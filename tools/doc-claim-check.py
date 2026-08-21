@@ -418,6 +418,67 @@ def currency_asserted(text, start, end):
     return bool(CURRENCY_ASSERTION.search(text[lo:hi]))
 
 
+# ---------------------------------------------------------------------------
+# Round 16 (M12). currency_asserted()'s proximity window is right for the
+# CHANGELOG-style append-only chain the header above reasons about — a record
+# is frozen by POSITION alone there, so a nearby "now"/"currently" is the only
+# thing that can plausibly mean "no, THIS one is still true". The ERR log is a
+# different kind of dated record: measured region coverage is 99.7% of
+# spec-error-log.md and 99.2% of CHANGELOG.md, and inside that span a mismatch
+# is excused unless a currency word happens to sit within 120 characters on
+# the same line — which most sentences in a 213-entry remediation backlog
+# simply do not carry, whether or not the claim they hold is current. Proven:
+# a present-tense acceptance criterion inside a still-Open ERR entry was
+# excused by the proximity rule alone. Every ERR entry already NAMES its own
+# resolution state, so that is the thing to ask instead — excuse a mismatch
+# there only when the enclosing entry is marked resolved, or the claim's own
+# sentence carries a date (a claim that names when it was measured is a
+# record of that measurement, resolved or not). Scoped to LOG_BODY_FILES only
+# — every other dated-record region (the frozen header chain, the resolved
+# archive) keeps the proximity rule above, unchanged.
+# ---------------------------------------------------------------------------
+ERR_RESOLVED_MARKER = re.compile(r"✅[^\n]{0,24}?(?:RESOLVED|CLOSED)", re.I)
+ERR_HEADING = re.compile(r"^## .*$", re.M)
+ERR_TABLE_ROW = re.compile(r"^\|\s*ERR-")
+
+
+def _err_log_entry_span(text, pos):
+    """(start, end) bounds of the spec-error-log.md entry enclosing `pos`.
+
+    Two shapes coexist: a row of the big `## Error Index` table (one line,
+    `| ERR-... | ... |`) and a `## ERR-NNN-NNN: ...` prose section below it.
+    A table row is bounded to its own line — the whole table sits under ONE
+    heading, so treating the table as a single entry would let a ✅ anywhere
+    in its 213 rows resolve every one of them. A prose section is bounded by
+    the nearest preceding `## ` heading and the next one."""
+    ls = text.rfind("\n", 0, pos) + 1
+    le = text.find("\n", pos)
+    le = len(text) if le == -1 else le
+    if ERR_TABLE_ROW.match(text, ls):
+        return ls, le
+    start, end = None, len(text)
+    for m in ERR_HEADING.finditer(text):
+        if m.start() <= pos:
+            start = m.start()
+        else:
+            end = m.start()
+            break
+    if start is None:
+        return ls, le
+    return start, end
+
+
+def err_log_excused(text, start, end):
+    """True when a mismatch at text[start:end] is excused under the ERR
+    log's OWN rule: the enclosing entry is marked resolved, or the claim's
+    own sentence carries a date. See the section banner above."""
+    a, b = _err_log_entry_span(text, start)
+    if ERR_RESOLVED_MARKER.search(text[a:b]):
+        return True
+    sentence = DCC.sentence_window(text, start, end)
+    return bool(ERR_LOG_DATE.search(sentence))
+
+
 # Surfaces scanned. Kept explicit rather than globbed: this tool executes what it
 # finds, so the scanned set is a security boundary and must be a decision.
 SURFACES = (
@@ -431,8 +492,16 @@ SURFACES = (
     "docs/tracking/spec-error-log.md",
     "docs/tracking/path-to-playable-roadmap.md",
 )
-SURFACE_GLOBS = ("docs/specs/*/section-*.md", "docs/specs/*/appendices.md",
-                 "docs/specs/*/section-9-approval-checklist.md")
+SURFACE_GLOBS = ("docs/specs/*/section-*.md", "docs/specs/*/appendices.md")
+# Round 16 (M6): a THIRD glob, "docs/specs/*/section-9-approval-checklist.md",
+# used to sit here — but that file's name already matches the first glob
+# ("section-" + anything + ".md"), so every approval checklist was scanned
+# TWICE and every finding on one printed twice at the same path:line. Measured
+# on this tree: 649 glob hits, 596 unique, the 53 duplicates being every
+# approval checklist in the corpus — the tool's own headline motivating case
+# double-counted. Deleted rather than kept-and-deduplicated, because a glob
+# that names no file the others do not already match is dead weight even once
+# de-duplication (below) makes it harmless.
 
 # ---------------------------------------------------------------------------
 # COVERAGE FLOOR (round 16, H9).
@@ -647,6 +716,13 @@ DATE_YEAR_BEFORE = re.compile(
     _MONTH + r"\s+\d{1,2}(?:st|nd|rd|th)?\s*,\s*$", re.I)
 # "August 18 (`cmd`)" — the same date with the year elided.
 DATE_DAY_BEFORE = re.compile(_MONTH + r"\s+$", re.I)
+
+# Round 16 (M12). The same month-name alternation, reused for a different
+# question: not "is this integer secretly a date" (the two above), but "does
+# the claim's own sentence carry one at all" — err_log_excused() near
+# currency_asserted() uses this to decide whether an ERR-log mismatch is a
+# dated record on its own terms, without a nearby "now"/"currently".
+ERR_LOG_DATE = re.compile(_MONTH + r"\s+\d{1,2}(?:st|nd|rd|th)?", re.I)
 
 # Verbs that introduce a command's own answer. Round 16 (H7): this list used to
 # be `returns?|reports?|prints?|yields?|gives?` — five present-tense forms with
@@ -1238,30 +1314,43 @@ def single_integer(out):
 
 GLOB_CH = re.compile(r"[*?\[]")
 
-# Minimum POSITIONAL operands the FIRST pipeline segment needs to be
-# self-contained. A quoted command missing its file operand reads stdin, which is
-# empty here, and returns 0 or nothing — reporting that as "document says 18,
-# command returns 0" would be a fabricated finding, the very thing this tool
-# exists to prevent. This repo genuinely writes such prose ("`grep -c '^- \*\*'`
-# over each file returns 18"), where the filename lives outside the backticks, so
-# the command as quoted is not runnable and the claim is UNVERIFIABLE, not false.
-FIRST_SEGMENT_MIN_OPERANDS = {
-    "grep": 2, "egrep": 2, "fgrep": 2, "rg": 2,   # pattern + at least one file
-    "sed": 2, "awk": 2,                           # script + at least one file
-    "cat": 1, "wc": 1, "sort": 1, "uniq": 1,
-    "head": 1, "tail": 1, "cut": 1, "tr": 1,
-}
+# Binaries whose FIRST pipeline segment needs a real file operand to be
+# self-contained. A quoted command missing its file operand reads stdin,
+# which is empty here, and returns 0 or nothing — reporting that as
+# "document says 18, command returns 0" would be a fabricated finding, the
+# very thing this tool exists to prevent. This repo genuinely writes such
+# prose ("`grep -c '^- \*\*'` over each file returns 18"), where the filename
+# lives outside the backticks, so the command as quoted is not runnable and
+# the claim is UNVERIFIABLE, not false.
+FIRST_SEGMENT_NEEDS_FILE = frozenset((
+    "grep", "egrep", "fgrep", "rg", "sed", "awk",
+    "cat", "wc", "sort", "uniq", "head", "tail", "cut", "tr",
+))
 
 
-def self_contained(segments):
-    """False when the first segment would read stdin because its file operand is
-    missing from the quoted text."""
+def self_contained(segments, repo):
+    """False when the first segment would read stdin because none of its
+    tokens name a file that actually exists under the repo root.
+
+    Round 16 (M8). The old rule was `[a for a in argv[1:] if not
+    a.startswith('-')]` — the exact OPTION-GRAMMAR error round 14 already
+    fixed once for awk's program and python3's script: a flag's own VALUE
+    does not start with `-` either, so it counts as an "operand" by this
+    filter even though it names nothing. `grep -m 3 -c x` produced ["3", "x"]
+    — two operands, meeting grep's old need-2 floor — and ran with an EMPTY
+    stdin, reporting "document says N; command returns 0" against a document
+    that was never wrong, which is precisely what this guard's own comment
+    says it exists to prevent. `awk -v n=1 'END{print NR}'` failed the same
+    way. Enumerating which flag on which binary takes a separate-argument
+    value is the shape of rule round 14 and round 15 both found does not
+    hold up — the fix here does not try: a segment is self-contained exactly
+    when at least one of its tokens, whatever else it might look like, names
+    a real file relative to the repo root."""
     argv = segments[0]
-    need = FIRST_SEGMENT_MIN_OPERANDS.get(argv[0])
-    if need is None:
+    if argv[0] not in FIRST_SEGMENT_NEEDS_FILE:
         return True
-    operands = [a for a in argv[1:] if not a.startswith("-")]
-    return len(operands) >= need
+    root = str(repo)
+    return any(os.path.isfile(os.path.join(root, a)) for a in argv[1:])
 
 
 def escaping_operand(argv, repo):
@@ -1318,6 +1407,17 @@ def expand_globs(segments, repo):
             except (NotImplementedError, ValueError, OSError) as exc:
                 return None, ("glob `%s` is not expandable from the repo root "
                               "(%s)" % (text, type(exc).__name__))
+            # Round 16 (M9): pathlib normalises away a trailing slash on BOTH
+            # ends — repo.glob("src/*/") already filters to directories only,
+            # but relative_to() renders each hit as "src/a", never "src/a/".
+            # A command that pipes to something anchored on the slash
+            # (`ls -d src/*/ \| grep -c '/$'`) then compares against a
+            # DIFFERENT command's output — bash's own expansion keeps the
+            # slash, so `ls -d src/*/ \| grep -c '/$'` returns 2 there and 0
+            # here for the identical claim. Restore the character the pattern
+            # itself carried; bash's directory-glob does the same.
+            if text.endswith("/"):
+                hits = [h + "/" for h in hits]
             # Round 14 (external review, P1): a FILENAME may look like an
             # option. With a repo file named `--output=canary`, the validated
             # command `sort * \| wc -l` expanded to
@@ -1407,6 +1507,7 @@ def scan_fence_identifiers(repo, quiet=False):
     files = []
     for pat in SURFACE_GLOBS:
         files.extend(sorted(repo.glob(pat)))
+    files = _dedup_by_resolved_path(files)
     scanned = 0
     for path in files:
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -1485,6 +1586,42 @@ DECLINE_BUCKETS = (
 )
 
 
+def document_relative_operand(rel, argv, repo):
+    """The first operand in `argv` that is ambiguous between the repo root
+    and the QUOTING DOCUMENT's own directory, or None.
+
+    Round 16 (M7). Every command runs from the repo root, with nothing
+    relating an operand to `rel`'s own directory — fine when `rel` IS the
+    repo root (CLAUDE.md, README.md: document-relative and root-relative are
+    the same thing there), but not when `rel` sits under docs/specs/. A bare
+    filename quoted there is ambiguous: it could mean "relative to the repo
+    root" or "relative to the file quoting it", and this tool cannot know
+    which. Proven both directions on a fixture: a spec quoting
+    `grep -c TODO README.md` about its own folder's README FAILED when the
+    two files' counts differed (comparing against the WRONG file) and PASSED
+    SILENTLY when the root file's count happened to match (still the wrong
+    file — the claim was never actually checked). "A checker must never
+    guess which of two files the author meant" — so this declines whenever a
+    document-relative candidate of the same bare name exists, independent of
+    whether a root-relative one also does, and leaves every other bare
+    operand alone: `wc -l CLAUDE.md` quoted from a nested surface with no
+    sibling `CLAUDE.md` of its own has no candidate to collide with and is
+    not flagged.
+
+    Live on this tree, not merely hypothetical: docs/specs/code-standards/
+    section-3.md quotes `grep -n '...' section-2.md`, the bare name of its
+    OWN sibling file, in exactly this idiom."""
+    doc_dir = pathlib.PurePosixPath(rel).parent
+    if str(doc_dir) in ("", "."):
+        return None                       # the document IS at the repo root
+    for a in argv[1:]:
+        if a.startswith("-") or "/" in a:
+            continue
+        if (repo / doc_dir / a).is_file():
+            return a
+    return None
+
+
 def check_claim(claim, repo, regions):
     """Validate, run and compare ONE claim. Returns (outcome, payload):
 
@@ -1532,10 +1669,20 @@ def check_claim(claim, repo, regions):
     segments, why = expand_globs(segments, repo)
     if segments is None:
         return "declined", ("unsafe", why)
-    if not self_contained(segments):
+    for seg in segments:
+        ambiguous = document_relative_operand(claim.rel, seg, repo)
+        if ambiguous is not None:
+            return "declined", ("did-not-run",
+                                "operand `%s` is ambiguous between the repo "
+                                "root and %s's own directory (a file of that "
+                                "name exists there) — a checker must never "
+                                "guess which one the document meant"
+                                % (ambiguous, claim.rel))
+    if not self_contained(segments, repo):
         return "declined", ("not-self-contained",
-                            "operand missing from the quoted text — not "
-                            "runnable as written")
+                            "no argv token names a file that exists on disk "
+                            "— this segment would read from an empty stdin, "
+                            "not from the quoted text")
     out, why = run_pipeline(segments, str(repo))
     if out is None:
         return "declined", ("did-not-run", why)
@@ -1544,10 +1691,40 @@ def check_claim(claim, repo, regions):
         return "declined", (answer.bucket, answer.unreadable)
     if answer.matches(stated, got):
         return "reproduced", (stated, got)
-    if (any(a <= claim.start < b for a, b in regions)
-            and not currency_asserted(claim.text, claim.start, claim.end)):
-        return "excused", (stated, got)
+    if any(a <= claim.start < b for a, b in regions):
+        # Round 16 (M12): the ERR log gets its OWN, stricter rule — see the
+        # section banner above err_log_excused(). Every other dated-record
+        # region keeps the proximity rule this file has used since round 13.
+        if claim.rel in DCC.LOG_BODY_FILES:
+            excuse = err_log_excused(claim.text, claim.start, claim.end)
+        else:
+            excuse = not currency_asserted(claim.text, claim.start, claim.end)
+        if excuse:
+            return "excused", (stated, got)
     return "mismatch", (stated, got)
+
+
+def _dedup_by_resolved_path(items):
+    """De-duplicate `items` (each a (rel, Path) pair or a bare Path) by
+    REALPATH, keeping first-seen order.
+
+    Round 16 (M6). Deleting the one redundant glob fixes today's overlap, but
+    the glob SET is a decision, not a proof of disjointness — SURFACE_GLOBS
+    gaining a second overlapping entry later would silently reintroduce the
+    double-scan/double-report defect. Comparing resolved paths, rather than
+    the (rel, Path) tuple or the Path's own string form, is what makes this
+    robust to two different glob patterns naming the same file two different
+    ways."""
+    seen = set()
+    out = []
+    for item in items:
+        p = item[1] if isinstance(item, tuple) else item
+        real = str(p.resolve())
+        if real in seen:
+            continue
+        seen.add(real)
+        out.append(item)
+    return out
 
 
 def collect_surfaces(repo):
@@ -1566,7 +1743,7 @@ def collect_surfaces(repo):
             missing.append("surface glob `%s` matches no file" % pat)
         for p in hits:
             files.append((str(p.relative_to(repo)), p))
-    return files, missing
+    return _dedup_by_resolved_path(files), missing
 
 
 def scan(repo, quiet=False):
@@ -1577,10 +1754,20 @@ def scan(repo, quiet=False):
     declined_list = []
     findings = []
     excused = []
+    region_coverage = []          # (rel, covered_chars, total_chars) — M12
 
     for rel, path in files:
         text = path.read_text(encoding="utf-8", errors="replace")
         regions = dated_record_regions(rel, text)
+        # M12's coverage figure is about the named tracking surfaces the
+        # excusal rule was written against (spec-error-log.md, CHANGELOG.md,
+        # ...) — every glob-matched spec file also carries a Version History
+        # table and so a small frozen-chain span of its own, which would
+        # otherwise turn this into a ~600-line wall of near-zero percentages
+        # that answers a question nobody asked.
+        if regions and text and rel in SURFACES:
+            covered = sum(min(e, len(text)) - max(0, s) for s, e in regions)
+            region_coverage.append((rel, covered, len(text)))
         claims = collect_claims(rel, text)
         for claim in claims:
             outcome, payload = check_claim(claim, repo, regions)
@@ -1633,6 +1820,21 @@ def scan(repo, quiet=False):
     for rel, line, cmd, stated, got in excused:
         print("      - %s:%d  %s  [record says %d; command now returns %d]"
               % (rel, line, cmd[:60], stated, got))
+
+    # Round 16 (M12): "how much of each surface is a dated record" was never
+    # printed, so a reader had no way to see that the gate was effectively
+    # switched off across most of spec-error-log.md and CHANGELOG.md — the
+    # excusal rule was invisible exactly where it mattered most. Printed
+    # always, like the excusal count above, and only for surfaces that have
+    # ANY dated-record span (most spec files have none and would be pure
+    # noise here).
+    if region_coverage:
+        print("  dated-record region coverage (inside a span, a mismatch is excused"
+              " under the rule stated above rather than reported):")
+        for rel, covered, total in sorted(region_coverage,
+                                          key=lambda t: -(t[1] / t[2])):
+            print("      - %-40s %5.1f%%  (%d/%d bytes)"
+                  % (rel, 100.0 * covered / total, covered, total))
 
     if findings:
         print("\nFAIL — %d stated value(s) the command does not reproduce:" % len(findings))
