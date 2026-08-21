@@ -418,7 +418,7 @@ Release Engineering, **#47** New-Game Setup & Database Editor, **#48** Match Pre
 **#50** Save Migration & Versioning, **#51** Audio & Sound Design.
 
 (53 of 53 specs reviewed: 2 carried forward from the prior session — #8, #11 — plus 51 reviewed
-fresh in this pass, of which 24 total specs across both passes returned at least one finding.)
+fresh in this pass, of which **19** total specs across both passes returned at least one finding. *(Corrected August 21, 2026 from 24 — see the §5 note; the 34 specs listed immediately above are the complement, and 19 + 34 = 53.)*)
 
 ---
 
@@ -427,11 +427,23 @@ fresh in this pass, of which 24 total specs across both passes returned at least
 | | Count |
 |---|---|
 | Specs reviewed | 53 / 53 |
-| Specs with ≥1 finding | 24 |
-| Specs with no findings | 29 |
+| Specs with ≥1 finding | **19** |
+| Specs with no findings | **34** |
 | Total findings recorded | 34 |
 | Findings fixed (`ERR-008-020` §3.1.3.3 template, August 4; `ERR-008-019` §3.2.3.1 long-shot ramp, August 5) | 2 |
 | Findings open | 32 |
+
+*(**CORRECTED August 21, 2026 — the two SPEC counts were wrong; the three FINDING counts were and are
+right.** This table read 24 / 29, which is internally consistent (24 + 29 = 53) and agrees with the §4
+closing parenthetical, but agrees with neither section's actual content. Re-derived by direct count:
+**§2/§3 carry 19 spec headings** (#8, #11, #1, #4, #6, #10, #13, #14, #15, #23, #27, #28, #31, #34, #41,
+#43, #54, #36, #46) and **§4 names 34 clean specs** (5 cross-cutting + 4 physics + 2 AI/mechanics +
+5 tactical + 5 player/season + 7 management + 6 late-wave). 19 + 34 = 53. The finding counts reconcile
+exactly and are untouched: 35 `- **§` bullets across §2/§3, minus the §3.1.4.3/§3.2.3.2 shot-lane bullet
+explicitly marked "not itemized in the original sweep", = **34 recorded**; minus `ERR-008-020` and
+`ERR-008-019` = **32 open**. Neither the remediation queue nor any per-spec claim moves — only the
+count of how many specs those findings are spread across. Surfaced while landing constraint C6, which
+needed the assembly-less subset of exactly this population.)*
 
 *(Updated August 5, 2026: `ERR-008-019` — the long-shot cliff, this review's founding finding — is
 now genuinely landed; see §2. Corrected August 4, 2026: this table originally counted that same

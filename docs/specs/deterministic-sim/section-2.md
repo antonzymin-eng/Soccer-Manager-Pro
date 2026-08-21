@@ -61,6 +61,35 @@ Core components:
 - `ToleranceRow { fieldPath, tier, comparator, toleranceValue, rationale, owner, reviewDate }`
 - `ComparatorRegistry = { BitwiseEqual, AbsEpsilon, RelEpsilon }` (normative v1)
 
+**Implementation mapping (added v1.1, `ERR-016-009`).** The list above is the **concept**
+inventory. It is NOT a type manifest, and six of its nine entries name no type in
+`src/deterministic-sim/` — a reader who took it for one would write six phantom types. **`src/` is
+the surface authority; this section is the contract those surfaces satisfy.** Every production file
+carries a `// Spec:` header naming the section it implements; that header is the per-file authority.
+
+| §2.3 name | Actual `src/deterministic-sim/` surface | Status |
+|---|---|---|
+| `DeterminismContext` | never aggregated into one type — `matchSeed` rides consumer contexts (e.g. `DecisionContext.MatchSeed`), `schemaVersion` / `digestVersion` ride `SaveManager` / `SnapshotCodec` / `ReplayEngine`. **`buildHash` has no representation anywhere in `src/`**, `EnvironmentFingerprint` included | **SPLIT + GAP** |
+| `PhaseDigest` | computed, never stored — the preimage is locked by the golden-vector corpus (D-01/D-02); the phase enum is `PhaseId.cs` | COMPUTED |
+| `RngStreamKey` | three fields on `RngStreamState` (`SubsystemOrdinal`, `EntityId`, `StreamVersion`) plus the packed `StreamKey`; ordinals in `SubsystemOrdinals.cs` | FIELDS ON `RngStreamState` |
+| `RngCursor` | two fields on `RngStreamState` (`RngCursor`, `ActionOrdinal`) | FIELDS ON `RngStreamState` |
+| `SnapshotHeader` | `SnapshotHeader.cs` | TYPE |
+| `DespawnLog` / `DespawnEntry` | `DespawnLog.cs` / `DespawnEntry.cs` | TYPE |
+| `ReplayCursor` | `ReplayCursor.cs` | TYPE |
+| `ToleranceRow` (§2.3.1) | none | **DEFERRED — Stage 1+** |
+| `ComparatorRegistry` | no registry exists; the three approved comparators exist as `DivergenceDetector.CompareTierAFloat` (BitwiseEqual), `CompareTierBFloat` (AbsEpsilon) and `CompareDigests` | **DEFERRED — Stage 1+** |
+
+**Two normative consequences.**
+
+1. **`buildHash` is an open GAP, not an omission of convenience.** It is a declared field of the
+   replay-identity context and nothing in `src/` carries it or a synonym. Until it exists, two builds
+   differing only in compiled code are indistinguishable to everything downstream of this section.
+   Tracked at `ERR-016-009`, alongside the existing open item that `SaveManager` still writes
+   `Fingerprint = null`.
+2. **The names above are NOT rename targets.** `RngStreamState.RngCursor` and its siblings are
+   correct as built and are Tier-A serialized state; renaming a serialized field to match a document
+   would move state for no behavioural gain. The spec was the thing that needed to tell the truth.
+
 ### 2.3.1 Tolerance row operational schema
 | Column | Type | Rule |
 |---|---|---|
@@ -88,6 +117,15 @@ Core components:
 | Tier B drift | continue replay with warning | fail if out-of-bound |
 
 ## 2.5 Version History
+- **v1.1 (August 21, 2026):** `ERR-016-009` — §2.3 gains an implementation-mapping table. Six of the nine
+  listed structures (`DeterminismContext`, `PhaseDigest`, `RngStreamKey`, `RngCursor`, `ToleranceRow`,
+  `ComparatorRegistry`) name no type in `src/deterministic-sim/`, while §4.2 has been explicitly
+  non-normative since v0.7 and §4.4 gives module paths (`sim/tick/*` …) that match no directory in the
+  tree — leaving §2.3 as the de facto type manifest it was never marked as. Each row now names its real
+  surface and status; `src/` is declared the surface authority. Two items are recorded rather than
+  fixed: **`buildHash` has no representation anywhere in `src/`** (an open gap on the replay-identity
+  contract), and `ToleranceRow`/`ComparatorRegistry` are marked Stage-1+ deferrals rather than left
+  reading as built. No rename and no code change — the serialized field names are correct as built.
 - **v1.0 (May 4, 2026):** Pass 4 / Pass 5 critique resolution. (a) Pass 4 L-3: FR-DS-009 stage-qualified ("Stage 5+") and pointed at `FR-DS-009-GATE` (§5.5) for operational binding. (b) Pass 5 M-3: `DespawnLog` and `DespawnEntry` added to §2.3 data structures, classified Tier A, canonical sort key declared. (c) Pass 5 M-4: `ReplayCursor { tick, phaseOrdinal }` data structure added with legal-value definition keyed to the §4.2.2 step 7 `EndOfSnapshot[T]` assertion. (d) Pass 4 L-2: §2.6.2 replay-lifecycle example mirrored to the 8-step §4.2.2 normative form with explicit "see §4.2.2 for normative" pointer.
 - **v0.8 (May 2, 2026):** Added FR-DS-010..013: EnvironmentFingerprint recording, Tier-B tolerance enforcement, replay 8-step lifecycle, Stage-0 float Tier-A classification gate (B-8).
 - **v0.7 (May 2, 2026):** Added §2.0 Identifier Taxonomy; corrected `RngStreamKey` (removed `actionOrdinal` from key) and extended `RngCursor` (added `actionOrdinal`); extended `SnapshotHeader` with `environmentFingerprint`.

@@ -260,7 +260,7 @@ below.)
 **Last Updated (prior):** August 4, 2026 (**ERR-008-020 — the first fix under the football-judgment
 remediation doctrine.** The new `docs/tracking/football-judgment-proxy-review.md` swept all 53
 APPROVED specs for continuous football judgments collapsed into thresholds or bare geometry — 34
-findings across 24 specs — and its owner-converged §6 doctrine (P1 continuous-never-cliff, P2 skill
+findings across 19 specs (corrected Aug 21, 2026 from 24) — and its owner-converged §6 doctrine (P1 continuous-never-cliff, P2 skill
 as discrimination fidelity, P3 the attribute ownership ledger, P4 intent as a first-class object,
 P5 chain calibration pivoted on today's baseline) now governs every fix. The template landed same
 day: Decision Tree #8 §3.1.3.3's binary pass-lane interceptor corridor became a continuous,

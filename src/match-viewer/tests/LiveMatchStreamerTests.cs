@@ -1,8 +1,10 @@
 // File:     src/match-viewer/tests/LiveMatchStreamerTests.cs
 // Created:  2026-07-15
-// Modified: 2026-07-27 (P1: the hand-built full-time frame carries the P1 fields. Cue/latch coverage
-//           lives in its own fixture — LiveMatchFrameCueTests. AR-1 M-6: score reads move onto the
-//           Scoreline carrier.)
+// Modified: 2026-08-15 (P4b AR pass M-5: + EffectiveTicksPerSecond_* locking the
+//           ticksPerSecond x SpeedMultiplier product against a NON-default ticksPerSecond, which the
+//           client's earlier direct-constant recomputation would have missed. Prior 2026-07-27 — P1:
+//           the hand-built full-time frame carries the P1 fields; cue/latch coverage lives in its own
+//           fixture, LiveMatchFrameCueTests; AR-1 M-6 moved score reads onto the Scoreline carrier.)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Testing Strategy #19 (unit layer), Code Standards #20
 // Purpose:  Contract tests for LiveMatchStreamer: latest-frame handoff, observer neutrality

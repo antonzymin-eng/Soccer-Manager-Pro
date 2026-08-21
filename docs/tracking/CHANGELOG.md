@@ -12,7 +12,52 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 21, 2026 (**Sequencing rule C6 recorded: spec hardening does not precede
+> **Last Updated:** August 21, 2026, later same day (**The three findings reported at the C6 landing
+> are FIXED, and the whole-tree gate ran for the first time this session.**) **1. `ERR-016-009` filed
+> and its spec half RESOLVED same commit** (`spec-error-log.md` v2.18): #16 §2.3's nine "Data
+> Structures" include **six that name no type in `src/deterministic-sim/`** — `DeterminismContext`,
+> `RngStreamKey`, `ToleranceRow` and `ComparatorRegistry` have **zero textual presence in `src/` at
+> all**; `RngCursor` and `RngStreamKey`'s triple are *fields on* `RngStreamState`; `PhaseDigest` is a
+> computation whose preimage is locked by golden-vector corpus D-01/D-02. §2.3 carries the weight
+> because §4.2 has been explicitly non-normative since its own v0.7 and §4.4's module paths
+> (`sim/tick/*` …) match **no directory** in the flat tree — and §2.3's version history revised two of
+> the phantom structures as contract text (v0.7: "corrected `RngStreamKey` … extended `RngCursor`").
+> **The substantive half is `buildHash`:** a declared field of the replay-identity context with no
+> representation anywhere, `EnvironmentFingerprint` included, so two builds differing only in compiled
+> code are indistinguishable to everything downstream of §2.3. Fixed as #16 §2.3 **v1.1** — a per-row
+> implementation-mapping table (TYPE / FIELDS ON / COMPUTED / DEFERRED / SPLIT + GAP) plus a normative
+> declaration that **`src/` is the surface authority and §2.3 the concept inventory**. Recorded OPEN,
+> not fixed: the `buildHash` gap (sits with the existing `SaveManager` writes `Fingerprint = null`
+> item) and the `ToleranceRow`/`ComparatorRegistry` Stage-1+ deferrals. **Deliberately no rename** —
+> the serialized field names are correct as built, and renaming Tier-A state to match a document moves
+> state for no behavioural gain. **2. The FR-CS-057 header regression fixed:**
+> `src/match-viewer/tests/LiveMatchStreamerTests.cs` carried `// Modified: 2026-07-27` against a v1.2
+> row dated 2026-08-15 (the Aug 15 P4b landing added the row and not the field). `recurring-defect-lint.py`
+> is back to **0 ERROR tree-wide**, restoring the state last recorded August 8. **3. The proxy review's
+> two SPEC counts corrected — the three FINDING counts were and are right.** §5 read 24 specs with
+> findings / 29 clean, which is self-consistent (24 + 29 = 53) and matches the §4 parenthetical but
+> matches neither section's content. Re-derived by direct count: **19 spec headings** in §2/§3, **34
+> clean specs** in §4's list, 19 + 34 = 53. The finding counts reconcile exactly and are untouched —
+> 35 `- **§` bullets minus the shot-lane bullet marked "not itemized" = 34 recorded, minus
+> `ERR-008-020` and `ERR-008-019` = 32 open. Corrected in seven places with the correction annotated
+> in place, never silently: the review's §4 and §5, `CLAUDE.md` ×2, `open-issues.md` ×3, `README.md`,
+> `file-manifest.md` (whose "1 already fixed" was also stale). **The C6 text landed earlier today is
+> unaffected** — it states only the six-assembly-less-specs figure, which is directly verifiable.
+> **GATE RUN — the first of this session** (SDK 8.0.130 installed from the Ubuntu apt archive after an
+> `apt-get update`; the initial install 404'd on stale index files, which is worth knowing for the next
+> session). Build **succeeded, 0 errors**, 5 pre-existing CS0649 warnings. **33 suites, 3,024 tests
+> passed, 1 failed, 191 skipped.** The single failure is `sim_match_engine_close_chance`
+> (`MatchEngine.Tests` **461 / 1 / 11**, 1 h) — the **inherited owner-held-red band**, matching the W2
+> landing's recorded baseline of 461/1/11 exactly, so this pass adds **no new failure**. The gate
+> script exits non-zero on the blocking phase and therefore never reached its quarantine-report
+> section: **the formal verdict is FAIL on the inherited red, not PASS**, and it is recorded that way
+> rather than rounded up. Only `.cs` change in the pass is a comment header. **Modified:**
+> `docs/specs/deterministic-sim/section-2.md` (v1.1), `docs/tracking/spec-error-log.md` (v2.18),
+> `src/match-viewer/tests/LiveMatchStreamerTests.cs`, `docs/tracking/football-judgment-proxy-review.md`,
+> `CLAUDE.md`, `README.md`, `docs/tracking/open-issues.md`, `docs/tracking/file-manifest.md`,
+> `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** August 21, 2026 (**Sequencing rule C6 recorded: spec hardening does not precede
 > the assembly — plus the pointer index that replaces a rejected `DATA_SCHEMA.md`.**) Doc-only; **no
 > `.cs` file touched.** Prompted by a review of an externally-suggested "upgrade every legacy spec
 > with a Gen-5 model first, then implement" pipeline. **What was rejected and why:** a blanket rewrite
