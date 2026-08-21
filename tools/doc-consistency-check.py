@@ -1092,22 +1092,32 @@ def agreement_groups(spec_folders):
     """
     return (
     ("assembly-less approved specs (\"N of %d\")" % spec_folders,
-     re.compile(r"(\d+)\s+of\s+(?:the\s+)?%d\b" % spec_folders),
+     # Round 14 (external review, P2): the DENOMINATOR is matched, not baked
+     # into the pattern. Round 9's derived-but-baked form searched only for the
+     # current registry size, so the day the registry grows the group matches
+     # nothing, prints a NOTE, and CI still PASSES — leaving the "19 of the 53"
+     # prose stale and unreported, which is the exact transition the round-9
+     # fix was for. Verified: with spec_folders=54 against today's prose the
+     # old form raised 0 findings. Now the denominator is checked against the
+     # measured count and a stale one is named directly, rather than inferred
+     # from an empty set.
+     re.compile(r"(\d+)\s+of\s+(?:the\s+)?(\d+)\b"),
      # The context must say what the figure MEANS ("…have no assembly", "…of the
      # registry"), not merely mention specs — "29 of 53 approved specs" in the
      # implementation-begun sense is a different figure and must not be pooled
      # into this agreement set.
      re.compile(r"no\s+`?src/?`?\s*assembly|no\s+assembly|assembly-less"
-                r"|of\s+the\s+registry", re.I)),
+                r"|of\s+the\s+registry", re.I),
+     spec_folders),
     ("registry share (\"N% of the registry\")",
      re.compile(r"(\d+)%\s+of\s+the\s+registry"),
-     None),
+     None, None),
     )
 
 
 def scan_agreements(sources, findings, stats, regions, spec_folders):
     empty_groups = []
-    for label, pat, ctx in agreement_groups(spec_folders):
+    for label, pat, ctx, expected_denom in agreement_groups(spec_folders):
         sites = {}
         for src, rel, text, _frozen, _pierced in sources:
             for m in pat.finditer(text):
@@ -1126,6 +1136,17 @@ def scan_agreements(sources, findings, stats, regions, spec_folders):
                     continue
                 stats[rel]["agreement figures"] += 1
                 line = text.count("\n", 0, m.start()) + 1
+                if expected_denom is not None:
+                    denom = int(m.group(2))
+                    if denom != expected_denom:
+                        findings.append(
+                            (f"{rel}:{line}",
+                             f"states \"{m.group(1)} of {denom}\" for the "
+                             f"{label.split(' (')[0]} figure; the registry "
+                             f"measures {expected_denom} spec folders — the "
+                             f"denominator is stale, so the numerator beside "
+                             f"it cannot be trusted either"))
+                        continue
                 sites.setdefault(int(m.group(1)), []).append(f"{rel}:{line}")
         if not sites:
             empty_groups.append(label)
@@ -1488,3 +1509,25 @@ if __name__ == "__main__":
 # |         |            |             | identical output before and after:    |
 # |         |            |             | PASS, 34 excusals (23/4/7/0), 15      |
 # |         |            |             | unresolvable.                         |
+# | 1.8     | 2026-08-19 | Claude Code | AR round 14 (external review, P2) —   |
+# |         |            |             | the derived registry denominator was  |
+# |         |            |             | still BAKED into the pattern, so on   |
+# |         |            |             | the day the registry grows the group  |
+# |         |            |             | matches nothing, prints a NOTE, and   |
+# |         |            |             | CI PASSES — leaving the "19 of the    |
+# |         |            |             | 53" prose stale and unreported, which |
+# |         |            |             | is the exact transition round 9's fix |
+# |         |            |             | existed to catch. Measured: at        |
+# |         |            |             | spec_folders=54 against today's prose |
+# |         |            |             | the old form raised 0 findings. The   |
+# |         |            |             | denominator is now MATCHED and        |
+# |         |            |             | checked against the measured count,   |
+# |         |            |             | naming each stale site directly       |
+# |         |            |             | instead of inferring staleness from   |
+# |         |            |             | an empty set; a stale-denominator     |
+# |         |            |             | site is not pooled into the agreement |
+# |         |            |             | numerator, since a figure whose       |
+# |         |            |             | denominator moved cannot be compared  |
+# |         |            |             | with one whose did not. Proved both   |
+# |         |            |             | ways: 54 -> 9 findings naming every   |
+# |         |            |             | site; 53 (today) -> clean.            |

@@ -12,7 +12,54 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 19, 2026, later still — **Round 13: `doc-claim-check.py` gains the
+> **Last Updated:** August 19, 2026, evening — **Round 14: an EXTERNAL reviewer found two exploitable
+> holes in round 9's own security fix, and both were confirmed by execution before being fixed.** This is
+> the first round of this series with fresh eyes on it, and it immediately found what four single-handed
+> rounds did not. Tooling and documentation only; no `.cs` and no `.asmdef` changed, so no gate run is
+> owed.
+>
+> **The finding that matters is not either bug — it is that both have one root error.** Round 9's H1 fix
+> validated a *shape* rather than the argv that actually executes. Everything downstream of that was
+> sound reasoning about the wrong object.
+>
+> **P1(a) — `awk -v` walked straight past the program.** The program was located as "the first operand
+> that does not start with `-`", but `-v` and `-F` take a SEPARATE argument, so
+> `awk -v x=1 'BEGIN{system("touch /tmp/pwn")}END{print 1}' CLAUDE.md` handed the escape check `x=1`,
+> never examined the program, ran `system()`, and returned the claimed integer under a printed **PASS**.
+> Reproduced here before fixing: the artefact was created. Fixed by scanning EVERY token rather than the
+> one guessed to be the program — that needs no awk option grammar and cannot be outflanked by adding
+> one, since `system`/`getline` must appear literally to be called. The same heuristic was wrong for
+> `python3` (`-X foo.py bar.py` executes `bar.py`), so the script must now be `argv[1]` with no
+> interpreter flags at all.
+>
+> **P1(b) — the flag check ran before glob expansion.** With a repo file named `--output=canary`, the
+> validated command `sort * \| wc -l` expanded to `sort --output=canary …` and **wrote that file**.
+> Reproduced here before fixing. Both halves closed: an expanded filename that would be read as an
+> option is refused by name, and the entire escape-hatch check re-runs on the post-expansion argv.
+>
+> **P2 — the derived denominator was still baked into the pattern.** Round 9 derived the registry size
+> instead of hard-coding 53, but the pattern still searched only for the CURRENT size, so on the day the
+> registry grows the group matches nothing, prints a NOTE, and CI passes — leaving the "19 of the 53"
+> prose stale and unreported, which is the exact transition that fix existed to catch. Measured: at
+> `spec_folders=54` against today's prose, the old form raised **0** findings. The denominator is now
+> matched and checked against the measured count, naming each stale site directly; at 54 that is **9**
+> findings, at today's 53 it is clean. A stale-denominator site is no longer pooled into the agreement
+> numerator either, since a figure whose denominator moved cannot be compared with one whose did not.
+>
+> **What this costs the record.** The standing caveat in the three entries below — that delegation was
+> unavailable and the fresh-eyes property was never obtained — was not a formality. Two exploitable
+> holes sat in a security fix through rounds 10, 11, 12 and 13, all of which re-read that file, and none
+> of which found them, because the reviewer and the author were the same. **A delegated pass over
+> `tools/doc-claim-check.py` is no longer "worth the tokens"; it is the demonstrated gap**, and it
+> remains owed even after this round.
+>
+> **Verification:** `doc-claim-check` PASS (3 executed, unchanged; the two exploit commands are declined
+> and NAMED, and neither artefact is created); `doc-consistency-check` PASS (34 excusals 23/4/7/0,
+> 16 unresolvable); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
+> `assembly-tier-check` PASS. Figures measured AFTER this entry was written, per the correction
+> annotated on the round-13 entry below.
+
+> **Last Updated (prior):** August 19, 2026, later still — **Round 13: `doc-claim-check.py` gains the
 > dated-record model, ported from the citation checker rather than reinvented.** Tooling and
 > documentation only; no `.cs` and no `.asmdef` changed over `12eba7d~1..HEAD`, so no gate run is owed.
 >
@@ -41,7 +88,7 @@ break it, and do not edit historical entries.
 > side of the extraction.
 >
 > **Verification:** `doc-claim-check` PASS (3 executed, 30 declined, 0 excused); `doc-consistency-check`
-> PASS (34 excusals 23/4/7/0, 15 unresolvable); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
+> PASS (34 excusals 23/4/7/0, 15 unresolvable *(⚠️ corrected August 19, 2026, round 14: **16**. The figure was measured before this entry was written, and WRITING it moved the number — a new head entry pushes the previous one below the `(prior)` marker, which changes what the citation scan reads. So this checker's own coverage figures cannot be measured before the entry that quotes them. Third recorded instance of "a count taken mid-pass does not survive the pass", and the first where the act of recording is itself what invalidated it.)*); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
 > `assembly-tier-check` PASS. **Still owed, unchanged:** a DELEGATED review pass over
 > `tools/doc-claim-check.py` — every round from 9 on ran single-handed, so the fresh-eyes property was
 > never obtained on code whose author was also its reviewer.

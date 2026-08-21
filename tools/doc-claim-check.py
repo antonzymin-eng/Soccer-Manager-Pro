@@ -388,18 +388,31 @@ def denied_flag(argv):
                                                        "--upload-pack=")):
                 return a
     if name == "awk":
-        script = next((a for a in argv[1:] if not a.startswith("-")), "")
-        if AWK_ESCAPES.search(script):
-            return "awk program calling system()/getline"
+        # Round 14 (external review, P1): scan EVERY token, never the token
+        # GUESSED to be the program. `-v` and `-F` take a SEPARATE argument, so
+        # "first operand not starting with -" picked `x=1` out of
+        # `awk -v x=1 'BEGIN{system("touch /tmp/pwn")}END{print 1}' f` and never
+        # looked at the program at all — the command then ran system() and
+        # returned the claimed integer under a printed PASS. Verified
+        # exploitable before this fix. Scanning all tokens needs no awk option
+        # grammar and cannot be outflanked by adding one: `system`/`getline`
+        # must appear literally to be called, and a FILENAME containing either
+        # word is merely declined-and-named, which is the safe direction.
+        for a in argv[1:]:
+            if AWK_ESCAPES.search(a):
+                return "awk program calling system()/getline"
     if name == "python3":
-        # Only an in-repo script may run: `-c`/`-m` are refused above, and a
-        # path that is not a repo `.py` file is refused here, so a document
-        # can at most re-run code the checkout already contains.
-        operands = [a for a in argv[1:] if not a.startswith("-")]
-        if (not operands or not operands[0].endswith(".py")
-                or operands[0].startswith("/")
-                or ".." in pathlib.PurePosixPath(operands[0]).parts):
-            return "python3 without an in-repo .py script"
+        # The script must be the FIRST argument — no interpreter flags at all.
+        # Same defect as the awk case: `-X`/`-W` take a separate value, so
+        # "first operand not starting with -" can name a different file from
+        # the one python actually executes (`python3 -X foo.py bar.py` runs
+        # bar.py). Every real claim in this corpus is `python3 <script> …`, so
+        # requiring that costs nothing and removes the grammar question.
+        script = argv[1] if len(argv) > 1 else ""
+        if (not script.endswith(".py") or script.startswith("/")
+                or ".." in pathlib.PurePosixPath(script).parts):
+            return ("python3 without an in-repo .py script as its first "
+                    "argument")
     if name == "uniq" and len([a for a in argv[1:] if not a.startswith("-")]) >= 2:
         return "uniq with an OUTPUT operand"
     return None
@@ -560,8 +573,30 @@ def expand_globs(segments, repo):
             except (NotImplementedError, ValueError, OSError) as exc:
                 return None, ("glob `%s` is not expandable from the repo root "
                               "(%s)" % (text, type(exc).__name__))
+            # Round 14 (external review, P1): a FILENAME may look like an
+            # option. With a repo file named `--output=canary`, the validated
+            # command `sort * \| wc -l` expanded to
+            # `sort --output=canary …` and WROTE that file, because
+            # denied_flag() had run on the pre-expansion argv. Verified
+            # exploitable before this fix. Both halves of the gap are closed:
+            # an expanded name that would be read as an option is refused
+            # here...
+            for hit in hits:
+                if hit.startswith("-"):
+                    return None, ("glob `%s` expands to `%s`, which the "
+                                  "command would read as an option, not a "
+                                  "file" % (text, hit))
             new.extend(hits if hits else [text])
         out.append(new)
+    # ...and the escape-hatch validation is re-run on the argv that will
+    # ACTUALLY execute, so no expansion can introduce a hatch that the
+    # pre-expansion check certified absent. Validating a shape instead of the
+    # real argv is the single root error behind both of this round's findings.
+    for argv in out:
+        hatch = denied_flag(argv)
+        if hatch is not None:
+            return None, ("after glob expansion, `%s` reaches a write/execute "
+                          "escape hatch (%s)" % (argv[0], hatch))
     return out, None
 
 
@@ -1049,3 +1084,34 @@ if __name__ == "__main__":
 # |         |            |             | above the marker is REPORTED, a plain       |
 # |         |            |             | record below it is EXCUSED and named, and a |
 # |         |            |             | reasserted one below it is REPORTED.        |
+# | 1.4     | 2026-08-19 | Claude Code | AR round 14 — two P1 holes in round 9's H1  |
+# |         |            |             | fix, found by an EXTERNAL reviewer on PR    |
+# |         |            |             | #328 and both verified exploitable here     |
+# |         |            |             | before fixing. One root error behind both:  |
+# |         |            |             | the validation ran on a SHAPE, not on the   |
+# |         |            |             | argv that actually executes. (a) awk's      |
+# |         |            |             | program was located as "first operand not   |
+# |         |            |             | starting with -", but `-v` and `-F` take a  |
+# |         |            |             | SEPARATE argument, so                       |
+# |         |            |             | `awk -v x=1 'BEGIN{system(...)}' f` handed  |
+# |         |            |             | the check `x=1` and never looked at the     |
+# |         |            |             | program — system() ran and the command      |
+# |         |            |             | returned the claimed integer under a        |
+# |         |            |             | printed PASS. Every token is scanned now,   |
+# |         |            |             | which needs no awk option grammar and       |
+# |         |            |             | cannot be outflanked by adding one. The     |
+# |         |            |             | same heuristic was wrong for python3        |
+# |         |            |             | (`-X foo.py bar.py` runs bar.py), so the    |
+# |         |            |             | script must be argv[1] with no interpreter  |
+# |         |            |             | flags at all. (b) denied_flag ran BEFORE    |
+# |         |            |             | glob expansion, so a repo file named        |
+# |         |            |             | `--output=canary` turned the validated      |
+# |         |            |             | `sort * \| wc -l` into                      |
+# |         |            |             | `sort --output=canary …`, which WROTE that  |
+# |         |            |             | file. An expanded name that would be read   |
+# |         |            |             | as an option is refused, and the whole      |
+# |         |            |             | escape-hatch check re-runs on the           |
+# |         |            |             | post-expansion argv. Both re-proved: the    |
+# |         |            |             | two exploits are declined and named,        |
+# |         |            |             | neither artefact is created, and the live   |
+# |         |            |             | claims still execute (3, unchanged).        |
