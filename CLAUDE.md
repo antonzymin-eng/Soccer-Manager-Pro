@@ -28,7 +28,10 @@ whatsoever about whether code exists.** It is true of ~42% of the registry.
 
 Sequencing for closing the gap is in `docs/tracking/path-to-playable-roadmap.md`, which is now the
 project's live critical path. **Check `src/` before assuming a consumer is available** — the assembly map
-above is the reliable index, not the spec registry.
+above is the reliable index, not the spec registry. **And do not harden, extend or wire a spec
+that has no assembly ahead of its own T0 landing** — findings against it are RECORDED and discharged at T0,
+in the same commit as the code they govern (`path-to-playable-roadmap.md` **C6**). For *where any entity is
+defined and whether it is implemented*, `docs/tracking/data-contract-index.md` is the pointer index.
 
 `src/CLAUDE.md` is the authoritative coding guide. Read it before writing any code.
 
@@ -256,6 +259,7 @@ pass-mechanics/
 | `spec-error-log.md` | `docs/tracking/spec-error-log.md` | Cross-spec architectural errors and remediation status |
 | `file-manifest.md` | `docs/tracking/file-manifest.md` | Authoritative file inventory (update after every file change) |
 | `fix-manifest-pass-mechanics.md` | `docs/tracking/fix-manifest-pass-mechanics.md` | Per-audit fix tracking (Pass Mechanics #5) |
+| `data-contract-index.md` | `docs/tracking/data-contract-index.md` | Entity → owning spec § → assembly **pointer** index (restates nothing; the specs remain the authority) |
 | `certification-platform.md` | `docs/tracking/certification-platform.md` | Pinned Stage-0 host/engine tuple; recertification rule |
 | `cert-run-runbook.md` | `docs/tracking/cert-run-runbook.md` | Step-by-step certification run procedure |
 

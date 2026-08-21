@@ -1,7 +1,17 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Updated:** August 6, 2026 — **the adversarial review over the `ERR-008-021` landing LANDED as
+> **Updated:** August 21, 2026 — **§6.3 gains an ASSEMBLY-LESS class, and the backlog's workable queue is
+> now 24 rather than 32.** Six of the specs itemized in §2/§3 have no `src/` assembly — **#31, #34, #36,
+> #43, #46, #54** — carrying **8 of the 32 open findings**. Their fixes are deferred BY RULE to those
+> specs' T0 landings: §6.3's formula-patch process requires spec + code in the same commit, and a fix
+> here is not landed until a test fails when it is reverted — with no assembly neither half can be
+> executed, so the fix would ship as prose with nothing enforcing it, which is precisely the class the
+> `ERR-008-021`/`-022` chain demonstrated when three consecutive hand-derived verification claims were
+> falsified on first execution. Normative source: `path-to-playable-roadmap.md` **C6** (new). The
+> finding counts are UNCHANGED — 34 recorded, 2 fixed, **32 open** — this reclassifies when 8 of them are
+> workable, not whether. Deferral is not dismissal: they stay itemized here and are discharged at T0.
+> **Updated (prior):** August 6, 2026 — **the adversarial review over the `ERR-008-021` landing LANDED as
 > `ERR-008-022`** (§6.4.2). It found that -021's overlap model was being fed by a lane test that
 > discarded the **far-post blocker on 100% of 20,213 sampled off-centre shooters** and dropped a
 > keeper standing on his line at goal centre for *every* shooter position — the far bound was a plane
@@ -536,6 +546,18 @@ creation — that separation is the acceptance test that the stages are genuinel
   lookup — overturning it is an owner decision about the spec's stated design intent, not a patch.
 - **Management-layer findings** (#31, #34, #54, #43, #36, #27, #28): the three-stage frame does not
   map literally (there is no "execution" of a sacking), but P1, P3, and P5 apply unchanged.
+- **Assembly-less class — deferred BY RULE, not by priority** *(added August 21, 2026)*. Six of the
+  specs itemized in §2/§3 have no `src/` assembly at all — **#31, #34, #36, #43, #46, #54** — and they
+  carry **8 of the 32 open findings** (#31 ×2, #34 ×1, #36 ×1, #43 ×1, #46 ×1, #54 ×2). Those fixes do
+  **not** land ahead of their spec's T0 code. The formula-patch process immediately above requires
+  spec + code in the same commit, and this project's standard for a landed fix is a test that fails
+  when the fix is reverted; with no assembly, neither half can be executed, so what would ship is
+  edited prose with nothing enforcing it — the same class as the three hand-derived verification
+  claims the `ERR-008-021`/`-022` chain falsified on first execution. They stay recorded here and are
+  discharged at their spec's T0 landing, under the same doctrine. Normative source and full evidence:
+  `path-to-playable-roadmap.md` **C6**. Note this **subsumes the governance-class entry above** — #46
+  is deferred on both grounds, and the owner decision it needs is better taken with the code in front
+  of it. **The remaining 24 open findings are workable today and are this backlog's actual queue.**
 
 ### 6.4 First worked example (LANDED August 4, 2026 as `ERR-008-020`)
 

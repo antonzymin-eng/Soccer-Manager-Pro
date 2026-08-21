@@ -190,6 +190,46 @@ surfaces. Expect **1–3 ERR-class findings per T-phase landing** against a spec
 compiled against. That is not a reason to delay — it is the reason to *start*, and a reason to keep
 the per-landing adversarial-review discipline on **code**.
 
+### C6 — Spec hardening does not precede the assembly.
+
+**The rule.** A spec with no `src/` assembly is **not** hardened ahead of its own T0 landing.
+Findings against such a spec are RECORDED — in the review that found them and in the spec's §7 —
+and DISCHARGED at T0, in the same commit as the code they govern. A spec that *does* have an
+assembly is hardened now, on its own, spec + code + test in one commit.
+
+**Why the split, and why "record" is not "ignore".** The remediation doctrine this project already
+runs on (`football-judgment-proxy-review.md` §6.3) requires *spec section and code patched in the
+same commit*, and this project's standard for a landed fix is a test that **fails when the fix is
+reverted** — the question that found AR pass 6's Medium in the #29/#41 chain. Against a spec with no
+assembly both halves are unexecutable: there is no code to patch and no suite to fail. What ships
+instead is edited prose with nothing enforcing it, which is this project's most persistent defect
+class — most recently the `ERR-008-021`/`-022` chain, where **three consecutive hand-derived
+verification claims were falsified the first time the code was executed**.
+
+**And reading does not find the defects that matter here.** C5's own list is the evidence:
+`ERR-017-002` (an APPROVED spec required overloads distinguished only by generic constraint —
+illegal C#, implemented verbatim in six files, the production assembly never compiled);
+`ERR-024-001` (an entire overlay catalogue was a structural no-op, past PASS-1 review); the June-12
+first full-tree compile finding *eight* never-compiled surfaces; `ERR-030-014` (every match a 0–0
+deadlock for months, past a green 600-tick capstone). Each survived spec review and died on first
+execution. Hardening prose buys nothing against that class; compiling and running it buys
+everything — which is C5's point restated as a sequencing rule.
+
+**Third reason — `[GT]`s.** P5 / KD-W1 already forbids landing a tuned constant that governs an
+unwired subsystem. A constant written into a spec that has no assembly at all is strictly worse: it
+is a guess the calibration pass must rewrite, and it accrues `[CROSS]` / `[CROSS-PENDING]`
+citations in consuming specs before it has ever produced a number.
+
+**What C6 is NOT.** It is not "implement all 20 assembly-less specs first." §6 defers fourteen of
+them past PM-3 on purpose, and §10 is explicit that finishing the specification set is not this
+roadmap's job. The implementation order is unchanged — it stays this document's. C6 governs only
+where hardening work *attaches*: **inside the landing, never ahead of it.**
+
+**Standing consequence for the live backlog.** Six specs carrying itemized findings in the
+football-judgment proxy review have no `src/` assembly — **#31, #34, #36, #43, #46, #54** — and they
+hold **8 of the 32 open findings**. Those eight are deferred to their specs' T0 landings by this
+rule; the other 24 are workable today and are that backlog's actual queue.
+
 ---
 
 ## 5. The roadmap
@@ -485,6 +525,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.21 | August 21, 2026 | **New constraint C6 — spec hardening does not precede the assembly.** Recorded after a review of a proposed "upgrade every legacy spec first, then implement" pipeline. The rule: a spec with no `src/` assembly is not hardened ahead of its own T0 landing — findings against it are RECORDED and discharged at T0, in the same commit as the code they govern; a spec that has an assembly is hardened now, spec + code + test in one commit. **Three grounds, all already in this document or its evidence base:** the remediation doctrine (`football-judgment-proxy-review.md` §6.3) requires spec + code in the same commit and this project requires a fix to be locked by a test that fails when reverted — both unexecutable with no assembly, leaving edited prose with nothing enforcing it (the `ERR-008-021`/`-022` chain falsified three consecutive hand-derived verification claims on first execution); C5’s own list shows the defects that matter here are found by the compiler and the first run, not by reading; and P5/KD-W1 already refuses `[GT]`s over unwired subsystems, which a spec with no assembly is a fortiori. **C6 is explicitly not "implement all 20 first"** — §6 defers fourteen past PM-3 and §10 disclaims finishing the spec set; the implementation order is unchanged. Live consequence: 6 of the finding-bearing specs have no assembly (#31, #34, #36, #43, #46, #54), holding 8 of the 32 open proxy-review findings, now deferred to their T0 landings; the other 24 are the backlog’s actual queue. Companion landing: `docs/tracking/data-contract-index.md`, a pointer-only entity → owning spec § → assembly index (it restates no field, type or range — the specs remain the sole authority). Doc-only; no `.cs` changed. |
 | v0.20 | August 12, 2026 | **A4a RAN — the round-resolution quick-sim is fitted against the engine for the first time, and both KD-8 acceptance bars are recorded FAILED for reasons that are not fit failures.** Step 0 re-run PASSED (+4.000 / −3.500). 198 real `MatchEngine` matches over 11 `dSquad` buckets, ~1.4 h across four processes. Fitted: **`QuickSimBaseGoals` 1.35 → 1.2325, `QuickSimGoalRatingSlope` 0.35 → 0.2162, `QuickSimHomeAdvantageRating` 0.30 → 0.4996**. **A goal-rate measurement worth carrying forward: 3.09/match grid-weighted.** **⚠️ CORRECTED August 12, 2026 by the goal-rate match-realism pass:** 3.09 is the grid-weighted mean and the grid samples `dSquad` −5…+5 uniformly, which a real season does not. Balanced fixtures (`dSquad ≈ 0`, n=198) give **2.70 ± 0.13 vs football's ~2.7 (0.02σ)**; league-weighted 2.93 ± 0.15 (not significant). **No overshoot, no defect, no `[GT]` moved.** Two findings filed: **`ERR-030-033`** — KD-8's ±0.25 per-bucket bar sits below the sampling error of the corpus KD-8 itself sizes (15 of 22 bucket-sides have a larger standard error than the whole bar), so as specified it is unmeetable by any model and needs re-specifying rather than re-running — **RESOLVED later the same day: KD-8 A1–A5 restate it against the corpus's measured precision (per-cell `max(0.25, 2·se)` with ±0.25 kept as a FLOOR, bounded exceedances, a pooled `χ² ≤ χ²₀.₉₅(cells−3)`, an 18/bucket scoreability floor, an n ≥ 250 W/D/L depth pin), and the same fit then reads mean agreement PASS at worst |z| = 2.06, pooled χ² = 16.0 on 19 dof vs 30.1**; **`ERR-030-034`** — the engine's scorelines are over-dispersed relative to KD-7's Poisson shape (z = +5.40), producing far fewer draws than the model can, which is a second-moment gap no mean-shaping parameter closes. **Successor PRE-DECIDED and gated (August 12, 2026): `league-bootstrap-design.md` KD-7a** — NB2 (`var = μ(1+αμ)`) with `NegativeBinomialInverseCdf` pinned by name and algorithm, one uniform per side, sub-streams unchanged, and `α = 0` routing to today's Poisson path verbatim so the successor is a strict superset. **Not adopted**, on four measured gates: α is not determined by this corpus (0.0773 vs 0.1552, one cell carrying 36% of the weighted fit); NB2 closes only ~0.3 pp of the 7.6 pp draw gap; the draw deficit's mechanism is unestablished (the family that would explain it needs negative home/away correlation, measured +0.044 ± 0.073); and the capture predates the defensive wiring that moves second moments. Formerly stated inline and is the surviving half of risk row 1. Both deliberately left as owner decisions. Harness gained a sample-window knob so a single bucket can be deepened in parallel; the fitter now emits per-bucket standard errors and the dispersion test so a verdict is interpretable; `RoundResolutionFitLockTests` pins the result. Two methodology properties were **verified rather than assumed** — a slice reproduces byte-for-byte in isolation, and the split ±6 run reproduced the sanctioned pilot's 20 rows exactly. |
 | v0.19 | August 7, 2026, evening | **B9c gate-verified, and the "no SDK in the authoring environment" era is over: `dotnet-sdk-8.0` installs from the Ubuntu apt archive (8.0.129) even though the dot.net installer is proxy-blocked** — owner-surfaced; every future landing should run the gate locally rather than deferring to CI. Gate: build 0 errors; ClientApp.Tests 15/15 on first execution; the FR-UI-001 scan fired on the new assembly as designed (`client-app` sanctioned, UiFramework.Tests 50/50); MatchEngine.Tests 434/2/10 — **both failures verified pre-existing at origin/main `9b8a7b4` by executing exactly those two tests there** (`sim_match_engine_close_chance` meanCosine −0.119 vs −0.10; `sim_match_engine_keeper_contact` deepDiveEarly = 1). Filed as a root OPEN ISSUES entry owned by the realism track (the close-chance and conversion-at-contact surfaces): every CI run on any branch cut from main reports these two until they are fixed or re-banded — the known floor, not a branch regression. PR #310 tracks the B9c branch. |
 | v0.18 | August 7, 2026, later same day | **B9b's blocker cleared — the screen-catalogue layering decision resolved by the owner and landed as B9c: new assembly `src/client-app/` above `ui-framework`.** The four screens' `ScreenId` catalogue and `ClientScreenFlow` navigation graph are gate-compiled and test-locked (15 tests), so B9b now binds a fully decided surface: enablement from `MatchControlAvailability`, speeds from `PlaybackSpeedLadder`, navigation from `ClientScreenFlow`. The `match-engine` composition-root precedent carried the decision; `match-client-unity` was rejected as gate-invisible (§12 rule 1). §6 item 2's C3 management screens inherit the same home by precedent when P7 opens them. **No sim reach** — no schema bump, no RNG stream / domain tag / draw site, no behaviour change; nothing existing references the new assembly. **Gate not runnable** in the landing environment (no .NET SDK; CI on push is the compiler), same caveat and resolution as v0.17. |

@@ -12,7 +12,48 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 17, 2026 (**The shot-lane chain is REFUTED as the cause of the held-red
+> **Last Updated:** August 21, 2026 (**Sequencing rule C6 recorded: spec hardening does not precede
+> the assembly — plus the pointer index that replaces a rejected `DATA_SCHEMA.md`.**) Doc-only; **no
+> `.cs` file touched.** Prompted by a review of an externally-suggested "upgrade every legacy spec
+> with a Gen-5 model first, then implement" pipeline. **What was rejected and why:** a blanket rewrite
+> of all 53 specs (this project's most recurring bug class is cross-reference cascades — `XC-`/`FM-`/
+> `EC-`/`ERR-` ids and `[CROSS]` citations — and a 53-way rewrite by a model that cannot see the other
+> 52 is a cascade generator; it would also re-open the ERR back-props landed since May, and its
+> suggested "fixed-point float" type contracts contradict the Stage-0 `float` / Stage-5 Fixed64
+> decision), and a master `DATA_SCHEMA.md` (a second authority over contracts #27/#30/#16 already own
+> — the parallel-surface defect this project has hit as `LineupSelector.CanSelect`, the three copies
+> of the `Save` signature, and the two hand-copied cursor walks). **What was kept:** the spec-only
+> test-generation check, folded forward onto NEW specs at promotion with the pass bar changed from
+> "the test file compiles" to *the test fails when the fix is reverted* — because compiling-and-green
+> is exactly what this project's tautological locks already were. **NEW:** `docs/tracking/data-contract-index.md`
+> v1.0 — entity → owning spec § → assembly, pointer-only, with §0's three rules (restate nothing /
+> the pointer targets win / rows not columns). Two of its rows did not resolve on verification and
+> were corrected before landing rather than shipped: `ScreenId` lives in `ui-framework` (it is
+> `ClientScreens` that `client-app` owns), and **four `#16 §2.3` names — `DeterminismContext`,
+> `PhaseDigest`, `RngStreamKey`, `RngCursor` — have no type of that name in `src/deterministic-sim/`**;
+> recorded in the index as an observation, not filed as a defect. **Modified:**
+> `docs/tracking/path-to-playable-roadmap.md` (v0.21 — new constraint **C6**, the normative source: a
+> spec with no `src/` assembly is not hardened ahead of its own T0 landing; findings are RECORDED and
+> discharged at T0, in the same commit as the code they govern. Three grounds, all already in the
+> repo: §6.3 requires spec + code in one commit and a fix is not landed until a test fails when
+> reverted — both unexecutable with no assembly; C5's own list shows the defects that matter here die
+> on first execution, not on re-reading; and P5/KD-W1 already refuses `[GT]`s over unwired subsystems.
+> **C6 is explicitly NOT "implement all 20 first"** — §6 defers fourteen past PM-3 and §10 disclaims
+> finishing the spec set; the implementation order is unchanged),
+> `docs/tracking/football-judgment-proxy-review.md` (new §6.3 **assembly-less class** + header entry —
+> six finding-bearing specs have no assembly, #31/#34/#36/#43/#46/#54, holding **8 of the 32 open
+> findings**, now deferred to their T0 landings; **the counts are unchanged — 34 recorded, 2 fixed, 32
+> open** — this reclassifies *when* 8 of them are workable, not whether, and leaves 24 as the
+> backlog's actual queue), `CLAUDE.md` (the C6 sentence on the live-gap paragraph + a TRACKING
+> DOCUMENTS row), `docs/tracking/file-manifest.md`, `docs/tracking/CHANGELOG.md`. **Verification:**
+> `tools/recurring-defect-lint.py` reports **0 findings of any class against all six changed files**.
+> Tree-wide it now reports **1 ERROR**, pre-existing and unrelated —
+> `src/match-viewer/tests/LiveMatchStreamerTests.cs:1` FR-CS-057 (`// Modified: 2026-07-27` vs a
+> 2026-08-15 version row, from the P4b landing) — which means the "0 ERROR tree-wide" state recorded
+> on August 8 has since regressed and was NOT re-derived; left unfixed as out of scope and reported.
+> No gate run: no `.cs` changed.
+
+> **Last Updated (prior):** August 17, 2026 (**The shot-lane chain is REFUTED as the cause of the held-red
 > close-chance band, C1's cost is priced, and `ERR-008-023` finally has a body entry.**) A salvage
 > of `claude/shot-lane-regression-bisect-vflxc2`, a branch that measured all this on August 10 and
 > never merged; ported onto `main` selectively, and what was dropped in the port matters as much as
