@@ -77,7 +77,20 @@
 # comment, for what the tool cannot see — and if a claim shape is worth
 # learning, it will be sitting in that list under its own file and line.
 #
-# The same rule governs the answer side. ANSWER_KINDS holds exactly one entry,
+# Round 19 (H15): that sentence was FALSE for one whole class until this
+# round, and it was false in the way this file keeps finding — "reads as a
+# command" was a HAND-WRITTEN LIST of binary names. A claim quoting a binary
+# on neither curated list (`comm`, `tac`, `pcregrep`, `tree`, `nl`, `du`) was
+# dropped by check_claim with no bucket, no count and no line, and could not
+# reach the census either, because the claim shape HAD bound the span. The
+# test is a positive SHAPE now — a binary-shaped head plus an argument only a
+# command takes — so a binary nobody here has heard of is named rather than
+# vanishing. Latent when found (0 live instances), which makes it a false
+# statement about coverage rather than a missed defect; it was the statement
+# that had to change.
+#
+# The same rule governs the answer side. ANSWER_KINDS holds exactly one entry
+# — DERIVED from the shapes that name it, never written out (round 19, H18) —
 # and the single-integer floor above is real; a claim whose command prints
 # prose, a table or a multi-line report lands in `not-a-single-integer`, which
 # is a count of what a second answer kind would be worth.
@@ -204,9 +217,12 @@
 #   2 = THIS TOOL COULD NOT DO ITS JOB, so its result is not a verdict on any
 #       document: a usage error, a named surface missing from the tree, a
 #       surface glob matching no file, fewer claims executed than
-#       MIN_EXECUTED_CLAIMS, or the doc-consistency-check.py import CHECK 1's
-#       dated-record excusal depends on failing to load or missing the surface
-#       this file calls through it (round 17, M13). It outranks 1 and 3,
+#       MIN_EXECUTED_CLAIMS, fewer LIVE (gate-capable) claims than
+#       MIN_LIVE_CLAIMS (round 19, H13), CHECK 2's own recall below its
+#       floors (round 19, H17 — until then, blinding CHECK 2 completely still
+#       printed PASS and exited 0), or the doc-consistency-check.py import
+#       CHECK 1's dated-record excusal depends on failing to load or missing
+#       the surface this file calls through it (round 17, M13). It outranks 1 and 3,
 #       because with the surface set (or the import) broken, the mismatches
 #       that were found are not the mismatches that exist. Before H9 existed,
 #       deleting 8 of the 9 named surfaces printed eight MISSING SURFACE
@@ -527,23 +543,89 @@ _HEAD_SHAPE = re.compile(r"(?:\.{1,2}/)?[A-Za-z0-9_][A-Za-z0-9_.-]*"
 # dropping a binary without adding it here would move its claims from a NAMED
 # decline to an invisible one, which is the decline contract failing in the
 # direction this file calls its worst.
+#
+# ROUND 19 (H15). This list is no longer the GATE, only a supplement to one.
+# It could not be a gate: a runnable claim whose binary was on neither curated
+# list (ALLOWED_CMDS or this) was dropped with no bucket, no count and no
+# line — `check_claim` returned ("ignored", None), and `unrecognised_spans`
+# could not recover it either, because the span WAS bound so its start sits in
+# `bound`. `comm -12 a b \| wc -l`, `tac`, `pcregrep`, `tree`, `nl` and `du`
+# claims were therefore invisible on BOTH routes, which made two sentences of
+# this file's own header false — including "every backticked span that reads
+# as a command ... is counted and named in the unrecognised-shape bucket. Read
+# that bucket, not this comment, for what the tool cannot see." The blind spot
+# WAS the hand-written list, which is the shape the SAFETY section names as
+# this file's recurring root error, arriving on the census side.
+#
+# The list stays because it can only ADD recognition: it names heads whose
+# ARGUMENTS carry no command-shaped evidence (`npm install`, `make`) and which
+# the positive test below would otherwise refuse. Removing a name from it can
+# lose a decline; adding one can never cost anything.
 _KNOWN_BINARIES = frozenset((
     "dotnet", "curl", "wget", "ps", "bash", "sh", "zsh", "make", "npm", "npx",
     "node", "python", "python3", "pip", "docker", "jq", "tee", "xargs", "sed",
     "unity", "dos2unix", "pwsh", "powershell",
 ))
 
+# The POSITIVE test (round 19, H15), replacing "is this head on a list I wrote"
+# with "does this span carry the evidence a command carries". Three parts, and
+# each was chosen against the live corpus rather than from taste:
+#   * a BINARY-SHAPED head — all lower case, the shape every real binary name
+#     on any of these lists has, and the shape a C# identifier (`PascalCase`,
+#     `UPPER_SNAKE`) never has;
+#   * at least one ARGUMENT that only a command takes — an option token, a
+#     filename with an extension, or a path with a directory separator whose
+#     last segment carries an extension or is empty (`src/`);
+#   * measured noise. Head-shape alone took the unrecognised-shape census from
+#     132 to 1297 on this tree, drowning every real entry in prose whose first
+#     word happens to be lower case (`public readonly byte[]`, `is available
+#     to`, `var = μ(1+αμ)`) — a census nobody reads is the silent skip wearing
+#     a bucket label. With the argument test it is 132 -> 140, and nothing the
+#     old predicate named is lost.
+# A NEGATIVE NUMBER is excluded from the option test explicitly: `-0.7` and
+# `-1f` are how this corpus writes constants, not how anything writes a flag.
+_BINARY_HEAD = re.compile(r"[a-z][a-z0-9_.+-]*\Z")
+_OPTION_TOKEN = re.compile(r"--?[A-Za-z0-9]")
+_NEGATIVE_NUMBER = re.compile(r"-\d+(?:\.\d+)?[A-Za-z]?\Z")
+_FILENAME_TOKEN = re.compile(r"[A-Za-z0-9_*?+-][A-Za-z0-9_*?.+-]*"
+                             r"\.[A-Za-z][A-Za-z0-9]{0,7}\Z")
+_PATH_TOKEN = re.compile(r"[A-Za-z0-9_*?.+-]+(?:/[A-Za-z0-9_*?.+-]*)+\Z")
+
+
+def _command_operand(tok):
+    """True when `tok` is an argument only a COMMAND takes — an option, a
+    filename with an extension, or a real path. `L/2`, `base/compactness` and
+    `IEventA/IEventB` are paths by punctuation and by nothing else, so a path
+    must end in a directory separator or carry an extension in its last
+    segment."""
+    if _OPTION_TOKEN.match(tok) and not _NEGATIVE_NUMBER.match(tok):
+        return True
+    if _FILENAME_TOKEN.match(tok):
+        return True
+    if _PATH_TOKEN.match(tok):
+        return tok.endswith("/") or "." in tok.rsplit("/", 1)[1]
+    return False
+
 
 def command_shaped(cmd, head):
     """True when this backticked span reads as a shell command rather than an
     identifier — the discriminator that lets an unlisted BINARY be named
-    without also naming every version-bump arrow in the corpus."""
-    if " " not in cmd.strip():
+    without also naming every version-bump arrow in the corpus.
+
+    Round 19 (H15): the head test is a SHAPE plus argument evidence, not a
+    membership test against a hand-written list. See the two comment blocks
+    above for the measurement that set the argument rule."""
+    cmd = cmd.strip()
+    if " " not in cmd:
         return False
     if not _HEAD_SHAPE.match(head):
         return False
-    return ("/" in head or head.endswith((".py", ".sh"))
-            or head in _KNOWN_BINARIES)
+    if ("/" in head or head.endswith((".py", ".sh"))
+            or head in _KNOWN_BINARIES):
+        return True
+    if not _BINARY_HEAD.match(head):
+        return False
+    return any(_command_operand(tok) for tok in cmd.split()[1:])
 
 
 TIMEOUT_S = 60
@@ -608,11 +690,58 @@ NEGATOR = re.compile(
 #   * an explicit CURRENCY ASSERTION pierces the excusal. A record that says
 #     the command returns N *now* is making a present-tense claim wherever it
 #     sits, and is reported like any other.
-# Regions come from that module (frozen header chain, log body, archive) so the
-# two tools cannot disagree about which bytes are frozen.
+# Regions come from that module (frozen header chain, VERSION HISTORY
+# sections, log body, archive) so the two tools cannot disagree about which
+# bytes are frozen. Round 19 (H13): the VH half of that list was missing here
+# for six rounds while the sibling excused it, and the spans are now DERIVED
+# from the sibling's own blanking rather than re-listed — see
+# dated_record_regions() and _blanked_runs() below.
 CURRENCY_ASSERTION = re.compile(
     r"\b(?:now|currently|today|at\s+HEAD|as\s+of\s+(?:today|HEAD))\b", re.I)
 CURRENCY_RADIUS = 120
+
+
+def _blanked_runs(text, blanked):
+    """The maximal spans in which `blanked` differs from `text`.
+
+    Round 19 (H13). `blank_frozen_history` is OFFSET-PRESERVING by contract
+    (a space per non-newline character, a newline per newline), so the set of
+    bytes it froze is recoverable exactly: they are the positions where the
+    two strings disagree. Deriving the spans that way is what makes the
+    import mean what its docstring says it means — the sibling and this file
+    cannot disagree about which bytes are frozen, because there is only one
+    computation and this reads its result rather than re-listing a subset of
+    its inputs.
+
+    Compared LINE BY LINE, not character by character: a whole-corpus
+    character diff is ~8 MB of Python-level comparisons per run, while a line
+    compare is one C-level `!=` for the ~99% of lines that are untouched.
+    Consecutive differing lines are one run, and two runs separated by
+    nothing but whitespace are merged — a blank line inside a Version History
+    section is blank-invariant (a newline maps to a newline) and must not cut
+    the section into pieces."""
+    runs, pos, start, last_end = [], 0, None, 0
+    for line in text.splitlines(keepends=True):
+        n = len(line)
+        seg = blanked[pos:pos + n]
+        if seg != line:
+            diff = [i for i in range(n) if seg[i] != line[i]]
+            if start is None:
+                start = pos + diff[0]
+            last_end = pos + diff[-1] + 1
+        elif start is not None:
+            runs.append((start, last_end))
+            start = None
+        pos += n
+    if start is not None:
+        runs.append((start, last_end))
+    merged = []
+    for span in runs:
+        if merged and not text[merged[-1][1]:span[0]].strip():
+            merged[-1] = (merged[-1][0], span[1])
+        else:
+            merged.append(span)
+    return merged
 
 
 def dated_record_regions(rel, text):
@@ -622,19 +751,36 @@ def dated_record_regions(rel, text):
     this caller used to violate — "computed on the same (frozen-history-
     blanked) text the scans read, so the offsets agree" — while this function
     passed RAW text. It was harmless only because `blank_frozen_history` is
-    offset-preserving (a space per non-newline character, a newline per
-    newline), which is a property of that function's IMPLEMENTATION, not a
-    contract this file was entitled to assume. HONOURED HERE rather than
-    replaced with a new assertion: `record_regions` is now called on the same
-    blanked text `doc-consistency-check.py`'s own scans read, so the two
-    tools' notion of "which bytes are frozen" cannot diverge by construction —
-    which is the whole reason this file imports that module instead of
-    restating the definition."""
+    offset-preserving, which is a property of that function's IMPLEMENTATION,
+    not a contract this file was entitled to assume. HONOURED HERE rather
+    than replaced with a new assertion: `record_regions` is now called on the
+    same blanked text `doc-consistency-check.py`'s own scans read.
+
+    ROUND 19 (H13) — THE HALF THAT WAS STILL WRONG, and it was the important
+    half. This function called `blank_frozen_history` only as INPUT to
+    `record_regions` and then THREW THE BLANKING AWAY, returning
+    `record_regions` plus a separately re-listed `frozen_chain_span`. But
+    that function freezes TWO things, not one: the header chain below its
+    head entry AND every `Version History` section (its own docstring: "a VH
+    row is a dated record of its own revision and states no currency"). So
+    the sibling excused a mismatch in a VH row and this tool GATED on it —
+    the two tools disagreeing about which bytes are frozen, in the one file
+    that imports the other specifically so they cannot.
+
+    Not hypothetical, and not a corner: VH is 5.9% of the scanned corpus and
+    FOUR of the six claims this tool executed sat inside one, two of them
+    `ls -d src/*/ \| wc -l` -> 35 in rows whose own neighbours read "left as
+    written per the do-not-rewrite-history convention". CI would have gone
+    red on two correct historical records the day a 36th assembly landed —
+    verbatim the hazard the dated-record model was introduced to prevent,
+    and the reason the round-12 CHANGELOG entry had to be reworded by hand.
+
+    The currency pierce is unchanged: a VH row that says the command returns
+    N *now* is a present-tense claim wherever it sits, and `currency_asserted`
+    still reports it."""
     blanked, _frozen, _pierced = DCC.blank_frozen_history(text)
     spans = list(DCC.record_regions(rel, blanked))
-    chain = DCC.frozen_chain_span(text)
-    if chain:
-        spans.append(chain)
+    spans.extend(_blanked_runs(text, blanked))
     return tuple(spans)
 
 
@@ -778,8 +924,45 @@ SURFACE_GLOBS = ("docs/specs/*/section-*.md", "docs/specs/*/appendices.md")
 # with the reason recorded in the Version History row beside it, because
 # lowering it silently is how the vacuous-pass failure class comes back.
 MIN_EXECUTED_SLACK = 2
-# Re-derived 2026-08-21 by the invocation above: 6 executed and compared.
+# Re-derived 2026-08-22 by the invocation above: 6 executed and compared.
 MIN_EXECUTED_CLAIMS = 6 - MIN_EXECUTED_SLACK
+
+# ---------------------------------------------------------------------------
+# THE LIVE FLOOR (round 19, H13) — the one that states this tool's real reach.
+#
+# MIN_EXECUTED_CLAIMS counts every claim the tool RAN. Five of the six it runs
+# on this tree sit inside a dated record, where a mismatch is EXCUSED: the
+# command still executes, the divergence is still printed, and CI stays green
+# by design. That is worth having — it is how "this historical figure no
+# longer reproduces" stays visible — but it is not drift-catching coverage,
+# and a floor built on it protects mostly frozen text. Until H13 the two were
+# fused, and the headline "6 executed (floor 4)" described a live coverage of
+# ONE.
+#
+# So the honest figure gets its own floor. Re-derived 2026-08-22, the same way
+# and by the same invocation: read the "... of which LIVE (can gate)" line.
+#
+#     live claims: 1   (1 distinct command: `ls docs/tracking/*-design.md
+#                       \| wc -l` -> 60, root CLAUDE.md's design-supplement
+#                       count — the flagship instance this tool was written
+#                       for, whose own sentence records that it read 42 while
+#                       the truth was 60 and nobody noticed)
+#
+# MIN_EXECUTED_SLACK is deliberately NOT applied here, and that is the whole
+# decision: at a measurement of 1, any slack at all puts the floor at zero,
+# which is the vacuous pass this section exists to deny. A floor of 1 means
+# deleting that one sentence from CLAUDE.md turns CI red — correct, because
+# it would take this tool's live coverage to nothing, and a checker that can
+# reach zero coverage while printing PASS is the failure class this project
+# files as High.
+#
+# THE NUMBER IS THE POINT, NOT A PROBLEM TO BE ENGINEERED AWAY. It did not
+# drop because H13 narrowed anything: the claims are the same six, sitting
+# where they always sat. What changed is that the tool stopped counting
+# frozen historical records as live coverage. The way to raise it is to write
+# more checkable claims in live text — re-derive and raise this floor in the
+# same commit when that happens.
+MIN_LIVE_CLAIMS = 1
 
 # ---------------------------------------------------------------------------
 # SEAM 1 — ANSWER KINDS (round 16, H11).
@@ -789,8 +972,35 @@ MIN_EXECUTED_CLAIMS = 6 - MIN_EXECUTED_SLACK
 # single_integer() read-back, the `not-single-int` decline bucket, the `!=`
 # comparison and the FAIL text. A second answer kind — a pair, a version
 # string, "prints nothing" — therefore meant editing all six, which is how a
-# floor becomes permanent. It is ONE object now: add a class here, name it on
-# a claim shape, and nothing in scan() changes.
+# floor becomes permanent. It is ONE object now: add a class here and name it
+# on a claim shape.
+#
+# ROUND 19 (H18) — WHAT THAT SENTENCE USED TO CLAIM, AND WHY IT WAS WRONG. It
+# read "...and nothing in scan() changes". Executed literally, it crashed: a
+# `PairAnswer` with bucket `not-a-pair` raised `KeyError: 'not-a-pair'`,
+# because scan()'s `declined` dict was built from DECLINE_BUCKETS — a module
+# table this banner never mentioned — and the traceback exited 1, the code
+# meaning "a document is wrong", the collision round 17 (M14) spent a whole
+# fix separating. Three smaller leaks in the same seam: ANSWER_KINDS was a
+# hand-written tuple (a duplicate of the truth, in the tool whose thesis is
+# that hand-maintained figures drift), every shape regex hard-coded the
+# integer value pattern (shapes and answers were a CROSS-PRODUCT, not two
+# orthogonal seams), and `answer.parse` may return a bucket its class never
+# declares.
+#
+# All four are closed: ANSWER_KINDS is DERIVED from the shapes, the decline
+# table is DERIVED from DECLINE_BUCKETS plus each kind's own bucket
+# (decline_bucket_order), an unforeseen bucket is counted rather than fatal
+# (record_decline), and the stated-value grammar lives on the answer kind
+# with each shape's regex built from it. What is STILL true rather than
+# aspirational, stated so this banner stops over-promising: registering a
+# kind and naming it on a shape is enough for scan() to run, count and print
+# it. What a new kind still touches outside this section is the SHAPE regex
+# it is named on — the text AROUND the value placeholder (shape 1's
+# `[^0-9`\n]{0,18}` run, for instance) is written for a value made of
+# digits, so a radically different grammar wants its own shape, not just its
+# own answer. That is a real limit and it is smaller than the one this
+# banner used to hide.
 #
 # An answer kind owns four things:
 #   parse(text, start, end) -> (value, None) | (None, (bucket, reason))
@@ -846,6 +1056,15 @@ class SingleIntegerAnswer:
     name = "single-integer"
     bucket = "not-single-int"
     unreadable = "output is not a single integer"
+    # Round 19 (H18). The STATED-VALUE grammar belongs to the answer kind, not
+    # to each claim shape: it used to be hard-coded as `\d[\d,]*` inside all
+    # four shape regexes, so a second answer kind meant editing every shape —
+    # shapes and answers were a cross-product, not two seams. Each shape's
+    # regex is now BUILT from this, at ClaimShape construction. Deliberately
+    # loose (it is the CAPTURE; `parse` below is what validates it), because
+    # a malformed transcription must reach a NAMED decline rather than fail
+    # to match and vanish.
+    value_pattern = r"\d[\d,]*"
 
     def parse(self, text, start, end):
         before = text[max(0, start - 24):start]
@@ -887,7 +1106,10 @@ class SingleIntegerAnswer:
 
 
 SINGLE_INTEGER = SingleIntegerAnswer()
-ANSWER_KINDS = (SINGLE_INTEGER,)
+# ANSWER_KINDS is DERIVED from CLAIM_SHAPES below, never written out here —
+# round 19 (H18). It was a hand-maintained duplicate referenced at exactly one
+# site (a printed count) in the one tool whose entire thesis is that
+# hand-maintained figures drift.
 
 
 # ---------------------------------------------------------------------------
@@ -911,12 +1133,18 @@ NEGATION_LOOKBACK = 40
 
 
 class ClaimShape:
-    """One recognised claim shape."""
+    """One recognised claim shape.
 
-    def __init__(self, name, regex, answer=SINGLE_INTEGER):
+    `template` is a regex with one `{value}` placeholder, filled from the
+    ANSWER KIND's own `value_pattern` — round 19 (H18). Substituted textually
+    rather than through `str.format`, because a regex is full of braces
+    (`{0,40}`) that `format` would try to read as fields of its own."""
+
+    def __init__(self, name, template, answer=SINGLE_INTEGER):
         self.name = name
-        self.regex = regex
         self.answer = answer
+        self.regex = re.compile(
+            template.replace("{value}", answer.value_pattern), re.I)
 
     def find(self, text):
         return self.regex.finditer(text)
@@ -966,7 +1194,39 @@ class LeadingValueShape(ClaimShape):
     luck, not a rule.
 
     A date is refused rather than declined: there is no claim in
-    "August 18, 2026", so counting one would overstate what was given up."""
+    "August 18, 2026", so counting one would overstate what was given up.
+
+    ROUND 19 (H16). The two date rules were ONE CASE of a general defect, and
+    stating them as two named prefixes left the rest of the class live. The
+    real rule is that a stated value must BEGIN ITS OWN TOKEN: any compound
+    number whose tail digits abut a parenthesised command bound as a stated
+    value, because the shapes' value pattern happily starts mid-token.
+    Reproduced, both correct sentences the tool would have failed CI on:
+
+        §2.2.2 (`grep -c a data.txt`)   -> "document says 2; command returns 3"
+        v1.73 (`cmd`)                   -> "document says 73; command returns 3"
+
+    The first is LIVE TEXT — `docs/specs/code-standards/section-3.md` binds
+    stated value 2 out of "verified against §2.2.2 (`grep -n ... section-2.md`)"
+    — and escaped only because `document_relative_operand` declines that
+    command for a wholly unrelated reason, which is the same luck this
+    class's docstring already warned about for the date case ("they escape
+    only because those backticked spans hold ERR ids rather than runnable
+    commands, which is luck, not a rule"). 216 of the 429 leading-value binds
+    on this tree share the shape: section numbers (`§3.5.`->2), version
+    numbers (`v1.`->73), spec numbers (`#20 §3.`->4), Markdown heading
+    numbers (`### 5.1.`->2) and decimal fractions (`52.`->5).
+
+    So the test is now the general one: the character before the value —
+    ignoring only emphasis markup, which does not join tokens — must not be
+    `.`, `#` or `§`. The date rules stay as they are, both because they catch
+    a form this one does not (the digits of "August 18," DO begin their own
+    token) and because their message names what was refused."""
+
+    # A stated value begins its own token. These three characters are the ways
+    # this corpus continues one: `.` (a section, version, heading or decimal
+    # tail), `#` (a spec number) and `§` (a section number).
+    COMPOUND_TAIL = (".", "#", "§")
 
     def rejects(self, text, m):
         before = text[max(0, m.start("value") - 32):m.start("value")]
@@ -974,6 +1234,12 @@ class LeadingValueShape(ClaimShape):
             return "the integer is the YEAR of a date, not a stated value"
         if DATE_DAY_BEFORE.search(before):
             return "the integer is the DAY of a date, not a stated value"
+        # `rstrip` over emphasis only: "**35**" is a stated value whose token
+        # begins at the 3, while "§2.2.**2**" is still a section number.
+        if before.rstrip("*_").endswith(self.COMPOUND_TAIL):
+            return ("the integer is the last component of a COMPOUND number "
+                    "(a section, version, spec, heading or decimal), not a "
+                    "stated value — a stated value begins its own token")
         return None
 
 
@@ -1018,13 +1284,12 @@ _REPORT_VERB = (
 # SHAPE 1 — command, then the stated value: "`cmd` → 18", "`cmd` returned 218".
 # The gap is deliberately tight — round 8's H4 showed that a loose lookahead
 # binds across unrelated clauses.
-CLAIM = re.compile(
+CLAIM = (
     r"`(?P<cmd>[^`\n]{4,200})`"          # the command
     r"(?P<gap>[^`\n]{0,40}?)"            # short gap, no intervening code span
     r"(?:→|->|\b(?:" + _REPORT_VERB + r")\b)"
     r"[^0-9`\n]{0,18}"
-    r"\*{0,2}(?P<value>\d[\d,]*)\*{0,2}",
-    re.I)
+    r"\*{0,2}(?P<value>{value})\*{0,2}")
 
 # SHAPE 2 — command, then a COLON, then the stated value:
 # "`python3 tools/recurring-defect-lint.py --repo .`: **0 ERROR**".
@@ -1032,10 +1297,9 @@ CLAIM = re.compile(
 # anywhere inside shape 1's 40-character gap would bind across an unrelated
 # clause, which is the defect round 8 filed. Adjacency makes the form
 # unambiguous, and it is the form this repo's gate lines actually use.
-CLAIM_COLON = re.compile(
+CLAIM_COLON = (
     r"`(?P<cmd>[^`\n]{4,200})`(?P<gap>\s*:\s*)"
-    r"\*{0,2}(?P<value>\d[\d,]*)\*{0,2}",
-    re.I)
+    r"\*{0,2}(?P<value>{value})\*{0,2}")
 
 # SHAPE 3 — the VALUE-FIRST shape: "8 scripts (`ls tools/*.py`)", "35 (`ls -d
 # src/*/ \| wc -l`)". Round 9 (L2) named this as unrecognised AND uncounted and
@@ -1045,11 +1309,10 @@ CLAIM_COLON = re.compile(
 # parenthesis is required: it is this repo's idiom for "and here is how to
 # check it", and without it the pattern would bind any number near any
 # backtick.
-CLAIM_VALUE_FIRST = re.compile(
-    r"\*{0,2}(?P<value>\d[\d,]*)\*{0,2}"
+CLAIM_VALUE_FIRST = (
+    r"\*{0,2}(?P<value>{value})\*{0,2}"
     r"(?P<gap>(?:\s+[A-Za-z][\w./-]*){0,4}\s*)"
-    r"\(\s*`(?P<cmd>[^`\n]{4,200})`\s*\)",
-    re.I)
+    r"\(\s*`(?P<cmd>[^`\n]{4,200})`\s*\)")
 
 # SHAPE 4 — the value, then an ATTRIBUTION CLAUSE, then the command:
 #   "(60 files — re-derived by `ls docs/tracking/*-design.md \| wc -l` …)"
@@ -1101,14 +1364,13 @@ _ATTR_POST = r"[^`;\"'.]{0,40}?"
 # to letters, spaces and hyphens, so it cannot cross a clause the way the
 # 80-character draft did.
 _ATTR_BARE = r"[A-Za-z \t-]{0,24}?"
-CLAIM_ATTRIBUTED = re.compile(
-    r"\*{0,2}(?P<value>\d[\d,]*)\*{0,2}"
+CLAIM_ATTRIBUTED = (
+    r"\*{0,2}(?P<value>{value})\*{0,2}"
     r"(?P<gap>(?:" + _ATTR_PRE + r"\b" + _ATTRIBUTION_VERB + r"\b"
     + _ATTR_POST + r"\b(?:by|via|per|using|from)"
     r"|" + _ATTR_BARE + r"\b(?:via|per)"
     r")\s+)"
-    r"`(?P<cmd>[^`\n]{4,200})`",
-    re.I)
+    r"`(?P<cmd>[^`\n]{4,200})`")
 
 
 class AttributedShape(LeadingValueShape):
@@ -1129,6 +1391,10 @@ CLAIM_SHAPES = (
     LeadingValueShape("value-then-parenthesised-command", CLAIM_VALUE_FIRST),
     AttributedShape("value-then-attributed-command", CLAIM_ATTRIBUTED),
 )
+
+# DERIVED, in first-use order, never written out (round 19, H18). Registering
+# an answer kind is naming it on a shape; there is no second place to forget.
+ANSWER_KINDS = tuple(dict.fromkeys(shape.answer for shape in CLAIM_SHAPES))
 
 # Every backticked span, for the unrecognised-shape census below.
 COMMAND_SPAN = re.compile(r"`(?P<cmd>[^`\n]{4,200})`")
@@ -2156,6 +2422,73 @@ FENCE_DECLINE_BUCKETS = (
 )
 
 
+# ---------------------------------------------------------------------------
+# CHECK 2'S COVERAGE FLOOR (round 19, H17).
+#
+# MIN_EXECUTED_CLAIMS gates CHECK 1's recall and NOTHING gated CHECK 2's.
+# Blinding CHECK 2 completely still printed PASS and exited 0 — reproduced on
+# the live tree with one mutation making DECL_CLASS match nothing: "references
+# examined : 1882 (1882 skipped)", every reference skipped, zero examined,
+# success reported, and all 71 tests green throughout. That is the
+# vacuous-pass failure class verbatim — fixed for CHECK 1 at round 16 (H9) and
+# never applied here, because CHECK 2's counters (round 17, M14) were added
+# without a gate to hang them on. It is reachable without a code change too:
+# `_CSHARP_TAGS` is ("csharp", "cs"), so a corpus that starts writing ```C#
+# silently zeroes the whole check.
+#
+# The floors are SHARES of what the corpus offers, not absolute counts, and
+# that is a deliberate departure from how MIN_EXECUTED_CLAIMS is written. An
+# absolute floor derived from this tree (101 fence files, 198 references
+# examined-not-skipped) is a floor no smaller corpus can meet — including
+# this file's own test fixtures, where the intended verdict is PASS on one
+# spec file holding one fence. A share is scale-free: it is 1.00 on a
+# one-fence fixture, 0.40 and 0.11 here, and 0.00 under either blinding
+# above, which is the only property the gate needs.
+#
+# RE-DERIVED 2026-08-22 by `python3 tools/doc-claim-check.py --repo .`:
+#     spec files with any fence   : 251
+#     ... with a csharp/cs fence  : 101   -> share 0.40
+#     references examined         : 1882
+#     ... not skipped             : 198   -> share 0.11
+# Each floor sits at roughly half its measurement, the same headroom rule
+# MIN_EXECUTED_SLACK expresses: ordinary corpus drift must not turn a green
+# tree red, a blinded check must. Raise them when the shares rise; lower one
+# only with the reason recorded in the Version History row beside it.
+MIN_TYPED_FENCE_FILE_SHARE = 0.20
+MIN_EXAMINED_SHARE = 0.05
+
+
+def fence_coverage_shortfalls(coverage):
+    """Every reason CHECK 2's recall is too low to call this run a verdict.
+
+    Both floors are skipped when their DENOMINATOR is zero, and the third
+    check is what stops that being a hole: a corpus with fenced spec files
+    but not one examinable reference means the REFERENCE matcher itself has
+    collapsed, which no share can express."""
+    fenced, typed, examined, skipped = coverage
+    out = []
+    if fenced and typed / fenced < MIN_TYPED_FENCE_FILE_SHARE:
+        out.append(
+            "only %d of %d fenced spec file(s) yielded a csharp/cs fence "
+            "(%.2f, floor %.2f) — CHECK 2 examined almost nothing, so its "
+            "silence is not a verdict; see CHECK 2'S COVERAGE FLOOR"
+            % (typed, fenced, typed / fenced, MIN_TYPED_FENCE_FILE_SHARE))
+    if fenced and not examined:
+        out.append(
+            "%d fenced spec file(s) and NOT ONE examinable reference — the "
+            "reference matcher has collapsed, so CHECK 2 found nothing "
+            "because it looked at nothing" % fenced)
+    elif examined and (examined - skipped) / examined < MIN_EXAMINED_SHARE:
+        out.append(
+            "%d of %d reference(s) examined were SKIPPED, leaving %.2f "
+            "actually examined (floor %.2f) — a run that skips everything "
+            "reports success for the same reason a blinded one does; see "
+            "CHECK 2'S COVERAGE FLOOR"
+            % (skipped, examined, (examined - skipped) / examined,
+               MIN_EXAMINED_SHARE))
+    return out
+
+
 def _blank_matches(pattern, s):
     """Replace every match of `pattern` in `s` with same-length whitespace —
     a space per non-newline character, the newline itself kept — so every
@@ -2216,10 +2549,16 @@ def _map_offset(offset_map, pos):
 
 def scan_fence_identifiers(repo, quiet=False):
     """Report Type.MEMBER references whose Type the file declares and whose
-    MEMBER it does not. Returns `findings` alone — round 17 (L3) corrected
-    this docstring, which used to promise a `files_with_fences` second return
-    value this function has never actually returned."""
+    MEMBER it does not.
+
+    Returns `(findings, coverage)`, where coverage is
+    `(fenced_files, typed_fence_files, examined, skipped)` — round 19 (H17)
+    needs those four to gate this check's recall, and they were previously
+    printed and thrown away. (Round 17's L3 had corrected this docstring for
+    promising a second return value the function did not have; it has one
+    now, and it is used, not decorative.)"""
     findings = []
+    fenced_files = 0
     files = []
     for pat in SURFACE_GLOBS:
         files.extend(sorted(repo.glob(pat)))
@@ -2233,6 +2572,7 @@ def scan_fence_identifiers(repo, quiet=False):
         fences = list(ANY_FENCE.finditer(text))
         if not fences:
             continue
+        fenced_files += 1
         untagged = [(m.group(2), m.start(2)) for m in fences
                     if m.group(1).lower() not in _CSHARP_TAGS]
         for body, _off in untagged:
@@ -2311,7 +2651,12 @@ def scan_fence_identifiers(repo, quiet=False):
     print("  references SKIPPED (each named) : %s"
           % " / ".join("%d %s" % (decline[b], label)
                        for b, label in FENCE_DECLINE_BUCKETS))
-    return findings
+    skipped = sum(decline.values())
+    print("  coverage floors                : %d/%d fenced files typed "
+          "(floor %.2f), %d/%d references actually examined (floor %.2f)"
+          % (scanned, fenced_files, MIN_TYPED_FENCE_FILE_SHARE,
+             examined - skipped, examined, MIN_EXAMINED_SHARE))
+    return findings, (fenced_files, scanned, examined, skipped)
 
 
 # ---------------------------------------------------------------------------
@@ -2338,6 +2683,42 @@ DECLINE_BUCKETS = (
     ("negated", "negated-or-historical"),
     ("unrecognised-shape", "unrecognised-shape"),
 )
+
+
+def decline_bucket_order():
+    """Every bucket a decline can land in, in print order — DECLINE_BUCKETS
+    plus each registered ANSWER KIND's own unreadable-output bucket.
+
+    Round 19 (H18). The SEAM 1 banner promised "add a class here, name it on
+    a claim shape, and nothing in scan() changes", and executing that promise
+    literally CRASHED: `declined` was built from DECLINE_BUCKETS alone, a
+    module table the banner never mentions, so a new kind whose bucket was
+    not already listed raised `KeyError` out of scan() and exited 1 — the
+    code meaning "a document is wrong", which a previous round spent a whole
+    fix separating from "this tool broke". Derived here instead, so
+    registering a kind cannot forget to register its bucket."""
+    order = list(DECLINE_BUCKETS)
+    known = {bucket for bucket, _label in order}
+    for kind in ANSWER_KINDS:
+        if kind.bucket not in known:
+            known.add(kind.bucket)
+            order.append((kind.bucket, kind.bucket))
+    return tuple(order)
+
+
+def record_decline(declined, order, bucket):
+    """Count one decline, ADDING the bucket to `order` if it is new.
+
+    The derivation above covers every bucket an answer kind DECLARES; an
+    `answer.parse` may still return a second bucket of its own (the live
+    `approximate-or-range` does exactly that). A bucket that reaches this
+    function unlisted is therefore counted and printed rather than crashing —
+    the same rule as everywhere else in this file: never let an unforeseen
+    decline become invisible, and never let it become a traceback."""
+    if bucket not in declined:
+        declined[bucket] = 0
+        order.append((bucket, bucket))
+    declined[bucket] += 1
 
 
 def document_relative_operand(rel, argv, repo):
@@ -2520,7 +2901,10 @@ def scan(repo, quiet=False):
     files, missing = collect_surfaces(repo)
 
     checked = 0
-    declined = {bucket: 0 for bucket, _label in DECLINE_BUCKETS}
+    live = 0                      # executed claims OUTSIDE every record span
+    live_commands = set()         # ... and how many DISTINCT commands they are
+    bucket_order = list(decline_bucket_order())
+    declined = {bucket: 0 for bucket, _label in bucket_order}
     declined_list = []
     findings = []
     excused = []
@@ -2536,7 +2920,16 @@ def scan(repo, quiet=False):
         # otherwise turn this into a ~600-line wall of near-zero percentages
         # that answers a question nobody asked.
         if regions and text and rel in SURFACES:
-            covered = sum(min(e, len(text)) - max(0, s) for s, e in regions)
+            # UNION, not a sum (round 19): since H13 the spans can overlap —
+            # a Version History section inside spec-error-log.md's log body
+            # is covered by both rules — and adding them printed more frozen
+            # bytes than the file has.
+            covered, reach = 0, 0
+            for a, b in sorted((max(0, a), min(b, len(text)))
+                               for a, b in regions):
+                if b > reach:
+                    covered += b - max(a, reach)
+                    reach = b
             region_coverage.append((rel, covered, len(text)))
         claims = collect_claims(rel, text)
         for claim in claims:
@@ -2545,10 +2938,18 @@ def scan(repo, quiet=False):
                 continue
             if outcome == "declined":
                 bucket, why = payload
-                declined[bucket] += 1
+                record_decline(declined, bucket_order, bucket)
                 declined_list.append((rel, claim.line, claim.cmd, why))
                 continue
             checked += 1
+            # Round 19 (H13). WHERE a claim sits decides what executing it is
+            # worth. Inside a dated record the command still runs and a
+            # mismatch is still printed, but it can never gate — so it is not
+            # drift-catching coverage, and counting it as such is how a
+            # headline of 6 came to describe a live coverage of 1.
+            if not any(a <= claim.start < b for a, b in regions):
+                live += 1
+                live_commands.add(claim.cmd)
             stated, got = payload
             if outcome == "excused":
                 excused.append((rel, claim.line, claim.cmd, stated, got))
@@ -2558,7 +2959,7 @@ def scan(repo, quiet=False):
         # The census of shapes NOBODY recognised — H7's self-reporting half.
         bound = {c.cmd_start for c in claims}
         for line, cmd in unrecognised_spans(text, bound):
-            declined["unrecognised-shape"] += 1
+            record_decline(declined, bucket_order, "unrecognised-shape")
             declined_list.append(
                 (rel, line, cmd,
                  "command-shaped, an integer is nearby, and NO claim shape "
@@ -2589,9 +2990,19 @@ def scan(repo, quiet=False):
           % (len(ANSWER_KINDS), ", ".join(a.name for a in ANSWER_KINDS)))
     print("  claims executed and compared  : %d  (floor %d)"
           % (checked, MIN_EXECUTED_CLAIMS))
+    # Round 19 (H13). The headline above is NOT this tool's drift-catching
+    # coverage and must never be read as it: a claim inside a dated record is
+    # executed and its mismatch printed, but it is EXCUSED, so it cannot fail
+    # CI and cannot catch drift. Both figures are printed, on adjacent lines,
+    # with the one that actually gates carrying the floor.
+    print("  ... of which LIVE (can gate)  : %d  (floor %d) — %d distinct "
+          "command(s); the other %d sit inside a dated record, where a "
+          "mismatch is EXCUSED, so they are executed coverage but NOT "
+          "drift-catching coverage"
+          % (live, MIN_LIVE_CLAIMS, len(live_commands), checked - live))
     print("  claims DECLINED (each named)   : %s"
           % " / ".join("%d %s" % (declined[b], label)
-                       for b, label in DECLINE_BUCKETS))
+                       for b, label in bucket_order))
     if not quiet:
         for rel, line, cmd, why in declined_list:
             print("      - %s:%d  %s  [%s]" % (rel, line, cmd[:70], why))
@@ -2630,7 +3041,8 @@ def scan(repo, quiet=False):
             print("      command : %s" % cmd)
             print("      %s" % what)
 
-    dangling = scan_fence_identifiers(repo, quiet)
+    dangling, fence_coverage = scan_fence_identifiers(repo, quiet)
+    fence_blocked = fence_coverage_shortfalls(fence_coverage)
     if dangling:
         print("\nFAIL — %d dangling identifier reference(s) in spec code fences:"
               % len(dangling))
@@ -2655,6 +3067,15 @@ def scan(repo, quiet=False):
             "see the COVERAGE FLOOR note beside SURFACE_GLOBS for how the "
             "floor is re-derived and when it may be changed"
             % (checked, MIN_EXECUTED_CLAIMS))
+    # Round 19 (H13): the floor that measures reach rather than activity.
+    if live < MIN_LIVE_CLAIMS:
+        blocked.append(
+            "only %d LIVE claim(s) executed — below the floor of %d. Every "
+            "other executed claim sits inside a dated record, where a "
+            "mismatch is excused, so this run could not have caught drift "
+            "in any document. See THE LIVE FLOOR beside MIN_LIVE_CLAIMS"
+            % (live, MIN_LIVE_CLAIMS))
+    blocked.extend(fence_blocked)
     if blocked:
         print("\nERROR — this run could not verify what it is supposed to "
               "verify, so its result is not a verdict on any document:")
@@ -3374,3 +3795,158 @@ if __name__ == "__main__":
 # |         |            |             | 4, 181 declines, 0 excused, PASS, exit 0;    |
 # |         |            |             | the 71-test suite passes unmodified; both    |
 # |         |            |             | sibling tools re-run green.                  |
+# | 1.10    | 2026-08-22 | Claude Code | Round 19 (H13, H15, H16, H17, H18), each     |
+# |         |            |             | proven by reproduction before the fix and in |
+# |         |            |             | BOTH directions after. **H13 — the load-     |
+# |         |            |             | bearing one, and it CHANGED THE HEADLINE     |
+# |         |            |             | NUMBERS ON PURPOSE.** `dated_record_regions` |
+# |         |            |             | called `blank_frozen_history` only as INPUT  |
+# |         |            |             | to `record_regions` and then threw the       |
+# |         |            |             | blanking away, re-listing                    |
+# |         |            |             | `frozen_chain_span` by hand. But that        |
+# |         |            |             | function freezes the header chain AND every  |
+# |         |            |             | `Version History` section, so the sibling    |
+# |         |            |             | excused a VH row and this tool GATED on it — |
+# |         |            |             | falsifying the docstring that says the       |
+# |         |            |             | import exists so the two cannot disagree     |
+# |         |            |             | about which bytes are frozen. VH is 5.9% of  |
+# |         |            |             | the corpus and FOUR of the six executed      |
+# |         |            |             | claims sat inside one, two of them `ls -d    |
+# |         |            |             | src/*/ \| wc -l` -> 35 in rows whose         |
+# |         |            |             | neighbours read "left as written per the do- |
+# |         |            |             | not-rewrite-history convention": CI would    |
+# |         |            |             | have gone red on two correct historical      |
+# |         |            |             | records the day a 36th assembly landed,      |
+# |         |            |             | verbatim the hazard the dated-record model   |
+# |         |            |             | exists to prevent. Spans are now DERIVED     |
+# |         |            |             | from the blanking itself (`_blanked_runs`,   |
+# |         |            |             | line-wise so the whole corpus costs          |
+# |         |            |             | nothing), which is one computation instead   |
+# |         |            |             | of two definitions. The currency pierce is   |
+# |         |            |             | unchanged — a VH row saying the command      |
+# |         |            |             | returns N *now* still reports. Proven: the   |
+# |         |            |             | historical row mismatches at HEAD and is     |
+# |         |            |             | EXCUSED after; the "now returns" row still   |
+# |         |            |             | MISMATCHES; a live sentence outside the      |
+# |         |            |             | section still gates. **The honest            |
+# |         |            |             | consequence, stated rather than engineered   |
+# |         |            |             | away: live coverage is 1, not 6.** Executed  |
+# |         |            |             | is still 6 — a record claim still runs and   |
+# |         |            |             | still prints — but five of the six can never |
+# |         |            |             | fail CI, so the printed output now carries   |
+# |         |            |             | "... of which LIVE (can gate)" beside the    |
+# |         |            |             | headline and a new MIN_LIVE_CLAIMS=1 floor   |
+# |         |            |             | gates on it (exit 2). MIN_EXECUTED_SLACK is  |
+# |         |            |             | deliberately NOT applied at a measurement of |
+# |         |            |             | 1: any slack puts that floor at zero, which  |
+# |         |            |             | is the vacuous pass the floor exists to      |
+# |         |            |             | deny. Region coverage is now a UNION, not a  |
+# |         |            |             | sum — the spans can overlap since VH sits    |
+# |         |            |             | inside the log body. **H16 — the date guard  |
+# |         |            |             | was one case of a general defect.**          |
+# |         |            |             | `LeadingValueShape.rejects()` refused        |
+# |         |            |             | exactly two prefixes, so every compound      |
+# |         |            |             | number whose tail digits abut a              |
+# |         |            |             | parenthesised command bound as a stated      |
+# |         |            |             | value: `§2.2.2 (`cmd`)` -> 2 and `v1.73      |
+# |         |            |             | (`cmd`)` -> 73, both correct sentences the   |
+# |         |            |             | tool would have failed CI on, and the first  |
+# |         |            |             | is LIVE at code-standards/section-3.md:1140, |
+# |         |            |             | escaping only because                        |
+# |         |            |             | `document_relative_operand` declined it for  |
+# |         |            |             | an unrelated reason. Generalised to "a       |
+# |         |            |             | stated value begins its own token": the      |
+# |         |            |             | character before it, emphasis stripped, may  |
+# |         |            |             | not be `.`, `#` or `§`. 216 of 429 leading-  |
+# |         |            |             | value binds on this tree were section,       |
+# |         |            |             | version, spec, heading or decimal tails;     |
+# |         |            |             | total binds 1734 -> 1518, NOT ONE new        |
+# |         |            |             | mismatch, all six executed claims unchanged, |
+# |         |            |             | and the three genuine leading-value forms    |
+# |         |            |             | still bind and reproduce. **H15 — a runnable |
+# |         |            |             | claim whose binary was on neither curated    |
+# |         |            |             | list was dropped with no bucket, no count    |
+# |         |            |             | and no line.** `check_claim` returned        |
+# |         |            |             | ("ignored", None) and the census could not   |
+# |         |            |             | recover it, because the span WAS bound. So   |
+# |         |            |             | `comm -12 a b \| wc -l`, `tac`, `pcregrep`,  |
+# |         |            |             | `nl`, `du`, `tree` were invisible on BOTH    |
+# |         |            |             | routes and two header sentences were false — |
+# |         |            |             | the blind spot being a hand-written list,    |
+# |         |            |             | the shape the SAFETY section names as this   |
+# |         |            |             | file's recurring root error.                 |
+# |         |            |             | `command_shaped` is a positive SHAPE test    |
+# |         |            |             | now: a binary-shaped head plus an argument   |
+# |         |            |             | only a command takes (option, filename, real |
+# |         |            |             | path). Head shape ALONE was measured first   |
+# |         |            |             | and rejected — it took the census from 132   |
+# |         |            |             | to 1297, drowning it in prose; with the      |
+# |         |            |             | argument test, 132 -> 140 and nothing        |
+# |         |            |             | previously named is lost. `_KNOWN_BINARIES`  |
+# |         |            |             | survives as a supplement that can only ADD   |
+# |         |            |             | recognition, never gate. Latent (0 live      |
+# |         |            |             | instances), so this corrects a false         |
+# |         |            |             | coverage statement rather than catching a    |
+# |         |            |             | live defect. **H17 — CHECK 2 had no coverage |
+# |         |            |             | floor, and blinding it completely still      |
+# |         |            |             | printed PASS and exited 0.** Reproduced on   |
+# |         |            |             | the live tree: one mutation making           |
+# |         |            |             | DECL_CLASS match nothing gives "references   |
+# |         |            |             | examined: 1882 (1882 skipped)", PASS, exit   |
+# |         |            |             | 0, all 71 tests green — the vacuous-pass     |
+# |         |            |             | class fixed for CHECK 1 at round 16 and      |
+# |         |            |             | never applied to the check whose counters    |
+# |         |            |             | were added without a gate. Also reachable    |
+# |         |            |             | with no code change: a corpus writing ```C#  |
+# |         |            |             | zeroes it. CHECK 2 now returns its coverage  |
+# |         |            |             | and gets a two-part floor folded into the    |
+# |         |            |             | same `blocked` list (exit 2). The floors are |
+# |         |            |             | SHARES, not the absolute counts the finding  |
+# |         |            |             | proposed, and that is a deliberate departure |
+# |         |            |             | recorded here: an absolute floor derived     |
+# |         |            |             | from this tree (101 files, 198 references)   |
+# |         |            |             | is one no smaller corpus can meet, including |
+# |         |            |             | this file's own fixtures, where the intended |
+# |         |            |             | verdict is PASS on one file holding one      |
+# |         |            |             | fence. Measured 0.40 and 0.11, floored at    |
+# |         |            |             | 0.20 and 0.05 — half, the same headroom rule |
+# |         |            |             | MIN_EXECUTED_SLACK expresses — plus a zero-  |
+# |         |            |             | denominator guard so "fenced files but not   |
+# |         |            |             | one examinable reference" is caught by shape |
+# |         |            |             | rather than by ratio. Both blindings now     |
+# |         |            |             | exit 2 and name themselves. **H18 —          |
+# |         |            |             | ANSWER_KINDS was not an extension point; the |
+# |         |            |             | documented way to add one crashed scan()     |
+# |         |            |             | with an uncaught KeyError, exiting 1** — the |
+# |         |            |             | code meaning "a document is wrong", the      |
+# |         |            |             | collision round 17 (M14) spent a fix         |
+# |         |            |             | separating. Reproduced with a throwaway      |
+# |         |            |             | `PairAnswer` whose bucket is `not-a-pair`,   |
+# |         |            |             | because `declined` was built from            |
+# |         |            |             | DECLINE_BUCKETS, a table the SEAM 1 banner   |
+# |         |            |             | never mentions. Both tables are derived now: |
+# |         |            |             | ANSWER_KINDS from the shapes that name it,   |
+# |         |            |             | the decline order from DECLINE_BUCKETS plus  |
+# |         |            |             | each kind's bucket, with `record_decline`    |
+# |         |            |             | counting an unforeseen bucket rather than    |
+# |         |            |             | raising. The stated-value grammar moved onto |
+# |         |            |             | the answer kind and each shape's regex is    |
+# |         |            |             | built from it, so shapes and answers stop    |
+# |         |            |             | being a cross-product. Re-executed the       |
+# |         |            |             | banner's promise on the live corpus by       |
+# |         |            |             | registering the throwaway kind in the file   |
+# |         |            |             | itself: 2 answer kinds, a `not-a-pair`       |
+# |         |            |             | column, PASS, exit 0, no other edit          |
+# |         |            |             | anywhere. The banner is corrected rather     |
+# |         |            |             | than left over-promising, and names the      |
+# |         |            |             | limit that REMAINS — the text around a       |
+# |         |            |             | shape's value placeholder is still written   |
+# |         |            |             | for digits. **Live tree: 605 surfaces, 6     |
+# |         |            |             | executed (floor 4) of which 1 LIVE (floor    |
+# |         |            |             | 1), 187 declines (unlisted-binary 20->19,    |
+# |         |            |             | did-not-run 1->0, not-a-single-integer 7->6, |
+# |         |            |             | unrecognised-shape 132->141), 0 excused,     |
+# |         |            |             | PASS, exit 0. The 71-test suite passes       |
+# |         |            |             | UNMODIFIED — no test premise was             |
+# |         |            |             | invalidated. Both sibling tools re-run       |
+# |         |            |             | green.**                                     |
