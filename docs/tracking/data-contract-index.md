@@ -110,12 +110,19 @@ file inventory. This file adds only the entity → (spec §, assembly) hop those
 | Per-layer AI snapshots | #14, #15 | `defensive-ai`, `attacking-ai` | `DefensiveSnapshot`, `AttackingSnapshot`, and their `*AgentSnapshot` rows |
 | Match statistics | #37 §2.2 | `match-analytics` | `MatchAnalyticsResult`, `MatchAnalyticsAggregator`, `MatchEngineObservation` |
 
-> **Four `#16 §2.3` names do not resolve to types.** That section lists `DeterminismContext`,
-> `PhaseDigest`, `RngStreamKey` and `RngCursor` as data structures; none exists under those names in
-> `src/deterministic-sim/`, whose closest surfaces are the four rows above. This is recorded as an
-> observation, not a defect claim — the concepts are implemented, the *names* differ — but it is why
-> this index points at `src/` for the type and at the spec for the contract, and never pretends the
-> two vocabularies are one. Verify with `grep -rn 'struct \|class ' src/deterministic-sim/`.
+> **Six of `#16 §2.3`'s nine names do not resolve to types — now filed as `ERR-016-009`.**
+> `DeterminismContext`, `RngStreamKey`, `ToleranceRow` and `ComparatorRegistry` have **zero textual
+> presence in `src/` at all**; `RngCursor` and `RngStreamKey`'s triple are *fields on*
+> `RngStreamState`; `PhaseDigest` is a computation whose preimage is locked by the golden-vector
+> corpus. **This was recorded here as an observation on August 21 and escalated to a filed ERR on
+> August 22** — §4.2 has been explicitly non-normative since its own v0.7 and §4.4's module paths match
+> no directory in the flat tree, so §2.3 was the de facto type manifest it was never marked as. **#16
+> §2.3 v1.1 now carries the authoritative per-row mapping table**; read it rather than this note. Two
+> items there are open, not cosmetic: **`buildHash` has no representation anywhere in `src/`**
+> (`EnvironmentFingerprint` included — so two builds differing only in compiled code are
+> indistinguishable downstream of §2.3), and `ToleranceRow`/`ComparatorRegistry` are Stage-1+
+> deferrals. Both are tracked in `open-issues.md` beside the `Fingerprint = null` remainder they share
+> a contract with. Verify with `git ls-files 'src/*' | xargs grep -l '\bDeterminismContext\b'`.
 
 > `match-analytics` is presentation-layer derivation: **no sim assembly may reference it**, and that
 > is enforced mechanically.
@@ -245,4 +252,5 @@ career-roster projection, `season-save`). They are three different layers of the
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.1 | August 22, 2026 | The §4 note on unresolved `#16 §2.3` names is **superseded by `ERR-016-009`**, filed the same day: the count is **six of nine**, not four (the note omitted `ToleranceRow` and `ComparatorRegistry`), and it is a filed defect rather than the observation this file first recorded. #16 §2.3 v1.1 now carries the authoritative per-row mapping table, so the note points there instead of restating it — §0 rule 2 working as intended: the pointer target won. The two open items it surfaces (`buildHash` has no representation anywhere in `src/`; `ToleranceRow`/`ComparatorRegistry` are Stage-1+ deferrals) are tracked in `open-issues.md` beside the `Fingerprint = null` remainder on the same contract. No row in any table changed. |
 | v1.0 | August 21, 2026 | Initial index. Created after a proposed `DATA_SCHEMA.md` master-schema document was rejected as a parallel surface over #27/#30/#16, which already own these contracts — this file is the pointer-only alternative that was adopted instead. Covers player/squad, club/league/season, the three career-state sets, match runtime and determinism, save-format constant locations, tactics, presentation, the 20 specified-but-unimplemented entity sets, and three name hazards (two `PlayerAttributes` types, two `SNAPSHOT_SCHEMA_VERSION` constants, three senses of "Squad"). §0's three rules — restate nothing, the pointer targets win, rows not columns — are what keep it from becoming the document it replaced. |

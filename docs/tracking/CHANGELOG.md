@@ -12,7 +12,51 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 22, 2026, later same day (**The football-judgment proxy review's DUPLICATE
+> **Last Updated:** August 22, 2026, latest same day (**The four tracking gaps surfaced across this
+> session's passes are now CLOSED — three registers reconciled, one new gap tracked.**) Doc-only; no
+> `.cs` touched. **1. `open-issues.md` was a landing behind its own index.** Root `CLAUDE.md` has
+> carried `ERR-008-023` since the August 7 landing and `open-issues.md` had **zero** mentions of it —
+> and the `spec-error-log.md` body entry for -023 was itself missing until August 17. The surviving
+> proxy-review entry now carries the full -023 record: the keeper's shot-stopping reach priced twice
+> (`GK_BLOCKER_RADIUS_M` = 1.5 m went live at -022 and removed **~42% of the goal arc on every shot**,
+> 1.000 → 0.584 at 16 m, keeper alone), **zero goals across four seeds**, the retirement of the
+> keeper-only radius under P3, suite 15 → 16 with the near-tautology lock rewritten, and the run-419
+> downstream. It also carries the **August 17 amendment**: the close-chance rebaseline was blamed on
+> the wrong thing — an 18-seed paired bisect prices the whole -021/-022/-023 shot-lane chain at
+> **−0.027 ± 0.039 (t = −0.70)** while **C1 / `ERR-012-011` costs −0.189 ± 0.038 (t = −5.05)**, and the
+> −0.119 that drove the rebaseline sits at the **4.6th percentile** of its own two-seed estimator; the
+> band is now owner-held RED. **2. A stale count inside that entry** — §3.2.10's catalogue was recorded
+> as five #8 landings behind; with -023 it is **six**, the figure `CLAUDE.md` and §6.3.1 both carry. The
+> historical "five … at this landing" statements in the review's §6.4 and in this changelog are
+> deliberately NOT edited — they were true at their landing, and this project preserves historical rows
+> verbatim. **3. The `buildHash` gap is now tracked where live blockers live.** `ERR-016-009` recorded
+> it OPEN in the error log yesterday, but `open-issues.md` had no entry — so it was a filed defect
+> nothing would surface. Appended to the existing `EnvironmentFingerprint.floatModelHash` entry rather
+> than filed as a new one (that entry already owns the `SaveManager` writes `Fingerprint = null`
+> remainder on the same contract, and after yesterday's de-duplication pass a near-duplicate entry was
+> the wrong instrument). The distinction is stated: `Fingerprint = null` is a **write-site gap on a
+> field that exists**; `buildHash` is a **field that does not exist** — verified by
+> `git ls-files 'src/*' | xargs grep -il 'buildhash'` returning **zero files**, `EnvironmentFingerprint`
+> included. Consequence recorded: the fingerprint pins the host and float mode, not the binary, so two
+> builds differing only in compiled game code are indistinguishable downstream of §2.3. Deliberately
+> **not** fixed — what constitutes build identity (assembly MVIDs? a CI-stamped commit? the `.asmdef`
+> closure?) is a decision, not an implementation detail. **4. A consistency gap this session created.**
+> `data-contract-index.md` recorded the #16 §2.3 names as *"an observation, not a defect claim"* with a
+> count of **four**; a day later they became filed defect `ERR-016-009` with a count of **six** (the
+> note had omitted `ToleranceRow` and `ComparatorRegistry`). The index goes **v1.1**: the note now cites
+> the ERR, gives the right count, and **points at #16 §2.3 v1.1's mapping table instead of restating
+> it** — which is §0 rule 2 (*the pointer targets win*) working as designed on the file that declares
+> it. No table row changed. **Counts re-verified after all edits:** `open-issues.md` **16 active**,
+> archive **44**, both by direct `grep -c '^- \*\*'`, matching `CLAUDE.md`'s preamble.
+> `recurring-defect-lint.py` **0 ERROR tree-wide**. **NOT done, and why:** compressing `CLAUDE.md`'s
+> OPEN ISSUES bullets — the measured token weight, 67% of the file with the #29/#41 bullet alone at
+> 38.7% — would mean editing historical entries, which this project's convention explicitly forbids
+> ("historical rows preserved verbatim"). That needs an owner decision about what history may be
+> summarised, not a unilateral pass. **Modified:** `docs/tracking/open-issues.md`, `CLAUDE.md`,
+> `docs/tracking/data-contract-index.md` (v1.1), `docs/tracking/file-manifest.md`,
+> `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** August 22, 2026, later same day (**The football-judgment proxy review's DUPLICATE
 > entries de-duplicated — and it was not the duplicate it looked like.**) Doc-only; no `.cs` touched.
 > The review had **two** active entries in `open-issues.md` and **two** bullets in root `CLAUDE.md`.
 > Investigating before deleting showed they are **not two copies of one record**: the second of each is
