@@ -27,6 +27,36 @@
 # passes against both the fixed and the broken tool is worse than no test; this
 # repo has filed that "tautological lock" three times.
 #
+# ROUND 2 (M17, M18) — TWO REVIEWED FINDINGS AGAINST THIS SUITE ITSELF, both
+# proven by mutation before the fix and re-proven mutation-red afterwards:
+#   M17: two independent mutation batteries (38 and 15 mutants) agreed on 18
+#        survivors — the suite's own load-bearing guards could regress with
+#        all 71 tests green. One test per surviving mutant is now below,
+#        each written red against the mutant first (section 8), and several
+#        deliberately drive scan() end to end rather than the helper alone —
+#        "the current test cannot distinguish a working census from a
+#        deleted call site" is M17's own diagnosis of why the old coverage
+#        was not enough.
+#   M18: this file's own header claimed "a skip is never silent" while
+#        `unittest.main()`'s exit code depends only on `wasSuccessful()`,
+#        which counts a skip as neither pass nor fail — reproduced by
+#        stubbing `shutil.which` for grep/printf/git: 71 ran, 39 skipped,
+#        `wasSuccessful() == True`. Fixed at the bottom of this file with a
+#        SKIP CEILING: `unittest.main(exit=False)` plus an explicit
+#        `sys.exit` that fails the run when any skip's reason is not
+#        explained by a binary independently re-verified absent from PATH
+#        right now (see `unexplained_skips()` below) — permitting a
+#        genuinely missing binary while still catching a mass silent skip,
+#        per the fix's own requirement. THIS CEILING ONLY RUNS UNDER THE
+#        FIRST INVOCATION FORM below — `unittest -m unittest discover` uses
+#        its own runner and `wasSuccessful()` alone, exactly the gap M18
+#        describes, which is why ci.yml (and this file's own header) treat
+#        the first form as authoritative and the second as a convenience.
+# Round 16's own fixes landed with NO coverage at all — the same shape that
+# made round 15's fixes silently regressable — so section 9 below locks ten
+# of them, each written red against the pre-fix tool or an equivalent
+# mutation of the current one (see the landing report for which).
+#
 # WHAT IT DOES NOT DO
 # -------------------
 # It does not re-verify the checker against the live tree — that is the gate
@@ -36,7 +66,8 @@
 # test builds: nothing reads or writes the repository, nothing needs network,
 # and the suite leaves no artefact.
 #
-# RUNNING IT (either form; the first is what ci.yml runs)
+# RUNNING IT (either form; the first is what ci.yml runs AND is the only one
+# that enforces the M18 skip ceiling — see ROUND 2 above)
 #     python3 tools/tests/test_doc_claim_check.py
 #     python3 -m unittest discover -s tools/tests -t tools/tests -v
 # `-t` is required: tools/ is not a package, so a bare `discover -s tools/tests`
@@ -48,6 +79,7 @@ import importlib.util
 import io
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -57,6 +89,10 @@ from unittest import mock
 
 TOOLS_DIR = pathlib.Path(__file__).resolve().parent.parent
 TOOL_PATH = TOOLS_DIR / "doc-claim-check.py"
+# This file's own path — the two CliTests cases that spawn a subprocess of
+# doc-claim-check.py, plus the M18 skip-ceiling self-test hooks below, spawn
+# a subprocess of THIS file too.
+TEST_PATH = pathlib.Path(__file__).resolve()
 
 
 def _load_tool():
@@ -92,12 +128,96 @@ def _has(binary):
 HAVE_GREP = _has("grep")
 HAVE_PRINTF = _has("printf")
 HAVE_GIT = _has("git")
+HAVE_SORT = _has("sort")
+HAVE_LS = _has("ls")
+HAVE_WC = _has("wc")
 
 # A file whose counts are unambiguous under every command quoted below:
 # three lines, all three containing "a".
 DATA_TEXT = "alpha\nbeta\ngamma\n"
 TRUE_CMD = "grep -c 'a' data.txt"
 TRUE_VALUE = 3
+
+
+# ---------------------------------------------------------------------------
+# M18 — THE SKIP CEILING. "A skip is never silent" is this suite's own
+# header claim, and until now it was false of itself: `unittest.main()`'s
+# exit code depends only on `wasSuccessful()`, which counts a skip as neither
+# a pass nor a failure. Reproduced by stubbing `shutil.which` for
+# grep/printf/git before this module loaded: 71 tests ran, 39 skipped, and
+# `wasSuccessful()` was True. Every exit-code test, every excusal test, every
+# matcher complement and every run_pipeline test is in that 39 — the suite
+# that exists to prove doc-claim-check.py never passes vacuously can go
+# vacuous itself with nobody told.
+#
+# The fix does not hard-code a ceiling of zero, because that would fail this
+# suite on a runner that genuinely lacks one of the three binaries — the
+# complement M18 also names as a requirement. Instead every SKIP REASON this
+# suite ever produces has one shape, "`<binary>` is not on PATH", and a skip
+# is EXPLAINED only when a FRESH, independent `shutil.which` call — not the
+# HAVE_* flag that was cached at import time and might itself be the thing
+# that lied — confirms that binary really is absent right now. A skip whose
+# reason names a binary that is actually present (M18's own reproduction) or
+# whose reason has no such shape at all is UNEXPLAINED, and even one of those
+# fails the run with a non-zero exit — see the `__main__` block at the
+# bottom of this file, which is where this is actually wired to the exit
+# code `unittest.main(exit=False)` would otherwise ignore.
+# ---------------------------------------------------------------------------
+_SKIP_REASON_BINARY = re.compile(r"\A([A-Za-z0-9_.+-]+) is not on PATH\Z")
+
+
+def _skip_binary_from_reason(reason):
+    """The binary name a skip reason shaped like '<binary> is not on PATH'
+    names, or None when the reason is not that shape at all."""
+    m = _SKIP_REASON_BINARY.match((reason or "").strip())
+    return m.group(1) if m else None
+
+
+def unexplained_skips(skipped):
+    """Every (test, reason) in `skipped` (a TestResult's own `.skipped` list)
+    that is NOT explained by a binary genuinely absent from PATH right now.
+
+    Re-checks `shutil.which` fresh for every skip rather than trusting
+    whichever HAVE_* flag produced it — a flag computed once at import time
+    is exactly what a stubbed `shutil.which` (M18's own reproduction) or a
+    plain bug in `_has()` would have already fooled."""
+    out = []
+    for test, reason in skipped:
+        binary = _skip_binary_from_reason(reason)
+        if binary is None or shutil.which(binary) is not None:
+            out.append((test, reason))
+    return out
+
+
+# Self-test hooks for the M18 ceiling logic, exercised by CliTests below via
+# a fresh subprocess of THIS file. Each is defined ONLY when its matching
+# env var is set, so neither ever exists — and neither ever costs a line of
+# `unittest.main()`'s own discovery — in a normal run of this suite.
+if os.environ.get("_DCC_SELFTEST_FAKE_UNEXPLAINED_SKIP") == "1":
+    class _FakeUnexplainedSkipProbe(unittest.TestCase):
+        # `grep` genuinely IS on PATH in every environment this suite runs
+        # in (HAVE_GREP-gated classes above depend on it) — this reason is
+        # FALSE, exactly the shape a stubbed `shutil.which` or a `_has()`
+        # bug would produce, and is what test_an_unexplained_skip_fails_the_
+        # run below proves the ceiling catches.
+        @unittest.skip("grep is not on PATH")
+        def test_fake_skip(self):
+            pass
+
+if os.environ.get("_DCC_SELFTEST_FAKE_LEGITIMATE_SKIP") == "1":
+    class _FakeLegitimateSkipProbe(unittest.TestCase):
+        @unittest.skip("zzz-nonexistent-binary-4f2c1a is not on PATH")
+        def test_fake_skip(self):
+            pass
+
+# True whenever THIS process is already a self-test subprocess spawned by one
+# of the two CliTests cases below. Both env vars run the WHOLE file again —
+# including CliTests itself — so without this guard each spawned subprocess
+# would spawn another or itself, recursing until the runner falls over
+# (reproduced once while writing this: dozens of stacked interpreters).
+_IN_SELFTEST_SUBPROCESS = bool(
+    os.environ.get("_DCC_SELFTEST_FAKE_UNEXPLAINED_SKIP")
+    or os.environ.get("_DCC_SELFTEST_FAKE_LEGITIMATE_SKIP"))
 
 
 class FixtureCase(unittest.TestCase):
@@ -897,9 +1017,647 @@ class CliTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("--repo", proc.stdout)
 
+    # -- M18: the skip ceiling, driven end to end as its own subprocess -----
+    #
+    # Both cases spawn a subprocess of THIS file with a self-test env var
+    # set. Neither method is even DEFINED (not skipped — genuinely absent
+    # from the class, so it adds no skip entry either) inside a subprocess
+    # already running under one of those two env vars — see
+    # _IN_SELFTEST_SUBPROCESS above for why: without this, each spawned
+    # subprocess would spawn another generation of itself, recursing until
+    # the runner falls over (reproduced once while writing this).
+    if not _IN_SELFTEST_SUBPROCESS:
+        def test_an_unexplained_skip_fails_the_run(self):
+            env = dict(os.environ, _DCC_SELFTEST_FAKE_UNEXPLAINED_SKIP="1")
+            proc = subprocess.run(
+                (sys.executable, str(TEST_PATH)),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                env=env)
+            self.assertNotEqual(proc.returncode, 0,
+                                proc.stdout + proc.stderr)
+            self.assertIn("SKIP CEILING EXCEEDED",
+                          proc.stdout + proc.stderr)
+
+        def test_a_skip_naming_a_genuinely_absent_binary_does_not_fail_the_run(
+                self):
+            env = dict(os.environ, _DCC_SELFTEST_FAKE_LEGITIMATE_SKIP="1")
+            proc = subprocess.run(
+                (sys.executable, str(TEST_PATH)),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                env=env)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            self.assertNotIn("SKIP CEILING EXCEEDED",
+                             proc.stdout + proc.stderr)
+
+
+class SkipCeilingLogicTests(unittest.TestCase):
+    """unexplained_skips() in isolation — no subprocess, so this pair is the
+    fast complement to CliTests' two end-to-end cases above."""
+
+    def test_a_reason_naming_a_present_binary_is_unexplained(self):
+        # grep is on PATH in every environment this suite runs in (several
+        # HAVE_GREP-gated classes above already depend on that being true).
+        self.assertEqual(
+            len(unexplained_skips([("t", "grep is not on PATH")])), 1)
+
+    def test_a_reason_naming_a_genuinely_absent_binary_is_explained(self):
+        self.assertEqual(unexplained_skips(
+            [("t", "zzz-nonexistent-binary-4f2c1a is not on PATH")]), [])
+
+    def test_a_reason_with_no_recognisable_binary_is_unexplained(self):
+        self.assertEqual(
+            len(unexplained_skips([("t", "some other reason entirely")])), 1)
+
+    def test_an_explained_and_an_unexplained_skip_are_told_apart(self):
+        skipped = [("t1", "grep is not on PATH"),
+                  ("t2", "zzz-nonexistent-binary-4f2c1a is not on PATH")]
+        out = unexplained_skips(skipped)
+        self.assertEqual([t for t, _r in out], ["t1"])
+
+
+# ---------------------------------------------------------------------------
+# (8) LOAD-BEARING GUARD REGRESSIONS — one test per mutant that survived two
+# independent mutation batteries (M17). Each is written so that its own
+# helper being deleted, short-circuited or reverted to the pre-fix behaviour
+# is what turns it red; each was mutation-verified against a scratch copy of
+# the tool (see the landing report). Several deliberately go through scan()
+# rather than the helper alone, per M17's own fix note: "the current test
+# cannot distinguish a working census from a deleted call site."
+# ---------------------------------------------------------------------------
+
+
+@unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+class DocumentRelativeOperandTests(FixtureCase):
+    """`document_relative_operand` — a bare filename quoted from a nested
+    spec is ambiguous between the repo root and the quoting document's own
+    directory, and a checker must never guess which one was meant."""
+
+    def test_a_bare_sibling_filename_declines_as_ambiguous(self):
+        self.write("docs/specs/demo/section-2.md", "TODO one\nTODO two\n")
+        claim, (outcome, payload) = self.check(
+            "references its neighbour: `grep -c TODO section-2.md` -> 2",
+            rel="docs/specs/demo/section-1.md")
+        self.assertEqual(outcome, "declined", payload)
+        bucket, why = payload
+        self.assertEqual(bucket, "did-not-run")
+        self.assertIn("ambiguous", why)
+        self.assertIn("section-2.md", why)
+
+
+class NegatorPrecisionTests(FixtureCase):
+    """NEGATOR — round 16 M5: widened back to bare `not`/`was`/`never`, this
+    excuses a WRONG claim merely because one of those words sits somewhere
+    nearby in ordinary prose, which is exactly how a claim wrong by a factor
+    of 33 was declined as historical instead of reported."""
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_a_bare_negation_word_near_a_wrong_claim_does_not_excuse_it(self):
+        _claim, (outcome, payload) = self.check(
+            "This was decided by the owner and is not in dispute: "
+            "`%s` -> 99" % TRUE_CMD)
+        self.assertEqual(outcome, "mismatch", payload)
+
+
+class FenceOffsetMappingTests(FixtureCase):
+    """`_map_offset` — round 17 M11: the dangling-reference line number used
+    to come from an unconditional-break search of the WHOLE FILE TEXT for the
+    reference's own spelling, so a PROSE mention of the same text earlier in
+    the file could steal the line number that belongs to the real fence
+    occurrence."""
+
+    def test_the_reported_line_is_the_fence_occurrence_not_a_prose_echo(self):
+        text = (
+            "# Spec\n\n"
+            "Prose note: Foo.Nope is mentioned here for illustration only.\n\n"
+            "```csharp\n"
+            "public class Foo { public int Bar; }\n"
+            "int x = Foo.Nope;\n"
+            "```\n")
+        self.write("docs/specs/demo/section-1.md", text)
+        findings, _coverage = M.scan_fence_identifiers(self.dir)
+        self.assertEqual(len(findings), 1, findings)
+        _rel, line, typ, mem, _near = findings[0]
+        self.assertEqual((typ, mem), ("Foo", "Nope"))
+        fence_line = text.count("\n", 0, text.index("int x = Foo.Nope;")) + 1
+        prose_line = text.count("\n", 0, text.index("Prose note: Foo.Nope")) + 1
+        self.assertNotEqual(fence_line, prose_line,
+                            "fixture must place the prose echo on a "
+                            "DIFFERENT line for this to prove anything")
+        self.assertEqual(line, fence_line)
+
+
+class SurfaceDeduplicationTests(FixtureCase):
+    """`_dedup_by_resolved_path` — round 16 M6: a SURFACE_GLOBS entry that
+    matches a file another entry already matched used to double-scan and
+    double-report it. Driven through `collect_surfaces` rather than the
+    helper alone, so a short-circuited helper is what turns this red, not
+    just an isolated unit result."""
+
+    def test_collect_surfaces_deduplicates_an_overlapping_glob(self):
+        self.spec_file("body\n", rel="docs/specs/demo/section-1.md")
+        with mock.patch.object(M, "SURFACES", ()), \
+             mock.patch.object(M, "SURFACE_GLOBS",
+                               ("docs/specs/*/section-*.md",
+                                "docs/specs/*/section-1.md")):
+            files, missing = M.collect_surfaces(self.dir)
+        self.assertEqual(missing, [])
+        rels = [rel for rel, _p in files]
+        self.assertEqual(rels.count("docs/specs/demo/section-1.md"), 1,
+                         "the same file was scanned twice: %r" % rels)
+
+
+class CensusWiringTests(FixtureCase):
+    """The unrecognised-shape CENSUS — round 16 H7's own self-reporting
+    bucket already has a unit test of `unrecognised_spans` in MatcherTests,
+    but that cannot distinguish a working census from a deleted call site
+    inside scan() itself (M17's own fix note). This drives scan() end to end
+    and reads the count back out of its printed decline-bucket line."""
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_scan_reports_an_unrecognised_shape_through_its_declined_bucket(self):
+        self.write("CLAUDE.md",
+                   "# Fixture\n\n35 assemblies. The gate runs `%s` nightly.\n\n"
+                   "`%s` -> %d\n" % (TRUE_CMD, TRUE_CMD, TRUE_VALUE))
+        self.spec_file("prose only\n")
+        code, out = self.scan()
+        self.assertEqual(code, 0, out)
+        m = re.search(r"(\d+) unrecognised-shape", out)
+        self.assertIsNotNone(m, "no unrecognised-shape count in output:\n%s"
+                             % out)
+        self.assertGreaterEqual(int(m.group(1)), 1)
+
+
+class CurrencyAssertedLineBoundTests(FixtureCase):
+    """`currency_asserted`'s line bound — a "now"/"currently" that belongs to
+    the NEXT sentence must not reach back and pierce the excusal of a claim
+    on the line before it."""
+
+    def test_a_currency_word_on_the_next_line_does_not_pierce(self):
+        prefix = "record: `%s` -> 92\n" % TRUE_CMD
+        suffix = "this next line currently states something unrelated.\n"
+        text = prefix + suffix
+        m = re.search(r"92", prefix)
+        self.assertFalse(M.currency_asserted(text, m.start(), m.end()))
+
+    def test_a_currency_word_on_the_same_line_does_pierce(self):
+        text = "record: `%s` -> 92, still true now\n" % TRUE_CMD
+        m = re.search(r"92", text)
+        self.assertTrue(M.currency_asserted(text, m.start(), m.end()))
+
+
+# ---------------------------------------------------------------------------
+# (9) ROUND 16 LOCKS — the fixes this round landed with no coverage at all.
+# Each is written red against the pre-fix tool (verified against a scratch
+# copy; see the landing report), the same discipline as section (8) above.
+# ---------------------------------------------------------------------------
+
+
+class GnuLongOptionAbbreviationTests(FixtureCase):
+    """Round 18 (H12): `getopt_long` accepts any UNAMBIGUOUS PREFIX of a long
+    option name, so denying only the full spelling left `--o=`, `--out=` and
+    `--outpu=` all reaching `--output`'s write. None of these needs the
+    binary on PATH — every one is declined before a process is spawned."""
+
+    def test_sort_o_equals_abbreviates_output(self):
+        why = self.assertDeclined("`sort --o=CANARY data.txt` -> 3",
+                                  "unsafe", "ABBREVIATION")
+        self.assertIn("--output", why)
+        self.assertNoFile("CANARY")
+
+    def test_sort_out_equals_abbreviates_output(self):
+        why = self.assertDeclined("`sort --out=CANARY data.txt` -> 3",
+                                  "unsafe", "ABBREVIATION")
+        self.assertIn("--output", why)
+        self.assertNoFile("CANARY")
+
+    def test_sort_outpu_equals_abbreviates_output(self):
+        why = self.assertDeclined("`sort --outpu=CANARY data.txt` -> 3",
+                                  "unsafe", "ABBREVIATION")
+        self.assertIn("--output", why)
+        self.assertNoFile("CANARY")
+
+    def test_sort_compress_progr_equals_abbreviates_compress_program(self):
+        self.write("p.sh", "#!/bin/sh\ntouch CANARY\n")
+        why = self.assertDeclined(
+            "`sort --compress-progr=./p.sh -S 1 data.txt` -> 3",
+            "unsafe", "ABBREVIATION")
+        self.assertIn("--compress-program", why)
+        self.assertNoFile("CANARY")
+
+    def test_git_grep_open_f_equals_abbreviates_open_files_in_pager(self):
+        self.write("p.sh", "#!/bin/sh\ntouch CANARY\n")
+        why = self.assertDeclined(
+            "`git grep --open-f=./p.sh alpha` -> 3",
+            "unsafe", "ABBREVIATION")
+        self.assertIn("--open-files-in-pager", why)
+        self.assertNoFile("CANARY")
+
+
+class ClusteredShortOptionTests(FixtureCase):
+    """Round 21 (H1): an ATTACHED short-option value is a SUFFIX of its
+    token, and a CLUSTER puts it further along than index 2 —
+    `grep -cf/etc/hostname data.txt` hands the child `/etc/hostname`, not the
+    `f/etc/hostname` a single-guess extractor computes. The complement matters
+    more than the decline: over-refusing every one of these five legitimate
+    clustered forms would be a silent coverage loss nobody would notice."""
+
+    def test_grep_cf_slash_etc_hostname_is_declined(self):
+        why = self.assertDeclined("`grep -cf/etc/hostname data.txt` -> 1",
+                                  "unsafe", "resolves outside")
+        self.assertIn("/etc/hostname", why)
+        self.assertIn("SUFFIX", why)
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_grep_rn_pattern_dir_still_executes(self):
+        self.write("sub/needle.txt", "pattern here\npattern again\n")
+        self.assertIsNone(M.escaping_operand(
+            ["grep", "-rn", "pattern", "sub/"], self.dir))
+        self.assertIsNone(M.denied_flag(["grep", "-rn", "pattern", "sub/"]))
+        out, why = M.run_pipeline([["grep", "-rn", "pattern", "sub/"]],
+                                  str(self.dir))
+        self.assertIsNone(why, why)
+        self.assertIn("pattern", out)
+
+    @unittest.skipUnless(HAVE_SORT, "sort is not on PATH")
+    def test_sort_nr_file_still_executes(self):
+        self.write("nums.txt", "3\n1\n2\n")
+        self.assertIsNone(M.escaping_operand(["sort", "-nr", "nums.txt"],
+                                             self.dir))
+        self.assertIsNone(M.denied_flag(["sort", "-nr", "nums.txt"]))
+        out, why = M.run_pipeline([["sort", "-nr", "nums.txt"]], str(self.dir))
+        self.assertIsNone(why, why)
+        self.assertEqual(out.split(), ["3", "2", "1"])
+
+    @unittest.skipUnless(HAVE_LS, "ls is not on PATH")
+    def test_ls_la_still_executes(self):
+        self.assertIsNone(M.escaping_operand(["ls", "-la"], self.dir))
+        self.assertIsNone(M.denied_flag(["ls", "-la"]))
+        out, why = M.run_pipeline([["ls", "-la"]], str(self.dir))
+        self.assertIsNone(why, why)
+
+    @unittest.skipUnless(HAVE_WC, "wc is not on PATH")
+    def test_wc_lc_file_still_executes(self):
+        out, why = M.run_pipeline([["wc", "-lc", "data.txt"]], str(self.dir))
+        self.assertIsNone(why, why)
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_grep_ic_pattern_file_still_executes(self):
+        out, why = M.run_pipeline([["grep", "-ic", "ALPHA", "data.txt"]],
+                                  str(self.dir))
+        self.assertIsNone(why, why)
+        self.assertEqual(M.single_integer(out), 1)
+
+
+@unittest.skipUnless(HAVE_GIT and M.RLIMITS_AVAILABLE,
+                     "git or the resource module is unavailable")
+class ChildResourceLimitTests(FixtureCase):
+    """Round 18 — OS-ENFORCED CHILD LIMITS, the one guard in the tool that is
+    not an enumeration. `git status` is a READ-ONLY subcommand on the
+    allow-list and yet rewrites `.git/index` on a stat-cache refresh — the
+    tool's own SAFETY section names this BY NAME as "a hatch fixed by no
+    name in this file". RLIMIT_FSIZE=0 is what stands between that and a
+    printed PASS."""
+
+    def setUp(self):
+        super().setUp()
+        env = dict(os.environ,
+                   HOME=str(self.dir), GIT_CONFIG_NOSYSTEM="1",
+                   GIT_CONFIG_GLOBAL=str(self.dir / ".gitconfig"),
+                   GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.invalid",
+                   GIT_COMMITTER_NAME="t",
+                   GIT_COMMITTER_EMAIL="t@example.invalid")
+        run = lambda *a: subprocess.run(  # noqa: E731 - fixture setup only
+            ("git",) + a, cwd=self.dir, env=env, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        run("init", "-q")
+        run("add", "data.txt", "CLAUDE.md")
+        run("commit", "-q", "-m", "fixture")
+        self.git_env = env
+        # Force a stat-cache mismatch so `git status` has an index write to
+        # perform on this run — a future mtime is enough, no sleep needed.
+        p = self.dir / "data.txt"
+        st = p.stat()
+        os.utime(p, (st.st_atime + 5, st.st_mtime + 5))
+
+    def index_bytes(self):
+        return (self.dir / ".git" / "index").read_bytes()
+
+    def test_git_status_index_write_is_killed_and_named_not_silent(self):
+        before = self.index_bytes()
+        why = self.assertDeclined("`git status \\| wc -l` -> 2",
+                                  "did-not-run", "WRITE a file")
+        self.assertIn("zero write limit", why)
+        self.assertEqual(self.index_bytes(), before,
+                         "the index changed despite RLIMIT_FSIZE=0")
+
+
+class ResourceLimitMathTests(FixtureCase):
+    """Round 21 (H2): `_lower_limit` used to clamp against the inherited HARD
+    limit alone, so an inherited SOFT limit was RAISED — the opposite of its
+    own docstring's guarantee (measured: an inherited RLIMIT_CPU of (10, 100)
+    came out of the child as (60, 65)). `resource.getrlimit`/`setrlimit` are
+    mocked throughout, so the real test process's own limits are never
+    touched."""
+
+    @unittest.skipUnless(M.RLIMITS_AVAILABLE, "resource module unavailable")
+    def test_tightest_treats_rlim_infinity_as_no_limit_not_a_number(self):
+        INF = M.resource.RLIM_INFINITY
+        # The exact trap this exists to avoid: RLIM_INFINITY is -1 on Linux,
+        # so a naive min(0, RLIM_INFINITY) is RLIM_INFINITY, not 0.
+        self.assertEqual(M._tightest(0, INF), 0)
+        self.assertEqual(M._tightest(INF, 0), 0)
+        self.assertEqual(M._tightest(INF, INF), INF)
+        self.assertEqual(M._tightest(10, 5, INF), 5)
+
+    @unittest.skipUnless(M.RLIMITS_AVAILABLE, "resource module unavailable")
+    def test_lower_limit_never_raises_an_inherited_soft_limit(self):
+        calls = []
+        with mock.patch.object(M.resource, "getrlimit",
+                               return_value=(10, 100)), \
+             mock.patch.object(M.resource, "setrlimit",
+                               side_effect=lambda w, l: calls.append(l)):
+            M._lower_limit(M.resource.RLIMIT_CPU, 60, 65)
+        self.assertEqual(calls, [(10, 10)],
+                         "an inherited soft limit of 10 must not come out "
+                         "looser than it went in — got %r" % calls)
+
+    @unittest.skipUnless(M.RLIMITS_AVAILABLE, "resource module unavailable")
+    def test_lower_limit_clamps_against_an_infinite_inherited_hard_limit(self):
+        INF = M.resource.RLIM_INFINITY
+        calls = []
+        with mock.patch.object(M.resource, "getrlimit",
+                               return_value=(10, INF)), \
+             mock.patch.object(M.resource, "setrlimit",
+                               side_effect=lambda w, l: calls.append(l)):
+            M._lower_limit(M.resource.RLIMIT_CPU, 60, 65)
+        self.assertEqual(calls, [(10, 10)])
+
+    @unittest.skipUnless(M.RLIMITS_AVAILABLE, "resource module unavailable")
+    def test_lower_limit_keeps_fsize_at_zero_with_infinite_inherited_limits(self):
+        INF = M.resource.RLIM_INFINITY
+        calls = []
+        with mock.patch.object(M.resource, "getrlimit",
+                               return_value=(INF, INF)), \
+             mock.patch.object(M.resource, "setrlimit",
+                               side_effect=lambda w, l: calls.append(l)):
+            M._lower_limit(M.resource.RLIMIT_FSIZE, 0, 0)
+        self.assertEqual(calls, [(0, 0)])
+
+    def test_child_limits_degrade_without_crashing_when_resource_is_missing(self):
+        with mock.patch.object(M, "resource", None), \
+             mock.patch.object(M, "RLIMITS_AVAILABLE", False):
+            self.assertIsNone(M.child_limits_preexec())
+            self.assertIn("UNAVAILABLE", M.child_limit_summary())
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_a_claim_still_executes_when_resource_is_unavailable(self):
+        with mock.patch.object(M, "resource", None), \
+             mock.patch.object(M, "RLIMITS_AVAILABLE", False):
+            _claim, (outcome, payload) = self.check(
+                "`%s` -> %d" % (TRUE_CMD, TRUE_VALUE))
+        self.assertEqual(outcome, "reproduced", payload)
+
+
+@unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+class VersionHistoryExcusalTests(FixtureCase):
+    """Round 19 (H13): a claim inside a `## Version History` section is a
+    dated record of its OWN revision exactly like the CHANGELOG header chain
+    ExcusalTests already covers — but nothing exercised the generic VH
+    heading form directly until now."""
+
+    VH_DOC = (
+        "# Doc\n\n"
+        "## Version History\n\n"
+        "| Version | Notes |\n"
+        "| 1.0 | measured `%s` -> 92 |\n"
+        "| 1.1 | measured `%s` -> 93 (still true now) |\n\n"
+        "## Somewhere else\n\n"
+        "Outside the VH table: `%s` -> 94.\n"
+        % (TRUE_CMD, TRUE_CMD, TRUE_CMD))
+
+    def outcomes(self):
+        regions = M.dated_record_regions("CLAUDE.md", self.VH_DOC)
+        self.assertTrue(regions, "no Version History region was computed")
+        return [M.check_claim(c, self.dir, regions)[0]
+                for c in M.collect_claims("CLAUDE.md", self.VH_DOC)]
+
+    def test_a_drifted_vh_claim_is_excused(self):
+        self.assertEqual(self.outcomes()[0], "excused")
+
+    def test_a_currency_word_pierces_the_vh_excusal(self):
+        self.assertEqual(self.outcomes()[1], "mismatch")
+
+    def test_a_claim_outside_the_vh_section_still_gates(self):
+        self.assertEqual(self.outcomes()[2], "mismatch")
+
+    def test_exit_2_when_every_claim_is_frozen_in_a_vh_section(self):
+        # The LIVE floor: a corpus whose only claims sit inside a dated
+        # record has zero drift-catching coverage and must not read PASS.
+        self.write("CLAUDE.md",
+                   "# Fixture\n\n## Version History\n\n"
+                   "| 1.0 | `%s` -> %d |\n" % (TRUE_CMD, TRUE_VALUE))
+        self.spec_file("prose only\n")
+        code, out = self.scan()
+        self.assertEqual(code, 2, out)
+        self.assertIn("LIVE claim", out)
+
+
+class LeadingValueTokenTests(FixtureCase):
+    """`LeadingValueShape.rejects` — round 19 H16: a stated value must begin
+    its own token. `§2.2.2` and `v1.73` share a section/version number's tail
+    digit with the value pattern; an ordinary count does not."""
+
+    def test_a_section_number_does_not_bind_a_claim(self):
+        self.assertEqual(M.collect_claims(
+            "CLAUDE.md", "verified against §2.2.2 (`%s`)" % TRUE_CMD), [])
+
+    def test_a_version_number_does_not_bind_a_claim(self):
+        self.assertEqual(M.collect_claims(
+            "CLAUDE.md", "as of v1.73 (`%s`)" % TRUE_CMD), [])
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_a_plain_count_still_binds(self):
+        claim = self.bind("%d files (`%s`)" % (TRUE_VALUE, TRUE_CMD))
+        self.assertEqual(claim.shape.name, "value-then-parenthesised-command")
+        self.assertEqual(M.check_claim(claim, self.dir, ())[0], "reproduced")
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_a_bold_total_with_attribution_still_binds(self):
+        claim = self.bind("**%d total** (re-derived by `%s`)"
+                          % (TRUE_VALUE, TRUE_CMD))
+        self.assertEqual(claim.shape.name, "value-then-attributed-command")
+        self.assertEqual(M.check_claim(claim, self.dir, ())[0], "reproduced")
+
+
+@unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+class CheckTwoCoverageFloorTests(FixtureCase):
+    """Round 19 (H17): CHECK 2 had no coverage floor at all — blinding it
+    completely (DECL_CLASS matching nothing, or no fence tag ever
+    recognised) still printed PASS and exited 0."""
+
+    CLEAN_FENCE = ("```csharp\npublic class Foo { public int Bar; }\n"
+                   "int x = Foo.Bar;\n```\n")
+
+    def true_claim(self):
+        self.write("CLAUDE.md", "# Fixture\n\n`%s` -> %d\n"
+                   % (TRUE_CMD, TRUE_VALUE))
+
+    def test_exit_2_when_decl_class_matches_nothing(self):
+        self.true_claim()
+        self.spec_file(self.CLEAN_FENCE)
+        with mock.patch.object(M, "DECL_CLASS", re.compile(r"(?!)")):
+            code, out = self.scan()
+        self.assertEqual(code, 2, out)
+        self.assertIn("actually examined", out)
+
+    def test_exit_2_when_no_fence_tag_is_recognised(self):
+        self.true_claim()
+        self.spec_file(self.CLEAN_FENCE)
+        with mock.patch.object(M, "_CSHARP_TAGS", ()):
+            code, out = self.scan()
+        self.assertEqual(code, 2, out)
+        self.assertIn("csharp/cs fence", out)
+
+
+@unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+class AnswerKindRegistrationTests(FixtureCase):
+    """Round 19 (H18): registering a second answer kind used to crash —
+    `declined` was built from DECLINE_BUCKETS alone, a table the SEAM 1
+    banner's promise never mentioned, so a kind whose bucket was not already
+    listed raised KeyError out of scan()."""
+
+    def test_decline_bucket_order_includes_every_registered_answer_kind(self):
+        class FakeAnswer:
+            bucket = "fake-unreadable-kind"
+        with mock.patch.object(M, "ANSWER_KINDS",
+                               M.ANSWER_KINDS + (FakeAnswer(),)):
+            order = M.decline_bucket_order()
+        self.assertIn(("fake-unreadable-kind", "fake-unreadable-kind"), order)
+
+    def test_record_decline_never_keyerrors_on_an_unforeseen_bucket(self):
+        declined = {b: 0 for b, _label in M.DECLINE_BUCKETS}
+        order = list(M.DECLINE_BUCKETS)
+        M.record_decline(declined, order, "totally-novel-bucket")
+        self.assertEqual(declined["totally-novel-bucket"], 1)
+        self.assertIn(("totally-novel-bucket", "totally-novel-bucket"), order)
+        M.record_decline(declined, order, "totally-novel-bucket")
+        self.assertEqual(declined["totally-novel-bucket"], 2)
+
+    def test_scan_tolerates_an_extra_registered_bucket_end_to_end(self):
+        class FakeAnswer:
+            name = "fake-kind"
+            bucket = "fake-unreadable-kind"
+        self.write("CLAUDE.md", "# Fixture\n\n`%s` -> %d\n"
+                   % (TRUE_CMD, TRUE_VALUE))
+        self.spec_file("prose only\n")
+        with mock.patch.object(M, "ANSWER_KINDS",
+                               M.ANSWER_KINDS + (FakeAnswer(),)):
+            code, out = self.scan()
+        self.assertEqual(code, 0, out)
+        self.assertIn("fake-unreadable-kind", out)
+
+
+class CensusShapeTests(FixtureCase):
+    """The unrecognised-shape census — round 19 H15's positive shape test
+    plus round 20 M15's FORBIDDEN-bearing fix, neither directly locked
+    before now."""
+
+    def test_a_quoted_head_reaches_the_census(self):
+        text = ("35 assemblies. The gate runs `\"grep\" -c 'a' data.txt` "
+                "nightly.")
+        bound = {c.cmd_start for c in M.collect_claims("CLAUDE.md", text)}
+        cmds = [cmd for _line, cmd in M.unrecognised_spans(text, bound)]
+        self.assertIn("\"grep\" -c 'a' data.txt", cmds)
+
+    def test_a_forbidden_bearing_span_is_named_not_dropped(self):
+        text = ("Also `rm -rf / || true` is refused everywhere (see rule 6)."
+                )
+        bound = {c.cmd_start for c in M.collect_claims("CLAUDE.md", text)}
+        hits = list(M.unrecognised_spans(text, bound))
+        self.assertEqual([cmd for _line, cmd in hits], ["rm -rf / || true"])
+        reason = M.unrecognised_span_reason(hits[0][1])
+        self.assertIn("shell metacharacter", reason)
+
+
+class SelfContainedPositionTests(FixtureCase):
+    """`self_contained`'s POSITION rule — round 20 M21: a grep/awk PATTERN
+    that happens to spell a real file must not count as the file operand, or
+    a pattern-only command silently reads an empty stdin and its output is
+    fabricated-compared against the document's stated value."""
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_a_pattern_naming_a_real_file_is_not_a_file_operand(self):
+        # The pattern here is literally "data.txt" — the real fixture file —
+        # and there is no OTHER operand at all.
+        self.assertDeclined("`grep -c 'data.txt'` -> 3",
+                            "not-self-contained", "empty stdin")
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_a_directory_operand_still_counts_and_executes(self):
+        self.write("docs/readme.txt", "x has a needle\ny plain\n")
+        expanded, why = M.expand_globs(M.tokenize("grep -rc x docs/"),
+                                       self.dir)
+        self.assertIsNone(why, why)
+        self.assertTrue(M.self_contained(expanded, self.dir))
+        out, why = M.run_pipeline(expanded, str(self.dir))
+        self.assertIsNone(why, why)
+
+
+@unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+class PostExpansionRevalidationTests(FixtureCase):
+    """`expand_globs`'s post-expansion re-run of the escape-hatch check — a
+    reviewer had called it dead because removing it left all 71 tests green.
+    `uniq tools/doc-*.py` is the exact case that proves otherwise: ONE
+    pre-expansion operand, so `uniq`'s own operand-COUNT hatch does not fire
+    pre-expansion, and it expands to TWO real files, neither starting with
+    `-`, so the option-shaped-filename check misses it too."""
+
+    def test_uniq_operand_count_hatch_survives_glob_expansion(self):
+        self.write("tools/doc-a.py", "alpha content\n")
+        self.write("tools/doc-b.py", "beta content\n")
+        segments = M.tokenize("uniq tools/doc-*.py")
+        self.assertEqual(len(segments[0]) - 1, 1,
+                         "fixture must be ONE pre-expansion operand for this "
+                         "to prove anything")
+        expanded, why = M.expand_globs(segments, self.dir)
+        self.assertIsNone(expanded)
+        self.assertIsNotNone(why)
+        self.assertIn("OUTPUT operand", why)
+        self.assertEqual((self.dir / "tools/doc-a.py").read_text(),
+                         "alpha content\n")
+        self.assertEqual((self.dir / "tools/doc-b.py").read_text(),
+                         "beta content\n")
+
+    def test_uniq_glob_hatch_is_declined_through_a_full_claim(self):
+        self.write("tools/doc-a.py", "alpha content\n")
+        self.write("tools/doc-b.py", "beta content\n")
+        self.assertDeclined("`uniq tools/doc-*.py` -> 3",
+                            "unsafe", "OUTPUT operand")
+        self.assertEqual((self.dir / "tools/doc-a.py").read_text(),
+                         "alpha content\n")
+        self.assertEqual((self.dir / "tools/doc-b.py").read_text(),
+                         "beta content\n")
+
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    # M18: `exit=False` so this file, not unittest's own default, decides the
+    # process exit code — `wasSuccessful()` alone counts a skip as neither a
+    # pass nor a failure, which is how the whole suite went vacuously green
+    # under a stubbed `shutil.which`. See unexplained_skips() above.
+    _program = unittest.main(verbosity=2, exit=False)
+    _result = _program.result
+    _bad_skips = unexplained_skips(_result.skipped)
+    if _bad_skips:
+        sys.stderr.write(
+            "\nSKIP CEILING EXCEEDED (M18) — a skip that leaves the exit "
+            "code at 0 is silent to the only consumer that acts on it. "
+            "%d of %d skip(s) could not be explained by a binary genuinely "
+            "absent from PATH right now:\n"
+            % (len(_bad_skips), len(_result.skipped)))
+        for _test, _reason in _bad_skips:
+            sys.stderr.write("  - %s: %s\n" % (_test, _reason))
+        sys.exit(1)
+    sys.exit(0 if _result.wasSuccessful() else 1)
 
 # Version History
 # | Version | Date       | Author      | Notes                                 |
@@ -940,3 +1698,81 @@ if __name__ == "__main__":
 # |         |            |             | every claim in every row, exactly     |
 # |         |            |             | what that function's docstring says   |
 # |         |            |             | it exists to prevent.                 |
+# | 1.1     | 2026-08-22 | Claude Code | M17 + M18 (two reviewed findings      |
+# |         |            |             | against this suite) plus round 16's   |
+# |         |            |             | own fixes, which had landed with no   |
+# |         |            |             | coverage at all — the same shape that |
+# |         |            |             | made round 15's fixes silently        |
+# |         |            |             | regressable. 71 -> 121 tests, 0.39s   |
+# |         |            |             | -> ~1.9s. M17: two independent        |
+# |         |            |             | mutation batteries (38 and 15         |
+# |         |            |             | mutants) agreed on 18 survivors —     |
+# |         |            |             | one test per survivor now (section    |
+# |         |            |             | 8), several driving scan() end to end |
+# |         |            |             | rather than the helper alone, per     |
+# |         |            |             | M17's own fix note that the old       |
+# |         |            |             | coverage "cannot distinguish a        |
+# |         |            |             | working census from a deleted call    |
+# |         |            |             | site." M18: this file's own "a skip   |
+# |         |            |             | is never silent" claim was false of   |
+# |         |            |             | itself — `unittest.main()`'s exit     |
+# |         |            |             | code ignores skips entirely, proven   |
+# |         |            |             | by stubbing shutil.which for grep/    |
+# |         |            |             | printf/git (71 ran, 39 skipped,       |
+# |         |            |             | wasSuccessful() True). Fixed with a   |
+# |         |            |             | SKIP CEILING in the `__main__` block: |
+# |         |            |             | `unittest.main(exit=False)` plus an   |
+# |         |            |             | explicit exit that fails the run      |
+# |         |            |             | unless every skip's reason is         |
+# |         |            |             | independently re-verified against a   |
+# |         |            |             | FRESH `shutil.which` call — not the   |
+# |         |            |             | HAVE_* flag that might itself have    |
+# |         |            |             | been fooled — so a genuinely missing  |
+# |         |            |             | binary still passes while a mass      |
+# |         |            |             | silent skip does not; locked by two   |
+# |         |            |             | self-test hooks driven as their own   |
+# |         |            |             | subprocess (CliTests) plus fast       |
+# |         |            |             | direct-call complements               |
+# |         |            |             | (SkipCeilingLogicTests). Section 9    |
+# |         |            |             | adds ten locks for round 16's own     |
+# |         |            |             | landings: GNU long-option             |
+# |         |            |             | abbreviation, clustered short-option  |
+# |         |            |             | attached values (plus the five        |
+# |         |            |             | legitimate clustered forms that must  |
+# |         |            |             | keep executing), the OS child         |
+# |         |            |             | resource limits (a real `git status`  |
+# |         |            |             | index-write kill, the strictest-of-   |
+# |         |            |             | three clamp, the RLIM_INFINITY trap,  |
+# |         |            |             | and degradation with no `resource`    |
+# |         |            |             | module), the generic Version History  |
+# |         |            |             | excusal plus the LIVE floor, the      |
+# |         |            |             | leading-value compound-token rule,    |
+# |         |            |             | CHECK 2's own coverage floors,        |
+# |         |            |             | ANSWER_KINDS registration not         |
+# |         |            |             | KeyError-ing, two more census shapes  |
+# |         |            |             | (a quoted head, a FORBIDDEN-bearing   |
+# |         |            |             | span), self_contained's positional    |
+# |         |            |             | pattern-operand rule, and the         |
+# |         |            |             | post-expansion escape-hatch re-run    |
+# |         |            |             | (`uniq tools/doc-*.py`, proven NOT    |
+# |         |            |             | dead against the exact case a         |
+# |         |            |             | reviewer had used to argue it was).   |
+# |         |            |             | Every one of the 16 new load-bearing  |
+# |         |            |             | tests (6 M17 + 10 round-16) was       |
+# |         |            |             | mutation-verified against a scratch   |
+# |         |            |             | edit of the real tool file (applied,  |
+# |         |            |             | confirmed red, `git checkout`-ed      |
+# |         |            |             | back) — see the landing report for    |
+# |         |            |             | the exact mutation and failure each   |
+# |         |            |             | one produced. Two mutations were      |
+# |         |            |             | caught by a DIFFERENT layer than the  |
+# |         |            |             | one under test (the RLIMIT_FSIZE      |
+# |         |            |             | defence-in-depth kill, on the         |
+# |         |            |             | abbreviation and clustered-suffix     |
+# |         |            |             | mutants) — the assertions still went  |
+# |         |            |             | red because they check the SPECIFIC   |
+# |         |            |             | bucket/reason the mutated layer owns, |
+# |         |            |             | not merely "declined by something."   |
+# |         |            |             | doc-claim-check.py ITSELF was not     |
+# |         |            |             | edited: no defect was found in it     |
+# |         |            |             | while writing this round.             |
