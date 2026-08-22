@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/SaveManager.cs
 // Created:  2026-05-29
-// Modified: 2026-06-16 (AR fix H-1: Load reconstructs the header from disk so replay can verify the chain)
+// Modified: 2026-08-22 (ERR-016-009: the Stage-0 header's missing buildHash is recorded explicitly)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.6.1, §4.6.1.1, §3.4 (FR-DS-006), Code Standards #20
 // Purpose:  Atomic save/load manager. Satisfies the §4.6.1.1 atomic-write contract:
@@ -119,10 +119,14 @@ namespace TacticalDirector.DeterministicSim
         /// verified across a process restart (AR H-1/H-2).
         /// Returns ERR_DS_STORAGE_ATOMICITY on read/IO failure, ERR_DS_SCHEMA_INCOMPATIBLE on a
         /// truncated/oversize file, 0 on success.
-        /// NOTE: the on-disk header does not yet carry the EnvironmentFingerprint (Stage-0 wire-format
-        /// limitation; serializing it requires a SNAPSHOT_SCHEMA_VERSION bump — tracked separately),
-        /// so <see cref="SnapshotHeader.Fingerprint"/> is left null on a disk load and the §4.2.2
-        /// step-3 env check must fail closed (see ReplayEngine).
+        /// NOTE: the on-disk header carries neither the EnvironmentFingerprint nor the §2.3.2
+        /// buildHash (Stage-0 wire-format limitation; serializing either requires a
+        /// SNAPSHOT_SCHEMA_VERSION bump — tracked separately), so
+        /// <see cref="SnapshotHeader.Fingerprint"/> and <see cref="SnapshotHeader.BuildHash"/> are
+        /// both left null on a disk load and the §4.2.2 step-3 env check must fail closed (see
+        /// ReplayEngine). A format that DOES carry the build hash — the on-disk match save
+        /// (match-save-file-design.md KD-7) — must refuse an empty one at both ends instead
+        /// (#16 §2.3.2).
         /// </summary>
         public ushort Load(ulong tick, SnapshotHeader headerOut, SnapshotPayload payloadOut)
         {
@@ -188,8 +192,9 @@ namespace TacticalDirector.DeterministicSim
         }
 
         // Inverse of WriteHeaderBytes: reconstructs the SnapshotHeader from the first
-        // ComputeRawHeaderSize() bytes of a loaded snapshot file. Fingerprint is NOT on disk
-        // at Stage 0 (see the Load overload doc) and is left null. The caller (the Load overload)
+        // ComputeRawHeaderSize() bytes of a loaded snapshot file. Neither the Fingerprint nor the
+        // §2.3.2 BuildHash is on disk at Stage 0 (see the Load overload doc); both are left null,
+        // written out explicitly so the absence reads as recorded rather than forgotten. The caller (the Load overload)
         // guarantees raw.Length > ComputeRawHeaderSize() before calling, so the reads are bounded.
         private static void ReadHeaderBytes(byte[] raw, SnapshotHeader headerOut)
         {
@@ -207,6 +212,7 @@ namespace TacticalDirector.DeterministicSim
             // the EndOfSnapshot factory and the §4.2.2 step-7 boundary check validates it downstream.
             _ = CanonicalSerializer.ReadU8(raw, ref offset);
             headerOut.Fingerprint = null;
+            headerOut.BuildHash   = null;
             headerOut.Cursor      = ReplayCursor.EndOfSnapshot(cursorTick);
         }
 
@@ -245,4 +251,8 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | (old payload-only Load delegates to the new overload; on-disk format      |
 // |         |            |        | unchanged). Fingerprint stays null on a disk load (M-4: serializing it    |
 // |         |            |        | needs a SNAPSHOT_SCHEMA_VERSION bump — filed for gate-verified follow-up). |
+// | 1.6     | 2026-08-22 | —      | ERR-016-009: ReadHeaderBytes sets BuildHash = null explicitly and the     |
+// |         |            |        | Load doc records that this Stage-0 87-byte layout carries neither the     |
+// |         |            |        | fingerprint nor the §2.3.2 build hash. No format change — the layout is   |
+// |         |            |        | untouched, so SNAPSHOT_SCHEMA_VERSION does not move.                      |
 #endregion

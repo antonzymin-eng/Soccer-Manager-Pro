@@ -9,6 +9,8 @@
 //           round-trip idempotence, and fault-injection error code coverage.
 
 using System;
+using System.Reflection;
+
 using NUnit.Framework;
 
 namespace TacticalDirector.DeterministicSim
@@ -19,8 +21,21 @@ namespace TacticalDirector.DeterministicSim
     /// §5 test card identifiers are noted in each test method's summary.
     /// </summary>
     [TestFixture]
+    /// <summary>
+    /// A stand-in #16 §2.3.2 buildHash for snapshot headers built inside this assembly.
+    /// `deterministic-sim` is a cross-cutting foundation and cannot name a real authoritative closure —
+    /// the composition root does that (`MatchEngineBuildIdentity`) — so these headers carry this
+    /// assembly's own identity, which is enough to satisfy FR-DS-014's non-empty requirement.
+    /// </summary>
+    internal static class TestBuildIdentity
+    {
+        internal static readonly string TestBuildHash =
+            BuildIdentity.ComputeHash(new[] { typeof(BuildIdentity).Assembly });
+    }
+
     public sealed class DeterministicSimTests
     {
+
         // ══════════════════════════════════════════════════════════════════════════════
         // HKDF-SHA256 golden vectors (§9.5 #4 / hkdf-sha256-kat.md v1.1)
         // ══════════════════════════════════════════════════════════════════════════════
@@ -331,7 +346,7 @@ namespace TacticalDirector.DeterministicSim
             var codec = new SnapshotCodec();
 
             var header = new SnapshotHeader();
-            header.Initialize(1UL, null, EnvironmentFingerprint.CreateStage0Dev());
+            header.Initialize(1UL, null, EnvironmentFingerprint.CreateStage0Dev(), TestBuildIdentity.TestBuildHash);
 
             // Corrupt the stored prev digest by writing non-zero bytes into PrevSnapshotDigest
             for (int i = 0; i < DeterministicSimConstants.SHA256_BYTES; i++)
@@ -699,7 +714,7 @@ namespace TacticalDirector.DeterministicSim
             // (prevDigest == null) clears PrevSnapshotDigest to all-zeros: this is the GENESIS
             // snapshot of the chain (§4.2.2 step 4 "expected predecessor" is the genesis
             // sentinel for the first snapshot).
-            header.Initialize(1UL, null, fingerprint);
+            header.Initialize(1UL, null, fingerprint, TestBuildIdentity.TestBuildHash);
 
             var payload = new SnapshotPayload();
             // Write one non-zero byte so step 5 (BytesWritten > 0) passes.
@@ -799,7 +814,7 @@ namespace TacticalDirector.DeterministicSim
             EnvironmentFingerprint fp = EnvironmentFingerprint.CreateStage0Dev();
 
             var header = new SnapshotHeader();
-            header.Initialize(120UL, prevDigest: null, fp);
+            header.Initialize(120UL, prevDigest: null, fp, TestBuildIdentity.TestBuildHash);
 
             var payload = new SnapshotPayload();
             payload.PayloadBytes[0] = 0xAB;
@@ -829,12 +844,12 @@ namespace TacticalDirector.DeterministicSim
             EnvironmentFingerprint fp = EnvironmentFingerprint.CreateStage0Dev();
 
             var codec = new SnapshotCodec();
-            var h1 = new SnapshotHeader(); h1.Initialize(1UL, null, fp);
+            var h1 = new SnapshotHeader(); h1.Initialize(1UL, null, fp, TestBuildIdentity.TestBuildHash);
             var p1 = new SnapshotPayload(); p1.PayloadBytes[0] = 0x01; p1.BytesWritten = 1;
             codec.Encode(h1, p1);
             byte[] d1 = (byte[])h1.CurrentSnapshotDigest.Clone();
 
-            var h2 = new SnapshotHeader(); h2.Initialize(2UL, null, fp);
+            var h2 = new SnapshotHeader(); h2.Initialize(2UL, null, fp, TestBuildIdentity.TestBuildHash);
             var p2 = new SnapshotPayload(); p2.PayloadBytes[0] = 0x01; p2.BytesWritten = 1;
             codec.Encode(h2, p2);
 
@@ -843,7 +858,7 @@ namespace TacticalDirector.DeterministicSim
 
             // Same tick + payload, but chained from genesis (all-zero prev) → must differ.
             var genesisCodec = new SnapshotCodec();
-            var hg = new SnapshotHeader(); hg.Initialize(2UL, null, fp);
+            var hg = new SnapshotHeader(); hg.Initialize(2UL, null, fp, TestBuildIdentity.TestBuildHash);
             var pg = new SnapshotPayload(); pg.PayloadBytes[0] = 0x01; pg.BytesWritten = 1;
             genesisCodec.Encode(hg, pg);
 

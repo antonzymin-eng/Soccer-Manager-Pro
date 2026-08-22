@@ -1,7 +1,17 @@
 # On-Disk Match Save File — Match Engine (Design Supplement)
 
 > **Created:** July 21, 2026
-> **Last Updated:** July 21, 2026 (v0.3 — **AR-2 (0H+0M+1L) — CONVERGENCE (L-only round closes the
+> **Last Updated:** August 22, 2026 (v0.4 — **`ERR-016-009`: the file now carries the #16 §2.3.2
+> `buildHash`.** New KD-7; §3 layout goes v2 (`MATCH_SAVE_FORMAT_VERSION` 1 → 2) with one
+> `string header.BuildHash` between `Cursor.PhaseOrdinal` and `fingerprintPresent`. **No presence flag
+> and no absent case** — unlike the fingerprint, this writer always knows its own build, so `Encode`
+> refuses a null/empty build hash and `Decode` refuses a blob carrying one; a codec able to write a
+> file its own reader rejects is the defect KD-6's sibling pass already filed elsewhere. It sits
+> BESIDE the fingerprint, not inside it: the fingerprint pins the host and float model, the build hash
+> pins the binary, and they fail with distinct error codes. KD-1 stands — a v1 blob is refused, not
+> migrated. `SNAPSHOT_SCHEMA_VERSION` untouched and no digest preimage sees the field, so no golden
+> vector moves. Prior v0.3 below.)
+> **Last Updated (prior):** July 21, 2026 (v0.3 — **AR-2 (0H+0M+1L) — CONVERGENCE (L-only round closes the
 > cycle).** Fresh-eyes re-walk of the whole v0.2 surface. Verified sound with no change: (a) the
 > boot-header/state split (KD-2 O1(b)) — the file carries `matchSeed` + `(SnapshotHeader,
 > SnapshotPayload)`, and `RestoreFromSnapshot` needs exactly that triple plus the caller-supplied
@@ -180,7 +190,7 @@ version-gate + trailing-byte guard over the payload).
 
 ---
 
-## 3. On-disk layout (v1)
+## 3. On-disk layout (v2 — `MATCH_SAVE_FORMAT_VERSION = 2` since August 22, 2026, `ERR-016-009`)
 
 All integers little-endian, via `CanonicalSerializer`. `string` = u32 length + ASCII bytes.
 `digest[32]` = 32 raw bytes (fixed width, not length-prefixed).
@@ -197,6 +207,7 @@ byte  header.PrevSnapshotDigest[32]
 byte  header.CurrentSnapshotDigest[32]
 u64   header.Cursor.Tick
 u8    header.Cursor.PhaseOrdinal
+string header.BuildHash                    // KD-7 (v2) — #16 §2.3.2 buildHash; MUST be non-empty
 u8    fingerprintPresent                   // KD-3 (1 = the 6 fields follow; 0 = null)
   // if present (EnvironmentFingerprint, the 6 ValidateAgainst fields):
   i32     WorkerCount
@@ -216,6 +227,28 @@ the remaining buffer before the copy (a corrupt count throws `ArgumentException`
 `OverflowException`/OOM or a silent short read); `payloadLength` is additionally checked against
 `SnapshotPayload.Capacity`; after the payload copy the read offset must equal the blob length exactly
 (trailing-byte guard).
+
+### KD-7 — The file carries the `buildHash`, and refuses to carry an empty one (v2, `ERR-016-009`)
+
+The #16 §2.3.2 `buildHash` rides in the header block for the same reason KD-3 put the
+`EnvironmentFingerprint` there: the gate that consumes it (`MatchEngine.RestoreFromSnapshot` step 0)
+runs on the reconstructed header, so a gate that cannot see the field through disk is not a real
+check. It sits **beside** the fingerprint rather than inside it: the fingerprint pins the *host and
+float model*, the build hash pins the *binary*, and the two fail for unrelated reasons
+(`ERR_DS_REPLAY_ENV_MISMATCH` vs `ERR_DS_REPLAY_BUILD_MISMATCH`).
+
+Unlike the fingerprint there is **no absent case and no presence flag**: this writer always knows its
+own build. `Encode` refuses a header with a null/empty `BuildHash` and `Decode` refuses a blob that
+carries one — both sides, because a codec that can write a file its own reader rejects is the defect
+this note's own KD-6 pass filed against the sibling season codecs. The one legitimately
+build-hash-less header is the deterministic-sim `SaveManager`'s (§3.9.2), whose Stage-0 87-byte
+header carries neither the fingerprint nor the build hash; that path is tracked separately and does
+not reach this format.
+
+`MATCH_SAVE_FORMAT_VERSION` 1 → 2. KD-1 stands: **no cross-version migration at Stage 0** — a v1 blob
+is refused, not upgraded. Nothing else in the layout moved, and the change is confined to this
+format: `SNAPSHOT_SCHEMA_VERSION` is untouched, and no digest preimage sees the new field (#16 §2.3.2
+rule 2), so no golden vector moves.
 
 ---
 
@@ -288,3 +321,4 @@ defect a per-method unit test would miss.
 | 0.1 | 2026-07-21 | — | Initial design supplement. Scope (on-disk match save file = the G-Phase 3 `SaveManager` fold / N1), goals, layout, components. |
 | 0.2 | 2026-07-21 | — | **Self-adversarial review AR-1: 0H + 3M + 2L, all resolved.** M-1: persist the boot `matchSeed` (the file was not self-sufficient without it — KD-2). M-2: serialize the `EnvironmentFingerprint` so the KD-6 gate runs through disk (KD-3). M-3: add the trailing-byte / length-bound fail-loud guards (KD-6). L-1: pin `MATCH_SAVE_FORMAT_VERSION` as a third distinct version (KD-1). L-2: pin the `ISquadProvider` as a Load parameter, not persisted (KD-4). |
 | 0.3 | 2026-07-21 | — | **Self-adversarial review AR-2: 0H + 0M + 1L — CONVERGENCE.** Fresh-eyes re-walk; boot-header/state split, gate order, and fingerprint round-trip verified sound with no change. L-1: clarified that `SaveManager` exposes no raw-blob atomic write, so the atomic steps are re-implemented (not delegated) in `MatchSaveManager` (KD-6). Cycle converged — ready to implement. |
+| 0.4 | 2026-08-22 | — | **`ERR-016-009` — the file carries the #16 §2.3.2 `buildHash`.** New **KD-7**; §3 layout goes **v2** (`MATCH_SAVE_FORMAT_VERSION` 1 → 2) with one `string header.BuildHash` between `Cursor.PhaseOrdinal` and `fingerprintPresent`. No presence flag and no absent case — `Encode` refuses a null/empty build hash and `Decode` refuses a blob carrying one, both sides, so the format cannot admit a save whose build identity is unknown. Sits beside the fingerprint rather than inside it: host identity and binary identity fail for unrelated reasons and carry distinct error codes. KD-1 unchanged (a v1 blob is refused, not migrated). `SNAPSHOT_SCHEMA_VERSION` untouched; no digest preimage sees the field, so no golden vector moves. |

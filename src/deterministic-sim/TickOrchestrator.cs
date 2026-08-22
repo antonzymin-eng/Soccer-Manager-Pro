@@ -1,6 +1,7 @@
 // File:     src/deterministic-sim/TickOrchestrator.cs
 // Created:  2026-05-29
-// Modified: 2026-06-15 (AR fix L-3/L-4: codec owns the digest chain; AI no-op doc corrected)
+// Modified: 2026-08-22 (ERR-016-009: the constructor takes the §2.3.2 buildHash and stamps it into
+//           every header it writes)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.1.2, §3.6.1, §3.4, FR-DS-001/002, Code Standards #20
 // Purpose:  7-phase 60 Hz tick pipeline orchestrator. Enforces canonical phase order
@@ -60,11 +61,18 @@ namespace TacticalDirector.DeterministicSim
         /// Constructs the orchestrator with constructor-injected dependencies and phase callbacks.
         /// All allocations occur here; RunTick is zero-allocation on the hot path.
         /// §3.1.2 / §3.6.1.
+        /// <para>
+        /// <paramref name="buildHash"/> is the #16 §2.3.2 build identity, captured at match start
+        /// alongside <paramref name="fingerprint"/> and stamped into every header this orchestrator
+        /// writes (FR-DS-014). It is supplied by the composition root rather than derived here: this
+        /// assembly is a cross-cutting foundation and cannot name the closure it would have to hash.
+        /// </para>
         /// </summary>
         public TickOrchestrator(
             MatchClock              clock,
             SnapshotCodec           codec,
             EnvironmentFingerprint  fingerprint,
+            string                  buildHash,
             System.Action           runInput,
             System.Action           runIntent,
             System.Action           runAI,
@@ -86,7 +94,7 @@ namespace TacticalDirector.DeterministicSim
             _snapshotHeader  = new SnapshotHeader();
             _snapshotPayload = new SnapshotPayload();
 
-            _snapshotHeader.Initialize(0UL, null, fingerprint);
+            _snapshotHeader.Initialize(0UL, null, fingerprint, buildHash);
         }
 
         // ── Public API ────────────────────────────────────────────────────────────────
@@ -161,7 +169,8 @@ namespace TacticalDirector.DeterministicSim
                 // The codec is the digest-chain authority: Encode threads the previous digest into
                 // PrevSnapshotDigest and computes CurrentSnapshotDigest over the §3.2.3 preimage.
                 // Pass prevDigest: null here (Encode overwrites it) rather than the stale field.
-                _snapshotHeader.Initialize(tick, prevDigest: null, _snapshotHeader.Fingerprint);
+                _snapshotHeader.Initialize(
+                    tick, prevDigest: null, _snapshotHeader.Fingerprint, _snapshotHeader.BuildHash);
                 _runSnapshot(_snapshotPayload);
                 _codec.Encode(_snapshotHeader, _snapshotPayload);
             }
@@ -197,4 +206,9 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | PrevSnapshotDigest in Encode); removes dead self-referential    |
 // |         |            |        | plumbing. AR fix L-4: AI-no-op comment no longer claims a       |
 // |         |            |        | per-phase digest emission that does not exist.                  |
+// | 1.3     | 2026-08-22 | —      | ERR-016-009: new required `buildHash` constructor parameter,    |
+// |         |            |        | captured beside the fingerprint and threaded into every         |
+// |         |            |        | SnapshotHeader.Initialize call (FR-DS-014). Supplied by the     |
+// |         |            |        | composition root — this assembly cannot name the assembly       |
+// |         |            |        | closure it would otherwise have to hash.                        |
 #endregion

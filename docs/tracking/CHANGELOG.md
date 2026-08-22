@@ -12,7 +12,87 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 22, 2026, latest same day (**The four tracking gaps surfaced across this
+> **Last Updated:** August 22, 2026, latest same day (**`ERR-016-009`'s `buildHash` half CLOSED —
+> spec + code, same commit — and the six long OPEN ISSUES landing narratives moved verbatim out of
+> `CLAUDE.md`.**) **1. What build identity IS.** The previous entry recorded `buildHash` as
+> deliberately not fixed because "what constitutes build identity (assembly MVIDs? a CI-stamped
+> commit? the `.asmdef` closure?) is a decision, not an implementation detail." The decision is made:
+> **SHA-256 over the Module Version IDs of a DECLARED authoritative assembly closure.** A **CI-stamped
+> commit** was rejected because it identifies *source*, not binary — a dirty working tree, a different
+> compiler and a different target framework all produce different binaries under one commit, and the
+> developer builds where determinism defects actually surface carry no stamp at all. The **`.asmdef`
+> closure alone** was rejected because it names *which* assemblies participate, not what is in them,
+> so two builds differing only in compiled code have identical closures. The adopted answer is not a
+> fourth option but the union of the two workable ones: the closure is the **scope selector**, the
+> MVIDs are the **content**. **2. Two rules that are not aesthetic.** The closure is **declared, never
+> discovered** — `AppDomain.GetAssemblies()` returns whatever happens to have been loaded, which
+> differs between a player run, an editor run and a test run of one build, so `MatchEngineBuildIdentity`
+> names its 20 modules with `typeof` expressions and a missing one is a compile error rather than a
+> silently shorter hash. And `buildHash` is **outside every digest preimage**, which is the constraint
+> that held this landing to one save format: `EnvironmentFingerprint.ComputeDigest()` *is* the §3.2.3
+> snapshot-header preimage's envFp slot and `header.SchemaVersion` is in that preimage too, so putting
+> the hash on the fingerprint — or bumping `SNAPSHOT_SCHEMA_VERSION` to widen the deterministic-sim
+> header — would have moved every snapshot digest and invalidated the golden-vector corpus certified
+> July 19, 2026 on a pinned host this project cannot currently re-run. `SnapshotHeader` was the right
+> home for the opposite reason: it already carries `schemaVersion` and `digestVersion`, two of
+> `DeterminismContext`'s four fields, so this **completes the split #16 §2.3 v1.1 documented** rather
+> than creating a parallel type. **3. Landed.** New `BuildIdentity` + `BuildModule` (fail-loud on an
+> empty closure, a duplicate name, a `default(BuildModule)` and a non-ASCII name the §3.2.4.1 encoder
+> would silently mangle); `SnapshotHeader.BuildHash` with a REQUIRED `Initialize` parameter;
+> `TickOrchestrator` takes it beside the fingerprint; `MatchEngine` stamps, copies and gates it;
+> `MatchSaveCodec` carries it at `MATCH_SAVE_FORMAT_VERSION` **1 → 2** and refuses an empty value at
+> **both** ends. Restore fails closed with the new **`ERR_DS_REPLAY_BUILD_MISMATCH` (0x160E)**, kept
+> distinct from `ERR_DS_REPLAY_ENV_MISMATCH` because a recompiled engine on the same host passes the
+> fingerprint check and must still be refused — collapsing those two axes is the reading the ERR was
+> filed against. Spec: #16 §2.3 **v1.2** with new normative **§2.3.2** and **FR-DS-014** (the v1.1
+> "open GAP" paragraph kept **frozen and quoted in place**, not deleted); §3.4 **v1.0.16** adds
+> `DOMAIN_TAG_BUILD_IDENTITY = 0x2E` — allocated *after* the roadmap §6 reserved block `0x2B`–`0x2D`
+> so no spec-pinned subsystem number moves, and with no `SubsystemOrdinals` mirror since it registers
+> no stream; §3.10 adds `EC-016-015`; `match-save-file-design.md` **v0.4** adds **KD-7**.
+> **No `DETERMINISM_DIGEST_VERSION` bump, no `SNAPSHOT_SCHEMA_VERSION` bump, no RNG stream, no draw
+> site, no draw-order change, no golden vector moved.** **4. Verification, including one thing the
+> suite caught that reasoning did not.** 27 locks — 16 on the hasher (an independently derived golden
+> vector from a Python mirror of the preimage, order invariance, name/MVID/count sensitivity, every
+> guard) and 11 on the composition root (closure drift, per-module sensitivity across the *real*
+> closure, header carriage, the KD-7 round-trip, both empty-hash refusals, the restore gate with a
+> positive control). **Three mutants were executed and each was killed by exactly one lock.** And on
+> its first run the suite failed for a real reason: `CaptureDurableHeader` deep-copies the header field
+> by field and dropped the new one, so every save would have carried `BuildHash = null` and the restore
+> gate would have skipped itself — the entire landing green and inert, which is precisely the failure
+> class this project keeps re-meeting. **GATE: whole-tree at HEAD, 33 test assemblies, build 0 errors
+> and the same 5 warnings as baseline, quarantine empty; `DeterministicSim.Tests` 72/0/4 (baseline
+> 56/0/4), `MatchEngine.Tests` 472/1/11 (baseline 461/1/11)** — the one failure in both runs being the
+> inherited owner-held-red `sim_match_engine_close_chance`. The baseline was captured *before* any
+> `src/` file was touched, and a line-by-line diff of the two runs shows **exactly two suites changed,
+> by exactly this landing's 16 + 11 new locks, with every other suite byte-identical** — so "adds no
+> new failure" is a measurement, not an inference.
+> **5. `CLAUDE.md` compression — the owner call taken up.** The previous entry recorded this as NOT
+> done because it "would mean editing historical entries, which this project's convention explicitly
+> forbids", and named the cleanest form: move the long landing narratives to a `landing-history.md`
+> and leave one-paragraph index bullets. That is what happened. **No text was edited, summarised,
+> reordered or deleted** — six bullets' bodies (72,711 bytes; 70% of the file, one of them 38.6% on
+> its own) were moved **verbatim** into the new `docs/tracking/landing-history.md`, each replaced by an
+> index paragraph pointing at its section. `CLAUDE.md` goes **104,292 → 44,244 bytes (−58%)**; all 17
+> bullets remain and **no item's open/closed status changed**. The new file states plainly that it
+> confers no status — `open-issues.md` stays the owning record, `spec-error-log.md` the authority on
+> every `ERR-` id, and a moved narrative is frozen at its move date, exactly as a pre-promotion design
+> supplement is. **6. A discrepancy the move surfaced, recorded and NOT fixed.** `CLAUDE.md`'s OPEN
+> ISSUES index carries **17** bullets against `open-issues.md`'s **16** entries: the **#29/#41** bullet
+> has no owning entry at all, so the "16 active" figure reconciles only because it is counted from the
+> record rather than from the index. That bullet's own text opens "WHAT REMAINS: nothing", which points
+> at the resolved archive — but it was never in `open-issues.md` to archive, and re-classifying it is
+> an owner call about what is open, not a side-effect of moving text. It is written down in three
+> places and left exactly as it stood. **7. What is still open on the same contract.** The
+> `SaveManager` `Fingerprint = null` write-site gap is untouched and has now gained a sibling: that
+> same Stage-0 87-byte header carries no build hash either, deliberately, because widening it is
+> exactly the `SNAPSHOT_SCHEMA_VERSION` bump the digest-preimage exclusion declines to spend. Closing
+> both together still costs a golden-vector re-certification on the pinned host. **Modified:**
+> `src/deterministic-sim/` (6 files + 2 new), `src/match-engine/` (3 files + 2 new),
+> `docs/specs/deterministic-sim/section-2.md`, `section-3.md`, `docs/tracking/match-save-file-design.md`,
+> `spec-error-log.md`, `open-issues.md`, `data-contract-index.md`, `file-manifest.md`, `CLAUDE.md`,
+> `docs/tracking/landing-history.md` (new), `CHANGELOG.md`, `CHANGELOG-src.md`.
+
+> **Last Updated (prior):** August 22, 2026, latest same day (**The four tracking gaps surfaced across this
 > session's passes are now CLOSED — three registers reconciled, one new gap tracked.**) Doc-only; no
 > `.cs` touched. **1. `open-issues.md` was a landing behind its own index.** Root `CLAUDE.md` has
 > carried `ERR-008-023` since the August 7 landing and `open-issues.md` had **zero** mentions of it —
