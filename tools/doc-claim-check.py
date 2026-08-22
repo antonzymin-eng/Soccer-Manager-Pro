@@ -249,13 +249,16 @@
 #      call allow-list structurally cannot see them; `ARGV` (round 22, H19)
 #      is the one that opens an arbitrary FILE, and it was missed for four
 #      rounds because it calls nothing at all.
-#   2. Each binary's `denied_flags` / `denied_prefixes` (BINARIES, round 17
-#      L1 — one `Binary` record per allow-listed binary, consolidated from
-#      what used to be separate DENIED_FLAGS / DENIED_FLAG_PREFIXES tables)
-#      compared on the option CORE, so an attached value (`-oFILE`,
-#      `-O./p.sh`) or an un-enumerated `--long=value` cannot respell a denied
-#      hatch past the check (round 15, H3) — and, since round 18 (H12),
-#      compared as a PREFIX for long options, because `getopt_long` accepts
+#   2. Each binary's `denied_flags` (BINARIES, round 17 L1 — one `Binary`
+#      record per allow-listed binary, consolidated from what used to be
+#      separate DENIED_FLAGS / DENIED_FLAG_PREFIXES tables; round 24, M28
+#      removed a third table, `denied_prefixes`, that `_option_cores()`'s
+#      own `=value` reduction below and the abbreviation rule after it had
+#      made entirely redundant) compared on the option CORE, so an attached
+#      value (`-oFILE`, `-O./p.sh`) or an un-enumerated `--long=value` cannot
+#      respell a denied hatch past the check (round 15, H3) — and, since
+#      round 18 (H12), a denied long option's NAME is also matched as a
+#      PREFIX (`_abbreviated_denial()`), because `getopt_long` accepts
 #      `--o=FILE` for `--output` and `--compress-progr=./p.sh` for
 #      `--compress-program`. Over-refusal is the safe direction and no live
 #      claim uses an abbreviated long option.
@@ -369,7 +372,8 @@
 # is not politeness: a silent refusal is indistinguishable from a pass, which
 # is the defect this whole tool exists to deny itself.
 #
-# Exit codes. Three kinds of non-zero, and the distinction is load-bearing:
+# Exit codes. Three kinds of non-zero, meaningfully distinct in what they
+# report about a run:
 #   0 = every executable claim reproduced its stated value, no dangling
 #       identifier, and the run actually looked at what it is supposed to.
 #   1 = CHECK 1 FOUND A DOCUMENT WRONG: at least one stated value does not
@@ -396,10 +400,21 @@
 #       of 1 — before it, CHECK 1 and CHECK 2 fused into one exit code with
 #       nothing in the number itself saying which of two unrelated defect
 #       classes CI was red for; the printed FAIL block always named it, but the
-#       exit code, the thing automation actually branches on, did not. From
-#       the day this file was written until round 17, the dangling-identifier
-#       path returned 1, same as CHECK 1 — that history is why 1 still wins
-#       when both checks fail, rather than 3 taking over as the newer code.
+#       exit code — the thing automation COULD branch on without reading a
+#       log — did not. From the day this file was written until round 17,
+#       the dangling-identifier path returned 1, same as CHECK 1 — that
+#       history is why 1 still wins when both checks fail, rather than 3
+#       taking over as the newer code.
+#
+#       ROUND 24 (L15), STATED HONESTLY RATHER THAN LEFT IMPLIED: "the thing
+#       automation actually branches on" overclaimed a consumer this repo
+#       does not have. `ci.yml`'s own step is a single `run:` line —
+#       `python3 tools/doc-claim-check.py --repo .` — and GitHub Actions
+#       fails a `run:` step on ANY non-zero exit identically; nothing in this
+#       repo currently reads 1 vs 2 vs 3 apart. The split is not wasted (a
+#       reader with the log open, or a future step written to branch on it,
+#       gets a real answer instead of one bit), but today it has no
+#       consumer, and this file should not claim one it does not have.
 
 import argparse
 import importlib.util
@@ -445,7 +460,17 @@ def _load_consistency():
 # worse than no report, because it reads like a finished one. Checked as one
 # batch, immediately after the load, so a contract break is reported before a
 # single line of scan output exists.
-_DCC_CONTRACT = ("record_regions", "frozen_chain_span", "sentence_window",
+#
+# Round 24 (L10): `frozen_chain_span` used to sit in this tuple, but nothing
+# in this file has called `DCC.frozen_chain_span` since the round-19 (H13)
+# rewrite that made `dated_record_regions` derive frozen spans from
+# `blank_frozen_history`'s own offset-preserving diff instead — the comment
+# above was a false sentence about the code below it, and the entry was
+# over-strict rather than unsafe: it would have exited 2 on a legitimate
+# rename or removal of a sibling function this file never touches. Dropped;
+# every name left here is one `grep -n "DCC\." tools/doc-claim-check.py`
+# away from being reproven live.
+_DCC_CONTRACT = ("record_regions", "sentence_window",
                  "LOG_BODY_FILES", "blank_frozen_history")
 
 DCC = None
@@ -507,20 +532,18 @@ def _ensure_consistency_module():
 # allow, which is not a property `Binary` has any field for.
 class Binary:
     """One allow-listed binary's read-only contract:
-      denied_flags     — exact denied option cores (round 9 H1, round 15 H3)
-      denied_prefixes  — denied `--long=` prefix forms not already caught by
-                          the exact-core check above (see _option_cores()).
-                          Round 20 (M23): this is a REAL constraint, not
-                          decoration — `--flag=value` already reduces to the
-                          bare core `--flag` via _option_cores(), so an entry
-                          here whose bare form already sits in denied_flags
-                          is dead weight the exact-core check already owns.
-                          10 of this file's then-12 entries were exactly
-                          that (measured, not assumed); the two survivors
-                          were moved into `denied_flags` outright rather
-                          than kept as a prefix — see git's entry below.
-                          Every binary here currently needs NO prefix entry
-                          at all, by construction, not by omission.
+      denied_flags     — exact denied option cores (round 9 H1, round 15 H3).
+                          `_option_cores()` already reduces `--flag=value` to
+                          the bare core `--flag`, and `_abbreviated_denial()`
+                          already catches any unambiguous GNU prefix of a
+                          denied long name (round 18, H12) — so a THIRD,
+                          separate prefix table sitting beside this one would
+                          only ever repeat what those two already refuse.
+                          Round 20 (M23) found the file's then-12 such
+                          entries were exactly that redundancy, and round 24
+                          (M28) removed the dead field: a binary needs no
+                          prefix table of its own, by construction, not by
+                          omission.
       benign_exit      — exit codes that are a RESULT, not a failure (grep-
                           family 1 = "no match", diff 1 = "files differ")
       needs_file       — the first pipeline segment must name a real on-disk
@@ -543,16 +566,15 @@ class Binary:
       git_global_denied   — flags denied only BEFORE the subcommand, where git
                              parses its own global options (GIT_GLOBAL_DENIED)
     """
-    __slots__ = ("denied_flags", "denied_prefixes", "benign_exit",
+    __slots__ = ("denied_flags", "benign_exit",
                  "needs_file", "pattern_operand", "git_subcommands",
                  "git_global_denied")
 
-    def __init__(self, denied_flags=frozenset(), denied_prefixes=(),
+    def __init__(self, denied_flags=frozenset(),
                  benign_exit=frozenset(), needs_file=False,
                  pattern_operand=False, git_subcommands=None,
                  git_global_denied=None):
         self.denied_flags = denied_flags
-        self.denied_prefixes = denied_prefixes
         self.benign_exit = benign_exit
         self.needs_file = needs_file
         self.pattern_operand = pattern_operand
@@ -615,12 +637,11 @@ BINARIES = {
                     benign_exit=frozenset({1}), needs_file=True,
                     pattern_operand=True),
     # `--pre`/`--pre-glob`/`--hostname-bin` hand ripgrep a program to run;
-    # `--generate` is a distinct info-dump hatch. No `denied_prefixes` entry
-    # here (round 20, M23 — all three used to be listed, redundantly):
-    # `_option_cores` already reduces `--pre=value` to the bare core `--pre`,
-    # which the exact-core check above already matches, so a `--pre=` prefix
-    # entry beside the bare `--pre` in denied_flags caught nothing the exact
-    # check did not already catch.
+    # `--generate` is a distinct info-dump hatch. `_option_cores` already
+    # reduces `--pre=value` to the bare core `--pre`, which the exact-core
+    # check already matches, so no separate `=value` entry is needed here
+    # (round 20, M23; the `denied_prefixes` table that used to carry one was
+    # removed entirely at round 24, M28).
     # `-L`/`--follow` is rg's own symlink-following switch (round 22, H20);
     # `-R`/`--dereference-recursive` are carried too, spelling-for-spelling
     # with the grep family, because rg does not define them and a claim
@@ -657,9 +678,9 @@ BINARIES = {
                     needs_file=True),
     # `--compress-program` (round 15, H5) runs an arbitrary program whenever a
     # sort spills to disk, which `-S 1` forces; proven creating a canary here.
-    # No `denied_prefixes` (round 20, M23 — both former entries were the same
-    # redundancy as rg's above: `--output`/`--compress-program` are already
-    # bare cores in denied_flags, so their `=value` forms are already caught).
+    # `--output`/`--compress-program` are bare cores in denied_flags, so
+    # their `=value` forms are already caught by `_option_cores` (round 20,
+    # M23; no separate prefix table needed, as with rg above).
     # `--files0-from=F` (round 22, the H20 sweep) makes sort read the list of
     # files to sort out of F's CONTENTS — a path reaching the child by no
     # dash-token route, so `_attached_option_values`' suffix rule cannot see
@@ -686,8 +707,8 @@ BINARIES = {
     # not a flag, so no flag table — consolidated or not — can describe it.
     # pattern_operand=True (round 20, M21): the first non-option token is the
     # PROGRAM text, not a file — same reasoning as the grep family above.
-    # No `denied_prefixes` (round 20, M23 — all four former entries were the
-    # same redundancy: every one's bare core already sits in denied_flags).
+    # Every flag's `=value` form is already caught via its bare core in
+    # denied_flags (round 20, M23; no separate prefix table needed).
     "awk": Binary(
         denied_flags=frozenset({"-f", "--file", "--source", "--exec", "-l",
                                  "--load", "-i", "--include", "-E"}),
@@ -705,17 +726,18 @@ BINARIES = {
     # nothing in this corpus quotes one, so both are gone entirely — a future
     # claim quoting them is DECLINED AND NAMED, the safe direction.
     # Round 20 (M23). `--exec-path`/`--upload-pack` moved INTO denied_flags,
-    # from being denied_prefixes-only entries here. They used to be
+    # from being denied_prefixes-only entries here (that field was removed
+    # entirely at round 24, M28 — see the Binary docstring). They used to be
     # load-bearing ONLY via git_global_denied (the pre-subcommand-only
-    # check below) and the generic startswith() prefix fallback — three
-    # mechanisms doing the work of one, and their cores were missing from
-    # this set for no stated reason. Denying them here too is a strict
+    # check below) and a generic prefix fallback this file no longer has —
+    # three mechanisms doing the work of one, and their cores were missing
+    # from this set for no stated reason. Denying them here too is a strict
     # WIDENING (over-refusal, the stated safe direction): the exact-core
     # check now refuses them at ANY argv position, not only before the
     # subcommand, and their `=value` forms are caught the same way
-    # `--output`'s already was — via `_option_cores`, with no
-    # `denied_prefixes` entry needed. `--output` itself needed no entry
-    # to begin with; it was already redundant with its own bare form here.
+    # `--output`'s already was — via `_option_cores`, needing no prefix
+    # table. `--output` itself needed no entry to begin with; it was
+    # already redundant with its own bare form here.
     "git": Binary(
         denied_flags=frozenset({"-O", "--open-files-in-pager", "--output",
                                  "--exec-path", "--upload-pack"}),
@@ -1141,7 +1163,32 @@ def dated_record_regions(rel, text):
 
     The currency pierce is unchanged: a VH row that says the command returns
     N *now* is a present-tense claim wherever it sits, and `currency_asserted`
-    still reports it."""
+    still reports it.
+
+    ROUND 24 (L11) — WHAT IS STILL NOT SHARED, honestly, because the header
+    chain's own docstring above claims the two tools "cannot disagree" and
+    that is not quite true. `blank_frozen_history` returns a THIRD value,
+    `pierced`: citations inside the header chain that carry a maintained
+    "since advanced to **vC**" currency pointer, which the sibling's own
+    `scan_version_citations` deliberately UN-FREEZES and evaluates directly
+    — a currency reassertion means that specific citation is being actively
+    maintained, not archived. This function discards that third value
+    (`_pierced` above) and blanks the WHOLE header-chain span regardless, so
+    a single-integer claim sitting inside a pierced citation's own excerpt
+    would be treated as a frozen dated record here even though the sibling
+    treats the citation it is attached to as live. Only the SPAN is shared;
+    the PIERCE POLICY is not. Reconstructing the pierced sub-spans exactly
+    would mean re-deriving `blank_frozen_history`'s own internal excerpt
+    bounds (the 40-character padding around each match), which is not part
+    of its public contract — attempted and rejected here as more likely to
+    silently mis-locate a span than to close this gap correctly.
+    MEASURED 2026-08-22 (`DCC.blank_frozen_history` run over every SURFACES
+    file, the pierced list summed): 21 pierced citations exist today
+    (README.md 1, file-manifest.md 11, CHANGELOG.md 9), and NONE sits within
+    300 characters of any claim this file's own shapes currently bind — so
+    the disagreement is real but latent, not a live miscount. Re-run that
+    measurement before trusting this note's "latent" half; re-deriving
+    whether it is still latent needs both, not just the pierced count."""
     blanked, _frozen, _pierced = DCC.blank_frozen_history(text)
     spans = list(DCC.record_regions(rel, blanked))
     spans.extend(_blanked_runs(text, blanked))
@@ -1241,6 +1288,31 @@ def err_log_excused(text, start, end):
     if ERR_RESOLVED_MARKER.search(text[a:b]):
         return True
     window = DCC.sentence_window(text, start, end)
+    # Round 24 (M29) — RECORDED AS A KNOWING DUPLICATE, NOT SILENTLY LEFT AS
+    # ONE. The five lines below (`ls` through the `hi = min(...)`) are the
+    # SAME clipping algorithm as `doc-consistency-check.py`'s
+    # `historically_marked()`, statement for statement, with two
+    # substitutions: `MARKER_RADIUS` (110, that file) for `CURRENCY_RADIUS`
+    # (120, this file), and the caller's own regex search at the end instead
+    # of `HISTORICAL_MARKERS`. That function does not expose the clip as a
+    # separate, callable step — it fuses window, clip and its own
+    # historical-marker search into one return value — so there is no
+    # narrower surface here to call THROUGH; reusing it as written would
+    # mean asking it the wrong question (whether a HISTORICAL marker sits
+    # nearby, not whether an ERR_LOG_DATE does). This file's own import
+    # docstring calls a second copy of a definition "the duplicate-claim
+    # defect this repo keeps filing", which is exactly what this is, and the
+    # fixer who copied it recorded that rather than hiding it (round 20,
+    # M22's own text cites the sibling's radius and reason by name, one
+    # paragraph up). The 110-vs-120 divergence is UNEXPLAINED in either
+    # file — nothing on either side states why the ERR log's own claims
+    # need ten characters more slack than the sentence-marker case the
+    # sibling's radius was measured against — and is flagged here rather
+    # than silently harmonised, since changing either number is a
+    # calibration decision this pass has no measurement to justify. The
+    # REAL fix is a shared clipping helper `doc-consistency-check.py`
+    # exports and both files call — deferred, because this pass owns only
+    # `doc-claim-check.py` and may not edit the sibling to add one.
     ls = text.rfind("\n", 0, start) + 1
     sent_start = text.find(window, ls) if window else start
     if sent_start == -1:
@@ -1399,7 +1471,22 @@ MIN_EXECUTED_CLAIMS = 3 - MIN_EXECUTED_SLACK
 # deferred ("whether to exclude revision-pinned commands entirely from even
 # the distinct count is a separate, owner-level call this fix does not
 # make"), and the same call decides both floors. It is left open here rather
-# than approximated. NOTE FOR WHOEVER TAKES IT: raising this constant today
+# than approximated.
+#
+# ROUND 24 (L12) DID THE HALF THAT WAS NOT THAT CALL. The GATE below used to
+# compare `live` (INSTANCES) against this floor, not `len(live_commands)`
+# (DISTINCT commands) — the very hole M20 closed on the executed floor,
+# reopened here: a floor on instances cannot tell "N drift-capable claims"
+# from "one command quoted N times", and README.md:930's quote of the
+# CLAUDE.md:276 command is exactly that repetition, counted twice in `live`.
+# Now gated on `len(live_commands)`, matching MIN_EXECUTED_CLAIMS. This
+# closes the REPETITION half only; the REVISION-PIN half two paragraphs up
+# is unchanged and is NOT this fix's claim — a floor of 1 is still met by
+# `code-standards/section-3.md:1140` alone, which can never drift, and
+# excluding it needs the same "revision-pinned" property this section
+# already defers. On today's tree the fix changes no printed number (live
+# commands: 2, unmoved) and no exit code — verified by full-output diff
+# against the unpatched tool. NOTE FOR WHOEVER TAKES IT: raising this constant today
 # fails 12 cases in tools/tests/test_doc_claim_check.py, because that suite's
 # `scan()` harness patches MIN_EXECUTED_CLAIMS and not MIN_LIVE_CLAIMS, so
 # every fixture is silently pinned to a live floor of 1.
@@ -1686,12 +1773,35 @@ class LeadingValueShape(ClaimShape):
     ignoring only emphasis markup, which does not join tokens — must not be
     `.`, `#` or `§`. The date rules stay as they are, both because they catch
     a form this one does not (the digits of "August 18," DO begin their own
-    token) and because their message names what was refused."""
+    token) and because their message names what was refused.
 
-    # A stated value begins its own token. These three characters are the ways
-    # this corpus continues one: `.` (a section, version, heading or decimal
-    # tail), `#` (a spec number) and `§` (a section number).
-    COMPOUND_TAIL = (".", "#", "§")
+    ROUND 24 (M31) — THE ENUMERATION WAS STILL THREE CHARACTERS WHERE THIS
+    DOCSTRING ALREADY STATED A GENERAL RULE, and the enumeration was never
+    tested against anything but itself. `.`, `#` and `§` are the ways THIS
+    corpus continues a token, not the ways a token CAN be continued —
+    reproduced, all wrongly bound under the pre-fix tuple: `test counts
+    461/1/2 (\\`cmd\\`)` bound 2 (preceded by `/`), `at 16:59:45 (\\`cmd\\`)`
+    bound 45 (preceded by `:`), `v2 (\\`cmd\\`)` bound 2 (preceded by the
+    letter `v`), `measured 2026/08/22 (\\`cmd\\`)` bound 22 (preceded by
+    `/`). A census of this corpus at the time found 87 preceding-hyphen hits
+    and 30+ bare-letter hits, latent only because those parentheses hold ERR
+    ids rather than runnable commands — the same luck this docstring already
+    named for the date case, one abstraction level up. The rule actually
+    implemented now: a stated value's own token may not be joined to
+    whatever precedes it, so the preceding character (after stripping
+    emphasis) must be neither ALPHANUMERIC (covers `v2`, and any bare digit
+    run like a ratio's earlier components) nor one of `.#§/:` (covers a
+    section/spec/heading/decimal tail, a ratio separator, and a clock or
+    date-slash separator)."""
+
+    # A stated value begins its own token. These are the PUNCTUATION ways
+    # this corpus continues one — `.` (a section, version, heading or
+    # decimal tail), `#` (a spec number), `§` (a section number), `/` (a
+    # slash-separated ratio like `461/1/2`, or a slash date), and `:` (a
+    # clock time like `16:59:45`). Any ALPHANUMERIC character before the
+    # value (a letter, as in `v2`, or a digit, as in an unseparated compound)
+    # is refused too — see rejects() below, which is the actual test.
+    COMPOUND_TAIL = (".", "#", "§", "/", ":")
 
     def rejects(self, text, m):
         before = text[max(0, m.start("value") - 32):m.start("value")]
@@ -1701,10 +1811,20 @@ class LeadingValueShape(ClaimShape):
             return "the integer is the DAY of a date, not a stated value"
         # `rstrip` over emphasis only: "**35**" is a stated value whose token
         # begins at the 3, while "§2.2.**2**" is still a section number.
-        if before.rstrip("*_").endswith(self.COMPOUND_TAIL):
-            return ("the integer is the last component of a COMPOUND number "
-                    "(a section, version, spec, heading or decimal), not a "
-                    "stated value — a stated value begins its own token")
+        # Round 24 (M31): the test used to be `.endswith(COMPOUND_TAIL)`,
+        # three characters standing in for the docstring's general rule
+        # ("a stated value must begin its own token"). It is now that rule,
+        # not an enumeration of it: refuse when the single character
+        # immediately before the value is either alphanumeric (a letter, as
+        # in `v2 (\`cmd\`)`, or an unseparated digit, as in a compound like a
+        # timestamp's own tens digit) or one of the punctuation joiners in
+        # COMPOUND_TAIL.
+        tail = before.rstrip("*_")[-1:]
+        if tail.isalnum() or tail in self.COMPOUND_TAIL:
+            return ("the integer is not the start of its own token — it is "
+                    "joined to what precedes it by %r (a section, version, "
+                    "spec, heading, decimal, ratio, clock time or date, not "
+                    "a stated value)" % tail)
         return None
 
 
@@ -2351,9 +2471,12 @@ def _long_option_core(tok):
 def _denied_long_names(*tables):
     """Every DENIED long option NAME across `tables`, `=` suffix stripped.
 
-    Derived from the same `denied_flags` / `denied_prefixes` a binary already
-    declares, never maintained separately — round 17 (L1) consolidated those
-    tables precisely because a parallel list is a list someone forgets."""
+    Derived from the same `denied_flags` a binary already declares (plus, for
+    git, `GIT_GLOBAL_DENIED`), never maintained separately — round 17 (L1)
+    consolidated those tables precisely because a parallel list is a list
+    someone forgets. Takes `*tables` rather than one so the git-global call
+    site below can hand it a second table; every current caller passes
+    exactly one."""
     names = set()
     for table in tables:
         for entry in table or ():
@@ -2411,16 +2534,11 @@ def denied_flag(argv):
     name = argv[0]
     binfo = BINARIES.get(name, _NO_BINARY)
     exact = binfo.denied_flags
-    prefixes = binfo.denied_prefixes
-    long_denied = _denied_long_names(exact, prefixes)
+    long_denied = _denied_long_names(exact)
     for a in argv[1:]:
         for core in _option_cores(a):
             if core in exact:
                 return a if core == a else "%s, attached as `%s`" % (core, a)
-            if any(pfx == core + "=" for pfx in prefixes):
-                return a
-        if any(a.startswith(pfx) for pfx in prefixes):
-            return a
         # Round 18 (H12): the same denied long option, ABBREVIATED — see
         # _abbreviated_denial() for the three reproductions this closes.
         full = _abbreviated_denial(a, long_denied)
@@ -2821,6 +2939,30 @@ def run_pipeline(segments, cwd):
                 proc.kill()
                 proc.wait()
                 reader.join(5)
+                # Round 24 (L16). This join used to be unchecked: whatever
+                # its outcome, control fell through to `proc.stdout.close()`
+                # and a normal decline, as if the reader were always known
+                # dead. CPython documents `preexec_fn` as unsafe in the
+                # presence of threads — a child forked while another thread
+                # holds a lock (the allocator, `import`, ...) can deadlock
+                # in the window between fork() and exec(), because the lock
+                # is copied held with no thread left in the child to release
+                # it. A reader still blocked on `stream.read1()` 5 extra
+                # seconds after its process was killed is not expected, but
+                # it is exactly the live-thread-at-fork state that warning
+                # describes, and the very next `Popen` in this loop — or in
+                # the next claim's call to this function — forks while it
+                # may still be alive. Declined and named instead of risking
+                # that fork: `proc.stdout` is left OPEN deliberately, since
+                # closing a stream a thread is actively reading from is its
+                # own race, not a fix.
+                if reader.is_alive():
+                    return None, (
+                        "`%s` output reader did not stop within 5s of the "
+                        "child being killed — declined rather than risking "
+                        "a live thread across the next fork (preexec_fn is "
+                        "documented unsafe in the presence of threads)"
+                        % argv[0])
                 proc.stdout.close()
                 if timed_out:
                     return None, "command timed out after %ds" % TIMEOUT_S
@@ -2858,7 +3000,12 @@ def run_pipeline(segments, cwd):
 # accepted at all, because no allow-listed binary's output ever contains one
 # (the document side allows one for readability; the command side is what
 # that readability is being checked AGAINST). Looser: an optional leading
-# `-`, because `awk` (2 of this tool's 3 live executed claims) can
+# `-`, because `awk` — the SCRIPT-hatches paragraph above is the canonical
+# site for how many of this tool's executed claims pipe through it; round 24
+# (M33) removed a THIRD copy of that fraction from here, which had drifted
+# both wrong on the number and loose on the term (it said "live", which this
+# file defines precisely — see MIN_LIVE_CLAIMS — and meant only "executed";
+# do not copy a number out of this comment either) — can
 # legitimately compute and print a negative number, and before this a
 # negative answer could not be READ at all — `single_integer("-3\n")` was
 # None, which check_claim() reports as "not-a-single-integer", a decline that
@@ -3012,8 +3159,14 @@ def _attached_option_values(tok):
     suffixes buy: a cluster whose deeper suffix reads as an escaping path is
     DECLINED AND NAMED, never run. Measured cost on this corpus: nil — the
     five legitimate clustered forms (`grep -rn pattern dir/`, `sort -nr file`,
-    `ls -la`, `wc -lc file`, `grep -ic pattern file`) and all six live executed
-    claims still execute, because a suffix escapes only by being absolute or
+    `ls -la`, `wc -lc file`, `grep -ic pattern file`) and every claim this
+    tool currently EXECUTES — not just the LIVE subset, which is a stricter,
+    separately-floored term (see MIN_LIVE_CLAIMS); re-derive the count by
+    running `python3 tools/doc-claim-check.py --repo .` rather than trusting
+    a number copied here (round 24, M33 — the third copy of a coverage
+    fraction this file found stale, and the second site conflating "live"
+    with plain "executed") — still executes, because a suffix escapes only
+    by being absolute or
     by traversing out with `..`, which no option letter cluster does.
 
     STATED HONESTLY, because a safety claim stated too broadly is this file's
@@ -3475,6 +3628,22 @@ FENCE_DECLINE_BUCKETS = (
 # MIN_EXECUTED_SLACK expresses: ordinary corpus drift must not turn a green
 # tree red, a blinded check must. Raise them when the shares rise; lower one
 # only with the reason recorded in the Version History row beside it.
+#
+# ROUND 24 (L13) — THE EXAMINED-SHARE DENOMINATOR GREW FOR FREE. `examined`
+# counted every REFERENCE match found in ANY fence, tagged or not — including
+# `fence-untagged`, which by construction can NEVER become "actually
+# examined" (an untagged fence is never given to the csharp scanner at all).
+# Adding an ASCII tree or a bash block to a spec file costs no real coverage
+# but grows this denominator, driving the ratio toward the floor for free;
+# headroom was measured at only ~2.1x (0.11 / 0.05) before this fix. The
+# share is now computed over EXAMINABLE references — those found in a
+# tagged fence — which is what MIN_EXAMINED_SHARE was always trying to
+# measure ("a run that skips everything [it COULD examine] reports success
+# for the same reason a blinded one does"), not "a run that finds a lot of
+# prose". RE-DERIVED under the new denominator, same invocation: examinable
+# = 1882 - 899 (fence-untagged) = 983; not skipped = 198 (unchanged — those
+# claims were never in the untagged bucket); share = 198/983 = 0.20, floor
+# unmoved at 0.05 (now ~4.0x headroom rather than lowering the floor).
 MIN_TYPED_FENCE_FILE_SHARE = 0.20
 MIN_EXAMINED_SHARE = 0.05
 
@@ -3485,8 +3654,12 @@ def fence_coverage_shortfalls(coverage):
     Both floors are skipped when their DENOMINATOR is zero, and the third
     check is what stops that being a hole: a corpus with fenced spec files
     but not one examinable reference means the REFERENCE matcher itself has
-    collapsed, which no share can express."""
-    fenced, typed, examined, skipped = coverage
+    collapsed, which no share can express.
+
+    Round 24 (L13): `coverage` gained a fifth field, `fence_untagged` — see
+    CHECK 2'S COVERAGE FLOOR above for why the examined-share denominator
+    excludes it."""
+    fenced, typed, examined, skipped, fence_untagged = coverage
     out = []
     if fenced and typed / fenced < MIN_TYPED_FENCE_FILE_SHARE:
         out.append(
@@ -3494,18 +3667,26 @@ def fence_coverage_shortfalls(coverage):
             "(%.2f, floor %.2f) — CHECK 2 examined almost nothing, so its "
             "silence is not a verdict; see CHECK 2'S COVERAGE FLOOR"
             % (typed, fenced, typed / fenced, MIN_TYPED_FENCE_FILE_SHARE))
-    if fenced and not examined:
+    examinable = examined - fence_untagged
+    examinable_skipped = skipped - fence_untagged
+    if fenced and not examinable:
         out.append(
-            "%d fenced spec file(s) and NOT ONE examinable reference — the "
-            "reference matcher has collapsed, so CHECK 2 found nothing "
-            "because it looked at nothing" % fenced)
-    elif examined and (examined - skipped) / examined < MIN_EXAMINED_SHARE:
+            "%d fenced spec file(s) and NOT ONE examinable reference (every "
+            "reference found sits in an untagged fence, which the csharp "
+            "scanner never reaches) — the reference matcher has collapsed, "
+            "so CHECK 2 found nothing because it looked at nothing"
+            % fenced)
+    elif (examinable
+          and (examinable - examinable_skipped) / examinable
+              < MIN_EXAMINED_SHARE):
         out.append(
-            "%d of %d reference(s) examined were SKIPPED, leaving %.2f "
-            "actually examined (floor %.2f) — a run that skips everything "
-            "reports success for the same reason a blinded one does; see "
-            "CHECK 2'S COVERAGE FLOOR"
-            % (skipped, examined, (examined - skipped) / examined,
+            "%d of %d examinable reference(s) (excluding %d found in "
+            "untagged fences, which are never examinable) were SKIPPED, "
+            "leaving %.2f actually examined (floor %.2f) — a run that "
+            "skips everything it could examine reports success for the "
+            "same reason a blinded one does; see CHECK 2'S COVERAGE FLOOR"
+            % (examinable_skipped, examinable, fence_untagged,
+               (examinable - examinable_skipped) / examinable,
                MIN_EXAMINED_SHARE))
     return out
 
@@ -3568,23 +3749,25 @@ def _map_offset(offset_map, pos):
         % pos)
 
 
-def scan_fence_identifiers(repo, quiet=False):
+def scan_fence_identifiers(repo):
     """Report Type.MEMBER references whose Type the file declares and whose
     MEMBER it does not.
 
     Returns `(findings, coverage)`, where coverage is
-    `(fenced_files, typed_fence_files, examined, skipped)` — round 19 (H17)
-    needs those four to gate this check's recall, and they were previously
-    printed and thrown away. (Round 17's L3 had corrected this docstring for
+    `(fenced_files, typed_fence_files, examined, skipped, fence_untagged)` —
+    round 19 (H17) needs the first four to gate this check's recall, and they
+    were previously printed and thrown away; round 24 (L13) added the fifth
+    so the examined-share floor can exclude references an untagged fence can
+    never make examinable. (Round 17's L3 had corrected this docstring for
     promising a second return value the function did not have; it has one
     now, and it is used, not decorative.)
 
-    `quiet` is kept for call-signature compatibility with the caller in
-    scan() but no longer gates anything here (round 20, L7): every print in
-    this function is now unconditional, matching CHECK 1's own treatment —
-    there is no itemized per-item CHECK 2 listing for `--quiet` to suppress
-    in the first place, since the dangling-identifier findings themselves
-    already print unconditionally back in scan()."""
+    Round 24 (L16): this used to take a `quiet` parameter kept only "for
+    call-signature compatibility with the caller in scan()" — its own
+    previous docstring's words — after round 20 (L7) made every print in
+    this function unconditional and left the parameter with nothing to gate.
+    A parameter a docstring itself says does nothing is worth dropping
+    rather than carrying; the caller below no longer passes one."""
     findings = []
     fenced_files = 0
     files = []
@@ -3690,11 +3873,20 @@ def scan_fence_identifiers(repo, quiet=False):
           % " / ".join("%d %s" % (decline[b], label)
                        for b, label in FENCE_DECLINE_BUCKETS))
     skipped = sum(decline.values())
+    # Round 24 (L13): the printed floor now matches what actually gates —
+    # examinable references (found in a tagged fence) — rather than the raw
+    # `examined` total, which untagged fences (ASCII trees, bash blocks)
+    # inflate for free without adding real coverage. See CHECK 2'S COVERAGE
+    # FLOOR beside MIN_EXAMINED_SHARE.
+    examinable = examined - decline["fence-untagged"]
     print("  coverage floors                : %d/%d fenced files typed "
-          "(floor %.2f), %d/%d references actually examined (floor %.2f)"
+          "(floor %.2f), %d/%d examinable reference(s) actually examined "
+          "(floor %.2f; excludes %d in untagged fences)"
           % (scanned, fenced_files, MIN_TYPED_FENCE_FILE_SHARE,
-             examined - skipped, examined, MIN_EXAMINED_SHARE))
-    return findings, (fenced_files, scanned, examined, skipped)
+             examinable - (skipped - decline["fence-untagged"]), examinable,
+             MIN_EXAMINED_SHARE, decline["fence-untagged"]))
+    return findings, (fenced_files, scanned, examined, skipped,
+                      decline["fence-untagged"])
 
 
 # ---------------------------------------------------------------------------
@@ -4171,7 +4363,7 @@ def scan(repo, quiet=False):
     # the code it describes exits 2 — "this tool could not do its job" — with
     # a named reason, never a bare stack trace.
     try:
-        dangling, fence_coverage = scan_fence_identifiers(repo, quiet)
+        dangling, fence_coverage = scan_fence_identifiers(repo)
     except AssertionError as exc:
         dangling = []
         fence_blocked = [
@@ -4209,14 +4401,27 @@ def scan(repo, quiet=False):
             "when it may be changed"
             % (len(checked_commands), checked, MIN_EXECUTED_CLAIMS))
     # Round 19 (H13): the floor that measures reach rather than activity.
-    if live < MIN_LIVE_CLAIMS:
+    # Round 24 (L12): gated on `live` (INSTANCES) rather than
+    # `len(live_commands)` (DISTINCT commands) — exactly the hole
+    # MIN_EXECUTED_CLAIMS was moved off of at round 20 (M20), reopened here
+    # one counter over. The two floors now share the same shape: an instance
+    # count cannot tell "N drift-capable claims" from "one command quoted N
+    # times", and the LIVE side is where a REVISION-PINNED command (see THE
+    # LIVE FLOOR banner beside MIN_LIVE_CLAIMS) makes that concretely worse
+    # rather than merely theoretical — its residual is recorded there, not
+    # fixed by this change: gating on distinct commands closes the
+    # repetition half of the hole (the property this fix actually shares
+    # with M20) and leaves the revision-pin half exactly where that banner
+    # already states it, honestly, as a deferred owner-level call.
+    if len(live_commands) < MIN_LIVE_CLAIMS:
         blocked.append(
-            "only %d LIVE claim(s) executed — below the floor of %d. Every "
-            "other executed claim sits inside a dated record whose own "
-            "pierce does not fire, so a mismatch there is excused and this "
-            "run could not have caught drift in any document. See THE LIVE "
-            "FLOOR beside MIN_LIVE_CLAIMS"
-            % (live, MIN_LIVE_CLAIMS))
+            "only %d distinct LIVE command(s) executed (%d LIVE claim "
+            "instance(s)) — below the floor of %d. Every other executed "
+            "claim sits inside a dated record whose own pierce does not "
+            "fire, so a mismatch there is excused and this run could not "
+            "have caught drift in any document. See THE LIVE FLOOR beside "
+            "MIN_LIVE_CLAIMS"
+            % (len(live_commands), live, MIN_LIVE_CLAIMS))
     blocked.extend(fence_blocked)
     if blocked:
         print("\nERROR — this run could not verify what it is supposed to "
@@ -4239,9 +4444,25 @@ def scan(repo, quiet=False):
     if dangling:
         return 3
 
-    print("\nPASS — every executable claim reproduced its stated value, and no"
-          " spec code fence references an identifier its own file does not declare"
-          " (with the coverage stated above).")
+    # Round 24 (M32). This line used to print UNCONDITIONALLY on exit 0,
+    # including a run that printed "N mismatch(es) EXCUSED ... [record says
+    # 99; command now returns 3]" five lines above it — the single
+    # most-read line of output stating "every executable claim reproduced
+    # its stated value" about a run that had just shown one that did not.
+    # An excusal is not a pass on that claim; it is a deliberate choice not
+    # to gate on it. Named here so the headline can never contradict its own
+    # printed excusal block.
+    if excused:
+        print("\nPASS — every claim OUTSIDE a dated record reproduced its stated"
+              " value, and no spec code fence references an identifier its own"
+              " file does not declare (with the coverage stated above). %d"
+              " mismatch(es) were EXCUSED as dated records rather than verified"
+              " — see the EXCUSED list above."
+              % len(excused))
+    else:
+        print("\nPASS — every executable claim reproduced its stated value, and no"
+              " spec code fence references an identifier its own file does not declare"
+              " (with the coverage stated above).")
     return 0
 
 
@@ -4270,7 +4491,27 @@ def main():
               "verify, so its result is not a verdict on any document:")
         print("  * %s" % dcc_error)
         return 2
-    return scan(repo, args.quiet)
+    # Round 24 (L14). No boundary sat here before this: an unforeseen error
+    # anywhere inside scan() — a `read_text()` on a path that turns out to be
+    # a directory (a surface glob can match one), a regex or bookkeeping
+    # defect this file has not yet found — propagated all the way to
+    # `sys.exit(main())` uncaught, and Python's default handler exits 1: the
+    # exact code CHECK 1 uses for "a stated value did not reproduce", after a
+    # partial report had already printed above it. That is the same
+    # confusion round 17 (M14) spent a whole fix separating for the
+    # documented FAIL/ERROR distinction, reopened here for the UNDOCUMENTED
+    # failure. Routed through the same named ERROR block as every other
+    # "this tool could not do its job" case, returning 2 — never a bare
+    # traceback masquerading as a document defect.
+    try:
+        return scan(repo, args.quiet)
+    except Exception as exc:
+        print("\nERROR — this run could not verify what it is supposed to "
+              "verify, so its result is not a verdict on any document:")
+        print("  * an unforeseen error interrupted the scan (%s: %s) — "
+              "whatever printed above, if anything, is not a verdict on any "
+              "document" % (type(exc).__name__, exc))
+        return 2
 
 
 if __name__ == "__main__":
@@ -5750,3 +5991,118 @@ if __name__ == "__main__":
 # |         |            |             | LIVE (2 distinct, floor 1), 224 declines     |
 # |         |            |             | (1/18/6/0/2/0/3/194), 0 excused, PASS, exit  |
 # |         |            |             | 0. The 121-test suite passes UNMODIFIED.     |
+# | 1.16    | 2026-08-22 | Claude Code | Round 24 — twelve reviewed findings, M28     |
+# |         |            |             | done LAST per its own caution note. M31: the |
+# |         |            |             | compound-token rule enumerated three         |
+# |         |            |             | characters (`.#§`) where its own docstring   |
+# |         |            |             | stated a general one; now the general rule   |
+# |         |            |             | (alphanumeric or `.#§/:` before the value    |
+# |         |            |             | refuses it), closing `461/1/2`, `16:59:45`,  |
+# |         |            |             | `v2` and `2026/08/22` mid-token binds —      |
+# |         |            |             | reproduced wrongly BOUND pre-fix, REJECTED   |
+# |         |            |             | post-fix, on the file's own regex objects;   |
+# |         |            |             | live corpus output byte-identical (latent    |
+# |         |            |             | defect, 0 live instances). M32: the PASS     |
+# |         |            |             | line printed unconditionally even after an   |
+# |         |            |             | EXCUSED mismatch block five lines above      |
+# |         |            |             | contradicted it; now names the excusal count |
+# |         |            |             | when nonzero, unchanged when zero            |
+# |         |            |             | (reproduced both ways on a constructed       |
+# |         |            |             | fixture). M33: a third, wrong copy of the    |
+# |         |            |             | awk coverage fraction, and two sites         |
+# |         |            |             | conflating the defined term LIVE with plain  |
+# |         |            |             | EXECUTED, all now cite the canonical site or |
+# |         |            |             | drop the number entirely. L10:               |
+# |         |            |             | `_DCC_CONTRACT` named `frozen_chain_span`,   |
+# |         |            |             | uncalled since the round-19 rewrite —        |
+# |         |            |             | dropped (reproduced: a legitimate sibling    |
+# |         |            |             | refactor removing it now passes instead of   |
+# |         |            |             | exiting 2). L11: `dated_record_regions`      |
+# |         |            |             | discards `blank_frozen_history`'s `pierced`  |
+# |         |            |             | return value; docstring now states the gap   |
+# |         |            |             | honestly, measured today at 21 pierced       |
+# |         |            |             | citations, none within 300 chars of a bound  |
+# |         |            |             | claim. L12: the LIVE floor gated on          |
+# |         |            |             | INSTANCES (`live`) rather than DISTINCT      |
+# |         |            |             | commands, the same hole M20 closed on the    |
+# |         |            |             | executed floor — now gates on                |
+# |         |            |             | `len(live_commands)` (reproduced: two quotes |
+# |         |            |             | of one command met a floor of 2 before the   |
+# |         |            |             | fix, correctly fails it after); the          |
+# |         |            |             | revision-pin residual stays open, honestly,  |
+# |         |            |             | as before. L13: CHECK 2's examined-share     |
+# |         |            |             | denominator counted references in UNTAGGED   |
+# |         |            |             | fences, which can never become examinable —  |
+# |         |            |             | grew the corpus for free toward the floor    |
+# |         |            |             | (~2.1x headroom, measured); now excludes     |
+# |         |            |             | them (~4.0x headroom), reproduced on a       |
+# |         |            |             | synthetic corpus that spuriously tripped the |
+# |         |            |             | old floor and passes the new one. L14: no    |
+# |         |            |             | top-level exception boundary — an unforeseen |
+# |         |            |             | error (a directory matching a surface glob,  |
+# |         |            |             | reproduced) used to exit 1 with a raw        |
+# |         |            |             | traceback, indistinguishable from a real     |
+# |         |            |             | document mismatch; now caught and routed     |
+# |         |            |             | through the named ERROR block, exit 2. L15:  |
+# |         |            |             | the exit-code-split banner claimed           |
+# |         |            |             | automation branches on 1 vs 2 vs 3; `ci.yml` |
+# |         |            |             | is one `run:` step and GitHub Actions fails  |
+# |         |            |             | on any nonzero identically — reworded to say |
+# |         |            |             | so rather than claiming a consumer this repo |
+# |         |            |             | does not have. L16:                          |
+# |         |            |             | `scan_fence_identifiers`'s own docstring     |
+# |         |            |             | said its `quiet` parameter does nothing —    |
+# |         |            |             | dropped, with its caller; and `run_pipeline` |
+# |         |            |             | proceeded past a `reader.join(5)` without    |
+# |         |            |             | checking whether the reader thread was still |
+# |         |            |             | alive, risking a live thread across the next |
+# |         |            |             | `Popen`'s fork (`preexec_fn` is documented   |
+# |         |            |             | unsafe in the presence of threads) — now     |
+# |         |            |             | declines by name instead (reproduced with a  |
+# |         |            |             | stubbed stuck reader: old code proceeded to  |
+# |         |            |             | a normal timeout decline after 6s, new code  |
+# |         |            |             | declines the reader hazard specifically; the |
+# |         |            |             | ordinary timeout path is unchanged and still |
+# |         |            |             | returns in 1s). M29: `err_log_excused`       |
+# |         |            |             | duplicates the sibling's clipping algorithm  |
+# |         |            |             | verbatim (radii 110 vs 120, unexplained) —   |
+# |         |            |             | cannot call the sibling's                    |
+# |         |            |             | `historically_marked()` directly without     |
+# |         |            |             | editing it (it fuses the clip with its OWN   |
+# |         |            |             | marker search, which is not what this file   |
+# |         |            |             | needs), so recorded as a knowing duplicate   |
+# |         |            |             | in a comment naming the sibling function,    |
+# |         |            |             | flagging the radius divergence, and          |
+# |         |            |             | deferring the real fix (a shared exported    |
+# |         |            |             | helper) as out of this pass's scope — `doc-  |
+# |         |            |             | consistency-check.py` untouched (verified by |
+# |         |            |             | diff). M28, done LAST:                       |
+# |         |            |             | `Binary.denied_prefixes` was dead on every   |
+# |         |            |             | one of 22 records (never set), with two of   |
+# |         |            |             | its three reads provably unreachable and the |
+# |         |            |             | third contributing nothing; docstring called |
+# |         |            |             | it "a REAL constraint, not decoration" three |
+# |         |            |             | lines above "every binary here currently     |
+# |         |            |             | needs NO prefix entry at all". Deleted       |
+# |         |            |             | (field, slot, constructor parameter, all     |
+# |         |            |             | three reads); the option-abbreviation guard  |
+# |         |            |             | now derives its denied long-name set from    |
+# |         |            |             | `denied_flags` alone. Every named exploit    |
+# |         |            |             | re-proven refused, byte-identical output     |
+# |         |            |             | before/after across all ten (`sort -oFILE`,  |
+# |         |            |             | `--output=`, `--o=`, `--compress-progr=`,    |
+# |         |            |             | `git grep -O./p.sh`, `--open-f=`, `git       |
+# |         |            |             | --exec-path=`, `git branch -D`, an outside-  |
+# |         |            |             | repo operand, glob-expanded `uniq`), plus    |
+# |         |            |             | six legitimate controls unchanged; a sanity  |
+# |         |            |             | mutant (clearing sort's denied_flags)        |
+# |         |            |             | confirmed the reproduction harness is not    |
+# |         |            |             | vacuous. Net: live tree UNCHANGED except one |
+# |         |            |             | accounted display line (L13's coverage-      |
+# |         |            |             | floors denominator, 198/1882 -> 198/983) —   |
+# |         |            |             | 605 surfaces, 7 executed (3 distinct, floor  |
+# |         |            |             | 2), 3 LIVE (2 distinct, floor 1), 224        |
+# |         |            |             | declines (1/18/6/0/2/0/3/194), 0 excused,    |
+# |         |            |             | PASS, exit 0. The 121-test suite passes      |
+# |         |            |             | UNMODIFIED; both siblings (doc-consistency-  |
+# |         |            |             | check.py, recurring-defect-lint.py) green.   |
