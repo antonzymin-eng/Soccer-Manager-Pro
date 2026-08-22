@@ -12,7 +12,40 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 21, 2026, later same day (**The three findings reported at the C6 landing
+> **Last Updated:** August 22, 2026 (**§6.3.1: the football-judgment backlog now has a LANDING ORDER,
+> not just a taxonomy.**) Doc-only; **no `.cs` touched**, so no gate run (the whole-tree gate ran
+> yesterday on the last `.cs` change — 33 suites, build 0 errors, the single inherited red band).
+> §6.3 classified each finding; nothing said what order to fix them in, and with 24 workable the
+> default "any order" was quietly costing sequencing decisions. **Derived from three things only, and
+> the subsection says outright that for roughly ten of the 24 the order does not matter.** **(A) Is the
+> chain's terminal action wired** — `match-engine-wiring-backlog.md` records **W2 BUILT August 12 but
+> SHIPS DISABLED pending W6**, with `MatchEngineConstants.TackleContactRadiusM` defaulting to **0.0f**
+> (verified in source), and **#14 §3.6 "Tackle Intent" is the section immediately above the §3.6.5
+> Tackle Outcome Resolution W2 added** (`ERR-014-006`) — so fixing the COMMIT gate now tunes the input
+> to a disabled output. That is the root `CLAUDE.md` trap-table row *"tuning a machine that is missing
+> pieces"* verbatim, and it defers **7** findings (#8 PRESS trigger, #13 ×4, #14 ×2). **(B) Does it need
+> a design supplement first** — §6.3's mechanism class already names 4 (#8 §3.2.2.1, #15 ×2, #27); those
+> are serialized on a *document*, so they are scheduled **start-first / land-last** rather than left to
+> become the critical path at the end. **(C) Batch by calibration chain** — P5 calibrates once, so
+> fixes sharing a measured output land together. **Six batches: off-pitch 3 → keeper 4 → contact/duel
+> 4 → singletons 2 → supplement-gated 4 → pressing/defensive 7 = 24.** Batch 2 is newly unblocked: the
+> conversion-at-contact residual was PARKED August 4 *because W1 changes the contact geometry the
+> decision turns on*, and W1 landed that same day — recorded with the caveat that it needs a **fresh
+> measurement against post-W1 geometry**, not a fix written against pre-W1 numbers. Two cross-cutting
+> constraints recorded with it: **#8 §3.2.10's constant catalogue is six #8 landings behind** and must
+> be discharged at the next #8 landing (batches 5 and 6 both touch #8), and **`sim_match_engine_close_chance`
+> is owner-held RED** (hold red, do not rebaseline a third time), so batches 2/3/5 land against an
+> already-tripped detector and need per-fix measurement rather than a band read. **What §6.3.1
+> deliberately does NOT do:** re-prioritise by football impact. None of the 24 has been measured against
+> the others, and ranking them by guess would be the same false precision the §5 spec-count correction
+> was about — so the order comes only from wiring state, document serialization and calibration
+> batching, three things the repo already knows to be true. One honest caveat is stated in the table
+> rather than glossed: #14 §3.5 (threat score → marking priority) is gated by chain-coherence, not by
+> W2 directly, and could move earlier. **Modified:**
+> `docs/tracking/football-judgment-proxy-review.md` (new §6.3.1 + header entry),
+> `docs/tracking/file-manifest.md`, `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** August 21, 2026, later same day (**The three findings reported at the C6 landing
 > are FIXED, and the whole-tree gate ran for the first time this session.**) **1. `ERR-016-009` filed
 > and its spec half RESOLVED same commit** (`spec-error-log.md` v2.18): #16 §2.3's nine "Data
 > Structures" include **six that name no type in `src/deterministic-sim/`** — `DeterminismContext`,
