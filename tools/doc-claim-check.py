@@ -2,9 +2,16 @@
 # doc-claim-check.py — execute the verification commands this repo's documents
 # quote, and diff the stated value against what they actually print.
 #
-# Created: August 18, 2026
+# File:     tools/doc-claim-check.py
+# Created:  August 18, 2026
+# Modified: August 22, 2026
+# Author:   Claude Code
 # Purpose: close the defect class adversarial-review rounds 6-8 kept finding and
 #          could not stop finding by review alone.
+#
+# Round 17 (L3): this was the only checker in tools/ without the File/
+# Modified/Author fields its siblings (doc-consistency-check.py,
+# recurring-defect-lint.py) both carry — added here to match, not restyled.
 #
 # TWO CHECKS RUN, not one, and both gate:
 #   CHECK 1 — the claim checker. Find every claim of the form "this command
@@ -14,8 +21,10 @@
 #             missed rename is a build error; in a spec's worked example nothing
 #             binds, so it dangles silently. See its own banner further down for
 #             why it is deliberately narrow. It shares this file because it
-#             shares the surface set and the exit code, and because a second
-#             script would be a second thing to remember to run.
+#             shares a surface set (the SURFACE_GLOBS half) and because a
+#             second script would be a second thing to remember to run — it
+#             does NOT share CHECK 1's exit code except when both checks fail
+#             in the same run; see the exit-code table below (round 17, M14).
 #
 # WHY THIS EXISTS
 # ---------------
@@ -110,9 +119,12 @@
 #      `awk` is kept — 2 of the 3 claims this tool executes are awk — with its
 #      program allow-listed (AWK_ALLOWED_CALLS) rather than blacklisted, plus a
 #      flat refusal of `|` and `@` in any awk token.
-#   2. DENIED_FLAGS / DENIED_FLAG_PREFIXES compared on the option CORE, so an
-#      attached value (`-oFILE`, `-O./p.sh`) or an un-enumerated `--long=value`
-#      cannot respell a denied hatch past the check (round 15, H3).
+#   2. Each binary's `denied_flags` / `denied_prefixes` (BINARIES, round 17
+#      L1 — one `Binary` record per allow-listed binary, consolidated from
+#      what used to be separate DENIED_FLAGS / DENIED_FLAG_PREFIXES tables)
+#      compared on the option CORE, so an attached value (`-oFILE`,
+#      `-O./p.sh`) or an un-enumerated `--long=value` cannot respell a denied
+#      hatch past the check (round 15, H3).
 #   3. GIT_READONLY holding only subcommands that cannot destroy anything —
 #      `branch` and `tag` are gone, because `-D`/`-d` delete refs (round 15,
 #      H4), and `--output` is denied because a diff writes a file with it.
@@ -129,21 +141,34 @@
 # is not politeness: a silent refusal is indistinguishable from a pass, which
 # is the defect this whole tool exists to deny itself.
 #
-# Exit codes. Two kinds of non-zero, and the distinction is load-bearing:
+# Exit codes. Three kinds of non-zero, and the distinction is load-bearing:
 #   0 = every executable claim reproduced its stated value, no dangling
 #       identifier, and the run actually looked at what it is supposed to.
-#   1 = A FINDING ABOUT A DOCUMENT. Either at least one stated value does not
-#       reproduce (CHECK 1) or at least one spec code fence references an
-#       identifier its own file does not declare (CHECK 2). The old exit table
-#       named only the first, while the dangling-identifier path had returned 1
-#       since the day it was written.
+#   1 = CHECK 1 FOUND A DOCUMENT WRONG: at least one stated value does not
+#       reproduce. Also returned when CHECK 1 AND CHECK 2 both fail in the
+#       same run — 1 is the long-standing, documented code and keeps priority
+#       over 3 so nothing downstream that already keys off "1 means a document
+#       claim is wrong" starts reading 3 as a novel kind of failure it isn't.
 #   2 = THIS TOOL COULD NOT DO ITS JOB, so its result is not a verdict on any
 #       document: a usage error, a named surface missing from the tree, a
-#       surface glob matching no file, or fewer claims executed than
-#       MIN_EXECUTED_CLAIMS. It outranks 1, because with the surface set broken
-#       the mismatches that were found are not the mismatches that exist.
-#       Before this existed, deleting 8 of the 9 named surfaces printed eight
-#       MISSING SURFACE lines, checked one claim, and exited 0 with PASS.
+#       surface glob matching no file, fewer claims executed than
+#       MIN_EXECUTED_CLAIMS, or the doc-consistency-check.py import CHECK 1's
+#       dated-record excusal depends on failing to load or missing the surface
+#       this file calls through it (round 17, M13). It outranks 1 and 3,
+#       because with the surface set (or the import) broken, the mismatches
+#       that were found are not the mismatches that exist. Before H9 existed,
+#       deleting 8 of the 9 named surfaces printed eight MISSING SURFACE
+#       lines, checked one claim, and exited 0 with PASS.
+#   3 = CHECK 2 FOUND A DOCUMENT WRONG, AND CHECK 1 DID NOT: at least one spec
+#       code fence references an identifier its own file does not declare, with
+#       every claim CHECK 1 checked reproducing. Round 17 (M14) split this out
+#       of 1 — before it, CHECK 1 and CHECK 2 fused into one exit code with
+#       nothing in the number itself saying which of two unrelated defect
+#       classes CI was red for; the printed FAIL block always named it, but the
+#       exit code, the thing automation actually branches on, did not. From
+#       the day this file was written until round 17, the dangling-identifier
+#       path returned 1, same as CHECK 1 — that history is why 1 still wins
+#       when both checks fail, rather than 3 taking over as the newer code.
 
 import argparse
 import importlib.util
@@ -166,7 +191,10 @@ def _load_consistency():
     other reports, and a second copy of a definition is the duplicate-claim
     defect this repo keeps filing. The cost is a hard dependency between the
     two checkers; both are steps of the same CI job, so a break in either
-    already fails that job."""
+    already fails that job.
+
+    May raise — the caller (_ensure_consistency_module below) is where that is
+    handled; this function's only job is the load itself."""
     q = pathlib.Path(__file__).with_name("doc-consistency-check.py")
     spec = importlib.util.spec_from_file_location("doc_consistency_check", q)
     mod = importlib.util.module_from_spec(spec)
@@ -174,25 +202,183 @@ def _load_consistency():
     return mod
 
 
-DCC = _load_consistency()
+# The imported surface this file actually calls through DCC. Round 17 (M13):
+# a renamed helper used to fail as an AttributeError mid-scan, after this run
+# had already printed part of a report — a partial report with no verdict is
+# worse than no report, because it reads like a finished one. Checked as one
+# batch, immediately after the load, so a contract break is reported before a
+# single line of scan output exists.
+_DCC_CONTRACT = ("record_regions", "frozen_chain_span", "sentence_window",
+                 "LOG_BODY_FILES", "blank_frozen_history")
 
-# Read-only binaries only. A command is refused unless EVERY pipeline segment's
-# argv[0] is here. `git` is further restricted below to read-only subcommands.
-ALLOWED_CMDS = {
-    "grep", "egrep", "fgrep", "rg", "ls", "find", "wc", "cat", "head", "tail",
-    "sort", "uniq", "awk", "cut", "tr", "git", "basename",
-    "dirname", "echo", "printf", "stat", "diff",
+DCC = None
+
+
+def _ensure_consistency_module():
+    """Load and validate the doc-consistency-check.py import. Returns an error
+    string on failure, or None once `DCC` is set and safe to call through.
+
+    Round 17 (M13). Before this, `DCC = _load_consistency()` ran at IMPORT
+    TIME as a bare module-level statement: a missing sibling raised out of
+    `spec.loader.exec_module` as an uncaught OSError, printing a raw traceback
+    and exiting 1 — the same exit code CHECK 1 uses for "a stated value did
+    not reproduce", so a broken import was indistinguishable from a real
+    finding on the number alone. And because it ran at import time, it fired
+    for `--help` too, before argparse ever got to print anything. Deferred to
+    here, called once from `main()` after `--repo`/`--quiet` are parsed but
+    before `scan()` does any work, so `--help` never touches it and a failure
+    is reported through this file's own named-error convention (exit 2 — "this
+    tool could not do its job") rather than a stack trace."""
+    global DCC
+    if DCC is not None:
+        return None
+    try:
+        mod = _load_consistency()
+    except Exception as exc:                          # pragma: no branch
+        return ("could not import tools/doc-consistency-check.py (%s: %s) — "
+                "CHECK 1's dated-record excusal has no answer to work with"
+                % (type(exc).__name__, exc))
+    missing = [name for name in _DCC_CONTRACT if not hasattr(mod, name)]
+    if missing:
+        return ("tools/doc-consistency-check.py no longer exposes %s — the "
+                "imported contract this file depends on has changed"
+                % ", ".join(missing))
+    DCC = mod
+    return None
+
+# ---------------------------------------------------------------------------
+# Round 17 (L1). Every fact this file knows about ONE allow-listed binary used
+# to live in up to eight separate parallel tables — ALLOWED_CMDS (membership),
+# GIT_READONLY / GIT_GLOBAL_DENIED (git's two-phase flags), DENIED_FLAGS,
+# DENIED_FLAG_PREFIXES, BENIGN_NONZERO, the needs-a-real-file-operand set, and
+# `_KNOWN_BINARIES` for the OPPOSITE purpose (naming a binary this file
+# recognises but refuses) — with nothing cross-checking any of them. Adding a
+# binary to the allow-list therefore obliged the author to separately remember
+# to consider all the others, and forgetting one is exactly this round's High
+# findings. The drift was already live proof of the failure mode: a `sed` row
+# sat in the needs-a-file table, unreachable since `sed` was dropped from the
+# allow-list at round 9 (parse_pipeline rejects `sed` on argv[0] before that
+# table is ever consulted), while `_KNOWN_BINARIES` — correctly — still lists
+# `sed`, for the unrelated purpose of naming it in a decline.
+#
+# One `Binary` record per ALLOWED binary now, and ALLOWED_CMDS is DERIVED as
+# its key set rather than maintained as a separate list — so a binary that is
+# not allowed cannot carry a stray row in any of the other fields, and a
+# binary that IS allowed has all four of its security-relevant properties
+# sitting in one place, in the same commit, by construction. `_KNOWN_BINARIES`
+# stays separate below: it deliberately names binaries this file does NOT
+# allow, which is not a property `Binary` has any field for.
+class Binary:
+    """One allow-listed binary's read-only contract:
+      denied_flags     — exact denied option cores (round 9 H1, round 15 H3)
+      denied_prefixes  — denied `--long=` prefix forms not already caught by
+                          the exact-core check above (see _option_cores())
+      benign_exit      — exit codes that are a RESULT, not a failure (grep-
+                          family 1 = "no match", diff 1 = "files differ")
+      needs_file       — the first pipeline segment must name a real on-disk
+                          file among its operands, or it is declined as
+                          reading from an (empty) stdin rather than the
+                          quoted text (round 16, M8)
+    git carries two more, read only by the git-specific branches in
+    denied_flag()/parse_pipeline():
+      git_subcommands     — the read-only subcommand allow-list (GIT_READONLY)
+      git_global_denied   — flags denied only BEFORE the subcommand, where git
+                             parses its own global options (GIT_GLOBAL_DENIED)
+    """
+    __slots__ = ("denied_flags", "denied_prefixes", "benign_exit",
+                 "needs_file", "git_subcommands", "git_global_denied")
+
+    def __init__(self, denied_flags=frozenset(), denied_prefixes=(),
+                 benign_exit=frozenset(), needs_file=False,
+                 git_subcommands=None, git_global_denied=None):
+        self.denied_flags = denied_flags
+        self.denied_prefixes = denied_prefixes
+        self.benign_exit = benign_exit
+        self.needs_file = needs_file
+        self.git_subcommands = git_subcommands
+        self.git_global_denied = git_global_denied
+
+
+_NO_BINARY = Binary()          # the all-defaults record for a plain binary
+
+
+BINARIES = {
+    "grep": Binary(benign_exit=frozenset({1}), needs_file=True),
+    "egrep": Binary(benign_exit=frozenset({1}), needs_file=True),
+    "fgrep": Binary(benign_exit=frozenset({1}), needs_file=True),
+    # `--pre`/`--pre-glob`/`--hostname-bin` hand ripgrep a program to run;
+    # `--generate` is a distinct info-dump hatch. No prefix form is needed for
+    # `--generate` — it never carries a `=value`.
+    "rg": Binary(
+        denied_flags=frozenset({"--pre", "--pre-glob", "--hostname-bin",
+                                 "--generate"}),
+        denied_prefixes=("--pre=", "--pre-glob=", "--hostname-bin="),
+        benign_exit=frozenset({1}), needs_file=True),
+    "ls": Binary(),
+    "find": Binary(denied_flags=frozenset({
+        "-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint",
+        "-fprint0", "-fprintf", "-fls"})),
+    "wc": Binary(needs_file=True),
+    "cat": Binary(needs_file=True),
+    "head": Binary(denied_flags=frozenset({"-f", "--follow"}), needs_file=True),
+    "tail": Binary(denied_flags=frozenset({"-f", "-F", "--follow"}),
+                    needs_file=True),
+    # `--compress-program` (round 15, H5) runs an arbitrary program whenever a
+    # sort spills to disk, which `-S 1` forces; proven creating a canary here.
+    "sort": Binary(
+        denied_flags=frozenset({"-o", "--output", "--compress-program"}),
+        denied_prefixes=("--output=", "--compress-program="), needs_file=True),
+    # Denied flags empty by design — `uniq` is guarded by OPERAND COUNT
+    # instead, in denied_flag()'s own uniq branch: `uniq IN OUT` writes OUT,
+    # and no flag names that hatch.
+    "uniq": Binary(needs_file=True),
+    # `-l`/`--load`, `-i`/`--include` and `-E`/`--exec` are gawk's extension
+    # and source-loading flags — the same class as `-f`, added in round 15
+    # H5's one-pass audit of every remaining allow-listed binary rather than
+    # one report at a time. The program-text allow-list (AWK_ALLOWED_CALLS,
+    # AWK_ESCAPES) is a SEPARATE mechanism below, for the same reason `sed`
+    # has no Binary entry at all: the escape lives in the SCRIPT, a language,
+    # not a flag, so no flag table — consolidated or not — can describe it.
+    "awk": Binary(
+        denied_flags=frozenset({"-f", "--file", "--source", "--exec", "-l",
+                                 "--load", "-i", "--include", "-E"}),
+        denied_prefixes=("--source=", "--file=", "--load=", "--include="),
+        needs_file=True),
+    "cut": Binary(needs_file=True),
+    "tr": Binary(needs_file=True),
+    # `git` is split in two: GLOBAL flags (before the subcommand, where git
+    # parses its own options) vs. the subcommand allow-list. `-O`/
+    # `--open-files-in-pager` hands the match list to a command; `--output` (a
+    # `log`/`diff`/`show` option) WRITES a file — `git diff --output=WROTE
+    # HEAD` created it here under a printed PASS before this was denied.
+    # `branch`/`tag` are NOT read-only subcommands (round 15, H4): `-D`/`-d`
+    # DESTROY a ref, proven deleting one in a fixture repo under a printed
+    # PASS; the argument-less read forms are not worth that surface and
+    # nothing in this corpus quotes one, so both are gone entirely — a future
+    # claim quoting them is DECLINED AND NAMED, the safe direction.
+    "git": Binary(
+        denied_flags=frozenset({"-O", "--open-files-in-pager", "--output"}),
+        denied_prefixes=("--exec-path=", "--upload-pack=", "--output="),
+        benign_exit=frozenset({1}),
+        git_subcommands=frozenset({
+            "log", "grep", "show", "ls-files", "diff", "rev-parse",
+            "rev-list", "cat-file", "describe", "status", "blame"}),
+        git_global_denied=frozenset({
+            "-c", "-C", "--exec-path", "--upload-pack"})),
+    "basename": Binary(),
+    "dirname": Binary(),
+    "echo": Binary(),
+    "printf": Binary(),
+    "stat": Binary(),
+    "diff": Binary(benign_exit=frozenset({1})),
 }
-# Round 15 (H4): `branch` and `tag` were on this list as READ subcommands, and
-# `git branch -D x` / `git tag -d x` DESTROY a ref — both proven here deleting
-# a ref in a fixture repo under a printed PASS. The argument-less read forms
-# (`git branch`, `git tag`) are not worth that surface, and nothing in this
-# corpus quotes one, so both are gone: a future claim quoting them is DECLINED
-# AND NAMED, which is the safe direction.
-GIT_READONLY = {
-    "log", "grep", "show", "ls-files", "diff", "rev-parse", "rev-list",
-    "cat-file", "describe", "status", "blame",
-}
+
+# ALLOWED_CMDS is DERIVED from BINARIES — a binary is allow-listed exactly
+# when it has a Binary record, never the other way around.
+ALLOWED_CMDS = frozenset(BINARIES)
+GIT_READONLY = BINARIES["git"].git_subcommands
+GIT_GLOBAL_DENIED = BINARIES["git"].git_global_denied
+
 # Shell metacharacters that make a string more than a simple pipeline. `\x00`
 # is here for a different reason from the rest (round 15, M2): subprocess
 # raises ValueError on a NUL in argv, which is not a SubprocessError, so an
@@ -211,7 +397,8 @@ FORBIDDEN = re.compile(r"[;&><`\n\x00]|\$\(|\|\|")
 # `pull_request` CI trigger that is untrusted input reaching a runner.
 #
 # Two mechanisms, because the hatches are of two kinds:
-#   (1) FLAG hatches — refusable exactly, by name. Listed per binary below.
+#   (1) FLAG hatches — refusable exactly, by name. Listed per binary above, in
+#       BINARIES.
 #   (2) SCRIPT hatches — the argument IS a language, so no flag list can
 #       contain them. `sed` (`w file`, `s///w file`) is therefore DROPPED from
 #       the allow-list entirely; it has no use anywhere in the corpus, and a
@@ -232,42 +419,7 @@ FORBIDDEN = re.compile(r"[;&><`\n\x00]|\$\(|\|\|")
 # deny-list keyed on the exact spelling an option happened to be written in
 # misses the same option carrying an attached value (`sort -oFILE`,
 # `git grep -O./p.sh`), which is not a new hatch but the same one respelled.
-DENIED_FLAGS = {
-    # exact flags
-    "find": {"-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint",
-             "-fprint0", "-fprintf", "-fls"},
-    # `--compress-program` (round 15, H5) runs an arbitrary program whenever a
-    # sort spills to disk, which `-S 1` forces; proven creating a canary here.
-    "sort": {"-o", "--output", "--compress-program"},
-    "uniq": set(),           # guarded by operand count below (uniq IN OUT writes)
-    # `-l`/`--load`, `-i`/`--include` and `-E`/`--exec` are gawk's extension
-    # and source-loading flags — the same class as `-f`, added in H5's
-    # one-pass audit of every remaining allow-listed binary rather than one
-    # report at a time.
-    "awk": {"-f", "--file", "--source", "--exec", "-l", "--load", "-i",
-            "--include", "-E"},
-    "head": {"-f", "--follow"},
-    "tail": {"-f", "-F", "--follow"},
-    "rg": {"--pre", "--pre-glob", "--hostname-bin", "--generate"},
-    # `git` is split in two: see GIT_GLOBAL_DENIED. A flag denied ANYWHERE goes
-    # here — `git grep -O <cmd>` hands the match list to a command, and
-    # `--output` (a diff option `log`/`diff`/`show` all accept) WRITES a file:
-    # `git diff --output=WROTE_THIS HEAD` created it here under a printed PASS.
-    "git": {"-O", "--open-files-in-pager", "--output"},
-}
-# Denied only BEFORE the subcommand, where git parses its own global options.
-# The same spellings after it belong to the subcommand and are harmless — and
-# refusing them there broke both of this repo's only executable claims, whose
-# command is `git grep -c …` (round 9: caught because the fix was re-measured
-# against the live corpus rather than accepted on its own reasoning).
-GIT_GLOBAL_DENIED = {"-c", "-C", "--exec-path", "--upload-pack"}
-# Prefix forms of the same hatches: `--output=x`, `--pre=x`, `-c=x`.
-DENIED_FLAG_PREFIXES = {
-    "sort": ("--output=", "--compress-program="),
-    "rg": ("--pre=", "--pre-glob=", "--hostname-bin="),
-    "git": ("--exec-path=", "--upload-pack=", "--output="),
-    "awk": ("--source=", "--file=", "--load=", "--include="),
-}
+#
 # awk program text that escapes the process. FORBIDDEN already removes every
 # redirection character, so these two are what is left OF THE NAMED FORMS —
 # and round 15 (H1) proved that naming forms is the wrong shape of rule for a
@@ -401,8 +553,22 @@ CURRENCY_RADIUS = 120
 
 
 def dated_record_regions(rel, text):
-    """Spans of `text` that are dated records by structure."""
-    spans = list(DCC.record_regions(rel, text))
+    """Spans of `text` that are dated records by structure.
+
+    Round 17 (M13): `record_regions`'s own docstring states a precondition
+    this caller used to violate — "computed on the same (frozen-history-
+    blanked) text the scans read, so the offsets agree" — while this function
+    passed RAW text. It was harmless only because `blank_frozen_history` is
+    offset-preserving (a space per non-newline character, a newline per
+    newline), which is a property of that function's IMPLEMENTATION, not a
+    contract this file was entitled to assume. HONOURED HERE rather than
+    replaced with a new assertion: `record_regions` is now called on the same
+    blanked text `doc-consistency-check.py`'s own scans read, so the two
+    tools' notion of "which bytes are frozen" cannot diverge by construction —
+    which is the whole reason this file imports that module instead of
+    restating the definition."""
+    blanked, _frozen, _pierced = DCC.blank_frozen_history(text)
+    spans = list(DCC.record_regions(rel, blanked))
     chain = DCC.frozen_chain_span(text)
     if chain:
         spans.append(chain)
@@ -578,6 +744,22 @@ APPROX_BEFORE = re.compile(
     r"nearly|almost|at least|at most|up to|no more than|no fewer than)\s+)$",
     re.I)
 
+# Round 17 (L5). No allow-listed binary this tool ever runs pads a count with
+# a leading zero or groups it with a thousands separator — `wc -l`, `grep -c`,
+# `git grep -c`, `ls | wc -l` all print a bare digit run. The old grammar
+# (`\d[\d,]*`, both here and in single_integer() below) accepted both anyway,
+# and Python's own `int()` NORMALISES what it is handed rather than validating
+# it: `int("1,2,3".replace(",", ""))` is 123 (comma position is irrelevant to
+# it) and `int("007")` is 7 (a leading zero is silently dropped) — so a
+# malformed document transcription "reproduced" a real value by accident of
+# `int()` being more permissive than any command's actual output grammar ever
+# is. A WELL-FORMED integer literal, matched in full: either the single digit
+# "0", or a nonzero digit run with no leading zero, optionally grouped in
+# EXACT thousands (a document may write "12,345" for readability; no live
+# claim's command ever emits the comma itself — see single_integer(), which
+# does not accept one).
+_WELL_FORMED_INT = re.compile(r"\A(?:0|[1-9]\d*|[1-9]\d{0,2}(?:,\d{3})+)\Z")
+
 
 class SingleIntegerAnswer:
     """The one answer kind this tool has ever had: the command prints exactly
@@ -604,7 +786,21 @@ class SingleIntegerAnswer:
                           "stated value carries an approximation marker "
                           "(~ / ≈ / about / roughly) — the document is not "
                           "claiming an exact figure")
-        return int(text[start:end].replace(",", "")), None
+        raw = text[start:end]
+        if not _WELL_FORMED_INT.match(raw):
+            # Round 17 (L5). `raw` matched the shape's own loose capture
+            # (`\d[\d,]*`) but is not a WELL-FORMED integer literal — a
+            # malformed thousands grouping ("1,2,3") or a leading zero
+            # ("007"). Declined and named rather than silently normalised by
+            # `int()`, which would have accepted either and let a malformed
+            # transcription "reproduce" a real value by coincidence.
+            return None, (self.bucket,
+                          "stated value %r is not a well-formed integer "
+                          "literal — a digit run with no leading zero, "
+                          "optionally grouped in exact thousands; no "
+                          "allow-listed command's output is shaped any other "
+                          "way" % raw)
+        return int(raw.replace(",", "")), None
 
     def read(self, out):
         return single_integer(out)
@@ -895,8 +1091,34 @@ class Claim:
 
     @property
     def head(self):
-        parts = self.cmd.split()
-        return parts[0] if parts else ""
+        """The command's real first token, via the quote-aware tokenizer —
+        never a naive whitespace split.
+
+        Round 17 (L2). This property used to be `self.cmd.split()[0]`: a
+        SECOND parser for "the head token", disagreeing with the one
+        validation (parse_pipeline, denied_flag, expand_globs, ...) actually
+        uses. Proven: `` `"grep" -c '^A' CLAUDE.md` `` tokenizes to a real,
+        runnable `grep` command — tokenize() strips the quotes exactly the
+        way it must for parse_pipeline to accept the claim — but the naive
+        split's head was the six characters `"grep"`, never equal to `grep`,
+        so a perfectly good claim failed `head not in ALLOWED_CMDS` in
+        check_claim() below, then failed command_shaped()'s quote-led shape
+        test too, and fell through the return-("ignored", None) branch: 0
+        executed, every decline bucket at 0, PASS — not run, not counted, not
+        named. That is round 9's M1 (the tool's one silent decline route)
+        re-created by a disagreeing parser rather than a bare `continue`.
+
+        Returns None when `self.cmd` does not tokenize AT ALL (an
+        unterminated quote, a trailing backslash) — check_claim() declines
+        that through the same NAMED path parse_pipeline already owns for it,
+        rather than falling through here."""
+        segments = tokenize(self.cmd)
+        if segments is None:
+            return None
+        for seg in segments:
+            if seg:
+                return seg[0][0]
+        return ""
 
     @property
     def answer(self):
@@ -1081,8 +1303,9 @@ def denied_flag(argv):
     `python3 -c`, `sort -o`, `rg --pre` and `git -c` all execute or write from
     a binary the list called read-only."""
     name = argv[0]
-    exact = DENIED_FLAGS.get(name, ())
-    prefixes = DENIED_FLAG_PREFIXES.get(name, ())
+    binfo = BINARIES.get(name, _NO_BINARY)
+    exact = binfo.denied_flags
+    prefixes = binfo.denied_prefixes
     for a in argv[1:]:
         for core in _option_cores(a):
             if core in exact:
@@ -1185,9 +1408,8 @@ def parse_pipeline(cmd):
 # Exit codes that are a RESULT, not a failure: grep-family 1 = "no match",
 # diff 1 = "files differ". Everything else non-zero means the command did not
 # run as written (bad path, bad flag, missing file), and its output is not an
-# answer to anything.
-BENIGN_NONZERO = {"grep": {1}, "egrep": {1}, "fgrep": {1}, "rg": {1},
-                  "diff": {1}, "git": {1}}
+# answer to anything. Round 17 (L1): each binary's own `benign_exit` field in
+# BINARIES, above, is this table now — see run_pipeline()'s use of it below.
 
 
 # A hard ceiling on how much a single pipeline segment may print. The answers
@@ -1290,7 +1512,7 @@ def run_pipeline(segments, cwd):
                 return None, "command timed out after %ds" % TIMEOUT_S
             finally:
                 proc.stdout.close()
-        if rc != 0 and rc not in BENIGN_NONZERO.get(argv[0], ()):
+        if rc != 0 and rc not in BINARIES.get(argv[0], _NO_BINARY).benign_exit:
             return None, ("`%s` exited %d — its output is not treated as an "
                           "answer" % (argv[0], rc))
         data = box["data"]
@@ -1300,34 +1522,49 @@ def run_pipeline(segments, cwd):
         return None, "output is not decodable text"
 
 
+# The command side is stricter than the document side's _WELL_FORMED_INT in
+# one direction and looser in another — round 17 (L5). Stricter: no comma is
+# accepted at all, because no allow-listed binary's output ever contains one
+# (the document side allows one for readability; the command side is what
+# that readability is being checked AGAINST). Looser: an optional leading
+# `-`, because `awk` (2 of this tool's 3 live executed claims) can
+# legitimately compute and print a negative number, and before this a
+# negative answer could not be READ at all — `single_integer("-3\n")` was
+# None, which check_claim() reports as "not-a-single-integer", a decline that
+# says the tool could not tell. That buries a genuine finding: a document's
+# POSITIVE claim compared against a real NEGATIVE answer is a mismatch this
+# tool can now actually make, rather than a claim it silently gives up on.
+_WELL_FORMED_COMMAND_INT = re.compile(r"\A-?(?:0|[1-9]\d*)\Z")
+
+
 def single_integer(out):
-    """The command's answer as an int, or None if it did not print exactly one."""
+    """The command's answer as an int, or None if it did not print exactly one
+    well-formed integer literal (see _WELL_FORMED_COMMAND_INT above)."""
     if out is None:
         return None
     lines = [l.strip() for l in out.splitlines() if l.strip()]
     if len(lines) != 1:
         return None
-    if not re.fullmatch(r"\d[\d,]*", lines[0]):
+    if not _WELL_FORMED_COMMAND_INT.match(lines[0]):
         return None
-    return int(lines[0].replace(",", ""))
+    return int(lines[0])
 
 
 GLOB_CH = re.compile(r"[*?\[]")
 
-# Binaries whose FIRST pipeline segment needs a real file operand to be
-# self-contained. A quoted command missing its file operand reads stdin,
-# which is empty here, and returns 0 or nothing — reporting that as
-# "document says 18, command returns 0" would be a fabricated finding, the
-# very thing this tool exists to prevent. This repo genuinely writes such
-# prose ("`grep -c '^- \*\*'` over each file returns 18"), where the filename
-# lives outside the backticks, so the command as quoted is not runnable and
-# the claim is UNVERIFIABLE, not false.
-FIRST_SEGMENT_NEEDS_FILE = frozenset((
-    "grep", "egrep", "fgrep", "rg", "sed", "awk",
-    "cat", "wc", "sort", "uniq", "head", "tail", "cut", "tr",
-))
-
-
+# A quoted command missing its file operand reads stdin, which is empty here,
+# and returns 0 or nothing — reporting that as "document says 18, command
+# returns 0" would be a fabricated finding, the very thing this tool exists to
+# prevent. This repo genuinely writes such prose ("`grep -c '^- \*\*'` over
+# each file returns 18"), where the filename lives outside the backticks, so
+# the command as quoted is not runnable and the claim is UNVERIFIABLE, not
+# false. Which binaries need this check is each one's own `needs_file` field
+# in BINARIES, above — round 17 (L1) deleted the separate table this used to
+# be: it still carried a `sed` row when this function was last touched, dead
+# ever since `sed` was dropped from ALLOWED_CMDS at round 9, because nothing
+# tied the two tables together. Consolidated, that specific drift cannot
+# recur: a dropped binary has no Binary record at all, so `.get(name,
+# _NO_BINARY).needs_file` reads False for it rather than a stale True.
 def self_contained(segments, repo):
     """False when the first segment would read stdin because none of its
     tokens name a file that actually exists under the repo root.
@@ -1347,7 +1584,7 @@ def self_contained(segments, repo):
     when at least one of its tokens, whatever else it might look like, names
     a real file relative to the repo root."""
     argv = segments[0]
-    if argv[0] not in FIRST_SEGMENT_NEEDS_FILE:
+    if not BINARIES.get(argv[0], _NO_BINARY).needs_file:
         return True
     root = str(repo)
     return any(os.path.isfile(os.path.join(root, a)) for a in argv[1:])
@@ -1468,12 +1705,71 @@ def expand_globs(segments, repo):
 # and flagging those would train readers to ignore the tool.
 # ---------------------------------------------------------------------------
 
-# ONLY `csharp`/`cs` fences. Spec files are full of ASCII file-tree diagrams and
-# untagged prose blocks in which `ShotExecutor.Execute()` is a sentence, not a
-# member access; parsing those produced three false positives for every true one
-# on first run, and a gate at that ratio gets switched off.
-FENCE = re.compile(r"```(csharp|cs)\n(.*?)```", re.S | re.I)
-DECL_CLASS = re.compile(r"\b(?:static\s+)?class\s+([A-Z][A-Za-z0-9_]*)")
+# ONLY `csharp`/`cs` fences are examined for real declarations/references (see
+# ANY_FENCE below for the OTHER tags — round 17, M14). Spec files are full of
+# ASCII file-tree diagrams and untagged prose blocks in which
+# `ShotExecutor.Execute()` is a sentence, not a member access; parsing those as
+# code produced three false positives for every true one on first run, and a
+# gate at that ratio gets switched off.
+_CSHARP_TAGS = ("csharp", "cs")
+# Every fenced block regardless of tag — round 17 (M14) needs this to COUNT a
+# reference living inside an untagged fence as a named decline rather than a
+# vanished one, without promoting untagged prose into the real scan above.
+ANY_FENCE = re.compile(r"```([A-Za-z0-9_+-]*)\n(.*?)```", re.S)
+
+# Round 17 (M10): DECL_CLASS matched the `class` keyword only. Measured over
+# this tree's fenced corpus: 181 struct / 91 class / 65 enum / 14 interface
+# declarations — so the `if typ in classes` gate downstream made every
+# reference into a struct silently unexaminable, and root CLAUDE.md names
+# struct-based architecture as the STANDING RULE, not the exception. Proven:
+# the identical dangling reference was reported when its owning type read
+# `class Foo` and missed when it read `readonly struct Foo`. Every C# type-
+# declaration keyword this corpus actually uses is covered now; the variable
+# keeps its old name because every caller still means "the set of types a
+# `Type.Member` reference may resolve against" by it.
+_TYPE_MODIFIER = (r"(?:public|internal|private|protected|static|readonly|"
+                  r"sealed|abstract|partial|unsafe|ref|new)\s+")
+DECL_CLASS = re.compile(
+    r"\b(?:" + _TYPE_MODIFIER + r")*"
+    r"(?:class|struct|interface|enum|record(?:\s+(?:class|struct))?)\s+"
+    r"([A-Z][A-Za-z0-9_]*)")
+# An enum MEMBER (`None`, `Yellow = 1`) is not a declaration DECL_MEMBER or
+# DECL_LOOSE can see below — neither pattern's grammar allows for the one
+# thing an enumerator omits: a preceding type. Harvested separately so that
+# widening DECL_CLASS to `enum` does not turn every enum into a false-positive
+# generator — without this, `Severity.Yellow` would dangle the instant
+# `enum Severity { Yellow, Red }` came into scope, for every member, in every
+# file that declares one.
+DECL_ENUM = re.compile(
+    r"\benum\s+[A-Z][A-Za-z0-9_]*\s*(?::\s*[A-Za-z_][\w.]*\s*)?\{(.*?)\}", re.S)
+_ENUM_MEMBER_NAME = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)")
+
+
+def _enum_members(code):
+    """Every identifier declared inside an `enum { ... }` body in `code`.
+
+    Comments are stripped from each body BEFORE the comma-split, and must be —
+    this corpus documents enum values with a `/// <summary>...</summary>` line
+    per member, and that prose routinely contains its own commas ("Ball at
+    rest on ground, no movement"). Splitting the raw body on `,` let a comma
+    inside a doc-comment cut the member after it in half, burying the real
+    name (`STATIONARY`) mid-fragment where the leading-identifier match could
+    never reach it — proven: `BallStateType`'s six real members all came back
+    missing, not extra, and the fragment blindly matched a stray English word
+    (`no`) as a phantom member instead. This is not a case of a member being
+    SKETCHED inside a comment (the class/DECL_LOOSE asymmetry is deliberate
+    and stays); the member here is ordinary code, only its DELIMITER was
+    corrupted by unrelated comment text."""
+    members = set()
+    for body in DECL_ENUM.findall(code):
+        body = _strip_comments(body)
+        for part in body.split(","):
+            m = _ENUM_MEMBER_NAME.match(part.strip())
+            if m:
+                members.add(m.group(1))
+    return members
+
+
 DECL_MEMBER = re.compile(
     r"\b(?:public|internal|private|protected)\s+"
     r"(?:static\s+|readonly\s+|const\s+)*"
@@ -1499,64 +1795,175 @@ FILE_EXTENSIONS = {
     "csv", "csproj", "sln", "xml", "html", "js", "ruleset", "editorconfig",
 }
 
+# Every decline bucket CHECK 2 can land a reference in, in print order — round
+# 17 (M14). Before this, CHECK 2 silently dropped a reference that was
+# filename-shaped, whose type was not locally declared, whose fence carried no
+# `csharp`/`cs` tag, or whose file declared no type at all: no bucket, no
+# count, no line, while CHECK 1 spends forty header lines establishing that
+# every decline it makes is counted and named. Same rule, second check.
+FENCE_DECLINE_BUCKETS = (
+    ("fence-untagged", "fence-untagged"),
+    ("no-declared-type", "no-declared-type-in-file"),
+    ("filename-shaped", "filename-shaped"),
+    ("type-not-declared-here", "type-not-declared-here"),
+)
+
+
+def _blank_matches(pattern, s):
+    """Replace every match of `pattern` in `s` with same-length whitespace —
+    a space per non-newline character, the newline itself kept — so every
+    OTHER character's offset in `s` is unchanged.
+
+    Round 17 (M11). The old comment-stripping step used a length-CHANGING
+    substitution (`re.sub(r"/\\*.*?\\*/", " ", code)`), which is one of the two
+    reasons a reference's position inside the stripped text could never be
+    trusted back to a real file offset — the other being the block-join below.
+    """
+    def repl(m):
+        return re.sub(r"[^\n]", " ", m.group(0))
+    return pattern.sub(repl, s)
+
+
+_USING_NAMESPACE_LINE = re.compile(r"^\s*(?:using|namespace)\b.*$", re.M)
+_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.S)
+_LINE_COMMENT = re.compile(r"//[^\n]*")
+
+
+def _strip_comments(code):
+    return _blank_matches(_LINE_COMMENT, _blank_matches(_BLOCK_COMMENT, code))
+
+
+def _join_with_offsets(blocks):
+    """Join `[(body, file_offset)]` the way the old code joined fence bodies
+    (one `\\n` between consecutive blocks) and return `(code, offset_map)`,
+    where `offset_map` is `[(code_start, code_end, file_start)]`.
+
+    Round 17 (M11). This table is the fix's load-bearing piece: every
+    reference position computed downstream is a position IN `code`, and it is
+    mapped back through this table to a real file offset — never re-derived
+    by searching the raw file text for the reference's own spelling, which is
+    what let the old code report the FIRST textual occurrence of
+    `Type.Member` anywhere in the file (a prose sentence outside every fence,
+    on a wrong line) instead of the occurrence that was actually flagged."""
+    parts, offset_map, pos = [], [], 0
+    for body, file_start in blocks:
+        parts.append(body)
+        offset_map.append((pos, pos + len(body), file_start))
+        pos += len(body) + 1                    # +1 for the "\n" joiner
+    return "\n".join(parts), offset_map
+
+
+def _map_offset(offset_map, pos):
+    """The file offset a position inside the joined `code` string corresponds
+    to. Round 17 (M11): fails LOUD — the old code let `line` stay `None` on a
+    failed lookup and printed the literal string 'None', which is silence
+    wearing the shape of an answer."""
+    for code_start, code_end, file_start in offset_map:
+        if code_start <= pos <= code_end:
+            return file_start + (pos - code_start)
+    raise AssertionError(
+        "dangling-identifier offset %d maps to no fence block — the fence "
+        "join/offset bookkeeping has drifted from the code it describes"
+        % pos)
+
 
 def scan_fence_identifiers(repo, quiet=False):
     """Report Type.MEMBER references whose Type the file declares and whose
-    MEMBER it does not. Returns (findings, files_with_fences)."""
+    MEMBER it does not. Returns `findings` alone — round 17 (L3) corrected
+    this docstring, which used to promise a `files_with_fences` second return
+    value this function has never actually returned."""
     findings = []
     files = []
     for pat in SURFACE_GLOBS:
         files.extend(sorted(repo.glob(pat)))
     files = _dedup_by_resolved_path(files)
     scanned = 0
+    type_count = 0
+    examined = 0
+    decline = {bucket: 0 for bucket, _label in FENCE_DECLINE_BUCKETS}
     for path in files:
         text = path.read_text(encoding="utf-8", errors="replace")
-        blocks = [b for _tag, b in FENCE.findall(text)]
-        if not blocks:
+        fences = list(ANY_FENCE.finditer(text))
+        if not fences:
+            continue
+        untagged = [(m.group(2), m.start(2)) for m in fences
+                    if m.group(1).lower() not in _CSHARP_TAGS]
+        for body, _off in untagged:
+            n = len(REFERENCE.findall(_strip_comments(body)))
+            examined += n
+            decline["fence-untagged"] += n
+        tagged = [(m.group(2), m.start(2)) for m in fences
+                  if m.group(1).lower() in _CSHARP_TAGS]
+        if not tagged:
             continue
         scanned += 1
-        code = "\n".join(blocks)
+        code, offset_map = _join_with_offsets(tagged)
         # `using` / `namespace` lines are declarations of paths, never member
-        # accesses; drop them before looking for references.
-        code = "\n".join(l for l in code.splitlines()
-                          if not re.match(r"\s*(?:using|namespace)\b", l))
+        # accesses; blanked (never deleted — deleting a line would break
+        # offset_map's byte accounting, round 17 M11) before looking for
+        # either declarations or references.
+        code = _blank_matches(_USING_NAMESPACE_LINE, code)
         classes = set(DECL_CLASS.findall(code))
+        type_count += len(classes)
         # Harvest declarations LOOSELY as well as strictly. Spec fences elide:
         # members appear without access modifiers (`int NextStaffId;`), inside
         # /* ... */ sketches of a class body, and as method signatures. A missed
         # declaration is a FALSE POSITIVE, and a checker that cries wolf is
         # ignored long before it is fixed — so over-harvest deliberately and
         # accept lower recall. Precision is the property that keeps it trusted.
-        members = set(DECL_MEMBER.findall(code)) | set(DECL_LOOSE.findall(code)) | classes
-        if not classes:
-            continue
+        members = (set(DECL_MEMBER.findall(code)) | set(DECL_LOOSE.findall(code))
+                   | classes | _enum_members(code))
         # Asymmetry, deliberate: comments COUNT as declarations (spec fences
         # sketch class bodies inside /* ... */) but NEVER as references — a
         # `/// Called by MatchSimulator.Update() at 60Hz` line is prose about
         # another spec's type, not a member access this file must satisfy.
         # Harvest from the full text above; scan for references here only.
-        code_nc = re.sub(r"/\*.*?\*/", " ", code, flags=re.S)
-        code_nc = re.sub(r"//[^\n]*", " ", code_nc)
+        code_nc = _strip_comments(code)
+        if not classes:
+            n = len(REFERENCE.findall(code_nc))
+            examined += n
+            decline["no-declared-type"] += n
+            continue
         for m in REFERENCE.finditer(code_nc):
+            examined += 1
             typ, mem = m.group(1), m.group(2)
             if mem in FILE_EXTENSIONS:
+                decline["filename-shaped"] += 1
                 continue
-            if typ in classes and mem not in members:
-                # Locate the reference in the FILE for an actionable line number.
-                line = None
-                for lm in re.finditer(re.escape(typ + "." + mem), text):
-                    line = text.count("\n", 0, lm.start()) + 1
-                    break
+            if typ not in classes:
+                decline["type-not-declared-here"] += 1
+                continue
+            if mem not in members:
+                # Locate the reference in the FILE via the offset map — round
+                # 17 (M11) — never by re-searching the raw file text.
+                line = (text.count("\n", 0, _map_offset(offset_map, m.start(1)))
+                        + 1)
+                # Round 17 (L3): this used to OR in a first disjunct
+                # (`x.lower() == mem.replace("_", "").lower()`) that can never
+                # fire alone — it is true only when `x` itself carries no
+                # underscore, and in exactly that case `x.replace("_", "")`
+                # is `x` unchanged, making the first disjunct textually
+                # identical to the second. Dead code, deleted rather than
+                # documented as dead.
                 findings.append((str(path.relative_to(repo)), line, typ, mem,
                                  sorted(x for x in members
-                                        if x.lower() == mem.replace("_", "").lower()
-                                        or x.replace("_", "").lower() == mem.replace("_", "").lower())))
+                                        if x.replace("_", "").lower()
+                                        == mem.replace("_", "").lower())))
     if not quiet:
         print("\ndangling-identifier check — references inside spec code fences")
         print("  spec files with code fences   : %d" % scanned)
+        print("  declared types considered      : %d" % type_count)
         print("  (a reference is reported only when its TYPE is declared in the same"
               " file and its MEMBER is not — cross-file resolution is deliberately"
               " not attempted)")
+    # Round 17 (M14): always printed, --quiet included — the same rule L4
+    # applies to CHECK 1's own counts, and CHECK 2's coverage line did not
+    # exist in any form before this round.
+    print("  references examined            : %d  (%d skipped)"
+          % (examined, sum(decline.values())))
+    print("  references SKIPPED (each named) : %s"
+          % " / ".join("%d %s" % (decline[b], label)
+                       for b, label in FENCE_DECLINE_BUCKETS))
     return findings
 
 
@@ -1633,7 +2040,23 @@ def check_claim(claim, repo, regions):
 
     Knows nothing about printing, counters or exit codes; scan() owns those."""
     answer = claim.answer
-    if claim.head not in ALLOWED_CMDS:
+    head = claim.head
+    if head is None:
+        # Round 17 (L2). `claim.cmd` does not tokenize AT ALL (an
+        # unterminated quote, a trailing backslash) — exactly the failure
+        # parse_pipeline names "does not tokenize (unterminated quote or
+        # trailing \\)" for a claim whose head WAS already recognised.
+        # Before `head` was tokenize-derived, a claim reached that same named
+        # decline via parse_pipeline further down whenever its NAIVE first
+        # word happened to already be an allow-listed binary; declined and
+        # named UNCONDITIONALLY here too, matching that generosity, rather
+        # than re-gating it behind command_shaped() — which exists to tell a
+        # command apart from a bare IDENTIFIER, a question a claim SHAPE has
+        # already answered by binding this span in the first place.
+        return "declined", ("unsafe",
+                            "does not tokenize (unterminated quote or "
+                            "trailing \\)")
+    if head not in ALLOWED_CMDS:
         # Round 9 (M1): this path was the tool's THIRD decline route and the
         # only silent one, while its header and its file-manifest row both
         # published "every declined claim is counted AND named". Most of what
@@ -1645,10 +2068,10 @@ def check_claim(claim, repo, regions):
         # path-shaped (`permille/1000f > 0.6f`, live in #33's appendices) is
         # not announced as a rejected binary. It was never a command; naming it
         # would be the mirror of the noise command_shaped exists to suppress.
-        if command_shaped(claim.cmd, claim.head) and not FORBIDDEN.search(claim.cmd):
+        if command_shaped(claim.cmd, head) and not FORBIDDEN.search(claim.cmd):
             return "declined", ("unlisted-binary",
                                 "`%s` is not an allow-listed read-only binary"
-                                % claim.head)
+                                % head)
         return "ignored", None
     # Round 10: the negation test used to run BEFORE the command test, so a
     # backticked IDENTIFIER near a negation ("`SeasonSaveContents` … was not
@@ -1794,22 +2217,33 @@ def scan(repo, quiet=False):
                  "command-shaped, an integer is nearby, and NO claim shape "
                  "binds it — this tool cannot read the claim, if it is one"))
 
+    # Round 17 (L4). --quiet used to gate this ENTIRE block, coverage counts
+    # included — so a quiet run's PASS line ("...with the coverage stated
+    # above") cited a statement that was never printed: nothing was "stated
+    # above" under --quiet, only the excusal/region-coverage lines that
+    # happen to sit outside this gate. --quiet now suppresses only the
+    # ITEMIZED per-claim decline list (the `- rel:line cmd [why]` lines,
+    # potentially hundreds of them) — the counts every verdict downstream
+    # refers to, and the verdict itself, are never suppressed. MISSING
+    # SURFACE and the coverage-floor error already print unconditionally too
+    # (below); this makes the summary counts consistent with that, and with
+    # what CHECK 2's own coverage line (M14) already does.
+    print("doc-claim-check — executing the verification commands the documents quote")
+    print("  surfaces scanned              : %d" % len(files))
+    print("  claim shapes recognised       : %d (%s)"
+          % (len(CLAIM_SHAPES), ", ".join(s.name for s in CLAIM_SHAPES)))
+    print("  answer kinds recognised       : %d (%s)"
+          % (len(ANSWER_KINDS), ", ".join(a.name for a in ANSWER_KINDS)))
+    print("  claims executed and compared  : %d  (floor %d)"
+          % (checked, MIN_EXECUTED_CLAIMS))
+    print("  claims DECLINED (each named)   : %s"
+          % " / ".join("%d %s" % (declined[b], label)
+                       for b, label in DECLINE_BUCKETS))
     if not quiet:
-        print("doc-claim-check — executing the verification commands the documents quote")
-        print("  surfaces scanned              : %d" % len(files))
-        print("  claim shapes recognised       : %d (%s)"
-              % (len(CLAIM_SHAPES), ", ".join(s.name for s in CLAIM_SHAPES)))
-        print("  answer kinds recognised       : %d (%s)"
-              % (len(ANSWER_KINDS), ", ".join(a.name for a in ANSWER_KINDS)))
-        print("  claims executed and compared  : %d  (floor %d)"
-              % (checked, MIN_EXECUTED_CLAIMS))
-        print("  claims DECLINED (each named)   : %s"
-              % " / ".join("%d %s" % (declined[b], label)
-                           for b, label in DECLINE_BUCKETS))
         for rel, line, cmd, why in declined_list:
             print("      - %s:%d  %s  [%s]" % (rel, line, cmd[:70], why))
-        print("  (a declined claim is UNVERIFIED, not passed — the count is the honest"
-              " statement of this tool's coverage)")
+    print("  (a declined claim is UNVERIFIED, not passed — the count is the honest"
+          " statement of this tool's coverage)")
     # Always printed, --quiet included: an excusal is a mismatch the tool chose
     # not to report, and the round-5/6 lesson is that those must never be
     # silent. Counted and NAMED, same rule as the declines.
@@ -1875,8 +2309,19 @@ def scan(repo, quiet=False):
             print("  * %s" % why)
         return 2
 
-    if findings or dangling:
+    # Round 17 (M14): CHECK 1 and CHECK 2 used to fuse into the SAME exit code
+    # (1), so CI reported one red step for two unrelated defect classes and a
+    # reader had to open the log to learn which check actually failed. CHECK 1
+    # keeps 1 — it is the documented, long-standing meaning, and it wins when
+    # BOTH checks fail in the same run, exactly as before. A run where CHECK 2
+    # is the ONLY failure is now machine-attributable as its own code, 3,
+    # distinct from both "a document is wrong" (1) and "this tool could not do
+    # its job" (2). The printed FAIL blocks above already say which check
+    # failed either way; this is about the exit code alone.
+    if findings:
         return 1
+    if dangling:
+        return 3
 
     print("\nPASS — every executable claim reproduced its stated value, and no"
           " spec code fence references an identifier its own file does not declare"
@@ -1888,12 +2333,26 @@ def main():
     ap = argparse.ArgumentParser(
         description="Execute the verification commands quoted in this repo's "
                     "documents and diff the stated value against the real one.")
-    ap.add_argument("--repo", required=True, help="repository root")
+    # Round 17 (L3): this was the only checker in tools/ requiring --repo —
+    # doc-consistency-check.py and recurring-defect-lint.py both default it
+    # to '.'. Aligned; still overridable, so `--repo .` (as ci.yml and this
+    # file's own callers already pass) is unchanged.
+    ap.add_argument("--repo", default=".", help="repository root (default: .)")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
     repo = pathlib.Path(args.repo).resolve()
     if not (repo / "CLAUDE.md").is_file():
         print("not a Tactical Director repo root: %s" % repo, file=sys.stderr)
+        return 2
+    # Round 17 (M13). Deferred here — after argparse (so `--help` never
+    # touches it) and before scan() prints anything (so a broken import is
+    # reported whole, not mid-scan) — see _ensure_consistency_module()'s own
+    # docstring for what this replaces.
+    dcc_error = _ensure_consistency_module()
+    if dcc_error is not None:
+        print("\nERROR — this run could not verify what it is supposed to "
+              "verify, so its result is not a verdict on any document:")
+        print("  * %s" % dcc_error)
         return 2
     return scan(repo, args.quiet)
 
@@ -2323,3 +2782,123 @@ if __name__ == "__main__":
 # |         |            |             | declines 30 -> 40 named plus the 143-entry   |
 # |         |            |             | census, every delta accounted for. Siblings  |
 # |         |            |             | re-run green.                                |
+# | 1.7     | 2026-08-22 | Claude Code | Round 17 (M10, M11, M13, M14, L1-L5) — five  |
+# |         |            |             | reviewer-named High/Medium findings plus five|
+# |         |            |             | Low, all reproduced before the fix and       |
+# |         |            |             | re-proven in BOTH directions after. **M10:** |
+# |         |            |             | DECL_CLASS matched `class` only — 181 struct |
+# |         |            |             | / 91 class / 65 enum / 14 interface declared |
+# |         |            |             | on this tree's fenced corpus, so a struct    |
+# |         |            |             | member reference was silently unexaminable,  |
+# |         |            |             | and root CLAUDE.md names struct-based        |
+# |         |            |             | architecture as the STANDING rule. Identical |
+# |         |            |             | reference proven reported for `class` and    |
+# |         |            |             | missed for `readonly struct`. Extended to    |
+# |         |            |             | class/struct/interface/enum/record, with enum|
+# |         |            |             | members harvested SEPARATELY (an enumerator  |
+# |         |            |             | has no preceding type, and the existing      |
+# |         |            |             | member patterns can only see one) — a        |
+# |         |            |             | comma-splitting bug in that harvest, caused  |
+# |         |            |             | by un-stripped `///` doc-comment prose       |
+# |         |            |             | containing its own commas, was caught by this|
+# |         |            |             | round's own re-run: `BallStateType`'s six    |
+# |         |            |             | real members came back MISSING, not extra,   |
+# |         |            |             | until comments were stripped before the      |
+# |         |            |             | split. **M11:** the dangling line number was |
+# |         |            |             | recovered by an unconditional-break search of|
+# |         |            |             | the WHOLE FILE TEXT, so it could report a    |
+# |         |            |             | prose occurrence outside every fence, at the |
+# |         |            |             | wrong line, and collapse two distinct fence  |
+# |         |            |             | sites onto one finding. Every fence's file   |
+# |         |            |             | offset is now carried through a join/offset  |
+# |         |            |             | table computed once per file; a failed lookup|
+# |         |            |             | raises rather than printing the literal      |
+# |         |            |             | string 'None'. **M13:** `DCC =               |
+# |         |            |             | _load_consistency()` ran at IMPORT TIME — a  |
+# |         |            |             | missing sibling gave a raw traceback and exit|
+# |         |            |             | 1, indistinguishable from a real finding, and|
+# |         |            |             | fired even for `--help`; a renamed helper    |
+# |         |            |             | failed mid-scan after partial output.        |
+# |         |            |             | Deferred to a validated loader called once   |
+# |         |            |             | from main(), checked against a five-name     |
+# |         |            |             | contract before scan() prints anything. Its  |
+# |         |            |             | own docstring's PRECONDITION ("computed on   |
+# |         |            |             | the same frozen-history-blanked text") was   |
+# |         |            |             | violated by this caller passing RAW text —   |
+# |         |            |             | honoured directly (blank first, then call    |
+# |         |            |             | record_regions) rather than replaced with a  |
+# |         |            |             | new assertion. **M14:** CHECK 1 and CHECK 2  |
+# |         |            |             | fused into one exit code, and CHECK 2 had NO |
+# |         |            |             | decline accounting at all while CHECK 1      |
+# |         |            |             | spends forty header lines establishing that  |
+# |         |            |             | every decline is printed. CHECK 2 now returns|
+# |         |            |             | exit 3 when it alone fails (1 still wins when|
+# |         |            |             | both fail — the long-standing code), plus its|
+# |         |            |             | own "N examined, M skipped" line across four |
+# |         |            |             | named buckets (fence-untagged,               |
+# |         |            |             | no-declared-type, filename-shaped,           |
+# |         |            |             | type-not-declared-here). **L1:** eight       |
+# |         |            |             | parallel per-binary tables, one already dead |
+# |         |            |             | — a `sed` row in the needs-a-file set,       |
+# |         |            |             | unreachable since `sed` was dropped from     |
+# |         |            |             | ALLOWED_CMDS at round 9, while               |
+# |         |            |             | `_KNOWN_BINARIES` still listed `sed` for the |
+# |         |            |             | OPPOSITE purpose. Consolidated into one      |
+# |         |            |             | `Binary` record per binary; ALLOWED_CMDS is  |
+# |         |            |             | now DERIVED from its keys, so a dropped      |
+# |         |            |             | binary cannot leave a stray row in any other |
+# |         |            |             | table again. Every documented exploit        |
+# |         |            |             | re-proven refused after consolidation (an awk|
+# |         |            |             | pipe-to-sh, `sort -oFILE`, `git branch -D`,  |
+# |         |            |             | `sort --compress-program=`, an operand       |
+# |         |            |             | escaping the repo root), each with zero side |
+# |         |            |             | effects on a live fixture repo, and the full |
+# |         |            |             | 46-case decision battery is BYTE-IDENTICAL   |
+# |         |            |             | before and after. **L2:** the safety gate's  |
+# |         |            |             | `claim.head` used a naive whitespace split   |
+# |         |            |             | disagreeing with the quote-aware tokenizer   |
+# |         |            |             | validation actually uses; `` `"grep" -c '^A' |
+# |         |            |             | f` `` — a perfectly runnable, quoted command |
+# |         |            |             | — was silently IGNORED: 0 executed, every    |
+# |         |            |             | decline bucket at 0. `head` is now           |
+# |         |            |             | tokenize-derived; a claim whose command does |
+# |         |            |             | not tokenize at all is declined by the SAME  |
+# |         |            |             | name parse_pipeline already uses for it,     |
+# |         |            |             | never dropped. **L3:** corrected a docstring |
+# |         |            |             | promising a `files_with_fences` return value |
+# |         |            |             | the function has never actually returned,    |
+# |         |            |             | deleted a near-miss disjunct fully subsumed  |
+# |         |            |             | by its own sibling (provably: it can fire    |
+# |         |            |             | only when the two are textually identical),  |
+# |         |            |             | added the missing File/Modified/Author header|
+# |         |            |             | fields, and defaulted --repo to '.' —        |
+# |         |            |             | matching every other checker in tools/.      |
+# |         |            |             | **L4:** --quiet used to suppress the coverage|
+# |         |            |             | counts while the PASS line still cited them  |
+# |         |            |             | as "stated above"; now suppresses only the   |
+# |         |            |             | itemized per-claim decline list, never the   |
+# |         |            |             | counts or the verdict. **L5:** `\d[\d,]*` let|
+# |         |            |             | Python's `int()` silently NORMALISE a        |
+# |         |            |             | malformed transcription — "1,2,3" as 123,    |
+# |         |            |             | "007" as 7 — into a false reproduction. Both |
+# |         |            |             | sides now require a well-formed integer      |
+# |         |            |             | literal (proper thousands grouping, no       |
+# |         |            |             | leading zero); the command side additionally |
+# |         |            |             | accepts an optional leading `-`, so a        |
+# |         |            |             | negative answer (awk can print one) is       |
+# |         |            |             | COMPARED — surfacing a real mismatch — rather|
+# |         |            |             | than declined unreadable. Live tree unchanged|
+# |         |            |             | in VERDICT (605 surfaces, 6 executed / floor |
+# |         |            |             | 4, PASS, exit 0) but not in accounting:      |
+# |         |            |             | declines 172 -> 181 (nine newly-NAMED        |
+# |         |            |             | untokenizable spans that were previously     |
+# |         |            |             | silently ignored prose, none a real command —|
+# |         |            |             | L2's fix); the dangling check stays at 0     |
+# |         |            |             | findings with 348 declared types now         |
+# |         |            |             | considered (M10, previously uncounted) and a |
+# |         |            |             | new 1,882-reference / 1,684-skipped          |
+# |         |            |             | accounting (M14, previously nonexistent).    |
+# |         |            |             | Every delta reproduced on a fixture in both  |
+# |         |            |             | directions before landing; siblings          |
+# |         |            |             | (doc-consistency-check.py,                   |
+# |         |            |             | recurring-defect-lint.py) re-run green.      |
