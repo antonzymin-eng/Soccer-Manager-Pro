@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.13)
+// Modified: 2026-08-22 (ERR-041-021 — AR over the ERR-041-020 landing, H4 — v1.14)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -205,18 +205,33 @@ namespace TacticalDirector.InjuriesMedical
         /// counter is shared and a double count is not representable (KD-2 / FR-MD-009).
         /// </para>
         /// <para>
-        /// <b><c>BaselineDailyRisk</c> sits BEFORE the mitigation, normatively</b> (§3.4 /
-        /// ERR-041-011): the exposure-independent floor is discriminated by robustness — a frail
-        /// player's quiet week is riskier than an iron man's — which an after-the-clamp addition
-        /// could not be. It is also what keeps a fit player on the default focus from being
-        /// injury-proof forever, the third absurdity the fifth AR pass measured.
+        /// <b><c>BaselineDailyRisk</c> and <c>AgeRiskFor</c> are both normatively positioned inside
+        /// the sum, BEFORE the <c>OccurrenceRiskMillMult</c> scaling and BEFORE the clamp</b> (§3.4,
+        /// as corrected by ERR-041-021). That is the whole of what their position buys, and both
+        /// halves are load-bearing: before the scaling, the staff seam modulates them exactly as it
+        /// modulates every other term rather than leaving two unmodulated islands in a scaled score;
+        /// before the clamp, neither can lift the result past <c>InjuryRiskMax</c> and break the
+        /// "every daily probability ≤ 1" invariant ERR-041-011 established at this ceiling.
         /// </para>
         /// <para>
-        /// <b>The age term sits in the same position, for the same reason</b> (ERR-041-020): inside
-        /// the sum, before the mitigation, so a robust veteran carries less of his age penalty than a
-        /// frail one. Until that landing this formula presented as multi-factor risk assembly while
-        /// omitting one of the best-established real-world risk factors — and one already carried on
-        /// the <c>PlayerRecord</c> the caller was already resolving to read the attributes above.
+        /// <b>Their position RELATIVE TO the mitigation is inert, and is no longer claimed.</b>
+        /// <c>RobustnessMitigation</c> is SUBTRACTED and addition commutes, so moving either term to
+        /// the far side of it changes no output for any input. ERR-041-011 and ERR-041-020 both
+        /// asserted the opposite — "before the mitigation, so robustness discriminates it" — and the
+        /// consequence is wrong in both readings: the age penalty is the same +1200 for a
+        /// robustness-1, a robustness-14 and a robustness-20 player alike, and LARGER in relative
+        /// terms for the more robust one, whose assembled score is smaller. The lock written to
+        /// enforce the claim passed against a mutant that moved the term across the mitigation, which
+        /// is how ERR-041-021 found it. What robustness genuinely does is lower every player's
+        /// assembled score, including these two terms' contribution to it, wherever they sit in the
+        /// sum.
+        /// </para>
+        /// <para>
+        /// <c>BaselineDailyRisk</c> is additionally what keeps a fit player on the default focus from
+        /// being injury-proof forever (the third absurdity the fifth AR pass measured); the age term
+        /// exists because until ERR-041-020 this formula presented as multi-factor risk assembly
+        /// while omitting one of the best-established real-world risk factors — one already carried
+        /// on the <c>PlayerRecord</c> the caller was already resolving to read the attributes above.
         /// </para>
         /// </summary>
         /// <param name="trainingRisk">#29's risk contribution.</param>
@@ -716,4 +731,12 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | zero-span identity can be EXERCISED — the [GT]s are read once at static
 // |         |            |        | init and the gate runs config-unbound). The term sits inside the sum
 // |         |            |        | BEFORE the mitigation, normatively, so robustness discriminates it.
+// | 1.14    | 2026-08-22 | —      | ERR-041-021 (AR over the ERR-041-020 landing, H4). Doc only. Row 1.13's
+// |         |            |        | last sentence — and ERR-041-011's identical claim for BaselineDailyRisk
+// |         |            |        | — is CORRECTED here rather than edited in place: RobustnessMitigation is
+// |         |            |        | SUBTRACTED and addition commutes, so a term's position relative to it is
+// |         |            |        | a no-op for every input (+1200 age penalty at robustness 1, 14 and 20
+// |         |            |        | alike, and larger in relative terms for the more robust player). The
+// |         |            |        | normative position is restated as what is actually load-bearing: inside
+// |         |            |        | the sum, BEFORE the OccurrenceRiskMillMult scaling and BEFORE the clamp.
 #endregion

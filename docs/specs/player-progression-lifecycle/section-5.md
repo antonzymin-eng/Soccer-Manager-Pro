@@ -1,11 +1,12 @@
 # Player Progression & Lifecycle #28 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** August 22, 2026 (v0.6 — **ERR-028-020 / ERR-028-021**: T-PG-ID-001 revised to name the ramp dial's off position and to require the identity be EXERCISED per-day rather than asserted; new **§5.3.1** allocates T-PG-AGE-001..005 for the continuous accrual curve (continuity, the exact P5 integral, the band description, the carried-fraction-vs-lost-point distinction, and ERR-028-018's traversal invariant re-stated for the ramped curve); T-PG-RET-001 re-pointed at the per-player retirement day and new **T-PG-RET-005** covers its three properties. Prior entry below.)
+**Last Updated:** August 22, 2026 (v0.7 — **ERR-028-022**: two §5.6 test ids amended because their implementing locks could not see the behaviour they were re-pointed at. T-PG-RET-005's population property now requires the whole uniform attribute **product**, not the `Ant == Pos == Comp` diagonal the lock actually swept — the one line on which §3.4's retired floored mean was exact, so the lock passed against an implementation whose true population sum was −204,621 days and passed a differently-wrong-rounding mutation too — plus a cardinality precondition against silent re-narrowing, and a note that the uniform product is not the league #27 generates (`[6,14]`, ≈ −38 d/player residual, recorded in §3.4). T-PG-RET-001 was re-pointed from `RETIREMENT_AGE` to `RetirementAgeDays` at ERR-028-021 while both implementing cases used a default-attribute Midfielder at exactly `RETIREMENT_AGE` / `−1`, where old and new agree by construction — restoring the pre-fix comparison left the whole suite green — so it now MUST include cases that fail against it: the goalkeeper allowance at the baseline age, and two same-position players separated only by the reading trio, advanced between their two retirement days. Prior entry below.)
+**Last Updated (prior):** August 22, 2026 (v0.6 — **ERR-028-020 / ERR-028-021**: T-PG-ID-001 revised to name the ramp dial's off position and to require the identity be EXERCISED per-day rather than asserted; new **§5.3.1** allocates T-PG-AGE-001..005 for the continuous accrual curve (continuity, the exact P5 integral, the band description, the carried-fraction-vs-lost-point distinction, and ERR-028-018's traversal invariant re-stated for the ramped curve); T-PG-RET-001 re-pointed at the per-player retirement day and new **T-PG-RET-005** covers its three properties. Prior entry below.)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: §5.1's `AdvanceDay_FirstCall_*` passage corrected from the retired sentinel-anchored behaviour to the shipped seed-day-replay behaviour, with the inversion noted; new §5.9/§5.10 allocate T-PG-BLOCK-001..007 / T-PG-BATCH-001 / T-PG-CODEC-001..007 and §5.7 gains T-PG-SAVE-007/008 for ~17 mutation-audit-proven locks that landed across commits `043ccd0`/`1d19bc8`/`9392839` with no prior test-plan id)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: new locks for the signed anchor, the cross-blob cursor rule, the roster-overwrite refusal, and the F8 sentinel guard)
 **Last Updated (prior):** August 8, 2026 (v0.3 — ERR-028-005: T-PG-DET-002 reworded to the gap-replay semantic that makes it satisfiable)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -118,11 +119,31 @@ to run at `BaseDay = 0`, not at a value picked to avoid the failure mode being t
 
 - **T-PG-RET-001** — A player crossing his `RetirementAgeDays` mid-season is **flagged** and stays
   selectable; no `Squad` mutation lands mid-fixture.
-- **T-PG-RET-005 (per-player retirement day, ERR-028-021)** — Three properties: a goalkeeper's day
-  exceeds an otherwise identical outfielder's by exactly `RETIREMENT_GOALKEEPER_BONUS_YEARS`; one
-  attribute point moves the day by a non-zero amount **strictly under a year** (the cliff removed, not
-  relocated); and the game-reading offsets over a uniform `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` population
-  sum to **exactly 0** (the P5 pivot — the league's retirement rate is unchanged).
+  *(**Amended at ERR-028-022.** This id was re-pointed from `RETIREMENT_AGE` to `RetirementAgeDays` at
+  ERR-028-021 while its implementing cases could not tell the two apart: both used a default-attribute
+  Midfielder at exactly `RETIREMENT_AGE` / `RETIREMENT_AGE − 1`, where the per-player day and the
+  retired league-wide age agree by construction, so restoring the pre-fix comparison left the whole
+  suite green. The implementing cases MUST therefore include at least one that **fails against
+  `AgeYears >= RETIREMENT_AGE`**: the position half — a goalkeeper and an otherwise identical
+  outfielder at the baseline age, where only the outfielder may be flagged — and the attribute/day-
+  resolution half — two same-position players a year BELOW the baseline whose reading trios sit at the
+  two ends of the range, advanced to a day strictly between their two retirement days, where exactly
+  one may be flagged and the retired comparison flags neither.)*
+- **T-PG-RET-005 (per-player retirement day, ERR-028-021; property 3 corrected at ERR-028-022)** —
+  Three properties: a goalkeeper's day exceeds an otherwise identical outfielder's by exactly
+  `RETIREMENT_GOALKEEPER_BONUS_YEARS`; one attribute point moves the day by a non-zero amount
+  **strictly under a year** (the cliff removed, not relocated); and the game-reading offsets over the
+  whole uniform `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` attribute **product** sum to **exactly 0** (the P5
+  pivot — the league's retirement rate is unchanged).
+  *(**ERR-028-022.** Property 3 read "over a uniform `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` population" and
+  its implementing lock swept only the `Anticipation == Positioning == Composure` diagonal — one line
+  through the population, and the one line on which §3.4's retired floored mean was exact. It therefore
+  passed against an implementation whose true population sum was −204,621 days, and a mutation to a
+  differently-wrong rounding passed it too. The sweep MUST cover the product, with a cardinality
+  precondition so it cannot silently narrow back to a line. Note the property is about the uniform
+  attribute product and **not** about the league #27 generates: `RosterGenerator` draws `[6,14]`,
+  centred half a point below the offset's neutral midpoint, leaving ≈ −38 days per generated player —
+  recorded in §3.4, deliberately not fitted away here.)*
 - **T-PG-RET-002** — `RunSeasonBoundary` emits the retirees + a 1:1 regen per vacancy; the block entry
   count is unchanged (FR-PG-019, no unbounded growth).
 - **T-PG-RET-003 (F6 idempotency)** — `RunSeasonBoundary` invoked twice for one boundary is a no-op
@@ -250,4 +271,5 @@ previously unlocked by deletion).
 | 0.4 | 2026-08-08 | — | Added T-PG-DET-004/005 (ERR-028-006 day-0 age-preservation regression lock + negative-anchor round-trip) with the §5.1 fixture-hazard note (`BaseDay = 100000` kept both fixtures off the one day-0 path the product starts on); added T-PG-SAVE-004 (F8 sentinel refusal, ERR-028-009), T-PG-SAVE-005 (cross-blob cursor-vs-clock refusal at all three boundaries, ERR-028-007), T-PG-SAVE-006 (populated-roster overwrite refusal, ERR-028-008). Spec-only, locks for the AR-over-T1/T2a landing. |
 | 0.5 | 2026-08-09 | — | **ERR-028-014**: §5.1's `AdvanceDay_FirstCall_AdvancesExactlyOneDay` passage corrected — the test was renamed `AdvanceDay_FirstCall_ReplaysFromTheSeedDay` and its assertion INVERTED, because the quoted reasoning ("cannot know how far in the past the career actually began accruing") was itself the defect: `SeedFrom` **is** handed the seed day. New **§5.9** (`T-PG-BLOCK-001..007`, `T-PG-BATCH-001`) and **§5.10** (`T-PG-CODEC-001..007`) allocate ids for ~15 `FromBlocks`/`ToBlocks`/batch/codec guards that landed across commits `043ccd0`, `1d19bc8` and `9392839` with no prior test-plan id, each proven previously unlocked by a mutation audit (delete the guard, confirm the whole suite including every existing `T-PG-*` lock stays green, restore it). §5.7 gains **T-PG-SAVE-007/008** for two `SeasonSaveManagerTests` mutation-audit locks (`Save` null-progression refusal; `Load` restoring from the file's roster, not the caller's bootstrap provider). Spec-only, no code change. |
 | 0.6 | 2026-08-22 | — | **ERR-028-020 / ERR-028-021** (football-judgment proxy review, batch 1 — spec + code, same commit). T-PG-ID-001 conditioned on `AGE_BAND_RAMP_HALF_WIDTH_YEARS = 0` and strengthened from sampled ages to every day of a lifetime, with the requirement that the identity be exercised through an explicit half-width rather than asserted in prose. New §5.3.1 (T-PG-AGE-001..005) covers the §3.1.3 curve: per-day continuity, the exact P5 integral equality with its own vacuity precondition, `ClassifyAgeBand`'s two now-inverted answers at the band edges, the mid-ramp carried fraction that must not be mistaken for ERR-028-018's shortfall, and ERR-028-018's traversal invariant re-stated for a traversal that runs to the ramp's end. T-PG-RET-001 re-pointed at `RetirementAgeDays`; new T-PG-RET-005 covers the goalkeeper allowance, the sub-year attribute sensitivity, and the exactly-zero population sum. |
+| 0.7 | 2026-08-22 | — | **ERR-028-022** — two §5.6 ids amended, spec + code in the same commit, because their implementing locks could not distinguish the behaviour they had been re-pointed at. **T-PG-RET-005:** property 3 said "the game-reading offsets over a uniform `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` population sum to exactly 0" and the lock swept the `Anticipation == Positioning == Composure` diagonal — one line through the population, and precisely the line on which §3.4's retired `floor(sum/3)` is exact — so it passed against an implementation summing **−204,621 days** over the real product (−25.58 d/player) and passed a mutation to a differently-wrong rounding. Now the whole product, with a cardinality precondition so the sweep cannot silently narrow back to a line, and with the residual honest fact attached: the uniform product is a modelling idealisation, while #27's `RosterGenerator` draws `[6,14]` (centre 10 against the offset's neutral 10.5), leaving ≈ −38 days per generated player — recorded in §3.4, deliberately not fitted away. **T-PG-RET-001:** re-pointed from `RETIREMENT_AGE` to `RetirementAgeDays` at ERR-028-021 while both implementing cases used a default-attribute Midfielder at exactly `RETIREMENT_AGE` / `RETIREMENT_AGE − 1`, where the per-player day and the retired league-wide age agree by construction; mutation-verified that restoring the pre-fix `rec.Age >= RETIREMENT_AGE` left `PlayerProgression.Tests` 134/134 and `SeasonSave.Tests` 402/3 green. The id now MUST carry at least one case that fails against that comparison — the position half (goalkeeper vs identical outfielder at the baseline age) and the attribute/day-resolution half (two same-position players a year below the baseline, reading trios at both ends of the range, advanced to a day strictly between their retirement days). |
 #endregion

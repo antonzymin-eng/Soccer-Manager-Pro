@@ -1,6 +1,7 @@
 // File:     src/player-progression/AbilityModel.cs
 // Created:  2026-07-24
-// Modified: 2026-08-22 (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.1)
+// Modified: 2026-08-22 (ERR-028-022 — the floored-mean anti-symmetry break in GameReadingOffsetDays — v1.2)
+//           (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.1)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1.2 / §3.2 (CA/PA model + weighted spend); Code Standards #20
 // Purpose:  Pure, draw-free ability arithmetic: the derived CurrentAbility summary, the age-band
@@ -218,21 +219,33 @@ namespace TacticalDirector.PlayerProgression
         }
 
         /// <summary>
-        /// The full-range, anti-symmetric game-reading offset in days (§3.4). Mean of Anticipation /
-        /// Positioning / Composure; at the attribute midpoint the offset is 0, so an average outfielder
-        /// retires on exactly today's day (P5).
+        /// The full-range, anti-symmetric game-reading offset in days (§3.4). Reads the SUM of
+        /// Anticipation / Positioning / Composure; at the attribute midpoint the offset is 0, so an
+        /// average outfielder retires on exactly today's day (P5).
         /// </summary>
+        /// <remarks>
+        /// ERR-028-022: the sum is carried UNDIVIDED into the numerator rather than being floored to a
+        /// mean first. The retired form computed <c>mean = (Ant + Pos + Comp) / 3</c> and mapped that,
+        /// and <c>floor(sum / 3)</c> is NOT symmetric about the attribute midpoint — truncation always
+        /// bites downward, so the map lost the anti-symmetry the P5 argument rests on everywhere off the
+        /// <c>Ant == Pos == Comp</c> diagonal. Measured through the built assembly: −204,621 days over
+        /// the uniform [1,20]³ product, i.e. −25.58 d/player, so the league's retirement RATE moved
+        /// where the claim was that only who-retires-when moved. Carrying the sum makes the map exactly
+        /// anti-symmetric (the [1,20]³ product sums to 0), and — because the sum form's numerator and
+        /// denominator are both exactly 3× the mean form's whenever <c>sum == 3·mean</c>, and integer
+        /// division truncates toward zero — it reproduces every diagonal value bit-for-bit.
+        /// </remarks>
         /// <param name="attrs">The player's canonical [1,20] attributes.</param>
         public static long GameReadingOffsetDays(in PlayerAttributes attrs)
         {
-            int mean = (attrs.Anticipation + attrs.Positioning + attrs.Composure) / 3;
+            int sum = attrs.Anticipation + attrs.Positioning + attrs.Composure;
 
             long span = (long)PlayerProgressionConstants.RetirementGameReadingSpanYears
                         * PlayerProgressionConstants.DAYS_PER_YEAR;
-            long numer = (2L * mean
-                          - (PlayerProgressionConstants.ATTRIBUTE_MIN
-                             + PlayerProgressionConstants.ATTRIBUTE_MAX)) * span;
-            long denom = 2L * (PlayerProgressionConstants.ATTRIBUTE_MAX
+            long numer = (2L * sum
+                          - 3L * (PlayerProgressionConstants.ATTRIBUTE_MIN
+                                  + PlayerProgressionConstants.ATTRIBUTE_MAX)) * span;
+            long denom = 6L * (PlayerProgressionConstants.ATTRIBUTE_MAX
                                - PlayerProgressionConstants.ATTRIBUTE_MIN);
 
             return numer / denom;
@@ -465,4 +478,15 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | would clamp both terms of the difference and an impossibly-old
 // |         |            |        | player would silently stop declining, where the retired band step
 // |         |            |        | kept him at the full decline rate. Locked.
+// | 1.2     | 2026-08-22 | —      | ERR-028-022. GameReadingOffsetDays carries the UNDIVIDED
+// |         |            |        | Anticipation+Positioning+Composure sum into the numerator instead of
+// |         |            |        | flooring it to a mean first. floor(sum/3) is not symmetric about the
+// |         |            |        | attribute midpoint, so v1.1's map was anti-symmetric only on the
+// |         |            |        | Ant==Pos==Comp diagonal — the one line the lock swept — and the
+// |         |            |        | ERR-028-021 "offsets sum to exactly 0" P5 claim was false off it:
+// |         |            |        | -204,621 days over the uniform [1,20]^3 product (-25.58 d/player),
+// |         |            |        | i.e. the whole league retiring early rather than only who-when
+// |         |            |        | moving. The new form sums to exactly 0 over that product and
+// |         |            |        | reproduces every diagonal value bit-for-bit (numerator and
+// |         |            |        | denominator are both exactly 3x v1.1's when sum == 3*mean).
 #endregion

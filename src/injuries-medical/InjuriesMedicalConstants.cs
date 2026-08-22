@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/InjuriesMedicalConstants.cs
 // Created:  2026-08-05
-// Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.6)
+// Modified: 2026-08-22 (ERR-041-021 — AR over the ERR-041-020 landing, H4 + H7 — v1.7)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A (constant catalogue) + §3.1–§3.4; Code Standards #20
 // Purpose:  Every numeric constant for #41 occurrence, severity bucketing and recovery. No magic
@@ -169,9 +169,11 @@ namespace TacticalDirector.InjuriesMedical
         public static readonly int AppearanceLoadWeight = Config.GetInt("injuries-medical", "AppearanceLoadWeight", 5600);
 
         /// <summary>
-        /// [GT] The exposure-independent daily base risk added into §3.4's assembly BEFORE the
-        /// robustness mitigation (position is normative — before, so robustness discriminates it;
-        /// ERR-041-011), on the <see cref="OCCURRENCE_DRAW_DENOM"/> per-million scale. First-guess
+        /// [GT] The exposure-independent daily base risk added inside §3.4's sum, BEFORE the
+        /// <c>OccurrenceRiskMillMult</c> scaling and BEFORE the clamp (position is normative;
+        /// ERR-041-011 as corrected by ERR-041-021 — its original wording, "before the robustness
+        /// mitigation, so robustness discriminates it", is arithmetically inert: the mitigation is
+        /// SUBTRACTED and addition commutes), on the <see cref="OCCURRENCE_DRAW_DENOM"/> per-million scale. First-guess
         /// 4000 (0.4%/day gross, ~0.37% net of average mitigation) targets ~1 injury per season for a
         /// non-playing squad member — the training-ground floor that keeps the default Balanced focus
         /// from converging on an injury-proof player (the fifth AR pass's third measured absurdity).
@@ -225,11 +227,20 @@ namespace TacticalDirector.InjuriesMedical
         /// <para>
         /// First-guess 150: a 34-year-old assembles +1200 against a 20-year-old's −900 on a typical
         /// ~6600 assembly, so the oldest squad member carries roughly a third more daily risk than the
-        /// youngest — the direction and rough magnitude the epidemiology supports, at a size that
-        /// cannot dominate the exposure terms it sits beside. Real calibration waits for the
-        /// complete-engine pass (P5 / KD-W1); the research-alignment supplement's age arm re-fits
-        /// against this term rather than adding beside it, exactly as its R-2 arm must against
-        /// <see cref="BaselineDailyRisk"/>.
+        /// youngest, at a size that cannot dominate the exposure terms it sits beside. Real
+        /// calibration waits for the complete-engine pass (P5 / KD-W1).
+        /// </para>
+        /// <para>
+        /// <b>Only the VETERAN half of this term follows the evidence</b> (ERR-041-021). The
+        /// research-alignment supplement's E-4 is rated <i>Strong</i> and is <b>U-shaped</b>:
+        /// musculoskeletal maturity continues to ~24–25 and the 16–20 band carries ELEVATED risk at
+        /// adult match intensity. A monotone term about pivot 26 makes exactly those players the
+        /// safest in the league — a 19-year-old receives −1050. That inversion is deliberate and
+        /// deliberately temporary: the U-shape is the supplement's R-1 design, it is awaiting owner
+        /// sign-off, and re-shaping shipped football behaviour is the owner's call. R-1's surviving
+        /// scope (back-prop <c>ERR-041-013</c>) is precisely the young-tail arm; its age-plumbing
+        /// half landed here as ERR-041-020. That refit RE-SHAPES this term rather than adding beside
+        /// it, exactly as its R-2 arm must against <see cref="BaselineDailyRisk"/>.
         /// </para>
         /// MUST be non-negative — a negative slope makes veterans the most durable players in the
         /// league, which is not an intent this system can express; enforced fail-loud at the
@@ -358,4 +369,16 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | pivot is #27's bootstrap mean age, so the term sums to zero over that
 // |         |            |        | population (P5); AgeRiskSpan = 0 is the exact pre-fix identity. Both
 // |         |            |        | dials guarded non-negative fail-loud at the computing site.
+// | 1.7     | 2026-08-22 | —      | ERR-041-021 (AR over the ERR-041-020 landing, H4 + H7). Doc only, two
+// |         |            |        | corrections, both annotating rather than editing published text.
+// |         |            |        | H4: BaselineDailyRisk's "before the mitigation, so robustness
+// |         |            |        | discriminates it" (rows 1.3 / ERR-041-011) is inert — the mitigation is
+// |         |            |        | SUBTRACTED and addition commutes; restated as before the
+// |         |            |        | OccurrenceRiskMillMult scaling and before the clamp, which is what the
+// |         |            |        | position actually buys. H7: AgeRiskPerYearFromPivot no longer claims
+// |         |            |        | the epidemiology supports the whole term. E-4 (Strong) is U-SHAPED —
+// |         |            |        | the 16-20 band is elevated — so the monotone form follows it above the
+// |         |            |        | pivot and INVERTS it below. Not re-shaped here: the U-shape is the
+// |         |            |        | research supplement's R-1 design, awaiting owner sign-off, and R-1's
+// |         |            |        | surviving scope under ERR-041-013 is exactly that young-tail arm.
 #endregion

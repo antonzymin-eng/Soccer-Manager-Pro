@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/MedicalStepTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.9)
+// Modified: 2026-08-22 (ERR-041-021 — AR over the ERR-041-020 landing, H4 — v1.10)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B/C; Code Standards #20
 // Purpose:  T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001, T-MD-SEV-001/002, T-MD-REC-001,
@@ -104,21 +104,29 @@ namespace TacticalDirector.InjuriesMedical.Tests
         }
 
         [Test]
-        public void AgeTerm_EntersTheAssemblyBeforeTheMitigation_SoRobustnessDiscriminatesIt()
+        public void AgeTerm_IsInsideTheSum_BeforeTheModifierScalingAndBeforeTheClamp_ERR041021()
         {
-            // The term's POSITION is normative, exactly as BaselineDailyRisk's is (§3.4): inside the
-            // sum, before the mitigation, so a robust veteran carries less of his age penalty than a
-            // frail one. Added after the clamp — or after the mitigation — the two players below would
-            // differ by the same amount as two players of the pivot age, and this assertion is what
-            // would catch that.
-            PlayerAttributes frail = PlayerAttributes.CreateDefault();
-            frail.Strength = 1;
-            frail.Stamina = 1;
-            frail.Balance = 1;
-
+            // The term's POSITION is normative — but only in the two respects this test asserts, and
+            // ERR-041-021 is the correction of what the previous version of this test CLAIMED.
+            //
+            // Retired claim: "before the mitigation, so robustness discriminates it." That is
+            // arithmetically vacuous. RobustnessMitigation is SUBTRACTED, addition commutes, and a
+            // term's position relative to it is a no-op for every input — the age penalty is the same
+            // +1200 for a robustness-1, a robustness-14 and a robustness-20 player alike (asserted
+            // below), and LARGER in relative terms for the more robust one. The mutant that moved the
+            // term across the mitigation passed the whole suite, because there was nothing to catch.
+            //
+            // What IS load-bearing, and what the three parts below lock:
+            //   (1) inside the sum at all — the term is not silently dropped;
+            //   (2) before the OccurrenceRiskMillMult scaling — the staff seam modulates it like
+            //       every other term, rather than leaving an unmodulated island in a scaled score;
+            //   (3) before the clamp — it can never lift the result past InjuryRiskMax and break
+            //       ERR-041-011's "every daily probability <= 1" invariant.
             int veteranAge = InjuriesMedicalConstants.AgeRiskPivotYears + 8;
+            int ageTerm = MedicalStep.AgeRiskFor(veteranAge);
             var risk = new InjuryRiskContribution(3000);
 
+            // (1) Inside the sum, undiluted at Identity.
             int ordinaryYoung = MedicalStep.AssembleRiskScore(
                 risk, MatchLoad.None, WorkedExampleAttributes(), PivotAge, MedicalModifier.Identity);
             int ordinaryOld = MedicalStep.AssembleRiskScore(
@@ -127,16 +135,82 @@ namespace TacticalDirector.InjuriesMedical.Tests
             Assert.Less(ordinaryOld, InjuriesMedicalConstants.InjuryRiskMax,
                 "precondition: unclamped, or the comparison below is a clamp artefact.");
             Assert.AreEqual(
-                MedicalStep.AgeRiskFor(veteranAge), ordinaryOld - ordinaryYoung,
+                ageTerm, ordinaryOld - ordinaryYoung,
                 "the age term reaches the assembled score undiluted — this is the assertion that fails "
                 + "if the term is dropped from the sum.");
 
-            // …and the mitigation still applies over the top of it, in both directions.
+            // The retired claim, asserted as the FALSE statement it is, so nobody restores it from the
+            // prose: the age delta is identical at every robustness, and the mitigation's own effect
+            // (which is real) is a level shift that applies to the whole score, not to this term.
+            PlayerAttributes frail = PlayerAttributes.CreateDefault();
+            frail.Strength = 1;
+            frail.Stamina = 1;
+            frail.Balance = 1;
+            PlayerAttributes iron = PlayerAttributes.CreateDefault();
+            iron.Strength = 20;
+            iron.Stamina = 20;
+            iron.Balance = 20;
+
             int frailOld = MedicalStep.AssembleRiskScore(
                 risk, MatchLoad.None, frail, veteranAge, MedicalModifier.Identity);
-            Assert.Greater(frailOld, ordinaryOld,
-                "a frail veteran is riskier than a robust one of the same age (ERR-041-011's ordering, "
-                + "unchanged by the new term).");
+            int frailYoung = MedicalStep.AssembleRiskScore(
+                risk, MatchLoad.None, frail, PivotAge, MedicalModifier.Identity);
+            int ironOld = MedicalStep.AssembleRiskScore(
+                risk, MatchLoad.None, iron, veteranAge, MedicalModifier.Identity);
+            int ironYoung = MedicalStep.AssembleRiskScore(
+                risk, MatchLoad.None, iron, PivotAge, MedicalModifier.Identity);
+
+            Assert.AreEqual(ageTerm, frailOld - frailYoung,
+                "robustness does NOT discriminate the age term (ERR-041-021) — the penalty is the "
+                + "same for a frail player as for anyone else.");
+            Assert.AreEqual(ageTerm, ironOld - ironYoung,
+                "…and the same for an iron man, which is why the retired 'before the mitigation' "
+                + "rationale had no arithmetic behind it.");
+            Assert.Greater(frailOld, ironOld,
+                "what the mitigation DOES do: a frail veteran is riskier than an iron one of the same "
+                + "age (ERR-041-011's ordering, unchanged by the age term).");
+
+            // (2) Before the OccurrenceRiskMillMult scaling. A halving staff seam must halve the age
+            // term along with everything else. Applied AFTER the scaling the delta would be the full
+            // ageTerm — which is what this asserts against, so the mutant cannot pass.
+            var halving = new MedicalModifier(
+                InjuriesMedicalConstants.MEDICAL_MODIFIER_IDENTITY_PERMILLE / 2,
+                InjuriesMedicalConstants.MEDICAL_MODIFIER_IDENTITY_PERMILLE);
+
+            int halvedYoung = MedicalStep.AssembleRiskScore(
+                risk, MatchLoad.None, WorkedExampleAttributes(), PivotAge, halving);
+            int halvedOld = MedicalStep.AssembleRiskScore(
+                risk, MatchLoad.None, WorkedExampleAttributes(), veteranAge, halving);
+
+            int expectedScaled =
+                ageTerm * halving.OccurrenceRiskMillMult
+                / InjuriesMedicalConstants.MEDICAL_MODIFIER_IDENTITY_PERMILLE;
+
+            Assert.AreNotEqual(ageTerm, expectedScaled,
+                "precondition: the chosen multiplier must actually change the term, or the assert "
+                + "below is satisfied by an unscaled term too.");
+            Assert.Less(halvedOld, InjuriesMedicalConstants.InjuryRiskMax,
+                "precondition: still unclamped under the modifier.");
+            Assert.AreEqual(expectedScaled, halvedOld - halvedYoung,
+                "the age term is scaled by the staff seam like every other term — it is inside the "
+                + "sum the modifier multiplies, not added to the modifier's result (ERR-041-021).");
+
+            // (3) Before the clamp. At a risk input that saturates InjuryRiskMax the assembled score
+            // must be EXACTLY the ceiling for a veteran too — added after the clamp it would return
+            // ceiling + ageTerm, i.e. a daily probability above 1 at the OCCURRENCE_DRAW_DENOM scale,
+            // breaking ERR-041-011's invariant.
+            int saturatedOld = MedicalStep.AssembleRiskScore(
+                MaxOccurrenceRisk(), MatchLoad.None, WorkedExampleAttributes(), veteranAge,
+                MedicalModifier.Identity);
+
+            Assert.AreEqual(
+                InjuriesMedicalConstants.InjuryRiskMax, saturatedOld,
+                "a saturating input clamps to InjuryRiskMax EXACTLY, age term included — the clamp is "
+                + "the last operation (ERR-041-021).");
+            Assert.LessOrEqual(
+                saturatedOld, InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM,
+                "…so the assembled score can never exceed the draw denominator, which is what makes "
+                + "it a probability numerator at all.");
         }
 
         /// <summary>
@@ -978,4 +1052,14 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // |         |            |        | term locks: the pivot zero and per-year linearity, symmetric saturation
 // |         |            |        | and the negative-age refusal, the zero-span identity through the
 // |         |            |        | parameterised overload, and the term's normative POSITION in the sum.
+// | 1.10    | 2026-08-22 | —      | ERR-041-021 (AR over the ERR-041-020 landing, H4). The position lock is
+// |         |            |        | renamed to what it asserts and made to assert it. Row 1.9's "normative
+// |         |            |        | POSITION" was "before the mitigation, so robustness discriminates it",
+// |         |            |        | which is inert — a reviewer's three mutants (term after the mitigation /
+// |         |            |        | after the OccurrenceRiskMillMult scaling / after the clamp) all left this
+// |         |            |        | suite green, and the third can return above InjuryRiskMax. Now: the
+// |         |            |        | undiluted-delta assert (drop), a halving MedicalModifier asserting the
+// |         |            |        | term scales with it (scaling mutant), a saturating input asserting the
+// |         |            |        | result is EXACTLY InjuryRiskMax (clamp mutant), and the retired claim
+// |         |            |        | pinned as false — the age delta is identical at robustness 1, 14 and 20.
 #endregion

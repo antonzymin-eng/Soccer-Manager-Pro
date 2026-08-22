@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/ProgressionEngineTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-22 (ERR-028-020 — football-judgment proxy review batch 1 — v1.9)
+// Modified: 2026-08-22 (ERR-028-022 — ERR-028-021's behaviour change locked at its call site — v1.10)
+//           (ERR-028-020 — football-judgment proxy review batch 1 — v1.9)
 //           retune to keep every FromBlocks(..., DefaultLife()) call legal — v1.8)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §5, KD-4 / KD-7,
@@ -223,7 +224,109 @@ namespace TacticalDirector.PlayerProgression.Tests
             engine.AdvanceDay(BaseDay + 1, TrainingInputBatch.Neutral);
 
             Assert.IsFalse(engine.LifecycleView(ClubId, FirstPlayerId).RetirementFlag,
-                "the retirement test is hard AT RETIREMENT_AGE, not below it.");
+                // ERR-028-022 (H2): the message this assertion carried until August 22, 2026 —
+                // "the retirement test is hard AT RETIREMENT_AGE, not below it" — asserted in prose
+                // exactly the property ERR-028-021 was filed to REMOVE. What the case actually shows is
+                // narrower and still worth locking: this fixture's default-attribute Midfielder is a
+                // full year short of his OWN RetirementAgeDays, so he must not be flagged. The two
+                // ERR-028-021 discrimination locks are below.
+                "a default-attribute Midfielder a year below the baseline is short of his own "
+                + "per-player RetirementAgeDays (§3.4, ERR-028-021).");
+        }
+
+        // ── ERR-028-021's behaviour change, locked at the production call site (ERR-028-022) ──
+
+        [Test]
+        public void AdvanceDay_AtTheBaselineAge_FlagsTheOutfielder_ButNotTheGoalkeeper()
+        {
+            // ERR-028-022 (H2). ERR-028-021 moved AdvancePlayerTo's retirement test from
+            // `rec.Age >= RETIREMENT_AGE` to `ageDays >= AbilityModel.RetirementAgeDays(rec)`, and
+            // NOTHING failed if it was reverted: the two wiring cases above both use an all-10
+            // Midfielder at exactly RETIREMENT_AGE / RETIREMENT_AGE − 1, where the old and new
+            // predicates agree by construction. Mutation-verified before this case existed: restoring
+            // the verbatim pre-fix comparison left PlayerProgression.Tests 134/134 and
+            // SeasonSave.Tests 402/3 green. So the goalkeeper allowance, the per-player day and the
+            // days-vs-years comparison were all unprotected at the only site that runs them.
+            //
+            // This case isolates the POSITION half. Both players are identical but for position and
+            // id, and both sit at the baseline age — the exact day the retired predicate fires for
+            // everyone. Under that predicate the goalkeeper is flagged here too, so the second
+            // assertion fails; under the fix he owes RetirementGoalkeeperBonusYears more.
+            PlayerRecord outfielder = Player(FirstPlayerId, PlayerProgressionConstants.RETIREMENT_AGE);
+            PlayerRecord keeper = Player(FirstPlayerId + 1, PlayerProgressionConstants.RETIREMENT_AGE);
+            keeper.Position = PlayerPosition.Goalkeeper;
+
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(
+                new[] { new Squad(ClubId, new[] { outfielder, keeper }) }, BaseDay);
+
+            Assert.Greater(
+                AbilityModel.RetirementAgeDays(in keeper),
+                AbilityModel.RetirementAgeDays(in outfielder),
+                "precondition: the two must differ at all, or this case cannot discriminate.");
+
+            engine.AdvanceDay(BaseDay + 1, TrainingInputBatch.Neutral);
+
+            Assert.IsTrue(engine.LifecycleView(ClubId, FirstPlayerId).RetirementFlag,
+                "the outfielder is past his own retirement day at the baseline age.");
+            Assert.IsFalse(engine.LifecycleView(ClubId, FirstPlayerId + 1).RetirementFlag,
+                "a goalkeeper does NOT retire on a forward's clock — he owes "
+                + "RetirementGoalkeeperBonusYears more (ERR-028-021). This is the assertion the "
+                + "pre-fix `rec.Age >= RETIREMENT_AGE` comparison fails.");
+
+            // …and he does flag once past the allowance. Asserted on the DAY, not just the flag: the
+            // retirement evaluation runs once per call at the target day (§3.4), so under the pre-fix
+            // predicate this day would read BaseDay + 1 from the call above rather than this one.
+            uint pastTheAllowance = BaseDay
+                + (uint)((PlayerProgressionConstants.RetirementGoalkeeperBonusYears + 1)
+                         * PlayerProgressionConstants.DAYS_PER_YEAR);
+            engine.AdvanceDay(pastTheAllowance, TrainingInputBatch.Neutral);
+
+            LifecycleViewModel keeperView = engine.LifecycleView(ClubId, FirstPlayerId + 1);
+            Assert.IsTrue(keeperView.RetirementFlag,
+                "past RETIREMENT_AGE + RetirementGoalkeeperBonusYears the goalkeeper retires too — "
+                + "the allowance defers the career, it does not abolish it.");
+            Assert.AreEqual(pastTheAllowance, keeperView.RetirementDay,
+                "his retirement day is the day he crossed his OWN threshold, not the baseline day.");
+        }
+
+        [Test]
+        public void AdvanceDay_BelowTheBaselineAge_FlagsTheWeakReader_ButNotTheSharpOne()
+        {
+            // ERR-028-022 (H2), the ATTRIBUTE half — and the days-vs-years half with it. Two players of
+            // the same position and the same age (a year BELOW the baseline, where the retired
+            // predicate flags nobody at all), separated only by the §3.4 reading trio at the two ends
+            // of its range. The target day sits strictly between their two retirement days, so exactly
+            // one of them may be flagged. Under the pre-fix `rec.Age >= RETIREMENT_AGE` comparison
+            // NEITHER is, and the first assertion fails.
+            PlayerRecord weakReader = Player(FirstPlayerId, PlayerProgressionConstants.RETIREMENT_AGE - 1);
+            weakReader.Attributes.Anticipation = PlayerProgressionConstants.ATTRIBUTE_MIN;
+            weakReader.Attributes.Positioning = PlayerProgressionConstants.ATTRIBUTE_MIN;
+            weakReader.Attributes.Composure = PlayerProgressionConstants.ATTRIBUTE_MIN;
+
+            PlayerRecord sharpReader = Player(FirstPlayerId + 1, PlayerProgressionConstants.RETIREMENT_AGE - 1);
+            sharpReader.Attributes.Anticipation = PlayerProgressionConstants.ATTRIBUTE_MAX;
+            sharpReader.Attributes.Positioning = PlayerProgressionConstants.ATTRIBUTE_MAX;
+            sharpReader.Attributes.Composure = PlayerProgressionConstants.ATTRIBUTE_MAX;
+
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(
+                new[] { new Squad(ClubId, new[] { weakReader, sharpReader }) }, BaseDay);
+
+            const uint TargetDay = BaseDay + 1;
+            long ageDaysAtTarget = (long)(TargetDay - BaseDay)
+                                   + (long)(PlayerProgressionConstants.RETIREMENT_AGE - 1)
+                                     * PlayerProgressionConstants.DAYS_PER_YEAR;
+            Assert.GreaterOrEqual(ageDaysAtTarget, AbilityModel.RetirementAgeDays(in weakReader),
+                "precondition: the target day must be past the weak reader's day…");
+            Assert.Less(ageDaysAtTarget, AbilityModel.RetirementAgeDays(in sharpReader),
+                "…and short of the sharp reader's, or 'exactly one flags' is not a discriminating test.");
+
+            engine.AdvanceDay(TargetDay, TrainingInputBatch.Neutral);
+
+            Assert.IsTrue(engine.LifecycleView(ClubId, FirstPlayerId).RetirementFlag,
+                "the weak reader is already past his own retirement day a year below the baseline "
+                + "(ERR-028-021). The pre-fix whole-years comparison flags nobody here.");
+            Assert.IsFalse(engine.LifecycleView(ClubId, FirstPlayerId + 1).RetirementFlag,
+                "the sharp reader is not — the reading trio moves the day by days, in both directions.");
         }
 
         // ── ERR-028-006: the signed age anchor ────────────────────────────────────────
@@ -1307,4 +1410,18 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | Ramp_CarriesAFraction_NotALostPoint: a mid-ramp seed's residue is correct
 // |         |            |        | and resembles ERR-028-018's shortfall, whose natural repair would restore
 // |         |            |        | the cliff.
+// | 1.10    | 2026-08-22 | —      | ERR-028-022. ERR-028-021's behaviour change was UNLOCKED at its
+// |         |            |        | production call site: reverting AdvancePlayerTo to the verbatim
+// |         |            |        | pre-fix `rec.Age >= RETIREMENT_AGE` left PlayerProgression.Tests
+// |         |            |        | 134/134 and SeasonSave.Tests 402/3 green, because both wiring cases
+// |         |            |        | use an all-10 Midfielder at exactly RETIREMENT_AGE / -1, where old
+// |         |            |        | and new agree by construction. + AdvanceDay_AtTheBaselineAge_-
+// |         |            |        | FlagsTheOutfielder_ButNotTheGoalkeeper (the position half, plus a
+// |         |            |        | RetirementDay assertion past the allowance) and AdvanceDay_-
+// |         |            |        | BelowTheBaselineAge_FlagsTheWeakReader_ButNotTheSharpOne (the
+// |         |            |        | attribute half and the days-vs-years half). Both mutation-verified
+// |         |            |        | against the restored pre-fix predicate. AdvanceDay_BelowRetirement-
+// |         |            |        | Age_DoesNotFlag's message corrected — it asserted in prose that
+// |         |            |        | "the retirement test is hard AT RETIREMENT_AGE", the property
+// |         |            |        | ERR-028-021 exists to remove.
 #endregion

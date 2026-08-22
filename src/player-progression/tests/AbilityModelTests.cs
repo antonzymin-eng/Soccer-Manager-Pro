@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/AbilityModelTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-22 (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.1)
+// Modified: 2026-08-22 (ERR-028-022 — the P5 population sweep widened to the whole attribute product — v1.2)
+//           (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.1)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1.2 / §3.2; Code Standards #20
 // Purpose:  T-PG-CA-001/002/003 — the derived CA summary, the F1 PA-ceiling clamp, and the deterministic
@@ -178,16 +179,39 @@ namespace TacticalDirector.PlayerProgression.Tests
 
             // (3) Over a uniform attribute population the offsets sum to exactly zero, so the league's
             // retirement rate is unchanged and only WHO retires when moves.
+            //
+            // ERR-028-022: this sweep runs the FULL [1,20]³ product, not the Ant == Pos == Comp
+            // diagonal it swept when ERR-028-021 landed. The diagonal is precisely where the defect
+            // was invisible — the retired implementation floored (Ant+Pos+Comp)/3 to a mean before the
+            // anti-symmetric map, and on the diagonal that division is exact, so truncation vanished.
+            // Off it, floor(sum/3) is not symmetric about the midpoint and the population sum was
+            // −204,621 days (−25.58 d/player): the whole league retiring ~2 months early, which is the
+            // rate change the P5 claim said could not happen. Mutation-confirmed at the time: replacing
+            // the floor with a different wrong rounding left all 539 tests green.
             long sum = 0;
+            long population = 0;
             for (int a = PlayerProgressionConstants.ATTRIBUTE_MIN; a <= PlayerProgressionConstants.ATTRIBUTE_MAX; a++)
             {
-                PlayerAttributes attrs = PlayerAttributes.CreateDefault();
-                attrs.Anticipation = a;
-                attrs.Positioning = a;
-                attrs.Composure = a;
-                sum += AbilityModel.GameReadingOffsetDays(in attrs);
+                for (int p = PlayerProgressionConstants.ATTRIBUTE_MIN; p <= PlayerProgressionConstants.ATTRIBUTE_MAX; p++)
+                {
+                    for (int c = PlayerProgressionConstants.ATTRIBUTE_MIN; c <= PlayerProgressionConstants.ATTRIBUTE_MAX; c++)
+                    {
+                        PlayerAttributes attrs = PlayerAttributes.CreateDefault();
+                        attrs.Anticipation = a;
+                        attrs.Positioning = p;
+                        attrs.Composure = c;
+                        sum += AbilityModel.GameReadingOffsetDays(in attrs);
+                        population++;
+                    }
+                }
             }
-            Assert.AreEqual(0L, sum, "the offset is anti-symmetric about the attribute midpoint (P5).");
+
+            int range = PlayerProgressionConstants.ATTRIBUTE_MAX - PlayerProgressionConstants.ATTRIBUTE_MIN + 1;
+            Assert.AreEqual((long)range * range * range, population,
+                "precondition: the sweep must cover the whole attribute product, not one line through it.");
+            Assert.AreEqual(0L, sum,
+                "the offset is anti-symmetric about the attribute midpoint over the WHOLE attribute "
+                + "product, not merely along Ant == Pos == Comp (ERR-028-022 / P5).");
         }
 
         [Test]
@@ -280,4 +304,12 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | player past MAX_DERIVABLE_AGE_YEARS must still drain at the full
 // |         |            |        | decline rate, which saturating the cumulative rather than the age
 // |         |            |        | would silently have stopped.
+// | 1.2     | 2026-08-22 | —      | ERR-028-022. RetirementAgeDays_IsPerPlayer_ContinuousAndPopulation-
+// |         |            |        | Neutral's property (3) now sweeps the FULL [1,20]^3 attribute
+// |         |            |        | product instead of the Ant==Pos==Comp diagonal. The diagonal is
+// |         |            |        | exactly where the retired floored-mean's asymmetry vanished, so the
+// |         |            |        | v1.1 lock passed against an implementation whose population sum was
+// |         |            |        | -204,621 days — it could not see the defect it claimed to prove
+// |         |            |        | absent. + a cardinality precondition so the sweep cannot silently
+// |         |            |        | narrow back to a line.
 #endregion

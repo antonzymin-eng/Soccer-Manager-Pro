@@ -1,7 +1,8 @@
 # Injuries & Medical #41 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 22, 2026 (v0.17 — **ERR-041-020**, the football-judgment proxy review's batch-1 #41 finding, spec + code in the same commit: §3.4's assembly presented as multi-factor risk while omitting player **age** entirely — from the sum, the signature and §2 — despite age being among the best-established real-world risk factors and already carried on the `PlayerRecord` the caller resolves for the attributes. §3.4 gains `AgeRiskFor(ageYears)`, linear and anti-symmetric about `AGE_RISK_PIVOT_YEARS` with no threshold anywhere (doctrine P1), placed inside the sum BEFORE the mitigation for the same normative reason `BASELINE_DAILY_RISK` is (robustness discriminates it); the pivot is the bootstrap roster's mean age, so the term sums to zero over that population and the measured season bands do not move (P5), and `AGE_RISK_SPAN = 0` is the exact pre-fix identity. §3.1's step signature and §3.5's composition gain `ageYears`. §3.6's worked example re-derived at three ages. Prior entry below.)
+**Last Updated:** August 22, 2026, later same day (v0.18 — **ERR-041-021** (adversarial review over the ERR-041-020 landing, H4 + H7), spec + code in the same commit. **H4:** §3.4's normative-position wording for BOTH `AgeRiskFor` and `BASELINE_DAILY_RISK` — "before the mitigation, so robustness discriminates it" — is arithmetically vacuous, since `RobustnessMitigation` is SUBTRACTED and addition commutes (measured: the same +1200 age penalty at robustness 1, 14 and 20, and larger in relative terms for the more robust player). Restated as what is load-bearing — inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE the clamp — with both superseded sentences annotated in place rather than deleted; the T-MD-AGE-004 lock is rebuilt to fail against the scaling and clamp mutants it was claimed to catch. **H7:** the term's evidential claim is corrected — the research supplement's E-4 (Strong) is U-SHAPED and puts the 16-20 band at ELEVATED risk, so the monotone form follows the evidence above the pivot and INVERTS it below; the shape is deliberately NOT changed (that is R-1's design, awaiting owner sign-off, and its surviving scope under `ERR-041-013`). Also recorded: "the season bands hold unmoved" is evidence for P5 and NOT for the term being wired — all four bands are age-blind, and forced ages 17/26/35 give 623/783/929 league injuries, all three inside the band. Prior entry below.)
+**Last Updated (prior):** August 22, 2026 (v0.17 — **ERR-041-020**, the football-judgment proxy review's batch-1 #41 finding, spec + code in the same commit: §3.4's assembly presented as multi-factor risk while omitting player **age** entirely — from the sum, the signature and §2 — despite age being among the best-established real-world risk factors and already carried on the `PlayerRecord` the caller resolves for the attributes. §3.4 gains `AgeRiskFor(ageYears)`, linear and anti-symmetric about `AGE_RISK_PIVOT_YEARS` with no threshold anywhere (doctrine P1), placed inside the sum BEFORE the mitigation for the same normative reason `BASELINE_DAILY_RISK` is (robustness discriminates it); the pivot is the bootstrap roster's mean age, so the term sums to zero over that population and the measured season bands do not move (P5), and `AGE_RISK_SPAN = 0` is the exact pre-fix identity. §3.1's step signature and §3.5's composition gain `ageYears`. §3.6's worked example re-derived at three ages. Prior entry below.)
 **Last Updated (prior):** August 8, 2026, third final entry (v0.16 — AR pass 16 L3: §3.3's own summary of the assignment aligned with the clamp)
 **Last Updated (prior):** August 8, 2026, second final entry (v0.15 — balance-pass AR pass 15 M1+M2: the §3.1 draw branch made atomic — fallible call before writes — and its assignment gains the RECOVERY_MAX ceiling the code has always applied)
 **Last Updated (prior):** August 8, 2026, final entry of the day (v0.14 — balance-pass AR pass 14 M1: the RECOVERY_MAX guard moved to §3.3's assignment step, the one site whose clamp can breach it)
@@ -15,7 +16,7 @@
 **Last Updated (prior):** August 8, 2026 (v0.5 — AR pass 3: §3.1's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`, the dial gated in step 2, §3.5's call updated; §3.1.1 gains the ERR-041-019 draw-key global-uniqueness contract)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.17
+**Version:** 0.18
 **Status:** APPROVED
 
 ---
@@ -256,10 +257,22 @@ AgeRiskFor(ageYears) -> int:
   (`PlayerRecord.Age`, kept current by #28's derived cache, FR-PG-005); a uniform per-year increment is
   not the pattern-(b) shape, which is a judgment collapsed onto ONE cutoff. Day resolution would mean
   #41 reading #28's `BirthWorldDay` for a term whose slope is a first-guess `[GT]`, and is not taken.
-- **Its POSITION is normative, exactly as `BASELINE_DAILY_RISK`'s is:** inside the sum, **before** the
-  mitigation, so a robust veteran carries less of his age penalty than a frail one. Added after the
-  mitigation — or after the clamp — the term would be attribute-blind, which is the shape this fix
-  exists to remove.
+- **Its POSITION is normative — inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE
+  the clamp** (`ERR-041-021`, correcting the position wording this bullet carried at `ERR-041-020`).
+  Both halves are load-bearing: before the scaling, the staff seam modulates the age term exactly as it
+  modulates every other term rather than leaving an unmodulated island inside a scaled score; before
+  the clamp, the term can never lift the result past `INJURY_RISK_MAX`, which is what keeps every
+  assembled score a probability numerator at or below `OCCURRENCE_DRAW_DENOM`.
+  > **Superseded wording (`ERR-041-020`, annotated in place, not deleted):** *"inside the sum, before
+  > the mitigation, so a robust veteran carries less of his age penalty than a frail one."* That is
+  > **arithmetically vacuous**. `RobustnessMitigation` is **subtracted** and addition commutes, so the
+  > term's position relative to it is a no-op for every input — measured, the age penalty is the same
+  > `+1200` for a robustness-1, a robustness-14 and a robustness-20 player alike, and *larger in
+  > relative terms* for the more robust one, whose assembled score is smaller. The consequence was
+  > wrong in both readings, and the lock written to enforce it passed against a mutant that moved the
+  > term across the mitigation. What robustness genuinely does is lower the whole assembled score,
+  > this term's contribution included, wherever in the sum it sits. The same wording sits on
+  > `BASELINE_DAILY_RISK` from `ERR-041-011` and is corrected with it, below.
 - **P5 pivot.** `AGE_RISK_PIVOT_YEARS` is the MEAN of the bootstrap roster's age distribution
   (`RosterGenerator` draws uniformly on #27's `[AgeMin, AgeMax]`), and the term is linear and
   anti-symmetric about it, so the age contributions over that population sum to zero: the squad-wide and
@@ -267,17 +280,46 @@ AgeRiskFor(ageYears) -> int:
   whole content of the finding. Measured after the fix: the season-scale instrument's league, starter,
   reserve and squad-unavailability bands all hold unmoved. `AGE_RISK_SPAN = 0` is the exact pre-fix
   identity, locked by execution rather than by assertion.
+  > **What "the bands hold unmoved" does and does not establish (`ERR-041-021`).** It establishes the
+  > P5 property above — an anti-symmetric term about the population mean does not move the aggregate.
+  > It is **not** evidence that the term is wired, and it was published as if it were. All four bands
+  > are age-blind by construction, and measurement confirms it: forcing every player's age to 17, 26
+  > and 35 yields **623 / 783 / 929** league injuries a season, and **all three pass the asserted
+  > band**, in both directions. The age axis is locked separately, by
+  > `SeasonInjuryRealismTests`' over-30-vs-under-23 split (measured 1.34×; 1.01× with the production
+  > call site's age neutralised, which fails the assert).
+- **Only the VETERAN half of this term follows the evidence (`ERR-041-021`).** The research-alignment
+  supplement's E-4 is rated **Strong** and is **U-shaped**: musculoskeletal maturity continues to
+  ~24–25, and *the 16–20 band carries elevated risk at adult match intensity*. A monotone linear term
+  about a pivot of 26 reproduces that above the pivot and **inverts it below** — a 19-year-old receives
+  −1050, making 16–20-year-olds the safest players in the league. `ERR-041-020`'s claim that the term
+  is "the direction and rough magnitude the epidemiology supports" is therefore true of the veteran arm
+  and false of the young arm. The shape is **deliberately not changed here**: the U-shape is the
+  research supplement's **R-1** design, it is awaiting owner sign-off, and re-shaping shipped football
+  behaviour is the owner's call rather than a review loop's. R-1's surviving scope under its reserved
+  back-prop `ERR-041-013` is exactly this young-tail arm; its age-plumbing half is what landed as
+  `ERR-041-020`. Any refit **re-shapes this term** rather than adding beside it.
 - **Not a second robustness read (P3).** The term is age, not durability; `RobustnessMitigation` keeps
   Strength/Stamina/Balance, and nothing else in #41 reads age. (#28's own `ERR-041-003`-driven decision
   runs the other way for the same reason: its retirement offset deliberately avoids that trio.)
 - **For the research-alignment supplement (its §10):** this is now a THIRD term its refit must fold
   into rather than add beside, alongside `BASELINE_DAILY_RISK`.
 
-**`BASELINE_DAILY_RISK`'s position is normative** (ERR-041-011): it sits **inside the sum, before the
-mitigation**, so robustness discriminates the exposure-independent floor — a frail player's quiet week
-is riskier than an iron man's — and, because #27 attributes floor at 1 and the default magnitudes keep
+**`BASELINE_DAILY_RISK`'s position is normative** (ERR-041-011, position wording corrected at
+`ERR-041-021`): it sits **inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE the
+clamp**, for the two reasons the age term's bullet above gives — the staff seam modulates it like every
+other term, and it cannot lift the result past `INJURY_RISK_MAX`. Because #27 attributes floor at 1 and
+the default magnitudes keep
 `BASELINE_DAILY_RISK` above the largest mitigation row, no valid-input player is ever injury-proof (the
-third absurdity the T0 fifth AR pass measured: the default focus converged on exactly-0-forever). It is
+third absurdity the T0 fifth AR pass measured: the default focus converged on exactly-0-forever).
+> **Superseded wording (`ERR-041-011`, annotated in place, not deleted):** *"before the mitigation, so
+> robustness discriminates the exposure-independent floor — a frail player's quiet week is riskier than
+> an iron man's."* Inert, for the reason given in the age term's bullet above: the mitigation is
+> subtracted and addition commutes, so no term's position relative to it changes any output. The
+> injury-proof-forever property is a consequence of the floor's *magnitude* relative to the largest
+> mitigation row, which the surviving sentence states, not of where it sits in the sum.
+
+It is
 the exposure-INDEPENDENT term: the research-alignment supplement's R-2 under-exposure arm must re-fit
 against it rather than add beside it, or the left tail is priced three times (its §10 concern).
 
@@ -375,4 +417,5 @@ pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling
 | 0.15 | 2026-08-08 | — | **Balance-pass AR pass 15 (M1 + M2)**: **M1** — the pass-14 guard fired AFTER `s.Severity` was written, making the draw branch the step's one partial-write throw site: the refusal itself left `RecoveryRemaining == 0` beside a fresh severity in the LIVE career, the exact breach being refused, surfacing a day later as a state-blaming fault (demonstrated by model; fixing the config did not recover the session). The branch is now atomic — fallible call first, three writes after — and the three prevention claims are corrected: prevention is the ORDERING's property. **M2** — §3.1's normative assignment had NO `RECOVERY_MAX` ceiling while the code has always clamped to it: an implementer following the step wrote 241+ for a below-average physio on the Serious tier, refused by `ValidateState` the next day and persisted happily by the codec. The ceiling was only in the two paragraphs pass 14 wrote — the normative step now carries `Clamp(…, 1, RECOVERY_MAX)` and FR-MD-014's assignment clause gains the ceiling. |
 | 0.16 | 2026-08-08 | — | **Balance-pass AR pass 16 (L3)**: §3.3's prose — the section that OWNS recovery-speed modulation — still said "floored at 1" after M2 swept the other two statements of the rule; the third aligned (the grep-boundary class, one clause short of the owning section). |
 | 0.17 | 2026-08-22 | — | **ERR-041-020** (football-judgment proxy review, batch 1 — spec + code, same commit). §3.4's `AssembleRiskScore` presented as multi-factor risk assembly while omitting player **age** from the sum, from the method signature and from §2's requirements — a well-established real-world risk factor, already on the `PlayerRecord` the caller resolves in order to read the attributes it does use, and already consumed by #31's valuation. Pattern (c). The assembly gains `AgeRiskFor(ageYears)`: linear in age, anti-symmetric about `AGE_RISK_PIVOT_YEARS`, saturating at `±AGE_RISK_SPAN`, with **no threshold anywhere** (doctrine P1 — the uniform per-year increment is deliberately not the one-cutoff shape, and the whole-year granularity is what #27 exposes). Its **position is normative** for the same reason `BASELINE_DAILY_RISK`'s is: inside the sum, before the mitigation, so robustness discriminates it. **P5**: the pivot is the mean of #27's bootstrap age distribution and the term is anti-symmetric about it, so it sums to zero over that population — the measured season bands (league injuries, starter/reserve means, squad unavailability) hold unmoved — and `AGE_RISK_SPAN = 0` reproduces the pre-fix assembly exactly, locked by execution through a parameterised overload rather than asserted. **P3**: the term is age, not durability — `RobustnessMitigation` keeps Strength/Stamina/Balance and nothing else in #41 reads age. §3.1's step signature and §3.5's composition loop gain `ageYears`; §3.6's worked example re-derived. No draw, no stream, no domain tag, no format version. |
+| 0.18 | 2026-08-22 | — | **ERR-041-021** (adversarial review over the ERR-041-020 landing — H4 + H7; spec + code, same commit). **H4 — the normative-position claim was arithmetically vacuous, in TWO places.** §3.4 said of both `AgeRiskFor` (v0.17) and `BASELINE_DAILY_RISK` (v0.4/ERR-041-011) that they sit "before the mitigation, so robustness discriminates it". `RobustnessMitigation` is **subtracted** and addition commutes, so neither term's position relative to it changes any output for any input: measured, the age penalty is `+1200` for a robustness-1, a robustness-14 and a robustness-20 player alike — and *larger in relative terms* for the more robust one, so the stated consequence is wrong in both readings. A reviewer's three mutants (term after the mitigation / after the `OccurrenceRiskMillMult` scaling / after the clamp) all left `InjuriesMedical.Tests` green, and the third can return **above** `INJURY_RISK_MAX`, breaking ERR-041-011's every-daily-probability-≤-1 invariant. Both positions are restated as what is genuinely load-bearing — **inside the sum, BEFORE the scaling and BEFORE the clamp** — with the two superseded sentences annotated in place, not deleted, and T-MD-AGE-004 rebuilt to fail against the scaling and clamp mutants (the after-the-mitigation mutant is an identity over 956,480 sampled inputs and is therefore no longer claimed rather than newly locked). **H7 — the term's evidential support was overstated, and its monotone shape INVERTS the repo's own Strong-rated young-tail evidence.** The research-alignment supplement's E-4 is **U-shaped** — maturity continues to ~24–25 and the 16–20 band carries elevated risk at adult match intensity — so a monotone term about pivot 26 follows the evidence above the pivot and contradicts it below, making 16–20-year-olds the safest players in the league (a 19-year-old receives −1050). The shape is **deliberately not changed**: it is the supplement's R-1 design, awaiting owner sign-off, and re-shaping shipped football behaviour is the owner's call. R-1 is annotated in the supplement as landed-in-part, with its reserved back-prop `ERR-041-013` now covering only the residual U-shape / young-tail arm. **Also corrected:** "the measured season bands hold unmoved" is evidence for P5 and **not** evidence that the term is wired — all four bands are age-blind, and forced ages 17/26/35 give 623/783/929 league injuries, all three inside the asserted band; the age axis now has its own lock in `SeasonInjuryRealismTests` (1.34× measured, 1.01× and failing with the production call site's age neutralised). |
 #endregion
