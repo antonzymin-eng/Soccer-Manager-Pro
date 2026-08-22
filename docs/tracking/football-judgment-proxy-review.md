@@ -1,7 +1,30 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Updated:** August 6, 2026 — **the adversarial review over the `ERR-008-021` landing LANDED as
+> **Updated:** August 22, 2026 — **§6.3.1 added: the landing order for the workable 24.** §6.3 said what
+> KIND each finding is; nothing said what ORDER to fix them in. The order is derived from three things
+> only — **(A)** is the chain's terminal action wired (`match-engine-wiring-backlog.md` records **W2 as
+> BUILT but SHIPS DISABLED pending W6**, `TackleContactRadiusM` defaulting to **0.0f**, and #14 §3.6
+> Tackle Intent sits immediately above the §3.6.5 resolver W2 added — so 7 findings would be tuning the
+> input to a disabled output); **(B)** does it need a design supplement first (4 findings, serialized on
+> a document, so START them first and land them last); **(C)** batch by calibration chain, since P5
+> calibrates once. Six batches, 3 + 4 + 4 + 2 + 4 + 7 = 24. **For roughly ten of the 24 the order does
+> not matter and §6.3.1 says so** — it deliberately does NOT re-prioritise by guessed football impact,
+> which would be the false precision the §5 count correction was about. Two cross-cutting constraints
+> recorded with it: #8 §3.2.10's constant catalogue is **six #8 landings behind** and must be discharged
+> at the next #8 landing, and `sim_match_engine_close_chance` is **owner-held RED**, so batches 2/3/5
+> land against an already-tripped detector and need per-fix measurement rather than a band read.
+> **Updated (prior):** August 21, 2026 — **§6.3 gains an ASSEMBLY-LESS class, and the backlog's workable queue is
+> now 24 rather than 32.** Six of the specs itemized in §2/§3 have no `src/` assembly — **#31, #34, #36,
+> #43, #46, #54** — carrying **8 of the 32 open findings**. Their fixes are deferred BY RULE to those
+> specs' T0 landings: §6.3's formula-patch process requires spec + code in the same commit, and a fix
+> here is not landed until a test fails when it is reverted — with no assembly neither half can be
+> executed, so the fix would ship as prose with nothing enforcing it, which is precisely the class the
+> `ERR-008-021`/`-022` chain demonstrated when three consecutive hand-derived verification claims were
+> falsified on first execution. Normative source: `path-to-playable-roadmap.md` **C6** (new). The
+> finding counts are UNCHANGED — 34 recorded, 2 fixed, **32 open** — this reclassifies when 8 of them are
+> workable, not whether. Deferral is not dismissal: they stay itemized here and are discharged at T0.
+> **Updated (prior):** August 6, 2026 — **the adversarial review over the `ERR-008-021` landing LANDED as
 > `ERR-008-022`** (§6.4.2). It found that -021's overlap model was being fed by a lane test that
 > discarded the **far-post blocker on 100% of 20,213 sampled off-centre shooters** and dropped a
 > keeper standing on his line at goal centre for *every* shooter position — the far bound was a plane
@@ -408,7 +431,7 @@ Release Engineering, **#47** New-Game Setup & Database Editor, **#48** Match Pre
 **#50** Save Migration & Versioning, **#51** Audio & Sound Design.
 
 (53 of 53 specs reviewed: 2 carried forward from the prior session — #8, #11 — plus 51 reviewed
-fresh in this pass, of which 24 total specs across both passes returned at least one finding.)
+fresh in this pass, of which **19** total specs across both passes returned at least one finding. *(Corrected August 21, 2026 from 24 — see the §5 note; the 34 specs listed immediately above are the complement, and 19 + 34 = 53.)*)
 
 ---
 
@@ -417,11 +440,23 @@ fresh in this pass, of which 24 total specs across both passes returned at least
 | | Count |
 |---|---|
 | Specs reviewed | 53 / 53 |
-| Specs with ≥1 finding | 24 |
-| Specs with no findings | 29 |
+| Specs with ≥1 finding | **19** |
+| Specs with no findings | **34** |
 | Total findings recorded | 34 |
 | Findings fixed (`ERR-008-020` §3.1.3.3 template, August 4; `ERR-008-019` §3.2.3.1 long-shot ramp, August 5) | 2 |
 | Findings open | 32 |
+
+*(**CORRECTED August 21, 2026 — the two SPEC counts were wrong; the three FINDING counts were and are
+right.** This table read 24 / 29, which is internally consistent (24 + 29 = 53) and agrees with the §4
+closing parenthetical, but agrees with neither section's actual content. Re-derived by direct count:
+**§2/§3 carry 19 spec headings** (#8, #11, #1, #4, #6, #10, #13, #14, #15, #23, #27, #28, #31, #34, #41,
+#43, #54, #36, #46) and **§4 names 34 clean specs** (5 cross-cutting + 4 physics + 2 AI/mechanics +
+5 tactical + 5 player/season + 7 management + 6 late-wave). 19 + 34 = 53. The finding counts reconcile
+exactly and are untouched: 35 `- **§` bullets across §2/§3, minus the §3.1.4.3/§3.2.3.2 shot-lane bullet
+explicitly marked "not itemized in the original sweep", = **34 recorded**; minus `ERR-008-020` and
+`ERR-008-019` = **32 open**. Neither the remediation queue nor any per-spec claim moves — only the
+count of how many specs those findings are spread across. Surfaced while landing constraint C6, which
+needed the assembly-less subset of exactly this population.)*
 
 *(Updated August 5, 2026: `ERR-008-019` — the long-shot cliff, this review's founding finding — is
 now genuinely landed; see §2. Corrected August 4, 2026: this table originally counted that same
@@ -536,6 +571,74 @@ creation — that separation is the acceptance test that the stages are genuinel
   lookup — overturning it is an owner decision about the spec's stated design intent, not a patch.
 - **Management-layer findings** (#31, #34, #54, #43, #36, #27, #28): the three-stage frame does not
   map literally (there is no "execution" of a sacking), but P1, P3, and P5 apply unchanged.
+- **Assembly-less class — deferred BY RULE, not by priority** *(added August 21, 2026)*. Six of the
+  specs itemized in §2/§3 have no `src/` assembly at all — **#31, #34, #36, #43, #46, #54** — and they
+  carry **8 of the 32 open findings** (#31 ×2, #34 ×1, #36 ×1, #43 ×1, #46 ×1, #54 ×2). Those fixes do
+  **not** land ahead of their spec's T0 code. The formula-patch process immediately above requires
+  spec + code in the same commit, and this project's standard for a landed fix is a test that fails
+  when the fix is reverted; with no assembly, neither half can be executed, so what would ship is
+  edited prose with nothing enforcing it — the same class as the three hand-derived verification
+  claims the `ERR-008-021`/`-022` chain falsified on first execution. They stay recorded here and are
+  discharged at their spec's T0 landing, under the same doctrine. Normative source and full evidence:
+  `path-to-playable-roadmap.md` **C6**. Note this **subsumes the governance-class entry above** — #46
+  is deferred on both grounds, and the owner decision it needs is better taken with the code in front
+  of it. **The remaining 24 open findings are workable today and are this backlog's actual queue.**
+
+
+### 6.3.1 Landing order for the workable 24 *(added August 22, 2026)*
+
+§6.3 says what *kind* of thing each finding is. This subsection says what order to land them in, and
+the honest headline is that **for roughly ten of the 24 the order does not matter** — they are
+independent leaves and any sequence works. The order earns its keep for **three** reasons only.
+Everything below follows from those three; nothing here is a preference about tidiness.
+
+**Gate A — is the terminal action of the chain actually wired?** This is `path-to-playable-roadmap.md`
+**C6** one layer down, and it is the same rule as **KD-W1**. It bites on seven findings.
+`match-engine-wiring-backlog.md` records **W2 as "BUILT August 12, 2026; SHIPS DISABLED pending W6"** —
+the tackle challenge is complete and measured, but `TackleContactRadiusM` ships at **0**. #14 §3.6
+"Tackle Intent (COMMIT/JOCKEY/HOLD)" is the section *immediately above* the §3.6.5 Tackle Outcome
+Resolution that W2 added (`ERR-014-006`), so fixing the COMMIT gate now means tuning the input to a
+resolver whose output is disabled. #13's four press findings and #8's PRESS trigger feed the same
+chain. This is the root `CLAUDE.md` trap-table row *"tuning a machine that is missing pieces"*
+verbatim — seven §5.Z passes once fitted `[GT]`s against an engine where `GetAndClearTackleFlag`
+returned a hardcoded `false`.
+
+**Gate B — does it need a design supplement before any code?** §6.3's mechanism class already names
+four: #8 §3.2.2.1 pass-to-space, #15 ×2, #27 lineup role fit. Those are serialized on a **document**,
+not on code, so the supplement should be *started first even though the code lands last* — otherwise
+the doc becomes the critical path at the end instead of running underneath everything else.
+
+**Gate C — batch by calibration chain.** P5 pivots calibration on one baseline pass. Fixes sharing a
+measured output should land together and be calibrated **once**, not four times.
+
+| # | Batch | Findings | Count | Why it sits here |
+|---|---|---|---|---|
+| 1 | **Off-pitch** | #28 §3.1/App A `ClassifyAgeBand`, #28 §3.4/App A `RETIREMENT_AGE`, #41 §3.4 `AssembleRiskScore` | 3 | Zero match-engine coupling, no red acceptance band, no wiring gate. The safest throughput in the set, and it re-exercises the fix pipeline end to end before anything harder. #41's finding also has a standing companion: the #41 T0 AR recorded that #29 and #41 price robustness on the same three attributes, i.e. it is double-counted across the layers. |
+| 2 | **Keeper** | #11 §3.5.3 parry direction, §3.5.2/KD-21 catch-vs-parry, §3.6.3 cross/aerial duel, KD-3/§2 FR-GK-006/§3 KD-20 angle-narrowing 1v1 | 4 | One chain, one calibration. **Newly unblocked:** the conversion-at-contact residual was PARKED August 4 explicitly because *"the keeper rush trigger (W1) changes the contact geometry the decision turns on"* — and W1 landed that same day. The parking condition is satisfied. **It needs a fresh measurement against post-W1 geometry before the design decision**, not a fix written against the pre-W1 numbers; that is the `match-realism-pass` measure-first step. |
+| 3 | **Contact / duel** | #1 §3.1.11.1 `CheckPossession`, #4 §1.4.5/§2.1 FR-06/§3.6 half-turn bonus, #4 §3.4.2 INTERCEPTION condition, #10 §3.7 contested duel | 4 | All four decide **who ends up with the ball at a contact**, and they interact — the possession gate, the interception condition and the header duel can each mask the others' effect, so measuring them separately measures noise. |
+| 4 | **Independent singletons** | #6 §2.1 FR-08/§3.7.9 stumble trigger, #23 §3.1/§3.3 `MarkingPressure` | 2 | Genuine leaves; land whenever convenient. |
+| 5 | **Supplement-gated** *(start FIRST, land LAST)* | #8 §3.2.2.1 baseline PASS formula, #15 §3.3 RUNNER assignment, #15 §3.4 run parameters, #27 §7.1 `LineupSelector` | 4 | Gate B. The pass-to-space and run-signalling supplements are one design conversation (P4 intent-as-first-class-object), so they should be authored together. Opening them on day one costs nothing and removes them from the end of the queue. |
+| 6 | **Pressing / defensive — AFTER W2 IS ARMED** | #8 §3.1.8/§3.2.7.1 PRESS trigger, #13 ×4 (§3.3 primary press, §3.4 cover shadow, §3.1.4 `WEAK_RECEIVER`, §3.3/§3.7 fatigue ceiling), #14 §3.5 threat score, #14 §3.6 tackle intent | 7 | Gate A. #8's PRESS trigger sits here rather than with the singletons because it and #13 §3.3 are **the same decision at two layers** — pressing them apart would calibrate one against the other's unfixed form. **One caveat, stated rather than glossed:** #14 §3.5 (threat score → MAN_MARK/INTERCEPT_RUNNER priority) is marking, not tackling, so it is gated by chain-coherence rather than by W2 directly. It could move earlier if a reason arises; the other six should not. |
+
+3 + 4 + 4 + 2 + 4 + 7 = **24**.
+
+**Two standing constraints that cut across every batch.**
+
+1. **#8 §3.2.10's constant catalogue is six #8 landings behind** (recorded at the `ERR-008-022` and
+   `-023` landings). Batches 5 and 6 both touch #8. **Discharge the catalogue debt at the next #8
+   landing** or it becomes seven.
+2. **`sim_match_engine_close_chance` is RED and owner-held** — hold red, do not rebaseline a third
+   time (`close-chance-creation-design.md` §10.9 item 6), diagnosed to C1 / `ERR-012-011` and queued
+   for the KD-W1 pass. `sim_match_engine_shot_outcomes`'s deflection predicate is separately open
+   awaiting its own owner call. **Any creation- or shot-chain fix therefore lands against a detector
+   that is already tripped** and must carry its own per-fix measurement; a green/red band read will
+   tell you nothing. This applies to batches 2, 3 and 5.
+
+**What this subsection deliberately does not do.** It does not re-prioritise by football impact. Every
+one of the 24 is a real defect under §6's doctrine, and none has been measured against the others for
+size; ordering them by guessed impact would be exactly the false precision this review's own §5
+correction was about. The order above is derived only from wiring state, document serialization and
+calibration batching — three things the repo already knows to be true.
 
 ### 6.4 First worked example (LANDED August 4, 2026 as `ERR-008-020`)
 
