@@ -12,7 +12,60 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 22, 2026, latest same day (**Both `SaveManager` gaps CLOSED as
+> **Last Updated:** August 22, 2026, latest same day (**`ERR-016-011`: the replay lifecycle now
+> re-derives a loaded record's OWN digest — closing the one item `ERR-016-010` had recorded as not
+> fixed, and leaving nothing open on the replay-identity surface.**) **1. The digest existed and was
+> correct; nothing asked it anything.** §3.2.3 defines a snapshot digest that covers the payload,
+> `Encode` has computed it correctly since May, and the on-disk record has carried it — but the
+> §4.2.2 lifecycle only ever validated the chain LINK (`prevSnapshotDigest`). `currentSnapshotDigest`
+> was written, stored, loaded and **never recomputed**, so a record whose stored digest had been
+> altered loaded clean — and so did one whose **payload** had been altered. That second case is the
+> one that matters: the payload IS the Tier A/B state step 5 rehydrates, and every other check on the
+> path (magic, versions, fingerprint, chain link, record trailer) validates metadata around it.
+> **2. Found by a failing assertion, not by reading.** The `ERR-016-010` tampered-digest lock was
+> first drafted asserting that flipping a bit in the stored digest would be refused. It was not; the
+> test failed, and the reason was structural rather than incidental. **3. The fix, and why it is a
+> split rather than a ninth step.** §4.2.2 step 4 becomes **4a** (chain link — is this the record that
+> should follow the last one?) and **4b** (re-derive this record's own §3.2.3 digest — are these bytes
+> the record they claim to be?), with a new `ERR_DS_SNAPSHOT_DIGEST_MISMATCH` (0x160F) and
+> `EC-016-016`. **The lifecycle stays 8 steps**: FR-DS-012 binds an 8-step lifecycle and §4.6.2
+> diagrams one, and spec renumbering cascades are this file's own KNOWN HAZARD, so a split beats a
+> renumbering for an identical outcome. 4b runs **before step 5**, stated normatively — a lifecycle
+> that verifies after rehydrating has already applied the bytes it was about to reject.
+> **4. One preimage, one implementation.** `ComputeSnapshotDigest` is extracted as the single owner
+> of the §3.2.3 preimage, shared by `Encode` and `ValidateCurrentDigest`. Not tidiness: two
+> hand-written derivations of one preimage that agree only by inspection is the `ERR-010-002` class,
+> and here it fails badly in **both** directions — a verifier that drifts from the recorder rejects
+> every honest record, one that omits a field silently accepts tampering in it. §4.2.2 now says so.
+> **5. Switching the check on immediately failed the suite's own happy-path test.**
+> `ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero` had never called `Encode`, so its
+> "well-formed" record carried an all-zero `currentSnapshotDigest` — a value its own comment called
+> "a valid digest value" and which no recording produces. It had been written that way to dodge a
+> real conflation (encoding on the same codec advances that codec's chain authority and then breaks
+> step 4a). The fix is the distinction the comment itself drew: **two codec instances**, a recording
+> codec that encodes and a fresh replay codec that validates. The fixture had been asserting the happy
+> path of a record that cannot exist. **6. Verification.** Four behaviours locked across three new
+> tests and one strengthened existing test: an altered payload refused at 4b; an altered stored digest
+> refused at 4b **while the loader still succeeds** — the pair marks where the boundary sits, storage
+> reports the bytes it found and replay decides whether they are the record they claim to be; an
+> honest round-tripped record **passing** 4b; and `ValidateCurrentDigest` not advancing the chain.
+> **Two mutants executed, killing in both directions:** deleting 4b fails the two tamper locks;
+> making the verifier's preimage differ slightly from the recorder's fails four honest-record locks.
+> **7. No determinism impact.** No `DETERMINISM_DIGEST_VERSION` bump — the digest being checked is
+> the one §3.2.3 already defined; what is new is that something reads it. No preimage, field width,
+> hash-input rule, schema version, file-format version, RNG stream or golden vector moved.
+> **GATE: whole tree, 33 test assemblies, 0 errors and the same 5 warnings as baseline, quarantine
+> empty; `DeterministicSim.Tests` 86/0/1 (from 83/0/1), `MatchEngine.Tests` 472/1/11.** Diffed against
+> the previous commit's run: **exactly one suite changed**, by exactly this landing's locks, every
+> other suite byte-identical; the one failure is the inherited owner-held-red
+> `sim_match_engine_close_chance`. **Nothing remains open on this surface** — the archived
+> `EnvironmentFingerprint.floatModelHash` entry is annotated to say so. **Modified:**
+> `src/deterministic-sim/SnapshotCodec.cs`, `ReplayEngine.cs`, `DeterministicSimConstants.cs`,
+> `tests/DeterministicSimTests.cs`, `docs/specs/deterministic-sim/section-3.md` (v1.0.18),
+> `section-4.md` (v1.2), `spec-error-log.md` (v2.21), `open-issues-resolved.md`, `file-manifest.md`,
+> `CHANGELOG.md`, `CHANGELOG-src.md`.
+
+> **Last Updated (prior):** August 22, 2026, latest same day (**Both `SaveManager` gaps CLOSED as
 > `ERR-016-010`, and two OPEN ISSUES entries archived — the index and the record now agree for the
 > first time in this file's history.**) **1. The gap was bigger than its title.** The
 > `EnvironmentFingerprint.floatModelHash` entry had carried "`SaveManager` still writes

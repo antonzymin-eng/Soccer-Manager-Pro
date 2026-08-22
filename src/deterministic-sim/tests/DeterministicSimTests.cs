@@ -869,6 +869,91 @@ namespace TacticalDirector.DeterministicSim
                 "A record whose trailer disagrees with its own length must be refused (§3.9.2).");
         }
 
+        /// <summary>
+        /// ERR-016-011: an altered PAYLOAD is refused at §4.2.2 step 4b. This is the half that
+        /// matters most — the payload is the authoritative state a replay is about to rehydrate, and
+        /// before step 4b existed nothing between the disk and rehydration looked at it at all. Every
+        /// other check on the path (magic, versions, fingerprint, chain link, trailer) passes on these
+        /// bytes; only the re-derived digest disagrees.
+        /// </summary>
+        [Test]
+        public void Replay_TamperedPayload_IsRefusedByTheRederivedDigest()
+        {
+            using var dir = new TempDir("tamperedpayload");
+            var manager = new SaveManager(dir.Path);
+            (SnapshotHeader header, SnapshotPayload payload) = EncodedSnapshotAt(210UL, 0x77);
+            Assert.AreEqual(0, manager.CommitAtomic(header, payload));
+
+            // The payload body is the single byte immediately before currentSnapshotDigest (32) and
+            // the u64 trailer (8).
+            string path = Directory.GetFiles(dir.Path, "*.bin")[0];
+            byte[] raw  = File.ReadAllBytes(path);
+            int payloadByte = raw.Length - 8 - DeterministicSimConstants.SHA256_BYTES - 1;
+            Assert.AreEqual(0x77, raw[payloadByte], "The splice offset is not the payload body.");
+            raw[payloadByte] = 0x78;
+            File.WriteAllBytes(path, raw);
+
+            var loaded = new SnapshotHeader();
+            var body   = new SnapshotPayload();
+            Assert.AreEqual(0, manager.Load(210UL, loaded, body),
+                "The record is still structurally well-formed, so the loader succeeds.");
+            Assert.AreEqual(0x78, body.PayloadBytes[0], "The altered byte reaches the caller.");
+
+            var engine = new ReplayEngine(
+                new SnapshotCodec(),
+                new DeterministicRngService(0xABCDEF0123456789UL),
+                new MatchClock(0UL),
+                EnvironmentFingerprint.CreateStage0Dev());
+            Assert.AreEqual(DeterministicSimConstants.ERR_DS_SNAPSHOT_DIGEST_MISMATCH,
+                engine.PrepareReplay(loaded, body),
+                "Altered authoritative state must be refused BEFORE step 5 rehydrates it.");
+        }
+
+        /// <summary>
+        /// ERR-016-011: the verifier and the recorder must compute ONE preimage. An honest,
+        /// untouched record must pass step 4b — otherwise a validator built from a second hand-written
+        /// derivation would reject every real snapshot, which is the failure mode that makes a
+        /// verification step worse than none.
+        /// </summary>
+        [Test]
+        public void Replay_HonestRecord_PassesTheRederivedDigestCheck()
+        {
+            using var dir = new TempDir("honestdigest");
+            var manager = new SaveManager(dir.Path);
+            (SnapshotHeader header, SnapshotPayload payload) = EncodedSnapshotAt(211UL, 0x12);
+            Assert.AreEqual(0, manager.CommitAtomic(header, payload));
+
+            var loaded = new SnapshotHeader();
+            var body   = new SnapshotPayload();
+            Assert.AreEqual(0, manager.Load(211UL, loaded, body));
+
+            Assert.AreEqual(0, new SnapshotCodec().ValidateCurrentDigest(loaded, body),
+                "A record round-tripped through disk must re-derive to its own stored digest.");
+        }
+
+        /// <summary>ERR-016-011: ValidateCurrentDigest must not disturb the chain authority — it is
+        /// called mid-lifecycle, between step 4a and step 5, and a validator that advanced
+        /// `_prevDigest` would break the next record's step 4a.</summary>
+        [Test]
+        public void ValidateCurrentDigest_DoesNotAdvanceTheDigestChain()
+        {
+            EnvironmentFingerprint fp = EnvironmentFingerprint.CreateStage0Dev();
+            var recordingCodec = new SnapshotCodec();
+
+            var header = new SnapshotHeader();
+            header.Initialize(1UL, null, fp, TestBuildIdentity.TestBuildHash);
+            var payload = new SnapshotPayload();
+            payload.PayloadBytes[0] = 0x09; payload.BytesWritten = 1;
+            recordingCodec.Encode(header, payload);
+
+            var replayCodec = new SnapshotCodec();
+            Assert.AreEqual(0, replayCodec.ValidateCurrentDigest(header, payload));
+            Assert.AreEqual(0, replayCodec.ValidateCurrentDigest(header, payload),
+                "Repeated validation must be idempotent.");
+            Assert.AreEqual(0, replayCodec.ValidatePrevDigest(header),
+                "Step 4a must still see the genesis sentinel after step 4b ran.");
+        }
+
         /// <summary>A missing file is a STORAGE failure, not a malformed record — the two codes must
         /// stay distinguishable (the AR L-2 split this suite never executed).</summary>
         [Test]
@@ -1002,20 +1087,30 @@ namespace TacticalDirector.DeterministicSim
                 engine.PrepareReplay(loaded, body),
                 "§4.2.2 step 4 must reject a record whose chain link no longer matches.");
 
-            // RECORDED, not fixed (ERR-016-010): the §4.2.2 lifecycle checks the chain LINK
-            // (prevSnapshotDigest) and never recomputes currentSnapshotDigest from the payload it just
-            // read, so tampering with the stored current digest — or with the payload — is NOT
-            // detected here. That is a third defect on this surface, outside the two ERR-016-010
-            // closes, and is written down rather than silently passed over. The assertion below pins
-            // today's behaviour so the day someone adds the recomputation, this test fails and says so.
+            // ERR-016-011 closed what ERR-016-010 had only recorded: a tampered CURRENT digest is
+            // still invisible to the LOADER (framing is intact, so Load succeeds) but is now refused
+            // by the §4.2.2 lifecycle at step 4b. The two assertions together say exactly where the
+            // boundary sits — the storage layer reports the bytes it found, the replay layer decides
+            // whether they are the record they claim to be.
             byte[] again = File.ReadAllBytes(path);
+            again[22] ^= 0x01;                 // undo the step-4a tamper above
             again[again.Length - 9] ^= 0x01;   // last byte of currentSnapshotDigest (before the u64 trailer)
             File.WriteAllBytes(path, again);
 
             var loadedCur = new SnapshotHeader();
             var bodyCur   = new SnapshotPayload();
             Assert.AreEqual(0, manager.Load(200UL, loadedCur, bodyCur),
-                "A tampered CURRENT digest is currently invisible to the loader — recorded, not fixed.");
+                "A tampered CURRENT digest leaves the framing valid, so the loader still succeeds.");
+
+            var digestEngine = new ReplayEngine(
+                new SnapshotCodec(),
+                new DeterministicRngService(0xABCDEF0123456789UL),
+                new MatchClock(0UL),
+                EnvironmentFingerprint.CreateStage0Dev());
+            Assert.AreEqual(DeterministicSimConstants.ERR_DS_SNAPSHOT_DIGEST_MISMATCH,
+                digestEngine.PrepareReplay(loadedCur, bodyCur),
+                "§4.2.2 step 4b must refuse a record whose stored digest is not the digest of its " +
+                "own bytes (ERR-016-011 / EC-016-016).");
         }
 
         // ══════════════════════════════════════════════════════════════════════════════
@@ -1033,12 +1128,21 @@ namespace TacticalDirector.DeterministicSim
         [Test]
         public void ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero()
         {
-            var codec = new SnapshotCodec();
             EnvironmentFingerprint fingerprint = EnvironmentFingerprint.CreateStage0Dev();
+
+            // TWO codecs, and the split is the point (corrected at ERR-016-011). The RECORDING codec
+            // encodes; the REPLAY codec is fresh, so its stored _prevDigest is the genesis sentinel
+            // that a genesis snapshot's recorded PrevSnapshotDigest must match. The prior fixture used
+            // one codec and skipped Encode entirely to dodge that conflation, which left
+            // CurrentSnapshotDigest all-zeros — a value no real recording ever produces. The comment
+            // below called that "a valid digest value"; the new step-4b check proved it was not, and
+            // the fixture had been asserting the happy path of a record that could not exist.
+            var recordingCodec = new SnapshotCodec();
+            var replayCodec    = new SnapshotCodec();
 
             var rng   = new DeterministicRngService(0xABCDEF0123456789UL);
             var clock = new MatchClock(0UL);
-            var engine = new ReplayEngine(codec, rng, clock, fingerprint);
+            var engine = new ReplayEngine(replayCodec, rng, clock, fingerprint);
 
             var header = new SnapshotHeader();
             // Initialize sets Cursor = EndOfSnapshot(tick) — step 7 already satisfied — and
@@ -1052,18 +1156,11 @@ namespace TacticalDirector.DeterministicSim
             payload.PayloadBytes[0] = 0x01;
             payload.BytesWritten    = 1;
 
-            // Fixture corrected (dotnet CI gate). The previous version called codec.Encode(),
-            // which is the RECORDING-side operation: it ADVANCES the codec's stored _prevDigest
-            // to the just-encoded payload digest D, leaving the chain authority positioned to
-            // record the NEXT snapshot. PrepareReplay then ran step-4 ValidatePrevDigest with
-            // _prevDigest = D against the genesis snapshot's recorded PrevSnapshotDigest = zeros,
-            // which mismatched and returned ERR_DS_DIGEST_CHAIN_BREAK (0x1608). That conflated
-            // the recording-side chain authority with the replay-side one. On a fresh codec the
-            // stored _prevDigest is already the genesis sentinel (all-zeros), which is exactly
-            // what a well-formed genesis snapshot's recorded PrevSnapshotDigest must match, so
-            // no Encode is needed here. CurrentSnapshotDigest stays all-zeros (a valid digest
-            // value); CommitLoadedDigest threads it forward without affecting this assertion.
-            // ReplayEngine / SnapshotCodec are unchanged — production is correct per §4.2.2.
+            // Encode on the RECORDING codec: this is what stamps CurrentSnapshotDigest, and it
+            // advances only that codec's chain authority — the replay codec is untouched, so step 4a
+            // still sees the genesis sentinel it needs. Both halves of the earlier fixture's dilemma
+            // are satisfied at once, without asserting a record shape that cannot occur.
+            recordingCodec.Encode(header, payload);
 
             ushort err = engine.PrepareReplay(header, payload);
             Assert.AreEqual(0, err,

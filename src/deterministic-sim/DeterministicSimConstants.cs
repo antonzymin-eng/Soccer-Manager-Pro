@@ -1,7 +1,9 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-08-22 (ERR-016-009: DOMAIN_TAG_BUILD_IDENTITY 0x2E + BUILD_IDENTITY_VERSION +
-//           ERR_DS_REPLAY_BUILD_MISMATCH 0x160E for the §2.3.2 buildHash — v1.8)
+// Modified: 2026-08-22 (ERR-016-011: ERR_DS_SNAPSHOT_DIGEST_MISMATCH 0x160F, replay step 4b — v1.10;
+//           prior same day ERR-016-010 SNAPSHOT_FILE_MAGIC / _FORMAT_VERSION v1.9;
+//           ERR-016-009 DOMAIN_TAG_BUILD_IDENTITY 0x2E + BUILD_IDENTITY_VERSION +
+//           ERR_DS_REPLAY_BUILD_MISMATCH 0x160E for the §2.3.2 buildHash v1.8)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.4, §3.2.4.1, Code Standards #20
 // Purpose:  All numeric and string constants for the deterministic simulation system.
@@ -253,6 +255,16 @@ namespace TacticalDirector.DeterministicSim
         /// </summary>
         public const ushort ERR_DS_REPLAY_BUILD_MISMATCH = 0x160E;
 
+        /// <summary>
+        /// [FIXED] Replay step 4b refused: a loaded record's OWN §3.2.3 digest, re-derived from the
+        /// header and payload just read, does not match the stored
+        /// <c>currentSnapshotDigest</c> — the record's bytes are not the bytes it was written from.
+        /// §3.4 / EC-016-016. Distinct from <see cref="ERR_DS_DIGEST_CHAIN_BREAK"/> (0x1608), which is
+        /// the chain LINK to the predecessor: step 4a asks "is this the record that should follow the
+        /// last one?", step 4b asks "are these bytes the record they claim to be?".
+        /// </summary>
+        public const ushort ERR_DS_SNAPSHOT_DIGEST_MISMATCH = 0x160F;
+
         // ── RNG cryptographic parameters ──────────────────────────────────────────────
 
         /// <summary>[FIXED] HKDF key derivation function identifier. §3.2.1 / §3.4.</summary>
@@ -390,4 +402,13 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | ERR_DS_REPLAY_BUILD_MISMATCH = 0x160E. Allocated AFTER the       |
 // |         |            |        | roadmap §6 reserved block 0x2B-0x2D so every spec-pinned number   |
 // |         |            |        | stays stable; no SubsystemOrdinals mirror (no registered stream). |
+// | 1.9     | 2026-08-22 | —      | ERR-016-010: SNAPSHOT_FILE_MAGIC ('S''N''A''P') +                 |
+// |         |            |        | SNAPSHOT_FILE_FORMAT_VERSION for the §3.9.2.1 record frame, and   |
+// |         |            |        | SNAPSHOT_SCHEMA_VERSION's doc now states why it must NOT be used  |
+// |         |            |        | for a file-frame change (it rides in the §3.2.3 digest preimage). |
+// | 1.10    | 2026-08-22 | —      | ERR-016-011: ERR_DS_SNAPSHOT_DIGEST_MISMATCH = 0x160F for replay  |
+// |         |            |        | step 4b — a loaded record's own digest, re-derived and compared.  |
+// |         |            |        | Distinct from ERR_DS_DIGEST_CHAIN_BREAK (0x1608), which is the    |
+// |         |            |        | chain LINK: 4a asks whether this record follows the last one, 4b  |
+// |         |            |        | asks whether these bytes are the record they claim to be.         |
 #endregion

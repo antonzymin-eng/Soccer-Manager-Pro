@@ -14,7 +14,26 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 22, 2026, later same day (v2.118 — **`ERR-016-010`: `SaveManager`'s
+> **Last Updated:** August 22, 2026, latest same day (v2.119 — **`ERR-016-011`: replay step 4b —
+> a loaded record's own §3.2.3 digest is now re-derived and compared.** Step 4 had only ever checked
+> the chain LINK, so `currentSnapshotDigest` was written, stored, loaded and never recomputed — an
+> altered **payload**, the authoritative state step 5 rehydrates, loaded clean. **Modified:**
+> `SnapshotCodec.cs` (`ComputeSnapshotDigest` extracted as the SINGLE owner of the §3.2.3 preimage,
+> shared by `Encode` and the new public `ValidateCurrentDigest`, which is pure with respect to the
+> chain state), `ReplayEngine.cs` (step 4 split 4a/4b, 4b before step 5 — unverified state must not be
+> rehydrated; still an 8-step lifecycle per FR-DS-012),
+> `DeterministicSimConstants.cs` (`ERR_DS_SNAPSHOT_DIGEST_MISMATCH = 0x160F`),
+> `tests/DeterministicSimTests.cs`. **The single-owner extraction is not tidiness** — two hand-written
+> derivations of one preimage is the `ERR-010-002` class, and a drifting verifier would reject every
+> honest record. **Turning the check on immediately failed the suite's own happy-path lifecycle
+> test**, whose "well-formed" fixture had never called `Encode` and carried an all-zero digest;
+> corrected to the two-codec form (recording vs replay chain authority). 4 behaviours locked across 3
+> new tests + 1 strengthened; 2 mutants, killing in both directions. **No `DETERMINISM_DIGEST_VERSION`
+> bump** — the digest checked is the one §3.2.3 already defined. **GATE: whole tree, 33 test
+> assemblies, 0 errors, quarantine empty; `DeterministicSim.Tests` 86/0/1, `MatchEngine.Tests`
+> 472/1/11** — exactly one suite changed against the previous commit's run. Prior entry below.)
+
+> **Last Updated (prior):** August 22, 2026, later same day (v2.118 — **`ERR-016-010`: `SaveManager`'s
 > on-disk record now IS the §3.9.2 layout, closing both remaining gaps on the replay-identity
 > contract.** The fixed 87-byte header had contradicted that normative layout in four respects at
 > once — no `environmentFingerprint` (FR-DS-010 requires it; §3.9.2 already listed it), no
@@ -2178,6 +2197,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.119 | 2026-08-22 | — | **`ERR-016-011` — replay step 4b re-derives a loaded record's own §3.2.3 digest.** Step 4 checked only the chain link, so an altered payload — the state step 5 rehydrates — loaded clean. `ComputeSnapshotDigest` extracted as the single owner of the preimage (recorder and verifier cannot drift, the ERR-010-002 class); new `SnapshotCodec.ValidateCurrentDigest` + `ERR_DS_SNAPSHOT_DIGEST_MISMATCH` (0x160F); step 4 split 4a/4b, still 8 steps. Turning it on failed the suite's own happy-path fixture, which had never called `Encode` — corrected to two codecs. 2 mutants, killing in both directions. No digest-version bump. Whole-tree gate: `DeterministicSim.Tests` 86/0/1. |
 | 2.118 | 2026-08-22 | — | **`ERR-016-010` — `SaveManager`'s record now IS the §3.9.2 layout.** The fixed 87-byte header contradicted that normative layout four ways (no fingerprint, no `recordTrailer`, `currentSnapshotDigest` in the header rather than after the payload, no format identifier), which is why the fingerprint had nowhere to go and §4.2.2 step 3 could only fail closed. Now magic-led + frame-versioned, carrying the fingerprint and the §2.3.2 buildHash. `SNAPSHOT_SCHEMA_VERSION` deliberately unmoved (digest preimage ⇒ golden vectors). 3 `Assert.Ignore` stubs activated into 12 executed locks + 1 real skip; 3 mutants, one of which forced a better trailer lock. Whole-tree gate: 33 assemblies, 0 errors, quarantine empty, `DeterministicSim.Tests` 83/0/1. |
 | 2.117 | 2026-08-22 | — | **`ERR-016-009` — the #16 §2.3.2 `buildHash` exists.** SHA-256 over the MVIDs of a DECLARED authoritative assembly closure (closure = scope, MVIDs = content; a CI-stamped commit identifies source, not binary). NEW `BuildIdentity.cs` / `MatchEngineBuildIdentity.cs`; `SnapshotHeader.BuildHash` with a required `Initialize` parameter; gated at `RestoreFromSnapshot` step 0 with the new `ERR_DS_REPLAY_BUILD_MISMATCH` (0x160E); `MATCH_SAVE_FORMAT_VERSION` 1 → 2, refusing an empty hash at both ends. Deliberately outside every digest preimage, so no digest/schema version moves and no golden vector is invalidated. 27 locks; 3 executed mutants each killed by one lock; the suite caught `CaptureDurableHeader` dropping the field on first run. Whole-tree gate: 32 suites, 0 errors, quarantine empty, `MatchEngine.Tests` 472/1/11 against a 461/1/11 pre-change baseline of the same tree — exactly the 11 new locks, same single inherited failure. |
 | 2.116 | 2026-08-17 | — | **Comments only, one file — `src/match-engine/tests/MatchEngineCloseChanceScenarios.cs` → v1.2.** No predicate, bound, seed or `[GT]` changed; suite behaviour identical. The v1.1 KD-W1 hand-off is **WITHDRAWN** and both bounds are restated as **floors, not estimators**, on the August 10 bisect ported to `main` in this same pass (`close-chance-creation-design.md` §11, v2.3): the -021/-022/-023 shot-lane chain's directional effect on this metric is **−0.027 ± 0.039** over 18 paired seeds (t = −0.70, 8 up / 10 down) against a between-seed sd ≈ 0.17, the −0.119 that drove the August 7 rebaseline is the **4.6th percentile** of this pair's own estimator across all 153 pairs, and **4 of 18 seeds sit below −0.16 with none of the chain applied**. Seed count left at **2** by owner call — widening to six adds four 90-minute matches to a ~23-minute suite — so the limit is written at the predicate instead of widened away. The live failure remains `ERR-012-011` (C1: −0.189 ± 0.038, t = −5.05, 16/18 seeds down), held red by the August 11 owner call. Docs in the same commit: `spec-error-log.md` v2.17 (`ERR-008-023`'s missing body entry, written), `match-engine-wiring-backlog.md` v1.9, `open-issues.md`, root `CLAUDE.md`. **GATE RUN (whole tree, locally, August 17, 2026): FAILED — the baseline red state, not this landing's.** Build **0 errors**, 32 suites, quarantine unchanged; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** (55 m 11 s). The one failure is `sim_match_engine_close_chance`, the owner-held-red predicate this pass re-attributes rather than fixes; counts are **identical to main's W2 baseline (461/1/11)**, so no new failure. The `.cs` edit was proven comment-only by stripping comment lines from its own diff — zero non-comment lines remain. |
