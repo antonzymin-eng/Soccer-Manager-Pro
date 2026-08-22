@@ -9,10 +9,6 @@
 # Purpose: close the defect class adversarial-review rounds 6-8 kept finding and
 #          could not stop finding by review alone.
 #
-# Round 17 (L3): this was the only checker in tools/ without the File/
-# Modified/Author fields its siblings (doc-consistency-check.py,
-# recurring-defect-lint.py) both carry — added here to match, not restyled.
-#
 # TWO CHECKS RUN, not one, and both gate:
 #   CHECK 1 — the claim checker. Find every claim of the form "this command
 #             returns N", run the command, compare. This is the bulk of the
@@ -24,27 +20,24 @@
 #             shares a surface set (the SURFACE_GLOBS half) and because a
 #             second script would be a second thing to remember to run — it
 #             does NOT share CHECK 1's exit code except when both checks fail
-#             in the same run; see the exit-code table below (round 17, M14).
+#             in the same run; see the exit-code table below.
 #
 # WHY THIS EXISTS
 # ---------------
 # Rounds 4-8 diagnosed one recurring shape: **verification prose is never itself
 # verified.** The repo writes claims in a machine-checkable form constantly —
 # "(`grep -c '^- \*\*' docs/tracking/open-issues.md` → 18)" — and nothing ever
-# re-ran them. Measured instances of the resulting defect:
-#
-#   * root CLAUDE.md cited a grep as proof of a claim that grep REFUTES, and did
-#     so on the day it was written (round 8, rules H2).
-#   * Spec #20 §9.2 Q-04 ratified "three distinct IDs" against an actual six, in
-#     the checklist file whose own header carries a fabrication prohibition.
-#   * §9.1 C-02's recorded value stopped reproducing inside the very commit that
-#     claimed to have re-run every §9.1 and §9.2 command.
-#   * §3.2.1 offered "218 occurrences (`grep -rn ... | wc -l`)" as proof; the
-#     command returned 243, because the fix that wrote the sentence added 25.
-#
-# None of these is subtle. All survived multiple hostile human-grade review
-# rounds, because checking them means running seventeen commands by hand and a
-# reviewer under time pressure reads the number instead. A tool cannot get bored.
+# re-ran them. Four measured instances, each of which survived multiple hostile
+# human-grade review rounds: root CLAUDE.md cited a grep as proof of a claim
+# that grep REFUTES, on the day it was written; Spec #20 §9.2 Q-04 ratified
+# "three distinct IDs" against an actual six, in the checklist file whose own
+# header carries a fabrication prohibition; §9.1 C-02's recorded value stopped
+# reproducing inside the very commit that claimed to have re-run every §9.1 and
+# §9.2 command; §3.2.1 offered "218 occurrences" as proof of a command that
+# returned 243, because the fix that wrote the sentence added 25. None is
+# subtle. Checking them means running seventeen commands by hand, and a
+# reviewer under time pressure reads the number instead. A tool cannot get
+# bored.
 #
 # WHAT IT DOES NOT DO, STATED UP FRONT
 # ------------------------------------
@@ -54,48 +47,40 @@
 # value should be" is unambiguous. A claim whose command prints prose, a table,
 # or a multi-line report is COUNTED AND NAMED as unverified rather than silently
 # skipped — the round-5/6 lesson is that a checker's silent skips are where the
-# next defect hides, so every claim this tool declines to check is COUNTED AND
-# NAMED, and ITEMIZED unless `--quiet` (round 20, L9 — the `--quiet` fix
-# deliberately made the flag suppress the itemized per-claim decline LIST while
-# keeping every count; this sentence was not updated at the time, and CI runs
-# without `--quiet` so the gap was documentation-only, but it is the sentence
-# this whole tool's honesty rests on).
+# next defect hides. `--quiet` suppresses the itemized per-claim decline LIST
+# and keeps every count; CI runs without it.
 #
 # It recognises FOUR claim SHAPES, listed in CLAIM_SHAPES and printed by every
 # run so the reader never has to trust this comment:
 #   1. command, then the value       "`cmd` → 18", "`cmd` returned 218"
-#      Its two routes have DIFFERENT gap grammars (round 23, H21): an arrow
-#      cannot belong to a neighbouring clause, a VERB can, so the verb route
-#      admits only whitespace, closing markup and adverbs between the command
-#      and its verb, and only whitespace and markup between the verb and the
-#      value. Ordinary English was binding integers out of unrelated clauses
-#      — "(`cmd`) was re-run and found 2 orphans" reported a correct document
-#      wrong — and the census could not see it, because a shape had bound it.
+#      Its two routes have DIFFERENT gap grammars, and the asymmetry is the
+#      rule, not an accident: an arrow cannot belong to a neighbouring clause,
+#      a VERB can. So the verb route admits only whitespace, closing markup
+#      and adverbs between the command and its verb, and only whitespace and
+#      markup between the verb and the value. Ordinary English was otherwise
+#      binding integers out of unrelated clauses, and the census could not see
+#      it, because a shape had bound it. (Locked by VerbGapPrecisionTests.)
 #   2. command, colon, value         "`cmd`: **0**"
 #   3. value, then the command in parentheses    "8 scripts (`ls tools/*.py`)"
 #   4. value, an attribution clause, the command
 #                                    "60 files — re-derived by `ls … \| wc -l`"
 #                                    "35 assemblies via `ls -d src/*/ \| wc -l`"
-#      Since round 23 (H24) it also reads `with`, the bare stem `re-derive`,
-#      and a wrap prefix before the command, because this repo hard-wraps
-#      mid-sentence inside an ASCII tree diagram and a live claim there was
-#      bound by nothing.
+#      It also reads `with`, the bare stem `re-derive`, and a wrap prefix
+#      before the command, because this repo hard-wraps mid-sentence inside an
+#      ASCII tree diagram and a live claim there was bound by nothing.
 #
 # THE RESIDUAL BLIND SPOT IS THE POINT OF THIS PARAGRAPH, and it is no longer
-# described by naming instances someone happened to notice. Rounds 9 and 12
-# each published a blind spot as prose, and the prose then drifted: round 12
-# added shape 3 and left this section saying it "is not matched at all, and so
-# is not counted among the declines either", which the very next run refuted by
-# printing that exact claim in the declined list. So the blind spot is DERIVED
-# now, not written down: every backticked span that reads as a command, has an
-# integer near it — on its own line, or on the line either side when its own
-# line carries no digit at all (round 23, H24: this repo hard-wraps
-# mid-sentence, and README.md:930-931 was a LIVE drift-capable claim split
-# across a wrap that no shape bound and the census could not see) — and binds
-# to NO shape is counted and named in the `unrecognised-shape` decline
-# bucket. Read that bucket, not this comment, for what the tool cannot see —
-# and if a claim shape is worth learning, it will be sitting in that list
-# under its own file and line.
+# described by naming instances someone happened to notice. Two earlier rounds
+# each published a blind spot as prose, and the prose then drifted — one of
+# them left this section asserting that a shape "is not matched at all", which
+# the very next run refuted by printing that exact claim in the declined list.
+# So the blind spot is DERIVED now, not written down: every backticked span
+# that reads as a command, has an integer near it — on its own line, or on the
+# line either side when its own line carries no digit at all, because this repo
+# hard-wraps mid-sentence — and binds to NO shape is counted and named in the
+# `unrecognised-shape` decline bucket. Read that bucket, not this comment, for
+# what the tool cannot see; if a claim shape is worth learning, it will be
+# sitting in that list under its own file and line.
 #
 # TWO THINGS STILL REACH NO BUCKET, named rather than implied, because every
 # previous version of this paragraph was falsified by the next round:
@@ -103,36 +88,41 @@
 #     `tools/count-supplements.sh`) is refused by the census's own
 #     command-shape test, which requires "a binary-shaped head plus an
 #     argument only a command takes" so that the backticked IDENTIFIERS this
-#     corpus is full of do not drown the bucket — measured 2026-08-22, that
-#     predicate refuses 53,804 spans and admits 195, which is the ratio the
-#     bucket would otherwise carry. (No figure is copied here from the
-#     ~1,100 in check_claim's own note below: that one counts a DIFFERENT
-#     population — identifiers a claim SHAPE bound and check_claim then had
-#     to dispose of — and round 20's M19 is exactly the defect of moving a
-#     number between the two.) That predicate cannot tell the two apart, and
-#     round 23 (H25) verified the span stays invisible even with the bound
-#     set emptied — so it is a limit of the SHAPE TEST, not of the
-#     reservation H25 fixed.
+#     corpus is full of do not drown the bucket. Re-derived 2026-08-22 by
+#     running `command_shaped()` over every `COMMAND_SPAN` match in every
+#     file `collect_surfaces()` returns: it refuses 70,462 spans and admits
+#     220. (The figure that stood here, 53,804 / 195, reproduced under no
+#     variant of that walk — named surfaces alone, globbed alone, or with
+#     the census's own `head in ALLOWED_CMDS` disjunct added — so it is
+#     replaced rather than carried, and the METHOD is stated with it so the
+#     next reader can re-run it instead of trusting it. Do NOT copy a figure
+#     here from
+#     check_claim's own note below: that one counts a DIFFERENT population —
+#     identifiers a claim SHAPE bound and check_claim then had to dispose of
+#     — and moving a number between the two is a defect this file has already
+#     filed once.) That predicate cannot tell the two apart, and the span
+#     stays invisible even with the bound set emptied — so it is a limit of
+#     the SHAPE TEST, not of the census's span reservation.
 #   * an integer further from the span than UNRECOGNISED_RADIUS, or two
 #     wrapped lines away.
 #
-# Round 19 (H15): that sentence was FALSE for one whole class until this
-# round, and it was false in the way this file keeps finding — "reads as a
-# command" was a HAND-WRITTEN LIST of binary names. A claim quoting a binary
-# on neither curated list (`comm`, `tac`, `pcregrep`, `tree`, `nl`, `du`) was
-# dropped by check_claim with no bucket, no count and no line, and could not
-# reach the census either, because the claim shape HAD bound the span. The
-# test is a positive SHAPE now — a binary-shaped head plus an argument only a
-# command takes — so a binary nobody here has heard of is named rather than
-# vanishing. Latent when found (0 live instances), which makes it a false
-# statement about coverage rather than a missed defect; it was the statement
-# that had to change.
+# THAT SENTENCE WAS FALSE FOR ONE WHOLE CLASS until round 19, and it was false
+# in the way this file keeps finding: "reads as a command" was a HAND-WRITTEN
+# LIST of binary names. A claim quoting a binary on neither curated list
+# (`comm`, `tac`, `pcregrep`, `tree`, `nl`, `du`) was dropped with no bucket,
+# no count and no line, and could not reach the census either, because the
+# claim shape HAD bound the span. The test is a positive SHAPE now — a
+# binary-shaped head plus an argument only a command takes — so a binary
+# nobody here has heard of is named rather than vanishing. It was latent when
+# found (0 live instances), which makes it a false statement about coverage
+# rather than a missed defect; the statement was the thing that had to change.
+# See command_shaped() and the measurement beside it.
 #
 # The same rule governs the answer side. ANSWER_KINDS holds exactly one entry
-# — DERIVED from the shapes that name it, never written out (round 19, H18) —
-# and the single-integer floor above is real; a claim whose command prints
-# prose, a table or a multi-line report lands in `not-a-single-integer`, which
-# is a count of what a second answer kind would be worth.
+# — DERIVED from the shapes that name it, never written out — and the
+# single-integer floor above is real; a claim whose command prints prose, a
+# table or a multi-line report lands in `not-a-single-integer`, which is a
+# count of what a second answer kind would be worth.
 #
 # SAFETY
 # ------
@@ -142,129 +132,94 @@
 # substitution, chaining, or an unlisted binary is refused and counted, the
 # invocation never goes through a shell, and it runs under a timeout.
 #
-# Being on ALLOWED_CMDS is NOT by itself the safety property, and round 9 (H1)
-# found the header claiming it was: "read-only by construction (no writing
-# command is on the list)" was false, demonstrated by `sed -i` rewriting a file
-# in the working tree while the tool printed PASS. Several genuinely read-only
-# tools carry a write or execute escape hatch — `sed -i`, `find -delete` /
-# `-exec`, `python3 -c`, `sort -o`, `rg --pre`, `git -c`, `awk 'BEGIN{system()}'`,
-# `uniq IN OUT`. They carry READ hatches too, and those are the harder half,
-# because nothing in rule 6 below bounds a read: `awk 'BEGIN{ARGV[ARGC++]=...}'`
-# opens any file as main input, `grep -R` / `find -L` / `rg --follow` /
-# `diff -r` walk out through a symlink, and `wc --files0-from=F` takes the
-# paths it opens from F's bytes (all round 22).
+# Being on ALLOWED_CMDS is NOT by itself the safety property, and round 9 found
+# the header claiming it was: "read-only by construction (no writing command is
+# on the list)" was false, demonstrated by `sed -i` rewriting a file in the
+# working tree while the tool printed PASS. Several genuinely read-only tools
+# carry a write or execute escape hatch, and they carry READ hatches too —
+# the harder half, because nothing in rule 6 below bounds a read. Every one is
+# a named regression test in tools/tests/test_doc_claim_check.py
+# (HatchRegressionTests, GitRefRegressionTests, AwkEnvironmentAndLoadHatchTests,
+# AwkArgvArgcTests, SymlinkTraversalTests, Files0FromTests,
+# GnuLongOptionAbbreviationTests, ClusteredShortOptionTests,
+# PostExpansionRevalidationTests, ChildResourceLimitTests), so the exploits are
+# not recited here; the RULES they produced are, because a test cannot state
+# why a rule has the shape it has.
 #
-# Rounds 9, 14 and 15 each falsified this section's then-current safety claim by
-# reproduction, so state the recurring root error before the rules: **an escape
-# hatch enumerated by name, on an argument that is itself a language, is a list
-# of the hatches someone happened to think of.** Round 9 named `system` and
-# `getline` for awk; round 15 executed `awk 'BEGIN{print "touch X" | "sh"}'`,
-# which uses neither. Round 14 put it as "the validation ran on a SHAPE, not on
-# the argv that actually executes"; round 15 adds its sibling — the validation
-# ran on the SPELLING, not on the option (`sort -o` was denied while
-# `sort -oFILE` wrote the file). Round 18 makes it FOUR consecutive rounds of
-# the same class, each time inside the previous round's fix: `--output` was
-# denied while `--o=`, `--out=` and `--compress-progr=` were not, because
-# `getopt_long` accepts any unambiguous PREFIX of a long name and this file
-# compared long options by exact string (H12). The same round found path
-# confinement skipping every token beginning with `-`, so an ATTACHED option
-# value (`grep -f/etc/hostname`, `--from-file=/tmp/secret`) never reached the
-# containment test at all and its integer was compared (H14) — the separated
-# spellings of both were correctly declined, which is the respelling shape
-# again, one layer over.
+# TWO GENERALISATIONS, EACH PAID FOR BY SEVERAL ROUNDS OF THE SAME CLASS:
 #
-# Round 21 makes it FIVE, and it arrived inside H14's own fix: H14 read the
-# attached value as `tok[2:]`, which is the value only when the option letter
-# is the first character of the token, and a CLUSTER puts it further along —
-# `grep -cf/etc/hostname` handed the child `/etc/hostname` while this file
-# computed `f/etc/hostname` and passed it. The fix is the first one in the
-# chain that does not enumerate anything: an attached short-option value is a
-# SUFFIX of its token by the definition of `getopt`, so every suffix is
-# tested and the question "which letters take a value" — the question whose
-# five successive wrong answers are this list — is never asked (H1,
-# _attached_option_values). It is worth stating what that does and does not
-# settle: it closes the SPELLING dimension of a dash-token completely, and it
-# says nothing about a path that reaches a child by some other route.
+#   (i) AN ESCAPE HATCH ENUMERATED BY NAME, ON AN ARGUMENT THAT IS ITSELF A
+#       LANGUAGE, IS A LIST OF THE HATCHES SOMEONE HAPPENED TO THINK OF.
+#       Round 9 named `system` and `getline` for awk; round 15 executed
+#       `awk 'BEGIN{print "touch X" | "sh"}'`, which uses neither. Round 14 put
+#       it as "the validation ran on a SHAPE, not on the argv that actually
+#       executes"; round 15 added its sibling — the validation ran on the
+#       SPELLING, not on the option (`sort -o` was denied while `sort -oFILE`
+#       wrote the file). Round 18 made it four consecutive rounds, each inside
+#       the previous round's fix, because `getopt_long` accepts any unambiguous
+#       PREFIX of a long name. Round 21 made it five, inside round 18's own
+#       fix: an attached value read as `tok[2:]` is the value only when the
+#       option letter is the FIRST character, and a CLUSTER puts it further
+#       along. The fix that ended the chain is the first one that enumerates
+#       nothing: an attached short-option value is a SUFFIX of its token by
+#       the definition of `getopt`, so EVERY suffix is tested and the question
+#       "which letters take a value" — whose five successive wrong answers are
+#       this list — is never asked. See _attached_option_values(). It closes
+#       the SPELLING dimension of a dash-token completely, and says nothing
+#       about a path reaching a child by any other route.
 #
-# ROUND 22 IS THAT SENTENCE COMING TRUE, TWICE, AND IT IS WHY THE ROUNDS 9-21
-# CHAIN ABOVE IS NOT THE WHOLE STORY. Both findings are the same class in the
-# dimension round 21 explicitly disclaimed — a path reaching a child by a
-# route that is not a dash-token — and the OS child limits (rule 6) touch
-# neither, because every one of them bounds writing, CPU or memory and both
-# of these are READS:
-#   * H19 — a path can be a STRING LITERAL INSIDE A PROGRAM.
-#     `awk 'BEGIN{ARGV[ARGC++]="/etc/passwd"}END{print NR}' data.txt` assigns
-#     into awk's own operand vector, so awk opens that file as ordinary main
-#     input. No pipe, no `getline`, no disallowed call, no forbidden
-#     character; `self_contained` is satisfied by the legitimate `data.txt`,
-#     and confinement never sees the path because it is not an operand.
-#     Reproduced through scan() into the FAIL block at exit 1 ("document says
-#     3; command returns 28"), and as a byte-level oracle over /etc/hostname
-#     using only allow-listed calls. Closed by AWK_SPECIAL_ARRAYS.
-#   * H20 — a path can be reached by TRAVERSAL, and by FILE CONTENTS.
-#     `grep -R`, `find -L`/`-H`/`-follow`, `rg --follow` and `diff -r` walk
-#     THROUGH a symlink inside an in-repo directory operand, whose own
-#     realpath is inside the root and passes. And `wc --files0-from=F`,
-#     `sort --files0-from=F`, `find -files0-from F` take the paths to read
-#     out of another file's BYTES, where no operand check of any kind can
-#     reach them. Every one reproduced against a committed symlink or a
-#     committed byte string, with its non-following sibling as the control;
-#     the `wc` one was live rather than latent, because `self_contained`
-#     inspects only the FIRST pipeline segment. Closed by per-binary flag
-#     denials AND by `escaping_symlink_under()`, which is the structural
-#     half: no operand DIRECTORY may contain an escaping symlink at all,
-#     whatever flags were passed and whatever the binary would do with them.
-# The lesson the chain above had been drawing — "stop enumerating spellings"
-# — was right and too narrow. The generalisation is: THE SET OF ARGV TOKENS
-# IS NOT THE SET OF PATHS A CHILD OPENS. Rule 4 below now says so in terms,
-# and names the three routes it cannot follow rather than implying there are
-# none.
+#  (ii) THE SET OF ARGV TOKENS IS NOT THE SET OF PATHS A CHILD OPENS. Round 22
+#       is (i)'s closing disclaimer coming true, twice, in the dimension it
+#       explicitly gave up: a path can be a STRING LITERAL INSIDE A PROGRAM
+#       (awk's `ARGV[ARGC++]="/etc/passwd"` makes awk open that file as
+#       ordinary main input — no pipe, no `getline`, no disallowed call, no
+#       forbidden character, and confinement never sees it because it is not an
+#       operand), and a path can be reached by TRAVERSAL (a recursing binary
+#       walking through a symlink inside an in-repo directory operand whose own
+#       realpath passes) or by FILE CONTENTS (`--files0-from=F` takes the paths
+#       it opens out of F's bytes, where no operand check can reach them).
+#       The OS child limits (rule 6) touch none of it, because every one of
+#       them bounds writing, CPU or memory and all three of these are READS.
+#       Rule 4 below therefore states what it enforces rather than what it
+#       reaches for, and NAMES the routes it cannot follow.
 #
-# So the sixth rule below is a different KIND of rule, and it was added for
-# that recurrence rather than for any one report: after four rounds of
-# closing respellings by name, the read-only property is moved off this
-# file's judgement and onto the kernel — and round 21 is the measured proof
-# that this was necessary but not sufficient, since the limits do not touch a
-# READ and H1 was a read. Enumeration is still necessary — the
-# limits do not stop reads, and reads are how this tool's answers are
-# fabricated — but it is no longer the only thing standing between a document
-# line and the runner's filesystem.
+# So the sixth rule below is a different KIND of rule, added for that
+# recurrence rather than for any one report: after four rounds of closing
+# respellings by name, the read-only property is moved off this file's
+# judgement and onto the kernel — and round 21 is the measured proof that this
+# was necessary but not sufficient, since the limits do not touch a READ.
+# Enumeration is still necessary — the limits do not stop reads, and reads are
+# how this tool's answers are fabricated — but it is no longer the only thing
+# standing between a document line and the runner's filesystem.
 #
 # The property therefore rests on six things together, in this order of
 # importance:
-#   1. ALLOW-LISTS WHEREVER THE ARGUMENT IS A LANGUAGE. `sed` (round 9) and
-#      `python3` (round 15, H2) are DROPPED — for python3 the old rationale
-#      ("a `.py` file the checkout already contains — CI runs those anyway")
-#      was simply false: CI runs four NAMED scripts, and on `pull_request` the
-#      checkout IS the pull request's head, so a PR that adds `tools/pwn.py`
-#      and a claim quoting it had arbitrary code executed with write access.
-#      `awk` is kept — a real, currently-reproducing claim on this tree pipes
-#      through it (see the SCRIPT-hatches paragraph below, the canonical site
-#      for that measurement — round 20, M19: the fraction used to be stated
-#      here too, twice, and had drifted wrong in both places) — with its
-#      program allow-listed (AWK_ALLOWED_CALLS) rather than blacklisted, plus a
-#      flat refusal of `|` and `@` in any awk token and of every awk SPECIAL
-#      ARRAY (AWK_SPECIAL_ARRAYS — `ARGV`/`ARGC`, `ENVIRON`/`PROCINFO`,
-#      gawk's `SYMTAB`/`FUNCTAB`). Those are variables, not calls, so the
-#      call allow-list structurally cannot see them; `ARGV` (round 22, H19)
-#      is the one that opens an arbitrary FILE, and it was missed for four
-#      rounds because it calls nothing at all.
-#   2. Each binary's `denied_flags` (BINARIES, round 17 L1 — one `Binary`
-#      record per allow-listed binary, consolidated from what used to be
-#      separate DENIED_FLAGS / DENIED_FLAG_PREFIXES tables; round 24, M28
-#      removed a third table, `denied_prefixes`, that `_option_cores()`'s
-#      own `=value` reduction below and the abbreviation rule after it had
-#      made entirely redundant) compared on the option CORE, so an attached
-#      value (`-oFILE`, `-O./p.sh`) or an un-enumerated `--long=value` cannot
-#      respell a denied hatch past the check (round 15, H3) — and, since
-#      round 18 (H12), a denied long option's NAME is also matched as a
-#      PREFIX (`_abbreviated_denial()`), because `getopt_long` accepts
-#      `--o=FILE` for `--output` and `--compress-progr=./p.sh` for
-#      `--compress-program`. Over-refusal is the safe direction and no live
-#      claim uses an abbreviated long option.
+#   1. ALLOW-LISTS WHEREVER THE ARGUMENT IS A LANGUAGE. `sed` and `python3` are
+#      DROPPED. For python3 the old rationale ("a `.py` file the checkout
+#      already contains — CI runs those anyway") was simply false: CI runs four
+#      NAMED scripts, and on `pull_request` the checkout IS the pull request's
+#      head, so a PR that adds `tools/pwn.py` and a claim quoting it had
+#      arbitrary code executed with write access. `awk` is KEPT, and the
+#      argument for keeping it is qualitative rather than a coverage fraction:
+#      a real, currently-reproducing claim on this tree pipes through it, so
+#      dropping it costs measured coverage. (The SCRIPT-hatches paragraph
+#      beside AWK_ESCAPES below is the canonical site for that fact — the
+#      fraction used to be stated here too and had drifted wrong in both
+#      places.) Its program is allow-listed (AWK_ALLOWED_CALLS) rather than
+#      blacklisted, plus a flat refusal of `|` and `@` in any awk token and of
+#      every awk SPECIAL ARRAY (AWK_SPECIAL_ARRAYS — `ARGV`/`ARGC`,
+#      `ENVIRON`/`PROCINFO`, gawk's `SYMTAB`/`FUNCTAB`). Those are variables,
+#      not calls, so the call allow-list structurally cannot see them.
+#   2. Each binary's `denied_flags` (BINARIES — one `Binary` record per
+#      allow-listed binary) compared on the option CORE, so an attached value
+#      (`-oFILE`, `-O./p.sh`) or an un-enumerated `--long=value` cannot respell
+#      a denied hatch past the check — and a denied long option's NAME is also
+#      matched as a PREFIX (`_abbreviated_denial()`), because `getopt_long`
+#      accepts `--o=FILE` for `--output`. Over-refusal is the safe direction
+#      and no live claim uses an abbreviated long option.
 #   3. GIT_READONLY holding only subcommands that cannot destroy anything —
-#      `branch` and `tag` are gone, because `-D`/`-d` delete refs (round 15,
-#      H4), and `--output` is denied because a diff writes a file with it.
+#      `branch` and `tag` are gone, because `-D`/`-d` delete refs, and
+#      `--output` is denied because a diff writes a file with it.
 #   4. PATH CONFINEMENT, checked after glob expansion. The property it is
 #      REACHING FOR is "a command may read the checkout and nothing else";
 #      the property it ENFORCES is narrower and is stated that way here from
@@ -273,69 +228,38 @@
 #        (a) every OPERAND, and every value a dash-token can carry, realpaths
 #            inside the root (escaping_operand);
 #        (b) no operand DIRECTORY contains a symlink leaving the root, at any
-#            depth (escaping_symlink_under, round 22 H20) — so a recursing
-#            command cannot walk out of the checkout even if this file has
-#            mismodelled which of its flags follow links;
+#            depth (escaping_symlink_under) — so a recursing command cannot
+#            walk out of the checkout even if this file has mismodelled which
+#            of its flags follow links;
 #        (c) the routes that reach a path by NEITHER of those are refused by
 #            NAME, per binary and per language, because there is nothing in
-#            argv for a containment rule to test: awk's `ARGV` (H19), and the
+#            argv for a containment rule to test: awk's `ARGV`, and the
 #            `--files0-from` / `-files0-from` family on `wc`, `sort` and
-#            `find`, which read the paths to open out of another file's bytes
-#            (the H20 sweep).
+#            `find`, which read the paths to open out of another file's bytes.
 #      (c) is an enumeration and is therefore the weak leg, deliberately kept
-#      visible as such rather than folded into the sentence above it.
-#      Without any of this, `grep -c .
-#      /etc/passwd` was a one-integer read oracle over the host (round 15, M3).
-#      Round 18 (H14): "every operand" now includes the value ATTACHED to an
-#      option token, which the check used to skip wholesale — until then this
-#      very sentence was false as written, and `diff --from-file=/tmp/secret
-#      data.txt \| wc -l` printed an integer derived from a file outside the
-#      checkout, into the FAIL block, for anyone reading the CI log.
-#      Round 21 (H1) — the FIFTH respelling, and this sentence was false
-#      AGAIN in the same way, one layer down. H14 extracted the attached
-#      value as `tok[2:]`, which assumes the option letter is the first
-#      character; in a CLUSTER it is not. `grep -cf/etc/hostname data.txt` is
-#      `-c -f /etc/hostname` to every GNU binary here, so the value is
-#      `/etc/hostname` — while the check computed `f/etc/hostname`, a
-#      RELATIVE path that resolves INSIDE the root and passed. The separated
-#      (`-f /etc/hostname`) and attached (`-f/etc/hostname`) spellings were
-#      correctly declined the whole time; only the clustered one walked
-#      through, and the round-18 OS limits do not cover it, because a read is
-#      not a write. The rule now refuses to model option grammars at all: an
-#      attached short-option value is, by the definition of `getopt`, a
-#      SUFFIX of its token, so EVERY suffix is tested as a path and the
-#      binary's own choice of which one is the value stops mattering. See
-#      _attached_option_values() for the argument, and for the honest
-#      statement of what it does NOT cover (a path inside a `key=value` bare
-#      operand, a file a binary opens on its own, the environment).
-#      ROUND 22 (H19, H20) — and this sentence's "a file a binary opens on
-#      its own" was not a hypothetical corner: it was THREE live routes, and
-#      naming them as a residual is how they were found. The suffix rule is
-#      still exactly right about dash-tokens and still says nothing about
-#      anything else, which is why (b) and (c) above exist. What remains
-#      unenforced by this file, named rather than implied — see
-#      escaping_symlink_under()'s docstring and the round-22 version-history
-#      row: a recursion with NO operand (defaulting to `.`), which the flag
-#      denials and `needs_file` cover instead; a binary's own config or
-#      dot-files (git's `.git/config`, rg's `RIPGREP_CONFIG_PATH`), none of
-#      which a DOCUMENT can point anywhere; and TOCTOU between the symlink
-#      walk and exec, against an external writer this tool has never claimed
-#      to defend.
+#      visible as such rather than folded into the sentence above it. Without
+#      any of this, `grep -c . /etc/passwd` was a one-integer read oracle over
+#      the host. What remains unenforced by this file, named rather than
+#      implied — see escaping_symlink_under()'s docstring: a recursion with NO
+#      operand (defaulting to `.`), which the flag denials and `needs_file`
+#      cover instead; a binary's own config or dot-files (git's `.git/config`,
+#      rg's `RIPGREP_CONFIG_PATH`), none of which a DOCUMENT can point
+#      anywhere; a path inside a `key=value` bare operand; the environment;
+#      and TOCTOU between the symlink walk and exec, against an external
+#      writer this tool has never claimed to defend.
 #   5. RESOURCE BOUNDS: no shell, a wall-clock timeout AND a hard cap on how
 #      much a segment may print, because a timeout does not bound memory —
 #      one document line drove the checker to 587 MB and `cat /dev/zero` would
-#      OOM-kill the runner first (round 15, M1). NUL is refused up front and
-#      ValueError caught, so document text cannot abort the scan (M2).
-#   6. OS-ENFORCED CHILD LIMITS (round 18) — the only rule here that is not an
+#      OOM-kill the runner first. NUL is refused up front and ValueError
+#      caught, so document text cannot abort the scan.
+#   6. OS-ENFORCED CHILD LIMITS — the only rule here that is not an
 #      enumeration, and the only one that holds against a hatch nobody has
 #      thought of. Every child runs under RLIMIT_FSIZE=0, RLIMIT_CPU and
-#      RLIMIT_AS, set in the forked child before exec. Demonstrated on a hatch
-#      fixed by no name in this file: `git status \| wc -l` passes the
-#      allow-list, every deny-flag and confinement, and REWRITES `.git/index`
-#      in the checkout — it now dies on that write and is declined by name,
-#      with the index byte-identical afterwards. State its LIMITS honestly,
-#      because a safety claim stated too broadly is the error this section
-#      keeps recording:
+#      RLIMIT_AS, set in the forked child before exec. It was demonstrated on
+#      a hatch fixed by no name in this file: `git status \| wc -l` passes the
+#      allow-list, every deny-flag and confinement, and REWRITES `.git/index`.
+#      State its LIMITS honestly, because a safety claim stated too broadly is
+#      the error this section keeps recording:
 #        * it does not stop READS at all. Rule 4 is still the only thing
 #          between a document line and every file the runner can read.
 #        * it does not stop EXECUTION. A permitted `--compress-program`
@@ -345,7 +269,7 @@
 #          not assumed. So rules 1-4 are load-bearing exactly as before, and
 #          nothing was relaxed because these limits exist.
 #        * it is POSIX-only. Without a `resource` module the tool degrades to
-#          the pre-round-18 behaviour and PRINTS that it has done so
+#          the pre-limit behaviour and PRINTS that it has done so
 #          (child_limit_summary(), on every run) rather than losing the
 #          property silently.
 #        * a child killed mid-write can leave a partial artefact its own
@@ -353,20 +277,13 @@
 #          `.git/index.lock`. Recorded rather than worked around — exempting
 #          git from the limit would exempt the one binary here that writes.
 #        * the limits are the STRICTEST of what this file asks for and what
-#          the runner already imposed — both fields, soft and hard. Round 21
-#          (H2): that was the stated guarantee and not the implemented one.
-#          `_lower_limit` clamped against the inherited HARD limit alone, so
-#          an inherited soft limit was RAISED — measured, an inherited
-#          RLIMIT_CPU of (10, 100) came out of the child as (60, 65), six
-#          times the CPU the runner intended, and an inherited (10, INF) was
-#          not clamped at all. Same weakening on RLIMIT_AS, where a runner's
-#          memory cap is a real containment measure. RLIMIT_FSIZE=0 was never
-#          affected and still is not — 0 is the minimum — but only because
-#          the clamp excludes RLIM_INFINITY from the comparison rather than
-#          calling `min()` on it: RLIM_INFINITY is -1 on Linux, so a naive
-#          `min(0, RLIM_INFINITY)` would have turned the load-bearing write
-#          ceiling into "unlimited" on any ordinary host. Checked, not
-#          assumed (_tightest()).
+#          the runner already imposed — both fields, soft and hard. That was
+#          the stated guarantee before it was the implemented one: clamping
+#          against the inherited HARD limit alone RAISED an inherited soft
+#          limit. RLIMIT_FSIZE=0 was never affected and still is not, but only
+#          because the clamp excludes RLIM_INFINITY from the comparison rather
+#          than calling `min()` on it — see _tightest(), which carries that
+#          argument, because it is a trap rather than a nicety.
 #
 # Every one of those refusals is COUNTED AND NAMED in the printed output. That
 # is not politeness: a silent refusal is indistinguishable from a pass, which
@@ -385,36 +302,30 @@
 #       document: a usage error, a named surface missing from the tree, a
 #       surface glob matching no file, fewer claims executed than
 #       MIN_EXECUTED_CLAIMS, fewer LIVE (gate-capable) claims than
-#       MIN_LIVE_CLAIMS (round 19, H13), CHECK 2's own recall below its
-#       floors (round 19, H17 — until then, blinding CHECK 2 completely still
-#       printed PASS and exited 0), or the doc-consistency-check.py import
-#       CHECK 1's dated-record excusal depends on failing to load or missing
-#       the surface this file calls through it (round 17, M13). It outranks 1 and 3,
-#       because with the surface set (or the import) broken, the mismatches
-#       that were found are not the mismatches that exist. Before H9 existed,
-#       deleting 8 of the 9 named surfaces printed eight MISSING SURFACE
-#       lines, checked one claim, and exited 0 with PASS.
+#       MIN_LIVE_CLAIMS, CHECK 2's own recall below its floors, or the
+#       doc-consistency-check.py import CHECK 1's dated-record excusal depends
+#       on failing to load or missing the surface this file calls through it.
+#       It outranks 1 and 3, because with the surface set (or the import)
+#       broken, the mismatches that were found are not the mismatches that
+#       exist. Before this existed, deleting 8 of the 9 named surfaces printed
+#       eight MISSING SURFACE lines, checked one claim, and exited 0 with PASS.
 #   3 = CHECK 2 FOUND A DOCUMENT WRONG, AND CHECK 1 DID NOT: at least one spec
 #       code fence references an identifier its own file does not declare, with
-#       every claim CHECK 1 checked reproducing. Round 17 (M14) split this out
-#       of 1 — before it, CHECK 1 and CHECK 2 fused into one exit code with
-#       nothing in the number itself saying which of two unrelated defect
-#       classes CI was red for; the printed FAIL block always named it, but the
-#       exit code — the thing automation COULD branch on without reading a
-#       log — did not. From the day this file was written until round 17,
-#       the dangling-identifier path returned 1, same as CHECK 1 — that
-#       history is why 1 still wins when both checks fail, rather than 3
-#       taking over as the newer code.
+#       every claim CHECK 1 checked reproducing. This was split out of 1, which
+#       had fused two unrelated defect classes into one number; the printed
+#       FAIL block always named which, but the exit code did not. From the day
+#       this file was written until that split, the dangling-identifier path
+#       returned 1 — that history is why 1 still wins when both checks fail,
+#       rather than 3 taking over as the newer code.
 #
-#       ROUND 24 (L15), STATED HONESTLY RATHER THAN LEFT IMPLIED: "the thing
-#       automation actually branches on" overclaimed a consumer this repo
-#       does not have. `ci.yml`'s own step is a single `run:` line —
-#       `python3 tools/doc-claim-check.py --repo .` — and GitHub Actions
+#       STATED HONESTLY RATHER THAN LEFT IMPLIED: "the thing automation
+#       actually branches on" would overclaim a consumer this repo does not
+#       have. `ci.yml`'s own step is a single `run:` line, and GitHub Actions
 #       fails a `run:` step on ANY non-zero exit identically; nothing in this
 #       repo currently reads 1 vs 2 vs 3 apart. The split is not wasted (a
 #       reader with the log open, or a future step written to branch on it,
-#       gets a real answer instead of one bit), but today it has no
-#       consumer, and this file should not claim one it does not have.
+#       gets a real answer instead of one bit), but today it has no consumer,
+#       and this file should not claim one it does not have.
 
 import argparse
 import importlib.util
@@ -509,41 +420,29 @@ def _ensure_consistency_module():
     return None
 
 # ---------------------------------------------------------------------------
-# Round 17 (L1). Every fact this file knows about ONE allow-listed binary used
-# to live in up to eight separate parallel tables — ALLOWED_CMDS (membership),
-# GIT_READONLY / GIT_GLOBAL_DENIED (git's two-phase flags), DENIED_FLAGS,
-# DENIED_FLAG_PREFIXES, BENIGN_NONZERO, the needs-a-real-file-operand set, and
-# `_KNOWN_BINARIES` for the OPPOSITE purpose (naming a binary this file
-# recognises but refuses) — with nothing cross-checking any of them. Adding a
-# binary to the allow-list therefore obliged the author to separately remember
-# to consider all the others, and forgetting one is exactly this round's High
-# findings. The drift was already live proof of the failure mode: a `sed` row
-# sat in the needs-a-file table, unreachable since `sed` was dropped from the
-# allow-list at round 9 (parse_pipeline rejects `sed` on argv[0] before that
-# table is ever consulted), while `_KNOWN_BINARIES` — correctly — still lists
-# `sed`, for the unrelated purpose of naming it in a decline.
-#
-# One `Binary` record per ALLOWED binary now, and ALLOWED_CMDS is DERIVED as
-# its key set rather than maintained as a separate list — so a binary that is
-# not allowed cannot carry a stray row in any of the other fields, and a
-# binary that IS allowed has all four of its security-relevant properties
-# sitting in one place, in the same commit, by construction. `_KNOWN_BINARIES`
-# stays separate below: it deliberately names binaries this file does NOT
-# allow, which is not a property `Binary` has any field for.
+# ONE `Binary` RECORD PER ALLOW-LISTED BINARY, and ALLOWED_CMDS is DERIVED as
+# its key set. Every fact about a binary used to live in up to eight separate
+# parallel tables with nothing cross-checking any of them, so adding one
+# obliged the author to remember all the others — and a stale `sed` row
+# survived in the needs-a-file table for six rounds after `sed` left the
+# allow-list, which is the failure mode rather than an anecdote about it.
+# Deriving membership from the records means a binary that is not allowed
+# cannot carry a stray row in any other field, and an allowed one has all its
+# security-relevant properties in one place by construction.
+# `_KNOWN_BINARIES` stays separate below: it deliberately names binaries this
+# file does NOT allow, which is not a property `Binary` has any field for.
 class Binary:
     """One allow-listed binary's read-only contract:
-      denied_flags     — exact denied option cores (round 9 H1, round 15 H3).
-                          `_option_cores()` already reduces `--flag=value` to
-                          the bare core `--flag`, and `_abbreviated_denial()`
-                          already catches any unambiguous GNU prefix of a
-                          denied long name (round 18, H12) — so a THIRD,
-                          separate prefix table sitting beside this one would
-                          only ever repeat what those two already refuse.
-                          Round 20 (M23) found the file's then-12 such
-                          entries were exactly that redundancy, and round 24
-                          (M28) removed the dead field: a binary needs no
-                          prefix table of its own, by construction, not by
-                          omission.
+      denied_flags     — exact denied option cores. NO BINARY BELOW NEEDS A
+                          PREFIX ENTRY, and that is structural rather than
+                          lucky: `_option_cores()` already reduces
+                          `--flag=value` to the bare core `--flag`, and
+                          `_abbreviated_denial()` already catches any
+                          unambiguous GNU prefix of a denied long name, so a
+                          third, separate prefix table could only ever repeat
+                          what those two refuse. One existed, carried twelve
+                          entries that were all exactly that redundancy, and
+                          was removed. Do not reintroduce it.
       benign_exit      — exit codes that are a RESULT, not a failure (grep-
                           family 1 = "no match", diff 1 = "files differ")
       needs_file       — the first pipeline segment must name a real on-disk
@@ -585,26 +484,19 @@ class Binary:
 _NO_BINARY = Binary()          # the all-defaults record for a plain binary
 
 
-# Round 22 (H20). SYMLINK-FOLLOWING TRAVERSAL FLAGS, denied per binary.
+# SYMLINK-FOLLOWING TRAVERSAL FLAGS, denied per binary. Locked by
+# SymlinkTraversalTests, whose lowercase/plain siblings are the positive
+# controls.
 #
-# `escaping_operand` realpaths each OPERAND and refuses one that leaves the
-# root — which correctly catches a symlink supplied DIRECTLY (`grep -c root
-# q` where `q -> /etc/passwd` is declined). It does not model TRANSITIVE
-# traversal: an in-repo DIRECTORY operand realpaths inside the root and
-# passes, and a recursing binary then walks through a symlink inside it to a
-# file outside. On `pull_request` the checkout is the PR head and
-# `actions/checkout` preserves symlinks, so `sub/x.md -> /etc/passwd` plus a
-# document claim is entirely attacker-controlled. Reproduced, each against a
-# committed symlink and each with its non-following sibling as the control:
-#   `grep -Rl 'root' sub \| wc -l`   -> 1   (`-rl` lowercase -> 0)
-#   `find -L deep -name passwd \| wc -l`   -> 2   (plain `find` -> 0)
-#   `find deep -follow -name passwd \| wc -l` -> 2
-#   `rg --follow -l root sub \| wc -l` -> 1   (`rg -l` -> 0)
-#   `diff -r sub other \| wc -l` -> a 30-line diff OF /etc/passwd
-# The lowercase/plain forms are the control in every case, and they are also
-# the ONLY forms the live corpus uses (`grep -r`, `grep -rn`, plain `find`),
-# so denying the following variants costs this tree nothing — measured, not
-# assumed.
+# The rule, which the tests cannot state: `escaping_operand` refuses a
+# symlink supplied DIRECTLY but does not model TRANSITIVE traversal — an
+# in-repo DIRECTORY operand realpaths inside the root and passes, and a
+# recursing binary then walks through a symlink inside it to a file outside.
+# On `pull_request` the checkout is the PR head and `actions/checkout`
+# preserves symlinks, so that arrangement is entirely attacker-controlled.
+# The non-following spellings are the ONLY forms the live corpus uses
+# (`grep -r`, `grep -rn`, plain `find`), so denying the following variants
+# costs this tree nothing — measured, not assumed.
 #
 # `diff` earns its `-r` denial for a different reason from the rest, worth
 # stating because it is not symmetrical with them: GNU diff has no
@@ -637,12 +529,10 @@ BINARIES = {
                     benign_exit=frozenset({1}), needs_file=True,
                     pattern_operand=True),
     # `--pre`/`--pre-glob`/`--hostname-bin` hand ripgrep a program to run;
-    # `--generate` is a distinct info-dump hatch. `_option_cores` already
-    # reduces `--pre=value` to the bare core `--pre`, which the exact-core
-    # check already matches, so no separate `=value` entry is needed here
-    # (round 20, M23; the `denied_prefixes` table that used to carry one was
-    # removed entirely at round 24, M28).
-    # `-L`/`--follow` is rg's own symlink-following switch (round 22, H20);
+    # `--generate` is a distinct info-dump hatch. Bare cores only — see the
+    # `denied_flags` note in the Binary docstring for why no `=value` entry
+    # is needed anywhere in this table.
+    # `-L`/`--follow` is rg's own symlink-following switch;
     # `-R`/`--dereference-recursive` are carried too, spelling-for-spelling
     # with the grep family, because rg does not define them and a claim
     # quoting one is an error either way — refusing it is free and keeps the
@@ -661,35 +551,26 @@ BINARIES = {
         "-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint",
         "-fprint0", "-fprintf", "-fls", "-L", "-H", "-follow",
         "-files0-from"})),
-    # `--files0-from=F` (round 22, the H20 sweep) is the ONE member of that
-    # family that was live rather than latent, and it was live because
-    # `self_contained` only ever inspects the FIRST pipeline segment:
-    # `cat data.txt \| wc -l --files0-from=l2.txt` put wc in second position,
-    # where the needs-a-real-operand rule does not run, and it read
-    # /etc/passwd — measured, two children spawned, the count declined only
-    # because wc prints "25 /etc/passwd" rather than a bare integer, which
-    # one `\| cut -d' ' -f1` undoes. The path never appears in argv at all:
-    # it is a byte string inside another file, so neither the suffix rule nor
-    # confinement can see it. Denied by name, as for `sort` and `find`.
+    # `--files0-from=F` was the ONE member of that family that was LIVE
+    # rather than latent, and the reason generalises: `self_contained` only
+    # ever inspects the FIRST pipeline segment, so a second-position `wc`
+    # never meets the needs-a-real-operand rule. The path never appears in
+    # argv at all — it is a byte string inside another file, so neither the
+    # suffix rule nor confinement can see it. Denied by name, as for `sort`
+    # and `find`. Locked by Files0FromTests, including the non-first-segment
+    # case.
     "wc": Binary(denied_flags=frozenset({"--files0-from"}), needs_file=True),
     "cat": Binary(needs_file=True),
     "head": Binary(denied_flags=frozenset({"-f", "--follow"}), needs_file=True),
     "tail": Binary(denied_flags=frozenset({"-f", "-F", "--follow"}),
                     needs_file=True),
-    # `--compress-program` (round 15, H5) runs an arbitrary program whenever a
-    # sort spills to disk, which `-S 1` forces; proven creating a canary here.
-    # `--output`/`--compress-program` are bare cores in denied_flags, so
-    # their `=value` forms are already caught by `_option_cores` (round 20,
-    # M23; no separate prefix table needed, as with rg above).
-    # `--files0-from=F` (round 22, the H20 sweep) makes sort read the list of
-    # files to sort out of F's CONTENTS — a path reaching the child by no
-    # dash-token route, so `_attached_option_values`' suffix rule cannot see
-    # it and confinement never tests it. LIVE, not latent, and the first
-    # guess about why it was safe was wrong: `needs_file` does decline it in
-    # first position, but `self_contained` inspects only the FIRST segment,
-    # so `cat data.txt \| sort --files0-from=l2.txt \| wc -l` reached the
-    # FAIL block reporting 25 — the line count of /etc/passwd, three children
-    # spawned. Denied by name, the same class as find's and wc's.
+    # `--compress-program` runs an arbitrary program whenever a sort spills
+    # to disk, which `-S 1` forces. `--files0-from=F` makes sort read the
+    # list of files to sort out of F's CONTENTS — a path reaching the child
+    # by no dash-token route, so the suffix rule cannot see it and
+    # confinement never tests it; `needs_file` declines it in first position
+    # only, and `self_contained` inspects only the FIRST segment. Denied by
+    # name, the same class as find's and wc's.
     "sort": Binary(
         denied_flags=frozenset({"-o", "--output", "--compress-program",
                                  "--files0-from"}),
@@ -699,16 +580,13 @@ BINARIES = {
     # and no flag names that hatch.
     "uniq": Binary(needs_file=True),
     # `-l`/`--load`, `-i`/`--include` and `-E`/`--exec` are gawk's extension
-    # and source-loading flags — the same class as `-f`, added in round 15
-    # H5's one-pass audit of every remaining allow-listed binary rather than
-    # one report at a time. The program-text allow-list (AWK_ALLOWED_CALLS,
-    # AWK_ESCAPES) is a SEPARATE mechanism below, for the same reason `sed`
-    # has no Binary entry at all: the escape lives in the SCRIPT, a language,
-    # not a flag, so no flag table — consolidated or not — can describe it.
-    # pattern_operand=True (round 20, M21): the first non-option token is the
-    # PROGRAM text, not a file — same reasoning as the grep family above.
-    # Every flag's `=value` form is already caught via its bare core in
-    # denied_flags (round 20, M23; no separate prefix table needed).
+    # and source-loading flags — the same class as `-f`. The program-text
+    # allow-list (AWK_ALLOWED_CALLS, AWK_ESCAPES) is a SEPARATE mechanism
+    # below, for the same reason `sed` has no Binary entry at all: the escape
+    # lives in the SCRIPT, a language, not a flag, so no flag table —
+    # consolidated or not — can describe it.
+    # pattern_operand=True: the first non-option token is the PROGRAM text,
+    # not a file — same reasoning as the grep family above.
     "awk": Binary(
         denied_flags=frozenset({"-f", "--file", "--source", "--exec", "-l",
                                  "--load", "-i", "--include", "-E"}),
@@ -725,19 +603,10 @@ BINARIES = {
     # PASS; the argument-less read forms are not worth that surface and
     # nothing in this corpus quotes one, so both are gone entirely — a future
     # claim quoting them is DECLINED AND NAMED, the safe direction.
-    # Round 20 (M23). `--exec-path`/`--upload-pack` moved INTO denied_flags,
-    # from being denied_prefixes-only entries here (that field was removed
-    # entirely at round 24, M28 — see the Binary docstring). They used to be
-    # load-bearing ONLY via git_global_denied (the pre-subcommand-only
-    # check below) and a generic prefix fallback this file no longer has —
-    # three mechanisms doing the work of one, and their cores were missing
-    # from this set for no stated reason. Denying them here too is a strict
-    # WIDENING (over-refusal, the stated safe direction): the exact-core
-    # check now refuses them at ANY argv position, not only before the
-    # subcommand, and their `=value` forms are caught the same way
-    # `--output`'s already was — via `_option_cores`, needing no prefix
-    # table. `--output` itself needed no entry to begin with; it was
-    # already redundant with its own bare form here.
+    # `--exec-path`/`--upload-pack` are denied HERE as well as in
+    # git_global_denied, deliberately: the global set refuses them only
+    # BEFORE the subcommand, while the exact-core check refuses them at any
+    # argv position. Over-refusal is the stated safe direction.
     "git": Binary(
         denied_flags=frozenset({"-O", "--open-files-in-pager", "--output",
                                  "--exec-path", "--upload-pack"}),
@@ -752,14 +621,12 @@ BINARIES = {
     "echo": Binary(),
     "printf": Binary(),
     "stat": Binary(),
-    # `-r`/`--recursive` (round 22, H20). GNU diff DEREFERENCES symlinks it
-    # meets while recursing unless `--no-dereference` is given, so — unlike
-    # grep and find, which have a safe default spelling to keep — there is no
-    # non-following form of `diff -r` to preserve. Reproduced: with
-    # `sub/x.md -> /etc/passwd` and a plain `other/x.md`, `diff -r sub other
-    # \| wc -l` printed 30, i.e. a diff OF /etc/passwd, into the FAIL block.
-    # The live corpus quotes no `diff -r` at all (its only diff is
-    # `git diff --stat`), so the denial costs nothing.
+    # `-r`/`--recursive`: GNU diff DEREFERENCES symlinks it meets while
+    # recursing unless `--no-dereference` is given, so — unlike grep and
+    # find, which have a safe default spelling to keep — there is no
+    # non-following form of `diff -r` to preserve. The live corpus quotes no
+    # `diff -r` at all (its only diff is `git diff --stat`), so the denial
+    # costs nothing.
     "diff": Binary(denied_flags=frozenset({"-r", "--recursive"}),
                    benign_exit=frozenset({1})),
 }
@@ -780,12 +647,10 @@ GIT_GLOBAL_DENIED = BINARIES["git"].git_global_denied
 FORBIDDEN = re.compile(r"[;&><`\n\x00]|\$\(|\|\|")
 
 # ---------------------------------------------------------------------------
-# Round 9, H1: allow-listing argv[0] is NOT sufficient, and the header used to
-# claim it was ("read-only by construction — no writing command is on the
-# list"). Several read-only tools carry a write or execute ESCAPE HATCH behind
-# a flag, and `sed -i` was demonstrated rewriting a file in the working tree
-# while this tool printed PASS. The commands come from documents; on a
-# `pull_request` CI trigger that is untrusted input reaching a runner.
+# Allow-listing argv[0] is NOT sufficient — the header used to claim it was
+# ("read-only by construction — no writing command is on the list") and `sed
+# -i` was demonstrated rewriting a file in the working tree while this tool
+# printed PASS. Locked by HatchRegressionTests.
 #
 # Two mechanisms, because the hatches are of two kinds:
 #   (1) FLAG hatches — refusable exactly, by name. Listed per binary above, in
@@ -794,36 +659,31 @@ FORBIDDEN = re.compile(r"[;&><`\n\x00]|\$\(|\|\|")
 #       contain them. `sed` (`w file`, `s///w file`) is therefore DROPPED from
 #       the allow-list entirely; it has no use anywhere in the corpus, and a
 #       future sed claim is DECLINED AND NAMED, which is the safe direction.
-#       `awk` is a language too, and round 15 (H1) proved the consequence:
-#       `awk 'BEGIN{print "touch X" | "sh"}'` executes a shell command using
-#       NEITHER of the two words this file blacklisted, and FORBIDDEN does not
-#       reject a single `|` because that is the pipeline separator. awk is
-#       nonetheless KEPT: a real claim in this corpus pipes through it and
-#       currently reproduces. (Round 20, M19 — THE CANONICAL SITE for this
-#       fact: the SAFETY section's rule 1 above states it too, and cites here
-#       rather than repeating a number, because the "2 of the 3 claims this
-#       tool executes are awk" figure this paragraph used to carry was wrong
-#       by the very re-measurement it invited — re-derived 2026-08-22, this
-#       tool executes 3 DISTINCT commands; exactly 1 of them pipes through
-#       awk, accounting for 3 of 7 executed INSTANCES (re-derived
-#       2026-08-22 after round 23 — it read "3 of 6" until H24 bound a
-#       seventh), and since H23 one of those three IS live: the
-#       currency-pierced Version History row at code-standards
-#       /section-3.md:1140. So the honest
-#       argument for keeping awk is qualitative, not a coverage fraction that
-#       goes stale the next time the corpus changes: SOME real, currently-
-#       passing claim on this tree uses it, dropping it costs that measured
-#       claim, and re-deriving which fraction is exactly the
-#       `python3 tools/doc-claim-check.py --repo .` invocation
-#       MIN_EXECUTED_CLAIMS already documents doing — do not copy a number
-#       out of this comment without re-running it.) —
-#       and its program is ALLOW-listed instead of escape-blacklisted: see
-#       AWK_ALLOWED_CALLS below. `python3` is DROPPED (H2) for the same reason
-#       as sed: its argument is a language too, and "the script must be an
-#       in-repo .py file" is not a restriction at all when the checkout under
-#       test is a pull request's own head — the PR simply adds the .py file.
+#       `python3` is DROPPED for the same reason: its argument is a language
+#       too, and "the script must be an in-repo .py file" is not a restriction
+#       at all when the checkout under test is a pull request's own head — the
+#       PR simply adds the .py file.
 #
-# Round 15 also generalised HOW a flag is matched: see _option_cores(). A
+#       `awk` IS A LANGUAGE TOO AND IS NONETHELESS KEPT. THIS IS THE CANONICAL
+#       SITE FOR WHY, and rule 1 of the SAFETY section cites here rather than
+#       repeating it. The consequence of keeping it is real: `awk 'BEGIN{print
+#       "touch X" | "sh"}'` executes a shell command using NEITHER of the two
+#       words this file originally blacklisted, and FORBIDDEN does not reject
+#       a single `|` because that is the pipeline separator. It is kept
+#       because SOME real, currently-passing claim on this tree pipes through
+#       it, so dropping it costs measured coverage — and its program is
+#       ALLOW-listed instead of escape-blacklisted (AWK_ALLOWED_CALLS below),
+#       which is the shape of rule that survives a hatch nobody has named.
+#
+#       THE ARGUMENT IS QUALITATIVE ON PURPOSE, NOT A COVERAGE FRACTION. The
+#       "2 of the 3 claims this tool executes are awk" figure this paragraph
+#       used to carry was wrong by the very re-measurement it invited, and any
+#       replacement goes stale the next time the corpus changes. Re-deriving
+#       the fraction is exactly the `python3 tools/doc-claim-check.py --repo .`
+#       invocation MIN_EXECUTED_CLAIMS already documents doing — do not copy a
+#       number out of this comment without re-running it.
+#
+# How a flag is MATCHED is generalised separately: see _option_cores(). A
 # deny-list keyed on the exact spelling an option happened to be written in
 # misses the same option carrying an attached value (`sort -oFILE`,
 # `git grep -O./p.sh`), which is not a new hatch but the same one respelled.
@@ -857,38 +717,23 @@ AWK_ESCAPES = re.compile(r"\b(?:system|getline)\b")
 #     is tested" rule explicitly never claimed. See AWK_SPECIAL_ARRAYS below.
 AWK_CALL = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 
-# awk's SPECIAL ARRAYS, each with the reason it is refused. Round 22 (H19).
+# awk's SPECIAL ARRAYS, each with the reason it is refused. Locked by
+# AwkArgvArgcTests and AwkEnvironmentAndLoadHatchTests.
 #
-# Round 18 refused `ENVIRON`/`PROCINFO` because an allow-list of FUNCTION
-# names structurally cannot see a VARIABLE. `ARGV`/`ARGC` are the same
-# mechanism aimed at the filesystem instead of the environment, and they were
-# missed because every awk rule this file has ever written asks what the
-# program CALLS or which CHARACTERS it contains — and this one calls nothing
-# and contains nothing forbidden:
+# WHY A NAME REFUSAL IS THE RIGHT SHAPE HERE, which is the part no test
+# states: every other awk rule in this file asks what the program CALLS or
+# which CHARACTERS it contains, and a special array is neither — it is a
+# VARIABLE, so the call allow-list structurally cannot see it, and it
+# contains nothing FORBIDDEN. `ARGV[ARGC++]="/etc/passwd"` assigns a path
+# into awk's own operand vector, so awk opens that file as ordinary main
+# input; path confinement is blind to it because the path is a string
+# LITERAL inside the program token rather than an operand, and
+# `self_contained` is satisfied by the legitimate operand beside it.
+# `SYMTAB`/`FUNCTAB` are refused with them because a `SYMTAB["ARGV"]` write
+# reaches the same vector indirectly, and refusing the direct spelling alone
+# would be the enumerate-the-spelling error the SAFETY section calls this
+# file's recurring root cause.
 #
-#     awk 'BEGIN{ARGV[ARGC++]="/etc/passwd"}END{print NR}' data.txt
-#
-# assigns a path into awk's own operand vector, so awk OPENS that file as
-# ordinary main input. No pipe, no `getline`, no disallowed call, no forbidden
-# character — and PATH CONFINEMENT is structurally blind to it, because the
-# path is a string LITERAL inside the program token rather than an operand,
-# while `self_contained` is satisfied by the legitimate `data.txt` beside it.
-# Reproduced end to end through scan(): a document stating 3 landed in the
-# FAIL block at exit 1 reading "document says 3; command returns 28", the 25
-# extra lines being /etc/passwd; and as a BYTE-level oracle over
-# /etc/hostname using only allow-listed calls (`index`, `substr`).
-#
-# `SYMTAB`/`FUNCTAB` are gawk's symbol tables and are refused with them: an
-# `SYMTAB["ARGV"]` write reaches the same vector indirectly, so refusing the
-# direct spelling alone would be the enumerate-the-spelling error this file's
-# SAFETY section calls its recurring root cause. (`\bARGV\b` already matches
-# inside the quoted string, so that particular route is doubly covered —
-# refusing the table itself is what covers the routes nobody has written yet.)
-#
-# The rule is a NAME refusal, deliberately, and it is the right shape here for
-# the reason the SAFETY section gives for awk generally: awk's argument is a
-# LANGUAGE, so the load-bearing rule is the CALL allow-list, and these are the
-# handful of things that allow-list cannot express because they are not calls.
 # Over-refusal is the stated safe direction and costs nothing measurable: the
 # one live awk claim on this tree (`... | awk '{s+=$1} END{print s}'`) names
 # none of them, and a document that legitimately wants NR or NF is untouched.
@@ -930,18 +775,16 @@ _HEAD_SHAPE = re.compile(r"(?:\.{1,2}/)?[A-Za-z0-9_][A-Za-z0-9_.-]*"
 # decline to an invisible one, which is the decline contract failing in the
 # direction this file calls its worst.
 #
-# ROUND 19 (H15). This list is no longer the GATE, only a supplement to one.
-# It could not be a gate: a runnable claim whose binary was on neither curated
-# list (ALLOWED_CMDS or this) was dropped with no bucket, no count and no
-# line — `check_claim` returned ("ignored", None), and `unrecognised_spans`
-# could not recover it either, because the span WAS bound so its start sits in
-# `bound`. `comm -12 a b \| wc -l`, `tac`, `pcregrep`, `tree`, `nl` and `du`
-# claims were therefore invisible on BOTH routes, which made two sentences of
-# this file's own header false — including "every backticked span that reads
-# as a command ... is counted and named in the unrecognised-shape bucket. Read
-# that bucket, not this comment, for what the tool cannot see." The blind spot
-# WAS the hand-written list, which is the shape the SAFETY section names as
-# this file's recurring root error, arriving on the census side.
+# THIS LIST IS NOT THE GATE, only a supplement to one, and it must never
+# become the gate again. It could not be one: a runnable claim whose binary
+# was on neither curated list (ALLOWED_CMDS or this) was dropped with no
+# bucket, no count and no line — `check_claim` returned ("ignored", None),
+# and `unrecognised_spans` could not recover it either, because the span WAS
+# bound so its start sat in `bound`. `comm`, `tac`, `pcregrep`, `tree`, `nl`
+# and `du` claims were therefore invisible on BOTH routes at once, which made
+# two sentences of this file's own header false. The blind spot WAS the
+# hand-written list — the shape the SAFETY section names as this file's
+# recurring root error, arriving on the census side.
 #
 # The list stays because it can only ADD recognition: it names heads whose
 # ARGUMENTS carry no command-shaped evidence (`npm install`, `make`) and which
@@ -1024,21 +867,15 @@ TIMEOUT_S = 60
 # lesson rounds 5-8 kept re-learning: a matcher tuned on the instances that
 # motivated it will misread their opposite.
 #
-# Round 16 (M5): the alternation used to include the BARE words `not`, `was`,
-# `never` and `n't`, and an excusal is the one outcome that costs coverage
-# silently — the claim is never run at all. Those words saturate this repo's
-# prose, and the window is 40 raw characters either side, so the excusal fired
-# on sentences that negate something else entirely. Proven before the fix:
-#
-#     This was decided by the owner and is not in dispute: 99 assemblies
-#     (`ls -d src/*/ | wc -l`)
-#
-# — a present-tense claim wrong by a factor of 33 — was declined as
-# negated-or-historical, 0 claims executed, PASS. The alternation is now
-# restricted to phrases that can only be negating THE CLAIM: a bare `not` may
-# negate anything in the sentence, but `no longer returns` cannot negate
-# anything else. Every verb-bound form is spelled out rather than left to a
-# bare adverb, so widening this list is a deliberate act.
+# THE ALTERNATION HOLDS ONLY PHRASES THAT CAN NEGATE NOTHING BUT THE CLAIM.
+# An excusal is the one outcome that costs coverage silently — the claim is
+# never run at all — so a bare `not`, `was`, `never` or `n't`, which saturate
+# this repo's prose and can negate anything in a sentence, excused correct
+# claims that were wrong by a factor of 33 while the run still printed PASS.
+# `no longer returns` cannot negate anything else. Every verb-bound form is
+# spelled out rather than left to a bare adverb, so widening this list is a
+# deliberate act. Locked by
+# NegatorPrecisionTests.test_a_bare_negation_word_near_a_wrong_claim_does_not_excuse_it.
 # `pre-fix` is deliberately NOT in the bare alternation, and that is a
 # correction to this round's own first draft, made on evidence. It fails M5's
 # own test — "phrases that can only negate a claim" — because in this corpus it
@@ -1061,12 +898,11 @@ NEGATOR = re.compile(
 # command returned AT THE TIME. When the underlying figure later moves, the
 # record is still correct and the tool must not fail CI on it.
 #
-# This is not hypothetical and it is not someone else's mistake: at round 12
-# the pass writing the CHANGELOG entry quoted Spec #20's own drift-prone
-# example verbatim, with its value, INTO the chain — which would have failed
-# this gate on a correct historical entry the day the 36th assembly landed. It
-# was caught and the example was described instead of quoted, but "remember not
-# to write that" is not a mechanism.
+# This is not hypothetical and it is not someone else's mistake: a pass
+# writing the CHANGELOG entry once quoted Spec #20's own drift-prone example
+# verbatim, with its value, INTO the chain — which would have failed this gate
+# on a correct historical entry the day the 36th assembly landed. It was
+# caught by hand, but "remember not to write that" is not a mechanism.
 #
 # The model is `doc-consistency-check.py`'s, ported rather than reinvented, and
 # kept to its two load-bearing properties:
@@ -1133,41 +969,36 @@ def _blanked_runs(text, blanked):
 def dated_record_regions(rel, text):
     """Spans of `text` that are dated records by structure.
 
-    Round 17 (M13): `record_regions`'s own docstring states a precondition
-    this caller used to violate — "computed on the same (frozen-history-
-    blanked) text the scans read, so the offsets agree" — while this function
-    passed RAW text. It was harmless only because `blank_frozen_history` is
-    offset-preserving, which is a property of that function's IMPLEMENTATION,
-    not a contract this file was entitled to assume. HONOURED HERE rather
-    than replaced with a new assertion: `record_regions` is now called on the
-    same blanked text `doc-consistency-check.py`'s own scans read.
+    `record_regions` is called on the same frozen-history-BLANKED text
+    `doc-consistency-check.py`'s own scans read, honouring a precondition its
+    docstring states ("so the offsets agree") that this caller used to
+    violate by passing RAW text — harmless only because
+    `blank_frozen_history` happens to be offset-preserving, which is a
+    property of that function's IMPLEMENTATION and not a contract this file
+    was entitled to assume.
 
-    ROUND 19 (H13) — THE HALF THAT WAS STILL WRONG, and it was the important
-    half. This function called `blank_frozen_history` only as INPUT to
-    `record_regions` and then THREW THE BLANKING AWAY, returning
-    `record_regions` plus a separately re-listed `frozen_chain_span`. But
-    that function freezes TWO things, not one: the header chain below its
-    head entry AND every `Version History` section (its own docstring: "a VH
-    row is a dated record of its own revision and states no currency"). So
-    the sibling excused a mismatch in a VH row and this tool GATED on it —
-    the two tools disagreeing about which bytes are frozen, in the one file
-    that imports the other specifically so they cannot.
-
-    Not hypothetical, and not a corner: VH is 5.9% of the scanned corpus and
-    FOUR of the six claims this tool executed sat inside one, two of them
-    `ls -d src/*/ \| wc -l` -> 35 in rows whose own neighbours read "left as
-    written per the do-not-rewrite-history convention". CI would have gone
-    red on two correct historical records the day a 36th assembly landed —
-    verbatim the hazard the dated-record model was introduced to prevent,
-    and the reason the round-12 CHANGELOG entry had to be reworded by hand.
+    THE SPANS ARE DERIVED FROM THE BLANKING, NOT RE-LISTED, and that is the
+    load-bearing decision. `blank_frozen_history` freezes TWO things: the
+    header chain below its head entry AND every `Version History` section.
+    While this function threw the blanking away and re-listed a separate
+    `frozen_chain_span`, the sibling excused a mismatch in a VH row and this
+    tool GATED on it — the two tools disagreeing about which bytes are
+    frozen, in the one file that imports the other specifically so they
+    cannot. That was not a corner: Version History sections are a
+    substantial slice of the scanned corpus and most of what this tool
+    executed sat inside one. (No percentage is quoted, deliberately — the
+    figure that stood here separated VH from the header chain, which the
+    imported blanking does not expose separately, so it was not
+    re-derivable.) Locked by
+    VersionHistoryExcusalTests and FrozenSpanBoundaryTests.
 
     The currency pierce is unchanged: a VH row that says the command returns
     N *now* is a present-tense claim wherever it sits, and `currency_asserted`
     still reports it.
 
-    ROUND 24 (L11) — WHAT IS STILL NOT SHARED, honestly, because the header
-    chain's own docstring above claims the two tools "cannot disagree" and
-    that is not quite true. `blank_frozen_history` returns a THIRD value,
+    WHAT IS STILL NOT SHARED, stated honestly because the import docstring
+    above claims the two tools "cannot disagree" and that is not quite true.
+    `blank_frozen_history` returns a THIRD value,
     `pierced`: citations inside the header chain that carry a maintained
     "since advanced to **vC**" currency pointer, which the sibling's own
     `scan_version_citations` deliberately UN-FREEZES and evaluates directly
@@ -1225,17 +1056,15 @@ def currency_asserted(text, start, end):
 # ---------------------------------------------------------------------------
 ERR_RESOLVED_MARKER = re.compile(r"✅[^\n]{0,24}?(?:RESOLVED|CLOSED)", re.I)
 ERR_HEADING = re.compile(r"^## .*$", re.M)
-# `re.M` is load-bearing, not decoration (round 18, found by the new
-# `tools/tests/test_doc_claim_check.py`). This pattern is used as
+# `re.M` is load-bearing, not decoration. This pattern is used as
 # `ERR_TABLE_ROW.match(text, ls)` with `ls` the start of a LINE, and without
 # MULTILINE a bare `^` matches only at the real start of the string — never at
-# a non-zero `pos`, whatever precedes it. So the table-row branch below could
-# not fire for any row except one at byte 0, every index row fell through to
-# the prose-section branch, and the whole `## Error Index` table was bounded as
-# ONE entry — precisely what _err_log_entry_span's own docstring says must not
-# happen ("a ✅ anywhere in its 213 rows [would] resolve every one of them").
-# Live at the time of the fix: 191 of the 213 index rows carry a ✅, so every
-# claim in every row, resolved or not, was excused.
+# a non-zero `pos`, whatever precedes it. Without it the table-row branch
+# below could not fire for any row except one at byte 0, every index row fell
+# through to the prose-section branch, and the whole `## Error Index` table
+# was bounded as ONE entry — precisely what _err_log_entry_span's own
+# docstring says must not happen. Locked by
+# ExcusalTests.test_an_err_index_table_row_is_bounded_to_its_own_line.
 ERR_TABLE_ROW = re.compile(r"^\|\s*ERR-", re.M)
 
 
@@ -1270,49 +1099,33 @@ def err_log_excused(text, start, end):
     log's OWN rule: the enclosing entry is marked resolved, or the claim's
     own sentence carries a date. See the section banner above.
 
-    Round 20 (M22). The sentence window used to be searched for a date
-    UNCLIPPED — exactly the defect `doc-consistency-check.py`'s own
-    `historically_marked()` was fixed for at its `MARKER_RADIUS` (110),
-    whose comment states the reason in terms: this repo's "sentences" are
-    not sentences, so at full sentence-window length an annotation about
-    something else entirely silently suppresses a real stale claim several
-    hundred characters away. Measured on the live ERR log before this fix:
-    window lengths median 249, p90 602, max 1126; 13 spans were excusable by
-    this rule alone, with the excusing date 53 to 689 characters from the
-    claim it excused — the model's own justification is "the claim's OWN
-    sentence carries a date", and 689 characters away is not that. Fixed the
-    same way the sibling fixed it for the same reason: the sentence window
-    is intersected with a tight radius around the claim itself, in the
-    window's own coordinates, before the date search runs."""
+    THE SENTENCE WINDOW IS CLIPPED before the date search runs, and the
+    reason is the one `doc-consistency-check.py` states at its own
+    `MARKER_RADIUS`: this repo's "sentences" are not sentences (measured on
+    the live ERR log, window lengths median 249, p90 602, max 1126), so at
+    full window length an annotation about something else entirely silently
+    suppresses a real stale claim several hundred characters away. The
+    model's own justification is "the claim's OWN sentence carries a date",
+    and 689 characters away — the worst case measured — is not that."""
     a, b = _err_log_entry_span(text, start)
     if ERR_RESOLVED_MARKER.search(text[a:b]):
         return True
     window = DCC.sentence_window(text, start, end)
-    # Round 24 (M29) — RECORDED AS A KNOWING DUPLICATE, NOT SILENTLY LEFT AS
-    # ONE. The five lines below (`ls` through the `hi = min(...)`) are the
-    # SAME clipping algorithm as `doc-consistency-check.py`'s
-    # `historically_marked()`, statement for statement, with two
-    # substitutions: `MARKER_RADIUS` (110, that file) for `CURRENCY_RADIUS`
-    # (120, this file), and the caller's own regex search at the end instead
-    # of `HISTORICAL_MARKERS`. That function does not expose the clip as a
-    # separate, callable step — it fuses window, clip and its own
-    # historical-marker search into one return value — so there is no
-    # narrower surface here to call THROUGH; reusing it as written would
-    # mean asking it the wrong question (whether a HISTORICAL marker sits
-    # nearby, not whether an ERR_LOG_DATE does). This file's own import
-    # docstring calls a second copy of a definition "the duplicate-claim
-    # defect this repo keeps filing", which is exactly what this is, and the
-    # fixer who copied it recorded that rather than hiding it (round 20,
-    # M22's own text cites the sibling's radius and reason by name, one
-    # paragraph up). The 110-vs-120 divergence is UNEXPLAINED in either
-    # file — nothing on either side states why the ERR log's own claims
-    # need ten characters more slack than the sentence-marker case the
-    # sibling's radius was measured against — and is flagged here rather
-    # than silently harmonised, since changing either number is a
-    # calibration decision this pass has no measurement to justify. The
-    # REAL fix is a shared clipping helper `doc-consistency-check.py`
-    # exports and both files call — deferred, because this pass owns only
-    # `doc-claim-check.py` and may not edit the sibling to add one.
+    # RECORDED AS A KNOWING DUPLICATE, NOT SILENTLY LEFT AS ONE. The five
+    # lines below are the SAME clipping algorithm as
+    # `doc-consistency-check.py`'s `historically_marked()`, statement for
+    # statement, with two substitutions: that file's `MARKER_RADIUS` (110)
+    # for `CURRENCY_RADIUS` (120), and this caller's own regex search
+    # instead of `HISTORICAL_MARKERS`. It cannot simply be called: that
+    # function fuses window, clip and its own historical-marker search into
+    # one return value, so there is no narrower surface to call THROUGH, and
+    # reusing it as written would ask it the wrong question. This file's own
+    # import docstring calls a second copy of a definition "the
+    # duplicate-claim defect this repo keeps filing", which is exactly what
+    # this is. The 110-vs-120 divergence is UNEXPLAINED on both sides and is
+    # flagged rather than silently harmonised, since changing either number
+    # is a calibration decision with no measurement behind it. The REAL fix
+    # is a shared clipping helper the sibling exports and both files call.
     ls = text.rfind("\n", 0, start) + 1
     sent_start = text.find(window, ls) if window else start
     if sent_start == -1:
@@ -1354,10 +1167,9 @@ SURFACE_GLOBS = ("docs/specs/*/section-*.md", "docs/specs/*/appendices.md")
 # of the 9 named surfaces deleted — 1 claim executed, PASS, exit 0. The globbed
 # half had no missing concept at all, and every executed claim on this tree
 # comes from ONE globbed folder, so renaming that folder would have taken the
-# executed count to zero with not one line of output changed. The imported
-# sibling states the opposite rule for itself in terms ("a named surface
-# MISSING from the tree is an ERROR, not a skip"), and this file's own header
-# calls a vacuous pass "the failure class this project files as High".
+# executed count to zero with not one line of output changed. Locked by
+# ExitCodeTests (the exit-2 cases for a missing named surface, a glob matching
+# no file, and no claim executed at all).
 #
 # Two gates, because a surface list and a claim count fail differently: a
 # surface can vanish while the count holds up, and the count can collapse
@@ -1374,126 +1186,83 @@ SURFACE_GLOBS = ("docs/specs/*/section-*.md", "docs/specs/*/appendices.md")
 # turn a green tree red, while a matcher regression or a renamed surface
 # folder, which take the count to zero or near it, do.
 #
-# Round 20 (M20). The floor used to be on INSTANCES, and half of what it
-# protected could never fail: today's six executed instances are only THREE
-# DISTINCT commands — one quoted in three files, one in two, one in one — and
-# the three-instance one is pinned to an immutable git revision
-# (`git grep -c 'CROSS-PENDING' 9b841d1^ ...`), so it can never drift and
-# never fail regardless of what any document says. An instance floor cannot
-# tell "N drift-capable claims" from "one pinned command quoted N times", and
-# most of this file's own six instances were exactly that. The floor is now
-# on DISTINCT COMMANDS — `checked_commands` in scan() — with the instance
-# count still printed alongside it, so the gap between "commands" and
-# "quotes of a command" stays visible either way. (Whether to exclude
-# revision-pinned commands entirely from even the distinct count is a
-# separate, owner-level call this fix does not make.)
+# THE FLOOR IS ON DISTINCT COMMANDS, NOT INSTANCES, and that is the rule worth
+# keeping: an instance floor cannot tell "N drift-capable claims" from "one
+# command quoted N times", and most of this file's own executed instances were
+# exactly that — one command quoted in three files, one in two, one in one,
+# with the three-instance one pinned to an immutable git revision so it can
+# never drift regardless of what any document says. `checked_commands` in
+# scan() is what the floor reads; the instance count is still printed beside
+# it, so the gap between "commands" and "quotes of a command" stays visible
+# either way. (Whether to exclude revision-pinned commands from even the
+# distinct count is a separate, owner-level call this file does not make.)
 #
-# That redefinition shrinks the MEASURED base sharply (6 -> 3), and applying
-# the old slack of 2 to a base that small would floor at 1 — the same
-# near-zero-protection MIN_LIVE_CLAIMS below was written to avoid at ITS
-# measurement of 1. So the slack here is re-derived too, at "roughly half the
-# measured base", the same headroom rule CHECK 2's own floors
-# (MIN_TYPED_FENCE_FILE_SHARE, MIN_EXAMINED_SHARE) already use, rather than
-# carrying forward a slack sized for a population six times bigger.
+# The SLACK is re-derived with the base rather than carried: at "roughly half
+# the measured base", the same headroom rule CHECK 2's own floors
+# (MIN_TYPED_FENCE_FILE_SHARE, MIN_EXAMINED_SHARE) use. A slack sized for a
+# population six times bigger would floor this one at 1.
 #
 # WHEN IT LEGITIMATELY CHANGES: coverage GROWING is the normal case (a new
 # shape, a new allow-listed binary, a new claim written) — re-derive and raise
 # the floor in the same commit, so the new coverage is protected too. Coverage
 # SHRINKING is the case that must not be waved through: lower this number only
-# with the reason recorded in the Version History row beside it, because
+# with the reason stated in the commit message that lowers it, because
 # lowering it silently is how the vacuous-pass failure class comes back.
 MIN_EXECUTED_SLACK = 1
-# Re-derived 2026-08-22 by the invocation above, after round 23: 3 DISTINCT
-# commands executed (7 instances of them — 6 before H24 taught shape 4 the
-# wrapped `re-derive with` attribution, which bound README.md:930's quote of
-# a command CLAUDE.md:276 already quotes; a second INSTANCE of a command
-# already counted, so the distinct figure the floor gates on is unmoved).
+# Re-derived 2026-08-22 by the invocation above: 3 DISTINCT commands executed
+# (7 instances of them).
 MIN_EXECUTED_CLAIMS = 3 - MIN_EXECUTED_SLACK
 
 # ---------------------------------------------------------------------------
 # THE LIVE FLOOR (round 19, H13) — the one that states this tool's real reach.
 #
-# MIN_EXECUTED_CLAIMS counts every claim the tool RAN. Four of the seven it
-# runs on this tree sit inside a dated record whose own pierce fails, so a
-# mismatch there is EXCUSED: the command still executes, the divergence is
-# still printed, and CI stays green by design. (Re-derived 2026-08-22 after
-# round 23; it read "five of the six" until H24 added an instance and H23
-# stopped counting a currency-pierced record claim as frozen.) That is worth having — it is how "this historical figure no
-# longer reproduces" stays visible — but it is not drift-catching coverage,
-# and a floor built on it protects mostly frozen text. Until H13 the two were
-# fused, and the headline "6 executed (floor 4)" described a live coverage of
-# ONE.
+# MIN_EXECUTED_CLAIMS counts every claim the tool RAN. Most of what it runs on
+# this tree sits inside a dated record whose own pierce fails, so a mismatch
+# there is EXCUSED: the command still executes, the divergence is still
+# printed, and CI stays green by design. That is worth having — it is how "this
+# historical figure no longer reproduces" stays visible — but it is not
+# drift-catching coverage, and a floor built on it protects mostly frozen text.
+# Until H13 the two were fused, and a headline of "6 executed (floor 4)"
+# described a live coverage of ONE.
 #
-# So the honest figure gets its own floor. Re-derived 2026-08-22, the same way
-# and by the same invocation: read the "... of which LIVE (can gate)" line.
+# So the honest figure gets its own floor, re-derived by the same invocation:
+# read the "... of which LIVE (can gate)" line. Re-derived 2026-08-22: 3 live
+# instances, 2 distinct commands.
 #
-# ROUND 23 MOVED THE MEASUREMENT FROM 1 TO 3, for two unrelated reasons, and
-# the FLOOR IS DELIBERATELY LEFT AT 1 — see the argument below, and do not
-# read the measurement as the floor. What the line now reads:
+# THE FLOOR IS DELIBERATELY LEFT AT 1 — DO NOT READ THE MEASUREMENT AS THE
+# FLOOR. The argument is MIN_EXECUTED_CLAIMS's own, applied to this counter: a
+# floor must not be raised by something that can be inflated without adding
+# reach. Of the three live instances, one is a second QUOTE of a command
+# already live elsewhere (repetition, exactly what the executed floor came off
+# instances to stop counting) and one is REVISION-PINNED (`9b841d1^`), so it
+# can never drift whatever any document says, and its liveness rests on the
+# word "today" sitting within 120 characters of it inside a frozen Version
+# History row. So the distinct live commands are 2, of which exactly ONE can
+# drift — the same single command that has been this tool's whole live reach
+# since H13 measured it. Raising the floor to 3, or to 2, would gate CI on
+# repetition and on prose adjacency inside a record, not on reach.
 #
-#     live claims: 3   (2 distinct commands)
-#       * CLAUDE.md:276  `ls docs/tracking/*-design.md \| wc -l` -> 60 — the
-#         flagship instance this tool was written for, whose own sentence
-#         records that it read 42 while the truth was 60 and nobody noticed.
-#       * README.md:930  the SAME command, quoted across a hard wrap inside
-#         the tree diagram. Live all along; invisible until H24 taught shape
-#         4 the `re-derive with` attribution and the wrap prefix.
-#       * code-standards/section-3.md:1140  `git grep -c 'CROSS-PENDING'
-#         9b841d1^ …` -> 218, in a Version History row. Newly COUNTED live by
-#         H23 rather than newly live: it always gated (the row says "245
-#         today", and a currency assertion pierces the record excusal), while
-#         the counter asked only where it sat.
+# THE RESIDUAL, recorded rather than engineered away: a floor of 1 can be met
+# by the revision-pinned claim ALONE, so a tree that lost both
+# design-supplement sentences would print PASS with no drift-catching coverage
+# at all. The honest fix is a floor on DISTINCT DRIFT-CAPABLE live commands
+# rather than on live instances, which needs "revision-pinned" to be a property
+# this file can compute — the same owner-level call MIN_EXECUTED_CLAIMS defers,
+# and it decides both floors. Left open here rather than approximated.
 #
-# THE FLOOR STAYS AT 1, and the argument is MIN_EXECUTED_CLAIMS's own (round
-# 20, M20) applied to this counter: a floor must not be raised by something
-# that can be inflated without adding reach. Neither of the two new live
-# instances adds a drift-capable COMMAND.
+# The GATE below compares `len(live_commands)`, not `live` (INSTANCES) —
+# matching MIN_EXECUTED_CLAIMS, and closing the REPETITION half of the residual
+# above. It does NOT close the revision-pin half. Locked by
+# LiveDistinctFloorTests.
 #
-#   * README.md:930 is a second QUOTE of a command already live at
-#     CLAUDE.md:276 — repetition, which is exactly what M20 took the executed
-#     floor off instances to stop counting.
-#   * section-3.md:1140 is REVISION-PINNED (`9b841d1^`), so it can never
-#     drift whatever any document says, and its liveness rests on the word
-#     "today" sitting within 120 characters of it in a frozen VH row.
-#
-# So the distinct live commands are 2, of which exactly ONE can drift — the
-# same single command that has been this tool's whole live reach since H13
-# measured it. Raising the floor to 3, or to 2, would gate CI on repetition
-# and on prose adjacency inside a record, not on reach.
-#
-# THE RESIDUAL, recorded rather than engineered away, because H23 created it:
-# a floor of 1 can now be met by the revision-pinned claim ALONE, so a tree
-# that lost both design-supplement sentences would print PASS with no
-# drift-catching coverage at all. Before H23 that case measured 0 and went
-# red. The honest fix is a floor on DISTINCT DRIFT-CAPABLE live commands
-# rather than on live instances, which needs "revision-pinned" to be a
-# property this file can compute — an owner-level call M20 explicitly
-# deferred ("whether to exclude revision-pinned commands entirely from even
-# the distinct count is a separate, owner-level call this fix does not
-# make"), and the same call decides both floors. It is left open here rather
-# than approximated.
-#
-# ROUND 24 (L12) DID THE HALF THAT WAS NOT THAT CALL. The GATE below used to
-# compare `live` (INSTANCES) against this floor, not `len(live_commands)`
-# (DISTINCT commands) — the very hole M20 closed on the executed floor,
-# reopened here: a floor on instances cannot tell "N drift-capable claims"
-# from "one command quoted N times", and README.md:930's quote of the
-# CLAUDE.md:276 command is exactly that repetition, counted twice in `live`.
-# Now gated on `len(live_commands)`, matching MIN_EXECUTED_CLAIMS. This
-# closes the REPETITION half only; the REVISION-PIN half two paragraphs up
-# is unchanged and is NOT this fix's claim — a floor of 1 is still met by
-# `code-standards/section-3.md:1140` alone, which can never drift, and
-# excluding it needs the same "revision-pinned" property this section
-# already defers. On today's tree the fix changes no printed number (live
-# commands: 2, unmoved) and no exit code — verified by full-output diff
-# against the unpatched tool. NOTE FOR WHOEVER TAKES IT: raising this constant today
-# fails 12 cases in tools/tests/test_doc_claim_check.py, because that suite's
-# `scan()` harness patches MIN_EXECUTED_CLAIMS and not MIN_LIVE_CLAIMS, so
-# every fixture is silently pinned to a live floor of 1.
+# NOTE FOR WHOEVER RAISES IT: raising this constant today fails 12 cases in
+# tools/tests/test_doc_claim_check.py, because that suite's `scan()` harness
+# patches MIN_EXECUTED_CLAIMS and not MIN_LIVE_CLAIMS, so every fixture is
+# silently pinned to a live floor of 1.
 #
 # THE NUMBER IS THE POINT, NOT A PROBLEM TO BE ENGINEERED AWAY. Raise it when
 # a NEW drift-capable command is quoted in live text, in the same commit;
-# lower it only with the reason recorded in the Version History row beside it.
+# lower it only with the reason stated in the commit message that lowers it.
 MIN_LIVE_CLAIMS = 1
 
 # ---------------------------------------------------------------------------
@@ -1507,32 +1276,24 @@ MIN_LIVE_CLAIMS = 1
 # floor becomes permanent. It is ONE object now: add a class here and name it
 # on a claim shape.
 #
-# ROUND 19 (H18) — WHAT THAT SENTENCE USED TO CLAIM, AND WHY IT WAS WRONG. It
-# read "...and nothing in scan() changes". Executed literally, it crashed: a
-# `PairAnswer` with bucket `not-a-pair` raised `KeyError: 'not-a-pair'`,
-# because scan()'s `declined` dict was built from DECLINE_BUCKETS — a module
-# table this banner never mentioned — and the traceback exited 1, the code
-# meaning "a document is wrong", the collision round 17 (M14) spent a whole
-# fix separating. Three smaller leaks in the same seam: ANSWER_KINDS was a
-# hand-written tuple (a duplicate of the truth, in the tool whose thesis is
-# that hand-maintained figures drift), every shape regex hard-coded the
-# integer value pattern (shapes and answers were a CROSS-PRODUCT, not two
-# orthogonal seams), and `answer.parse` may return a bucket its class never
-# declares.
+# THE BANNER USED TO SAY "...and nothing in scan() changes", and executed
+# literally that crashed. Four leaks, all closed and locked by
+# AnswerKindRegistrationTests: ANSWER_KINDS is DERIVED from the shapes rather
+# than hand-written (a hand-maintained duplicate, in the tool whose thesis is
+# that hand-maintained figures drift), the decline table is DERIVED from
+# DECLINE_BUCKETS plus each kind's own bucket (decline_bucket_order), an
+# unforeseen bucket is counted rather than fatal (record_decline), and the
+# stated-value grammar lives on the answer kind with each shape's regex built
+# from it — before that, shapes and answers were a CROSS-PRODUCT rather than
+# two orthogonal seams.
 #
-# All four are closed: ANSWER_KINDS is DERIVED from the shapes, the decline
-# table is DERIVED from DECLINE_BUCKETS plus each kind's own bucket
-# (decline_bucket_order), an unforeseen bucket is counted rather than fatal
-# (record_decline), and the stated-value grammar lives on the answer kind
-# with each shape's regex built from it. What is STILL true rather than
-# aspirational, stated so this banner stops over-promising: registering a
-# kind and naming it on a shape is enough for scan() to run, count and print
-# it. What a new kind still touches outside this section is the SHAPE regex
-# it is named on — the text AROUND the value placeholder (shape 1's
-# `[^0-9`\n]{0,18}` run, for instance) is written for a value made of
-# digits, so a radically different grammar wants its own shape, not just its
-# own answer. That is a real limit and it is smaller than the one this
-# banner used to hide.
+# WHAT IS STILL TRUE RATHER THAN ASPIRATIONAL, stated so this banner stops
+# over-promising: registering a kind and naming it on a shape is enough for
+# scan() to run, count and print it. What a new kind still touches outside
+# this section is the SHAPE regex it is named on — the text AROUND the value
+# placeholder is written for a value made of digits, so a radically different
+# grammar wants its own shape, not just its own answer. That is a real limit,
+# and it is smaller than the one this banner used to hide.
 #
 # An answer kind owns four things:
 #   parse(text, start, end) -> (value, None) | (None, (bucket, reason))
@@ -1560,20 +1321,19 @@ APPROX_BEFORE = re.compile(
     r"nearly|almost|at least|at most|up to|no more than|no fewer than)\s+)$",
     re.I)
 
-# Round 17 (L5). No allow-listed binary this tool ever runs pads a count with
-# a leading zero or groups it with a thousands separator — `wc -l`, `grep -c`,
-# `git grep -c`, `ls | wc -l` all print a bare digit run. The old grammar
-# (`\d[\d,]*`, both here and in single_integer() below) accepted both anyway,
-# and Python's own `int()` NORMALISES what it is handed rather than validating
-# it: `int("1,2,3".replace(",", ""))` is 123 (comma position is irrelevant to
-# it) and `int("007")` is 7 (a leading zero is silently dropped) — so a
-# malformed document transcription "reproduced" a real value by accident of
-# `int()` being more permissive than any command's actual output grammar ever
-# is. A WELL-FORMED integer literal, matched in full: either the single digit
-# "0", or a nonzero digit run with no leading zero, optionally grouped in
-# EXACT thousands (a document may write "12,345" for readability; no live
-# claim's command ever emits the comma itself — see single_integer(), which
-# does not accept one).
+# No allow-listed binary this tool runs pads a count with a leading zero or
+# groups it with a thousands separator — `wc -l`, `grep -c`, `git grep -c`,
+# `ls | wc -l` all print a bare digit run. The trap this guards is Python's
+# own `int()`, which NORMALISES what it is handed rather than validating it:
+# `int("1,2,3".replace(",", ""))` is 123 (comma position is irrelevant to it)
+# and `int("007")` is 7 (a leading zero is silently dropped), so a malformed
+# document transcription could "reproduce" a real value by accident of `int()`
+# being more permissive than any command's output grammar ever is. A
+# WELL-FORMED integer literal, matched in full: either the single digit "0",
+# or a nonzero digit run with no leading zero, optionally grouped in EXACT
+# thousands (a document may write "12,345" for readability; no live claim's
+# command ever emits the comma itself — see single_integer(), which does not
+# accept one). Locked by MatcherTests.test_a_malformed_integer_literal_is_declined.
 _WELL_FORMED_INT = re.compile(r"\A(?:0|[1-9]\d*|[1-9]\d{0,2}(?:,\d{3})+)\Z")
 
 
@@ -1588,14 +1348,11 @@ class SingleIntegerAnswer:
     name = "single-integer"
     bucket = "not-single-int"
     unreadable = "output is not a single integer"
-    # Round 19 (H18). The STATED-VALUE grammar belongs to the answer kind, not
-    # to each claim shape: it used to be hard-coded as `\d[\d,]*` inside all
-    # four shape regexes, so a second answer kind meant editing every shape —
-    # shapes and answers were a cross-product, not two seams. Each shape's
-    # regex is now BUILT from this, at ClaimShape construction. Deliberately
-    # loose (it is the CAPTURE; `parse` below is what validates it), because
-    # a malformed transcription must reach a NAMED decline rather than fail
-    # to match and vanish.
+    # The STATED-VALUE grammar belongs to the answer kind, not to each claim
+    # shape; each shape's regex is BUILT from this at ClaimShape
+    # construction. Deliberately loose (it is the CAPTURE; `parse` below is
+    # what validates it), because a malformed transcription must reach a
+    # NAMED decline rather than fail to match and vanish.
     value_pattern = r"\d[\d,]*"
 
     def parse(self, text, start, end):
@@ -1613,12 +1370,10 @@ class SingleIntegerAnswer:
                           "claiming an exact figure")
         raw = text[start:end]
         if not _WELL_FORMED_INT.match(raw):
-            # Round 17 (L5). `raw` matched the shape's own loose capture
-            # (`\d[\d,]*`) but is not a WELL-FORMED integer literal — a
-            # malformed thousands grouping ("1,2,3") or a leading zero
-            # ("007"). Declined and named rather than silently normalised by
-            # `int()`, which would have accepted either and let a malformed
-            # transcription "reproduce" a real value by coincidence.
+            # `raw` matched the shape's own loose capture but is not a
+            # WELL-FORMED integer literal — a malformed thousands grouping
+            # ("1,2,3") or a leading zero ("007"). Declined and named rather
+            # than silently normalised by `int()`. See _WELL_FORMED_INT.
             return None, (self.bucket,
                           "stated value %r is not a well-formed integer "
                           "literal — a digit run with no leading zero, "
@@ -1704,16 +1459,13 @@ class ClaimShape:
     def negation_window(self, text, m):
         """The text a NEGATOR may appear in to mark this claim historical.
 
-        Round 16 (M4). This is ONE implementation shared by every shape,
-        deliberately. The look-back was added at round 12 to the value-first
-        shape only, because that was the shape whose negator demonstrably
-        precedes the match; the forward shape kept passing the text AFTER its
-        gap, which can only ever contain the arrow and the digits, so that
-        argument was dead code and a forward-shape claim whose negator sits
-        BEFORE the backtick was never recognised as historical. Proven, same
-        document and same negator: "before this fix, `grep -c … f` → 4" was
-        reported as a MISMATCH while the value-first phrasing of the identical
-        sentence correctly declined.
+        ONE implementation shared by every shape, deliberately. When the
+        look-back existed on the value-first shape alone, the forward shape
+        passed the text AFTER its gap — which can only ever contain the arrow
+        and the digits — so a forward-shape claim whose negator sits BEFORE
+        the backtick was never recognised as historical, while the
+        value-first phrasing of the identical sentence declined correctly.
+        Locked by MatcherTests.test_a_negated_claim_declines_in_every_shape.
 
         Both directions are covered by looking back from the start of the
         match (bounded to the line) and adding the shape's own gap — which for
@@ -1748,51 +1500,25 @@ class LeadingValueShape(ClaimShape):
     A date is refused rather than declined: there is no claim in
     "August 18, 2026", so counting one would overstate what was given up.
 
-    ROUND 19 (H16). The two date rules were ONE CASE of a general defect, and
-    stating them as two named prefixes left the rest of the class live. The
-    real rule is that a stated value must BEGIN ITS OWN TOKEN: any compound
-    number whose tail digits abut a parenthesised command bound as a stated
-    value, because the shapes' value pattern happily starts mid-token.
-    Reproduced, both correct sentences the tool would have failed CI on:
+    THE DATE RULES ARE ONE CASE OF A GENERAL RULE, and the general rule is
+    the one implemented: A STATED VALUE MUST BEGIN ITS OWN TOKEN. The shapes'
+    value pattern happily starts mid-token, so any compound number whose tail
+    digits abut a parenthesised command bound as a stated value — section
+    numbers, version numbers, spec numbers, Markdown heading numbers, decimal
+    fractions, slash-separated ratios, clock times, slash dates, and a bare
+    letter prefix (`v2`). Stating the rule as an ENUMERATION of joiners was
+    tried twice and failed twice, in both cases because the enumeration was
+    the ways THIS corpus continues a token rather than the ways a token CAN
+    be continued.
 
-        §2.2.2 (`grep -c a data.txt`)   -> "document says 2; command returns 3"
-        v1.73 (`cmd`)                   -> "document says 73; command returns 3"
+    So the test is: the single character immediately before the value (after
+    stripping emphasis markup, which does not join tokens) must be neither
+    ALPHANUMERIC nor one of the punctuation joiners in COMPOUND_TAIL. Locked
+    by LeadingValueTokenTests and CompoundTokenPrecisionTests.
 
-    The first is LIVE TEXT — `docs/specs/code-standards/section-3.md` binds
-    stated value 2 out of "verified against §2.2.2 (`grep -n ... section-2.md`)"
-    — and escaped only because `document_relative_operand` declines that
-    command for a wholly unrelated reason, which is the same luck this
-    class's docstring already warned about for the date case ("they escape
-    only because those backticked spans hold ERR ids rather than runnable
-    commands, which is luck, not a rule"). 216 of the 429 leading-value binds
-    on this tree share the shape: section numbers (`§3.5.`->2), version
-    numbers (`v1.`->73), spec numbers (`#20 §3.`->4), Markdown heading
-    numbers (`### 5.1.`->2) and decimal fractions (`52.`->5).
-
-    So the test is now the general one: the character before the value —
-    ignoring only emphasis markup, which does not join tokens — must not be
-    `.`, `#` or `§`. The date rules stay as they are, both because they catch
-    a form this one does not (the digits of "August 18," DO begin their own
-    token) and because their message names what was refused.
-
-    ROUND 24 (M31) — THE ENUMERATION WAS STILL THREE CHARACTERS WHERE THIS
-    DOCSTRING ALREADY STATED A GENERAL RULE, and the enumeration was never
-    tested against anything but itself. `.`, `#` and `§` are the ways THIS
-    corpus continues a token, not the ways a token CAN be continued —
-    reproduced, all wrongly bound under the pre-fix tuple: `test counts
-    461/1/2 (\\`cmd\\`)` bound 2 (preceded by `/`), `at 16:59:45 (\\`cmd\\`)`
-    bound 45 (preceded by `:`), `v2 (\\`cmd\\`)` bound 2 (preceded by the
-    letter `v`), `measured 2026/08/22 (\\`cmd\\`)` bound 22 (preceded by
-    `/`). A census of this corpus at the time found 87 preceding-hyphen hits
-    and 30+ bare-letter hits, latent only because those parentheses hold ERR
-    ids rather than runnable commands — the same luck this docstring already
-    named for the date case, one abstraction level up. The rule actually
-    implemented now: a stated value's own token may not be joined to
-    whatever precedes it, so the preceding character (after stripping
-    emphasis) must be neither ALPHANUMERIC (covers `v2`, and any bare digit
-    run like a ratio's earlier components) nor one of `.#§/:` (covers a
-    section/spec/heading/decimal tail, a ratio separator, and a clock or
-    date-slash separator)."""
+    The date rules stay as they are, both because they catch a form this one
+    does not (the digits of "August 18," DO begin their own token) and
+    because their message names what was refused."""
 
     # A stated value begins its own token. These are the PUNCTUATION ways
     # this corpus continues one — `.` (a section, version, heading or
@@ -1811,14 +1537,10 @@ class LeadingValueShape(ClaimShape):
             return "the integer is the DAY of a date, not a stated value"
         # `rstrip` over emphasis only: "**35**" is a stated value whose token
         # begins at the 3, while "§2.2.**2**" is still a section number.
-        # Round 24 (M31): the test used to be `.endswith(COMPOUND_TAIL)`,
-        # three characters standing in for the docstring's general rule
-        # ("a stated value must begin its own token"). It is now that rule,
-        # not an enumeration of it: refuse when the single character
-        # immediately before the value is either alphanumeric (a letter, as
-        # in `v2 (\`cmd\`)`, or an unseparated digit, as in a compound like a
-        # timestamp's own tens digit) or one of the punctuation joiners in
-        # COMPOUND_TAIL.
+        # The docstring's general rule, not an enumeration of it: refuse
+        # when the single character immediately before the value is either
+        # alphanumeric (a letter, as in `v2 (\`cmd\`)`, or an unseparated
+        # digit) or one of the punctuation joiners in COMPOUND_TAIL.
         tail = before.rstrip("*_")[-1:]
         if tail.isalnum() or tail in self.COMPOUND_TAIL:
             return ("the integer is not the start of its own token — it is "
@@ -1882,53 +1604,28 @@ _VERB_GAP = (r"[\s)\]}*_'\"—–-]{0,24}?"
              r"(?:\b(?:" + _GAP_ADVERB + r")\b[\s,]{1,4}){0,3}")
 
 
-# The run between the arrow-or-verb and the stated value. Round 23 (H21): it
-# used to be `[^0-9`\n]{0,18}` — eighteen characters of ANY non-digit text,
-# which is enough for a whole subordinate clause, and H21's third reproduction
-# is exactly that:
-#
-#     `grep -c 'a' data.txt` returns, for the 2 tracking files, a count of 3.
-#
-# The verb is adjacent to the command, so the gap rule above passes it; ", for
-# the " is ten characters and binds the 2 out of an aside, against a sentence
-# whose stated answer, 3, is correct. A value the command ANSWERS follows its
-# verb across markup and punctuation, never across words — "returned **218**",
-# "→ 18", "shows: 4" — so the run is whitespace and markup only. Measured on
-# this tree at the same time: of the post-verb runs on 217 verb-route matches
-# the overwhelming majority are " ", " **", " == ", " = "; the ones carrying
-# words (" the exact Stage-", " of FR-", " at step ") are prose that names a
-# number, not a command reporting one, and none of the seven executed claims
-# has a word here. (118 of those 217 carry a post-verb run this refuses —
-# re-derived 2026-08-22, and see the count note at the CLAIM template below,
-# which is where the two halves are added up.)
+# The run between the arrow-or-verb and the stated value: whitespace and
+# markup only, no letters. The rule, which is what the eighteen-character
+# any-text run it replaced could not express: a value the command ANSWERS
+# follows its verb across markup and punctuation, never across words —
+# "returned **218**", "→ 18", "shows: 4". A run carrying words (" the exact
+# Stage-", " of FR-", " at step ") is prose that names a number, not a command
+# reporting one. Locked by
+# VerbGapPrecisionTests.test_a_subordinate_clause_before_the_verb_does_not_bind,
+# which is exactly the case this half closes and the gap rule above does not
+# ("`cmd` returns, for the 2 tracking files, a count of 3" has an EMPTY verb
+# gap).
 _POST_VERB = r"[^0-9A-Za-z`\n]{0,18}"
 
 
 # SHAPE 1 — command, then the stated value: "`cmd` → 18", "`cmd` returned 218".
-# The gap is deliberately tight — round 8's H4 showed that a loose lookahead
-# binds across unrelated clauses.
 #
-# ROUND 23 (H21) — AND 40 CHARACTERS WAS STILL A WHOLE CLAUSE, so the two
-# routes into this shape no longer share one gap grammar. An ARROW cannot
-# belong to a neighbouring clause: "→ 18" after a command is that command's
-# answer and nothing else, whatever the 40 characters before it say. A VERB
-# can, and `found`/`counted`/`shows`/`returns` are among the commonest verbs
-# in this repo's prose, so any sentence that mentions a command and later
-# reports SOME number matched. Three reproductions against CORRECT documents,
-# each producing "document says 2; command returns 3" end to end through
-# scan(), at exit 1:
-#
-#     `grep -c 'a' data.txt` returns, for the 2 tracking files, a count of 3.
-#     The instrument (`grep -c 'a' data.txt`) was re-run and found 2 orphans.
-#     `grep -c 'a' data.txt` is the gate; the sweep counted 2 regressions.
-#
-# All three were re-run against this file both ways on 2026-08-22: at the
-# pre-round-23 code each binds and reports "document says 2; command returns
-# 3" at exit 1; after it none binds and each is named in the census instead.
-#
-# The census could not see any of them, because the shape HAD bound the span —
-# this is round 19 (H15)'s shape one layer up, a claim that is invisible
-# precisely because a matcher took it.
+# ITS TWO ROUTES DO NOT SHARE ONE GAP GRAMMAR, and the asymmetry is the whole
+# rule: an ARROW cannot belong to a neighbouring clause ("→ 18" after a
+# command is that command's answer and nothing else, whatever the 40
+# characters before it say), while a VERB can — `found`/`counted`/`shows`/
+# `returns` are among the commonest verbs in this repo's prose, so any
+# sentence that mentioned a command and later reported SOME number matched.
 #
 # So the verb route's gap may hold only whitespace, CLOSING or EMPHASIS markup
 # (") ", " **", " — "), and ADVERBS OR NEGATORS. The rule is not "punctuation
@@ -1941,28 +1638,22 @@ _POST_VERB = r"[^0-9A-Za-z`\n]{0,18}"
 # have been wrong about English, not merely strict.) A `.` `;` or `:` ends the
 # clause outright and is refused whatever follows.
 #
-# Measured on this tree, and RE-DERIVED 2026-08-22 rather than carried,
-# because the figure first written here was wrong: 217 verb-route matches, of
-# which the gap rule alone refuses 147, the _POST_VERB rule alone refuses 118,
-# and the two together refuse 184. (The number that stood here was 153, which
-# is the pre-round-23 unrecognised-shape CENSUS count copied into a sentence
-# about a different population — round 20's M19 defect, committed inside the
-# paragraph that files it. The procedure is the one M19 prescribes: re-run the
-# measurement, never copy the figure.) NONE of the seven claims the tool
-# actually executes uses a non-empty verb gap, so the measured cost is nil,
-# and the refused matches are re-counted in the census and decline buckets
-# rather than dropped — 8 of them moved from a named decline bucket into the
-# census on the live tree, and none of them was a claim this tool could run.
-# A phrasing this list has not thought of lands in the census under its own
-# file and line, which is the self-reporting failure mode round 16 (H7) built
-# that bucket for, not a silent drop.
+# NOT ONE OF THE CLAIMS THIS TOOL EXECUTES USES A NON-EMPTY VERB GAP, so the
+# measured cost of the restriction is nil; and a refused match is re-counted
+# in the census and decline buckets rather than dropped, so a phrasing this
+# rule has not thought of lands in the census under its own file and line
+# rather than vanishing. That matters more than the restriction itself: before
+# it, the census could not see a wrongly-bound claim AT ALL, because the shape
+# HAD bound the span — the same shape as the hand-written-binary-list blind
+# spot, one layer up.
 #
-# THE THIRD REPRODUCTION IS CLOSED BY THE OTHER HALF, not by this rule, and
-# the split is worth keeping straight: "`cmd` returns, for the 2 tracking
-# files, a count of 3" has an EMPTY verb gap, so the rule above admits it. It
-# is `_POST_VERB` (defined immediately above this comment) that refuses it,
-# because the run between the verb and the value may hold no letters. Neither
-# half alone closes all three reproductions; both are required.
+# THE TWO HALVES ARE BOTH REQUIRED and the split is worth keeping straight.
+# The gap rule closes "was re-run and found 2 orphans" and "is the gate; the
+# sweep counted 2"; `_POST_VERB` (immediately above) closes "returns, for the
+# 2 tracking files, a count of 3", which has an EMPTY verb gap and which the
+# gap rule therefore admits. Only the `_POST_VERB` case carries its own
+# regression test; the two gap-rule reproductions are named here because
+# nothing else records them.
 CLAIM = (
     r"`(?P<cmd>[^`\n]{4,200})`"          # the command
     # ONE `gap` group, two grammars — ClaimShape's contract requires the group
@@ -2034,13 +1725,14 @@ _ATTRIBUTION_VERB = (
 # the value and the verb must belong to the same clause. Sentence and quote
 # marks are excluded outright for the same reason. The POST half may cross the
 # one hard wrap rejects() allows; the PRE half may not.
-# Both halves are single CHARACTER CLASSES, never an alternation of "ordinary
-# char" and "newline plus indent": the alternation form `(?:[^`\n]|\n[ \t>]*)`
-# is ambiguous — "\n> " can be consumed by either branch — and under two
-# bounded repetitions that is catastrophic backtracking. Measured on the first
-# draft: the whole scan went from 1.5 s to no result in 120 s. The newline
-# BUDGET is enforced in rejects() instead, where it is a two-line rule rather
-# than a regex nobody can reason about.
+# EVERY RUN IN THIS SHAPE IS A SINGLE CHARACTER CLASS, never an alternation
+# of "ordinary char" and "newline plus indent". The alternation form
+# `(?:[^`\n]|\n[ \t>]*)` is ambiguous — "\n> " can be consumed by either
+# branch — and under two bounded repetitions that is catastrophic
+# backtracking: measured on the first draft, the whole scan went from 1.5 s
+# to no result in 120 s. The newline BUDGET is enforced in rejects()
+# instead, where it is a two-line rule rather than a regex nobody can reason
+# about.
 _ATTR_PRE = r"[^`;\"'.\n]{0,24}?"
 _ATTR_POST = r"[^`;\"'.]{0,40}?"
 # The second route to the same shape, and the reason the connectives are split
@@ -2067,6 +1759,8 @@ _ATTR_BARE = r"[A-Za-z \t-]{0,24}?"
 # repetitions and took a draft scan from 1.5 s to no result in 120 s), and
 # the one-hard-wrap budget in AttributedShape.rejects() still bounds it,
 # because this run sits inside the `gap` group it counts newlines in.
+# (The single-class rule is _ATTR_PRE/_ATTR_POST's, stated above; it applies
+# here for the same reason and is not restated.)
 #
 # THE CLASS HOLDS EXACTLY TWO PREFIX CHARACTERS AND NOT A THIRD, and the
 # third is the one worth recording. The round-23 draft of this line read
@@ -2075,8 +1769,9 @@ _ATTR_BARE = r"[A-Za-z \t-]{0,24}?"
 # bound the 35 out of a neighbouring column. That is H21's own defect
 # (a value bound from an unrelated clause) reintroduced one shape over, in
 # the same commit that fixed it. Measured before removing it: the ASCII pipe
-# binds NOTHING on this tree (shape 4 binds 33 spans with it and 33 without),
-# so it was pure risk. `│` is H24's actual need — the tree diagram's
+# bound NOTHING on this tree — shape 4's bind count was identical with and
+# without it — so it was pure risk. `│` is H24's actual need — the tree
+# diagram's
 # continuation rule — and `>` is the blockquote continuation this repo writes
 # in every design supplement; `>` binds one further span here
 # (CHANGELOG.md:4177), a backticked identifier that check_claim ignores and
@@ -2289,18 +1984,15 @@ def unrecognised_spans(text, bound):
                     + text[s.end():min(hi, s.end() + UNRECOGNISED_RADIUS)])
 
         if not re.search(r"\d", near(ls, le)):
-            # ROUND 23 (H24). Bounding the census to the span's OWN line was
-            # right for its stated job — stopping an entry being manufactured
-            # out of the next bullet's numbers — and wrong for the shape this
-            # repo actually writes, because it HARD-WRAPS MID-SENTENCE. Live
-            # at README.md:930-931 when this landed: the stated value ("60
-            # design supplements") sits on one physical line and the command
-            # that re-derives it on the next, so no shape bound it AND the
-            # census could not name it either. It was a SECOND live instance
-            # of the very command this file's LIVE floor is built around,
-            # and the tool neither checked it, declined it, nor mentioned
-            # it. A corpus sweep found 13 runnable command spans in that
-            # shape.
+            # BOUNDING THE CENSUS TO THE SPAN'S OWN LINE was right for its
+            # stated job — stopping an entry being manufactured out of the
+            # next bullet's numbers — and wrong for the shape this repo
+            # actually writes, because it HARD-WRAPS MID-SENTENCE: a stated
+            # value on one physical line and the command that re-derives it
+            # on the next was bound by no shape AND unnameable by the
+            # census. A corpus sweep found 13 runnable command spans in that
+            # shape, one of them a live instance of the very command this
+            # file's LIVE floor is built around.
             #
             # So the window widens by ONE physical line each way, and only
             # when the span's own line carries no digit at all — a line that
@@ -2567,25 +2259,21 @@ def denied_flag(argv):
                 return ("%s, a GNU long-option ABBREVIATION of the denied "
                         "git global `%s`" % (a, full))
     if name == "awk":
-        # Round 14 (external review, P1): scan EVERY token, never the token
-        # GUESSED to be the program. `-v` and `-F` take a SEPARATE argument, so
-        # "first operand not starting with -" picked `x=1` out of
-        # `awk -v x=1 'BEGIN{system("touch /tmp/pwn")}END{print 1}' f` and never
-        # looked at the program at all — the command then ran system() and
-        # returned the claimed integer under a printed PASS. Verified
-        # exploitable before this fix. Scanning all tokens needs no awk option
-        # grammar and cannot be outflanked by adding one: `system`/`getline`
-        # must appear literally to be called, and a FILENAME containing either
-        # word is merely declined-and-named, which is the safe direction.
+        # SCAN EVERY TOKEN, never the token GUESSED to be the program.
+        # `-v` and `-F` take a SEPARATE argument, so "first operand not
+        # starting with -" picked `x=1` out of `awk -v x=1 '...' f` and never
+        # looked at the program at all. Scanning all tokens needs no awk
+        # option grammar and cannot be outflanked by adding one; a FILENAME
+        # that happens to contain a refused word is merely
+        # declined-and-named, which is the safe direction. Locked by
+        # HatchRegressionTests.test_awk_with_a_leading_v_assignment.
         #
-        # Round 15 (H1): scanning every token for two BLACKLISTED words was
-        # still the wrong shape of rule, because awk's escape lives in its
-        # SCRIPT and a script is a language, not a vocabulary.
-        # `awk 'BEGIN{print "touch X" | "sh"} END{print 1}' CLAUDE.md` created
-        # the file and returned the claimed 1 under a printed PASS, using
-        # neither `system` nor `getline`. The rule is inverted: what the
-        # program may CALL is allow-listed, and the two pipe characters that no
-        # call-name list can describe are refused outright.
+        # WHAT IS SCANNED FOR IS AN ALLOW-LIST, NOT A BLACKLIST, because
+        # awk's escape lives in its SCRIPT and a script is a language, not a
+        # vocabulary: `print x | "sh"` runs a shell command using neither of
+        # the two words a blacklist named. So what the program may CALL is
+        # allow-listed, and the two characters that no call-name list can
+        # describe are refused outright.
         for a in argv[1:]:
             if "|" in a:
                 return ("awk token containing `|` — `print x | \"cmd\"` and "
@@ -2681,24 +2369,21 @@ OUTPUT_CAP_BYTES = 8 * 1024 * 1024
 
 
 # ---------------------------------------------------------------------------
-# CHILD RESOURCE LIMITS (round 18) — DEFENCE IN DEPTH, NOT A REPLACEMENT.
+# CHILD RESOURCE LIMITS — DEFENCE IN DEPTH, NOT A REPLACEMENT.
 #
 # This is not a review finding. It is a structural decision taken on the
-# evidence that ONE defect class has now recurred four consecutive rounds —
-# round 9's H1, round 14's P1, round 15's H3, round 18's H12 — and each time
-# INSIDE THE PREVIOUS ROUND'S FIX. The shape is always the same: a hatch is
-# refused by the spelling someone enumerated, and the same hatch respelled
-# (`sort -o` → `sort -oFILE` → `sort --o=FILE`) walks past the check. Every
-# fix in that chain was correct and none of them was sufficient, because they
-# all assert read-only-ness rather than ENFORCING it.
+# evidence the SAFETY header records: one defect class recurred five
+# consecutive rounds, each time INSIDE the previous round's fix, because
+# every fix in that chain ASSERTS read-only-ness rather than ENFORCING it.
 #
-# Round 21 (H1) made it FIVE, and is the sharpest available statement of what
-# this section can and cannot do: `grep -cf/etc/hostname data.txt` respelled
-# H14's attached option value as a CLUSTER, walked past confinement, and READ
-# a host file — and not one limit below applies, because every one of them
-# bounds writing, CPU and memory, and none of them bounds a read. The limits
-# are defence in depth for the WRITE/EXECUTE half only; confinement (rule 4)
-# is still the whole of the read half, on its own, exactly as stated below.
+# The fifth of those is also the sharpest available statement of what this
+# section can and cannot do: the hatch that ended the chain was a clustered
+# short option that walked past confinement and READ a host file, and not
+# one limit below applies to it, because every one of them bounds writing,
+# CPU and memory and none of them bounds a read. The limits are defence in
+# depth for the WRITE/EXECUTE half only; confinement (rule 4) is still the
+# whole of the read half, on its own, exactly as stated below. Locked by
+# ChildResourceLimitTests and ResourceLimitMathTests.
 #
 # So the property is moved off the allow-list and onto the kernel. Every child
 # this tool spawns runs under:
@@ -2996,22 +2681,21 @@ def run_pipeline(segments, cwd):
 
 
 # The command side is stricter than the document side's _WELL_FORMED_INT in
-# one direction and looser in another — round 17 (L5). Stricter: no comma is
-# accepted at all, because no allow-listed binary's output ever contains one
-# (the document side allows one for readability; the command side is what
-# that readability is being checked AGAINST). Looser: an optional leading
-# `-`, because `awk` — the SCRIPT-hatches paragraph above is the canonical
-# site for how many of this tool's executed claims pipe through it; round 24
-# (M33) removed a THIRD copy of that fraction from here, which had drifted
-# both wrong on the number and loose on the term (it said "live", which this
-# file defines precisely — see MIN_LIVE_CLAIMS — and meant only "executed";
-# do not copy a number out of this comment either) — can
-# legitimately compute and print a negative number, and before this a
+# one direction and looser in another. Stricter: no comma is accepted at all,
+# because no allow-listed binary's output ever contains one (the document
+# side allows one for readability; the command side is what that readability
+# is being checked AGAINST). Looser: an optional leading `-`, because `awk`
+# can legitimately compute and print a negative number, and without it a
 # negative answer could not be READ at all — `single_integer("-3\n")` was
 # None, which check_claim() reports as "not-a-single-integer", a decline that
 # says the tool could not tell. That buries a genuine finding: a document's
 # POSITIVE claim compared against a real NEGATIVE answer is a mismatch this
 # tool can now actually make, rather than a claim it silently gives up on.
+# (A third copy of the "how many executed claims pipe through awk" fraction
+# used to sit here and had drifted both wrong on the number and loose on the
+# term — it said "live", which this file defines precisely; see
+# MIN_LIVE_CLAIMS. The SCRIPT-hatches paragraph above is the canonical site,
+# and it deliberately carries no number.)
 _WELL_FORMED_COMMAND_INT = re.compile(r"\A-?(?:0|[1-9]\d*)\Z")
 
 
@@ -3048,20 +2732,18 @@ def self_contained(segments, repo):
     POSITION AN OPERAND COULD OCCUPY names something real on disk under the
     repo root — a file, or a directory (round 20, M24).
 
-    Round 16 (M8). The old rule was `[a for a in argv[1:] if not
-    a.startswith('-')]` — the exact OPTION-GRAMMAR error round 14 already
-    fixed once for awk's program and python3's script: a flag's own VALUE
-    does not start with `-` either, so it counts as an "operand" by this
-    filter even though it names nothing. `grep -m 3 -c x` produced ["3", "x"]
-    — two operands, meeting grep's old need-2 floor — and ran with an EMPTY
-    stdin, reporting "document says N; command returns 0" against a document
-    that was never wrong, which is precisely what this guard's own comment
-    says it exists to prevent. `awk -v n=1 'END{print NR}'` failed the same
-    way. Enumerating which flag on which binary takes a separate-argument
-    value is the shape of rule round 14 and round 15 both found does not
-    hold up — the fix here does not try: a segment used to be self-contained
-    exactly when at least one of its tokens, whatever else it might look
-    like, named a real file relative to the repo root.
+    THE TEST NAMES A REAL FILE; IT DOES NOT MODEL AN OPTION GRAMMAR. The
+    rule it replaced was `[a for a in argv[1:] if not a.startswith('-')]` —
+    the same OPTION-GRAMMAR error as guessing awk's program token, because a
+    flag's own VALUE does not start with `-` either and so counted as an
+    "operand" that names nothing. `grep -m 3 -c x` produced ["3", "x"], met
+    the old operand floor, ran with an EMPTY stdin, and reported "document
+    says N; command returns 0" against a document that was never wrong —
+    precisely what this guard exists to prevent. Enumerating which flag on
+    which binary takes a separate-argument value is the shape of rule this
+    file has repeatedly found does not hold up, so the fix does not try: a
+    segment is self-contained exactly when at least one of its tokens,
+    whatever else it might look like, names something real on disk.
 
     Round 20 (M21) narrowed "whatever else it might look like" to "at a
     position an operand can occupy", because CONTENT alone fabricates a
@@ -3599,16 +3281,12 @@ FENCE_DECLINE_BUCKETS = (
 # ---------------------------------------------------------------------------
 # CHECK 2'S COVERAGE FLOOR (round 19, H17).
 #
-# MIN_EXECUTED_CLAIMS gates CHECK 1's recall and NOTHING gated CHECK 2's.
-# Blinding CHECK 2 completely still printed PASS and exited 0 — reproduced on
-# the live tree with one mutation making DECL_CLASS match nothing: "references
-# examined : 1882 (1882 skipped)", every reference skipped, zero examined,
-# success reported, and all 71 tests green throughout. That is the
-# vacuous-pass failure class verbatim — fixed for CHECK 1 at round 16 (H9) and
-# never applied here, because CHECK 2's counters (round 17, M14) were added
-# without a gate to hang them on. It is reachable without a code change too:
-# `_CSHARP_TAGS` is ("csharp", "cs"), so a corpus that starts writing ```C#
-# silently zeroes the whole check.
+# MIN_EXECUTED_CLAIMS gates CHECK 1's recall and NOTHING gated CHECK 2's:
+# blinding CHECK 2 completely still printed PASS and exited 0, the
+# vacuous-pass failure class verbatim, with the whole suite green throughout.
+# It is reachable without a code change too — `_CSHARP_TAGS` is ("csharp",
+# "cs"), so a corpus that starts writing ```C# silently zeroes the whole
+# check. Locked by CheckTwoCoverageFloorTests, both blindings.
 #
 # The floors are SHARES of what the corpus offers, not absolute counts, and
 # that is a deliberate departure from how MIN_EXECUTED_CLAIMS is written. An
@@ -3627,23 +3305,16 @@ FENCE_DECLINE_BUCKETS = (
 # Each floor sits at roughly half its measurement, the same headroom rule
 # MIN_EXECUTED_SLACK expresses: ordinary corpus drift must not turn a green
 # tree red, a blinded check must. Raise them when the shares rise; lower one
-# only with the reason recorded in the Version History row beside it.
+# only with the reason stated in the commit message that lowers it.
 #
-# ROUND 24 (L13) — THE EXAMINED-SHARE DENOMINATOR GREW FOR FREE. `examined`
-# counted every REFERENCE match found in ANY fence, tagged or not — including
-# `fence-untagged`, which by construction can NEVER become "actually
-# examined" (an untagged fence is never given to the csharp scanner at all).
-# Adding an ASCII tree or a bash block to a spec file costs no real coverage
-# but grows this denominator, driving the ratio toward the floor for free;
-# headroom was measured at only ~2.1x (0.11 / 0.05) before this fix. The
-# share is now computed over EXAMINABLE references — those found in a
-# tagged fence — which is what MIN_EXAMINED_SHARE was always trying to
-# measure ("a run that skips everything [it COULD examine] reports success
-# for the same reason a blinded one does"), not "a run that finds a lot of
-# prose". RE-DERIVED under the new denominator, same invocation: examinable
-# = 1882 - 899 (fence-untagged) = 983; not skipped = 198 (unchanged — those
-# claims were never in the untagged bucket); share = 198/983 = 0.20, floor
-# unmoved at 0.05 (now ~4.0x headroom rather than lowering the floor).
+# THE EXAMINED SHARE IS COMPUTED OVER EXAMINABLE REFERENCES — those found in
+# a TAGGED fence — not over every reference found in any fence. An untagged
+# fence is never given to the csharp scanner at all, so its references can
+# never become "actually examined"; counting them meant adding an ASCII tree
+# or a bash block to a spec file grew the denominator and drove the ratio
+# toward the floor for free, at no cost in real coverage. Under the correct
+# denominator the measurement above reads 198/983 = 0.20 against an unmoved
+# floor of 0.05.
 MIN_TYPED_FENCE_FILE_SHARE = 0.20
 MIN_EXAMINED_SHARE = 0.05
 
@@ -4066,13 +3737,24 @@ def check_claim(claim, repo, regions):
                                 "trailing \\)")
         return "ignored", None
     if head not in ALLOWED_CMDS:
-        # Round 9 (M1): this path was the tool's THIRD decline route and the
-        # only silent one, while its header and its file-manifest row both
-        # published "every declined claim is counted AND named". Most of what
-        # lands here is not a command at all — the shapes also match a
+        # This path was once the tool's THIRD decline route and the only
+        # SILENT one, while its header and its file-manifest row both
+        # published "every declined claim is counted AND named". Most of
+        # what lands here is not a command at all — the shapes also match a
         # backticked IDENTIFIER before an arrow (`SEASON_SAVE_FORMAT_VERSION`
-        # **5 → 6**), ~1,100 of them — so counting all of it would drown the
-        # real signal. Only genuinely command-SHAPED text is counted and named.
+        # **5 → 6**) — so counting all of it would drown the real signal.
+        # Only genuinely command-SHAPED text is counted and named.
+        #
+        # RE-DERIVED 2026-08-22, and stated as TWO figures because a single
+        # one is ambiguous between them and transplanting the wrong one is a
+        # defect this file has already filed: of 776 spans a claim SHAPE
+        # bound on this tree, 735 reach this branch (head not allow-listed)
+        # and 489 of those are a bare identifier with no argument at all.
+        # The figure that stood here was "~1,100", which is neither. Both are
+        # measured by walking `collect_claims` over `collect_surfaces` — do
+        # not copy either without re-running it, and do not carry either into
+        # the header's census note, which counts a DIFFERENT population
+        # (spans no shape bound at all).
         # FORBIDDEN gates it too, so a backticked EXPRESSION that merely looks
         # path-shaped (`permille/1000f > 0.6f`, live in #33's appendices) is
         # not announced as a rejected binary. It was never a command; naming it
@@ -4517,1592 +4199,26 @@ def main():
 if __name__ == "__main__":
     sys.exit(main())
 
-# Version History
-# | Version | Date       | Author      | Notes                                        |
-# | 1.0     | 2026-08-18 | Claude Code | Initial. Closes the "verification prose is   |
-# |         |            |             | never itself verified" class that AR rounds  |
-# |         |            |             | 6-8 kept finding and review alone could not  |
-# |         |            |             | stop finding: CLAUDE.md citing a grep that   |
-# |         |            |             | refutes its own claim, §9.2 Q-04 ratifying   |
-# |         |            |             | three IDs against six, §9.1 C-02 breaking    |
-# |         |            |             | inside the commit that claimed to re-run it, |
-# |         |            |             | §3.2.1's 218-vs-243 figure. Scope is         |
-# |         |            |             | deliberately floored at single-integer       |
-# |         |            |             | output — the class that actually bit — and   |
-# |         |            |             | every declined claim is COUNTED AND PRINTED  |
-# |         |            |             | rather than skipped, because rounds 5 and 6  |
-# |         |            |             | both found this project's checkers hiding    |
-# |         |            |             | real defects behind silent skips. Commands   |
-# |         |            |             | are untrusted document text: every pipeline  |
-# |         |            |             | segment must be an allow-listed read-only    |
-# |         |            |             | binary (git further restricted to read-only  |
-# |         |            |             | subcommands), no shell is used, redirection/ |
-# |         |            |             | substitution/chaining are refused, and glob- |
-# |         |            |             | dependent commands are DECLINED rather than  |
-# |         |            |             | approximated — a guessed reproduction would  |
-# |         |            |             | be a fabricated verification, which is the   |
-# |         |            |             | defect this tool exists to catch.            |
-# | 1.1     | 2026-08-19 | Claude Code | AR round-9 (3 High, 3 Medium, 2 Low), all   |
-# |         |            |             | proven by reproduction before the fix and   |
-# |         |            |             | re-proven in BOTH directions after. **H1:**  |
-# |         |            |             | "read-only by construction (no writing      |
-# |         |            |             | command is on the list)" was FALSE — the    |
-# |         |            |             | allow-list gates argv[0] only, and `sed -i` |
-# |         |            |             | was demonstrated rewriting a file in the    |
-# |         |            |             | working tree while this tool printed PASS.  |
-# |         |            |             | `python3 -c`, `find -delete`/`-exec`,       |
-# |         |            |             | `sort -o`, `rg --pre`, `git -c`, `uniq IN   |
-# |         |            |             | OUT` and `awk 'BEGIN{system()}'` were all   |
-# |         |            |             | reachable, and ci.yml runs this on          |
-# |         |            |             | pull_request, so document text reaches a    |
-# |         |            |             | runner. Fixed by naming the hatches:        |
-# |         |            |             | DENIED_FLAGS / DENIED_FLAG_PREFIXES, git    |
-# |         |            |             | globals scoped to BEFORE the subcommand     |
-# |         |            |             | (refusing them after it broke `git grep -c` |
-# |         |            |             | — both live executable claims — caught by   |
-# |         |            |             | re-measuring rather than by reasoning),     |
-# |         |            |             | `sed` DROPPED (its write lives in its       |
-# |         |            |             | script, not a flag), `awk` KEPT but with    |
-# |         |            |             | system()/getline refused, because both      |
-# |         |            |             | executable claims in the corpus use it and  |
-# |         |            |             | dropping it would have made every run a     |
-# |         |            |             | vacuous pass. **H2:** `shlex.split` discards |
-# |         |            |             | quoting, so expand_globs treated a QUOTED   |
-# |         |            |             | regex as a shell glob: `find . -name        |
-# |         |            |             | '*.md' \| wc -l` ran as `find . -name       |
-# |         |            |             | CLAUDE.md doc.md`. New quote-preserving     |
-# |         |            |             | tokenize(); only tokens whose glob chars    |
-# |         |            |             | are ALL unquoted expand. All 7 glob-char    |
-# |         |            |             | tokens in the live corpus are quoted regex. |
-# |         |            |             | It also splits pipelines on UNQUOTED `\|`   |
-# |         |            |             | only, so `grep -c 'a\|b' f` stops being a   |
-# |         |            |             | parse failure. **H3:** segment exit status  |
-# |         |            |             | was never checked, so a FAILED segment's    |
-# |         |            |             | empty output flowed downstream and `grep    |
-# |         |            |             | -rn X nosuchdir/ \| wc -l` printed 0, which |
-# |         |            |             | was reported as "document says 218; command |
-# |         |            |             | returns 0" against a document that was not  |
-# |         |            |             | wrong — the tool fabricating the finding it |
-# |         |            |             | exists to prevent. Non-zero now DECLINES,   |
-# |         |            |             | with grep/rg/diff/git 1 (no match / differ) |
-# |         |            |             | as the named benign case. **M1:** the       |
-# |         |            |             | unlisted-binary `continue` was a THIRD, and |
-# |         |            |             | the only silent, decline path, while the    |
-# |         |            |             | header and the file-manifest row both       |
-# |         |            |             | published "every declined claim is counted  |
-# |         |            |             | AND named". Counted and named now, behind a |
-# |         |            |             | command-SHAPE discriminator so the ~1,100   |
-# |         |            |             | backticked identifiers CLAIM also matches   |
-# |         |            |             | (`SNAPSHOT_SCHEMA_VERSION` **20 → 21**) do  |
-# |         |            |             | not drown it: 9 named, all real. **M2:** an |
-# |         |            |             | absolute glob (`ls /etc/*.conf`) crashed    |
-# |         |            |             | the tool with an uncaught                   |
-# |         |            |             | NotImplementedError out of pathlib —        |
-# |         |            |             | document text must not be able to crash the |
-# |         |            |             | checker; declined by name instead. **L1:**  |
-# |         |            |             | a backticked run of whitespace matches      |
-# |         |            |             | CLAIM and crashed on `"".split()[0]`.       |
-# |         |            |             | **L2:** the header never stated that only   |
-# |         |            |             | the command-then-value SHAPE is recognised, |
-# |         |            |             | so root CLAUDE.md's "8 scripts (`ls         |
-# |         |            |             | tools/*.py`)" is invisible AND uncounted;   |
-# |         |            |             | stated now. Also: every refusal now NAMES   |
-# |         |            |             | the hatch instead of "not an allow-listed   |
-# |         |            |             | read-only pipeline". Live tree unchanged at |
-# |         |            |             | 2 executed / PASS; declines 21 → 30, the    |
-# |         |            |             | 9 new ones being the previously-silent      |
-# |         |            |             | class (later 21 -> 25 at round 10: five     |
-# |         |            |             | "negated" declines were backticked          |
-# |         |            |             | IDENTIFIERS beside a negation, never        |
-# |         |            |             | claims, so counting them overstated the     |
-# |         |            |             | coverage being given up in the very figure  |
-# |         |            |             | that exists to state it honestly; the       |
-# |         |            |             | command test now gates the negation test).  |
-# |         |            |             | Verified on a scratch mirror: 10            |
-# |         |            |             | hatch attempts all refused with the canary  |
-# |         |            |             | file intact and no file created, and the    |
-# |         |            |             | complement — the same quoted-glob command   |
-# |         |            |             | with its TRUE value stated — passes.        |
-# |         |            |             | Two further defects were found in THIS      |
-# |         |            |             | round's own fix, by re-reviewing it as      |
-# |         |            |             | hostilely as the original (round 8's        |
-# |         |            |             | lesson, applied to round 9): the blind      |
-# |         |            |             | `\|` unescape was harmless only while a     |
-# |         |            |             | quoted pipe broke the parse — once the      |
-# |         |            |             | tokenizer kept such a command runnable it   |
-# |         |            |             | would have silently rewritten BRE           |
-# |         |            |             | alternation (`grep -n "typeof\|GetFields"`, |
-# |         |            |             | live in spec-error-log.md) into a literal   |
-# |         |            |             | pipe and reported the wrong regex's count;  |
-# |         |            |             | it is now quote-aware. And python3's script |
-# |         |            |             | operand was checked for a `.py` suffix but  |
-# |         |            |             | not for staying inside the repo, so         |
-# |         |            |             | `python3 ../../evil.py` satisfied the       |
-# |         |            |             | "in-repo script" rule its own comment       |
-# |         |            |             | claimed to enforce.                         |
-# | 1.2     | 2026-08-19 | Claude Code | AR round 12 — the VALUE-FIRST claim shape.  |
-# |         |            |             | Round 9 (L2) named it unrecognised AND      |
-# |         |            |             | uncounted and stopped at naming it; this    |
-# |         |            |             | closes it, because the live instances are   |
-# |         |            |             | the drift-prone kind: Spec #20 §5.4.5       |
-# |         |            |             | states the assembly count as "35 (`ls -d    |
-# |         |            |             | src/*/ \| wc -l`)" in APPROVED text, which   |
-# |         |            |             | goes stale the day the 36th assembly lands  |
-# |         |            |             | and which nothing watched. Seven live       |
-# |         |            |             | value-first claims quote a real command;    |
-# |         |            |             | all seven were verified by hand first and   |
-# |         |            |             | all are currently TRUE, so this adds        |
-# |         |            |             | coverage, not findings. Executed 2 -> 3.    |
-# |         |            |             | The complement test caught a defect in the  |
-# |         |            |             | addition itself before it landed: in this   |
-# |         |            |             | shape the NEGATOR precedes the number ("no  |
-# |         |            |             | longer 3 files (`cmd`)"), so reusing the    |
-# |         |            |             | forward shape's forward-looking gap         |
-# |         |            |             | reported a correctly-negated claim as a     |
-# |         |            |             | mismatch. The window now looks back,        |
-# |         |            |             | bounded to the line. Also: FORBIDDEN now    |
-# |         |            |             | gates the unlisted-binary naming, so a      |
-# |         |            |             | backticked EXPRESSION that merely looks     |
-# |         |            |             | path-shaped (`permille/1000f > 0.6f`, live  |
-# |         |            |             | in #33's appendices) is not announced as a  |
-# |         |            |             | rejected binary — the mirror of the noise   |
-# |         |            |             | command_shaped exists to suppress.          |
-# | 1.3     | 2026-08-19 | Claude Code | AR round 13 — the DATED-RECORD model,       |
-# |         |            |             | ported from doc-consistency-check rather    |
-# |         |            |             | than reinvented. A claim in an append-only  |
-# |         |            |             | record states what a command returned AT    |
-# |         |            |             | THE TIME; when the figure later moves the   |
-# |         |            |             | record is still correct, and this gate      |
-# |         |            |             | would have failed CI on it. Not             |
-# |         |            |             | hypothetical: at round 12 the pass writing  |
-# |         |            |             | the CHANGELOG quoted Spec #20's own         |
-# |         |            |             | drift-prone example verbatim INTO the       |
-# |         |            |             | chain, which fails the day the 36th         |
-# |         |            |             | assembly lands. It was caught and reworded, |
-# |         |            |             | but "remember not to write that" is not a   |
-# |         |            |             | mechanism. Regions come from                |
-# |         |            |             | doc-consistency-check (frozen header chain  |
-# |         |            |             | via the new shared frozen_chain_span, log   |
-# |         |            |             | body, archive) so the two tools cannot      |
-# |         |            |             | disagree about which bytes are frozen. Both |
-# |         |            |             | of that model's load-bearing properties are |
-# |         |            |             | kept: the claim is still EXECUTED and the   |
-# |         |            |             | mismatch EXCUSED — counted and NAMED, never |
-# |         |            |             | skipped, so "this historical figure no      |
-# |         |            |             | longer reproduces" stays visible without    |
-# |         |            |             | gating — and an explicit "now"/"currently"/ |
-# |         |            |             | "today" PIERCES the excusal, because a      |
-# |         |            |             | record asserting a value is current is a    |
-# |         |            |             | present-tense claim wherever it sits.       |
-# |         |            |             | 0 excusals on today's tree: prophylactic,   |
-# |         |            |             | stated as such. Proved four ways on a       |
-# |         |            |             | scratch mirror, in both region kinds        |
-# |         |            |             | (frozen chain and log body): the head entry |
-# |         |            |             | above the marker is REPORTED, a plain       |
-# |         |            |             | record below it is EXCUSED and named, and a |
-# |         |            |             | reasserted one below it is REPORTED.        |
-# | 1.4     | 2026-08-19 | Claude Code | AR round 14 — two P1 holes in round 9's H1  |
-# |         |            |             | fix, found by an EXTERNAL reviewer on PR    |
-# |         |            |             | #328 and both verified exploitable here     |
-# |         |            |             | before fixing. One root error behind both:  |
-# |         |            |             | the validation ran on a SHAPE, not on the   |
-# |         |            |             | argv that actually executes. (a) awk's      |
-# |         |            |             | program was located as "first operand not   |
-# |         |            |             | starting with -", but `-v` and `-F` take a  |
-# |         |            |             | SEPARATE argument, so                       |
-# |         |            |             | `awk -v x=1 'BEGIN{system(...)}' f` handed  |
-# |         |            |             | the check `x=1` and never looked at the     |
-# |         |            |             | program — system() ran and the command      |
-# |         |            |             | returned the claimed integer under a        |
-# |         |            |             | printed PASS. Every token is scanned now,   |
-# |         |            |             | which needs no awk option grammar and       |
-# |         |            |             | cannot be outflanked by adding one. The     |
-# |         |            |             | same heuristic was wrong for python3        |
-# |         |            |             | (`-X foo.py bar.py` runs bar.py), so the    |
-# |         |            |             | script must be argv[1] with no interpreter  |
-# |         |            |             | flags at all. (b) denied_flag ran BEFORE    |
-# |         |            |             | glob expansion, so a repo file named        |
-# |         |            |             | `--output=canary` turned the validated      |
-# |         |            |             | `sort * \| wc -l` into                      |
-# |         |            |             | `sort --output=canary …`, which WROTE that  |
-# |         |            |             | file. An expanded name that would be read   |
-# |         |            |             | as an option is refused, and the whole      |
-# |         |            |             | escape-hatch check re-runs on the           |
-# |         |            |             | post-expansion argv. Both re-proved: the    |
-# |         |            |             | two exploits are declined and named,        |
-# |         |            |             | neither artefact is created, and the live   |
-# |         |            |             | claims still execute (3, unchanged).        |
-# | 1.5     | 2026-08-21 | Claude Code | AR round 15 (5 High, 3 Medium) — the third  |
-# |         |            |             | consecutive round to falsify this header's  |
-# |         |            |             | read-only claim by reproduction, so the ROOT|
-# |         |            |             | error is now stated in the SAFETY section   |
-# |         |            |             | rather than the instances: an escape hatch  |
-# |         |            |             | enumerated BY NAME, on an argument that is  |
-# |         |            |             | itself a language, is a list of the hatches |
-# |         |            |             | someone happened to think of. Round 14      |
-# |         |            |             | called it "the validation ran on a SHAPE,   |
-# |         |            |             | not on the argv that actually executes";    |
-# |         |            |             | this round adds its sibling — the validation|
-# |         |            |             | ran on the SPELLING, not on the option.     |
-# |         |            |             | Every finding was reproduced BEFORE the fix |
-# |         |            |             | and re-proved three ways after: exploit     |
-# |         |            |             | DECLINED AND NAMED, no canary created and no|
-# |         |            |             | ref destroyed, and a legitimate command of  |
-# |         |            |             | the same shape still executed. **H1:** `awk |
-# |         |            |             | 'BEGIN{print "touch X" | "sh"}'` is         |
-# |         |            |             | arbitrary command execution using NEITHER   |
-# |         |            |             | blacklisted word, and FORBIDDEN does not    |
-# |         |            |             | reject a single `|` (tokenize keeps a quoted|
-# |         |            |             | one literal, so it reaches the program      |
-# |         |            |             | intact) — the canary was created under a    |
-# |         |            |             | printed PASS. awk is KEPT, because the      |
-# |         |            |             | header's old reason for keeping it          |
-# |         |            |             | ("dropping it would take the tool to zero   |
-# |         |            |             | verified claims") is STALE but its          |
-# |         |            |             | conclusion is not: re-measured, 2 of the 3  |
-# |         |            |             | executed claims are awk, so dropping it     |
-# |         |            |             | costs two thirds of the live coverage, not  |
-# |         |            |             | all of it. Its program is now ALLOW-listed  |
-# |         |            |             | (AWK_ALLOWED_CALLS — an unknown call name is|
-# |         |            |             | declined and named, so the next gawk builtin|
-# |         |            |             | cannot be the next hatch) with `|` and `@`  |
-# |         |            |             | refused outright. **H2:** `python3 <any     |
-# |         |            |             | in-repo .py>` executed attacker-added code —|
-# |         |            |             | on `pull_request` the checkout IS the PR    |
-# |         |            |             | head, so a PR adding tools/pwn.py plus a    |
-# |         |            |             | claim quoting it got arbitrary code run with|
-# |         |            |             | write access; canary written, PASS, exit 0. |
-# |         |            |             | The rationale in the header ("CI runs those |
-# |         |            |             | anyway") was false: CI runs four NAMED      |
-# |         |            |             | scripts. DROPPED, at zero coverage cost —   |
-# |         |            |             | re-measured, no python3 claim has ever      |
-# |         |            |             | executed (all decline as                    |
-# |         |            |             | not-a-single-integer) — and added to        |
-# |         |            |             | _KNOWN_BINARIES in the same change, or its  |
-# |         |            |             | claims would have moved from a NAMED decline|
-# |         |            |             | to an invisible one, which is the decline   |
-# |         |            |             | contract failing in the direction this file |
-# |         |            |             | calls its worst. **H3:** the deny-list      |
-# |         |            |             | compared the SPELLING, so `sort             |
-# |         |            |             | -oSORT_CANARY` wrote the file and `git grep |
-# |         |            |             | -O./p.sh` executed the script while `-o` and|
-# |         |            |             | `-O` sat in the list; the option CORE is    |
-# |         |            |             | compared now, whatever attaches to it (new  |
-# |         |            |             | _option_cores: a short token is decomposed  |
-# |         |            |             | into its whole cluster, a long one split on |
-# |         |            |             | `=`). **H4:** GIT_READONLY listed `branch`  |
-# |         |            |             | and `tag`, which DELETE refs — both proven  |
-# |         |            |             | destroying a ref in a fixture repo — and    |
-# |         |            |             | `git diff --output=` wrote a file. Both     |
-# |         |            |             | subcommands dropped, `--output` denied.     |
-# |         |            |             | **H5:** `sort --compress-program=` runs an  |
-# |         |            |             | arbitrary program whenever a sort spills,   |
-# |         |            |             | which `-S 1` forces; denied, and every      |
-# |         |            |             | remaining allow-listed binary audited in the|
-# |         |            |             | same pass (gawk's -l/-i/-E added). **M1:**  |
-# |         |            |             | output was buffered whole with no cap —     |
-# |         |            |             | TIMEOUT_S bounds wall time, not memory: one |
-# |         |            |             | document line drove the checker to 587.6 MB |
-# |         |            |             | (measured, own peak RSS), and `cat          |
-# |         |            |             | /dev/zero` OOM-kills the runner before 60 s |
-# |         |            |             | elapse. Read incrementally against an 8 MiB |
-# |         |            |             | cap, child killed, declined and named; same |
-# |         |            |             | line now peaks at 31.0 MB. **M2:** an       |
-# |         |            |             | embedded NUL raised an uncaught ValueError  |
-# |         |            |             | (subprocess raises it, and it is not a      |
-# |         |            |             | SubprocessError), aborting the WHOLE scan in|
-# |         |            |             | a traceback — every later claim and the     |
-# |         |            |             | entire dangling-identifier check never ran, |
-# |         |            |             | masking any real defect behind a crash. NUL |
-# |         |            |             | added to FORBIDDEN, ValueError caught as the|
-# |         |            |             | backstop. **M3:** nothing confined the      |
-# |         |            |             | OPERANDS, so `grep -c . /etc/passwd` was a  |
-# |         |            |             | one-integer read oracle over the host and   |
-# |         |            |             | `cat ../OUTSIDE.txt` reproduced its value   |
-# |         |            |             | under PASS; every non-option operand must   |
-# |         |            |             | now realpath inside the repo, checked AFTER |
-# |         |            |             | expansion. Live tree unchanged: PASS, exit  |
-# |         |            |             | 0, 3 executed (the same 3, by name), 30     |
-# |         |            |             | declines — the only movement is two python3 |
-# |         |            |             | claims changing decline REASON. Siblings    |
-# |         |            |             | re-run green.                               |
-# | 1.6     | 2026-08-21 | Claude Code | AR round 16 (4 High, 2 Medium) — the         |
-# |         |            |             | through-line is that this tool's whole value |
-# |         |            |             | is not lying about its own coverage, and it  |
-# |         |            |             | was lying in its header, in its buckets and  |
-# |         |            |             | in its verdict. **H11 (landed first, so the  |
-# |         |            |             | rest sit on the seam):** scan() was a        |
-# |         |            |             | 155-line monolith doing surface collection,  |
-# |         |            |             | matching for two shapes with two hand-       |
-# |         |            |             | written and mutually inconsistent negation   |
-# |         |            |             | windows, per-claim                           |
-# |         |            |             | validate/run/compare/excuse, six-bucket      |
-# |         |            |             | counting, four print blocks, an unrelated    |
-# |         |            |             | check and exit composition, with "single     |
-# |         |            |             | integer" hard-wired at six sites. Three      |
-# |         |            |             | seams extracted — a Claim value type,        |
-# |         |            |             | CLAIM_SHAPES whose entries own their find()  |
-# |         |            |             | and negation_window(), ANSWER_KINDS owning   |
-# |         |            |             | parse/read/compare/describe — leaving scan() |
-# |         |            |             | to iterate and report. M4 existed BECAUSE    |
-# |         |            |             | there was no seam. **H7:** the coverage      |
-# |         |            |             | statement was false by omission.             |
-# |         |            |             | Instrumented over its own surfaces, 2 of the |
-# |         |            |             | 3 executed claims were the same command      |
-# |         |            |             | pinned to an immutable revision, so live     |
-# |         |            |             | drift-catching coverage was ONE claim, while |
-# |         |            |             | command-shaped spans with a nearby integer   |
-# |         |            |             | bound to neither regex and appeared in NO    |
-# |         |            |             | bucket — including root CLAUDE.md's design-  |
-# |         |            |             | supplement count, the flagship case whose    |
-# |         |            |             | own sentence records that it drifted 42 ->   |
-# |         |            |             | 60 undetected. Past-tense verbs were         |
-# |         |            |             | unmatchable (the \b after `returns?` kills   |
-# |         |            |             | "returned"), the colon form was unknown, and |
-# |         |            |             | an attribution clause broke the value-first  |
-# |         |            |             | gap. Two shapes added (colon; value +        |
-# |         |            |             | attribution clause) and the verb list        |
-# |         |            |             | widened — and, the half that matters more,   |
-# |         |            |             | an `unrecognised-shape` bucket now COUNTS    |
-# |         |            |             | AND NAMES every command-shaped span with an  |
-# |         |            |             | integer near it that no shape binds (143 on  |
-# |         |            |             | this tree), so a shape gap is self-reporting |
-# |         |            |             | instead of self-concealing. **H8:** the      |
-# |         |            |             | value-first extractor bound a date year or a |
-# |         |            |             | range endpoint as the stated value — "August |
-# |         |            |             | 18, 2026 (`cmd`)" parsed as 2026 and FAILED  |
-# |         |            |             | a correct sentence, and the live tree        |
-# |         |            |             | already extracts 2026 twice, escaping only   |
-# |         |            |             | because those spans hold ERR ids rather than |
-# |         |            |             | runnable commands. Dates are refused (no     |
-# |         |            |             | claim exists there); ranges and              |
-# |         |            |             | approximation markers are DECLINED AND NAMED |
-# |         |            |             | as `approximate-or-range` rather than        |
-# |         |            |             | compared. **H9:** a run that checked nothing |
-# |         |            |             | printed PASS. MISSING SURFACE incremented no |
-# |         |            |             | counter and gated nothing — proven with 8 of |
-# |         |            |             | 9 surfaces deleted: 1 claim executed, PASS,  |
-# |         |            |             | exit 0 — and the globbed half had no missing |
-# |         |            |             | concept at all, so renaming one folder took  |
-# |         |            |             | executed to 0 with no output line changed. A |
-# |         |            |             | missing named surface, a glob matching no    |
-# |         |            |             | file, and a claim count below                |
-# |         |            |             | MIN_EXECUTED_CLAIMS are now exit 2, a class  |
-# |         |            |             | that outranks exit 1 because it is not a     |
-# |         |            |             | verdict on any document. The floor is re-    |
-# |         |            |             | derived by running the tool, not typed.      |
-# |         |            |             | **M4:** the look-back negation window was    |
-# |         |            |             | added to only one of the two shapes; the     |
-# |         |            |             | forward shape still searched the text AFTER  |
-# |         |            |             | its gap, which can only hold the arrow and   |
-# |         |            |             | the digits, so "before this fix, `grep -c …  |
-# |         |            |             | f` -> 4" was reported as a mismatch while    |
-# |         |            |             | the value-first phrasing of the same         |
-# |         |            |             | sentence correctly declined. One shared      |
-# |         |            |             | negation_window() now, on the seam. **M5:**  |
-# |         |            |             | NEGATOR held bare `not`/`was`/`never`, which |
-# |         |            |             | saturate this repo's prose, and an excusal   |
-# |         |            |             | costs coverage silently: "…is not in         |
-# |         |            |             | dispute: 99 assemblies (`ls -d src/*/ \| wc  |
-# |         |            |             | -l`)" — wrong by a factor of 33 — was        |
-# |         |            |             | declined as historical, 0 executed, PASS.    |
-# |         |            |             | Restricted to verb-bound phrases that can    |
-# |         |            |             | only negate a claim. **H6 (landed last, on   |
-# |         |            |             | purpose):** the header said the value-first  |
-# |         |            |             | shape "is not matched at all" while the      |
-# |         |            |             | baseline run printed that exact claim in its |
-# |         |            |             | declined list, the exit table named one of   |
-# |         |            |             | two ways to return 1, and CHECK 2 was        |
-# |         |            |             | documented nowhere. Rewritten, and the blind |
-# |         |            |             | spot is now DERIVED from the unrecognised-   |
-# |         |            |             | shape bucket rather than restated as prose   |
-# |         |            |             | that drifts. EVERY matcher change was proved |
-# |         |            |             | in BOTH directions — 46 cases, each a claim  |
-# |         |            |             | that must now bind and its complement that   |
-# |         |            |             | must not — and the complement caught three   |
-# |         |            |             | defects in this round's own work before they |
-# |         |            |             | landed: `read` on the verb list bound the    |
-# |         |            |             | refuted 42 and FAILED root CLAUDE.md; an     |
-# |         |            |             | 80-character attribution gap bound the 0 of  |
-# |         |            |             | "Stage 0 status" 71 characters away and      |
-# |         |            |             | FAILED #20 §7.2; and the census's            |
-# |         |            |             | command_shaped() test excluded every ALLOW-  |
-# |         |            |             | LISTED binary, so a runnable command in an   |
-# |         |            |             | unknown shape — the most valuable thing that |
-# |         |            |             | bucket can report — was the one class it     |
-# |         |            |             | could not see. Bare `pre-fix` was dropped    |
-# |         |            |             | from NEGATOR on the same evidence: it is a   |
-# |         |            |             | noun modifier here ("the pre-fix commit"),   |
-# |         |            |             | and with M4's new look-back it excused a     |
-# |         |            |             | live claim pinned to an immutable revision.  |
-# |         |            |             | Live tree: 3 executed -> 6, PASS, exit 0;    |
-# |         |            |             | declines 30 -> 40 named plus the 143-entry   |
-# |         |            |             | census, every delta accounted for. Siblings  |
-# |         |            |             | re-run green.                                |
-# | 1.7     | 2026-08-22 | Claude Code | Round 17 (M10, M11, M13, M14, L1-L5) — five  |
-# |         |            |             | reviewer-named High/Medium findings plus five|
-# |         |            |             | Low, all reproduced before the fix and       |
-# |         |            |             | re-proven in BOTH directions after. **M10:** |
-# |         |            |             | DECL_CLASS matched `class` only — 181 struct |
-# |         |            |             | / 91 class / 65 enum / 14 interface declared |
-# |         |            |             | on this tree's fenced corpus, so a struct    |
-# |         |            |             | member reference was silently unexaminable,  |
-# |         |            |             | and root CLAUDE.md names struct-based        |
-# |         |            |             | architecture as the STANDING rule. Identical |
-# |         |            |             | reference proven reported for `class` and    |
-# |         |            |             | missed for `readonly struct`. Extended to    |
-# |         |            |             | class/struct/interface/enum/record, with enum|
-# |         |            |             | members harvested SEPARATELY (an enumerator  |
-# |         |            |             | has no preceding type, and the existing      |
-# |         |            |             | member patterns can only see one) — a        |
-# |         |            |             | comma-splitting bug in that harvest, caused  |
-# |         |            |             | by un-stripped `///` doc-comment prose       |
-# |         |            |             | containing its own commas, was caught by this|
-# |         |            |             | round's own re-run: `BallStateType`'s six    |
-# |         |            |             | real members came back MISSING, not extra,   |
-# |         |            |             | until comments were stripped before the      |
-# |         |            |             | split. **M11:** the dangling line number was |
-# |         |            |             | recovered by an unconditional-break search of|
-# |         |            |             | the WHOLE FILE TEXT, so it could report a    |
-# |         |            |             | prose occurrence outside every fence, at the |
-# |         |            |             | wrong line, and collapse two distinct fence  |
-# |         |            |             | sites onto one finding. Every fence's file   |
-# |         |            |             | offset is now carried through a join/offset  |
-# |         |            |             | table computed once per file; a failed lookup|
-# |         |            |             | raises rather than printing the literal      |
-# |         |            |             | string 'None'. **M13:** `DCC =               |
-# |         |            |             | _load_consistency()` ran at IMPORT TIME — a  |
-# |         |            |             | missing sibling gave a raw traceback and exit|
-# |         |            |             | 1, indistinguishable from a real finding, and|
-# |         |            |             | fired even for `--help`; a renamed helper    |
-# |         |            |             | failed mid-scan after partial output.        |
-# |         |            |             | Deferred to a validated loader called once   |
-# |         |            |             | from main(), checked against a five-name     |
-# |         |            |             | contract before scan() prints anything. Its  |
-# |         |            |             | own docstring's PRECONDITION ("computed on   |
-# |         |            |             | the same frozen-history-blanked text") was   |
-# |         |            |             | violated by this caller passing RAW text —   |
-# |         |            |             | honoured directly (blank first, then call    |
-# |         |            |             | record_regions) rather than replaced with a  |
-# |         |            |             | new assertion. **M14:** CHECK 1 and CHECK 2  |
-# |         |            |             | fused into one exit code, and CHECK 2 had NO |
-# |         |            |             | decline accounting at all while CHECK 1      |
-# |         |            |             | spends forty header lines establishing that  |
-# |         |            |             | every decline is printed. CHECK 2 now returns|
-# |         |            |             | exit 3 when it alone fails (1 still wins when|
-# |         |            |             | both fail — the long-standing code), plus its|
-# |         |            |             | own "N examined, M skipped" line across four |
-# |         |            |             | named buckets (fence-untagged,               |
-# |         |            |             | no-declared-type, filename-shaped,           |
-# |         |            |             | type-not-declared-here). **L1:** eight       |
-# |         |            |             | parallel per-binary tables, one already dead |
-# |         |            |             | — a `sed` row in the needs-a-file set,       |
-# |         |            |             | unreachable since `sed` was dropped from     |
-# |         |            |             | ALLOWED_CMDS at round 9, while               |
-# |         |            |             | `_KNOWN_BINARIES` still listed `sed` for the |
-# |         |            |             | OPPOSITE purpose. Consolidated into one      |
-# |         |            |             | `Binary` record per binary; ALLOWED_CMDS is  |
-# |         |            |             | now DERIVED from its keys, so a dropped      |
-# |         |            |             | binary cannot leave a stray row in any other |
-# |         |            |             | table again. Every documented exploit        |
-# |         |            |             | re-proven refused after consolidation (an awk|
-# |         |            |             | pipe-to-sh, `sort -oFILE`, `git branch -D`,  |
-# |         |            |             | `sort --compress-program=`, an operand       |
-# |         |            |             | escaping the repo root), each with zero side |
-# |         |            |             | effects on a live fixture repo, and the full |
-# |         |            |             | 46-case decision battery is BYTE-IDENTICAL   |
-# |         |            |             | before and after. **L2:** the safety gate's  |
-# |         |            |             | `claim.head` used a naive whitespace split   |
-# |         |            |             | disagreeing with the quote-aware tokenizer   |
-# |         |            |             | validation actually uses; `` `"grep" -c '^A' |
-# |         |            |             | f` `` — a perfectly runnable, quoted command |
-# |         |            |             | — was silently IGNORED: 0 executed, every    |
-# |         |            |             | decline bucket at 0. `head` is now           |
-# |         |            |             | tokenize-derived; a claim whose command does |
-# |         |            |             | not tokenize at all is declined by the SAME  |
-# |         |            |             | name parse_pipeline already uses for it,     |
-# |         |            |             | never dropped. **L3:** corrected a docstring |
-# |         |            |             | promising a `files_with_fences` return value |
-# |         |            |             | the function has never actually returned,    |
-# |         |            |             | deleted a near-miss disjunct fully subsumed  |
-# |         |            |             | by its own sibling (provably: it can fire    |
-# |         |            |             | only when the two are textually identical),  |
-# |         |            |             | added the missing File/Modified/Author header|
-# |         |            |             | fields, and defaulted --repo to '.' —        |
-# |         |            |             | matching every other checker in tools/.      |
-# |         |            |             | **L4:** --quiet used to suppress the coverage|
-# |         |            |             | counts while the PASS line still cited them  |
-# |         |            |             | as "stated above"; now suppresses only the   |
-# |         |            |             | itemized per-claim decline list, never the   |
-# |         |            |             | counts or the verdict. **L5:** `\d[\d,]*` let|
-# |         |            |             | Python's `int()` silently NORMALISE a        |
-# |         |            |             | malformed transcription — "1,2,3" as 123,    |
-# |         |            |             | "007" as 7 — into a false reproduction. Both |
-# |         |            |             | sides now require a well-formed integer      |
-# |         |            |             | literal (proper thousands grouping, no       |
-# |         |            |             | leading zero); the command side additionally |
-# |         |            |             | accepts an optional leading `-`, so a        |
-# |         |            |             | negative answer (awk can print one) is       |
-# |         |            |             | COMPARED — surfacing a real mismatch — rather|
-# |         |            |             | than declined unreadable. Live tree unchanged|
-# |         |            |             | in VERDICT (605 surfaces, 6 executed / floor |
-# |         |            |             | 4, PASS, exit 0) but not in accounting:      |
-# |         |            |             | declines 172 -> 181 (nine newly-NAMED        |
-# |         |            |             | untokenizable spans that were previously     |
-# |         |            |             | silently ignored prose, none a real command —|
-# |         |            |             | L2's fix); the dangling check stays at 0     |
-# |         |            |             | findings with 348 declared types now         |
-# |         |            |             | considered (M10, previously uncounted) and a |
-# |         |            |             | new 1,882-reference / 1,684-skipped          |
-# |         |            |             | accounting (M14, previously nonexistent).    |
-# |         |            |             | Every delta reproduced on a fixture in both  |
-# |         |            |             | directions before landing; siblings          |
-# |         |            |             | (doc-consistency-check.py,                   |
-# |         |            |             | recurring-defect-lint.py) re-run green.      |
-# | 1.8     | 2026-08-22 | Claude Code | ONE-LINE FIX, found by the new suite         |
-# |         |            |             | tools/tests/test_doc_claim_check.py while it |
-# |         |            |             | was being written: ERR_TABLE_ROW carried no  |
-# |         |            |             | re.MULTILINE flag, and it is used as         |
-# |         |            |             | `.match(text, ls)` with `ls` a LINE start —  |
-# |         |            |             | where a bare `^` matches only at the real    |
-# |         |            |             | start of the string, never at a non-zero     |
-# |         |            |             | pos. So _err_log_entry_span's table-row      |
-# |         |            |             | branch could not fire for any row except one |
-# |         |            |             | at byte 0: every ERR index row fell through  |
-# |         |            |             | to the prose-section branch and the WHOLE    |
-# |         |            |             | `## Error Index` table was bounded as ONE    |
-# |         |            |             | entry — exactly what that function's own     |
-# |         |            |             | docstring says must not happen ("a ✅         |
-# |         |            |             | anywhere in its 213 rows [would] resolve     |
-# |         |            |             | every one of them"). Live at the time of the |
-# |         |            |             | fix: 191 of the 213 index rows carry a ✅, so |
-# |         |            |             | a stale claim in ANY index row, resolved or  |
-# |         |            |             | not, would have been excused instead of      |
-# |         |            |             | reported. Latent rather than active today —  |
-# |         |            |             | no index-row claim currently mismatches, so  |
-# |         |            |             | the live verdict and every printed figure    |
-# |         |            |             | are unchanged (605 surfaces, 6 executed /    |
-# |         |            |             | floor 4, 181 declines, 0 excused, PASS,      |
-# |         |            |             | exit 0). Locked by                           |
-# |         |            |             | ExcusalTests.test_an_err_index_table_row_is_ |
-# |         |            |             | bounded_to_its_own_line, which was written   |
-# |         |            |             | RED against the unfixed tool and re-verified |
-# |         |            |             | red by mutation afterwards.                  |
-# | 1.9     | 2026-08-22 | Claude Code | Round 18 (H12, H14) plus the OS-ENFORCED     |
-# |         |            |             | CHILD LIMITS the owner approved on the       |
-# |         |            |             | evidence that this class has now recurred    |
-# |         |            |             | FOUR consecutive rounds, each time inside    |
-# |         |            |             | the previous round's fix. **H12:** long      |
-# |         |            |             | options were denied by EXACT core, but       |
-# |         |            |             | getopt_long accepts any unambiguous PREFIX,  |
-# |         |            |             | so `--output` was denied while `--o=`,       |
-# |         |            |             | `--out=`, `--outpu=` and `--compress-progr=` |
-# |         |            |             | were not. Reproduced under a printed PASS:   |
-# |         |            |             | `sort -S 1 --compress-progr=/…/pwn.sh        |
-# |         |            |             | big.txt \| wc -l` EXECUTED an attacker       |
-# |         |            |             | script on the runner; `sort --o=/tmp/OUTSIDE |
-# |         |            |             | data.txt` wrote outside the checkout (path   |
-# |         |            |             | confinement could not see it — the target is |
-# |         |            |             | an option VALUE, H14); `sort --outpu=CANARY  |
-# |         |            |             | data.txt` wrote inside it. Fixed as a PREFIX |
-# |         |            |             | rule over each binary's own denied long      |
-# |         |            |             | names (and git's globals), derived from      |
-# |         |            |             | denied_flags/denied_prefixes rather than     |
-# |         |            |             | listed again. Re-proven after at five        |
-# |         |            |             | abbreviation lengths, each declined and      |
-# |         |            |             | NAMED with no canary, while `sort            |
-# |         |            |             | --numeric-sort`, `grep --count`,             |
-# |         |            |             | `grep -c --regexp=a`, `wc --lines` and       |
-# |         |            |             | `git grep --count` still execute. **H14:**   |
-# |         |            |             | escaping_operand() skipped every token       |
-# |         |            |             | starting with `-`, so an ATTACHED option     |
-# |         |            |             | value never reached the containment test.    |
-# |         |            |             | Reproduced, all executed and COMPARED:       |
-# |         |            |             | `grep -c --file=/etc/hostname data.txt`,     |
-# |         |            |             | `grep -c -f/etc/hostname data.txt`,          |
-# |         |            |             | `git --git-dir=../other/.git rev-list        |
-# |         |            |             | --count HEAD`, and `diff                     |
-# |         |            |             | --from-file=/tmp/hostsecret.txt data.txt \|  |
-# |         |            |             | wc -l`, whose printed integer is derived     |
-# |         |            |             | from a file OUTSIDE the repository — so this |
-# |         |            |             | header's own property 4 was false as         |
-# |         |            |             | written. The value is now extracted (after   |
-# |         |            |             | `=` for long, after the first char for       |
-# |         |            |             | short) and given the identical realpath      |
-# |         |            |             | test; the in-repo forms `-fpatterns.txt`,    |
-# |         |            |             | `--file=patterns.txt`, `-F:` and `-m3` still |
-# |         |            |             | execute. Same round, same shape: awk's       |
-# |         |            |             | `ENVIRON`/`PROCINFO` are ARRAYS, not calls,  |
-# |         |            |             | so AWK_ALLOWED_CALLS structurally could not  |
-# |         |            |             | see them and                                 |
-# |         |            |             | `awk 'END{print length(ENVIRON["X"])}' f`    |
-# |         |            |             | read the runner's environment one integer at |
-# |         |            |             | a time — refused flat, beside `\|` and `@`.  |
-# |         |            |             | **CHILD RESOURCE LIMITS** (not a finding —   |
-# |         |            |             | an owner decision on the recurrence):        |
-# |         |            |             | RLIMIT_FSIZE=0, RLIMIT_CPU and RLIMIT_AS set |
-# |         |            |             | in the forked child before exec, so          |
-# |         |            |             | read-only-ness is enforced by the OS rather  |
-# |         |            |             | than asserted by a list. DEFENCE IN DEPTH:   |
-# |         |            |             | every allow-list, deny-flag and confinement  |
-# |         |            |             | check is unchanged and nothing was relaxed.  |
-# |         |            |             | Demonstrated against a hatch fixed by NO     |
-# |         |            |             | name here: `git status \| wc -l` passes      |
-# |         |            |             | every check and REWRITES `.git/index` — with |
-# |         |            |             | the limits off it executed and the index     |
-# |         |            |             | digest changed; with them on it died on the  |
-# |         |            |             | write, was declined by name, and the index   |
-# |         |            |             | was byte-identical. Same for `sort -S 1      |
-# |         |            |             | big.txt \| wc -l`, whose spill file is a     |
-# |         |            |             | write the allow-list permits. Limits stated  |
-# |         |            |             | honestly in SAFETY rule 6: no effect on      |
-# |         |            |             | READS, none on EXECUTION, FSIZE=0 stops a    |
-# |         |            |             | file GROWING but not an empty create or a    |
-# |         |            |             | truncate (measured), POSIX-only with a       |
-# |         |            |             | printed UNAVAILABLE line where `resource` is |
-# |         |            |             | missing, and a killed child can leave a      |
-# |         |            |             | partial artefact (`git status` leaves a      |
-# |         |            |             | zero-byte `.git/index.lock`) — recorded, not |
-# |         |            |             | worked around by exempting git. A limit kill |
-# |         |            |             | is a NAMED decline (SIGXFSZ/SIGXCPU/SIGKILL  |
-# |         |            |             | mapped in _LIMIT_KILL), never a crash and    |
-# |         |            |             | never a silent zero that gets compared. The  |
-# |         |            |             | parent's stdin staging is unaffected (the    |
-# |         |            |             | PARENT writes the temp file) and stdout is a |
-# |         |            |             | pipe, so the output cap and reader thread    |
-# |         |            |             | are untouched — verified, incl. the live     |
-# |         |            |             | `git grep -c 'CROSS-PENDING' 9b841d1^ --     |
-# |         |            |             | docs/specs \| awk …` claim, which still      |
-# |         |            |             | executes under the limits. Live tree         |
-# |         |            |             | unchanged: 605 surfaces, 6 executed / floor  |
-# |         |            |             | 4, 181 declines, 0 excused, PASS, exit 0;    |
-# |         |            |             | the 71-test suite passes unmodified; both    |
-# |         |            |             | sibling tools re-run green.                  |
-# | 1.10    | 2026-08-22 | Claude Code | Round 19 (H13, H15, H16, H17, H18), each     |
-# |         |            |             | proven by reproduction before the fix and in |
-# |         |            |             | BOTH directions after. **H13 — the load-     |
-# |         |            |             | bearing one, and it CHANGED THE HEADLINE     |
-# |         |            |             | NUMBERS ON PURPOSE.** `dated_record_regions` |
-# |         |            |             | called `blank_frozen_history` only as INPUT  |
-# |         |            |             | to `record_regions` and then threw the       |
-# |         |            |             | blanking away, re-listing                    |
-# |         |            |             | `frozen_chain_span` by hand. But that        |
-# |         |            |             | function freezes the header chain AND every  |
-# |         |            |             | `Version History` section, so the sibling    |
-# |         |            |             | excused a VH row and this tool GATED on it — |
-# |         |            |             | falsifying the docstring that says the       |
-# |         |            |             | import exists so the two cannot disagree     |
-# |         |            |             | about which bytes are frozen. VH is 5.9% of  |
-# |         |            |             | the corpus and FOUR of the six executed      |
-# |         |            |             | claims sat inside one, two of them `ls -d    |
-# |         |            |             | src/*/ \| wc -l` -> 35 in rows whose         |
-# |         |            |             | neighbours read "left as written per the do- |
-# |         |            |             | not-rewrite-history convention": CI would    |
-# |         |            |             | have gone red on two correct historical      |
-# |         |            |             | records the day a 36th assembly landed,      |
-# |         |            |             | verbatim the hazard the dated-record model   |
-# |         |            |             | exists to prevent. Spans are now DERIVED     |
-# |         |            |             | from the blanking itself (`_blanked_runs`,   |
-# |         |            |             | line-wise so the whole corpus costs          |
-# |         |            |             | nothing), which is one computation instead   |
-# |         |            |             | of two definitions. The currency pierce is   |
-# |         |            |             | unchanged — a VH row saying the command      |
-# |         |            |             | returns N *now* still reports. Proven: the   |
-# |         |            |             | historical row mismatches at HEAD and is     |
-# |         |            |             | EXCUSED after; the "now returns" row still   |
-# |         |            |             | MISMATCHES; a live sentence outside the      |
-# |         |            |             | section still gates. **The honest            |
-# |         |            |             | consequence, stated rather than engineered   |
-# |         |            |             | away: live coverage is 1, not 6.** Executed  |
-# |         |            |             | is still 6 — a record claim still runs and   |
-# |         |            |             | still prints — but five of the six can never |
-# |         |            |             | fail CI, so the printed output now carries   |
-# |         |            |             | "... of which LIVE (can gate)" beside the    |
-# |         |            |             | headline and a new MIN_LIVE_CLAIMS=1 floor   |
-# |         |            |             | gates on it (exit 2). MIN_EXECUTED_SLACK is  |
-# |         |            |             | deliberately NOT applied at a measurement of |
-# |         |            |             | 1: any slack puts that floor at zero, which  |
-# |         |            |             | is the vacuous pass the floor exists to      |
-# |         |            |             | deny. Region coverage is now a UNION, not a  |
-# |         |            |             | sum — the spans can overlap since VH sits    |
-# |         |            |             | inside the log body. **H16 — the date guard  |
-# |         |            |             | was one case of a general defect.**          |
-# |         |            |             | `LeadingValueShape.rejects()` refused        |
-# |         |            |             | exactly two prefixes, so every compound      |
-# |         |            |             | number whose tail digits abut a              |
-# |         |            |             | parenthesised command bound as a stated      |
-# |         |            |             | value: `§2.2.2 (`cmd`)` -> 2 and `v1.73      |
-# |         |            |             | (`cmd`)` -> 73, both correct sentences the   |
-# |         |            |             | tool would have failed CI on, and the first  |
-# |         |            |             | is LIVE at code-standards/section-3.md:1140, |
-# |         |            |             | escaping only because                        |
-# |         |            |             | `document_relative_operand` declined it for  |
-# |         |            |             | an unrelated reason. Generalised to "a       |
-# |         |            |             | stated value begins its own token": the      |
-# |         |            |             | character before it, emphasis stripped, may  |
-# |         |            |             | not be `.`, `#` or `§`. 216 of 429 leading-  |
-# |         |            |             | value binds on this tree were section,       |
-# |         |            |             | version, spec, heading or decimal tails;     |
-# |         |            |             | total binds 1734 -> 1518, NOT ONE new        |
-# |         |            |             | mismatch, all six executed claims unchanged, |
-# |         |            |             | and the three genuine leading-value forms    |
-# |         |            |             | still bind and reproduce. **H15 — a runnable |
-# |         |            |             | claim whose binary was on neither curated    |
-# |         |            |             | list was dropped with no bucket, no count    |
-# |         |            |             | and no line.** `check_claim` returned        |
-# |         |            |             | ("ignored", None) and the census could not   |
-# |         |            |             | recover it, because the span WAS bound. So   |
-# |         |            |             | `comm -12 a b \| wc -l`, `tac`, `pcregrep`,  |
-# |         |            |             | `nl`, `du`, `tree` were invisible on BOTH    |
-# |         |            |             | routes and two header sentences were false — |
-# |         |            |             | the blind spot being a hand-written list,    |
-# |         |            |             | the shape the SAFETY section names as this   |
-# |         |            |             | file's recurring root error.                 |
-# |         |            |             | `command_shaped` is a positive SHAPE test    |
-# |         |            |             | now: a binary-shaped head plus an argument   |
-# |         |            |             | only a command takes (option, filename, real |
-# |         |            |             | path). Head shape ALONE was measured first   |
-# |         |            |             | and rejected — it took the census from 132   |
-# |         |            |             | to 1297, drowning it in prose; with the      |
-# |         |            |             | argument test, 132 -> 140 and nothing        |
-# |         |            |             | previously named is lost. `_KNOWN_BINARIES`  |
-# |         |            |             | survives as a supplement that can only ADD   |
-# |         |            |             | recognition, never gate. Latent (0 live      |
-# |         |            |             | instances), so this corrects a false         |
-# |         |            |             | coverage statement rather than catching a    |
-# |         |            |             | live defect. **H17 — CHECK 2 had no coverage |
-# |         |            |             | floor, and blinding it completely still      |
-# |         |            |             | printed PASS and exited 0.** Reproduced on   |
-# |         |            |             | the live tree: one mutation making           |
-# |         |            |             | DECL_CLASS match nothing gives "references   |
-# |         |            |             | examined: 1882 (1882 skipped)", PASS, exit   |
-# |         |            |             | 0, all 71 tests green — the vacuous-pass     |
-# |         |            |             | class fixed for CHECK 1 at round 16 and      |
-# |         |            |             | never applied to the check whose counters    |
-# |         |            |             | were added without a gate. Also reachable    |
-# |         |            |             | with no code change: a corpus writing ```C#  |
-# |         |            |             | zeroes it. CHECK 2 now returns its coverage  |
-# |         |            |             | and gets a two-part floor folded into the    |
-# |         |            |             | same `blocked` list (exit 2). The floors are |
-# |         |            |             | SHARES, not the absolute counts the finding  |
-# |         |            |             | proposed, and that is a deliberate departure |
-# |         |            |             | recorded here: an absolute floor derived     |
-# |         |            |             | from this tree (101 files, 198 references)   |
-# |         |            |             | is one no smaller corpus can meet, including |
-# |         |            |             | this file's own fixtures, where the intended |
-# |         |            |             | verdict is PASS on one file holding one      |
-# |         |            |             | fence. Measured 0.40 and 0.11, floored at    |
-# |         |            |             | 0.20 and 0.05 — half, the same headroom rule |
-# |         |            |             | MIN_EXECUTED_SLACK expresses — plus a zero-  |
-# |         |            |             | denominator guard so "fenced files but not   |
-# |         |            |             | one examinable reference" is caught by shape |
-# |         |            |             | rather than by ratio. Both blindings now     |
-# |         |            |             | exit 2 and name themselves. **H18 —          |
-# |         |            |             | ANSWER_KINDS was not an extension point; the |
-# |         |            |             | documented way to add one crashed scan()     |
-# |         |            |             | with an uncaught KeyError, exiting 1** — the |
-# |         |            |             | code meaning "a document is wrong", the      |
-# |         |            |             | collision round 17 (M14) spent a fix         |
-# |         |            |             | separating. Reproduced with a throwaway      |
-# |         |            |             | `PairAnswer` whose bucket is `not-a-pair`,   |
-# |         |            |             | because `declined` was built from            |
-# |         |            |             | DECLINE_BUCKETS, a table the SEAM 1 banner   |
-# |         |            |             | never mentions. Both tables are derived now: |
-# |         |            |             | ANSWER_KINDS from the shapes that name it,   |
-# |         |            |             | the decline order from DECLINE_BUCKETS plus  |
-# |         |            |             | each kind's bucket, with `record_decline`    |
-# |         |            |             | counting an unforeseen bucket rather than    |
-# |         |            |             | raising. The stated-value grammar moved onto |
-# |         |            |             | the answer kind and each shape's regex is    |
-# |         |            |             | built from it, so shapes and answers stop    |
-# |         |            |             | being a cross-product. Re-executed the       |
-# |         |            |             | banner's promise on the live corpus by       |
-# |         |            |             | registering the throwaway kind in the file   |
-# |         |            |             | itself: 2 answer kinds, a `not-a-pair`       |
-# |         |            |             | column, PASS, exit 0, no other edit          |
-# |         |            |             | anywhere. The banner is corrected rather     |
-# |         |            |             | than left over-promising, and names the      |
-# |         |            |             | limit that REMAINS — the text around a       |
-# |         |            |             | shape's value placeholder is still written   |
-# |         |            |             | for digits. **Live tree: 605 surfaces, 6     |
-# |         |            |             | executed (floor 4) of which 1 LIVE (floor    |
-# |         |            |             | 1), 187 declines (unlisted-binary 20->19,    |
-# |         |            |             | did-not-run 1->0, not-a-single-integer 7->6, |
-# |         |            |             | unrecognised-shape 132->141), 0 excused,     |
-# |         |            |             | PASS, exit 0. The 71-test suite passes       |
-# |         |            |             | UNMODIFIED — no test premise was             |
-# |         |            |             | invalidated. Both sibling tools re-run       |
-# |         |            |             | green.**                                     |
-# | 1.11    | 2026-08-22 | Claude Code | Round 20 (M15, M16, M19-M24, L6-L9), each    |
-# |         |            |             | proven by reproduction before the fix and in |
-# |         |            |             | BOTH directions after; M23 done LAST, per    |
-# |         |            |             | its own risk note. **M15**:                  |
-# |         |            |             | unrecognised_spans() used a second, naive    |
-# |         |            |             | cmd.split()[0] head parser disagreeing with  |
-# |         |            |             | the one Claim.head already tokenizes (round  |
-# |         |            |             | 17, L2), and dropped every FORBIDDEN-bearing |
-# |         |            |             | span via a bare continue. Extracted the      |
-# |         |            |             | shared command_head() tokenizer both now     |
-# |         |            |             | call; a FORBIDDEN span lands in              |
-# |         |            |             | unrecognised-shape with its own reason       |
-# |         |            |             | (unrecognised_span_reason()) instead of      |
-# |         |            |             | vanishing. **M16**: check_claim()'s          |
-# |         |            |             | head-is-None branch declined every           |
-# |         |            |             | untokenizable span unconditionally;          |
-# |         |            |             | measured, 9 of 10 unsafe-bucket entries were |
-# |         |            |             | markdown prose, not commands. Gated behind   |
-# |         |            |             | the same command_shaped() test the           |
-# |         |            |             | unlisted-binary branch already applies — 8   |
-# |         |            |             | of 9 false declines now read ignored (the    |
-# |         |            |             | residual one trips command_shaped's own      |
-# |         |            |             | pre-existing _command_operand path-token     |
-# |         |            |             | quirk on 'v2.104/v2.105', not a new defect). |
-# |         |            |             | **M19**: the 'awk is kept — 2 of 3 claims    |
-# |         |            |             | executed are awk' rationale (stated twice)   |
-# |         |            |             | and the UNRECOGNISED_RADIUS saturation curve |
-# |         |            |             | (86/117/138/143/145/145) were both wrong     |
-# |         |            |             | against today's tree — re-measured: only 1   |
-# |         |            |             | of 3 DISTINCT executed commands uses awk,    |
-# |         |            |             | and it is not this run's one LIVE claim; the |
-# |         |            |             | true curve is 97/126/148/153/155/155. Both   |
-# |         |            |             | sites reworded to state the fact once,       |
-# |         |            |             | qualitatively, and cite each other, rather   |
-# |         |            |             | than repeat a number that goes stale.        |
-# |         |            |             | **M20**: the coverage floor counted          |
-# |         |            |             | INSTANCES (6), half of which are one         |
-# |         |            |             | revision-pinned command quoted three times   |
-# |         |            |             | and so can never drift or fail. Floored on   |
-# |         |            |             | DISTINCT COMMANDS now (checked_commands,     |
-# |         |            |             | printed alongside the instance count); floor |
-# |         |            |             | re-derived at 3 distinct minus 1 slack = 2,  |
-# |         |            |             | since the old slack of 2 would floor a base  |
-# |         |            |             | this small at 1, the near-zero-protection    |
-# |         |            |             | problem MIN_LIVE_CLAIMS already avoids.      |
-# |         |            |             | **M21**: self_contained() accepted a         |
-# |         |            |             | grep/awk PATTERN operand that merely         |
-# |         |            |             | happened to spell a real repo path,          |
-# |         |            |             | fabricating a finding (grep -c 'CLAUDE.md'   |
-# |         |            |             | with no file operand at all read empty       |
-# |         |            |             | stdin, printed 0, and that 0 was compared    |
-# |         |            |             | against a real stated value). Fixed by       |
-# |         |            |             | POSITION via new Binary.pattern_operand      |
-# |         |            |             | (grep family, awk): the first non-option     |
-# |         |            |             | token is excluded from the file search, not  |
-# |         |            |             | by content. **M24**: the same function       |
-# |         |            |             | rejected grep -rn over a directory with the  |
-# |         |            |             | false reason 'would read from an empty       |
-# |         |            |             | stdin' — os.path.isdir now accepted          |
-# |         |            |             | alongside os.path.isfile; a binary that      |
-# |         |            |             | truly cannot read a directory still fails    |
-# |         |            |             | downstream at run_pipeline's own             |
-# |         |            |             | non-zero-exit decline. **M22**:              |
-# |         |            |             | err_log_excused() searched an UNCLIPPED      |
-# |         |            |             | sentence window for an excusing date — the   |
-# |         |            |             | same defect doc-consistency-check.py's       |
-# |         |            |             | historically_marked() was fixed for at       |
-# |         |            |             | MARKER_RADIUS; measured 13 spans excusable   |
-# |         |            |             | by a date 53 to 689 characters away.         |
-# |         |            |             | Intersected the sentence window with         |
-# |         |            |             | CURRENCY_RADIUS, mirroring the sibling's own |
-# |         |            |             | fix. **L6**: ClaimShape's cmd/value/gap      |
-# |         |            |             | group contract was undocumented and          |
-# |         |            |             | unvalidated; negation_window() reads         |
-# |         |            |             | group('gap') unconditionally. Asserted at    |
-# |         |            |             | construction now, with a named               |
-# |         |            |             | AssertionError instead of a mid-scan         |
-# |         |            |             | IndexError. **L7**: --quiet suppressed CHECK |
-# |         |            |             | 2's own coverage counts (spec files with     |
-# |         |            |             | code fences, declared types considered) —    |
-# |         |            |             | the exact rule CHECK 1 was fixed to honor at |
-# |         |            |             | round 17, L4. Both prints moved              |
-# |         |            |             | unconditional; there is no itemized CHECK-2  |
-# |         |            |             | listing left for --quiet to suppress at all. |
-# |         |            |             | **L8**: _map_offset's fail-loud              |
-# |         |            |             | AssertionError was uncaught, so a drift      |
-# |         |            |             | between the fence-join bookkeeping and the   |
-# |         |            |             | code it describes would traceback AFTER      |
-# |         |            |             | CHECK 1 had already printed a verdict.       |
-# |         |            |             | Caught in scan() and routed through blocked  |
-# |         |            |             | (exit 2), reproduced by forcing the raise:   |
-# |         |            |             | uncaught before, a clean 'ERROR ... exit 2'  |
-# |         |            |             | after. **L9**: the header's 'every claim     |
-# |         |            |             | this tool declines to check is printed' is   |
-# |         |            |             | false under --quiet (only counted, not       |
-# |         |            |             | itemized); reworded to 'COUNTED AND NAMED,   |
-# |         |            |             | and ITEMIZED unless --quiet'. **M23 (done    |
-# |         |            |             | LAST)**: 10 of 12 denied_prefixes entries    |
-# |         |            |             | (rg x3, sort x2, awk x4, git x1) were        |
-# |         |            |             | strictly subsumed by the exact-core check —  |
-# |         |            |             | _option_cores already reduces --flag=value   |
-# |         |            |             | to the bare core --flag, so a --flag= prefix |
-# |         |            |             | entry beside an existing bare --flag in      |
-# |         |            |             | denied_flags caught nothing new; deleted.    |
-# |         |            |             | The two survivors (git's                     |
-# |         |            |             | --exec-path=/--upload-pack=) were            |
-# |         |            |             | load-bearing only via git_global_denied and  |
-# |         |            |             | the generic startswith fallback, because     |
-# |         |            |             | their bare cores were missing from git's own |
-# |         |            |             | denied_flags for no stated reason — moved    |
-# |         |            |             | in, so the exact-core check owns them at     |
-# |         |            |             | every argv position, a strict widening. The  |
-# |         |            |             | dead 'or core in ("--exec-path",             |
-# |         |            |             | "--upload-pack")' disjunct (both already     |
-# |         |            |             | members of GIT_GLOBAL_DENIED) and its        |
-# |         |            |             | matching redundant tuple argument to         |
-# |         |            |             | _denied_long_names were deleted. THE         |
-# |         |            |             | FINDING'S FOURTH ASK — deleting the          |
-# |         |            |             | post-expansion denied_flag() re-run in       |
-# |         |            |             | expand_globs as 'subsumed by the             |
-# |         |            |             | hit.startswith("-") refusal' — was           |
-# |         |            |             | investigated and REJECTED, per the finding's |
-# |         |            |             | own instruction to report what could not be  |
-# |         |            |             | preserved with confidence rather than delete |
-# |         |            |             | it anyway. Reproduced: uniq tools/doc-*.py   |
-# |         |            |             | has ONE pre-expansion operand (uniq's        |
-# |         |            |             | OPERAND-COUNT hatch does not fire) and       |
-# |         |            |             | expands to two real files, NEITHER starting  |
-# |         |            |             | with '-' (the startswith check passes it     |
-# |         |            |             | clean too) — only the post-expansion re-run, |
-# |         |            |             | seeing the actual two-operand argv, catches  |
-# |         |            |             | the write. The 71-green-tests claim behind   |
-# |         |            |             | the deletion proposal is real but beside the |
-# |         |            |             | point: it is a gap in the SUITE's coverage   |
-# |         |            |             | of an operand-COUNT hatch, not evidence the  |
-# |         |            |             | code is dead. Kept, with the reproduction    |
-# |         |            |             | recorded in a comment beside it. Every named |
-# |         |            |             | exploit re-verified refused after every M23  |
-# |         |            |             | change: sort -oFILE, sort --output=, sort    |
-# |         |            |             | --o=, sort --compress-progr=, git grep       |
-# |         |            |             | -O./p.sh, git grep --open-f=, git            |
-# |         |            |             | --exec-path= (now caught in BOTH pre- and    |
-# |         |            |             | post-subcommand position), git               |
-# |         |            |             | --upload-pack=, git branch -D, an operand    |
-# |         |            |             | outside the repo, and the uniq multi-glob    |
-# |         |            |             | case above — plus the legitimate corpus      |
-# |         |            |             | commands (ls -d src/*/, the git grep | awk   |
-# |         |            |             | claim) still execute clean. **Live tree: 605 |
-# |         |            |             | surfaces, 6 executed (3 distinct commands,   |
-# |         |            |             | floor 2) of which 1 LIVE (floor 1), 191      |
-# |         |            |             | declines (unsafe 10->2, unrecognised-shape   |
-# |         |            |             | 141->153 — the FORBIDDEN-routing and         |
-# |         |            |             | quoted-head fixes recovering 12              |
-# |         |            |             | previously-invisible spans), 0 excused,      |
-# |         |            |             | PASS, exit 0. The 71-test suite passes       |
-# |         |            |             | UNMODIFIED — not edited, per the fixer       |
-# |         |            |             | boundary. Both sibling tools re-run green.** |
-# | 1.12    | 2026-08-22 | Claude Code | Two defects from the automated review of PR  |
-# |         |            |             | #330, both independently reproduced against  |
-# |         |            |             | the committed tree before and after the fix. |
-# |         |            |             | **H1 (security): CLUSTERED SHORT OPTIONS     |
-# |         |            |             | DEFEATED PATH CONFINEMENT — the FIFTH        |
-# |         |            |             | consecutive round of one class, and the      |
-# |         |            |             | fourth to land inside the previous round's   |
-# |         |            |             | fix.** Round 18's H14 extracted an attached  |
-# |         |            |             | option value as `tok[2:]`, which is the      |
-# |         |            |             | value only when the option letter is the     |
-# |         |            |             | token's first character. GNU grep parses     |
-# |         |            |             | `-cf/etc/hostname` as `-c -f /etc/hostname`  |
-# |         |            |             | (`-c` takes no value, `-f, --file=FILE`      |
-# |         |            |             | does), so the value is `/etc/hostname` while |
-# |         |            |             | this file computed `f/etc/hostname` — a      |
-# |         |            |             | RELATIVE path that resolves inside the root  |
-# |         |            |             | and passed. Reproduced through the real      |
-# |         |            |             | validation chain: the separated              |
-# |         |            |             | (`-c -f /etc/hostname`) and attached         |
-# |         |            |             | (`-c -f/etc/hostname`) spellings DECLINED,   |
-# |         |            |             | the clustered one ACCEPTED with              |
-# |         |            |             | escaping_operand → None; and end to end as a |
-# |         |            |             | working one-integer read ORACLE over host    |
-# |         |            |             | file CONTENTS —                              |
-# |         |            |             | `grep -hf/etc/hostname data.txt data2.txt \| |
-# |         |            |             | wc -l` reproduced a stated 1 when a fixture  |
-# |         |            |             | file held the runner's real hostname and     |
-# |         |            |             | FAILED on a wrong guess, i.e. a document     |
-# |         |            |             | line interrogating /etc one bit at a time.   |
-# |         |            |             | The round-18 OS child limits do NOT cover    |
-# |         |            |             | it: every one of them bounds writing, CPU or |
-# |         |            |             | memory, and this is a READ. FIXED by         |
-# |         |            |             | refusing to model option grammars at all —   |
-# |         |            |             | _attached_option_value (one guess) becomes   |
-# |         |            |             | _attached_option_values (a tuple), returning |
-# |         |            |             | EVERY suffix from index 2 to the end, each   |
-# |         |            |             | subjected to the identical realpath test.    |
-# |         |            |             | The argument that this is not a sixth        |
-# |         |            |             | spelling waiting to happen is structural,    |
-# |         |            |             | not an enumeration: for POSIX getopt and GNU |
-# |         |            |             | getopt_long alike an attached short-option   |
-# |         |            |             | value is `&argv[i][j+1]`, a SUFFIX of the    |
-# |         |            |             | token, so the suffix set BOUNDS what any     |
-# |         |            |             | dash-token can hand a child, whatever the    |
-# |         |            |             | binary's option table says; which suffix the |
-# |         |            |             | real binary picks stops mattering because    |
-# |         |            |             | all of them were checked. Stated honestly in |
-# |         |            |             | the docstring: it is exhaustive over paths   |
-# |         |            |             | carried INSIDE a dash-token and says nothing |
-# |         |            |             | about a path reaching a child by another     |
-# |         |            |             | route (a `key=value` bare operand, a file a  |
-# |         |            |             | binary opens on its own, the environment —   |
-# |         |            |             | the last two closed for awk by name).        |
-# |         |            |             | OVER-REFUSAL MEASURED, NOT ASSUMED, since    |
-# |         |            |             | over-refusal is what the extra suffixes buy  |
-# |         |            |             | and the floors now gate the exit code: a     |
-# |         |            |             | fixture of five legitimate clustered forms   |
-# |         |            |             | (grep -rn over a directory, sort -nr, ls     |
-# |         |            |             | -la, wc -lc, grep -ic) executes 5 of 5 with  |
-# |         |            |             | 0 declines, IDENTICALLY before and after —   |
-# |         |            |             | a suffix escapes only by being absolute or   |
-# |         |            |             | traversing out with `..`, which no letter    |
-# |         |            |             | cluster does. The decline NAMES which value  |
-# |         |            |             | escaped, so escaping_operand now returns a   |
-# |         |            |             | rendered description rather than a bare      |
-# |         |            |             | token; the bare-operand message is unchanged |
-# |         |            |             | byte for byte. **H2: _lower_limit RAISED an  |
-# |         |            |             | inherited SOFT limit while its own docstring |
-# |         |            |             | said it never raises one the runner imposes  |
-# |         |            |             | — the guarantee stated in the function whose |
-# |         |            |             | whole purpose it is.** It clamped against    |
-# |         |            |             | the inherited HARD limit alone. Reproduced   |
-# |         |            |             | in a child holding real inherited limits:    |
-# |         |            |             | RLIMIT_CPU (10, 100) → (60, 65), six times   |
-# |         |            |             | the CPU the runner intended; (10, INF) → the |
-# |         |            |             | same, since the infinite-hard path clamped   |
-# |         |            |             | nothing at all; RLIMIT_AS (512 MiB, 1 GiB) → |
-# |         |            |             | (1 GiB, 1 GiB). After: (10, 10), (10, 10)    |
-# |         |            |             | and (512 MiB, 512 MiB), with the untouched   |
-# |         |            |             | default host case still (60, 65) / 2 GiB.    |
-# |         |            |             | Every limit is now the strictest of {what    |
-# |         |            |             | this file asks for, the inherited soft, the  |
-# |         |            |             | inherited hard}, so the function can only    |
-# |         |            |             | tighten. RLIMIT_FSIZE stays EXACTLY 0 in     |
-# |         |            |             | every case measured (inherited INF, and      |
-# |         |            |             | inherited (100, 1000)) — and that needed the |
-# |         |            |             | new _tightest() rather than min(), because   |
-# |         |            |             | RLIM_INFINITY is -1 on Linux and a naive     |
-# |         |            |             | min(0, RLIM_INFINITY) would have turned the  |
-# |         |            |             | load-bearing write ceiling into UNLIMITED on |
-# |         |            |             | any ordinary host; verified by re-running    |
-# |         |            |             | the SIGXFSZ kill (a 1-byte write still dies, |
-# |         |            |             | file size 0, and SIGXFSZ is still a named    |
-# |         |            |             | decline). The `+5` CPU grace collapses on a  |
-# |         |            |             | runner that already caps CPU, which costs    |
-# |         |            |             | nothing: _LIMIT_KILL names SIGKILL as a      |
-# |         |            |             | resource kill too. SAFETY section corrected  |
-# |         |            |             | in both places it was now inaccurate — rule  |
-# |         |            |             | 4's "every operand" (the fifth respelling)   |
-# |         |            |             | and rule 6's limit ledger (the soft-limit    |
-# |         |            |             | guarantee, plus the note that these limits   |
-# |         |            |             | bound the write/execute half ONLY and rule 4 |
-# |         |            |             | is the whole of the read half). **Live tree  |
-# |         |            |             | AFTER: byte-identical to before — 605        |
-# |         |            |             | surfaces, 6 executed (3 distinct, floor 2)   |
-# |         |            |             | of which 1 LIVE (floor 1), 191 declines      |
-# |         |            |             | (2 unsafe / 19 unlisted-binary / 8           |
-# |         |            |             | not-self-contained / 6 not-a-single-integer  |
-# |         |            |             | / 3 negated / 153 unrecognised-shape), 0     |
-# |         |            |             | excused, PASS, exit 0. The six executed      |
-# |         |            |             | claims are the same six BY NAME, and the one |
-# |         |            |             | LIVE claim is still CLAUDE.md:276's          |
-# |         |            |             | `ls docs/tracking/*-design.md \| wc -l`, so  |
-# |         |            |             | the coverage delta is zero and neither floor |
-# |         |            |             | moved. The 71-test suite passes UNMODIFIED — |
-# |         |            |             | not edited, per the fixer boundary. Both     |
-# |         |            |             | sibling tools re-run green.**                |
-# | 1.13    | 2026-08-22 | Claude Code | Two reviewed findings, both the SAME class   |
-# |         |            |             | as rounds 9-21 in the ONE dimension round    |
-# |         |            |             | 21's suffix rule explicitly disclaimed — a   |
-# |         |            |             | path reaching a child by a route that is NOT |
-# |         |            |             | a dash-token — and both READS, which the     |
-# |         |            |             | round-18 OS child limits do not bound. Each  |
-# |         |            |             | reproduced through the real `scan()` path    |
-# |         |            |             | before the fix and re-proven after, with the |
-# |         |            |             | legitimate case of the same shape still      |
-# |         |            |             | executing. **H19: awk `ARGV`/`ARGC` OPENED   |
-# |         |            |             | AN ARBITRARY HOST FILE — a read oracle       |
-# |         |            |             | confinement is structurally blind to.** The  |
-# |         |            |             | awk guard refused `\|`, `@`, system/getline, |
-# |         |            |             | ENVIRON/PROCINFO and un-allow-listed calls;  |
-# |         |            |             | it never touched ARGV. `awk 'BEGIN{ARGV[     |
-# |         |            |             | ARGC++]="/etc/passwd"}END{print NR}'         |
-# |         |            |             | data.txt` assigns a path into awk's own      |
-# |         |            |             | operand vector, so awk OPENS it as ordinary  |
-# |         |            |             | main input: no pipe, no getline, no          |
-# |         |            |             | disallowed call, no forbidden character, and |
-# |         |            |             | the path is a string LITERAL inside the      |
-# |         |            |             | program token rather than an operand, so     |
-# |         |            |             | escaping_operand cannot see it while         |
-# |         |            |             | self_contained is satisfied by the           |
-# |         |            |             | legitimate `data.txt`. BEFORE: scan()        |
-# |         |            |             | reached the FAIL block at exit 1 — "document |
-# |         |            |             | says 3; command returns 28", the 25 extra    |
-# |         |            |             | lines being /etc/passwd — with parse_        |
-# |         |            |             | pipeline OK, denied_flag None, self_         |
-# |         |            |             | contained True and escaping_operand None,    |
-# |         |            |             | i.e. every gate clean individually; and as a |
-# |         |            |             | BYTE-level oracle over /etc/hostname using   |
-# |         |            |             | only allow-listed calls (`index`). AFTER:    |
-# |         |            |             | declined `unsafe`, NAMED, and 0 children     |
-# |         |            |             | spawned (measured by spying on               |
-# |         |            |             | subprocess.Popen), so the read demonstrably  |
-# |         |            |             | does not happen. FIXED by AWK_SPECIAL_       |
-# |         |            |             | ARRAYS, replacing AWK_ENV_ARRAYS: a name     |
-# |         |            |             | refusal for `ARGV`/`ARGC`, the existing      |
-# |         |            |             | `ENVIRON`/`PROCINFO`, and gawk's `SYMTAB`/   |
-# |         |            |             | `FUNCTAB` — the symbol table reaches ARGV    |
-# |         |            |             | indirectly, so refusing only the direct      |
-# |         |            |             | spelling would be the enumerate-the-spelling |
-# |         |            |             | error again. A name refusal IS the right     |
-# |         |            |             | shape here for the reason the SAFETY section |
-# |         |            |             | gives for awk generally: the load-bearing    |
-# |         |            |             | rule is the CALL allow-list, and a special   |
-# |         |            |             | array is a VARIABLE — this one calls NOTHING |
-# |         |            |             | AT ALL, which is why four rounds of awk      |
-# |         |            |             | rules missed it. Cost measured, not assumed: |
-# |         |            |             | the one live awk claim names none of them    |
-# |         |            |             | and still executes, as do a bare             |
-# |         |            |             | `awk 'END{print NR}' data.txt` and the       |
-# |         |            |             | corpus's own pipeline shape. **H20: `grep    |
-# |         |            |             | -R` AND `find -L` FOLLOWED SYMLINKS OUT OF   |
-# |         |            |             | THE CHECKOUT.** escaping_operand realpaths   |
-# |         |            |             | each operand and refuses one that leaves the |
-# |         |            |             | root — correct for a symlink handed over     |
-# |         |            |             | directly, blind to TRANSITIVE traversal: an  |
-# |         |            |             | in-repo DIRECTORY operand resolves inside    |
-# |         |            |             | the root and passes, and the binary walks    |
-# |         |            |             | through a symlink inside it. On              |
-# |         |            |             | `pull_request` the checkout is the PR head   |
-# |         |            |             | and actions/checkout preserves symlinks, so  |
-# |         |            |             | `sub/x.md -> /etc/passwd` plus a document    |
-# |         |            |             | claim is entirely attacker-controlled.       |
-# |         |            |             | BEFORE, each against a committed symlink and |
-# |         |            |             | each with its non-following sibling as the   |
-# |         |            |             | control: `grep -Rl 'root' sub \| wc -l` -> 1 |
-# |         |            |             | (`-rl` -> 0); `find -L deep -name passwd \|  |
-# |         |            |             | wc -l` -> 2 (plain find -> 0); `find deep    |
-# |         |            |             | -follow ...` -> 2; `rg --follow -l root sub  |
-# |         |            |             | \| wc -l` -> 1 (`rg -l` -> 0); and `diff -r  |
-# |         |            |             | sub other \| wc -l` reached the FAIL block   |
-# |         |            |             | at 30 — a diff OF /etc/passwd. AFTER: all    |
-# |         |            |             | declined and named, 0 children spawned.      |
-# |         |            |             | FIXED IN TWO HALVES, because the prescribed  |
-# |         |            |             | flag denial alone rests on each binary's     |
-# |         |            |             | documented default, which is the enumerate-  |
-# |         |            |             | what-you-know shape this file keeps filing.  |
-# |         |            |             | (i) per-binary denials: grep/egrep/fgrep/rg  |
-# |         |            |             | `-R`/`--dereference-recursive`, rg also      |
-# |         |            |             | `-L`/`--follow`, find `-L`/`-H`/`-follow`,   |
-# |         |            |             | and diff `-r`/`--recursive` — diff for a     |
-# |         |            |             | different reason worth stating, since GNU    |
-# |         |            |             | diff DEREFERENCES while recursing unless     |
-# |         |            |             | `--no-dereference` is passed, so there is no |
-# |         |            |             | safe spelling to keep. (ii) the STRUCTURAL   |
-# |         |            |             | half, escaping_symlink_under(): no operand   |
-# |         |            |             | DIRECTORY may contain a symlink leaving the  |
-# |         |            |             | root at any depth, whatever flags were given |
-# |         |            |             | and whatever the binary would have done with |
-# |         |            |             | them — so lowercase `grep -rl root sub` is   |
-# |         |            |             | declined too, because the difference between |
-# |         |            |             | it and `-Rl` is a fact about GNU grep and    |
-# |         |            |             | not one this tool can enforce. `os.walk(     |
-# |         |            |             | followlinks=False)` (a symlinked dir is      |
-# |         |            |             | examined, never descended, so no loop can    |
-# |         |            |             | hang it), memoised per resolved directory,   |
-# |         |            |             | with SYMLINK_WALK_CAP as a fail-SAFE runaway |
-# |         |            |             | guard (hitting it declines). Measured on the |
-# |         |            |             | live tree: 36 walks, 12 ms total, whole run  |
-# |         |            |             | 4.0 s -> 4.2 s. **THE REQUIREMENT-2 SWEEP    |
-# |         |            |             | FOUND A THIRD ROUTE, and one instance of it  |
-# |         |            |             | was LIVE, not latent: a path taken from      |
-# |         |            |             | another file's BYTES.** `wc -l --files0-from |
-# |         |            |             | =F` reads the files named inside F. It       |
-# |         |            |             | escapes needs_file because self_contained    |
-# |         |            |             | inspects only the FIRST pipeline segment, so |
-# |         |            |             | `cat data.txt \| wc -l --files0-from=l2.txt` |
-# |         |            |             | EXECUTED (2 children spawned) and read       |
-# |         |            |             | /etc/passwd; it was declined only because wc |
-# |         |            |             | prints "25 /etc/passwd" rather than a bare   |
-# |         |            |             | integer, which one `\| cut -d' ' -f1` undoes |
-# |         |            |             | — luck, not a rule. THE SAME FAMILY ON       |
-# |         |            |             | `sort` WAS WORSE, and it corrects this       |
-# |         |            |             | round's own first guess that only wc's was   |
-# |         |            |             | live: `cat data.txt \| sort --files0-from=   |
-# |         |            |             | l2.txt \| wc -l` reached the FAIL BLOCK at   |
-# |         |            |             | 25 — the line count of /etc/passwd, three    |
-# |         |            |             | children spawned — because self_contained    |
-# |         |            |             | never runs on a second segment.              |
-# |         |            |             | `find -files0-from list.txt -name passwd \|  |
-# |         |            |             | wc -l` reproduced a stated 2 out of /etc in  |
-# |         |            |             | FIRST position. All three declined and named |
-# |         |            |             | after, 0 children. No operand check of any   |
-# |         |            |             | kind can reach these, so they are refused by |
-# |         |            |             | NAME and rule 4 now labels that leg its weak |
-# |         |            |             | one rather than folding it in. Sweep         |
-# |         |            |             | RESIDUALS, named because a named residual is |
-# |         |            |             | worth more than a silent one: a recursion    |
-# |         |            |             | with NO operand (covered by the flag denials |
-# |         |            |             | and needs_file, not by the walk); a binary's |
-# |         |            |             | own config/dot-files (git `.git/config`, rg  |
-# |         |            |             | `RIPGREP_CONFIG_PATH`), which no DOCUMENT    |
-# |         |            |             | can point anywhere; `ls -R`/`stat -L`, safe  |
-# |         |            |             | only because ls prints names and both are    |
-# |         |            |             | already covered by (a)+(b); `find -printf    |
-# |         |            |             | '%l'`, which leaks an in-repo symlink's      |
-# |         |            |             | TARGET STRING and is covered by (b) whenever |
-# |         |            |             | that target escapes; and TOCTOU between the  |
-# |         |            |             | walk and exec, against an external writer    |
-# |         |            |             | this file has never claimed to defend.       |
-# |         |            |             | SAFETY section rewritten where these         |
-# |         |            |             | findings made it false: the awk hatch list   |
-# |         |            |             | (no ARGV), rule 1 (special arrays), rule 4   |
-# |         |            |             | (restated as what it ENFORCES — (a) operands |
-# |         |            |             | and dash-token suffixes, (b) no escaping     |
-# |         |            |             | symlink under an operand directory, (c) the  |
-# |         |            |             | named refusals — instead of "a command may   |
-# |         |            |             | read the checkout and nothing else"), and a  |
-# |         |            |             | new chain paragraph stating the              |
-# |         |            |             | generalisation the rounds 9-21 chain had     |
-# |         |            |             | been drawing too narrowly: THE SET OF ARGV   |
-# |         |            |             | TOKENS IS NOT THE SET OF PATHS A CHILD       |
-# |         |            |             | OPENS. **Live tree AFTER: byte-identical to  |
-# |         |            |             | before — 605 surfaces, 6 executed (3         |
-# |         |            |             | distinct, floor 2) of which 1 LIVE (floor    |
-# |         |            |             | 1), 191 declines in the same eight buckets,  |
-# |         |            |             | 0 excused, PASS, exit 0. Coverage delta is   |
-# |         |            |             | ZERO and neither floor moved: the live       |
-# |         |            |             | corpus quotes only `grep -r`/`grep -rn`,     |
-# |         |            |             | plain `find`, and an awk program naming no   |
-# |         |            |             | special array, and it contains no symlinks   |
-# |         |            |             | at all. The 121-test suite passes            |
-# |         |            |             | UNMODIFIED — not edited, per the fixer       |
-# |         |            |             | boundary. Both sibling tools re-run green.** |
-# | 1.14    | 2026-08-22 | Claude Code | Round 23 — five reviewed findings, each      |
-# |         |            |             | reproduced before and after, and one of them |
-# |         |            |             | a FALSE PASS. **H22 (in the sibling, so both |
-# |         |            |             | tools agree): `frozen_chain_span` ran to the |
-# |         |            |             | NEXT MARKDOWN HEADING, and a chain is        |
-# |         |            |             | inserted INTO a file's header field block,   |
-# |         |            |             | so everything between the last chain entry   |
-# |         |            |             | and that heading — the file's own present-   |
-# |         |            |             | tense status block — was frozen by position  |
-# |         |            |             | alone.** On README.md that is lines 556-565, |
-# |         |            |             | whose `**Current Stage:**` says "All 26      |
-# |         |            |             | approved specs" against a real 53; the same  |
-# |         |            |             | shape on file-manifest.md (`**Purpose:**`),  |
-# |         |            |             | spec-error-log.md (`**Status:**`, `**Raised  |
-# |         |            |             | During:**`) and three design supplements.    |
-# |         |            |             | Reproduced on a fixture mirroring README's   |
-# |         |            |             | structure: a count-with-command wrong by a   |
-# |         |            |             | factor of 33, EXCUSED, exit 0, PASS — the    |
-# |         |            |             | worst failure this tool can produce — and    |
-# |         |            |             | after the fix the same fixture FAILS at exit |
-# |         |            |             | 1 while a genuine chain entry one line above |
-# |         |            |             | stays excused. The span now ends at the LAST |
-# |         |            |             | marker's entry (a blank line or a new        |
-# |         |            |             | `**Label:**`), deliberately not "the first   |
-# |         |            |             | non-marker line", because lines BETWEEN      |
-# |         |            |             | markers are wrapped entry bodies and this    |
-# |         |            |             | repo writes them starting with emphasis and  |
-# |         |            |             | a colon. **H23: LIVE was computed by         |
-# |         |            |             | POSITION while the excusal needed position   |
-# |         |            |             | AND a failed pierce**, so a currency-        |
-# |         |            |             | asserted claim inside a record — which gates |
-# |         |            |             | perfectly well — was counted non-live.       |
-# |         |            |             | Reproduced: one such claim with a wrong      |
-# |         |            |             | value printed `LIVE (can gate): 0`, `0       |
-# |         |            |             | mismatch(es) EXCUSED`, a FAIL block          |
-# |         |            |             | reporting the drift, and "this run could not |
-# |         |            |             | have caught drift in any document", exiting  |
-# |         |            |             | 2 and demoting a real document defect to a   |
-# |         |            |             | tooling error. Hoisted into `would_gate()`,  |
-# |         |            |             | used by both sites; after, the same fixture  |
-# |         |            |             | reads LIVE 1 and exits 1. **H21: shape 1's   |
-# |         |            |             | 40-character gap bound integers out of       |
-# |         |            |             | unrelated clauses** — "(`cmd`) was re-run    |
-# |         |            |             | and found 2 orphans" and two more correct    |
-# |         |            |             | sentences reported as mismatch(2,3) at exit  |
-# |         |            |             | 1, invisible to the census because a shape   |
-# |         |            |             | had bound them. The arrow route keeps its    |
-# |         |            |             | gap (an arrow cannot belong to another       |
-# |         |            |             | clause); the verb route admits only          |
-# |         |            |             | whitespace, closing markup and ADVERBS (`now |
-# |         |            |             | returns`, `no longer returns` both still     |
-# |         |            |             | bind and are both in this file's suite), and |
-# |         |            |             | the post-verb run admits no words, which is  |
-# |         |            |             | what closes the third reproduction           |
-# |         |            |             | (`returns, for the 2 tracking files, a count |
-# |         |            |             | of 3`). **H25: a span `check_claim` IGNORED  |
-# |         |            |             | still reserved itself**, so `curl … >        |
-# |         |            |             | out.txt`, `make build && echo 7` and `dotnet |
-# |         |            |             | test … 2>&1` reached no bucket at all while  |
-# |         |            |             | the same dotnet claim WITHOUT the            |
-# |         |            |             | redirection was named — adding a redirection |
-# |         |            |             | moved a claim from a named decline to        |
-# |         |            |             | invisibility. Ignored `cmd_start`s are now   |
-# |         |            |             | subtracted from `bound`; fixture: 0 -> 3     |
-# |         |            |             | named. Verified in passing that the report's |
-# |         |            |             | "with `bound` emptied the census names all   |
-# |         |            |             | of them" is NOT true of an argument-less     |
-# |         |            |             | script path — that one is refused by the     |
-# |         |            |             | census's own command-shape test, and the     |
-# |         |            |             | header now says so. **H24: a live drift-     |
-# |         |            |             | capable claim split across a hard wrap was   |
-# |         |            |             | invisible to both the shapes and the         |
-# |         |            |             | census** — README.md:930-931, a SECOND live  |
-# |         |            |             | instance of the very command this file's     |
-# |         |            |             | LIVE floor is built around. Shape 4 learned  |
-# |         |            |             | `with`, the bare stem `re-derive` and a wrap |
-# |         |            |             | prefix, so it now BINDS, executes and        |
-# |         |            |             | reproduces (60); the census widens by one    |
-# |         |            |             | physical line each way only when the span's  |
-# |         |            |             | own line carries no digit. **Live tree: 605  |
-# |         |            |             | surfaces, 7 executed (3 distinct, floor 2)   |
-# |         |            |             | of which 3 LIVE (2 distinct, floor 1), 224   |
-# |         |            |             | declines, 0 excused, PASS, exit 0.**         |
-# |         |            |             | Coverage deltas, all accounted: executed 6   |
-# |         |            |             | -> 7 (H24 binding README:930, a new INSTANCE |
-# |         |            |             | of an already-counted command); LIVE 1 -> 3  |
-# |         |            |             | (H23 counting the currency-pierced VH claim  |
-# |         |            |             | that always gated, plus H24's new instance); |
-# |         |            |             | declines 191 -> 224, which is 8 spans moved  |
-# |         |            |             | out of the named buckets into the census by  |
-# |         |            |             | H21 and 33 more named by H24's widened       |
-# |         |            |             | window, net +41 in one bucket and -8 across  |
-# |         |            |             | four (unsafe 2->1, unlisted-binary 19->18,   |
-# |         |            |             | not-self-contained 8->6, not-a-single-       |
-# |         |            |             | integer 6->2, unrecognised-shape 153->194).  |
-# |         |            |             | (Both corrected 2026-08-22 in the recovery   |
-# |         |            |             | pass that verified this round: the row read  |
-# |         |            |             | "194 declines" and "declines 191 -> 194",    |
-# |         |            |             | quoting the unrecognised-shape BUCKET as the |
-# |         |            |             | TOTAL, and "12 spans moved out", which       |
-# |         |            |             | counted the four region-coverage lines of a  |
-# |         |            |             | before/after report diff as declines. The    |
-# |         |            |             | eight are: README:1176, code-standards       |
-# |         |            |             | /section-2.md:330, CHANGELOG.md:1240 and     |
-# |         |            |             | :2789, file-manifest.md:4 and :5 twice, and  |
-# |         |            |             | spec-error-log.md:943.) H25 contributes 0    |
-# |         |            |             | census entries on THIS corpus — its fixture  |
-# |         |            |             | proof (0 -> 3) is the evidence, not a live   |
-# |         |            |             | count.                                       |
-# |         |            |             | MIN_EXECUTED_CLAIMS unmoved: the floor is on |
-# |         |            |             | DISTINCT commands and that is still 3.       |
-# |         |            |             | MIN_LIVE_CLAIMS unmoved at 1 WITH ITS        |
-# |         |            |             | RESIDUAL RECORDED: both new live instances   |
-# |         |            |             | are repetition or a revision-pinned command, |
-# |         |            |             | so no new drift-capable command became live, |
-# |         |            |             | and raising an instance floor on either is   |
-# |         |            |             | what round 20's M20 took the executed floor  |
-# |         |            |             | off instances to prevent — but a floor of 1  |
-# |         |            |             | can now be met by the pinned claim alone,    |
-# |         |            |             | which is a real hole H23 created and which   |
-# |         |            |             | wants a distinct-drift-capable-command       |
-# |         |            |             | floor, an owner-level call M20 already       |
-# |         |            |             | deferred. The census RADIUS CURVE was re-    |
-# |         |            |             | measured in the same change (122 / 154 / 186 |
-# |         |            |             | / 194 / 199 / 199 at 40 / 60 / 120 / 200 /   |
-# |         |            |             | 400 / unbounded), saturating at 200 as       |
-# |         |            |             | before. Header and SAFETY text corrected     |
-# |         |            |             | where these findings falsified it: the four- |
-# |         |            |             | shape list, the derived-blind-spot paragraph |
-# |         |            |             | (which now names the two classes that still  |
-# |         |            |             | reach no bucket instead of implying there    |
-# |         |            |             | are none), and the radius note. The 121-test |
-# |         |            |             | suite passes UNMODIFIED — not edited, per    |
-# |         |            |             | the fixer boundary; note for its owner that  |
-# |         |            |             | its `scan()` harness patches                 |
-# |         |            |             | MIN_EXECUTED_CLAIMS but not MIN_LIVE_CLAIMS, |
-# |         |            |             | which silently pins every fixture to a live  |
-# |         |            |             | floor of 1. Both sibling tools re-run green. |
-# | 1.15    | 2026-08-22 | Claude Code | Round 23 RECOVERY AND AUDIT PASS. The round  |
-# |         |            |             | above was authored in a session that was     |
-# |         |            |             | interrupted before it reported, so every one |
-# |         |            |             | of its five findings was re-proved here from |
-# |         |            |             | scratch against `git show HEAD:tools/…` —    |
-# |         |            |             | the defect reproduced on the PRE-round code  |
-# |         |            |             | and the fixed behaviour and its legitimate   |
-# |         |            |             | complement measured after. All five hold:    |
-# |         |            |             | H21's three sentences bind and report        |
-# |         |            |             | mismatch(2,3) before and are named in the    |
-# |         |            |             | census after, while arrow/verb/adverb/       |
-# |         |            |             | markup/negation phrasings still bind; H22's  |
-# |         |            |             | README-shaped fixture is EXCUSED at exit 0   |
-# |         |            |             | PASS before and FAILs at exit 1 after, with  |
-# |         |            |             | the genuine chain entry one line above still |
-# |         |            |             | excused; H23's currency-pierced record claim |
-# |         |            |             | prints LIVE 0 + a FAIL block + exit 2 before |
-# |         |            |             | and LIVE 1 + exit 1 after; H24 binds         |
-# |         |            |             | README.md:930 (60) where nothing bound       |
-# |         |            |             | before; H25 takes a fixture from 0 named to  |
-# |         |            |             | 3. **What the audit CHANGED.** (1) Shape 4's |
-# |         |            |             | wrap-prefix class admitted the ASCII PIPE,   |
-# |         |            |             | which is a markdown TABLE CELL separator, so |
-# |         |            |             | a three-column row reading "35", then        |
-# |         |            |             | "re-derived by", then a backticked command   |
-# |         |            |             | bound the 35 out of a neighbouring column    |
-# |         |            |             | (reproduced on a fixture) — H21's own        |
-# |         |            |             | defect reintroduced one shape over, in the   |
-# |         |            |             | commit that fixed it. Measured at 33 shape-4 |
-# |         |            |             | bindings with it and 33 without, so it was   |
-# |         |            |             | pure risk; removed, `│` and `>` kept and     |
-# |         |            |             | each justified by measurement. (2) The LIVE  |
-# |         |            |             | line and its blocked message said the        |
-# |         |            |             | non-live claims "carry no currency           |
-# |         |            |             | assertion", which is false of the ERR-log    |
-# |         |            |             | claims — those are excused by the stricter   |
-# |         |            |             | resolved-or-dated rule. Both now name the    |
-# |         |            |             | TEST (`would_gate`), not one of its two      |
-# |         |            |             | branches. (3) FIGURES, every one re-derived  |
-# |         |            |             | rather than carried, because the round       |
-# |         |            |             | above committed round 20's M19 defect four   |
-# |         |            |             | times: the verb-gap refusal count (153 was   |
-# |         |            |             | the census total copied into a sentence      |
-# |         |            |             | about verb-route matches; measured 147 for   |
-# |         |            |             | the gap rule, 118 for _POST_VERB, 184 for    |
-# |         |            |             | the two together, of 217); the decline total |
-# |         |            |             | (191 -> 224, not 194 — the unrecognised      |
-# |         |            |             | BUCKET quoted as the TOTAL); the spans H21   |
-# |         |            |             | moved out of the named buckets (8, not 12 —  |
-# |         |            |             | the 12 counted four region-coverage lines of |
-# |         |            |             | a report diff); "~130 chain entries in       |
-# |         |            |             | README.md" in the sibling (CHANGELOG.md's    |
-# |         |            |             | 139 under README's name; README holds 36     |
-# |         |            |             | entries in total, so 35 is the real figure); |
-# |         |            |             | and a `~1,100` transplanted into the header  |
-# |         |            |             | from a note about a different population.    |
-# |         |            |             | Six instance counts stale at "six" are now   |
-# |         |            |             | seven. (4) The MIN_LIVE_CLAIMS note opened   |
-# |         |            |             | "the floor is set at 2" and closed "THE      |
-# |         |            |             | FLOOR STAYS AT 1" over a constant of 1 —     |
-# |         |            |             | corrected to say the MEASUREMENT moved, not  |
-# |         |            |             | the floor. **What the audit CONFIRMED and    |
-# |         |            |             | did not change:** the radius curve (122 /    |
-# |         |            |             | 154 / 186 / 194 / 199 / 199 at 40 / 60 /     |
-# |         |            |             | 120 / 200 / 400 / unbounded) reproduces      |
-# |         |            |             | exactly; H24's "13 runnable spans in this    |
-# |         |            |             | shape" reproduces exactly under its own      |
-# |         |            |             | definition (value on the previous physical   |
-# |         |            |             | line, runnable head); the sibling's per-file |
-# |         |            |             | scope deltas reproduce exactly; H25's        |
-# |         |            |             | residual (a bare argument-less script path   |
-# |         |            |             | stays invisible with `bound` emptied) is     |
-# |         |            |             | real; and MIN_LIVE_CLAIMS = 2 does fail      |
-# |         |            |             | exactly 12 cases in the test suite. Live     |
-# |         |            |             | tree unchanged by this pass: 605 surfaces, 7 |
-# |         |            |             | executed (3 distinct, floor 2) of which 3    |
-# |         |            |             | LIVE (2 distinct, floor 1), 224 declines     |
-# |         |            |             | (1/18/6/0/2/0/3/194), 0 excused, PASS, exit  |
-# |         |            |             | 0. The 121-test suite passes UNMODIFIED.     |
-# | 1.16    | 2026-08-22 | Claude Code | Round 24 — twelve reviewed findings, M28     |
-# |         |            |             | done LAST per its own caution note. M31: the |
-# |         |            |             | compound-token rule enumerated three         |
-# |         |            |             | characters (`.#§`) where its own docstring   |
-# |         |            |             | stated a general one; now the general rule   |
-# |         |            |             | (alphanumeric or `.#§/:` before the value    |
-# |         |            |             | refuses it), closing `461/1/2`, `16:59:45`,  |
-# |         |            |             | `v2` and `2026/08/22` mid-token binds —      |
-# |         |            |             | reproduced wrongly BOUND pre-fix, REJECTED   |
-# |         |            |             | post-fix, on the file's own regex objects;   |
-# |         |            |             | live corpus output byte-identical (latent    |
-# |         |            |             | defect, 0 live instances). M32: the PASS     |
-# |         |            |             | line printed unconditionally even after an   |
-# |         |            |             | EXCUSED mismatch block five lines above      |
-# |         |            |             | contradicted it; now names the excusal count |
-# |         |            |             | when nonzero, unchanged when zero            |
-# |         |            |             | (reproduced both ways on a constructed       |
-# |         |            |             | fixture). M33: a third, wrong copy of the    |
-# |         |            |             | awk coverage fraction, and two sites         |
-# |         |            |             | conflating the defined term LIVE with plain  |
-# |         |            |             | EXECUTED, all now cite the canonical site or |
-# |         |            |             | drop the number entirely. L10:               |
-# |         |            |             | `_DCC_CONTRACT` named `frozen_chain_span`,   |
-# |         |            |             | uncalled since the round-19 rewrite —        |
-# |         |            |             | dropped (reproduced: a legitimate sibling    |
-# |         |            |             | refactor removing it now passes instead of   |
-# |         |            |             | exiting 2). L11: `dated_record_regions`      |
-# |         |            |             | discards `blank_frozen_history`'s `pierced`  |
-# |         |            |             | return value; docstring now states the gap   |
-# |         |            |             | honestly, measured today at 21 pierced       |
-# |         |            |             | citations, none within 300 chars of a bound  |
-# |         |            |             | claim. L12: the LIVE floor gated on          |
-# |         |            |             | INSTANCES (`live`) rather than DISTINCT      |
-# |         |            |             | commands, the same hole M20 closed on the    |
-# |         |            |             | executed floor — now gates on                |
-# |         |            |             | `len(live_commands)` (reproduced: two quotes |
-# |         |            |             | of one command met a floor of 2 before the   |
-# |         |            |             | fix, correctly fails it after); the          |
-# |         |            |             | revision-pin residual stays open, honestly,  |
-# |         |            |             | as before. L13: CHECK 2's examined-share     |
-# |         |            |             | denominator counted references in UNTAGGED   |
-# |         |            |             | fences, which can never become examinable —  |
-# |         |            |             | grew the corpus for free toward the floor    |
-# |         |            |             | (~2.1x headroom, measured); now excludes     |
-# |         |            |             | them (~4.0x headroom), reproduced on a       |
-# |         |            |             | synthetic corpus that spuriously tripped the |
-# |         |            |             | old floor and passes the new one. L14: no    |
-# |         |            |             | top-level exception boundary — an unforeseen |
-# |         |            |             | error (a directory matching a surface glob,  |
-# |         |            |             | reproduced) used to exit 1 with a raw        |
-# |         |            |             | traceback, indistinguishable from a real     |
-# |         |            |             | document mismatch; now caught and routed     |
-# |         |            |             | through the named ERROR block, exit 2. L15:  |
-# |         |            |             | the exit-code-split banner claimed           |
-# |         |            |             | automation branches on 1 vs 2 vs 3; `ci.yml` |
-# |         |            |             | is one `run:` step and GitHub Actions fails  |
-# |         |            |             | on any nonzero identically — reworded to say |
-# |         |            |             | so rather than claiming a consumer this repo |
-# |         |            |             | does not have. L16:                          |
-# |         |            |             | `scan_fence_identifiers`'s own docstring     |
-# |         |            |             | said its `quiet` parameter does nothing —    |
-# |         |            |             | dropped, with its caller; and `run_pipeline` |
-# |         |            |             | proceeded past a `reader.join(5)` without    |
-# |         |            |             | checking whether the reader thread was still |
-# |         |            |             | alive, risking a live thread across the next |
-# |         |            |             | `Popen`'s fork (`preexec_fn` is documented   |
-# |         |            |             | unsafe in the presence of threads) — now     |
-# |         |            |             | declines by name instead (reproduced with a  |
-# |         |            |             | stubbed stuck reader: old code proceeded to  |
-# |         |            |             | a normal timeout decline after 6s, new code  |
-# |         |            |             | declines the reader hazard specifically; the |
-# |         |            |             | ordinary timeout path is unchanged and still |
-# |         |            |             | returns in 1s). M29: `err_log_excused`       |
-# |         |            |             | duplicates the sibling's clipping algorithm  |
-# |         |            |             | verbatim (radii 110 vs 120, unexplained) —   |
-# |         |            |             | cannot call the sibling's                    |
-# |         |            |             | `historically_marked()` directly without     |
-# |         |            |             | editing it (it fuses the clip with its OWN   |
-# |         |            |             | marker search, which is not what this file   |
-# |         |            |             | needs), so recorded as a knowing duplicate   |
-# |         |            |             | in a comment naming the sibling function,    |
-# |         |            |             | flagging the radius divergence, and          |
-# |         |            |             | deferring the real fix (a shared exported    |
-# |         |            |             | helper) as out of this pass's scope — `doc-  |
-# |         |            |             | consistency-check.py` untouched (verified by |
-# |         |            |             | diff). M28, done LAST:                       |
-# |         |            |             | `Binary.denied_prefixes` was dead on every   |
-# |         |            |             | one of 22 records (never set), with two of   |
-# |         |            |             | its three reads provably unreachable and the |
-# |         |            |             | third contributing nothing; docstring called |
-# |         |            |             | it "a REAL constraint, not decoration" three |
-# |         |            |             | lines above "every binary here currently     |
-# |         |            |             | needs NO prefix entry at all". Deleted       |
-# |         |            |             | (field, slot, constructor parameter, all     |
-# |         |            |             | three reads); the option-abbreviation guard  |
-# |         |            |             | now derives its denied long-name set from    |
-# |         |            |             | `denied_flags` alone. Every named exploit    |
-# |         |            |             | re-proven refused, byte-identical output     |
-# |         |            |             | before/after across all ten (`sort -oFILE`,  |
-# |         |            |             | `--output=`, `--o=`, `--compress-progr=`,    |
-# |         |            |             | `git grep -O./p.sh`, `--open-f=`, `git       |
-# |         |            |             | --exec-path=`, `git branch -D`, an outside-  |
-# |         |            |             | repo operand, glob-expanded `uniq`), plus    |
-# |         |            |             | six legitimate controls unchanged; a sanity  |
-# |         |            |             | mutant (clearing sort's denied_flags)        |
-# |         |            |             | confirmed the reproduction harness is not    |
-# |         |            |             | vacuous. Net: live tree UNCHANGED except one |
-# |         |            |             | accounted display line (L13's coverage-      |
-# |         |            |             | floors denominator, 198/1882 -> 198/983) —   |
-# |         |            |             | 605 surfaces, 7 executed (3 distinct, floor  |
-# |         |            |             | 2), 3 LIVE (2 distinct, floor 1), 224        |
-# |         |            |             | declines (1/18/6/0/2/0/3/194), 0 excused,    |
-# |         |            |             | PASS, exit 0. The 121-test suite passes      |
-# |         |            |             | UNMODIFIED; both siblings (doc-consistency-  |
-# |         |            |             | check.py, recurring-defect-lint.py) green.   |
+# HISTORY — NOT KEPT HERE.
+#
+# A 1,589-line Version History table used to sit at this point: seventeen rows
+# (v1.0 - v1.16), one per adversarial-review round, each reproducing that
+# round's findings in prose. It was 26% of the file, nothing verified it, and
+# a single reviewer pass found six countable falsehoods in this file's
+# explanatory prose while that table was the largest single body of it. It was
+# DELETED rather than corrected, on this repo's own stated convention for spec
+# folders — "No version suffixes in filenames. Git tracks history." — applied
+# to the one file that had opted out of it.
+#
+# Where the history now lives, in the order worth consulting:
+#   * `git log -p -- tools/doc-claim-check.py` — the rows described commits;
+#     the commits are the rows, and they cannot drift from what they describe.
+#   * `docs/tracking/CHANGELOG.md` — the round-by-round narrative, which is
+#     that file's job rather than this one's.
+#   * `tools/tests/test_doc_claim_check.py` — every exploit a row recited is a
+#     named regression test there. A test is the form of history that fails
+#     when it stops being true.
+#
+# The reasoning a row carried that is NOT recoverable from a diff — why a rule
+# has the shape it has, and what a safety property does not cover — was kept,
+# in the section that owns the rule rather than in a table at the bottom.
