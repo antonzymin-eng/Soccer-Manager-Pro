@@ -57,6 +57,55 @@
 # of them, each written red against the pre-fix tool or an equivalent
 # mutation of the current one (see the landing report for which).
 #
+# ROUND 3 — FOUR REVIEWED FINDINGS AGAINST THIS SUITE ITSELF (M25-M27, M30),
+# fixed in sections 10-11 below, plus locks for round 18's own landings this
+# suite had not caught up with:
+#   M25: a 25-mutant battery found CHECK 2's own precision guards almost
+#        entirely unlocked — 7 of 8 survived, 4 with a measured live-tree
+#        false-positive effect (97 / 3 / 2 / 1 false dangling findings) —
+#        while the suite's only precision tests were one `Foo.Bar` case and
+#        one struct case. Section 10's `CheckTwoGuardRegressionTests` adds
+#        one fixture per surviving guard.
+#   M26: the skip ceiling only ever learned ONE skip-reason shape
+#        ("<binary> is not on PATH"), and this file already emits a SECOND —
+#        "<name> module unavailable" and, until this round, the COMPOUND
+#        "git or the resource module is unavailable". Reproduced by running
+#        this suite with `git` off PATH: SKIP CEILING EXCEEDED on a wholly
+#        legitimate skip. Fixed with a second recognised shape
+#        (`_skip_capability_from_reason` / `_module_importable`, mirroring
+#        the binary shape's fresh-check discipline exactly) and by
+#        splitting the compound decorator on `ChildResourceLimitTests` into
+#        two single-reason ones, so a skip's reason always names exactly
+#        one checkable thing.
+#   M27: `test_help_does_not_touch_the_sibling_import` was a TAUTOLOGICAL
+#        LOCK — restoring the pre-fix module-scope import left it green,
+#        because it asserted only `returncode == 0` and `"--repo" in
+#        stdout`, both true whether the import ran deferred or at module
+#        scope. Replaced with three subprocess cases driven against a
+#        throwaway copy of tools/ (`_write_tool_copy`): `--help` with the
+#        sibling missing entirely, `--repo` with the sibling missing
+#        (exit 2, "could not import"), and `--repo` against a stub sibling
+#        missing one `_DCC_CONTRACT` name (exit 2, the contract-break text).
+#   M30: two live security guards — the awk ENVIRON/PROCINFO refusal and the
+#        @load/@include refusal — had ZERO coverage; deleting either left
+#        all 121 tests green although the mutated tool was proven (see the
+#        landing report) to reproduce a value derived from a REAL
+#        environment variable, a one-integer read oracle over the CI
+#        runner's own environment. `AwkEnvironmentAndLoadHatchTests` locks
+#        both, neither needing awk on PATH since both are refused before a
+#        process spawns.
+# Section 11 locks round 18's own landings this suite had not caught up
+# with: awk's ARGV/ARGC/SYMTAB/FUNCTAB refusal, the symlink-traversal
+# denials (per-flag AND the structural directory-walk rule, with its own
+# complement), `--files0-from` on every binary that carries it including a
+# NON-FIRST pipeline segment, the frozen-span bound, `would_gate`'s LIVE
+# classification, the restricted verb-gap grammar, ignored-span recovery
+# into the census, the leading-value compound-token rule, the LIVE
+# distinct-command floor, and the top-level exception boundary. Every one of
+# the 51 new tests across both rounds was mutation-verified against a
+# scratch copy of the tool (or, for M26, of this file itself) — see the
+# landing report for the exact mutation and failure each one produced.
+#
 # WHAT IT DOES NOT DO
 # -------------------
 # It does not re-verify the checker against the live tree — that is the gate
@@ -131,6 +180,28 @@ HAVE_GIT = _has("git")
 HAVE_SORT = _has("sort")
 HAVE_LS = _has("ls")
 HAVE_WC = _has("wc")
+HAVE_FIND = _has("find")
+
+
+def _write_tool_copy(dest, include_sibling=True, sibling_stub=None):
+    """A `dest` dir holding a copy of doc-claim-check.py, for driving the
+    two import-failure modes (M27) in a subprocess without ever touching the
+    real tools/ directory this suite's own import depends on.
+
+    `include_sibling=False` omits tools/doc-consistency-check.py entirely —
+    the ImportError case `_ensure_consistency_module()` names "could not
+    import". `sibling_stub` writes that TEXT as the sibling instead of
+    copying the real one — the CONTRACT-BREAK case, a stub module missing
+    one of `_DCC_CONTRACT`'s names. Real content is copied only when
+    neither override is given."""
+    dest.mkdir(parents=True, exist_ok=True)
+    shutil.copy(TOOL_PATH, dest / "doc-claim-check.py")
+    if sibling_stub is not None:
+        (dest / "doc-consistency-check.py").write_text(sibling_stub,
+                                                        encoding="utf-8")
+    elif include_sibling:
+        shutil.copy(TOOLS_DIR / "doc-consistency-check.py",
+                    dest / "doc-consistency-check.py")
 
 # A file whose counts are unambiguous under every command quoted below:
 # three lines, all three containing "a".
@@ -162,8 +233,47 @@ TRUE_VALUE = 3
 # fails the run with a non-zero exit — see the `__main__` block at the
 # bottom of this file, which is where this is actually wired to the exit
 # code `unittest.main(exit=False)` would otherwise ignore.
+#
+# M26 (reviewed finding, round 2 of this suite's own hardening) — THE CEILING
+# ONLY EVER LEARNED ONE SHAPE, AND THIS FILE ALREADY EMITS A SECOND ONE.
+# `ChildResourceLimitTests` and `ResourceLimitMathTests` below both skip with
+# a reason naming a CAPABILITY, not a binary — "resource module unavailable"
+# and (before this fix) the compound "git or the resource module is
+# unavailable". Neither matches `_SKIP_REASON_BINARY`, so BOTH were
+# UNEXPLAINED no matter how genuinely absent the capability was — reproduced
+# by running this suite with `git` off PATH: "SKIP CEILING EXCEEDED — 1 of 6
+# skip(s) could not be explained", non-zero exit, on a wholly legitimate
+# skip; the same fires on any host with no `resource` module (a non-POSIX
+# host, which this file's own SAFETY section already documents as a real,
+# supported degradation, not a defect). The ceiling's own two self-tests
+# below only ever exercised the PATH shape, so this was never run against a
+# reason the suite actually emits.
+#
+# Fixed the same way M18 fixed the binary shape, one dimension over: a second
+# recognised SKIP REASON shape, "<name> module unavailable", explained only
+# when a FRESH, independent `importlib.import_module(name)` call — never a
+# cached flag such as `M.RLIMITS_AVAILABLE`, which a test body's own
+# `mock.patch.object(M, "RLIMITS_AVAILABLE", False)` could have altered by
+# the time a skip is being explained, the exact class of "the flag that lied"
+# M18 was written against — confirms the module genuinely does not import
+# right now. No hard-coded registry of capability names: `importlib` can
+# attempt any name, exactly as `shutil.which` can look up any binary name,
+# so "resource" is explained by a real absence and a nonsense name a
+# self-test invents is explained the same way, with no list to keep in sync.
+#
+# THE OTHER HALF OF THE FIX is splitting the COMPOUND reason apart —
+# "git or the resource module is unavailable" names TWO things at once, so
+# even a correctly-implemented capability shape could not parse it as either
+# alone. `ChildResourceLimitTests` below now stacks two single-reason
+# `skipUnless` decorators instead of ANDing the conditions into one
+# decorator with one prose reason, so a skip there is explained (or not) by
+# checking the ONE condition that actually caused it — never both at once —
+# which is the same "every reason names exactly one thing" property M25's
+# own fix note asks CHECK 2's decline buckets for.
 # ---------------------------------------------------------------------------
 _SKIP_REASON_BINARY = re.compile(r"\A([A-Za-z0-9_.+-]+) is not on PATH\Z")
+_SKIP_REASON_CAPABILITY = re.compile(
+    r"\A([A-Za-z_][A-Za-z0-9_.]*) module unavailable\Z")
 
 
 def _skip_binary_from_reason(reason):
@@ -173,24 +283,57 @@ def _skip_binary_from_reason(reason):
     return m.group(1) if m else None
 
 
+def _skip_capability_from_reason(reason):
+    """The module name a skip reason shaped like '<name> module unavailable'
+    names, or None when the reason is not that shape at all. M26."""
+    m = _SKIP_REASON_CAPABILITY.match((reason or "").strip())
+    return m.group(1) if m else None
+
+
+def _module_importable(name):
+    """A FRESH check — not a cached flag — of whether `name` can be imported
+    right now. M26: the capability-shape twin of `shutil.which`, general on
+    purpose so no per-capability registry is needed; a genuinely-missing
+    module (a self-test's nonsense name, or `resource` on a non-POSIX host)
+    fails to import and is EXPLAINED, exactly as a genuinely-missing binary
+    is."""
+    try:
+        importlib.import_module(name)
+        return True
+    except Exception:
+        return False
+
+
 def unexplained_skips(skipped):
     """Every (test, reason) in `skipped` (a TestResult's own `.skipped` list)
-    that is NOT explained by a binary genuinely absent from PATH right now.
+    that is NOT explained by a binary or capability genuinely absent right
+    now.
 
-    Re-checks `shutil.which` fresh for every skip rather than trusting
-    whichever HAVE_* flag produced it — a flag computed once at import time
-    is exactly what a stubbed `shutil.which` (M18's own reproduction) or a
-    plain bug in `_has()` would have already fooled."""
+    Re-checks fresh for every skip rather than trusting whichever HAVE_* flag
+    or cached module-level flag produced it — a flag computed once at import
+    time is exactly what a stubbed `shutil.which` (M18's own reproduction),
+    a mocked `M.RLIMITS_AVAILABLE` (M26's own reproduction, one capability
+    over), or a plain bug in `_has()` would have already fooled."""
     out = []
     for test, reason in skipped:
         binary = _skip_binary_from_reason(reason)
-        if binary is None or shutil.which(binary) is not None:
+        if binary is not None:
+            if shutil.which(binary) is None:
+                continue                  # explained: genuinely absent
             out.append((test, reason))
+            continue
+        capability = _skip_capability_from_reason(reason)
+        if capability is not None:
+            if not _module_importable(capability):
+                continue                  # explained: genuinely unavailable
+            out.append((test, reason))
+            continue
+        out.append((test, reason))        # no recognised shape at all
     return out
 
 
-# Self-test hooks for the M18 ceiling logic, exercised by CliTests below via
-# a fresh subprocess of THIS file. Each is defined ONLY when its matching
+# Self-test hooks for the M18/M26 ceiling logic, exercised by CliTests below
+# via a fresh subprocess of THIS file. Each is defined ONLY when its matching
 # env var is set, so neither ever exists — and neither ever costs a line of
 # `unittest.main()`'s own discovery — in a normal run of this suite.
 if os.environ.get("_DCC_SELFTEST_FAKE_UNEXPLAINED_SKIP") == "1":
@@ -210,14 +353,34 @@ if os.environ.get("_DCC_SELFTEST_FAKE_LEGITIMATE_SKIP") == "1":
         def test_fake_skip(self):
             pass
 
+# M26's own pair, the capability shape's twin of the two probes above.
+if os.environ.get("_DCC_SELFTEST_FAKE_UNEXPLAINED_CAPABILITY_SKIP") == "1":
+    class _FakeUnexplainedCapabilitySkipProbe(unittest.TestCase):
+        # `resource` genuinely IS importable on every POSIX host this suite
+        # runs on (the `RLIMITS_AVAILABLE`-gated classes below depend on
+        # that being true) — this reason is FALSE, exactly the shape a
+        # mocked `M.RLIMITS_AVAILABLE` would produce.
+        @unittest.skip("resource module unavailable")
+        def test_fake_skip(self):
+            pass
+
+if os.environ.get("_DCC_SELFTEST_FAKE_LEGITIMATE_CAPABILITY_SKIP") == "1":
+    class _FakeLegitimateCapabilitySkipProbe(unittest.TestCase):
+        @unittest.skip("zzz_nonexistent_module_4f2c1a module unavailable")
+        def test_fake_skip(self):
+            pass
+
 # True whenever THIS process is already a self-test subprocess spawned by one
-# of the two CliTests cases below. Both env vars run the WHOLE file again —
-# including CliTests itself — so without this guard each spawned subprocess
-# would spawn another or itself, recursing until the runner falls over
-# (reproduced once while writing this: dozens of stacked interpreters).
+# of the four CliTests cases below. Every one of these env vars runs the
+# WHOLE file again — including CliTests itself — so without this guard each
+# spawned subprocess would spawn another or itself, recursing until the
+# runner falls over (reproduced once while writing this: dozens of stacked
+# interpreters).
 _IN_SELFTEST_SUBPROCESS = bool(
     os.environ.get("_DCC_SELFTEST_FAKE_UNEXPLAINED_SKIP")
-    or os.environ.get("_DCC_SELFTEST_FAKE_LEGITIMATE_SKIP"))
+    or os.environ.get("_DCC_SELFTEST_FAKE_LEGITIMATE_SKIP")
+    or os.environ.get("_DCC_SELFTEST_FAKE_UNEXPLAINED_CAPABILITY_SKIP")
+    or os.environ.get("_DCC_SELFTEST_FAKE_LEGITIMATE_CAPABILITY_SKIP"))
 
 
 class FixtureCase(unittest.TestCase):
@@ -1017,6 +1180,106 @@ class CliTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("--repo", proc.stdout)
 
+    # -- M27 — the case above is a TAUTOLOGICAL LOCK, and the whole deferred-
+    # import fix was otherwise unprotected. Restoring the module-scope
+    # `DCC = _load_consistency()` this round's own docstring names — verbatim
+    # the pre-fix code — leaves the case above green too, because it asserts
+    # only `returncode == 0` and `"--repo" in stdout`, both of which hold
+    # whether the import runs deferred (as intended) or at module scope (the
+    # M13 defect): the real repo's own doc-consistency-check.py is present
+    # either way, so the import always succeeds and `--help` always exits 0
+    # regardless of WHEN it ran. Nothing here drove the actual contract this
+    # fix exists for — the import failing, and the exit-2 routing that
+    # follows. The three cases below do, each against a throwaway copy of
+    # tools/ built by `_write_tool_copy` so nothing here touches the real
+    # tree.
+    def test_help_still_exits_0_with_the_sibling_missing(self):
+        # The deferred-import half: `--help` must never touch the sibling at
+        # all, so removing it changes nothing about `--help`. Reverting to a
+        # module-scope import would make THIS case fail — the bare `import`
+        # statement runs before argparse gets to print anything, and a
+        # missing sibling raises an uncaught OSError out of it.
+        with tempfile.TemporaryDirectory() as d:
+            dest = pathlib.Path(d) / "tools"
+            _write_tool_copy(dest, include_sibling=False)
+            proc = subprocess.run(
+                (sys.executable, str(dest / "doc-claim-check.py"), "--help"),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            self.assertIn("--repo", proc.stdout)
+
+    def test_repo_exits_2_with_the_sibling_missing(self):
+        # The exit-2 routing half: once real work is asked for, the missing
+        # sibling must be reported through this file's own named-error
+        # convention (exit 2, "could not import") rather than a bare
+        # traceback at exit 1 — the round-17 (M13) defect this whole fix
+        # closed.
+        with tempfile.TemporaryDirectory() as d:
+            dest = pathlib.Path(d) / "tools"
+            _write_tool_copy(dest, include_sibling=False)
+            fixture = pathlib.Path(d) / "fixture-repo"
+            fixture.mkdir()
+            (fixture / "CLAUDE.md").write_text("# Fixture\n", encoding="utf-8")
+            proc = subprocess.run(
+                (sys.executable, str(dest / "doc-claim-check.py"),
+                 "--repo", str(fixture)),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+            self.assertIn("could not import", proc.stdout)
+
+    def test_repo_exits_2_on_a_contract_break_in_the_sibling(self):
+        # The other failure `_ensure_consistency_module()` names: the
+        # sibling imports fine but no longer exposes every name in
+        # `_DCC_CONTRACT` — a stub missing `blank_frozen_history` alone,
+        # every other contract name present, so this proves the per-name
+        # check rather than "the sibling is broken somehow".
+        with tempfile.TemporaryDirectory() as d:
+            dest = pathlib.Path(d) / "tools"
+            stub = ("def record_regions(rel, text):\n"
+                   "    return ()\n"
+                   "def sentence_window(text, start, end):\n"
+                   "    return ''\n"
+                   "LOG_BODY_FILES = set()\n"
+                   "# blank_frozen_history deliberately NOT defined\n")
+            _write_tool_copy(dest, sibling_stub=stub)
+            fixture = pathlib.Path(d) / "fixture-repo"
+            fixture.mkdir()
+            (fixture / "CLAUDE.md").write_text("# Fixture\n", encoding="utf-8")
+            proc = subprocess.run(
+                (sys.executable, str(dest / "doc-claim-check.py"),
+                 "--repo", str(fixture)),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+            self.assertIn("no longer exposes", proc.stdout)
+            self.assertIn("blank_frozen_history", proc.stdout)
+
+    # -- M26: the capability shape's own end-to-end pair, the twin of M18's
+    # two binary-shape cases below.
+    if not _IN_SELFTEST_SUBPROCESS:
+        def test_an_unexplained_capability_skip_fails_the_run(self):
+            env = dict(os.environ,
+                      _DCC_SELFTEST_FAKE_UNEXPLAINED_CAPABILITY_SKIP="1")
+            proc = subprocess.run(
+                (sys.executable, str(TEST_PATH)),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                env=env)
+            self.assertNotEqual(proc.returncode, 0,
+                                proc.stdout + proc.stderr)
+            self.assertIn("SKIP CEILING EXCEEDED",
+                          proc.stdout + proc.stderr)
+
+        def test_a_skip_naming_a_genuinely_unavailable_capability_does_not_fail_the_run(
+                self):
+            env = dict(os.environ,
+                      _DCC_SELFTEST_FAKE_LEGITIMATE_CAPABILITY_SKIP="1")
+            proc = subprocess.run(
+                (sys.executable, str(TEST_PATH)),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                env=env)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            self.assertNotIn("SKIP CEILING EXCEEDED",
+                             proc.stdout + proc.stderr)
+
     # -- M18: the skip ceiling, driven end to end as its own subprocess -----
     #
     # Both cases spawn a subprocess of THIS file with a self-test env var
@@ -1073,6 +1336,32 @@ class SkipCeilingLogicTests(unittest.TestCase):
                   ("t2", "zzz-nonexistent-binary-4f2c1a is not on PATH")]
         out = unexplained_skips(skipped)
         self.assertEqual([t for t, _r in out], ["t1"])
+
+    # -- M26: the capability shape's fast complements to the CliTests pair --
+
+    def test_a_reason_naming_an_importable_module_is_unexplained(self):
+        # `resource` genuinely IS importable on every POSIX host this suite
+        # runs on (the RLIMITS_AVAILABLE-gated classes above depend on it).
+        self.assertEqual(
+            len(unexplained_skips([("t", "resource module unavailable")])),
+            1)
+
+    def test_a_reason_naming_a_genuinely_unimportable_module_is_explained(
+            self):
+        self.assertEqual(unexplained_skips(
+            [("t", "zzz_nonexistent_module_4f2c1a module unavailable")]), [])
+
+    def test_a_capability_and_a_binary_reason_are_both_recognised_in_one_run(
+            self):
+        # The compound reason M26 found unlocked — "git or the resource
+        # module is unavailable" — named two things at once; this is its
+        # replacement's complement, one binary reason and one capability
+        # reason in the SAME list, each explained (or not) on its own terms
+        # rather than folded into a single ANDed condition.
+        skipped = [("t1", "grep is not on PATH"),
+                  ("t2", "resource module unavailable")]
+        out = unexplained_skips(skipped)
+        self.assertEqual({t for t, _r in out}, {"t1", "t2"})
 
 
 # ---------------------------------------------------------------------------
@@ -1308,8 +1597,14 @@ class ClusteredShortOptionTests(FixtureCase):
         self.assertEqual(M.single_integer(out), 1)
 
 
-@unittest.skipUnless(HAVE_GIT and M.RLIMITS_AVAILABLE,
-                     "git or the resource module is unavailable")
+# M26: two STACKED single-reason decorators, not one compound-reason
+# decorator ANDing both conditions — "git or the resource module is
+# unavailable" named two things at once, which even a correctly-implemented
+# capability shape could not parse as either alone. Stacking means a skip
+# here is always explained (or not) by the ONE condition that actually
+# caused it.
+@unittest.skipUnless(HAVE_GIT, "git is not on PATH")
+@unittest.skipUnless(M.RLIMITS_AVAILABLE, "resource module unavailable")
 class ChildResourceLimitTests(FixtureCase):
     """Round 18 — OS-ENFORCED CHILD LIMITS, the one guard in the tool that is
     not an enumeration. `git status` is a READ-ONLY subcommand on the
@@ -1639,6 +1934,481 @@ class PostExpansionRevalidationTests(FixtureCase):
                          "beta content\n")
 
 
+# ---------------------------------------------------------------------------
+# (10) PART A — FOUR REVIEWED FINDINGS AGAINST THIS SUITE ITSELF (M25, M26,
+# M27, M30). M26 and M27 are fixed above, in the skip-ceiling machinery and
+# CliTests respectively; M25 and M30 are locked here.
+# ---------------------------------------------------------------------------
+
+
+class CheckTwoGuardRegressionTests(FixtureCase):
+    """M25 — a 25-mutant battery found CHECK 2's own precision guards almost
+    completely unlocked: 7 of 8 survived, 4 of them with a measured
+    live-tree false-positive effect (97 / 3 / 2 / 1 false dangling findings
+    when deleted) while the suite's only precision tests were one `Foo.Bar`
+    case and one struct case. One fixture per surviving guard below, each
+    mutation-verified against the guard's own deletion in a scratch copy of
+    the tool (see the landing report for the exact edit and failure each
+    produced)."""
+
+    def test_an_enum_member_reference_does_not_dangle(self):
+        # `_enum_members` — deleting it turned this into 97 false findings on
+        # the live tree, because an enum's members are declared nowhere
+        # DECL_MEMBER or DECL_LOOSE can see (neither pattern's grammar
+        # allows for an enumerator, which has no preceding type).
+        self.spec_file(
+            "```csharp\n"
+            "public enum Severity { Yellow, Red }\n"
+            "public class Foo { public Severity S = Severity.Yellow; }\n"
+            "```\n")
+        findings, _coverage = M.scan_fence_identifiers(self.dir)
+        self.assertEqual(findings, [])
+
+    def test_a_declaration_inside_a_comment_suppresses_and_a_comment_reference_is_not_scanned(
+            self):
+        # `_strip_comments` — the SAME asymmetry this file's own code
+        # comment states as deliberate ("comments COUNT as declarations ...
+        # but NEVER as references"), in one fixture: `Bar`, declared only
+        # inside a `/* ... */` sketch, must suppress `Foo.Bar` (declaration
+        # harvesting reads the UNSTRIPPED text, by design); and
+        # `Other.Update()`, mentioned only inside a `///` doc-comment line,
+        # must never be SCANNED as a reference at all — deleting the
+        # comment-strip before REFERENCE scanning turned this into 3 false
+        # findings on the live tree, because a doc-comment naming another
+        # spec's type and method is prose, not code that must satisfy
+        # anything.
+        self.spec_file(
+            "```csharp\n"
+            "public class Foo {\n"
+            "    /* public int Bar; */\n"
+            "}\n"
+            "public class Other {\n"
+            "    public void Tick() {}\n"
+            "}\n"
+            "/// Called by Other.Update()\n"
+            "int x = Foo.Bar;\n"
+            "```\n")
+        findings, _coverage = M.scan_fence_identifiers(self.dir)
+        self.assertEqual(findings, [])
+
+    def test_a_namespace_path_does_not_bind_as_a_reference(self):
+        # REFERENCE's own lookbehind/lookahead guards, which keep a
+        # namespace path (neither side of `Physics` continues the chain
+        # here) from being read as a member access at all — deleting them
+        # turned this into 2 false findings on the live tree.
+        self.spec_file(
+            "```csharp\n"
+            "public class TacticalDirector { public int Existing; }\n"
+            "var y = TacticalDirector.Physics.Collision.Something;\n"
+            "```\n")
+        findings, _coverage = M.scan_fence_identifiers(self.dir)
+        self.assertEqual(findings, [])
+
+    def test_a_modifier_less_field_suppresses_via_the_loose_declaration_harvest(
+            self):
+        # DECL_LOOSE — the harvest for fields sketched with no access
+        # modifier at all, which this corpus's spec fences use constantly
+        # ("int NextStaffId;"). Deleting it turned this into 1 false finding
+        # on the live tree.
+        self.spec_file(
+            "```csharp\n"
+            "public class Foo {\n"
+            "    int Count;\n"
+            "}\n"
+            "int x = Foo.Count;\n"
+            "```\n")
+        findings, _coverage = M.scan_fence_identifiers(self.dir)
+        self.assertEqual(findings, [])
+
+    def test_a_filename_shaped_member_does_not_dangle(self):
+        # FILE_EXTENSIONS — `BallPhysicsConstants.cs` is a filename, not a
+        # member access, written here as an ordinary string literal so the
+        # comment-stripping guard above cannot be the thing suppressing it.
+        self.spec_file(
+            "```csharp\n"
+            "public class BallPhysicsConstants { public float Gravity; }\n"
+            "string path = \"BallPhysicsConstants.cs\";\n"
+            "```\n")
+        findings, _coverage = M.scan_fence_identifiers(self.dir)
+        self.assertEqual(findings, [])
+
+    def test_a_using_line_does_not_bind_as_a_reference(self):
+        # `_USING_NAMESPACE_LINE` blanking — a `using X.Y;` line is a
+        # declaration of a PATH, never a member access, and must not be
+        # scanned as one even when `Y` coincides with a real member name of
+        # a locally-declared type spelled the same as the namespace segment.
+        self.spec_file(
+            "```csharp\n"
+            "using System.Text;\n"
+            "public class System { public int Present; }\n"
+            "int x = System.Present;\n"
+            "```\n")
+        findings, _coverage = M.scan_fence_identifiers(self.dir)
+        self.assertEqual(findings, [])
+
+
+class AwkEnvironmentAndLoadHatchTests(FixtureCase):
+    """M30 — two live security guards (round 18's ENVIRON/PROCINFO refusal,
+    round 15's @load/@include refusal) had ZERO coverage: deleting the
+    ENVIRON/PROCINFO check left all 121 tests green although the mutated
+    tool was proven to reproduce a value derived from a real environment
+    variable — a one-integer read oracle over the CI runner's environment,
+    driven entirely from document text, and the one rule the OS child
+    limits explicitly do not cover (they bound writes, not reads). Neither
+    case below needs awk on PATH — both are refused before a process
+    spawns, exactly like the neighbouring, already-locked awk call
+    allow-list and escape checks."""
+
+    def test_awk_environ_read_is_declined_and_named(self):
+        why = self.assertDeclined(
+            "`awk 'END{print length(ENVIRON[\"PATH\"])}' data.txt` -> 3",
+            "unsafe", "ENVIRON", "environment")
+        self.assertIn("special array", why)
+
+    def test_awk_procinfo_read_is_declined_and_named(self):
+        self.assertDeclined(
+            "`awk 'END{print PROCINFO[\"pid\"]}' data.txt` -> 3",
+            "unsafe", "PROCINFO")
+
+    def test_awk_at_load_is_declined_and_named(self):
+        # No embedded newline (CLAIM's own `cmd` group is `[^`\n]{4,200}`,
+        # so a backticked span may not contain one) and no `;` either
+        # (FORBIDDEN refuses it before this ever reaches the awk-specific
+        # check) — validity as an awk program does not matter, since this
+        # is declined before any process spawns.
+        self.assertDeclined(
+            "`awk '@load \"fake\" END{print 3}' data.txt` -> 3",
+            "unsafe", "@")
+
+    def test_awk_at_include_is_declined_and_named(self):
+        self.assertDeclined(
+            "`awk '@include \"fake\" END{print 3}' data.txt` -> 3",
+            "unsafe", "@")
+
+
+# ---------------------------------------------------------------------------
+# (11) PART B — ROUND 18 LOCKS. Round 18 landed a large amount of safety and
+# correctness work this suite did not cover at all: awk's ARGV/ARGC/SYMTAB/
+# FUNCTAB refusal, the symlink-traversal denials (per-flag AND the
+# structural directory-walk rule), `--files0-from` on every binary that
+# carries it (including a NON-FIRST pipeline segment, which is how it used
+# to evade `self_contained`), the frozen-span bound, `would_gate`'s LIVE
+# classification, the restricted verb-gap grammar, ignored-span recovery
+# into the census, the compound-token rule on a leading value, the LIVE
+# distinct-command floor, and the top-level exception boundary. Every case
+# below is written red against the pre-fix tool first — a mutation of the
+# CURRENT tool reproducing the pre-fix behaviour it replaced, unless noted
+# otherwise — and re-verified green against the real one.
+# ---------------------------------------------------------------------------
+
+
+class AwkArgvArgcTests(FixtureCase):
+    """Round 22 (H19) / round 18's own SYMTAB/FUNCTAB extension — awk's
+    OPERAND VECTOR and gawk's symbol tables, refused by name because they
+    are variables, not calls, so the CALL allow-list structurally cannot see
+    either. Declined before a process spawns, so the read is demonstrably
+    never attempted; `M.denied_flag` is asserted directly for that reason,
+    ahead of the full-claim decline."""
+
+    ARGV_CMD = ('awk \'BEGIN{ARGV[ARGC++]="/etc/passwd"}END{print NR}\' '
+               "data.txt")
+
+    def test_awk_argv_argc_assignment_is_refused_pre_spawn(self):
+        self.assertIsNotNone(M.denied_flag(["awk",
+                                            'BEGIN{ARGV[ARGC++]="/etc/passwd"}END{print NR}',
+                                            "data.txt"]))
+
+    def test_awk_argv_argc_claim_is_declined_and_the_read_never_happens(self):
+        why = self.assertDeclined("`%s` -> 3" % self.ARGV_CMD,
+                                  "unsafe", "ARGV")
+        self.assertIn("OPERAND VECTOR", why)
+
+    def test_awk_symtab_is_declined(self):
+        self.assertDeclined(
+            "`awk 'BEGIN{SYMTAB[\"x\"]=1}END{print 3}' data.txt` -> 3",
+            "unsafe", "SYMTAB")
+
+    def test_awk_functab_is_declined(self):
+        self.assertDeclined(
+            "`awk 'BEGIN{print length(FUNCTAB)}' data.txt` -> 3",
+            "unsafe", "FUNCTAB")
+
+
+class SymlinkTraversalTests(FixtureCase):
+    """Round 22 (H20) — symlink-FOLLOWING flags declined per binary by name
+    (the enumeration half), and the structural rule that no operand
+    DIRECTORY may contain a symlink leaving the repository root, whatever
+    flags were passed. Every symlink fixture is built inside the temp repo
+    dir this case owns, or in a second throwaway temp dir standing in for
+    the host outside it — never in the real checkout."""
+
+    # -- the per-flag denials — refused before any process spawns, so none
+    # of these five needs its binary on PATH.
+
+    def test_grep_capital_r_is_declined(self):
+        self.assertDeclined("`grep -Rc a data.txt` -> 3", "unsafe", "-R")
+
+    def test_find_dash_L_is_declined(self):
+        self.assertDeclined("`find -L . -name x` -> 3", "unsafe", "-L")
+
+    def test_find_follow_is_declined(self):
+        self.assertDeclined("`find . -follow -name x` -> 3",
+                            "unsafe", "-follow")
+
+    def test_rg_follow_is_declined(self):
+        self.assertDeclined("`rg --follow -c a data.txt` -> 3",
+                            "unsafe", "--follow")
+
+    def test_diff_dash_r_is_declined(self):
+        self.assertDeclined("`diff -r sub other` -> 3", "unsafe", "-r")
+
+    # -- the structural rule: an operand DIRECTORY containing an escaping
+    # symlink is declined even for the LOWERCASE, non-following form.
+
+    def test_a_directory_containing_an_escaping_symlink_is_declined_for_plain_lowercase_r(
+            self):
+        outside = pathlib.Path(tempfile.mkdtemp(prefix="doc-claim-outside-"))
+        self.addCleanup(shutil.rmtree, outside, ignore_errors=True)
+        (outside / "secret.txt").write_text("secret\nsecret\n")
+        sub = self.dir / "sub"
+        sub.mkdir()
+        (sub / "link").symlink_to(outside / "secret.txt")
+        why = self.assertDeclined("`grep -rc a sub` -> 3",
+                                  "unsafe", "symlink",
+                                  "leaves the repository root")
+        self.assertIn("link", why)
+
+    # -- the complement: the same commands, non-following, on a CLEAN tree
+    # (no symlink at all) still execute.
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_grep_lowercase_r_still_executes_on_a_clean_tree(self):
+        self.write("sub/needle.txt", "alpha\n")
+        self.assertIsNone(M.escaping_symlink_under(
+            ["grep", "-rc", "alpha", "sub"], self.dir))
+        # GNU grep -r always prefixes the filename ("sub/needle.txt:1"),
+        # never a bare integer -- this proves EXECUTION, the property under
+        # test, not single-integer parsing, which is a different matcher's
+        # job and is exercised everywhere else in this suite.
+        out, why = M.run_pipeline([["grep", "-rc", "alpha", "sub"]],
+                                  str(self.dir))
+        self.assertIsNone(why, why)
+        self.assertIn("needle.txt:1", out)
+
+    @unittest.skipUnless(HAVE_FIND, "find is not on PATH")
+    def test_find_plain_still_executes_on_a_clean_tree(self):
+        self.write("sub/needle.txt", "x\n")
+        self.assertIsNone(M.escaping_symlink_under(
+            ["find", "sub", "-name", "needle.txt"], self.dir))
+        out, why = M.run_pipeline(
+            [["find", "sub", "-name", "needle.txt"]], str(self.dir))
+        self.assertIsNone(why, why)
+        self.assertIn("needle.txt", out)
+
+
+class Files0FromTests(FixtureCase):
+    """Round 22 (the H20 sweep) — `--files0-from` reads the paths a binary
+    opens out of ANOTHER FILE'S BYTES, a route no operand check of any kind
+    can see. Denied by NAME on every binary that carries it, in EVERY
+    pipeline segment — the live gap was `self_contained` inspecting only the
+    FIRST segment, so `wc --files0-from=...` in second position read
+    /etc/passwd untouched by the first-segment-only rule."""
+
+    def test_wc_files0_from_is_declined(self):
+        self.assertDeclined("`wc --files0-from=list.txt` -> 3",
+                            "unsafe", "--files0-from")
+
+    def test_sort_files0_from_is_declined(self):
+        self.assertDeclined("`sort --files0-from=list.txt` -> 3",
+                            "unsafe", "--files0-from")
+
+    def test_find_files0_from_is_declined(self):
+        self.assertDeclined("`find -files0-from list.txt` -> 3",
+                            "unsafe", "-files0-from")
+
+    def test_files0_from_is_declined_in_a_non_first_pipeline_segment(self):
+        # `self_contained` only ever inspects the FIRST segment, so this is
+        # the exact shape that evaded it — `sort` sits second, behind a
+        # `cat` that legitimately reads a real in-repo file.
+        why = self.assertDeclined(
+            "`cat data.txt \\| sort --files0-from=list.txt \\| wc -l` -> 3",
+            "unsafe", "--files0-from")
+        self.assertIn("sort", why)
+
+
+@unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+class FrozenSpanBoundaryTests(FixtureCase):
+    """The frozen-span bound `_blanked_runs` computes: two genuinely
+    separate frozen regions (the header chain; a Version History section)
+    must stay two regions, never merged across the LIVE, present-tense text
+    that sits between them on this repo's own surfaces (round 23, H22's
+    "Current Stage"-shaped status block, reproduced here as a fixture rather
+    than depended on as a fact about README.md)."""
+
+    CHAIN = (
+        "# Doc\n\n"
+        "**Last Updated:** head entry — `%s` → 91\n\n"
+        "**Last Updated (prior):** older entry — `%s` → 92\n\n"
+        "**Current Stage:** the count reads `%s` → 99\n\n"
+        "## Version History\n\n"
+        "| 1.0 | `%s` -> 92 |\n"
+        % (TRUE_CMD, TRUE_CMD, TRUE_CMD, TRUE_CMD))
+
+    def outcomes(self):
+        regions = M.dated_record_regions("CLAUDE.md", self.CHAIN)
+        return [M.check_claim(c, self.dir, regions)[0]
+                for c in M.collect_claims("CLAUDE.md", self.CHAIN)]
+
+    def test_the_genuine_chain_entry_stays_excused(self):
+        self.assertEqual(self.outcomes()[1], "excused")
+
+    def test_the_present_tense_status_block_after_the_chain_is_reported(
+            self):
+        self.assertEqual(self.outcomes()[2], "mismatch")
+
+    def test_the_version_history_row_is_still_its_own_excused_region(self):
+        self.assertEqual(self.outcomes()[3], "excused")
+
+
+@unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+class WouldGateLiveGateTests(FixtureCase):
+    """Round 23 (H23) — a currency-pierced record claim must be counted
+    LIVE and gate at exit 1, not read as zero live coverage and exit 2 with
+    "this run could not have caught drift" — the exact demotion of a real
+    document defect into a tooling error H23 fixed."""
+
+    def test_a_currency_pierced_record_gates_at_exit_1(self):
+        self.write(
+            "CLAUDE.md",
+            "# Doc\n\n"
+            "**Last Updated (prior):** older, still true now: `%s` -> 92\n"
+            % TRUE_CMD)
+        self.spec_file("prose only\n")
+        code, out = self.scan()
+        self.assertEqual(code, 1, out)
+        self.assertIn("document says 92; command returns 3", out)
+        self.assertNotIn("could not have caught drift", out)
+
+
+@unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+class VerbGapPrecisionTests(FixtureCase):
+    """Round 23 (H21) — the verb route's gap admits only whitespace,
+    closing/emphasis markup and adverbs; a genuine subordinate clause
+    between the command and its verb must not bind, and the plain arrow and
+    plain verb forms must still bind either side of that restriction."""
+
+    def test_a_subordinate_clause_before_the_verb_does_not_bind(self):
+        text = ("`%s` returns, for the 2 tracking files, a count of %d."
+               % (TRUE_CMD, TRUE_VALUE))
+        self.assertEqual(M.collect_claims("CLAUDE.md", text), [])
+
+    def test_the_plain_arrow_form_still_binds(self):
+        claim = self.bind("`%s` -> %d" % (TRUE_CMD, TRUE_VALUE))
+        self.assertEqual(M.check_claim(claim, self.dir, ())[0], "reproduced")
+
+    def test_the_plain_verb_form_still_binds(self):
+        claim = self.bind("`%s` returned %d" % (TRUE_CMD, TRUE_VALUE))
+        self.assertEqual(M.check_claim(claim, self.dir, ())[0], "reproduced")
+
+
+@unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+class IgnoredSpanCensusTests(FixtureCase):
+    """Round 23 (H25) — a span `check_claim` IGNORES (command-shaped, an
+    integer nearby, but FORBIDDEN-bearing) must still reach the
+    unrecognised-shape census; before this fix it reserved its own span and
+    then landed in NO bucket at all, invisible on both routes at once."""
+
+    def _census_out(self, cmd, value):
+        self.write("CLAUDE.md",
+                   "# Fixture\n\nmeasured via `%s` -> %d\n\n`%s` -> %d\n"
+                   % (cmd, value, TRUE_CMD, TRUE_VALUE))
+        self.spec_file("prose only\n")
+        code, out = self.scan()
+        self.assertEqual(code, 0, out)
+        return out
+
+    def test_curl_with_redirection_reaches_the_census(self):
+        out = self._census_out("curl http://x > out.txt", 7)
+        self.assertIn("curl http://x > out.txt", out)
+
+    def test_make_with_a_chain_reaches_the_census(self):
+        out = self._census_out("make build && echo 7", 7)
+        self.assertIn("make build && echo 7", out)
+
+    def test_dotnet_with_a_redirected_stderr_reaches_the_census(self):
+        out = self._census_out("dotnet test foo.csproj 2>&1", 5)
+        self.assertIn("dotnet test foo.csproj 2>&1", out)
+
+
+class CompoundTokenPrecisionTests(FixtureCase):
+    """Round 24 (M31) — a stated value must begin its own token: the
+    character immediately before it may not be alphanumeric (a letter, as in
+    `v2`, or an unseparated digit) or one of the punctuation joiners this
+    corpus continues a token with (`.#§/:`). The old rule was a three-
+    character enumeration (`.`, `#`, `§`) that missed every one of these."""
+
+    def test_a_slash_separated_ratio_does_not_bind(self):
+        self.assertEqual(M.collect_claims(
+            "CLAUDE.md", "test counts 461/1/2 (`%s`)" % TRUE_CMD), [])
+
+    def test_a_clock_time_does_not_bind(self):
+        self.assertEqual(M.collect_claims(
+            "CLAUDE.md", "at 16:59:45 (`%s`)" % TRUE_CMD), [])
+
+    def test_a_bare_letter_prefixed_version_does_not_bind(self):
+        self.assertEqual(M.collect_claims(
+            "CLAUDE.md", "v2 (`%s`)" % TRUE_CMD), [])
+
+    def test_a_slash_dated_value_does_not_bind(self):
+        self.assertEqual(M.collect_claims(
+            "CLAUDE.md", "measured 2026/08/22 (`%s`)" % TRUE_CMD), [])
+
+    @unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+    def test_an_ordinary_count_still_binds(self):
+        claim = self.bind("%d scripts (`%s`)" % (TRUE_VALUE, TRUE_CMD))
+        self.assertEqual(claim.shape.name, "value-then-parenthesised-command")
+        self.assertEqual(M.check_claim(claim, self.dir, ())[0], "reproduced")
+
+
+@unittest.skipUnless(HAVE_GREP, "grep is not on PATH")
+class LiveDistinctFloorTests(FixtureCase):
+    """Round 24 (L12) — the LIVE floor gates on DISTINCT commands, exactly
+    as the executed floor already does (round 20, M20): one command quoted
+    twice is one drift-capable claim, not two, and must not satisfy a floor
+    of 2."""
+
+    def test_one_command_quoted_twice_does_not_satisfy_a_floor_of_two(self):
+        self.write("CLAUDE.md",
+                   "# Fixture\n\n`%s` -> %d\n\nAgain: `%s` -> %d\n"
+                   % (TRUE_CMD, TRUE_VALUE, TRUE_CMD, TRUE_VALUE))
+        self.spec_file("prose only\n")
+        code, out = self.scan(MIN_LIVE_CLAIMS=2)
+        self.assertEqual(code, 2, out)
+        self.assertIn("distinct LIVE command(s)", out)
+
+
+class TopLevelBoundaryTests(unittest.TestCase):
+    """Round 24 (L14) — an unforeseen error anywhere inside `scan()` must be
+    routed through the named ERROR block at exit 2, never propagate
+    uncaught to Python's default handler at exit 1, the code CHECK 1 uses
+    for "a document is wrong"."""
+
+    def test_an_unforeseen_error_exits_2_not_1(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = pathlib.Path(d)
+            (repo / "CLAUDE.md").write_text("# Fixture\n", encoding="utf-8")
+            argv = ["doc-claim-check.py", "--repo", str(repo)]
+            buf = io.StringIO()
+            with mock.patch.object(sys, "argv", argv), \
+                 mock.patch.object(M, "scan",
+                                   side_effect=RuntimeError("boom")), \
+                 contextlib.redirect_stdout(buf):
+                code = M.main()
+        self.assertEqual(code, 2, buf.getvalue())
+        self.assertIn("unforeseen error", buf.getvalue())
+
+
+
 if __name__ == "__main__":
     # M18: `exit=False` so this file, not unittest's own default, decides the
     # process exit code — `wasSuccessful()` alone counts a skip as neither a
@@ -1776,3 +2546,173 @@ if __name__ == "__main__":
 # |         |            |             | doc-claim-check.py ITSELF was not     |
 # |         |            |             | edited: no defect was found in it     |
 # |         |            |             | while writing this round.             |
+# | 1.2     | 2026-08-22 | Claude Code | ROUND 3: four reviewed findings       |
+# |         |            |             | against this suite itself (M25-M27,   |
+# |         |            |             | M30), plus locks for round 18's own   |
+# |         |            |             | landings this suite had not caught up |
+# |         |            |             | with. 121 -> 172 tests, ~1.9s ->      |
+# |         |            |             | ~4.5s. M25: a 25-mutant battery found |
+# |         |            |             | CHECK 2's own precision guards        |
+# |         |            |             | 12%-killed (7 of 8 survived, 4 with a |
+# |         |            |             | measured 97/3/2/1 false-dangling      |
+# |         |            |             | live-tree effect) against two         |
+# |         |            |             | precision tests total; six new        |
+# |         |            |             | fixtures in                           |
+# |         |            |             | CheckTwoGuardRegressionTests, one per |
+# |         |            |             | surviving guard (enum-member harvest, |
+# |         |            |             | comment-stripping before REFERENCE    |
+# |         |            |             | scanning — paired with the asymmetric |
+# |         |            |             | comment-DECLARES-but-never-           |
+# |         |            |             | REFERENCES property in the same       |
+# |         |            |             | fixture, REFERENCE's namespace-path   |
+# |         |            |             | lookaround guards, the loose-         |
+# |         |            |             | declaration harvest, the filename-    |
+# |         |            |             | shaped-member guard, the using/       |
+# |         |            |             | namespace-line blanking). M26: the    |
+# |         |            |             | skip ceiling had learned only ONE     |
+# |         |            |             | reason shape ("<binary> is not on     |
+# |         |            |             | PATH") although this file already     |
+# |         |            |             | emits a second — reproduced by        |
+# |         |            |             | running this suite with git off PATH: |
+# |         |            |             | SKIP CEILING EXCEEDED on a wholly     |
+# |         |            |             | legitimate skip. RECONCILED (not      |
+# |         |            |             | widened into a hole): a second        |
+# |         |            |             | recognised shape, "<name> module      |
+# |         |            |             | unavailable", explained only by a     |
+# |         |            |             | FRESH `importlib.import_module`       |
+# |         |            |             | probe — never a cached flag such as   |
+# |         |            |             | M.RLIMITS_AVAILABLE, which a test     |
+# |         |            |             | body's own mock.patch could have      |
+# |         |            |             | altered by the time a skip is being   |
+# |         |            |             | explained, the exact "flag that lied" |
+# |         |            |             | class M18 was written against, one    |
+# |         |            |             | capability over. General by           |
+# |         |            |             | construction (no per-capability       |
+# |         |            |             | registry, mirroring shutil.which's    |
+# |         |            |             | own generality), so it explains a     |
+# |         |            |             | genuinely-missing capability exactly  |
+# |         |            |             | as readily as a genuinely-missing     |
+# |         |            |             | binary and nothing more readily than  |
+# |         |            |             | that — proven both ways by mutating   |
+# |         |            |             | this file's OWN unexplained_skips()   |
+# |         |            |             | back to the pre-fix, binary-only      |
+# |         |            |             | logic. The compound reason on         |
+# |         |            |             | ChildResourceLimitTests ("git or the  |
+# |         |            |             | resource module is unavailable")      |
+# |         |            |             | named two things at once, unparseable |
+# |         |            |             | by either shape alone; split into two |
+# |         |            |             | stacked single-reason decorators.     |
+# |         |            |             | Verified against the REAL tree with   |
+# |         |            |             | git genuinely removed from PATH: all  |
+# |         |            |             | 172 tests still pass (4 legitimately  |
+# |         |            |             | skipped), exit 0 — the actual         |
+# |         |            |             | reconciliation this finding asked     |
+# |         |            |             | for. M27:                             |
+# |         |            |             | test_help_does_not_touch_the_sibling_ |
+# |         |            |             | import was a TAUTOLOGICAL LOCK —      |
+# |         |            |             | restoring the pre-fix module-scope    |
+# |         |            |             | `DCC = _load_consistency()` left it   |
+# |         |            |             | green, because it asserted only       |
+# |         |            |             | returncode==0 and "--repo" in stdout, |
+# |         |            |             | both true whether the import ran      |
+# |         |            |             | deferred or at module scope — proven  |
+# |         |            |             | by that exact mutation. Replaced with |
+# |         |            |             | three subprocess cases against a      |
+# |         |            |             | throwaway tools/ copy                 |
+# |         |            |             | (_write_tool_copy, built fresh in a   |
+# |         |            |             | temp dir every time): --help with the |
+# |         |            |             | sibling missing entirely (still exits |
+# |         |            |             | 0); --repo with the sibling missing   |
+# |         |            |             | (exit 2, "could not import"); --repo  |
+# |         |            |             | against a stub sibling missing        |
+# |         |            |             | blank_frozen_history alone (exit 2,   |
+# |         |            |             | the contract-break text naming it).   |
+# |         |            |             | M30: the awk ENVIRON/PROCINFO refusal |
+# |         |            |             | and the @load/@include refusal had    |
+# |         |            |             | ZERO coverage — deleting the          |
+# |         |            |             | ENVIRON/PROCINFO check left all 121   |
+# |         |            |             | tests green while the mutated tool    |
+# |         |            |             | was proven, live, to print a value    |
+# |         |            |             | derived from this runner's own $PATH  |
+# |         |            |             | (length 189) — a real environment     |
+# |         |            |             | read oracle, not a theoretical one,   |
+# |         |            |             | and the one class the OS child limits |
+# |         |            |             | explicitly do not cover (they bound   |
+# |         |            |             | writes). Four new hatch-regression    |
+# |         |            |             | cases, none needing awk on PATH.      |
+# |         |            |             | SECTION 11 locks round 18's own       |
+# |         |            |             | landings, each written red against a  |
+# |         |            |             | targeted mutation of the current      |
+# |         |            |             | tool first (see the landing report    |
+# |         |            |             | for the exact edit and failure each   |
+# |         |            |             | produced): awk ARGV/ARGC (proven,     |
+# |         |            |             | live, to actually read /etc/passwd    |
+# |         |            |             | when the guard is removed — 28 lines  |
+# |         |            |             | back instead of 3) and SYMTAB/        |
+# |         |            |             | FUNCTAB; the five symlink-following   |
+# |         |            |             | flag denials (grep -R, find -L,       |
+# |         |            |             | find -follow, rg --follow, diff -r)   |
+# |         |            |             | PLUS the structural rule (an operand  |
+# |         |            |             | directory containing a symlink that   |
+# |         |            |             | leaves the root is declined even for  |
+# |         |            |             | plain lowercase grep -r) and its      |
+# |         |            |             | execution complement, built with real |
+# |         |            |             | symlinks in a throwaway temp dir      |
+# |         |            |             | (never the checkout); --files0-from   |
+# |         |            |             | on wc/sort/find including a NON-FIRST |
+# |         |            |             | pipeline segment; the frozen-span     |
+# |         |            |             | bound (_blanked_runs' merge-across-   |
+# |         |            |             | whitespace rule, mutated to merge     |
+# |         |            |             | unconditionally, which wrongly        |
+# |         |            |             | excused a present-tense status line   |
+# |         |            |             | sitting between two genuinely frozen  |
+# |         |            |             | regions); would_gate's LIVE           |
+# |         |            |             | classification (a currency-pierced    |
+# |         |            |             | record claim gates at exit 1, not     |
+# |         |            |             | "0 LIVE ... could not have caught     |
+# |         |            |             | drift" at exit 2 — H23's own          |
+# |         |            |             | demotion, reproduced exactly by       |
+# |         |            |             | reverting would_gate to its pre-fix   |
+# |         |            |             | position-only rule); the verb-gap     |
+# |         |            |             | grammar (a subordinate clause between |
+# |         |            |             | command and verb must not bind, the   |
+# |         |            |             | plain arrow and plain verb forms      |
+# |         |            |             | must); ignored-span recovery into the |
+# |         |            |             | census (curl/make/dotnet with         |
+# |         |            |             | redirection, reverting scan()'s       |
+# |         |            |             | ignored_spans subtraction makes all   |
+# |         |            |             | three vanish from every bucket at     |
+# |         |            |             | once, reproducing H25 exactly); the   |
+# |         |            |             | leading-value compound-token rule (a  |
+# |         |            |             | slash ratio, a clock time, a bare-    |
+# |         |            |             | letter version and a slash date must  |
+# |         |            |             | not bind, reverting                   |
+# |         |            |             | LeadingValueShape.rejects to its      |
+# |         |            |             | pre-M31 three-character enumeration   |
+# |         |            |             | binds all four); the LIVE distinct-   |
+# |         |            |             | command floor (one command quoted     |
+# |         |            |             | twice does not satisfy a floor of 2,  |
+# |         |            |             | reverting the gate to count INSTANCES |
+# |         |            |             | rather than distinct commands turns   |
+# |         |            |             | exit 2 back into a silent PASS); and  |
+# |         |            |             | the top-level exception boundary (an  |
+# |         |            |             | unforeseen error exits 2, not 1,      |
+# |         |            |             | proven by mocking scan() to raise and |
+# |         |            |             | separately by deleting main()'s own   |
+# |         |            |             | try/except, which lets the exception  |
+# |         |            |             | propagate uncaught). Every complement |
+# |         |            |             | test (the ones asserting a legitimate |
+# |         |            |             | form still binds/executes/passes) was |
+# |         |            |             | independently proven able to fail too |
+# |         |            |             | — via an over-eager complementary     |
+# |         |            |             | mutation — not merely proven able to  |
+# |         |            |             | pass, per this file's own standing    |
+# |         |            |             | rule that a test green against both   |
+# |         |            |             | the fixed and the broken tool is      |
+# |         |            |             | worse than none. doc-claim-check.py   |
+# |         |            |             | ITSELF was not edited: every finding  |
+# |         |            |             | in Part A and every round-18 property |
+# |         |            |             | in Part B was reproduced as a real    |
+# |         |            |             | defect in the CURRENT tool under a    |
+# |         |            |             | targeted mutation, never as a defect  |
+# |         |            |             | the current tool already has.         |
