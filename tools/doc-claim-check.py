@@ -64,11 +64,22 @@
 # It recognises FOUR claim SHAPES, listed in CLAIM_SHAPES and printed by every
 # run so the reader never has to trust this comment:
 #   1. command, then the value       "`cmd` → 18", "`cmd` returned 218"
+#      Its two routes have DIFFERENT gap grammars (round 23, H21): an arrow
+#      cannot belong to a neighbouring clause, a VERB can, so the verb route
+#      admits only whitespace, closing markup and adverbs between the command
+#      and its verb, and only whitespace and markup between the verb and the
+#      value. Ordinary English was binding integers out of unrelated clauses
+#      — "(`cmd`) was re-run and found 2 orphans" reported a correct document
+#      wrong — and the census could not see it, because a shape had bound it.
 #   2. command, colon, value         "`cmd`: **0**"
 #   3. value, then the command in parentheses    "8 scripts (`ls tools/*.py`)"
 #   4. value, an attribution clause, the command
 #                                    "60 files — re-derived by `ls … \| wc -l`"
 #                                    "35 assemblies via `ls -d src/*/ \| wc -l`"
+#      Since round 23 (H24) it also reads `with`, the bare stem `re-derive`,
+#      and a wrap prefix before the command, because this repo hard-wraps
+#      mid-sentence inside an ASCII tree diagram and a live claim there was
+#      bound by nothing.
 #
 # THE RESIDUAL BLIND SPOT IS THE POINT OF THIS PARAGRAPH, and it is no longer
 # described by naming instances someone happened to notice. Rounds 9 and 12
@@ -77,10 +88,33 @@
 # is not counted among the declines either", which the very next run refuted by
 # printing that exact claim in the declined list. So the blind spot is DERIVED
 # now, not written down: every backticked span that reads as a command, has an
-# integer near it on the same line, and binds to NO shape is counted and named
-# in the `unrecognised-shape` decline bucket. Read that bucket, not this
-# comment, for what the tool cannot see — and if a claim shape is worth
-# learning, it will be sitting in that list under its own file and line.
+# integer near it — on its own line, or on the line either side when its own
+# line carries no digit at all (round 23, H24: this repo hard-wraps
+# mid-sentence, and README.md:930-931 was a LIVE drift-capable claim split
+# across a wrap that no shape bound and the census could not see) — and binds
+# to NO shape is counted and named in the `unrecognised-shape` decline
+# bucket. Read that bucket, not this comment, for what the tool cannot see —
+# and if a claim shape is worth learning, it will be sitting in that list
+# under its own file and line.
+#
+# TWO THINGS STILL REACH NO BUCKET, named rather than implied, because every
+# previous version of this paragraph was falsified by the next round:
+#   * a backticked span whose head is an argument-less path (a bare
+#     `tools/count-supplements.sh`) is refused by the census's own
+#     command-shape test, which requires "a binary-shaped head plus an
+#     argument only a command takes" so that the backticked IDENTIFIERS this
+#     corpus is full of do not drown the bucket — measured 2026-08-22, that
+#     predicate refuses 53,804 spans and admits 195, which is the ratio the
+#     bucket would otherwise carry. (No figure is copied here from the
+#     ~1,100 in check_claim's own note below: that one counts a DIFFERENT
+#     population — identifiers a claim SHAPE bound and check_claim then had
+#     to dispose of — and round 20's M19 is exactly the defect of moving a
+#     number between the two.) That predicate cannot tell the two apart, and
+#     round 23 (H25) verified the span stays invisible even with the bound
+#     set emptied — so it is a limit of the SHAPE TEST, not of the
+#     reservation H25 fixed.
+#   * an integer further from the span than UNRECOGNISED_RADIUS, or two
+#     wrapped lines away.
 #
 # Round 19 (H15): that sentence was FALSE for one whole class until this
 # round, and it was false in the way this file keeps finding — "reads as a
@@ -749,8 +783,11 @@ FORBIDDEN = re.compile(r"[;&><`\n\x00]|\$\(|\|\|")
 #       tool executes are awk" figure this paragraph used to carry was wrong
 #       by the very re-measurement it invited — re-derived 2026-08-22, this
 #       tool executes 3 DISTINCT commands; exactly 1 of them pipes through
-#       awk, accounting for 3 of 6 executed INSTANCES, and it is not this
-#       run's one LIVE claim, which is a bare `ls | wc -l`. So the honest
+#       awk, accounting for 3 of 7 executed INSTANCES (re-derived
+#       2026-08-22 after round 23 — it read "3 of 6" until H24 bound a
+#       seventh), and since H23 one of those three IS live: the
+#       currency-pierced Version History row at code-standards
+#       /section-3.md:1140. So the honest
 #       argument for keeping awk is qualitative, not a coverage fraction that
 #       goes stale the next time the corpus changes: SOME real, currently-
 #       passing claim on this tree uses it, dropping it costs that measured
@@ -1294,17 +1331,22 @@ SURFACE_GLOBS = ("docs/specs/*/section-*.md", "docs/specs/*/appendices.md")
 # with the reason recorded in the Version History row beside it, because
 # lowering it silently is how the vacuous-pass failure class comes back.
 MIN_EXECUTED_SLACK = 1
-# Re-derived 2026-08-22 by the invocation above: 3 DISTINCT commands executed
-# (6 instances of them).
+# Re-derived 2026-08-22 by the invocation above, after round 23: 3 DISTINCT
+# commands executed (7 instances of them — 6 before H24 taught shape 4 the
+# wrapped `re-derive with` attribution, which bound README.md:930's quote of
+# a command CLAUDE.md:276 already quotes; a second INSTANCE of a command
+# already counted, so the distinct figure the floor gates on is unmoved).
 MIN_EXECUTED_CLAIMS = 3 - MIN_EXECUTED_SLACK
 
 # ---------------------------------------------------------------------------
 # THE LIVE FLOOR (round 19, H13) — the one that states this tool's real reach.
 #
-# MIN_EXECUTED_CLAIMS counts every claim the tool RAN. Five of the six it runs
-# on this tree sit inside a dated record, where a mismatch is EXCUSED: the
-# command still executes, the divergence is still printed, and CI stays green
-# by design. That is worth having — it is how "this historical figure no
+# MIN_EXECUTED_CLAIMS counts every claim the tool RAN. Four of the seven it
+# runs on this tree sit inside a dated record whose own pierce fails, so a
+# mismatch there is EXCUSED: the command still executes, the divergence is
+# still printed, and CI stays green by design. (Re-derived 2026-08-22 after
+# round 23; it read "five of the six" until H24 added an instance and H23
+# stopped counting a currency-pierced record claim as frozen.) That is worth having — it is how "this historical figure no
 # longer reproduces" stays visible — but it is not drift-catching coverage,
 # and a floor built on it protects mostly frozen text. Until H13 the two were
 # fused, and the headline "6 executed (floor 4)" described a live coverage of
@@ -1313,26 +1355,58 @@ MIN_EXECUTED_CLAIMS = 3 - MIN_EXECUTED_SLACK
 # So the honest figure gets its own floor. Re-derived 2026-08-22, the same way
 # and by the same invocation: read the "... of which LIVE (can gate)" line.
 #
-#     live claims: 1   (1 distinct command: `ls docs/tracking/*-design.md
-#                       \| wc -l` -> 60, root CLAUDE.md's design-supplement
-#                       count — the flagship instance this tool was written
-#                       for, whose own sentence records that it read 42 while
-#                       the truth was 60 and nobody noticed)
+# ROUND 23 MOVED THE MEASUREMENT FROM 1 TO 3, for two unrelated reasons, and
+# the FLOOR IS DELIBERATELY LEFT AT 1 — see the argument below, and do not
+# read the measurement as the floor. What the line now reads:
 #
-# MIN_EXECUTED_SLACK is deliberately NOT applied here, and that is the whole
-# decision: at a measurement of 1, any slack at all puts the floor at zero,
-# which is the vacuous pass this section exists to deny. A floor of 1 means
-# deleting that one sentence from CLAUDE.md turns CI red — correct, because
-# it would take this tool's live coverage to nothing, and a checker that can
-# reach zero coverage while printing PASS is the failure class this project
-# files as High.
+#     live claims: 3   (2 distinct commands)
+#       * CLAUDE.md:276  `ls docs/tracking/*-design.md \| wc -l` -> 60 — the
+#         flagship instance this tool was written for, whose own sentence
+#         records that it read 42 while the truth was 60 and nobody noticed.
+#       * README.md:930  the SAME command, quoted across a hard wrap inside
+#         the tree diagram. Live all along; invisible until H24 taught shape
+#         4 the `re-derive with` attribution and the wrap prefix.
+#       * code-standards/section-3.md:1140  `git grep -c 'CROSS-PENDING'
+#         9b841d1^ …` -> 218, in a Version History row. Newly COUNTED live by
+#         H23 rather than newly live: it always gated (the row says "245
+#         today", and a currency assertion pierces the record excusal), while
+#         the counter asked only where it sat.
 #
-# THE NUMBER IS THE POINT, NOT A PROBLEM TO BE ENGINEERED AWAY. It did not
-# drop because H13 narrowed anything: the claims are the same six, sitting
-# where they always sat. What changed is that the tool stopped counting
-# frozen historical records as live coverage. The way to raise it is to write
-# more checkable claims in live text — re-derive and raise this floor in the
-# same commit when that happens.
+# THE FLOOR STAYS AT 1, and the argument is MIN_EXECUTED_CLAIMS's own (round
+# 20, M20) applied to this counter: a floor must not be raised by something
+# that can be inflated without adding reach. Neither of the two new live
+# instances adds a drift-capable COMMAND.
+#
+#   * README.md:930 is a second QUOTE of a command already live at
+#     CLAUDE.md:276 — repetition, which is exactly what M20 took the executed
+#     floor off instances to stop counting.
+#   * section-3.md:1140 is REVISION-PINNED (`9b841d1^`), so it can never
+#     drift whatever any document says, and its liveness rests on the word
+#     "today" sitting within 120 characters of it in a frozen VH row.
+#
+# So the distinct live commands are 2, of which exactly ONE can drift — the
+# same single command that has been this tool's whole live reach since H13
+# measured it. Raising the floor to 3, or to 2, would gate CI on repetition
+# and on prose adjacency inside a record, not on reach.
+#
+# THE RESIDUAL, recorded rather than engineered away, because H23 created it:
+# a floor of 1 can now be met by the revision-pinned claim ALONE, so a tree
+# that lost both design-supplement sentences would print PASS with no
+# drift-catching coverage at all. Before H23 that case measured 0 and went
+# red. The honest fix is a floor on DISTINCT DRIFT-CAPABLE live commands
+# rather than on live instances, which needs "revision-pinned" to be a
+# property this file can compute — an owner-level call M20 explicitly
+# deferred ("whether to exclude revision-pinned commands entirely from even
+# the distinct count is a separate, owner-level call this fix does not
+# make"), and the same call decides both floors. It is left open here rather
+# than approximated. NOTE FOR WHOEVER TAKES IT: raising this constant today
+# fails 12 cases in tools/tests/test_doc_claim_check.py, because that suite's
+# `scan()` harness patches MIN_EXECUTED_CLAIMS and not MIN_LIVE_CLAIMS, so
+# every fixture is silently pinned to a live floor of 1.
+#
+# THE NUMBER IS THE POINT, NOT A PROBLEM TO BE ENGINEERED AWAY. Raise it when
+# a NEW drift-capable command is quoted in live text, in the same commit;
+# lower it only with the reason recorded in the Version History row beside it.
 MIN_LIVE_CLAIMS = 1
 
 # ---------------------------------------------------------------------------
@@ -1672,14 +1746,113 @@ _REPORT_VERB = (
     r"gives?|gave|shows?|showed|outputs?|emits?|emitted|finds?|found|"
     r"counts?|counted")
 
+# The only words the verb route's gap may hold (round 23, H21) — adverbs and
+# negators. Every one of them modifies the verb without supplying a new
+# subject, which is exactly the property that keeps the verb attached to the
+# command: "`cmd` now returns 93", "the plain `cmd` no longer returns 99".
+# `no`/`not`/`never`/`longer` are here so a NEGATED claim still binds and can
+# reach its `negated-or-historical` decline — refusing to bind it would move
+# it from a named decline to the census, losing the negation signal the
+# lookback window exists to record.
+_GAP_ADVERB = (r"no|not|never|longer|now|still|again|already|always|"
+               r"currently|today|then|once|only|thus")
+# Whitespace and closing/emphasis markup, then up to three adverbs. Lazy, so
+# the gap stops at the first verb rather than reaching for a later one.
+_VERB_GAP = (r"[\s)\]}*_'\"—–-]{0,24}?"
+             r"(?:\b(?:" + _GAP_ADVERB + r")\b[\s,]{1,4}){0,3}")
+
+
+# The run between the arrow-or-verb and the stated value. Round 23 (H21): it
+# used to be `[^0-9`\n]{0,18}` — eighteen characters of ANY non-digit text,
+# which is enough for a whole subordinate clause, and H21's third reproduction
+# is exactly that:
+#
+#     `grep -c 'a' data.txt` returns, for the 2 tracking files, a count of 3.
+#
+# The verb is adjacent to the command, so the gap rule above passes it; ", for
+# the " is ten characters and binds the 2 out of an aside, against a sentence
+# whose stated answer, 3, is correct. A value the command ANSWERS follows its
+# verb across markup and punctuation, never across words — "returned **218**",
+# "→ 18", "shows: 4" — so the run is whitespace and markup only. Measured on
+# this tree at the same time: of the post-verb runs on 217 verb-route matches
+# the overwhelming majority are " ", " **", " == ", " = "; the ones carrying
+# words (" the exact Stage-", " of FR-", " at step ") are prose that names a
+# number, not a command reporting one, and none of the seven executed claims
+# has a word here. (118 of those 217 carry a post-verb run this refuses —
+# re-derived 2026-08-22, and see the count note at the CLAIM template below,
+# which is where the two halves are added up.)
+_POST_VERB = r"[^0-9A-Za-z`\n]{0,18}"
+
+
 # SHAPE 1 — command, then the stated value: "`cmd` → 18", "`cmd` returned 218".
 # The gap is deliberately tight — round 8's H4 showed that a loose lookahead
 # binds across unrelated clauses.
+#
+# ROUND 23 (H21) — AND 40 CHARACTERS WAS STILL A WHOLE CLAUSE, so the two
+# routes into this shape no longer share one gap grammar. An ARROW cannot
+# belong to a neighbouring clause: "→ 18" after a command is that command's
+# answer and nothing else, whatever the 40 characters before it say. A VERB
+# can, and `found`/`counted`/`shows`/`returns` are among the commonest verbs
+# in this repo's prose, so any sentence that mentions a command and later
+# reports SOME number matched. Three reproductions against CORRECT documents,
+# each producing "document says 2; command returns 3" end to end through
+# scan(), at exit 1:
+#
+#     `grep -c 'a' data.txt` returns, for the 2 tracking files, a count of 3.
+#     The instrument (`grep -c 'a' data.txt`) was re-run and found 2 orphans.
+#     `grep -c 'a' data.txt` is the gate; the sweep counted 2 regressions.
+#
+# All three were re-run against this file both ways on 2026-08-22: at the
+# pre-round-23 code each binds and reports "document says 2; command returns
+# 3" at exit 1; after it none binds and each is named in the census instead.
+#
+# The census could not see any of them, because the shape HAD bound the span —
+# this is round 19 (H15)'s shape one layer up, a claim that is invisible
+# precisely because a matcher took it.
+#
+# So the verb route's gap may hold only whitespace, CLOSING or EMPHASIS markup
+# (") ", " **", " — "), and ADVERBS OR NEGATORS. The rule is not "punctuation
+# only" and the difference is load-bearing: an adverb cannot introduce a new
+# SUBJECT, so "`cmd` now returns 93" and "the plain `cmd` no longer returns 99"
+# are still the command's own clause, while "was re-run and", "is the gate;
+# the sweep" and any other noun or conjunction hand the verb to somebody else.
+# (Both admitted forms are live in this file's own test suite — the currency
+# pierce and the negation-window case — and a rule that refused them would
+# have been wrong about English, not merely strict.) A `.` `;` or `:` ends the
+# clause outright and is refused whatever follows.
+#
+# Measured on this tree, and RE-DERIVED 2026-08-22 rather than carried,
+# because the figure first written here was wrong: 217 verb-route matches, of
+# which the gap rule alone refuses 147, the _POST_VERB rule alone refuses 118,
+# and the two together refuse 184. (The number that stood here was 153, which
+# is the pre-round-23 unrecognised-shape CENSUS count copied into a sentence
+# about a different population — round 20's M19 defect, committed inside the
+# paragraph that files it. The procedure is the one M19 prescribes: re-run the
+# measurement, never copy the figure.) NONE of the seven claims the tool
+# actually executes uses a non-empty verb gap, so the measured cost is nil,
+# and the refused matches are re-counted in the census and decline buckets
+# rather than dropped — 8 of them moved from a named decline bucket into the
+# census on the live tree, and none of them was a claim this tool could run.
+# A phrasing this list has not thought of lands in the census under its own
+# file and line, which is the self-reporting failure mode round 16 (H7) built
+# that bucket for, not a silent drop.
+#
+# THE THIRD REPRODUCTION IS CLOSED BY THE OTHER HALF, not by this rule, and
+# the split is worth keeping straight: "`cmd` returns, for the 2 tracking
+# files, a count of 3" has an EMPTY verb gap, so the rule above admits it. It
+# is `_POST_VERB` (defined immediately above this comment) that refuses it,
+# because the run between the verb and the value may hold no letters. Neither
+# half alone closes all three reproductions; both are required.
 CLAIM = (
     r"`(?P<cmd>[^`\n]{4,200})`"          # the command
-    r"(?P<gap>[^`\n]{0,40}?)"            # short gap, no intervening code span
+    # ONE `gap` group, two grammars — ClaimShape's contract requires the group
+    # to exist on every path, and negation_window() reads it with no fallback.
+    # Each branch stops on a lookahead so the gap still excludes the arrow or
+    # verb itself, exactly as the single-branch form did.
+    r"(?P<gap>[^`\n]{0,40}?(?=→|->)"
+    r"|" + _VERB_GAP + r"(?=\b(?:" + _REPORT_VERB + r")\b))"
     r"(?:→|->|\b(?:" + _REPORT_VERB + r")\b)"
-    r"[^0-9`\n]{0,18}"
+    + _POST_VERB +
     r"\*{0,2}(?P<value>{value})\*{0,2}")
 
 # SHAPE 2 — command, then a COLON, then the stated value:
@@ -1720,9 +1893,13 @@ CLAIM_VALUE_FIRST = (
 # rejects() keep it from reaching across a paragraph — this repo hard-wraps
 # mid-sentence, so refusing every newline would have missed the second example
 # above, and allowing any number of them would bind across bullets.
+# Round 23 (H24) added the bare STEM `derive` beside `derived`: README's own
+# tree diagram writes the instruction, not the record — "[60 design
+# supplements — re-derive with `ls … \| wc -l`]" — and the past-tense-only
+# list could not read it.
 _ATTRIBUTION_VERB = (
-    r"(?:re-)?(?:derived|measured|counted|verified|confirmed|computed|"
-    r"checked|produced|reproduced|obtained|generated|re-run|rerun)")
+    r"(?:re-)?(?:derives?|derived|measured|counted|verified|confirmed|"
+    r"computed|checked|produced|reproduced|obtained|generated|re-run|rerun)")
 # The two halves of the gap, and their budgets. Both were tightened after the
 # first draft FAILED a correct document, which is round 8's H4 recurring in a
 # new shape: with 80 characters before the verb, #20 §7.2's version-history row
@@ -1755,12 +1932,41 @@ _ATTR_POST = r"[^`;\"'.]{0,40}?"
 # to letters, spaces and hyphens, so it cannot cross a clause the way the
 # 80-character draft did.
 _ATTR_BARE = r"[A-Za-z \t-]{0,24}?"
+# Round 23 (H24): `with` joins the earned connectives (`by`/`from`/`using`),
+# and the whitespace run before the command admits a WRAP PREFIX. This repo
+# hard-wraps inside an ASCII tree diagram, where the continuation line opens
+# with box-drawing rules and spaces:
+#
+#     │       └── *-design.md   [60 design supplements — re-derive with
+#     │                        `ls docs/tracking/*-design.md \| wc -l`; ...]
+#
+# A bare `\s+` stops at the `│`, so a LIVE, drift-capable claim quoting the
+# very command this tool's LIVE floor is built around bound to nothing. The
+# run is ONE character class (never an alternation of "ordinary char" and
+# "newline plus indent" — that form is ambiguous under two bounded
+# repetitions and took a draft scan from 1.5 s to no result in 120 s), and
+# the one-hard-wrap budget in AttributedShape.rejects() still bounds it,
+# because this run sits inside the `gap` group it counts newlines in.
+#
+# THE CLASS HOLDS EXACTLY TWO PREFIX CHARACTERS AND NOT A THIRD, and the
+# third is the one worth recording. The round-23 draft of this line read
+# `[\s│|>]+`, admitting the ASCII PIPE as well — which is a markdown TABLE
+# CELL separator, so `| 35 | re-derived by | \`ls -d src/*/ \| wc -l\` |`
+# bound the 35 out of a neighbouring column. That is H21's own defect
+# (a value bound from an unrelated clause) reintroduced one shape over, in
+# the same commit that fixed it. Measured before removing it: the ASCII pipe
+# binds NOTHING on this tree (shape 4 binds 33 spans with it and 33 without),
+# so it was pure risk. `│` is H24's actual need — the tree diagram's
+# continuation rule — and `>` is the blockquote continuation this repo writes
+# in every design supplement; `>` binds one further span here
+# (CHANGELOG.md:4177), a backticked identifier that check_claim ignores and
+# the census then names, which is the designed disposal, not a finding.
 CLAIM_ATTRIBUTED = (
     r"\*{0,2}(?P<value>{value})\*{0,2}"
     r"(?P<gap>(?:" + _ATTR_PRE + r"\b" + _ATTRIBUTION_VERB + r"\b"
-    + _ATTR_POST + r"\b(?:by|via|per|using|from)"
+    + _ATTR_POST + r"\b(?:by|via|per|using|from|with)"
     r"|" + _ATTR_BARE + r"\b(?:via|per)"
-    r")\s+)"
+    r")[\s│>]+)"
     r"`(?P<cmd>[^`\n]{4,200})`")
 
 
@@ -1793,19 +1999,23 @@ COMMAND_SPAN = re.compile(r"`(?P<cmd>[^`\n]{4,200})`")
 # binds to no shape to be reported as a possible claim this tool cannot read.
 # Bounding to the line is what stops a census entry being manufactured out of
 # the next bullet's numbers, and 200 characters is where the census effectively
-# SATURATES. Re-derived 2026-08-22 (round 20, M19 — the prior figures on this
-# line were themselves six-for-six wrong against the very re-measurement
-# procedure this comment prescribes, the defect class this file exists to
-# close, found inside the file that closes it): 97 / 126 / 148 / 153 / 155 /
-# 155 for radii 40 / 60 / 120 / 200 / 400 / unbounded-within-the-line. Past
-# 200 a wider window still buys exactly two more entries, the same shape the
-# stale figures claimed even though every absolute count under it had moved —
-# below it the census starts missing spans on this repo's very long bullet
-# lines. Re-measure this curve if the corpus changes shape or this file's own
-# matchers change (as round 20's M15 fix to `unrecognised_spans` did) — it is
-# the only thing that justifies the number, and per M19: DO NOT copy the
-# figures on this line into prose elsewhere without re-running the
-# measurement, because that copy is what went stale here.
+# SATURATES. RE-MEASURED 2026-08-22 after round 23, because that round changed
+# three things this curve depends on — H21 (shape 1 binds less, so more spans
+# reach the census), H25 (an ignored span no longer reserves itself) and H24
+# (the window widens by one line each way when the span's own line has no
+# digit): 122 / 154 / 186 / 194 / 199 / 199 for radii
+# 40 / 60 / 120 / 200 / 400 / unbounded-within-the-window. The shape of the
+# curve is unchanged and so is the conclusion — past 200 a wider window buys
+# five more entries and then nothing, while below it the census starts
+# missing spans on this repo's very long bullet lines — but every absolute
+# count moved, which is why the figures are re-derived rather than carried.
+# (Round 20, M19: the figures on this line were once six-for-six wrong
+# against the very re-measurement procedure this comment prescribes — the
+# defect class this file exists to close, found inside the file that closes
+# it.) Re-measure this curve whenever the corpus changes shape or this file's
+# own matchers change, and per M19: DO NOT copy the figures on this line into
+# prose elsewhere without re-running the measurement, because that copy is
+# what went stale here.
 UNRECOGNISED_RADIUS = 200
 
 
@@ -1953,10 +2163,39 @@ def unrecognised_spans(text, bound):
         ls = text.rfind("\n", 0, s.start()) + 1
         le = text.find("\n", s.end())
         le = len(text) if le == -1 else le
-        near = (text[max(ls, s.start() - UNRECOGNISED_RADIUS):s.start()]
-                + text[s.end():min(le, s.end() + UNRECOGNISED_RADIUS)])
-        if not re.search(r"\d", near):
-            continue
+
+        def near(lo, hi):
+            return (text[max(lo, s.start() - UNRECOGNISED_RADIUS):s.start()]
+                    + text[s.end():min(hi, s.end() + UNRECOGNISED_RADIUS)])
+
+        if not re.search(r"\d", near(ls, le)):
+            # ROUND 23 (H24). Bounding the census to the span's OWN line was
+            # right for its stated job — stopping an entry being manufactured
+            # out of the next bullet's numbers — and wrong for the shape this
+            # repo actually writes, because it HARD-WRAPS MID-SENTENCE. Live
+            # at README.md:930-931 when this landed: the stated value ("60
+            # design supplements") sits on one physical line and the command
+            # that re-derives it on the next, so no shape bound it AND the
+            # census could not name it either. It was a SECOND live instance
+            # of the very command this file's LIVE floor is built around,
+            # and the tool neither checked it, declined it, nor mentioned
+            # it. A corpus sweep found 13 runnable command spans in that
+            # shape.
+            #
+            # So the window widens by ONE physical line each way, and only
+            # when the span's own line carries no digit at all — a line that
+            # has one is already answered, and widening it would pull in the
+            # neighbour's numbers for no gain. The radius still applies, so
+            # this reaches a neighbouring line's digits only when they are
+            # genuinely near. The SHAPES stay line-bounded; only the
+            # over-reporting census widens, which is the asymmetry that keeps
+            # a fabricated finding impossible here — everything this bucket
+            # names is named, never compared.
+            pls = text.rfind("\n", 0, ls - 1) + 1 if ls > 0 else 0
+            nle = text.find("\n", le + 1) if le < len(text) else le
+            nle = len(text) if nle == -1 else nle
+            if not re.search(r"\d", near(pls, nle)):
+                continue
         # Yields (line, cmd) only — the FORBIDDEN-vs-ordinary reason text is
         # picked by the caller (unrecognised_span_reason() below), so this
         # generator's return shape stays the two-tuple its test fixture
@@ -2101,8 +2340,9 @@ def _long_option_core(tok):
     long option at all (`-`, `--`, a short cluster, a bare operand).
 
     `--` returns None deliberately: it is the end-of-options marker, it is
-    live in this corpus (`git grep -c … -- docs/specs`, three of the six
-    executed claims), and it names no option to abbreviate."""
+    live in this corpus (`git grep -c … -- docs/specs`, three of the seven
+    executed claims — re-derived 2026-08-22 after round 23), and it names no
+    option to abbreviate."""
     if not tok.startswith("--") or len(tok) <= 2:
         return None
     return tok.split("=", 1)[0]
@@ -2149,9 +2389,10 @@ def _abbreviated_denial(tok, names):
     `getopt_long` — a prefix shared by two options is AMBIGUOUS and the real
     binary would reject it, while this refuses it — because over-refusal is
     this file's stated safe direction, and a claim refused here is DECLINED
-    AND NAMED, never silently dropped. Zero of the six live executed claims
-    uses an abbreviated long option (they use `--` and nothing else), so the
-    cost on this corpus is nil."""
+    AND NAMED, never silently dropped. Zero of the seven executed claims
+    uses an abbreviated long option (they use `--` and nothing else —
+    re-derived 2026-08-22 after round 23), so the cost on this corpus is
+    nil."""
     core = _long_option_core(tok)
     if core is None:
         return None
@@ -3554,14 +3795,51 @@ def document_relative_operand(rel, argv, repo):
     return None
 
 
+def would_gate(claim, regions):
+    """True when a MISMATCH on this claim would be REPORTED rather than
+    excused — i.e. when executing it is drift-catching coverage.
+
+    Round 23 (H23). The excusal test and the LIVE counter had drifted into
+    two different questions. Excusing a mismatch requires BOTH that the claim
+    sits inside a dated-record span AND that the region's own pierce fails
+    (a currency assertion outside the ERR log; the resolved/dated rule inside
+    it) — while `scan()` counted a claim as live on POSITION ALONE. So a
+    currency-asserted claim inside a record, which gates perfectly well, was
+    counted non-live, and one such claim carrying a wrong value produced
+    three falsehoods in a single run: `of which LIVE (can gate): 0`,
+    `0 mismatch(es) EXCUSED`, and a FAIL block reporting the drift — followed
+    by "only 0 LIVE claim(s) executed ... so this run could not have caught
+    drift in any document" and exit 2, which OUTRANKS 1. A genuine document
+    defect was demoted to a tooling error, by the very mechanism this file
+    keeps for honesty.
+
+    One helper, called by both sites, so the two can no longer disagree — the
+    same rule this file already applies to `command_head` (round 20, M15) and
+    to the imported frozen-history definition: where two answers must agree,
+    there is one computation."""
+    if not any(a <= claim.start < b for a, b in regions):
+        return True
+    # Round 16 (M12): the ERR log gets its OWN, stricter rule — see the
+    # section banner above err_log_excused(). Every other dated-record
+    # region keeps the proximity rule this file has used since round 13.
+    if claim.rel in DCC.LOG_BODY_FILES:
+        return not err_log_excused(claim.text, claim.start, claim.end)
+    return currency_asserted(claim.text, claim.start, claim.end)
+
+
 def check_claim(claim, repo, regions):
     """Validate, run and compare ONE claim. Returns (outcome, payload):
 
         ("ignored",    None)            not a command at all — no claim here
         ("declined",   (bucket, why))   counted and named; UNVERIFIED
         ("reproduced", (stated, got))   the document is right
-        ("excused",    (stated, got))   wrong, but inside a dated record
+        ("excused",    (stated, got))   wrong, but `would_gate()` is False —
+                                        inside a dated record whose own
+                                        pierce did not fire
         ("mismatch",   (stated, got))   wrong, and gating
+
+    An "ignored" claim reserves NOTHING (round 23, H25): scan() subtracts
+    these command spans from `bound` so the census can still name them.
 
     Knows nothing about printing, counters or exit codes; scan() owns those."""
     answer = claim.answer
@@ -3653,16 +3931,10 @@ def check_claim(claim, repo, regions):
         return "declined", (answer.bucket, answer.unreadable)
     if answer.matches(stated, got):
         return "reproduced", (stated, got)
-    if any(a <= claim.start < b for a, b in regions):
-        # Round 16 (M12): the ERR log gets its OWN, stricter rule — see the
-        # section banner above err_log_excused(). Every other dated-record
-        # region keeps the proximity rule this file has used since round 13.
-        if claim.rel in DCC.LOG_BODY_FILES:
-            excuse = err_log_excused(claim.text, claim.start, claim.end)
-        else:
-            excuse = not currency_asserted(claim.text, claim.start, claim.end)
-        if excuse:
-            return "excused", (stated, got)
+    # Round 23 (H23): the excusability test is `would_gate()` above, shared
+    # with scan()'s LIVE counter so "can this gate?" has ONE answer.
+    if not would_gate(claim, regions):
+        return "excused", (stated, got)
     return "mismatch", (stated, got)
 
 
@@ -3745,9 +4017,11 @@ def scan(repo, quiet=False):
                     reach = b
             region_coverage.append((rel, covered, len(text)))
         claims = collect_claims(rel, text)
+        ignored_spans = set()         # round 23 (H25) — see `bound` below
         for claim in claims:
             outcome, payload = check_claim(claim, repo, regions)
             if outcome == "ignored":
+                ignored_spans.add(claim.cmd_start)
                 continue
             if outcome == "declined":
                 bucket, why = payload
@@ -3761,7 +4035,7 @@ def scan(repo, quiet=False):
             # mismatch is still printed, but it can never gate — so it is not
             # drift-catching coverage, and counting it as such is how a
             # headline of 6 came to describe a live coverage of 1.
-            if not any(a <= claim.start < b for a, b in regions):
+            if would_gate(claim, regions):
                 live += 1
                 live_commands.add(claim.cmd)
             stated, got = payload
@@ -3771,7 +4045,28 @@ def scan(repo, quiet=False):
                 findings.append((rel, claim.line, claim.cmd,
                                  claim.answer.describe(stated, got)))
         # The census of shapes NOBODY recognised — H7's self-reporting half.
-        bound = {c.cmd_start for c in claims}
+        #
+        # ROUND 23 (H25). A span `check_claim` IGNORED must not reserve
+        # itself. `check_claim` returns ("ignored", None) on two paths — the
+        # text is not command-shaped, or it is but FORBIDDEN matches — and
+        # this set used to hold EVERY bound `cmd_start`, so such a span
+        # reached no bucket, no count and no line: not executed, not
+        # declined, and invisible to the census that exists to name exactly
+        # what no shape could read. Measured: `python3 -c '...'`,
+        # `curl http://x > out.txt`, `make build && echo 7`,
+        # `dotnet test ... 2>&1` and a bare `tools/count-supplements.sh` all
+        # landed nowhere, while the same `dotnet` claim WITHOUT the `2>&1`
+        # was named — so ADDING a redirection, which every real
+        # how-I-measured-it line carries, moved a claim from a named decline
+        # to complete invisibility. That falsifies this file's central
+        # contract ("every claim this tool declines to check is COUNTED AND
+        # NAMED"), and the census already discriminates correctly: with this
+        # set emptied it names all of them.
+        #
+        # The rule mirrors `collect_claims`'s own — a match a shape REJECTS
+        # does not reserve its command span — one layer down: a claim the
+        # CHECKER ignored does not reserve it either.
+        bound = {c.cmd_start for c in claims} - ignored_spans
         for line, cmd in unrecognised_spans(text, bound):
             record_decline(declined, bucket_order, "unrecognised-shape")
             declined_list.append(
@@ -3813,10 +4108,16 @@ def scan(repo, quiet=False):
     # executed and its mismatch printed, but it is EXCUSED, so it cannot fail
     # CI and cannot catch drift. Both figures are printed, on adjacent lines,
     # with the one that actually gates carrying the floor.
+    # The wording names the TEST, not a position: `would_gate()` asks whether
+    # the claim sits in a dated record AND that region's own pierce fails —
+    # the currency-word rule everywhere, the resolved-or-dated rule inside
+    # LOG_BODY_FILES. Saying "carries no currency assertion" would be false
+    # of the ERR-log claims, which are excused under the stricter rule.
     print("  ... of which LIVE (can gate)  : %d  (floor %d) — %d distinct "
-          "command(s); the other %d sit inside a dated record, where a "
-          "mismatch is EXCUSED, so they are executed coverage but NOT "
-          "drift-catching coverage"
+          "command(s); the other %d sit inside a dated record WHOSE OWN "
+          "PIERCE DOES NOT FIRE (a currency word, or — in the ERR log — a "
+          "resolved or dated entry), so a mismatch there is EXCUSED — "
+          "executed coverage, but NOT drift-catching coverage"
           % (live, MIN_LIVE_CLAIMS, len(live_commands), checked - live))
     print("  claims DECLINED (each named)   : %s"
           % " / ".join("%d %s" % (declined[b], label)
@@ -3911,9 +4212,10 @@ def scan(repo, quiet=False):
     if live < MIN_LIVE_CLAIMS:
         blocked.append(
             "only %d LIVE claim(s) executed — below the floor of %d. Every "
-            "other executed claim sits inside a dated record, where a "
-            "mismatch is excused, so this run could not have caught drift "
-            "in any document. See THE LIVE FLOOR beside MIN_LIVE_CLAIMS"
+            "other executed claim sits inside a dated record whose own "
+            "pierce does not fire, so a mismatch there is excused and this "
+            "run could not have caught drift in any document. See THE LIVE "
+            "FLOOR beside MIN_LIVE_CLAIMS"
             % (live, MIN_LIVE_CLAIMS))
     blocked.extend(fence_blocked)
     if blocked:
@@ -5231,3 +5533,220 @@ if __name__ == "__main__":
 # |         |            |             | at all. The 121-test suite passes            |
 # |         |            |             | UNMODIFIED — not edited, per the fixer       |
 # |         |            |             | boundary. Both sibling tools re-run green.** |
+# | 1.14    | 2026-08-22 | Claude Code | Round 23 — five reviewed findings, each      |
+# |         |            |             | reproduced before and after, and one of them |
+# |         |            |             | a FALSE PASS. **H22 (in the sibling, so both |
+# |         |            |             | tools agree): `frozen_chain_span` ran to the |
+# |         |            |             | NEXT MARKDOWN HEADING, and a chain is        |
+# |         |            |             | inserted INTO a file's header field block,   |
+# |         |            |             | so everything between the last chain entry   |
+# |         |            |             | and that heading — the file's own present-   |
+# |         |            |             | tense status block — was frozen by position  |
+# |         |            |             | alone.** On README.md that is lines 556-565, |
+# |         |            |             | whose `**Current Stage:**` says "All 26      |
+# |         |            |             | approved specs" against a real 53; the same  |
+# |         |            |             | shape on file-manifest.md (`**Purpose:**`),  |
+# |         |            |             | spec-error-log.md (`**Status:**`, `**Raised  |
+# |         |            |             | During:**`) and three design supplements.    |
+# |         |            |             | Reproduced on a fixture mirroring README's   |
+# |         |            |             | structure: a count-with-command wrong by a   |
+# |         |            |             | factor of 33, EXCUSED, exit 0, PASS — the    |
+# |         |            |             | worst failure this tool can produce — and    |
+# |         |            |             | after the fix the same fixture FAILS at exit |
+# |         |            |             | 1 while a genuine chain entry one line above |
+# |         |            |             | stays excused. The span now ends at the LAST |
+# |         |            |             | marker's entry (a blank line or a new        |
+# |         |            |             | `**Label:**`), deliberately not "the first   |
+# |         |            |             | non-marker line", because lines BETWEEN      |
+# |         |            |             | markers are wrapped entry bodies and this    |
+# |         |            |             | repo writes them starting with emphasis and  |
+# |         |            |             | a colon. **H23: LIVE was computed by         |
+# |         |            |             | POSITION while the excusal needed position   |
+# |         |            |             | AND a failed pierce**, so a currency-        |
+# |         |            |             | asserted claim inside a record — which gates |
+# |         |            |             | perfectly well — was counted non-live.       |
+# |         |            |             | Reproduced: one such claim with a wrong      |
+# |         |            |             | value printed `LIVE (can gate): 0`, `0       |
+# |         |            |             | mismatch(es) EXCUSED`, a FAIL block          |
+# |         |            |             | reporting the drift, and "this run could not |
+# |         |            |             | have caught drift in any document", exiting  |
+# |         |            |             | 2 and demoting a real document defect to a   |
+# |         |            |             | tooling error. Hoisted into `would_gate()`,  |
+# |         |            |             | used by both sites; after, the same fixture  |
+# |         |            |             | reads LIVE 1 and exits 1. **H21: shape 1's   |
+# |         |            |             | 40-character gap bound integers out of       |
+# |         |            |             | unrelated clauses** — "(`cmd`) was re-run    |
+# |         |            |             | and found 2 orphans" and two more correct    |
+# |         |            |             | sentences reported as mismatch(2,3) at exit  |
+# |         |            |             | 1, invisible to the census because a shape   |
+# |         |            |             | had bound them. The arrow route keeps its    |
+# |         |            |             | gap (an arrow cannot belong to another       |
+# |         |            |             | clause); the verb route admits only          |
+# |         |            |             | whitespace, closing markup and ADVERBS (`now |
+# |         |            |             | returns`, `no longer returns` both still     |
+# |         |            |             | bind and are both in this file's suite), and |
+# |         |            |             | the post-verb run admits no words, which is  |
+# |         |            |             | what closes the third reproduction           |
+# |         |            |             | (`returns, for the 2 tracking files, a count |
+# |         |            |             | of 3`). **H25: a span `check_claim` IGNORED  |
+# |         |            |             | still reserved itself**, so `curl … >        |
+# |         |            |             | out.txt`, `make build && echo 7` and `dotnet |
+# |         |            |             | test … 2>&1` reached no bucket at all while  |
+# |         |            |             | the same dotnet claim WITHOUT the            |
+# |         |            |             | redirection was named — adding a redirection |
+# |         |            |             | moved a claim from a named decline to        |
+# |         |            |             | invisibility. Ignored `cmd_start`s are now   |
+# |         |            |             | subtracted from `bound`; fixture: 0 -> 3     |
+# |         |            |             | named. Verified in passing that the report's |
+# |         |            |             | "with `bound` emptied the census names all   |
+# |         |            |             | of them" is NOT true of an argument-less     |
+# |         |            |             | script path — that one is refused by the     |
+# |         |            |             | census's own command-shape test, and the     |
+# |         |            |             | header now says so. **H24: a live drift-     |
+# |         |            |             | capable claim split across a hard wrap was   |
+# |         |            |             | invisible to both the shapes and the         |
+# |         |            |             | census** — README.md:930-931, a SECOND live  |
+# |         |            |             | instance of the very command this file's     |
+# |         |            |             | LIVE floor is built around. Shape 4 learned  |
+# |         |            |             | `with`, the bare stem `re-derive` and a wrap |
+# |         |            |             | prefix, so it now BINDS, executes and        |
+# |         |            |             | reproduces (60); the census widens by one    |
+# |         |            |             | physical line each way only when the span's  |
+# |         |            |             | own line carries no digit. **Live tree: 605  |
+# |         |            |             | surfaces, 7 executed (3 distinct, floor 2)   |
+# |         |            |             | of which 3 LIVE (2 distinct, floor 1), 224   |
+# |         |            |             | declines, 0 excused, PASS, exit 0.**         |
+# |         |            |             | Coverage deltas, all accounted: executed 6   |
+# |         |            |             | -> 7 (H24 binding README:930, a new INSTANCE |
+# |         |            |             | of an already-counted command); LIVE 1 -> 3  |
+# |         |            |             | (H23 counting the currency-pierced VH claim  |
+# |         |            |             | that always gated, plus H24's new instance); |
+# |         |            |             | declines 191 -> 224, which is 8 spans moved  |
+# |         |            |             | out of the named buckets into the census by  |
+# |         |            |             | H21 and 33 more named by H24's widened       |
+# |         |            |             | window, net +41 in one bucket and -8 across  |
+# |         |            |             | four (unsafe 2->1, unlisted-binary 19->18,   |
+# |         |            |             | not-self-contained 8->6, not-a-single-       |
+# |         |            |             | integer 6->2, unrecognised-shape 153->194).  |
+# |         |            |             | (Both corrected 2026-08-22 in the recovery   |
+# |         |            |             | pass that verified this round: the row read  |
+# |         |            |             | "194 declines" and "declines 191 -> 194",    |
+# |         |            |             | quoting the unrecognised-shape BUCKET as the |
+# |         |            |             | TOTAL, and "12 spans moved out", which       |
+# |         |            |             | counted the four region-coverage lines of a  |
+# |         |            |             | before/after report diff as declines. The    |
+# |         |            |             | eight are: README:1176, code-standards       |
+# |         |            |             | /section-2.md:330, CHANGELOG.md:1240 and     |
+# |         |            |             | :2789, file-manifest.md:4 and :5 twice, and  |
+# |         |            |             | spec-error-log.md:943.) H25 contributes 0    |
+# |         |            |             | census entries on THIS corpus — its fixture  |
+# |         |            |             | proof (0 -> 3) is the evidence, not a live   |
+# |         |            |             | count.                                       |
+# |         |            |             | MIN_EXECUTED_CLAIMS unmoved: the floor is on |
+# |         |            |             | DISTINCT commands and that is still 3.       |
+# |         |            |             | MIN_LIVE_CLAIMS unmoved at 1 WITH ITS        |
+# |         |            |             | RESIDUAL RECORDED: both new live instances   |
+# |         |            |             | are repetition or a revision-pinned command, |
+# |         |            |             | so no new drift-capable command became live, |
+# |         |            |             | and raising an instance floor on either is   |
+# |         |            |             | what round 20's M20 took the executed floor  |
+# |         |            |             | off instances to prevent — but a floor of 1  |
+# |         |            |             | can now be met by the pinned claim alone,    |
+# |         |            |             | which is a real hole H23 created and which   |
+# |         |            |             | wants a distinct-drift-capable-command       |
+# |         |            |             | floor, an owner-level call M20 already       |
+# |         |            |             | deferred. The census RADIUS CURVE was re-    |
+# |         |            |             | measured in the same change (122 / 154 / 186 |
+# |         |            |             | / 194 / 199 / 199 at 40 / 60 / 120 / 200 /   |
+# |         |            |             | 400 / unbounded), saturating at 200 as       |
+# |         |            |             | before. Header and SAFETY text corrected     |
+# |         |            |             | where these findings falsified it: the four- |
+# |         |            |             | shape list, the derived-blind-spot paragraph |
+# |         |            |             | (which now names the two classes that still  |
+# |         |            |             | reach no bucket instead of implying there    |
+# |         |            |             | are none), and the radius note. The 121-test |
+# |         |            |             | suite passes UNMODIFIED — not edited, per    |
+# |         |            |             | the fixer boundary; note for its owner that  |
+# |         |            |             | its `scan()` harness patches                 |
+# |         |            |             | MIN_EXECUTED_CLAIMS but not MIN_LIVE_CLAIMS, |
+# |         |            |             | which silently pins every fixture to a live  |
+# |         |            |             | floor of 1. Both sibling tools re-run green. |
+# | 1.15    | 2026-08-22 | Claude Code | Round 23 RECOVERY AND AUDIT PASS. The round  |
+# |         |            |             | above was authored in a session that was     |
+# |         |            |             | interrupted before it reported, so every one |
+# |         |            |             | of its five findings was re-proved here from |
+# |         |            |             | scratch against `git show HEAD:tools/…` —    |
+# |         |            |             | the defect reproduced on the PRE-round code  |
+# |         |            |             | and the fixed behaviour and its legitimate   |
+# |         |            |             | complement measured after. All five hold:    |
+# |         |            |             | H21's three sentences bind and report        |
+# |         |            |             | mismatch(2,3) before and are named in the    |
+# |         |            |             | census after, while arrow/verb/adverb/       |
+# |         |            |             | markup/negation phrasings still bind; H22's  |
+# |         |            |             | README-shaped fixture is EXCUSED at exit 0   |
+# |         |            |             | PASS before and FAILs at exit 1 after, with  |
+# |         |            |             | the genuine chain entry one line above still |
+# |         |            |             | excused; H23's currency-pierced record claim |
+# |         |            |             | prints LIVE 0 + a FAIL block + exit 2 before |
+# |         |            |             | and LIVE 1 + exit 1 after; H24 binds         |
+# |         |            |             | README.md:930 (60) where nothing bound       |
+# |         |            |             | before; H25 takes a fixture from 0 named to  |
+# |         |            |             | 3. **What the audit CHANGED.** (1) Shape 4's |
+# |         |            |             | wrap-prefix class admitted the ASCII PIPE,   |
+# |         |            |             | which is a markdown TABLE CELL separator, so |
+# |         |            |             | a three-column row reading "35", then        |
+# |         |            |             | "re-derived by", then a backticked command   |
+# |         |            |             | bound the 35 out of a neighbouring column    |
+# |         |            |             | (reproduced on a fixture) — H21's own        |
+# |         |            |             | defect reintroduced one shape over, in the   |
+# |         |            |             | commit that fixed it. Measured at 33 shape-4 |
+# |         |            |             | bindings with it and 33 without, so it was   |
+# |         |            |             | pure risk; removed, `│` and `>` kept and     |
+# |         |            |             | each justified by measurement. (2) The LIVE  |
+# |         |            |             | line and its blocked message said the        |
+# |         |            |             | non-live claims "carry no currency           |
+# |         |            |             | assertion", which is false of the ERR-log    |
+# |         |            |             | claims — those are excused by the stricter   |
+# |         |            |             | resolved-or-dated rule. Both now name the    |
+# |         |            |             | TEST (`would_gate`), not one of its two      |
+# |         |            |             | branches. (3) FIGURES, every one re-derived  |
+# |         |            |             | rather than carried, because the round       |
+# |         |            |             | above committed round 20's M19 defect four   |
+# |         |            |             | times: the verb-gap refusal count (153 was   |
+# |         |            |             | the census total copied into a sentence      |
+# |         |            |             | about verb-route matches; measured 147 for   |
+# |         |            |             | the gap rule, 118 for _POST_VERB, 184 for    |
+# |         |            |             | the two together, of 217); the decline total |
+# |         |            |             | (191 -> 224, not 194 — the unrecognised      |
+# |         |            |             | BUCKET quoted as the TOTAL); the spans H21   |
+# |         |            |             | moved out of the named buckets (8, not 12 —  |
+# |         |            |             | the 12 counted four region-coverage lines of |
+# |         |            |             | a report diff); "~130 chain entries in       |
+# |         |            |             | README.md" in the sibling (CHANGELOG.md's    |
+# |         |            |             | 139 under README's name; README holds 36     |
+# |         |            |             | entries in total, so 35 is the real figure); |
+# |         |            |             | and a `~1,100` transplanted into the header  |
+# |         |            |             | from a note about a different population.    |
+# |         |            |             | Six instance counts stale at "six" are now   |
+# |         |            |             | seven. (4) The MIN_LIVE_CLAIMS note opened   |
+# |         |            |             | "the floor is set at 2" and closed "THE      |
+# |         |            |             | FLOOR STAYS AT 1" over a constant of 1 —     |
+# |         |            |             | corrected to say the MEASUREMENT moved, not  |
+# |         |            |             | the floor. **What the audit CONFIRMED and    |
+# |         |            |             | did not change:** the radius curve (122 /    |
+# |         |            |             | 154 / 186 / 194 / 199 / 199 at 40 / 60 /     |
+# |         |            |             | 120 / 200 / 400 / unbounded) reproduces      |
+# |         |            |             | exactly; H24's "13 runnable spans in this    |
+# |         |            |             | shape" reproduces exactly under its own      |
+# |         |            |             | definition (value on the previous physical   |
+# |         |            |             | line, runnable head); the sibling's per-file |
+# |         |            |             | scope deltas reproduce exactly; H25's        |
+# |         |            |             | residual (a bare argument-less script path   |
+# |         |            |             | stays invisible with `bound` emptied) is     |
+# |         |            |             | real; and MIN_LIVE_CLAIMS = 2 does fail      |
+# |         |            |             | exactly 12 cases in the test suite. Live     |
+# |         |            |             | tree unchanged by this pass: 605 surfaces, 7 |
+# |         |            |             | executed (3 distinct, floor 2) of which 3    |
+# |         |            |             | LIVE (2 distinct, floor 1), 224 declines     |
+# |         |            |             | (1/18/6/0/2/0/3/194), 0 excused, PASS, exit  |
+# |         |            |             | 0. The 121-test suite passes UNMODIFIED.     |
