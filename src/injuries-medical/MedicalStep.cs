@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 15 M1: the draw branch made atomic — fallible call before writes — v1.12)
+// Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.13)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -56,6 +56,7 @@ namespace TacticalDirector.InjuriesMedical
         /// </param>
         /// <param name="playerId">The player's id — one of the three draw-key components.</param>
         /// <param name="attributes">The player's #27 attributes, read-only (the robustness term).</param>
+        /// <param name="ageYears">The player's CURRENT age in whole years — #27's <c>PlayerRecord.Age</c>, which #28 keeps current as a derived cache (FR-PG-005). Feeds the §3.4 age term (ERR-041-020).</param>
         /// <param name="trainingRisk">#29's already-published risk scalar, read-only (FR-MD-009). #41 never touches #29's fatigue accumulator.</param>
         /// <param name="recentMatchLoad">Caller-supplied match participation (FR-MD-010); <see cref="MatchLoad.None"/> when there is none.</param>
         /// <param name="medical">The KD-5 staff seam; <see cref="MedicalModifier.Identity"/> until #34 lands.</param>
@@ -82,6 +83,7 @@ namespace TacticalDirector.InjuriesMedical
             ref InjuryState state,
             int playerId,
             in PlayerAttributes attributes,
+            int ageYears,
             in InjuryRiskContribution trainingRisk,
             in MatchLoad recentMatchLoad,
             in MedicalModifier medical,
@@ -155,7 +157,7 @@ namespace TacticalDirector.InjuriesMedical
             // 2. Occurrence draw — only for a player healthy at entry, and only when the dial is on.
             if (wasAvailableAtEntry && occurrenceEnabled)
             {
-                int risk = AssembleRiskScore(trainingRisk, recentMatchLoad, attributes, medical);
+                int risk = AssembleRiskScore(trainingRisk, recentMatchLoad, attributes, ageYears, medical);
                 ulong actionOrdinal = DeriveActionOrdinal(worldDay, InjuriesMedicalConstants.DRAW_PURPOSE_OCCURRENCE);
                 int draw = DrawOccurrence(worldSeed, playerId, actionOrdinal);
 
@@ -209,16 +211,27 @@ namespace TacticalDirector.InjuriesMedical
         /// could not be. It is also what keeps a fit player on the default focus from being
         /// injury-proof forever, the third absurdity the fifth AR pass measured.
         /// </para>
+        /// <para>
+        /// <b>The age term sits in the same position, for the same reason</b> (ERR-041-020): inside
+        /// the sum, before the mitigation, so a robust veteran carries less of his age penalty than a
+        /// frail one. Until that landing this formula presented as multi-factor risk assembly while
+        /// omitting one of the best-established real-world risk factors — and one already carried on
+        /// the <c>PlayerRecord</c> the caller was already resolving to read the attributes above.
+        /// </para>
         /// </summary>
         /// <param name="trainingRisk">#29's risk contribution.</param>
         /// <param name="load">Caller-supplied match participation.</param>
         /// <param name="attributes">The player's #27 attributes (the robustness mitigation).</param>
+        /// <param name="ageYears">The player's current age in whole years (the §3.4 age term, ERR-041-020).</param>
         /// <param name="medical">The staff seam; ×1.0 at <see cref="MedicalModifier.Identity"/>.</param>
         /// <exception cref="ArgumentException">Either <paramref name="medical"/> multiplier is non-positive — the <c>default(MedicalModifier)</c> trap, and the negative one that produces no crash to announce it (FR-MD-016 / F4).</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="ageYears"/> is negative — a derived age is never below zero (#28 §3.1.1 fails loud on a future-dated anchor before this is reached), so a negative one is corrupt state rather than a young player.</exception>
+        /// <exception cref="InvalidOperationException">The <c>[GT]</c> age dials are negative (from <see cref="AgeRiskFor"/>) — see that method.</exception>
         public static int AssembleRiskScore(
             in InjuryRiskContribution trainingRisk,
             in MatchLoad load,
             in PlayerAttributes attributes,
+            int ageYears,
             in MedicalModifier medical)
         {
             ValidateModifier(medical);
@@ -227,6 +240,7 @@ namespace TacticalDirector.InjuriesMedical
                         + (long)InjuriesMedicalConstants.AppearanceLoadWeight * load.AppearanceDays
                         + (long)InjuriesMedicalConstants.HardContactWeight * load.HardContacts
                         + InjuriesMedicalConstants.BaselineDailyRisk
+                        + AgeRiskFor(ageYears)
                         - RobustnessMitigation(attributes);
 
             risk = risk * medical.OccurrenceRiskMillMult / InjuriesMedicalConstants.MEDICAL_MODIFIER_IDENTITY_PERMILLE;
@@ -403,6 +417,73 @@ namespace TacticalDirector.InjuriesMedical
         {
             int mean = (attributes.Strength + attributes.Stamina + attributes.Balance) / 3;
             return InjuriesMedicalConstants.RobustnessMitigationFor(mean);
+        }
+
+        /// <summary>
+        /// The deterministic age term of §3.4's assembly (ERR-041-020) — linear in age, anti-symmetric
+        /// about <see cref="InjuriesMedicalConstants.AgeRiskPivotYears"/>, saturating at
+        /// ±<see cref="InjuriesMedicalConstants.AgeRiskSpan"/>. Never RNG, and never a threshold: every
+        /// year of age moves the term by the same amount, so there is no age at which a player's risk
+        /// steps (doctrine P1).
+        /// <para>
+        /// <b>Granularity, stated rather than glossed.</b> The input is whole years, because whole
+        /// years is what #27 exposes — <c>PlayerRecord.Age</c>, kept current by #28's derived cache. A
+        /// uniform one-year increment is not the defect this fix addresses: the pattern-(b) shape is a
+        /// judgment collapsed onto ONE cutoff, and there is no cutoff here. Should a day-resolution age
+        /// ever be wanted, #28's <c>BirthWorldDay</c> is its source and #41 would take days instead —
+        /// but reaching for it now would mean #41 reading a #28 field for a term whose slope is a
+        /// first-guess <c>[GT]</c>.
+        /// </para>
+        /// </summary>
+        /// <param name="ageYears">The player's current age in whole years.</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="ageYears"/> is negative.</exception>
+        /// <exception cref="InvalidOperationException">
+        /// <see cref="InjuriesMedicalConstants.AgeRiskPerYearFromPivot"/> or
+        /// <see cref="InjuriesMedicalConstants.AgeRiskSpan"/> is negative — a catalogue/config
+        /// integrity failure rather than a caller error, checked at the one site that computes the term
+        /// (the <see cref="DrawOccurrence"/> guard posture). A negative slope inverts the whole finding
+        /// this term exists to fix, silently; a negative span makes the clamp's min exceed its max, so
+        /// every player takes the maximum penalty regardless of age.
+        /// </exception>
+        public static int AgeRiskFor(int ageYears)
+        {
+            return AgeRiskFor(
+                ageYears,
+                InjuriesMedicalConstants.AgeRiskPivotYears,
+                InjuriesMedicalConstants.AgeRiskPerYearFromPivot,
+                InjuriesMedicalConstants.AgeRiskSpan);
+        }
+
+        /// <summary>
+        /// <see cref="AgeRiskFor(int)"/> against explicit dials, so the <c>span = 0</c> pre-fix
+        /// identity can be EXERCISED rather than asserted in prose. The catalogue values are
+        /// <c>[GT]</c>s read once at static initialisation, so a test cannot vary them any other way —
+        /// and this project's standing lesson is that an identity claim nothing executes is exactly the
+        /// class of claim that gets falsified on first run (the ERR-008-021/-022 chain, three times).
+        /// </summary>
+        /// <param name="ageYears">The player's current age in whole years.</param>
+        /// <param name="pivotYears">The age at which the term is zero.</param>
+        /// <param name="perYear">Per-mille-of-a-million risk per year away from the pivot.</param>
+        /// <param name="span">Symmetric saturation magnitude.</param>
+        internal static int AgeRiskFor(int ageYears, int pivotYears, int perYear, int span)
+        {
+            if (ageYears < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(ageYears), ageYears, "A player's derived age is never negative (§3.4).");
+            }
+
+            if (perYear < 0 || span < 0)
+            {
+                throw new InvalidOperationException(
+                    "AgeRiskPerYearFromPivot and AgeRiskSpan must be non-negative — a negative slope "
+                    + "makes veterans the least injury-prone players in the league and a negative span "
+                    + "inverts the clamp; catalogue/config integrity failure (§3.4, Appendix A).");
+            }
+
+            long term = (long)perYear * (ageYears - pivotYears);
+
+            return ClampLong(term, -span, span);
         }
 
         /// <summary>
@@ -630,4 +711,9 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | behind the very refusal (demonstrated by model). AssignRecovery-  |
 // |         |            |        | Days now runs before any write; the branch is atomic; the guard's |
 // |         |            |        | message stops claiming the prevention the ordering provides.      |
+// | 1.13    | 2026-08-22 | —      | ERR-041-020. AdvanceMedicalDay and AssembleRiskScore take int ageYears;
+// |         |            |        | + AgeRiskFor (public, plus an internal parameterised overload so the
+// |         |            |        | zero-span identity can be EXERCISED — the [GT]s are read once at static
+// |         |            |        | init and the gate runs config-unbound). The term sits inside the sum
+// |         |            |        | BEFORE the mitigation, normatively, so robustness discriminates it.
 #endregion

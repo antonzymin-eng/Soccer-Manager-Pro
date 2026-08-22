@@ -1,6 +1,6 @@
 // File:     src/player-progression/tests/ProgressionEngineTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-11 (AR pass 8 — L-3's SeedFrom overflow lock; L-4's DefaultLife() CurrentAbility
+// Modified: 2026-08-22 (ERR-028-020 — football-judgment proxy review batch 1 — v1.9)
 //           retune to keep every FromBlocks(..., DefaultLife()) call legal — v1.8)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §5, KD-4 / KD-7,
@@ -752,17 +752,32 @@ namespace TacticalDirector.PlayerProgression.Tests
             // Two assertions, and the residue one is the load-bearing half: points-gained alone would
             // still pass if a future change re-introduced a residue while rounding the count back up.
             // The residue is what silently eats the first year of the Decline band later.
-            foreach (int seedAge in new[] { 16, 20, 23 })
+            // REBASELINED at ERR-028-020: seed age 23 moves to the ramp's own start
+            // (GROWTH_AGE − half-width). A seed INSIDE the ramp genuinely does end a traversal holding
+            // a fractional cursor — its exact integral is not a whole multiple of POINT_COST — and
+            // that fraction is correct rather than lost, so it is asserted separately below instead of
+            // being folded in here where it would read as the ERR-028-018 shortfall recurring.
+            int rampStartAge = PlayerProgressionConstants.GROWTH_AGE
+                               - PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+            foreach (int seedAge in new[] { 16, 20, rampStartAge })
             {
                 PlayerRecord rec = Player(1, age: seedAge);
                 var squad = new Squad(clubId: 1, new[] { rec });
                 ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u);
 
+                // REBASELINED at ERR-028-020, and the rebaseline strengthens the claim rather than
+                // weakening it. The band no longer ENDS at GROWTH_AGE — the rate ramps to zero one
+                // half-width past it — so the traversal must run to the end of the ramp. What must
+                // still hold, and does, is the total: because the ramp is centred, the whole traversal
+                // still yields exactly (GROWTH_AGE − seedAge) points and still leaves no residue. That
+                // equality IS the P5 pivot: the curve redistributes accrual across the edge without
+                // creating or destroying any of it.
                 int yearsInBand = PlayerProgressionConstants.GROWTH_AGE - seedAge;
+                int yearsToTraverse = yearsInBand + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
                 int before = AttributeSum(engine, clubIndex: 0, playerIndex: 0);
 
                 engine.AdvanceDay(
-                    (uint)(yearsInBand * PlayerProgressionConstants.DAYS_PER_YEAR),
+                    (uint)(yearsToTraverse * PlayerProgressionConstants.DAYS_PER_YEAR),
                     TrainingInputBatch.Neutral);
 
                 int after = AttributeSum(engine, clubIndex: 0, playerIndex: 0);
@@ -776,6 +791,37 @@ namespace TacticalDirector.PlayerProgression.Tests
                     + "cursor survives the Stable band unspendable and then cancels the first year of "
                     + "Decline.");
             }
+        }
+
+        [Test]
+        public void AdvanceDay_ASeedInsideTheGrowthRamp_CarriesAFraction_NotALostPoint()
+        {
+            // ERR-028-020. The distinction this test exists to hold: a mid-ramp seed reaches the end
+            // of growth with a NON-zero cursor, and that is arithmetically right — the exact integral
+            // over his remaining growth simply is not a whole number of attribute-points, and the
+            // remainder is carried forward against his first days of decline rather than discarded.
+            // The pathology ERR-028-018 fixed looked superficially identical (a residue at the band
+            // exit) but was a whole point SHORT of the integral, every traversal, for every seed age.
+            // Without this lock the natural reading of the failure would be that ERR-028-018 had
+            // regressed, and the natural "fix" would be to re-round the accrual — which would put the
+            // cliff back.
+            int seedAge = PlayerProgressionConstants.GROWTH_AGE;   // dead centre of the ramp
+            PlayerRecord rec = Player(1, age: seedAge);
+            var squad = new Squad(clubId: 1, new[] { rec });
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u);
+
+            engine.AdvanceDay(
+                (uint)(PlayerProgressionConstants.AgeBandRampHalfWidthYears
+                       * PlayerProgressionConstants.DAYS_PER_YEAR),
+                TrainingInputBatch.Neutral);
+
+            PlayerLifecycle life = engine.ToBlocks()[0].Lifecycles[0];
+
+            Assert.Greater(life.GrowthCursor, 0L,
+                "a player who spends the back half of the ramp developing must still hold the credit "
+                + "for it — the pre-fix model gave him exactly nothing from his 24th birthday on.");
+            Assert.Less(life.GrowthCursor, PlayerProgressionConstants.POINT_COST,
+                "…and it is a FRACTION of a point, held for the ledger, not a point that went missing.");
         }
 
         private static int AttributeSum(ProgressionEngine engine, int clubIndex, int playerIndex)
@@ -1255,4 +1301,10 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | for uniform default attributes, so one value covers every fixture  |
 // |         |            |        | here) rather than a second magic literal. No test assertions       |
 // |         |            |        | changed — this is the fixture keeping pace with a production gate. |
+// | 1.9     | 2026-08-22 | —      | ERR-028-020. The traversal lock now runs to the END of the growth ramp and
+// |         |            |        | asserts the identical totals — the P5 pivot stated as a test. Seed age 23
+// |         |            |        | moved to the ramp's start, and its case split out as ASeedInsideTheGrowth-
+// |         |            |        | Ramp_CarriesAFraction_NotALostPoint: a mid-ramp seed's residue is correct
+// |         |            |        | and resembles ERR-028-018's shortfall, whose natural repair would restore
+// |         |            |        | the cliff.
 #endregion

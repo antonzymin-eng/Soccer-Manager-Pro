@@ -1,6 +1,6 @@
 // File:     src/player-progression/tests/GrowthProjectionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-11 (AR pass 8, L-2 — stale comment corrected, no assertion change — v1.3)
+// Modified: 2026-08-22 (ERR-028-020 — football-judgment proxy review batch 1 — v1.4)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 + Appendix B; Code Standards #20
 // Purpose:  T-PG-DET-001/002, T-PG-ID-001/002 — byte-exact growth across a value-copy "save", age
@@ -37,13 +37,38 @@ namespace TacticalDirector.PlayerProgression.Tests
         [Test]
         public void DeclineBand_DrainsExactlyOnePointPerYear_CurveOff()
         {
-            (PlayerRecord rec, PlayerLifecycle life) = NewPlayer(ageAtBase: 32); // > DECLINE_AGE ⇒ Decline
+            // REBASELINED at ERR-028-020 from a hard-coded age 32. Since the decline rate now ramps in
+            // across the DECLINE_AGE edge, "the full decline rate" starts one half-width past it —
+            // age 32 sits INSIDE the ramp and drains less than a whole point, which is the fix
+            // working, not a regression. The property under test is unchanged: at the full rate the
+            // drain is exactly one point per year with no residue.
+            int fullRateAge = PlayerProgressionConstants.DECLINE_AGE + 1
+                              + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+            (PlayerRecord rec, PlayerLifecycle life) = NewPlayer(ageAtBase: fullRateAge);
 
             StepInclusive(ref rec, ref life, BaseDay, BaseDay + 364);
 
             Assert.AreEqual(NeutralAttributeSum - 1, SumAttributes(rec.Attributes),
                 "the symmetric decline step: exactly one attribute point drained per year.");
             Assert.AreEqual(0L, life.GrowthCursor);
+        }
+
+        [Test]
+        public void InsideTheDeclineRamp_TheDrainIsPartial_NotAllOrNothing()
+        {
+            // ERR-028-020's own lock, and the one that fails against the pre-fix model: a year spent
+            // inside the ramp must drain SOMETHING and less than a full point. The retired band step
+            // could only ever answer 0 or 1 — that is the whole defect.
+            (PlayerRecord rec, PlayerLifecycle life) = NewPlayer(ageAtBase: PlayerProgressionConstants.DECLINE_AGE);
+
+            StepInclusive(ref rec, ref life, BaseDay, BaseDay + 364);
+
+            Assert.AreEqual(NeutralAttributeSum, SumAttributes(rec.Attributes),
+                "a mid-ramp year does not yet cost a whole attribute point…");
+            Assert.Less(life.GrowthCursor, 0L,
+                "…but it does move the cursor toward one, where the band step moved it not at all.");
+            Assert.Greater(life.GrowthCursor, -PlayerProgressionConstants.POINT_COST,
+                "…and by less than a full point, or the ramp is not a ramp.");
         }
 
         [Test]
@@ -341,4 +366,8 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | comment was never updated. Corrected; the assertions are       |
 // |         |            |        | property-based (bounded in both directions) and were already   |
 // |         |            |        | correct — this is a prose-only fix, no behavior or lock change.|
+// | 1.4     | 2026-08-22 | —      | ERR-028-020. The decline-band lock REBASELINED from a hard-coded age 32 to
+// |         |            |        | the first full-rate age past the ramp (age 32 now sits inside it and drains
+// |         |            |        | less than a point — the fix working). + InsideTheDeclineRamp_TheDrainIs-
+// |         |            |        | Partial_NotAllOrNothing, which the retired band step cannot satisfy.
 #endregion

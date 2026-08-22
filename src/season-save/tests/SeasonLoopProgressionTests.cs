@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopProgressionTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-11 (AR pass 6, M2(b) — the BirthWorldDay-vs-clock composition locks — v1.7)
+// Modified: 2026-08-22 (ERR-028-020 — football-judgment proxy review batch 1 — v1.8)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 slot 1); Player Progression & Lifecycle #28
 //           KD-4 / FR-PG-021 / FR-PG-022; ERR-029-006 (the batch entry point, closed here);
@@ -45,6 +45,21 @@ namespace TacticalDirector.SeasonSave.Tests
         // club's SquadRating must move, well inside the [1,20] contract the codec range-gates.
         private const int StrengthenedFloor = 18;
 
+        // The ERR-028-020 ramp edges in whole years, read from the catalogue rather than written as
+        // literals: a whole year at or beyond each of these sits entirely in one accrual regime, so an
+        // expectation stated against them is exact without consulting AbilityModel.
+        private static readonly int GrowthRampStartsAt =
+            PlayerProgressionConstants.GROWTH_AGE - PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+
+        private static readonly int GrowthRampEndsAt =
+            PlayerProgressionConstants.GROWTH_AGE + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+
+        private static readonly int DeclineRampStartsAt =
+            PlayerProgressionConstants.DECLINE_AGE - PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+
+        private static readonly int DeclineRampEndsAt =
+            PlayerProgressionConstants.DECLINE_AGE + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+
         // ── The wiring proof ──────────────────────────────────────────────────────────
 
         [Test]
@@ -83,7 +98,7 @@ namespace TacticalDirector.SeasonSave.Tests
             // window shift, not a semantic change.
             const int SeedDayCredit = 1;
 
-            int growth = 0, decline = 0, stable = 0;
+            int growth = 0, decline = 0, stable = 0, inRamp = 0;
             ClubCareerStates[] blocks = progression.ToBlocks();
             for (int c = 0; c < blocks.Length; c++)
             {
@@ -93,15 +108,49 @@ namespace TacticalDirector.SeasonSave.Tests
                     int playerId = blocks[c].Records[p].PlayerId;
                     int bootstrapAge = AgeOf(seeded, playerId);
 
-                    long expected;
-                    if (bootstrapAge < PlayerProgressionConstants.GROWTH_AGE) { expected = +(AccruingDays + SeedDayCredit); growth++; }
-                    else if (bootstrapAge > PlayerProgressionConstants.DECLINE_AGE) { expected = -(AccruingDays + SeedDayCredit); decline++; }
-                    else { expected = 0; stable++; }
+                    // REBASELINED at ERR-028-020. The accrual rate now RAMPS across each band edge, so
+                    // the three-way expectation is exact only outside the ramps — which is still where
+                    // the strength of this lock lives, because those expectations are derived from the
+                    // bootstrap age and the catalogue alone, never from the code under test. A player
+                    // inside a ramp accrues a genuinely fractional share of the six days, so he is
+                    // asserted on sign and bound instead of being handed an expectation this test
+                    // would have to compute with AbilityModel to know.
+                    long cursor = blocks[c].Lifecycles[p].GrowthCursor;
+                    long full = AccruingDays + SeedDayCredit;
 
-                    Assert.AreEqual(expected, blocks[c].Lifecycles[p].GrowthCursor,
-                        $"player {playerId} (bootstrap age {bootstrapAge}) must accrue his own band's "
-                        + "step once per advanced day — slot 1 running not at all, twice, or on the "
-                        + "wrong band is each distinguishable here.");
+                    if (bootstrapAge < GrowthRampStartsAt)
+                    {
+                        growth++;
+                        Assert.AreEqual(+full, cursor,
+                            $"player {playerId} (bootstrap age {bootstrapAge}) is below the growth ramp "
+                            + "entirely and must accrue the full step once per advanced day — slot 1 "
+                            + "running not at all, twice, or on the wrong band is each distinguishable "
+                            + "here.");
+                    }
+                    else if (bootstrapAge > DeclineRampEndsAt)
+                    {
+                        decline++;
+                        Assert.AreEqual(-full, cursor,
+                            $"player {playerId} (bootstrap age {bootstrapAge}) is past the decline ramp "
+                            + "entirely and must drain the full step once per advanced day.");
+                    }
+                    else if (bootstrapAge >= GrowthRampEndsAt && bootstrapAge <= DeclineRampStartsAt)
+                    {
+                        stable++;
+                        Assert.AreEqual(0L, cursor,
+                            $"player {playerId} (bootstrap age {bootstrapAge}) is in the genuinely flat "
+                            + "stretch between the two ramps and must accrue nothing.");
+                    }
+                    else
+                    {
+                        inRamp++;
+                        bool growthSide = bootstrapAge < PlayerProgressionConstants.GROWTH_AGE
+                                          + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+                        Assert.That(
+                            growthSide ? cursor >= 0 && cursor <= full : cursor <= 0 && cursor >= -full,
+                            $"player {playerId} (bootstrap age {bootstrapAge}) sits inside a ramp: his "
+                            + $"six days must accrue a partial step of the right sign, not {cursor}.");
+                    }
                 }
             }
 
@@ -109,6 +158,9 @@ namespace TacticalDirector.SeasonSave.Tests
             // the loop would still pass while proving far less. All three bands must be represented.
             Assert.Greater(growth, 0, "precondition: the league must contain Growth-band players.");
             Assert.Greater(decline, 0, "precondition: the league must contain Decline-band players.");
+            Assert.Greater(inRamp, 0,
+                "precondition: the league must contain players inside a ramp, or the ERR-028-020 curve "
+                + "is never exercised by this lock at all.");
             Assert.Greater(stable, 0, "precondition: the league must contain Stable-band players.");
         }
 
@@ -890,4 +942,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | Clock_IsRefused and Constructor_WithABirthWorldDayExactlyOnThe-    |
 // |         |            |        | Clock_IsAccepted — the composition-boundary counterpart of         |
 // |         |            |        | GrowthProjectionTests' M2(a) lock, at the ahead/on-clock boundary. |
+// | 1.8     | 2026-08-22 | —      | ERR-028-020. The slot-1 wiring lock is ramp-aware: the strict three-way
+// |         |            |        | expectation still applies OUTSIDE the ramps, where it is derived from the
+// |         |            |        | bootstrap age and the catalogue alone and never from the code under test;
+// |         |            |        | in-ramp players are asserted on sign and bound instead. + an inRamp
+// |         |            |        | precondition, so a league that never exercised the curve cannot pass.
 #endregion

@@ -1,7 +1,7 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-08-11 (AR pass 7 — GrowthCursor credits its own construction day, ERR-028-018's
-//           second writer — v1.5)
+// Modified: 2026-08-22 (ERR-028-020 — the construction-day credit takes the continuous step —
+//           football-judgment proxy review batch 1 — v1.7)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.3 (regen generation); Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  Pure single-player regen generation (§3.3) — a young player with a drawn PotentialAbility
@@ -186,10 +186,16 @@ namespace TacticalDirector.PlayerProgression
         /// </summary>
         private static long BandStepFor(int age)
         {
-            AbilityModel.AgeBand band = AbilityModel.ClassifyAgeBand(age);
-            return band == AbilityModel.AgeBand.Growth ? PlayerProgressionConstants.GROWTH_DAILY_POINTS
-                 : band == AbilityModel.AgeBand.Decline ? PlayerProgressionConstants.DECLINE_DAILY_POINTS
-                 : 0;
+            // ERR-028-020: the CONTINUOUS step, from the same AbilityModel.DailyBandPoints the daily
+            // step and SeedLifecycle use. This method's own doc says every construction site that
+            // anchors LastAdvancedWorldDay owes the day's step — which means it owes the SAME step, and
+            // the retired three-way form here would have been a second answer to a question with one
+            // authority. Inert at today's values (a regen is generated at REGEN_AGE_MIN..MAX = 16..20,
+            // entirely below the growth ramp, where the two forms agree day for day) and precisely
+            // therefore worth fixing now: it diverges silently the first time either the regen age band
+            // or the ramp half-width moves, and the symptom would be one attribute point per traversal
+            // — ERR-028-018's shape, at the sibling site that pass did not have to reach.
+            return AbilityModel.DailyBandPoints((long)age * PlayerProgressionConstants.DAYS_PER_YEAR);
         }
 
         // DrawBounded (the reserved-draw → [0, bound) modulo mapping + its accepted-bias rationale) and
@@ -231,4 +237,14 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | version row (the sixth consecutive FR-CS-057 recurrence,         |
 // |         |            |        | L-1) — this row and the corrected `Modified` header above        |
 // |         |            |        | backfill it.                                                     |
+// | 1.7     | 2026-08-22 | —      | ERR-028-020. BandStepFor takes AbilityModel.DailyBandPoints —  |
+// |         |            |        | the same continuous step SeedLifecycle and the daily step now  |
+// |         |            |        | use. This method's own doc says every construction site owes   |
+// |         |            |        | the day's step, which means the SAME step; the retired three-  |
+// |         |            |        | way form was a second answer to a one-authority question.      |
+// |         |            |        | INERT at today's values (regens are 16-20, wholly below the    |
+// |         |            |        | growth ramp, where both forms agree) and fixed for exactly     |
+// |         |            |        | that reason: it diverges silently the first time the regen age |
+// |         |            |        | band or the ramp half-width moves, costing one point per band  |
+// |         |            |        | traversal — ERR-028-018's shape at the sibling site.           |
 #endregion

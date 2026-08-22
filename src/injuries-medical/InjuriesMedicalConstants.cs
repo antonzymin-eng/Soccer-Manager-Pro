@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/InjuriesMedicalConstants.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 9 L5: the severity-split invariant is strict — v1.5)
+// Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.6)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A (constant catalogue) + §3.1–§3.4; Code Standards #20
 // Purpose:  Every numeric constant for #41 occurrence, severity bucketing and recovery. No magic
@@ -100,7 +100,7 @@ namespace TacticalDirector.InjuriesMedical
         /// </summary>
         public const int OCCURRENCE_DRAW_DENOM = 1_000_000;
 
-        #endregion
+#endregion
 
         #region Cross
 
@@ -197,6 +197,62 @@ namespace TacticalDirector.InjuriesMedical
 
         /// <summary>[GT] Risk contribution per <see cref="MatchLoad.HardContacts"/>. Zero at Stage 2 — the field is deep-tier only (KD-3), so a non-zero value is a config change rather than a formula rewrite. Config key [injuries-medical] HardContactWeight.</summary>
         public static readonly int HardContactWeight = Config.GetInt("injuries-medical", "HardContactWeight", 0);
+
+        /// <summary>
+        /// [GT] The age at which the §3.4 age term contributes exactly zero (ERR-041-020) — the P5
+        /// pivot, and the reason adding age to the assembly does not move the league aggregate.
+        /// <para>
+        /// 26 is the MEAN of the bootstrap roster's age distribution, which
+        /// <c>RosterGenerator</c> draws uniformly on
+        /// <c>[PlayerDatabaseConstants.AgeMin, AgeMax]</c> = <c>[17, 35]</c>. Because the term is
+        /// linear and anti-symmetric about this pivot, the age contributions over that population sum
+        /// to zero: the squad-wide injury rate is unchanged and only its DISTRIBUTION across the squad
+        /// moves, which is the whole content of the finding. Deliberately NOT mirrored from #27 as a
+        /// <c>[CROSS]</c> derivation — the pivot is a balance choice about where risk should be
+        /// neutral, and pinning it to the generator's bounds would silently re-pivot #41 the day #47's
+        /// authored database replaces them.
+        /// </para>
+        /// Config key [injuries-medical] AgeRiskPivotYears.
+        /// </summary>
+        public static readonly int AgeRiskPivotYears = Config.GetInt("injuries-medical", "AgeRiskPivotYears", 26);
+
+        /// <summary>
+        /// [GT] Risk contribution per year of age away from <see cref="AgeRiskPivotYears"/>, on the
+        /// <see cref="OCCURRENCE_DRAW_DENOM"/> per-million scale (ERR-041-020). Positive above the
+        /// pivot, negative below, linear throughout — there is no age THRESHOLD anywhere in the term
+        /// (doctrine P1), which is what separates this from the age-band cliff its sibling #28 carried
+        /// (ERR-028-020).
+        /// <para>
+        /// First-guess 150: a 34-year-old assembles +1200 against a 20-year-old's −900 on a typical
+        /// ~6600 assembly, so the oldest squad member carries roughly a third more daily risk than the
+        /// youngest — the direction and rough magnitude the epidemiology supports, at a size that
+        /// cannot dominate the exposure terms it sits beside. Real calibration waits for the
+        /// complete-engine pass (P5 / KD-W1); the research-alignment supplement's age arm re-fits
+        /// against this term rather than adding beside it, exactly as its R-2 arm must against
+        /// <see cref="BaselineDailyRisk"/>.
+        /// </para>
+        /// MUST be non-negative — a negative slope makes veterans the most durable players in the
+        /// league, which is not an intent this system can express; enforced fail-loud at the
+        /// computing site. Config key [injuries-medical] AgeRiskPerYearFromPivot.
+        /// </summary>
+        public static readonly int AgeRiskPerYearFromPivot = Config.GetInt("injuries-medical", "AgeRiskPerYearFromPivot", 150);
+
+        /// <summary>
+        /// [GT] Symmetric magnitude cap on the §3.4 age term, per-million (ERR-041-020) — it saturates
+        /// this many points above and below zero, i.e. <c>AgeRiskSpan / AgeRiskPerYearFromPivot</c>
+        /// years either side of the pivot. Bounds the term for an out-of-range derived age (a career
+        /// run far past any football span still assembles a finite risk) without putting a cliff inside
+        /// the football range: at 1800 and a slope of 150 the cap binds only beyond ±12 years of the
+        /// pivot, i.e. below 14 and above 38.
+        /// <para>
+        /// <b>Zero is the exact pre-fix identity</b> — the term vanishes for every player and
+        /// <see cref="MedicalStep.AssembleRiskScore"/> reproduces its ERR-041-011 form byte-for-byte
+        /// (the FR-MD-027 dial posture, locked both ways).
+        /// </para>
+        /// MUST be non-negative; enforced fail-loud at the computing site. Config key
+        /// [injuries-medical] AgeRiskSpan.
+        /// </summary>
+        public static readonly int AgeRiskSpan = Config.GetInt("injuries-medical", "AgeRiskSpan", 1800);
 
         // [GT] Fixed recovery-days per severity tier (Appendix A), indexed by InjurySeverity ordinal.
         // Index 0 (None) is 0 by the F1 coherence invariant: a healthy player has no recovery
@@ -295,6 +351,11 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | to restore discrimination headroom, superseding v1.3's "(1%)"      |
 // |         |            |        | description. Row added at AR pass 2 (the edit shipped rowless).    |
 // | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 9 (L5, doc): Minor + Moderate must be         |
-// |         |            |        | STRICTLY below the denominator — at exactly 1000 the SS3.2 second  |
+// |         |            |        | STRICTLY below the denominator — at exactly 1000 the §3.2 second  |
 // |         |            |        | bucket saturates and Serious is unreachable with "<=" satisfied.   |
+// | 1.6     | 2026-08-22 | —      | ERR-041-020 (football-judgment proxy review, batch 1): + AgeRiskPivot-
+// |         |            |        | Years, AgeRiskPerYearFromPivot and AgeRiskSpan for §3.4's age term. The
+// |         |            |        | pivot is #27's bootstrap mean age, so the term sums to zero over that
+// |         |            |        | population (P5); AgeRiskSpan = 0 is the exact pre-fix identity. Both
+// |         |            |        | dials guarded non-negative fail-loud at the computing site.
 #endregion

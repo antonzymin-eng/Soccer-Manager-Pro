@@ -1,7 +1,8 @@
 # Injuries & Medical #41 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026, later (v0.10 — balance-pass AR pass 15 M2: FR-MD-014's assignment clause gains the RECOVERY_MAX ceiling the code has always applied)
+**Last Updated:** August 22, 2026 (v0.11 — **ERR-041-020**: new **FR-MD-025a** requires the occurrence-risk assembly to carry a deterministic, threshold-free player-age term positioned before the robustness mitigation, taken as a caller-supplied `ageYears` (#27's `PlayerRecord.Age`) with no #28 type referenced; §2.2's `AdvanceMedicalDay` signature gains the parameter. Until this ERR §2 required a multi-factor assembly and named no age input, so nothing here would have caught the omission the proxy review found. Prior entry below.)
+**Last Updated (prior):** August 8, 2026, later (v0.10 — balance-pass AR pass 15 M2: FR-MD-014's assignment clause gains the RECOVERY_MAX ceiling the code has always applied)
 **Last Updated (prior):** August 8, 2026 (v0.9 — balance-pass AR pass 9 L4: new F8 — the sentinel itself is not a day; the refusal the code has always enforced gets its normative row)
 **Last Updated (prior):** August 8, 2026 (v0.8 — balance-pass AR pass 8 (L4 + L2): FR-MD-007 no longer names the `injuries.occurrence` stream that must never exist; rows 0.6/0.7 reordered ascending)
 **Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 6 M4: §2.2's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`; the stale `MatchLoad` comment corrected. Prior header below.)
@@ -9,7 +10,7 @@
 **Last Updated (prior):** August 7, 2026 (v0.5 — the balance pass D2 (ERR-041-010(b)): FR-MD-010 pins the `AppearanceDays` window unit — appearances in the `APPEARANCE_WINDOW_DAYS` `[GT]` window of days strictly before the draw day, never the current day (the ERR-030-027 pre-round ordering depends on the exclusion); the record itself is #30-owned)
 **Last Updated (prior):** August 6, 2026 (v0.4 — ERR-041-008: §2.3 F3's exception type corrected to match the posture it cites)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.10
+**Version:** 0.11
 **Status:** APPROVED
 
 ---
@@ -84,6 +85,15 @@
 - **FR-MD-015** — The occurrence-risk robustness/injury-proneness term MUST be a **derived** deterministic
   function of existing #27 physical attributes at Stage 2 (never RNG); a dedicated `InjuryProneness` #27
   attribute is a recorded deep-tier deferral, not built here (KD-4).
+- **FR-MD-025a** — The occurrence-risk assembly MUST include a **player-age** term (§3.4's
+  `AgeRiskFor`), deterministic and **continuous in age with no threshold**, positioned inside the sum
+  **before** the robustness mitigation so a robust veteran carries less of his age penalty than a frail
+  one. Age MUST be taken as a caller-supplied `ageYears` — #27's `PlayerRecord.Age`, which #28 keeps
+  current (FR-PG-005) — and #41 MUST NOT store an age of its own or reference any #28 type. *(Added at
+  **ERR-041-020**. Until then this section required a multi-factor risk assembly and named no age
+  input at all, so the omission the football-judgment proxy review found had nothing in §2 to catch
+  it; the FR is the half of that fix that makes a future implementer's omission a spec violation
+  rather than an oversight.)*
 
 **Staff seam (KD-5)**
 - **FR-MD-016** — `AdvanceMedicalDay` MUST take `in MedicalModifier` set to `MedicalModifier.Identity`
@@ -172,7 +182,11 @@ public struct InjuryState
 // position-independent, no free-running cursor, no DeterministicRngService (KD-1/§3, ERR-041-012).
 // occurrenceEnabled is the FR-MD-027 dial: REQUIRED, never defaulted; disarmed, the step is the
 // recovery countdown and cursor advance alone.
+// ageYears (ERR-041-020) is the player's CURRENT age in whole years — #27's PlayerRecord.Age, kept
+// current by #28's derived cache (FR-PG-005) and refreshed at #30's slot 1, before this slot-4 step.
+// Read only by §3.4's age term; #41 stores no age of its own and no #28 type is referenced.
 public static void AdvanceMedicalDay(ref InjuryState s, int playerId, in PlayerAttributes a,
+                                      int ageYears,
                                       in InjuryRiskContribution trainingRisk, in MatchLoad recentMatchLoad,
                                       in MedicalModifier medical, uint worldDay, ulong worldSeed,
                                       bool occurrenceEnabled);
@@ -236,4 +250,5 @@ construction are pure reads over an `InjuryState` value. See §3.
 | 0.8 | 2026-08-08 | — | **Balance-pass AR pass 8 (L4 + L2)**: FR-MD-007's "for `injuries.occurrence`" → "for the keyed occurrence derivation" (true statement, phantom name); rows 0.6/0.7 reordered ascending — the third recurrence in this table's own history. |
 | 0.9 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: new **F8** — `AdvanceMedicalDay` invoked with the never-advanced sentinel as `worldDay` itself fails loud; enforced in code since T0 with no F-row (a fail-loud with no normative source). §3.1's pseudocode gains the guard in the same commit; mirrored at #29 §2.3/§3.1. |
 | 0.10 | 2026-08-08 | — | **Balance-pass AR pass 15 (M2)**: FR-MD-014 put the `[0, RECOVERY_MAX]` clamp on the COUNTDOWN and gave the assignment as a bare floored division, while the code has always ceilinged the assignment too — an implementer following the FR wrote `241+` for a slow physio on the Serious tier, refused by `ValidateState` the next day (the field's own declared range forbids it). The assignment clause now carries `Clamp(…, 1, RECOVERY_MAX)`. |
+| 0.11 | 2026-08-22 | — | **ERR-041-020** (football-judgment proxy review, batch 1 — spec + code, same commit). New **FR-MD-025a**: the occurrence-risk assembly MUST carry a player-age term, deterministic and continuous in age with no threshold, inside the sum before the robustness mitigation, with age supplied by the caller as #27's `PlayerRecord.Age` and no #28 type referenced by #41. §2.2's `AdvanceMedicalDay` signature gains `int ageYears` with a comment naming where the value is refreshed (#30's KD-2 slot 1, before this slot-4 step). The id is suffixed rather than appended at the end of the sequence deliberately: it belongs beside FR-MD-015 in the occurrence-inputs group, and FR-MD-016..027 are cited across five files whose renumbering would be the recurring cross-reference cascade the root `CLAUDE.md` names as this project's most frequent bug class. |
 #endregion

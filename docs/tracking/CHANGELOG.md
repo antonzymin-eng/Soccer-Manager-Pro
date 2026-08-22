@@ -12,7 +12,75 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 22, 2026, latest same day (**The four tracking gaps surfaced across this
+> **Last Updated:** August 22, 2026, latest same day (**BATCH 1 of the football-judgment proxy review's
+> workable 24 LANDED IN FULL — three findings, three ERRs filed AND resolved in the same commit, spec +
+> code together, whole-tree gate run.** `ERR-028-020`, `ERR-028-021`, `ERR-041-020`; the review's counts
+> move for the first time since August 5 — **34 recorded, 5 fixed, 29 open, workable queue 24 → 21**.
+> **ERR-028-020 (#28 §3.1, new §3.1.3):** the daily growth rate was `DailyPoints(ClassifyAgeBand(ageYears), …)`
+> — three constants selected by a hard step at an exact integer age, so a player developed at the full
+> rate on the last day of his 23rd year and at exactly zero on the first day of his 24th, with the mirror
+> discontinuity at `DECLINE_AGE`; the "deep" `curveEnabled` tier called the identical classifier, and
+> §1.3's promised "curves keyed to age" existed nowhere in the spec. Now a centred linear ramp of
+> half-width `AGE_BAND_RAMP_HALF_WIDTH_YEARS` at each edge. **The implementation choice is the
+> load-bearing one:** the accrual is the first difference of an exact integer CUMULATIVE, not a per-day
+> rate — `GrowthCursor` is integer fixed-point at one-unit-per-full-growth-day, so a rate has nothing
+> between 0 and 1 to return, and rescaling to milli-points (the obvious alternative) would have forced
+> `PROGRESSION_SAVE_FORMAT_VERSION` 1 → 2 and a refusal of every existing save. The difference form
+> keeps the per-day step in `{0, ±1}` while its DENSITY follows the continuous curve, so **no format
+> moves at all**. **P5 came out exact rather than fitted:** a centred ramp has the same integral as the
+> step it replaces for EVERY half-width, so no growth-rate recalibration is owed and ERR-028-018's
+> no-residue traversal invariant survives by construction. Half-width 0 reproduces the §4.3 step
+> byte-for-byte, exercised per-day across a 45-year sweep through a parameterised overload rather than
+> asserted. `ClassifyAgeBand` demoted to a READ of the curve (two of its answers invert, which is the
+> fix). **ERR-028-021 (#28 §3.4):** retirement was `rec.Age >= RETIREMENT_AGE` — one integer age for the
+> whole league, so goalkeepers retired on a forward's clock and one calendar day was the difference
+> between a career continuing and ending, for everyone at once. Now a per-player `RetirementAgeDays`
+> compared in days: baseline + goalkeeper allowance + a full-range anti-symmetric offset over the
+> Anticipation/Positioning/Composure mean. **The P3 decision is the part worth carrying forward** —
+> robustness was the obvious input and is deliberately NOT used, because #29 and #41 already price
+> Strength/Stamina/Balance twice over (`ERR-041-003`), so a third read would be that recorded defect a
+> third time; recorded in §3.4 as a ledger entry. Zero dials reproduce the retired comparison
+> identically, and the offsets sum to exactly 0 over a uniform attribute population, so the league's
+> retirement RATE is unchanged and only who-retires-when moves. Still draw-free. **ERR-041-020 (#41
+> §3.4):** the risk assembly presented as multi-factor and read player age nowhere — not in the formula,
+> not in the signature, not in §2, so nothing in the spec would have caught it either. `AgeRiskFor` now
+> sits inside the sum BEFORE the mitigation (normative, like `BASELINE_DAILY_RISK`, so robustness
+> discriminates it), linear with no threshold anywhere. **P5 measured rather than argued:** the pivot is
+> #27's bootstrap mean age (26 over `[17, 35]`), so `SeasonInjuryRealismTests`' league (717–816/season),
+> starter (2.08), reserve (1.12) and squad-unavailability (9.4%) bands all held unmoved, and all 26
+> pre-existing `AssembleRiskScore` expectations stay exact by passing the pivot age rather than being
+> rebaselined. First-guess magnitude: a 34-year-old carries ≈1.37× a 20-year-old's daily risk. New
+> **FR-MD-025a** carries the requirement. **Two of the three findings were mandated by their own spec's
+> §2 requirements** — FR-PG-007/KD-8 made the band step the required curve-off behaviour, FR-PG-013
+> required retirement "hard at `RETIREMENT_AGE`" — so both FRs are revised in place with the superseded
+> requirement annotated; that is pattern (d) reaching past §3 into the FR table, and batches 5 and 6
+> should expect it. **Across all three: no RNG draw, no stream registration, no domain tag, no
+> `SNAPSHOT_SCHEMA_VERSION`, no `*_FORMAT_VERSION`, no draw-order change.** Suites at landing:
+> `PlayerProgression.Tests` 127 → **134**, `InjuriesMedical.Tests` 70 → **74**, `SeasonSave.Tests`
+> **402 passed / 3 known skips**, `TrainingSystem.Tests` 52/52. Four pre-existing locks were rebaselined
+> onto the fixes and each rebaseline is annotated in the test itself with what the old assertion was
+> asserting — three of them were asserting the cliff.
+
+> **Gate: run in full at final HEAD, and the verdict is the inherited one.** Build 0 errors; **31 of 32
+> suites fully green** (`PlayerProgression.Tests` 134/0, `InjuriesMedical.Tests` 74/0,
+> `SeasonSave.Tests` 402/0 with its 3 known skips, `TrainingSystem.Tests` 52/0, every other suite 0
+> failed); `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped**; quarantine empty. The single
+> failure is `sim_match_engine_close_chance` — **owner-held RED since August 11 and failing at
+> baseline** (`close-chance-creation-design.md` §10.9 item 6; §6.3.1's constraint 2 names it as the
+> detector any batch now lands against). Its counts and both failing predicates come back **identical
+> to the recorded baseline**: `MatchEngine.Tests` 461/1/11 exactly as recorded at the W2 landing, mean
+> cosine **−0.165** against the −0.16 bound and goalward share **0.407** against 0.42 — the exact
+> figures the C1 / `ERR-012-011` record carries. Nothing in this landing runs on a match tick (#28 and
+> #41 are world-day subsystems; the one #30 call site is slot 4 of the day loop), so identical figures
+> are the predicted result and the evidence for it, not a coincidence to be explained away. **No new
+> failure, and no band was rebaselined.** An earlier run of this gate was killed and restarted
+> deliberately rather than reported: its test phase had begun before the `RegenGenerator` fix and the
+> `MAX_DERIVABLE_AGE_YEARS` correction below, so its verdict would not have covered the tree it was
+> reported against — the invalidated-gate class this project recorded at AR pass 9.)
+> 
+> Prior entry below.
+
+> **Last Updated (prior):** August 22, 2026, latest same day (**The four tracking gaps surfaced across this
 > session's passes are now CLOSED — three registers reconciled, one new gap tracked.**) Doc-only; no
 > `.cs` touched. **1. `open-issues.md` was a landing behind its own index.** Root `CLAUDE.md` has
 > carried `ERR-008-023` since the August 7 landing and `open-issues.md` had **zero** mentions of it —

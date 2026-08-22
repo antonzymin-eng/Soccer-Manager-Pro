@@ -1,11 +1,12 @@
 # Injuries & Medical #41 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026, second final entry (v0.6 — AR pass 16 L2: T-MD-MOD-002 covers both clamp arms)
+**Last Updated:** August 22, 2026 (v0.7 — **ERR-041-020**: new **§5.6.1** allocates T-MD-AGE-001..006 for §3.4's age term — the pivot zero that keeps every pre-ERR expectation exact, per-year continuity, symmetric saturation and the negative-age refusal, the normative POSITION of the term inside the sum, the zero-span pre-fix identity required to be EXERCISED rather than asserted, and the season-scale P5 check that the measured bands hold unmoved. §5.8 gains the FR-MD-025a row. Prior entry below.)
+**Last Updated (prior):** August 8, 2026, second final entry (v0.6 — AR pass 16 L2: T-MD-MOD-002 covers both clamp arms)
 **Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 10 L4: T-MD-DET-010 names the existing F8 sentinel lock)
 **Last Updated (prior):** August 8, 2026 (v0.4 — balance-pass AR pass 6 M4: the ERR-041-012 sweep — T-MD-DET-004 / T-MD-NEU-003 / T-MD-SEV-001 restated off the phantom registered stream and its service reservation. Prior header below.)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -96,6 +97,29 @@ Tests land at T-phase; this is the acceptance contract.
 - **T-MD-REC-002** — `RobustnessMitigation` is deterministic over own attributes (identical inputs →
   identical mitigation) — FR-MD-015.
 
+## 5.6.1 The age term (§3.4 / FR-MD-025a / ERR-041-020)
+
+- **T-MD-AGE-001 (the pivot, and why nothing else was rebaselined)** — `AgeRiskFor(AGE_RISK_PIVOT_YEARS)`
+  MUST be exactly 0, and one year either side MUST differ by exactly
+  `AGE_RISK_PER_YEAR_FROM_PIVOT`. The zero is what keeps every §5 expectation written before this ERR
+  exact when the pivot age is passed, rather than requiring them all to be re-derived.
+- **T-MD-AGE-002 (continuity, doctrine P1)** — Across the whole football age range every adjacent-year
+  step MUST be the same magnitude (or 0, at saturation) — there MUST be no age at which the term jumps.
+- **T-MD-AGE-003 (saturation + a corrupt age)** — The term saturates symmetrically at `±AGE_RISK_SPAN`,
+  and a **negative** `ageYears` fails loud rather than being clamped (a derived age is never negative —
+  #28 §3.1.1 fails loud on the anchor that would produce one).
+- **T-MD-AGE-004 (position is normative)** — The assembled score for a veteran MUST exceed the same
+  player at the pivot age by exactly `AgeRiskFor(veteranAge)` (below the clamp, with the precondition
+  asserted), AND a frail veteran MUST still exceed a robust one of the same age. Together these fail if
+  the term is dropped from the sum, and if it is moved after the mitigation or after the clamp.
+- **T-MD-AGE-005 (the zero-span identity)** — At `AGE_RISK_SPAN = 0` the term MUST be 0 for every age,
+  reproducing the pre-fix assembly exactly. MUST be **exercised** against an explicit span — the `[GT]`
+  is read once at static initialisation and the gate runs config-unbound, so an identity asserted only
+  in prose is the class the `ERR-008-021`/`-022` chain had falsified three times on first run.
+- **T-MD-AGE-006 (P5 at season scale)** — The season-scale realism instrument's league, starter,
+  reserve and squad-unavailability bands MUST hold unmoved with the term live: the pivot is the
+  bootstrap population's mean age, so the aggregate does not move and only the distribution does.
+
 ## 5.7 Seams & fail-loud
 
 - **T-MD-MOD-002** — Recovery-speed is applied to **assigned tier-days at injury time**, not per-tick: a
@@ -137,6 +161,7 @@ Tests land at T-phase; this is the acceptance contract.
 | FR-MD-013 | T-MD-NEU-001 |
 | FR-MD-014 | T-MD-REC-001, T-MD-MOD-002 |
 | FR-MD-015 | T-MD-REC-002 |
+| FR-MD-025a | T-MD-AGE-001..006 |
 | FR-MD-016 | T-MD-MOD-001, T-MD-FAIL-006 |
 | FR-MD-017 | T-MD-FAIL-001 |
 | FR-MD-018 | T-MD-DET-001 |
@@ -159,4 +184,5 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.4 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: three test descriptions still asserted against the registered `injuries.occurrence` stream / `DeterministicRngService` reservation that ERR-041-012 established never existed; restated against the keyed derivation the suites actually exercise. |
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 10 (L4)**: **T-MD-DET-010** — the F8 sentinel-as-worldDay refusal (pass 9) gets its §5 id, naming the `AdvancingTheSentinelDay_FailsLoud` lock that already executes it. |
 | 0.6 | 2026-08-08 | — | **Balance-pass AR pass 16 (L2)**: T-MD-MOD-002 covered only the floor arm while pass 15 M2 made the ceiling normative — and a mutant erasing the ceiling left the whole suite green; both arms now stated and locked. |
+| 0.7 | 2026-08-22 | — | **ERR-041-020** (football-judgment proxy review, batch 1 — spec + code, same commit). New §5.6.1 allocates **T-MD-AGE-001..006** for §3.4's age term: the pivot-is-exactly-zero property (which is what leaves every expectation written before this ERR exact when the pivot age is passed, rather than requiring a suite-wide re-derivation), per-year continuity across the football range, symmetric saturation plus the negative-age refusal, the term's normative POSITION inside the sum (an assertion that fails both if the term is dropped and if it is moved after the mitigation or the clamp), the zero-span pre-fix identity — required to be EXERCISED against an explicit span, since the `[GT]` is read once at static init and the gate runs config-unbound — and the season-scale P5 check that the realism instrument's measured bands hold unmoved. §5.8 gains the FR-MD-025a traceability row. |
 #endregion

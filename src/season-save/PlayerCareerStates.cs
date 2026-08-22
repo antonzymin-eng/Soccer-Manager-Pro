@@ -1,6 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-11 (AR pass 6, M2(b) — RequireBirthWorldDayWithinClock — v1.18)
+// Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.19)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
@@ -932,10 +932,16 @@ namespace TacticalDirector.SeasonSave
                         load = MatchLoad.None;
                     }
 
+                    // record.Age is #28's derived cache (FR-PG-005), refreshed at slot 1 of this same
+                    // world day — #30's KD-2 order runs #28 before #41 — so the age reaching the
+                    // ERR-041-020 term is the day's own, never the new-game seed. In a career with no
+                    // #28 store wired the record still carries its generated age, which is the correct
+                    // reading for a roster that is not ageing.
                     MedicalStep.AdvanceMedicalDay(
                         ref injury[i],
                         ids[i],
                         in record.Attributes,
+                        record.Age,
                         in risk,
                         in load,
                         in medical,
@@ -1758,4 +1764,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | the composition boundary that can. Called from SeasonLoop's     |
 // |         |            |        | per-player composition walk and SeasonSaveManager's block-level |
 // |         |            |        | walk, alongside RequireProgressionCursorWithinClock in both.    |
+// | 1.19    | 2026-08-22 | —      | ERR-041-020. AdvanceMedicalDay passes record.Age — the one production call
+// |         |            |        | site of #41's step. #28 refreshes the derived-age cache at #30's KD-2 slot
+// |         |            |        | 1, before this slot-4 step, so the age reaching the term is the day's own.
 #endregion

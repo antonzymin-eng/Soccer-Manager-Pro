@@ -1,9 +1,10 @@
 # Player Progression & Lifecycle #28 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** August 10, 2026 (v0.3 — ERR-028-017: §4.2's "Season-save composition" note corrected from a stale "2 → 3" frame-version claim to a citation of #30 Appendix A's 1→5 chain; §4.5's seam sentence restated in `TrainingInputBatch` terms and its "sole seam" claim replaced with the verified full public surface of `ProgressionEngine`)
+**Last Updated:** August 22, 2026 (v0.4 — **ERR-028-020 / ERR-028-021**: §4's file map for `AbilityModel.cs` brought current — it now carries §3.1.3's age curve (`DailyBandPoints` / `AccruedBandPoints`, with `ClassifyAgeBand` demoted to a read of it) and §3.4's `RetirementAgeDays`, neither of which existed when the map was written. No file added, no reference direction changed. Prior entry below.)
+**Last Updated (prior):** August 10, 2026 (v0.3 — ERR-028-017: §4.2's "Season-save composition" note corrected from a stale "2 → 3" frame-version claim to a citation of #30 Appendix A's 1→5 chain; §4.5's seam sentence restated in `TrainingInputBatch` terms and its "sole seam" claim replaced with the verified full public surface of `ProgressionEngine`)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -40,7 +41,9 @@ src/player-progression/                 // references PlayerDatabase + Determini
 ├── PlayerLifecycle.cs                  // the per-player overlay value type (§2.2)
 ├── ClubCareerStates.cs                 // the per-club (records, lifecycles) pair Encode/Decode and ToBlocks/FromBlocks carry (§3.5)
 ├── GrowthProjection.cs                 // static pure: the §3.1 daily projection (sole attribute-mutation path)
-├── AbilityModel.cs                     // static pure: ComputeCA + ClassifyAgeBand + the weighted spend order (§3.1.2/§3.2)
+├── AbilityModel.cs                     // static pure: ComputeCA, the §3.1.3 age curve (DailyBandPoints /
+│                                       //   AccruedBandPoints) + ClassifyAgeBand as its read, §3.4's
+│                                       //   RetirementAgeDays, and the weighted spend order (§3.1.2/§3.2)
 ├── RegenGenerator.cs                   // static pure: §3.3 single-player generation (reuses #27's draw pattern)
 ├── TrainingInput.cs                    // the per-player #29 seam element (Neutral identity, §2.2)
 ├── TrainingInputBatch.cs               // the FR-PG-021 batch parameter: ClubTrainingInputs[] + Neutral (§2.2)
@@ -119,4 +122,5 @@ stream); this section's prior text listed it as already part of the seam.
 | 0.1 | 2026-07-23 | — | Initial architecture: assembly placement + one-way reference direction, file layout, determinism-identifier promotion, CS0104 note, no-phantom-interface discipline. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-08-10 | — | ERR-028-017 (AR pass 5 spec-vs-code sweep, no code change): §4.2's file layout was stale against `src/player-progression/*.cs` — missing `ClubCareerStates.cs` and `TrainingInputBatch.cs` (both public, both load-bearing since T1/T2a) and listing `RetirementResult.cs`/`RegenResult.cs`, which do not exist (only sketched inline in §2.2; `RunSeasonBoundary` itself is deferred) — corrected, with the not-yet-built pair marked as such rather than removed. §4.2's "Season-save composition" paragraph carried a stale "2 → 3" `SEASON_SAVE_FORMAT_VERSION` claim — actual is 4 → 5 as of #28 T1 — replaced with a citation to #30 Appendix A rather than a fourth restated copy of a chain #30 already owns (the AR pass 13 "a third copy is not re-synchronised" lesson, applied at the second copy this time). §4.5's seam sentence corrected from "a `TrainingInput` method parameter" to the actual `TrainingInputBatch` shape, and its "sole seam" list — which named `RunSeasonBoundary` (not yet built) and omitted `SeedFrom`/`SquadFor`/`ToBlocks`/`FromBlocks`/`Empty`/`ClubCount`/`NextPlayerId`/`CarriesClub` — replaced with the verified full public surface of `ProgressionEngine`, split into the #30 contract, codec-internal members, observation, and construction convenience. |
+| 0.4 | 2026-08-22 | — | **ERR-028-020 / ERR-028-021** (football-judgment proxy review, batch 1 — spec + code, same commit). §4's file map annotation for `AbilityModel.cs` updated: it now hosts §3.1.3's continuous age curve (`DailyBandPoints` / `AccruedBandPoints`) with `ClassifyAgeBand` as a read of that curve rather than an independent classifier, plus §3.4's `RetirementAgeDays`. No new file, no new assembly reference, no change to the reference direction. |
 #endregion

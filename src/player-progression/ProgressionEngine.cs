@@ -1,6 +1,6 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-08-11 (AR pass 8, L-3 — SeedFrom's id cursor no longer overflows silently — v1.6)
+// Modified: 2026-08-22 (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.7)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §4.2 / §4.5, KD-4 / KD-7 / KD-8,
 //           FR-PG-001/005/008/011/013/014/016/019/021/022/023; ERR-029-006 (the batch entry point);
@@ -443,10 +443,19 @@ namespace TacticalDirector.PlayerProgression
                 return;
             }
 
-            // §3.4 daily retirement evaluation: hard at RETIREMENT_AGE, deterministic, no draw
-            // (FR-PG-013). Flagged only — the player stays selectable until the season boundary
-            // (FR-PG-014), whose roster mutation is the deferred landing's.
-            if (!life.RetirementFlag && rec.Age >= PlayerProgressionConstants.RETIREMENT_AGE)
+            // §3.4 daily retirement evaluation: deterministic, no draw (FR-PG-013). Flagged only — the
+            // player stays selectable until the season boundary (FR-PG-014), whose roster mutation is
+            // the deferred landing's.
+            //
+            // ERR-028-021: the comparison is in DAYS against a PER-PLAYER retirement day, not in whole
+            // years against one league-wide integer. The retired form retired a goalkeeper on the same
+            // clock as a forward and made one day of the calendar the whole difference between a career
+            // continuing and ending, for everyone at once. At a zero goalkeeper bonus and a zero
+            // reading span, `ageDays >= RETIREMENT_AGE * DAYS_PER_YEAR` is exactly the old
+            // `rec.Age >= RETIREMENT_AGE` (age being that quotient, floored), so the identity is
+            // reproducible rather than approximated.
+            long ageDaysAtTarget = (long)worldDay - life.BirthWorldDay;
+            if (!life.RetirementFlag && ageDaysAtTarget >= AbilityModel.RetirementAgeDays(in rec))
             {
                 life.RetirementFlag = true;
                 life.RetirementDay = worldDay;
@@ -543,11 +552,15 @@ namespace TacticalDirector.PlayerProgression
             // Crediting the anchor day's own band step here is ERR-028-014's reading made arithmetically
             // honest. Deliberately NOT fixed by anchoring the cursor at newGameWorldDay - 1: at day 0
             // that underflows to uint.MaxValue, which is the sentinel FromBlocks refuses.
-            AbilityModel.AgeBand seedBand = AbilityModel.ClassifyAgeBand(rec.Age);
-            long seedCursor =
-                seedBand == AbilityModel.AgeBand.Growth ? PlayerProgressionConstants.GROWTH_DAILY_POINTS
-                : seedBand == AbilityModel.AgeBand.Decline ? PlayerProgressionConstants.DECLINE_DAILY_POINTS
-                : 0;
+            //
+            // ERR-028-020: the credit is the seed day's own CONTINUOUS step, taken from the same
+            // AbilityModel.DailyBandPoints the daily step uses. The retired three-way form read
+            // ClassifyAgeBand and picked one of three constants, which agreed with the daily step only
+            // while that step was itself a three-way band — leaving it behind would have re-opened
+            // exactly the one-day accrual discrepancy this block was written to close, silently and in
+            // the ramp only.
+            long seedAgeDays = (long)rec.Age * PlayerProgressionConstants.DAYS_PER_YEAR;
+            long seedCursor = AbilityModel.DailyBandPoints(seedAgeDays);
 
             return new PlayerLifecycle
             {
@@ -829,4 +842,9 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | int.MaxValue id, so the gate refuses it AT THE SEED SITE instead. |
 // |         |            |        | Mutation-verified: reverting to the bare assignment fails exactly |
 // |         |            |        | the new SeedFrom_APlayerAtIntMaxValue_IsRefused lock.             |
+// | 1.7     | 2026-08-22 | —      | ERR-028-020 / ERR-028-021. SeedLifecycle's seed-day credit takes the
+// |         |            |        | CONTINUOUS step (leaving the three-way form here would have re-opened
+// |         |            |        | ERR-028-018's one-day discrepancy inside the ramp, silently).
+// |         |            |        | AdvancePlayerTo's retirement test moves from rec.Age >= RETIREMENT_AGE to
+// |         |            |        | ageDays >= AbilityModel.RetirementAgeDays(rec) — per-player, in days.
 #endregion

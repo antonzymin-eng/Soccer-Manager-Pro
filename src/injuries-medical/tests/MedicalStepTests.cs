@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/MedicalStepTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 16 L2: the ceiling arm locked — v1.8)
+// Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.9)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B/C; Code Standards #20
 // Purpose:  T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001, T-MD-SEV-001/002, T-MD-REC-001,
@@ -24,6 +24,12 @@ namespace TacticalDirector.InjuriesMedical.Tests
         private const ulong WorldSeed = 0x5EED_1234_ABCD_0001UL;
         private const int PlayerId = 501;
 
+        // ERR-041-020: the age at which §3.4's age term contributes exactly zero. Every assertion in
+        // this file that predates the term passes it, so those expectations remain the pre-fix
+        // arithmetic exactly rather than being rebaselined around a new constant — the age term gets
+        // its own locks below instead.
+        private static readonly int PivotAge = InjuriesMedicalConstants.AgeRiskPivotYears;
+
         /// <summary>Attributes whose three robustness fields mean exactly 14 — §3.6's worked example.</summary>
         private static PlayerAttributes WorkedExampleAttributes()
         {
@@ -32,6 +38,105 @@ namespace TacticalDirector.InjuriesMedical.Tests
             a.Stamina = 14;
             a.Balance = 14;
             return a;
+        }
+
+        // ── §3.4 — the age term (ERR-041-020) ───────────────────────────────────────
+
+        [Test]
+        public void AgeTerm_IsZeroAtThePivot_AndLinearEitherSide_ERR041020()
+        {
+            // The pivot assertion is what makes every OTHER expectation in this file — all of which
+            // predate the term and none of which was rebaselined — still the pre-fix arithmetic
+            // exactly. It is the P5 pivot at the single-player scale.
+            Assert.AreEqual(0, MedicalStep.AgeRiskFor(InjuriesMedicalConstants.AgeRiskPivotYears));
+
+            Assert.AreEqual(
+                InjuriesMedicalConstants.AgeRiskPerYearFromPivot,
+                MedicalStep.AgeRiskFor(InjuriesMedicalConstants.AgeRiskPivotYears + 1),
+                "one year older is one slope-unit riskier — no threshold anywhere (doctrine P1).");
+            Assert.AreEqual(
+                -InjuriesMedicalConstants.AgeRiskPerYearFromPivot,
+                MedicalStep.AgeRiskFor(InjuriesMedicalConstants.AgeRiskPivotYears - 1),
+                "and one year younger is symmetrically safer.");
+
+            // Every adjacent pair across the football range moves by the SAME amount — the property
+            // that distinguishes a linear term from a band, and the one a cliff would break.
+            for (int age = 1; age <= 44; age++)
+            {
+                int step = MedicalStep.AgeRiskFor(age) - MedicalStep.AgeRiskFor(age - 1);
+                Assert.That(
+                    step == InjuriesMedicalConstants.AgeRiskPerYearFromPivot || step == 0,
+                    $"age {age - 1} → {age} stepped by {step}: the term must be linear, saturating "
+                    + "only at the span, never jumping.");
+            }
+        }
+
+        [Test]
+        public void AgeTerm_SaturatesSymmetrically_AndRefusesACorruptAge()
+        {
+            Assert.AreEqual(InjuriesMedicalConstants.AgeRiskSpan, MedicalStep.AgeRiskFor(200));
+            Assert.AreEqual(-InjuriesMedicalConstants.AgeRiskSpan, MedicalStep.AgeRiskFor(0));
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => MedicalStep.AgeRiskFor(-1),
+                "a negative derived age is corrupt state, not a young player (#28 §3.1.1 fails loud "
+                + "on the anchor that would produce one).");
+        }
+
+        [Test]
+        public void AgeTerm_AtZeroSpan_ReproducesThePreFixAssemblyExactly()
+        {
+            // FR-MD-027's dial posture applied to this term: its off position must be the retired
+            // formula byte-for-byte, not merely close to it. Exercised through the parameterised
+            // overload because the [GT]s are read once at static initialisation and no test can vary
+            // them — an identity asserted only in prose is the class of claim the ERR-008-021/-022
+            // chain had falsified three times on first execution.
+            for (int age = 0; age <= 60; age++)
+            {
+                Assert.AreEqual(
+                    0,
+                    MedicalStep.AgeRiskFor(
+                        age,
+                        InjuriesMedicalConstants.AgeRiskPivotYears,
+                        InjuriesMedicalConstants.AgeRiskPerYearFromPivot,
+                        span: 0),
+                    $"at span 0 the term must vanish for every age; age {age} did not.");
+            }
+        }
+
+        [Test]
+        public void AgeTerm_EntersTheAssemblyBeforeTheMitigation_SoRobustnessDiscriminatesIt()
+        {
+            // The term's POSITION is normative, exactly as BaselineDailyRisk's is (§3.4): inside the
+            // sum, before the mitigation, so a robust veteran carries less of his age penalty than a
+            // frail one. Added after the clamp — or after the mitigation — the two players below would
+            // differ by the same amount as two players of the pivot age, and this assertion is what
+            // would catch that.
+            PlayerAttributes frail = PlayerAttributes.CreateDefault();
+            frail.Strength = 1;
+            frail.Stamina = 1;
+            frail.Balance = 1;
+
+            int veteranAge = InjuriesMedicalConstants.AgeRiskPivotYears + 8;
+            var risk = new InjuryRiskContribution(3000);
+
+            int ordinaryYoung = MedicalStep.AssembleRiskScore(
+                risk, MatchLoad.None, WorkedExampleAttributes(), PivotAge, MedicalModifier.Identity);
+            int ordinaryOld = MedicalStep.AssembleRiskScore(
+                risk, MatchLoad.None, WorkedExampleAttributes(), veteranAge, MedicalModifier.Identity);
+
+            Assert.Less(ordinaryOld, InjuriesMedicalConstants.InjuryRiskMax,
+                "precondition: unclamped, or the comparison below is a clamp artefact.");
+            Assert.AreEqual(
+                MedicalStep.AgeRiskFor(veteranAge), ordinaryOld - ordinaryYoung,
+                "the age term reaches the assembled score undiluted — this is the assertion that fails "
+                + "if the term is dropped from the sum.");
+
+            // …and the mitigation still applies over the top of it, in both directions.
+            int frailOld = MedicalStep.AssembleRiskScore(
+                risk, MatchLoad.None, frail, veteranAge, MedicalModifier.Identity);
+            Assert.Greater(frailOld, ordinaryOld,
+                "a frail veteran is riskier than a robust one of the same age (ERR-041-011's ordering, "
+                + "unchanged by the new term).");
         }
 
         /// <summary>
@@ -104,7 +209,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
         {
             PlayerAttributes a = WorkedExampleAttributes();
             MedicalStep.AdvanceMedicalDay(
-                ref state, playerId, a, risk, MatchLoad.None, MedicalModifier.Identity,
+                ref state, playerId, a, PivotAge, risk, MatchLoad.None, MedicalModifier.Identity,
                 worldDay, WorldSeed, occurrenceEnabled);
         }
 
@@ -119,6 +224,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
                 new InjuryRiskContribution(3000),
                 MatchLoad.None,
                 WorkedExampleAttributes(),
+                PivotAge,
                 MedicalModifier.Identity);
 
             Assert.AreEqual(6600, risk);
@@ -129,6 +235,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
                 new InjuryRiskContribution(3000),
                 new MatchLoad(appearanceDays: 2, hardContacts: 0),
                 WorkedExampleAttributes(),
+                PivotAge,
                 MedicalModifier.Identity));
         }
 
@@ -260,7 +367,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
             Assert.Throws<ArgumentException>(
                 () => MedicalStep.AdvanceMedicalDay(
-                    ref state, PlayerId, a, risk, MatchLoad.None, MedicalModifier.Identity,
+                    ref state, PlayerId, a, PivotAge, risk, MatchLoad.None, MedicalModifier.Identity,
                     102, WorldSeed, occurrenceEnabled: true),
                 "a gap silently under-advances recovery AND skips an occurrence evaluation (F7).");
 
@@ -276,7 +383,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
             Assert.Throws<ArgumentException>(
                 () => MedicalStep.AdvanceMedicalDay(
-                    ref state, PlayerId, a, risk, MatchLoad.None, MedicalModifier.Identity,
+                    ref state, PlayerId, a, PivotAge, risk, MatchLoad.None, MedicalModifier.Identity,
                     InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL, WorldSeed, occurrenceEnabled: true));
         }
 
@@ -441,6 +548,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
                 3000 + InjuriesMedicalConstants.BaselineDailyRisk - 400,
                 MedicalStep.AssembleRiskScore(
                     new InjuryRiskContribution(3000), MatchLoad.None, WorkedExampleAttributes(),
+                    PivotAge,
                     MedicalModifier.Identity),
                 "the identity occurrence multiplier leaves the assembled score at #29's contribution " +
                 "plus the baseline term less the mean-14 robustness row (ERR-041-011).");
@@ -497,12 +605,12 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
             Assert.Throws<ArgumentException>(
                 () => MedicalStep.AdvanceMedicalDay(
-                    ref state, PlayerId, a, risk, MatchLoad.None, default(MedicalModifier),
+                    ref state, PlayerId, a, PivotAge, risk, MatchLoad.None, default(MedicalModifier),
                     100, WorldSeed, occurrenceEnabled: true),
                 "default(MedicalModifier) is all-zero: ×0 risk and a divide-by-zero recovery scale.");
 
             Assert.Throws<ArgumentException>(
-                () => MedicalStep.AssembleRiskScore(risk, MatchLoad.None, a, default(MedicalModifier)));
+                () => MedicalStep.AssembleRiskScore(risk, MatchLoad.None, a, PivotAge, default(MedicalModifier)));
         }
 
         [Test]
@@ -516,7 +624,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
             Assert.Throws<ArgumentException>(
                 () => MedicalStep.AdvanceMedicalDay(
-                    ref healthyButRecovering, PlayerId, a, risk, MatchLoad.None, MedicalModifier.Identity,
+                    ref healthyButRecovering, PlayerId, a, PivotAge, risk, MatchLoad.None, MedicalModifier.Identity,
                     100, WorldSeed, occurrenceEnabled: false));
 
             var injuredButHealed = InjuryState.Create();
@@ -524,7 +632,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
             Assert.Throws<ArgumentException>(
                 () => MedicalStep.AdvanceMedicalDay(
-                    ref injuredButHealed, PlayerId, a, risk, MatchLoad.None, MedicalModifier.Identity,
+                    ref injuredButHealed, PlayerId, a, PivotAge, risk, MatchLoad.None, MedicalModifier.Identity,
                     100, WorldSeed, occurrenceEnabled: false));
         }
 
@@ -540,7 +648,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => MedicalStep.AdvanceMedicalDay(
-                    ref state, PlayerId, a, risk, MatchLoad.None, MedicalModifier.Identity,
+                    ref state, PlayerId, a, PivotAge, risk, MatchLoad.None, MedicalModifier.Identity,
                     100, WorldSeed, occurrenceEnabled: false));
         }
 
@@ -556,18 +664,18 @@ namespace TacticalDirector.InjuriesMedical.Tests
             robust.Balance = 20;
 
             int baseline = MedicalStep.AssembleRiskScore(
-                new InjuryRiskContribution(3000), MatchLoad.None, ordinary, MedicalModifier.Identity);
+                new InjuryRiskContribution(3000), MatchLoad.None, ordinary, PivotAge, MedicalModifier.Identity);
 
             int moreTraining = MedicalStep.AssembleRiskScore(
-                new InjuryRiskContribution(4000), MatchLoad.None, ordinary, MedicalModifier.Identity);
+                new InjuryRiskContribution(4000), MatchLoad.None, ordinary, PivotAge, MedicalModifier.Identity);
 
             int moreMatches = MedicalStep.AssembleRiskScore(
-                new InjuryRiskContribution(3000), new MatchLoad(1, 0), ordinary, MedicalModifier.Identity);
+                new InjuryRiskContribution(3000), new MatchLoad(1, 0), ordinary, PivotAge, MedicalModifier.Identity);
             Assert.Less(moreMatches, InjuriesMedicalConstants.InjuryRiskMax,
                 "precondition: unclamped, or the magnitude comparisons below are clamp artefacts.");
 
             int moreRobust = MedicalStep.AssembleRiskScore(
-                new InjuryRiskContribution(3000), MatchLoad.None, robust, MedicalModifier.Identity);
+                new InjuryRiskContribution(3000), MatchLoad.None, robust, PivotAge, MedicalModifier.Identity);
 
             Assert.Greater(moreTraining, baseline, "#29's contribution passes through with weight 1.");
             Assert.Greater(moreMatches, baseline, "the Stage-2 match-load term.");
@@ -594,9 +702,9 @@ namespace TacticalDirector.InjuriesMedical.Tests
             worn.TrainingFatigue = TrainingSystemConstants.TrainingFatigueMax / 2;
 
             int freshRisk = MedicalStep.AssembleRiskScore(
-                TrainingStep.ComputeInjuryRisk(fresh, a), MatchLoad.None, a, MedicalModifier.Identity);
+                TrainingStep.ComputeInjuryRisk(fresh, a), MatchLoad.None, a, PivotAge, MedicalModifier.Identity);
             int wornRisk = MedicalStep.AssembleRiskScore(
-                TrainingStep.ComputeInjuryRisk(worn, a), MatchLoad.None, a, MedicalModifier.Identity);
+                TrainingStep.ComputeInjuryRisk(worn, a), MatchLoad.None, a, PivotAge, MedicalModifier.Identity);
 
             Assert.Greater(wornRisk, freshRisk,
                 "a tired, under-conditioned player must be at higher occurrence risk than a fresh one — " +
@@ -617,7 +725,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
             frail.Balance = 1;
 
             int maxRisk = MedicalStep.AssembleRiskScore(
-                TrainingStep.ComputeInjuryRisk(wrecked, frail), MatchLoad.None, frail, MedicalModifier.Identity);
+                TrainingStep.ComputeInjuryRisk(wrecked, frail), MatchLoad.None, frail, PivotAge, MedicalModifier.Identity);
 
             // BOTH layers mitigate on the SAME three physical attributes: #29 §3.4 subtracts its
             // robustness term before clamping, then #41 §3.4 subtracts its own from the result. Each
@@ -725,6 +833,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
                 TrainingStep.ComputeInjuryRisk(training, attributes),
                 in load,
                 attributes,
+                PivotAge,
                 MedicalModifier.Identity);
 
             return (int)((long)risk * 100_000 / InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM);
@@ -740,13 +849,13 @@ namespace TacticalDirector.InjuriesMedical.Tests
             // a clamp-induced tautology). The precondition keeps a future retune from silently
             // re-clamping it.
             int withoutContacts = MedicalStep.AssembleRiskScore(
-                new InjuryRiskContribution(3000), new MatchLoad(0, 0), a, MedicalModifier.Identity);
+                new InjuryRiskContribution(3000), new MatchLoad(0, 0), a, PivotAge, MedicalModifier.Identity);
             Assert.Less(withoutContacts, InjuriesMedicalConstants.InjuryRiskMax,
                 "precondition: the operand must sit below the clamp, or the equality is vacuous.");
             Assert.AreEqual(
                 withoutContacts,
                 MedicalStep.AssembleRiskScore(
-                    new InjuryRiskContribution(3000), new MatchLoad(0, 40), a, MedicalModifier.Identity),
+                    new InjuryRiskContribution(3000), new MatchLoad(0, 40), a, PivotAge, MedicalModifier.Identity),
                 "KD-3: the ledger-derived field is deep-tier only, so populating it early is harmless — " +
                 "raising its weight is a config change, not a formula rewrite.");
         }
@@ -768,13 +877,13 @@ namespace TacticalDirector.InjuriesMedical.Tests
             iron.Stamina = 20;
             iron.Balance = 20;
             Assert.Greater(
-                MedicalStep.AssembleRiskScore(InjuryRiskContribution.None, MatchLoad.None, iron, MedicalModifier.Identity),
+                MedicalStep.AssembleRiskScore(InjuryRiskContribution.None, MatchLoad.None, iron, PivotAge, MedicalModifier.Identity),
                 0,
                 "even the most robust player keeps a positive baseline floor — nobody is injury-proof (ERR-041-011).");
 
             Assert.AreEqual(InjuriesMedicalConstants.InjuryRiskMax,
                 MedicalStep.AssembleRiskScore(
-                    new InjuryRiskContribution(int.MaxValue / 2), new MatchLoad(1000, 0), a, MedicalModifier.Identity),
+                    new InjuryRiskContribution(int.MaxValue / 2), new MatchLoad(1000, 0), a, PivotAge, MedicalModifier.Identity),
                 "the ceiling — and the widened intermediate is what stops this overflowing on the way there.");
         }
 
@@ -786,7 +895,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
             PlayerAttributes copy = a;
 
             MedicalStep.AdvanceMedicalDay(
-                ref state, PlayerId, a, MaxOccurrenceRisk(), MatchLoad.None, MedicalModifier.Identity,
+                ref state, PlayerId, a, PivotAge, MaxOccurrenceRisk(), MatchLoad.None, MedicalModifier.Identity,
                 100, WorldSeed, occurrenceEnabled: true);
 
             // #41 reads #27 attributes and #29's scalar; it writes neither, and it has no path to any
@@ -863,4 +972,10 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 16 (L2): the assignment CEILING arm locked    |
 // |         |            |        | for the first time — a mutant replacing RecoveryMax with          |
 // |         |            |        | int.MaxValue had left the whole suite green.                      |
+// | 1.9     | 2026-08-22 | —      | ERR-041-020. All 26 pre-existing AssembleRiskScore / AdvanceMedicalDay
+// |         |            |        | call sites take the pivot age, so every expectation in this file remains
+// |         |            |        | the pre-fix arithmetic exactly rather than being rebaselined. + 4 age-
+// |         |            |        | term locks: the pivot zero and per-year linearity, symmetric saturation
+// |         |            |        | and the negative-age refusal, the zero-span identity through the
+// |         |            |        | parameterised overload, and the term's normative POSITION in the sum.
 #endregion

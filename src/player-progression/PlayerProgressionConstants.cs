@@ -1,6 +1,6 @@
 // File:     src/player-progression/PlayerProgressionConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-08
+// Modified: 2026-08-22 (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.2)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3/§4 + Appendix A (constant catalogue); Code Standards #20
 // Purpose:  All numeric constants for #28 aging/growth/regen — the age-derivation divisor, the CA/PA
@@ -81,7 +81,7 @@ namespace TacticalDirector.PlayerProgression
         /// </summary>
         public const uint PROGRESSION_NOT_ADVANCED_SENTINEL = uint.MaxValue;
 
-        #endregion
+#endregion
 
         #region Derived
 
@@ -130,8 +130,73 @@ namespace TacticalDirector.PlayerProgression
         /// <summary>[GT] Age above which a player is in the Decline band (§4.3 &gt;30 → −1/yr; age 30 stays Stable). TODO: replace with config loader (Stage 1).</summary>
         public static readonly int DECLINE_AGE = 30;
 
-        /// <summary>[GT] Hard retirement age — deterministic, no draw (§3.4). TODO: replace with config loader (Stage 1).</summary>
+        /// <summary>[GT] Baseline retirement age — deterministic, no draw (§3.4). The per-player retirement day is this PLUS <see cref="RetirementGoalkeeperBonusYears"/> and the game-reading offset (ERR-028-021); at a zero bonus and a zero span this is the whole rule, as it was before. TODO: replace with config loader (Stage 1).</summary>
         public static readonly int RETIREMENT_AGE = 36;
+
+        /// <summary>
+        /// [GT] Half-width, in years, of the linear ramp that carries the daily accrual rate across
+        /// each age-band edge (ERR-028-020, doctrine P1). Centred on the edge: the rate is at full
+        /// magnitude up to <c>edge − half-width</c>, zero at <c>edge + half-width</c> for the Growth side
+        /// and full for the Decline side, and linear between — so a one-DAY difference in age moves the
+        /// rate, never a one-year cliff at an exact integer age.
+        /// <para>
+        /// <b>Zero is the exact §4.3 identity</b>, not an approximation of it: at 0 the ramps collapse
+        /// to the old <c>Growth &lt; GROWTH_AGE</c> / <c>Decline &gt; DECLINE_AGE</c> step functions
+        /// and every day's accrual is byte-identical to the pre-fix model. That is what keeps KD-8 /
+        /// FR-PG-007 expressible after the fix (the FR-MD-027 dial posture; #30 KD-7a's
+        /// <c>QuickSimDispersion</c> is the nearest precedent — the off value routes to the retired
+        /// path verbatim rather than identically-in-the-limit).
+        /// </para>
+        /// <para>
+        /// <b>P5 pivot, exact.</b> Because the ramp is centred, the lifetime integral of growth-days is
+        /// <c>GROWTH_AGE · DAYS_PER_YEAR</c> for ANY half-width — the curve redistributes accrual
+        /// across the edge without adding or removing any of it, so a completed traversal still gains
+        /// exactly <c>GROWTH_AGE</c> attribute-points and still leaves no residue (the ERR-028-018
+        /// invariant). The same holds on the decline side.
+        /// </para>
+        /// <para>
+        /// MUST leave the two ramps disjoint — <c>2 · half-width ≤ (DECLINE_AGE + 1) − GROWTH_AGE</c>
+        /// years, i.e. ≤ 3 at today's 24/30 — or a single day would sit in both, which the accrual
+        /// arithmetic represents but no football reading does. Enforced fail-loud at the computing
+        /// site (the <c>DrawOccurrence</c> guard posture): the catalogue lock runs config-unbound and
+        /// only ever sees this fallback.
+        /// </para>
+        /// TODO: replace with config loader (Stage 1).
+        /// </summary>
+        public static readonly int AgeBandRampHalfWidthYears = 2;
+
+        /// <summary>
+        /// [GT] Years added to a goalkeeper's retirement age (ERR-028-021). Goalkeepers demonstrably
+        /// play longer than outfielders, and position is the one career-length input this spec already
+        /// owns — <c>PlayerRecord.Position</c> is on the record the step already holds.
+        /// Zero restores the single league-wide retirement age exactly. TODO: replace with config loader (Stage 1).
+        /// </summary>
+        public static readonly int RetirementGoalkeeperBonusYears = 3;
+
+        /// <summary>
+        /// [GT] Full attribute-range span, in years, of the game-reading retirement offset
+        /// (ERR-028-021, doctrine P1/P3): a player whose mean of Anticipation / Positioning / Composure
+        /// is at the attribute floor retires <c>span / 2</c> years early, one at the ceiling
+        /// <c>span / 2</c> years late, and every point between moves the day linearly — the full-range
+        /// form ERR-008-019 was owner-revised to, so there is no plateau anywhere.
+        /// <para>
+        /// <b>Why these three attributes and not robustness (doctrine P3, the ownership ledger).</b>
+        /// The obvious reading — a durable player lasts longer — would be the THIRD read of
+        /// Strength / Stamina / Balance: #29's <c>ComputeInjuryRisk</c> and #41's
+        /// <c>RobustnessMitigation</c> already price that trio twice over, which ERR-041-003 records as
+        /// a contract-level double count. Career length here is instead owned by the reading trio,
+        /// which no other subsystem consumes: the player who ages well is the one whose game rests on
+        /// anticipation and position rather than on the pace he is losing.
+        /// </para>
+        /// <para>
+        /// <b>P5 pivot, exact over the population.</b> The offset is anti-symmetric about the attribute
+        /// midpoint and integer division truncates toward zero symmetrically, so the offsets over a
+        /// uniform <c>[ATTRIBUTE_MIN, ATTRIBUTE_MAX]</c> population sum to exactly 0. Zero span
+        /// restores the single hard age exactly.
+        /// </para>
+        /// TODO: replace with config loader (Stage 1).
+        /// </summary>
+        public static readonly int RetirementGameReadingSpanYears = 4;
 
         /// <summary>[GT] Per-day cursor accrual in the Growth band (Stable = 0). TODO: replace with config loader (Stage 1).</summary>
         public static readonly int GROWTH_DAILY_POINTS = +1;
@@ -186,6 +251,13 @@ namespace TacticalDirector.PlayerProgression
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.2     | 2026-08-22 | —      | ERR-028-020 / ERR-028-021 (football-judgment proxy review, batch 1):
+// |         |            |        | + AgeBandRampHalfWidthYears (the centred accrual ramp of #28 §3.1.3 —
+// |         |            |        | zero is the exact §4.3 identity, and 2 x half-width must not exceed
+// |         |            |        | (DECLINE_AGE + 1) - GROWTH_AGE or the two ramps overlap); +
+// |         |            |        | RetirementGoalkeeperBonusYears and RetirementGameReadingSpanYears
+// |         |            |        | (§3.4's per-player retirement day). RETIREMENT_AGE's doc corrected —
+// |         |            |        | it is the BASELINE now, not the whole rule. No format version, no draw.
 // | 1.1     | 2026-08-08 | —      | #28 T1: + PROGRESSION_SAVE_MAGIC ("PROG"), written before the  |
 // |         |            |        | version — ERR-028-004, since §3.5 specified the RNG domain tag |
 // |         |            |        | as the block's identifier and a version is not one             |

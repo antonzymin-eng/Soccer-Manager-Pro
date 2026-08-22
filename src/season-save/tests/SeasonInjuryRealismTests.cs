@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonInjuryRealismTests.cs
 // Created:  2026-08-07
-// Modified: 2026-08-08
+// Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.5)
 // Author:   —
 // Spec:     Injuries & Medical #41 §5 (the balance pass), FR-MD-027; Training System #29 §5;
 //           Season & Competition Loop #30 §3.3/§3.4; ERR-041-010(b) / ERR-030-027; Code Standards #20
@@ -39,6 +39,10 @@ namespace TacticalDirector.SeasonSave.Tests
     internal class SeasonInjuryRealismTests
     {
         private const int ManagerId = 77;
+
+        // ERR-041-020: the §3.4 age term's zero point — this probe compares two assemblies that differ
+        // only in match load, so both take the pivot and the age axis stays out of the comparison.
+        private static readonly int PivotAge = InjuriesMedicalConstants.AgeRiskPivotYears;
 
         private static readonly ulong[] Seeds =
         {
@@ -319,10 +323,10 @@ namespace TacticalDirector.SeasonSave.Tests
 
             int baselineOnly = MedicalStep.AssembleRiskScore(
                 TrainingStep.ComputeInjuryRisk(peak, average),
-                MatchLoad.None, average, MedicalModifier.Identity);
+                MatchLoad.None, average, PivotAge, MedicalModifier.Identity);
             int withOneAppearance = MedicalStep.AssembleRiskScore(
                 TrainingStep.ComputeInjuryRisk(peak, average),
-                new MatchLoad(1, 0), average, MedicalModifier.Identity);
+                new MatchLoad(1, 0), average, PivotAge, MedicalModifier.Identity);
             int appearanceDelta = withOneAppearance - baselineOnly;
 
             Assert.Greater(baselineOnly, 0,
@@ -405,4 +409,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 8 (L6): the per-club diagnostic log line     |
 // |         |            |        | reads DefaultClubCount instead of a hard-coded 20 — log-only, but |
 // |         |            |        | a club-count retune silently mislabelled the diagnostic.          |
+// | 1.5     | 2026-08-22 | —      | ERR-041-020. The two AssembleRiskScore probes take the pivot age — they
+// |         |            |        | compare assemblies differing only in match load, so the age axis stays out
+// |         |            |        | of the comparison. The season-scale bands are unchanged and held unmoved
+// |         |            |        | with the term live, which is this landing's P5 evidence.
 #endregion

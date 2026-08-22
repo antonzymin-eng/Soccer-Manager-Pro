@@ -1,7 +1,8 @@
 # Injuries & Medical #41 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026, third final entry (v0.16 — AR pass 16 L3: §3.3's own summary of the assignment aligned with the clamp)
+**Last Updated:** August 22, 2026 (v0.17 — **ERR-041-020**, the football-judgment proxy review's batch-1 #41 finding, spec + code in the same commit: §3.4's assembly presented as multi-factor risk while omitting player **age** entirely — from the sum, the signature and §2 — despite age being among the best-established real-world risk factors and already carried on the `PlayerRecord` the caller resolves for the attributes. §3.4 gains `AgeRiskFor(ageYears)`, linear and anti-symmetric about `AGE_RISK_PIVOT_YEARS` with no threshold anywhere (doctrine P1), placed inside the sum BEFORE the mitigation for the same normative reason `BASELINE_DAILY_RISK` is (robustness discriminates it); the pivot is the bootstrap roster's mean age, so the term sums to zero over that population and the measured season bands do not move (P5), and `AGE_RISK_SPAN = 0` is the exact pre-fix identity. §3.1's step signature and §3.5's composition gain `ageYears`. §3.6's worked example re-derived at three ages. Prior entry below.)
+**Last Updated (prior):** August 8, 2026, third final entry (v0.16 — AR pass 16 L3: §3.3's own summary of the assignment aligned with the clamp)
 **Last Updated (prior):** August 8, 2026, second final entry (v0.15 — balance-pass AR pass 15 M1+M2: the §3.1 draw branch made atomic — fallible call before writes — and its assignment gains the RECOVERY_MAX ceiling the code has always applied)
 **Last Updated (prior):** August 8, 2026, final entry of the day (v0.14 — balance-pass AR pass 14 M1: the RECOVERY_MAX guard moved to §3.3's assignment step, the one site whose clamp can breach it)
 **Last Updated (prior):** August 8, 2026, last entry of the day (v0.13 — balance-pass AR pass 13 M1: the guard class completed — RECOVERY_MAX ≥ 1 at the countdown site, the ceiling's positive side at the draw site)
@@ -14,7 +15,7 @@
 **Last Updated (prior):** August 8, 2026 (v0.5 — AR pass 3: §3.1's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`, the dial gated in step 2, §3.5's call updated; §3.1.1 gains the ERR-041-019 draw-key global-uniqueness contract)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.16
+**Version:** 0.17
 **Status:** APPROVED
 
 ---
@@ -27,9 +28,13 @@ bucketing), so an occurrence day consumes exactly **one** draw total.
 ## 3.1 The daily world-day step (`AdvanceMedicalDay`)
 
 ```
-AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, in InjuryRiskContribution trainingRisk,
+AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, ageYears,
+                  in InjuryRiskContribution trainingRisk,
                   in MatchLoad recentMatchLoad, in MedicalModifier medical, worldDay, worldSeed,
                   occurrenceEnabled):
+    # ageYears: the player's CURRENT age in whole years — #27's PlayerRecord.Age, which #28 keeps
+    # current as a derived cache (FR-PG-005) and #30's KD-2 order refreshes at slot 1, before this
+    # slot-4 step. Read ONLY by §3.4's age term (ERR-041-020); #41 stores no age of its own.
     # worldSeed: the CAREER's world seed (WorldStore.WorldSeed) — the draw key's root, never a
     # per-match seed. occurrenceEnabled: the FR-MD-027 dial, a REQUIRED never-defaulted argument
     # of the step itself (§2 FR-MD-027 as revised at the balance pass).
@@ -75,7 +80,7 @@ AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, in InjuryR
     #    and ONLY with the FR-MD-027 dial armed: disarmed, the step is the recovery countdown and
     #    the cursor advance alone (the FR-MD-027 identity).
     if wasAvailableAtEntry and occurrenceEnabled:
-        risk = AssembleRiskScore(trainingRisk, recentMatchLoad, a, medical)   # §3.4; in [0, INJURY_RISK_MAX]
+        risk = AssembleRiskScore(trainingRisk, recentMatchLoad, a, ageYears, medical)   # §3.4; in [0, INJURY_RISK_MAX]
         actionOrdinal = DeriveActionOrdinal(worldDay, DRAW_PURPOSE_OCCURRENCE)     # §3.1.1
         # ERR-041-002 (re-anchored at ERR-041-011): the draw is a LOCAL KEYED DERIVATION, not a
         # registered-stream call — #16 exposes no keyed-draw API and a registered stream is
@@ -218,16 +223,55 @@ alone only made the breach loud).
 
 ```
 AssembleRiskScore(in InjuryRiskContribution trainingRisk, in MatchLoad load, in PlayerAttributes a,
-                   in MedicalModifier medical) -> int:
+                   int ageYears, in MedicalModifier medical) -> int:
     # All terms and weights are INTEGER (no float — FR-MD-014).
     risk = TRAINING_RISK_PASSTHROUGH_WEIGHT * trainingRisk.RiskScore        # #29's already-published scalar (weight = 1)
          + APPEARANCE_LOAD_WEIGHT * load.AppearanceDays                    # Stage-2 match-load term (FR-MD-010 window count)
          + HARD_CONTACT_WEIGHT * load.HardContacts                         # 0 at Stage 2 (deep-tier only)
          + BASELINE_DAILY_RISK                                             # exposure-independent floor (ERR-041-011)
+         + AgeRiskFor(ageYears)                                            # the age term (ERR-041-020), same position
          - RobustnessMitigation(a)                                         # deterministic, own-attribute
     risk = risk * medical.OccurrenceRiskMillMult / 1000                    # per-mille; ×1.0 at Identity (KD-5)
     return Clamp(risk, 0, INJURY_RISK_MAX)
 ```
+
+**The age term (`ERR-041-020`).** Until August 22, 2026 this formula presented as multi-factor risk
+assembly while omitting player **age** entirely — from the sum, from the method signature, and from §2's
+requirements — despite age being one of the best-established real-world injury-risk factors, and despite
+it already being carried on the `PlayerRecord` the caller resolves in order to read the attributes above.
+Recorded as pattern (c) by `docs/tracking/football-judgment-proxy-review.md` §3; fixed under that
+document's §6 doctrine **P1** (continuous, never a cliff) and **P5** (pivot on today's baseline).
+
+```
+AgeRiskFor(ageYears) -> int:
+    if ageYears < 0: FAIL LOUD                       # a derived age is never negative (#28 §3.1.1)
+    if AGE_RISK_PER_YEAR_FROM_PIVOT < 0 or AGE_RISK_SPAN < 0: FAIL LOUD    # catalogue/config integrity
+    return Clamp(AGE_RISK_PER_YEAR_FROM_PIVOT * (ageYears − AGE_RISK_PIVOT_YEARS),
+                 −AGE_RISK_SPAN, +AGE_RISK_SPAN)
+```
+
+- **No threshold anywhere.** Every year of age moves the term by the same amount, so there is no age at
+  which a player's risk steps — which is what separates this from the age-band cliff its sibling #28
+  carried until `ERR-028-020`. The input is whole years because whole years is what #27 exposes
+  (`PlayerRecord.Age`, kept current by #28's derived cache, FR-PG-005); a uniform per-year increment is
+  not the pattern-(b) shape, which is a judgment collapsed onto ONE cutoff. Day resolution would mean
+  #41 reading #28's `BirthWorldDay` for a term whose slope is a first-guess `[GT]`, and is not taken.
+- **Its POSITION is normative, exactly as `BASELINE_DAILY_RISK`'s is:** inside the sum, **before** the
+  mitigation, so a robust veteran carries less of his age penalty than a frail one. Added after the
+  mitigation — or after the clamp — the term would be attribute-blind, which is the shape this fix
+  exists to remove.
+- **P5 pivot.** `AGE_RISK_PIVOT_YEARS` is the MEAN of the bootstrap roster's age distribution
+  (`RosterGenerator` draws uniformly on #27's `[AgeMin, AgeMax]`), and the term is linear and
+  anti-symmetric about it, so the age contributions over that population sum to zero: the squad-wide and
+  league-wide injury rates are unchanged and only the DISTRIBUTION across the squad moves, which is the
+  whole content of the finding. Measured after the fix: the season-scale instrument's league, starter,
+  reserve and squad-unavailability bands all hold unmoved. `AGE_RISK_SPAN = 0` is the exact pre-fix
+  identity, locked by execution rather than by assertion.
+- **Not a second robustness read (P3).** The term is age, not durability; `RobustnessMitigation` keeps
+  Strength/Stamina/Balance, and nothing else in #41 reads age. (#28's own `ERR-041-003`-driven decision
+  runs the other way for the same reason: its retirement offset deliberately avoids that trio.)
+- **For the research-alignment supplement (its §10):** this is now a THIRD term its refit must fold
+  into rather than add beside, alongside `BASELINE_DAILY_RISK`.
 
 **`BASELINE_DAILY_RISK`'s position is normative** (ERR-041-011): it sits **inside the sum, before the
 mitigation**, so robustness discriminates the exposure-independent floor — a frail player's quiet week
@@ -263,8 +307,8 @@ for each playerId in club roster:
     trainingRisk    = TrainingSystem.ComputeInjuryRisk(trainingState[playerId], attrs[playerId])   # #29 read
     recentMatchLoad = ... caller-supplied MatchLoad (Stage 2: AppearanceDays from #30's per-player
                           appearance record — the FR-MD-010 window count; ERR-041-010(b)) ...
-    AdvanceMedicalDay(ref medicalState[playerId], playerId, attrs[playerId], trainingRisk,
-                       recentMatchLoad, medical, worldDay, worldSeed, occurrenceEnabled)
+    AdvanceMedicalDay(ref medicalState[playerId], playerId, attrs[playerId], ages[playerId],
+                       trainingRisk, recentMatchLoad, medical, worldDay, worldSeed, occurrenceEnabled)
 ```
 
 Because this slot runs strictly after #29's own slot-2 `AdvanceTrainingDay` (per #30's KD-2 tick order),
@@ -279,8 +323,15 @@ Player 501, world day 205: `TrainingRiskContribution.RiskScore = 3000`, `MatchLo
 `BASELINE_DAILY_RISK = 4000`, `MedicalModifier.Identity`. *(Re-derived at ERR-041-011; the pre-balance-
 pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling 2900.)*
 
-- `risk = 1×3000 + 0 + 4000 − 400 = 6600` (× `OccurrenceRiskMillMult 1000 / 1000` = unchanged; clamp
-  within `[0, 16000]` inactive) — a 0.66%/day probability against the per-million draw. *(The same
+- `risk = 1×3000 + 0 + 4000 + AgeRiskFor(26) − 400 = 1×3000 + 0 + 4000 + 0 − 400 = 6600`
+  (× `OccurrenceRiskMillMult 1000 / 1000` = unchanged; clamp within `[0, 16000]` inactive) — a
+  0.66%/day probability against the per-million draw. *(Player 501 is taken to be `AGE_RISK_PIVOT_YEARS`
+  old, which is why the arithmetic is unchanged by ERR-041-020: the age term is zero at the pivot, and
+  that is what makes this example — and every §5 expectation written before that ERR — still exact.
+  **Re-derived at two other ages, same player otherwise:** at 20 the assembly is
+  `3000 + 4000 − 900 − 400 = 5700` (0.57%/day) and at 34 it is `3000 + 4000 + 1200 − 400 = 7800`
+  (0.78%/day) — the veteran carries about 1.37× the youngster's daily risk, the direction and rough
+  magnitude the epidemiology supports, at a size that cannot dominate the exposure terms beside it.)* *(The same
   player the week after two matches assembles `3000 + 2×5600 + 4000 − 400 = 17800`, which CLAMPS to
   `INJURY_RISK_MAX = 16000`: a heavily-loaded congested week sits at the hard 1.6%/day ceiling —
   what sits beyond the cap is the residual the research supplement's R-2 refit inherits. A formula
@@ -323,4 +374,5 @@ pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling
 | 0.14 | 2026-08-08 | — | **Balance-pass AR pass 14 (M1)** *(its "fail-louds before the clamp" prevention claim corrected at v0.15 — the branch wrote Severity first)*: v0.13 placed the `RECOVERY_MAX < 1` refusal on the countdown branch, where it is PROVABLY DEAD — the F1 entry gate refuses any injured state above the ceiling and forces `RecoveryRemaining ≥ 1` while injured, so the predicate is unsatisfiable there under any config, while the breach it names happens on the mutually exclusive draw branch (demonstrated by model: a healthy player drawn injured gets `RecoveryRemaining == 0` written beside a severity, refused a day later as a state fault). Moved to §3.3's assignment step; §3.1's guard reverts to rate-only. A guard on a mutually-exclusive branch ships green precisely because it is unreachable — the pass-13 verification gap. |
 | 0.15 | 2026-08-08 | — | **Balance-pass AR pass 15 (M1 + M2)**: **M1** — the pass-14 guard fired AFTER `s.Severity` was written, making the draw branch the step's one partial-write throw site: the refusal itself left `RecoveryRemaining == 0` beside a fresh severity in the LIVE career, the exact breach being refused, surfacing a day later as a state-blaming fault (demonstrated by model; fixing the config did not recover the session). The branch is now atomic — fallible call first, three writes after — and the three prevention claims are corrected: prevention is the ORDERING's property. **M2** — §3.1's normative assignment had NO `RECOVERY_MAX` ceiling while the code has always clamped to it: an implementer following the step wrote 241+ for a below-average physio on the Serious tier, refused by `ValidateState` the next day and persisted happily by the codec. The ceiling was only in the two paragraphs pass 14 wrote — the normative step now carries `Clamp(…, 1, RECOVERY_MAX)` and FR-MD-014's assignment clause gains the ceiling. |
 | 0.16 | 2026-08-08 | — | **Balance-pass AR pass 16 (L3)**: §3.3's prose — the section that OWNS recovery-speed modulation — still said "floored at 1" after M2 swept the other two statements of the rule; the third aligned (the grep-boundary class, one clause short of the owning section). |
+| 0.17 | 2026-08-22 | — | **ERR-041-020** (football-judgment proxy review, batch 1 — spec + code, same commit). §3.4's `AssembleRiskScore` presented as multi-factor risk assembly while omitting player **age** from the sum, from the method signature and from §2's requirements — a well-established real-world risk factor, already on the `PlayerRecord` the caller resolves in order to read the attributes it does use, and already consumed by #31's valuation. Pattern (c). The assembly gains `AgeRiskFor(ageYears)`: linear in age, anti-symmetric about `AGE_RISK_PIVOT_YEARS`, saturating at `±AGE_RISK_SPAN`, with **no threshold anywhere** (doctrine P1 — the uniform per-year increment is deliberately not the one-cutoff shape, and the whole-year granularity is what #27 exposes). Its **position is normative** for the same reason `BASELINE_DAILY_RISK`'s is: inside the sum, before the mitigation, so robustness discriminates it. **P5**: the pivot is the mean of #27's bootstrap age distribution and the term is anti-symmetric about it, so it sums to zero over that population — the measured season bands (league injuries, starter/reserve means, squad unavailability) hold unmoved — and `AGE_RISK_SPAN = 0` reproduces the pre-fix assembly exactly, locked by execution through a parameterised overload rather than asserted. **P3**: the term is age, not durability — `RobustnessMitigation` keeps Strength/Stamina/Balance and nothing else in #41 reads age. §3.1's step signature and §3.5's composition loop gain `ageYears`; §3.6's worked example re-derived. No draw, no stream, no domain tag, no format version. |
 #endregion
