@@ -54,7 +54,12 @@
 # value should be" is unambiguous. A claim whose command prints prose, a table,
 # or a multi-line report is COUNTED AND NAMED as unverified rather than silently
 # skipped — the round-5/6 lesson is that a checker's silent skips are where the
-# next defect hides, so every claim this tool declines to check is printed.
+# next defect hides, so every claim this tool declines to check is COUNTED AND
+# NAMED, and ITEMIZED unless `--quiet` (round 20, L9 — the `--quiet` fix
+# deliberately made the flag suppress the itemized per-claim decline LIST while
+# keeping every count; this sentence was not updated at the time, and CI runs
+# without `--quiet` so the gap was documentation-only, but it is the sentence
+# this whole tool's honesty rests on).
 #
 # It recognises FOUR claim SHAPES, listed in CLAIM_SHAPES and printed by every
 # run so the reader never has to trust this comment:
@@ -146,7 +151,10 @@
 #      was simply false: CI runs four NAMED scripts, and on `pull_request` the
 #      checkout IS the pull request's head, so a PR that adds `tools/pwn.py`
 #      and a claim quoting it had arbitrary code executed with write access.
-#      `awk` is kept — 2 of the 3 claims this tool executes are awk — with its
+#      `awk` is kept — a real, currently-reproducing claim on this tree pipes
+#      through it (see the SCRIPT-hatches paragraph below, the canonical site
+#      for that measurement — round 20, M19: the fraction used to be stated
+#      here too, twice, and had drifted wrong in both places) — with its
 #      program allow-listed (AWK_ALLOWED_CALLS) rather than blacklisted, plus a
 #      flat refusal of `|` and `@` in any awk token.
 #   2. Each binary's `denied_flags` / `denied_prefixes` (BINARIES, round 17
@@ -346,13 +354,34 @@ class Binary:
     """One allow-listed binary's read-only contract:
       denied_flags     — exact denied option cores (round 9 H1, round 15 H3)
       denied_prefixes  — denied `--long=` prefix forms not already caught by
-                          the exact-core check above (see _option_cores())
+                          the exact-core check above (see _option_cores()).
+                          Round 20 (M23): this is a REAL constraint, not
+                          decoration — `--flag=value` already reduces to the
+                          bare core `--flag` via _option_cores(), so an entry
+                          here whose bare form already sits in denied_flags
+                          is dead weight the exact-core check already owns.
+                          10 of this file's then-12 entries were exactly
+                          that (measured, not assumed); the two survivors
+                          were moved into `denied_flags` outright rather
+                          than kept as a prefix — see git's entry below.
+                          Every binary here currently needs NO prefix entry
+                          at all, by construction, not by omission.
       benign_exit      — exit codes that are a RESULT, not a failure (grep-
                           family 1 = "no match", diff 1 = "files differ")
       needs_file       — the first pipeline segment must name a real on-disk
-                          file among its operands, or it is declined as
-                          reading from an (empty) stdin rather than the
-                          quoted text (round 16, M8)
+                          file (or directory — round 20, M24) among its
+                          operands, or it is declined as reading from an
+                          (empty) stdin rather than the quoted text
+                          (round 16, M8)
+      pattern_operand  — this binary's grammar consumes its FIRST non-option
+                          token as a PATTERN (grep/egrep/fgrep/rg) or a
+                          PROGRAM (awk), never a file — so that position is
+                          excluded from the needs_file search (round 20,
+                          M21): a pattern that happens to spell a real
+                          repo-relative path is not evidence the segment
+                          reads it, and self_contained() must ask "could an
+                          operand occupy this position", not "does this
+                          token's text name a file"
     git carries two more, read only by the git-specific branches in
     denied_flag()/parse_pipeline():
       git_subcommands     — the read-only subcommand allow-list (GIT_READONLY)
@@ -360,15 +389,18 @@ class Binary:
                              parses its own global options (GIT_GLOBAL_DENIED)
     """
     __slots__ = ("denied_flags", "denied_prefixes", "benign_exit",
-                 "needs_file", "git_subcommands", "git_global_denied")
+                 "needs_file", "pattern_operand", "git_subcommands",
+                 "git_global_denied")
 
     def __init__(self, denied_flags=frozenset(), denied_prefixes=(),
                  benign_exit=frozenset(), needs_file=False,
-                 git_subcommands=None, git_global_denied=None):
+                 pattern_operand=False, git_subcommands=None,
+                 git_global_denied=None):
         self.denied_flags = denied_flags
         self.denied_prefixes = denied_prefixes
         self.benign_exit = benign_exit
         self.needs_file = needs_file
+        self.pattern_operand = pattern_operand
         self.git_subcommands = git_subcommands
         self.git_global_denied = git_global_denied
 
@@ -377,17 +409,27 @@ _NO_BINARY = Binary()          # the all-defaults record for a plain binary
 
 
 BINARIES = {
-    "grep": Binary(benign_exit=frozenset({1}), needs_file=True),
-    "egrep": Binary(benign_exit=frozenset({1}), needs_file=True),
-    "fgrep": Binary(benign_exit=frozenset({1}), needs_file=True),
+    # pattern_operand=True on the whole grep family (round 20, M21): the
+    # first non-option token is the PATTERN, not a file, so a search regex
+    # that happens to spell a real repo path (`grep -c 'CLAUDE.md'`) must not
+    # be read as evidence this segment names a file to read.
+    "grep": Binary(benign_exit=frozenset({1}), needs_file=True,
+                   pattern_operand=True),
+    "egrep": Binary(benign_exit=frozenset({1}), needs_file=True,
+                    pattern_operand=True),
+    "fgrep": Binary(benign_exit=frozenset({1}), needs_file=True,
+                    pattern_operand=True),
     # `--pre`/`--pre-glob`/`--hostname-bin` hand ripgrep a program to run;
-    # `--generate` is a distinct info-dump hatch. No prefix form is needed for
-    # `--generate` — it never carries a `=value`.
+    # `--generate` is a distinct info-dump hatch. No `denied_prefixes` entry
+    # here (round 20, M23 — all three used to be listed, redundantly):
+    # `_option_cores` already reduces `--pre=value` to the bare core `--pre`,
+    # which the exact-core check above already matches, so a `--pre=` prefix
+    # entry beside the bare `--pre` in denied_flags caught nothing the exact
+    # check did not already catch.
     "rg": Binary(
         denied_flags=frozenset({"--pre", "--pre-glob", "--hostname-bin",
                                  "--generate"}),
-        denied_prefixes=("--pre=", "--pre-glob=", "--hostname-bin="),
-        benign_exit=frozenset({1}), needs_file=True),
+        benign_exit=frozenset({1}), needs_file=True, pattern_operand=True),
     "ls": Binary(),
     "find": Binary(denied_flags=frozenset({
         "-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint",
@@ -399,9 +441,12 @@ BINARIES = {
                     needs_file=True),
     # `--compress-program` (round 15, H5) runs an arbitrary program whenever a
     # sort spills to disk, which `-S 1` forces; proven creating a canary here.
+    # No `denied_prefixes` (round 20, M23 — both former entries were the same
+    # redundancy as rg's above: `--output`/`--compress-program` are already
+    # bare cores in denied_flags, so their `=value` forms are already caught).
     "sort": Binary(
         denied_flags=frozenset({"-o", "--output", "--compress-program"}),
-        denied_prefixes=("--output=", "--compress-program="), needs_file=True),
+        needs_file=True),
     # Denied flags empty by design — `uniq` is guarded by OPERAND COUNT
     # instead, in denied_flag()'s own uniq branch: `uniq IN OUT` writes OUT,
     # and no flag names that hatch.
@@ -413,11 +458,14 @@ BINARIES = {
     # AWK_ESCAPES) is a SEPARATE mechanism below, for the same reason `sed`
     # has no Binary entry at all: the escape lives in the SCRIPT, a language,
     # not a flag, so no flag table — consolidated or not — can describe it.
+    # pattern_operand=True (round 20, M21): the first non-option token is the
+    # PROGRAM text, not a file — same reasoning as the grep family above.
+    # No `denied_prefixes` (round 20, M23 — all four former entries were the
+    # same redundancy: every one's bare core already sits in denied_flags).
     "awk": Binary(
         denied_flags=frozenset({"-f", "--file", "--source", "--exec", "-l",
                                  "--load", "-i", "--include", "-E"}),
-        denied_prefixes=("--source=", "--file=", "--load=", "--include="),
-        needs_file=True),
+        needs_file=True, pattern_operand=True),
     "cut": Binary(needs_file=True),
     "tr": Binary(needs_file=True),
     # `git` is split in two: GLOBAL flags (before the subcommand, where git
@@ -430,9 +478,21 @@ BINARIES = {
     # PASS; the argument-less read forms are not worth that surface and
     # nothing in this corpus quotes one, so both are gone entirely — a future
     # claim quoting them is DECLINED AND NAMED, the safe direction.
+    # Round 20 (M23). `--exec-path`/`--upload-pack` moved INTO denied_flags,
+    # from being denied_prefixes-only entries here. They used to be
+    # load-bearing ONLY via git_global_denied (the pre-subcommand-only
+    # check below) and the generic startswith() prefix fallback — three
+    # mechanisms doing the work of one, and their cores were missing from
+    # this set for no stated reason. Denying them here too is a strict
+    # WIDENING (over-refusal, the stated safe direction): the exact-core
+    # check now refuses them at ANY argv position, not only before the
+    # subcommand, and their `=value` forms are caught the same way
+    # `--output`'s already was — via `_option_cores`, with no
+    # `denied_prefixes` entry needed. `--output` itself needed no entry
+    # to begin with; it was already redundant with its own bare form here.
     "git": Binary(
-        denied_flags=frozenset({"-O", "--open-files-in-pager", "--output"}),
-        denied_prefixes=("--exec-path=", "--upload-pack=", "--output="),
+        denied_flags=frozenset({"-O", "--open-files-in-pager", "--output",
+                                 "--exec-path", "--upload-pack"}),
         benign_exit=frozenset({1}),
         git_subcommands=frozenset({
             "log", "grep", "show", "ls-files", "diff", "rev-parse",
@@ -481,8 +541,22 @@ FORBIDDEN = re.compile(r"[;&><`\n\x00]|\$\(|\|\|")
 #       `awk 'BEGIN{print "touch X" | "sh"}'` executes a shell command using
 #       NEITHER of the two words this file blacklisted, and FORBIDDEN does not
 #       reject a single `|` because that is the pipeline separator. awk is
-#       nonetheless KEPT — 2 of the 3 claims this tool actually executes are
-#       awk, so dropping it would surrender two thirds of the live coverage —
+#       nonetheless KEPT: a real claim in this corpus pipes through it and
+#       currently reproduces. (Round 20, M19 — THE CANONICAL SITE for this
+#       fact: the SAFETY section's rule 1 above states it too, and cites here
+#       rather than repeating a number, because the "2 of the 3 claims this
+#       tool executes are awk" figure this paragraph used to carry was wrong
+#       by the very re-measurement it invited — re-derived 2026-08-22, this
+#       tool executes 3 DISTINCT commands; exactly 1 of them pipes through
+#       awk, accounting for 3 of 6 executed INSTANCES, and it is not this
+#       run's one LIVE claim, which is a bare `ls | wc -l`. So the honest
+#       argument for keeping awk is qualitative, not a coverage fraction that
+#       goes stale the next time the corpus changes: SOME real, currently-
+#       passing claim on this tree uses it, dropping it costs that measured
+#       claim, and re-deriving which fraction is exactly the
+#       `python3 tools/doc-claim-check.py --repo .` invocation
+#       MIN_EXECUTED_CLAIMS already documents doing — do not copy a number
+#       out of this comment without re-running it.) —
 #       and its program is ALLOW-listed instead of escape-blacklisted: see
 #       AWK_ALLOWED_CALLS below. `python3` is DROPPED (H2) for the same reason
 #       as sed: its argument is a language too, and "the script must be an
@@ -857,12 +931,33 @@ def _err_log_entry_span(text, pos):
 def err_log_excused(text, start, end):
     """True when a mismatch at text[start:end] is excused under the ERR
     log's OWN rule: the enclosing entry is marked resolved, or the claim's
-    own sentence carries a date. See the section banner above."""
+    own sentence carries a date. See the section banner above.
+
+    Round 20 (M22). The sentence window used to be searched for a date
+    UNCLIPPED — exactly the defect `doc-consistency-check.py`'s own
+    `historically_marked()` was fixed for at its `MARKER_RADIUS` (110),
+    whose comment states the reason in terms: this repo's "sentences" are
+    not sentences, so at full sentence-window length an annotation about
+    something else entirely silently suppresses a real stale claim several
+    hundred characters away. Measured on the live ERR log before this fix:
+    window lengths median 249, p90 602, max 1126; 13 spans were excusable by
+    this rule alone, with the excusing date 53 to 689 characters from the
+    claim it excused — the model's own justification is "the claim's OWN
+    sentence carries a date", and 689 characters away is not that. Fixed the
+    same way the sibling fixed it for the same reason: the sentence window
+    is intersected with a tight radius around the claim itself, in the
+    window's own coordinates, before the date search runs."""
     a, b = _err_log_entry_span(text, start)
     if ERR_RESOLVED_MARKER.search(text[a:b]):
         return True
-    sentence = DCC.sentence_window(text, start, end)
-    return bool(ERR_LOG_DATE.search(sentence))
+    window = DCC.sentence_window(text, start, end)
+    ls = text.rfind("\n", 0, start) + 1
+    sent_start = text.find(window, ls) if window else start
+    if sent_start == -1:
+        sent_start = ls
+    lo = max(sent_start, start - CURRENCY_RADIUS)
+    hi = min(sent_start + len(window), end + CURRENCY_RADIUS)
+    return bool(ERR_LOG_DATE.search(text[lo:hi]))
 
 
 # Surfaces scanned. Kept explicit rather than globbed: this tool executes what it
@@ -917,15 +1012,38 @@ SURFACE_GLOBS = ("docs/specs/*/section-*.md", "docs/specs/*/appendices.md")
 # turn a green tree red, while a matcher regression or a renamed surface
 # folder, which take the count to zero or near it, do.
 #
+# Round 20 (M20). The floor used to be on INSTANCES, and half of what it
+# protected could never fail: today's six executed instances are only THREE
+# DISTINCT commands — one quoted in three files, one in two, one in one — and
+# the three-instance one is pinned to an immutable git revision
+# (`git grep -c 'CROSS-PENDING' 9b841d1^ ...`), so it can never drift and
+# never fail regardless of what any document says. An instance floor cannot
+# tell "N drift-capable claims" from "one pinned command quoted N times", and
+# most of this file's own six instances were exactly that. The floor is now
+# on DISTINCT COMMANDS — `checked_commands` in scan() — with the instance
+# count still printed alongside it, so the gap between "commands" and
+# "quotes of a command" stays visible either way. (Whether to exclude
+# revision-pinned commands entirely from even the distinct count is a
+# separate, owner-level call this fix does not make.)
+#
+# That redefinition shrinks the MEASURED base sharply (6 -> 3), and applying
+# the old slack of 2 to a base that small would floor at 1 — the same
+# near-zero-protection MIN_LIVE_CLAIMS below was written to avoid at ITS
+# measurement of 1. So the slack here is re-derived too, at "roughly half the
+# measured base", the same headroom rule CHECK 2's own floors
+# (MIN_TYPED_FENCE_FILE_SHARE, MIN_EXAMINED_SHARE) already use, rather than
+# carrying forward a slack sized for a population six times bigger.
+#
 # WHEN IT LEGITIMATELY CHANGES: coverage GROWING is the normal case (a new
 # shape, a new allow-listed binary, a new claim written) — re-derive and raise
 # the floor in the same commit, so the new coverage is protected too. Coverage
 # SHRINKING is the case that must not be waved through: lower this number only
 # with the reason recorded in the Version History row beside it, because
 # lowering it silently is how the vacuous-pass failure class comes back.
-MIN_EXECUTED_SLACK = 2
-# Re-derived 2026-08-22 by the invocation above: 6 executed and compared.
-MIN_EXECUTED_CLAIMS = 6 - MIN_EXECUTED_SLACK
+MIN_EXECUTED_SLACK = 1
+# Re-derived 2026-08-22 by the invocation above: 3 DISTINCT commands executed
+# (6 instances of them).
+MIN_EXECUTED_CLAIMS = 3 - MIN_EXECUTED_SLACK
 
 # ---------------------------------------------------------------------------
 # THE LIVE FLOOR (round 19, H13) — the one that states this tool's real reach.
@@ -1138,13 +1256,33 @@ class ClaimShape:
     `template` is a regex with one `{value}` placeholder, filled from the
     ANSWER KIND's own `value_pattern` — round 19 (H18). Substituted textually
     rather than through `str.format`, because a regex is full of braces
-    (`{0,40}`) that `format` would try to read as fields of its own."""
+    (`{0,40}`) that `format` would try to read as fields of its own.
+
+    CONTRACT (round 20, L6): the compiled regex MUST expose three named
+    groups — `cmd`, `value` and `gap` — asserted at construction rather than
+    left implicit. `negation_window()` below reads `group("gap")`
+    UNCONDITIONALLY, with no fallback, so a shape added without one would
+    die with an uncaught `IndexError` the first time `collect_claims()`
+    walked the live tree — a traceback mid-scan, at the exit code this
+    file's own header reserves for "a document is wrong" rather than "this
+    tool broke". Failing at construction, with a message naming the missing
+    group, is cheaper than failing at the first real document that happens
+    to trip it."""
 
     def __init__(self, name, template, answer=SINGLE_INTEGER):
         self.name = name
         self.answer = answer
         self.regex = re.compile(
             template.replace("{value}", answer.value_pattern), re.I)
+        missing = [g for g in ("cmd", "value", "gap")
+                   if g not in self.regex.groupindex]
+        if missing:
+            raise AssertionError(
+                "ClaimShape %r's regex is missing required named group(s) "
+                "%s — every shape's regex must expose cmd, value AND gap "
+                "(see this class's own docstring); negation_window() reads "
+                "group(\"gap\") unconditionally with no fallback"
+                % (name, missing))
 
     def find(self, text):
         return self.regex.finditer(text)
@@ -1402,11 +1540,19 @@ COMMAND_SPAN = re.compile(r"`(?P<cmd>[^`\n]{4,200})`")
 # binds to no shape to be reported as a possible claim this tool cannot read.
 # Bounding to the line is what stops a census entry being manufactured out of
 # the next bullet's numbers, and 200 characters is where the census effectively
-# SATURATES: measured on this tree at 86 / 117 / 138 / 143 / 145 / 145 for
-# radii 40 / 60 / 120 / 200 / 400 / unbounded-within-the-line. Past 200 a wider
-# window buys two entries; below it the census starts missing spans on this
-# repo's very long bullet lines. Re-measure this curve if the corpus changes
-# shape — it is the only thing that justifies the number.
+# SATURATES. Re-derived 2026-08-22 (round 20, M19 — the prior figures on this
+# line were themselves six-for-six wrong against the very re-measurement
+# procedure this comment prescribes, the defect class this file exists to
+# close, found inside the file that closes it): 97 / 126 / 148 / 153 / 155 /
+# 155 for radii 40 / 60 / 120 / 200 / 400 / unbounded-within-the-line. Past
+# 200 a wider window still buys exactly two more entries, the same shape the
+# stale figures claimed even though every absolute count under it had moved —
+# below it the census starts missing spans on this repo's very long bullet
+# lines. Re-measure this curve if the corpus changes shape or this file's own
+# matchers change (as round 20's M15 fix to `unrecognised_spans` did) — it is
+# the only thing that justifies the number, and per M19: DO NOT copy the
+# figures on this line into prose elsewhere without re-running the
+# measurement, because that copy is what went stale here.
 UNRECOGNISED_RADIUS = 200
 
 
@@ -1431,8 +1577,10 @@ class Claim:
 
     @property
     def head(self):
-        """The command's real first token, via the quote-aware tokenizer —
-        never a naive whitespace split.
+        """The command's real first token — see `command_head()`, the one
+        tokenize-derived parser both this property and the census
+        (`unrecognised_spans`) call, so a third disagreeing copy cannot
+        appear (round 20, M15).
 
         Round 17 (L2). This property used to be `self.cmd.split()[0]`: a
         SECOND parser for "the head token", disagreeing with the one
@@ -1452,13 +1600,7 @@ class Claim:
         unterminated quote, a trailing backslash) — check_claim() declines
         that through the same NAMED path parse_pipeline already owns for it,
         rather than falling through here."""
-        segments = tokenize(self.cmd)
-        if segments is None:
-            return None
-        for seg in segments:
-            if seg:
-                return seg[0][0]
-        return ""
+        return command_head(self.cmd)
 
     @property
     def answer(self):
@@ -1486,9 +1628,25 @@ def collect_claims(rel, text):
     return claims
 
 
+def unrecognised_span_reason(cmd):
+    """The decline reason for one `unrecognised_spans` hit — a plain
+    unrecognised-shape span, or one that also carries a FORBIDDEN shell
+    metacharacter (round 20, M15). Kept as a separate function, rather than a
+    third field on the generator's yield, so `unrecognised_spans` keeps
+    returning the two-tuple its own test fixture asserts against."""
+    if FORBIDDEN.search(cmd):
+        return ("command-shaped, an integer is nearby, and it contains a "
+                "shell metacharacter FORBIDDEN refuses (redirection, "
+                "substitution or chaining) — no claim shape can ever bind "
+                "it, so it is named here rather than silently dropped")
+    return ("command-shaped, an integer is nearby, and NO claim shape binds "
+            "it — this tool cannot read the claim, if it is one")
+
+
 def unrecognised_spans(text, bound):
     """Command-shaped backticked spans with an integer nearby that NO shape
-    bound — yields (line, cmd).
+    bound — yields (line, cmd). See `unrecognised_span_reason()` for the
+    decline text a caller should print for each hit.
 
     Round 16 (H7). This is the half of that finding that matters more than the
     widened matchers. Before it, a claim written in a shape none of the regexes
@@ -1502,13 +1660,32 @@ def unrecognised_spans(text, bound):
     the shapes — same line, an integer within UNRECOGNISED_RADIUS characters —
     because its job is to over-report: everything it names is either a claim a
     shape should learn, or prose that happens to sit near a number, and both
-    are better in the printed list than in nobody's."""
+    are better in the printed list than in nobody's.
+
+    Round 20 (M15). This used to have TWO defects, the naive-head one shared
+    with `Claim.head` before round 17 (L2) fixed it there and not here, and a
+    second of its own: every span containing `>` `;` or a backtick was
+    dropped by a bare `if FORBIDDEN.search(cmd): continue`, silently, before
+    this function's own coverage claim ("a command-shaped span ... is counted
+    and named") could apply to it. Both fixed the same way — derive, don't
+    drop: the head now comes from `command_head()`, the one tokenizer this
+    file and `Claim.head` both call, so a quoted head (`` `"grep" -c ...` ``)
+    is recognised here exactly as it is there; and a FORBIDDEN-bearing span
+    that is otherwise command-shaped is yielded like any other census hit
+    instead of vanishing — its caller names the difference via
+    `unrecognised_span_reason()` — so a document line that quotes
+    `rm -rf / \|\| true` is named as unreadable rather than uncounted."""
     for s in COMMAND_SPAN.finditer(text):
         if s.start("cmd") in bound:
             continue
         cmd = s.group("cmd").strip()
-        parts = cmd.split()
-        head = parts[0] if parts else ""
+        head = command_head(cmd)
+        if head is None:
+            # Same crude fallback the untokenizable case gets everywhere
+            # else in this file (round 20, M16's sibling note): the census's
+            # job is to over-report, not to require a valid pipeline.
+            parts = cmd.split()
+            head = parts[0] if parts else ""
         # command_shaped() alone is NOT the right test here, and the complement
         # case caught it: that predicate exists to tell an UNLISTED binary from
         # a backticked identifier, so its head test is "a path, a script, or a
@@ -1517,8 +1694,6 @@ def unrecognised_spans(text, bound):
         # -l` nightly.` was therefore missing from the census: a runnable
         # command in a shape no matcher knows, the single most valuable thing
         # this bucket can report, and the one class it was blind to.
-        if FORBIDDEN.search(cmd):
-            continue
         if not (command_shaped(cmd, head)
                 or (head in ALLOWED_CMDS and " " in cmd)):
             continue
@@ -1529,6 +1704,10 @@ def unrecognised_spans(text, bound):
                 + text[s.end():min(le, s.end() + UNRECOGNISED_RADIUS)])
         if not re.search(r"\d", near):
             continue
+        # Yields (line, cmd) only — the FORBIDDEN-vs-ordinary reason text is
+        # picked by the caller (unrecognised_span_reason() below), so this
+        # generator's return shape stays the two-tuple its test fixture
+        # already asserts against.
         yield text.count("\n", 0, s.start()) + 1, cmd
 
 
@@ -1609,6 +1788,34 @@ def tokenize(cmd):
             toks.append((text, bool(globs) and not any(globs)))
         out.append(toks)
     return out
+
+
+def command_head(cmd):
+    """`cmd`'s real first token, via the quote-aware tokenizer — never a
+    naive whitespace split.
+
+    Round 20 (M15). This used to be TWO disagreeing parsers: `Claim.head`
+    (below) already tokenizes, because a second parser disagreeing with the
+    one validation actually uses is how round 9's M1 silent-decline route
+    came back one function later — but `unrecognised_spans`' own head
+    extraction was still `cmd.split()[0]`, unable to see past a quoted head
+    the same way. Proven: `` `"grep" -c '^A' CLAUDE.md` `` naive-splits to the
+    six characters `"grep"`, never a member of ALLOWED_CMDS or
+    `_KNOWN_BINARIES`, so a runnable claim in an unrecognised shape vanished
+    from the census exactly as it used to vanish from `check_claim` before
+    round 17 (L2) — the same blind spot, one function over, with the header's
+    "read that bucket ... for what the tool cannot see" promise false for it.
+    One helper now, called from both, so a third copy cannot appear.
+
+    Returns None when `cmd` does not tokenize AT ALL (an unterminated quote,
+    a trailing backslash) — callers decide what that means for them."""
+    segments = tokenize(cmd)
+    if segments is None:
+        return None
+    for seg in segments:
+        if seg:
+            return seg[0][0]
+    return ""
 
 
 def _option_cores(tok):
@@ -1727,14 +1934,20 @@ def denied_flag(argv):
             return ("%s, a GNU long-option ABBREVIATION of the denied `%s` — "
                     "getopt_long accepts any prefix" % (a, full))
     if name == "git":
-        git_long_denied = _denied_long_names(GIT_GLOBAL_DENIED,
-                                             ("--exec-path", "--upload-pack"))
+        # Round 20 (M23): the `or core in ("--exec-path", "--upload-pack")`
+        # disjunct this branch used to carry was DEAD BY CONSTRUCTION —
+        # GIT_GLOBAL_DENIED (BINARIES["git"].git_global_denied) already
+        # contains both strings verbatim, so the extra disjunct, and the
+        # matching extra tuple handed to _denied_long_names below, could
+        # never change either call's result. Deleted; GIT_GLOBAL_DENIED
+        # alone is both the exact-match set and the abbreviation-name
+        # source, same as every other binary's git_global_denied-style use.
+        git_long_denied = _denied_long_names(GIT_GLOBAL_DENIED)
         for a in argv[1:]:
             if not a.startswith("-"):
                 break            # the subcommand: globals end here
             for core in _option_cores(a):
-                if core in GIT_GLOBAL_DENIED or core in ("--exec-path",
-                                                         "--upload-pack"):
+                if core in GIT_GLOBAL_DENIED:
                     return a if core == a else ("%s, attached as `%s`"
                                                 % (core, a))
             full = _abbreviated_denial(a, git_long_denied)
@@ -2137,8 +2350,9 @@ GLOB_CH = re.compile(r"[*?\[]")
 # recur: a dropped binary has no Binary record at all, so `.get(name,
 # _NO_BINARY).needs_file` reads False for it rather than a stale True.
 def self_contained(segments, repo):
-    """False when the first segment would read stdin because none of its
-    tokens name a file that actually exists under the repo root.
+    """False when the first segment would read stdin because no token AT A
+    POSITION AN OPERAND COULD OCCUPY names something real on disk under the
+    repo root — a file, or a directory (round 20, M24).
 
     Round 16 (M8). The old rule was `[a for a in argv[1:] if not
     a.startswith('-')]` — the exact OPTION-GRAMMAR error round 14 already
@@ -2151,14 +2365,52 @@ def self_contained(segments, repo):
     says it exists to prevent. `awk -v n=1 'END{print NR}'` failed the same
     way. Enumerating which flag on which binary takes a separate-argument
     value is the shape of rule round 14 and round 15 both found does not
-    hold up — the fix here does not try: a segment is self-contained exactly
-    when at least one of its tokens, whatever else it might look like, names
-    a real file relative to the repo root."""
+    hold up — the fix here does not try: a segment used to be self-contained
+    exactly when at least one of its tokens, whatever else it might look
+    like, named a real file relative to the repo root.
+
+    Round 20 (M21) narrowed "whatever else it might look like" to "at a
+    position an operand can occupy", because CONTENT alone fabricates a
+    finding: the rule as stated let a grep/awk PATTERN (never a file
+    position at all) satisfy it merely by spelling a real path. Reproduced:
+    `` `grep -c 'CLAUDE.md'` `` over each tracking file was declined
+    honestly before this fix would have made it worse — `grep -c
+    'CLAUDE.md'` ALONE, no file operand at all, ran against an EMPTY stdin
+    and printed 0, which this guard then compared against the document's
+    stated value as a real mismatch, fabricating the exact finding this
+    guard exists to prevent. Fixed by POSITION, not by inspecting what the
+    pattern says: `Binary.pattern_operand` (grep family, awk) marks that the
+    first non-option token is consumed as the pattern/program and is
+    excluded from the file search; every binary without that grammar keeps
+    every non-option token as a candidate, exactly as before.
+
+    Round 20 (M24). `os.path.isfile` alone declined `grep -rn TODO src/` —
+    one of this file's own four motivating WHY THIS EXISTS cases — with a
+    reason that says the segment "would read from an empty stdin", which is
+    false: `-r` makes a directory operand a normal, real read. `os.path.isdir`
+    is now accepted alongside `isfile`; a binary that cannot actually read a
+    directory (`cat somedir`) still fails downstream at run_pipeline's own
+    non-zero-exit decline, so widening the check here costs nothing and
+    fixes the false reason for binaries that can."""
     argv = segments[0]
-    if not BINARIES.get(argv[0], _NO_BINARY).needs_file:
+    binfo = BINARIES.get(argv[0], _NO_BINARY)
+    if not binfo.needs_file:
         return True
     root = str(repo)
-    return any(os.path.isfile(os.path.join(root, a)) for a in argv[1:])
+    operands = argv[1:]
+    if binfo.pattern_operand:
+        # The FIRST non-option token is the pattern/program, not a file
+        # candidate — every later token (option or not) is unaffected.
+        filtered, seen_pattern = [], False
+        for a in operands:
+            if not seen_pattern and not a.startswith("-"):
+                seen_pattern = True
+                continue
+            filtered.append(a)
+        operands = filtered
+    return any(os.path.isfile(os.path.join(root, a))
+               or os.path.isdir(os.path.join(root, a))
+               for a in operands)
 
 
 def _attached_option_value(tok):
@@ -2287,6 +2539,22 @@ def expand_globs(segments, repo):
     # ACTUALLY execute, so no expansion can introduce a hatch that the
     # pre-expansion check certified absent. Validating a shape instead of the
     # real argv is the single root error behind both of this round's findings.
+    #
+    # Round 20 (M23) considered, and REJECTED, deleting this re-run as
+    # "subsumed by the `hit.startswith('-')` refusal above" — reproduced
+    # instead of trusted, because that claim is false on the current code.
+    # The startswith check only inspects successful glob HITS; it cannot see
+    # a hatch that depends on the ARGV SHAPE post-expansion rather than on
+    # any one token's spelling. Proven: `uniq tools/doc-*.py` — ONE
+    # pre-expansion operand, so `uniq`'s own OPERAND-COUNT hatch
+    # (denied_flag()'s uniq branch: `uniq IN OUT` writes OUT) does not fire
+    # pre-expansion — expands to TWO real files, NEITHER of which starts
+    # with `-`, so the startswith check passes it clean too. Only this
+    # re-run, seeing the actual two-operand post-expansion argv, catches it.
+    # A mutation-test claim that "all 71 tests stay green with this
+    # deleted" was independently reproduced as true and is beside the
+    # point: it is a gap in the SUITE's coverage of this exploit shape, not
+    # evidence this code is dead. Kept.
     for argv in out:
         hatch = denied_flag(argv)
         if hatch is not None:
@@ -2556,7 +2824,14 @@ def scan_fence_identifiers(repo, quiet=False):
     needs those four to gate this check's recall, and they were previously
     printed and thrown away. (Round 17's L3 had corrected this docstring for
     promising a second return value the function did not have; it has one
-    now, and it is used, not decorative.)"""
+    now, and it is used, not decorative.)
+
+    `quiet` is kept for call-signature compatibility with the caller in
+    scan() but no longer gates anything here (round 20, L7): every print in
+    this function is now unconditional, matching CHECK 1's own treatment —
+    there is no itemized per-item CHECK 2 listing for `--quiet` to suppress
+    in the first place, since the dangling-identifier findings themselves
+    already print unconditionally back in scan()."""
     findings = []
     fenced_files = 0
     files = []
@@ -2636,13 +2911,23 @@ def scan_fence_identifiers(repo, quiet=False):
                                  sorted(x for x in members
                                         if x.replace("_", "").lower()
                                         == mem.replace("_", "").lower())))
-    if not quiet:
-        print("\ndangling-identifier check — references inside spec code fences")
-        print("  spec files with code fences   : %d" % scanned)
-        print("  declared types considered      : %d" % type_count)
-        print("  (a reference is reported only when its TYPE is declared in the same"
-              " file and its MEMBER is not — cross-file resolution is deliberately"
-              " not attempted)")
+    # Round 20 (L7). The header and its two counts used to sit behind
+    # `if not quiet`, in the very function whose own round-17 (M14) comment
+    # two lines below states the rule this violated: "the counts every
+    # verdict refers to are never suppressed" — and these two ARE the
+    # coverage figures CHECK 2'S COVERAGE FLOOR gates on. `--quiet` still has
+    # nothing left to suppress for CHECK 2: unlike CHECK 1's itemized
+    # per-claim decline list, there is no per-item CHECK 2 listing gated
+    # here at all — the dangling-identifier findings themselves print
+    # unconditionally, in scan(), regardless of `quiet`. So the whole block
+    # is unconditional now, matching CHECK 1's treatment exactly rather than
+    # only half of it.
+    print("\ndangling-identifier check — references inside spec code fences")
+    print("  spec files with code fences   : %d" % scanned)
+    print("  declared types considered      : %d" % type_count)
+    print("  (a reference is reported only when its TYPE is declared in the same"
+          " file and its MEMBER is not — cross-file resolution is deliberately"
+          " not attempted)")
     # Round 17 (M14): always printed, --quiet included — the same rule L4
     # applies to CHECK 1's own counts, and CHECK 2's coverage line did not
     # exist in any form before this round.
@@ -2770,20 +3055,34 @@ def check_claim(claim, repo, regions):
     answer = claim.answer
     head = claim.head
     if head is None:
-        # Round 17 (L2). `claim.cmd` does not tokenize AT ALL (an
-        # unterminated quote, a trailing backslash) — exactly the failure
-        # parse_pipeline names "does not tokenize (unterminated quote or
-        # trailing \\)" for a claim whose head WAS already recognised.
-        # Before `head` was tokenize-derived, a claim reached that same named
-        # decline via parse_pipeline further down whenever its NAIVE first
-        # word happened to already be an allow-listed binary; declined and
-        # named UNCONDITIONALLY here too, matching that generosity, rather
-        # than re-gating it behind command_shaped() — which exists to tell a
-        # command apart from a bare IDENTIFIER, a question a claim SHAPE has
-        # already answered by binding this span in the first place.
-        return "declined", ("unsafe",
-                            "does not tokenize (unterminated quote or "
-                            "trailing \\)")
+        # Round 17 (L2) introduced this branch and round 20 (M16) narrowed
+        # it, on evidence the L2 reasoning got backwards. `claim.cmd` does
+        # not tokenize AT ALL (an unterminated quote, a trailing backslash)
+        # — the same failure parse_pipeline names "does not tokenize
+        # (unterminated quote or trailing \\)" for a claim whose head WAS
+        # already recognised. L2 declined it UNCONDITIONALLY, arguing that a
+        # claim SHAPE binding this span had already answered whether it is a
+        # command. It had not: a shape only recognises "value, then a
+        # command-looking backticked span", and markdown prose caught
+        # between two code spans binds that shape just as readily as a real
+        # command does. Measured on this tree: 9 of the 10 `unsafe`-bucket
+        # entries this branch produced were exactly that — ordinary prose
+        # ("...**(2)** §3.1's age-derivation ", "...this branch's seven rows
+        # renumbered ") whose stray quote or trailing backslash merely broke
+        # the tokenizer, never a command anyone wrote. Gated now behind the
+        # same command_shaped() test the sibling not-allow-listed branch
+        # below already applies — using the naive split as the shape probe,
+        # since tokenize() has nothing better to offer a string it could not
+        # parse at all. A genuinely command-shaped span that still fails to
+        # tokenize (an unterminated quote INSIDE a real command) keeps the
+        # named `unsafe` decline; ordinary prose is `ignored`, as it always
+        # was for every other shape-bound non-command on this tree.
+        naive_head = claim.cmd.split()[0] if claim.cmd.split() else ""
+        if command_shaped(claim.cmd, naive_head):
+            return "declined", ("unsafe",
+                                "does not tokenize (unterminated quote or "
+                                "trailing \\)")
+        return "ignored", None
     if head not in ALLOWED_CMDS:
         # Round 9 (M1): this path was the tool's THIRD decline route and the
         # only silent one, while its header and its file-manifest row both
@@ -2901,6 +3200,8 @@ def scan(repo, quiet=False):
     files, missing = collect_surfaces(repo)
 
     checked = 0
+    checked_commands = set()      # ... and how many DISTINCT commands they are
+                                   # (round 20, M20 — see MIN_EXECUTED_CLAIMS)
     live = 0                      # executed claims OUTSIDE every record span
     live_commands = set()         # ... and how many DISTINCT commands they are
     bucket_order = list(decline_bucket_order())
@@ -2942,6 +3243,7 @@ def scan(repo, quiet=False):
                 declined_list.append((rel, claim.line, claim.cmd, why))
                 continue
             checked += 1
+            checked_commands.add(claim.cmd)
             # Round 19 (H13). WHERE a claim sits decides what executing it is
             # worth. Inside a dated record the command still runs and a
             # mismatch is still printed, but it can never gate — so it is not
@@ -2961,9 +3263,7 @@ def scan(repo, quiet=False):
         for line, cmd in unrecognised_spans(text, bound):
             record_decline(declined, bucket_order, "unrecognised-shape")
             declined_list.append(
-                (rel, line, cmd,
-                 "command-shaped, an integer is nearby, and NO claim shape "
-                 "binds it — this tool cannot read the claim, if it is one"))
+                (rel, line, cmd, unrecognised_span_reason(cmd)))
 
     # Round 17 (L4). --quiet used to gate this ENTIRE block, coverage counts
     # included — so a quiet run's PASS line ("...with the coverage stated
@@ -2988,8 +3288,14 @@ def scan(repo, quiet=False):
           % (len(CLAIM_SHAPES), ", ".join(s.name for s in CLAIM_SHAPES)))
     print("  answer kinds recognised       : %d (%s)"
           % (len(ANSWER_KINDS), ", ".join(a.name for a in ANSWER_KINDS)))
-    print("  claims executed and compared  : %d  (floor %d)"
-          % (checked, MIN_EXECUTED_CLAIMS))
+    # Round 20 (M20). The floor is on DISTINCT COMMANDS, not instances — see
+    # MIN_EXECUTED_CLAIMS's own note for why: an instance count cannot tell
+    # "N drift-capable claims" from "one command quoted N times", and half of
+    # today's six instances are exactly that (one revision-pinned command
+    # quoted in three files). Both figures are printed; the floor is on the
+    # one that cannot be inflated by repetition.
+    print("  claims executed and compared  : %d  (%d distinct command(s), "
+          "floor %d)" % (checked, len(checked_commands), MIN_EXECUTED_CLAIMS))
     # Round 19 (H13). The headline above is NOT this tool's drift-catching
     # coverage and must never be read as it: a claim inside a dated record is
     # executed and its mismatch printed, but it is EXCUSED, so it cannot fail
@@ -3041,8 +3347,26 @@ def scan(repo, quiet=False):
             print("      command : %s" % cmd)
             print("      %s" % what)
 
-    dangling, fence_coverage = scan_fence_identifiers(repo, quiet)
-    fence_blocked = fence_coverage_shortfalls(fence_coverage)
+    # Round 20 (L8). `_map_offset`'s fail-loud AssertionError used to be
+    # uncaught here, producing a raw traceback AFTER CHECK 1 had already
+    # printed its own counts and verdict text above — a partial report with
+    # no overall verdict, at the very exit code (an uncaught exception exits
+    # 1) round 17 (M14) spent a whole fix separating from "a document is
+    # wrong". Believed unreachable today (a consistency defect rather than a
+    # live bug), so this is prophylactic: caught here and routed through
+    # `blocked`, so a future drift between the fence-join bookkeeping and
+    # the code it describes exits 2 — "this tool could not do its job" — with
+    # a named reason, never a bare stack trace.
+    try:
+        dangling, fence_coverage = scan_fence_identifiers(repo, quiet)
+    except AssertionError as exc:
+        dangling = []
+        fence_blocked = [
+            "CHECK 2 (dangling-identifier scan) could not complete: %s — "
+            "this run's dangling-identifier result is not a verdict on any "
+            "document" % exc]
+    else:
+        fence_blocked = fence_coverage_shortfalls(fence_coverage)
     if dangling:
         print("\nFAIL — %d dangling identifier reference(s) in spec code fences:"
               % len(dangling))
@@ -3061,12 +3385,16 @@ def scan(repo, quiet=False):
     # the surface set broken, the mismatches that were found are not the
     # mismatches that exist.
     blocked = list(missing)
-    if checked < MIN_EXECUTED_CLAIMS:
+    # Round 20 (M20): the gate is on DISTINCT COMMANDS — `checked` alone
+    # would let one revision-pinned command, quoted in arbitrarily many
+    # files, inflate a floor meant to catch a matcher regression.
+    if len(checked_commands) < MIN_EXECUTED_CLAIMS:
         blocked.append(
-            "only %d claim(s) executed and compared, below the floor of %d — "
-            "see the COVERAGE FLOOR note beside SURFACE_GLOBS for how the "
-            "floor is re-derived and when it may be changed"
-            % (checked, MIN_EXECUTED_CLAIMS))
+            "only %d distinct command(s) executed and compared (%d "
+            "instance(s)), below the floor of %d — see the COVERAGE FLOOR "
+            "note beside SURFACE_GLOBS for how the floor is re-derived and "
+            "when it may be changed"
+            % (len(checked_commands), checked, MIN_EXECUTED_CLAIMS))
     # Round 19 (H13): the floor that measures reach rather than activity.
     if live < MIN_LIVE_CLAIMS:
         blocked.append(
@@ -3950,3 +4278,160 @@ if __name__ == "__main__":
 # |         |            |             | UNMODIFIED — no test premise was             |
 # |         |            |             | invalidated. Both sibling tools re-run       |
 # |         |            |             | green.**                                     |
+# | 1.11    | 2026-08-22 | Claude Code | Round 20 (M15, M16, M19-M24, L6-L9), each    |
+# |         |            |             | proven by reproduction before the fix and in |
+# |         |            |             | BOTH directions after; M23 done LAST, per    |
+# |         |            |             | its own risk note. **M15**:                  |
+# |         |            |             | unrecognised_spans() used a second, naive    |
+# |         |            |             | cmd.split()[0] head parser disagreeing with  |
+# |         |            |             | the one Claim.head already tokenizes (round  |
+# |         |            |             | 17, L2), and dropped every FORBIDDEN-bearing |
+# |         |            |             | span via a bare continue. Extracted the      |
+# |         |            |             | shared command_head() tokenizer both now     |
+# |         |            |             | call; a FORBIDDEN span lands in              |
+# |         |            |             | unrecognised-shape with its own reason       |
+# |         |            |             | (unrecognised_span_reason()) instead of      |
+# |         |            |             | vanishing. **M16**: check_claim()'s          |
+# |         |            |             | head-is-None branch declined every           |
+# |         |            |             | untokenizable span unconditionally;          |
+# |         |            |             | measured, 9 of 10 unsafe-bucket entries were |
+# |         |            |             | markdown prose, not commands. Gated behind   |
+# |         |            |             | the same command_shaped() test the           |
+# |         |            |             | unlisted-binary branch already applies — 8   |
+# |         |            |             | of 9 false declines now read ignored (the    |
+# |         |            |             | residual one trips command_shaped's own      |
+# |         |            |             | pre-existing _command_operand path-token     |
+# |         |            |             | quirk on 'v2.104/v2.105', not a new defect). |
+# |         |            |             | **M19**: the 'awk is kept — 2 of 3 claims    |
+# |         |            |             | executed are awk' rationale (stated twice)   |
+# |         |            |             | and the UNRECOGNISED_RADIUS saturation curve |
+# |         |            |             | (86/117/138/143/145/145) were both wrong     |
+# |         |            |             | against today's tree — re-measured: only 1   |
+# |         |            |             | of 3 DISTINCT executed commands uses awk,    |
+# |         |            |             | and it is not this run's one LIVE claim; the |
+# |         |            |             | true curve is 97/126/148/153/155/155. Both   |
+# |         |            |             | sites reworded to state the fact once,       |
+# |         |            |             | qualitatively, and cite each other, rather   |
+# |         |            |             | than repeat a number that goes stale.        |
+# |         |            |             | **M20**: the coverage floor counted          |
+# |         |            |             | INSTANCES (6), half of which are one         |
+# |         |            |             | revision-pinned command quoted three times   |
+# |         |            |             | and so can never drift or fail. Floored on   |
+# |         |            |             | DISTINCT COMMANDS now (checked_commands,     |
+# |         |            |             | printed alongside the instance count); floor |
+# |         |            |             | re-derived at 3 distinct minus 1 slack = 2,  |
+# |         |            |             | since the old slack of 2 would floor a base  |
+# |         |            |             | this small at 1, the near-zero-protection    |
+# |         |            |             | problem MIN_LIVE_CLAIMS already avoids.      |
+# |         |            |             | **M21**: self_contained() accepted a         |
+# |         |            |             | grep/awk PATTERN operand that merely         |
+# |         |            |             | happened to spell a real repo path,          |
+# |         |            |             | fabricating a finding (grep -c 'CLAUDE.md'   |
+# |         |            |             | with no file operand at all read empty       |
+# |         |            |             | stdin, printed 0, and that 0 was compared    |
+# |         |            |             | against a real stated value). Fixed by       |
+# |         |            |             | POSITION via new Binary.pattern_operand      |
+# |         |            |             | (grep family, awk): the first non-option     |
+# |         |            |             | token is excluded from the file search, not  |
+# |         |            |             | by content. **M24**: the same function       |
+# |         |            |             | rejected grep -rn over a directory with the  |
+# |         |            |             | false reason 'would read from an empty       |
+# |         |            |             | stdin' — os.path.isdir now accepted          |
+# |         |            |             | alongside os.path.isfile; a binary that      |
+# |         |            |             | truly cannot read a directory still fails    |
+# |         |            |             | downstream at run_pipeline's own             |
+# |         |            |             | non-zero-exit decline. **M22**:              |
+# |         |            |             | err_log_excused() searched an UNCLIPPED      |
+# |         |            |             | sentence window for an excusing date — the   |
+# |         |            |             | same defect doc-consistency-check.py's       |
+# |         |            |             | historically_marked() was fixed for at       |
+# |         |            |             | MARKER_RADIUS; measured 13 spans excusable   |
+# |         |            |             | by a date 53 to 689 characters away.         |
+# |         |            |             | Intersected the sentence window with         |
+# |         |            |             | CURRENCY_RADIUS, mirroring the sibling's own |
+# |         |            |             | fix. **L6**: ClaimShape's cmd/value/gap      |
+# |         |            |             | group contract was undocumented and          |
+# |         |            |             | unvalidated; negation_window() reads         |
+# |         |            |             | group('gap') unconditionally. Asserted at    |
+# |         |            |             | construction now, with a named               |
+# |         |            |             | AssertionError instead of a mid-scan         |
+# |         |            |             | IndexError. **L7**: --quiet suppressed CHECK |
+# |         |            |             | 2's own coverage counts (spec files with     |
+# |         |            |             | code fences, declared types considered) —    |
+# |         |            |             | the exact rule CHECK 1 was fixed to honor at |
+# |         |            |             | round 17, L4. Both prints moved              |
+# |         |            |             | unconditional; there is no itemized CHECK-2  |
+# |         |            |             | listing left for --quiet to suppress at all. |
+# |         |            |             | **L8**: _map_offset's fail-loud              |
+# |         |            |             | AssertionError was uncaught, so a drift      |
+# |         |            |             | between the fence-join bookkeeping and the   |
+# |         |            |             | code it describes would traceback AFTER      |
+# |         |            |             | CHECK 1 had already printed a verdict.       |
+# |         |            |             | Caught in scan() and routed through blocked  |
+# |         |            |             | (exit 2), reproduced by forcing the raise:   |
+# |         |            |             | uncaught before, a clean 'ERROR ... exit 2'  |
+# |         |            |             | after. **L9**: the header's 'every claim     |
+# |         |            |             | this tool declines to check is printed' is   |
+# |         |            |             | false under --quiet (only counted, not       |
+# |         |            |             | itemized); reworded to 'COUNTED AND NAMED,   |
+# |         |            |             | and ITEMIZED unless --quiet'. **M23 (done    |
+# |         |            |             | LAST)**: 10 of 12 denied_prefixes entries    |
+# |         |            |             | (rg x3, sort x2, awk x4, git x1) were        |
+# |         |            |             | strictly subsumed by the exact-core check —  |
+# |         |            |             | _option_cores already reduces --flag=value   |
+# |         |            |             | to the bare core --flag, so a --flag= prefix |
+# |         |            |             | entry beside an existing bare --flag in      |
+# |         |            |             | denied_flags caught nothing new; deleted.    |
+# |         |            |             | The two survivors (git's                     |
+# |         |            |             | --exec-path=/--upload-pack=) were            |
+# |         |            |             | load-bearing only via git_global_denied and  |
+# |         |            |             | the generic startswith fallback, because     |
+# |         |            |             | their bare cores were missing from git's own |
+# |         |            |             | denied_flags for no stated reason — moved    |
+# |         |            |             | in, so the exact-core check owns them at     |
+# |         |            |             | every argv position, a strict widening. The  |
+# |         |            |             | dead 'or core in ("--exec-path",             |
+# |         |            |             | "--upload-pack")' disjunct (both already     |
+# |         |            |             | members of GIT_GLOBAL_DENIED) and its        |
+# |         |            |             | matching redundant tuple argument to         |
+# |         |            |             | _denied_long_names were deleted. THE         |
+# |         |            |             | FINDING'S FOURTH ASK — deleting the          |
+# |         |            |             | post-expansion denied_flag() re-run in       |
+# |         |            |             | expand_globs as 'subsumed by the             |
+# |         |            |             | hit.startswith("-") refusal' — was           |
+# |         |            |             | investigated and REJECTED, per the finding's |
+# |         |            |             | own instruction to report what could not be  |
+# |         |            |             | preserved with confidence rather than delete |
+# |         |            |             | it anyway. Reproduced: uniq tools/doc-*.py   |
+# |         |            |             | has ONE pre-expansion operand (uniq's        |
+# |         |            |             | OPERAND-COUNT hatch does not fire) and       |
+# |         |            |             | expands to two real files, NEITHER starting  |
+# |         |            |             | with '-' (the startswith check passes it     |
+# |         |            |             | clean too) — only the post-expansion re-run, |
+# |         |            |             | seeing the actual two-operand argv, catches  |
+# |         |            |             | the write. The 71-green-tests claim behind   |
+# |         |            |             | the deletion proposal is real but beside the |
+# |         |            |             | point: it is a gap in the SUITE's coverage   |
+# |         |            |             | of an operand-COUNT hatch, not evidence the  |
+# |         |            |             | code is dead. Kept, with the reproduction    |
+# |         |            |             | recorded in a comment beside it. Every named |
+# |         |            |             | exploit re-verified refused after every M23  |
+# |         |            |             | change: sort -oFILE, sort --output=, sort    |
+# |         |            |             | --o=, sort --compress-progr=, git grep       |
+# |         |            |             | -O./p.sh, git grep --open-f=, git            |
+# |         |            |             | --exec-path= (now caught in BOTH pre- and    |
+# |         |            |             | post-subcommand position), git               |
+# |         |            |             | --upload-pack=, git branch -D, an operand    |
+# |         |            |             | outside the repo, and the uniq multi-glob    |
+# |         |            |             | case above — plus the legitimate corpus      |
+# |         |            |             | commands (ls -d src/*/, the git grep | awk   |
+# |         |            |             | claim) still execute clean. **Live tree: 605 |
+# |         |            |             | surfaces, 6 executed (3 distinct commands,   |
+# |         |            |             | floor 2) of which 1 LIVE (floor 1), 191      |
+# |         |            |             | declines (unsafe 10->2, unrecognised-shape   |
+# |         |            |             | 141->153 — the FORBIDDEN-routing and         |
+# |         |            |             | quoted-head fixes recovering 12              |
+# |         |            |             | previously-invisible spans), 0 excused,      |
+# |         |            |             | PASS, exit 0. The 71-test suite passes       |
+# |         |            |             | UNMODIFIED — not edited, per the fixer       |
+# |         |            |             | boundary. Both sibling tools re-run green.** |
