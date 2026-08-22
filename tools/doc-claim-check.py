@@ -135,10 +135,25 @@
 # spellings of both were correctly declined, which is the respelling shape
 # again, one layer over.
 #
+# Round 21 makes it FIVE, and it arrived inside H14's own fix: H14 read the
+# attached value as `tok[2:]`, which is the value only when the option letter
+# is the first character of the token, and a CLUSTER puts it further along —
+# `grep -cf/etc/hostname` handed the child `/etc/hostname` while this file
+# computed `f/etc/hostname` and passed it. The fix is the first one in the
+# chain that does not enumerate anything: an attached short-option value is a
+# SUFFIX of its token by the definition of `getopt`, so every suffix is
+# tested and the question "which letters take a value" — the question whose
+# five successive wrong answers are this list — is never asked (H1,
+# _attached_option_values). It is worth stating what that does and does not
+# settle: it closes the SPELLING dimension of a dash-token completely, and it
+# says nothing about a path that reaches a child by some other route.
+#
 # So the sixth rule below is a different KIND of rule, and it was added for
 # that recurrence rather than for any one report: after four rounds of
 # closing respellings by name, the read-only property is moved off this
-# file's judgement and onto the kernel. Enumeration is still necessary — the
+# file's judgement and onto the kernel — and round 21 is the measured proof
+# that this was necessary but not sufficient, since the limits do not touch a
+# READ and H1 was a read. Enumeration is still necessary — the
 # limits do not stop reads, and reads are how this tool's answers are
 # fabricated — but it is no longer the only thing standing between a document
 # line and the runner's filesystem.
@@ -178,6 +193,23 @@
 #      very sentence was false as written, and `diff --from-file=/tmp/secret
 #      data.txt \| wc -l` printed an integer derived from a file outside the
 #      checkout, into the FAIL block, for anyone reading the CI log.
+#      Round 21 (H1) — the FIFTH respelling, and this sentence was false
+#      AGAIN in the same way, one layer down. H14 extracted the attached
+#      value as `tok[2:]`, which assumes the option letter is the first
+#      character; in a CLUSTER it is not. `grep -cf/etc/hostname data.txt` is
+#      `-c -f /etc/hostname` to every GNU binary here, so the value is
+#      `/etc/hostname` — while the check computed `f/etc/hostname`, a
+#      RELATIVE path that resolves INSIDE the root and passed. The separated
+#      (`-f /etc/hostname`) and attached (`-f/etc/hostname`) spellings were
+#      correctly declined the whole time; only the clustered one walked
+#      through, and the round-18 OS limits do not cover it, because a read is
+#      not a write. The rule now refuses to model option grammars at all: an
+#      attached short-option value is, by the definition of `getopt`, a
+#      SUFFIX of its token, so EVERY suffix is tested as a path and the
+#      binary's own choice of which one is the value stops mattering. See
+#      _attached_option_values() for the argument, and for the honest
+#      statement of what it does NOT cover (a path inside a `key=value` bare
+#      operand, a file a binary opens on its own, the environment).
 #   5. RESOURCE BOUNDS: no shell, a wall-clock timeout AND a hard cap on how
 #      much a segment may print, because a timeout does not bound memory —
 #      one document line drove the checker to 587 MB and `cat /dev/zero` would
@@ -209,6 +241,21 @@
 #          cleanup would have removed: `git status` leaves a zero-byte
 #          `.git/index.lock`. Recorded rather than worked around — exempting
 #          git from the limit would exempt the one binary here that writes.
+#        * the limits are the STRICTEST of what this file asks for and what
+#          the runner already imposed — both fields, soft and hard. Round 21
+#          (H2): that was the stated guarantee and not the implemented one.
+#          `_lower_limit` clamped against the inherited HARD limit alone, so
+#          an inherited soft limit was RAISED — measured, an inherited
+#          RLIMIT_CPU of (10, 100) came out of the child as (60, 65), six
+#          times the CPU the runner intended, and an inherited (10, INF) was
+#          not clamped at all. Same weakening on RLIMIT_AS, where a runner's
+#          memory cap is a real containment measure. RLIMIT_FSIZE=0 was never
+#          affected and still is not — 0 is the minimum — but only because
+#          the clamp excludes RLIM_INFINITY from the comparison rather than
+#          calling `min()` on it: RLIM_INFINITY is -1 on Linux, so a naive
+#          `min(0, RLIM_INFINITY)` would have turned the load-bearing write
+#          ceiling into "unlimited" on any ordinary host. Checked, not
+#          assumed (_tightest()).
 #
 # Every one of those refusals is COUNTED AND NAMED in the printed output. That
 # is not politeness: a silent refusal is indistinguishable from a pass, which
@@ -2077,6 +2124,14 @@ OUTPUT_CAP_BYTES = 8 * 1024 * 1024
 # fix in that chain was correct and none of them was sufficient, because they
 # all assert read-only-ness rather than ENFORCING it.
 #
+# Round 21 (H1) made it FIVE, and is the sharpest available statement of what
+# this section can and cannot do: `grep -cf/etc/hostname data.txt` respelled
+# H14's attached option value as a CLUSTER, walked past confinement, and READ
+# a host file — and not one limit below applies, because every one of them
+# bounds writing, CPU and memory, and none of them bounds a read. The limits
+# are defence in depth for the WRITE/EXECUTE half only; confinement (rule 4)
+# is still the whole of the read half, on its own, exactly as stated below.
+#
 # So the property is moved off the allow-list and onto the kernel. Every child
 # this tool spawns runs under:
 #   RLIMIT_FSIZE = 0   — no file may GROW past zero bytes: a write of any
@@ -2120,17 +2175,52 @@ CHILD_AS_BYTES = 2 * 1024 * 1024 * 1024
 RLIMITS_AVAILABLE = resource is not None
 
 
+def _tightest(*values):                  # pragma: no cover - runs post-fork
+    """The strictest of some rlimit values, treating RLIM_INFINITY as "no
+    limit" rather than as a number.
+
+    `min()` cannot be used directly and the reason is a trap, not a nicety:
+    on Linux `resource.RLIM_INFINITY` is **-1**, so `min(0, RLIM_INFINITY)`
+    is RLIM_INFINITY — i.e. the naive clamp turns the load-bearing
+    RLIMIT_FSIZE=0 into "unlimited" on the completely ordinary host whose
+    inherited file-size limit is infinite. Verified against the values this
+    file actually sets, not assumed."""
+    out = resource.RLIM_INFINITY
+    for value in values:
+        if value == resource.RLIM_INFINITY:
+            continue
+        out = value if out == resource.RLIM_INFINITY else min(out, value)
+    return out
+
+
 def _lower_limit(which, soft, hard):     # pragma: no cover - runs post-fork
-    """Set one rlimit, never RAISING one the runner already imposes.
+    """Set one rlimit to the STRICTEST of {what this file asks for, the soft
+    limit inherited from the runner, the hard limit inherited from the
+    runner}, so that neither field can come out above the value it had on
+    entry. This function only ever tightens.
 
     setrlimit fails when the requested hard limit exceeds the inherited one,
     and a failure here surfaces as "command could not be executed" — a
     decline, so it fails safe, but it would decline every claim on a runner
-    that already caps CPU. Clamped to the inherited hard limit instead."""
+    that already caps CPU. Hence the clamp rather than a bare setrlimit.
+
+    ROUND 21 (H2). The docstring used to say "never RAISING one the runner
+    already imposes" while the code clamped against the inherited HARD limit
+    alone, so an inherited SOFT limit was raised — the opposite of the stated
+    guarantee, in the function whose whole purpose is that guarantee.
+    Reproduced: with an inherited RLIMIT_CPU of (10, 100) the child came out
+    with (60, 65) — six times the CPU the runner intended — and with an
+    inherited (10, RLIM_INFINITY) no clamping happened at all, so the soft
+    limit still went 10 → 60. The same weakening applied to RLIMIT_AS, where
+    a runner's memory cap is a real containment measure.
+
+    RLIMIT_FSIZE=0 is unaffected and that is checked rather than assumed: 0 is
+    the minimum a limit can take, so the strictest of {0, anything} is 0 — but
+    only once RLIM_INFINITY is excluded from the comparison, which is why
+    _tightest() exists above. A child still cannot grow any file by one byte."""
     cur_soft, cur_hard = resource.getrlimit(which)
-    if cur_hard != resource.RLIM_INFINITY:
-        hard = min(hard, cur_hard)
-        soft = min(soft, hard)
+    hard = _tightest(hard, cur_soft, cur_hard)
+    soft = _tightest(soft, cur_soft, cur_hard, hard)
     resource.setrlimit(which, (soft, hard))
 
 
@@ -2142,7 +2232,14 @@ def _apply_child_limits():               # pragma: no cover - runs post-fork
     it cannot be set, the child must not run, and Popen turns the exception
     into this file's named "could not be executed" decline. RLIMIT_AS is
     best-effort — some hosts refuse it outright — because it bounds cost, not
-    authority, and losing it must not cost the write ceiling."""
+    authority, and losing it must not cost the write ceiling.
+
+    The `+ 5` on the CPU hard limit buys a SIGXCPU (at the soft limit) before
+    the SIGKILL (at the hard one), so the kill is named rather than anonymous.
+    On a runner that already caps CPU more tightly than this file asks, round
+    21's clamp collapses that grace — soft and hard both come down to the
+    runner's own soft limit — which costs nothing: `_LIMIT_KILL` names SIGKILL
+    as a resource kill too, so the claim is still DECLINED AND NAMED."""
     _lower_limit(resource.RLIMIT_FSIZE, CHILD_FSIZE_BYTES, CHILD_FSIZE_BYTES)
     _lower_limit(resource.RLIMIT_CPU, CHILD_CPU_SECONDS, CHILD_CPU_SECONDS + 5)
     try:
@@ -2413,19 +2510,83 @@ def self_contained(segments, repo):
                for a in operands)
 
 
-def _attached_option_value(tok):
-    """The value carried INSIDE an option token, or None when it carries none.
+def _attached_option_values(tok):
+    """EVERY value an option token could be carrying — a tuple, never one guess.
 
-    `--file=PATH` → `PATH`; `-fPATH` → `PATH`; `-`, `--`, `--file`, `-f` and
-    a bare operand → None. `--` is excluded by _long_option_core's own rule
-    (it is the end-of-options marker, live in this corpus)."""
+    `--file=PATH` → `("PATH",)`; `-`, `--`, `--file`, `-f` and a bare operand →
+    `()`. `--` is excluded for _long_option_core's own reason (it is the
+    end-of-options marker, live in this corpus).
+
+    ROUND 21 (H1), and the FIFTH consecutive round in which an option hatch
+    reached this file in a spelling it did not model — round 9's H1, round
+    14's P1, round 15's H3 (attached values), round 18's H12 (GNU long-option
+    abbreviations), and now CLUSTERING. Every one of those lived inside the
+    previous one's fix, and the OS child limits added at round 18 do not touch
+    this one, because a read is not a write.
+
+    The predecessor returned `tok[2:]` for a short-option token — i.e. it
+    ASSUMED the option letter is at index 1 and the value starts at index 2.
+    That is false for a CLUSTER, and every GNU binary on ALLOWED_CMDS clusters:
+    `grep -cf/etc/hostname data.txt` is `-c -f /etc/hostname` (`-c, --count`
+    takes no value; `-f, --file=FILE` does), so the value is `/etc/hostname` —
+    while `tok[2:]` computed `f/etc/hostname`, a RELATIVE path that does not
+    exist, which therefore resolved INSIDE the repo root and passed
+    confinement. Reproduced before this fix, driving the real validation chain:
+
+        grep -c -f/etc/hostname data.txt   DECLINED (`-f/etc/hostname`)
+        grep -c -f /etc/hostname data.txt  DECLINED (`/etc/hostname`)
+        grep -cf/etc/hostname data.txt     ACCEPTED — escaping_operand → None
+
+    and end to end as a working one-integer read ORACLE over host file
+    CONTENTS: `grep -hf/etc/hostname data.txt data2.txt \\| wc -l` reproduced a
+    stated `1` when a fixture file held the runner's real hostname and FAILED
+    when it held a wrong guess — a document line interrogating /etc one bit at
+    a time, which is exactly what SAFETY rule 4 exists to deny.
+
+    THE RULE, and why it is not a sixth spelling waiting to happen. It does
+    NOT ask which letters of which binary take a value — that is precisely the
+    per-binary option modelling that has now failed five times, and this file
+    will not do it again. It rests instead on one structural fact about short
+    options that holds for POSIX `getopt` and GNU `getopt_long` alike: an
+    ATTACHED short-option value is always `&argv[i][j+1]`, the remainder of the
+    token after the option character — that is, a SUFFIX of the token. So the
+    set of paths a single dash-token can hand a child is bounded, exactly, by
+    its suffixes, and every suffix from index 2 (the earliest position a value
+    can begin, since index 1 is always an option character) to the end is
+    returned here for the identical realpath test. Which suffix the real binary
+    would pick is then irrelevant: whatever it picks, this checked it. Adding a
+    letter, reordering a cluster, or moving to a binary with a different option
+    grammar cannot produce a value outside that set.
+
+    Over-refusal is this file's stated safe direction and is what the extra
+    suffixes buy: a cluster whose deeper suffix reads as an escaping path is
+    DECLINED AND NAMED, never run. Measured cost on this corpus: nil — the
+    five legitimate clustered forms (`grep -rn pattern dir/`, `sort -nr file`,
+    `ls -la`, `wc -lc file`, `grep -ic pattern file`) and all six live executed
+    claims still execute, because a suffix escapes only by being absolute or
+    by traversing out with `..`, which no option letter cluster does.
+
+    STATED HONESTLY, because a safety claim stated too broadly is this file's
+    recurring error: the rule is exhaustive over paths carried INSIDE a
+    dash-token. A path that reaches a child by some OTHER route is a different
+    mechanism's job — a `key=value` bare operand (`awk -v x=/etc/passwd`,
+    whose read hatches are separately closed by the `|`/`getline`/FORBIDDEN
+    refusals), a file the binary opens on its own initiative, or the
+    environment (refused for awk by name in denied_flag). Confinement here
+    still reads one token as one path; it does not parse inside a token that
+    is not an option."""
     if not tok.startswith("-") or tok in ("-", "--"):
-        return None
+        return ()
     if tok.startswith("--"):
         if "=" not in tok:
-            return None
-        return tok.split("=", 1)[1] or None
-    return tok[2:] or None
+            return ()
+        value = tok.split("=", 1)[1]
+        return (value,) if value else ()
+    # Every position a value could begin at, not the one position the old
+    # code assumed. `-f/etc/hostname` → ("/etc/hostname", "etc/hostname", ...);
+    # `-cf/etc/hostname` → ("f/etc/hostname", "/etc/hostname", ...), and it is
+    # the SECOND of those that the old single-guess helper never looked at.
+    return tuple(tok[i:] for i in range(2, len(tok)))
 
 
 def escaping_operand(argv, repo):
@@ -2467,18 +2628,31 @@ def escaping_operand(argv, repo):
     `-rn` cluster) resolve INSIDE the root and pass, so the widening costs
     nothing on this corpus; one that reads as an escaping path is declined and
     NAMED, which is the same over-refusal the bare-operand rule already
-    accepts."""
+    accepts.
+
+    Round 21 (H1). H14 above closed the ATTACHED spelling and left the
+    CLUSTERED one open — `grep -cf/etc/hostname data.txt` reached the child
+    and read the host file, because the helper took the value to be `tok[2:]`
+    and a cluster puts it further along. Every suffix of a dash-token is a
+    candidate value now, and the reason it cannot be respelled a sixth time is
+    argued where the suffixes are produced, in _attached_option_values().
+
+    RETURNS a rendered, backticked description rather than the bare token, so
+    the caller's decline can NAME which value inside a cluster escaped — an
+    unnamed refusal of `-cf/etc/hostname` would leave a reader guessing which
+    of six suffixes the tool objected to."""
     root = os.path.realpath(str(repo))
     for a in argv[1:]:
-        if a.startswith("-"):
-            candidate = _attached_option_value(a)
-            if candidate is None:
-                continue
-        else:
-            candidate = a
-        real = os.path.realpath(os.path.join(root, candidate))
-        if real != root and not real.startswith(root + os.sep):
-            return a
+        candidates = _attached_option_values(a) if a.startswith("-") else (a,)
+        for candidate in candidates:
+            real = os.path.realpath(os.path.join(root, candidate))
+            if real != root and not real.startswith(root + os.sep):
+                if candidate == a:
+                    return "`%s`" % a
+                return ("`%s` (the option value `%s` it can carry — a short "
+                        "option's attached value is a SUFFIX of its token, "
+                        "and this tool deliberately does not model which "
+                        "letters of which binary take one)" % (a, candidate))
     return None
 
 
@@ -2562,7 +2736,11 @@ def expand_globs(segments, repo):
                           "escape hatch (%s)" % (argv[0], hatch))
         outside = escaping_operand(argv, repo)
         if outside is not None:
-            return None, ("operand `%s` resolves outside the repository root — "
+            # `outside` arrives already backticked and, for a value carried
+            # inside an option cluster, already carrying WHICH value escaped
+            # (round 21, H1) — a decline that named only the token would leave
+            # a reader guessing which suffix of `-cf/etc/hostname` was refused.
+            return None, ("operand %s resolves outside the repository root — "
                           "this tool reads the checkout, not the host"
                           % outside)
     return out, None
@@ -4435,3 +4613,120 @@ if __name__ == "__main__":
 # |         |            |             | PASS, exit 0. The 71-test suite passes       |
 # |         |            |             | UNMODIFIED — not edited, per the fixer       |
 # |         |            |             | boundary. Both sibling tools re-run green.** |
+# | 1.12    | 2026-08-22 | Claude Code | Two defects from the automated review of PR  |
+# |         |            |             | #330, both independently reproduced against  |
+# |         |            |             | the committed tree before and after the fix. |
+# |         |            |             | **H1 (security): CLUSTERED SHORT OPTIONS     |
+# |         |            |             | DEFEATED PATH CONFINEMENT — the FIFTH        |
+# |         |            |             | consecutive round of one class, and the      |
+# |         |            |             | fourth to land inside the previous round's   |
+# |         |            |             | fix.** Round 18's H14 extracted an attached  |
+# |         |            |             | option value as `tok[2:]`, which is the      |
+# |         |            |             | value only when the option letter is the     |
+# |         |            |             | token's first character. GNU grep parses     |
+# |         |            |             | `-cf/etc/hostname` as `-c -f /etc/hostname`  |
+# |         |            |             | (`-c` takes no value, `-f, --file=FILE`      |
+# |         |            |             | does), so the value is `/etc/hostname` while |
+# |         |            |             | this file computed `f/etc/hostname` — a      |
+# |         |            |             | RELATIVE path that resolves inside the root  |
+# |         |            |             | and passed. Reproduced through the real      |
+# |         |            |             | validation chain: the separated              |
+# |         |            |             | (`-c -f /etc/hostname`) and attached         |
+# |         |            |             | (`-c -f/etc/hostname`) spellings DECLINED,   |
+# |         |            |             | the clustered one ACCEPTED with              |
+# |         |            |             | escaping_operand → None; and end to end as a |
+# |         |            |             | working one-integer read ORACLE over host    |
+# |         |            |             | file CONTENTS —                              |
+# |         |            |             | `grep -hf/etc/hostname data.txt data2.txt \| |
+# |         |            |             | wc -l` reproduced a stated 1 when a fixture  |
+# |         |            |             | file held the runner's real hostname and     |
+# |         |            |             | FAILED on a wrong guess, i.e. a document     |
+# |         |            |             | line interrogating /etc one bit at a time.   |
+# |         |            |             | The round-18 OS child limits do NOT cover    |
+# |         |            |             | it: every one of them bounds writing, CPU or |
+# |         |            |             | memory, and this is a READ. FIXED by         |
+# |         |            |             | refusing to model option grammars at all —   |
+# |         |            |             | _attached_option_value (one guess) becomes   |
+# |         |            |             | _attached_option_values (a tuple), returning |
+# |         |            |             | EVERY suffix from index 2 to the end, each   |
+# |         |            |             | subjected to the identical realpath test.    |
+# |         |            |             | The argument that this is not a sixth        |
+# |         |            |             | spelling waiting to happen is structural,    |
+# |         |            |             | not an enumeration: for POSIX getopt and GNU |
+# |         |            |             | getopt_long alike an attached short-option   |
+# |         |            |             | value is `&argv[i][j+1]`, a SUFFIX of the    |
+# |         |            |             | token, so the suffix set BOUNDS what any     |
+# |         |            |             | dash-token can hand a child, whatever the    |
+# |         |            |             | binary's option table says; which suffix the |
+# |         |            |             | real binary picks stops mattering because    |
+# |         |            |             | all of them were checked. Stated honestly in |
+# |         |            |             | the docstring: it is exhaustive over paths   |
+# |         |            |             | carried INSIDE a dash-token and says nothing |
+# |         |            |             | about a path reaching a child by another     |
+# |         |            |             | route (a `key=value` bare operand, a file a  |
+# |         |            |             | binary opens on its own, the environment —   |
+# |         |            |             | the last two closed for awk by name).        |
+# |         |            |             | OVER-REFUSAL MEASURED, NOT ASSUMED, since    |
+# |         |            |             | over-refusal is what the extra suffixes buy  |
+# |         |            |             | and the floors now gate the exit code: a     |
+# |         |            |             | fixture of five legitimate clustered forms   |
+# |         |            |             | (grep -rn over a directory, sort -nr, ls     |
+# |         |            |             | -la, wc -lc, grep -ic) executes 5 of 5 with  |
+# |         |            |             | 0 declines, IDENTICALLY before and after —   |
+# |         |            |             | a suffix escapes only by being absolute or   |
+# |         |            |             | traversing out with `..`, which no letter    |
+# |         |            |             | cluster does. The decline NAMES which value  |
+# |         |            |             | escaped, so escaping_operand now returns a   |
+# |         |            |             | rendered description rather than a bare      |
+# |         |            |             | token; the bare-operand message is unchanged |
+# |         |            |             | byte for byte. **H2: _lower_limit RAISED an  |
+# |         |            |             | inherited SOFT limit while its own docstring |
+# |         |            |             | said it never raises one the runner imposes  |
+# |         |            |             | — the guarantee stated in the function whose |
+# |         |            |             | whole purpose it is.** It clamped against    |
+# |         |            |             | the inherited HARD limit alone. Reproduced   |
+# |         |            |             | in a child holding real inherited limits:    |
+# |         |            |             | RLIMIT_CPU (10, 100) → (60, 65), six times   |
+# |         |            |             | the CPU the runner intended; (10, INF) → the |
+# |         |            |             | same, since the infinite-hard path clamped   |
+# |         |            |             | nothing at all; RLIMIT_AS (512 MiB, 1 GiB) → |
+# |         |            |             | (1 GiB, 1 GiB). After: (10, 10), (10, 10)    |
+# |         |            |             | and (512 MiB, 512 MiB), with the untouched   |
+# |         |            |             | default host case still (60, 65) / 2 GiB.    |
+# |         |            |             | Every limit is now the strictest of {what    |
+# |         |            |             | this file asks for, the inherited soft, the  |
+# |         |            |             | inherited hard}, so the function can only    |
+# |         |            |             | tighten. RLIMIT_FSIZE stays EXACTLY 0 in     |
+# |         |            |             | every case measured (inherited INF, and      |
+# |         |            |             | inherited (100, 1000)) — and that needed the |
+# |         |            |             | new _tightest() rather than min(), because   |
+# |         |            |             | RLIM_INFINITY is -1 on Linux and a naive     |
+# |         |            |             | min(0, RLIM_INFINITY) would have turned the  |
+# |         |            |             | load-bearing write ceiling into UNLIMITED on |
+# |         |            |             | any ordinary host; verified by re-running    |
+# |         |            |             | the SIGXFSZ kill (a 1-byte write still dies, |
+# |         |            |             | file size 0, and SIGXFSZ is still a named    |
+# |         |            |             | decline). The `+5` CPU grace collapses on a  |
+# |         |            |             | runner that already caps CPU, which costs    |
+# |         |            |             | nothing: _LIMIT_KILL names SIGKILL as a      |
+# |         |            |             | resource kill too. SAFETY section corrected  |
+# |         |            |             | in both places it was now inaccurate — rule  |
+# |         |            |             | 4's "every operand" (the fifth respelling)   |
+# |         |            |             | and rule 6's limit ledger (the soft-limit    |
+# |         |            |             | guarantee, plus the note that these limits   |
+# |         |            |             | bound the write/execute half ONLY and rule 4 |
+# |         |            |             | is the whole of the read half). **Live tree  |
+# |         |            |             | AFTER: byte-identical to before — 605        |
+# |         |            |             | surfaces, 6 executed (3 distinct, floor 2)   |
+# |         |            |             | of which 1 LIVE (floor 1), 191 declines      |
+# |         |            |             | (2 unsafe / 19 unlisted-binary / 8           |
+# |         |            |             | not-self-contained / 6 not-a-single-integer  |
+# |         |            |             | / 3 negated / 153 unrecognised-shape), 0     |
+# |         |            |             | excused, PASS, exit 0. The six executed      |
+# |         |            |             | claims are the same six BY NAME, and the one |
+# |         |            |             | LIVE claim is still CLAUDE.md:276's          |
+# |         |            |             | `ls docs/tracking/*-design.md \| wc -l`, so  |
+# |         |            |             | the coverage delta is zero and neither floor |
+# |         |            |             | moved. The 71-test suite passes UNMODIFIED — |
+# |         |            |             | not edited, per the fixer boundary. Both     |
+# |         |            |             | sibling tools re-run green.**                |
