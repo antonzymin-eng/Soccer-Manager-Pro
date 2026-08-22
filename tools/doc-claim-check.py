@@ -106,9 +106,26 @@
 # which uses neither. Round 14 put it as "the validation ran on a SHAPE, not on
 # the argv that actually executes"; round 15 adds its sibling — the validation
 # ran on the SPELLING, not on the option (`sort -o` was denied while
-# `sort -oFILE` wrote the file).
+# `sort -oFILE` wrote the file). Round 18 makes it FOUR consecutive rounds of
+# the same class, each time inside the previous round's fix: `--output` was
+# denied while `--o=`, `--out=` and `--compress-progr=` were not, because
+# `getopt_long` accepts any unambiguous PREFIX of a long name and this file
+# compared long options by exact string (H12). The same round found path
+# confinement skipping every token beginning with `-`, so an ATTACHED option
+# value (`grep -f/etc/hostname`, `--from-file=/tmp/secret`) never reached the
+# containment test at all and its integer was compared (H14) — the separated
+# spellings of both were correctly declined, which is the respelling shape
+# again, one layer over.
 #
-# The property therefore rests on five things together, in this order of
+# So the sixth rule below is a different KIND of rule, and it was added for
+# that recurrence rather than for any one report: after four rounds of
+# closing respellings by name, the read-only property is moved off this
+# file's judgement and onto the kernel. Enumeration is still necessary — the
+# limits do not stop reads, and reads are how this tool's answers are
+# fabricated — but it is no longer the only thing standing between a document
+# line and the runner's filesystem.
+#
+# The property therefore rests on six things together, in this order of
 # importance:
 #   1. ALLOW-LISTS WHEREVER THE ARGUMENT IS A LANGUAGE. `sed` (round 9) and
 #      `python3` (round 15, H2) are DROPPED — for python3 the old rationale
@@ -124,18 +141,53 @@
 #      what used to be separate DENIED_FLAGS / DENIED_FLAG_PREFIXES tables)
 #      compared on the option CORE, so an attached value (`-oFILE`,
 #      `-O./p.sh`) or an un-enumerated `--long=value` cannot respell a denied
-#      hatch past the check (round 15, H3).
+#      hatch past the check (round 15, H3) — and, since round 18 (H12),
+#      compared as a PREFIX for long options, because `getopt_long` accepts
+#      `--o=FILE` for `--output` and `--compress-progr=./p.sh` for
+#      `--compress-program`. Over-refusal is the safe direction and no live
+#      claim uses an abbreviated long option.
 #   3. GIT_READONLY holding only subcommands that cannot destroy anything —
 #      `branch` and `tag` are gone, because `-D`/`-d` delete refs (round 15,
 #      H4), and `--output` is denied because a diff writes a file with it.
 #   4. PATH CONFINEMENT on every operand, checked after glob expansion: a
 #      command may read the checkout and nothing else. Without it, `grep -c .
 #      /etc/passwd` was a one-integer read oracle over the host (round 15, M3).
+#      Round 18 (H14): "every operand" now includes the value ATTACHED to an
+#      option token, which the check used to skip wholesale — until then this
+#      very sentence was false as written, and `diff --from-file=/tmp/secret
+#      data.txt \| wc -l` printed an integer derived from a file outside the
+#      checkout, into the FAIL block, for anyone reading the CI log.
 #   5. RESOURCE BOUNDS: no shell, a wall-clock timeout AND a hard cap on how
 #      much a segment may print, because a timeout does not bound memory —
 #      one document line drove the checker to 587 MB and `cat /dev/zero` would
 #      OOM-kill the runner first (round 15, M1). NUL is refused up front and
 #      ValueError caught, so document text cannot abort the scan (M2).
+#   6. OS-ENFORCED CHILD LIMITS (round 18) — the only rule here that is not an
+#      enumeration, and the only one that holds against a hatch nobody has
+#      thought of. Every child runs under RLIMIT_FSIZE=0, RLIMIT_CPU and
+#      RLIMIT_AS, set in the forked child before exec. Demonstrated on a hatch
+#      fixed by no name in this file: `git status \| wc -l` passes the
+#      allow-list, every deny-flag and confinement, and REWRITES `.git/index`
+#      in the checkout — it now dies on that write and is declined by name,
+#      with the index byte-identical afterwards. State its LIMITS honestly,
+#      because a safety claim stated too broadly is the error this section
+#      keeps recording:
+#        * it does not stop READS at all. Rule 4 is still the only thing
+#          between a document line and every file the runner can read.
+#        * it does not stop EXECUTION. A permitted `--compress-program`
+#          would still run its script; it just could not write.
+#        * RLIMIT_FSIZE=0 stops a file GROWING past zero bytes. Creating an
+#          empty file and TRUNCATING an existing one still succeed — measured,
+#          not assumed. So rules 1-4 are load-bearing exactly as before, and
+#          nothing was relaxed because these limits exist.
+#        * it is POSIX-only. Without a `resource` module the tool degrades to
+#          the pre-round-18 behaviour and PRINTS that it has done so
+#          (child_limit_summary(), on every run) rather than losing the
+#          property silently.
+#        * a child killed mid-write can leave a partial artefact its own
+#          cleanup would have removed: `git status` leaves a zero-byte
+#          `.git/index.lock`. Recorded rather than worked around — exempting
+#          git from the limit would exempt the one binary here that writes.
 #
 # Every one of those refusals is COUNTED AND NAMED in the printed output. That
 # is not politeness: a silent refusal is indistinguishable from a pass, which
@@ -175,10 +227,16 @@ import importlib.util
 import os
 import pathlib
 import re
+import signal
 import subprocess
 import sys
 import tempfile
 import threading
+
+try:                                                  # POSIX only; see the
+    import resource                                   # CHILD RESOURCE LIMITS
+except ImportError:                    # pragma: no cover - non-POSIX host
+    resource = None                                   # section below.
 
 
 def _load_consistency():
@@ -440,7 +498,12 @@ AWK_ESCAPES = re.compile(r"\b(?:system|getline)\b")
 #   * `@` anywhere in an awk token — gawk's `@load` / `@include`.
 # What is left after those, plus FORBIDDEN's refusal of `>` `<` `` ` `` `;`
 # `&` anywhere in the string, is arithmetic and printing.
+#   * `ENVIRON` / `PROCINFO` anywhere in an awk token (round 18) — gawk's
+#     special ARRAYS. They are variables, not calls, so the allow-list below
+#     is the wrong shape of rule for them exactly as a call-name blacklist was
+#     the wrong shape for `print x | "sh"`; see denied_flag()'s awk branch.
 AWK_CALL = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+AWK_ENV_ARRAYS = re.compile(r"\b(?:ENVIRON|PROCINFO)\b")
 AWK_ALLOWED_CALLS = frozenset((
     # keywords that take a parenthesised clause
     "if", "while", "for", "do", "else", "return", "function", "func",
@@ -1307,6 +1370,71 @@ def _option_cores(tok):
     return (tok,) + tuple("-" + ch for ch in tok[1:])
 
 
+def _long_option_core(tok):
+    """`--name` out of `--name` or `--name=value`, or None when `tok` is not a
+    long option at all (`-`, `--`, a short cluster, a bare operand).
+
+    `--` returns None deliberately: it is the end-of-options marker, it is
+    live in this corpus (`git grep -c … -- docs/specs`, three of the six
+    executed claims), and it names no option to abbreviate."""
+    if not tok.startswith("--") or len(tok) <= 2:
+        return None
+    return tok.split("=", 1)[0]
+
+
+def _denied_long_names(*tables):
+    """Every DENIED long option NAME across `tables`, `=` suffix stripped.
+
+    Derived from the same `denied_flags` / `denied_prefixes` a binary already
+    declares, never maintained separately — round 17 (L1) consolidated those
+    tables precisely because a parallel list is a list someone forgets."""
+    names = set()
+    for table in tables:
+        for entry in table or ():
+            core = entry.split("=", 1)[0]
+            if core.startswith("--") and len(core) > 2:
+                names.add(core)
+    return names
+
+
+def _abbreviated_denial(tok, names):
+    """The denied long option `tok` ABBREVIATES, or None.
+
+    Round 18 (H12), and the fourth consecutive round in which a denied hatch
+    walked past this file RESPELLED rather than renamed. `_option_cores`
+    compares a long option's core by EXACT string — but `getopt_long`, which
+    every GNU binary on ALLOWED_CMDS uses, accepts any UNAMBIGUOUS PREFIX of
+    a long option name. So `--output` was denied while `--o=`, `--out=` and
+    `--outpu=` were not, and all three write the file. Reproduced before this
+    fix, each under a printed PASS:
+      * `sort -S 1 --compress-progr=/tmp/pwn.sh big.txt \\| wc -l` EXECUTED an
+        attacker-supplied script on the runner (`-S 1` forces the spill that
+        invokes it);
+      * `sort --o=/tmp/OUTSIDE data.txt` wrote OUTSIDE the checkout, which
+        path confinement could not see because the target is an option VALUE
+        (round 18, H14 — fixed in escaping_operand below);
+      * `sort --outpu=IN_REPO_CANARY data.txt` wrote inside it.
+    Not one of those is a new hatch. Each is a hatch this file already denies,
+    spelled the way the binary's own parser accepts it.
+
+    The rule is therefore a PREFIX rule, not a longer list of spellings: a
+    long-option token is denied when its core is a prefix of ANY denied long
+    name for that binary. It deliberately over-refuses relative to
+    `getopt_long` — a prefix shared by two options is AMBIGUOUS and the real
+    binary would reject it, while this refuses it — because over-refusal is
+    this file's stated safe direction, and a claim refused here is DECLINED
+    AND NAMED, never silently dropped. Zero of the six live executed claims
+    uses an abbreviated long option (they use `--` and nothing else), so the
+    cost on this corpus is nil."""
+    core = _long_option_core(tok)
+    if core is None:
+        return None
+    for name in sorted(names):
+        if name.startswith(core):
+            return name
+    return None
+
+
 def denied_flag(argv):
     """The write/execute escape hatch this argv reaches for, or None.
 
@@ -1317,6 +1445,7 @@ def denied_flag(argv):
     binfo = BINARIES.get(name, _NO_BINARY)
     exact = binfo.denied_flags
     prefixes = binfo.denied_prefixes
+    long_denied = _denied_long_names(exact, prefixes)
     for a in argv[1:]:
         for core in _option_cores(a):
             if core in exact:
@@ -1325,7 +1454,15 @@ def denied_flag(argv):
                 return a
         if any(a.startswith(pfx) for pfx in prefixes):
             return a
+        # Round 18 (H12): the same denied long option, ABBREVIATED — see
+        # _abbreviated_denial() for the three reproductions this closes.
+        full = _abbreviated_denial(a, long_denied)
+        if full is not None:
+            return ("%s, a GNU long-option ABBREVIATION of the denied `%s` — "
+                    "getopt_long accepts any prefix" % (a, full))
     if name == "git":
+        git_long_denied = _denied_long_names(GIT_GLOBAL_DENIED,
+                                             ("--exec-path", "--upload-pack"))
         for a in argv[1:]:
             if not a.startswith("-"):
                 break            # the subcommand: globals end here
@@ -1334,6 +1471,10 @@ def denied_flag(argv):
                                                          "--upload-pack"):
                     return a if core == a else ("%s, attached as `%s`"
                                                 % (core, a))
+            full = _abbreviated_denial(a, git_long_denied)
+            if full is not None:
+                return ("%s, a GNU long-option ABBREVIATION of the denied "
+                        "git global `%s`" % (a, full))
     if name == "awk":
         # Round 14 (external review, P1): scan EVERY token, never the token
         # GUESSED to be the program. `-v` and `-F` take a SEPARATE argument, so
@@ -1360,6 +1501,21 @@ def denied_flag(argv):
                         "`\"cmd\" | getline` both run a shell command")
             if "@" in a:
                 return "awk token containing `@` — gawk @load/@include"
+            env = AWK_ENV_ARRAYS.search(a)
+            if env is not None:
+                # Round 18 (H14, the related note). `ENVIRON` is a VARIABLE,
+                # not a call, so AWK_ALLOWED_CALLS — an allow-list of
+                # FUNCTION names — structurally cannot see it, and
+                # `awk 'END{print length(ENVIRON["TD_SECRET"])}' data.txt`
+                # calls only `length(`, which is on the list. It reads the
+                # runner's environment one integer at a time, which is the
+                # same read-oracle shape path confinement exists to deny for
+                # files. Refused flat, beside `|` and `@`, for the reason
+                # those two are: no allow-list of call names can express it.
+                return ("awk token naming the special array `%s`, which "
+                        "exposes the runner's environment and process state — "
+                        "a variable, not a call, so the function allow-list "
+                        "structurally cannot see it" % env.group(0))
             for call in AWK_CALL.findall(a):
                 if call not in AWK_ALLOWED_CALLS:
                     return ("awk program calling `%s(`, which is not on the "
@@ -1430,6 +1586,135 @@ def parse_pipeline(cmd):
 OUTPUT_CAP_BYTES = 8 * 1024 * 1024
 
 
+# ---------------------------------------------------------------------------
+# CHILD RESOURCE LIMITS (round 18) — DEFENCE IN DEPTH, NOT A REPLACEMENT.
+#
+# This is not a review finding. It is a structural decision taken on the
+# evidence that ONE defect class has now recurred four consecutive rounds —
+# round 9's H1, round 14's P1, round 15's H3, round 18's H12 — and each time
+# INSIDE THE PREVIOUS ROUND'S FIX. The shape is always the same: a hatch is
+# refused by the spelling someone enumerated, and the same hatch respelled
+# (`sort -o` → `sort -oFILE` → `sort --o=FILE`) walks past the check. Every
+# fix in that chain was correct and none of them was sufficient, because they
+# all assert read-only-ness rather than ENFORCING it.
+#
+# So the property is moved off the allow-list and onto the kernel. Every child
+# this tool spawns runs under:
+#   RLIMIT_FSIZE = 0   — no file may GROW past zero bytes: a write of any
+#                        byte raises SIGXFSZ and kills the child, whatever
+#                        hatch produced it, whether or not this file has ever
+#                        heard of it. Measured caveat, not assumed: creating
+#                        an empty file and TRUNCATING an existing one still
+#                        succeed, so this bounds what a child can write, not
+#                        that it can touch nothing.
+#   RLIMIT_CPU         — CPU seconds, complementing TIMEOUT_S: a wall-clock
+#                        timeout does not bound a spinning child's cost, and
+#                        a CPU limit does not bound a sleeping one, so both.
+#   RLIMIT_AS          — an address-space ceiling, so an allocation bomb dies
+#                        in the child instead of OOM-killing the runner.
+#                        OUTPUT_CAP_BYTES bounds what a child PRINTS; nothing
+#                        bounded what it ALLOCATES without printing.
+#
+# WHAT IT DOES NOT DO, because a limit stated too broadly is the same error
+# as an allow-list stated too broadly:
+#   * it does not stop READS. A child may still open any file the runner can
+#     read; path confinement (escaping_operand) is the only thing that stops
+#     that, and it stays exactly as strict.
+#   * it does not stop EXECUTION as such. `--compress-program=./p.sh` under
+#     these limits still RUNS the script — it just cannot write anything. The
+#     deny-lists stay exactly as strict too.
+#   * it is POSIX-only. On a platform with no `resource` module the tool
+#     degrades to the previous behaviour and SAYS SO in its printed output
+#     (child_limit_summary(), printed by every run) rather than silently
+#     losing a safety property.
+# Nothing above was relaxed because these limits exist.
+#
+# The tool's own temp files are unaffected: stdin is staged by the PARENT
+# (tempfile.TemporaryFile in run_pipeline), which runs under no such limit,
+# and a child's stdout is a PIPE — RLIMIT_FSIZE bounds regular files, not
+# pipes — so the output cap and the reader thread are untouched. Verified by
+# running the whole live corpus, not by reasoning about it.
+# ---------------------------------------------------------------------------
+CHILD_FSIZE_BYTES = 0
+CHILD_CPU_SECONDS = TIMEOUT_S
+CHILD_AS_BYTES = 2 * 1024 * 1024 * 1024
+RLIMITS_AVAILABLE = resource is not None
+
+
+def _lower_limit(which, soft, hard):     # pragma: no cover - runs post-fork
+    """Set one rlimit, never RAISING one the runner already imposes.
+
+    setrlimit fails when the requested hard limit exceeds the inherited one,
+    and a failure here surfaces as "command could not be executed" — a
+    decline, so it fails safe, but it would decline every claim on a runner
+    that already caps CPU. Clamped to the inherited hard limit instead."""
+    cur_soft, cur_hard = resource.getrlimit(which)
+    if cur_hard != resource.RLIM_INFINITY:
+        hard = min(hard, cur_hard)
+        soft = min(soft, hard)
+    resource.setrlimit(which, (soft, hard))
+
+
+def _apply_child_limits():               # pragma: no cover - runs post-fork
+    """preexec_fn: runs in the forked child, before exec, so the limits are
+    already in force when the untrusted binary starts.
+
+    RLIMIT_FSIZE is the load-bearing one and is deliberately NOT wrapped: if
+    it cannot be set, the child must not run, and Popen turns the exception
+    into this file's named "could not be executed" decline. RLIMIT_AS is
+    best-effort — some hosts refuse it outright — because it bounds cost, not
+    authority, and losing it must not cost the write ceiling."""
+    _lower_limit(resource.RLIMIT_FSIZE, CHILD_FSIZE_BYTES, CHILD_FSIZE_BYTES)
+    _lower_limit(resource.RLIMIT_CPU, CHILD_CPU_SECONDS, CHILD_CPU_SECONDS + 5)
+    try:
+        _lower_limit(resource.RLIMIT_AS, CHILD_AS_BYTES, CHILD_AS_BYTES)
+        _lower_limit(resource.RLIMIT_CORE, 0, 0)
+    except (ValueError, OSError, AttributeError):
+        pass
+
+
+def child_limits_preexec():
+    """The preexec_fn to hand Popen, or None where `resource` is missing."""
+    return _apply_child_limits if RLIMITS_AVAILABLE else None
+
+
+def child_limit_summary():
+    """One line, printed by every run: what the OS is enforcing, or that it is
+    enforcing nothing. A safety property that degrades silently is the decline
+    contract failing in the direction this file calls its worst."""
+    if not RLIMITS_AVAILABLE:
+        return ("UNAVAILABLE — no `resource` module on this platform, so "
+                "children run under the allow-list, the deny-flags, path "
+                "confinement, the %ds timeout and the %d-byte output cap "
+                "ALONE, with no OS-enforced write/CPU/memory ceiling"
+                % (TIMEOUT_S, OUTPUT_CAP_BYTES))
+    return ("RLIMIT_FSIZE=%d (no file may grow past 0 bytes — a write kills "
+            "the child), RLIMIT_CPU=%ds, RLIMIT_AS=%d MiB — enforced by the "
+            "OS, not asserted by a list; READS are not limited by these"
+            % (CHILD_FSIZE_BYTES, CHILD_CPU_SECONDS,
+               CHILD_AS_BYTES // (1024 * 1024)))
+
+
+# A child killed by one of these limits is DECLINED AND NAMED, like every
+# other refusal — never a crash, and never the silent `0` that a killed
+# `wc -l` would otherwise hand to the comparison. Keyed by signal number so a
+# platform missing one of them simply has one fewer row.
+_LIMIT_KILL = {}
+for _sig, _why in (
+        ("SIGXFSZ", "was killed attempting to WRITE a file — this tool runs "
+                    "every command under a zero write limit (RLIMIT_FSIZE), "
+                    "so its output is not treated as an answer"),
+        ("SIGXCPU", "exceeded the %ds CPU limit (RLIMIT_CPU) and was killed "
+                    "— its output is not treated as an answer"
+                    % CHILD_CPU_SECONDS),
+        ("SIGKILL", "was killed by the kernel, which on this tool's children "
+                    "means a hard resource limit (CPU or address space) was "
+                    "reached — its output is not treated as an answer")):
+    if hasattr(signal, _sig):
+        _LIMIT_KILL[int(getattr(signal, _sig))] = _why
+del _sig, _why
+
+
 def _read_capped(stream, box):
     """Drain `stream` into `box["data"]`, giving up at OUTPUT_CAP_BYTES.
 
@@ -1493,7 +1778,8 @@ def run_pipeline(segments, cwd):
             try:
                 proc = subprocess.Popen(
                     argv, cwd=cwd, stdin=sin, stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL)
+                    stderr=subprocess.DEVNULL,
+                    preexec_fn=child_limits_preexec())
             except ValueError as exc:
                 return None, ("`%s` cannot be executed as written (%s)"
                               % (argv[0], exc))
@@ -1523,6 +1809,14 @@ def run_pipeline(segments, cwd):
                 return None, "command timed out after %ds" % TIMEOUT_S
             finally:
                 proc.stdout.close()
+        if rc < 0 and -rc in _LIMIT_KILL:
+            # Round 18. A child that hit an OS limit did not "exit" with a
+            # status — it was SIGNALLED, and Popen reports that as a negative
+            # rc. Named here rather than left to the generic "exited -25"
+            # below, because the whole point of the limits is that the reason
+            # a command was stopped is legible: "sort was killed attempting
+            # to write" is a security event, not a broken command.
+            return None, "`%s` %s" % (argv[0], _LIMIT_KILL[-rc])
         if rc != 0 and rc not in BINARIES.get(argv[0], _NO_BINARY).benign_exit:
             return None, ("`%s` exited %d — its output is not treated as an "
                           "answer" % (argv[0], rc))
@@ -1601,8 +1895,23 @@ def self_contained(segments, repo):
     return any(os.path.isfile(os.path.join(root, a)) for a in argv[1:])
 
 
+def _attached_option_value(tok):
+    """The value carried INSIDE an option token, or None when it carries none.
+
+    `--file=PATH` → `PATH`; `-fPATH` → `PATH`; `-`, `--`, `--file`, `-f` and
+    a bare operand → None. `--` is excluded by _long_option_core's own rule
+    (it is the end-of-options marker, live in this corpus)."""
+    if not tok.startswith("-") or tok in ("-", "--"):
+        return None
+    if tok.startswith("--"):
+        if "=" not in tok:
+            return None
+        return tok.split("=", 1)[1] or None
+    return tok[2:] or None
+
+
 def escaping_operand(argv, repo):
-    """The first non-option operand whose realpath leaves the repo, or None.
+    """The first operand whose realpath leaves the repo, or None.
 
     Round 15 (M3). cwd was the repo and nothing else confined anything: a
     document line could read any file on the host and have the number COMPARED.
@@ -1617,12 +1926,39 @@ def escaping_operand(argv, repo):
     error. A pattern operand that happens to read as an escaping path
     (`grep -c '..' f`) is declined and NAMED rather than run — over-refusal is
     the safe direction, and containment is the property that becomes
-    load-bearing the moment the execution hatches are closed."""
+    load-bearing the moment the execution hatches are closed.
+
+    Round 18 (H14). The loop below used to open with `if a.startswith("-"):
+    continue` — every option token skipped WHOLESALE — so a path handed to a
+    command as an ATTACHED OPTION VALUE never reached the realpath test at
+    all. That is the same respelling class as H12 one layer over: the
+    separated forms (`grep -f /etc/hostname`) were correctly declined, and the
+    attached forms were not. Reproduced, all four executed and COMPARED under
+    a printed PASS:
+      * `grep -c --file=/etc/hostname data.txt`
+      * `grep -c -f/etc/hostname data.txt`
+      * `git --git-dir=../other/.git rev-list --count HEAD`
+      * `diff --from-file=/tmp/hostsecret.txt data.txt \\| wc -l` — whose
+        printed integer is derived from the CONTENTS of a file outside the
+        repository and lands in the FAIL block for anyone reading the CI log.
+    So this file's own header property 4 ("a command may read the checkout and
+    nothing else") was false as written. An option token is no longer skipped:
+    its attached value, if it has one, is subjected to the identical test.
+
+    Short-option values that are not paths at all (`-F:`, `-m3`, the `n` of a
+    `-rn` cluster) resolve INSIDE the root and pass, so the widening costs
+    nothing on this corpus; one that reads as an escaping path is declined and
+    NAMED, which is the same over-refusal the bare-operand rule already
+    accepts."""
     root = os.path.realpath(str(repo))
     for a in argv[1:]:
         if a.startswith("-"):
-            continue
-        real = os.path.realpath(os.path.join(root, a))
+            candidate = _attached_option_value(a)
+            if candidate is None:
+                continue
+        else:
+            candidate = a
+        real = os.path.realpath(os.path.join(root, candidate))
         if real != root and not real.startswith(root + os.sep):
             return a
     return None
@@ -2241,6 +2577,12 @@ def scan(repo, quiet=False):
     # what CHECK 2's own coverage line (M14) already does.
     print("doc-claim-check — executing the verification commands the documents quote")
     print("  surfaces scanned              : %d" % len(files))
+    # Round 18. Printed unconditionally, --quiet included: whether the OS is
+    # enforcing the write ceiling is a property of what this run PROVED, and
+    # a safety property that degrades on an unsupported platform without
+    # saying so is the silent-skip failure this file's whole decline contract
+    # exists to deny itself.
+    print("  child resource limits         : %s" % child_limit_summary())
     print("  claim shapes recognised       : %d (%s)"
           % (len(CLAIM_SHAPES), ", ".join(s.name for s in CLAIM_SHAPES)))
     print("  answer kinds recognised       : %d (%s)"
@@ -2942,3 +3284,93 @@ if __name__ == "__main__":
 # |         |            |             | bounded_to_its_own_line, which was written   |
 # |         |            |             | RED against the unfixed tool and re-verified |
 # |         |            |             | red by mutation afterwards.                  |
+# | 1.9     | 2026-08-22 | Claude Code | Round 18 (H12, H14) plus the OS-ENFORCED     |
+# |         |            |             | CHILD LIMITS the owner approved on the       |
+# |         |            |             | evidence that this class has now recurred    |
+# |         |            |             | FOUR consecutive rounds, each time inside    |
+# |         |            |             | the previous round's fix. **H12:** long      |
+# |         |            |             | options were denied by EXACT core, but       |
+# |         |            |             | getopt_long accepts any unambiguous PREFIX,  |
+# |         |            |             | so `--output` was denied while `--o=`,       |
+# |         |            |             | `--out=`, `--outpu=` and `--compress-progr=` |
+# |         |            |             | were not. Reproduced under a printed PASS:   |
+# |         |            |             | `sort -S 1 --compress-progr=/…/pwn.sh        |
+# |         |            |             | big.txt \| wc -l` EXECUTED an attacker       |
+# |         |            |             | script on the runner; `sort --o=/tmp/OUTSIDE |
+# |         |            |             | data.txt` wrote outside the checkout (path   |
+# |         |            |             | confinement could not see it — the target is |
+# |         |            |             | an option VALUE, H14); `sort --outpu=CANARY  |
+# |         |            |             | data.txt` wrote inside it. Fixed as a PREFIX |
+# |         |            |             | rule over each binary's own denied long      |
+# |         |            |             | names (and git's globals), derived from      |
+# |         |            |             | denied_flags/denied_prefixes rather than     |
+# |         |            |             | listed again. Re-proven after at five        |
+# |         |            |             | abbreviation lengths, each declined and      |
+# |         |            |             | NAMED with no canary, while `sort            |
+# |         |            |             | --numeric-sort`, `grep --count`,             |
+# |         |            |             | `grep -c --regexp=a`, `wc --lines` and       |
+# |         |            |             | `git grep --count` still execute. **H14:**   |
+# |         |            |             | escaping_operand() skipped every token       |
+# |         |            |             | starting with `-`, so an ATTACHED option     |
+# |         |            |             | value never reached the containment test.    |
+# |         |            |             | Reproduced, all executed and COMPARED:       |
+# |         |            |             | `grep -c --file=/etc/hostname data.txt`,     |
+# |         |            |             | `grep -c -f/etc/hostname data.txt`,          |
+# |         |            |             | `git --git-dir=../other/.git rev-list        |
+# |         |            |             | --count HEAD`, and `diff                     |
+# |         |            |             | --from-file=/tmp/hostsecret.txt data.txt \|  |
+# |         |            |             | wc -l`, whose printed integer is derived     |
+# |         |            |             | from a file OUTSIDE the repository — so this |
+# |         |            |             | header's own property 4 was false as         |
+# |         |            |             | written. The value is now extracted (after   |
+# |         |            |             | `=` for long, after the first char for       |
+# |         |            |             | short) and given the identical realpath      |
+# |         |            |             | test; the in-repo forms `-fpatterns.txt`,    |
+# |         |            |             | `--file=patterns.txt`, `-F:` and `-m3` still |
+# |         |            |             | execute. Same round, same shape: awk's       |
+# |         |            |             | `ENVIRON`/`PROCINFO` are ARRAYS, not calls,  |
+# |         |            |             | so AWK_ALLOWED_CALLS structurally could not  |
+# |         |            |             | see them and                                 |
+# |         |            |             | `awk 'END{print length(ENVIRON["X"])}' f`    |
+# |         |            |             | read the runner's environment one integer at |
+# |         |            |             | a time — refused flat, beside `\|` and `@`.  |
+# |         |            |             | **CHILD RESOURCE LIMITS** (not a finding —   |
+# |         |            |             | an owner decision on the recurrence):        |
+# |         |            |             | RLIMIT_FSIZE=0, RLIMIT_CPU and RLIMIT_AS set |
+# |         |            |             | in the forked child before exec, so          |
+# |         |            |             | read-only-ness is enforced by the OS rather  |
+# |         |            |             | than asserted by a list. DEFENCE IN DEPTH:   |
+# |         |            |             | every allow-list, deny-flag and confinement  |
+# |         |            |             | check is unchanged and nothing was relaxed.  |
+# |         |            |             | Demonstrated against a hatch fixed by NO     |
+# |         |            |             | name here: `git status \| wc -l` passes      |
+# |         |            |             | every check and REWRITES `.git/index` — with |
+# |         |            |             | the limits off it executed and the index     |
+# |         |            |             | digest changed; with them on it died on the  |
+# |         |            |             | write, was declined by name, and the index   |
+# |         |            |             | was byte-identical. Same for `sort -S 1      |
+# |         |            |             | big.txt \| wc -l`, whose spill file is a     |
+# |         |            |             | write the allow-list permits. Limits stated  |
+# |         |            |             | honestly in SAFETY rule 6: no effect on      |
+# |         |            |             | READS, none on EXECUTION, FSIZE=0 stops a    |
+# |         |            |             | file GROWING but not an empty create or a    |
+# |         |            |             | truncate (measured), POSIX-only with a       |
+# |         |            |             | printed UNAVAILABLE line where `resource` is |
+# |         |            |             | missing, and a killed child can leave a      |
+# |         |            |             | partial artefact (`git status` leaves a      |
+# |         |            |             | zero-byte `.git/index.lock`) — recorded, not |
+# |         |            |             | worked around by exempting git. A limit kill |
+# |         |            |             | is a NAMED decline (SIGXFSZ/SIGXCPU/SIGKILL  |
+# |         |            |             | mapped in _LIMIT_KILL), never a crash and    |
+# |         |            |             | never a silent zero that gets compared. The  |
+# |         |            |             | parent's stdin staging is unaffected (the    |
+# |         |            |             | PARENT writes the temp file) and stdout is a |
+# |         |            |             | pipe, so the output cap and reader thread    |
+# |         |            |             | are untouched — verified, incl. the live     |
+# |         |            |             | `git grep -c 'CROSS-PENDING' 9b841d1^ --     |
+# |         |            |             | docs/specs \| awk …` claim, which still      |
+# |         |            |             | executes under the limits. Live tree         |
+# |         |            |             | unchanged: 605 surfaces, 6 executed / floor  |
+# |         |            |             | 4, 181 declines, 0 excused, PASS, exit 0;    |
+# |         |            |             | the 71-test suite passes unmodified; both    |
+# |         |            |             | sibling tools re-run green.                  |
