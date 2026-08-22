@@ -605,7 +605,18 @@ def currency_asserted(text, start, end):
 # ---------------------------------------------------------------------------
 ERR_RESOLVED_MARKER = re.compile(r"✅[^\n]{0,24}?(?:RESOLVED|CLOSED)", re.I)
 ERR_HEADING = re.compile(r"^## .*$", re.M)
-ERR_TABLE_ROW = re.compile(r"^\|\s*ERR-")
+# `re.M` is load-bearing, not decoration (round 18, found by the new
+# `tools/tests/test_doc_claim_check.py`). This pattern is used as
+# `ERR_TABLE_ROW.match(text, ls)` with `ls` the start of a LINE, and without
+# MULTILINE a bare `^` matches only at the real start of the string — never at
+# a non-zero `pos`, whatever precedes it. So the table-row branch below could
+# not fire for any row except one at byte 0, every index row fell through to
+# the prose-section branch, and the whole `## Error Index` table was bounded as
+# ONE entry — precisely what _err_log_entry_span's own docstring says must not
+# happen ("a ✅ anywhere in its 213 rows [would] resolve every one of them").
+# Live at the time of the fix: 191 of the 213 index rows carry a ✅, so every
+# claim in every row, resolved or not, was excused.
+ERR_TABLE_ROW = re.compile(r"^\|\s*ERR-", re.M)
 
 
 def _err_log_entry_span(text, pos):
@@ -2902,3 +2913,32 @@ if __name__ == "__main__":
 # |         |            |             | directions before landing; siblings          |
 # |         |            |             | (doc-consistency-check.py,                   |
 # |         |            |             | recurring-defect-lint.py) re-run green.      |
+# | 1.8     | 2026-08-22 | Claude Code | ONE-LINE FIX, found by the new suite         |
+# |         |            |             | tools/tests/test_doc_claim_check.py while it |
+# |         |            |             | was being written: ERR_TABLE_ROW carried no  |
+# |         |            |             | re.MULTILINE flag, and it is used as         |
+# |         |            |             | `.match(text, ls)` with `ls` a LINE start —  |
+# |         |            |             | where a bare `^` matches only at the real    |
+# |         |            |             | start of the string, never at a non-zero     |
+# |         |            |             | pos. So _err_log_entry_span's table-row      |
+# |         |            |             | branch could not fire for any row except one |
+# |         |            |             | at byte 0: every ERR index row fell through  |
+# |         |            |             | to the prose-section branch and the WHOLE    |
+# |         |            |             | `## Error Index` table was bounded as ONE    |
+# |         |            |             | entry — exactly what that function's own     |
+# |         |            |             | docstring says must not happen ("a ✅         |
+# |         |            |             | anywhere in its 213 rows [would] resolve     |
+# |         |            |             | every one of them"). Live at the time of the |
+# |         |            |             | fix: 191 of the 213 index rows carry a ✅, so |
+# |         |            |             | a stale claim in ANY index row, resolved or  |
+# |         |            |             | not, would have been excused instead of      |
+# |         |            |             | reported. Latent rather than active today —  |
+# |         |            |             | no index-row claim currently mismatches, so  |
+# |         |            |             | the live verdict and every printed figure    |
+# |         |            |             | are unchanged (605 surfaces, 6 executed /    |
+# |         |            |             | floor 4, 181 declines, 0 excused, PASS,      |
+# |         |            |             | exit 0). Locked by                           |
+# |         |            |             | ExcusalTests.test_an_err_index_table_row_is_ |
+# |         |            |             | bounded_to_its_own_line, which was written   |
+# |         |            |             | RED against the unfixed tool and re-verified |
+# |         |            |             | red by mutation afterwards.                  |

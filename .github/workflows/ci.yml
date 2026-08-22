@@ -139,6 +139,22 @@ jobs:
         # reported in one push instead of one per round-trip.
         if: always()
         run: python3 tools/doc-claim-check.py --repo .
+      - name: doc-claim-check regression suite
+        # The step above executes commands taken from DOCUMENT TEXT, and on a
+        # `pull_request` trigger that text is the PR's own. Every safety
+        # property it relies on — the dropped binaries, the per-binary escape
+        # hatches, path confinement, the output cap, the awk program allow-list
+        # — was established by manual scratch-mirror experiments that no longer
+        # exist, and a review round found several had since become false while
+        # the tool printed PASS and exited 0. This pins them: one regression
+        # test per historical exploit (each asserting BOTH the named decline
+        # AND an untouched canary), the matcher complements, the dated-record
+        # excusal model, all four exit codes, and the vacuous-pass guard.
+        # Pure stdlib unittest, fixtures in temp dirs, runs in under a second.
+        # `if: always()`, like its neighbours, so one push reports every
+        # hygiene failure instead of one per round-trip.
+        if: always()
+        run: python3 tools/tests/test_doc_claim_check.py
       - name: Constants must carry source tag in spec text
         run: |
           set -e
