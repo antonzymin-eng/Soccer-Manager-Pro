@@ -35,7 +35,17 @@ Where a narrative here disagrees with one of those files, **they win** — a mov
 at the moment of its move, exactly like the pre-promotion design supplements described in
 `CLAUDE.md`'s DESIGN SUPPLEMENT note.
 
-### One discrepancy this move surfaced, recorded rather than fixed
+### One discrepancy this move surfaced — recorded here, CLOSED the same day
+
+> **Update, August 22, 2026, later the same day.** The owner call described below was made: the
+> #29/#41 item was verified resolved against the code (`SeasonLoop` slot 1 LIVE, the #41 occurrence
+> dial ARMED, every chain `ERR-` id closed) and filed straight to `open-issues-resolved.md`, since
+> there was no `open-issues.md` entry to move. Root `CLAUDE.md`'s index and `open-issues.md` now both
+> carry 15. **§3 below is unchanged** — it is the narrative, not the status record, and a moved
+> narrative stays frozen at its move. The paragraph that follows is the original note, kept as
+> written.
+
+#### The original note
 
 `CLAUDE.md`'s OPEN ISSUES preamble reports **16 active**, and that figure is derived — correctly, by
 `grep -c '^- \*\*'` — from `open-issues.md`. But `CLAUDE.md`'s own bullet list has **17** entries: it

@@ -7,6 +7,131 @@
 
 ---
 
+> **[RESOLVED and ARCHIVED August 22, 2026.]** Both remainders this entry carried on the
+> replay-identity contract are now closed, so the entry is archived whole and **verbatim** below.
+> **(1) `ERR-016-009` — `buildHash`** (August 22, earlier the same day): build identity is SHA-256
+> over the Module Version IDs of a DECLARED authoritative assembly closure, carried on
+> `SnapshotHeader` and deliberately outside every digest preimage; restore fails closed with the new
+> `ERR_DS_REPLAY_BUILD_MISMATCH`. **(2) `ERR-016-010` — `SaveManager` writes `Fingerprint = null`,
+> the remainder this entry's own title named** (August 22, later the same day): closing it turned out
+> to be a larger finding than the title implied — §3.9.2's *normative* on-disk record layout was
+> contradicted by the implementation in **four** respects at once (no `environmentFingerprint`, no
+> `recordTrailer`, `currentSnapshotDigest` inside the header rather than after the payload, and no
+> format identifier at all), which is *why* the fingerprint had nowhere to go. The record is now
+> magic-led and versioned in its own frame, carries the fingerprint and the build hash, and a
+> disk-loaded header **passes** §4.2.2 step 3 instead of being refused by construction. The three
+> `Assert.Ignore` save/load stubs were activated rather than deleted: 12 executed locks, 3 mutants,
+> one of which survived its first lock and forced a better one.
+>
+> **One estimate in the record is corrected by this closure, not preserved as true:** the
+> `ERR-016-009` landing (and the `CLAUDE.md` bullet it wrote) priced closing these two gaps as
+> "widening that header, i.e. the `SNAPSHOT_SCHEMA_VERSION` bump the digest-preimage exclusion
+> deliberately declines to spend", costing a golden-vector re-certification on the pinned host. That
+> was wrong: the correct instrument was a **file-frame version**, already precedented in this tree as
+> `MATCH_SAVE_FORMAT_VERSION`. **No digest moved, no golden vector was touched, and no
+> recertification is owed.** The estimate is left standing where it was written — it was the honest
+> reading at the time — and corrected here and in `ERR-016-010`.
+>
+> **Still open on this surface, and deliberately NOT folded into this closure:** nothing in the
+> §4.2.2 lifecycle recomputes `currentSnapshotDigest` from the payload it just read, so a record whose
+> stored current digest or payload was altered loads clean. That is a third, distinct defect; it is
+> recorded in `ERR-016-010` and pinned by an explicit assertion in
+> `SaveLoad_ValidateHeader_RejectsTamperedDigest`, not carried as a live entry here.
+
+- **`EnvironmentFingerprint.floatModelHash` — hasher + §4.8.3 Mono mapping LANDED (Option A); §4.8.2 runtime MXCSR gate code LANDED (July 21, 2026); compiled plugin + certified live read LANDED July 22, 2026 (ERR-016-006) — REMAINDER: `SaveManager` still writes `Fingerprint = null`; load-bearing only where a real cert run reads a `SaveManager`-written save — no longer host-blocked (the certification host block cleared July 19, 2026 and the MXCSR plugin host block cleared July 22, 2026); the gap is unimplemented code, not host access** *Re-filed August 2, 2026: stays ACTIVE. Every landing the title announces is real, but the entry's own closing sentence records a live remainder — the fingerprint is written as `null` and is load-bearing only at a real cert run reading a `SaveManager`-written save. **Correction (August 3, 2026):** this note previously said `certification-platform.md` "still marks ⏳ RECERT REQUIRED" — stale; the file has been v1.4 ✅ PINNED since July 19, 2026 (see the July-19 UPDATE below), so the certification host block is not what keeps this remainder open. Title amended so the index shows what is open rather than what is done.* — *opened July 19, 2026; Option A landed same day; MXCSR gate July 21, 2026.* The `SessionManifest` requires an `EnvironmentFingerprint` (#16 §4.8), whose `floatModelHash` (§4.8.3) is `SHA-256(SerializeCanonical(0x14 ‖ floatFlagTuple))` over an 11-field compiler/runtime float-mode tuple. **Original gap:** no code computed that hash for a live host (the field was a plain constructor string; the only factory, `CreateStage0Dev()`, stamped a `STAGE0_DEV_PLACEHOLDER` sentinel — `ComputeDigest()` hashes the *outer* 6-field fingerprint, a different digest), and the tuple's fields 1–4 (`compilerToolchain`/`compilerVersion`/`targetTriple`/`il2cppVersion`) were IL2CPP-shaped while §5.5 row 0 / §4.8.3 field 4 required IL2CPP and rejected `"MONO"` — contradicting the **Mono** Stage-0 backend pinned in `certification-platform.md` v1.3 (the spec text May 3–4 predates the June-7 pin). **Resolved via Option A (owner sign-off July 19, 2026; `docs/tracking/env-fingerprint-float-model-hash-mono-mapping.md` v0.2 §7):** the §4.8.3 tuple is mapped onto the Mono backend, keeping the 11-field shape. **Spec (`section-4.md` v1.1 / `section-5.md` v1.1):** field 1 gains `"Mono"`; field 4 flips so Stage-0 certification ACCEPTS `"MONO"` (reject-MONO / IL2CPP-required → Stage 5+); a "Stage-0 Mono backend mapping" paragraph pins fields 1–4 (toolchain `"Mono"`, compilerVersion = host-supplied Mono version, targetTriple RID `"win-x64"`, il2cpp `"MONO"`); §5.5 row 0 backend → Mono + §5.5.1 Mono note. **Code:** new `src/deterministic-sim/FloatFlagTuple.cs` (`ComputeHash()` = the live-host hasher) + `EnvironmentFingerprint.CreateStage0MonoCertified(monoRuntimeVersion)` (v1.3) — a genuine, non-placeholder fingerprint from the Option-A fields + the §4.8.3 Required Stage-0 flag values; `CreateStage0Dev()` fixed `"SSE2"` → `"SSE4.2"` (v1.2) + named `FloatModelHashDevPlaceholder` sentinel + `IsDevPlaceholder` gate. Golden vector (`89f50a31…f343e7`, Python-mirror-verified) + determinism/sensitivity tests in `DeterministicSimTests`. **`monoRuntimeVersion` (field 2) is host-supplied — deliberately not synthesised.** **UPDATE July 19, 2026 — (b) the full platform-determinism certification is now DONE:** the determinism-KAT run executed on the pinned Windows 11 / Unity 6000.4.9f1 / DX11 / Mono host (commit `819f9d1`, `TacticalDirector.DeterministicSim.Tests` under Unity Test Framework EditMode) — all three golden-vector corpora (#16 §9.5 #4 a/b/c) + the §5 determinism-tier locks pass byte-exact (44 passed / 0 failed / 4 Stage-0+1-deferred skips); `certification-platform.md` v1.4 → **✅ PINNED**, `FR-DS-009-GATE` closed. Run record + raw NUnit evidence: `docs/specs/deterministic-sim/cert-runs/determinism-cert-2026-07-19.md` (+ `determinism-results-2026-07-19.xml`). **Remaining host-blocked / consumer-blocked:** (a) the §4.8.2 **runtime MXCSR validation** — the *code* LANDED July 21, 2026 (`src/deterministic-sim/native/mxcsr_query.c` STMXCSR shim + `MxcsrNative.cs` P/Invoke + `MxcsrValidator.cs` decode/gate, called at `MatchEngine` boot AND `RestoreFromSnapshot` step 0 — the snapshot-deserialize/restore path that gives it its consumer now exists; full dotnet gate PASSED). It *enforces* the now-certified pin as defense-in-depth (a no-op off the pinned host / without the compiled plugin), and is not part of *proving* the bits exact (the KAT run is that proof). The compiled `td_mxcsr` plugin build + the certified live golden read on the pinned host LANDED July 22, 2026 (live MXCSR `0x1FBF`; mode fields DAZ/FTZ/RC match the Stage-0 pin; `ValidateStage0FloatMode()` → `Validated`) — evidence `docs/specs/deterministic-sim/cert-runs/mxcsr-live-mode-cert-2026-07-22.md`, plugin `src/deterministic-sim/native/td_mxcsr.dll` (see `src/deterministic-sim/native/README.md`). No host-block remains on the MXCSR gate. **UPDATE July 19, 2026 — the FR-PO-052 perf-baseline certified capture is DONE:** the pinned-host 100-run capture (p50=0.4768 / p99=2.5669 ms/tick) was promoted PENDING → CERTIFIED (`docs/specs/performance-optimization/baselines/match-engine/kickoff-multi-second.cert.md` v1.2; code entry `CertifiedPerfBaselineTests.KickoffCertified()` swapped `Pending()` → `Certified()`), using `CreateStage0MonoCertified("mono-bundled-unity6000.4.9f1")` for the host-supplied Mono version (§4.8.3 field 2 — Unity versions its forked Mono runtime by editor release) ⇒ `floatModelHash 73c47ad5…b6bb756a` (golden-vector-validated Python mirror); Platform Certification owner sign-off recorded via the PR merge. The recorded tuple uses the pinned Stage-0 flag values, which is exactly what (a) validates against. **Latent, not live:** `SaveManager` still writes the header `Fingerprint = null`; the fingerprint is load-bearing only at a real cert run. Distinct from ERR-016-005's follow-up (the *outer* envFp golden vector). **A SECOND, INDEPENDENT GAP ON THE SAME CONTRACT — added August 22, 2026 (`ERR-016-009`):**
+#16 §2.3 declares `DeterminismContext { buildHash, matchSeed, schemaVersion, digestVersion }`, and
+**`buildHash` has no representation anywhere in `src/`** — not as a type, not as a field, not under a
+synonym, and **not on `EnvironmentFingerprint`**, which carries `WorkerCount`, `SchedulerPolicy`,
+`ReductionTopology`, `SimdFeatureLevel`, `FloatModelHash` and `UnicodeNormalizationVersion` and no
+build hash. Verified by `git ls-files 'src/*' | xargs grep -l '\bbuildHash\b'` returning **zero
+files**. **Consequence:** two builds differing only in compiled game code are indistinguishable to
+everything downstream of §2.3 — the fingerprint pins the *host and float mode*, not the *binary*. That
+is a different axis from the `Fingerprint = null` remainder above (which is a write-site gap on a field
+that exists); this one is a field that does not exist. Both sit on the replay-identity contract and
+should be closed together, since a cert run reading a `SaveManager`-written save is the consumer for
+both. Recorded, not fixed: `ERR-016-009` deliberately did not invent a build-hash source — what counts
+as the build identity (assembly MVIDs? a CI-stamped commit? the `.asmdef` closure?) is a decision, and
+#16 §2.3 v1.1 now marks it an explicit **GAP** rather than letting it read as implemented. Two further
+§2.3 names, `ToleranceRow` and `ComparatorRegistry`, are marked **Stage-1+ deferrals** by the same
+back-prop — the three approved comparators exist as `DivergenceDetector.CompareTierAFloat` /
+`CompareTierBFloat` / `CompareDigests`, but no registry and no tolerance table does, and §4.4's
+`sim/determinism/*` "tolerance matrix" module has never existed.
+**THE `buildHash` HALF IS CLOSED — August 22, 2026 (spec + code, same commit).** The decision
+`ERR-016-009` deliberately left open is made: build identity is **SHA-256 over the Module Version IDs
+of a DECLARED authoritative assembly closure**. Of the three candidates that entry named, a
+**CI-stamped commit** was rejected because it identifies *source* — a dirty tree, a different
+compiler or a different target framework all produce different binaries under one commit, and the
+developer builds where determinism defects actually surface carry no stamp at all — and the
+**`.asmdef` closure alone** was rejected because it names *which* assemblies participate, not what is
+in them, so two builds differing only in compiled code have identical closures. The closure survives
+as the **scope selector**; the MVIDs supply the **content**. The closure is **declared, never
+discovered**: `MatchEngineBuildIdentity` names its 20 modules with `typeof` expressions, because
+enumerating loaded assemblies returns whatever happens to be loaded and differs between a player run,
+an editor run and a test run of one build. It lands on `SnapshotHeader` — which already carries two
+of `DeterminismContext`'s four fields — and **outside every digest preimage**, which is the
+constraint that held the blast radius to one save format: `EnvironmentFingerprint.ComputeDigest()`
+*is* the §3.2.3 header preimage's envFp slot and `SchemaVersion` is in that preimage too, so putting
+the hash on the fingerprint or widening the deterministic-sim header would have moved every snapshot
+digest and invalidated the golden-vector corpus certified July 19, 2026 on a host this project cannot
+currently re-run. Restore fails closed with the new `ERR_DS_REPLAY_BUILD_MISMATCH` (0x160E), kept
+distinct from `ERR_DS_REPLAY_ENV_MISMATCH` because a recompiled engine on the same host passes the
+fingerprint check and must still be refused. #16 §2.3 v1.2 + new §2.3.2 / FR-DS-014; §3.4 v1.0.16
+(`DOMAIN_TAG_BUILD_IDENTITY = 0x2E`, after the roadmap §6 reserved block so no spec-pinned number
+moves; no `SubsystemOrdinals` mirror); §3.10 EC-016-015; `MATCH_SAVE_FORMAT_VERSION` **1 → 2**
+(`match-save-file-design.md` KD-7 — refuses an empty hash at BOTH ends, so the on-disk path can never
+reach the null-skip the restore gate allows for the `SaveManager` header). **No
+`DETERMINISM_DIGEST_VERSION` bump, no `SNAPSHOT_SCHEMA_VERSION` bump, no RNG stream, no draw site, no
+golden vector moved.** 27 locks and a whole-tree gate at HEAD (33 test assemblies, 0 errors, quarantine empty, `DeterministicSim.Tests` 72/0/4 and `MatchEngine.Tests` 472/1/11 against a pre-change baseline of the same tree at 56/0/4 and 461/1/11 — exactly two suites changed, by exactly the new locks, the one failure in both runs being the inherited owner-held-red `sim_match_engine_close_chance`); **three mutants executed, each killed by exactly one lock** (drop a
+declared assembly → the closure-drift lock; delete the restore gate → the foreign-hash lock; delete
+the decode-side refusal → the empty-hash lock); and **the suite caught a real defect on first run** —
+`CaptureDurableHeader` deep-copies the header field by field and would have dropped the new one, so
+every save would have carried `BuildHash = null` and the gate would have skipped itself, the whole
+landing green and inert. **What stays open on this entry:** the `Fingerprint = null` write-site gap
+above, which now has a sibling — the same Stage-0 87-byte `SaveManager` header carries no build hash
+either, deliberately, because widening it is exactly the `SNAPSHOT_SCHEMA_VERSION` bump the
+digest-preimage exclusion declines to spend. Closing them together is still the right move; it costs
+a golden-vector re-certification on the pinned host.
+
+---
+
+> **[RESOLVED and ARCHIVED August 22, 2026 — filed straight to the archive, because it never had an
+> entry in `open-issues.md` to move.]** This is the discrepancy the August 22 `landing-history.md`
+> split surfaced and deliberately left for an owner call: root `CLAUDE.md` carried a **#29 Training /
+> #41 Injuries & Medical** bullet in its OPEN ISSUES index for which the owning record had no entry,
+> so the index ran 17 bullets against the record's 16 and the "16 active" count reconciled only
+> because it was taken from the record. The owner has now called it: **resolved, archived here.**
+>
+> **Verified before archiving, not taken on the bullet's word.** (a) `SeasonLoop.RunCareerDaySteps`
+> slot 1 is **LIVE** — `_progression.AdvanceDay(day, in growth)`, with the batch gathered through
+> `PlayerCareerStates.GatherTrainingInputs` before slot 2 runs; (b) the #41 occurrence dial is
+> **ARMED** — `PlayerCareerStates.InjuryOccurrenceEnabled`, FR-MD-027; (c) every `ERR-029-*` and
+> `ERR-041-*` id in the chain reads resolved in `spec-error-log.md`.
+>
+> **Three stale status markers were corrected in the same pass**, and they are the reason this needed
+> checking rather than accepting: `ERR-029-006`, `ERR-041-010` and `ERR-041-001` each **led with `◑`
+> while their own cell text already recorded `✅`** — "FULLY RESOLVED August 8, 2026", "✅ closed
+> August 7, 2026", "✅ Resolved August 5, 2026" respectively. The narratives were not edited; each row
+> now leads with the verdict its own body had been carrying, annotated with the date and reason for
+> the correction. A row whose marker disagrees with its text is exactly how a closed item goes on
+> reading open.
+>
+> The full landing narrative is **not duplicated here** — it lives verbatim at
+> `docs/tracking/landing-history.md` §3, where it was moved earlier the same day. This annotation is
+> the status record; that section is the reasoning.
+
+- **#29 Training / #41 Injuries & Medical — DONE.** The balance pass landed August 7, 2026 and its
+  adversarial-review loop converged August 8: pass 16 of 16 returned no new High or Medium findings,
+  over 13 consecutive whole-tree gate PASSES. T0 August 5, T1 August 6, T2 later that day, then the
+  balance pass and the loop. The occurrence dial is **ARMED** (FR-MD-027) and measured in the football
+  band (717–816 injuries/season league-wide, ~39/club against an E-1-derived 30–55 band; 9.4% squad
+  unavailability). 9 ERR ids were filed and resolved across the loop, and
+  `tools/recurring-defect-lint.py` was built to mechanize four of its recurring defect classes.
+  **WHAT REMAINED at the time of writing: nothing** — #30's KD-2 slot 1, the last open seam of the
+  chain, went live at #28 T1/T2a and `ERR-029-006` is fully resolved. Re-verified against the code on
+  August 22, 2026 before archiving. Full narrative: `docs/tracking/landing-history.md` §3.
+
+---
+
 > **[ARCHIVED August 22, 2026 as a SUPERSEDED PARALLEL RECORD — not resolved, and not a duplicate in the ordinary sense.]** The entry below tracked the same live issue as `open-issues.md`'s football-judgment proxy-review entry, but it is the record of the **concurrent `claude/football-judgment-proxy-review-pq12dz` branch (PR #305)**, which filed its own `ERR-008-021` against the same section with a **different fix** — ability-weighting only, explicitly leaving the containment cliff in place. **The August 7, 2026 merge kept the other branch's form, not PR #305's**; `spec-error-log.md`'s superseded `ERR-008-021` entry (annotated 2026-08-11) is the authoritative reconciliation. It was archived because two active entries for one issue made the file's own active count double-count it — the precedent is this file's August 2, 2026 archiving of "a duplicated pair". **Two facts from it were carried forward into the surviving `open-issues.md` entry rather than left only here:** PR #305's form WAS genuinely gate-verified (CI run 404, head `3f207ee`) — a different run from the withdrawn CI-402 claim, and not evidence for the code that shipped — and its AR-1 H-1 single-goalkeeper-candidate selection is recorded by the reconciliation as *"strictly better… deliberately NOT grafted in this merge"*, i.e. real, unlanded work. **Nothing below is edited; it is preserved verbatim per this file's convention, and describes a fix that is NOT live in `src/decision-tree/OptionGenerator.cs`.**
 
 - **Football-judgment proxy review — 32 findings open across **19** specs (corrected Aug 21, 2026 from 24); the §6 doctrine governs every fix; ERR-008-020 (template), ERR-008-019 (the founding long-shot cliff, August 5) and ERR-008-021 (the deferred shot-lane follow-up, August 6) LANDED** — *opened August 4, 2026 (review + doctrine + template landing all same day); ERR-008-019 landed August 5, 2026; ERR-008-021 landed August 6, 2026.*

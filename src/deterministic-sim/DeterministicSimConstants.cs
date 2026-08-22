@@ -37,8 +37,35 @@ namespace TacticalDirector.DeterministicSim
         public const ushort DETERMINISM_DIGEST_VERSION = 1;
 
         /// <summary>[FIXED] Schema version for the snapshot binary format. §3.9.2.
-        /// Bumped whenever the authoritative-state field set changes in a backward-incompatible way.</summary>
+        /// Bumped whenever the authoritative-state field set changes in a backward-incompatible way.
+        /// <para>
+        /// <b>This is NOT the on-disk file frame's version</b> — see <see cref="SNAPSHOT_FILE_FORMAT_VERSION"/>.
+        /// It rides inside the §3.2.3 snapshot-digest preimage, so moving it moves every digest and
+        /// invalidates the golden-vector corpus; only a change to the authoritative STATE shape earns
+        /// that. Identity metadata added to the file frame does not.
+        /// </para></summary>
         public const uint SNAPSHOT_SCHEMA_VERSION = 1;
+
+        /// <summary>
+        /// [FIXED] Magic identifying a <c>SaveManager</c> snapshot file — ASCII <c>'S''N''A''P'</c>.
+        /// §3.9.2.1. Written first and checked first: the magic says WHICH format the bytes are, and
+        /// <see cref="SNAPSHOT_FILE_FORMAT_VERSION"/> says which generation of it (ERR-029-005 /
+        /// ERR-041-009: a format version is not a format identifier). It is also what distinguishes a
+        /// file written by the pre-ERR-016-010 unversioned layout, whose first four bytes were the
+        /// schema version — such a file fails the magic check and is refused, never mis-parsed.
+        /// </summary>
+        public const uint SNAPSHOT_FILE_MAGIC = 0x534E4150;   // 'S''N''A''P'
+
+        /// <summary>
+        /// [FIXED] Generation of the on-disk snapshot FILE frame identified by
+        /// <see cref="SNAPSHOT_FILE_MAGIC"/> (§3.9.2.1). Distinct from both
+        /// <see cref="SNAPSHOT_SCHEMA_VERSION"/> (the #16 header framing schema, which rides in the
+        /// digest preimage) and <see cref="DETERMINISM_DIGEST_VERSION"/> — the same three-version
+        /// split `MATCH_SAVE_FORMAT_VERSION` already draws for the match save file. Version 1 is the
+        /// first frame to carry the <see cref="EnvironmentFingerprint"/> and the §2.3.2 build hash
+        /// (ERR-016-010).
+        /// </summary>
+        public const uint SNAPSHOT_FILE_FORMAT_VERSION = 1;
 
         // ── Serialization format ─────────────────────────────────────────────────────
 

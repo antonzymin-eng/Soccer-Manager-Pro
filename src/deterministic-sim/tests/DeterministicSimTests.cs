@@ -9,6 +9,7 @@
 //           round-trip idempotence, and fault-injection error code coverage.
 
 using System;
+using System.IO;
 using System.Reflection;
 
 using NUnit.Framework;
@@ -615,19 +616,269 @@ namespace TacticalDirector.DeterministicSim
         // T-DS-REPLAY-004 / T-DS-004: save/load equivalence
         // ══════════════════════════════════════════════════════════════════════════════
 
+        // A temp directory per test, deleted afterwards. The three save/load cards below were
+        // `Assert.Ignore` stubs for "requires temp-directory fixture … activate when Stage 1 CI
+        // infrastructure supports file I/O in EditMode tests". That premise was stale: the gate runs
+        // plain NUnit on net8.0 and the sibling MatchSaveManagerTests has been doing real file I/O on
+        // it for a month. Activated at ERR-016-010, because a record format nothing ever wrote or read
+        // is exactly how this one came to contradict its own normative layout in four places.
+        private sealed class TempDir : IDisposable
+        {
+            public string Path { get; }
+
+            public TempDir(string label)
+            {
+                Path = System.IO.Path.Combine(
+                    System.IO.Path.GetTempPath(), "td-savemanager-" + label + "-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(Path);
+            }
+
+            public void Dispose()
+            {
+                try { Directory.Delete(Path, recursive: true); } catch (Exception) { }
+            }
+        }
+
+        private static (SnapshotHeader, SnapshotPayload) EncodedSnapshotAt(ulong tick, byte payloadByte)
+        {
+            var header = new SnapshotHeader();
+            header.Initialize(
+                tick, null, EnvironmentFingerprint.CreateStage0Dev(), TestBuildIdentity.TestBuildHash);
+
+            var payload = new SnapshotPayload();
+            payload.PayloadBytes[0] = payloadByte;
+            payload.BytesWritten    = 1;
+
+            new SnapshotCodec().Encode(header, payload);
+            return (header, payload);
+        }
+
         /// <summary>
         /// T-DS-004: SnapshotCodec.Encode → SaveManager.CommitAtomic → SaveManager.Load →
-        /// SnapshotCodec.ValidateHeader → digest matches.
-        /// Stub: SaveManager.Load exists but requires a real filesystem and well-formed header;
-        /// activate with a temp-directory fixture at Stage 1.
+        /// SnapshotCodec.ValidateHeader → digest matches. Executed against a real temp directory.
+        /// Also the ERR-016-010 lock that the record carries what §3.9.2 and FR-DS-010 require: the
+        /// EnvironmentFingerprint and the §2.3.2 buildHash survive the disk round-trip, so the §4.2.2
+        /// step-3 environment check is a real check rather than a guaranteed fail-closed.
         /// §5.3 T-DS-REPLAY-004 / §5.5.2.
         /// </summary>
         [Test]
         public void SaveLoad_Encode_CommitAtomic_Load_ValidateHeader_DigestMatches()
         {
-            Assert.Ignore("Stage 0+1: requires temp-directory fixture and full SnapshotPayload " +
-                          "serialization — activate when Stage 1 CI infrastructure supports " +
-                          "file I/O in EditMode tests (§5.3 T-DS-REPLAY-004 / §5.5.2).");
+            using var dir = new TempDir("roundtrip");
+            var manager  = new SaveManager(dir.Path);
+            (SnapshotHeader header, SnapshotPayload payload) = EncodedSnapshotAt(42UL, 0x5A);
+
+            Assert.AreEqual(0, manager.CommitAtomic(header, payload), "CommitAtomic must succeed.");
+
+            var loadedHeader  = new SnapshotHeader();
+            var loadedPayload = new SnapshotPayload();
+            Assert.AreEqual(0, manager.Load(42UL, loadedHeader, loadedPayload), "Load must succeed.");
+
+            Assert.AreEqual(0, new SnapshotCodec().ValidateHeader(loadedHeader),
+                "The loaded header must pass §4.2.2 steps 1–2.");
+            Assert.AreEqual(header.Tick, loadedHeader.Tick);
+            Assert.AreEqual(header.Cursor.Tick, loadedHeader.Cursor.Tick);
+            Assert.AreEqual(header.Cursor.PhaseOrdinal, loadedHeader.Cursor.PhaseOrdinal);
+            CollectionAssert.AreEqual(header.PrevSnapshotDigest, loadedHeader.PrevSnapshotDigest);
+            CollectionAssert.AreEqual(header.CurrentSnapshotDigest, loadedHeader.CurrentSnapshotDigest,
+                "The digest computed before the write must survive the round-trip byte-exact.");
+            Assert.AreEqual(payload.BytesWritten, loadedPayload.BytesWritten);
+            Assert.AreEqual(0x5A, loadedPayload.PayloadBytes[0]);
+
+            // ERR-016-010, the two gaps this landing closes.
+            Assert.AreEqual(TestBuildIdentity.TestBuildHash, loadedHeader.BuildHash,
+                "The §2.3.2 buildHash must survive the round-trip (FR-DS-014).");
+            Assert.IsNotNull(loadedHeader.Fingerprint,
+                "The EnvironmentFingerprint must survive the round-trip — FR-DS-010 requires it in " +
+                "every snapshot header, and §3.9.2's normative layout has always listed it.");
+            Assert.AreEqual(0,
+                loadedHeader.Fingerprint.ValidateAgainst(EnvironmentFingerprint.CreateStage0Dev()),
+                "The reconstructed fingerprint must validate against the live one.");
+        }
+
+        /// <summary>
+        /// ERR-016-010: the reconstructed header is complete enough for the §4.2.2 step-3 environment
+        /// check to PASS. Before this landing the loaded fingerprint was always null and step 3 could
+        /// only ever fail closed, so a disk-loaded replay was unreachable by construction.
+        /// </summary>
+        [Test]
+        public void SaveLoad_DiskLoadedHeader_PassesTheReplayEnvironmentCheck()
+        {
+            using var dir = new TempDir("replaygate");
+            var manager = new SaveManager(dir.Path);
+            (SnapshotHeader header, SnapshotPayload payload) = EncodedSnapshotAt(7UL, 0x01);
+            Assert.AreEqual(0, manager.CommitAtomic(header, payload));
+
+            var loadedHeader  = new SnapshotHeader();
+            var loadedPayload = new SnapshotPayload();
+            Assert.AreEqual(0, manager.Load(7UL, loadedHeader, loadedPayload));
+
+            var engine = new ReplayEngine(
+                new SnapshotCodec(),
+                new DeterministicRngService(0xABCDEF0123456789UL),
+                new MatchClock(0UL),
+                EnvironmentFingerprint.CreateStage0Dev());
+
+            Assert.AreEqual(0, engine.PrepareReplay(loadedHeader, loadedPayload),
+                "A disk-loaded snapshot must pass the §4.2.2 lifecycle, environment check included.");
+        }
+
+        /// <summary>
+        /// ERR-016-010: a record written under a FOREIGN environment must be refused at §4.2.2 step 3.
+        /// The positive test above cannot distinguish "the check passed" from "the check is inert", so
+        /// this is the half that proves the gate discriminates.
+        /// </summary>
+        [Test]
+        public void SaveLoad_ForeignFingerprintOnDisk_FailsTheReplayEnvironmentCheck()
+        {
+            using var dir = new TempDir("foreignenv");
+            var manager = new SaveManager(dir.Path);
+
+            var header = new SnapshotHeader();
+            header.Initialize(
+                3UL,
+                null,
+                new EnvironmentFingerprint(
+                    workerCount: 4, schedulerPolicy: "foreign", reductionTopology: "Tree",
+                    simdFeatureLevel: "AVX2", floatModelHash: "deadbeef", unicodeNormalizationVersion: "9.0"),
+                TestBuildIdentity.TestBuildHash);
+            var payload = new SnapshotPayload();
+            payload.PayloadBytes[0] = 0x01;
+            payload.BytesWritten    = 1;
+            new SnapshotCodec().Encode(header, payload);
+
+            Assert.AreEqual(0, manager.CommitAtomic(header, payload));
+
+            var loadedHeader  = new SnapshotHeader();
+            var loadedPayload = new SnapshotPayload();
+            Assert.AreEqual(0, manager.Load(3UL, loadedHeader, loadedPayload));
+
+            var engine = new ReplayEngine(
+                new SnapshotCodec(),
+                new DeterministicRngService(0xABCDEF0123456789UL),
+                new MatchClock(0UL),
+                EnvironmentFingerprint.CreateStage0Dev());
+
+            Assert.AreEqual(DeterministicSimConstants.ERR_DS_REPLAY_ENV_MISMATCH,
+                engine.PrepareReplay(loadedHeader, loadedPayload),
+                "A snapshot recorded under a different environment must be refused (EC-016-007).");
+        }
+
+        /// <summary>ERR-016-010: a null fingerprint round-trips as null (the KD-3 presence-flag
+        /// contract) rather than being invented, and the replay gate then fails closed as before.</summary>
+        [Test]
+        public void SaveLoad_NullFingerprint_RoundTripsToNull()
+        {
+            using var dir = new TempDir("nullfp");
+            var manager = new SaveManager(dir.Path);
+
+            var header = new SnapshotHeader();
+            header.Initialize(9UL, null, null, TestBuildIdentity.TestBuildHash);
+            var payload = new SnapshotPayload();
+            payload.PayloadBytes[0] = 0x02;
+            payload.BytesWritten    = 1;
+            new SnapshotCodec().Encode(header, payload);
+
+            Assert.AreEqual(0, manager.CommitAtomic(header, payload));
+
+            var loadedHeader  = new SnapshotHeader();
+            var loadedPayload = new SnapshotPayload();
+            Assert.AreEqual(0, manager.Load(9UL, loadedHeader, loadedPayload));
+            Assert.IsNull(loadedHeader.Fingerprint);
+            Assert.AreEqual(TestBuildIdentity.TestBuildHash, loadedHeader.BuildHash);
+        }
+
+        /// <summary>ERR-016-010: the write side refuses a header with no §2.3.2 build hash, so this
+        /// codec cannot produce a file its own reader rejects. Throws rather than returning the
+        /// storage-failure code, which would send the reader looking at the disk.</summary>
+        [Test]
+        public void SaveLoad_CommitWithoutBuildHash_Throws()
+        {
+            using var dir = new TempDir("nobuildhash");
+            var manager = new SaveManager(dir.Path);
+            (SnapshotHeader header, SnapshotPayload payload) = EncodedSnapshotAt(11UL, 0x03);
+            header.BuildHash = null;
+
+            Assert.Throws<ArgumentException>(() => manager.CommitAtomic(header, payload));
+        }
+
+        /// <summary>ERR-016-010: bad magic is refused. This is also the gate that refuses a file in
+        /// the pre-ERR-016-010 unversioned layout, whose first four bytes were the schema version —
+        /// refused, never mis-parsed as the new frame.</summary>
+        [Test]
+        public void SaveLoad_ForeignBytes_AreRefusedAsSchemaIncompatible()
+        {
+            using var dir = new TempDir("badmagic");
+            var manager = new SaveManager(dir.Path);
+            (SnapshotHeader header, SnapshotPayload payload) = EncodedSnapshotAt(13UL, 0x04);
+            Assert.AreEqual(0, manager.CommitAtomic(header, payload));
+
+            string path = Directory.GetFiles(dir.Path, "*.bin")[0];
+            byte[] raw  = File.ReadAllBytes(path);
+            raw[0] ^= 0xFF;                       // corrupt the leading magic
+            File.WriteAllBytes(path, raw);
+
+            Assert.AreEqual(DeterministicSimConstants.ERR_DS_SCHEMA_INCOMPATIBLE,
+                manager.Load(13UL, new SnapshotHeader(), new SnapshotPayload()));
+        }
+
+        /// <summary>ERR-016-010: an appended byte is refused. Note this is a FRAMING lock, not a
+        /// trailer lock — padding is caught by the trailing-byte guard whether or not the §3.9.2
+        /// trailer is checked, which a mutation run proved by deleting the trailer check and watching
+        /// this test stay green. The trailer's own lock is the test below it.</summary>
+        [Test]
+        public void SaveLoad_PaddedRecord_IsRefused()
+        {
+            using var dir = new TempDir("padded");
+            var manager = new SaveManager(dir.Path);
+            (SnapshotHeader header, SnapshotPayload payload) = EncodedSnapshotAt(17UL, 0x05);
+            Assert.AreEqual(0, manager.CommitAtomic(header, payload));
+
+            string path = Directory.GetFiles(dir.Path, "*.bin")[0];
+            byte[] raw  = File.ReadAllBytes(path);
+            var padded  = new byte[raw.Length + 1];
+            Array.Copy(raw, padded, raw.Length);
+            File.WriteAllBytes(path, padded);
+
+            Assert.AreEqual(DeterministicSimConstants.ERR_DS_SCHEMA_INCOMPATIBLE,
+                manager.Load(17UL, new SnapshotHeader(), new SnapshotPayload()));
+        }
+
+        /// <summary>
+        /// ERR-016-010: the §3.9.2 record trailer, locked by the ONE corruption only it can catch — a
+        /// trailer whose declared size is wrong while the file length is unchanged. Every other
+        /// structural check still passes on these bytes, so deleting the trailer comparison makes this
+        /// test and only this test fail. Written after a mutation run found the padded-record test
+        /// above did not distinguish the two.
+        /// </summary>
+        [Test]
+        public void SaveLoad_CorruptRecordTrailer_IsRefused()
+        {
+            using var dir = new TempDir("badtrailer");
+            var manager = new SaveManager(dir.Path);
+            (SnapshotHeader header, SnapshotPayload payload) = EncodedSnapshotAt(19UL, 0x06);
+            Assert.AreEqual(0, manager.CommitAtomic(header, payload));
+
+            string path = Directory.GetFiles(dir.Path, "*.bin")[0];
+            byte[] raw  = File.ReadAllBytes(path);
+            raw[raw.Length - 8] ^= 0x01;   // low byte of the u64 total-size trailer; length unchanged
+            File.WriteAllBytes(path, raw);
+
+            Assert.AreEqual(DeterministicSimConstants.ERR_DS_SCHEMA_INCOMPATIBLE,
+                manager.Load(19UL, new SnapshotHeader(), new SnapshotPayload()),
+                "A record whose trailer disagrees with its own length must be refused (§3.9.2).");
+        }
+
+        /// <summary>A missing file is a STORAGE failure, not a malformed record — the two codes must
+        /// stay distinguishable (the AR L-2 split this suite never executed).</summary>
+        [Test]
+        public void SaveLoad_MissingFile_IsAStorageFailure()
+        {
+            using var dir = new TempDir("missing");
+            var manager = new SaveManager(dir.Path);
+
+            Assert.AreEqual(DeterministicSimConstants.ERR_DS_STORAGE_ATOMICITY,
+                manager.Load(999UL, new SnapshotHeader(), new SnapshotPayload()));
         }
 
         // ══════════════════════════════════════════════════════════════════════════════
@@ -662,9 +913,47 @@ namespace TacticalDirector.DeterministicSim
         [Test]
         public void SaveLoad_ConsecutiveSaves_SecondOverwriteDoesNotCorruptFirstDigest()
         {
-            Assert.Ignore("Stage 0+1: requires temp-directory fixture and multi-tick " +
-                          "SnapshotPayload serialization — activate when Stage 1 CI " +
-                          "infrastructure supports file I/O in EditMode tests (§5.3 T-DS-006).");
+            using var dir = new TempDir("consecutive");
+            var manager = new SaveManager(dir.Path);
+            var codec   = new SnapshotCodec();
+
+            var h1 = new SnapshotHeader();
+            h1.Initialize(100UL, null, EnvironmentFingerprint.CreateStage0Dev(), TestBuildIdentity.TestBuildHash);
+            var p1 = new SnapshotPayload();
+            p1.PayloadBytes[0] = 0x11; p1.BytesWritten = 1;
+            codec.Encode(h1, p1);
+            Assert.AreEqual(0, manager.CommitAtomic(h1, p1));
+
+            // Same tick, re-saved: exercises the File.Replace overwrite arm of §4.6.1.1 step 3.
+            var h1b = new SnapshotHeader();
+            h1b.Initialize(100UL, null, EnvironmentFingerprint.CreateStage0Dev(), TestBuildIdentity.TestBuildHash);
+            var p1b = new SnapshotPayload();
+            p1b.PayloadBytes[0] = 0x22; p1b.BytesWritten = 1;
+            codec.Encode(h1b, p1b);
+            Assert.AreEqual(0, manager.CommitAtomic(h1b, p1b));
+
+            var h2 = new SnapshotHeader();
+            h2.Initialize(101UL, null, EnvironmentFingerprint.CreateStage0Dev(), TestBuildIdentity.TestBuildHash);
+            var p2 = new SnapshotPayload();
+            p2.PayloadBytes[0] = 0x33; p2.BytesWritten = 1;
+            codec.Encode(h2, p2);
+            Assert.AreEqual(0, manager.CommitAtomic(h2, p2));
+
+            var loaded1 = new SnapshotHeader();
+            var body1   = new SnapshotPayload();
+            Assert.AreEqual(0, manager.Load(100UL, loaded1, body1));
+            CollectionAssert.AreEqual(h1b.CurrentSnapshotDigest, loaded1.CurrentSnapshotDigest,
+                "The overwritten record must be the SECOND save, intact — not a partial file.");
+            Assert.AreEqual(0x22, body1.PayloadBytes[0]);
+
+            var loaded2 = new SnapshotHeader();
+            var body2   = new SnapshotPayload();
+            Assert.AreEqual(0, manager.Load(101UL, loaded2, body2));
+            Assert.AreEqual(0x33, body2.PayloadBytes[0]);
+            Assert.AreEqual(0, new SnapshotCodec().ValidateHeader(loaded2));
+
+            Assert.AreEqual(0, Directory.GetFiles(dir.Path, "*.tmp").Length,
+                "§4.6.1.1 step 5: no temp file may survive a successful commit.");
         }
 
         // ══════════════════════════════════════════════════════════════════════════════
@@ -682,9 +971,51 @@ namespace TacticalDirector.DeterministicSim
         [Test]
         public void SaveLoad_ValidateHeader_RejectsTamperedDigest()
         {
-            Assert.Ignore("Stage 0+1: requires temp-directory fixture and structured header " +
-                          "binary re-read to flip a digest byte — activate when Stage 1 CI " +
-                          "infrastructure supports file I/O in EditMode tests (§5.3 T-DS-007).");
+            using var dir = new TempDir("tampered");
+            var manager = new SaveManager(dir.Path);
+            (SnapshotHeader header, SnapshotPayload payload) = EncodedSnapshotAt(200UL, 0x44);
+            Assert.AreEqual(0, manager.CommitAtomic(header, payload));
+
+            // prevSnapshotDigest sits at offset 22: magic(4) + fileVersion(4) + schemaVersion(4) +
+            // digestVersion(2) + tick(8). Flipping a bit there leaves the record structurally valid —
+            // the trailer still agrees with the file length — which is what makes this a digest test
+            // rather than a framing test.
+            string path = Directory.GetFiles(dir.Path, "*.bin")[0];
+            byte[] raw  = File.ReadAllBytes(path);
+            raw[22] ^= 0x01;
+            File.WriteAllBytes(path, raw);
+
+            var loaded = new SnapshotHeader();
+            var body   = new SnapshotPayload();
+            Assert.AreEqual(0, manager.Load(200UL, loaded, body),
+                "A flipped digest bit must not break the framing — the record is still well-formed.");
+
+            CollectionAssert.AreNotEqual(header.PrevSnapshotDigest, loaded.PrevSnapshotDigest,
+                "The tampered digest must reach the caller, not be silently normalised.");
+
+            var engine = new ReplayEngine(
+                new SnapshotCodec(),
+                new DeterministicRngService(0xABCDEF0123456789UL),
+                new MatchClock(0UL),
+                EnvironmentFingerprint.CreateStage0Dev());
+            Assert.AreEqual(DeterministicSimConstants.ERR_DS_DIGEST_CHAIN_BREAK,
+                engine.PrepareReplay(loaded, body),
+                "§4.2.2 step 4 must reject a record whose chain link no longer matches.");
+
+            // RECORDED, not fixed (ERR-016-010): the §4.2.2 lifecycle checks the chain LINK
+            // (prevSnapshotDigest) and never recomputes currentSnapshotDigest from the payload it just
+            // read, so tampering with the stored current digest — or with the payload — is NOT
+            // detected here. That is a third defect on this surface, outside the two ERR-016-010
+            // closes, and is written down rather than silently passed over. The assertion below pins
+            // today's behaviour so the day someone adds the recomputation, this test fails and says so.
+            byte[] again = File.ReadAllBytes(path);
+            again[again.Length - 9] ^= 0x01;   // last byte of currentSnapshotDigest (before the u64 trailer)
+            File.WriteAllBytes(path, again);
+
+            var loadedCur = new SnapshotHeader();
+            var bodyCur   = new SnapshotPayload();
+            Assert.AreEqual(0, manager.Load(200UL, loadedCur, bodyCur),
+                "A tampered CURRENT digest is currently invisible to the loader — recorded, not fixed.");
         }
 
         // ══════════════════════════════════════════════════════════════════════════════

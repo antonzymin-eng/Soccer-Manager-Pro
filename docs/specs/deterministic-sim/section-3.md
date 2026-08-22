@@ -275,6 +275,8 @@ Target catalogue: `Sim.Constants.Determinism`. Every constant carries one of the
 | `_RESERVED_0x2B_` | `0x2B` | [FIXED] | **Reserved — held for Youth Academy & Intake #42 per roadmap §6 (`SubsystemOrdinals` 93); MUST NOT be reused.** Placeholder pending #42's promotion (the A-04 every-gap-has-a-placeholder rule; added by the ERR-043-001 sweep at Competition Structure #43's section-file approval — #43 is the first of #42/#43/#45 to reach the catalogue, and the catalogue previously ended at `0x2A`). Promotes at #42's first draw site, or stays reserved if #42's minimal tier proves draw-free (the #29/#40 pattern). No code const. |
 | `_RESERVED_0x2C_` | `0x2C` | [FIXED] | **Reserved — held for Competition Structure #43 per roadmap §6 (`SubsystemOrdinals.Competition = 94`); MUST NOT be reused.** Added by the ERR-043-001 sweep at #43's own section-file approval and **stays RESERVED there** — #43's minimal tier (a singleton-league collection) is draw-free (the #40 ERR-040-001 / #31 / #34 / #32 precedent). Promotes to `DOMAIN_TAG_COMPETITION = 0x2C` at #43 T3's first knockout draw (siteId `competition.draws`, `entityId = competitionId`; all draws position-independent/keyed via #43 §3.2's fixed-radix ordinal — no cursor, nothing serialized). No code const. |
 | `_RESERVED_0x2D_` | `0x2D` | [FIXED] | **Reserved — held for Board & Ownership Dynamics #45 per roadmap §6 (`SubsystemOrdinals` 95); MUST NOT be reused.** Placeholder pending #45's promotion (A-04 gap rule; the ERR-043-001 sweep). Promotes at #45's first draw site, or stays reserved if draw-free. No code const. |
+| `SNAPSHOT_FILE_MAGIC` | `0x534E4150` (ASCII `'S''N''A''P'`) | [FIXED] | Identifies a snapshot record on durable storage (§3.9.2.1). Written first, checked first; a reader MUST refuse a non-matching record before interpreting any later field. Also what distinguishes a record written by the pre-`ERR-016-010` unversioned layout, whose first four bytes were the schema version |
+| `SNAPSHOT_FILE_FORMAT_VERSION` | `1` (u32) | [FIXED] | Generation of the on-disk snapshot FILE frame identified by `SNAPSHOT_FILE_MAGIC` (§3.9.2.1). Distinct from `SNAPSHOT_SCHEMA_VERSION` (which versions the authoritative-state field set and rides inside the §3.2.3 digest preimage) and from `DETERMINISM_DIGEST_VERSION`. Version 1 is the first frame to carry the `EnvironmentFingerprint` and the §2.3.2 build hash |
 | `DOMAIN_TAG_BUILD_IDENTITY` | `0x2E` | [FIXED] | Hash-domain tag for the §2.3 `buildHash` preimage — `SHA-256( 0x2E ‖ BUILD_IDENTITY_VERSION ‖ moduleCount ‖ (assemblyName ‖ moduleVersionIdHex)* )` over the authoritative assembly closure, modules sorted by ordinal assembly name. Allocated at the buildHash's first (and only) computation site (`BuildIdentity.ComputeHash`), the `0x1E`/`0x1F` code-first pattern rather than the spec-text-first reservations above it. Next value after `_RESERVED_0x2D_`, so the roadmap §6 contiguous block `0x20`–`0x2D` is left intact — this is an infrastructure tag rather than a subsystem allocation, and no `SubsystemOrdinals` value is allocated with it (a build hash registers no RNG stream; the `0x2A` / ERR-041-012 precedent). Resolves the `buildHash` half of ERR-016-009. Pure namespace allocation; no `DETERMINISM_DIGEST_VERSION` bump — the buildHash is deliberately **outside** every digest preimage (see the §2.3 exclusion note) |
 | `BUILD_IDENTITY_VERSION` | `1` (u16) | [FIXED] | Preimage-layout version of the §2.3 `buildHash`. Distinguishes one generation of the buildHash preimage from the next; it is **not** a format identifier (the `0x2E` domain tag is — ERR-029-005 / ERR-041-009's "a format version is not a format identifier" MUST). A change to the preimage layout bumps this and changes every build's hash, which refuses saves written by earlier builds — acceptable, and the same failure direction the hash already accepts |
 | `ERR_DS_REPLAY_BUILD_MISMATCH` | `0x160E` | [FIXED] | Restore/replay refused: the recorded §2.3 `buildHash` differs from the live one — the snapshot was produced by different compiled binaries (§3.10 EC-016-015). Distinct from `ERR_DS_REPLAY_ENV_MISMATCH` (`0x1604`), which is host/float-model divergence: the fingerprint pins the **host**, this code pins the **binary**, and collapsing them was the reading ERR-016-009 was filed against |
@@ -300,6 +302,7 @@ Reference verification: `python3 -c "import struct; print(hex(struct.unpack('<I'
 **Numeric-literal review gate (normative).** Every numeric literal in §3.4 MUST be cross-checked against either (a) a programmatically-generated KAT or (b) an appendix derivation before the constant is added. Visual review of hex literals is insufficient (regression class identified by Pass 4 C-1).
 
 ## 3.5 Version History
+- **v1.0.17 (August 22, 2026):** Patch revision (`ERR-016-010`). §3.9.2's normative on-disk record layout is revised to the record that is actually emitted and consumed, and new **§3.9.2.1** pins record identity and the three-version separation. The prior layout was contradicted by the implementation in **four** respects at once — no `environmentFingerprint` (which FR-DS-010 requires and §3.9.2 already listed), no `recordTrailer`, `currentSnapshotDigest` stored inside the header block rather than after the payload, and no format identifier of any kind — so the section was a normative layout nothing emitted. The revised layout adds the preamble (`SNAPSHOT_FILE_MAGIC` + `SNAPSHOT_FILE_FORMAT_VERSION`, both new §3.4 rows), the fields the runtime has always needed to persist (`digestVersion`, the replay cursor), the §2.3.2 `buildHash`, and the presence-flagged fingerprint, and states that a `fingerprintPresent = 0` record is for a genuinely unknown environment rather than a licence to drop one the writer holds. **`SNAPSHOT_SCHEMA_VERSION` deliberately does NOT move:** it versions the authoritative state shape and rides in the §3.2.3 digest preimage, so bumping it would move every snapshot digest and invalidate the July-19-certified golden-vector corpus — the file frame carries its own version instead, the same split `MATCH_SAVE_FORMAT_VERSION` already draws. No `DETERMINISM_DIGEST_VERSION` bump, no preimage, field-width or hash-input rule changed.
 - **v1.0.16 (August 22, 2026):** Patch revision (`ERR-016-009`, the `buildHash` half). Added three §3.4 catalogue rows — `DOMAIN_TAG_BUILD_IDENTITY = 0x2E`, `BUILD_IDENTITY_VERSION = 1`, `ERR_DS_REPLAY_BUILD_MISMATCH = 0x160E` — plus §3.10 `EC-016-015` (build-identity mismatch on restore). The tag is allocated **after** the roadmap §6 reserved block `0x20`–`0x2D` so every spec-pinned subsystem number stays stable, and takes **no** `SubsystemOrdinals` value: a build hash registers no RNG stream (the `0x2A` / ERR-041-012 precedent). Code-first (`0x1E`/`0x1F` pattern) — the const and its single computation site landed in the same commit. **No `DETERMINISM_DIGEST_VERSION` bump:** the buildHash is deliberately outside every digest preimage (§2.3), so no preimage layout, field width or hash-input rule changed; adding it to the §3.2.3 header preimage would have moved every snapshot digest and invalidated the July-19-certified golden-vector corpus, which is the reason the exclusion is normative rather than incidental. All other constants, formulas, and §3.4.x sub-rules unchanged.
 - **v1.0.15 (August 8, 2026):** Patch revision (balance-pass AR pass 8 M2 — landed rowless, row added at pass 9 L1). The `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` §3.4 catalogue row re-anchored per ERR-041-012: #41's draws are a keyed SplitMix64 derivation, NO stream is registered or may be, and `SubsystemOrdinals.InjuriesMedical = 92` stays deliberately unallocated; the v1.0.11 note below annotated as the superseded frozen original. Pure text; no `DETERMINISM_DIGEST_VERSION` bump.
 - **v1.0.14 (July 25, 2026):** Patch revision. Added the three `_RESERVED_0x2B_` / `_RESERVED_0x2C_` / `_RESERVED_0x2D_` placeholder rows (`SubsystemOrdinals` 93/94/95, held for #42/#43/#45 per roadmap §6) to §3.4 at Board & Ownership Dynamics #45's section-file approval (ERR-045-001). **All three reserved, NOT promoted:** #45's minimal tier is a draw-free integer projection (the #29/#40 pattern), #42's `youth.intake` draw site does not exist until its own T2, and #43 is unauthored. This closes an A-04 gap the same way v1.0.13 did: #42's July-24 approval correctly deferred *promoting* `0x2B` but omitted the *placeholder*, so the catalogue ended at `0x2A` with `0x2B`/`0x2C` unmarked — and filing only #45's `0x2D` would have left two gaps and re-committed the exact defect v1.0.13 was written to fix. Pure namespace reservation; no `DETERMINISM_DIGEST_VERSION` bump.
@@ -406,16 +409,56 @@ Serialized canonical key stream:
 Any alternate ordering MUST be treated as deterministic contract violation.
 
 ### 3.9.2 Snapshot record on-disk layout (normative)
-A snapshot record on durable storage is the byte-exact concatenation, in order, of the four sections below. Implementations MUST emit and consume this layout exactly; field reordering is a `SchemaVersion` bump.
+A snapshot record on durable storage is the byte-exact concatenation, in order, of the five sections below. Implementations MUST emit and consume this layout exactly; field reordering is a `SNAPSHOT_FILE_FORMAT_VERSION` bump (§3.9.2.1).
 
 ```
-[ SnapshotHeader bytes              ] (variable, schema order from §2.3)
-[ SnapshotPayload bytes             ] (variable, canonical schema order)
+[ record preamble                   ] (8 bytes: u32 SNAPSHOT_FILE_MAGIC ‖ u32 SNAPSHOT_FILE_FORMAT_VERSION)
+[ SnapshotHeader bytes              ] (variable, order below)
+[ SnapshotPayload bytes             ] (variable: u32 payloadLength ‖ payloadLength canonical-order bytes)
 [ currentSnapshotDigest             ] (32 bytes, raw SHA-256 octets, opaque)
 [ recordTrailer                     ] (8 bytes: u64 LE total record size)
 ```
 
-`SnapshotHeader` field-byte order is the §2.3 schema declaration order: `schemaVersion (u32) ‖ tick (u64) ‖ prevSnapshotDigest (32 bytes) ‖ environmentFingerprint (variable, §4.8)`. All multi-byte integer fields use `SNAPSHOT_PAYLOAD_ENDIANNESS` (§3.4 = `LittleEndian`). The trailing `currentSnapshotDigest` is the SHA-256 output of §3.2.3 stored as raw 32-octet opaque bytes (no endian swap). The `recordTrailer` enables atomic-write integrity checks (§4.6.1.1) without re-parsing the payload.
+`SnapshotHeader` field-byte order is:
+
+```
+u32     schemaVersion
+u16     digestVersion
+u64     tick
+32B     prevSnapshotDigest
+u64     cursor.tick
+u8      cursor.phaseOrdinal
+string  buildHash                    -- §2.3.2; MUST be non-empty (FR-DS-014)
+u8      fingerprintPresent           -- 1 => the six §4.8 fields follow; 0 => no fingerprint recorded
+  i32     workerCount
+  string  schedulerPolicy
+  string  reductionTopology
+  string  simdFeatureLevel
+  string  floatModelHash
+  string  unicodeNormalizationVersion
+```
+
+All multi-byte integer fields use `SNAPSHOT_PAYLOAD_ENDIANNESS` (§3.4 = `LittleEndian`); `string` is a u32 length prefix followed by that many ASCII bytes (§3.2.4.1). The trailing `currentSnapshotDigest` is the SHA-256 output of §3.2.3 stored as raw 32-octet opaque bytes (no endian swap); it sits **after** the payload precisely because it is excluded from the preimage of its own computation, and an implementation that stores it inside the header block obscures that. The `recordTrailer` enables atomic-write integrity checks (§4.6.1.1) without re-parsing the payload, and MUST be compared against the actual record length on load.
+
+**A record that omits the fingerprint is not a shortcut.** FR-DS-010 requires the `EnvironmentFingerprint` to be embedded in every snapshot header for the match, and §4.2.2 step 3 validates it; a format that cannot carry it makes that step a guaranteed refusal rather than a check, which is indistinguishable from having no check at all. The `fingerprintPresent` flag exists for the record whose environment is genuinely unknown, **not** as a licence for the writer to drop one it holds.
+
+*(Layout revised v1.0.17, `ERR-016-010`. The prior revision listed the header order as `schemaVersion ‖ tick ‖ prevSnapshotDigest ‖ environmentFingerprint` and named no preamble; the implementation matched it in none of four respects — no fingerprint, no trailer, `currentSnapshotDigest` inside the header, and no format identifier at all — so this revision states the record that is now emitted and consumed, adding the fields the runtime has always needed to persist and the §2.3.2 build hash.)*
+
+#### 3.9.2.1 Record identity and versioning (normative, added v1.0.17)
+
+The record is **magic-led**: `SNAPSHOT_FILE_MAGIC` (ASCII `'S''N''A''P'`) is written first and checked first, and `SNAPSHOT_FILE_FORMAT_VERSION` follows it. The magic says WHICH format the bytes are; the version says which generation of that format (the `ERR-029-005` / `ERR-041-009` rule — a format version is not a format identifier). A reader MUST refuse a record whose magic does not match, before interpreting any later field.
+
+**Three versions govern a snapshot record and MUST NOT be conflated:**
+
+| Constant | Versions | Where it lives |
+|---|---|---|
+| `SNAPSHOT_FILE_FORMAT_VERSION` | the on-disk FILE frame — this layout | the record preamble |
+| `SNAPSHOT_SCHEMA_VERSION` | the authoritative-state field set / §2.3 header framing | inside the record **and inside the §3.2.3 digest preimage** |
+| `DETERMINISM_DIGEST_VERSION` | the digest protocol itself | inside the record |
+
+The split is load-bearing, not clerical. `SNAPSHOT_SCHEMA_VERSION` rides in the digest preimage, so moving it moves **every** snapshot digest and invalidates the golden-vector corpus (§9.5). Only a change to the authoritative STATE shape earns that. Adding identity metadata to the file frame — a magic, a fingerprint, a build hash — is not a state-shape change and MUST bump `SNAPSHOT_FILE_FORMAT_VERSION` instead. This is the same three-version separation the on-disk match save file already draws (`match-save-file-design.md` KD-1).
+
+There is **no cross-version migration at Stage 0**: a record whose file-format version is not the current one is refused, not upgraded.
 
 **Worked example.** Given:
 - `PrevSnapshotDigest = 0xAA11…`

@@ -73,11 +73,12 @@ namespace TacticalDirector.DeterministicSim
             }
 
             // Step 3: validate EnvironmentFingerprint against live runtime.
-            // AR fix M-3: a header reconstructed from disk carries no embedded fingerprint at
-            // Stage 0 (SaveManager does not yet serialize it — the M-4 wire-format gap), and the
-            // live fingerprint is constructor-injected; a null on either side MUST fail closed with
-            // ERR_DS_REPLAY_ENV_MISMATCH rather than NullReferenceException. An in-process replay
-            // that passes a header carrying its fingerprint is unaffected.
+            // AR fix M-3: a null on either side MUST fail closed with ERR_DS_REPLAY_ENV_MISMATCH
+            // rather than NullReferenceException. ERR-016-010 (2026-08-22) removed the reason this
+            // was the NORMAL disk path — SaveManager now serializes the fingerprint, so a
+            // disk-reconstructed header carries one and this check is a real comparison rather than a
+            // guaranteed refusal. The null arm remains for a header written with no fingerprint at
+            // all, which round-trips as null by contract and must still fail closed.
             if (header.Fingerprint == null || _liveFingerprint == null)
             {
                 return DeterministicSimConstants.ERR_DS_REPLAY_ENV_MISMATCH;

@@ -12,7 +12,79 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 22, 2026, latest same day (**`ERR-016-009`'s `buildHash` half CLOSED —
+> **Last Updated:** August 22, 2026, latest same day (**Both `SaveManager` gaps CLOSED as
+> `ERR-016-010`, and two OPEN ISSUES entries archived — the index and the record now agree for the
+> first time in this file's history.**) **1. The gap was bigger than its title.** The
+> `EnvironmentFingerprint.floatModelHash` entry had carried "`SaveManager` still writes
+> `Fingerprint = null`" as a remainder for a month, alongside the `buildHash` sibling closed earlier
+> the same day. Working the fix showed why the field had nowhere to go: **#16 §3.9.2 already
+> specifies a normative on-disk record layout, and the implementation contradicted it in four
+> respects at once** — no `environmentFingerprint` (which FR-DS-010 requires and §3.9.2 already
+> listed), no `recordTrailer` (`grep -rn recordTrailer src/` returned zero files), a
+> `currentSnapshotDigest` stored inside the header block instead of after the payload, and no format
+> identifier of any kind. So this was never a missing field; it was a normative section describing no
+> artifact. **The consequence that mattered:** §4.2.2 step 3 validates the fingerprint, but a disk
+> load always produced `null`, so `ReplayEngine` could only ever fail closed — a step that can only
+> refuse is indistinguishable from a step that is not there, and it had carried an `AR fix M-3`
+> comment naming that as the normal case since June. **2. The fix, and the version that did NOT
+> move.** §3.9.2 is revised to the five-section record now emitted and consumed; new **§3.9.2.1** pins
+> record identity (**magic-led** — `SNAPSHOT_FILE_MAGIC` checked before any later field is
+> interpreted, the ERR-029-005 "a format version is not a format identifier" rule) and separates the
+> three versions that govern a record, with the reason attached. `SaveManager` replaces the fixed
+> 87-byte header codec with `EncodeRecord`/`DecodeRecord`, bounds every read through
+> `SaveBlobFramingHelpers.Require`, and **throws** on a malformed header instead of reporting it as
+> `ERR_DS_STORAGE_ATOMICITY` — a return code from that method means the storage layer failed, and
+> mapping a caller's defect onto it sends the reader to the disk. **`SNAPSHOT_SCHEMA_VERSION` is
+> deliberately unmoved:** it rides in the §3.2.3 digest preimage, so bumping it moves every snapshot
+> digest and invalidates the July-19-certified golden vectors. It versions the authoritative STATE
+> shape; identity metadata in the file frame is not that. The frame carries its own version instead —
+> the split `MATCH_SAVE_FORMAT_VERSION` already draws. **3. A cost estimate this landing corrects.**
+> The entry written one commit earlier priced closing these two gaps as "the
+> `SNAPSHOT_SCHEMA_VERSION` bump the digest-preimage exclusion deliberately declines to spend", at a
+> golden-vector recertification on a host this project cannot currently reach. **That was wrong, and
+> the correction is cheaper rather than dearer:** the right instrument was a file-frame version,
+> already precedented in this tree. No digest moved, no golden vector was touched, no recertification
+> is owed. The estimate stands where it was written — it was the honest reading at the time — and is
+> corrected in `ERR-016-010` and at the archived entry. **4. Verification, and one lock that only
+> exists because a mutant survived.** The three save/load `Assert.Ignore` stubs were **activated, not
+> deleted**: their premise ("activate when Stage 1 CI infrastructure supports file I/O in EditMode
+> tests") was stale, since the gate runs plain NUnit on net8.0 and the sibling `MatchSaveManagerTests`
+> had been doing real file I/O on it for a month. `DeterministicSimSaveLoadTests` goes from **3 ignored
+> stubs to 12 executed locks + 1 genuinely-deferred skip** (`SaveAtomicMidTick`, an API that does not
+> exist). Three mutants executed: never writing the fingerprint fails three tests; accepting an empty
+> build hash fails exactly one; deleting the record-trailer comparison fails exactly one — **and that
+> last lock exists only because the first run of that mutant survived.** The padded-record test had
+> been written as the trailer's lock; the mutant passed it; a test only the trailer can fail (a
+> corrupt trailer value at unchanged file length) was written in response. That is the #29/#41 review
+> loop's "which fixes have a test that fails if the fix is reverted?" applied to this landing and
+> answered honestly. **5. RECORDED, not fixed — a third defect on the same surface.** Nothing in the
+> §4.2.2 lifecycle recomputes `currentSnapshotDigest` from the payload it just read: step 4 validates
+> the chain LINK, and the current digest is stored, loaded and never re-derived, so a record whose
+> stored digest or payload was altered loads clean. Distinct from the two closed here, outside what
+> closing them requires, and pinned by an explicit assertion so the day someone adds the recomputation
+> the test fails and says why. **6. #29 Training / #41 Injuries & Medical — verified resolved and
+> archived.** This is the discrepancy the `landing-history.md` split had recorded and left for an
+> owner call. Checked against the code rather than taken on the bullet's word: `SeasonLoop`
+> slot 1 is **LIVE** (`_progression.AdvanceDay(day, in growth)`), the #41 occurrence dial is **ARMED**
+> (`PlayerCareerStates.InjuryOccurrenceEnabled`), and every chain `ERR-` id reads resolved. Filed
+> straight to `open-issues-resolved.md`, since it never had an `open-issues.md` entry to move. **Three
+> stale status markers were corrected in the same check**, and they are why it needed checking:
+> `ERR-029-006`, `ERR-041-010` and `ERR-041-001` each **led with `◑` while their own cell text already
+> recorded `✅`**. The narratives were not edited; each row now leads with the verdict its own body had
+> been carrying. A row whose marker disagrees with its text is exactly how a closed item goes on
+> reading open. Two `CLAUDE.md` assembly-map rows that still said "slot 1 stays a null seam" and "the
+> occurrence dial ships OFF" were corrected with them. **7. Counts.** `open-issues.md` **15 active**,
+> archive **46**, and root `CLAUDE.md`'s index **15 bullets** — re-derived by direct count, and
+> **agreeing for the first time in the record**. **GATE: whole tree, 33 test assemblies, 0 errors and
+> the same 5 warnings as baseline, quarantine empty; `DeterministicSim.Tests` 83/0/1 (from 72/0/4 —
+> +11 executed locks, and three ignores retired), `MatchEngine.Tests` 472/1/11, byte-identical to the run one commit earlier.** The one failure is the
+> inherited owner-held-red `sim_match_engine_close_chance`. **Modified:**
+> `src/deterministic-sim/SaveManager.cs`, `DeterministicSimConstants.cs`, `ReplayEngine.cs`,
+> `tests/DeterministicSimTests.cs`, `docs/specs/deterministic-sim/section-3.md` (v1.0.17),
+> `spec-error-log.md` (v2.20), `open-issues.md`, `open-issues-resolved.md`, `CLAUDE.md`,
+> `landing-history.md`, `file-manifest.md`, `CHANGELOG.md`, `CHANGELOG-src.md`.
+
+> **Last Updated (prior):** August 22, 2026, latest same day (**`ERR-016-009`'s `buildHash` half CLOSED —
 > spec + code, same commit — and the six long OPEN ISSUES landing narratives moved verbatim out of
 > `CLAUDE.md`.**) **1. What build identity IS.** The previous entry recorded `buildHash` as
 > deliberately not fixed because "what constitutes build identity (assembly MVIDs? a CI-stamped
