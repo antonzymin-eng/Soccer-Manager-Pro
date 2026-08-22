@@ -114,7 +114,11 @@
 # in the working tree while the tool printed PASS. Several genuinely read-only
 # tools carry a write or execute escape hatch — `sed -i`, `find -delete` /
 # `-exec`, `python3 -c`, `sort -o`, `rg --pre`, `git -c`, `awk 'BEGIN{system()}'`,
-# `uniq IN OUT`.
+# `uniq IN OUT`. They carry READ hatches too, and those are the harder half,
+# because nothing in rule 6 below bounds a read: `awk 'BEGIN{ARGV[ARGC++]=...}'`
+# opens any file as main input, `grep -R` / `find -L` / `rg --follow` /
+# `diff -r` walk out through a symlink, and `wc --files0-from=F` takes the
+# paths it opens from F's bytes (all round 22).
 #
 # Rounds 9, 14 and 15 each falsified this section's then-current safety claim by
 # reproduction, so state the recurring root error before the rules: **an escape
@@ -148,6 +152,40 @@
 # settle: it closes the SPELLING dimension of a dash-token completely, and it
 # says nothing about a path that reaches a child by some other route.
 #
+# ROUND 22 IS THAT SENTENCE COMING TRUE, TWICE, AND IT IS WHY THE ROUNDS 9-21
+# CHAIN ABOVE IS NOT THE WHOLE STORY. Both findings are the same class in the
+# dimension round 21 explicitly disclaimed — a path reaching a child by a
+# route that is not a dash-token — and the OS child limits (rule 6) touch
+# neither, because every one of them bounds writing, CPU or memory and both
+# of these are READS:
+#   * H19 — a path can be a STRING LITERAL INSIDE A PROGRAM.
+#     `awk 'BEGIN{ARGV[ARGC++]="/etc/passwd"}END{print NR}' data.txt` assigns
+#     into awk's own operand vector, so awk opens that file as ordinary main
+#     input. No pipe, no `getline`, no disallowed call, no forbidden
+#     character; `self_contained` is satisfied by the legitimate `data.txt`,
+#     and confinement never sees the path because it is not an operand.
+#     Reproduced through scan() into the FAIL block at exit 1 ("document says
+#     3; command returns 28"), and as a byte-level oracle over /etc/hostname
+#     using only allow-listed calls. Closed by AWK_SPECIAL_ARRAYS.
+#   * H20 — a path can be reached by TRAVERSAL, and by FILE CONTENTS.
+#     `grep -R`, `find -L`/`-H`/`-follow`, `rg --follow` and `diff -r` walk
+#     THROUGH a symlink inside an in-repo directory operand, whose own
+#     realpath is inside the root and passes. And `wc --files0-from=F`,
+#     `sort --files0-from=F`, `find -files0-from F` take the paths to read
+#     out of another file's BYTES, where no operand check of any kind can
+#     reach them. Every one reproduced against a committed symlink or a
+#     committed byte string, with its non-following sibling as the control;
+#     the `wc` one was live rather than latent, because `self_contained`
+#     inspects only the FIRST pipeline segment. Closed by per-binary flag
+#     denials AND by `escaping_symlink_under()`, which is the structural
+#     half: no operand DIRECTORY may contain an escaping symlink at all,
+#     whatever flags were passed and whatever the binary would do with them.
+# The lesson the chain above had been drawing — "stop enumerating spellings"
+# — was right and too narrow. The generalisation is: THE SET OF ARGV TOKENS
+# IS NOT THE SET OF PATHS A CHILD OPENS. Rule 4 below now says so in terms,
+# and names the three routes it cannot follow rather than implying there are
+# none.
+#
 # So the sixth rule below is a different KIND of rule, and it was added for
 # that recurrence rather than for any one report: after four rounds of
 # closing respellings by name, the read-only property is moved off this
@@ -171,7 +209,12 @@
 #      for that measurement — round 20, M19: the fraction used to be stated
 #      here too, twice, and had drifted wrong in both places) — with its
 #      program allow-listed (AWK_ALLOWED_CALLS) rather than blacklisted, plus a
-#      flat refusal of `|` and `@` in any awk token.
+#      flat refusal of `|` and `@` in any awk token and of every awk SPECIAL
+#      ARRAY (AWK_SPECIAL_ARRAYS — `ARGV`/`ARGC`, `ENVIRON`/`PROCINFO`,
+#      gawk's `SYMTAB`/`FUNCTAB`). Those are variables, not calls, so the
+#      call allow-list structurally cannot see them; `ARGV` (round 22, H19)
+#      is the one that opens an arbitrary FILE, and it was missed for four
+#      rounds because it calls nothing at all.
 #   2. Each binary's `denied_flags` / `denied_prefixes` (BINARIES, round 17
 #      L1 — one `Binary` record per allow-listed binary, consolidated from
 #      what used to be separate DENIED_FLAGS / DENIED_FLAG_PREFIXES tables)
@@ -185,8 +228,26 @@
 #   3. GIT_READONLY holding only subcommands that cannot destroy anything —
 #      `branch` and `tag` are gone, because `-D`/`-d` delete refs (round 15,
 #      H4), and `--output` is denied because a diff writes a file with it.
-#   4. PATH CONFINEMENT on every operand, checked after glob expansion: a
-#      command may read the checkout and nothing else. Without it, `grep -c .
+#   4. PATH CONFINEMENT, checked after glob expansion. The property it is
+#      REACHING FOR is "a command may read the checkout and nothing else";
+#      the property it ENFORCES is narrower and is stated that way here from
+#      round 22 on, because every previous statement of it was falsified by
+#      the next round's reproduction. What it enforces:
+#        (a) every OPERAND, and every value a dash-token can carry, realpaths
+#            inside the root (escaping_operand);
+#        (b) no operand DIRECTORY contains a symlink leaving the root, at any
+#            depth (escaping_symlink_under, round 22 H20) — so a recursing
+#            command cannot walk out of the checkout even if this file has
+#            mismodelled which of its flags follow links;
+#        (c) the routes that reach a path by NEITHER of those are refused by
+#            NAME, per binary and per language, because there is nothing in
+#            argv for a containment rule to test: awk's `ARGV` (H19), and the
+#            `--files0-from` / `-files0-from` family on `wc`, `sort` and
+#            `find`, which read the paths to open out of another file's bytes
+#            (the H20 sweep).
+#      (c) is an enumeration and is therefore the weak leg, deliberately kept
+#      visible as such rather than folded into the sentence above it.
+#      Without any of this, `grep -c .
 #      /etc/passwd` was a one-integer read oracle over the host (round 15, M3).
 #      Round 18 (H14): "every operand" now includes the value ATTACHED to an
 #      option token, which the check used to skip wholesale — until then this
@@ -210,6 +271,19 @@
 #      _attached_option_values() for the argument, and for the honest
 #      statement of what it does NOT cover (a path inside a `key=value` bare
 #      operand, a file a binary opens on its own, the environment).
+#      ROUND 22 (H19, H20) — and this sentence's "a file a binary opens on
+#      its own" was not a hypothetical corner: it was THREE live routes, and
+#      naming them as a residual is how they were found. The suffix rule is
+#      still exactly right about dash-tokens and still says nothing about
+#      anything else, which is why (b) and (c) above exist. What remains
+#      unenforced by this file, named rather than implied — see
+#      escaping_symlink_under()'s docstring and the round-22 version-history
+#      row: a recursion with NO operand (defaulting to `.`), which the flag
+#      denials and `needs_file` cover instead; a binary's own config or
+#      dot-files (git's `.git/config`, rg's `RIPGREP_CONFIG_PATH`), none of
+#      which a DOCUMENT can point anywhere; and TOCTOU between the symlink
+#      walk and exec, against an external writer this tool has never claimed
+#      to defend.
 #   5. RESOURCE BOUNDS: no shell, a wall-clock timeout AND a hard cap on how
 #      much a segment may print, because a timeout does not bound memory —
 #      one document line drove the checker to 587 MB and `cat /dev/zero` would
@@ -455,16 +529,56 @@ class Binary:
 _NO_BINARY = Binary()          # the all-defaults record for a plain binary
 
 
+# Round 22 (H20). SYMLINK-FOLLOWING TRAVERSAL FLAGS, denied per binary.
+#
+# `escaping_operand` realpaths each OPERAND and refuses one that leaves the
+# root — which correctly catches a symlink supplied DIRECTLY (`grep -c root
+# q` where `q -> /etc/passwd` is declined). It does not model TRANSITIVE
+# traversal: an in-repo DIRECTORY operand realpaths inside the root and
+# passes, and a recursing binary then walks through a symlink inside it to a
+# file outside. On `pull_request` the checkout is the PR head and
+# `actions/checkout` preserves symlinks, so `sub/x.md -> /etc/passwd` plus a
+# document claim is entirely attacker-controlled. Reproduced, each against a
+# committed symlink and each with its non-following sibling as the control:
+#   `grep -Rl 'root' sub \| wc -l`   -> 1   (`-rl` lowercase -> 0)
+#   `find -L deep -name passwd \| wc -l`   -> 2   (plain `find` -> 0)
+#   `find deep -follow -name passwd \| wc -l` -> 2
+#   `rg --follow -l root sub \| wc -l` -> 1   (`rg -l` -> 0)
+#   `diff -r sub other \| wc -l` -> a 30-line diff OF /etc/passwd
+# The lowercase/plain forms are the control in every case, and they are also
+# the ONLY forms the live corpus uses (`grep -r`, `grep -rn`, plain `find`),
+# so denying the following variants costs this tree nothing — measured, not
+# assumed.
+#
+# `diff` earns its `-r` denial for a different reason from the rest, worth
+# stating because it is not symmetrical with them: GNU diff has no
+# non-dereferencing default to fall back to. `-r` recursion DEREFERENCES
+# symlinks unless `--no-dereference` is passed, so unlike grep and find there
+# is no safe spelling to keep — the whole flag goes.
+#
+# THE FLAG DENIAL IS NOT THE WHOLE FIX. It rests on each binary's documented
+# default (grep `-r` follows only command-line symlinks; find without `-L` is
+# `-P`; rg follows nothing without `--follow`), which is exactly the
+# "enumerate what you happen to know" shape this file's SAFETY section calls
+# its recurring root error. `escaping_symlink_under()` below is the
+# structural half: no operand DIRECTORY may contain an escaping symlink at
+# all, whatever flags were passed and whatever the binary would have done
+# with them.
+_FOLLOWING_GREP = frozenset({"-R", "--dereference-recursive"})
+
 BINARIES = {
     # pattern_operand=True on the whole grep family (round 20, M21): the
     # first non-option token is the PATTERN, not a file, so a search regex
     # that happens to spell a real repo path (`grep -c 'CLAUDE.md'`) must not
     # be read as evidence this segment names a file to read.
-    "grep": Binary(benign_exit=frozenset({1}), needs_file=True,
+    "grep": Binary(denied_flags=_FOLLOWING_GREP,
+                   benign_exit=frozenset({1}), needs_file=True,
                    pattern_operand=True),
-    "egrep": Binary(benign_exit=frozenset({1}), needs_file=True,
+    "egrep": Binary(denied_flags=_FOLLOWING_GREP,
+                    benign_exit=frozenset({1}), needs_file=True,
                     pattern_operand=True),
-    "fgrep": Binary(benign_exit=frozenset({1}), needs_file=True,
+    "fgrep": Binary(denied_flags=_FOLLOWING_GREP,
+                    benign_exit=frozenset({1}), needs_file=True,
                     pattern_operand=True),
     # `--pre`/`--pre-glob`/`--hostname-bin` hand ripgrep a program to run;
     # `--generate` is a distinct info-dump hatch. No `denied_prefixes` entry
@@ -473,15 +587,36 @@ BINARIES = {
     # which the exact-core check above already matches, so a `--pre=` prefix
     # entry beside the bare `--pre` in denied_flags caught nothing the exact
     # check did not already catch.
+    # `-L`/`--follow` is rg's own symlink-following switch (round 22, H20);
+    # `-R`/`--dereference-recursive` are carried too, spelling-for-spelling
+    # with the grep family, because rg does not define them and a claim
+    # quoting one is an error either way — refusing it is free and keeps the
+    # family's denial set readable as one rule rather than three.
     "rg": Binary(
         denied_flags=frozenset({"--pre", "--pre-glob", "--hostname-bin",
-                                 "--generate"}),
+                                 "--generate", "-L", "--follow"})
+                    | _FOLLOWING_GREP,
         benign_exit=frozenset({1}), needs_file=True, pattern_operand=True),
     "ls": Binary(),
+    # `-L`, `-H` and the old `-follow` synonym make find DEREFERENCE symlinks
+    # (round 22, H20); `-files0-from` reads the paths to walk out of a FILE'S
+    # CONTENTS, which is a path reaching the child by no dash-token route at
+    # all — see escaping_symlink_under() and the sweep note beside it.
     "find": Binary(denied_flags=frozenset({
         "-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint",
-        "-fprint0", "-fprintf", "-fls"})),
-    "wc": Binary(needs_file=True),
+        "-fprint0", "-fprintf", "-fls", "-L", "-H", "-follow",
+        "-files0-from"})),
+    # `--files0-from=F` (round 22, the H20 sweep) is the ONE member of that
+    # family that was live rather than latent, and it was live because
+    # `self_contained` only ever inspects the FIRST pipeline segment:
+    # `cat data.txt \| wc -l --files0-from=l2.txt` put wc in second position,
+    # where the needs-a-real-operand rule does not run, and it read
+    # /etc/passwd — measured, two children spawned, the count declined only
+    # because wc prints "25 /etc/passwd" rather than a bare integer, which
+    # one `\| cut -d' ' -f1` undoes. The path never appears in argv at all:
+    # it is a byte string inside another file, so neither the suffix rule nor
+    # confinement can see it. Denied by name, as for `sort` and `find`.
+    "wc": Binary(denied_flags=frozenset({"--files0-from"}), needs_file=True),
     "cat": Binary(needs_file=True),
     "head": Binary(denied_flags=frozenset({"-f", "--follow"}), needs_file=True),
     "tail": Binary(denied_flags=frozenset({"-f", "-F", "--follow"}),
@@ -491,8 +626,18 @@ BINARIES = {
     # No `denied_prefixes` (round 20, M23 — both former entries were the same
     # redundancy as rg's above: `--output`/`--compress-program` are already
     # bare cores in denied_flags, so their `=value` forms are already caught).
+    # `--files0-from=F` (round 22, the H20 sweep) makes sort read the list of
+    # files to sort out of F's CONTENTS — a path reaching the child by no
+    # dash-token route, so `_attached_option_values`' suffix rule cannot see
+    # it and confinement never tests it. LIVE, not latent, and the first
+    # guess about why it was safe was wrong: `needs_file` does decline it in
+    # first position, but `self_contained` inspects only the FIRST segment,
+    # so `cat data.txt \| sort --files0-from=l2.txt \| wc -l` reached the
+    # FAIL block reporting 25 — the line count of /etc/passwd, three children
+    # spawned. Denied by name, the same class as find's and wc's.
     "sort": Binary(
-        denied_flags=frozenset({"-o", "--output", "--compress-program"}),
+        denied_flags=frozenset({"-o", "--output", "--compress-program",
+                                 "--files0-from"}),
         needs_file=True),
     # Denied flags empty by design — `uniq` is guarded by OPERAND COUNT
     # instead, in denied_flag()'s own uniq branch: `uniq IN OUT` writes OUT,
@@ -551,7 +696,16 @@ BINARIES = {
     "echo": Binary(),
     "printf": Binary(),
     "stat": Binary(),
-    "diff": Binary(benign_exit=frozenset({1})),
+    # `-r`/`--recursive` (round 22, H20). GNU diff DEREFERENCES symlinks it
+    # meets while recursing unless `--no-dereference` is given, so — unlike
+    # grep and find, which have a safe default spelling to keep — there is no
+    # non-following form of `diff -r` to preserve. Reproduced: with
+    # `sub/x.md -> /etc/passwd` and a plain `other/x.md`, `diff -r sub other
+    # \| wc -l` printed 30, i.e. a diff OF /etc/passwd, into the FAIL block.
+    # The live corpus quotes no `diff -r` at all (its only diff is
+    # `git diff --stat`), so the denial costs nothing.
+    "diff": Binary(denied_flags=frozenset({"-r", "--recursive"}),
+                   benign_exit=frozenset({1})),
 }
 
 # ALLOWED_CMDS is DERIVED from BINARIES — a binary is allow-listed exactly
@@ -639,8 +793,60 @@ AWK_ESCAPES = re.compile(r"\b(?:system|getline)\b")
 #     special ARRAYS. They are variables, not calls, so the allow-list below
 #     is the wrong shape of rule for them exactly as a call-name blacklist was
 #     the wrong shape for `print x | "sh"`; see denied_flag()'s awk branch.
+#   * `ARGV` / `ARGC` anywhere in an awk token (round 22, H19) — the SAME
+#     shape one dimension over, and the one the "every suffix of a dash-token
+#     is tested" rule explicitly never claimed. See AWK_SPECIAL_ARRAYS below.
 AWK_CALL = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*\(")
-AWK_ENV_ARRAYS = re.compile(r"\b(?:ENVIRON|PROCINFO)\b")
+
+# awk's SPECIAL ARRAYS, each with the reason it is refused. Round 22 (H19).
+#
+# Round 18 refused `ENVIRON`/`PROCINFO` because an allow-list of FUNCTION
+# names structurally cannot see a VARIABLE. `ARGV`/`ARGC` are the same
+# mechanism aimed at the filesystem instead of the environment, and they were
+# missed because every awk rule this file has ever written asks what the
+# program CALLS or which CHARACTERS it contains — and this one calls nothing
+# and contains nothing forbidden:
+#
+#     awk 'BEGIN{ARGV[ARGC++]="/etc/passwd"}END{print NR}' data.txt
+#
+# assigns a path into awk's own operand vector, so awk OPENS that file as
+# ordinary main input. No pipe, no `getline`, no disallowed call, no forbidden
+# character — and PATH CONFINEMENT is structurally blind to it, because the
+# path is a string LITERAL inside the program token rather than an operand,
+# while `self_contained` is satisfied by the legitimate `data.txt` beside it.
+# Reproduced end to end through scan(): a document stating 3 landed in the
+# FAIL block at exit 1 reading "document says 3; command returns 28", the 25
+# extra lines being /etc/passwd; and as a BYTE-level oracle over
+# /etc/hostname using only allow-listed calls (`index`, `substr`).
+#
+# `SYMTAB`/`FUNCTAB` are gawk's symbol tables and are refused with them: an
+# `SYMTAB["ARGV"]` write reaches the same vector indirectly, so refusing the
+# direct spelling alone would be the enumerate-the-spelling error this file's
+# SAFETY section calls its recurring root cause. (`\bARGV\b` already matches
+# inside the quoted string, so that particular route is doubly covered —
+# refusing the table itself is what covers the routes nobody has written yet.)
+#
+# The rule is a NAME refusal, deliberately, and it is the right shape here for
+# the reason the SAFETY section gives for awk generally: awk's argument is a
+# LANGUAGE, so the load-bearing rule is the CALL allow-list, and these are the
+# handful of things that allow-list cannot express because they are not calls.
+# Over-refusal is the stated safe direction and costs nothing measurable: the
+# one live awk claim on this tree (`... | awk '{s+=$1} END{print s}'`) names
+# none of them, and a document that legitimately wants NR or NF is untouched.
+AWK_SPECIAL_ARRAYS = (
+    (re.compile(r"\b(?:ARGV|ARGC)\b"),
+     "which is awk's own OPERAND VECTOR — assigning a path into `ARGV` (or "
+     "raising `ARGC`) makes awk OPEN that file as ordinary main input, with "
+     "no pipe, no getline and no disallowed call, and path confinement "
+     "cannot see it because the path is a string LITERAL inside the program "
+     "token rather than an operand"),
+    (re.compile(r"\b(?:ENVIRON|PROCINFO)\b"),
+     "which exposes the runner's environment and process state"),
+    (re.compile(r"\b(?:SYMTAB|FUNCTAB)\b"),
+     "which is gawk's symbol table — it reaches every global variable "
+     "indirectly, `ARGV` among them, so refusing only the direct spelling "
+     "would be an enumeration of spellings again"),
+)
 AWK_ALLOWED_CALLS = frozenset((
     # keywords that take a parenthesised clause
     "if", "while", "for", "do", "else", "return", "function", "func",
@@ -2027,21 +2233,24 @@ def denied_flag(argv):
                         "`\"cmd\" | getline` both run a shell command")
             if "@" in a:
                 return "awk token containing `@` — gawk @load/@include"
-            env = AWK_ENV_ARRAYS.search(a)
-            if env is not None:
-                # Round 18 (H14, the related note). `ENVIRON` is a VARIABLE,
-                # not a call, so AWK_ALLOWED_CALLS — an allow-list of
-                # FUNCTION names — structurally cannot see it, and
-                # `awk 'END{print length(ENVIRON["TD_SECRET"])}' data.txt`
-                # calls only `length(`, which is on the list. It reads the
-                # runner's environment one integer at a time, which is the
-                # same read-oracle shape path confinement exists to deny for
-                # files. Refused flat, beside `|` and `@`, for the reason
-                # those two are: no allow-list of call names can express it.
-                return ("awk token naming the special array `%s`, which "
-                        "exposes the runner's environment and process state — "
-                        "a variable, not a call, so the function allow-list "
-                        "structurally cannot see it" % env.group(0))
+            # Round 18 (H14, the related note) for ENVIRON/PROCINFO; round 22
+            # (H19) for ARGV/ARGC and gawk's SYMTAB/FUNCTAB. A special array
+            # is a VARIABLE, not a call, so AWK_ALLOWED_CALLS — an allow-list
+            # of FUNCTION names — structurally cannot see one:
+            # `awk 'END{print length(ENVIRON["TD_SECRET"])}' data.txt` calls
+            # only `length(`, and
+            # `awk 'BEGIN{ARGV[ARGC++]="/etc/passwd"}END{print NR}' data.txt`
+            # calls NOTHING AT ALL. Both are one-integer read oracles — one
+            # over the runner's environment, one over any file it can open —
+            # so both are refused flat, beside `|` and `@`, for the reason
+            # those two are: no allow-list of call names can express them.
+            # See AWK_SPECIAL_ARRAYS for the reproductions.
+            for pattern, why in AWK_SPECIAL_ARRAYS:
+                hit = pattern.search(a)
+                if hit is not None:
+                    return ("awk token naming the special array `%s`, %s — a "
+                            "variable, not a call, so the function allow-list "
+                            "structurally cannot see it" % (hit.group(0), why))
             for call in AWK_CALL.findall(a):
                 if call not in AWK_ALLOWED_CALLS:
                     return ("awk program calling `%s(`, which is not on the "
@@ -2656,6 +2865,117 @@ def escaping_operand(argv, repo):
     return None
 
 
+# How many directory entries `escaping_symlink_under` may examine under ONE
+# operand before it gives up and DECLINES rather than pass a tree it did not
+# finish reading. Deliberately far above anything this repo can present (a
+# whole-tree walk here is ~3.6k entries including `.git`), because the cap is
+# a runaway guard, not a policy: a tree big enough to hit it is one this tool
+# could not have proved anything about, and "declined and named" is the only
+# honest answer to that. Fail-safe by construction — hitting the cap refuses
+# the claim, it does not wave it through.
+SYMLINK_WALK_CAP = 500_000
+
+# Memo for the walk, keyed by the resolved directory path. The tool only ever
+# READS the tree — every child runs under RLIMIT_FSIZE=0 — so a directory's
+# contents cannot change between two claims of one run, which is what makes a
+# process-lifetime memo sound here. Keyed on the RESOLVED path so two
+# spellings of one directory share an answer.
+_SYMLINK_WALK_MEMO = {}
+
+
+def escaping_symlink_under(argv, repo):
+    """The first (operand-directory, escaping-symlink) pair reachable by
+    recursing into an operand, rendered for a decline, or None.
+
+    ROUND 22 (H20), and the half of that finding that is a RULE rather than a
+    list. `escaping_operand` above realpaths each operand, which catches a
+    symlink handed over DIRECTLY and nothing else: an in-repo DIRECTORY
+    operand resolves inside the root and passes, and a recursing binary then
+    walks THROUGH a symlink inside it to a file outside the checkout. On a
+    `pull_request` trigger the checkout is the pull request's own head and
+    `actions/checkout` preserves symlinks, so both halves — the symlink and
+    the document line quoting the command — are attacker-supplied.
+
+    The per-binary denial of `-R` / `-L` / `-follow` / `diff -r` (see the
+    BINARIES note above) closes every following spelling this file knows
+    about, and that is precisely the objection: it is a list of the traversal
+    behaviours someone thought of, resting on each binary's documented
+    default for everything else. THIS function does not model binaries at
+    all. If an operand is a directory, the whole subtree under it must be
+    free of symlinks leaving the root — whatever flags were passed, whatever
+    the binary would have done with them, and whether or not this file has
+    ever heard of the binary's traversal rules. `grep -rl root sub` is
+    declined by this check exactly as `grep -Rl root sub` is, because the
+    difference between them is a fact about GNU grep and not a fact this tool
+    can enforce.
+
+    Deliberately NOT scoped to binaries that recurse. `wc -l somedir` cannot
+    read the subtree, and refusing it costs a claim that would have failed at
+    run_pipeline's non-zero-exit decline anyway; scoping the check would mean
+    keeping a second list of which binaries recurse, which is the shape of
+    rule this file has now watched fail six times.
+
+    WHAT IT DOES NOT COVER, stated because a containment claim stated too
+    broadly is this file's recurring error:
+      * a recursion with NO operand at all, which defaults to `.` — `find`
+        with no path, `rg` with no file. Those are covered by the flag denial
+        (`find -L`) or by `needs_file` (`rg` alone declines as reading an
+        empty stdin), not by this walk.
+      * a path the child derives from FILE CONTENTS rather than from argv —
+        `find -files0-from`, `sort --files0-from`. There is no operand to
+        walk there at all; both are denied by name in BINARIES.
+      * TOCTOU. The walk runs before exec. Nothing in this tool's own run
+        writes to the tree, so the window is against an external writer, and
+        this file has never claimed to defend one.
+      * a subtree the walk cannot READ. `os.walk` swallows a permission
+        error and yields nothing for that directory, so it would be reported
+        clean. Harmless rather than a hole, because the child runs as the
+        same user: a directory this process cannot open is one the child
+        cannot recurse into either.
+    """
+    root = os.path.realpath(str(repo))
+    for a in argv[1:]:
+        if a.startswith("-"):
+            # A dash-token's suffixes are handled by escaping_operand's own
+            # rule; none of them is a directory operand to recurse into.
+            continue
+        target = os.path.join(root, a)
+        if not os.path.isdir(target) or os.path.islink(target):
+            continue
+        real = os.path.realpath(target)
+        found = _SYMLINK_WALK_MEMO.get(real)
+        if found is None:
+            found = _walk_for_escaping_symlink(real, root)
+            _SYMLINK_WALK_MEMO[real] = found
+        if found:
+            return a, found
+    return None
+
+
+def _walk_for_escaping_symlink(target, root):
+    """The first symlink at or under `target` whose realpath leaves `root`,
+    as a repo-relative path — or the cap message, or "" for a clean subtree.
+
+    `followlinks=False` is the load-bearing argument: a symlinked directory
+    appears in `dirnames` (so it IS examined) and is not descended into (so a
+    symlink loop cannot hang the walk)."""
+    seen = 0
+    for dirpath, dirnames, filenames in os.walk(target, followlinks=False):
+        for name in dirnames + filenames:
+            seen += 1
+            if seen > SYMLINK_WALK_CAP:
+                return ("<more than %d entries — this tool stopped reading "
+                        "before it could prove the subtree contains no "
+                        "symlink leaving the checkout>" % SYMLINK_WALK_CAP)
+            q = os.path.join(dirpath, name)
+            if not os.path.islink(q):
+                continue
+            real = os.path.realpath(q)
+            if real != root and not real.startswith(root + os.sep):
+                return os.path.relpath(q, root)
+    return ""
+
+
 def expand_globs(segments, repo):
     """Expand UNQUOTED glob tokens as a shell would: sorted matches relative to
     the repo root, or the literal token when nothing matches (bash default).
@@ -2743,6 +3063,20 @@ def expand_globs(segments, repo):
             return None, ("operand %s resolves outside the repository root — "
                           "this tool reads the checkout, not the host"
                           % outside)
+        # Round 22 (H20). The TRANSITIVE half of the same property: an
+        # operand that resolves inside the root may still be a doorway out
+        # of it. Checked here, on the post-expansion argv, for the round-14
+        # reason every other containment rule is — a glob may expand onto a
+        # directory that was never written in the document.
+        reach = escaping_symlink_under(argv, repo)
+        if reach is not None:
+            operand, link = reach
+            return None, ("operand `%s` is a directory containing `%s`, a "
+                          "symlink that leaves the repository root — a "
+                          "recursing command reads through it, and an "
+                          "operand's own realpath cannot see that. This "
+                          "tool reads the checkout, not the host"
+                          % (operand, link))
     return out, None
 
 
@@ -4730,3 +5064,170 @@ if __name__ == "__main__":
 # |         |            |             | moved. The 71-test suite passes UNMODIFIED — |
 # |         |            |             | not edited, per the fixer boundary. Both     |
 # |         |            |             | sibling tools re-run green.**                |
+# | 1.13    | 2026-08-22 | Claude Code | Two reviewed findings, both the SAME class   |
+# |         |            |             | as rounds 9-21 in the ONE dimension round    |
+# |         |            |             | 21's suffix rule explicitly disclaimed — a   |
+# |         |            |             | path reaching a child by a route that is NOT |
+# |         |            |             | a dash-token — and both READS, which the     |
+# |         |            |             | round-18 OS child limits do not bound. Each  |
+# |         |            |             | reproduced through the real `scan()` path    |
+# |         |            |             | before the fix and re-proven after, with the |
+# |         |            |             | legitimate case of the same shape still      |
+# |         |            |             | executing. **H19: awk `ARGV`/`ARGC` OPENED   |
+# |         |            |             | AN ARBITRARY HOST FILE — a read oracle       |
+# |         |            |             | confinement is structurally blind to.** The  |
+# |         |            |             | awk guard refused `\|`, `@`, system/getline, |
+# |         |            |             | ENVIRON/PROCINFO and un-allow-listed calls;  |
+# |         |            |             | it never touched ARGV. `awk 'BEGIN{ARGV[     |
+# |         |            |             | ARGC++]="/etc/passwd"}END{print NR}'         |
+# |         |            |             | data.txt` assigns a path into awk's own      |
+# |         |            |             | operand vector, so awk OPENS it as ordinary  |
+# |         |            |             | main input: no pipe, no getline, no          |
+# |         |            |             | disallowed call, no forbidden character, and |
+# |         |            |             | the path is a string LITERAL inside the      |
+# |         |            |             | program token rather than an operand, so     |
+# |         |            |             | escaping_operand cannot see it while         |
+# |         |            |             | self_contained is satisfied by the           |
+# |         |            |             | legitimate `data.txt`. BEFORE: scan()        |
+# |         |            |             | reached the FAIL block at exit 1 — "document |
+# |         |            |             | says 3; command returns 28", the 25 extra    |
+# |         |            |             | lines being /etc/passwd — with parse_        |
+# |         |            |             | pipeline OK, denied_flag None, self_         |
+# |         |            |             | contained True and escaping_operand None,    |
+# |         |            |             | i.e. every gate clean individually; and as a |
+# |         |            |             | BYTE-level oracle over /etc/hostname using   |
+# |         |            |             | only allow-listed calls (`index`). AFTER:    |
+# |         |            |             | declined `unsafe`, NAMED, and 0 children     |
+# |         |            |             | spawned (measured by spying on               |
+# |         |            |             | subprocess.Popen), so the read demonstrably  |
+# |         |            |             | does not happen. FIXED by AWK_SPECIAL_       |
+# |         |            |             | ARRAYS, replacing AWK_ENV_ARRAYS: a name     |
+# |         |            |             | refusal for `ARGV`/`ARGC`, the existing      |
+# |         |            |             | `ENVIRON`/`PROCINFO`, and gawk's `SYMTAB`/   |
+# |         |            |             | `FUNCTAB` — the symbol table reaches ARGV    |
+# |         |            |             | indirectly, so refusing only the direct      |
+# |         |            |             | spelling would be the enumerate-the-spelling |
+# |         |            |             | error again. A name refusal IS the right     |
+# |         |            |             | shape here for the reason the SAFETY section |
+# |         |            |             | gives for awk generally: the load-bearing    |
+# |         |            |             | rule is the CALL allow-list, and a special   |
+# |         |            |             | array is a VARIABLE — this one calls NOTHING |
+# |         |            |             | AT ALL, which is why four rounds of awk      |
+# |         |            |             | rules missed it. Cost measured, not assumed: |
+# |         |            |             | the one live awk claim names none of them    |
+# |         |            |             | and still executes, as do a bare             |
+# |         |            |             | `awk 'END{print NR}' data.txt` and the       |
+# |         |            |             | corpus's own pipeline shape. **H20: `grep    |
+# |         |            |             | -R` AND `find -L` FOLLOWED SYMLINKS OUT OF   |
+# |         |            |             | THE CHECKOUT.** escaping_operand realpaths   |
+# |         |            |             | each operand and refuses one that leaves the |
+# |         |            |             | root — correct for a symlink handed over     |
+# |         |            |             | directly, blind to TRANSITIVE traversal: an  |
+# |         |            |             | in-repo DIRECTORY operand resolves inside    |
+# |         |            |             | the root and passes, and the binary walks    |
+# |         |            |             | through a symlink inside it. On              |
+# |         |            |             | `pull_request` the checkout is the PR head   |
+# |         |            |             | and actions/checkout preserves symlinks, so  |
+# |         |            |             | `sub/x.md -> /etc/passwd` plus a document    |
+# |         |            |             | claim is entirely attacker-controlled.       |
+# |         |            |             | BEFORE, each against a committed symlink and |
+# |         |            |             | each with its non-following sibling as the   |
+# |         |            |             | control: `grep -Rl 'root' sub \| wc -l` -> 1 |
+# |         |            |             | (`-rl` -> 0); `find -L deep -name passwd \|  |
+# |         |            |             | wc -l` -> 2 (plain find -> 0); `find deep    |
+# |         |            |             | -follow ...` -> 2; `rg --follow -l root sub  |
+# |         |            |             | \| wc -l` -> 1 (`rg -l` -> 0); and `diff -r  |
+# |         |            |             | sub other \| wc -l` reached the FAIL block   |
+# |         |            |             | at 30 — a diff OF /etc/passwd. AFTER: all    |
+# |         |            |             | declined and named, 0 children spawned.      |
+# |         |            |             | FIXED IN TWO HALVES, because the prescribed  |
+# |         |            |             | flag denial alone rests on each binary's     |
+# |         |            |             | documented default, which is the enumerate-  |
+# |         |            |             | what-you-know shape this file keeps filing.  |
+# |         |            |             | (i) per-binary denials: grep/egrep/fgrep/rg  |
+# |         |            |             | `-R`/`--dereference-recursive`, rg also      |
+# |         |            |             | `-L`/`--follow`, find `-L`/`-H`/`-follow`,   |
+# |         |            |             | and diff `-r`/`--recursive` — diff for a     |
+# |         |            |             | different reason worth stating, since GNU    |
+# |         |            |             | diff DEREFERENCES while recursing unless     |
+# |         |            |             | `--no-dereference` is passed, so there is no |
+# |         |            |             | safe spelling to keep. (ii) the STRUCTURAL   |
+# |         |            |             | half, escaping_symlink_under(): no operand   |
+# |         |            |             | DIRECTORY may contain a symlink leaving the  |
+# |         |            |             | root at any depth, whatever flags were given |
+# |         |            |             | and whatever the binary would have done with |
+# |         |            |             | them — so lowercase `grep -rl root sub` is   |
+# |         |            |             | declined too, because the difference between |
+# |         |            |             | it and `-Rl` is a fact about GNU grep and    |
+# |         |            |             | not one this tool can enforce. `os.walk(     |
+# |         |            |             | followlinks=False)` (a symlinked dir is      |
+# |         |            |             | examined, never descended, so no loop can    |
+# |         |            |             | hang it), memoised per resolved directory,   |
+# |         |            |             | with SYMLINK_WALK_CAP as a fail-SAFE runaway |
+# |         |            |             | guard (hitting it declines). Measured on the |
+# |         |            |             | live tree: 36 walks, 12 ms total, whole run  |
+# |         |            |             | 4.0 s -> 4.2 s. **THE REQUIREMENT-2 SWEEP    |
+# |         |            |             | FOUND A THIRD ROUTE, and one instance of it  |
+# |         |            |             | was LIVE, not latent: a path taken from      |
+# |         |            |             | another file's BYTES.** `wc -l --files0-from |
+# |         |            |             | =F` reads the files named inside F. It       |
+# |         |            |             | escapes needs_file because self_contained    |
+# |         |            |             | inspects only the FIRST pipeline segment, so |
+# |         |            |             | `cat data.txt \| wc -l --files0-from=l2.txt` |
+# |         |            |             | EXECUTED (2 children spawned) and read       |
+# |         |            |             | /etc/passwd; it was declined only because wc |
+# |         |            |             | prints "25 /etc/passwd" rather than a bare   |
+# |         |            |             | integer, which one `\| cut -d' ' -f1` undoes |
+# |         |            |             | — luck, not a rule. THE SAME FAMILY ON       |
+# |         |            |             | `sort` WAS WORSE, and it corrects this       |
+# |         |            |             | round's own first guess that only wc's was   |
+# |         |            |             | live: `cat data.txt \| sort --files0-from=   |
+# |         |            |             | l2.txt \| wc -l` reached the FAIL BLOCK at   |
+# |         |            |             | 25 — the line count of /etc/passwd, three    |
+# |         |            |             | children spawned — because self_contained    |
+# |         |            |             | never runs on a second segment.              |
+# |         |            |             | `find -files0-from list.txt -name passwd \|  |
+# |         |            |             | wc -l` reproduced a stated 2 out of /etc in  |
+# |         |            |             | FIRST position. All three declined and named |
+# |         |            |             | after, 0 children. No operand check of any   |
+# |         |            |             | kind can reach these, so they are refused by |
+# |         |            |             | NAME and rule 4 now labels that leg its weak |
+# |         |            |             | one rather than folding it in. Sweep         |
+# |         |            |             | RESIDUALS, named because a named residual is |
+# |         |            |             | worth more than a silent one: a recursion    |
+# |         |            |             | with NO operand (covered by the flag denials |
+# |         |            |             | and needs_file, not by the walk); a binary's |
+# |         |            |             | own config/dot-files (git `.git/config`, rg  |
+# |         |            |             | `RIPGREP_CONFIG_PATH`), which no DOCUMENT    |
+# |         |            |             | can point anywhere; `ls -R`/`stat -L`, safe  |
+# |         |            |             | only because ls prints names and both are    |
+# |         |            |             | already covered by (a)+(b); `find -printf    |
+# |         |            |             | '%l'`, which leaks an in-repo symlink's      |
+# |         |            |             | TARGET STRING and is covered by (b) whenever |
+# |         |            |             | that target escapes; and TOCTOU between the  |
+# |         |            |             | walk and exec, against an external writer    |
+# |         |            |             | this file has never claimed to defend.       |
+# |         |            |             | SAFETY section rewritten where these         |
+# |         |            |             | findings made it false: the awk hatch list   |
+# |         |            |             | (no ARGV), rule 1 (special arrays), rule 4   |
+# |         |            |             | (restated as what it ENFORCES — (a) operands |
+# |         |            |             | and dash-token suffixes, (b) no escaping     |
+# |         |            |             | symlink under an operand directory, (c) the  |
+# |         |            |             | named refusals — instead of "a command may   |
+# |         |            |             | read the checkout and nothing else"), and a  |
+# |         |            |             | new chain paragraph stating the              |
+# |         |            |             | generalisation the rounds 9-21 chain had     |
+# |         |            |             | been drawing too narrowly: THE SET OF ARGV   |
+# |         |            |             | TOKENS IS NOT THE SET OF PATHS A CHILD       |
+# |         |            |             | OPENS. **Live tree AFTER: byte-identical to  |
+# |         |            |             | before — 605 surfaces, 6 executed (3         |
+# |         |            |             | distinct, floor 2) of which 1 LIVE (floor    |
+# |         |            |             | 1), 191 declines in the same eight buckets,  |
+# |         |            |             | 0 excused, PASS, exit 0. Coverage delta is   |
+# |         |            |             | ZERO and neither floor moved: the live       |
+# |         |            |             | corpus quotes only `grep -r`/`grep -rn`,     |
+# |         |            |             | plain `find`, and an awk program naming no   |
+# |         |            |             | special array, and it contains no symlinks   |
+# |         |            |             | at all. The 121-test suite passes            |
+# |         |            |             | UNMODIFIED — not edited, per the fixer       |
+# |         |            |             | boundary. Both sibling tools re-run green.** |
