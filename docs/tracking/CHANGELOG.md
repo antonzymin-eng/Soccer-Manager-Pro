@@ -12,7 +12,40 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 22, 2026 (**§6.3.1: the football-judgment backlog now has a LANDING ORDER,
+> **Last Updated:** August 22, 2026, later same day (**The football-judgment proxy review's DUPLICATE
+> entries de-duplicated — and it was not the duplicate it looked like.**) Doc-only; no `.cs` touched.
+> The review had **two** active entries in `open-issues.md` and **two** bullets in root `CLAUDE.md`.
+> Investigating before deleting showed they are **not two copies of one record**: the second of each is
+> the record of the **concurrent `claude/football-judgment-proxy-review-pq12dz` branch (PR #305)**,
+> which filed its own `ERR-008-021` against the same section with a **different fix** — ability
+> weighting only, explicitly leaving the containment cliff in place — and the **August 7 merge kept the
+> other branch's form, not PR #305's** (`spec-error-log.md`'s superseded `ERR-008-021` entry, annotated
+> 2026-08-11, is the authoritative reconciliation). The two records also disagree on `ERR-008-021`'s
+> landing date (Aug 5 vs Aug 6) and give **different gate results**, which is why a mechanical
+> merge-and-delete would have been wrong. **Resolution.** `CLAUDE.md` and `open-issues.md` each keep
+> ONE entry — this branch's live line, current through `ERR-008-023`. The PR #305 record moved to
+> `open-issues-resolved.md` **verbatim**, under a *blockquote* annotation (deliberately not a bullet, so
+> it is not counted as a resolved issue) stating that it is a superseded parallel record, not a resolved
+> one, and that it describes a fix **not live in `src/decision-tree/OptionGenerator.cs`**. Precedent:
+> this file's own August 2, 2026 archiving of "a duplicated pair". **Two facts were carried forward into
+> both survivors rather than left only in the archive:** PR #305's form **was** genuinely gate-verified
+> at **CI run 404, head `3f207ee`, Aug 7** — a *different run* from the withdrawn CI-402 claim, and
+> **not evidence for the code that shipped** — and that branch's **AR-1 H-1**, selecting a SINGLE
+> goal-line-nearest goalkeeper candidate for the P3 exemption instead of exempting the whole 6 m GK
+> band, which the reconciliation records as *"strictly better… deliberately NOT grafted in this merge"*,
+> i.e. **real, unlanded, follow-up-worthy work** on top of what `ERR-008-023` left. **Counts corrected:
+> the active count had been double-counting this issue.** `open-issues.md` **17 → 16 active** and the
+> archive **43 → 44**, both re-derived by direct `grep -c '^- \*\*'` after the change. **Verified no
+> loss:** the archived body is byte-identical to what was removed, and every distinctive token from the
+> removed `CLAUDE.md` bullet still resolves somewhere in the tree. **Honest note on token cost: this did
+> NOT shrink `CLAUDE.md`** — 3,102 chars of bullet came out, ~2,400 of annotation went in, so the file
+> is roughly flat at ~104k chars (~29k tokens). The win is correctness, not size. **Where the size
+> actually is, measured:** OPEN ISSUES bullets are **67% of the file**, and the single
+> #29-Training/#41-Injuries bullet is **40,214 chars — 38.7% of `CLAUDE.md` on its own**. Any real
+> token-cost work starts there, not here. **Modified:** `CLAUDE.md`, `docs/tracking/open-issues.md`,
+> `docs/tracking/open-issues-resolved.md`, `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** August 22, 2026 (**§6.3.1: the football-judgment backlog now has a LANDING ORDER,
 > not just a taxonomy.**) Doc-only; **no `.cs` touched**, so no gate run (the whole-tree gate ran
 > yesterday on the last `.cs` change — 33 suites, build 0 errors, the single inherited red band).
 > §6.3 classified each finding; nothing said what order to fix them in, and with 24 workable the
