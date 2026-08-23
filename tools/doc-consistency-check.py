@@ -2,7 +2,7 @@
 # ============================================================================
 # File:     tools/doc-consistency-check.py
 # Created:  2026-08-18
-# Modified: 2026-08-19
+# Modified: 2026-08-22
 # Author:   Claude Code
 # ============================================================================
 # Purpose: Catch the two defect classes that three consecutive adversarial-review
@@ -509,21 +509,94 @@ def _blank(text, start, end):
             + text[end:])
 
 
+# A HEADER FIELD LINE: `**Label:**` at the start of a line (blockquote prefix
+# allowed). The chain marker is itself one of these, which is the whole reason
+# the bound below works — a chain is a run of field lines of ONE label, and the
+# file's remaining header fields (`**Status:**`, `**Author:**`, `**Purpose:**`,
+# `**Project Type:**`, `**Raised During:**`) are field lines of a different
+# label sitting immediately after it. The label is bounded to 60 characters and
+# may not contain `*`, so a wrapped sentence that happens to carry emphasis and
+# a colon ("**The load-bearing addition is the honest gap:** ...") is not one.
+CHAIN_FIELD_LINE = re.compile(r"^[ \t]*>?[ \t]*\*\*[^*\n]{1,60}?:\*\*")
+
+
 def frozen_chain_span(text):
     """(start, end) of the append-only header chain below its head entry, or
-    None. Everything from the first `**Last Updated (prior):**` marker to the
-    next markdown heading (or EOF) is a dated record of a past pass.
+    None. It runs from the first `**Last Updated (prior):**` marker to the end
+    of the LAST such marker's entry — every byte between two markers belongs to
+    the earlier entry, so the only place the chain can stop being a chain is
+    after the final one.
 
     Extracted as its own function at round 13 so `tools/doc-claim-check.py` can
     reuse THIS definition rather than carry a second copy: two tools disagreeing
     about which bytes are frozen history is the duplicate-claim defect this repo
     files repeatedly, and it would show up as one tool excusing a record the
-    other reports."""
+    other reports.
+
+    ROUND 23 (H22) — THE SPAN USED TO RUN TO THE NEXT MARKDOWN HEADING, AND
+    THAT SWALLOWED PRESENT-TENSE TEXT ON EVERY SURFACE THAT HAS A CHAIN. The
+    chain is inserted INTO a file's header field block, between
+    `**Last Updated:**` and the fields below it, so the bytes after the last
+    chain entry and before the next heading are the file's own live status
+    block — not a record of anything. Measured on this tree at the time of the
+    fix, every one of them present-tense metadata frozen by position alone:
+
+        README.md                   556-565   **Project Type:** / **Current Stage:**
+        docs/tracking/file-manifest.md    1383-1386   **Purpose:**
+        docs/tracking/spec-error-log.md    746-750   **Status:** / **Raised During:**
+        docs/tracking/living-world-system-design.md  56-71  **Status:** / **Author:**
+        docs/tracking/match-engine-design.md         93-103 **Status:** / **Purpose:**
+        docs/tracking/unified-season-save-design.md  55-69  **Status:** / **Purpose:**
+
+    README's is the one that proves the cost rather than merely describing it:
+    `**Current Stage:**` there says "All 26 approved specs", against a real 53,
+    and both this checker and `doc-claim-check.py` excused every claim in it —
+    the second tool as a PASS on a count-with-command, which is verbatim the
+    defect it exists to catch.
+
+    The bound is deliberately the LAST ENTRY'S END and not "the first line that
+    is not a marker": lines BETWEEN markers are the wrapped bodies of the
+    entries above them, and this repo writes bodies that begin with emphasis
+    and a colon (README's `> **Note on this file's currency:**`, CHANGELOG's
+    `> **Verification:**`). Cutting at the first such line would have unfrozen
+    35 of README.md's 36 chain entries and 139 of CHANGELOG.md's 140 — both
+    re-derived 2026-08-22 by running that naive rule against the live files
+    and counting the markers it leaves outside the span. (The figure first
+    written here was "~130 … in README.md alone", which is CHANGELOG.md's
+    number attached to README.md's name; README has only 36 entries in total,
+    so it was not reachable.) After the final marker the
+    entry ends at the first line that is blank or begins a NEW header field —
+    a `>`-only line is a paragraph break inside a quoted entry, not an end —
+    and the next heading remains an upper bound."""
     m = PRIOR_MARKER.search(text)
     if not m:
         return None
     nxt = HEADING_RE.search(text, m.start())
-    return (m.start(), nxt.start() if nxt else len(text))
+    hard = nxt.start() if nxt else len(text)
+    last = m
+    for mm in PRIOR_MARKER.finditer(text, m.start(), hard):
+        last = mm
+    # From the marker match's END, not its start: PRIOR_MARKER opens with
+    # `^\s*`, and `\s` matches a newline, so on a chain whose first marker is
+    # preceded by a BLANK LINE the match begins one line early. Walking from
+    # `start` then treated the marker's own line as the first candidate
+    # continuation, matched it against CHAIN_FIELD_LINE (a marker IS a field
+    # line) and stopped immediately, leaving a span holding nothing but a
+    # newline — which blanks to itself, so `doc-claim-check.py` derived NO
+    # region at all and every record in the chain was reported. Found by that
+    # file's own test suite, whose fixture has exactly that blank line.
+    nl = text.find("\n", last.end())
+    if nl == -1 or nl + 1 >= hard:
+        return (m.start(), hard)
+    pos = end = nl + 1
+    while pos < hard:
+        nl = text.find("\n", pos)
+        stop = hard if nl == -1 else min(nl + 1, hard)
+        line = text[pos:nl if nl != -1 else hard]
+        if not line.strip() or CHAIN_FIELD_LINE.match(line):
+            break
+        pos = end = stop
+    return (m.start(), min(end, hard))
 
 
 def blank_frozen_history(text):
@@ -1531,3 +1604,128 @@ if __name__ == "__main__":
 # |         |            |             | with one whose did not. Proved both   |
 # |         |            |             | ways: 54 -> 9 findings naming every   |
 # |         |            |             | site; 53 (today) -> clean.            |
+# | 1.9     | 2026-08-22 | Claude Code | Round 23 (H22, filed against          |
+# |         |            |             | `tools/doc-claim-check.py` and fixed  |
+# |         |            |             | HERE so both tools keep ONE           |
+# |         |            |             | definition of which bytes are         |
+# |         |            |             | frozen). **`frozen_chain_span` ran    |
+# |         |            |             | from the first `**Last Updated        |
+# |         |            |             | (prior):**` marker to the NEXT        |
+# |         |            |             | MARKDOWN HEADING — and a header chain |
+# |         |            |             | is inserted INTO a file's metadata    |
+# |         |            |             | block, so every byte between the last |
+# |         |            |             | chain entry and that heading is the   |
+# |         |            |             | file's own PRESENT-TENSE status       |
+# |         |            |             | block, frozen by position alone.**    |
+# |         |            |             | Live on six surfaces when this        |
+# |         |            |             | landed: README.md 556-565 (`**Project |
+# |         |            |             | Type:**` … `**Current Stage:**`,      |
+# |         |            |             | whose text says "All 26 approved      |
+# |         |            |             | specs" against a real 53), file-      |
+# |         |            |             | manifest.md 1383-1386                 |
+# |         |            |             | (`**Purpose:**`), spec-error-log.md   |
+# |         |            |             | 746-750 (`**Status:**`, `**Raised     |
+# |         |            |             | During:**`), and living-world-system- |
+# |         |            |             | design.md / match-engine-design.md /  |
+# |         |            |             | unified-season-save-design.md         |
+# |         |            |             | (`**Status:**`, `**Author:**`,        |
+# |         |            |             | `**Purpose:**`). The sibling's cost   |
+# |         |            |             | was the worse one — a count-with-     |
+# |         |            |             | command written there was EXCUSED and |
+# |         |            |             | the run printed PASS, reproduced on a |
+# |         |            |             | fixture at a claim wrong by a factor  |
+# |         |            |             | of 33 — but this checker skipped the  |
+# |         |            |             | same bytes. The span now ends at the  |
+# |         |            |             | END OF THE LAST MARKER'S ENTRY: after |
+# |         |            |             | the final marker line, the entry runs |
+# |         |            |             | on while lines are non-blank and do   |
+# |         |            |             | not begin a new `**Label:**` field (a |
+# |         |            |             | `>`-only line is a paragraph break    |
+# |         |            |             | inside a quoted entry, not an end),   |
+# |         |            |             | and the next heading remains an upper |
+# |         |            |             | bound. Deliberately NOT "the first    |
+# |         |            |             | line that is not a marker": lines     |
+# |         |            |             | BETWEEN markers are the wrapped       |
+# |         |            |             | bodies of the entries above them, and |
+# |         |            |             | this repo writes bodies opening with  |
+# |         |            |             | emphasis and a colon (README's `>     |
+# |         |            |             | **Note on this file's currency:**`,   |
+# |         |            |             | CHANGELOG's `> **Verification:**`),   |
+# |         |            |             | so that rule would have unfrozen 35   |
+# |         |            |             | of README.md's 36 chain entries and   |
+# |         |            |             | 139 of CHANGELOG.md's 140 (re-derived |
+# |         |            |             | 2026-08-22 by running the naive rule; |
+# |         |            |             | the figure first written here, "~130  |
+# |         |            |             | in README.md alone", was CHANGELOG's  |
+# |         |            |             | number under README's name, and was   |
+# |         |            |             | not reachable — README holds 36       |
+# |         |            |             | entries in total). One bug found by   |
+# |         |            |             | the sibling's                         |
+# |         |            |             | own suite and fixed in the same pass: |
+# |         |            |             | PRIOR_MARKER opens with `^\s*`, and   |
+# |         |            |             | `\s` matches a newline, so on a chain |
+# |         |            |             | whose first marker is preceded by a   |
+# |         |            |             | BLANK LINE the match begins one line  |
+# |         |            |             | early — the walk must start from the  |
+# |         |            |             | match's END, or it treats the         |
+# |         |            |             | marker's own line as the first        |
+# |         |            |             | candidate continuation and returns a  |
+# |         |            |             | span holding nothing but a newline.   |
+# |         |            |             | **Measured: every span's START is     |
+# |         |            |             | unchanged; scope grows by 9,206 chars |
+# |         |            |             | across SEVEN files — six carrying a   |
+# |         |            |             | real status block plus CHANGELOG-src, |
+# |         |            |             | whose 3 chars are a trailing rule —   |
+# |         |            |             | measured as this checker's own        |
+# |         |            |             | "chars in scope" delta (README +532,  |
+# |         |            |             | spec-error-log +3808, CHANGELOG-src   |
+# |         |            |             | +3, file-manifest +103, living-world  |
+# |         |            |             | +1127, match-engine-design +2627,     |
+# |         |            |             | unified-season-save +1006); per-file  |
+# |         |            |             | citation and cardinality counts       |
+# |         |            |             | unchanged; 34 excusals (23/4/7/0) and |
+# |         |            |             | 16 unresolvable unchanged; PASS, exit |
+# |         |            |             | 0 both before and after.** The newly- |
+# |         |            |             | scanned README status block is a      |
+# |         |            |             | genuine documentation defect neither  |
+# |         |            |             | tool's matchers bind (no version      |
+# |         |            |             | citation, and "All 26 approved specs" |
+# |         |            |             | matches no cardinality pattern) —     |
+# |         |            |             | reported to the owner, not edited,    |
+# |         |            |             | and not worked around here.           |
+# | 1.10    | 2026-08-22 | Claude Code | Round 23 recovery pass over the row   |
+# |         |            |             | above, which was written in an        |
+# |         |            |             | interrupted session and never         |
+# |         |            |             | reported. `frozen_chain_span` itself  |
+# |         |            |             | is CONFIRMED, re-proved both ways     |
+# |         |            |             | against `git show HEAD:tools/…`:      |
+# |         |            |             | every span's START is unchanged, the  |
+# |         |            |             | seven per-file scope deltas reproduce |
+# |         |            |             | exactly, and a README-shaped fixture  |
+# |         |            |             | carrying a count-with-command wrong   |
+# |         |            |             | by a factor of 33 is EXCUSED at exit  |
+# |         |            |             | 0 PASS before the fix and FAILS at    |
+# |         |            |             | exit 1 after it, while the genuine    |
+# |         |            |             | chain entry one line above stays      |
+# |         |            |             | excused. No code changed here. Two    |
+# |         |            |             | FIGURES did: "~130 real chain entries |
+# |         |            |             | in README.md alone" was CHANGELOG.md's|
+# |         |            |             | 139 written under README's name, and  |
+# |         |            |             | was not reachable — README holds 36   |
+# |         |            |             | entries, of which the naive rule      |
+# |         |            |             | would unfreeze 35 (re-derived by      |
+# |         |            |             | running that rule, both files); and   |
+# |         |            |             | "~9.2 KB across the six files" listed |
+# |         |            |             | SEVEN, so it now names the seventh    |
+# |         |            |             | (CHANGELOG-src, +3 chars, a trailing  |
+# |         |            |             | rule rather than a status block) and  |
+# |         |            |             | states the exact 9,206 and the        |
+# |         |            |             | measurement it comes from — this      |
+# |         |            |             | checker's own "chars in scope" line.  |
+# |         |            |             | The README `**Current Stage:**`       |
+# |         |            |             | finding stands and is still not       |
+# |         |            |             | edited: "All 26 approved specs"       |
+# |         |            |             | against a real 53, bound by no        |
+# |         |            |             | matcher in either tool, so it is      |
+# |         |            |             | reported to the owner and nothing     |
+# |         |            |             | here is widened to catch it.          |
