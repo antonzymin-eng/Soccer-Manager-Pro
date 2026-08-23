@@ -52,9 +52,9 @@
 #        its own runner and `wasSuccessful()` alone, exactly the gap M18
 #        describes, which is why ci.yml (and this file's own header) treat
 #        the first form as authoritative and the second as a convenience.
-# Round 16's own fixes landed with NO coverage at all — the same shape that
-# made round 15's fixes silently regressable — so section 9 below locks ten
-# of them, each written red against the pre-fix tool or an equivalent
+# Rounds 18-21's own fixes landed with NO coverage at all — the same shape
+# that made round 15's fixes silently regressable — so section 9 below locks
+# ten of them, each written red against the pre-fix tool or an equivalent
 # mutation of the current one (see the landing report for which).
 #
 # ROUND 3 — FOUR REVIEWED FINDINGS AGAINST THIS SUITE ITSELF (M25-M27, M30),
@@ -223,16 +223,18 @@ TRUE_VALUE = 3
 #
 # The fix does not hard-code a ceiling of zero, because that would fail this
 # suite on a runner that genuinely lacks one of the three binaries — the
-# complement M18 also names as a requirement. Instead every SKIP REASON this
-# suite ever produces has one shape, "`<binary>` is not on PATH", and a skip
-# is EXPLAINED only when a FRESH, independent `shutil.which` call — not the
-# HAVE_* flag that was cached at import time and might itself be the thing
-# that lied — confirms that binary really is absent right now. A skip whose
-# reason names a binary that is actually present (M18's own reproduction) or
-# whose reason has no such shape at all is UNEXPLAINED, and even one of those
-# fails the run with a non-zero exit — see the `__main__` block at the
-# bottom of this file, which is where this is actually wired to the exit
-# code `unittest.main(exit=False)` would otherwise ignore.
+# complement M18 also names as a requirement. The classifier recognises two
+# SKIP REASON shapes: "`<binary>` is not on PATH", explained only when a
+# FRESH, independent `shutil.which` call — not the HAVE_* flag that was
+# cached at import time and might itself be the thing that lied — confirms
+# that binary really is absent right now; and, since M26 below, "<name>
+# module unavailable", explained the same way by a fresh
+# `importlib.import_module` call. A skip whose reason names a binary or
+# module that is actually present (M18's own reproduction) or whose reason
+# matches neither shape is UNEXPLAINED, and even one of those fails the run
+# with a non-zero exit — see the `__main__` block at the bottom of this
+# file, which is where this is actually wired to the exit code
+# `unittest.main(exit=False)` would otherwise ignore.
 #
 # M26 (reviewed finding, round 2 of this suite's own hardening) — THE CEILING
 # ONLY EVER LEARNED ONE SHAPE, AND THIS FILE ALREADY EMITS A SECOND ONE.
@@ -1495,7 +1497,10 @@ class CurrencyAssertedLineBoundTests(FixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# (9) ROUND 16 LOCKS — the fixes this round landed with no coverage at all.
+# (9) ROUNDS 18-21 LOCKS — the fixes these rounds landed with no coverage at
+# all (see each class's own docstring below for its specific round and
+# finding id: rounds 18 and 21 for the option-parsing and resource-limit
+# classes, rounds 19-20 for the rest).
 # Each is written red against the pre-fix tool (verified against a scratch
 # copy; see the landing report), the same discipline as section (8) above.
 # ---------------------------------------------------------------------------
@@ -2469,11 +2474,12 @@ if __name__ == "__main__":
 # |         |            |             | what that function's docstring says   |
 # |         |            |             | it exists to prevent.                 |
 # | 1.1     | 2026-08-22 | Claude Code | M17 + M18 (two reviewed findings      |
-# |         |            |             | against this suite) plus round 16's   |
-# |         |            |             | own fixes, which had landed with no   |
-# |         |            |             | coverage at all — the same shape that |
-# |         |            |             | made round 15's fixes silently        |
-# |         |            |             | regressable. 71 -> 121 tests, 0.39s   |
+# |         |            |             | against this suite) plus rounds       |
+# |         |            |             | 18-21's own fixes, which had landed   |
+# |         |            |             | with no coverage at all — the same    |
+# |         |            |             | shape that made round 15's fixes      |
+# |         |            |             | silently regressable. 71 -> 121 tests,|
+# |         |            |             | 0.39s                                 |
 # |         |            |             | -> ~1.9s. M17: two independent        |
 # |         |            |             | mutation batteries (38 and 15         |
 # |         |            |             | mutants) agreed on 18 survivors —     |
@@ -2504,7 +2510,7 @@ if __name__ == "__main__":
 # |         |            |             | subprocess (CliTests) plus fast       |
 # |         |            |             | direct-call complements               |
 # |         |            |             | (SkipCeilingLogicTests). Section 9    |
-# |         |            |             | adds ten locks for round 16's own     |
+# |         |            |             | adds ten locks for rounds 18-21's own |
 # |         |            |             | landings: GNU long-option             |
 # |         |            |             | abbreviation, clustered short-option  |
 # |         |            |             | attached values (plus the five        |
@@ -2716,3 +2722,31 @@ if __name__ == "__main__":
 # |         |            |             | defect in the CURRENT tool under a    |
 # |         |            |             | targeted mutation, never as a defect  |
 # |         |            |             | the current tool already has.         |
+# | 1.3     | 2026-08-23 | Claude Code | Two docstring-only corrections, both  |
+# |         |            |             | prose about this file's own content   |
+# |         |            |             | rather than the tool it tests. (1) The|
+# |         |            |             | M18 skip-ceiling paragraph claimed    |
+# |         |            |             | every skip reason this suite produces |
+# |         |            |             | has ONE shape, "<binary> is not on    |
+# |         |            |             | PATH", although M26 (below it, in the |
+# |         |            |             | same header) had already added a      |
+# |         |            |             | second recognised shape, "<name>      |
+# |         |            |             | module unavailable" — the paragraph   |
+# |         |            |             | now states both shapes and which fresh|
+# |         |            |             | check explains each. (2) Section 9 was|
+# |         |            |             | titled "ROUND 16 LOCKS" although none |
+# |         |            |             | of its eleven classes' own docstrings |
+# |         |            |             | cite round 16 — they cite rounds 18,  |
+# |         |            |             | 19, 20 and 21 — so genuine round-16   |
+# |         |            |             | locks live in sections 1 and 8        |
+# |         |            |             | instead. Retitled to "ROUNDS 18-21    |
+# |         |            |             | LOCKS" and the same wrong "round 16"  |
+# |         |            |             | was corrected in its two echoes: this |
+# |         |            |             | file's own intro paragraph and the    |
+# |         |            |             | v1.1 table row above. No test, fixture|
+# |         |            |             | or assertion changed: still 172 tests,|
+# |         |            |             | all passing, and doc-claim-check.py   |
+# |         |            |             | --repo . is unchanged at PASS / exit 0|
+# |         |            |             | / 605 surfaces / 7 executed (3        |
+# |         |            |             | distinct) / 3 LIVE (2 distinct) / 224 |
+# |         |            |             | declined.                             |
