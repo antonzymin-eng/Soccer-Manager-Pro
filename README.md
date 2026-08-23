@@ -953,7 +953,7 @@ Soccer-Manager-Pro/
     ├── unity-ci/  perf-harness/  spec-stress/
     └── budget-auditor.py, select-seed.py, round-resolution-fit.py, run-perf-local.sh,
         recurring-defect-lint.py, assembly-tier-check.py, doc-consistency-check.py,
-        doc-claim-check.py, chat-review.py
+        chat-review.py
 ```
 
 **Assembly names do not reliably match spec folder names.** #27 lives in `player-database`, #28 in

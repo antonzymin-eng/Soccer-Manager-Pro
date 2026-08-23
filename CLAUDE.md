@@ -55,8 +55,8 @@ Soccer-Manager-Pro/
 └── tools/
     ├── dotnet-ci/                  ← Non-certifying Linux compile/test gate (asmdef→csproj + Unity shim)
     ├── unity-ci/ perf-harness/ spec-stress/
-    └── *.py, run-perf-local.sh     ← 8 scripts (`ls tools/*.py`): assembly-tier-check,
-                                      budget-auditor, chat-review, doc-claim-check,
+    └── *.py, run-perf-local.sh     ← 7 scripts (`ls tools/*.py`): assembly-tier-check,
+                                      budget-auditor, chat-review,
                                       doc-consistency-check, recurring-defect-lint,
                                       round-resolution-fit, select-seed
 ```
@@ -222,6 +222,36 @@ pass-mechanics/
 - Never fabricate verification values in Approval Checklists. All values must be programmatically verifiable against source files.
 - Append a version history entry to every modified file.
 - Include creation date and purpose header on every new file.
+
+### Checking Stated Numbers in Documents (use a Sonnet task, not a tool)
+
+This repo writes claims with their proof attached — "60 design supplements
+(`ls docs/tracking/*-design.md | wc -l`)", "218 occurrences (`grep -rn ... | wc -l`)",
+"**148 total** (re-derived by `python3 tools/assembly-tier-check.py --repo .`)". The
+recurring defect is that the number goes stale and nobody re-runs the command: root
+`CLAUDE.md` read 42 for months while the truth was 60.
+
+**To check these, dispatch a Sonnet task.** Something like: *"Sweep CLAUDE.md, README.md
+and docs/tracking/ for sentences stating a number alongside a shell command that would
+verify it. Re-run each command from the repo root and report every case where the stated
+value and the real value disagree. Do not edit anything — report path:line, stated, actual.
+Ignore claims inside frozen history (CHANGELOG entries, Version History rows, resolved
+ERR-log entries): those record what a command returned at the time and are correct as
+written."*
+
+This was previously a checked-in tool (`doc-claim-check.py`, removed August 23, 2026).
+It was deleted because the cost was wildly out of proportion to the value: to verify what
+turned out to be ONE drift-capable claim, it executed command strings taken from document
+text, and four adversarial-review rounds found seven separate ways that execution could be
+escaped — arbitrary file reads, file truncation, and remote code execution from a branch
+name. A Sonnet task does the same checking without a program that runs untrusted input in
+CI. **If you find yourself rebuilding it, don't.**
+
+Two things the tool also did, if either is ever wanted again: it resolved `Type.MEMBER`
+references inside `csharp` spec fences against the same file's declarations (this caught
+`ERR-020-001`'s dangling rename), and it printed a named reason for every claim it could
+not check. The first is worth a small standalone script if dangling spec identifiers
+recur; the second is just a discipline — say what you did not check.
 
 ### When Writing Code
 
