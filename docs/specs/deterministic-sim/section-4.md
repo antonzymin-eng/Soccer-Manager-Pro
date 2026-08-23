@@ -34,13 +34,23 @@ The replay runtime MUST execute these steps in order. Each step MUST fail determ
 | 1 | Load snapshot bytes | `ERR_DS_SCHEMA_INCOMPATIBLE` |
 | 2 | Validate `schemaVersion` and `digestVersion` | `ERR_DS_SCHEMA_INCOMPATIBLE` |
 | 3 | Validate `EnvironmentFingerprint` against live runtime (§4.8) | `ERR_DS_REPLAY_ENV_MISMATCH` |
-| 4 | Validate `prevSnapshotDigest` chain link to expected predecessor | `ERR_DS_DIGEST_CHAIN_BREAK` |
+| 4a | Validate `prevSnapshotDigest` chain link to expected predecessor | `ERR_DS_DIGEST_CHAIN_BREAK` |
+| 4b | Re-derive this record's OWN §3.2.3 digest from the loaded header and payload and compare it against the stored `currentSnapshotDigest` (added v1.2, `ERR-016-011`) | `ERR_DS_SNAPSHOT_DIGEST_MISMATCH` |
 | 5 | Rehydrate authoritative state (Tier A + Tier B fields only; Tier C excluded) | `ERR_DS_SCHEMA_INCOMPATIBLE` |
 | 6 | Restore RNG cursors and `actionOrdinal` per stream (§3.2.5); fail if any required stream is missing | `ERR_DS_RNG_STREAM_MISSING` |
 | 7 | Verify the replay cursor is at `EndOfSnapshot[T]` (the save point). The snapshot was committed at this boundary; the cursor must be exactly here before T+1 reapplication is permitted. An off-boundary cursor indicates a corrupt or partial load. | `ERR_DS_REPLAY_BOUNDARY` |
 | 8 | Reapply authoritative input log from `T+1` | (propagates from `RunTick`) |
 
 Side-effects on non-authoritative subsystems (UI, audio, VFX, telemetry) MUST NOT be triggered during steps 1–7.
+
+**Step 4 is one step in two parts, not a ninth step** (`ERR-016-011`). The lifecycle remains the **8-step** lifecycle FR-DS-012 binds and §4.6.2 diagrams; 4a and 4b are the two halves of one integrity question and are numbered as a split so that no existing citation of a step number is invalidated. They are not redundant:
+
+- **4a asks whether this is the record that should follow the last one** — it compares the record's declared `prevSnapshotDigest` against the expected predecessor. It says nothing about the record's own contents.
+- **4b asks whether these bytes are the record they claim to be** — it recomputes `SHA-256( 0x12 ‖ schemaVersion ‖ tick ‖ prevSnapshotDigest ‖ envFpDigest ‖ 0x11 ‖ payloadBytes )` from what was just loaded and compares it against the stored `currentSnapshotDigest`. An altered payload, or an altered stored digest, passes 4a and fails 4b.
+
+**4b MUST run before step 5.** Authoritative state that has not been verified MUST NOT be rehydrated; a lifecycle that verifies after rehydrating has already applied the bytes it was about to reject.
+
+**The verifier and the recorder MUST compute one preimage, from one implementation.** Two hand-written derivations of the same preimage that agree only by inspection are the `ERR-010-002` defect class, and here the failure is worse in both directions: a verifier whose preimage drifts from the recorder's rejects every honest record, while a verifier that omits a field silently accepts tampering in it.
 
 ## 4.3 Event Interactions
 Events MUST be emitted and committed in canonical order at `Events` phase.
@@ -62,6 +72,7 @@ Recommended module ownership:
 - `sim/determinism/*` — digest protocol, tolerance matrix, divergence tooling.
 
 ## 4.5 Version History
+- **v1.2 (August 22, 2026):** `ERR-016-011`. §4.2.2 step 4 is split into **4a** (the chain link to the predecessor, unchanged) and new **4b** (re-derive the record's own §3.2.3 digest from the loaded header and payload and compare it against the stored `currentSnapshotDigest`, failing with the new `ERR_DS_SNAPSHOT_DIGEST_MISMATCH`; §3.4 / §3.10 EC-016-016). Nothing in the lifecycle had ever asked the second question, so an altered payload — the authoritative state step 5 is about to rehydrate — loaded clean. **The lifecycle stays 8 steps** (FR-DS-012, §4.6.2's diagram): 4a/4b is a split, deliberately not a renumbering, since spec renumbering cascades are this project's most recurring defect class. Added normative requirements that 4b run BEFORE step 5, and that the verifier and recorder compute one preimage from one implementation.
 - **v1.1 (July 19, 2026):** ERR-016-006 (Option A, owner sign-off). §4.8.3 reconciled to the pinned Stage-0 **Mono** backend: `compilerToolchain` gains `"Mono"` (field 1); the field-4 `il2cppVersion` note flips so Stage-0 certification ACCEPTS the `"MONO"` sentinel (the reject-MONO / IL2CPP-required rules move to Stage 5+), resolving the contradiction with `certification-platform.md`; a new "Stage-0 Mono backend mapping" paragraph pins fields 1–4 under Mono and records that the live-host hasher now exists (`FloatFlagTuple.ComputeHash()` / `EnvironmentFingerprint.CreateStage0MonoCertified`). The §4.8.2 runtime MXCSR validation stays a Stage-1+/host task. Proposal: `docs/tracking/env-fingerprint-float-model-hash-mono-mapping.md`.
 - **v1.0 (May 4, 2026):** Pass 4 / Pass 5 critique resolution. (a) Pass 4 M-3: §4.8.1 mid-match mutation now fails with `ERR_DS_ENV_MUTATION` (0x160D), distinct from replay-side `ERR_DS_REPLAY_ENV_MISMATCH`; EC-016-013 paired in §3.10. (b) Pass 4 M-4: §4.8.3 `il2cppVersion` row clarified — Mono fallback uses sentinel `"MONO"` so cross-backend replay deterministically fails; certification rejects `"MONO"` snapshots. (c) Pass 4 M-5: on-disk snapshot record layout moved to §3.9.2 (normative); §4.8 fingerprint table extended with `unicodeNormalizationVersion` row (Pass 4 L-1 binding).
 - **v0.9 (May 3, 2026):** Third-pass critique fixes. (a) M-I: §4.6.1.1 atomic-write contract bound (same-volume write-then-rename, fsync barrier, atomic rename, directory fsync, partial-save forbidden); paired with `ERR_DS_STORAGE_ATOMICITY`. (b) H-D: §4.8 `floatModelHash` row pointed to new §4.8.3 normative composition (SHA-256 over canonical 11-field tuple of compiler/runtime float-mode flags); Stage-0 required values listed; flag strings cross-referenced to §5.5.1.

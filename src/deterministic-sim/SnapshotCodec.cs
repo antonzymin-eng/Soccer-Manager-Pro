@@ -1,8 +1,9 @@
 // File:     src/deterministic-sim/SnapshotCodec.cs
 // Created:  2026-05-29
-// Modified: 2026-06-15 (AR fix M-1: Encode computes the §3.2.3 chained digest, not payload-only)
+// Modified: 2026-08-22 (ERR-016-011: the §3.2.3 preimage gets a single owner, ComputeSnapshotDigest,
+//           and the new ValidateCurrentDigest re-derives a loaded record's own digest — replay step 4b)
 // Author:   —
-// Spec:     Deterministic Simulation #16 §3.9.2, §3.2.4.1, §3.4, §4.6.1, Code Standards #20
+// Spec:     Deterministic Simulation #16 §3.9.2, §3.2.3, §3.2.4.1, §3.4, §4.2.2, §4.6.1, Code Standards #20
 // Purpose:  Encodes and decodes snapshots in canonical binary format. Computes SHA-256 digest over
 //           SnapshotPayload bytes. Validates schema/digest version on decode. Manages the digest chain.
 
@@ -67,7 +68,30 @@ namespace TacticalDirector.DeterministicSim
             // Thread the previous digest into the header BEFORE hashing — it is part of the preimage.
             Array.Copy(_prevDigest, 0, header.PrevSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
 
-            // Build the §3.2.3 / corpus D-04 header preimage into the reused buffer.
+            byte[] digest = ComputeSnapshotDigest(header, payload);
+
+            Array.Copy(digest, 0, header.CurrentSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
+
+            // Advance chain
+            Array.Copy(digest, 0, _prevDigest, 0, DeterministicSimConstants.SHA256_BYTES);
+        }
+
+        /// <summary>
+        /// The single owner of the §3.2.3 / corpus D-04 snapshot-digest preimage:
+        /// <c>SHA-256( 0x12 ‖ schemaVersion ‖ tick ‖ prevSnapshotDigest ‖ envFpDigest ‖ 0x11 ‖ payloadBytes )</c>.
+        /// <para>
+        /// Extracted at ERR-016-011 so <see cref="Encode"/> and
+        /// <see cref="ValidateCurrentDigest"/> cannot drift: two hand-written derivations of one
+        /// preimage that agree only by inspection is the ERR-010-002 defect class, and a verifier
+        /// computing a *different* preimage from the recorder would reject every honest record.
+        /// </para>
+        /// <para>
+        /// Reads only from <paramref name="header"/> / <paramref name="payload"/> and the reused
+        /// scratch buffer — it does NOT touch the chain state, so a validator may call it freely.
+        /// </para>
+        /// </summary>
+        private byte[] ComputeSnapshotDigest(SnapshotHeader header, SnapshotPayload payload)
+        {
             int o = 0;
             CanonicalSerializer.WriteU8 (_headerPreimage, ref o, DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_HEADER);
             CanonicalSerializer.WriteU32(_headerPreimage, ref o, header.SchemaVersion);
@@ -78,21 +102,54 @@ namespace TacticalDirector.DeterministicSim
             Array.Copy(envFpDigest, 0, _headerPreimage, o, DeterministicSimConstants.SHA256_BYTES);
             o += DeterministicSimConstants.SHA256_BYTES;
 
-            // SnapshotDigest = SHA-256( headerPreimage ‖ 0x11 ‖ payloadBytes ).
             // TransformBlock feeds the three regions without allocating a combined preimage buffer.
-            byte[] digest;
             using (SHA256 sha = SHA256.Create())
             {
                 sha.TransformBlock(_headerPreimage, 0, o, null, 0);
                 sha.TransformBlock(s_payloadDomainTag, 0, s_payloadDomainTag.Length, null, 0);
                 sha.TransformFinalBlock(payload.PayloadBytes, 0, payload.BytesWritten);
-                digest = sha.Hash;
+                return sha.Hash;
+            }
+        }
+
+        /// <summary>
+        /// Replay step 4b (§4.2.2): re-derives this record's OWN digest from the header and payload
+        /// just loaded and compares it against the stored <see cref="SnapshotHeader.CurrentSnapshotDigest"/>.
+        /// Returns <c>ERR_DS_SNAPSHOT_DIGEST_MISMATCH</c> on any difference; 0 on match.
+        /// <para>
+        /// Distinct from <see cref="ValidatePrevDigest"/>, which checks the chain LINK to the
+        /// predecessor. Step 4a answers "is this the record that should follow the last one?"; this
+        /// answers "are these bytes the record they claim to be?". Before ERR-016-011 nothing asked
+        /// the second question, so an altered payload — or an altered stored digest — loaded clean.
+        /// </para>
+        /// <para>
+        /// Pure with respect to the digest chain: it does not advance <c>_prevDigest</c>, so calling it
+        /// mid-replay cannot disturb step 4a for the next record. Replay-side only — not on the tick
+        /// path.
+        /// </para>
+        /// </summary>
+        public ushort ValidateCurrentDigest(SnapshotHeader header, SnapshotPayload payload)
+        {
+            using var _ = s_decodeMarker.Auto();
+
+            if (header == null || payload == null ||
+                header.CurrentSnapshotDigest == null ||
+                header.CurrentSnapshotDigest.Length != DeterministicSimConstants.SHA256_BYTES)
+            {
+                return DeterministicSimConstants.ERR_DS_SNAPSHOT_DIGEST_MISMATCH;
             }
 
-            Array.Copy(digest, 0, header.CurrentSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
+            byte[] recomputed = ComputeSnapshotDigest(header, payload);
 
-            // Advance chain
-            Array.Copy(digest, 0, _prevDigest, 0, DeterministicSimConstants.SHA256_BYTES);
+            for (int i = 0; i < DeterministicSimConstants.SHA256_BYTES; i++)
+            {
+                if (recomputed[i] != header.CurrentSnapshotDigest[i])
+                {
+                    return DeterministicSimConstants.ERR_DS_SNAPSHOT_DIGEST_MISMATCH;
+                }
+            }
+
+            return 0;
         }
 
         // ── Decode (replay steps 1–2) ──────────────────────────────────────────────────
@@ -177,4 +234,12 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | valid) and ignored the domain tags/header the corpus D-07 pins.  |
 // |         |            |        | Unused ComputeSha256 helper removed; envFp digest sourced from   |
 // |         |            |        | EnvironmentFingerprint.ComputeDigest().                          |
+// | 1.3     | 2026-08-22 | —      | ERR-016-011: the §3.2.3 preimage gets a SINGLE owner,            |
+// |         |            |        | ComputeSnapshotDigest, called by both Encode and the new public  |
+// |         |            |        | ValidateCurrentDigest (replay step 4b). Two hand-written         |
+// |         |            |        | derivations of one preimage is the ERR-010-002 class, and here   |
+// |         |            |        | it fails in BOTH directions: a drifting verifier rejects every   |
+// |         |            |        | honest record, an incomplete one accepts tampering. The          |
+// |         |            |        | validator is pure with respect to the chain — it does not       |
+// |         |            |        | advance _prevDigest — so it may run between steps 4a and 5.     |
 #endregion
