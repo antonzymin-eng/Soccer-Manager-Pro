@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 2.19
-**Updated:** August 22, 2026 (v2.19 — **ERR-028-020, ERR-028-021 and ERR-041-020 filed AND resolved in the same commit: the first three of the football-judgment proxy review's 24 workable findings (`football-judgment-proxy-review.md` §6.3.1 batch 1 — the off-pitch batch), spec + code together per §6.3.** Two of the three found that the SPEC MANDATED THE DEFECT: FR-PG-007/KD-8 made the three-way age-band step the required curve-off behaviour, and FR-PG-013 required retirement "hard at `RETIREMENT_AGE`" — so both are revised in place with the superseded requirement annotated, not silently restated. **ERR-028-020** replaces the age-band cliff with centred ramps evaluated as the difference of an exact integer cumulative, which keeps the persisted cursor's scale and therefore moves no save format; P5 is exact for every half-width rather than fitted, and the KD-8 identity survives as the dial's off position, exercised per-day rather than asserted. **ERR-028-021** makes retirement a per-player day in days, and records a P3 ledger entry explaining why robustness is deliberately NOT its input (a third read of the trio `ERR-041-003` already records as double-counted). **ERR-041-020** adds the missing age term to #41's risk assembly, pivoted on #27's bootstrap mean age so the measured season bands hold unmoved — verified by running them, and by all 26 pre-existing assembly expectations staying exact. No RNG draw, no stream, no domain tag, no `SNAPSHOT_SCHEMA_VERSION` and no format version across all three. **Gate run in full at final HEAD:** build 0 errors, 31 of 32 suites fully green, `MatchEngine.Tests` **461/1/11**, quarantine empty — the one failure is the owner-held-red `sim_match_engine_close_chance`, returning the recorded baseline's exact counts and exact predicate values (cosine −0.165, goalward share 0.407), which is the predicted result since nothing here runs on a match tick. No new failure, no band rebaselined. Prior entry below.)
+**Version:** 2.20
+**Updated:** August 23, 2026 (v2.20 — **ERR-028-022, ERR-028-023 and ERR-041-021 filed AND resolved: the High findings of the adversarial review over the batch-1 landing, all three fixed in commit `9e41537`.** All three ids had already been cited in shipped spec text and code comments while no entry stood behind them here — the missing-body class this log recorded at v2.17 for `ERR-008-023`, closed the same way: an Error Index row and a `##` body for each. **ERR-028-022** (High) — `GameReadingOffsetDays` floored the reading trio's SUM to a mean before an anti-symmetric map, and `floor(sum/3)` is not symmetric about the attribute midpoint, so `ERR-028-021`'s published P5 claim ("the offsets sum to exactly 0 over a uniform population") was false by **−204,621 days over the `[1,20]³` product**; the lock that purported to prove it swept only the diagonal where the defect vanishes, and **neither of ERR-028-021's behaviour changes was locked at all** — restoring the pre-fix `rec.Age >= RETIREMENT_AGE` left every suite green. Fixed by carrying the sum undivided (bit-identical on the diagonal, so nothing was rebaselined), a whole-product lock with a cardinality precondition, and two mutation-verified retirement locks; the `[6,14]` generator residual (≈ −38 d/player) is RECORDED, not fitted away. **ERR-028-023** (High, spec text only — the code was already right) — §3.1's seed-credit MUST and Appendix B still mandated the three-way band step `ERR-028-020` retired one section below, the grep-boundary shape this log has recorded five times. **ERR-041-021** (High) — `ERR-041-020`'s normative "before the mitigation, so robustness discriminates it" is arithmetically vacuous (the mitigation is SUBTRACTED and addition commutes), and all three mutants its lock names left `InjuriesMedical.Tests` 74/74 green, one of them able to return above `InjuryRiskMax`; the position is restated as before-the-scaling-and-before-the-clamp, the after-the-mitigation mutant WITHDRAWN as a proven identity rather than re-locked, the unlocked production call site closed by the new T-MD-AGE-007, and the term's monotone shape recorded as INVERTING E-4's Strong-rated young tail with `ERR-041-013` narrowed to that residual. `ERR-041-020`'s own "Magnitude, first-guess" epidemiology sentence is corrected in place with it (annotated, not deleted). Across all three: no `[GT]` value moved, no RNG draw, no stream, no domain tag, no `SNAPSHOT_SCHEMA_VERSION`, no format version. The v2.19 gate line below is also corrected in place — it overstated the suite count by one and claimed a quarantine report the run never printed. Prior entry below.)
+**Updated (prior):** August 22, 2026 (v2.19 — **ERR-028-020, ERR-028-021 and ERR-041-020 filed AND resolved in the same commit: the first three of the football-judgment proxy review's 24 workable findings (`football-judgment-proxy-review.md` §6.3.1 batch 1 — the off-pitch batch), spec + code together per §6.3.** Two of the three found that the SPEC MANDATED THE DEFECT: FR-PG-007/KD-8 made the three-way age-band step the required curve-off behaviour, and FR-PG-013 required retirement "hard at `RETIREMENT_AGE`" — so both are revised in place with the superseded requirement annotated, not silently restated. **ERR-028-020** replaces the age-band cliff with centred ramps evaluated as the difference of an exact integer cumulative, which keeps the persisted cursor's scale and therefore moves no save format; P5 is exact for every half-width rather than fitted, and the KD-8 identity survives as the dial's off position, exercised per-day rather than asserted. **ERR-028-021** makes retirement a per-player day in days, and records a P3 ledger entry explaining why robustness is deliberately NOT its input (a third read of the trio `ERR-041-003` already records as double-counted). **ERR-041-020** adds the missing age term to #41's risk assembly, pivoted on #27's bootstrap mean age so the measured season bands hold unmoved — verified by running them, and by all 26 pre-existing assembly expectations staying exact. No RNG draw, no stream, no domain tag, no `SNAPSHOT_SCHEMA_VERSION` and no format version across all three. **Gate: the test sweep ran in full at final HEAD; the formal result is the inherited FAIL, not a PASS:** build 0 errors, **32 of 33 suites fully green**, `MatchEngine.Tests` **461/1/11**; the quarantine ledger is **empty by inspection of `tools/dotnet-ci/known-failures.txt`**, not because the gate reported it — `run-gate.sh` runs under `set -euo pipefail`, exited non-zero on the blocking phase, and never reached its quarantine-report section or a `Gate PASSED` line, so **no formal verdict was ever printed**; recorded as FAIL on the inherited owner-held-red band rather than rounded up to PASS *(⚠️ CORRECTED August 23, 2026, v2.20 — as first published this read "31 of 32 suites fully green … quarantine empty"; the suite count is one low (33 test asmdefs, 33 suite result lines in the gate log) and "quarantine empty" implied a ledger report the run never printed. Annotated in place, never silently replaced)* — the one failure is the owner-held-red `sim_match_engine_close_chance`, returning the recorded baseline's exact counts and exact predicate values (cosine −0.165, goalward share 0.407), which is the predicted result since nothing here runs on a match tick. No new failure, no band rebaselined. Prior entry below.)
 **Updated (prior):** August 21, 2026 (v2.18 — **`ERR-016-009` filed and its spec half RESOLVED same commit: #16 §2.3's nine "Data Structures" include six that name no type in `src/deterministic-sim/`.** Four (`DeterminismContext`, `RngStreamKey`, `ToleranceRow`, `ComparatorRegistry`) have zero textual presence in `src/` at all; `RngCursor` and `RngStreamKey`'s triple are *fields on* `RngStreamState`; `PhaseDigest` is a computation. §2.3 carries the weight because §4.2 has been explicitly non-normative since v0.7 and §4.4's module paths match no directory in the flat tree — and §2.3's own version history revised two of the phantom structures as contract text. **The substantive half is `buildHash`:** a declared field of the replay-identity context with no representation anywhere, `EnvironmentFingerprint` included, so two builds differing only in compiled code are indistinguishable downstream of §2.3. Fixed as a per-row implementation-mapping table + `src/`-is-the-surface-authority declaration; `buildHash` and the two Stage-1+ deferrals recorded OPEN; deliberately no rename, the serialized field names being correct as built. Surfaced by the `data-contract-index.md` landing rule that every named type be verified to exist. Prior update below.)
 **Updated (prior):** August 17, 2026 (v2.17 — **`ERR-008-023`'s body entry WRITTEN; it had been missing since the August 7 landing.** The id has been cited from `CLAUDE.md`, `open-issues.md`, `close-chance-creation-design.md` and an `OptionGenerator.cs` comment, and carried by this header's v1.76/v1.77 rows and the Error Index, while no `##` detail section ever existed — the record was reachable only by reading a commit message. Written in this log's standard shape from those existing records alone; nothing new is asserted about the landing. Two things ARE new: the August 10 bisect isolating this entry as the sole source of the `sim_match_engine_close_chance` cosine movement the v1.77 row queued for KD-W1 (18 paired seeds, chain effect **−0.027 ± 0.039**, a resample rather than a mechanism), and a currency caveat on it — the sweep held the tree at `64513e4`, which predates the W2 tackle wiring, so the controlled comparison stands but the absolute figures are not today's `main`. The entry cites the SHIPPED `ERR-008-021` throughout and says so explicitly, per the `ERR-028-019` reconciliation at v2.13. Docs-only; no `src/` file touched by this edit.**)
 **Updated (prior):** August 12, 2026, later still (v2.16 — **ERR-030-034's successor is PRE-DECIDED and gated as `league-bootstrap-design.md` KD-7a; the ERR stays OPEN.** NB2 marginal, `NegativeBinomialInverseCdf` pinned by name and recurrence, one uniform per side with sub-streams unchanged, and a `[GT] QuickSimDispersion` whose zero case routes to `PoissonInverseCdf` verbatim so α = 0 is bit-identical rather than identical-in-the-limit. **Writing it surfaced a correction that changed the deliverable: α is NOT determined by this corpus** — 0.0773 weighted vs 0.1552 unweighted, one 18-sample cell carrying 36% of the weighted fit — so no initial value is recorded and the fitter now emits the instability every run. Also pinned: NB2 closes only ~0.3 pp of the 7.6 pp draw gap (26.5% vs 26.8%, engine 19.2%), the draw deficit gets NO successor because the family that would explain it needs negative home/away correlation the corpus refutes (+0.044 ± 0.073), and adoption requires a post-defensive-wiring capture. The ERR's two findings — marginal over-dispersion and the draw deficit — are now stated separately, which the original single causal sentence had conflated.**)
@@ -384,6 +385,9 @@ different things, each internally self-consistent); no code change proposed. Pri
 | ERR-028-020 | Player Progression #28 §3.1 — the daily growth rate was `DailyPoints(ClassifyAgeBand(ageYears), …)`: a hard three-way step at an exact integer age on a continuous football judgment, with the identical classifier in the "deep" tier and §1.3's promised age-keyed curve existing nowhere in the spec. **FR-PG-007 and KD-8 REQUIRED the cliff.** Football-judgment proxy review, pattern (b)+(d) | High | 6 spec + 8 src | ✅ **Resolved August 22, 2026, spec + code same commit** — new §3.1.3: centred linear ramps of half-width `AGE_BAND_RAMP_HALF_WIDTH_YEARS` at each edge, evaluated as the difference of an exact integer cumulative so the per-day step stays in `{0, ±1}`, the cursor scale is unchanged and no save format moves. P5 exact for every half-width (a centred ramp has the step's integral), so no growth-rate recalibration is owed and ERR-028-018's no-residue invariant survives by construction; half-width 0 reproduces the §4.3 step byte-for-byte, exercised per-day over 45 years through a parameterised overload. `ClassifyAgeBand` demoted to a READ of the curve. Two invariants fail-loud at the computing site. Recorded-not-fixed: the finding's per-player-variance half is Stage-3 `curveEnabled`'s |
 | ERR-028-021 | Player Progression #28 §3.4 — retirement was `rec.Age >= RETIREMENT_AGE`, one hard integer age for the whole league with no position or attribute input: goalkeepers retired on a forward's clock, and one calendar day separated a career continuing from ending, identically for everyone. **FR-PG-013 REQUIRED it** ("hard at `RETIREMENT_AGE`"). Football-judgment proxy review, pattern (b)/(c) | High | 5 spec + 4 src | ✅ **Resolved August 22, 2026, spec + code same commit** — per-player `RetirementAgeDays(record)` compared in DAYS: baseline + `RETIREMENT_GOALKEEPER_BONUS_YEARS` + a full-range anti-symmetric offset over the Anticipation/Positioning/Composure mean. **P3 ledger entry recorded**: robustness is the obvious input and is deliberately NOT used — #29 and #41 already price Strength/Stamina/Balance twice over (`ERR-041-003`), so a third read would be that defect a third time. P5 exact at both scales: zero dials reproduce the retired comparison identically, and the offsets sum to exactly 0 over a uniform attribute population, so the league retirement RATE is unchanged. Still draw-free; three fail-loud config guards |
 | ERR-041-020 | Injuries & Medical #41 §3.4 — `AssembleRiskScore` presents as multi-factor risk assembly and omits player **age** entirely: from the sum, from the signature, and from §2's requirements, so nothing in the spec would have caught it. Age is among the best-established real-world risk factors, is already on the `PlayerRecord` the caller resolves to read the attributes it does use, and is already consumed by #31's valuation. Football-judgment proxy review, pattern (c) | Moderate | 4 spec + 5 src | ✅ **Resolved August 22, 2026, spec + code same commit** — `AgeRiskFor(ageYears)`, linear and anti-symmetric about `AGE_RISK_PIVOT_YEARS`, saturating at `±AGE_RISK_SPAN`, with **no threshold anywhere** (P1); positioned inside the sum BEFORE the mitigation, normatively, so robustness discriminates it. **P5 measured, not argued**: the pivot is #27's bootstrap mean age, so `SeasonInjuryRealismTests`' league/starter/reserve/unavailability bands all hold unmoved and all 26 pre-existing assembly expectations stay exact by passing the pivot. `AGE_RISK_SPAN = 0` is the exact pre-fix identity, exercised not asserted. New **FR-MD-025a** (suffixed deliberately — renumbering FR-MD-016..027 would be the cross-reference cascade `CLAUDE.md` names as this project's most recurring bug class) |
+| ERR-028-022 | Player Progression #28 §3.4 — `GameReadingOffsetDays` floored the Anticipation/Positioning/Composure SUM to a mean before the anti-symmetric map, and `floor(sum/3)` is not symmetric about the attribute midpoint: ERR-028-021's published P5 claim ("the offsets sum to exactly 0 over a uniform attribute population — the league's retirement RATE is unchanged") was FALSE by **−204,621 days over the uniform `[1,20]³` product (−25.58 d/player)**, the whole league retiring ~2 months early, with the lock that purported to prove it sweeping only the `Ant == Pos == Comp` diagonal where the defect vanishes. **And neither of ERR-028-021's behaviour changes was locked at all** — reverting `AdvancePlayerTo` to the verbatim pre-fix `rec.Age >= RETIREMENT_AGE` left `PlayerProgression.Tests` 134/134 and `SeasonSave.Tests` 402/3 green. Adversarial review over the batch-1 landing | High | 3 spec + 3 src | ✅ **Resolved August 22, 2026, spec + code same commit** — the sum is carried undivided (`(2·sum − 3·(MIN + MAX))·span / (6·(MAX − MIN))`): exactly anti-symmetric over all 8,000 triples, and bit-for-bit identical to the retired form on the diagonal, so no expectation was rebaselined and no constant moved. The population lock now sweeps the whole product with a cardinality precondition; two new `ProgressionEngineTests` locks isolate the goalkeeper allowance and the attribute/day-resolution halves, **mutation-verified** to fail against the restored pre-fix predicate and to be the only two that do. **Residual RECORDED, not fitted away:** #27's generator draws `[6,14]` (centre 10) against the offset's neutral 10.5, so ≈ −38 d/player remains on the generated league; re-pivoting on the generator's mean is the coupling `ERR-041-020` refused for `AGE_RISK_PIVOT_YEARS`. Appendix C's worked example is corrected with it — its "average-reading outfielder, whose offset is 0" pivot is unattainable under EITHER form (the neutral point is the midpoint 10.5, which no integer attribute occupies), so that claim was false when written rather than made false here |
+| ERR-028-023 | Player Progression #28 §3.1 — the normative seed-credit MUST still ordered `SeedFrom` to credit "the seed day's own `DailyPoints` step for the player's seed-time age band (`GROWTH_DAILY_POINTS` in Growth, `DECLINE_DAILY_POINTS` in Decline, `0` in Stable)": the three-way step **ERR-028-020 retired**, mandated one section above the curve that replaced it, with `appendices.md` Appendix B asserting the same form in the present tense directly above that landing's own currency note. The two disagree at bootstrap ages **24, 25, 29, 30** — 4 of the 19 ages `RosterGenerator` draws — so an implementer following the spec reopens ERR-028-018's one-day accrual discrepancy for ~21% of the roster, silently and only inside the ramps. Adversarial review over the batch-1 landing | High | 2 spec + 0 src | ✅ **Resolved August 22, 2026, spec text only — the code was already correct** — both sites now name `DailyBandPoints(Age₀ · DAYS_PER_YEAR)` (§3.1.3), mirroring the §3.3 regen paragraph the ERR-028-020 commit amended for exactly this reason and stopped at — the grep-boundary shape the ERR-041-012 sweep hit five times. Superseded form annotated in place at both sites with the four disagreeing ages and the roster share; Appendix B's table arithmetic explicitly unaffected (its player sits far below the growth ramp) |
+| ERR-041-021 | Injuries & Medical #41 §3.4, **adversarial review over the ERR-041-020 landing**: the age term's normative position — "inside the sum, before the mitigation, **so robustness discriminates it**" — is arithmetically vacuous, because `RobustnessMitigation` is SUBTRACTED and addition commutes; the penalty is the same `+1200` at robustness 1, 14 and 20, and *larger in relative terms* for the more robust player, so the stated consequence is wrong in both readings. The claim was APPROVED text in three files plus the code doc, and T-MD-AGE-004 asserted the mutants fail: all three (term after the mitigation / after the `OccurrenceRiskMillMult` scaling / after the clamp) left the suite **74/74 green**, and the clamp mutant can return **above** `InjuryRiskMax`, breaking ERR-041-011's every-daily-probability-≤-1 invariant. The identical wording sat on `BASELINE_DAILY_RISK` from ERR-041-011. Carried with it: **H3** — the production call site (`PlayerCareerStates`, the only one, in the only assembly that constructs one) had **no lock at all**: neutralising `record.Age` left `SeasonSave.Tests` at 402/3, identical to baseline, and the realism bands published as the P5 evidence are **age-blind** (forced ages 17/26/35 give 623/783/929 league injuries, all three inside the band). **H7** — the monotone shape **inverts** E-4's Strong-rated young tail (a 19-year-old gets −1050, making 16–20-year-olds the safest players in the league) and duplicated the still-open R-1 under reserved `ERR-041-013`. | High | 5 spec/doc + 4 src | ✅ **Resolved August 22, 2026, spec + code same commit** — position restated at all five sites as **inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE the clamp** (both load-bearing: the staff seam must modulate the term, and it must not lift the score past the ceiling), the robustness sentence dropped and every superseded sentence annotated in place, `BASELINE_DAILY_RISK` corrected in the same commit rather than deferred. T-MD-AGE-004 rebuilt with a halving-`MedicalModifier` case (kills the scaling mutant) and a saturating-input case asserting exactly `InjuryRiskMax` (kills the clamp mutant), plus a pin of the retired claim as false. The after-the-mitigation mutant is an **identity** — byte-identical checksum over 956,480 sampled inputs — so it is unlockable by construction and the claim is withdrawn rather than re-locked. **H3:** new **T-MD-AGE-007** splits the instrument's own `InjuryCount` walk by age and asserts over-30s out-injure under-23s (measured **1.34×**, asserted `> 1.25×`); mutation-verified at **1.01×** and failing with the call site's age neutralised, where the four age-blind bands return the recorded pre-fix 783/2.08/1.13/9.5% and all pass. T-MD-AGE-006 keeps the P5 claim with the caveat that it establishes P5 and nothing else. **H7:** R-1 annotated in place in the research supplement as landed-in-part, `ERR-041-013` **narrowed** to the residual U-shape / young-tail arm, and #41 §3.4 / Appendix A / the catalogue corrected to say the veteran half follows E-4 and the 16–20 half inverts it. **The shape is deliberately NOT changed** — it is the supplement's design, awaiting owner sign-off. No `[GT]` moved, no draw, no stream, no domain tag, no format version |
 
 ---
 
@@ -4391,9 +4395,17 @@ and pinning it to the generator would silently re-pivot #41 the day #47's author
 those bounds.
 
 **Magnitude, first-guess.** At the shipped 150/year a 34-year-old assembles 7800 against a 20-year-old's
-5700 on the §3.6 worked example's player — 0.78%/day against 0.57%/day, about **1.37×** — the direction
-and rough magnitude the epidemiology supports, at a size that cannot dominate the exposure terms beside
-it. Real calibration waits for the complete-engine pass (P5 / KD-W1). The research-alignment supplement's
+5700 on the §3.6 worked example's player — 0.78%/day against 0.57%/day, about **1.37×** — a size that
+cannot dominate the exposure terms beside it. **⚠️ CORRECTED August 22, 2026 (`ERR-041-021`): the
+original wording here — "the direction and rough magnitude the epidemiology supports" — is true of the
+VETERAN arm only, and is annotated rather than deleted.** The research-alignment supplement's **E-4 is
+rated Strong and is U-SHAPED**: musculoskeletal maturity continues to ~24–25 and *the 16–20 band carries
+elevated risk at adult match intensity*. A monotone linear term about a pivot of 26 reproduces E-4 above
+the pivot and **inverts** it below — a 19-year-old receives **−1050**, making 16–20-year-olds the
+**safest players in the league**. The shape is deliberately not changed: the U-shape is supplement
+finding **R-1**'s design, R-1 is awaiting owner sign-off, and its reserved back-prop **`ERR-041-013` is
+now narrowed to exactly that residual young-tail arm** (R-1 is annotated in place as landed-in-part by
+that entry's plumbing). Real calibration waits for the complete-engine pass (P5 / KD-W1). The research-alignment supplement's
 age arm must RE-FIT against this term rather than add beside it, exactly as its R-2 arm must against
 `BASELINE_DAILY_RISK` — recorded at §3.4 and in the catalogue.
 
@@ -4422,3 +4434,280 @@ root `CLAUDE.md` names as this project's most recurring bug class.
 | `src/season-save/PlayerCareerStates.cs` | `AdvanceMedicalDay` | Passes `record.Age` — the one production call site |
 | `src/injuries-medical/tests/MedicalStepTests.cs` | — | 26 call sites take the pivot age; `+ 4` age-term locks |
 | `src/season-save/tests/SeasonInjuryRealismTests.cs` | — | 2 call sites take the pivot age |
+
+---
+
+## ERR-028-022: Player Progression #28 §3.4 — the retirement offset's floored mean broke the anti-symmetry the P5 claim rests on, and neither of ERR-028-021's behaviour changes was locked at all
+
+**Filed:** August 22, 2026 — the adversarial review over the ERR-028-020/-021/-041-020 batch-1
+landing (two independent High findings against the same landing, filed under one id because they are
+one failure of verification: the ERR-028-021 fix's stated properties were checked only where they
+could not fail). **Status: ✅ Resolved August 22, 2026, spec + code, same commit.**
+
+**The defect, part 1 — the arithmetic.** `AbilityModel.GameReadingOffsetDays` computed
+`mean = (Anticipation + Positioning + Composure) / 3` and mapped that mean anti-symmetrically about
+the attribute midpoint. `floor(sum / 3)` is **not** symmetric about that midpoint — C# integer
+division truncates toward zero, so on a positive sum truncation always bites downward — and the
+composition therefore loses the anti-symmetry everywhere off the `Ant == Pos == Comp` diagonal, which
+is the one line on which the division by 3 is exact. Measured through the built assembly: **−204,621
+days over the uniform `[1,20]³` product, i.e. −25.58 days per player.** So ERR-028-021's published P5
+claim — *"the offsets over a uniform `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` population **sum to exactly 0**:
+the league's retirement RATE is unchanged and only which players retire when moves"* — was false of
+the implementation it described. The whole league retired roughly two months early. That claim is the
+stated reason no recalibration was owed at the ERR-028-021 landing, and it was published in APPROVED
+spec text in three places (#28 §3.4, Appendix A, §5's T-PG-RET-005).
+
+**Why the lock did not see it.** `AbilityModelTests`' property (3) swept `Ant = Pos = Comp` only —
+the diagonal, i.e. exactly the locus where the defect vanishes. It passed against the broken model,
+and a mutation replacing the floor with a *differently* wrong rounding also left all 539 tests green.
+A P5 population claim is a claim about the whole attribute **product**; sweeping a line through it
+proves nothing about the population, and the line chosen was the degenerate one.
+
+**The defect, part 2 — ERR-028-021's behaviour change was unlocked at its production call site.**
+Restoring the verbatim pre-fix predicate at `ProgressionEngine.AdvancePlayerTo`
+(`rec.Age >= PlayerProgressionConstants.RETIREMENT_AGE`) left **`PlayerProgression.Tests` 134/134 and
+`SeasonSave.Tests` 402/3 — nothing failed.** The goalkeeper allowance, the per-player retirement day
+and the days-vs-years comparison were protected by no test anywhere. The two wiring cases
+(`AdvanceDay_AtRetirementAge_FlagsButDoesNotRemove`,
+`AdvanceDay_BelowRetirementAge_DoesNotFlag`) both use an all-10 **Midfielder** at exactly
+`RETIREMENT_AGE` / `RETIREMENT_AGE − 1`, where the retired league-wide comparison and the per-player
+day agree **by construction** — and the second still asserted, in its own failure message, *"the
+retirement test is hard AT RETIREMENT_AGE"*, which is precisely the property ERR-028-021 was filed to
+remove. §5's T-PG-RET-001 had meanwhile been re-pointed at `RetirementAgeDays` while its implementing
+cases could not distinguish it from `RETIREMENT_AGE`.
+
+**The fix, part 1.** The reading trio's **sum** is carried undivided into the numerator:
+`((2·sum − 3·(ATTRIBUTE_MIN + ATTRIBUTE_MAX)) · span) / (6 · (ATTRIBUTE_MAX − ATTRIBUTE_MIN))`. This
+is exactly anti-symmetric — verified 0 over all 8,000 triples — and it **reproduces every diagonal
+value bit-for-bit**, since for `sum == 3·mean` both numerator and denominator are exactly 3× the
+retired form's and truncation toward zero is invariant under that scaling. No constant moved, no `[GT]`
+was introduced, and the existing diagonal expectations were therefore not rebaselined. The `[1,20]³`
+lock now sweeps the whole product and carries a **cardinality precondition** so it cannot silently
+narrow back to a line.
+
+**The fix, part 2.** Two `ProgressionEngineTests` cases that fail against the pre-fix predicate:
+`AdvanceDay_AtTheBaselineAge_FlagsTheOutfielder_ButNotTheGoalkeeper` (the position half — a
+goalkeeper and an otherwise identical outfielder at the baseline age; only the outfielder may flag,
+and the keeper's later `RetirementDay` is asserted on the DAY, not merely on the flag, so the pre-fix
+predicate's earlier stamp fails too) and
+`AdvanceDay_BelowTheBaselineAge_FlagsTheWeakReader_ButNotTheSharpOne` (the attribute half and the
+days-vs-years half together — two same-position players a year BELOW the baseline, reading trios at
+the two ends of the range, advanced to a day strictly between their two retirement days, where
+exactly one may flag and the retired whole-years comparison flags neither). Both carry preconditions
+asserting the discriminating geometry rather than assuming it. **Mutation-verified:** with line 458
+reverted to the verbatim pre-fix comparison, these two cases fail and **only** these two —
+136 → 134 passed / 2 failed. The stale assertion message is corrected in place, with the superseded
+wording quoted rather than silently deleted.
+
+**The residual, recorded rather than papered over.** "Sums to exactly 0 over a uniform population" is
+a statement about the uniform attribute **product**, which is a modelling idealisation and not this
+game's league: #27's `RosterGenerator` draws each attribute independently on
+`AttributeBaseMean ± AttributeSpread` = `[6,14]`, centred on **10**, while the offset's neutral point
+is the range midpoint **10.5**. Over that population the corrected offset still averages
+**≈ −38 days per generated player** (against the retired form's −63.89). So the generated league does
+retire fractionally early — about five weeks, by half a point of attribute centring rather than by a
+broken map. Closing it would mean either pivoting the offset on the generator's mean — the coupling
+`ERR-041-020` explicitly refused for `AGE_RISK_PIVOT_YEARS`, and one that would re-pivot #28 silently
+the day #47's authored database replaces those bounds — or an odd-width attribute range. Neither is
+this ERR's to decide; the figure is stated in §3.4, Appendix A and §5 so the next reader inherits the
+number rather than the impression that it is zero.
+
+**A third site fell out of the same arithmetic: Appendix C's retirement worked example.** It calls
+its player "the P5 pivot case — an average-reading outfielder, whose offset is 0", and concludes his
+`RetirementAgeDays` is "exactly `RETIREMENT_AGE · DAYS_PER_YEAR`". **No player's offset is 0 under
+either form**: the neutral point is the attribute-range MIDPOINT, `(1 + 20) / 2 = 10.5`, which no
+integer attribute can occupy — so the claim was already false when it was written, not made false
+here. Corrected in place with the reachable values: reading trios summing to 31 or 32 give ∓12 days,
+and an all-10 outfielder — the closest the `[1,20]` scale offers to "average" — gives **−38 days**,
+which is the generated-population residual above arriving as a single player. Under the retired
+floored-mean form that same all-10 player was ALSO −38, so this ERR changes the map's shape, not this
+example's number. The example's flow and its illustrative world-day 4020 crossing stand; what is
+withdrawn is the claim that any player's crossing day equals the baseline exactly.
+
+**Two habits this entry is evidence for.** (1) A population claim must be checked over the
+population, not over a convenient slice of it — and when a slice is chosen, the defect will be the one
+the slice cannot see. (2) `ERR-028-021`'s own record listed a test file under "Files Affected" and
+recorded the properties as "Locked"; the lock existed and was inadequate, which reads identically in a
+version-history row. The passes-3–6 question — *of the fixes landed here, which have a test that fails
+if the fix is reverted?* — is what surfaced part 2, and it was not asked at the batch-1 landing.
+
+**No draw, no stream, no domain tag, no `SNAPSHOT_SCHEMA_VERSION`, no format version.**
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/player-progression-lifecycle/section-3.md` | §3.4 pseudocode + the P5 paragraph | The sum carried undivided; the superseded "sums to exactly 0" claim annotated in place, with the `[6,14]` residual stated (v0.10) |
+| `docs/specs/player-progression-lifecycle/section-5.md` | §5.6 T-PG-RET-001, T-PG-RET-005 | RET-005's population property widened to the whole product + cardinality precondition; RET-001 now MUST carry cases that fail against `AgeYears >= RETIREMENT_AGE` (v0.7) |
+| `docs/specs/player-progression-lifecycle/appendices.md` | Appendix A `RETIREMENT_GAME_READING_SPAN_YEARS`; Appendix C worked example | The row's P5 claim annotated in place and the residual recorded with it; Appendix C's unattainable "offset is 0" pivot claim corrected to the reachable ∓12 / −38 values, flow and crossing day left standing (v0.8) |
+| `src/player-progression/AbilityModel.cs` | `GameReadingOffsetDays` | The floored mean removed — the sum carries into the numerator; diagonal values bit-identical (v1.2) |
+| `src/player-progression/tests/AbilityModelTests.cs` | T-PG-RET-005 property (3) | Diagonal sweep → the full `[1,20]³` product, + a cardinality precondition (v1.2) |
+| `src/player-progression/tests/ProgressionEngineTests.cs` | §3.4 retirement cases | + the two discriminating locks (both mutation-verified); `AdvanceDay_BelowRetirementAge_DoesNotFlag`'s message corrected (v1.10) |
+
+---
+
+## ERR-028-023: Player Progression #28 §3.1 — the normative seed-credit MUST still mandated the three-way band step ERR-028-020 retired
+
+**Filed:** August 22, 2026 — the adversarial review over the ERR-028-020/-021/-041-020 batch-1
+landing. **Status: ✅ Resolved August 22, 2026, spec text only (the code was already correct).**
+
+**The defect.** §3.1's seed-credit requirement read: *"`SeedFrom` (§3.1.1) MUST therefore seed
+`GrowthCursor` at the seed day's own `DailyPoints` step for the player's seed-time age band
+(`GROWTH_DAILY_POINTS` in Growth, `DECLINE_DAILY_POINTS` in Decline, `0` in Stable)"* — the hard
+three-way step **ERR-028-020 retired**, still mandated normatively one section above the continuous
+curve that replaced it, in the same spec, after the same commit. The code computes
+`AbilityModel.DailyBandPoints(rec.Age · DAYS_PER_YEAR)`. The two forms are **not** equivalent: at the
+shipped `AGE_BAND_RAMP_HALF_WIDTH_YEARS` they disagree at bootstrap ages **24, 25, 29 and 30** — 4 of
+the 19 ages #27's `RosterGenerator` draws — so an implementer following the spec would reopen
+ERR-028-018's one-day accrual discrepancy for **~21% of a bootstrapped roster**, silently, and only
+inside the ramps, where nothing outside them would show it. `appendices.md`'s Appendix B carried the
+same three-way form in the **present tense**, directly above the ERR-028-020 currency note that the
+same landing added beneath the same table.
+
+**Why it survived.** The ERR-028-020 commit amended the **sibling** paragraph — §3.3's regen
+construction credit — for exactly this reason, with an explicit "*the two forms agree today… they
+diverge the first time either that band or `AGE_BAND_RAMP_HALF_WIDTH_YEARS` moves*" note, and did not
+reach §3.1's own MUST or Appendix B. That is this project's recurring **grep-boundary** shape: the
+sweep visited the site it was looking at and stopped. It is the same class as the ERR-041-012 phantom
+stream's five widenings, and the fix is likewise applied at every site in one pass rather than at the
+one the reviewer happened to open.
+
+**The fix.** Both sites now name the single authority — `DailyBandPoints(Age₀ · DAYS_PER_YEAR)`,
+§3.1.3 — mirroring §3.3's already-corrected wording. The superseded three-way form is **annotated in
+place** at both, with the disagreeing ages and the affected roster share stated, and Appendix B's
+paragraph is marked as the ERR-028-018-era text it now is. Appendix B's table arithmetic is
+unaffected and that is stated too, so a reader does not have to re-derive it: its player is far below
+the growth ramp, where curve and step agree day for day.
+
+**No code change, and that is the point** — the divergence was between the spec and an implementation
+that was already right, so the cost of leaving it was borne entirely by the next implementer.
+
+**No draw, no stream, no domain tag, no format version.**
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/player-progression-lifecycle/section-3.md` | §3.1, the seed-credit MUST | The MUST names `DailyBandPoints(Age₀ · DAYS_PER_YEAR)`; the three-way form annotated in place with the four disagreeing bootstrap ages (v0.10) |
+| `docs/specs/player-progression-lifecycle/appendices.md` | Appendix B, "The fix" paragraph | Corrected and marked ERR-028-018-era; the table's own arithmetic explicitly unaffected (v0.8) |
+
+---
+
+## ERR-041-021: Injuries & Medical #41 §3.4 — the "before the mitigation, so robustness discriminates it" position claim is arithmetically vacuous, and its lock passes against all three mutations it names
+
+**Filed:** August 22, 2026 — the adversarial review over the `ERR-041-020` landing (H4; found
+independently by two reviewers, one by mutation).
+**Status: ✅ Resolved August 22, 2026, spec + code, same commit.**
+
+**The defect.** `ERR-041-020` placed the new age term "inside the sum, **before** the mitigation, so a
+robust veteran carries less of his age penalty than a frail one", and made that position **normative**
+in three APPROVED files (#41 §2 FR-MD-025a, §3.4, Appendix A), in `MedicalStep.cs`'s doc, and in the
+test T-MD-AGE-004 written to enforce it. The claim is false in both of its readings.
+`RobustnessMitigation` is **SUBTRACTED**, and addition commutes, so the term's position relative to it
+is a no-op for **every** input: measured, the age penalty for a robustness-1, a robustness-14 and a
+robustness-20 player is the same `+1200`, and *larger in relative terms* for the more robust one, whose
+assembled score is smaller. The identical wording sits on `BASELINE_DAILY_RISK` from `ERR-041-011`,
+where it has been inert since the balance pass.
+
+**The lock was worse than the claim.** Three mutations of `AssembleRiskScore` all left
+`InjuriesMedical.Tests` **74/74 green**:
+
+| Mutant | Change | Caught pre-fix? |
+|---|---|---|
+| **A** | age term moved to after `- RobustnessMitigation(...)` | no |
+| **B** | age term applied after the `OccurrenceRiskMillMult` scaling | no |
+| **C** | age term applied after the `InjuryRiskMax` clamp | no |
+
+Only "term dropped entirely" was caught. **C is a real defect, not merely an unlocked one**: applied
+after the clamp the assembly can return **above** `InjuryRiskMax`, breaking `ERR-041-011`'s "every
+daily probability ≤ 1 at the `OCCURRENCE_DRAW_DENOM` scale" invariant.
+
+**The fix — restate the position as what is actually load-bearing.** The normative position is now
+**inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE the clamp**, and both halves
+buy something: before the scaling, the staff seam modulates the term exactly as it modulates every
+other term rather than leaving an unmodulated island inside a scaled score; before the clamp, the term
+can never lift the result past the ceiling. The robustness-discrimination sentence is **dropped**, and
+every superseded sentence is **annotated in place** rather than deleted, at all five sites that carried
+it — including `BASELINE_DAILY_RISK`'s copy from `ERR-041-011`, corrected here rather than left as
+recorded pre-existing debt, because it is the same sentence about the same sum and splitting the two
+would leave a live spec asserting the arithmetic this entry retires.
+
+**The test now locks what it claims.** `AgeTerm_IsInsideTheSum_BeforeTheModifierScalingAndBeforeTheClamp_ERR041021`
+(renamed from `AgeTerm_EntersTheAssemblyBeforeTheMitigation_SoRobustnessDiscriminatesIt`) has one part
+per surviving property: the undiluted-delta assert at Identity (drop); a **halving `MedicalModifier`**
+asserting the veteran-minus-pivot delta equals `AgeRiskFor(age) × mult / 1000` rather than
+`AgeRiskFor(age)`, with a precondition that the chosen multiplier actually changes the value so the
+case cannot pass against an unscaled term (**kills B**); and a **saturating risk input** asserting the
+result is **exactly** `InjuryRiskMax` and never above `OCCURRENCE_DRAW_DENOM` (**kills C**). It
+additionally pins the retired claim as the false statement it is — the age delta is identical at
+robustness 1, 14 and 20 — so the prose cannot be restored from a passing test.
+
+**Mutation A is not lockable, and is therefore withdrawn rather than re-locked.** It is an **identity**:
+verified by executing a probe against the built assemblies over **956,480** input combinations
+(robustness 1–20 × age 0–60 × training risk 0–20,000 × appearance days 0–7 × occurrence multiplier
+100–2000‰), mutant A returns a byte-identical checksum to the unmutated build
+(`0x7ECF863560438E07`), while B and C diverge (`0xC8F5E2CEF648218F`, `0x3BE31216BCB2B363`). No test can
+fail against a transformation that changes no output; the correct remedy is to stop claiming it, which
+is what this entry does.
+
+**A second finding, landed with it (H3): the production call site had no lock at all, and the evidence
+published for P5 could not see the age axis.** `ERR-041-020`'s record states *"P5 measured, not argued:
+`SeasonInjuryRealismTests`' league/starter/reserve/unavailability bands all held unmoved."* That is
+true and **non-probative**. All four bands are age-blind by construction — the term is anti-symmetric
+about the bootstrap mean age, so it sums to zero over the population each band pools — and measurement
+confirms it: forcing every player's age to **17 / 26 / 35** yields **623 / 783 / 929** league injuries a
+season, and **all three pass the asserted band**, in both directions. Meanwhile `record.Age` at
+`PlayerCareerStates`' single production call site could be replaced with the literal `26` and
+`SeasonSave.Tests` returned **402/3 — identical to baseline**, and `season-save` is the only assembly
+that constructs a `PlayerCareerStates`, so that suite is the complete coverage set. Fixed by splitting
+the instrument's existing `MedicalBlocks()` walk by age band and asserting **over-30s out-injure
+under-23s** by a margin no rounding supplies — measured **1.34×**, asserted `> 1.25×` — mirroring its
+existing starters-out-injure-reserves assert, plus a per-seed assert that both bands are populated so a
+change to #27's bootstrap age distribution cannot silently empty the comparison. Mutation-verified:
+with the call site's age neutralised the split reads **1.01×** and fails, while the four age-blind
+bands return the recorded pre-fix **783 / 2.08 / 1.13 / 9.5%** and all pass. New test id
+**T-MD-AGE-007**; T-MD-AGE-006 gains the standing caveat that it establishes P5 and nothing else.
+**The P5 property itself is undisturbed and is now independently verified** — forcing the pivot
+reproduces the recorded pre-fix figures exactly, and the live term moves the league aggregate by
+−0.5% (783 → 779).
+
+**A third, landed with them (H7 — annotation only, no behaviour change).** The shipped term's monotone
+form **inverts** this repo's own Strong-rated young-tail evidence, and the finding was recorded twice.
+`docs/tracking/injury-aging-research-alignment-design.md` **R-1** is the same defect
+("`AssembleRiskScore` has no age term at all", severity H, back-prop **`ERR-041-013`**) and proposes
+the identical plumbing `ERR-041-020` landed — but its contract is **U-shaped** ("elevated below
+`AGE_MATURITY_YEARS` (24), zero across the prime band, rising above `AGE_VETERAN_YEARS` (31)") from
+evidence **E-4, rated Strong**, whose academy half is explicit: *the 16–20 band carries elevated risk at
+adult match intensity*. The shipped term is monotone linear about pivot 26, so a 19-year-old receives
+**−1050** and 16–20-year-olds are the **safest players in the league**. R-1 is now annotated **in
+place** as landed-in-part, with `ERR-041-013` **narrowed** to the residual U-shape / young-tail arm
+only, and every #41 site that claimed evidential support for the term's shape corrected to the accurate
+statement: the veteran half follows E-4, the 16–20 half inverts it, and closing that is R-1's surviving
+scope. **The shape is deliberately NOT changed here** — the U-shape is the supplement's design, the
+supplement is awaiting owner sign-off, and re-shaping shipped football behaviour is the owner's call
+rather than a review loop's. Two forward notes recorded at R-1 for whoever lands it: the proposed
+piecewise-constant BAND table would reintroduce the age **threshold** doctrine P1 forbids and
+`ERR-028-020` has just removed from the sibling spec, so the U-shape wants a continuous piecewise form;
+and the shipped term's P5 pivot does not survive an asymmetric U, so a refit must re-establish P5
+rather than inherit it.
+
+**No `[GT]` value moved, no age-term shape changed, no draw, no stream, no domain tag, no format
+version, no change to the draw key or its order.** The one behavioural surface this entry touches is
+the test suite; the age term computes exactly what it computed at `ERR-041-020`.
+
+**Gate (targeted, not the full `run-gate.sh`):** build 0 errors, 0 warnings; `InjuriesMedical.Tests`
+**74/74, 0 skipped** (unchanged count — the rebuilt T-MD-AGE-004 replaces its predecessor rather than
+adding a case); `SeasonSave.Tests` **402 passed / 3 known skips / 405** (unchanged count — T-MD-AGE-007's
+asserts land inside the existing dial-on test); `python3 tools/recurring-defect-lint.py --repo .`
+**0 ERROR**.
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/injuries-medical/section-2.md` | §2.1 FR-MD-025a | Positional requirement restated (before the scaling, before the clamp); superseded wording annotated (v0.12) |
+| `docs/specs/injuries-medical/section-3.md` | §3.4 | The age term's and `BASELINE_DAILY_RISK`'s position bullets restated with both superseded sentences annotated in place; the age-blind-bands caveat; the E-4 inversion bullet (v0.18) |
+| `docs/specs/injuries-medical/section-5.md` | §5.6.1, §5.8 | T-MD-AGE-004 rebuilt into three parts + the retired-claim pin; T-MD-AGE-006 caveat; new **T-MD-AGE-007**; traceability row → T-MD-AGE-001..007 (v0.8) |
+| `docs/specs/injuries-medical/appendices.md` | Appendix A | `BASELINE_DAILY_RISK` and `AGE_RISK_PER_YEAR_FROM_PIVOT` rows corrected (position; evidential support) (v0.15) |
+| `docs/tracking/injury-aging-research-alignment-design.md` | header id-map, R-1 | R-1 annotated in place as landed-in-part; `ERR-041-013` narrowed to the U-shape / young-tail residual (v0.5) |
+| `src/injuries-medical/MedicalStep.cs` | `AssembleRiskScore` doc | Position restated for both terms; the inert claim recorded as retired (v1.14, doc only) |
+| `src/injuries-medical/InjuriesMedicalConstants.cs` | `BaselineDailyRisk`, `AgeRiskPerYearFromPivot` | Same two corrections at the catalogue (v1.7, doc only) |
+| `src/injuries-medical/tests/MedicalStepTests.cs` | T-MD-AGE-004 | Test renamed and rebuilt: scaling case, clamp case, retired-claim pin (v1.10) |
+| `src/season-save/tests/SeasonInjuryRealismTests.cs` | `PlaySeason`, dial-on test | Age captured per player; the season walk split into under-23 / over-30 bands; the T-MD-AGE-007 assert (v1.6) |

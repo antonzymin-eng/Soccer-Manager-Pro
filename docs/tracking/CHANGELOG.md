@@ -12,7 +12,38 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 22, 2026, latest same day (**BATCH 1 of the football-judgment proxy review's
+> **Last Updated:** August 23, 2026 (**Documentation-only: the batch-1 landing's OVERSTATED GATE CLAIM
+> corrected at all seven sites, and the three held ERR bodies landed in `spec-error-log.md` (v2.19 →
+> v2.20). No `.cs` file touched, no `[GT]`, no format version, no draw.** **(1) The gate claim.** As
+> published, the batch-1 entry read "31 of 32 suites fully green … quarantine empty", and both halves
+> were false. The tree has **33** test suites — `ls -d src/*/[Tt]ests/*.asmdef` returns 33 and the gate
+> log carries 33 suite result lines; the original count missed every suite whose folder is capitalised
+> `Tests/`, which is 17 of them — so the figure is **32 of 33**. And "quarantine empty" implied a ledger
+> report the run never printed: `run-gate.sh` runs under `set -euo pipefail`, so it exited non-zero on
+> the inherited owner-held-red `sim_match_engine_close_chance` and never reached its quarantine-report
+> section or a `Gate PASSED` line — `grep -c 'Quarantine\|Gate PASSED'` on that log returns **0**. The
+> ledger IS empty, but **by inspection of `tools/dotnet-ci/known-failures.txt`** (zero non-comment
+> lines), not because the gate said so. The restated form says the test sweep ran in full at final HEAD,
+> names the inspection as the source of the empty ledger, and records the formal result as **FAIL on the
+> held-red band — no new failure, no band rebaselined** — rather than rounding it up to PASS. Corrected
+> at `CLAUDE.md`, `open-issues.md`, `spec-error-log.md`, `file-manifest.md`,
+> `football-judgment-proxy-review.md`, this file and `CHANGELOG-src.md`, each with the superseded wording
+> quoted in place rather than deleted. **The August 12 W2 entry further down this chain also says "31 of
+> 32" and is deliberately left alone** — it is a different landing's record, and re-deriving its suite
+> count is not this pass's work. **(2) The three held ERR bodies.** `ERR-028-022`, `ERR-028-023` and
+> `ERR-041-021` were already cited in shipped spec text and code comments while `spec-error-log.md` held
+> nothing behind them — the missing-body class that log recorded at v2.17 for `ERR-008-023`. All three
+> now have both an Error Index row and a `##` body: the floored-mean retirement offset that falsified
+> `ERR-028-021`'s P5 claim (and the two behaviour changes that were locked by nothing at all); the
+> seed-credit MUST that still mandated the band step `ERR-028-020` retired; and `ERR-041-020`'s
+> arithmetically vacuous "before the mitigation, so robustness discriminates it" position claim, whose
+> lock passed against all three mutants it named. Ids re-verified free before writing. `ERR-041-020`'s
+> own "Magnitude, first-guess" epidemiology sentence is corrected in place with them — the shipped
+> monotone age term follows E-4 above the pivot and **inverts** its Strong-rated 16–20 arm below it, with
+> `ERR-041-013` narrowed to that residual. **No gate run in this pass and none claimed:** nothing
+> compilable changed, and `python3 tools/recurring-defect-lint.py --repo .` reports **0 ERROR**.)
+
+> **Last Updated (prior):** August 22, 2026, latest same day (**BATCH 1 of the football-judgment proxy review's
 > workable 24 LANDED IN FULL — three findings, three ERRs filed AND resolved in the same commit, spec +
 > code together, whole-tree gate run.** `ERR-028-020`, `ERR-028-021`, `ERR-041-020`; the review's counts
 > move for the first time since August 5 — **34 recorded, 5 fixed, 29 open, workable queue 24 → 21**.
@@ -61,10 +92,21 @@ break it, and do not edit historical entries.
 > onto the fixes and each rebaseline is annotated in the test itself with what the old assertion was
 > asserting — three of them were asserting the cliff.
 
-> **Gate: run in full at final HEAD, and the verdict is the inherited one.** Build 0 errors; **31 of 32
-> suites fully green** (`PlayerProgression.Tests` 134/0, `InjuriesMedical.Tests` 74/0,
+> **Gate: the test sweep ran in full at final HEAD; the formal result is the inherited FAIL, not a
+> PASS.** Build 0 errors; **32 of 33 suites fully green** (`PlayerProgression.Tests` 134/0,
+> `InjuriesMedical.Tests` 74/0,
 > `SeasonSave.Tests` 402/0 with its 3 known skips, `TrainingSystem.Tests` 52/0, every other suite 0
-> failed); `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped**; quarantine empty. The single
+> failed); `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped**. The quarantine ledger is **empty
+> by inspection of `tools/dotnet-ci/known-failures.txt`** — not because the gate reported it:
+> `run-gate.sh` runs under `set -euo pipefail`, so it exited non-zero on the blocking phase and never
+> reached its quarantine-report section or a `Gate PASSED` line, and **no formal verdict was ever
+> printed**. Recorded as FAIL on the inherited owner-held-red band rather than rounded up to PASS.
+> *(⚠️ CORRECTED August 23, 2026 — as first published this entry read "31 of 32 suites fully green …
+> quarantine empty". The suite count was one low: `ls -d src/*/[Tt]ests/*.asmdef` returns **33** and the
+> gate log carries 33 suite result lines, the original count having missed the suites whose folder is
+> capitalised `Tests/`. And "quarantine empty" implied a ledger report the run never printed —
+> `grep -c 'Quarantine\|Gate PASSED'` returns **0** on that log. The ledger IS empty, but by inspection
+> of the file, not by the gate's own report. Annotated in place, never silently replaced.)* The single
 > failure is `sim_match_engine_close_chance` — **owner-held RED since August 11 and failing at
 > baseline** (`close-chance-creation-design.md` §10.9 item 6; §6.3.1's constraint 2 names it as the
 > detector any batch now lands against). Its counts and both failing predicates come back **identical
