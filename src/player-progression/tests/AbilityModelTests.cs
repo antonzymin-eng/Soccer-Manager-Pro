@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/AbilityModelTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-22 (ERR-028-022 — the P5 population sweep widened to the whole attribute product — v1.2)
+// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial findings — v1.3)
+//           (ERR-028-022 — the P5 population sweep widened to the whole attribute product — v1.2)
 //           (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.1)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1.2 / §3.2; Code Standards #20
@@ -214,6 +215,127 @@ namespace TacticalDirector.PlayerProgression.Tests
                 + "product, not merely along Ant == Pos == Comp (ERR-028-022 / P5).");
         }
 
+        // ── Catalogue/config integrity guards (guards-unexercised, ramp-guard-int-overflow,
+        //    retirement-dials-no-overload — football-judgment proxy review batch-1 adversarial pass) ──
+        //
+        // Every case below drives the guard through an explicit parameterised value (never the live
+        // catalogue), so it is reachable under a config-unbound gate — mirroring the AgeCurve_* /
+        // RetirementAgeDays_* tests above, which established the same pattern for the [GT] dials
+        // themselves. Mutation-verified: deleting any one of these four computing-site guards (the
+        // negative-half-width check, the disjointness check, and the two negative-dial checks inside
+        // the new RetirementAgeDays overload) leaves the whole suite green without the matching case
+        // here; each case below is what turns that revert red.
+
+        [Test]
+        public void RampHalfWidthDays_Negative_FailsLoud()
+        {
+            Assert.Throws<System.InvalidOperationException>(
+                () => AbilityModel.AccruedBandPoints(1000, rampHalfWidthYears: -1),
+                "a negative ramp half-width inverts the ramp and must be refused where it is read.");
+        }
+
+        [Test]
+        public void RampHalfWidthDays_TooWide_FailsLoud()
+        {
+            // edgeSpanYears = (DECLINE_AGE + 1) - GROWTH_AGE = 7 at today's 24/30, so a half-width of 4
+            // (2*4 = 8 > 7) overlaps the two ramps by construction, whatever the catalogue's own value is.
+            int tooWide = (PlayerProgressionConstants.DECLINE_AGE + 1 - PlayerProgressionConstants.GROWTH_AGE) / 2 + 1;
+            Assert.Throws<System.InvalidOperationException>(
+                () => AbilityModel.AccruedBandPoints(1000, tooWide),
+                "2 x half-width exceeding (DECLINE_AGE + 1) - GROWTH_AGE must be refused, or a day "
+                + "accrues growth and decline at once.");
+        }
+
+        [Test]
+        public void RampHalfWidthDays_TooWide_OverflowCannotDefeatTheGuard()
+        {
+            // ramp-guard-int-overflow, verified against the real assembly with the exact values the
+            // review measured, not by inspection. Pre-fix, `2 * halfWidthYears` wrapped negative in
+            // `int` arithmetic at halfWidthYears >= 2^30, so the disjointness guard read a negative
+            // "too wide" comparison as satisfied and let a wildly-too-wide half-width straight through
+            // to GrowthPhaseDays/DeclinePhaseDays, whose own u*u term then overflowed `long` and
+            // returned garbage instead of throwing.
+            const int HalfWidthAtThePowerOf2Boundary = 1 << 30; // 1,073,741,824
+            Assert.Throws<System.InvalidOperationException>(
+                () => AbilityModel.DailyBandPoints(1000, HalfWidthAtThePowerOf2Boundary),
+                "a half-width at the int-overflow boundary of the pre-fix guard must still be refused, "
+                + "not silently accepted as 'not too wide'.");
+            Assert.Throws<System.InvalidOperationException>(
+                () => AbilityModel.AccruedBandPoints(1000, 1_200_000_000),
+                "…and the cumulative form must refuse the same class of value rather than returning the "
+                + "garbage the review measured (2,451,094, identical at daysLived 1000 and 1001).");
+        }
+
+        [Test]
+        public void RetirementAgeDays_NegativeGoalkeeperBonus_FailsLoud()
+        {
+            PlayerRecord rec = PlayerRecord.CreateDefault(1);
+            Assert.Throws<System.InvalidOperationException>(
+                () => AbilityModel.RetirementAgeDays(in rec, goalkeeperBonusYears: -1, readingSpanYears: 0),
+                "a negative goalkeeper bonus shortens a goalkeeper's career and must be refused where "
+                + "it is read, not merely at the catalogue.");
+        }
+
+        [Test]
+        public void RetirementAgeDays_NegativeReadingSpan_FailsLoud()
+        {
+            PlayerRecord rec = PlayerRecord.CreateDefault(1);
+            Assert.Throws<System.InvalidOperationException>(
+                () => AbilityModel.RetirementAgeDays(in rec, goalkeeperBonusYears: 0, readingSpanYears: -1),
+                "a negative reading span retires the best readers of the game first and must be "
+                + "refused where it is read, not merely at the catalogue.");
+        }
+
+        [Test]
+        public void RetirementAgeDays_ComputedDayAtOrBeforeBirth_FailsLoud()
+        {
+            // A minimum-reading player under a wildly oversized (but individually non-negative) span
+            // drives the computed day to or past zero — the third guard, distinct from the two dial
+            // sign checks above.
+            PlayerRecord rec = PlayerRecord.CreateDefault(1);
+            rec.Attributes.Anticipation = PlayerProgressionConstants.ATTRIBUTE_MIN;
+            rec.Attributes.Positioning = PlayerProgressionConstants.ATTRIBUTE_MIN;
+            rec.Attributes.Composure = PlayerProgressionConstants.ATTRIBUTE_MIN;
+
+            Assert.Throws<System.InvalidOperationException>(
+                () => AbilityModel.RetirementAgeDays(in rec, goalkeeperBonusYears: 0, readingSpanYears: 1_000_000),
+                "a computed retirement day at or before birth is a catalogue/config integrity failure, "
+                + "not a value to silently clamp.");
+        }
+
+        [Test]
+        public void RetirementAgeDays_AtZeroZeroDials_ReproducesTheBaselineExactly_ForGoalkeeperAndOutfielder()
+        {
+            // retirement-dials-no-overload / spec-error-log.md's "zero dials reproduce the retired
+            // comparison identically ... Locked" claim, EXECUTED — the public RetirementAgeDays(in rec)
+            // reads the live catalogue and cannot be driven to bonus 0 / span 0 unless the catalogue
+            // itself happens to be there; this overload can be, so the identity is checked directly
+            // rather than only by hand.
+            long baseline = (long)PlayerProgressionConstants.RETIREMENT_AGE * PlayerProgressionConstants.DAYS_PER_YEAR;
+
+            for (int a = PlayerProgressionConstants.ATTRIBUTE_MIN; a <= PlayerProgressionConstants.ATTRIBUTE_MAX; a += 3)
+            {
+                PlayerRecord outfielder = PlayerRecord.CreateDefault(1);
+                outfielder.Position = PlayerPosition.Defender;
+                outfielder.Attributes.Anticipation = a;
+                outfielder.Attributes.Positioning = a;
+                outfielder.Attributes.Composure = a;
+
+                PlayerRecord keeper = outfielder;
+                keeper.Position = PlayerPosition.Goalkeeper;
+
+                Assert.AreEqual(
+                    baseline,
+                    AbilityModel.RetirementAgeDays(in outfielder, goalkeeperBonusYears: 0, readingSpanYears: 0),
+                    $"outfielder at reading-trio value {a}: bonus 0 / span 0 must reproduce RETIREMENT_AGE "
+                    + "exactly, whatever the attributes are.");
+                Assert.AreEqual(
+                    baseline,
+                    AbilityModel.RetirementAgeDays(in keeper, goalkeeperBonusYears: 0, readingSpanYears: 0),
+                    $"goalkeeper at reading-trio value {a}: the position term must also vanish at bonus 0.");
+            }
+        }
+
         [Test]
         public void ComputeCA_Neutral_IsDeterministicAndRecomputeEqualsStored()
         {
@@ -312,4 +434,20 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | -204,621 days — it could not see the defect it claimed to prove
 // |         |            |        | absent. + a cardinality precondition so the sweep cannot silently
 // |         |            |        | narrow back to a line.
+// | 1.3     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial findings
+// |         |            |        | (guards-unexercised, ramp-guard-int-overflow, retirement-dials-no-
+// |         |            |        | overload). + RampHalfWidthDays_Negative_FailsLoud,
+// |         |            |        | RampHalfWidthDays_TooWide_FailsLoud,
+// |         |            |        | RampHalfWidthDays_TooWide_OverflowCannotDefeatTheGuard (the
+// |         |            |        | int-overflow fix, verified against the exact garbage values the
+// |         |            |        | review measured), RetirementAgeDays_NegativeGoalkeeperBonus_
+// |         |            |        | FailsLoud, RetirementAgeDays_NegativeReadingSpan_FailsLoud,
+// |         |            |        | RetirementAgeDays_ComputedDayAtOrBeforeBirth_FailsLoud (all four
+// |         |            |        | now reachable through the new internal parameterised
+// |         |            |        | RetirementAgeDays/GameReadingOffsetDays overloads, not the live
+// |         |            |        | catalogue), and RetirementAgeDays_AtZeroZeroDials_ReproducesThe-
+// |         |            |        | BaselineExactly_ForGoalkeeperAndOutfielder (the zero-dial OFF
+// |         |            |        | identity, executed rather than hand-verified). Mutation-verified:
+// |         |            |        | each guard deleted independently turns exactly its matching new
+// |         |            |        | case red with the rest of the suite green.
 #endregion

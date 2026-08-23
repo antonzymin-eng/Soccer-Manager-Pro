@@ -1,6 +1,8 @@
 // File:     src/player-progression/tests/GrowthProjectionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-22 (ERR-028-020 — football-judgment proxy review batch 1 — v1.4)
+// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial finding
+//           growthprojection-test-comment-stale-bands — v1.5)
+//           (ERR-028-020 — football-judgment proxy review batch 1 — v1.4)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 + Appendix B; Code Standards #20
 // Purpose:  T-PG-DET-001/002, T-PG-ID-001/002 — byte-exact growth across a value-copy "save", age
@@ -219,7 +221,15 @@ namespace TacticalDirector.PlayerProgression.Tests
                 RetirementDay = 0
             };
 
-            // Growth (18..23, 6 years) + Stable (24..30, 7 years) = 13 years, every Growth day refused.
+            // 13 years, ages 18..30 (growthprojection-test-comment-stale-bands, football-judgment
+            // proxy review batch-1: this comment described the retired flat step — "Growth (18..23, 6
+            // years) + Stable (24..30, 7 years)" — which is no longer the shipped model). Under the
+            // shipped ramp (AgeBandRampHalfWidthYears = 2 today) growth runs at full rate through age
+            // GROWTH_AGE - Ramp - 1 (21), tapers across GROWTH_AGE +/- Ramp (22..26), and is genuinely
+            // flat from age 26 until the decline ramp begins at (DECLINE_AGE + 1) - Ramp (29) — so this
+            // 13-year window now spans two years of decline-ramp accrual (ages 29-30) before this loop
+            // ends. Every Growth-band day is still refused (CA == PA throughout); the loop below is
+            // bounds-only and holds regardless of which band a given day falls in.
             uint growthStableDays = 13 * (uint)PlayerProgressionConstants.DAYS_PER_YEAR;
             for (uint d = BaseDay; d < BaseDay + growthStableDays; d++)
             {
@@ -235,9 +245,15 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.AreEqual(initialCA, AbilityModel.ComputeCA(in rec.Attributes, rec.Position),
                 "at the PA ceiling for the entire Growth band, no point was ever actually spent.");
 
-            // 10 years of Decline (age 31..40). A bounded residual (< POINT_COST) can delay the FIRST
-            // decline point by at most one point's worth — not the years-long cancellation the unbounded
-            // bank produced (measured pre-fix: 3 attributes lost at 40 where an unbanked player loses 9).
+            // 10 more years, ages 31..40 (growthprojection-test-comment-stale-bands: this comment
+            // previously read "10 years of Decline (age 31..40)" against the retired flat step). The
+            // decline ramp is centred on (DECLINE_AGE + 1) = 31, spanning ages 29..33 at today's
+            // AgeBandRampHalfWidthYears = 2, so this window picks up where the first loop left off
+            // (age 31, mid-ramp), covers two more ramp years (31-32) before reaching the full Decline
+            // rate at age 33, then continues full-rate through age 40. A bounded residual (< POINT_COST)
+            // can delay the FIRST decline point by at most one point's worth — not the years-long
+            // cancellation the unbounded bank produced (measured pre-fix: 3 attributes lost at 40 where
+            // an unbanked player loses 9).
             int sumBeforeDecline = SumAttributes(rec.Attributes);
             uint declineDays = 10 * (uint)PlayerProgressionConstants.DAYS_PER_YEAR;
             uint declineStart = BaseDay + growthStableDays;
@@ -370,4 +386,14 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | the first full-rate age past the ramp (age 32 now sits inside it and drains
 // |         |            |        | less than a point — the fix working). + InsideTheDeclineRamp_TheDrainIs-
 // |         |            |        | Partial_NotAllOrNothing, which the retired band step cannot satisfy.
+// | 1.5     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial finding
+// |         |            |        | growthprojection-test-comment-stale-bands (doc only, no assertion
+// |         |            |        | change). PaBoundYoungster_...'s two band-arithmetic comments still
+// |         |            |        | read "Growth (18..23, 6 years) + Stable (24..30, 7 years)" and "10
+// |         |            |        | years of Decline (age 31..40)" — the retired flat step's edges, not
+// |         |            |        | the shipped ramp's. Restated against GROWTH_AGE +/- Ramp and
+// |         |            |        | (DECLINE_AGE + 1) +/- Ramp, as GrowthProjectionTests 1.4 and
+// |         |            |        | AbilityModelTests already do; the assertions themselves were already
+// |         |            |        | correct (traced: 2190 growth days, 6 refusals, cursor 0, then -182
+// |         |            |        | by the end) and are unchanged.
 #endregion

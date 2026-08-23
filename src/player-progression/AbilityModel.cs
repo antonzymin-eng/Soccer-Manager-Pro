@@ -1,6 +1,7 @@
 // File:     src/player-progression/AbilityModel.cs
 // Created:  2026-07-24
-// Modified: 2026-08-22 (ERR-028-022 — the floored-mean anti-symmetry break in GameReadingOffsetDays — v1.2)
+// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial findings — v1.3)
+//           (ERR-028-022 — the floored-mean anti-symmetry break in GameReadingOffsetDays — v1.2)
 //           (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.1)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1.2 / §3.2 (CA/PA model + weighted spend); Code Standards #20
@@ -51,6 +52,14 @@ namespace TacticalDirector.PlayerProgression
         /// At <see cref="PlayerProgressionConstants.AgeBandRampHalfWidthYears"/> = 0 this reproduces
         /// the retired predicate exactly: every year below `GROWTH_AGE` nets a full year of growth,
         /// every year above `DECLINE_AGE` a full year of decline, and the years between net zero.
+        /// </para>
+        /// <para>
+        /// <b>Year-granular, not a per-day rate — read the answer accordingly.</b> The result is the
+        /// SIGN of the whole calendar year's net accrual, quantised per day inside a ramp — reading
+        /// <c>ClassifyAgeBand(25) == Growth</c> as "this player grows today" is wrong on most days of
+        /// year 25, since a day inside a ramp accrues <c>{0, ±1}</c> depending on exactly which day it
+        /// is. A caller that needs the per-day answer wants <see cref="DailyBandPoints(long)"/>, not
+        /// this method classified at a coarser grain.
         /// </para>
         /// </summary>
         /// <param name="ageYears">The player's derived age in whole years.</param>
@@ -103,7 +112,7 @@ namespace TacticalDirector.PlayerProgression
         /// </summary>
         /// <param name="ageDays">The player's age in whole days on the day being advanced.</param>
         /// <param name="rampHalfWidthYears">The ramp half-width to evaluate against, in years.</param>
-        public static long DailyBandPoints(long ageDays, int rampHalfWidthYears)
+        internal static long DailyBandPoints(long ageDays, int rampHalfWidthYears)
         {
             // The saturation belongs HERE, on the age, and not inside AccruedBandPoints on the
             // cumulative — this is a real difference and it took a re-read to notice. §3.1.1's age
@@ -152,7 +161,7 @@ namespace TacticalDirector.PlayerProgression
         /// </summary>
         /// <param name="daysLived">Days lived; values at or below zero accrue nothing.</param>
         /// <param name="rampHalfWidthYears">The ramp half-width to evaluate against, in years.</param>
-        public static long AccruedBandPoints(long daysLived, int rampHalfWidthYears)
+        internal static long AccruedBandPoints(long daysLived, int rampHalfWidthYears)
         {
             if (daysLived <= 0)
             {
@@ -179,16 +188,35 @@ namespace TacticalDirector.PlayerProgression
         /// <param name="rec">The career-state record — position and the reading attributes.</param>
         /// <exception cref="System.InvalidOperationException">
         /// The <c>[GT]</c> career-length dials are incoherent — a negative span or goalkeeper bonus, or
-        /// a combination that puts the retirement day at or before birth. A catalogue/config integrity
-        /// failure rather than a caller error, checked at the one site that computes the day (the
-        /// <c>MedicalStep.DrawOccurrence</c> guard posture): the catalogue locks run config-unbound and
-        /// see only the fallbacks, so a shipped config could otherwise retire an entire league on the
-        /// day it is generated.
+        /// a combination that puts the retirement day at or before birth. Checked at the one site that
+        /// computes the day. <b>Not a config-unbound rationale (corrected — the premise was false for
+        /// this catalogue):</b> `PlayerProgressionConstants.cs` has no `Config.GetX` call at all yet —
+        /// every `[GT]` here, including the two this guard covers, is still a compile-time literal — so
+        /// this is a forward-looking placement for the Stage-1 config loader, not a workaround for a
+        /// catalogue lock a config-unbound gate defeats today. `PlayerProgressionConstantsTests` carries
+        /// the catalogue-side lock on these same literals; this guard is what stays load-bearing once
+        /// the loader lands and the catalogue lock stops seeing anything but the fallback.
         /// </exception>
         public static long RetirementAgeDays(in PlayerRecord rec)
         {
-            if (PlayerProgressionConstants.RetirementGameReadingSpanYears < 0
-                || PlayerProgressionConstants.RetirementGoalkeeperBonusYears < 0)
+            return RetirementAgeDays(
+                in rec,
+                PlayerProgressionConstants.RetirementGoalkeeperBonusYears,
+                PlayerProgressionConstants.RetirementGameReadingSpanYears);
+        }
+
+        /// <summary>
+        /// <see cref="RetirementAgeDays(in PlayerRecord)"/> against explicit dial values, so the
+        /// zero/zero OFF identity (P5) and both catalogue/config integrity guards can be EXERCISED
+        /// rather than asserted in prose — the dials are read once at static initialisation, so no test
+        /// can otherwise vary them (the `ERR-008-021`/`-022` posture, per <see cref="DailyBandPoints(long, int)"/>).
+        /// </summary>
+        /// <param name="rec">The career-state record — position and the reading attributes.</param>
+        /// <param name="goalkeeperBonusYears">The goalkeeper allowance to evaluate against, in years.</param>
+        /// <param name="readingSpanYears">The game-reading offset's full-range span to evaluate against, in years.</param>
+        internal static long RetirementAgeDays(in PlayerRecord rec, int goalkeeperBonusYears, int readingSpanYears)
+        {
+            if (readingSpanYears < 0 || goalkeeperBonusYears < 0)
             {
                 throw new System.InvalidOperationException(
                     "RetirementGameReadingSpanYears and RetirementGoalkeeperBonusYears must be "
@@ -202,11 +230,10 @@ namespace TacticalDirector.PlayerProgression
 
             if (rec.Position == PlayerPosition.Goalkeeper)
             {
-                days += (long)PlayerProgressionConstants.RetirementGoalkeeperBonusYears
-                        * PlayerProgressionConstants.DAYS_PER_YEAR;
+                days += (long)goalkeeperBonusYears * PlayerProgressionConstants.DAYS_PER_YEAR;
             }
 
-            days += GameReadingOffsetDays(in rec.Attributes);
+            days += GameReadingOffsetDays(in rec.Attributes, readingSpanYears);
 
             if (days <= 0)
             {
@@ -220,8 +247,12 @@ namespace TacticalDirector.PlayerProgression
 
         /// <summary>
         /// The full-range, anti-symmetric game-reading offset in days (§3.4). Reads the SUM of
-        /// Anticipation / Positioning / Composure; at the attribute midpoint the offset is 0, so an
-        /// average outfielder retires on exactly today's day (P5).
+        /// Anticipation / Positioning / Composure. <b>The offset changes SIGN at the attribute-range
+        /// MIDPOINT, not AT it (corrected — no player can occupy the midpoint exactly):</b> the range
+        /// midpoint is 10.5 at today's [1,20] bounds, which no integer attribute can equal, so no
+        /// player's offset is ever exactly 0. The two means either side of it are the nearest reachable
+        /// values — mean 10 gives −38 days, mean 11 gives +38, at today's span (P5 is exact over the
+        /// population, not over any one player).
         /// </summary>
         /// <remarks>
         /// ERR-028-022: the sum is carried UNDIVIDED into the numerator rather than being floored to a
@@ -236,12 +267,23 @@ namespace TacticalDirector.PlayerProgression
         /// division truncates toward zero — it reproduces every diagonal value bit-for-bit.
         /// </remarks>
         /// <param name="attrs">The player's canonical [1,20] attributes.</param>
-        public static long GameReadingOffsetDays(in PlayerAttributes attrs)
+        internal static long GameReadingOffsetDays(in PlayerAttributes attrs)
+        {
+            return GameReadingOffsetDays(in attrs, PlayerProgressionConstants.RetirementGameReadingSpanYears);
+        }
+
+        /// <summary>
+        /// <see cref="GameReadingOffsetDays(in PlayerAttributes)"/> against an explicit span, so
+        /// <see cref="RetirementAgeDays(in PlayerRecord, int, int)"/> can drive it through the same
+        /// dial and the zero-span identity can be exercised directly.
+        /// </summary>
+        /// <param name="attrs">The player's canonical [1,20] attributes.</param>
+        /// <param name="spanYears">The full-range span to evaluate against, in years.</param>
+        internal static long GameReadingOffsetDays(in PlayerAttributes attrs, int spanYears)
         {
             int sum = attrs.Anticipation + attrs.Positioning + attrs.Composure;
 
-            long span = (long)PlayerProgressionConstants.RetirementGameReadingSpanYears
-                        * PlayerProgressionConstants.DAYS_PER_YEAR;
+            long span = (long)spanYears * PlayerProgressionConstants.DAYS_PER_YEAR;
             long numer = (2L * sum
                           - 3L * (PlayerProgressionConstants.ATTRIBUTE_MIN
                                   + PlayerProgressionConstants.ATTRIBUTE_MAX)) * span;
@@ -304,11 +346,13 @@ namespace TacticalDirector.PlayerProgression
         }
 
         // The ramp half-width in days, with the disjointness invariant enforced HERE rather than in a
-        // catalogue test: the [GT] is a config key and the catalogue lock runs config-unbound, so it
-        // sees the fallback forever while a shipped config overlaps the two ramps (ERR-041-003's class,
-        // and the DrawOccurrence guard posture's sixth instance). Overlapping ramps are not merely
-        // untidy — a day inside both accrues growth and decline at once, which the arithmetic
-        // represents and no football reading does.
+        // catalogue test alone: this is a forward-looking placement for the Stage-1 config loader — the
+        // [GT] is still a compile-time literal today (PlayerProgressionConstants.cs has no Config.GetX
+        // call yet), but once the loader lands, the catalogue lock in PlayerProgressionConstantsTests
+        // (which that test file also carries) runs config-unbound and sees only the fallback, and this
+        // computing-site guard is what stays load-bearing. Overlapping ramps are not merely untidy — a
+        // day inside both accrues growth and decline at once, which the arithmetic represents and no
+        // football reading does.
         private static long RampHalfWidthDays(int halfWidthYears)
         {
             if (halfWidthYears < 0)
@@ -318,9 +362,16 @@ namespace TacticalDirector.PlayerProgression
                     + "the ramp; catalogue/config integrity failure (§3.1, Appendix A).");
             }
 
-            int edgeSpanYears = PlayerProgressionConstants.DECLINE_AGE + 1
-                                - PlayerProgressionConstants.GROWTH_AGE;
-            if (2 * halfWidthYears > edgeSpanYears)
+            // ERR-028 review finding "ramp-guard-int-overflow": the comparison MUST run in `long`. As
+            // `int` arithmetic, `2 * halfWidthYears` wraps negative for halfWidthYears >= 2^30, which
+            // defeats this guard silently (measured: DailyBandPoints(1000, 1_073_741_824) then returns 0
+            // where +1 is correct, and AccruedBandPoints(1000/1001, 1_200_000_000) collide on the same
+            // garbage value because GrowthPhaseDays' own `u * u` term then overflows `long` too, at
+            // u ~ 4.4e11). Casting both sides to `long` here is what keeps the guard load-bearing over
+            // its own full `int` parameter domain, not merely over the plausible-bad-config range.
+            long edgeSpanYears = (long)PlayerProgressionConstants.DECLINE_AGE + 1
+                                  - PlayerProgressionConstants.GROWTH_AGE;
+            if (2L * halfWidthYears > edgeSpanYears)
             {
                 throw new System.InvalidOperationException(
                     "AgeBandRampHalfWidthYears is too wide — 2 x half-width must not exceed "
@@ -489,4 +540,30 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | moving. The new form sums to exactly 0 over that product and
 // |         |            |        | reproduces every diagonal value bit-for-bit (numerator and
 // |         |            |        | denominator are both exactly 3x v1.1's when sum == 3*mean).
+// | 1.3     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial findings, spec +
+// |         |            |        | code same commit. RampHalfWidthDays' disjointness guard now compares
+// |         |            |        | in `long` — as `int` arithmetic, `2 * halfWidthYears` wrapped negative
+// |         |            |        | at halfWidthYears >= 2^30 and defeated the guard silently, after which
+// |         |            |        | GrowthPhaseDays' own u*u term overflowed `long` too and returned
+// |         |            |        | garbage on a public API (ramp-guard-int-overflow). + new INTERNAL
+// |         |            |        | RetirementAgeDays(in rec, goalkeeperBonusYears, readingSpanYears) and
+// |         |            |        | GameReadingOffsetDays(in attrs, spanYears) overloads, so the two
+// |         |            |        | retirement dials are exercised through a parameterised overload like
+// |         |            |        | DailyBandPoints/AccruedBandPoints already were, instead of reading the
+// |         |            |        | catalogue statics directly where no test could vary them
+// |         |            |        | (retirement-dials-no-overload). DailyBandPoints(long,int),
+// |         |            |        | AccruedBandPoints(long,int) and GameReadingOffsetDays(in attrs) demoted
+// |         |            |        | PUBLIC -> INTERNAL (FR-CS-015 — no cross-assembly caller; see the new
+// |         |            |        | AssemblyInfo.cs InternalsVisibleTo) (classifyageband-no-production-
+// |         |            |        | caller). ClassifyAgeBand's doc now states its answer is year-granular,
+// |         |            |        | not a per-day rate. GameReadingOffsetDays' doc corrected — the offset
+// |         |            |        | changes SIGN at the attribute midpoint 10.5, which no integer attribute
+// |         |            |        | can occupy, so no player's offset is ever exactly 0 (midpoint-offset-
+// |         |            |        | zero-unattainable). RetirementAgeDays' <exception> doc and
+// |         |            |        | RampHalfWidthDays' comment corrected — PlayerProgressionConstants.cs has
+// |         |            |        | zero Config.GetX calls today, so "the catalogue lock runs config-unbound"
+// |         |            |        | was a false premise for #28 (copied from ERR-041-003 without checking);
+// |         |            |        | restated as a forward-looking placement for the Stage-1 loader
+// |         |            |        | (config-unbound-premise-false-28). No format version, no draw, no
+// |         |            |        | numeric value changed.
 #endregion

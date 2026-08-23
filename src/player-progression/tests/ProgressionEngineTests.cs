@@ -1,7 +1,9 @@
 // File:     src/player-progression/tests/ProgressionEngineTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-22 (ERR-028-022 — ERR-028-021's behaviour change locked at its call site — v1.10)
+// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial findings — v1.11)
+//           (ERR-028-022 — ERR-028-021's behaviour change locked at its call site — v1.10)
 //           (ERR-028-020 — football-judgment proxy review batch 1 — v1.9)
+//           (AR pass 8 — SeedFrom's id-cursor overflow lock + the DefaultLife() CurrentAbility
 //           retune to keep every FromBlocks(..., DefaultLife()) call legal — v1.8)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §5, KD-4 / KD-7,
@@ -430,11 +432,17 @@ namespace TacticalDirector.PlayerProgression.Tests
         {
             // AR pass 5 (recorded), fixed. BirthWorldDay was the ONLY lifecycle field with no range
             // gate, and it is the AUTHORITATIVE age anchor — every other age in the model is a derived
-            // cache of it. Probe-verified before the fix: this anchor was accepted at every boundary,
-            // the daily step narrowed the derived age to int.MinValue, ClassifyAgeBand read that as
-            // GROWTH (so the player grows forever and RETIREMENT_AGE can never fire — ERR-028-006's
-            // failure mode through a different door), and Snapshot() then refused the negative age —
-            // a career that loaded, advanced and projected fine, permanently unsavable.
+            // cache of it. Probe-verified before the fix: this anchor was accepted at every boundary and
+            // the daily step narrowed the derived age to int.MinValue — a value ClassifyAgeBand read
+            // at the time as GROWTH under the retired age-only band step, so the player grew forever and
+            // RETIREMENT_AGE could never fire (ERR-028-006's failure mode through a different door) —
+            // and Snapshot() then refused the negative age, a career that loaded, advanced and projected
+            // fine, permanently unsavable. **Corrected (classifyageband-growth-claim-stale, football-
+            // judgment proxy review batch-1): ClassifyAgeBand no longer classifies int.MinValue as
+            // Growth at all — since ERR-028-020 it reads the continuous accrual curve, and both
+            // AccruedBandPoints cumulatives are 0 at a hugely negative age, so it now returns Stable.**
+            // The int-narrowing itself is still real and still the reason this gate exists; only the
+            // ClassifyAgeBand-specific downstream symptom this comment narrates is history.
             var records = new[] { Player(400, age: 20) };
             var lifecycles = new[] { DefaultLife() };
             lifecycles[0].BirthWorldDay = -(long)int.MaxValue * PlayerProgressionConstants.DAYS_PER_YEAR
@@ -1424,4 +1432,17 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | Age_DoesNotFlag's message corrected — it asserted in prose that
 // |         |            |        | "the retirement test is hard AT RETIREMENT_AGE", the property
 // |         |            |        | ERR-028-021 exists to remove.
+// | 1.11    | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial findings.
+// |         |            |        | Header's dangling v1.8 fragment (a line missing its own opening
+// |         |            |        | clause, listing only "retune to keep every FromBlocks(...,
+// |         |            |        | DefaultLife()) call legal — v1.8)") restored to a complete entry
+// |         |            |        | (version-header-hygiene). FromBlocks_ABirthWorldDayBelowTheDerivable-
+// |         |            |        | Floor_IsRefused's comment corrected (classifyageband-growth-claim-
+// |         |            |        | stale): it asserted ClassifyAgeBand(int.MinValue) reads Growth,
+// |         |            |        | which was true of the pre-ERR-028-020 retired classifier at the time
+// |         |            |        | this comment was written but is not true of ClassifyAgeBand today —
+// |         |            |        | measured, it now returns Stable at a hugely negative age, since both
+// |         |            |        | AccruedBandPoints cumulatives are 0 there. Annotated as history
+// |         |            |        | rather than restated as current behaviour; the int-narrowing concern
+// |         |            |        | itself is unchanged and is still why this lock exists.
 #endregion

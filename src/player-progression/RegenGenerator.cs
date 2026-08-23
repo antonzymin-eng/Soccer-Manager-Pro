@@ -1,7 +1,8 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-08-22 (ERR-028-020 — the construction-day credit takes the continuous step —
-//           football-judgment proxy review batch 1 — v1.7)
+// Modified: 2026-08-23 (BandStepFor made internal + directly locked — v1.7)
+//           (ERR-028-020 — the construction-day credit takes the continuous step —
+//           football-judgment proxy review batch 1 — v1.6)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.3 (regen generation); Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  Pure single-player regen generation (§3.3) — a young player with a drawn PotentialAbility
@@ -184,7 +185,17 @@ namespace TacticalDirector.PlayerProgression
         /// because that anchor declares the day already lived and a zero cursor accounts for it as
         /// nothing — costing one whole attribute point per band traversal.
         /// </summary>
-        private static long BandStepFor(int age)
+        /// <remarks>
+        /// <b>Internal, not private (regen-bandstep-both-locked-false).</b> A regen's drawn age is
+        /// always <c>REGEN_AGE_MIN..REGEN_AGE_MAX</c> (16-20 today), entirely below the growth ramp, so
+        /// this v1.7 delegation to <see cref="AbilityModel.DailyBandPoints(long)"/> is behaviourally
+        /// INERT at every age <see cref="GenerateRegen"/> can actually produce — no test driven only
+        /// through the public entry point can distinguish it from the retired
+        /// <c>AbilityModel.ClassifyAgeBand</c>-based form. Internal access lets
+        /// <c>RegenGeneratorTests</c> drive an age INSIDE the ramp directly, which is the only way to
+        /// make the v1.7 change (rather than its inert regen-age consequence) detectable by a revert.
+        /// </remarks>
+        internal static long BandStepFor(int age)
         {
             // ERR-028-020: the CONTINUOUS step, from the same AbilityModel.DailyBandPoints the daily
             // step and SeedLifecycle use. This method's own doc says every construction site that
@@ -237,7 +248,7 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | version row (the sixth consecutive FR-CS-057 recurrence,         |
 // |         |            |        | L-1) — this row and the corrected `Modified` header above        |
 // |         |            |        | backfill it.                                                     |
-// | 1.7     | 2026-08-22 | —      | ERR-028-020. BandStepFor takes AbilityModel.DailyBandPoints —  |
+// | 1.6     | 2026-08-22 | —      | ERR-028-020. BandStepFor takes AbilityModel.DailyBandPoints —  |
 // |         |            |        | the same continuous step SeedLifecycle and the daily step now  |
 // |         |            |        | use. This method's own doc says every construction site owes   |
 // |         |            |        | the day's step, which means the SAME step; the retired three-  |
@@ -246,5 +257,23 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | growth ramp, where both forms agree) and fixed for exactly     |
 // |         |            |        | that reason: it diverges silently the first time the regen age |
 // |         |            |        | band or the ramp half-width moves, costing one point per band  |
-// |         |            |        | traversal — ERR-028-018's shape at the sibling site.           |
+// |         |            |        | traversal — ERR-028-018's shape at the sibling site. THIS ROW  |
+// |         |            |        | WAS PUBLISHED NUMBERED "1.7" (skipping 1.6, header/version     |
+// |         |            |        | hygiene defect, football-judgment proxy review batch-1         |
+// |         |            |        | adversarial finding version-header-hygiene) — renumbered here. |
+// | 1.7     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial findings.  |
+// |         |            |        | BandStepFor PRIVATE -> INTERNAL (regen-bandstep-both-locked-   |
+// |         |            |        | false): v1.6's delegation to DailyBandPoints is inert at every |
+// |         |            |        | age GenerateRegen can actually draw (16-20, wholly below the   |
+// |         |            |        | growth ramp), so no test through the public entry point could  |
+// |         |            |        | ever fail if it were reverted — RegenGeneratorTests gained no  |
+// |         |            |        | case at v1.6, and the commit record's "Both locked" claim (also|
+// |         |            |        | naming the MAX_DERIVABLE_AGE_YEARS ceiling placement, which IS |
+// |         |            |        | locked) was true of only one of the two. Internal access lets  |
+// |         |            |        | BandStepFor_AtAnAgeInsideTheRamp_DelegatesToTheContinuousCurve |
+// |         |            |        | drive an age INSIDE the ramp directly, where v1.6's change and  |
+// |         |            |        | the retired ClassifyAgeBand-based form disagree — mutation-     |
+// |         |            |        | verified. (ERR-028-020's own Files Affected row and the ea910a7 |
+// |         |            |        | commit record live in spec-error-log.md, outside this agent's  |
+// |         |            |        | scope this pass — not corrected here; flagged for the owner.)  |
 #endregion

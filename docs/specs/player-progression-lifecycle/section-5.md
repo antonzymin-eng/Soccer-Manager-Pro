@@ -1,12 +1,13 @@
 # Player Progression & Lifecycle #28 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** August 22, 2026 (v0.7 — **ERR-028-022**: two §5.6 test ids amended because their implementing locks could not see the behaviour they were re-pointed at. T-PG-RET-005's population property now requires the whole uniform attribute **product**, not the `Ant == Pos == Comp` diagonal the lock actually swept — the one line on which §3.4's retired floored mean was exact, so the lock passed against an implementation whose true population sum was −204,621 days and passed a differently-wrong-rounding mutation too — plus a cardinality precondition against silent re-narrowing, and a note that the uniform product is not the league #27 generates (`[6,14]`, ≈ −38 d/player residual, recorded in §3.4). T-PG-RET-001 was re-pointed from `RETIREMENT_AGE` to `RetirementAgeDays` at ERR-028-021 while both implementing cases used a default-attribute Midfielder at exactly `RETIREMENT_AGE` / `−1`, where old and new agree by construction — restoring the pre-fix comparison left the whole suite green — so it now MUST include cases that fail against it: the goalkeeper allowance at the baseline age, and two same-position players separated only by the reading trio, advanced between their two retirement days. Prior entry below.)
+**Last Updated:** August 23, 2026 (v0.8 — football-judgment proxy review, batch-1 adversarial findings: new T-PG-AGE-006/007 allocate ids for the ramp half-width's non-negativity and disjointness (incl. the int-overflow class) guards; new T-PG-RET-006/007/008 allocate ids for the two retirement dials' non-negativity guards, the computed-day-at-or-before-birth guard, and the zero/zero OFF identity, all previously unlisted anywhere in §5 (guards-unexercised, ramp-guard-int-overflow, retirement-dials-no-overload); T-PG-CA-002 corrected — it still said "the cursor is not consumed past the ceiling", the pre-AR-pass-6 posture (f1-cursor-not-consumed-stale). Prior entry below.)
+**Last Updated (prior):** August 22, 2026 (v0.7 — **ERR-028-022**: two §5.6 test ids amended because their implementing locks could not see the behaviour they were re-pointed at. T-PG-RET-005's population property now requires the whole uniform attribute **product**, not the `Ant == Pos == Comp` diagonal the lock actually swept — the one line on which §3.4's retired floored mean was exact, so the lock passed against an implementation whose true population sum was −204,621 days and passed a differently-wrong-rounding mutation too — plus a cardinality precondition against silent re-narrowing, and a note that the uniform product is not the league #27 generates (`[6,14]`, ≈ −38 d/player residual, recorded in §3.4). T-PG-RET-001 was re-pointed from `RETIREMENT_AGE` to `RetirementAgeDays` at ERR-028-021 while both implementing cases used a default-attribute Midfielder at exactly `RETIREMENT_AGE` / `−1`, where old and new agree by construction — restoring the pre-fix comparison left the whole suite green — so it now MUST include cases that fail against it: the goalkeeper allowance at the baseline age, and two same-position players separated only by the reading trio, advanced between their two retirement days. Prior entry below.)
 **Last Updated (prior):** August 22, 2026 (v0.6 — **ERR-028-020 / ERR-028-021**: T-PG-ID-001 revised to name the ramp dial's off position and to require the identity be EXERCISED per-day rather than asserted; new **§5.3.1** allocates T-PG-AGE-001..005 for the continuous accrual curve (continuity, the exact P5 integral, the band description, the carried-fraction-vs-lost-point distinction, and ERR-028-018's traversal invariant re-stated for the ramped curve); T-PG-RET-001 re-pointed at the per-player retirement day and new **T-PG-RET-005** covers its three properties. Prior entry below.)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: §5.1's `AdvanceDay_FirstCall_*` passage corrected from the retired sentinel-anchored behaviour to the shipped seed-day-replay behaviour, with the inversion noted; new §5.9/§5.10 allocate T-PG-BLOCK-001..007 / T-PG-BATCH-001 / T-PG-CODEC-001..007 and §5.7 gains T-PG-SAVE-007/008 for ~17 mutation-audit-proven locks that landed across commits `043ccd0`/`1d19bc8`/`9392839` with no prior test-plan id)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: new locks for the signed anchor, the cross-blob cursor rule, the roster-overwrite refusal, and the F8 sentinel guard)
 **Last Updated (prior):** August 8, 2026 (v0.3 — ERR-028-005: T-PG-DET-002 reworded to the gap-replay semantic that makes it satisfiable)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -97,13 +98,29 @@ to run at `BaseDay = 0`, not at a value picked to avoid the failure mode being t
 - **T-PG-ID-002 (KD-2 seam neutrality)** — The daily step with `TrainingInput.Neutral` == the daily
   step with no training input, byte-for-byte (the #29 seam adds nothing until #29 writes a non-neutral
   value).
+- **T-PG-AGE-006 (ramp half-width non-negative, guards-unexercised)** — The ramp half-width guard
+  fails loud when driven negative through the parameterised overload; a catalogue-level lock on the
+  live `[GT]` sits alongside it (Appendix A, `PlayerProgressionConstantsTests`).
+- **T-PG-AGE-007 (ramp disjointness, including the int-overflow class, guards-unexercised /
+  ramp-guard-int-overflow)** — The disjointness guard fails loud for a plausible too-wide half-width
+  AND for a half-width at the `int` overflow boundary (`1 &lt;&lt; 30` and above), where the pre-fix
+  `2 * halfWidthYears` comparison wrapped negative and silently defeated the guard, after which the
+  growth/decline phase integrals' own squared term overflowed `long` and returned garbage on a public
+  API — verified against the exact garbage values measured (`DailyBandPoints(1000, 1_073_741_824)`
+  returning 0; `AccruedBandPoints(1000/1001, 1_200_000_000)` both returning 2,451,094), not merely that
+  an exception is thrown.
 
 ## 5.4 CA/PA model (FR-PG-003 / §3.2)
 
 - **T-PG-CA-001** — `CurrentAbility` recomputed from the restored `[1,20]` attributes equals the
   serialized CA cache (recompute-equals-stored — a corrupt CA can never diverge).
 - **T-PG-CA-002** — A growth spend that would push CA past `PotentialAbility` is a no-op at the ceiling
-  (F1); the attribute stays, the cursor is not consumed past the ceiling.
+  (F1); the attribute stays, and the refused spend DISCARDS the pending fraction (`GrowthCursor = 0`),
+  so no residue survives the band. *(Corrected — f1-cursor-not-consumed-stale, football-judgment proxy
+  review batch-1: this id previously read "the cursor is not consumed past the ceiling", the retired
+  clamp-to-`POINT_COST − 1` posture superseded by AR pass 6's discard-to-zero fix; pre-existing
+  staleness, not introduced by this batch. `PaBoundSpendRefusal_LeavesNoResidue` is the implementing
+  lock.)*
 - **T-PG-CA-003** — The weighted spend order raises a position's signature attributes first and breaks
   ties by ascending `AttrIdx` (deterministic, no draw).
 
@@ -144,6 +161,20 @@ to run at `BaseDay = 0`, not at a value picked to avoid the failure mode being t
   attribute product and **not** about the league #27 generates: `RosterGenerator` draws `[6,14]`,
   centred half a point below the offset's neutral midpoint, leaving ≈ −38 days per generated player —
   recorded in §3.4, deliberately not fitted away here.)*
+- **T-PG-RET-006 (retirement dial non-negativity, guards-unexercised / retirement-dials-no-overload)**
+  — `RetirementAgeDays`, driven through its internal parameterised overload, fails loud when
+  `goalkeeperBonusYears` or `readingSpanYears` is negative — independently for each — reproducing
+  Appendix A's two MUST-be-non-negative invariants at the site that computes the day, not only at the
+  catalogue.
+- **T-PG-RET-007 (computed day at or before birth, guards-unexercised)** — `RetirementAgeDays` fails
+  loud when a coherent (non-negative) but extreme `readingSpanYears` combined with a minimum-reading
+  player drives the computed day to or past zero — distinct from T-PG-RET-006's two dial-sign guards.
+- **T-PG-RET-008 (zero/zero OFF identity, retirement-dials-no-overload)** — At `goalkeeperBonusYears =
+  0, readingSpanYears = 0`, `RetirementAgeDays` equals `RETIREMENT_AGE · DAYS_PER_YEAR` exactly, for a
+  goalkeeper and an outfielder alike, across an attribute sweep — the P5 zero-dial identity `spec-
+  error-log.md`'s "Locked" claim asserted but nothing until now executed, since the public
+  single-argument overload can only be driven to bonus 0 / span 0 if the live catalogue happens to be
+  there.
 - **T-PG-RET-002** — `RunSeasonBoundary` emits the retirees + a 1:1 regen per vacancy; the block entry
   count is unchanged (FR-PG-019, no unbounded growth).
 - **T-PG-RET-003 (F6 idempotency)** — `RunSeasonBoundary` invoked twice for one boundary is a no-op
@@ -272,4 +303,5 @@ previously unlocked by deletion).
 | 0.5 | 2026-08-09 | — | **ERR-028-014**: §5.1's `AdvanceDay_FirstCall_AdvancesExactlyOneDay` passage corrected — the test was renamed `AdvanceDay_FirstCall_ReplaysFromTheSeedDay` and its assertion INVERTED, because the quoted reasoning ("cannot know how far in the past the career actually began accruing") was itself the defect: `SeedFrom` **is** handed the seed day. New **§5.9** (`T-PG-BLOCK-001..007`, `T-PG-BATCH-001`) and **§5.10** (`T-PG-CODEC-001..007`) allocate ids for ~15 `FromBlocks`/`ToBlocks`/batch/codec guards that landed across commits `043ccd0`, `1d19bc8` and `9392839` with no prior test-plan id, each proven previously unlocked by a mutation audit (delete the guard, confirm the whole suite including every existing `T-PG-*` lock stays green, restore it). §5.7 gains **T-PG-SAVE-007/008** for two `SeasonSaveManagerTests` mutation-audit locks (`Save` null-progression refusal; `Load` restoring from the file's roster, not the caller's bootstrap provider). Spec-only, no code change. |
 | 0.6 | 2026-08-22 | — | **ERR-028-020 / ERR-028-021** (football-judgment proxy review, batch 1 — spec + code, same commit). T-PG-ID-001 conditioned on `AGE_BAND_RAMP_HALF_WIDTH_YEARS = 0` and strengthened from sampled ages to every day of a lifetime, with the requirement that the identity be exercised through an explicit half-width rather than asserted in prose. New §5.3.1 (T-PG-AGE-001..005) covers the §3.1.3 curve: per-day continuity, the exact P5 integral equality with its own vacuity precondition, `ClassifyAgeBand`'s two now-inverted answers at the band edges, the mid-ramp carried fraction that must not be mistaken for ERR-028-018's shortfall, and ERR-028-018's traversal invariant re-stated for a traversal that runs to the ramp's end. T-PG-RET-001 re-pointed at `RetirementAgeDays`; new T-PG-RET-005 covers the goalkeeper allowance, the sub-year attribute sensitivity, and the exactly-zero population sum. |
 | 0.7 | 2026-08-22 | — | **ERR-028-022** — two §5.6 ids amended, spec + code in the same commit, because their implementing locks could not distinguish the behaviour they had been re-pointed at. **T-PG-RET-005:** property 3 said "the game-reading offsets over a uniform `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` population sum to exactly 0" and the lock swept the `Anticipation == Positioning == Composure` diagonal — one line through the population, and precisely the line on which §3.4's retired `floor(sum/3)` is exact — so it passed against an implementation summing **−204,621 days** over the real product (−25.58 d/player) and passed a mutation to a differently-wrong rounding. Now the whole product, with a cardinality precondition so the sweep cannot silently narrow back to a line, and with the residual honest fact attached: the uniform product is a modelling idealisation, while #27's `RosterGenerator` draws `[6,14]` (centre 10 against the offset's neutral 10.5), leaving ≈ −38 days per generated player — recorded in §3.4, deliberately not fitted away. **T-PG-RET-001:** re-pointed from `RETIREMENT_AGE` to `RetirementAgeDays` at ERR-028-021 while both implementing cases used a default-attribute Midfielder at exactly `RETIREMENT_AGE` / `RETIREMENT_AGE − 1`, where the per-player day and the retired league-wide age agree by construction; mutation-verified that restoring the pre-fix `rec.Age >= RETIREMENT_AGE` left `PlayerProgression.Tests` 134/134 and `SeasonSave.Tests` 402/3 green. The id now MUST carry at least one case that fails against that comparison — the position half (goalkeeper vs identical outfielder at the baseline age) and the attribute/day-resolution half (two same-position players a year below the baseline, reading trios at both ends of the range, advanced to a day strictly between their retirement days). |
+| 0.8 | 2026-08-23 | — | Football-judgment proxy review, batch-1 adversarial findings. **guards-unexercised / ramp-guard-int-overflow:** new T-PG-AGE-006 (ramp half-width non-negativity) and T-PG-AGE-007 (disjointness, including the int-overflow class that let a wildly-too-wide half-width defeat the pre-fix guard and return garbage) — §5.3.1's ramp catalogue/config integrity guards previously had no test-plan id at all. **retirement-dials-no-overload:** new T-PG-RET-006 (the two retirement dials' non-negativity), T-PG-RET-007 (computed day at or before birth), and T-PG-RET-008 (the zero/zero OFF identity, executed rather than only hand-verified) — same gap on the §3.4 side. **f1-cursor-not-consumed-stale:** T-PG-CA-002 corrected from "the cursor is not consumed past the ceiling" (the pre-AR-pass-6 clamp posture) to the discard-to-zero behaviour §3.1 and the code have carried since AR pass 6; pre-existing staleness, not introduced by this batch. |
 #endregion

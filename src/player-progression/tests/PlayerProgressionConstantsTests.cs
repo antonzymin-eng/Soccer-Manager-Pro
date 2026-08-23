@@ -1,6 +1,6 @@
 // File:     src/player-progression/tests/PlayerProgressionConstantsTests.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial findings — v1.1)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 Appendix A (constant catalogue); Code Standards #20
 // Purpose:  Balance-pass invariant locks on the #28 constant catalogue — the [GT] shapes/derivations
@@ -64,10 +64,52 @@ namespace TacticalDirector.PlayerProgression.Tests
             // A regen's generated age must be below the Growth-band ceiling (a young player, §3.3).
             Assert.Less(PlayerProgressionConstants.REGEN_AGE_MAX, PlayerProgressionConstants.GROWTH_AGE);
         }
+
+        // ── config-unbound-premise-false-28 ──────────────────────────────────────────
+        //
+        // AbilityModel.RampHalfWidthDays/RetirementAgeDays enforce these same three invariants at their
+        // computing site, with a documented rationale ("forward-looking placement for the Stage-1
+        // config loader") that is different from — and narrower than — the reason the sibling
+        // #29/#41 computing-site guards give ("the catalogue lock runs config-unbound"). That reason is
+        // false for THIS catalogue: PlayerProgressionConstants.cs has zero Config.GetX calls today, so
+        // a catalogue-level lock is not defeated here and belongs alongside the other three above.
+
+        [Test]
+        public void AgeBandRampHalfWidthYears_IsNonNegative()
+        {
+            Assert.GreaterOrEqual(PlayerProgressionConstants.AgeBandRampHalfWidthYears, 0,
+                "a negative ramp half-width inverts the ramp (§3.1.3, Appendix A).");
+        }
+
+        [Test]
+        public void AgeBandRampHalfWidthYears_LeavesTheTwoRampsDisjoint()
+        {
+            int edgeSpanYears = PlayerProgressionConstants.DECLINE_AGE + 1 - PlayerProgressionConstants.GROWTH_AGE;
+            Assert.LessOrEqual(2 * PlayerProgressionConstants.AgeBandRampHalfWidthYears, edgeSpanYears,
+                "2 x half-width must not exceed (DECLINE_AGE + 1) - GROWTH_AGE, or a day sits inside "
+                + "both ramps and accrues growth and decline at once (§3.1.3, Appendix A).");
+        }
+
+        [Test]
+        public void RetirementDials_AreNonNegative()
+        {
+            Assert.GreaterOrEqual(PlayerProgressionConstants.RetirementGoalkeeperBonusYears, 0,
+                "a negative goalkeeper bonus shortens a goalkeeper's career (§3.4, Appendix A).");
+            Assert.GreaterOrEqual(PlayerProgressionConstants.RetirementGameReadingSpanYears, 0,
+                "a negative reading span retires the best readers of the game first (§3.4, Appendix A).");
+        }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-07-24 | —      | Initial implementation. |
+// | 1.1     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial findings
+// |         |            |        | (config-unbound-premise-false-28): + catalogue-level non-negative
+// |         |            |        | / disjointness locks on AgeBandRampHalfWidthYears,
+// |         |            |        | RetirementGoalkeeperBonusYears and RetirementGameReadingSpanYears —
+// |         |            |        | this catalogue has zero Config.GetX calls, so a catalogue lock is
+// |         |            |        | not defeated by a config-unbound gate here (unlike the sibling
+// |         |            |        | #29/#41 rationale it had been copied from) and belongs alongside
+// |         |            |        | the other locks in this file. No value changed.
 #endregion

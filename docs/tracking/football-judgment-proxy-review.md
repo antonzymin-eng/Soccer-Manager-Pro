@@ -62,6 +62,14 @@
 > falsified on first execution. Normative source: `path-to-playable-roadmap.md` **C6** (new). The
 > finding counts are UNCHANGED — 34 recorded, 2 fixed, **32 open** — this reclassifies when 8 of them are
 > workable, not whether. Deferral is not dismissal: they stay itemized here and are discharged at T0.
+> **Updated (prior):** August 6, 2026, later same day — **ERR-008-021 AR-1: 1 High, 7 Medium, 5 Low, all
+> fixed.** The High: the landed P3 exemption keyed on the whole 6 m GK band rather than the
+> goalkeeper, so every near-goal defender escaped the new weighting — inert precisely where shots
+> are blocked. Now a single **GK candidate** (goal-line-nearest in band) is exempt and every other
+> blocker is weighted (radius stays per-band). The P5 claim below is corrected the same way as
+> ERR-008-019's a day earlier: exact only at the ability midpoint (raw 10/11) or under a null
+> view — the all-default 10/10 profile reads ≈ 0.979, so the pivot is approximate, which is what
+> P5 ("≈ today's behavior") actually requires. See `spec-error-log.md` v1.68 for the full list.
 > **Updated (prior):** August 6, 2026 — **the adversarial review over the `ERR-008-021` landing LANDED as
 > `ERR-008-022`** (§6.4.2). It found that -021's overlap model was being fed by a lane test that
 > discarded the **far-post blocker on 100% of 20,213 sampled off-centre shooters** and dropped a
@@ -93,14 +101,6 @@
 > against the old model fail on it; gate NOT runnable in the authoring environment. **The 34-finding tally is unchanged**: the shot lane was
 > never itemized as its own §2/§3 finding — it surfaced in §6.4 at the -020 landing — so 32 itemized
 > findings remain open.
-> **Updated:** August 6, 2026, later same day — **ERR-008-021 AR-1: 1 High, 7 Medium, 5 Low, all
-> fixed.** The High: the landed P3 exemption keyed on the whole 6 m GK band rather than the
-> goalkeeper, so every near-goal defender escaped the new weighting — inert precisely where shots
-> are blocked. Now a single **GK candidate** (goal-line-nearest in band) is exempt and every other
-> blocker is weighted (radius stays per-band). The P5 claim below is corrected the same way as
-> ERR-008-019's a day earlier: exact only at the ability midpoint (raw 10/11) or under a null
-> view — the all-default 10/10 profile reads ≈ 0.979, so the pivot is approximate, which is what
-> P5 ("≈ today's behavior") actually requires. See `spec-error-log.md` v1.68 for the full list.
 > **Updated (prior):** August 6, 2026 — **the shot-lane follow-up deferred at the ERR-008-020 landing is
 > CLOSED, landed as `ERR-008-021`** (#8 §3.1.4.3/§3.2.3.2 step 3a): each blocker's
 > occluded arc now scales by §3.1.3.3's Vision-read Anticipation/Pace `perceived_ability`
@@ -647,7 +647,7 @@ creation — that separation is the acceptance test that the stages are genuinel
   map literally (there is no "execution" of a sacking), but P1, P3, and P5 apply unchanged.
 - **Assembly-less class — deferred BY RULE, not by priority** *(added August 21, 2026)*. Six of the
   specs itemized in §2/§3 have no `src/` assembly at all — **#31, #34, #36, #43, #46, #54** — and they
-  carry **8 of the 32 open findings** (#31 ×2, #34 ×1, #36 ×1, #43 ×1, #46 ×1, #54 ×2). Those fixes do
+  carry **8 of the 29 open findings** (#31 ×2, #34 ×1, #36 ×1, #43 ×1, #46 ×1, #54 ×2). Those fixes do
   **not** land ahead of their spec's T0 code. The formula-patch process immediately above requires
   spec + code in the same commit, and this project's standard for a landed fix is a test that fails
   when the fix is reverted; with no assembly, neither half can be executed, so what would ship is

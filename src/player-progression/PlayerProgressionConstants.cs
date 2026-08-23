@@ -1,6 +1,7 @@
 // File:     src/player-progression/PlayerProgressionConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-22 (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.2)
+// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial findings — v1.3)
+//           (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.2)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3/§4 + Appendix A (constant catalogue); Code Standards #20
 // Purpose:  All numeric constants for #28 aging/growth/regen — the age-derivation divisor, the CA/PA
@@ -34,10 +35,17 @@ namespace TacticalDirector.PlayerProgression
         /// <c>BirthWorldDay</c> was the one lifecycle field with no range gate, and it is the
         /// authoritative age anchor. An anchor of <c>-(long)int.MaxValue * 365 - 365</c> was accepted at
         /// every boundary, and the daily step then narrowed the derived age to
-        /// <c>int.MinValue</c> — which <see cref="AbilityModel.ClassifyAgeBand"/> classifies as
-        /// <c>Growth</c>, so the player grows forever and <see cref="RETIREMENT_AGE"/> can never fire
-        /// (ERR-028-006's failure mode through a different door), and which the save path then refuses
-        /// as a negative age, making a career that loaded and advanced fine permanently unsavable.
+        /// <c>int.MinValue</c> — which, at the time this bound was added, <see cref="AbilityModel.ClassifyAgeBand"/>
+        /// classified as <c>Growth</c> under the retired age-only band step, so the player grew forever
+        /// and <see cref="RETIREMENT_AGE"/> could never fire (ERR-028-006's failure mode through a
+        /// different door), and which the save path then refuses as a negative age, making a career that
+        /// loaded and advanced fine permanently unsavable. <b>Corrected
+        /// (classifyageband-growth-claim-stale, football-judgment proxy review batch-1):</b>
+        /// <c>ClassifyAgeBand</c> no longer reads <c>int.MinValue</c> as <c>Growth</c> — since
+        /// ERR-028-020 it reads the continuous accrual curve, and both <c>AccruedBandPoints</c>
+        /// cumulatives are 0 at a hugely negative age, so it now returns <c>Stable</c>. The
+        /// int-narrowing this constant guards against is unchanged; only that one downstream symptom is
+        /// history rather than present behaviour.
         /// </para>
         /// <para>
         /// <b>This is NOT a football-plausibility bound, and the distinction is load-bearing.</b> It was
@@ -158,8 +166,12 @@ namespace TacticalDirector.PlayerProgression
         /// MUST leave the two ramps disjoint — <c>2 · half-width ≤ (DECLINE_AGE + 1) − GROWTH_AGE</c>
         /// years, i.e. ≤ 3 at today's 24/30 — or a single day would sit in both, which the accrual
         /// arithmetic represents but no football reading does. Enforced fail-loud at the computing
-        /// site (the <c>DrawOccurrence</c> guard posture): the catalogue lock runs config-unbound and
-        /// only ever sees this fallback.
+        /// site (the <c>DrawOccurrence</c> guard posture) AND at the catalogue, in
+        /// <c>PlayerProgressionConstantsTests</c>. <b>Corrected (config-unbound-premise-false-28):</b>
+        /// this file has zero <c>Config.GetX</c> calls today, so a catalogue lock is NOT defeated by a
+        /// config-unbound gate here the way it would be for an already-migrated catalogue — the
+        /// computing-site guard is a forward-looking placement for the Stage-1 loader, not the only
+        /// place this invariant can be checked before then.
         /// </para>
         /// TODO: replace with config loader (Stage 1).
         /// </summary>
@@ -251,6 +263,19 @@ namespace TacticalDirector.PlayerProgression
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.3     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial findings.
+// |         |            |        | AgeBandRampHalfWidthYears' doc corrected (config-unbound-premise-
+// |         |            |        | false-28): this catalogue has zero Config.GetX calls, so the
+// |         |            |        | prior "catalogue lock runs config-unbound" rationale (copied
+// |         |            |        | from ERR-041-003's, where it IS true) did not apply here — a
+// |         |            |        | catalogue lock is available today and now exists in
+// |         |            |        | PlayerProgressionConstantsTests. MAX_DERIVABLE_AGE_YEARS' doc
+// |         |            |        | corrected (classifyageband-growth-claim-stale): its
+// |         |            |        | ClassifyAgeBand(int.MinValue)-reads-Growth rationale was true when
+// |         |            |        | written but is false today (ERR-028-020 rewrote ClassifyAgeBand to
+// |         |            |        | read the continuous curve, which returns Stable at a hugely
+// |         |            |        | negative age); annotated as history, the int-narrowing concern
+// |         |            |        | itself unchanged. No value changed.
 // | 1.2     | 2026-08-22 | —      | ERR-028-020 / ERR-028-021 (football-judgment proxy review, batch 1):
 // |         |            |        | + AgeBandRampHalfWidthYears (the centred accrual ramp of #28 §3.1.3 —
 // |         |            |        | zero is the exact §4.3 identity, and 2 x half-width must not exceed
