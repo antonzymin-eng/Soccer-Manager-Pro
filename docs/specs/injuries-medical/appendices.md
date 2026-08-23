@@ -1,7 +1,15 @@
 # Injuries & Medical #41 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** August 22, 2026, later same day (v0.15 — **ERR-041-021** (adversarial review over the ERR-041-020 landing, H4 + H7). Appendix A's `BASELINE_DAILY_RISK` and `AGE_RISK_PER_YEAR_FROM_PIVOT` rows corrected. **H4:** both rows' "before the mitigation, so robustness discriminates it" position claim is inert — the mitigation is SUBTRACTED and addition commutes — and is restated as before the `OccurrenceRiskMillMult` scaling and before the clamp, which are the positions that change behaviour. **H7:** the age slope no longer claims blanket epidemiological support: E-4 (Strong) is U-shaped and puts the 16–20 band at elevated risk, so the monotone form follows it above the pivot and inverts it below; the shape is deliberately unchanged, that being R-1's design under the reserved `ERR-041-013`. Prior entry below.)
+**Last Updated:** August 23, 2026 (v0.16 — Group-B AR findings, `appendix-b-mid-recovery-offbyone`:
+Appendix B's mid-recovery seed corrected `RecoveryRemaining` 3 → 4 at world day 208 (§3.6's chain — 7 at
+day 205, decrementing 1/day — puts day 208 at 4, not 3) and the day-209 countdown result 2 → 3 with it;
+the post-fixture-draw example's `risk = 2850` replaced with `risk = 3600`, player 501's own reachable
+floor since ERR-041-011 (`BASELINE_DAILY_RISK` − `RobustnessMitigation(14)` + `AgeRiskFor(26)` = 4000 −
+400 + 0), since 2850 is below any risk this player can actually assemble. Both pre-existed the
+ERR-041-011 balance pass; §3.6 was re-derived at that pass and this appendix was not re-checked against
+it. Prior entry below.)
+**Last Updated (prior):** August 22, 2026, later same day (v0.15 — **ERR-041-021** (adversarial review over the ERR-041-020 landing, H4 + H7). Appendix A's `BASELINE_DAILY_RISK` and `AGE_RISK_PER_YEAR_FROM_PIVOT` rows corrected. **H4:** both rows' "before the mitigation, so robustness discriminates it" position claim is inert — the mitigation is SUBTRACTED and addition commutes — and is restated as before the `OccurrenceRiskMillMult` scaling and before the clamp, which are the positions that change behaviour. **H7:** the age slope no longer claims blanket epidemiological support: E-4 (Strong) is U-shaped and puts the 16–20 band at elevated risk, so the monotone form follows it above the pivot and inverts it below; the shape is deliberately unchanged, that being R-1's design under the reserved `ERR-041-013`. Prior entry below.)
 **Last Updated (prior):** August 22, 2026 (v0.14 — **ERR-041-020**: Appendix A gains `AGE_RISK_PIVOT_YEARS`, `AGE_RISK_PER_YEAR_FROM_PIVOT` and `AGE_RISK_SPAN`, all `[GT]`, for §3.4's new age term — with the P5 pivot's derivation from #27's bootstrap age distribution, the deliberate refusal to make that pivot a `[CROSS]`, the zero-span pre-fix identity, and the two fail-loud non-negativity invariants at the computing site. Prior entry below.)
 **Last Updated (prior):** August 8, 2026, second final entry (v0.13 — balance-pass AR pass 15 M1: the RECOVERY_MAX row records the write-ordering half of the enforcement)
 **Last Updated (prior):** August 8, 2026, final entry of the day (v0.12 — balance-pass AR pass 14 M1: RECOVERY_MAX's enforcement site corrected to the assignment)
@@ -14,7 +22,7 @@
 **Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 7 M1: the ERR-041-012 sweep reaches the appendices — Appendix A no longer asserts the T2 stream registration §4.5 forbids, and Appendix C's T-MD-NEU-003 matches §5.5's restatement instead of contradicting it under the same test id)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: Appendix A's `INJURY_RISK_MAX` re-tagged `[CROSS: #29 Appendix A]` (discharging ERR-041-003's standing back-prop), `OCCURRENCE_DRAW_DENOM` re-tagged `[FIXED]` 1,000,000 (decoupled), `APPEARANCE_LOAD_WEIGHT` refitted 150 → 5600 on the new scale, + `BASELINE_DAILY_RISK` 4000 and `APPEARANCE_WINDOW_DAYS` 7)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.15
+**Version:** 0.16
 **Status:** APPROVED
 
 ---
@@ -63,14 +71,21 @@ allocation, cross-cited `[CROSS: #16 §3.4]` once promoted.
 ## Appendix B — Worked example: save/restore across a mid-recovery AND a post-fixture-draw boundary
 
 **Mid-recovery boundary.** Seed (from §3.6): player 501, world day 208, `InjuryState { Severity = Minor,
-RecoveryRemaining = 3, InjuryCount = 1, LastAdvancedWorldDay = 208 }`. Save now; restore. The four fields
-restore field-identical. Advancing day 209: `wasAvailableAtEntry = false` (still `Minor`); countdown
-`RecoveryRemaining = 2`; no occurrence draw. This is identical to an uninterrupted run that never saved
-(T-MD-DET-001) — there is no RNG cursor to diverge, because none is serialized (KD-1/FR-MD-007).
+RecoveryRemaining = 4, InjuryCount = 1, LastAdvancedWorldDay = 208 }` — §3.6's chain starts at day 205
+(`RecoveryRemaining = 7`) and decrements by 1 per day (206→6, 207→5, 208→4), so day 208 is **4**, not 3
+(appendix-b-mid-recovery-offbyone: this row was off by one against §3.6). Save now; restore. The four
+fields restore field-identical. Advancing day 209: `wasAvailableAtEntry = false` (still `Minor`);
+countdown `RecoveryRemaining = 3`; no occurrence draw. This is identical to an uninterrupted run that
+never saved (T-MD-DET-001) — there is no RNG cursor to diverge, because none is serialized
+(KD-1/FR-MD-007).
 
 **Post-fixture-draw boundary.** Player 501, world day 213 (healthy entering the call, per §3.6). The
-occurrence draw resolves — suppose this time `draw = 6200` against `risk = 2850` (no occurrence, since
-`6200` is not `< 2850`); `InjuryState` is unchanged except `LastAdvancedWorldDay = 213`. Save immediately
+occurrence draw resolves — suppose this time `draw = 6200` against `risk = 3600` (player 501's own FLOOR
+since ERR-041-011: `BASELINE_DAILY_RISK` 4000 − `RobustnessMitigation(14)` 400 + `AgeRiskFor(26)` 0 =
+3600, with no training-risk contribution and no match load this week — the lowest risk this player can
+actually assemble, so a lower value here would be unreachable; corrected from the pre-ERR-041-011 example's
+`risk = 2850`, appendix-b-mid-recovery-offbyone) — no occurrence, since `6200` is not `< 3600`;
+`InjuryState` is unchanged except `LastAdvancedWorldDay = 213`. Save immediately
 after this draw resolves; restore. Advancing day 214 draws again, keyed on `(501, 214, Occurrence)` — a
 *different* key from `(501, 213, Occurrence)`, so it is unaffected by whether day 213's draw happened before
 or after a save/restore boundary (T-MD-DET-002/003) — the position-independent property means "immediately
@@ -105,4 +120,5 @@ with or without #41 active (T-MD-NEU-003, as restated in §5.5).
 | 0.13 | 2026-08-08 | — | **Balance-pass AR pass 15 (M1)**: v0.12's "enforced at the assignment" was half the story — the guard fired AFTER `Severity` was written, so the refusal itself wrote the breach it named; the draw branch is now atomic and the row records ordering as the preventing half. |
 | 0.14 | 2026-08-22 | — | **ERR-041-020** (football-judgment proxy review, batch 1 — spec + code, same commit). Appendix A gains three `[GT]` rows for §3.4's age term: `AGE_RISK_PIVOT_YEARS` (the zero point, taken as the mean of #27's bootstrap age distribution so the term sums to zero over that population — the P5 pivot — and deliberately NOT a `[CROSS]` mirror of the generator's bounds, since #47's authored database would then silently re-pivot #41), `AGE_RISK_PER_YEAR_FROM_PIVOT` (the linear slope, first-guess, with the research-supplement re-fit note and the non-negativity invariant), and `AGE_RISK_SPAN` (the symmetric cap, whose zero value is the exact pre-fix identity, plus its own non-negativity invariant). Both invariants are enforced fail-loud at the computing site rather than by a catalogue lock, which runs config-unbound and would see only the fallbacks (`ERR-041-003`'s class). |
 | 0.15 | 2026-08-22 | — | **ERR-041-021** (adversarial review over the ERR-041-020 landing, H4 + H7 — spec + code, same commit). Two Appendix A rows corrected, both annotated rather than rewritten away. **H4 (`BASELINE_DAILY_RISK`, `AGE_RISK_PER_YEAR_FROM_PIVOT`'s sibling position claim in §3.4):** "added BEFORE the mitigation — position normative, so robustness discriminates it" is arithmetically vacuous. `RobustnessMitigation` is subtracted and addition commutes, so a term's position relative to it is a no-op for every input; measured, the age penalty is `+1200` at robustness 1, 14 and 20 alike and *larger in relative terms* for the more robust player. Restated as before the `OccurrenceRiskMillMult` scaling and before the `INJURY_RISK_MAX` clamp, and the injury-proof-forever property re-attributed to the floor's magnitude against the largest mitigation row, which is what actually produces it. **H7 (`AGE_RISK_PER_YEAR_FROM_PIVOT`):** the row claimed the first-guess slope is "the direction and rough magnitude the epidemiology supports". That holds only above the pivot. The research-alignment supplement's E-4 is rated *Strong* and is **U-shaped** — the 16–20 band carries elevated risk at adult match intensity — so the monotone linear form INVERTS the evidence below the pivot and makes 16–20-year-olds the safest players in the league (−1050 at 19). The shape is deliberately not changed: it is R-1's design in the supplement, awaiting owner sign-off, and R-1's surviving scope under its reserved back-prop `ERR-041-013` is exactly that young-tail arm; the supplement's R-1 is annotated in place as landed-in-part. |
+| 0.16 | 2026-08-23 | — | **Group-B AR findings (`appendix-b-mid-recovery-offbyone`)**: Appendix B's mid-recovery seed corrected — §3.6's chain (7 at day 205, −1/day) puts world day 208 at `RecoveryRemaining = 4`, not the 3 this appendix had carried since v0.1; day 209's countdown result corrected 2 → 3 with it. The post-fixture-draw example's `risk = 2850` was below player 501's own floor (3600 = `BASELINE_DAILY_RISK` 4000 − `RobustnessMitigation(14)` 400 + `AgeRiskFor(26)` 0, since ERR-041-011) and therefore unassemblable by that player; replaced with `risk = 3600`, keeping `draw = 6200` (still not `< risk`, so still illustrating "no occurrence"). Both defects pre-dated the ERR-041-011 balance pass; §3.6 was re-derived at that pass (and again at ERR-041-020) while this appendix's worked-example numbers were not re-checked against it. |
 #endregion

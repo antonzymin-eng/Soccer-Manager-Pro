@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/MedicalStepTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-22 (ERR-041-021 — AR over the ERR-041-020 landing, H4 — v1.10)
+// Modified: 2026-08-23 (Group-B AR findings over the ERR-041-021 landing — v1.11)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B/C; Code Standards #20
 // Purpose:  T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001, T-MD-SEV-001/002, T-MD-REC-001,
@@ -80,6 +80,46 @@ namespace TacticalDirector.InjuriesMedical.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => MedicalStep.AgeRiskFor(-1),
                 "a negative derived age is corrupt state, not a young player (#28 §3.1.1 fails loud "
                 + "on the anchor that would produce one).");
+        }
+
+        [Test]
+        public void AgeRiskFor_NegativeDials_FailLoud_TTMDAGE008()
+        {
+            // The guards-unexercised finding's #41 half: this parameterised overload's own
+            // catalogue/config-integrity guard (MedicalStep.cs's internal AgeRiskFor) was deletable
+            // with the whole suite green — reachable ONLY through this overload, since the [GT]s are
+            // read once at static initialisation and the gate runs config-unbound.
+            Assert.Throws<InvalidOperationException>(
+                () => MedicalStep.AgeRiskFor(
+                    PivotAge, InjuriesMedicalConstants.AgeRiskPivotYears, perYear: -1, span: 100),
+                "a negative per-year slope must fail loud — it would make veterans the least "
+                + "injury-prone players in the league, silently.");
+
+            Assert.Throws<InvalidOperationException>(
+                () => MedicalStep.AgeRiskFor(
+                    PivotAge, InjuriesMedicalConstants.AgeRiskPivotYears, perYear: 100, span: -1),
+                "a negative span must fail loud — it inverts the clamp's min/max.");
+
+            Assert.DoesNotThrow(
+                () => MedicalStep.AgeRiskFor(
+                    PivotAge, InjuriesMedicalConstants.AgeRiskPivotYears, perYear: 0, span: 0),
+                "precondition: zero is legal for both dials — the guard is strictly negative-only.");
+        }
+
+        [Test]
+        public void AgeRiskFor_WidensTheSubtraction_NoSignInversionAtAnExtremePivot()
+        {
+            // agerisk-int-subtraction-and-both-dials: `(ageYears - pivotYears)` evaluated in `int`
+            // before the cast overflows for a sufficiently negative pivotYears and WRAPS to a large
+            // negative value — inverting the term's sign league-wide. ageYears=26, pivotYears=
+            // int.MinValue: pre-fix this returns -AgeRiskSpan (int subtraction wraps negative);
+            // post-fix (subtraction itself widened to long) it correctly saturates at +AgeRiskSpan,
+            // since 26 is enormously ABOVE an int.MinValue pivot.
+            int result = MedicalStep.AgeRiskFor(26, pivotYears: int.MinValue, perYear: 150, span: 1800);
+
+            Assert.AreEqual(1800, result,
+                "a player enormously older than the (absurd) pivot must saturate at +span, not invert "
+                + "sign via int-subtraction overflow.");
         }
 
         [Test]
@@ -1062,4 +1102,13 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // |         |            |        | term scales with it (scaling mutant), a saturating input asserting the
 // |         |            |        | result is EXACTLY InjuryRiskMax (clamp mutant), and the retired claim
 // |         |            |        | pinned as false — the age delta is identical at robustness 1, 14 and 20.
+// | 1.11    | 2026-08-23 | —      | Group-B AR findings. + AgeRiskFor_NegativeDials_FailLoud_TTMDAGE008: the
+// |         |            |        | parameterised overload's own catalogue-integrity guard (perYear < 0 ||
+// |         |            |        | span < 0) had no isolating case anywhere and was deletable with the
+// |         |            |        | whole suite green (guards-unexercised, the #41 half); reverting the
+// |         |            |        | guard now fails this test (mutation-verified). +
+// |         |            |        | AgeRiskFor_WidensTheSubtraction_NoSignInversionAtAnExtremePivot:
+// |         |            |        | locks the (long)ageYears - pivotYears widening fix
+// |         |            |        | (agerisk-int-subtraction-and-both-dials) — reverting to the un-widened
+// |         |            |        | int subtraction flips this test's expectation from +1800 to -1800.
 #endregion

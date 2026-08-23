@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-22 (ERR-041-021 — AR over the ERR-041-020 landing, H4 — v1.14)
+// Modified: 2026-08-23 (Group-B AR findings over the ERR-041-021 landing — v1.15)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -63,7 +63,12 @@ namespace TacticalDirector.InjuriesMedical
         /// <param name="worldDay">The world day being advanced.</param>
         /// <param name="worldSeed">The world seed the draw key is derived from — the career's seed, not a per-match one.</param>
         /// <param name="occurrenceEnabled">The KD-8 dial. Off reduces the step to recovery-only with no draw at all (FR-MD-027).</param>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="state"/> carries an undefined <see cref="InjurySeverity"/> (F4).</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="state"/> carries an undefined <see cref="InjurySeverity"/> (F4); or
+        /// <paramref name="ageYears"/> is negative (from <see cref="AgeRiskFor(int)"/>, reached only on
+        /// an occurrence-eligible day — a derived age is never below zero, so a negative one is corrupt
+        /// state, not a young player).
+        /// </exception>
         /// <exception cref="ArgumentException">
         /// <paramref name="state"/> is incoherent — recovery outstanding while healthy, none while
         /// injured, negative, or above the ceiling (F1); either <paramref name="medical"/> multiplier
@@ -71,13 +76,15 @@ namespace TacticalDirector.InjuriesMedical
         /// last-advanced day (F7) or is itself the never-advanced sentinel.
         /// </exception>
         /// <exception cref="InvalidOperationException">
-        /// A catalogue/config integrity failure, not a caller error — one of the four consuming-site
+        /// A catalogue/config integrity failure, not a caller error — one of the FIVE consuming-site
         /// guards fired: <see cref="InjuriesMedicalConstants.InjuryRiskMax"/> outside
         /// <c>(0, OCCURRENCE_DRAW_DENOM]</c> (from <see cref="DrawOccurrence"/>);
         /// <see cref="InjuriesMedicalConstants.RecoveryDaysPerTickBase"/> non-positive or
-        /// <see cref="InjuriesMedicalConstants.RecoveryMax"/> below 1 (the countdown site); or the
+        /// <see cref="InjuriesMedicalConstants.RecoveryMax"/> below 1 (the countdown site); the
         /// severity split negative / summing past the denominator (from
-        /// <see cref="ClassifySeverityFromDraw"/>).
+        /// <see cref="ClassifySeverityFromDraw"/>); or
+        /// <see cref="InjuriesMedicalConstants.AgeRiskPerYearFromPivot"/> /
+        /// <see cref="InjuriesMedicalConstants.AgeRiskSpan"/> negative (from <see cref="AgeRiskFor(int)"/>).
         /// </exception>
         public static void AdvanceMedicalDay(
             ref InjuryState state,
@@ -477,8 +484,13 @@ namespace TacticalDirector.InjuriesMedical
         /// class of claim that gets falsified on first run (the ERR-008-021/-022 chain, three times).
         /// </summary>
         /// <param name="ageYears">The player's current age in whole years.</param>
-        /// <param name="pivotYears">The age at which the term is zero.</param>
-        /// <param name="perYear">Per-mille-of-a-million risk per year away from the pivot.</param>
+        /// <param name="pivotYears">
+        /// The age at which the term is zero. Deliberately UNGUARDED here (agerisk-int-subtraction-and-
+        /// both-dials): unlike <paramref name="perYear"/>/<paramref name="span"/>, no value of this
+        /// dial breaks a catalogue/config invariant — every pivot, including an extreme or mistyped one,
+        /// still produces a well-defined (if degenerate) term once the subtraction below is widened.
+        /// </param>
+        /// <param name="perYear">Risk contribution (per-million scale) per year away from the pivot.</param>
         /// <param name="span">Symmetric saturation magnitude.</param>
         internal static int AgeRiskFor(int ageYears, int pivotYears, int perYear, int span)
         {
@@ -496,7 +508,13 @@ namespace TacticalDirector.InjuriesMedical
                     + "inverts the clamp; catalogue/config integrity failure (§3.4, Appendix A).");
             }
 
-            long term = (long)perYear * (ageYears - pivotYears);
+            // Widened on BOTH operands (the ClassifySeverityFromDraw widening-comment standard,
+            // agerisk-int-subtraction-and-both-dials): with only the product widened, a sufficiently
+            // negative pivotYears overflows the int subtraction below before the cast ever runs — e.g.
+            // ageYears=26, pivotYears=int.MinValue computes 26 - int.MinValue in int arithmetic, which
+            // wraps to a large NEGATIVE value and inverts the term's sign league-wide. Widening the
+            // subtraction itself removes the wrap for any int-range pivot.
+            long term = (long)perYear * ((long)ageYears - pivotYears);
 
             return ClampLong(term, -span, span);
         }
@@ -739,4 +757,16 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | alike, and larger in relative terms for the more robust player). The
 // |         |            |        | normative position is restated as what is actually load-bearing: inside
 // |         |            |        | the sum, BEFORE the OccurrenceRiskMillMult scaling and BEFORE the clamp.
+// | 1.15    | 2026-08-23 | —      | Group-B AR findings (Medium guards-unexercised half + 3 Low). The
+// |         |            |        | parameterised AgeRiskFor's subtraction is widened on BOTH operands —
+// |         |            |        | (long)ageYears - pivotYears, not (ageYears - pivotYears) then cast — a
+// |         |            |        | sufficiently negative pivotYears otherwise overflows int and inverts the
+// |         |            |        | term's sign (agerisk-int-subtraction-and-both-dials); the pivotYears
+// |         |            |        | param doc now states it is deliberately the one unguarded dial and why.
+// |         |            |        | perYear's doc corrected from "per-mille-of-a-million" (1000x too small)
+// |         |            |        | to "per-million" (medicalstep-contract-docs). AdvanceMedicalDay's
+// |         |            |        | <exception> docs: the ArgumentOutOfRangeException tag now names the
+// |         |            |        | negative-ageYears source alongside the undefined-severity one, and the
+// |         |            |        | InvalidOperationException tag counts FIVE consuming-site guards (was
+// |         |            |        | four — AgeRiskFor's own guard is now named) rather than four.
 #endregion

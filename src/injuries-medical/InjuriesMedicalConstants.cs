@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/InjuriesMedicalConstants.cs
 // Created:  2026-08-05
-// Modified: 2026-08-22 (ERR-041-021 — AR over the ERR-041-020 landing, H4 + H7 — v1.7)
+// Modified: 2026-08-23 (Group-B AR findings over the ERR-041-021 landing — v1.8)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A (constant catalogue) + §3.1–§3.4; Code Standards #20
 // Purpose:  Every numeric constant for #41 occurrence, severity bucketing and recovery. No magic
@@ -214,6 +214,19 @@ namespace TacticalDirector.InjuriesMedical
         /// neutral, and pinning it to the generator's bounds would silently re-pivot #41 the day #47's
         /// authored database replaces them.
         /// </para>
+        /// <para>
+        /// <b>Deliberately the one dial of the three (with <see cref="AgeRiskPerYearFromPivot"/> and
+        /// <see cref="AgeRiskSpan"/>) that carries NO runtime non-negativity guard</b>
+        /// (agerisk-int-subtraction-and-both-dials). Those two are guarded because a negative value
+        /// breaks a catalogue invariant — an inverted slope or a clamp whose min exceeds its max. No
+        /// value of this pivot does that: every pivot, however extreme or mistyped, still produces a
+        /// well-defined term once <see cref="MedicalStep.AgeRiskFor(int, int, int, int)"/>'s subtraction
+        /// is evaluated in <c>long</c> (fixed alongside this note — the un-widened form could overflow
+        /// and invert the term's sign at an extreme pivot). An unusually large pivot degenerates the
+        /// term to a constant (e.g. a 260-for-26 typo saturates every player at
+        /// <c>−AgeRiskSpan</c>), which is a balance-quality problem the season-scale instrument would
+        /// surface, not a config-integrity failure this catalogue can fail loud on.
+        /// </para>
         /// Config key [injuries-medical] AgeRiskPivotYears.
         /// </summary>
         public static readonly int AgeRiskPivotYears = Config.GetInt("injuries-medical", "AgeRiskPivotYears", 26);
@@ -251,10 +264,24 @@ namespace TacticalDirector.InjuriesMedical
         /// <summary>
         /// [GT] Symmetric magnitude cap on the §3.4 age term, per-million (ERR-041-020) — it saturates
         /// this many points above and below zero, i.e. <c>AgeRiskSpan / AgeRiskPerYearFromPivot</c>
-        /// years either side of the pivot. Bounds the term for an out-of-range derived age (a career
-        /// run far past any football span still assembles a finite risk) without putting a cliff inside
-        /// the football range: at 1800 and a slope of 150 the cap binds only beyond ±12 years of the
-        /// pivot, i.e. below 14 and above 38.
+        /// years either side of the pivot: at 1800 and a slope of 150, ±12 years of the pivot, i.e.
+        /// below 14 and above 38. Bounds the term for an out-of-range derived age (a career run far past
+        /// any football span still assembles a finite risk).
+        /// <para>
+        /// <b>The plateau is REACHABLE inside the football-playing population today, and is
+        /// KNOWINGLY accepted rather than out of range</b> (agerisk-span-plateau-reachable — the prior
+        /// wording here claimed the cap "puts no cliff inside the football range", which is false on
+        /// both halves: 36–40 is ordinary football, not "far past any football span", and 38+ is
+        /// reachable in a live career because #28's retirement is FLAG-ONLY today —
+        /// <c>ProgressionEngine.SquadFor</c> returns every carried record regardless of
+        /// <c>RetirementFlag</c>, and roster removal (the actual departure) is the explicitly deferred
+        /// half of roadmap D1. With ages advancing daily and no removal, every player eventually crosses
+        /// 38 and stays on the roster, so a long-running career's whole veteran tail converges on the
+        /// identical +1800 plateau and the term stops discriminating among them. Accepted, not fixed,
+        /// until #28's retiree removal lands and bounds how old a rostered player can actually be — at
+        /// which point this note should be revisited to confirm the plateau again sits outside the
+        /// reachable range, or the span should be widened instead.</b>
+        /// </para>
         /// <para>
         /// <b>Zero is the exact pre-fix identity</b> — the term vanishes for every player and
         /// <see cref="MedicalStep.AssembleRiskScore"/> reproduces its ERR-041-011 form byte-for-byte
@@ -367,8 +394,10 @@ namespace TacticalDirector.InjuriesMedical
 // | 1.6     | 2026-08-22 | —      | ERR-041-020 (football-judgment proxy review, batch 1): + AgeRiskPivot-
 // |         |            |        | Years, AgeRiskPerYearFromPivot and AgeRiskSpan for §3.4's age term. The
 // |         |            |        | pivot is #27's bootstrap mean age, so the term sums to zero over that
-// |         |            |        | population (P5); AgeRiskSpan = 0 is the exact pre-fix identity. Both
-// |         |            |        | dials guarded non-negative fail-loud at the computing site.
+// |         |            |        | population (P5); AgeRiskSpan = 0 is the exact pre-fix identity. TWO of
+// |         |            |        | the three dials (AgeRiskPerYearFromPivot, AgeRiskSpan) are guarded
+// |         |            |        | non-negative fail-loud at the computing site; AgeRiskPivotYears is not
+// |         |            |        | (claim corrected at v1.8 — see AgeRiskPivotYears's own doc for why).
 // | 1.7     | 2026-08-22 | —      | ERR-041-021 (AR over the ERR-041-020 landing, H4 + H7). Doc only, two
 // |         |            |        | corrections, both annotating rather than editing published text.
 // |         |            |        | H4: BaselineDailyRisk's "before the mitigation, so robustness
@@ -381,4 +410,16 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | pivot and INVERTS it below. Not re-shaped here: the U-shape is the
 // |         |            |        | research supplement's R-1 design, awaiting owner sign-off, and R-1's
 // |         |            |        | surviving scope under ERR-041-013 is exactly that young-tail arm.
+// | 1.8     | 2026-08-23 | —      | Group-B AR findings. AgeRiskPivotYears's doc now states explicitly why
+// |         |            |        | it is the one dial of the three carrying no runtime non-negativity
+// |         |            |        | guard (no config-integrity invariant it can break, once AgeRiskFor's
+// |         |            |        | subtraction is widened — see MedicalStep.cs v1.15); v1.6's "guarded
+// |         |            |        | non-negative" claim corrected from "both dials" to the actual two of
+// |         |            |        | three. AgeRiskSpan's doc corrected: the +/-12-year plateau IS reachable
+// |         |            |        | by a live career while #28's retirement stays FLAG-ONLY (roster removal
+// |         |            |        | deferred), so "no cliff inside the football range" was false on both
+// |         |            |        | halves (36-40 is ordinary football; unremoved retirees eventually all
+// |         |            |        | sit on the plateau) — recorded as knowingly accepted pending #28's
+// |         |            |        | retiree removal, not re-derived as still out of range
+// |         |            |        | (agerisk-span-plateau-reachable).
 #endregion

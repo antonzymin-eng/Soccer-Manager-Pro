@@ -1,12 +1,17 @@
 # Injuries & Medical #41 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.6 — the lint sweep: the §9 preamble tensed to since-landed)
+**Last Updated:** August 23, 2026 (v0.7 — Group-B AR findings, `fr-md-count-claims-stale`: §9.2's FR-count
+gate still said "FR-MD-001..027 … 27 unique, contiguous" after ERR-041-020 appended FR-MD-025a on
+August 22 — a grep of §2 now returns 28 ids, non-contiguous by construction (the id is suffixed to sit
+beside FR-MD-015 rather than appended at the end — §2 v0.11's own stated reason). Corrected to "28
+unique; deliberately non-contiguous". Prior entry below.)
+**Last Updated (prior):** August 8, 2026 (v0.6 — the lint sweep: the §9 preamble tensed to since-landed)
 **Last Updated (prior):** August 8, 2026, later same day (v0.5 — balance-pass AR pass 10 L5, relabelled v0.4 → v0.5 at pass 11 L1: the renumber commit was itself a versioned change and had claimed the same v0.4 the renumbered pass-9 row now holds — the pass-7 row had duplicated version 0.2; rows renumbered 0.3/0.4 and this chain relabelled to match)
 **Last Updated (prior):** August 8, 2026 (v0.4, as-published v0.3 — balance-pass AR pass 9 M2: the §9.1 KD-1 gate and the §9.6 Decision's T-phase list stop ordering the registration the spec forbids)
 **Last Updated (prior):** August 8, 2026 (v0.3, as-published v0.2 — balance-pass AR pass 7 M1: R-02's evidence phrase no longer signs off the phantom stream as verified)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 **Source:** `docs/tracking/injuries-medical-design.md` v0.2
 
@@ -37,7 +42,8 @@ spec with the implementation gates open by construction; **since landed** — T0
 
 ## 9.2 Implementation status (forward design — nothing built yet)
 
-- [x] FR set complete + stable: FR-MD-001..027 (grep-verified: 27 unique, contiguous, in §2).
+- [x] FR set complete + stable: FR-MD-001..027 + FR-MD-025a (28 unique; deliberately non-contiguous —
+      see section 2 v0.11).
 - [ ] `TacticalDirector.InjuriesMedical` assembly (value types + deterministic Stage-2 step) — **NOT
       STARTED** (T0).
 - [ ] `MedicalSaveCodec` + season-save composition (a #30 change) — NOT STARTED (T1).
@@ -107,4 +113,5 @@ spec with the implementation gates open by construction; **since landed** — T0
 | 0.4 | 2026-08-08 | — | **Balance-pass AR pass 9 (M2)** *(renumbered 0.3 → 0.4 with the row above)*: two residuals in the file pass 7 bumped for this class — the §9.1 content gate still ticked KD-1 as "one stream", and the §9.6 **Decision** still ratified a T-phase plan whose T2 item ordered "stream registration" (the pass-7 M1 wording, surviving in the approval that signs the plan off). Both re-anchored; the Decision keeps the ratified-as wording as an annotated frozen original. |
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 10 (L5)**: rows renumbered 0.2 → 0.3 / 0.3 → 0.4 (the pass-7 edit had collided with the July 23 row, leaving it unaddressable by version) and the header chain relabelled. Recorded as its own version at pass 11 (L1) — the renumber had reused v0.4 in the header while the table's 0.4 described pass 9, relocating the duplicate-label defect from the table into the chain. |
 | 0.6 | 2026-08-08 | — | **Lint sweep**: the §9 preamble still read "nothing is built yet" of a subsystem whose dial is ARMED (the pass-13-L4 class, in the approval checklist). |
+| 0.7 | 2026-08-23 | — | **Group-B AR findings (`fr-md-count-claims-stale`)**: §9.2's FR-count gate corrected from "FR-MD-001..027 … 27 unique, contiguous" to "FR-MD-001..027 + FR-MD-025a (28 unique; deliberately non-contiguous)" — stale since ERR-041-020 appended FR-MD-025a on August 22, the exact "fabricated checklist values" trap the root `CLAUDE.md` names. |
 #endregion

@@ -190,7 +190,9 @@
 > **Last Updated (prior):** July 23, 2026, latest same day (**Injuries & Medical #41 authored + advanced
 > `→ IN REVIEW → APPROVED`** — Wave 2's third spec (injury occurrence/severity/recovery on the world
 > tick). Promoted from the converged design supplement (`docs/tracking/injuries-medical-design.md` v0.2,
-> design-AR 2M+2L → clean) to a full 11-file section set (FR-MD-001..027); section-file **AR-1 (1M — float
+> design-AR 2M+2L → clean) to a full 11-file section set (FR-MD-001..027 — **since ERR-041-020, Aug 22,
+> 2026: FR-MD-001..027 + FR-MD-025a, 28 unique, deliberately non-contiguous; see injuries-medical
+> section-2 v0.11 — this July 23 entry is frozen at the count current on that date**); section-file **AR-1 (1M — float
 > arithmetic → integer per-mille throughout) → AR-2 (1M — fixed-radix action-ordinal for append parity) →
 > AR-3 clean, CONVERGENCE.** **KD-1:** all draws via ONE world-tick keyed derivation (no registered stream — ERR-041-012), keyed
 > position-independently on `(playerId, worldDay, purpose)` — no free-running cursor, nothing to persist,
