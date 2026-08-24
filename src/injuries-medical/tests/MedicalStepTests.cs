@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/MedicalStepTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-23 (Group-B AR findings over the ERR-041-021 landing — v1.11)
+// Modified: 2026-08-24 (Round-2 residual-carrier sweep, ERR-041-021 — v1.13)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B/C; Code Standards #20
 // Purpose:  T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001, T-MD-SEV-001/002, T-MD-REC-001,
@@ -90,18 +90,18 @@ namespace TacticalDirector.InjuriesMedical.Tests
             // with the whole suite green — reachable ONLY through this overload, since the [GT]s are
             // read once at static initialisation and the gate runs config-unbound.
             Assert.Throws<InvalidOperationException>(
-                () => MedicalStep.AgeRiskFor(
+                () => MedicalStep.TestOnly_AgeRiskFor(
                     PivotAge, InjuriesMedicalConstants.AgeRiskPivotYears, perYear: -1, span: 100),
                 "a negative per-year slope must fail loud — it would make veterans the least "
                 + "injury-prone players in the league, silently.");
 
             Assert.Throws<InvalidOperationException>(
-                () => MedicalStep.AgeRiskFor(
+                () => MedicalStep.TestOnly_AgeRiskFor(
                     PivotAge, InjuriesMedicalConstants.AgeRiskPivotYears, perYear: 100, span: -1),
                 "a negative span must fail loud — it inverts the clamp's min/max.");
 
             Assert.DoesNotThrow(
-                () => MedicalStep.AgeRiskFor(
+                () => MedicalStep.TestOnly_AgeRiskFor(
                     PivotAge, InjuriesMedicalConstants.AgeRiskPivotYears, perYear: 0, span: 0),
                 "precondition: zero is legal for both dials — the guard is strictly negative-only.");
         }
@@ -115,7 +115,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
             // int.MinValue: pre-fix this returns -AgeRiskSpan (int subtraction wraps negative);
             // post-fix (subtraction itself widened to long) it correctly saturates at +AgeRiskSpan,
             // since 26 is enormously ABOVE an int.MinValue pivot.
-            int result = MedicalStep.AgeRiskFor(26, pivotYears: int.MinValue, perYear: 150, span: 1800);
+            int result = MedicalStep.TestOnly_AgeRiskFor(26, pivotYears: int.MinValue, perYear: 150, span: 1800);
 
             Assert.AreEqual(1800, result,
                 "a player enormously older than the (absurd) pivot must saturate at +span, not invert "
@@ -134,7 +134,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
             {
                 Assert.AreEqual(
                     0,
-                    MedicalStep.AgeRiskFor(
+                    MedicalStep.TestOnly_AgeRiskFor(
                         age,
                         InjuriesMedicalConstants.AgeRiskPivotYears,
                         InjuriesMedicalConstants.AgeRiskPerYearFromPivot,
@@ -334,6 +334,14 @@ namespace TacticalDirector.InjuriesMedical.Tests
         {
             // §3.6 as re-derived at ERR-041-011: 1×3000 + 4000 (baseline, before the mitigation —
             // position normative) − 400 = 6600, unchanged by the ×1000/1000 identity multiplier.
+            //
+            // CORRECTED 2026-08-24 (ERR-041-021): "before the mitigation — position normative" above
+            // is annotated rather than deleted. RobustnessMitigation is SUBTRACTED and addition
+            // commutes, so a term's position relative to it is an arithmetic identity — proven over
+            // 956,480 sampled inputs. The load-bearing position is inside the sum, BEFORE the
+            // OccurrenceRiskMillMult scaling and BEFORE the clamp; only the clamp half was ever true.
+            // The arithmetic of this worked example is unaffected: 6600 is what the sum returns
+            // either way, which is precisely why no test can distinguish the two orderings.
             int risk = MedicalStep.AssembleRiskScore(
                 new InjuryRiskContribution(3000),
                 MatchLoad.None,
@@ -1111,4 +1119,14 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // |         |            |        | locks the (long)ageYears - pivotYears widening fix
 // |         |            |        | (agerisk-int-subtraction-and-both-dials) — reverting to the un-widened
 // |         |            |        | int subtraction flips this test's expectation from +1800 to -1800.
+// | 1.12    | 2026-08-24 | —      | Round-2 M/L pass, M9. The four call sites against the renamed
+// |         |            |        | parameterised overload now call TestOnly_AgeRiskFor; the 1-arg calls
+// |         |            |        | are unchanged (that method is unrenamed, only demoted internal, and
+// |         |            |        | remains reachable here via the assembly's existing IVT grant).
+// | 1.13    | 2026-08-24 | —      | Round-2 residual-carrier sweep. WorkedExample_RiskAssembly_Is6600's
+// |         |            |        | comment still carried ERR-041-011's "before the mitigation —
+// |         |            |        | position normative" rationale in short form, which ERR-041-021
+// |         |            |        | retracted; annotated in place, not deleted. The example's
+// |         |            |        | arithmetic is unaffected — 6600 is what the sum returns either
+// |         |            |        | way, which is exactly why no test can distinguish the orderings.
 #endregion

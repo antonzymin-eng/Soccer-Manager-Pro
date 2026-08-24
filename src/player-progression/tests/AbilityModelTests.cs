@@ -1,6 +1,9 @@
 // File:     src/player-progression/tests/AbilityModelTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial findings — v1.3)
+// Modified: 2026-08-24 (round-2 M/L adversarial findings: TestOnly_ renames (M3), the retirement-day
+//           monotonicity lock (M5), the four-guards comment correction (L1) — v1.5)
+//           (construction-day-credit-implemented-twice — the credit's owner lock — v1.4)
+//           (football-judgment proxy review, batch-1 adversarial findings — v1.3)
 //           (ERR-028-022 — the P5 population sweep widened to the whole attribute product — v1.2)
 //           (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.1)
 // Author:   —
@@ -77,7 +80,7 @@ namespace TacticalDirector.PlayerProgression.Tests
 
                 Assert.AreEqual(
                     expected,
-                    AbilityModel.DailyBandPoints(ageDays, rampHalfWidthYears: 0),
+                    AbilityModel.TestOnly_DailyBandPoints(ageDays, rampHalfWidthYears: 0),
                     $"day {ageDays} (age {ageYears}) must reproduce the literal §4.3 step at half-width 0.");
             }
         }
@@ -116,8 +119,8 @@ namespace TacticalDirector.PlayerProgression.Tests
             // decline-days past the decline edge are the same as the step's. The ramp moves accrual
             // across an edge; it does not add or remove any.
             long endOfLife = 45L * PlayerProgressionConstants.DAYS_PER_YEAR;
-            long stepModel = AbilityModel.AccruedBandPoints(endOfLife, rampHalfWidthYears: 0);
-            long rampModel = AbilityModel.AccruedBandPoints(endOfLife, PlayerProgressionConstants.AgeBandRampHalfWidthYears);
+            long stepModel = AbilityModel.TestOnly_AccruedBandPoints(endOfLife, rampHalfWidthYears: 0);
+            long rampModel = AbilityModel.TestOnly_AccruedBandPoints(endOfLife, PlayerProgressionConstants.AgeBandRampHalfWidthYears);
 
             Assert.AreEqual(stepModel, rampModel,
                 "the whole-life integral must be identical under both models, or the fix has silently "
@@ -126,8 +129,8 @@ namespace TacticalDirector.PlayerProgression.Tests
             // …and it is genuinely a different curve in between, or the equality above is vacuous.
             long midRamp = (long)PlayerProgressionConstants.GROWTH_AGE * PlayerProgressionConstants.DAYS_PER_YEAR;
             Assert.AreNotEqual(
-                AbilityModel.AccruedBandPoints(midRamp, rampHalfWidthYears: 0),
-                AbilityModel.AccruedBandPoints(midRamp, PlayerProgressionConstants.AgeBandRampHalfWidthYears),
+                AbilityModel.TestOnly_AccruedBandPoints(midRamp, rampHalfWidthYears: 0),
+                AbilityModel.TestOnly_AccruedBandPoints(midRamp, PlayerProgressionConstants.AgeBandRampHalfWidthYears),
                 "precondition: the two models must differ mid-ramp, or this test proves nothing.");
         }
 
@@ -151,6 +154,50 @@ namespace TacticalDirector.PlayerProgression.Tests
                 PlayerProgressionConstants.DECLINE_DAILY_POINTS,
                 AbilityModel.DailyBandPoints(ceiling * 20),
                 "…and far beyond it, where the saturation is doing all the work.");
+        }
+
+        [Test]
+        public void ConstructionDayCredit_InsideARamp_IsTheContinuousStep_NotTheRetiredBandStep()
+        {
+            // construction-day-credit-implemented-twice. The rule's ONE implementation now lives here,
+            // so the ramp discrimination that used to be driven through RegenGenerator's internal
+            // BandStepFor is driven at the owner instead — and the owner is public, which is what
+            // retires the motive for that internal surface.
+            //
+            // GROWTH_AGE is inside the growth ramp by construction (the ramp is centred on it). The
+            // RETIRED three-way form read ClassifyAgeBand, which reads Growth at GROWTH_AGE (see
+            // ClassifyAgeBand_ReadsTheContinuousCurve_NotAFixedEdge above — the YEAR's net accrual is
+            // positive), so it would have returned GROWTH_DAILY_POINTS unconditionally, while the DAY on
+            // which a player is exactly GROWTH_AGE years old sits at the ramp's own midpoint where the
+            // continuous rate is far below full. That difference is what this case asserts; it is what
+            // no test through GenerateRegen's public entry point can reach, since a regen's drawn age is
+            // REGEN_AGE_MIN..REGEN_AGE_MAX (16-20 today), wholly below the ramp.
+            int ageInsideTheRamp = PlayerProgressionConstants.GROWTH_AGE;
+
+            long credit = AbilityModel.ConstructionDayCredit(ageInsideTheRamp);
+
+            Assert.AreEqual(
+                AbilityModel.DailyBandPoints(
+                    (long)ageInsideTheRamp * PlayerProgressionConstants.DAYS_PER_YEAR),
+                credit,
+                "the construction-day credit must be exactly the step the daily loop would have taken "
+                + "on that day — that equality is the whole content of the ERR-028-018 rule.");
+
+            Assert.AreNotEqual(
+                (long)PlayerProgressionConstants.GROWTH_DAILY_POINTS,
+                credit,
+                "…and it must NOT be the retired three-way band step, which returns the full growth "
+                + "rate for every day of this year.");
+
+            Assert.Less(
+                System.Math.Abs(ageInsideTheRamp - PlayerProgressionConstants.GROWTH_AGE),
+                Ramp + 1,
+                "precondition: the probed age must sit inside the growth ramp, or the AreNotEqual "
+                + "above could pass for a reason unrelated to the curve.");
+            Assert.Greater(
+                Ramp, 0,
+                "precondition: at a zero half-width the two forms coincide everywhere and this case is "
+                + "vacuous (that identity is AgeCurve_AtZeroHalfWidth_IsTheLiteralSection43Step_KD8's).");
         }
 
         [Test]
@@ -218,19 +265,28 @@ namespace TacticalDirector.PlayerProgression.Tests
         // ── Catalogue/config integrity guards (guards-unexercised, ramp-guard-int-overflow,
         //    retirement-dials-no-overload — football-judgment proxy review batch-1 adversarial pass) ──
         //
-        // Every case below drives the guard through an explicit parameterised value (never the live
-        // catalogue), so it is reachable under a config-unbound gate — mirroring the AgeCurve_* /
-        // RetirementAgeDays_* tests above, which established the same pattern for the [GT] dials
-        // themselves. Mutation-verified: deleting any one of these four computing-site guards (the
-        // negative-half-width check, the disjointness check, and the two negative-dial checks inside
-        // the new RetirementAgeDays overload) leaves the whole suite green without the matching case
-        // here; each case below is what turns that revert red.
+        // Every case below drives the guard through an explicit parameterised TestOnly_ value (never
+        // the live catalogue), so it is reachable under a config-unbound gate — mirroring the
+        // AgeCurve_* / RetirementAgeDays_* tests above, which established the same pattern for the
+        // [GT] dials themselves. There are FOUR fail-loud `if` guards across the two computing sites:
+        // RampHalfWidthDays' negative-half-width check and its disjointness check, and
+        // TestOnly_RetirementAgeDays' ONE combined dial non-negativity check
+        // (`readingSpanYears < 0 || goalkeeperBonusYears < 0` — a single `if`, not two) and its
+        // separate `days <= 0` guard. *(Corrected — round-2 finding
+        // four-guards-enumerated-as-five-and-mis-named: this comment previously named "the two
+        // negative-dial checks inside the new RetirementAgeDays overload" as two of the four, which
+        // both mis-described the combined dial check as two separate guards AND silently dropped the
+        // `days <= 0` guard from the enumeration entirely — it is the fourth, named here.)* The
+        // combined dial check needs two cases below (one per operand) to prove the OR is checked on
+        // both sides, not because it is two `if` statements. Mutation-verified: deleting any one of
+        // the four guards leaves the whole suite green without the matching case(s) here; each case
+        // below is what turns that revert red.
 
         [Test]
         public void RampHalfWidthDays_Negative_FailsLoud()
         {
             Assert.Throws<System.InvalidOperationException>(
-                () => AbilityModel.AccruedBandPoints(1000, rampHalfWidthYears: -1),
+                () => AbilityModel.TestOnly_AccruedBandPoints(1000, rampHalfWidthYears: -1),
                 "a negative ramp half-width inverts the ramp and must be refused where it is read.");
         }
 
@@ -241,7 +297,7 @@ namespace TacticalDirector.PlayerProgression.Tests
             // (2*4 = 8 > 7) overlaps the two ramps by construction, whatever the catalogue's own value is.
             int tooWide = (PlayerProgressionConstants.DECLINE_AGE + 1 - PlayerProgressionConstants.GROWTH_AGE) / 2 + 1;
             Assert.Throws<System.InvalidOperationException>(
-                () => AbilityModel.AccruedBandPoints(1000, tooWide),
+                () => AbilityModel.TestOnly_AccruedBandPoints(1000, tooWide),
                 "2 x half-width exceeding (DECLINE_AGE + 1) - GROWTH_AGE must be refused, or a day "
                 + "accrues growth and decline at once.");
         }
@@ -257,11 +313,11 @@ namespace TacticalDirector.PlayerProgression.Tests
             // returned garbage instead of throwing.
             const int HalfWidthAtThePowerOf2Boundary = 1 << 30; // 1,073,741,824
             Assert.Throws<System.InvalidOperationException>(
-                () => AbilityModel.DailyBandPoints(1000, HalfWidthAtThePowerOf2Boundary),
+                () => AbilityModel.TestOnly_DailyBandPoints(1000, HalfWidthAtThePowerOf2Boundary),
                 "a half-width at the int-overflow boundary of the pre-fix guard must still be refused, "
                 + "not silently accepted as 'not too wide'.");
             Assert.Throws<System.InvalidOperationException>(
-                () => AbilityModel.AccruedBandPoints(1000, 1_200_000_000),
+                () => AbilityModel.TestOnly_AccruedBandPoints(1000, 1_200_000_000),
                 "…and the cumulative form must refuse the same class of value rather than returning the "
                 + "garbage the review measured (2,451,094, identical at daysLived 1000 and 1001).");
         }
@@ -271,7 +327,7 @@ namespace TacticalDirector.PlayerProgression.Tests
         {
             PlayerRecord rec = PlayerRecord.CreateDefault(1);
             Assert.Throws<System.InvalidOperationException>(
-                () => AbilityModel.RetirementAgeDays(in rec, goalkeeperBonusYears: -1, readingSpanYears: 0),
+                () => AbilityModel.TestOnly_RetirementAgeDays(in rec, goalkeeperBonusYears: -1, readingSpanYears: 0),
                 "a negative goalkeeper bonus shortens a goalkeeper's career and must be refused where "
                 + "it is read, not merely at the catalogue.");
         }
@@ -281,7 +337,7 @@ namespace TacticalDirector.PlayerProgression.Tests
         {
             PlayerRecord rec = PlayerRecord.CreateDefault(1);
             Assert.Throws<System.InvalidOperationException>(
-                () => AbilityModel.RetirementAgeDays(in rec, goalkeeperBonusYears: 0, readingSpanYears: -1),
+                () => AbilityModel.TestOnly_RetirementAgeDays(in rec, goalkeeperBonusYears: 0, readingSpanYears: -1),
                 "a negative reading span retires the best readers of the game first and must be "
                 + "refused where it is read, not merely at the catalogue.");
         }
@@ -290,15 +346,15 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void RetirementAgeDays_ComputedDayAtOrBeforeBirth_FailsLoud()
         {
             // A minimum-reading player under a wildly oversized (but individually non-negative) span
-            // drives the computed day to or past zero — the third guard, distinct from the two dial
-            // sign checks above.
+            // drives the computed day to or past zero — the DAYS-AT-OR-BEFORE-BIRTH guard, distinct
+            // from the combined dial-sign check the two cases above exercise.
             PlayerRecord rec = PlayerRecord.CreateDefault(1);
             rec.Attributes.Anticipation = PlayerProgressionConstants.ATTRIBUTE_MIN;
             rec.Attributes.Positioning = PlayerProgressionConstants.ATTRIBUTE_MIN;
             rec.Attributes.Composure = PlayerProgressionConstants.ATTRIBUTE_MIN;
 
             Assert.Throws<System.InvalidOperationException>(
-                () => AbilityModel.RetirementAgeDays(in rec, goalkeeperBonusYears: 0, readingSpanYears: 1_000_000),
+                () => AbilityModel.TestOnly_RetirementAgeDays(in rec, goalkeeperBonusYears: 0, readingSpanYears: 1_000_000),
                 "a computed retirement day at or before birth is a catalogue/config integrity failure, "
                 + "not a value to silently clamp.");
         }
@@ -326,13 +382,62 @@ namespace TacticalDirector.PlayerProgression.Tests
 
                 Assert.AreEqual(
                     baseline,
-                    AbilityModel.RetirementAgeDays(in outfielder, goalkeeperBonusYears: 0, readingSpanYears: 0),
+                    AbilityModel.TestOnly_RetirementAgeDays(in outfielder, goalkeeperBonusYears: 0, readingSpanYears: 0),
                     $"outfielder at reading-trio value {a}: bonus 0 / span 0 must reproduce RETIREMENT_AGE "
                     + "exactly, whatever the attributes are.");
                 Assert.AreEqual(
                     baseline,
-                    AbilityModel.RetirementAgeDays(in keeper, goalkeeperBonusYears: 0, readingSpanYears: 0),
+                    AbilityModel.TestOnly_RetirementAgeDays(in keeper, goalkeeperBonusYears: 0, readingSpanYears: 0),
                     $"goalkeeper at reading-trio value {a}: the position term must also vanish at bonus 0.");
+            }
+        }
+
+        [Test]
+        public void RetirementAgeDays_IsMonotonicWithinABand_AsTheAttributesItReadsAreMonotone()
+        {
+            // round-2 finding retirement-day-derived-from-attributes-the-same-step-mutates. §3.4's
+            // RetirementAgeDays is re-evaluated daily against `rec`, the SAME record TrySpendOnePoint /
+            // DrainOnePoint mutate earlier in the same AdvancePlayerTo call — the reading trio it reads
+            // (Anticipation/Positioning/Composure) is exactly what those two methods move. Nothing
+            // stops the retirement day itself moving day over day; what this locks is the ONE property
+            // that keeps it from oscillating today: within a single band, each spend/drain call moves
+            // every reading attribute in the SAME direction (up in Growth, down in Decline, never
+            // both), so the computed retirement day is monotone across a run of same-direction
+            // mutations. Reverting to a version where the trio could move in mixed directions within a
+            // band (a T3 curve; #47 authored data touching them independently) is exactly what would
+            // break this.
+            PlayerRecord rec = PlayerRecord.CreateDefault(1); // Midfielder, all attrs = 10
+            var growthLife = new PlayerLifecycle { PotentialAbility = PlayerProgressionConstants.ABILITY_MAX };
+
+            long previousGrowth = AbilityModel.RetirementAgeDays(in rec);
+            for (int i = 0; i < 5; i++)
+            {
+                // A spend only ever raises an attribute (never lowers one), so each successful spend
+                // that touches Anticipation/Positioning/Composure must move the retirement day the same
+                // way (non-decreasing) as the one before it, and never the other way.
+                bool spent = AbilityModel.TrySpendOnePoint(ref rec, ref growthLife);
+                Assert.IsTrue(spent, "precondition: the PA ceiling must not bind inside this sweep.");
+                long day = AbilityModel.RetirementAgeDays(in rec);
+                Assert.GreaterOrEqual(
+                    day, previousGrowth,
+                    "a successful Growth-side spend must never LOWER the retirement day — it only ever "
+                    + "raises an attribute, and the offset is monotone increasing in the reading trio.");
+                previousGrowth = day;
+            }
+
+            PlayerRecord declineRec = PlayerRecord.CreateDefault(1);
+            var declineLife = new PlayerLifecycle();
+            long previousDecline = AbilityModel.RetirementAgeDays(in declineRec);
+            for (int i = 0; i < 5; i++)
+            {
+                bool drained = AbilityModel.DrainOnePoint(ref declineRec, ref declineLife);
+                Assert.IsTrue(drained, "precondition: no attribute floor must bind inside this sweep.");
+                long day = AbilityModel.RetirementAgeDays(in declineRec);
+                Assert.LessOrEqual(
+                    day, previousDecline,
+                    "a successful Decline-side drain must never RAISE the retirement day — it only ever "
+                    + "lowers an attribute, and the offset is monotone increasing in the reading trio.");
+                previousDecline = day;
             }
         }
 
@@ -450,4 +555,35 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | identity, executed rather than hand-verified). Mutation-verified:
 // |         |            |        | each guard deleted independently turns exactly its matching new
 // |         |            |        | case red with the rest of the suite green.
+// | 1.4     | 2026-08-24 | —      | Round-2 adversarial finding construction-day-credit-implemented-
+// |         |            |        | twice (High). + ConstructionDayCredit_InsideARamp_IsThe-
+// |         |            |        | ContinuousStep_NotTheRetiredBandStep — the ramp discrimination
+// |         |            |        | that RegenGeneratorTests used to drive through RegenGenerator's
+// |         |            |        | internal BandStepFor, now driven at the rule's owner, whose
+// |         |            |        | public API is what retires that internal surface. Both
+// |         |            |        | vacuity preconditions (inside-the-ramp, non-zero half-width)
+// |         |            |        | asserted, per the case it replaces. Mutation-verified:
+// |         |            |        | reimplementing ConstructionDayCredit as the retired
+// |         |            |        | ClassifyAgeBand three-way step fails exactly this case.
+// | 1.5     | 2026-08-24 | —      | Round-2 Medium/Low adversarial findings. M3 (test-affordance-
+// |         |            |        | overloads-ignore-the-TestOnly-naming-convention): every call to
+// |         |            |        | the four dial-taking internal overloads renamed to
+// |         |            |        | TestOnly_DailyBandPoints / TestOnly_AccruedBandPoints /
+// |         |            |        | TestOnly_RetirementAgeDays (AbilityModel.cs v1.5); calls to the
+// |         |            |        | single-argument catalogue-reading forms (DailyBandPoints(long),
+// |         |            |        | AccruedBandPoints(long), RetirementAgeDays(in rec),
+// |         |            |        | GameReadingOffsetDays(in attrs)) are unchanged. L1 (four-guards-
+// |         |            |        | enumerated-as-five-and-mis-named): the guard-block comment
+// |         |            |        | corrected — it named "two negative-dial checks" where there is
+// |         |            |        | ONE combined `if`, and omitted the `days <= 0` guard from the
+// |         |            |        | enumeration entirely; RetirementAgeDays_ComputedDayAtOrBeforeBirth_
+// |         |            |        | FailsLoud's own comment corrected to name that guard instead of a
+// |         |            |        | second dial check. M5 (retirement-day-derived-from-attributes-the-
+// |         |            |        | same-step-mutates): + RetirementAgeDays_IsMonotonicWithinABand_
+// |         |            |        | AsTheAttributesItReadsAreMonotone — locks the one property that
+// |         |            |        | keeps the daily re-evaluation from oscillating today (each
+// |         |            |        | band's spend/drain order is one-directional), so a future change
+// |         |            |        | that lets the reading trio move in mixed directions within a band
+// |         |            |        | (a T3 curve; #47 authored data) trips a red suite here rather
+// |         |            |        | than surfacing as an undiagnosed field report.
 #endregion

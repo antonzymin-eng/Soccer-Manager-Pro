@@ -1,12 +1,13 @@
 # Injuries & Medical #41 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.6 — balance-pass AR pass 14 L1: §4.4's non-gate rationale states the #29/#41 clamp-vs-refuse asymmetry)
+**Last Updated:** August 24, 2026 (v0.7 — round-2 M/L pass, L4: §4.2's file tree gains `AssemblyInfo.cs` and `ClubInjuryStates.cs`, both present in `src/` since T0/T2 and omitted from this tree)
+**Last Updated (prior):** August 8, 2026 (v0.6 — balance-pass AR pass 14 L1: §4.4's non-gate rationale states the #29/#41 clamp-vs-refuse asymmetry)
 **Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 7 M1: §4.1's dependency-diagram label restated off the phantom stream)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-012 at the balance pass: §4.5 rewritten from stream registration to the keyed derivation that actually exists; ordinal 92 stays deliberately unallocated)
 **Last Updated (prior):** August 6, 2026 (v0.3 — ERR-041-009: §4.4's layout gains the leading
 MEDICAL_SAVE_MAGIC, without which the #29 block decodes here silently; AR pass 1)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -36,8 +37,10 @@ FR-MD-026).
 ```
 src/injuries-medical/
 ├── injuries-medical.asmdef
+├── AssemblyInfo.cs                   // InternalsVisibleTo the Tests assembly (T0)
 ├── InjurySeverity.cs                 // the severity enum
 ├── InjuryState.cs                    // the #41-owned per-player state (serialized)
+├── ClubInjuryStates.cs               // one club's per-player InjuryState set — the MedicalSaveCodec unit (T2)
 ├── MatchLoad.cs                      // KD-3 caller-supplied occurrence input
 ├── MedicalModifier.cs                // KD-5 identity routing seam
 ├── MedicalStep.cs                    // AdvanceMedicalDay + ClassifySeverityFromDraw + AssembleRiskScore
@@ -46,6 +49,9 @@ src/injuries-medical/
 ├── InjuriesMedicalConstants.cs       // Appendix A catalogue
 └── Tests/ …
 ```
+
+*(L4, round-2 M/L pass, August 24, 2026: `AssemblyInfo.cs` and `ClubInjuryStates.cs` — both present in
+`src/injuries-medical/` since T0/T2 respectively — added to this tree, which had omitted them.)*
 
 ## 4.3 Seam contracts
 
@@ -171,4 +177,5 @@ stream-independence property vacuously: nothing #41 does can move any other subs
 | 0.4 | 2026-08-07 | — | **ERR-041-012** (the balance pass, D4): §4.5 rewritten — the `injuries.occurrence` registered-stream requirement was self-contradictory (cursor-positioned, forbidden by FR-MD-006/007) and was resolved in code at T0 as the keyed derivation (ERR-041-002); arming the dial is the moment the stale text would govern a live subsystem, so it now describes the derivation and pins ordinal 92 as deliberately unallocated (FR-LW-031). (Rows 0.3/0.4 were appended out of order and swapped at the balance-pass AR pass 3 — L2.) |
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 7 (M1)**: §4.1's diagram still labelled the #16 edge "[world-tick RNG stream + namespace]"; now the SplitMix64 finalizers + domain tag §4.5 describes. |
 | 0.6 | 2026-08-08 | — | **Balance-pass AR pass 14 (L1)**: the §4.4 non-gate rationale was TRUE for #29 and false here — #41's day step refuses, not clamps, so a lowered ceiling halts an existing career loudly (config-reversible); the asymmetry stated at both the codec and this section. |
+| 0.7 | 2026-08-24 | — | **Round-2 Medium/Low pass (L4)**: §4.2's file tree gains `AssemblyInfo.cs` and `ClubInjuryStates.cs` rows — both present in `src/injuries-medical/` since T0/T2 respectively and omitted from this tree. |
 #endregion

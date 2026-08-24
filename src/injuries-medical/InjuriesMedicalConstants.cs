@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/InjuriesMedicalConstants.cs
 // Created:  2026-08-05
-// Modified: 2026-08-23 (Group-B AR findings over the ERR-041-021 landing — v1.8)
+// Modified: 2026-08-24 (Round-2 M/L pass, M9 — v1.9)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A (constant catalogue) + §3.1–§3.4; Code Standards #20
 // Purpose:  Every numeric constant for #41 occurrence, severity bucketing and recovery. No magic
@@ -220,7 +220,7 @@ namespace TacticalDirector.InjuriesMedical
         /// (agerisk-int-subtraction-and-both-dials). Those two are guarded because a negative value
         /// breaks a catalogue invariant — an inverted slope or a clamp whose min exceeds its max. No
         /// value of this pivot does that: every pivot, however extreme or mistyped, still produces a
-        /// well-defined term once <see cref="MedicalStep.AgeRiskFor(int, int, int, int)"/>'s subtraction
+        /// well-defined term once <see cref="MedicalStep.TestOnly_AgeRiskFor(int, int, int, int)"/>'s subtraction
         /// is evaluated in <c>long</c> (fixed alongside this note — the un-widened form could overflow
         /// and invert the term's sign at an extreme pivot). An unusually large pivot degenerates the
         /// term to a constant (e.g. a 260-for-26 typo saturates every player at
@@ -422,4 +422,7 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | sit on the plateau) — recorded as knowingly accepted pending #28's
 // |         |            |        | retiree removal, not re-derived as still out of range
 // |         |            |        | (agerisk-span-plateau-reachable).
+// | 1.9     | 2026-08-24 | —      | Round-2 M/L pass, M9. Doc-only: the AgeRiskPivotYears cref to the
+// |         |            |        | parameterised overload updated to its renamed form,
+// |         |            |        | MedicalStep.TestOnly_AgeRiskFor(int, int, int, int).
 #endregion

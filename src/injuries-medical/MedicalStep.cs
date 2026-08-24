@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-23 (Group-B AR findings over the ERR-041-021 landing — v1.15)
+// Modified: 2026-08-24 (Round-2 M/L pass, M9 — v1.16)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -467,9 +467,15 @@ namespace TacticalDirector.InjuriesMedical
         /// this term exists to fix, silently; a negative span makes the clamp's min exceed its max, so
         /// every player takes the maximum penalty regardless of age.
         /// </exception>
-        public static int AgeRiskFor(int ageYears)
+        /// <remarks>
+        /// <c>internal</c>, not <c>public</c> (M9, round-2 AR): no cross-assembly caller exists —
+        /// verified by grep over <c>src/</c> — and its twin term <see cref="RobustnessMitigation"/>,
+        /// same sum, same file, is <c>internal</c> too. <see cref="AssembleRiskScore"/> is the sole
+        /// production caller of both.
+        /// </remarks>
+        internal static int AgeRiskFor(int ageYears)
         {
-            return AgeRiskFor(
+            return TestOnly_AgeRiskFor(
                 ageYears,
                 InjuriesMedicalConstants.AgeRiskPivotYears,
                 InjuriesMedicalConstants.AgeRiskPerYearFromPivot,
@@ -482,6 +488,15 @@ namespace TacticalDirector.InjuriesMedical
         /// <c>[GT]</c>s read once at static initialisation, so a test cannot vary them any other way —
         /// and this project's standing lesson is that an identity claim nothing executes is exactly the
         /// class of claim that gets falsified on first run (the ERR-008-021/-022 chain, three times).
+        /// <para>
+        /// <b>Named <c>TestOnly_</c>, not overloaded on <see cref="AgeRiskFor(int)"/> (M9, round-2
+        /// AR).</b> Argument count alone did not mark this as a test affordance rather than a
+        /// legitimate production call pinning the dials off — the house convention this repo already
+        /// uses elsewhere (<c>MatchEngine.cs</c>'s ~40 <c>TestOnly_*</c> members;
+        /// <c>agent-movement</c>'s <c>ToolingOverrideOnly_NaNInjection</c>). Not an overload also
+        /// removes the resolution hazard where a future parameter added to <see cref="AgeRiskFor(int)"/>
+        /// would silently rebind existing calls to this one.
+        /// </para>
         /// </summary>
         /// <param name="ageYears">The player's current age in whole years.</param>
         /// <param name="pivotYears">
@@ -492,7 +507,7 @@ namespace TacticalDirector.InjuriesMedical
         /// </param>
         /// <param name="perYear">Risk contribution (per-million scale) per year away from the pivot.</param>
         /// <param name="span">Symmetric saturation magnitude.</param>
-        internal static int AgeRiskFor(int ageYears, int pivotYears, int perYear, int span)
+        internal static int TestOnly_AgeRiskFor(int ageYears, int pivotYears, int perYear, int span)
         {
             if (ageYears < 0)
             {
@@ -769,4 +784,12 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | negative-ageYears source alongside the undefined-severity one, and the
 // |         |            |        | InvalidOperationException tag counts FIVE consuming-site guards (was
 // |         |            |        | four — AgeRiskFor's own guard is now named) rather than four.
+// | 1.16    | 2026-08-24 | —      | Round-2 M/L pass, M9. The 4-arg parameterised overload is renamed
+// |         |            |        | TestOnly_AgeRiskFor (was an overload distinguished from the 1-arg
+// |         |            |        | production form by argument count alone — the M3 house convention,
+// |         |            |        | already used ~40x in MatchEngine.cs); stays internal, IVT unchanged.
+// |         |            |        | AgeRiskFor(int) demoted public -> internal to match its twin term
+// |         |            |        | RobustnessMitigation (same sum, same file) — verified by repo-wide
+// |         |            |        | grep that neither has a cross-assembly caller; AssembleRiskScore is
+// |         |            |        | the sole production caller of both.
 #endregion

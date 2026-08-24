@@ -1,7 +1,21 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Updated:** August 23, 2026 — **the batch-1 row's gate line CORRECTED in place; no finding, count or
+> **Updated:** August 24, 2026 (round-2 M/L pass, L6) — **adding the chain entry that commit `9fca357`
+> (round-1's #28 Medium/Low close-out) landed without.** That commit made two edits to this file with no
+> governing `Updated:` line of its own — FR-CS-056/057 applied to a tracking document, whose only
+> version-history mechanism is this chain. **(1)** §6.3's assembly-less-class bullet ("carry 8 of the 32
+> open findings") was updated to **"8 of the 29"**, tracking batch 1's count move (34 recorded / 5 fixed /
+> 29 open). **(2)** The `ERR-008-021 AR-1` entry — which had been sitting at the TOP of this chain labelled
+> `**Updated:**` despite dating August 6, chronologically below several August 22/23 entries — was demoted
+> to `**Updated (prior):**` and moved down to its correct newest-first slot, immediately above the
+> `ERR-008-022` entry it precedes in time. **Recorded, not fixed** (per `9fca357`'s own commit message):
+> the move surfaced a SECOND date inversion in the same stretch of chain — an August 6 entry now sits
+> below two August 5 entries — that no finding diagnosed and that this pass leaves in place rather than
+> resolving unilaterally against ambiguous same-day orderings. The August 23 entry immediately below is
+> scoped to `78b57e2` alone, annotated there to say so, since it predates and does not describe `9fca357`'s
+> edits.
+> **Updated (prior):** August 23, 2026 (scoped to `78b57e2` only — see the entry above) — **the batch-1 row's gate line CORRECTED in place; no finding, count or
 > doctrine text moved.** As published, §6.3.1's batch-1 outcome row read "31 of 32 suites fully green …
 > quarantine empty". Both halves were wrong. The tree has **33** test suites (`ls -d
 > src/*/[Tt]ests/*.asmdef` returns 33, and the gate log carries 33 suite result lines — the original
@@ -423,7 +437,9 @@ this pattern — FRs and formulas).
   **FIXED — landed August 22, 2026 as `ERR-041-020`** (batch 1): `AgeRiskFor(ageYears)` — linear,
   anti-symmetric about `AGE_RISK_PIVOT_YEARS`, saturating at `±AGE_RISK_SPAN`, with **no threshold
   anywhere** (P1) — added inside the sum BEFORE the robustness mitigation, whose position is normative
-  for the same reason `BASELINE_DAILY_RISK`'s is: robustness must discriminate it. **P5 measured, not
+  for the same reason `BASELINE_DAILY_RISK`'s is: robustness must discriminate it.
+  *(⚠️ CORRECTED August 24, 2026 — `ERR-041-021`: the "before the mitigation … robustness discriminates it" rationale quoted above is FALSE and is annotated rather than deleted. `RobustnessMitigation` is SUBTRACTED and addition commutes, so a term's position relative to it is a proven identity over 956,480 sampled inputs — the load-bearing position is inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE the clamp. Only the clamp half was ever true.)*
+  **P5 measured, not
   argued**: the pivot is the mean of #27's bootstrap age distribution, so the term sums to zero over
   that population — `SeasonInjuryRealismTests`' league, starter, reserve and squad-unavailability bands
   all held unmoved, and all 26 pre-existing `AssembleRiskScore` expectations stay exact by passing the

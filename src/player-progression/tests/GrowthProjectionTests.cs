@@ -1,6 +1,8 @@
 // File:     src/player-progression/tests/GrowthProjectionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial finding
+// Modified: 2026-08-24 (round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side —
+//           the pinned degenerate end state — v1.6)
+//           (football-judgment proxy review, batch-1 adversarial finding
 //           growthprojection-test-comment-stale-bands — v1.5)
 //           (ERR-028-020 — football-judgment proxy review batch 1 — v1.4)
 // Author:   —
@@ -300,6 +302,41 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void GrowthProjection_DeclineIsUnbounded_ANeverRemovedVeteranReachesEveryAttributeAtMinimum()
+        {
+            // round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side. §3.1.3's decline
+            // phase has NO ceiling — every day past DECLINE_AGE's ramp drains one more point,
+            // unconditionally — and #28's retirement is FLAG-ONLY (ProgressionEngine.SquadFor returns
+            // every carried record regardless of RetirementFlag; roster removal is roadmap D1's
+            // deferred half). Pin the honest end state rather than leave it unmeasured: a player who
+            // never leaves the roster and is stepped for long enough at the full decline rate reaches
+            // EVERY attribute at ATTRIBUTE_MIN and stays there — the degenerate population any
+            // long-career measurement taken before roster removal lands would be sampling from.
+            int fullRateAge = PlayerProgressionConstants.DECLINE_AGE + 1
+                              + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+            (PlayerRecord rec, PlayerLifecycle life) = NewPlayer(ageAtBase: fullRateAge);
+
+            // NeutralAttributeSum starts every one of the 31 attributes at 10 — far more decline-years
+            // than needed to floor them all (10 - ATTRIBUTE_MIN each) at one point per year, plus
+            // headroom so the loop demonstrably runs PAST full degeneracy, not merely up to it.
+            uint declineYears = (uint)(NeutralAttributeSum - PlayerProgressionConstants.ATTRIBUTE_MIN * 31 + 50);
+            StepInclusive(ref rec, ref life, BaseDay, BaseDay + declineYears * (uint)PlayerProgressionConstants.DAYS_PER_YEAR);
+
+            int[] attrs = rec.Attributes.ToArray();
+            for (int i = 0; i < attrs.Length; i++)
+            {
+                Assert.AreEqual(PlayerProgressionConstants.ATTRIBUTE_MIN, attrs[i],
+                    $"attribute index {i} must have reached the floor — decline has no ceiling to stop it.");
+            }
+            Assert.AreEqual(0, AbilityModel.ComputeCA(in rec.Attributes, rec.Position),
+                "every attribute at ATTRIBUTE_MIN must derive CA of exactly 0 (ComputeCAFromArray's own "
+                + "floor-scaling arithmetic, exercised at its own boundary).");
+            Assert.AreEqual(0L, life.GrowthCursor,
+                "fully drained: DrainOnePoint's refusal exit discards the cursor to 0 (AR pass 6), it "
+                + "does not grind — see FullyDrainedPlayer_DrainLoopExits_AndDoesNotGrind above.");
+        }
+
+        [Test]
         public void TrainingInputNeutral_IsByteIdenticalToDefault()
         {
             (PlayerRecord withNeutral, PlayerLifecycle neutralLife) = NewPlayer(ageAtBase: 18);
@@ -396,4 +433,14 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | AbilityModelTests already do; the assertions themselves were already
 // |         |            |        | correct (traced: 2190 growth days, 6 refusals, cursor 0, then -182
 // |         |            |        | by the end) and are unchanged.
+// | 1.6     | 2026-08-24 | —      | Round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-
+// |         |            |        | side. + GrowthProjection_DeclineIsUnbounded_ANeverRemovedVeteran-
+// |         |            |        | ReachesEveryAttributeAtMinimum: a player stepped for far longer
+// |         |            |        | than any real career at the full decline rate reaches EVERY
+// |         |            |        | attribute at ATTRIBUTE_MIN, derives CA == 0, and the cursor stays
+// |         |            |        | at 0 (DrainOnePoint's refusal exit). Pins the honest degenerate end
+// |         |            |        | state §3.1.3's decline phase has no ceiling against, so the
+// |         |            |        | roadmap-D1 roster-removal landing has a visible diff. No production
+// |         |            |        | code change — PlayerProgressionConstants.cs v1.4 carries the doc
+// |         |            |        | note this test backs.
 #endregion

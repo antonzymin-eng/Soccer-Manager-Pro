@@ -1,6 +1,9 @@
 // File:     src/player-progression/tests/ProgressionEngineTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial findings — v1.11)
+// Modified: 2026-08-24 (round-2 finding classifyageband-public-with-no-callers-and-a-silently-changed-
+//           meaning (M7): LifecycleView_AgeBand_ReflectsTheCurrentDerivedAge — v1.13)
+//           (construction-day-credit-implemented-twice — the seed site's ramp lock — v1.12)
+//           (football-judgment proxy review, batch-1 adversarial findings — v1.11)
 //           (ERR-028-022 — ERR-028-021's behaviour change locked at its call site — v1.10)
 //           (ERR-028-020 — football-judgment proxy review batch 1 — v1.9)
 //           (AR pass 8 — SeedFrom's id-cursor overflow lock + the DefaultLife() CurrentAbility
@@ -213,6 +216,32 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void LifecycleView_AgeBand_ReflectsTheCurrentDerivedAge()
+        {
+            // round-2 finding classifyageband-public-with-no-callers-and-a-silently-changed-meaning
+            // (M7). ProgressionEngine.LifecycleView is ClassifyAgeBand's first (and only) production
+            // caller anywhere in src/ — this locks that the wiring actually reads the CURRENT derived
+            // age, not a stale or default value, for a player well inside each band (clear of every
+            // ramp, so the band is unambiguous whichever half-width is configured).
+            int growthAge = PlayerProgressionConstants.GROWTH_AGE
+                             - PlayerProgressionConstants.AgeBandRampHalfWidthYears - 5;
+            int declineAge = PlayerProgressionConstants.DECLINE_AGE + 1
+                              + PlayerProgressionConstants.AgeBandRampHalfWidthYears + 5;
+
+            ProgressionEngine growthEngine = SeedOneClub(ageAtBase: growthAge);
+            ProgressionEngine declineEngine = SeedOneClub(ageAtBase: declineAge);
+
+            Assert.AreEqual(
+                AbilityModel.AgeBand.Growth,
+                growthEngine.LifecycleView(ClubId, FirstPlayerId).AgeBand,
+                "a player well clear of every ramp, below GROWTH_AGE, must read Growth through the view.");
+            Assert.AreEqual(
+                AbilityModel.AgeBand.Decline,
+                declineEngine.LifecycleView(ClubId, FirstPlayerId).AgeBand,
+                "…and a player well clear of every ramp, past DECLINE_AGE, must read Decline.");
+        }
+
+        [Test]
         public void AdvanceDay_BelowRetirementAge_DoesNotFlag()
         {
             // The FIRST LIVED day (ERR-028-015). Its positive sibling above was bumped to BaseDay + 1
@@ -401,6 +430,40 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.AreEqual(+2L, blocks[0].Lifecycles[0].GrowthCursor, "Growth band (age 18): +1/day, plus the seed day's own step.");
             Assert.AreEqual(0L, blocks[0].Lifecycles[1].GrowthCursor, "Stable band (age 27): no change.");
             Assert.AreEqual(-2L, blocks[0].Lifecycles[2].GrowthCursor, "Decline band (age 34): -1/day, plus the seed day's own step.");
+        }
+
+        [Test]
+        public void SeedFrom_AtAnAgeInsideTheGrowthRamp_CreditsTheContinuousStep()
+        {
+            // construction-day-credit-implemented-twice (round-2 High). Every seed-credit case in this
+            // file drove ages 18 / 27 / 34 — all far outside both ramps, where the continuous curve and
+            // the RETIRED three-way band step agree day for day. So nothing here could see the seed
+            // site's ERR-028-020 change, and nothing here would see it reverted.
+            //
+            // GROWTH_AGE is the ramp's own midpoint: ClassifyAgeBand reads Growth there (the year's net
+            // accrual is positive), so the retired form returns GROWTH_DAILY_POINTS for every day of
+            // that year, while the day on which a player is exactly GROWTH_AGE years old accrues the
+            // continuous rate at the ramp's centre. The AreNotEqual below is what makes this case
+            // discriminating rather than a restatement of the implementation.
+            int ageInsideTheRamp = PlayerProgressionConstants.GROWTH_AGE;
+            var squad = new Squad(ClubId, new[] { Player(FirstPlayerId, ageInsideTheRamp) });
+
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, BaseDay);
+
+            long seeded = engine.ToBlocks()[0].Lifecycles[0].GrowthCursor;
+
+            Assert.AreEqual(AbilityModel.ConstructionDayCredit(ageInsideTheRamp), seeded,
+                "SeedLifecycle must ask AbilityModel for the construction-day credit, not answer for "
+                + "itself — the duplicated answer is what made ERR-028-018 a one-site fix.");
+            Assert.AreNotEqual(
+                (long)PlayerProgressionConstants.GROWTH_DAILY_POINTS, seeded,
+                "…and inside the ramp that value is NOT the retired three-way band step, which this "
+                + "case exists to fail against.");
+
+            Assert.Greater(
+                PlayerProgressionConstants.AgeBandRampHalfWidthYears, 0,
+                "precondition: at a zero half-width the two forms coincide everywhere and the "
+                + "AreNotEqual above is vacuous.");
         }
 
         [Test]
@@ -1445,4 +1508,23 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | AccruedBandPoints cumulatives are 0 there. Annotated as history
 // |         |            |        | rather than restated as current behaviour; the int-narrowing concern
 // |         |            |        | itself is unchanged and is still why this lock exists.
+// | 1.12    | 2026-08-24 | —      | Round-2 adversarial finding construction-day-credit-implemented-
+// |         |            |        | twice (High). + SeedFrom_AtAnAgeInsideTheGrowthRamp_CreditsThe-
+// |         |            |        | ContinuousStep. Every seed-credit case in this file drove ages
+// |         |            |        | 18 / 27 / 34, all outside both ramps, where the continuous curve
+// |         |            |        | and the retired three-way band step agree day for day — so the
+// |         |            |        | seed site's own ERR-028-020 change had no lock here and would
+// |         |            |        | not have been seen reverted. This case drives GROWTH_AGE, the
+// |         |            |        | ramp's midpoint, and asserts BOTH that the cursor is the value
+// |         |            |        | AbilityModel.ConstructionDayCredit owns and that it is NOT
+// |         |            |        | GROWTH_DAILY_POINTS, with the zero-half-width vacuity
+// |         |            |        | precondition. Mutation-verified against the restored three-way
+// |         |            |        | form.
+// | 1.13    | 2026-08-24 | —      | Round-2 finding classifyageband-public-with-no-callers-and-a-
+// |         |            |        | silently-changed-meaning (M7). + LifecycleView_AgeBand_
+// |         |            |        | ReflectsTheCurrentDerivedAge — locks that LifecycleView (now
+// |         |            |        | AbilityModel.ClassifyAgeBand's first and only production caller,
+// |         |            |        | AbilityModel.cs v1.5) actually reads the CURRENT derived age
+// |         |            |        | into the new LifecycleViewModel.AgeBand field, for a player well
+// |         |            |        | inside Growth and one well inside Decline, clear of every ramp.
 #endregion

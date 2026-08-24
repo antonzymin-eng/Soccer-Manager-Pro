@@ -1,6 +1,7 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-08-23 (BandStepFor made internal + directly locked — v1.7)
+// Modified: 2026-08-24 (construction-day-credit-implemented-twice — BandStepFor deleted — v1.8)
+//           (BandStepFor made internal + directly locked — v1.7)
 //           (ERR-028-020 — the construction-day credit takes the continuous step —
 //           football-judgment proxy review batch 1 — v1.6)
 // Author:   —
@@ -151,11 +152,14 @@ namespace TacticalDirector.PlayerProgression
                 // anchor was worldDay and the cursor was 0, which is exactly the disagreement
                 // ERR-028-018 exists to remove. Now they do.
                 //
-                // Classified rather than hard-coded to GROWTH_DAILY_POINTS: a regen's drawn age is
-                // 16–20 and therefore always Growth today, but that is a fact about REGEN_AGE_MAX vs
-                // GROWTH_AGE, not about this line, and it should not silently become wrong if either
-                // constant moves.
-                GrowthCursor = BandStepFor(age),
+                // construction-day-credit-implemented-twice (round-2 High): the credit is asked of
+                // AbilityModel, its one owner, rather than computed by a local BandStepFor whose own
+                // doc claimed to be the shared owner of a rule ProgressionEngine.SeedLifecycle
+                // implemented separately. Nothing about the value is decided here — including the
+                // question of whether a regen's drawn age is always Growth (it is, at today's
+                // REGEN_AGE_MAX < GROWTH_AGE, but that is a fact about those constants and not about
+                // this line, and the owner is age-continuous, so no such assumption is embedded).
+                GrowthCursor = AbilityModel.ConstructionDayCredit(age),
 
                 BirthWorldDay = birthWorldDay,
                 RetirementFlag = false,
@@ -176,37 +180,6 @@ namespace TacticalDirector.PlayerProgression
             };
 
             return (record, life);
-        }
-
-        /// <summary>
-        /// The construction day's own band step — the ERR-028-018 invariant, shared in shape with
-        /// <c>ProgressionEngine.SeedLifecycle</c>. Every site that anchors
-        /// <see cref="PlayerLifecycle.LastAdvancedWorldDay"/> at its own construction day owes this,
-        /// because that anchor declares the day already lived and a zero cursor accounts for it as
-        /// nothing — costing one whole attribute point per band traversal.
-        /// </summary>
-        /// <remarks>
-        /// <b>Internal, not private (regen-bandstep-both-locked-false).</b> A regen's drawn age is
-        /// always <c>REGEN_AGE_MIN..REGEN_AGE_MAX</c> (16-20 today), entirely below the growth ramp, so
-        /// this v1.7 delegation to <see cref="AbilityModel.DailyBandPoints(long)"/> is behaviourally
-        /// INERT at every age <see cref="GenerateRegen"/> can actually produce — no test driven only
-        /// through the public entry point can distinguish it from the retired
-        /// <c>AbilityModel.ClassifyAgeBand</c>-based form. Internal access lets
-        /// <c>RegenGeneratorTests</c> drive an age INSIDE the ramp directly, which is the only way to
-        /// make the v1.7 change (rather than its inert regen-age consequence) detectable by a revert.
-        /// </remarks>
-        internal static long BandStepFor(int age)
-        {
-            // ERR-028-020: the CONTINUOUS step, from the same AbilityModel.DailyBandPoints the daily
-            // step and SeedLifecycle use. This method's own doc says every construction site that
-            // anchors LastAdvancedWorldDay owes the day's step — which means it owes the SAME step, and
-            // the retired three-way form here would have been a second answer to a question with one
-            // authority. Inert at today's values (a regen is generated at REGEN_AGE_MIN..MAX = 16..20,
-            // entirely below the growth ramp, where the two forms agree day for day) and precisely
-            // therefore worth fixing now: it diverges silently the first time either the regen age band
-            // or the ramp half-width moves, and the symptom would be one attribute point per traversal
-            // — ERR-028-018's shape, at the sibling site that pass did not have to reach.
-            return AbilityModel.DailyBandPoints((long)age * PlayerProgressionConstants.DAYS_PER_YEAR);
         }
 
         // DrawBounded (the reserved-draw → [0, bound) modulo mapping + its accepted-bias rationale) and
@@ -276,4 +249,21 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | verified. (ERR-028-020's own Files Affected row and the ea910a7 |
 // |         |            |        | commit record live in spec-error-log.md, outside this agent's  |
 // |         |            |        | scope this pass — not corrected here; flagged for the owner.)  |
+// | 1.8     | 2026-08-24 | —      | Round-2 adversarial finding construction-day-credit-           |
+// |         |            |        | implemented-twice (High). BandStepFor DELETED; the constructed |
+// |         |            |        | lifecycle takes AbilityModel.ConstructionDayCredit(age), the   |
+// |         |            |        | rule's one owner. BandStepFor's body was character-for-        |
+// |         |            |        | character the expression ProgressionEngine.SeedLifecycle also  |
+// |         |            |        | carried, while its own doc described itself as the shared      |
+// |         |            |        | owner of a rule it did not own — the duplication that made     |
+// |         |            |        | ERR-028-018 a one-site fix (the regen site was missed, found   |
+// |         |            |        | a day later by AR pass 7) and ERR-028-020 a two-site revisit.  |
+// |         |            |        | v1.7's private -> internal widening goes with it: the ramp is  |
+// |         |            |        | now exercisable at the public owner instead. The GrowthCursor  |
+// |         |            |        | comment's stale "Classified rather than hard-coded to          |
+// |         |            |        | GROWTH_DAILY_POINTS" rationale (a description of the three-way |
+// |         |            |        | form retired at v1.6) is rewritten with it. Behaviour-         |
+// |         |            |        | identical — verified by probe over ages 0..200 and the int     |
+// |         |            |        | domain's edges before the collapse. No draw, no budget, no     |
+// |         |            |        | ordinal change; the RNG path is untouched.                     |
 #endregion

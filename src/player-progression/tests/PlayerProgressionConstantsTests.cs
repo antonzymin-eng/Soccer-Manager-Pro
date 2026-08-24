@@ -67,12 +67,22 @@ namespace TacticalDirector.PlayerProgression.Tests
 
         // ── config-unbound-premise-false-28 ──────────────────────────────────────────
         //
-        // AbilityModel.RampHalfWidthDays/RetirementAgeDays enforce these same three invariants at their
-        // computing site, with a documented rationale ("forward-looking placement for the Stage-1
-        // config loader") that is different from — and narrower than — the reason the sibling
-        // #29/#41 computing-site guards give ("the catalogue lock runs config-unbound"). That reason is
-        // false for THIS catalogue: PlayerProgressionConstants.cs has zero Config.GetX calls today, so
-        // a catalogue-level lock is not defeated here and belongs alongside the other three above.
+        // AbilityModel.RampHalfWidthDays/TestOnly_RetirementAgeDays enforce FOUR fail-loud guards at
+        // their computing site: the ramp half-width's non-negativity and disjointness (mirrored by the
+        // two methods above), and the two retirement dials' non-negativity (mirrored by
+        // RetirementDials_AreNonNegative below, in one method since it is ONE combined `if` at the
+        // computing site too — see AbilityModelTests.cs). *(Corrected — round-2 finding
+        // four-guards-enumerated-as-five-and-mis-named: this comment previously said "these same three
+        // invariants", underselling RetirementDials_AreNonNegative by one — it asserts TWO invariants,
+        // not one. The count here is THREE TEST METHODS covering FOUR invariants, matching
+        // AbilityModelTests.cs' four computing-site guards; TestOnly_RetirementAgeDays' fifth guard,
+        // `days <= 0`, has NO catalogue-level equivalent here, since it depends on a player record's
+        // attributes and cannot be evaluated from catalogue constants alone.)* The documented rationale
+        // ("forward-looking placement for the Stage-1 config loader") is different from — and narrower
+        // than — the reason the sibling #29/#41 computing-site guards give ("the catalogue lock runs
+        // config-unbound"). That reason is false for THIS catalogue: PlayerProgressionConstants.cs has
+        // zero Config.GetX calls today, so a catalogue-level lock is not defeated here and belongs
+        // alongside the computing-site guards above.
 
         [Test]
         public void AgeBandRampHalfWidthYears_IsNonNegative()

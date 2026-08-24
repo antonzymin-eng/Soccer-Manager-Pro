@@ -1,6 +1,10 @@
 // File:     src/player-progression/PlayerProgressionConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial findings — v1.3)
+// Modified: 2026-08-24 (round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side —
+//           DECLINE_DAILY_POINTS doc — v1.5)
+//           (round-2 finding spec-32-flat-band-step-sweep-stopped-two-paragraphs-short —
+//           POINT_COST / NEW_GAME_PA_HEADROOM docs — v1.4)
+//           (football-judgment proxy review, batch-1 adversarial findings — v1.3)
 //           (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.2)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3/§4 + Appendix A (constant catalogue); Code Standards #20
@@ -126,8 +130,13 @@ namespace TacticalDirector.PlayerProgression
         public static readonly int ABILITY_MAX = 10000;
 
         /// <summary>
-        /// [GT] Cursor points per whole attribute-point. With the §4.3 band step this makes exactly one
-        /// [1,20] step per year (KD-8: POINT_COST = DAYS_PER_YEAR ⇒ +1/yr in the Growth band).
+        /// [GT] Cursor points per whole attribute-point. Over a full band traversal of §3.1.3's
+        /// accrual curve this makes exactly one [1,20] step per year (KD-8: POINT_COST = DAYS_PER_YEAR
+        /// ⇒ +1/yr in the Growth band) — exact at every ramp half-width including the shipped one, per
+        /// the curve's own P5 pivot, not merely at the retired flat §4.3 step. <b>Corrected (round-2
+        /// finding spec-32-flat-band-step-sweep-stopped-two-paragraphs-short):</b> this doc previously
+        /// said "with the §4.3 band step", present tense, after ERR-028-020 made that step the retired
+        /// predicate.
         /// TODO: replace with config loader (Stage 1).
         /// </summary>
         public static readonly long POINT_COST = DAYS_PER_YEAR;
@@ -213,7 +222,32 @@ namespace TacticalDirector.PlayerProgression
         /// <summary>[GT] Per-day cursor accrual in the Growth band (Stable = 0). TODO: replace with config loader (Stage 1).</summary>
         public static readonly int GROWTH_DAILY_POINTS = +1;
 
-        /// <summary>[GT] Per-day cursor accrual in the Decline band (Stable = 0). TODO: replace with config loader (Stage 1).</summary>
+        /// <summary>
+        /// [GT] Per-day cursor accrual in the Decline band (Stable = 0).
+        /// <para>
+        /// <b>Decline accrual is UNBOUNDED past the DECLINE_AGE edge, and the model is meaningful only
+        /// up to the retirement boundary</b> (round-2 finding
+        /// decline-tail-degeneracy-undocumented-on-the-owning-side — the sibling side of this fact,
+        /// <c>InjuriesMedicalConstants.AgeRiskSpan</c>'s <c>agerisk-span-plateau-reachable</c> note,
+        /// carries it; this owning side did not). §3.1.3's decline phase has no ceiling — every
+        /// Decline day drains one more point via <c>GrowthProjection</c>'s drain loop, unconditionally
+        /// — and #28's retirement is FLAG-ONLY today: <c>ProgressionEngine.SquadFor</c> returns every
+        /// carried record regardless of <c>RetirementFlag</c>, and roster removal (the actual
+        /// departure) is the explicitly deferred half of roadmap D1. With ages advancing daily and no
+        /// removal, a never-removed veteran drains one point per year until every attribute sits at
+        /// <c>ATTRIBUTE_MIN</c>, <c>ComputeCA</c> reports 0, and every downstream consumer of that
+        /// player's rating (<c>SquadRating</c>, <c>LineupSelector</c>, the round-resolution
+        /// <c>dSquad</c> term) sees an identical, minimal, fully-degenerated player. Any long-career
+        /// measurement taken before roster removal lands is measuring a degenerating population.
+        /// <b>Not fixed by filtering <c>SquadFor</c> on <c>RetirementFlag</c></b> — that would silently
+        /// shrink a squad below the formation, the same trap #41's KD-6 back-fill rule exists to avoid.
+        /// The honest interim is the pinned degenerate end state locked by
+        /// <c>GrowthProjection_DeclineIsUnbounded_ANeverRemovedVeteranReachesEveryAttributeAtMinimum</c>
+        /// (<c>GrowthProjectionTests.cs</c>), so the roster-removal landing (roadmap D1) has a visible
+        /// diff against this state rather than an unmeasured one.
+        /// </para>
+        /// TODO: replace with config loader (Stage 1).
+        /// </summary>
         public static readonly int DECLINE_DAILY_POINTS = -1;
 
         // -- Regen [GT] balance values (§3.3; pinned at the §5.6 balance pass) --
@@ -246,12 +280,16 @@ namespace TacticalDirector.PlayerProgression
         /// value #47 is going to overwrite. #47 fills real values through the same seam.
         /// </para>
         /// <para>
-        /// <b>Recorded, not fixed:</b> at the §4.3 band step a whole youth career raises CA by only
-        /// ~421 of <see cref="ABILITY_MAX"/> (8 growth years x ~52.6, one attribute per year), so ANY
-        /// headroom above ~420 makes the PA ceiling unreachable and F1 unexercised in production —
-        /// including this one, and including any realistic authored gap. That is a property of the
-        /// growth RATE, not of where PA comes from, and it is the Stage-3 <c>curveEnabled</c> tier's to
-        /// close. KD-W1 forbids retuning it in the pass that wires the subsystem.
+        /// <b>Recorded, not fixed:</b> over §3.1.3's accrual curve a whole youth career raises CA by
+        /// only ~421 of <see cref="ABILITY_MAX"/> (8 growth years x ~52.6, one attribute per year — the
+        /// P5 pivot means this total is exact at every ramp half-width, including the shipped one, so
+        /// it is unchanged from the retired flat step's total), so ANY headroom above ~420 makes the PA
+        /// ceiling unreachable and F1 unexercised in production — including this one, and including any
+        /// realistic authored gap. That is a property of the growth RATE, not of where PA comes from,
+        /// and it is the Stage-3 <c>curveEnabled</c> tier's to close. KD-W1 forbids retuning it in the
+        /// pass that wires the subsystem. <b>Corrected (round-2 finding
+        /// spec-32-flat-band-step-sweep-stopped-two-paragraphs-short):</b> this doc previously said "at
+        /// the §4.3 band step", present tense, after ERR-028-020 made that step the retired predicate.
         /// </para>
         /// TODO: replace with the #47 authored value (Stage 1).
         /// </summary>
@@ -263,6 +301,31 @@ namespace TacticalDirector.PlayerProgression
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.5     | 2026-08-24 | —      | Round-2 finding decline-tail-degeneracy-undocumented-on-the-
+// |         |            |        | owning-side. DECLINE_DAILY_POINTS' doc states what round 1's
+// |         |            |        | InjuriesMedicalConstants.AgeRiskSpan note stated on the
+// |         |            |        | consuming side but this owning side never did: decline accrual
+// |         |            |        | is UNBOUNDED past DECLINE_AGE's ramp, #28's retirement is
+// |         |            |        | FLAG-ONLY (ProgressionEngine.SquadFor returns every carried
+// |         |            |        | record regardless of RetirementFlag), and roster removal is
+// |         |            |        | roadmap D1's deferred half — so a never-removed veteran drains
+// |         |            |        | to every attribute at ATTRIBUTE_MIN and stays there, and any
+// |         |            |        | long-career measurement taken before D1 lands samples that
+// |         |            |        | degenerate population. Locked, not "fixed" by filtering
+// |         |            |        | SquadFor (that would silently shrink a squad below the
+// |         |            |        | formation): GrowthProjection_DeclineIsUnbounded_ANeverRemoved-
+// |         |            |        | VeteranReachesEveryAttributeAtMinimum (GrowthProjectionTests.cs
+// |         |            |        | v1.6) pins the end state so D1's roster-removal landing has a
+// |         |            |        | visible diff. No value changed.
+// | 1.4     | 2026-08-24 | —      | Round-2 finding spec-32-flat-band-step-sweep-stopped-two-
+// |         |            |        | paragraphs-short. POINT_COST's doc and NEW_GAME_PA_HEADROOM's
+// |         |            |        | "Recorded, not fixed" paragraph both still said "the §4.3 [flat]
+// |         |            |        | band step", present tense, after ERR-028-020 made that step the
+// |         |            |        | retired predicate — restated against §3.1.3's accrual curve.
+// |         |            |        | The ~421-of-ABILITY_MAX figure and the KD-8 one-step-per-year
+// |         |            |        | identity are UNCHANGED (the P5 pivot means the whole-life
+// |         |            |        | integral is exact at every ramp half-width, so neither number
+// |         |            |        | needed re-derivation). No value changed.
 // | 1.3     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial findings.
 // |         |            |        | AgeBandRampHalfWidthYears' doc corrected (config-unbound-premise-
 // |         |            |        | false-28): this catalogue has zero Config.GetX calls, so the
