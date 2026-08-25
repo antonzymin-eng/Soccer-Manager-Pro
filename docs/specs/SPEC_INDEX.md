@@ -1,7 +1,18 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** August 8, 2026 (**ERR-041-012 back-prop, balance-pass AR pass 8 M2 — recorded at pass 9 L1, the edit having landed without this header bump.** One line inside the July 23 #41 entry below re-anchored: its KD-1 summary read "all draws on ONE world-tick `injuries.occurrence` stream", and ERR-041-012 established that stream never existed and may not — the draws are a keyed SplitMix64 derivation under `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A`, `SubsystemOrdinals` 92 deliberately unallocated. Registry counts and every status unchanged.)
+> **Last Updated:** August 24, 2026 (**M8, round-2 Medium/Low pass — the ordinal-92 half of the ERR-041-012
+> re-anchor, which the August 8 sweep below fixed for the KD-1 line but left standing four lines further
+> down.** The July 23 #41 entry's KD-7 sentence still read "#16 §3.4 promotes `DOMAIN_TAG_INJURIES_MEDICAL =
+> 0x2A` / `SubsystemOrdinals` 92 (ERR-041-001, spec-text-first)" — wording that reads as both halves
+> promoted together. Only the domain tag was: `SubsystemOrdinals.InjuriesMedical = 92` stays deliberately
+> unallocated (no registered stream exists or may be added — ERR-041-012), consistent with the KD-1 line's
+> own August 8 fix and with `deterministic-sim/section-3.md` v1.0.15. Re-anchored the same way. A repo-wide
+> `SubsystemOrdinals` re-grep afterward found this the only surviving misstatement in this file's own
+> injuries-medical text; every other #41 site already read "deliberately unallocated" — see the round-2
+> tracking entry for the full account. Registry counts and every status unchanged.)
+>
+> **Last Updated (prior):** August 8, 2026 (**ERR-041-012 back-prop, balance-pass AR pass 8 M2 — recorded at pass 9 L1, the edit having landed without this header bump.** One line inside the July 23 #41 entry below re-anchored: its KD-1 summary read "all draws on ONE world-tick `injuries.occurrence` stream", and ERR-041-012 established that stream never existed and may not — the draws are a keyed SplitMix64 derivation under `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A`, `SubsystemOrdinals` 92 deliberately unallocated. Registry counts and every status unchanged.)
 >
 > **Last Updated (prior):** July 27, 2026, later same day (**ALL TEN ADVANCED `IN REVIEW → APPROVED`.**
 > Lead-developer **R-01..R-05 sign-off granted** on #53, #35, #46, #36, #54, #47, #48, #50, #51 and #39,
@@ -190,14 +201,20 @@
 > **Last Updated (prior):** July 23, 2026, latest same day (**Injuries & Medical #41 authored + advanced
 > `→ IN REVIEW → APPROVED`** — Wave 2's third spec (injury occurrence/severity/recovery on the world
 > tick). Promoted from the converged design supplement (`docs/tracking/injuries-medical-design.md` v0.2,
-> design-AR 2M+2L → clean) to a full 11-file section set (FR-MD-001..027); section-file **AR-1 (1M — float
+> design-AR 2M+2L → clean) to a full 11-file section set (FR-MD-001..027 — **since ERR-041-020, Aug 22,
+> 2026: FR-MD-001..027 + FR-MD-025a, 28 unique, deliberately non-contiguous; see injuries-medical
+> section-2 v0.11 — this July 23 entry is frozen at the count current on that date**); section-file **AR-1 (1M — float
 > arithmetic → integer per-mille throughout) → AR-2 (1M — fixed-radix action-ordinal for append parity) →
 > AR-3 clean, CONVERGENCE.** **KD-1:** all draws via ONE world-tick keyed derivation (no registered stream — ERR-041-012), keyed
 > position-independently on `(playerId, worldDay, purpose)` — no free-running cursor, nothing to persist,
 > the match tick never draws (the plan's dual-clock hazard dissolved). **KD-6:** a #30 tick-order back-prop
 > (ERR-030-002) appends the injuries null seam as step 4. **KD-7:** a `MEDICAL_SAVE_FORMAT_VERSION`
-> season-save sub-blob (not `WORLD_STORE_FORMAT_VERSION`). #16 §3.4 promotes `DOMAIN_TAG_INJURIES_MEDICAL =
-> 0x2A` / `SubsystemOrdinals` 92 (ERR-041-001, spec-text-first). Reads #29's `InjuryRiskContribution`
+> season-save sub-blob (not `WORLD_STORE_FORMAT_VERSION`). #16 §3.4 allocates `DOMAIN_TAG_INJURIES_MEDICAL =
+> 0x2A` at #41's first draw site (ERR-041-001, spec-text-first); `SubsystemOrdinals` 92 stays
+> **deliberately unallocated** — no stream is registered or may be (ERR-041-012; *this sentence originally
+> read "promotes `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` / `SubsystemOrdinals` 92 (ERR-041-001,
+> spec-text-first)", implying both were promoted together — re-anchored M8, August 24, 2026, the ordinal
+> half the August 8 KD-1 fix above left standing*). Reads #29's `InjuryRiskContribution`
 > read-only; staff (#34) via an identity `MedicalModifier`; #34/#27-injury-proneness deferred. Count:
 > **34 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
 > **Last Updated (prior):** July 23, 2026, latest same day (**Training System #29 authored + advanced

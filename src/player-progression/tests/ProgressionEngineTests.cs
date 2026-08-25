@@ -1,6 +1,12 @@
 // File:     src/player-progression/tests/ProgressionEngineTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-11 (AR pass 8 — L-3's SeedFrom overflow lock; L-4's DefaultLife() CurrentAbility
+// Modified: 2026-08-24 (round-2 finding classifyageband-public-with-no-callers-and-a-silently-changed-
+//           meaning (M7): LifecycleView_AgeBand_ReflectsTheCurrentDerivedAge — v1.13)
+//           (construction-day-credit-implemented-twice — the seed site's ramp lock — v1.12)
+//           (football-judgment proxy review, batch-1 adversarial findings — v1.11)
+//           (ERR-028-022 — ERR-028-021's behaviour change locked at its call site — v1.10)
+//           (ERR-028-020 — football-judgment proxy review batch 1 — v1.9)
+//           (AR pass 8 — SeedFrom's id-cursor overflow lock + the DefaultLife() CurrentAbility
 //           retune to keep every FromBlocks(..., DefaultLife()) call legal — v1.8)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §5, KD-4 / KD-7,
@@ -210,6 +216,32 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void LifecycleView_AgeBand_ReflectsTheCurrentDerivedAge()
+        {
+            // round-2 finding classifyageband-public-with-no-callers-and-a-silently-changed-meaning
+            // (M7). ProgressionEngine.LifecycleView is ClassifyAgeBand's first (and only) production
+            // caller anywhere in src/ — this locks that the wiring actually reads the CURRENT derived
+            // age, not a stale or default value, for a player well inside each band (clear of every
+            // ramp, so the band is unambiguous whichever half-width is configured).
+            int growthAge = PlayerProgressionConstants.GROWTH_AGE
+                             - PlayerProgressionConstants.AgeBandRampHalfWidthYears - 5;
+            int declineAge = PlayerProgressionConstants.DECLINE_AGE + 1
+                              + PlayerProgressionConstants.AgeBandRampHalfWidthYears + 5;
+
+            ProgressionEngine growthEngine = SeedOneClub(ageAtBase: growthAge);
+            ProgressionEngine declineEngine = SeedOneClub(ageAtBase: declineAge);
+
+            Assert.AreEqual(
+                AbilityModel.AgeBand.Growth,
+                growthEngine.LifecycleView(ClubId, FirstPlayerId).AgeBand,
+                "a player well clear of every ramp, below GROWTH_AGE, must read Growth through the view.");
+            Assert.AreEqual(
+                AbilityModel.AgeBand.Decline,
+                declineEngine.LifecycleView(ClubId, FirstPlayerId).AgeBand,
+                "…and a player well clear of every ramp, past DECLINE_AGE, must read Decline.");
+        }
+
+        [Test]
         public void AdvanceDay_BelowRetirementAge_DoesNotFlag()
         {
             // The FIRST LIVED day (ERR-028-015). Its positive sibling above was bumped to BaseDay + 1
@@ -223,7 +255,109 @@ namespace TacticalDirector.PlayerProgression.Tests
             engine.AdvanceDay(BaseDay + 1, TrainingInputBatch.Neutral);
 
             Assert.IsFalse(engine.LifecycleView(ClubId, FirstPlayerId).RetirementFlag,
-                "the retirement test is hard AT RETIREMENT_AGE, not below it.");
+                // ERR-028-022 (H2): the message this assertion carried until August 22, 2026 —
+                // "the retirement test is hard AT RETIREMENT_AGE, not below it" — asserted in prose
+                // exactly the property ERR-028-021 was filed to REMOVE. What the case actually shows is
+                // narrower and still worth locking: this fixture's default-attribute Midfielder is a
+                // full year short of his OWN RetirementAgeDays, so he must not be flagged. The two
+                // ERR-028-021 discrimination locks are below.
+                "a default-attribute Midfielder a year below the baseline is short of his own "
+                + "per-player RetirementAgeDays (§3.4, ERR-028-021).");
+        }
+
+        // ── ERR-028-021's behaviour change, locked at the production call site (ERR-028-022) ──
+
+        [Test]
+        public void AdvanceDay_AtTheBaselineAge_FlagsTheOutfielder_ButNotTheGoalkeeper()
+        {
+            // ERR-028-022 (H2). ERR-028-021 moved AdvancePlayerTo's retirement test from
+            // `rec.Age >= RETIREMENT_AGE` to `ageDays >= AbilityModel.RetirementAgeDays(rec)`, and
+            // NOTHING failed if it was reverted: the two wiring cases above both use an all-10
+            // Midfielder at exactly RETIREMENT_AGE / RETIREMENT_AGE − 1, where the old and new
+            // predicates agree by construction. Mutation-verified before this case existed: restoring
+            // the verbatim pre-fix comparison left PlayerProgression.Tests 134/134 and
+            // SeasonSave.Tests 402/3 green. So the goalkeeper allowance, the per-player day and the
+            // days-vs-years comparison were all unprotected at the only site that runs them.
+            //
+            // This case isolates the POSITION half. Both players are identical but for position and
+            // id, and both sit at the baseline age — the exact day the retired predicate fires for
+            // everyone. Under that predicate the goalkeeper is flagged here too, so the second
+            // assertion fails; under the fix he owes RetirementGoalkeeperBonusYears more.
+            PlayerRecord outfielder = Player(FirstPlayerId, PlayerProgressionConstants.RETIREMENT_AGE);
+            PlayerRecord keeper = Player(FirstPlayerId + 1, PlayerProgressionConstants.RETIREMENT_AGE);
+            keeper.Position = PlayerPosition.Goalkeeper;
+
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(
+                new[] { new Squad(ClubId, new[] { outfielder, keeper }) }, BaseDay);
+
+            Assert.Greater(
+                AbilityModel.RetirementAgeDays(in keeper),
+                AbilityModel.RetirementAgeDays(in outfielder),
+                "precondition: the two must differ at all, or this case cannot discriminate.");
+
+            engine.AdvanceDay(BaseDay + 1, TrainingInputBatch.Neutral);
+
+            Assert.IsTrue(engine.LifecycleView(ClubId, FirstPlayerId).RetirementFlag,
+                "the outfielder is past his own retirement day at the baseline age.");
+            Assert.IsFalse(engine.LifecycleView(ClubId, FirstPlayerId + 1).RetirementFlag,
+                "a goalkeeper does NOT retire on a forward's clock — he owes "
+                + "RetirementGoalkeeperBonusYears more (ERR-028-021). This is the assertion the "
+                + "pre-fix `rec.Age >= RETIREMENT_AGE` comparison fails.");
+
+            // …and he does flag once past the allowance. Asserted on the DAY, not just the flag: the
+            // retirement evaluation runs once per call at the target day (§3.4), so under the pre-fix
+            // predicate this day would read BaseDay + 1 from the call above rather than this one.
+            uint pastTheAllowance = BaseDay
+                + (uint)((PlayerProgressionConstants.RetirementGoalkeeperBonusYears + 1)
+                         * PlayerProgressionConstants.DAYS_PER_YEAR);
+            engine.AdvanceDay(pastTheAllowance, TrainingInputBatch.Neutral);
+
+            LifecycleViewModel keeperView = engine.LifecycleView(ClubId, FirstPlayerId + 1);
+            Assert.IsTrue(keeperView.RetirementFlag,
+                "past RETIREMENT_AGE + RetirementGoalkeeperBonusYears the goalkeeper retires too — "
+                + "the allowance defers the career, it does not abolish it.");
+            Assert.AreEqual(pastTheAllowance, keeperView.RetirementDay,
+                "his retirement day is the day he crossed his OWN threshold, not the baseline day.");
+        }
+
+        [Test]
+        public void AdvanceDay_BelowTheBaselineAge_FlagsTheWeakReader_ButNotTheSharpOne()
+        {
+            // ERR-028-022 (H2), the ATTRIBUTE half — and the days-vs-years half with it. Two players of
+            // the same position and the same age (a year BELOW the baseline, where the retired
+            // predicate flags nobody at all), separated only by the §3.4 reading trio at the two ends
+            // of its range. The target day sits strictly between their two retirement days, so exactly
+            // one of them may be flagged. Under the pre-fix `rec.Age >= RETIREMENT_AGE` comparison
+            // NEITHER is, and the first assertion fails.
+            PlayerRecord weakReader = Player(FirstPlayerId, PlayerProgressionConstants.RETIREMENT_AGE - 1);
+            weakReader.Attributes.Anticipation = PlayerProgressionConstants.ATTRIBUTE_MIN;
+            weakReader.Attributes.Positioning = PlayerProgressionConstants.ATTRIBUTE_MIN;
+            weakReader.Attributes.Composure = PlayerProgressionConstants.ATTRIBUTE_MIN;
+
+            PlayerRecord sharpReader = Player(FirstPlayerId + 1, PlayerProgressionConstants.RETIREMENT_AGE - 1);
+            sharpReader.Attributes.Anticipation = PlayerProgressionConstants.ATTRIBUTE_MAX;
+            sharpReader.Attributes.Positioning = PlayerProgressionConstants.ATTRIBUTE_MAX;
+            sharpReader.Attributes.Composure = PlayerProgressionConstants.ATTRIBUTE_MAX;
+
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(
+                new[] { new Squad(ClubId, new[] { weakReader, sharpReader }) }, BaseDay);
+
+            const uint TargetDay = BaseDay + 1;
+            long ageDaysAtTarget = (long)(TargetDay - BaseDay)
+                                   + (long)(PlayerProgressionConstants.RETIREMENT_AGE - 1)
+                                     * PlayerProgressionConstants.DAYS_PER_YEAR;
+            Assert.GreaterOrEqual(ageDaysAtTarget, AbilityModel.RetirementAgeDays(in weakReader),
+                "precondition: the target day must be past the weak reader's day…");
+            Assert.Less(ageDaysAtTarget, AbilityModel.RetirementAgeDays(in sharpReader),
+                "…and short of the sharp reader's, or 'exactly one flags' is not a discriminating test.");
+
+            engine.AdvanceDay(TargetDay, TrainingInputBatch.Neutral);
+
+            Assert.IsTrue(engine.LifecycleView(ClubId, FirstPlayerId).RetirementFlag,
+                "the weak reader is already past his own retirement day a year below the baseline "
+                + "(ERR-028-021). The pre-fix whole-years comparison flags nobody here.");
+            Assert.IsFalse(engine.LifecycleView(ClubId, FirstPlayerId + 1).RetirementFlag,
+                "the sharp reader is not — the reading trio moves the day by days, in both directions.");
         }
 
         // ── ERR-028-006: the signed age anchor ────────────────────────────────────────
@@ -299,6 +433,40 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void SeedFrom_AtAnAgeInsideTheGrowthRamp_CreditsTheContinuousStep()
+        {
+            // construction-day-credit-implemented-twice (round-2 High). Every seed-credit case in this
+            // file drove ages 18 / 27 / 34 — all far outside both ramps, where the continuous curve and
+            // the RETIRED three-way band step agree day for day. So nothing here could see the seed
+            // site's ERR-028-020 change, and nothing here would see it reverted.
+            //
+            // GROWTH_AGE is the ramp's own midpoint: ClassifyAgeBand reads Growth there (the year's net
+            // accrual is positive), so the retired form returns GROWTH_DAILY_POINTS for every day of
+            // that year, while the day on which a player is exactly GROWTH_AGE years old accrues the
+            // continuous rate at the ramp's centre. The AreNotEqual below is what makes this case
+            // discriminating rather than a restatement of the implementation.
+            int ageInsideTheRamp = PlayerProgressionConstants.GROWTH_AGE;
+            var squad = new Squad(ClubId, new[] { Player(FirstPlayerId, ageInsideTheRamp) });
+
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, BaseDay);
+
+            long seeded = engine.ToBlocks()[0].Lifecycles[0].GrowthCursor;
+
+            Assert.AreEqual(AbilityModel.ConstructionDayCredit(ageInsideTheRamp), seeded,
+                "SeedLifecycle must ask AbilityModel for the construction-day credit, not answer for "
+                + "itself — the duplicated answer is what made ERR-028-018 a one-site fix.");
+            Assert.AreNotEqual(
+                (long)PlayerProgressionConstants.GROWTH_DAILY_POINTS, seeded,
+                "…and inside the ramp that value is NOT the retired three-way band step, which this "
+                + "case exists to fail against.");
+
+            Assert.Greater(
+                PlayerProgressionConstants.AgeBandRampHalfWidthYears, 0,
+                "precondition: at a zero half-width the two forms coincide everywhere and the "
+                + "AreNotEqual above is vacuous.");
+        }
+
+        [Test]
         public void FromBlocks_AGrowthCursorBeyondOneWholePoint_IsRefused()
         {
             // AR pass 6 (High), the boundary half. Pass 5 called BirthWorldDay "the ONLY lifecycle field
@@ -327,11 +495,17 @@ namespace TacticalDirector.PlayerProgression.Tests
         {
             // AR pass 5 (recorded), fixed. BirthWorldDay was the ONLY lifecycle field with no range
             // gate, and it is the AUTHORITATIVE age anchor — every other age in the model is a derived
-            // cache of it. Probe-verified before the fix: this anchor was accepted at every boundary,
-            // the daily step narrowed the derived age to int.MinValue, ClassifyAgeBand read that as
-            // GROWTH (so the player grows forever and RETIREMENT_AGE can never fire — ERR-028-006's
-            // failure mode through a different door), and Snapshot() then refused the negative age —
-            // a career that loaded, advanced and projected fine, permanently unsavable.
+            // cache of it. Probe-verified before the fix: this anchor was accepted at every boundary and
+            // the daily step narrowed the derived age to int.MinValue — a value ClassifyAgeBand read
+            // at the time as GROWTH under the retired age-only band step, so the player grew forever and
+            // RETIREMENT_AGE could never fire (ERR-028-006's failure mode through a different door) —
+            // and Snapshot() then refused the negative age, a career that loaded, advanced and projected
+            // fine, permanently unsavable. **Corrected (classifyageband-growth-claim-stale, football-
+            // judgment proxy review batch-1): ClassifyAgeBand no longer classifies int.MinValue as
+            // Growth at all — since ERR-028-020 it reads the continuous accrual curve, and both
+            // AccruedBandPoints cumulatives are 0 at a hugely negative age, so it now returns Stable.**
+            // The int-narrowing itself is still real and still the reason this gate exists; only the
+            // ClassifyAgeBand-specific downstream symptom this comment narrates is history.
             var records = new[] { Player(400, age: 20) };
             var lifecycles = new[] { DefaultLife() };
             lifecycles[0].BirthWorldDay = -(long)int.MaxValue * PlayerProgressionConstants.DAYS_PER_YEAR
@@ -752,17 +926,32 @@ namespace TacticalDirector.PlayerProgression.Tests
             // Two assertions, and the residue one is the load-bearing half: points-gained alone would
             // still pass if a future change re-introduced a residue while rounding the count back up.
             // The residue is what silently eats the first year of the Decline band later.
-            foreach (int seedAge in new[] { 16, 20, 23 })
+            // REBASELINED at ERR-028-020: seed age 23 moves to the ramp's own start
+            // (GROWTH_AGE − half-width). A seed INSIDE the ramp genuinely does end a traversal holding
+            // a fractional cursor — its exact integral is not a whole multiple of POINT_COST — and
+            // that fraction is correct rather than lost, so it is asserted separately below instead of
+            // being folded in here where it would read as the ERR-028-018 shortfall recurring.
+            int rampStartAge = PlayerProgressionConstants.GROWTH_AGE
+                               - PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+            foreach (int seedAge in new[] { 16, 20, rampStartAge })
             {
                 PlayerRecord rec = Player(1, age: seedAge);
                 var squad = new Squad(clubId: 1, new[] { rec });
                 ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u);
 
+                // REBASELINED at ERR-028-020, and the rebaseline strengthens the claim rather than
+                // weakening it. The band no longer ENDS at GROWTH_AGE — the rate ramps to zero one
+                // half-width past it — so the traversal must run to the end of the ramp. What must
+                // still hold, and does, is the total: because the ramp is centred, the whole traversal
+                // still yields exactly (GROWTH_AGE − seedAge) points and still leaves no residue. That
+                // equality IS the P5 pivot: the curve redistributes accrual across the edge without
+                // creating or destroying any of it.
                 int yearsInBand = PlayerProgressionConstants.GROWTH_AGE - seedAge;
+                int yearsToTraverse = yearsInBand + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
                 int before = AttributeSum(engine, clubIndex: 0, playerIndex: 0);
 
                 engine.AdvanceDay(
-                    (uint)(yearsInBand * PlayerProgressionConstants.DAYS_PER_YEAR),
+                    (uint)(yearsToTraverse * PlayerProgressionConstants.DAYS_PER_YEAR),
                     TrainingInputBatch.Neutral);
 
                 int after = AttributeSum(engine, clubIndex: 0, playerIndex: 0);
@@ -776,6 +965,37 @@ namespace TacticalDirector.PlayerProgression.Tests
                     + "cursor survives the Stable band unspendable and then cancels the first year of "
                     + "Decline.");
             }
+        }
+
+        [Test]
+        public void AdvanceDay_ASeedInsideTheGrowthRamp_CarriesAFraction_NotALostPoint()
+        {
+            // ERR-028-020. The distinction this test exists to hold: a mid-ramp seed reaches the end
+            // of growth with a NON-zero cursor, and that is arithmetically right — the exact integral
+            // over his remaining growth simply is not a whole number of attribute-points, and the
+            // remainder is carried forward against his first days of decline rather than discarded.
+            // The pathology ERR-028-018 fixed looked superficially identical (a residue at the band
+            // exit) but was a whole point SHORT of the integral, every traversal, for every seed age.
+            // Without this lock the natural reading of the failure would be that ERR-028-018 had
+            // regressed, and the natural "fix" would be to re-round the accrual — which would put the
+            // cliff back.
+            int seedAge = PlayerProgressionConstants.GROWTH_AGE;   // dead centre of the ramp
+            PlayerRecord rec = Player(1, age: seedAge);
+            var squad = new Squad(clubId: 1, new[] { rec });
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u);
+
+            engine.AdvanceDay(
+                (uint)(PlayerProgressionConstants.AgeBandRampHalfWidthYears
+                       * PlayerProgressionConstants.DAYS_PER_YEAR),
+                TrainingInputBatch.Neutral);
+
+            PlayerLifecycle life = engine.ToBlocks()[0].Lifecycles[0];
+
+            Assert.Greater(life.GrowthCursor, 0L,
+                "a player who spends the back half of the ramp developing must still hold the credit "
+                + "for it — the pre-fix model gave him exactly nothing from his 24th birthday on.");
+            Assert.Less(life.GrowthCursor, PlayerProgressionConstants.POINT_COST,
+                "…and it is a FRACTION of a point, held for the ledger, not a point that went missing.");
         }
 
         private static int AttributeSum(ProgressionEngine engine, int clubIndex, int playerIndex)
@@ -1255,4 +1475,56 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | for uniform default attributes, so one value covers every fixture  |
 // |         |            |        | here) rather than a second magic literal. No test assertions       |
 // |         |            |        | changed — this is the fixture keeping pace with a production gate. |
+// | 1.9     | 2026-08-22 | —      | ERR-028-020. The traversal lock now runs to the END of the growth ramp and
+// |         |            |        | asserts the identical totals — the P5 pivot stated as a test. Seed age 23
+// |         |            |        | moved to the ramp's start, and its case split out as ASeedInsideTheGrowth-
+// |         |            |        | Ramp_CarriesAFraction_NotALostPoint: a mid-ramp seed's residue is correct
+// |         |            |        | and resembles ERR-028-018's shortfall, whose natural repair would restore
+// |         |            |        | the cliff.
+// | 1.10    | 2026-08-22 | —      | ERR-028-022. ERR-028-021's behaviour change was UNLOCKED at its
+// |         |            |        | production call site: reverting AdvancePlayerTo to the verbatim
+// |         |            |        | pre-fix `rec.Age >= RETIREMENT_AGE` left PlayerProgression.Tests
+// |         |            |        | 134/134 and SeasonSave.Tests 402/3 green, because both wiring cases
+// |         |            |        | use an all-10 Midfielder at exactly RETIREMENT_AGE / -1, where old
+// |         |            |        | and new agree by construction. + AdvanceDay_AtTheBaselineAge_-
+// |         |            |        | FlagsTheOutfielder_ButNotTheGoalkeeper (the position half, plus a
+// |         |            |        | RetirementDay assertion past the allowance) and AdvanceDay_-
+// |         |            |        | BelowTheBaselineAge_FlagsTheWeakReader_ButNotTheSharpOne (the
+// |         |            |        | attribute half and the days-vs-years half). Both mutation-verified
+// |         |            |        | against the restored pre-fix predicate. AdvanceDay_BelowRetirement-
+// |         |            |        | Age_DoesNotFlag's message corrected — it asserted in prose that
+// |         |            |        | "the retirement test is hard AT RETIREMENT_AGE", the property
+// |         |            |        | ERR-028-021 exists to remove.
+// | 1.11    | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial findings.
+// |         |            |        | Header's dangling v1.8 fragment (a line missing its own opening
+// |         |            |        | clause, listing only "retune to keep every FromBlocks(...,
+// |         |            |        | DefaultLife()) call legal — v1.8)") restored to a complete entry
+// |         |            |        | (version-header-hygiene). FromBlocks_ABirthWorldDayBelowTheDerivable-
+// |         |            |        | Floor_IsRefused's comment corrected (classifyageband-growth-claim-
+// |         |            |        | stale): it asserted ClassifyAgeBand(int.MinValue) reads Growth,
+// |         |            |        | which was true of the pre-ERR-028-020 retired classifier at the time
+// |         |            |        | this comment was written but is not true of ClassifyAgeBand today —
+// |         |            |        | measured, it now returns Stable at a hugely negative age, since both
+// |         |            |        | AccruedBandPoints cumulatives are 0 there. Annotated as history
+// |         |            |        | rather than restated as current behaviour; the int-narrowing concern
+// |         |            |        | itself is unchanged and is still why this lock exists.
+// | 1.12    | 2026-08-24 | —      | Round-2 adversarial finding construction-day-credit-implemented-
+// |         |            |        | twice (High). + SeedFrom_AtAnAgeInsideTheGrowthRamp_CreditsThe-
+// |         |            |        | ContinuousStep. Every seed-credit case in this file drove ages
+// |         |            |        | 18 / 27 / 34, all outside both ramps, where the continuous curve
+// |         |            |        | and the retired three-way band step agree day for day — so the
+// |         |            |        | seed site's own ERR-028-020 change had no lock here and would
+// |         |            |        | not have been seen reverted. This case drives GROWTH_AGE, the
+// |         |            |        | ramp's midpoint, and asserts BOTH that the cursor is the value
+// |         |            |        | AbilityModel.ConstructionDayCredit owns and that it is NOT
+// |         |            |        | GROWTH_DAILY_POINTS, with the zero-half-width vacuity
+// |         |            |        | precondition. Mutation-verified against the restored three-way
+// |         |            |        | form.
+// | 1.13    | 2026-08-24 | —      | Round-2 finding classifyageband-public-with-no-callers-and-a-
+// |         |            |        | silently-changed-meaning (M7). + LifecycleView_AgeBand_
+// |         |            |        | ReflectsTheCurrentDerivedAge — locks that LifecycleView (now
+// |         |            |        | AbilityModel.ClassifyAgeBand's first and only production caller,
+// |         |            |        | AbilityModel.cs v1.5) actually reads the CURRENT derived age
+// |         |            |        | into the new LifecycleViewModel.AgeBand field, for a player well
+// |         |            |        | inside Growth and one well inside Decline, clear of every ramp.
 #endregion

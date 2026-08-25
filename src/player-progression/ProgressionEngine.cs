@@ -1,6 +1,9 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-08-11 (AR pass 8, L-3 — SeedFrom's id cursor no longer overflows silently — v1.6)
+// Modified: 2026-08-24 (round-2 M/L adversarial findings: LifecycleView computes AgeBand (M7) +
+//           the retirement-day feedback-loop invariant documented at the daily evaluation (M5) — v1.9)
+//           (construction-day-credit-implemented-twice — SeedLifecycle delegates — v1.8)
+//           (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.7)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §4.2 / §4.5, KD-4 / KD-7 / KD-8,
 //           FR-PG-001/005/008/011/013/014/016/019/021/022/023; ERR-029-006 (the batch entry point);
@@ -443,10 +446,33 @@ namespace TacticalDirector.PlayerProgression
                 return;
             }
 
-            // §3.4 daily retirement evaluation: hard at RETIREMENT_AGE, deterministic, no draw
-            // (FR-PG-013). Flagged only — the player stays selectable until the season boundary
-            // (FR-PG-014), whose roster mutation is the deferred landing's.
-            if (!life.RetirementFlag && rec.Age >= PlayerProgressionConstants.RETIREMENT_AGE)
+            // §3.4 daily retirement evaluation: deterministic, no draw (FR-PG-013). Flagged only — the
+            // player stays selectable until the season boundary (FR-PG-014), whose roster mutation is
+            // the deferred landing's.
+            //
+            // ERR-028-021: the comparison is in DAYS against a PER-PLAYER retirement day, not in whole
+            // years against one league-wide integer. The retired form retired a goalkeeper on the same
+            // clock as a forward and made one day of the calendar the whole difference between a career
+            // continuing and ending, for everyone at once. At a zero goalkeeper bonus and a zero
+            // reading span, `ageDays >= RETIREMENT_AGE * DAYS_PER_YEAR` is exactly the old
+            // `rec.Age >= RETIREMENT_AGE` (age being that quotient, floored), so the identity is
+            // reproducible rather than approximated.
+            //
+            // round-2 finding retirement-day-derived-from-attributes-the-same-step-mutates: `rec` here
+            // is the SAME record the spend/drain loop above (inside this call's replay) just mutated —
+            // AbilityModel.RetirementAgeDays reads Anticipation/Positioning/Composure, which
+            // TrySpendOnePoint raises during Growth and DrainOnePoint lowers during Decline. So the
+            // retirement day is a moving target this very step moves: re-evaluating tomorrow can return
+            // a different day than today's read did. That is bounded today only because each attribute
+            // is monotone within one band and RetirementFlag is sticky once true (no oscillation) — an
+            // accident of §3.1.2's one-directional spend/drain order, not a property this method
+            // enforces, and it stops holding the day something can move these three attributes
+            // independently of age (the T3 curveEnabled tier; #47's authored data). See
+            // AbilityModel.RetirementAgeDays' own doc for the invariant statement and
+            // RetirementAgeDays_IsMonotonicWithinABand_AsTheAttributesItReadsAreMonotone
+            // (AbilityModelTests.cs) for the locked half of the bound.
+            long ageDaysAtTarget = (long)worldDay - life.BirthWorldDay;
+            if (!life.RetirementFlag && ageDaysAtTarget >= AbilityModel.RetirementAgeDays(in rec))
             {
                 life.RetirementFlag = true;
                 life.RetirementDay = worldDay;
@@ -497,11 +523,13 @@ namespace TacticalDirector.PlayerProgression
             }
 
             PlayerLifecycle life = _lifecycles[c][p];
+            int age = _records[c][p].Age;
             return new LifecycleViewModel(
                 playerId,
-                _records[c][p].Age,
+                age,
                 life.CurrentAbility,
                 life.PotentialAbility,
+                AbilityModel.ClassifyAgeBand(age),
                 life.RetirementFlag,
                 life.RetirementDay);
         }
@@ -543,11 +571,20 @@ namespace TacticalDirector.PlayerProgression
             // Crediting the anchor day's own band step here is ERR-028-014's reading made arithmetically
             // honest. Deliberately NOT fixed by anchoring the cursor at newGameWorldDay - 1: at day 0
             // that underflows to uint.MaxValue, which is the sentinel FromBlocks refuses.
-            AbilityModel.AgeBand seedBand = AbilityModel.ClassifyAgeBand(rec.Age);
-            long seedCursor =
-                seedBand == AbilityModel.AgeBand.Growth ? PlayerProgressionConstants.GROWTH_DAILY_POINTS
-                : seedBand == AbilityModel.AgeBand.Decline ? PlayerProgressionConstants.DECLINE_DAILY_POINTS
-                : 0;
+            //
+            // ERR-028-020: the credit is the seed day's own CONTINUOUS step, taken from the same
+            // AbilityModel.DailyBandPoints the daily step uses. The retired three-way form read
+            // ClassifyAgeBand and picked one of three constants, which agreed with the daily step only
+            // while that step was itself a three-way band — leaving it behind would have re-opened
+            // exactly the one-day accrual discrepancy this block was written to close, silently and in
+            // the ramp only.
+            //
+            // construction-day-credit-implemented-twice (round-2 High): the expression is no longer
+            // written out here. It was character-for-character RegenGenerator.BandStepFor's body, at the
+            // OTHER site that constructs a PlayerLifecycle from scratch, and that duplication is what
+            // made ERR-028-018 a one-site fix to a two-site rule and ERR-028-020 a re-visit of both.
+            // AbilityModel.ConstructionDayCredit is the single owner now; this site delegates.
+            long seedCursor = AbilityModel.ConstructionDayCredit(rec.Age);
 
             return new PlayerLifecycle
             {
@@ -829,4 +866,34 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | int.MaxValue id, so the gate refuses it AT THE SEED SITE instead. |
 // |         |            |        | Mutation-verified: reverting to the bare assignment fails exactly |
 // |         |            |        | the new SeedFrom_APlayerAtIntMaxValue_IsRefused lock.             |
+// | 1.7     | 2026-08-22 | —      | ERR-028-020 / ERR-028-021. SeedLifecycle's seed-day credit takes the
+// |         |            |        | CONTINUOUS step (leaving the three-way form here would have re-opened
+// |         |            |        | ERR-028-018's one-day discrepancy inside the ramp, silently).
+// |         |            |        | AdvancePlayerTo's retirement test moves from rec.Age >= RETIREMENT_AGE to
+// |         |            |        | ageDays >= AbilityModel.RetirementAgeDays(rec) — per-player, in days.
+// | 1.8     | 2026-08-24 | —      | Round-2 adversarial finding construction-day-credit-implemented-twice
+// |         |            |        | (High). SeedLifecycle no longer spells the construction-day credit out
+// |         |            |        | inline — it calls AbilityModel.ConstructionDayCredit(rec.Age). The two
+// |         |            |        | lines deleted here were character-for-character RegenGenerator.
+// |         |            |        | BandStepFor's body, i.e. the same rule implemented twice, which is
+// |         |            |        | why ERR-028-018 landed at this site only and ERR-028-020 had to
+// |         |            |        | visit both. Behaviour-identical (verified by probe over ages 0..200
+// |         |            |        | and the int edges before the collapse). Newly locked at this site by
+// |         |            |        | SeedFrom_AtAnAgeInsideTheGrowthRamp_CreditsTheContinuousStep, which
+// |         |            |        | fails if the seed credit reverts to the retired three-way band step —
+// |         |            |        | no case in this file drove a ramp age before.
+// | 1.9     | 2026-08-24 | —      | Round-2 Medium/Low adversarial findings. M7
+// |         |            |        | (classifyageband-public-with-no-callers-and-a-silently-changed-
+// |         |            |        | meaning): LifecycleView now computes AbilityModel.ClassifyAgeBand(age)
+// |         |            |        | and passes it into the new LifecycleViewModel.AgeBand field —
+// |         |            |        | ClassifyAgeBand's first production caller anywhere in src/, and the
+// |         |            |        | reason it can now be demoted internal (AbilityModel.cs v1.5). M5
+// |         |            |        | (retirement-day-derived-from-attributes-the-same-step-mutates): the
+// |         |            |        | §3.4 retirement evaluation in AdvancePlayerTo now states in comment
+// |         |            |        | that `rec` there is the SAME record the spend/drain loop just
+// |         |            |        | mutated earlier in this call, so RetirementAgeDays reads a moving
+// |         |            |        | target — bounded today only by the one-directional band order and
+// |         |            |        | RetirementFlag's stickiness, locked by a new AbilityModelTests.cs
+// |         |            |        | case rather than left as an unstated accident. No behaviour change,
+// |         |            |        | no format version, no draw.
 #endregion

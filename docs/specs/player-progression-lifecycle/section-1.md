@@ -1,9 +1,11 @@
 # Player Progression & Lifecycle #28 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated:** August 23, 2026 (v0.5 — football-judgment proxy review, batch-1 adversarial findings: KD-5 revised (kd5-stale-hard-retirement — it still said retirement is "hard at `RETIREMENT_AGE`", the exact wording FR-PG-013 was revised to remove at v0.4); §1.2's out-of-scope paragraph corrected (s12-29-does-not-exist-stale — it still described #29 as a spec with no assembly). Prior entry below.)
+**Last Updated (prior):** August 22, 2026 (v0.4 — **ERR-028-020**: §1.3's staging split and KD-8 revised. The age-continuity of the growth rate moves from the Stage-3 promise to the Stage-2 shipped tier (§3.1.3), because the tier as described was a cliff rather than a simplification of the curve §1.3 promised; KD-8's byte-for-byte identity moves onto the new ramp dial's OFF position. What stays Stage-3 is the `(PA − CA)` magnitude modulation and per-attribute weighting. Prior entry below.)
+**Last Updated (prior):** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.3
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -34,8 +36,14 @@ reader does not attribute the facility model to #40, whose scope excludes it; #2
 position is unchanged either way); training-driven growth *input* is **#29** (a shared seam #28 defines, not a duplicate
 mutation — KD-2); valuations/price are **#31**; the day-advance loop and season-save composition
 that *drive* #28 are **#30** (#28 exposes the step; #30 invokes it — never the reverse). Where #28
-must reference a spec that does not exist yet (#29's producer), it does so through a **method input
-defaulted to neutral** — never an invented interface (FR-LW-031: no phantom interfaces).
+references #29's growth-input producer, it does so through a **method input defaulted to neutral** —
+never an invented interface (FR-LW-031: no phantom interfaces). *(Corrected — s12-29-does-not-exist-
+stale, football-judgment proxy review batch-1: this paragraph described #29 as "a spec that does not
+exist yet" at the time this section was written; `src/training-system/` has existed since #29 T0
+landed August 5, 2026, and #30's slot 1 has driven `ComputeTrainingInput` into #28's batch since T1/T2a
+on August 8 — the seam is live. The no-phantom-interface rule the sentence exists to state is
+unaffected: the method-input-defaulted-to-neutral pattern is why this reference never needed an
+interface in the first place, whether or not #29 had an assembly yet.)*
 
 ## 1.3 Staging — one code path, a config dial
 
@@ -43,8 +51,20 @@ Stage-2 minimal is the master plan §4.3 rule as a **deterministic per-day proje
 one year per `DAYS_PER_YEAR` world-days; a player over `DECLINE_AGE` loses ≈1 attribute-point/year,
 under `GROWTH_AGE` gains ≈1/year, and at `RETIREMENT_AGE` (36) retires. Stage-3 deep replaces the
 flat step with per-attribute CA/PA growth-decline curves keyed to age, position, and (via #29)
-training. **One code path, a config dial (KD-8):** with `curveEnabled` off the daily growth function
-reproduces the literal §4.3 step exactly (digest-locked); with it on, the deep curve modulates it.
+training. **One code path, a config dial (KD-8):** with `curveEnabled` off **and
+`AGE_BAND_RAMP_HALF_WIDTH_YEARS = 0`** the daily growth function reproduces the literal §4.3 step
+exactly (digest-locked); with it on, the deep curve modulates it.
+
+**Revised at ERR-028-020 (August 22, 2026).** The paragraph above described the Stage-2 tier as a
+three-way band step with hard edges at `GROWTH_AGE`, `DECLINE_AGE` and `RETIREMENT_AGE`, and then
+promised that "per-attribute CA/PA growth-decline curves keyed to age" were the Stage-3 tier's. The
+football-judgment proxy review found the two halves in tension: the age-keyed curve was named as a
+Stage-3 deliverable while §3 contained no age-continuous formula at all, so the shipped tier was not a
+simplification of a curve — it was a cliff, and one whose 1-day discontinuity is visible in a career.
+**The age-continuity of the rate is now Stage 2** (§3.1.3's centred ramps, and §3.4's per-player
+retirement day under ERR-028-021), and what remains Stage-3 is what always distinguished the deep tier:
+the `(PA − CA)` magnitude modulation and per-attribute weighting (§3.2). The KD-8 identity is not lost —
+it moves onto the ramp dial's OFF position, which reproduces the retired step byte-for-byte.
 The `[GT]` magnitudes are illustrative pending a Stage-2/3 balance pass (the #21 §9.2 / #30 precedent
 — the spec's contract is the shapes, not the tuned numbers).
 
@@ -88,16 +108,25 @@ precedent).
   Stage-1+ deferred and #30 KD-5 rejects regeneration-on-load, so the career-state roster must be
   *serialized* — and #28 is its single over-time writer.
 - **KD-5 (retirement → roster-removal — season-boundary, never mid-fixture).** Retirement is
-  evaluated on the world tick (hard at `RETIREMENT_AGE`) and only **flagged**; roster removal + regen
+  evaluated on the world tick against the per-player `RetirementAgeDays(record)` (§3.4, ERR-028-021 —
+  the league baseline plus the goalkeeper allowance plus the game-reading offset, compared in days, not
+  a single hard `RETIREMENT_AGE` for the whole league) and only **flagged**; roster removal + regen
   replacement land at the **season boundary** (#30's KD-6 roll). A flagged player stays selectable
-  until the season ends (§3.4).
+  until the season ends (§3.4). *(Revised — kd5-stale-hard-retirement, football-judgment proxy review
+  batch-1: this Key Decision still read "hard at `RETIREMENT_AGE`" after FR-PG-013 was revised at
+  ERR-028-020/-021 to remove exactly that wording, and a Key Decision is the first thing an implementer
+  reads. The season-boundary / flag-then-remove shape this KD exists to state is unchanged — only the
+  per-player-vs-hard-age half is corrected.)*
 - **KD-6 (the season-boundary step).** `RunSeasonBoundary` does **not** re-bank growth (banked daily,
   KD-1); it applies the deferred retirements + produces regens, restartable (§3.4).
 - **KD-7 (single-writer + observation-surface).** `ProgressionEngine` is the sole writer of lifecycle
   state; a read-only `LifecycleViewModel` is observer-neutral (the `MatchEngine.BallView` posture);
   #30/tests mutate only through the public step API.
-- **KD-8 (behaviour-neutral minimal identity).** `curveEnabled` off reproduces the literal §4.3 step
-  byte-for-byte; a two-run multi-season projection from one seed is byte-identical.
+- **KD-8 (behaviour-neutral minimal identity).** `curveEnabled` off **and
+  `AGE_BAND_RAMP_HALF_WIDTH_YEARS = 0`** reproduces the literal §4.3 step byte-for-byte; a two-run
+  multi-season projection from one seed is byte-identical. *(Revised at ERR-028-020 — the identity is
+  now the ramp dial's off position rather than the shipped behaviour; §5 exercises it rather than
+  asserting it. §1.3 records why.)*
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -105,4 +134,6 @@ precedent).
 | 0.1 | 2026-07-23 | — | Initial section from the converged supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-27 | — | **ERR-028-002** (at #53's approval): the out-of-scope row records that the facility level #42 consumes is **#53's**, so a reader does not attribute the facility model to #40 (whose scope excludes it). #28's own out-of-scope position is unchanged. |
+| 0.4 | 2026-08-22 | — | **ERR-028-020** (football-judgment proxy review, batch 1 — spec + code, same commit). §1.3 named "per-attribute CA/PA growth-decline curves keyed to age" as the Stage-3 tier while §3 contained no age-continuous formula anywhere, so what shipped as "the flat step" was a hard discontinuity at an exact integer age rather than a coarse approximation of a curve — pattern (d) as well as (b). The age-continuity of the rate is now Stage 2 (§3.1.3's centred ramps; §3.4's per-player retirement day under ERR-028-021); Stage 3 keeps the `(PA − CA)` magnitude modulation and per-attribute weighting, which is what always distinguished it. **KD-8** revised in the same way: the byte-for-byte identity is the ramp dial's OFF position, exercised by §5 rather than asserted. No other key decision moved. |
+| 0.5 | 2026-08-23 | — | Football-judgment proxy review, batch-1 adversarial findings. **kd5-stale-hard-retirement:** KD-5 still read "Retirement is evaluated on the world tick (hard at `RETIREMENT_AGE`) and only flagged" — the v0.4 row's "no other key decision moved" was true of that commit but left KD-5 stale against the SAME commit's own §3.4/FR-PG-013 revision (ERR-028-020/-021), which removed exactly that wording. Revised to name the per-player `RetirementAgeDays(record)`; the season-boundary / flag-then-remove shape is unchanged. **s12-29-does-not-exist-stale:** §1.2's out-of-scope paragraph still described #29 as a spec #28 must reference "that does not exist yet" — `src/training-system/` has existed since #29 T0 (August 5, 2026) and the seam has been live since #30 T1/T2a (August 8); restated as history, with the no-phantom-interface rule it exists to state left intact. |
 #endregion

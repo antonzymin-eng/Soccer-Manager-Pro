@@ -1,6 +1,6 @@
 // File:     src/player-progression/GrowthProjection.cs
 // Created:  2026-07-24
-// Modified: 2026-08-11 (AR pass 6, M2(a) — the future-dated-anchor fail-loud guard — v1.2)
+// Modified: 2026-08-22 (ERR-028-020 — football-judgment proxy review batch 1 — v1.3)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 (the daily growth projection); Code Standards #20
 // Purpose:  The pure, draw-free per-player daily step (§3.1) — the SOLE attribute-mutation path
@@ -72,8 +72,11 @@ namespace TacticalDirector.PlayerProgression
             rec.Age = age; // keep the record's Age current (derived cache, FR-PG-005)
 
             // 2. Per-day point accrual — the ONLY accumulator (FR-PG-002/003).
-            AbilityModel.AgeBand band = AbilityModel.ClassifyAgeBand(age);
-            life.GrowthCursor += DailyPoints(band, rec.Position, in training, curveEnabled);
+            //    ERR-028-020: the rate is a function of ageDAYS, not of a three-way band on ageYEARS.
+            //    The retired form asked ClassifyAgeBand(age) and returned one of three constants, so
+            //    the day a player turned GROWTH_AGE his development stopped outright — a football
+            //    judgment that is continuous everywhere collapsed onto an exact integer birthday.
+            life.GrowthCursor += DailyPoints(ageDays, rec.Position, in training, curveEnabled);
 
             // 3. Spend/drain whole attribute-points at the POINT_COST threshold (deterministic order).
             while (life.GrowthCursor >= PlayerProgressionConstants.POINT_COST)
@@ -123,25 +126,20 @@ namespace TacticalDirector.PlayerProgression
             life.CurrentAbility = AbilityModel.ComputeCA(in rec.Attributes, rec.Position);
         }
 
-        // Signed integer daily accrual. curveEnabled OFF ⇒ the literal §4.3 band step (KD-8): Growth
-        // +GROWTH_DAILY_POINTS, Decline +DECLINE_DAILY_POINTS, Stable 0; TrainingInput.Neutral adds 0.
+        // Signed integer daily accrual, age-continuous since ERR-028-020: AbilityModel.DailyBandPoints
+        // differences an exact integer cumulative, so the per-day step stays in {0, ±1} (the cursor
+        // scale is unchanged and nothing about the save block moves) while its DENSITY follows a rate
+        // that ramps smoothly across each band edge. At AgeBandRampHalfWidthYears = 0 it returns the
+        // literal §4.3 band step for every day, which is the KD-8 / FR-PG-007 identity.
         // curveEnabled ON (T3) would modulate by (PA−CA) + training — not built in T0, so both params
-        // are accepted but unread here (the flat band step is the KD-8 behaviour-neutral identity).
+        // are accepted but unread here.
         private static long DailyPoints(
-            AbilityModel.AgeBand band,
+            long ageDays,
             PlayerPosition pos,
             in TrainingInput training,
             bool curveEnabled)
         {
-            switch (band)
-            {
-                case AbilityModel.AgeBand.Growth:
-                    return PlayerProgressionConstants.GROWTH_DAILY_POINTS;
-                case AbilityModel.AgeBand.Decline:
-                    return PlayerProgressionConstants.DECLINE_DAILY_POINTS;
-                default:
-                    return 0;
-            }
+            return AbilityModel.DailyBandPoints(ageDays);
         }
     }
 }
@@ -165,4 +163,8 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | ageDays < 0 instead of manufacturing an age; the composition   |
 // |         |            |        | boundary (M2(b), PlayerCareerStates.RequireBirthWorldDayWithin |
 // |         |            |        | Clock) refuses the pairing before a day step can reach this.   |
+// | 1.3     | 2026-08-22 | —      | ERR-028-020. Step 2's accrual takes ageDAYS through
+// |         |            |        | AbilityModel.DailyBandPoints instead of a three-way band on ageYEARS —
+// |         |            |        | the hard step at an exact integer age the football-judgment proxy review
+// |         |            |        | filed. No signature change on AdvanceDayForPlayer, no format change.
 #endregion

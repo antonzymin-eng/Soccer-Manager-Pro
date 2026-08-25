@@ -12,7 +12,120 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 22, 2026, latest same day (**`ERR-016-011`: the replay lifecycle now
+> **Last Updated:** August 24, 2026 — **ADVERSARIAL REVIEW ROUND 2 — RAN PARTIALLY, and the partiality is the first thing round 3 must fix: TWO OF FOUR REVIEW LENSES NEVER RAN.** Four fresh Opus reviewers were dispatched over the ENTIRE current state (not a diff) — arithmetic, mutation, spec-governance, architecture. The governance and architecture lenses returned; **the arithmetic and mutation lenses both died on an API session limit before producing a finding.** That matters specifically: those two are the lenses that found round 1's real code defects (the `AgeRiskFor` sign inversion, the overflow-defeated ramp guard), so round 2's silence on arithmetic is ABSENCE OF EVIDENCE, not evidence of absence. **Round 2 therefore does NOT close the loop** — the termination test is a fresh FULL pass returning Low or nothing, and only half a pass ran. **Findings: 3 High, 15 Medium, 7 Low** (one dedupe — both surviving lenses independently flagged `ClassifyAgeBand`). **all three Highs fixed, and 16 of the 22 Medium/Low fixed across three fixer groups; 4 deliberately DEFERRED (D1–D4) and **`M10` NOT FIXED** — verified by grep at commit time, the config-unbound premise still stands at 2 sites in `spec-error-log.md`. *(⚠️ COUNT CORRECTED at commit time: this entry as first drafted said "13 of the M/L set fixed", which was FALSE — Group A's ten findings had not been dispatched at all when it was written, and the true figure at that moment was 6. Caught by reading the change set against the claim rather than trusting the summary. 16 + 4 + 1 = 21 against a 22 total, so **the M/L tally is still not fully reconciled and round 3 must re-derive it from the ledger** — no reconciled number is asserted here.)*** **The two governance Highs are the same defect class round 1 was fixing, recurring inside the fix:** `spec-error-log.md` — the authoritative record — still published, in two entries, the exact claims that later entries in the same file were filed to retract. `ERR-041-020` still asserted the age term sits "before the mitigation … so robustness discriminates it" while `ERR-041-021` forty lines below records that as arithmetically false (the mitigation is SUBTRACTED; addition commutes; a 956,480-input probe returns byte-identical output). `ERR-028-021` still published "the offsets sum to exactly 0 … **Locked.**" — the precise claim `ERR-028-022` retracted after the league was measured retiring ~2 months early. Round 1's sweep reached the specs and the code and stopped one paragraph short inside the log. **Both Error Index rows carried it too and were fixed with the bodies** — a body without its Index row is half a fix, which this project has shipped before. **The residual-carrier sweep that followed is this correction's SIXTH widening**, and one of the surviving carriers was the review document's own "FIXED" note for the very finding; every live carrier is now annotated in place (`MedicalStepTests.cs`, `football-judgment-proxy-review.md`, `CLAUDE.md` ×2, `open-issues.md`). The two `CHANGELOG.md` carriers are **deliberately NOT edited** — that file's own rule is that the chain is the record and historical entries are not edited; they are corrected by this entry instead. **The architecture High was a real structural defect:** the construction-day credit rule had TWO implementations (`RegenGenerator.BandStepFor` and inlined in `ProgressionEngine.SeedLifecycle`), with `BandStepFor`'s own doc declaring itself the owner of a rule it did not own — and **#28 had already paid for this exact duplication twice** (`ERR-028-018` fixed the seed site and missed the regen site; `ERR-028-020` then had to visit both). Collapsed to one owner, `AbilityModel.ConstructionDayCredit`; `BandStepFor` deleted, taking round 1's private→internal widening with it. **The two implementations were verified identical first** (probe: 0 mismatches over ages 0..200 and the `int` edges), so no larger finding. **Mutation evidence, honestly stated:** a PURE REVERT of the collapse passes 149/0 — it is behaviour-identical by construction and no behaviour test can detect it being undone; what the three new locks catch is the DIVERGENCE class, and re-introducing the historical one-site-credits defect now fails 2 tests where nothing previously compared the sites at all. **A claim of this session's own is CORRECTED here:** round 1's record described the new ramp oracle in `SeasonLoopProgressionTests` as "an INDEPENDENT reimplementation". It is not — it is a line-for-line transcription of `GrowthPhaseDays`/`DeclinePhaseDays` (same branch order, same shifted variables). It still detects the mutation it was built for, so the fix stands, but the word was false and is withdrawn. **Also fixed:** the `AgeBand` enum docs still defined the bands by the retired hard predicates in the same file round 1 was correcting; `AssemblyInfo.cs`'s FR-CS-015 rationale was false as applied (the same copied-rationale class as round 1's own `config-unbound-premise-false-28`); `MedicalStep`'s test affordance now follows the house `TestOnly_` convention and `AgeRiskFor(int)` is `internal` to match its twin term; `SPEC_INDEX`'s ordinal-92 promotion claim is re-anchored — and a full re-grep of all 251 `SubsystemOrdinals` sites in `docs/` established SPEC_INDEX was **the only surviving misstatement in the tree**, closing a sweep widened five times before. **DEFERRED, recorded, NOT silently dropped — all four widen the blast radius past the surface under review, and this project does not widen a landing unilaterally: (D1)** hoist the SplitMix64 finalizer, duplicated verbatim in **11 production files**, into `deterministic-sim` — the right answer and byte-identical by construction, but it touches `match-engine` and proving no digest or draw-order move needs a whole-tree gate including `MatchEngine.Tests` that this round cannot run; **(D2)** give the nine per-call catalogue-invariant guards a boot-time owner via `GameplayConfigHolder.Bind` — a redesign affecting every `[GT]` catalogue; **(D3)** hoist the duplicated global-id predicate to `player-database` and back-prop #27, which lands in a third spec's territory (`ERR-027-004` already open there); **(D4)** move the ramp oracle to the assembly that owns the formula and pin oracle == implementation (the false "independent" claim is corrected now; the move is round 3's). **Recorded, not fixed:** no §5 test ids allocated for H3's three new cases (the case they replace had none either); the regen CALL SITE still cannot be driven at a ramp age through the public API, so a mutation of its argument would go uncaught; and `spec-error-log.md`'s `ERR-028-020` Files Affected row now has a second stale item on this rule. **Verification at final HEAD, run rather than asserted:** whole-tree build **0 errors / 0 warnings**; `PlayerProgression.Tests` **149/0/0** (was 147); `InjuriesMedical.Tests` **76/0/0**; `SeasonSave.Tests` **402 passed / 3 known skips**; `TrainingSystem.Tests` **52/0/0**; `recurring-defect-lint.py` **0 ERROR** on a quiet tree. **NOT a whole-tree gate run** — `MatchEngine.Tests` was not executed and no verdict is claimed; nothing in this round runs on a match tick. **The football-judgment queue is untouched: still 29 open, 21 workable, batch 2 (keeper) next.**
+>
+> **Last Updated (prior):** August 23, 2026, latest same day — **ADVERSARIAL REVIEW ROUND 1 over the batch-1 landing — CLOSED August 23, 2026 at owner instruction: 7 High, 9 Medium, 15 Low, all 31 fixed across four commits (`9e41537`, `78b57e2`, `eb23c1c`, `9fca357`). CLOSED IS NOT CONVERGED, and the distinction is the point:** the `/adversarial-review` loop terminates only when a FRESH FULL re-review of the entire current state returns Low findings or none. No such pass ran. Round 1's fixes are verified individually — every behavioural one by actual mutation, reverted and re-run — but nothing has re-reviewed the tree those fixes produced. Recorded here so no later session reads "round 1 closed" as "this surface converged". **Why the round mattered: all seven Highs were claims that had ALREADY been verified once at the batch-1 landing.** Three worth carrying forward. **(1) A real arithmetic defect in the landing's headline fix** — `GameReadingOffsetDays` averaged three attributes with a floored `int` mean, so the offsets did NOT sum to zero over the population as the P5-exactness claim stated; the league retired ~2 months early. Fixed by carrying the undivided sum into the numerator, which sums to exactly 0 AND reproduces every diagonal value bit-for-bit, so nothing needed rebaselining. **(2) Both new production wirings were unlocked** — reverting them left 539 and 405 tests green respectively. **(3) The gate line itself was wrong** (see the entry below). **Two further real arithmetic defects came out of the Medium/Low tier, both the same shape — an `int` computation widened one step too late:** `AgeRiskFor` widened its product but not its subtraction, so at an extreme pivot the age term **changed sign** (measured +1800 with the fix, −1800 without); and `RampHalfWidthDays`'s disjointness guard was **defeated by overflow inside its own predicate**, returning `AccruedBandPoints` = 2,451,094 where it should have thrown. **The round's dominant pattern, and the one to remember: every one of the five new fail-loud config guards was deletable with the whole suite green, and two could never fire at all** — they read catalogue statics directly under a gate that binds no config. That is AR pass 14's own recorded lesson ("a guard on a branch nothing can execute ships green precisely because nothing can fire it") recurring inside the landing that cites its posture. All five now have isolating cases driven through parameterised `internal` overloads; deleting all four `AbilityModel` guards at once now fails exactly six cases (141/6) where it previously left 134/0. **One claim was WITHDRAWN rather than locked, deliberately:** `AgeRiskFor`'s position relative to the mitigation is an arithmetic identity — a 956,480-input checksum probe against the built assemblies returns byte-identical output for the moved term — so no test can distinguish it. The claim was retracted and the position restated as what is actually load-bearing (before the `OccurrenceRiskMillMult` scaling, before the clamp), with those two locked. Inventing a lock that passes vacuously is precisely what the `ERR-008-021`/`-022` chain did three times. **Three ERR ids filed and resolved:** `ERR-028-022` (the floored-mean anti-symmetry break), `ERR-028-023`, `ERR-041-021`. **Recorded, NOT fixed:** a second date inversion in `football-judgment-proxy-review.md`'s Updated chain that no finding diagnosed (an August 6 entry below August 5 ones), left rather than restructured on one reader's interpretation of ambiguous same-day timestamps; and `injuries-medical/section-9-approval-checklist.md`'s R-02 / §9.3.1 rows still saying "27 FRs", outside the three sites its finding named — the grep-boundary class this project has hit five times. **Process, recorded because it nearly cost work:** three agents shared one working tree and one ran `git stash` to measure a lint baseline; `outline.md` came back PARTIALLY restored and two edits were lost and redone. The dropped stash is pinned at tag `rescue/dropped-stash-4255331`. A concurrent-agent pass must not stash a shared tree. **Verification at final HEAD, run rather than asserted:** whole-tree build **0 errors / 0 warnings**; `PlayerProgression.Tests` **147/0/0**; `InjuriesMedical.Tests` **76/0/0**; `SeasonSave.Tests` **402 passed / 3 known skips** — the locked season-injury bands did not move; `TrainingSystem.Tests` **52/0/0**; `recurring-defect-lint.py` **0 ERROR**. **NOT a whole-tree gate run** — `MatchEngine.Tests` was not executed on this tree and no verdict is claimed for it; nothing in this round runs on a match tick. **The football-judgment queue is untouched by this round: still 29 open, 21 workable, batch 2 (keeper) next per §6.3.1.**
+>
+> **Last Updated (prior):** August 23, 2026 (**Documentation-only: the batch-1 landing's OVERSTATED GATE CLAIM
+> corrected at all seven sites, and the three held ERR bodies landed in `spec-error-log.md` (v2.22 →
+> v2.23). No `.cs` file touched, no `[GT]`, no format version, no draw.** **(1) The gate claim.** As
+> published, the batch-1 entry read "31 of 32 suites fully green … quarantine empty", and both halves
+> were false. The tree has **33** test suites — `ls -d src/*/[Tt]ests/*.asmdef` returns 33 and the gate
+> log carries 33 suite result lines; the original count missed every suite whose folder is capitalised
+> `Tests/`, which is 17 of them — so the figure is **32 of 33**. And "quarantine empty" implied a ledger
+> report the run never printed: `run-gate.sh` runs under `set -euo pipefail`, so it exited non-zero on
+> the inherited owner-held-red `sim_match_engine_close_chance` and never reached its quarantine-report
+> section or a `Gate PASSED` line — `grep -c 'Quarantine\|Gate PASSED'` on that log returns **0**. The
+> ledger IS empty, but **by inspection of `tools/dotnet-ci/known-failures.txt`** (zero non-comment
+> lines), not because the gate said so. The restated form says the test sweep ran in full at final HEAD,
+> names the inspection as the source of the empty ledger, and records the formal result as **FAIL on the
+> held-red band — no new failure, no band rebaselined** — rather than rounding it up to PASS. Corrected
+> at `CLAUDE.md`, `open-issues.md`, `spec-error-log.md`, `file-manifest.md`,
+> `football-judgment-proxy-review.md`, this file and `CHANGELOG-src.md`, each with the superseded wording
+> quoted in place rather than deleted. **The August 12 W2 entry further down this chain also says "31 of
+> 32" and is deliberately left alone** — it is a different landing's record, and re-deriving its suite
+> count is not this pass's work. **(2) The three held ERR bodies.** `ERR-028-022`, `ERR-028-023` and
+> `ERR-041-021` were already cited in shipped spec text and code comments while `spec-error-log.md` held
+> nothing behind them — the missing-body class that log recorded at v2.17 for `ERR-008-023`. All three
+> now have both an Error Index row and a `##` body: the floored-mean retirement offset that falsified
+> `ERR-028-021`'s P5 claim (and the two behaviour changes that were locked by nothing at all); the
+> seed-credit MUST that still mandated the band step `ERR-028-020` retired; and `ERR-041-020`'s
+> arithmetically vacuous "before the mitigation, so robustness discriminates it" position claim, whose
+> lock passed against all three mutants it named. Ids re-verified free before writing. `ERR-041-020`'s
+> own "Magnitude, first-guess" epidemiology sentence is corrected in place with them — the shipped
+> monotone age term follows E-4 above the pivot and **inverts** its Strong-rated 16–20 arm below it, with
+> `ERR-041-013` narrowed to that residual. **No gate run in this pass and none claimed:** nothing
+> compilable changed, and `python3 tools/recurring-defect-lint.py --repo .` reports **0 ERROR**.)
+
+> **Last Updated (prior):** August 22, 2026, latest same day (**BATCH 1 of the football-judgment proxy review's
+> workable 24 LANDED IN FULL — three findings, three ERRs filed AND resolved in the same commit, spec +
+> code together, whole-tree gate run.** `ERR-028-020`, `ERR-028-021`, `ERR-041-020`; the review's counts
+> move for the first time since August 5 — **34 recorded, 5 fixed, 29 open, workable queue 24 → 21**.
+> **ERR-028-020 (#28 §3.1, new §3.1.3):** the daily growth rate was `DailyPoints(ClassifyAgeBand(ageYears), …)`
+> — three constants selected by a hard step at an exact integer age, so a player developed at the full
+> rate on the last day of his 23rd year and at exactly zero on the first day of his 24th, with the mirror
+> discontinuity at `DECLINE_AGE`; the "deep" `curveEnabled` tier called the identical classifier, and
+> §1.3's promised "curves keyed to age" existed nowhere in the spec. Now a centred linear ramp of
+> half-width `AGE_BAND_RAMP_HALF_WIDTH_YEARS` at each edge. **The implementation choice is the
+> load-bearing one:** the accrual is the first difference of an exact integer CUMULATIVE, not a per-day
+> rate — `GrowthCursor` is integer fixed-point at one-unit-per-full-growth-day, so a rate has nothing
+> between 0 and 1 to return, and rescaling to milli-points (the obvious alternative) would have forced
+> `PROGRESSION_SAVE_FORMAT_VERSION` 1 → 2 and a refusal of every existing save. The difference form
+> keeps the per-day step in `{0, ±1}` while its DENSITY follows the continuous curve, so **no format
+> moves at all**. **P5 came out exact rather than fitted:** a centred ramp has the same integral as the
+> step it replaces for EVERY half-width, so no growth-rate recalibration is owed and ERR-028-018's
+> no-residue traversal invariant survives by construction. Half-width 0 reproduces the §4.3 step
+> byte-for-byte, exercised per-day across a 45-year sweep through a parameterised overload rather than
+> asserted. `ClassifyAgeBand` demoted to a READ of the curve (two of its answers invert, which is the
+> fix). **ERR-028-021 (#28 §3.4):** retirement was `rec.Age >= RETIREMENT_AGE` — one integer age for the
+> whole league, so goalkeepers retired on a forward's clock and one calendar day was the difference
+> between a career continuing and ending, for everyone at once. Now a per-player `RetirementAgeDays`
+> compared in days: baseline + goalkeeper allowance + a full-range anti-symmetric offset over the
+> Anticipation/Positioning/Composure mean. **The P3 decision is the part worth carrying forward** —
+> robustness was the obvious input and is deliberately NOT used, because #29 and #41 already price
+> Strength/Stamina/Balance twice over (`ERR-041-003`), so a third read would be that recorded defect a
+> third time; recorded in §3.4 as a ledger entry. Zero dials reproduce the retired comparison
+> identically, and the offsets sum to exactly 0 over a uniform attribute population, so the league's
+> retirement RATE is unchanged and only who-retires-when moves. Still draw-free. **ERR-041-020 (#41
+> §3.4):** the risk assembly presented as multi-factor and read player age nowhere — not in the formula,
+> not in the signature, not in §2, so nothing in the spec would have caught it either. `AgeRiskFor` now
+> sits inside the sum BEFORE the mitigation (normative, like `BASELINE_DAILY_RISK`, so robustness
+> discriminates it), linear with no threshold anywhere. **P5 measured rather than argued:** the pivot is
+> #27's bootstrap mean age (26 over `[17, 35]`), so `SeasonInjuryRealismTests`' league (717–816/season),
+> starter (2.08), reserve (1.12) and squad-unavailability (9.4%) bands all held unmoved, and all 26
+> pre-existing `AssembleRiskScore` expectations stay exact by passing the pivot age rather than being
+> rebaselined. First-guess magnitude: a 34-year-old carries ≈1.37× a 20-year-old's daily risk. New
+> **FR-MD-025a** carries the requirement. **Two of the three findings were mandated by their own spec's
+> §2 requirements** — FR-PG-007/KD-8 made the band step the required curve-off behaviour, FR-PG-013
+> required retirement "hard at `RETIREMENT_AGE`" — so both FRs are revised in place with the superseded
+> requirement annotated; that is pattern (d) reaching past §3 into the FR table, and batches 5 and 6
+> should expect it. **Across all three: no RNG draw, no stream registration, no domain tag, no
+> `SNAPSHOT_SCHEMA_VERSION`, no `*_FORMAT_VERSION`, no draw-order change.** Suites at landing:
+> `PlayerProgression.Tests` 127 → **134**, `InjuriesMedical.Tests` 70 → **74**, `SeasonSave.Tests`
+> **402 passed / 3 known skips**, `TrainingSystem.Tests` 52/52. Four pre-existing locks were rebaselined
+> onto the fixes and each rebaseline is annotated in the test itself with what the old assertion was
+> asserting — three of them were asserting the cliff.
+
+> **Gate: the test sweep ran in full at final HEAD; the formal result is the inherited FAIL, not a
+> PASS.** Build 0 errors; **32 of 33 suites fully green** (`PlayerProgression.Tests` 134/0,
+> `InjuriesMedical.Tests` 74/0,
+> `SeasonSave.Tests` 402/0 with its 3 known skips, `TrainingSystem.Tests` 52/0, every other suite 0
+> failed); `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped**. The quarantine ledger is **empty
+> by inspection of `tools/dotnet-ci/known-failures.txt`** — not because the gate reported it:
+> `run-gate.sh` runs under `set -euo pipefail`, so it exited non-zero on the blocking phase and never
+> reached its quarantine-report section or a `Gate PASSED` line, and **no formal verdict was ever
+> printed**. Recorded as FAIL on the inherited owner-held-red band rather than rounded up to PASS.
+> *(⚠️ CORRECTED August 23, 2026 — as first published this entry read "31 of 32 suites fully green …
+> quarantine empty". The suite count was one low: `ls -d src/*/[Tt]ests/*.asmdef` returns **33** and the
+> gate log carries 33 suite result lines, the original count having missed the suites whose folder is
+> capitalised `Tests/`. And "quarantine empty" implied a ledger report the run never printed —
+> `grep -c 'Quarantine\|Gate PASSED'` returns **0** on that log. The ledger IS empty, but by inspection
+> of the file, not by the gate's own report. Annotated in place, never silently replaced.)* The single
+> failure is `sim_match_engine_close_chance` — **owner-held RED since August 11 and failing at
+> baseline** (`close-chance-creation-design.md` §10.9 item 6; §6.3.1's constraint 2 names it as the
+> detector any batch now lands against). Its counts and both failing predicates come back **identical
+> to the recorded baseline**: `MatchEngine.Tests` 461/1/11 exactly as recorded at the W2 landing, mean
+> cosine **−0.165** against the −0.16 bound and goalward share **0.407** against 0.42 — the exact
+> figures the C1 / `ERR-012-011` record carries. Nothing in this landing runs on a match tick (#28 and
+> #41 are world-day subsystems; the one #30 call site is slot 4 of the day loop), so identical figures
+> are the predicted result and the evidence for it, not a coincidence to be explained away. **No new
+> failure, and no band was rebaselined.** An earlier run of this gate was killed and restarted
+> deliberately rather than reported: its test phase had begun before the `RegenGenerator` fix and the
+> `MAX_DERIVABLE_AGE_YEARS` correction below, so its verdict would not have covered the tree it was
+> reported against — the invalidated-gate class this project recorded at AR pass 9.)
+> 
+> Prior entry below.
+> **Last Updated (prior):** August 22, 2026, latest same day (**`ERR-016-011`: the replay lifecycle now
 > re-derives a loaded record's OWN digest — closing the one item `ERR-016-010` had recorded as not
 > fixed, and leaving nothing open on the replay-identity surface.**) **1. The digest existed and was
 > correct; nothing asked it anything.** §3.2.3 defines a snapshot digest that covers the payload,

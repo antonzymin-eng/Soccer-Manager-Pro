@@ -1,11 +1,13 @@
 # Player Progression & Lifecycle #28 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 11, 2026 (v0.7 — ERR-028-019: docs close-out for AR passes 5-8 over the T1/T2a landing, four of which (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`) landed production refusals with no `docs/specs/` edit at all, the ERR-028-017 class recurring — F8's exception-type claim for `ProgressionSaveCodec.Decode` corrected in place, new **F10** for the FR-PG-011 id-cursor rule (four boundaries, not previously stated anywhere) and new **F11** for the M3 club-size rule (three boundaries, likewise unstated); §2.2's `PlayerLifecycle` field comments extended for `GrowthCursor`'s now-enforced band, `BirthWorldDay`'s representability ceiling and ahead-of-clock guard, `CurrentAbility`'s now-enforced recompute-equals-stored gate, and `RetirementDay`'s now-enforced pairing invariant)
+**Last Updated:** August 23, 2026 (v0.9 — football-judgment proxy review, batch-1 adversarial findings: F1's row corrected (f1-cursor-not-consumed-stale — it still said "the cursor is not consumed past the ceiling", the retired clamp-to-`POINT_COST − 1` posture; §3.1 and the code have discarded the fraction to zero since AR pass 6) and the `RetirementFlag` field comment corrected (still cited "RETIREMENT_AGE" for the per-player day KD-5/§3.4 now compute). Prior entry below.)
+**Last Updated (prior):** August 22, 2026 (v0.8 — **ERR-028-020 / ERR-028-021: two FRs in this section were themselves the defect and are revised in place.** FR-PG-007 made the three-way §4.3 band step the normative curve-off behaviour, i.e. it mandated a hard discontinuity at an exact integer age; it now names the ramp dial's OFF position as the identity. FR-PG-013 mandated "hard at `RETIREMENT_AGE`", one league-wide integer age with no position or attribute input; it now names §3.4's per-player `RetirementAgeDays`, still draw-free. Both revisions annotate what the FR used to require rather than silently restating it. See §3.1.3 and §3.4.)
+**Last Updated (prior):** August 11, 2026 (v0.7 — ERR-028-019: docs close-out for AR passes 5-8 over the T1/T2a landing, four of which (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`) landed production refusals with no `docs/specs/` edit at all, the ERR-028-017 class recurring — F8's exception-type claim for `ProgressionSaveCodec.Decode` corrected in place, new **F10** for the FR-PG-011 id-cursor rule (four boundaries, not previously stated anywhere) and new **F11** for the M3 club-size rule (three boundaries, likewise unstated); §2.2's `PlayerLifecycle` field comments extended for `GrowthCursor`'s now-enforced band, `BirthWorldDay`'s representability ceiling and ahead-of-clock guard, `CurrentAbility`'s now-enforced recompute-equals-stored gate, and `RetirementDay`'s now-enforced pairing invariant)
 **Last Updated (prior):** August 10, 2026 (v0.6 — ERR-028-017: AR pass 5 spec corrections — §2.3 F3's exception type corrected (`InvalidOperationException`, matching #29/#41's own ERR-029-004/ERR-041-008 corrections), F5 gains the same type, F8 extended from one refusing site to five, new F9 for the FR-PG-021 batch's four validation gates, §2.2 gains `ClubTrainingInputs`/`TrainingInputBatch`)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006: `BirthWorldDay` becomes a signed anchor; ERR-028-009: F8 sentinel-refusal row)
-**Version:** 0.7
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -31,8 +33,14 @@
   `CurrentAbility`), so a consumer reading `record.Age` gets **current** age, never the new-game seed.
 - **FR-PG-006** — A mid-year save→restore MUST reproduce the identical continuation (byte-exact); no
   step MUST be double-counted across a save boundary.
-- **FR-PG-007** — With `curveEnabled` off, `GrowthProjection` MUST reproduce the literal §4.3 step
-  exactly (the behaviour-neutral identity, KD-8).
+- **FR-PG-007** — With `curveEnabled` off **and `AGE_BAND_RAMP_HALF_WIDTH_YEARS = 0`**,
+  `GrowthProjection` MUST reproduce the literal §4.3 step exactly (the behaviour-neutral identity,
+  KD-8). *(Revised at **ERR-028-020**. As originally written this FR **mandated the defect**: it made
+  the three-way band step the required curve-off behaviour, so a hard discontinuity at an exact integer
+  age was normative rather than incidental. The identity survives as the ramp dial's OFF position —
+  reproducing the retired step byte-for-byte, not approximating it — and §3.1.3 owns the shipped
+  non-zero half-width. The dial's off position is verified by execution, not asserted: §5 exercises it
+  through a parameterised overload, because the `[GT]` is read once at static initialisation.)*
 
 **The #29 training seam (KD-2)**
 - **FR-PG-008** — `GrowthProjection` MUST be the **sole** attribute-mutation path; the daily step
@@ -53,9 +61,16 @@
   mutate #27's `Squad` directly — it emits a `RegenResult` the roster owner (#30/#27) applies.
 
 **Retirement (KD-5)**
-- **FR-PG-013** — Retirement MUST be evaluated on the world tick, **hard at `RETIREMENT_AGE`** (the
-  §4.3 literal); a retiring player MUST be **flagged** (`RetirementFlag` + `RetirementDay`), not
-  removed.
+- **FR-PG-013** — Retirement MUST be evaluated on the world tick against the **per-player**
+  `RetirementAgeDays(record)` of §3.4 — the `RETIREMENT_AGE` baseline plus the goalkeeper allowance
+  plus the game-reading offset, compared in **days** — with **no draw**; a retiring player MUST be
+  **flagged** (`RetirementFlag` + `RetirementDay`), not removed. *(Revised at **ERR-028-021**. As
+  originally written this FR **mandated the defect**: "hard at `RETIREMENT_AGE` (the §4.3 literal)"
+  made a single league-wide integer age normative, so a goalkeeper retired on a forward's clock and a
+  one-day step in the calendar was the whole difference between a career continuing and ending.
+  "Deterministic, no draw" is retained and is not what changed — per-player variation now comes from
+  per-player attributes, not from randomness. At a zero goalkeeper bonus and a zero reading span the
+  new comparison is identically the old one.)*
 - **FR-PG-014** — A flagged-retiring player MUST remain selectable until the season boundary (an
   in-progress season's fixtures/selection MUST NOT be disrupted).
 - **FR-PG-015** — Roster removal + regen replacement MUST happen **only at the season boundary** via
@@ -136,7 +151,9 @@ public struct PlayerLifecycle
                                    //   AR pass 5) — and separately gated at its UPPER end (ahead of the
                                    //   world clock) at the #30-owned composition/file boundaries, never
                                    //   inside this codec, which has no clock to check against (§3.5).
-    public bool RetirementFlag;    // set on the world tick at RETIREMENT_AGE (KD-5)
+    public bool RetirementFlag;    // set on the world tick once ageDays >= RetirementAgeDays(record),
+                                   //   the per-player day (§3.4, ERR-028-021), not a single hard
+                                   //   RETIREMENT_AGE for the whole league (KD-5)
     public uint RetirementDay;     // the world-day the flag was set (0 if not flagged). Save-boundary
                                    //   gated (ERR-028-019, AR pass 8 L-4): the pairing is a function of
                                    //   the flag, not independent — unset MUST carry 0; set MUST carry a
@@ -215,7 +232,7 @@ the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) 
 
 | ID | Condition | Handling |
 |---|---|---|
-| **F1** | A growth spend would exceed the `PotentialAbility` ceiling | The spend is a no-op (clamped at the ceiling), deterministic; the cursor is not consumed past the ceiling. |
+| **F1** | A growth spend would exceed the `PotentialAbility` ceiling | The spend is a no-op (clamped at the ceiling), deterministic; the refused spend DISCARDS the pending fraction (`GrowthCursor = 0`), so no residue survives the band. *(Corrected — f1-cursor-not-consumed-stale, football-judgment proxy review batch-1: this row previously read "the cursor is not consumed past the ceiling", the pre-AR-pass-6 clamp-to-`POINT_COST − 1` posture; §3.1 and the code have discarded to zero since AR pass 6, and `PaBoundSpendRefusal_LeavesNoResidue` is the implementing lock. Pre-existing staleness, not introduced by this batch.)* |
 | **F2** | A regen is requested for a club with no vacancy (roster already full) | Refused / no-op — the bounded-roster invariant (FR-PG-019); a regen is produced only for an actual retirement vacancy. |
 | **F3** | `PROGRESSION_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`InvalidOperationException`), the `MatchSaveCodec` posture — corrected from `ArgumentException` (ERR-028-017), the same self-contradiction ERR-029-004 (#29 §2.3 F3) and ERR-041-008 (#41 §2.3 F3) filed against their sibling rows: the cited `MatchSaveCodec` posture IS `InvalidOperationException`, so the row's own two halves disagreed. Third instance of the class. |
 | **F4** | A `TrainingInput` carries an out-of-contract value | **Fail loud** at the consuming seam (the #27 `SquadFileLoader` bounds-gate precedent) — an invalid input from the future #29 producer is a bug, not silently clamped. |
@@ -236,4 +253,6 @@ the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) 
 | 0.5 | 2026-08-09 | — | ERR-028-014: the `LastAdvancedWorldDay` struct comment and the sentinel discussion below §2.2's listing are corrected — the sentinel is NOT a legal cursor state for #28 as it is for #29/#41 (their fresh states carry no clock-anchored quantity; #28's derives age from `BirthWorldDay`). `SeedFrom` anchors the cursor at the seed day and `FromBlocks` refuses a lifecycle carrying the sentinel; the constant survives only as F8's refused `worldDay` input. Spec + code, same commit. |
 | 0.6 | 2026-08-10 | — | ERR-028-017 (AR pass 5 spec-vs-code sweep, found against the T1/T2a landing, no code change): §2.3 **F3** corrected `ArgumentException` → `InvalidOperationException` (the row cited the `MatchSaveCodec` posture, which throws `InvalidOperationException` — the third instance of this exact self-contradiction, after ERR-029-004 and ERR-041-008 on the sibling #29/#41 rows); **F5** gains the same exception type, undocumented until now; **F8** extended from naming one refusing site (`AdvanceDay`) to all five the code carries (`AdvanceDay`, `SeedFrom`, `FromBlocks`, `ProgressionSaveCodec.Encode`, `ProgressionSaveCodec.Decode` — two exception types across them); new **F9** for the FR-PG-021 batch's four `ValidateBatch` refusals (club-count coverage, positional club agreement, per-club player-count exactness, per-player id agreement), none previously stated anywhere. §2.2 gains `ClubTrainingInputs`/`TrainingInputBatch` — the batch parameter's actual shape, previously declared in no document. |
 | 0.7 | 2026-08-11 | — | ERR-028-019 — docs close-out for AR passes 5-8 (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`), four consecutive production landings with no `docs/specs/` edit, the ERR-028-017 class recurring twice more. **F8** corrected in place: `ProgressionSaveCodec.Decode`'s exception type for the sentinel gate is `InvalidOperationException`, not the `ArgumentException` this row previously claimed for it (AR pass 8, M-1) — the prior claim was itself correct when written (AR pass 5) and became stale at AR pass 8; annotated rather than silently restated. New **F10**: the FR-PG-011 id-cursor rule, four boundaries (`FromBlocks`, `Encode`, `Decode`, `SeedFrom`), not previously stated in this spec at all — `SeedFrom`'s boundary (AR pass 8 L-3) closes a silent `int` overflow at `maxPlayerId == int.MaxValue`. New **F11**: the M3 club-size rule (`[1, CLUB_SQUAD_SIZE]`), three boundaries, likewise never stated. §2.2's `PlayerLifecycle` field comments extended for `GrowthCursor` (the now-enforced `|cursor| < POINT_COST` band, AR pass 6 High), `BirthWorldDay` (the `MAX_DERIVABLE_AGE_YEARS` representability ceiling at the codec, the ahead-of-clock guard at the #30-owned composition/file boundaries), `CurrentAbility` (the now-enforced recompute-equals-stored gate, AR pass 8 L-4) and `RetirementDay` (the now-enforced flag-pairing invariant, AR pass 8 L-4). See §3.1/§3.5 for the algorithm-level detail and Appendix A for the new `MAX_DERIVABLE_AGE_YEARS` constant row. Code unchanged by this pass; verified against `src/player-progression/*.cs` at commit `6987dbf`. |
+| 0.8 | 2026-08-22 | — | **ERR-028-020 / ERR-028-021** (football-judgment proxy review, batch 1 — spec + code, same commit). Two FRs in this section were the defect rather than a description of it. **FR-PG-007** required `GrowthProjection` to reproduce the literal §4.3 three-way band step whenever `curveEnabled` is off — making a hard step at an exact integer age the *mandated* behaviour of the shipped tier, not an incidental simplification; revised to condition that identity on `AGE_BAND_RAMP_HALF_WIDTH_YEARS = 0`, which reproduces the retired step byte-for-byte, with §3.1.3's continuous curve owning the shipped half-width. **FR-PG-013** required retirement "hard at `RETIREMENT_AGE` (the §4.3 literal)" — one integer age for the whole league, no position or attribute input; revised to §3.4's per-player `RetirementAgeDays(record)`, compared in days, still deterministic and still draw-free (the variation is attributes, not randomness). Both rows annotate the superseded requirement in place per this project's convention. No other FR moved; F1–F11 unchanged. |
+| 0.9 | 2026-08-23 | — | Football-judgment proxy review, batch-1 adversarial findings. **f1-cursor-not-consumed-stale:** F1's Handling column still read "the cursor is not consumed past the ceiling", the pre-AR-pass-6 clamp-to-`POINT_COST − 1` posture — §3.1 and the code have discarded the refused spend's fraction to zero (`GrowthCursor = 0`) since AR pass 6, and `PaBoundSpendRefusal_LeavesNoResidue` locks it; pre-existing staleness, not introduced at v0.8. **The `RetirementFlag` field comment (§2.2):** still read "set on the world tick at RETIREMENT_AGE (KD-5)" after v0.8 revised the underlying rule to the per-player `RetirementAgeDays`; corrected to name it. |
 #endregion

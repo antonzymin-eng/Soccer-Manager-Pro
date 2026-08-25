@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/InjuriesMedicalConstants.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 9 L5: the severity-split invariant is strict — v1.5)
+// Modified: 2026-08-24 (Round-2 M/L pass, M9 — v1.9)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A (constant catalogue) + §3.1–§3.4; Code Standards #20
 // Purpose:  Every numeric constant for #41 occurrence, severity bucketing and recovery. No magic
@@ -100,7 +100,7 @@ namespace TacticalDirector.InjuriesMedical
         /// </summary>
         public const int OCCURRENCE_DRAW_DENOM = 1_000_000;
 
-        #endregion
+#endregion
 
         #region Cross
 
@@ -169,9 +169,11 @@ namespace TacticalDirector.InjuriesMedical
         public static readonly int AppearanceLoadWeight = Config.GetInt("injuries-medical", "AppearanceLoadWeight", 5600);
 
         /// <summary>
-        /// [GT] The exposure-independent daily base risk added into §3.4's assembly BEFORE the
-        /// robustness mitigation (position is normative — before, so robustness discriminates it;
-        /// ERR-041-011), on the <see cref="OCCURRENCE_DRAW_DENOM"/> per-million scale. First-guess
+        /// [GT] The exposure-independent daily base risk added inside §3.4's sum, BEFORE the
+        /// <c>OccurrenceRiskMillMult</c> scaling and BEFORE the clamp (position is normative;
+        /// ERR-041-011 as corrected by ERR-041-021 — its original wording, "before the robustness
+        /// mitigation, so robustness discriminates it", is arithmetically inert: the mitigation is
+        /// SUBTRACTED and addition commutes), on the <see cref="OCCURRENCE_DRAW_DENOM"/> per-million scale. First-guess
         /// 4000 (0.4%/day gross, ~0.37% net of average mitigation) targets ~1 injury per season for a
         /// non-playing squad member — the training-ground floor that keeps the default Balanced focus
         /// from converging on an injury-proof player (the fifth AR pass's third measured absurdity).
@@ -197,6 +199,98 @@ namespace TacticalDirector.InjuriesMedical
 
         /// <summary>[GT] Risk contribution per <see cref="MatchLoad.HardContacts"/>. Zero at Stage 2 — the field is deep-tier only (KD-3), so a non-zero value is a config change rather than a formula rewrite. Config key [injuries-medical] HardContactWeight.</summary>
         public static readonly int HardContactWeight = Config.GetInt("injuries-medical", "HardContactWeight", 0);
+
+        /// <summary>
+        /// [GT] The age at which the §3.4 age term contributes exactly zero (ERR-041-020) — the P5
+        /// pivot, and the reason adding age to the assembly does not move the league aggregate.
+        /// <para>
+        /// 26 is the MEAN of the bootstrap roster's age distribution, which
+        /// <c>RosterGenerator</c> draws uniformly on
+        /// <c>[PlayerDatabaseConstants.AgeMin, AgeMax]</c> = <c>[17, 35]</c>. Because the term is
+        /// linear and anti-symmetric about this pivot, the age contributions over that population sum
+        /// to zero: the squad-wide injury rate is unchanged and only its DISTRIBUTION across the squad
+        /// moves, which is the whole content of the finding. Deliberately NOT mirrored from #27 as a
+        /// <c>[CROSS]</c> derivation — the pivot is a balance choice about where risk should be
+        /// neutral, and pinning it to the generator's bounds would silently re-pivot #41 the day #47's
+        /// authored database replaces them.
+        /// </para>
+        /// <para>
+        /// <b>Deliberately the one dial of the three (with <see cref="AgeRiskPerYearFromPivot"/> and
+        /// <see cref="AgeRiskSpan"/>) that carries NO runtime non-negativity guard</b>
+        /// (agerisk-int-subtraction-and-both-dials). Those two are guarded because a negative value
+        /// breaks a catalogue invariant — an inverted slope or a clamp whose min exceeds its max. No
+        /// value of this pivot does that: every pivot, however extreme or mistyped, still produces a
+        /// well-defined term once <see cref="MedicalStep.TestOnly_AgeRiskFor(int, int, int, int)"/>'s subtraction
+        /// is evaluated in <c>long</c> (fixed alongside this note — the un-widened form could overflow
+        /// and invert the term's sign at an extreme pivot). An unusually large pivot degenerates the
+        /// term to a constant (e.g. a 260-for-26 typo saturates every player at
+        /// <c>−AgeRiskSpan</c>), which is a balance-quality problem the season-scale instrument would
+        /// surface, not a config-integrity failure this catalogue can fail loud on.
+        /// </para>
+        /// Config key [injuries-medical] AgeRiskPivotYears.
+        /// </summary>
+        public static readonly int AgeRiskPivotYears = Config.GetInt("injuries-medical", "AgeRiskPivotYears", 26);
+
+        /// <summary>
+        /// [GT] Risk contribution per year of age away from <see cref="AgeRiskPivotYears"/>, on the
+        /// <see cref="OCCURRENCE_DRAW_DENOM"/> per-million scale (ERR-041-020). Positive above the
+        /// pivot, negative below, linear throughout — there is no age THRESHOLD anywhere in the term
+        /// (doctrine P1), which is what separates this from the age-band cliff its sibling #28 carried
+        /// (ERR-028-020).
+        /// <para>
+        /// First-guess 150: a 34-year-old assembles +1200 against a 20-year-old's −900 on a typical
+        /// ~6600 assembly, so the oldest squad member carries roughly a third more daily risk than the
+        /// youngest, at a size that cannot dominate the exposure terms it sits beside. Real
+        /// calibration waits for the complete-engine pass (P5 / KD-W1).
+        /// </para>
+        /// <para>
+        /// <b>Only the VETERAN half of this term follows the evidence</b> (ERR-041-021). The
+        /// research-alignment supplement's E-4 is rated <i>Strong</i> and is <b>U-shaped</b>:
+        /// musculoskeletal maturity continues to ~24–25 and the 16–20 band carries ELEVATED risk at
+        /// adult match intensity. A monotone term about pivot 26 makes exactly those players the
+        /// safest in the league — a 19-year-old receives −1050. That inversion is deliberate and
+        /// deliberately temporary: the U-shape is the supplement's R-1 design, it is awaiting owner
+        /// sign-off, and re-shaping shipped football behaviour is the owner's call. R-1's surviving
+        /// scope (back-prop <c>ERR-041-013</c>) is precisely the young-tail arm; its age-plumbing
+        /// half landed here as ERR-041-020. That refit RE-SHAPES this term rather than adding beside
+        /// it, exactly as its R-2 arm must against <see cref="BaselineDailyRisk"/>.
+        /// </para>
+        /// MUST be non-negative — a negative slope makes veterans the most durable players in the
+        /// league, which is not an intent this system can express; enforced fail-loud at the
+        /// computing site. Config key [injuries-medical] AgeRiskPerYearFromPivot.
+        /// </summary>
+        public static readonly int AgeRiskPerYearFromPivot = Config.GetInt("injuries-medical", "AgeRiskPerYearFromPivot", 150);
+
+        /// <summary>
+        /// [GT] Symmetric magnitude cap on the §3.4 age term, per-million (ERR-041-020) — it saturates
+        /// this many points above and below zero, i.e. <c>AgeRiskSpan / AgeRiskPerYearFromPivot</c>
+        /// years either side of the pivot: at 1800 and a slope of 150, ±12 years of the pivot, i.e.
+        /// below 14 and above 38. Bounds the term for an out-of-range derived age (a career run far past
+        /// any football span still assembles a finite risk).
+        /// <para>
+        /// <b>The plateau is REACHABLE inside the football-playing population today, and is
+        /// KNOWINGLY accepted rather than out of range</b> (agerisk-span-plateau-reachable — the prior
+        /// wording here claimed the cap "puts no cliff inside the football range", which is false on
+        /// both halves: 36–40 is ordinary football, not "far past any football span", and 38+ is
+        /// reachable in a live career because #28's retirement is FLAG-ONLY today —
+        /// <c>ProgressionEngine.SquadFor</c> returns every carried record regardless of
+        /// <c>RetirementFlag</c>, and roster removal (the actual departure) is the explicitly deferred
+        /// half of roadmap D1. With ages advancing daily and no removal, every player eventually crosses
+        /// 38 and stays on the roster, so a long-running career's whole veteran tail converges on the
+        /// identical +1800 plateau and the term stops discriminating among them. Accepted, not fixed,
+        /// until #28's retiree removal lands and bounds how old a rostered player can actually be — at
+        /// which point this note should be revisited to confirm the plateau again sits outside the
+        /// reachable range, or the span should be widened instead.</b>
+        /// </para>
+        /// <para>
+        /// <b>Zero is the exact pre-fix identity</b> — the term vanishes for every player and
+        /// <see cref="MedicalStep.AssembleRiskScore"/> reproduces its ERR-041-011 form byte-for-byte
+        /// (the FR-MD-027 dial posture, locked both ways).
+        /// </para>
+        /// MUST be non-negative; enforced fail-loud at the computing site. Config key
+        /// [injuries-medical] AgeRiskSpan.
+        /// </summary>
+        public static readonly int AgeRiskSpan = Config.GetInt("injuries-medical", "AgeRiskSpan", 1800);
 
         // [GT] Fixed recovery-days per severity tier (Appendix A), indexed by InjurySeverity ordinal.
         // Index 0 (None) is 0 by the F1 coherence invariant: a healthy player has no recovery
@@ -295,6 +389,40 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | to restore discrimination headroom, superseding v1.3's "(1%)"      |
 // |         |            |        | description. Row added at AR pass 2 (the edit shipped rowless).    |
 // | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 9 (L5, doc): Minor + Moderate must be         |
-// |         |            |        | STRICTLY below the denominator — at exactly 1000 the SS3.2 second  |
+// |         |            |        | STRICTLY below the denominator — at exactly 1000 the §3.2 second  |
 // |         |            |        | bucket saturates and Serious is unreachable with "<=" satisfied.   |
+// | 1.6     | 2026-08-22 | —      | ERR-041-020 (football-judgment proxy review, batch 1): + AgeRiskPivot-
+// |         |            |        | Years, AgeRiskPerYearFromPivot and AgeRiskSpan for §3.4's age term. The
+// |         |            |        | pivot is #27's bootstrap mean age, so the term sums to zero over that
+// |         |            |        | population (P5); AgeRiskSpan = 0 is the exact pre-fix identity. TWO of
+// |         |            |        | the three dials (AgeRiskPerYearFromPivot, AgeRiskSpan) are guarded
+// |         |            |        | non-negative fail-loud at the computing site; AgeRiskPivotYears is not
+// |         |            |        | (claim corrected at v1.8 — see AgeRiskPivotYears's own doc for why).
+// | 1.7     | 2026-08-22 | —      | ERR-041-021 (AR over the ERR-041-020 landing, H4 + H7). Doc only, two
+// |         |            |        | corrections, both annotating rather than editing published text.
+// |         |            |        | H4: BaselineDailyRisk's "before the mitigation, so robustness
+// |         |            |        | discriminates it" (rows 1.3 / ERR-041-011) is inert — the mitigation is
+// |         |            |        | SUBTRACTED and addition commutes; restated as before the
+// |         |            |        | OccurrenceRiskMillMult scaling and before the clamp, which is what the
+// |         |            |        | position actually buys. H7: AgeRiskPerYearFromPivot no longer claims
+// |         |            |        | the epidemiology supports the whole term. E-4 (Strong) is U-SHAPED —
+// |         |            |        | the 16-20 band is elevated — so the monotone form follows it above the
+// |         |            |        | pivot and INVERTS it below. Not re-shaped here: the U-shape is the
+// |         |            |        | research supplement's R-1 design, awaiting owner sign-off, and R-1's
+// |         |            |        | surviving scope under ERR-041-013 is exactly that young-tail arm.
+// | 1.8     | 2026-08-23 | —      | Group-B AR findings. AgeRiskPivotYears's doc now states explicitly why
+// |         |            |        | it is the one dial of the three carrying no runtime non-negativity
+// |         |            |        | guard (no config-integrity invariant it can break, once AgeRiskFor's
+// |         |            |        | subtraction is widened — see MedicalStep.cs v1.15); v1.6's "guarded
+// |         |            |        | non-negative" claim corrected from "both dials" to the actual two of
+// |         |            |        | three. AgeRiskSpan's doc corrected: the +/-12-year plateau IS reachable
+// |         |            |        | by a live career while #28's retirement stays FLAG-ONLY (roster removal
+// |         |            |        | deferred), so "no cliff inside the football range" was false on both
+// |         |            |        | halves (36-40 is ordinary football; unremoved retirees eventually all
+// |         |            |        | sit on the plateau) — recorded as knowingly accepted pending #28's
+// |         |            |        | retiree removal, not re-derived as still out of range
+// |         |            |        | (agerisk-span-plateau-reachable).
+// | 1.9     | 2026-08-24 | —      | Round-2 M/L pass, M9. Doc-only: the AgeRiskPivotYears cref to the
+// |         |            |        | parameterised overload updated to its renamed form,
+// |         |            |        | MedicalStep.TestOnly_AgeRiskFor(int, int, int, int).
 #endregion

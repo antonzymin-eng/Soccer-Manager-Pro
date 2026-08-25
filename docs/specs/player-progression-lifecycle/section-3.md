@@ -1,12 +1,29 @@
 # Player Progression & Lifecycle #28 — Section 3: Core Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 11, 2026 (v0.8 — ERR-028-019: docs close-out for AR passes 5-8, four consecutive production landings (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`) with no `docs/specs/` edit — §3.1's spend/drain pseudocode rewritten for the AR pass 6/8 changes (fail-loud on a future-dated `BirthWorldDay`, saturating age narrowing at `MAX_DERIVABLE_AGE_YEARS`, both refusal branches clamp to 0 rather than banking or leaving the cursor, `DrainOnePoint` returns `bool`); §3.1.1's age-formula guard corrected from "guarded at zero" to "fails loud below zero, ordinary at zero"; §3.3 states the AR pass 7 regen construction-day credit; §3.5's fail-loud enumeration rewritten from four value gates to eight, with the Encode/FromBlocks-vs-Decode exception-type split stated per gate, and gains the FR-PG-011 id-cursor and M3 club-size rules (previously undocumented); a new OPEN decision recorded on the `CurrentAbility`/`ComputeCA` save-acceptance predicate, adjacent to the existing `PA_MIN` one)
+**Last Updated:** August 24, 2026 (v0.13 — round-2 Medium/Low adversarial findings. M2
+(spec-32-flat-band-step-sweep-stopped-two-paragraphs-short): §3.2's "Recorded limitation, not fixed
+here" paragraph — two paragraphs below the v0.11 correction of the same stale phrasing — restated
+against §3.1.3's accrual curve instead of "the §4.3 flat band step"; the ~421-of-ABILITY_MAX figure is
+UNCHANGED (the P5 pivot means the whole-life integral is exact at every half-width, so the number needed
+no re-derivation). L1 (four-guards-enumerated-as-five-and-mis-named): §3.4's `RetirementAgeDays`
+pseudocode note corrected — it said "these two dial guards", describing the single combined
+non-negativity `if` as two guards, which made the paragraph claim "four" and then list five items; now
+"this ONE combined dial guard". M5 (retirement-day-derived-from-attributes-the-same-step-mutates): new
+§3.4 paragraph states the retirement-day feedback-loop invariant explicitly — the day is re-evaluated
+against the same record §3.1.2 just mutated, bounded today only by the one-directional band order and
+`RetirementFlag`'s stickiness — and points at the new **T-PG-RET-009** lock (`section-5.md` v0.9). No
+numeric value, no draw, no format version. Prior entry below.)
+**Last Updated (prior):** August 24, 2026 (v0.12 — round-2 adversarial finding `construction-day-credit-implemented-twice` (High), spec + code in the same commit: the construction-day credit is stated as having ONE implementation, `AbilityModel.ConstructionDayCredit`, which both `SeedFrom` (§3.1) and `GenerateRegen` (§3.3) MUST call rather than compute locally. §3.3's `BandStepFor(age)` reference is retired with the method — it was character-for-character the expression `SeedLifecycle` also carried, which is why ERR-028-018 credited one site and missed the other and ERR-028-020 had to revisit both. Behaviour unchanged (verified by probe over ages 0..200 and the `int` edges before the collapse); no new constant, no draw, no format version. Prior entry below.)
+**Last Updated (prior):** August 23, 2026 (v0.11 — football-judgment proxy review, batch-1 adversarial findings: §3.4's `RetirementAgeDays` pseudocode gains the missing `RETIREMENT_GAME_READING_SPAN_YEARS`/`RETIREMENT_GOALKEEPER_BONUS_YEARS` non-negativity guard, Appendix A/the code already had (guards-unexercised); §3.1.3's disjointness-guard rationale corrected — `PlayerProgressionConstants.cs` has zero `Config.GetX` calls, so "the catalogue lock runs config-unbound" was false here (config-unbound-premise-false-28); §3.2's `DailyPoints` description corrected from "the flat §4.3 band step" to `DailyBandPoints`'s ramp, present tense having gone stale at ERR-028-020 (spec-32-stale-flat-band-step); §3.5's `birthWorldDay` value-gate rationale corrected — `ClassifyAgeBand` no longer reads `int.MinValue` as Growth (classifyageband-growth-claim-stale). Prior entry below.)
+**Last Updated (prior):** August 22, 2026 (v0.10 — **ERR-028-022 + ERR-028-023, the reviewed High findings against the v0.9 landing, spec + code in the same commit.** ERR-028-022: §3.4's game-reading offset floored the Anticipation/Positioning/Composure SUM to a mean before the anti-symmetric map, and `floor(sum/3)` is not symmetric about the attribute midpoint — so v0.9's published "the offsets sum to exactly 0 over a uniform attribute population, the league's retirement RATE is unchanged" P5 claim was FALSE off the `Ant == Pos == Comp` diagonal, by −204,621 days over the uniform `[1,20]³` product (−25.58 d/player: the whole league retiring ~2 months early). The pseudocode now carries the sum undivided — exactly anti-symmetric, and bit-for-bit identical to v0.9 on the diagonal — and the superseded claim is annotated in place, together with the residual honest fact that #27's generator draws `[6,14]` (centre 10) against the model's neutral 10.5, leaving ≈ −38 days per generated player. ERR-028-023: §3.1's normative seed-credit MUST still mandated the three-way band step ERR-028-020 retired (`GROWTH_DAILY_POINTS` in Growth, `DECLINE_DAILY_POINTS` in Decline, `0` in Stable), which disagrees with the shipped `DailyBandPoints(Age₀ · DAYS_PER_YEAR)` at bootstrap ages 24, 25, 29 and 30 — 4 of the 19 ages `RosterGenerator` draws — so an implementer following the spec reopened ERR-028-018's one-day discrepancy for ~21% of the roster; amended to mirror §3.3's already-corrected regen wording. Neither fix adds a draw, a stream, a domain tag or a format version. Prior entry below.)
+**Last Updated (prior):** August 22, 2026 (v0.9 — **ERR-028-020 + ERR-028-021, the football-judgment proxy review's batch-1 #28 findings, spec + code in the same commit.** ERR-028-020: §3.1's daily accrual is no longer `DailyPoints(ClassifyAgeBand(ageYears), …)` — a hard step at an exact integer age on a continuous football judgment (pattern (b), and (d) against §1.3's promised age-keyed curves) — but the age-CONTINUOUS `DailyBandPoints(ageDays)` of the new **§3.1.3**, a centred linear ramp of half-width `AGE_BAND_RAMP_HALF_WIDTH_YEARS` at each edge, expressed as the difference of an exact integer cumulative so the cursor scale and the save format are untouched; the P5 pivot is exact (both integrals equal the step model's for every half-width, including the 0 that reproduces KD-8's identity byte-for-byte), and `ClassifyAgeBand` is demoted to a READ of the curve rather than a second authority over it. ERR-028-021: §3.4's `AgeYears >= RETIREMENT_AGE` — one integer age for the whole league, no position or attribute input — becomes a per-player `RetirementAgeDays(record)` in days, with a goalkeeper allowance and a full-range game-reading offset over Anticipation/Positioning/Composure, chosen over robustness under doctrine P3 because #29 and #41 already price that trio twice (`ERR-041-003`); anti-symmetric, so the league retirement rate is unchanged and only who-retires-when moves. Neither fix adds a draw. Prior entry below.)
+**Last Updated (prior):** August 11, 2026 (v0.8 — ERR-028-019: docs close-out for AR passes 5-8, four consecutive production landings (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`) with no `docs/specs/` edit — §3.1's spend/drain pseudocode rewritten for the AR pass 6/8 changes (fail-loud on a future-dated `BirthWorldDay`, saturating age narrowing at `MAX_DERIVABLE_AGE_YEARS`, both refusal branches clamp to 0 rather than banking or leaving the cursor, `DrainOnePoint` returns `bool`); §3.1.1's age-formula guard corrected from "guarded at zero" to "fails loud below zero, ordinary at zero"; §3.3 states the AR pass 7 regen construction-day credit; §3.5's fail-loud enumeration rewritten from four value gates to eight, with the Encode/FromBlocks-vs-Decode exception-type split stated per gate, and gains the FR-PG-011 id-cursor and M3 club-size rules (previously undocumented); a new OPEN decision recorded on the `CurrentAbility`/`ComputeCA` save-acceptance predicate, adjacent to the existing `PA_MIN` one)
 **Last Updated (prior):** August 10, 2026 (v0.7 — ERR-028-018: §3.1 states the seed-day accrual-window rule — the seed day's own band step MUST be credited to `GrowthCursor`, not merely excluded from replay — closing the gap that let a full band traversal accrue one attribute point short of Appendix A / KD-8's `+1/yr` promise)
 **Last Updated (prior):** August 10, 2026 (v0.6 — ERR-028-017: AR pass 5 spec corrections — §3.1.1 states the `ageDays ≤ 0 → age 0` guard the formula omitted; §3.4 states the retirement evaluation runs once per `AdvanceDay` CALL on post-replay age (not once per lived day), with the multi-day-gap `RetirementDay` limitation recorded and cross-referenced to T-PG-DET-002; §3.5's byte layout pins the `str` encoding (u32 length + ASCII, #16 §3.2.4.1) and states the four VALUE gates `Decode` applies (previously undocumented), with the `PA_MIN`/`ABILITY_MAX` config-keyed-acceptance-predicate tension against #30 Appendix B.1's posture recorded as an OPEN decision)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: the signed age anchor, the cross-blob cursor rule, the destination-roster-overwrite refusal, and the F8 sentinel guard)
-**Version:** 0.8
+**Version:** 0.13
 **Status:** APPROVED
 
 ---
@@ -62,12 +79,25 @@ edge: a full traversal of an *N*-year band then accrues `N · DAYS_PER_YEAR − 
 `N · DAYS_PER_YEAR`, and because `POINT_COST == DAYS_PER_YEAR` (KD-8) that is one whole `[1,20]`
 attribute point short, every single traversal — with the shortfall banked as a permanent residue that
 survives the (accrual-free) Stable band and eats the first year of Decline. `SeedFrom` (§3.1.1) MUST
-therefore seed `GrowthCursor` at the seed day's own `DailyPoints` step for the player's seed-time age
-band (`GROWTH_DAILY_POINTS` in Growth, `DECLINE_DAILY_POINTS` in Decline, `0` in Stable) — the single
-call to `AdvanceDayForPlayer` line 2 would have made on that day, without also running its spend/drain
-step or its `LastAdvancedWorldDay` write (both already handled by the anchor). This is not derivable
-from "the seed day is already accounted for" by itself; that sentence is a claim about the CURSOR's
-correctness, and crediting the band step is what makes it true rather than aspirational.
+therefore seed `GrowthCursor` at the seed day's own step taken from §3.1.3's continuous curve,
+`DailyBandPoints(Age₀ · DAYS_PER_YEAR)` — asked of the credit's single owner,
+`AbilityModel.ConstructionDayCredit(Age₀)`, never recomputed here (§3.3 states why that is normative
+and not a style preference) — the single call to `AdvanceDayForPlayer` line 2 would have
+made on that day, without also running its spend/drain step or its `LastAdvancedWorldDay` write (both
+already handled by the anchor). This is not derivable from "the seed day is already accounted for" by
+itself; that sentence is a claim about the CURSOR's correctness, and crediting the band step is what
+makes it true rather than aspirational.
+
+*(**Amended at ERR-028-023, August 22, 2026.** This MUST previously named the seed-time age BAND and
+its three constants — "`GROWTH_DAILY_POINTS` in Growth, `DECLINE_DAILY_POINTS` in Decline, `0` in
+Stable" — which is the three-way step ERR-028-020 retired, still mandated normatively one section above
+the curve that replaced it. The two forms disagree at bootstrap ages **24, 25, 29, 30** at the shipped
+`AGE_BAND_RAMP_HALF_WIDTH_YEARS`, i.e. 4 of the 19 ages #27's `RosterGenerator` draws, so an implementer
+following the retired wording reopened ERR-028-018's one-day accrual discrepancy for roughly a fifth of
+the roster — silently, and only inside the ramps, where nothing outside them would show it. The code
+has computed `AbilityModel.DailyBandPoints(rec.Age · DAYS_PER_YEAR)` since ERR-028-020 landed; the
+ERR-028-020 commit amended the sibling regen paragraph in §3.3 for exactly this reason and did not
+reach this one. Same wording, same authority, same single curve.)*
 
 **The F8 guard runs before anything else in the batch (ERR-028-009).** #29's `TrainingStep` and #41's
 `MedicalStep` both refuse `worldDay == sentinel` under an explicit F8 row landed one day before #28's
@@ -95,8 +125,11 @@ AdvanceDayForPlayer(ref record, ref lifecycle, worldDay, in trainingInput, curve
     record.Age = ageYears                                              # keep the record's Age current (cache)
 
     # 2. Per-day point accrual — the ONLY accumulator (FR-PG-002/003).
-    ageBand   = ClassifyAgeBand(ageYears)                              # Growth | Stable | Decline
-    dailyPts  = DailyPoints(ageBand, record.Position, in trainingInput, curveEnabled)  # signed integer, fixed-point
+    #    ERR-028-020: the rate is a continuous function of ageDAYS (§3.1.3), NOT a three-way band on
+    #    ageYEARS. ClassifyAgeBand survives only as a DESCRIPTION of the curve (§3.1.3) — it is no
+    #    longer consulted here, and re-deriving a band from GROWTH_AGE/DECLINE_AGE at this line would
+    #    reinstate the cliff behind the fix.
+    dailyPts  = DailyBandPoints(ageDays)                               # signed integer, fixed-point (§3.1.3)
     lifecycle.GrowthCursor += dailyPts
 
     # 3. Spend/drain whole attribute-points at the POINT_COST threshold (deterministic order).
@@ -144,12 +177,14 @@ code at the time, and both since revised by execution-driven findings:
 
 **Byte-exactness (FR-PG-006):** every field mutated is integer, and a save carries `GrowthCursor` +
 `BirthWorldDay` + the `[1,20]` attributes. Restore recomputes the identical continuation because
-`DailyPoints` and the spend/drain `while` bounds are pure integer functions of serialized state, and
+`DailyBandPoints` and the spend/drain `while` bounds are pure integer functions of serialized state, and
 age is a pure integer function of `(worldDay, BirthWorldDay)` with **no** discrete rollover event to
-double-count — a save on any day restores to the identical continuation. **KD-8 identity:** with
-`curveEnabled` off, `DailyPoints` returns `GROWTH_DAILY_POINTS` / `DECLINE_DAILY_POINTS` (`±1` with
-`POINT_COST = DAYS_PER_YEAR`) so the cursor crosses `POINT_COST` exactly once per year in the
-Growth/Decline bands and zero times in Stable — the literal §4.3 `±1/year` step, byte-for-byte (§5 lock).
+double-count — a save on any day restores to the identical continuation. **KD-8 identity (revised at
+ERR-028-020):** with `curveEnabled` off **and `AGE_BAND_RAMP_HALF_WIDTH_YEARS = 0`**, `DailyBandPoints`
+returns `GROWTH_DAILY_POINTS` / `DECLINE_DAILY_POINTS` (`±1` with `POINT_COST = DAYS_PER_YEAR`) so the
+cursor crosses `POINT_COST` exactly once per year in the Growth/Decline bands and zero times in Stable
+— the literal §4.3 `±1/year` step, byte-for-byte (§5 lock). The dial's off position is the identity;
+the shipped half-width is non-zero, and §3.1.3 states what it changes.
 
 ### 3.1.1 Age derivation — one representation
 
@@ -227,14 +262,117 @@ develops, and ties break by ascending `AttrIdx`. An attribute at `ATTRIBUTE_MAX`
 push the derived CA past `PotentialAbility`, is skipped (F1). This preserves per-attribute individuality
 (two players with the same CA but different positions develop different attributes) without a draw.
 
+### 3.1.3 The age-continuous accrual rate (ERR-028-020)
+
+**The defect this replaces.** `DailyPoints` took a three-way `ClassifyAgeBand(ageYears)` and returned
+one of three constants, so "is this player still developing?" — a continuous football judgment — was
+answered by a hard step at an exact integer age: a player developed at the full rate on the last day of
+his 23rd year and at exactly zero on the first day of his 24th, and the same discontinuity sat at
+`DECLINE_AGE`. §1.3 promises "per-attribute CA/PA growth-decline curves keyed to age" and no
+age-continuous curve existed anywhere in this spec's text. Recorded as pattern (b) **and** (d) by
+`docs/tracking/football-judgment-proxy-review.md` §3; fixed under that document's §6 doctrine **P1**
+(continuous, never a cliff) and **P5** (pivot on today's baseline).
+
+**The shape.** Each edge becomes a linear ramp of half-width `AGE_BAND_RAMP_HALF_WIDTH_YEARS`
+**centred on the old step**, in DAYS:
+
+```
+g = GROWTH_AGE  · DAYS_PER_YEAR                    # the retired growth edge, in days
+e = (DECLINE_AGE + 1) · DAYS_PER_YEAR              # the retired decline edge (the predicate was ageYears > DECLINE_AGE)
+h = AGE_BAND_RAMP_HALF_WIDTH_YEARS · DAYS_PER_YEAR
+
+growthRate(d)   = 1                     for d ≤ g − h
+                = (g + h − d) / (2h)    for g − h < d < g + h
+                = 0                     for d ≥ g + h
+declineRate(d)  = 0                     for d ≤ e − h
+                = (d − (e − h)) / (2h)  for e − h < d < e + h
+                = 1                     for d ≥ e + h
+```
+
+**Why an INTEGRAL and not a rate.** `GrowthCursor` is integer fixed-point at a scale where one day of
+full growth is one unit (`POINT_COST = DAYS_PER_YEAR`, KD-8), so a per-day rate has nothing between 0
+and 1 to return. The accrual is therefore defined as the difference of an exact integer **cumulative**:
+
+```
+AccruedBandPoints(n)  =  GROWTH_DAILY_POINTS · G(n)  +  DECLINE_DAILY_POINTS · D(n)      # n = days LIVED
+    G(n) = n                                    for n ≤ g − h
+         = (g − h) + u − u² / (4h),  u = n − (g − h)     for g − h < n < g + h
+         = g                                    for n ≥ g + h
+    D(n) = 0                                    for n ≤ e − h
+         = v² / (4h),                v = n − (e − h)     for e − h < n < e + h
+         = n − e                                for n ≥ e + h
+
+DailyBandPoints(ageDays) = AccruedBandPoints(ageDays + 1) − AccruedBandPoints(ageDays)
+```
+
+All integer, all floor division. The per-day step stays in `{0, ±1}` — so **the persisted cursor's
+scale is unchanged and `PROGRESSION_SAVE_FORMAT_VERSION` does not move** — while its DENSITY follows
+the continuous rate exactly, with no rounding drift over any span. Both branches are written in the
+shifted variables `u`/`v`, bounded by `2h`, so the squared term cannot overflow for an anchor near
+`MAX_DERIVABLE_AGE_YEARS`.
+
+**The representability ceiling is applied to the AGE, not to the cumulative**, and the distinction is
+load-bearing rather than stylistic. §3.1.1's age narrowing saturates at `MAX_DERIVABLE_AGE_YEARS`, and
+under the retired band step that pinned age classified as `Decline`, so a player beyond the ceiling
+kept draining at the full rate. Saturating `AccruedBandPoints` would clamp BOTH terms of
+`DailyBandPoints`' difference to the same value, and such a player would silently stop declining
+altogether — a behaviour change nothing inside the football range could surface. `DailyBandPoints`
+therefore clamps `ageDays` to one day inside the ceiling, making his daily step the step AT the
+ceiling, which is the full decline rate exactly as before (§5 lock).
+
+**The P5 pivot is exact, not fitted.** Because each ramp is centred on its old edge, `G(∞) = g` and
+`D` past `e + h` is `n − e` — the **same totals the step model produced, for every half-width including
+0**. The ramp redistributes accrual across an edge without creating or destroying any, so no
+growth-rate recalibration is owed: a traversal that starts outside a ramp and finishes past it still
+gains exactly one attribute-point per year of the band and still leaves **no residue**, which is
+ERR-028-018's invariant preserved by construction (§5 lock). A player *seeded inside* a ramp does end
+his growth holding a fractional cursor — his own remaining integral is not a whole multiple of
+`POINT_COST` — and that fraction is **carried, not lost**: it correctly offsets his first days of
+decline. That is arithmetically distinct from ERR-028-018's pathology, which was a whole point *short*
+of the integral on every traversal, and §5 locks the distinction so a future reader does not "fix" it
+by re-rounding the accrual and putting the cliff back.
+
+**Two catalogue invariants, enforced fail-loud at the computing site** (the `MedicalStep.DrawOccurrence`
+guard posture): `AGE_BAND_RAMP_HALF_WIDTH_YEARS ≥ 0`, and `2 · half-width ≤ (DECLINE_AGE + 1) −
+GROWTH_AGE` so the two ramps stay disjoint — a day inside both would accrue growth and decline at once,
+which the arithmetic represents and no football reading does. *(Corrected —
+config-unbound-premise-false-28, football-judgment proxy review batch-1: this paragraph justified the
+computing-site placement with "the `[GT]` is a config key and the catalogue lock runs config-unbound,
+so it sees only the fallback" — the same rationale ERR-041-003 states truly of an already-migrated
+catalogue, copied here without checking it applied. `PlayerProgressionConstants.cs` has ZERO
+`Config.GetX` calls today (confirmed by `src/CLAUDE.md`'s own 2026-08-10 tree-wide measurement, which
+lists `player-progression` among the ten catalogues with none), so the computing-site guard is a
+forward-looking placement for the Stage-1 config loader, not a workaround for a catalogue lock a
+config-unbound gate defeats today — a catalogue-level lock IS available now and exists in
+`PlayerProgressionConstantsTests`.)*
+
+**`ClassifyAgeBand` survives as a DESCRIPTION, not as a second authority.** It returns the SIGN of the
+year's own net accrual (positive ⇒ Growth, negative ⇒ Decline, zero ⇒ Stable), read from
+`AccruedBandPoints`. Re-deriving a band from `GROWTH_AGE`/`DECLINE_AGE` would be a second surface
+answering a question the curve already answers — the parallel-surface class this project has filed
+three times (`LineupSelector.CanSelect` being the nearest). A whole year rather than a single day
+because inside a ramp the per-day accrual is quantised and adjacent days differ.
+
+**Not fixed here, recorded:** the review's finding also names "no per-player variance" in the growth
+rate. That is the Stage-3 `curveEnabled` tier's — it needs the `(PA − CA)` modulation §3.2 already
+reserves, and adding a per-player term here would either duplicate that or introduce #28's first draw
+site (§3.3's stream is deliberately unregistered until the season boundary lands). The cliff is what
+this ERR removes.
+
 ## 3.2 The CA/PA model
 
 `PotentialAbility` (PA) is generated once at regen/new-game (a wide-integer ceiling from the
 `progression.regen` stream, §3.3) and never rises. `CurrentAbility` (CA) is `ComputeCA(attributes,
 position)` — a position-weighted mean of the `[1,20]` attributes scaled to `[0, ABILITY_MAX]`,
 **recomputed** whenever attributes change (FR-PG-003). CA→PA gap drives growth magnitude in the deep
-tier (`DailyPoints` scales with `(PA − CA)` when `curveEnabled`); in the minimal tier the gap is
-unused and `DailyPoints` is the flat §4.3 band step. CA is a cache in the serialized block, but the
+tier (`DailyPoints` scales with `(PA − CA)` when `curveEnabled`); in the Stage-2 shipped tier the gap
+is unused and `DailyPoints` is `DailyBandPoints` — §3.1.3's age-continuous ramp, not a flat step (see
+§3.1.3; `curveEnabled` off reproduces the retired flat step only at `AGE_BAND_RAMP_HALF_WIDTH_YEARS =
+0`, KD-8). *(Corrected — spec-32-stale-flat-band-step, football-judgment proxy review batch-1: this
+paragraph still described `DailyPoints` as "the flat §4.3 band step" and the minimal tier as flat,
+present tense, after ERR-028-020 made both stale — `DailyBandPoints` is the accrual authority now, the
+surviving private wrapper only delegates, and the Stage-2 tier is ramped, not flat. The `(PA − CA)`
+deep-tier half is unaffected and kept verbatim.)* CA is a cache in the serialized block, but the
 attributes are authoritative — a restore recomputes CA from the attributes, so a corrupt CA cache can
 never diverge (it is overwritten on the first `AdvanceDay`, and §5 locks recompute-equals-stored).
 
@@ -248,13 +386,20 @@ at all, and would force the `player-progression.regen` stream (FR-PG-020) to reg
 is going to overwrite the moment its assembly lands — a stream registered against a number nobody
 reads once #47 ships is exactly the phantom-surface class FR-LW-031 forbids.
 
-**Recorded limitation, not fixed here:** at the §4.3 flat band step, a whole youth career (roughly
-eight growth years, one attribute raised per year) raises CA by only ~421 of `ABILITY_MAX` = 10,000
-(8 years × ~52.6 per point). The PA ceiling therefore binds only when the authored CA→PA gap is under
-about 420 — no realistic authored wonderkid gap is that small. **PA-as-ceiling is decorative regardless
-of PA's source** (authored or drawn); the cause is the growth RATE, not where PA comes from. Closing it
-is the Stage-3 `curveEnabled` tier's job, and KD-W1 forbids retuning the flat-band rate in a landing
-that has not wired the deep tier.
+**Recorded limitation, not fixed here:** over §3.1.3's accrual curve, a whole youth career (roughly
+eight growth years, one attribute-point's worth of accrual per year — the P5 pivot means this total is
+exact at every ramp half-width, including the shipped one, not merely at the retired flat step) raises
+CA by only ~421 of `ABILITY_MAX` = 10,000 (8 years × ~52.6 per point). The PA ceiling therefore binds
+only when the authored CA→PA gap is under about 420 — no realistic authored wonderkid gap is that
+small. **PA-as-ceiling is decorative regardless of PA's source** (authored or drawn); the cause is the
+growth RATE, not where PA comes from. Closing it is the Stage-3 `curveEnabled` tier's job, and KD-W1
+forbids retuning the growth rate in a landing that has not wired the deep tier. *(Corrected —
+round-2 finding spec-32-flat-band-step-sweep-stopped-two-paragraphs-short: this paragraph still said
+"at the §4.3 flat band step" and "the flat-band rate", present tense, two paragraphs below the v0.11
+correction that swept the same stale phrasing elsewhere in this section — ERR-028-020 made both stale.
+The ~421 figure itself is UNCHANGED by the correction: the ramp is centred on the old step edge, so its
+whole-life integral equals the step's for every half-width (§3.1.3's P5 paragraph), which is exactly
+why this number needed no re-derivation.)*
 
 ## 3.3 Regen generation (KD-3)
 
@@ -284,17 +429,154 @@ must be CREDITED to `GrowthCursor`, not left at `0`. ERR-028-018 fixed this at `
 `N · DAYS_PER_YEAR − 1` days over its remaining *N*-year Growth band, identically to the pre-ERR-028-018
 defect — measured: a regen gained +5 points over its remaining Growth band where an identically
 generated seeded player gained +6, the same 364-day residue surviving into Decline. `GenerateRegen` now
-sets `GrowthCursor = BandStepFor(age)` at construction — the construction day's own `DailyPoints` step
-for the drawn age's band (`GROWTH_DAILY_POINTS` in Growth, `DECLINE_DAILY_POINTS` in Decline, `0` in
-Stable; a regen's drawn age is always in `[REGEN_AGE_MIN, REGEN_AGE_MAX]`, which is always below
-`GROWTH_AGE` today, so this is Growth-band only in practice — but classified rather than hard-coded, so
-it does not silently become wrong if either age constant moves).
+sets `GrowthCursor = ConstructionDayCredit(age)` at construction — the construction day's own step,
+**taken from §3.1.3's continuous curve** (`DailyBandPoints(age · DAYS_PER_YEAR)`), which is the same
+authority the daily step and `SeedLifecycle` read.
+
+**The credit has ONE implementation, and both construction sites MUST call it.** `ConstructionDayCredit`
+belongs to the same owner as the curve it reads (`AbilityModel`, §3.1.3); neither `SeedFrom` nor
+`GenerateRegen` may compute it locally. This is normative because the alternative has already cost this
+spec two landings: the rule was written out twice — once inlined in `SeedLifecycle`, once as a
+`RegenGenerator.BandStepFor` whose own documentation described itself as the shared owner of a rule it
+did not own — so ERR-028-018 credited one site and left the other at `0` (caught a day later), and
+ERR-028-020 then had to visit both again to move each off the retired three-way step. A rule two sites
+owe is a rule exactly one place may state.
+
+*(**Amended August 24, 2026** — round-2 adversarial finding
+`construction-day-credit-implemented-twice`. This paragraph named `BandStepFor(age)`, the
+`RegenGenerator`-local method that has since been DELETED; the call is
+`AbilityModel.ConstructionDayCredit(age)`. The value is unchanged — `BandStepFor`'s body was
+character-for-character the expression `SeedLifecycle` also carried, verified by probe over ages 0..200
+and the `int` domain's edges before the collapse — so what moved is ownership, not arithmetic.)*
+
+*(**Amended at ERR-028-020.** This paragraph previously described `BandStepFor` as classifying the
+drawn age into a band and returning one of three constants, and defended that as "classified rather
+than hard-coded, so it does not silently become wrong if either age constant moves". The reasoning was
+right and the mechanism no longer is: since §3.1.3 the step is a continuous function of age, so a
+three-way classification here would have been a **second answer to a question with one authority** —
+the parallel-surface class — and would have gone wrong on exactly the move it was defending against.
+The two forms agree today, because a regen's drawn age is always in
+`[REGEN_AGE_MIN, REGEN_AGE_MAX]`, entirely below the growth ramp; they diverge the first time either
+that band or `AGE_BAND_RAMP_HALF_WIDTH_YEARS` moves, and the symptom would be one attribute point per
+band traversal — ERR-028-018's shape, at the sibling construction site.)*
 
 ## 3.4 Retirement + the season boundary (KD-5 / KD-6)
 
-**Daily (in `AdvanceDay`):** `if AgeYears >= RETIREMENT_AGE and not RetirementFlag: RetirementFlag =
-true; RetirementDay = worldDay`. Deterministic-hard — no draw (FR-PG-013). The player stays in the
-roster and stays selectable (FR-PG-014).
+**Daily (in `AdvanceDay`):** `if ageDays >= RetirementAgeDays(record) and not RetirementFlag:
+RetirementFlag = true; RetirementDay = worldDay`. Deterministic — no draw (FR-PG-013). The player stays
+in the roster and stays selectable (FR-PG-014).
+
+**The retirement day is PER-PLAYER and continuous (ERR-028-021), superseding the single
+`AgeYears >= RETIREMENT_AGE` comparison this section carried until August 22, 2026.** That comparison
+was a hard integer-age threshold with no attribute or position input at all: a goalkeeper retired on
+the identical clock as a forward, despite goalkeepers demonstrably playing markedly longer careers, and
+one day of the calendar was the whole difference between a career continuing and ending — for the whole
+league at once. Recorded as pattern (b)/(c) by `docs/tracking/football-judgment-proxy-review.md` §3;
+fixed under **P1** (continuous, never a cliff), **P3** (the attribute-ownership ledger) and **P5**
+(pivot on today's baseline).
+
+```
+RetirementAgeDays(record) -> days:
+    if RETIREMENT_GAME_READING_SPAN_YEARS < 0 or RETIREMENT_GOALKEEPER_BONUS_YEARS < 0:
+        FAIL LOUD                                                          # catalogue/config integrity
+    days = RETIREMENT_AGE · DAYS_PER_YEAR
+    if record.Position == Goalkeeper:
+        days += RETIREMENT_GOALKEEPER_BONUS_YEARS · DAYS_PER_YEAR
+    sum   = Anticipation + Positioning + Composure                         # NOT floored to a mean
+    days += ((2·sum − 3·(ATTRIBUTE_MIN + ATTRIBUTE_MAX)) · RETIREMENT_GAME_READING_SPAN_YEARS
+             · DAYS_PER_YEAR) / (6 · (ATTRIBUTE_MAX − ATTRIBUTE_MIN))      # full-range, anti-symmetric
+    if days <= 0: FAIL LOUD                                                # catalogue/config integrity
+    return days
+```
+
+*(**Added — guards-unexercised, football-judgment proxy review batch-1.** This pseudocode previously
+showed only the `days <= 0` guard, omitting the leading non-negativity check on the two career-length
+dials that Appendix A mandates for both (`RETIREMENT_GOALKEEPER_BONUS_YEARS` and
+`RETIREMENT_GAME_READING_SPAN_YEARS` "MUST be non-negative") and the code has always carried
+(`AbilityModel.RetirementAgeDays`). Test ids for all four §3.1.3/§3.4 catalogue/config integrity
+guards — the ramp half-width's non-negativity and disjointness guards, this ONE combined dial
+non-negativity guard, and the `days <= 0` guard — are allocated at §5.3.1/§5.6 below.)*
+
+*(**Corrected — round-2 finding four-guards-enumerated-as-five-and-mis-named.** The paragraph above
+previously read "these TWO dial guards" where the code above is ONE `if`
+(`readingSpanYears < 0 or goalkeeperBonusYears < 0`) — describing it as two guards made the paragraph
+claim "four" and then enumerate five items. Two test CASES are needed to prove the `or` is checked on
+both operands, which is not the same thing as two separate guards; the fix corrects the enumeration to
+match the code without changing the "four" count, which was already right.)*
+
+**The reading trio's SUM is carried undivided into the numerator (ERR-028-022), superseding the
+`mean = (Anticipation + Positioning + Composure) / 3` step this pseudocode carried between
+ERR-028-021's landing and August 22, 2026.** Flooring the sum to a mean before the anti-symmetric map
+destroys the anti-symmetry the map exists to have: `floor(sum / 3)` is not symmetric about the
+attribute midpoint — truncation always bites downward — so the two halves of the population no longer
+cancel anywhere off the `Anticipation == Positioning == Composure` diagonal. Measured through the built
+assembly: **−204,621 days over the uniform `[1,20]³` product, i.e. −25.58 days per player**. The claim
+below said the league's retirement *rate* was unchanged; in fact the whole league retired about two
+months early. Carrying the sum is exactly anti-symmetric (the product sums to **0**) and reproduces
+every value on the old diagonal bit-for-bit, since for `sum == 3·mean` the numerator and denominator
+are both exactly 3× the retired form's and integer division truncates toward zero.
+
+**The comparison is in DAYS, against a day-resolution threshold**, so one attribute point moves a
+player's retirement by tens of days rather than by a whole year — the full-range ramp form
+`ERR-008-019` was owner-revised to, with no plateau anywhere across `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]`.
+
+**P3: why the reading trio and NOT robustness.** The obvious input — a durable player lasts longer —
+would be the **third** read of `Strength`/`Stamina`/`Balance`: #29's `ComputeInjuryRisk` and #41's
+`RobustnessMitigation` already price that trio twice over, which `ERR-041-003` records as a
+contract-level double count. Career length is therefore owned here by `Anticipation`/`Positioning`/
+`Composure`, which no other subsystem consumes: the player who ages well is the one whose game rests on
+reading play rather than on the pace he is losing. This is a ledger entry, not a preference — a future
+spec wanting a career-length term must find its stage here first.
+
+**P5: exact at both scales.** At a zero goalkeeper bonus and a zero reading span,
+`ageDays >= RETIREMENT_AGE · DAYS_PER_YEAR` is *identically* the retired
+`AgeYears >= RETIREMENT_AGE` (age being that quotient, floored) — the dial's off position reproduces
+the old rule rather than approximating it. At the shipped values the offset is anti-symmetric about the
+attribute midpoint and integer division truncates toward zero symmetrically, so the offsets over a
+uniform `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` population **sum to exactly 0**: the league's retirement RATE
+is unchanged and only *which* players retire *when* moves. (§5 locks all three properties.)
+
+*(**Corrected at ERR-028-022, August 22, 2026 — the paragraph above was published against an
+implementation for which it was false, and is annotated rather than restated.** As written it is true
+of the formula THIS SECTION NOW STATES; it was not true of the floored-mean form the section carried
+from ERR-028-021's landing until this date, whose offsets summed to **−204,621 days** over the uniform
+`[1,20]³` product. Two things about the correction are worth carrying forward. First, **"sum to exactly
+0 over a uniform population" is a claim about the whole attribute PRODUCT, and it must be checked
+there** — the §5 lock swept only the `Ant == Pos == Comp` diagonal, which is precisely the line on
+which the defect vanished (there the division by 3 is exact), so the lock passed against the broken
+model and a mutation to a differently-wrong rounding also passed. Second, **the population that is
+uniform on `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` is a modelling idealisation, not this game's league.** #27's
+`RosterGenerator` draws each attribute independently on `AttributeBaseMean ± AttributeSpread` = `[6,14]`,
+which centres on **10** while the offset's neutral point is the midpoint **10.5**; over that population
+the corrected offset averages **≈ −38 days per player**, so the generated league does retire fractionally
+early — about five weeks, not two months, and by a half-point of attribute centring rather than by a
+broken map. That residual is stated rather than papered over: closing it would mean either pivoting the
+offset on the generator's mean (which re-pivots #28 the day #47's authored database replaces those
+bounds — the same coupling `ERR-041-020` refused for `AGE_RISK_PIVOT_YEARS`) or an odd-width attribute
+range, and neither is this ERR's to decide.)*
+
+**This is a re-evaluated function, not a stored property, and the function's own inputs are what the
+daily step mutates (round-2 adversarial finding
+retirement-day-derived-from-attributes-the-same-step-mutates).** `RetirementAgeDays(record)` is called
+once per `AdvanceDay` (see the placement paragraph below), against the SAME record §3.1's spend/drain
+step (§3.1.2) has just mutated earlier in that same call — `TrySpendOnePoint` raises
+Anticipation/Positioning/Composure during Growth, `DrainOnePoint` lowers them during Decline, and this
+section's own offset reads exactly that trio. So a player's retirement day is not fixed at birth; it
+moves under him as those three attributes change, and re-evaluating tomorrow can return a different day
+than today's read did. **Bounded today, but by an accident of order, not by a stated rule:** within one
+band every spend/drain call moves the trio in the SAME direction (up in Growth, down in Decline, never
+mixed), and `RetirementFlag` is sticky once set (no un-flagging), so the day observed across a run of
+same-direction days is monotone and no oscillation is reachable. That bound stops holding the day
+something can move Anticipation/Positioning/Composure independently of the band-driven spend/drain
+order — the Stage-3 `curveEnabled` tier or #47's authored data touching them directly — and nothing in
+this section currently guards against it; §5.6's T-PG-RET-009 monotonicity lock covers only what holds
+today. See
+`AbilityModel.RetirementAgeDays`'s own doc for the code-side statement of this invariant.
+
+**Still deterministic, still no draw.** A draw here would be #28's first draw site and would force the
+`player-progression.regen` stream to register for a value the season boundary has not yet needed
+(§3.3, FR-PG-020) — the phantom-surface class FR-LW-031 forbids. Per-player *variation* is delivered by
+per-player *attributes*, which is what the finding asked for.
 
 **Evaluated once per `AdvanceDay` call, on the post-replay derived age — not once per lived day
 (ERR-028-017, correcting a placement §3.1's `AdvanceDayForPlayer` pseudocode never showed).** §3.1's
@@ -401,10 +683,15 @@ age, and `potentialAbility`. That was accurate against the code at the time. AR 
    ERR-028-019) — the LOWER half only; see §3.1.1 for the UPPER half, which this codec cannot check
    (it has no world clock).** `BirthWorldDay` is the AUTHORITATIVE age anchor (§3.1.1) and was, until
    this gate, the one lifecycle field with no range gate at all — an anchor far below the floor narrowed
-   the derived age to `int.MinValue`, which `ClassifyAgeBand` reads as `Growth` (so the player grows
-   forever and `RETIREMENT_AGE` can never fire — ERR-028-006's failure mode through a different door),
-   and which this very gate then refused as a negative age, making a career that loaded, advanced and
-   projected fine PERMANENTLY unsavable.
+   the derived age to `int.MinValue` — at the time this gate was added, `ClassifyAgeBand` read that as
+   `Growth` under the retired age-only band step (so the player grew forever and `RETIREMENT_AGE` could
+   never fire — ERR-028-006's failure mode through a different door) — and which this very gate then
+   refused as a negative age, making a career that loaded, advanced and projected fine PERMANENTLY
+   unsavable. *(Corrected — classifyageband-growth-claim-stale, football-judgment proxy review batch-1:
+   `ClassifyAgeBand` no longer reads `int.MinValue` as `Growth` — since ERR-028-020 it reads the
+   continuous accrual curve, and both `AccruedBandPoints` cumulatives are 0 at a hugely negative age, so
+   it now returns `Stable`. The int-narrowing this gate guards against is unchanged; only that one
+   downstream symptom is history rather than present behaviour.)*
 7. **`currentAbility` MUST equal `ComputeCA(attributes, position)` exactly (AR pass 8 L-4, ERR-028-019).**
    Guarded on the position ordinal's own validity first — `ComputeCA` indexes
    `PlayerDatabaseConstants.PositionAttributeBias` by the raw ordinal with no bounds check, so an
@@ -605,4 +892,9 @@ about not erasing a roster the codec can actually see.
 | 0.6 | 2026-08-10 | — | ERR-028-017 (AR pass 5 spec-vs-code sweep, found against the T1/T2a landing, no code change). **§3.1.1**: the age formula is stated unconditionally; `GrowthProjection.AdvanceDayForPlayer` guards `age = 0` when `ageDays ≤ 0` rather than dividing — now stated. **§3.4**: the daily retirement check's placement was undocumented — it runs ONCE per `AdvanceDay` call (in `ProgressionEngine.AdvancePlayerTo`, which wraps the whole gap-replay loop), against the age derived at the call's target day, never once per lived day inside the replay; `RetirementDay` is therefore stamped with the call's target day, not the earlier day within a multi-day gap on which the threshold was actually crossed — recorded as a known limitation and cross-referenced to §5's T-PG-DET-002 far-future-gap tests, which a reader would otherwise rebuild. **§3.5**: the byte layout left `str` unencoded (now pinned: `u32` length + ASCII, #16 §3.2.4.1) and its fail-loud enumeration named only framing gates, omitting the four VALUE gates `Decode` applies (attribute range, weak-foot range, non-negative age, `PotentialAbility` within `[PA_MIN, ABILITY_MAX]`) — now stated, with the `PA_MIN`/`ABILITY_MAX` `[GT]` tags' tension against #30 Appendix B.1's no-`[GT]`-gating-on-decode posture recorded as an OPEN decision, not resolved. |
 | 0.7 | 2026-08-10 | — | ERR-028-018 (High): §3.1 gains the accrual-window paragraph "already accounted for" was silent on — anchoring `LastAdvancedWorldDay` at the seed day stops that day being REPLAYED, but says nothing about whether `GrowthCursor` was CREDITED for it, and the code shipped crediting nothing. Since a band exit is decided by the derived age, not the cursor, that left every full band traversal one whole attribute point short (`N · DAYS_PER_YEAR − 1` days accrued, not `N · DAYS_PER_YEAR`) with a permanent residue eating the first year of the next accruing band — contradicting Appendix A / KD-8's `+1/yr` promise. `ProgressionEngine.SeedLifecycle` now credits the seed day's own band step at construction; spec text now states this as a MUST rather than leaving it implied by "already accounted for". Spec + code, same commit in spirit — code landed at `789ea74`, this row supplies the close-out FR-CS-057 requires. |
 | 0.8 | 2026-08-11 | — | ERR-028-019 — docs close-out for AR passes 5-8 (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`), four consecutive production landings with no `docs/specs/` edit at all. **§3.1**: the spend/drain pseudocode rewritten — fail-loud on `ageDays < 0` (M2(a), AR pass 6) rather than the retired `ageDays ≤ 0 → age 0` guard; saturating narrowing at `MAX_DERIVABLE_AGE_YEARS` (AR pass 5); both spend and drain refusal branches now clamp `GrowthCursor = 0` and `break` (superseding the AR-pass-5-only `POINT_COST - 1` clamp this section never carried, and the original no-exit `DrainOnePoint` call, AR pass 6 High); the two-clamp-values history stated explicitly so a reader is not left to reconstruct it from `spec-error-log.md`. **§3.1.1**: the age-formula guard corrected — `ageDays == 0` is ordinary (age 0), `ageDays < 0` now FAILS LOUD rather than silently deriving age 0 (M2(a)); the ERR-028-017 "guarded at zero" claim SUPERSEDED in place; `MAX_DERIVABLE_AGE_YEARS`'s own history (first set to a football-plausibility 1000, corrected same-session to the representability bound 100,000,000) stated so the tag distinction is not re-litigated. **§3.3**: regen construction now credits `GrowthCursor` at its own construction day's band step (AR pass 7), the second of two `PlayerLifecycle` construction sites ERR-028-018 needed and did not reach at `SeedLifecycle` alone. **§3.5**: the four-value-gate enumeration ERR-028-017 recorded is SUPERSEDED (not restated) by eight; the Encode/FromBlocks-vs-Decode `ArgumentException`/`InvalidOperationException` exception-type split (AR pass 8 M-1) stated as a general rule covering every shared boundary rule in this section, correcting F8's stale claim (§2.3) that both codec sides threw the same type for the sentinel gate; the FR-PG-011 id-cursor rule (four boundaries, including the AR-pass-8 `SeedFrom` overflow fix) and the M3 club-size rule (three boundaries) stated in full — neither had ANY normative text in this spec before this pass; the null-name non-idempotency documented as deliberate (AR pass 8 L-5); a new paragraph cross-references the #30-owned `BirthWorldDay`-vs-clock composition/file check (M2(b)) to #30 Appendix B.1 rather than restating a mechanism §4.1 forbids #28 from referencing; a new OPEN decision recorded on the `CurrentAbility`/`ComputeCA`/`PositionAttributeBias` save-acceptance predicate (AR pass 9's finding), adjacent to the existing `PA_MIN`/`ABILITY_MAX` one, not resolved — no tag changed, no code changed. Code unchanged by this pass; verified against `src/player-progression/*.cs` at commit `6987dbf`. |
+| 0.9 | 2026-08-22 | — | **ERR-028-020 + ERR-028-021** — the football-judgment proxy review's batch-1 #28 findings (`docs/tracking/football-judgment-proxy-review.md` §3 / §6.3.1 batch 1), spec + code in the same commit. **ERR-028-020 (§3.1, new §3.1.3):** the daily accrual was `DailyPoints(ClassifyAgeBand(ageYears), …)` — a hard three-way step at an exact integer age, on a judgment ("is this player still developing?") that is continuous everywhere; pattern (b), and pattern (d) against §1.3's promise of "per-attribute CA/PA growth-decline curves keyed to age", of which no age-continuous curve existed anywhere in this spec. Replaced under doctrine **P1** by `DailyBandPoints(ageDays)`: a centred linear ramp of half-width `AGE_BAND_RAMP_HALF_WIDTH_YEARS` at each edge, evaluated as the difference of an exact integer cumulative so the per-day step stays in `{0, ±1}`, the cursor scale is unchanged and `PROGRESSION_SAVE_FORMAT_VERSION` does not move. **P5 is exact rather than fitted**: a centred ramp has the same integral as the step it replaces for EVERY half-width, so no growth-rate recalibration is owed and ERR-028-018's no-residue traversal invariant survives by construction; half-width 0 reproduces KD-8 / FR-PG-007 byte-for-byte (§5 lock, executed through a parameterised overload because the `[GT]` is read once at static init). `ClassifyAgeBand` demoted to a READ of the curve — the sign of the year's net accrual — rather than a second surface deciding the same question. Two catalogue invariants (non-negative half-width; disjoint ramps) enforced fail-loud at the computing site. Recorded, not fixed: the finding's "no per-player variance" half is the Stage-3 `curveEnabled` tier's, needing §3.2's `(PA − CA)` modulation. **ERR-028-021 (§3.4):** retirement was `AgeYears >= RETIREMENT_AGE` — one integer age for the entire league, with no position or attribute input, so a goalkeeper retired on a forward's clock and one calendar day separated a career continuing from ending; pattern (b)/(c). Replaced by a per-player `RetirementAgeDays(record)` compared in DAYS: the baseline, plus `RETIREMENT_GOALKEEPER_BONUS_YEARS`, plus a full-range anti-symmetric offset over the Anticipation/Positioning/Composure mean. **P3 ledger entry recorded explicitly**: robustness was the obvious input and is deliberately NOT used, because #29's `ComputeInjuryRisk` and #41's `RobustnessMitigation` already price Strength/Stamina/Balance twice over (`ERR-041-003`) — career length is owned by the reading trio, which nothing else consumes. **P5 exact at both scales**: zero bonus + zero span is identically the retired comparison, and the shipped offset sums to exactly 0 over a uniform attribute population, so the league's retirement rate is unchanged and only who-retires-when moves. Neither fix adds an RNG draw, a stream, a domain tag or a format version. |
+| 0.10 | 2026-08-22 | — | **ERR-028-022 + ERR-028-023** — the reviewed High findings against the v0.9 landing, spec + code in the same commit. **ERR-028-022 (§3.4):** the game-reading offset computed `mean = (Anticipation + Positioning + Composure) / 3` and mapped that mean anti-symmetrically. `floor(sum / 3)` is NOT symmetric about the attribute midpoint — truncation always bites downward — so the map was anti-symmetric only along the `Ant == Pos == Comp` diagonal, and v0.9's P5 claim ("the offsets over a uniform `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` population sum to exactly 0: the league's retirement RATE is unchanged and only which players retire when moves") was false everywhere else. Measured through the built assembly: **−204,621 days over the uniform `[1,20]³` product = −25.58 days per player** — the whole league retiring about two months early, which is a rate change. The §5 lock that purported to prove the property swept only the diagonal, i.e. exactly the line on which the division by 3 is exact and the defect vanishes, so it passed against the broken model and against a mutation to a differently-wrong rounding. §3.4's pseudocode now carries the SUM undivided into the numerator (`(2·sum − 3·(MIN + MAX)) · span / (6 · (MAX − MIN))`): exactly anti-symmetric (the product sums to 0), and bit-for-bit identical to the retired form on the diagonal, since for `sum == 3·mean` numerator and denominator are both exactly 3× the old ones and integer division truncates toward zero. The superseded claim is ANNOTATED in place rather than restated, and the **residual honest fact is recorded with it**: #27's `RosterGenerator` draws each attribute on `AttributeBaseMean ± AttributeSpread` = `[6,14]`, centred on 10 against the offset's neutral midpoint of 10.5, so the corrected offset still averages **≈ −38 days per generated player** — a half-point of centring, not a broken map, and not this ERR's to re-pivot (pinning the offset to the generator's mean is the coupling `ERR-041-020` refused for `AGE_RISK_PIVOT_YEARS`). **ERR-028-023 (§3.1):** the normative seed-credit MUST still ordered `SeedFrom` to credit "the seed day's own `DailyPoints` step for the player's seed-time age band (`GROWTH_DAILY_POINTS` in Growth, `DECLINE_DAILY_POINTS` in Decline, `0` in Stable)" — the three-way band step ERR-028-020 retired, mandated normatively one section above the curve that replaced it. The code has computed `AbilityModel.DailyBandPoints(rec.Age · DAYS_PER_YEAR)` since that landing, and the two forms disagree at bootstrap ages **24, 25, 29, 30** at the shipped `AGE_BAND_RAMP_HALF_WIDTH_YEARS` — 4 of the 19 ages `RosterGenerator` draws — so an implementer following the spec reopened ERR-028-018's one-day accrual discrepancy for ~21% of the roster, silently and only inside the ramps. Amended to `DailyBandPoints(Age₀ · DAYS_PER_YEAR)`, mirroring the §3.3 regen paragraph the ERR-028-020 commit amended for exactly this reason and stopped at. Neither fix adds an RNG draw, a stream, a domain tag or a format version. |
+| 0.11 | 2026-08-23 | — | Football-judgment proxy review, batch-1 adversarial findings, four doc-only corrections, spec + code together where a test id is allocated. **guards-unexercised:** §3.4's `RetirementAgeDays` pseudocode showed only `if days <= 0: FAIL LOUD`, omitting the leading non-negativity check on `RETIREMENT_GAME_READING_SPAN_YEARS`/`RETIREMENT_GOALKEEPER_BONUS_YEARS` that Appendix A already mandates and `AbilityModel.RetirementAgeDays` has always enforced — added. **config-unbound-premise-false-28:** §3.1.3's disjointness-guard paragraph justified its computing-site placement with "the `[GT]` is a config key and the catalogue lock runs config-unbound" — copied from ERR-041-003's rationale, where it is true, without checking it against this catalogue: `PlayerProgressionConstants.cs` has zero `Config.GetX` calls, so the rationale was false here. Corrected to state the placement is forward-looking for the Stage-1 loader, and that a catalogue-level lock exists today in `PlayerProgressionConstantsTests`. **spec-32-stale-flat-band-step:** §3.2 still described `DailyPoints` as "the flat §4.3 band step" in the minimal tier, present tense, after ERR-028-020 made `DailyBandPoints`'s ramp the accrual authority; corrected. **classifyageband-growth-claim-stale:** §3.5's `birthWorldDay` lower-bound value-gate rationale said `ClassifyAgeBand` reads `int.MinValue` as `Growth` — true when written, false since ERR-028-020 (`ClassifyAgeBand` now returns `Stable` there); annotated as history, the int-narrowing concern itself unchanged. |
+| 0.12 | 2026-08-24 | — | Round-2 adversarial finding `construction-day-credit-implemented-twice` (High), spec + code in the same commit. The construction-day credit — the rule that a site anchoring `LastAdvancedWorldDay` at its own construction day owes that day's band step to `GrowthCursor` — was IMPLEMENTED TWICE: inlined in `ProgressionEngine.SeedLifecycle` and again as `RegenGenerator.BandStepFor`, whose own documentation described itself as the shared owner of a rule it did not own. That duplication is not hypothetical debt here: it is why ERR-028-018 credited the seed site and left the regen site at `0` (found a day later, AR pass 7) and why ERR-028-020 then had to visit both sites again to move each off the retired three-way step. §3.3 now states the single-owner requirement normatively (`AbilityModel.ConstructionDayCredit`, alongside the §3.1.3 curve it reads) and §3.1's seed-credit MUST points at the same owner; §3.3's `BandStepFor(age)` reference retires with the method, which is deleted. **No behaviour change** — the two implementations were character-for-character identical, verified by probe over ages 0..200 and the `int` domain's edges (including `int.MinValue`/`MaxValue`) before the collapse, and the suite is unchanged at 147 pre-existing passes. What the landing adds is the divergence detection neither form had: a cross-SITE lock seeding a `ProgressionEngine` from a regen's own returned record and requiring both credits to agree, plus a seed-site case at a ramp age (every prior seed-credit case drove 18/27/34, all outside both ramps, where the retired step and the continuous curve agree day for day). No new constant, no `[GT]`, no draw, no stream, no domain tag, no format version. |
+| 0.13 | 2026-08-24 | — | Round-2 Medium/Low adversarial findings, doc-only. **M2 (spec-32-flat-band-step-sweep-stopped-two-paragraphs-short):** §3.2's "Recorded limitation, not fixed here" paragraph — two paragraphs below the v0.11 correction of the same stale phrasing — restated against §3.1.3's accrual curve instead of "the §4.3 flat band step"; the ~421-of-`ABILITY_MAX` figure is unchanged (the P5 pivot makes it exact at every half-width). **L1 (four-guards-enumerated-as-five-and-mis-named):** §3.4's `RetirementAgeDays` pseudocode note corrected — it said "these TWO dial guards" for the single combined non-negativity `if`, which made the paragraph claim "four" and then list five items; now "this ONE combined dial guard". **M5 (retirement-day-derived-from-attributes-the-same-step-mutates):** new §3.4 paragraph states the retirement-day feedback-loop invariant — the day is re-evaluated against the same record §3.1.2 just mutated, bounded today only by the one-directional band order and `RetirementFlag`'s stickiness — and cites the new **T-PG-RET-009** lock (`section-5.md` v0.9). No numeric value, no draw, no format version. |
 #endregion

@@ -1,7 +1,59 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Updated:** August 22, 2026 — **§6.3.1 added: the landing order for the workable 24.** §6.3 said what
+> **Updated:** August 24, 2026 (round-2 M/L pass, L6) — **adding the chain entry that commit `9fca357`
+> (round-1's #28 Medium/Low close-out) landed without.** That commit made two edits to this file with no
+> governing `Updated:` line of its own — FR-CS-056/057 applied to a tracking document, whose only
+> version-history mechanism is this chain. **(1)** §6.3's assembly-less-class bullet ("carry 8 of the 32
+> open findings") was updated to **"8 of the 29"**, tracking batch 1's count move (34 recorded / 5 fixed /
+> 29 open). **(2)** The `ERR-008-021 AR-1` entry — which had been sitting at the TOP of this chain labelled
+> `**Updated:**` despite dating August 6, chronologically below several August 22/23 entries — was demoted
+> to `**Updated (prior):**` and moved down to its correct newest-first slot, immediately above the
+> `ERR-008-022` entry it precedes in time. **Recorded, not fixed** (per `9fca357`'s own commit message):
+> the move surfaced a SECOND date inversion in the same stretch of chain — an August 6 entry now sits
+> below two August 5 entries — that no finding diagnosed and that this pass leaves in place rather than
+> resolving unilaterally against ambiguous same-day orderings. The August 23 entry immediately below is
+> scoped to `78b57e2` alone, annotated there to say so, since it predates and does not describe `9fca357`'s
+> edits.
+> **Updated (prior):** August 23, 2026 (scoped to `78b57e2` only — see the entry above) — **the batch-1 row's gate line CORRECTED in place; no finding, count or
+> doctrine text moved.** As published, §6.3.1's batch-1 outcome row read "31 of 32 suites fully green …
+> quarantine empty". Both halves were wrong. The tree has **33** test suites (`ls -d
+> src/*/[Tt]ests/*.asmdef` returns 33, and the gate log carries 33 suite result lines — the original
+> count missed the suites whose folder is capitalised `Tests/`), so the figure is **32 of 33**. And
+> "quarantine empty" implied a ledger report the run never printed: `run-gate.sh` runs under
+> `set -euo pipefail`, exited non-zero on the inherited owner-held-red `sim_match_engine_close_chance`,
+> and never reached its quarantine-report section or a `Gate PASSED` line — `grep -c 'Quarantine\|Gate
+> PASSED'` returns **0** on that log. The ledger IS empty, but **by inspection of
+> `tools/dotnet-ci/known-failures.txt`** (zero non-comment lines), not by the gate's own report. The
+> formal result is therefore **FAIL on the held-red band, with no new failure and no band rebaselined**,
+> and it is recorded that way rather than rounded up to PASS. Corrected identically at all seven sites
+> that carried the claim (`CLAUDE.md`, `open-issues.md`, `spec-error-log.md`, `file-manifest.md`, this
+> file, `CHANGELOG.md`, `CHANGELOG-src.md`); the superseded wording is quoted in each annotation rather
+> than deleted. Landed in the same pass: the three held ERR bodies — `ERR-028-022`, `ERR-028-023`,
+> `ERR-041-021` — which the batch-1 spec text and code comments had been citing with nothing behind
+> them in `spec-error-log.md` (**v2.23**). **The finding counts are untouched: 34 recorded, 5 fixed, 29
+> open, workable queue 21.** Those three are review-over-the-landing findings, not new §2/§3 proxy
+> findings.
+> **Updated (prior):** August 22, 2026, later same day — **BATCH 1 LANDED IN FULL: all three off-pitch findings
+> fixed, spec + code in the same commit, whole-tree gate run.** `ERR-028-020` (#28 §3.1 age-band cliff →
+> the age-continuous curve of a new §3.1.3), `ERR-028-021` (#28 §3.4 single league-wide retirement age →
+> a per-player retirement day in days), `ERR-041-020` (#41 §3.4's risk assembly gains the player-age term
+> it omitted). **Counts move for the first time since August 5: 34 recorded, 5 fixed, 29 open; the
+> workable queue is 24 → 21.** Three things worth carrying forward. **(a)** Two of the three findings were
+> *mandated by their own spec's requirements* — FR-PG-007/KD-8 made the three-way band step the required
+> curve-off behaviour and FR-PG-013 required retirement "hard at `RETIREMENT_AGE`" — so the fix had to
+> revise §2 FRs, not only §3 formulas; both are annotated in place rather than silently restated. That is
+> the pattern-(d) shape reaching further than §3, and batches 5 and 6 should expect it. **(b)** The P5
+> pivot came out **exact rather than fitted** in all three cases (a centred ramp has the same integral as
+> the step it replaces; an anti-symmetric offset sums to zero over a uniform population; a pivot at the
+> bootstrap mean age sums to zero over the league), which is why nothing needed recalibrating and the
+> locked season-injury bands held unmoved — a property worth aiming for deliberately in the batches that
+> land against `sim_match_engine_close_chance`'s already-tripped detector. **(c)** Each fix's dial has an
+> OFF value reproducing the pre-fix behaviour **byte-for-byte**, and each is *exercised* through a
+> parameterised overload rather than asserted in prose — the `[GT]`s are read once at static
+> initialisation and the gate runs config-unbound, so an identity claim nothing executes is the class the
+> `ERR-008-021`/`-022` chain had falsified three times on first run.
+> **Updated (prior):** August 22, 2026 — **§6.3.1 added: the landing order for the workable 24.** §6.3 said what
 > KIND each finding is; nothing said what ORDER to fix them in. The order is derived from three things
 > only — **(A)** is the chain's terminal action wired (`match-engine-wiring-backlog.md` records **W2 as
 > BUILT but SHIPS DISABLED pending W6**, `TackleContactRadiusM` defaulting to **0.0f**, and #14 §3.6
@@ -24,6 +76,14 @@
 > falsified on first execution. Normative source: `path-to-playable-roadmap.md` **C6** (new). The
 > finding counts are UNCHANGED — 34 recorded, 2 fixed, **32 open** — this reclassifies when 8 of them are
 > workable, not whether. Deferral is not dismissal: they stay itemized here and are discharged at T0.
+> **Updated (prior):** August 6, 2026, later same day — **ERR-008-021 AR-1: 1 High, 7 Medium, 5 Low, all
+> fixed.** The High: the landed P3 exemption keyed on the whole 6 m GK band rather than the
+> goalkeeper, so every near-goal defender escaped the new weighting — inert precisely where shots
+> are blocked. Now a single **GK candidate** (goal-line-nearest in band) is exempt and every other
+> blocker is weighted (radius stays per-band). The P5 claim below is corrected the same way as
+> ERR-008-019's a day earlier: exact only at the ability midpoint (raw 10/11) or under a null
+> view — the all-default 10/10 profile reads ≈ 0.979, so the pivot is approximate, which is what
+> P5 ("≈ today's behavior") actually requires. See `spec-error-log.md` v1.68 for the full list.
 > **Updated (prior):** August 6, 2026 — **the adversarial review over the `ERR-008-021` landing LANDED as
 > `ERR-008-022`** (§6.4.2). It found that -021's overlap model was being fed by a lane test that
 > discarded the **far-post blocker on 100% of 20,213 sampled off-centre shooters** and dropped a
@@ -55,14 +115,6 @@
 > against the old model fail on it; gate NOT runnable in the authoring environment. **The 34-finding tally is unchanged**: the shot lane was
 > never itemized as its own §2/§3 finding — it surfaced in §6.4 at the -020 landing — so 32 itemized
 > findings remain open.
-> **Updated:** August 6, 2026, later same day — **ERR-008-021 AR-1: 1 High, 7 Medium, 5 Low, all
-> fixed.** The High: the landed P3 exemption keyed on the whole 6 m GK band rather than the
-> goalkeeper, so every near-goal defender escaped the new weighting — inert precisely where shots
-> are blocked. Now a single **GK candidate** (goal-line-nearest in band) is exempt and every other
-> blocker is weighted (radius stays per-band). The P5 claim below is corrected the same way as
-> ERR-008-019's a day earlier: exact only at the ability midpoint (raw 10/11) or under a null
-> view — the all-default 10/10 profile reads ≈ 0.979, so the pivot is approximate, which is what
-> P5 ("≈ today's behavior") actually requires. See `spec-error-log.md` v1.68 for the full list.
 > **Updated (prior):** August 6, 2026 — **the shot-lane follow-up deferred at the ERR-008-020 landing is
 > CLOSED, landed as `ERR-008-021`** (#8 §3.1.4.3/§3.2.3.2 step 3a): each blocker's
 > occluded arc now scales by §3.1.3.3's Vision-read Anticipation/Pace `perceived_ability`
@@ -102,11 +154,12 @@
 > **Updated (prior):** August 4, 2026 — §6 remediation doctrine added (owner-converged in session;
 > see §6 provenance note). Findings §§2–5 unchanged.
 > **Status:** FINDINGS LOG (§§1–5) + REMEDIATION DOCTRINE (§6, the owner-approved general
-> approach each fix must cite). Remediation is underway: **three fixes landed** — `ERR-008-020`
-> (August 4), `ERR-008-019` (August 5) and `ERR-008-021` (August 5, the §6.4 shot-lane follow-up) —
-> all through the spec-error-log's full Filed/Status/Fix/Determinism-impact process. Two of the
-> three close an itemized finding, so **32 of the 34 itemized findings remain open**; -021 discharges
-> a deferral opened by -020 rather than closing a numbered finding of its own. `ERR-` ids for the
+> approach each fix must cite). Remediation is underway: **six fixes landed** — `ERR-008-020`
+> (August 4), `ERR-008-019` (August 5), `ERR-008-021` (August 5, the §6.4 shot-lane follow-up), and
+> **batch 1's three on August 22: `ERR-028-020`, `ERR-028-021`, `ERR-041-020`** — all through the
+> spec-error-log's full Filed/Status/Fix/Determinism-impact process. Five of the six close an itemized
+> finding, so **29 of the 34 itemized findings remain open** and the workable queue stands at **21**;
+> -021 discharges a deferral opened by -020 rather than closing a numbered finding of its own. `ERR-` ids for the
 > rest are allocated at fix time, per the `err-file-and-backprop` skill.
 > **Scope:** All 53 APPROVED specs in `SPEC_INDEX.md`, read directly from `docs/specs/`, regardless
 > of whether a `src/` assembly exists yet for that spec.
@@ -330,10 +383,31 @@ this pattern — FRs and formulas).
   (`curveEnabled`) still calls the identical 3-way `ClassifyAgeBand` — only the magnitude within a
   band varies. §1.3 promises "per-attribute CA/PA growth-decline curves keyed to age"; no
   age-continuous curve exists anywhere in the spec text. Pattern (b) **and** (d).
+  **FIXED — landed August 22, 2026 as `ERR-028-020`** (batch 1): the rate becomes a function of
+  ageDAYS through centred linear ramps of half-width `AGE_BAND_RAMP_HALF_WIDTH_YEARS` at each edge
+  (new §3.1.3, doctrine P1), evaluated as the difference of an exact integer cumulative so the per-day
+  step stays in `{0, ±1}` — the persisted cursor's scale is untouched and no save format moves. **P5
+  is exact rather than fitted**: a centred ramp has the same integral as the step it replaces for
+  every half-width, so no growth-rate recalibration is owed and ERR-028-018's no-residue traversal
+  invariant survives by construction. The pattern-(d) half is discharged with it — the age-keyed curve
+  §1.3 promised now exists, and §1.3's staging split is revised to say so. `ClassifyAgeBand` survives
+  only as a READ of the curve, not a second authority over it. **Recorded, not fixed:** the finding's
+  "no per-player variance" half is the Stage-3 `curveEnabled` tier's — it needs §3.2's `(PA − CA)`
+  modulation, and a per-player term here would either duplicate that or open #28's first draw site.
 - **§3.4 / Appendix A `RETIREMENT_AGE=36`** — retirement is a single hard integer-age comparison with
   no draw and no attribute input — no fitness/robustness/position modulation (goalkeepers, who in
   real football play markedly longer careers, retire on the identical clock as outfield players).
   Pattern (b)/(c).
+  **FIXED — landed August 22, 2026 as `ERR-028-021`** (batch 1): a per-player `RetirementAgeDays`
+  compared in DAYS — the baseline plus a goalkeeper allowance plus a full-range anti-symmetric offset
+  over the Anticipation/Positioning/Composure mean (P1, the `ERR-008-019` full-range form: one
+  attribute point moves the day by tens of days, never by a year). **Doctrine P3 decided the input and
+  the decision is worth carrying to the other batches:** robustness was the obvious choice and is
+  deliberately NOT used, because #29 and #41 already price Strength/Stamina/Balance twice over
+  (`ERR-041-003`) — a third read would be that recorded defect a third time. P5 is exact at both
+  scales: zero dials reproduce the retired comparison identically, and the offsets sum to exactly 0
+  over a uniform attribute population, so the league's retirement RATE is unchanged and only
+  who-retires-when moves. Still draw-free — the variation is attributes, not randomness.
 
 ### Management layer — batch A
 
@@ -360,6 +434,21 @@ this pattern — FRs and formulas).
   injury-risk factors and already available on #27's `PlayerRecord` (and already used by #31's own
   valuation formula). Pattern (c) — a formula that presents as multi-factor risk assembly but omits a
   well-established factor already available elsewhere in the codebase.
+  **FIXED — landed August 22, 2026 as `ERR-041-020`** (batch 1): `AgeRiskFor(ageYears)` — linear,
+  anti-symmetric about `AGE_RISK_PIVOT_YEARS`, saturating at `±AGE_RISK_SPAN`, with **no threshold
+  anywhere** (P1) — added inside the sum BEFORE the robustness mitigation, whose position is normative
+  for the same reason `BASELINE_DAILY_RISK`'s is: robustness must discriminate it.
+  *(⚠️ CORRECTED August 24, 2026 — `ERR-041-021`: the "before the mitigation … robustness discriminates it" rationale quoted above is FALSE and is annotated rather than deleted. `RobustnessMitigation` is SUBTRACTED and addition commutes, so a term's position relative to it is a proven identity over 956,480 sampled inputs — the load-bearing position is inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE the clamp. Only the clamp half was ever true.)*
+  **P5 measured, not
+  argued**: the pivot is the mean of #27's bootstrap age distribution, so the term sums to zero over
+  that population — `SeasonInjuryRealismTests`' league, starter, reserve and squad-unavailability bands
+  all held unmoved, and all 26 pre-existing `AssembleRiskScore` expectations stay exact by passing the
+  pivot age rather than being rebaselined. New **FR-MD-025a** carries the requirement, so a future
+  implementer's omission becomes a spec violation rather than an oversight — which is what the §2 half
+  of this finding actually was. The standing companion the batch table names (robustness double-counted
+  across #29/#41, `ERR-041-003`) is **not** closed by this and is untouched: the age term is age, not
+  durability — but the same ledger question decided `ERR-028-021`'s input the other way, and that
+  decision is recorded there.
 
 ### Management layer — batch B
 
@@ -443,8 +532,9 @@ fresh in this pass, of which **19** total specs across both passes returned at l
 | Specs with ≥1 finding | **19** |
 | Specs with no findings | **34** |
 | Total findings recorded | 34 |
-| Findings fixed (`ERR-008-020` §3.1.3.3 template, August 4; `ERR-008-019` §3.2.3.1 long-shot ramp, August 5) | 2 |
-| Findings open | 32 |
+| Findings fixed (`ERR-008-020` §3.1.3.3 template, August 4; `ERR-008-019` §3.2.3.1 long-shot ramp, August 5; **batch 1, August 22: `ERR-028-020` age-band cliff, `ERR-028-021` retirement age, `ERR-041-020` the missing age term**) | 5 |
+| Findings open | 29 |
+| …of which workable today (the §6.3 assembly-less class defers 8) | **21** |
 
 *(**CORRECTED August 21, 2026 — the two SPEC counts were wrong; the three FINDING counts were and are
 right.** This table read 24 / 29, which is internally consistent (24 + 29 = 53) and agrees with the §4
@@ -573,7 +663,7 @@ creation — that separation is the acceptance test that the stages are genuinel
   map literally (there is no "execution" of a sacking), but P1, P3, and P5 apply unchanged.
 - **Assembly-less class — deferred BY RULE, not by priority** *(added August 21, 2026)*. Six of the
   specs itemized in §2/§3 have no `src/` assembly at all — **#31, #34, #36, #43, #46, #54** — and they
-  carry **8 of the 32 open findings** (#31 ×2, #34 ×1, #36 ×1, #43 ×1, #46 ×1, #54 ×2). Those fixes do
+  carry **8 of the 29 open findings** (#31 ×2, #34 ×1, #36 ×1, #43 ×1, #46 ×1, #54 ×2). Those fixes do
   **not** land ahead of their spec's T0 code. The formula-patch process immediately above requires
   spec + code in the same commit, and this project's standard for a landed fix is a test that fails
   when the fix is reverted; with no assembly, neither half can be executed, so what would ship is
@@ -582,7 +672,7 @@ creation — that separation is the acceptance test that the stages are genuinel
   discharged at their spec's T0 landing, under the same doctrine. Normative source and full evidence:
   `path-to-playable-roadmap.md` **C6**. Note this **subsumes the governance-class entry above** — #46
   is deferred on both grounds, and the owner decision it needs is better taken with the code in front
-  of it. **The remaining 24 open findings are workable today and are this backlog's actual queue.**
+  of it. **The remaining 24 open findings are workable today and are this backlog's actual queue.** *(**21** as of August 22, 2026 — batch 1's three landed; see §6.3.1's table.)*
 
 
 ### 6.3.1 Landing order for the workable 24 *(added August 22, 2026)*
@@ -613,14 +703,14 @@ measured output should land together and be calibrated **once**, not four times.
 
 | # | Batch | Findings | Count | Why it sits here |
 |---|---|---|---|---|
-| 1 | **Off-pitch** | #28 §3.1/App A `ClassifyAgeBand`, #28 §3.4/App A `RETIREMENT_AGE`, #41 §3.4 `AssembleRiskScore` | 3 | Zero match-engine coupling, no red acceptance band, no wiring gate. The safest throughput in the set, and it re-exercises the fix pipeline end to end before anything harder. #41's finding also has a standing companion: the #41 T0 AR recorded that #29 and #41 price robustness on the same three attributes, i.e. it is double-counted across the layers. |
+| 1 | **Off-pitch** ✅ **LANDED August 22, 2026** | #28 §3.1/App A `ClassifyAgeBand`, #28 §3.4/App A `RETIREMENT_AGE`, #41 §3.4 `AssembleRiskScore` | 3 | Zero match-engine coupling, no red acceptance band, no wiring gate. The safest throughput in the set, and it re-exercises the fix pipeline end to end before anything harder. #41's finding also has a standing companion: the #41 T0 AR recorded that #29 and #41 price robustness on the same three attributes, i.e. it is double-counted across the layers. **Outcome:** all three landed together as `ERR-028-020` / `ERR-028-021` / `ERR-041-020`, spec + code in the same commit, whole-tree gate run. Two findings turned out to be **mandated by their own spec's §2 requirements** (FR-PG-007/KD-8; FR-PG-013), so the fix reached the FR table and §1.3's staging split, not only the §3 formula — batches 5 and 6 should expect the same. The P5 pivot came out **exact rather than fitted** in all three (a centred ramp has the step's integral; an anti-symmetric offset sums to zero; a pivot at the bootstrap mean age sums to zero over the league), so nothing needed recalibrating and the locked season-injury bands held unmoved. The robustness double-count this row names is NOT closed — it was, however, the reason `ERR-028-021` took the reading trio rather than the durability trio as its input, which is the P3 ledger doing its job. **Gate: the test sweep ran in full at final HEAD; the formal result is the inherited FAIL, not a PASS.** Build 0 errors, **32 of 33 suites fully green**, `MatchEngine.Tests` **461/1/11**. The quarantine ledger is **empty by inspection of `tools/dotnet-ci/known-failures.txt`** — not because the gate reported it: `run-gate.sh` runs under `set -euo pipefail`, exited non-zero on the blocking phase, and therefore never reached its quarantine-report section or a `Gate PASSED` line, so **no formal verdict was ever printed**. Recorded as FAIL on the inherited owner-held-red band rather than rounded up to PASS. *(⚠️ CORRECTED August 23, 2026 — as first published this read "31 of 32 suites fully green … quarantine empty". Both halves were wrong: the suite count is one low (`ls -d src/*/[Tt]ests/*.asmdef` returns **33**, and the gate log carries 33 suite result lines — the original count missed the suites whose folder is capitalised `Tests/`), and "quarantine empty" implied a ledger report the run never printed (`grep -c 'Quarantine\|Gate PASSED'` returns **0** on that log). Annotated in place, never silently replaced.)* The one failure is `sim_match_engine_close_chance`, **owner-held RED and failing at baseline**, and it returns the recorded baseline's exact counts and exact predicate values (cosine −0.165 vs −0.16; goalward share 0.407 vs 0.42) — nothing in this landing runs on a match tick, so the identical figures are the predicted result. **No new failure, no band rebaselined.** |
 | 2 | **Keeper** | #11 §3.5.3 parry direction, §3.5.2/KD-21 catch-vs-parry, §3.6.3 cross/aerial duel, KD-3/§2 FR-GK-006/§3 KD-20 angle-narrowing 1v1 | 4 | One chain, one calibration. **Newly unblocked:** the conversion-at-contact residual was PARKED August 4 explicitly because *"the keeper rush trigger (W1) changes the contact geometry the decision turns on"* — and W1 landed that same day. The parking condition is satisfied. **It needs a fresh measurement against post-W1 geometry before the design decision**, not a fix written against the pre-W1 numbers; that is the `match-realism-pass` measure-first step. |
 | 3 | **Contact / duel** | #1 §3.1.11.1 `CheckPossession`, #4 §1.4.5/§2.1 FR-06/§3.6 half-turn bonus, #4 §3.4.2 INTERCEPTION condition, #10 §3.7 contested duel | 4 | All four decide **who ends up with the ball at a contact**, and they interact — the possession gate, the interception condition and the header duel can each mask the others' effect, so measuring them separately measures noise. |
 | 4 | **Independent singletons** | #6 §2.1 FR-08/§3.7.9 stumble trigger, #23 §3.1/§3.3 `MarkingPressure` | 2 | Genuine leaves; land whenever convenient. |
 | 5 | **Supplement-gated** *(start FIRST, land LAST)* | #8 §3.2.2.1 baseline PASS formula, #15 §3.3 RUNNER assignment, #15 §3.4 run parameters, #27 §7.1 `LineupSelector` | 4 | Gate B. The pass-to-space and run-signalling supplements are one design conversation (P4 intent-as-first-class-object), so they should be authored together. Opening them on day one costs nothing and removes them from the end of the queue. |
 | 6 | **Pressing / defensive — AFTER W2 IS ARMED** | #8 §3.1.8/§3.2.7.1 PRESS trigger, #13 ×4 (§3.3 primary press, §3.4 cover shadow, §3.1.4 `WEAK_RECEIVER`, §3.3/§3.7 fatigue ceiling), #14 §3.5 threat score, #14 §3.6 tackle intent | 7 | Gate A. #8's PRESS trigger sits here rather than with the singletons because it and #13 §3.3 are **the same decision at two layers** — pressing them apart would calibrate one against the other's unfixed form. **One caveat, stated rather than glossed:** #14 §3.5 (threat score → MAN_MARK/INTERCEPT_RUNNER priority) is marking, not tackling, so it is gated by chain-coherence rather than by W2 directly. It could move earlier if a reason arises; the other six should not. |
 
-3 + 4 + 4 + 2 + 4 + 7 = **24**.
+3 + 4 + 4 + 2 + 4 + 7 = **24** — **21 outstanding** since batch 1 landed on August 22, 2026.
 
 **Two standing constraints that cut across every batch.**
 

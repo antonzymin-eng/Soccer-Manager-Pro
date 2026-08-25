@@ -1,9 +1,12 @@
 # Player Progression & Lifecycle #28 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** August 10, 2026 (v0.3 — ERR-028-017: §4.2's "Season-save composition" note corrected from a stale "2 → 3" frame-version claim to a citation of #30 Appendix A's 1→5 chain; §4.5's seam sentence restated in `TrainingInputBatch` terms and its "sole seam" claim replaced with the verified full public surface of `ProgressionEngine`)
+**Last Updated:** August 24, 2026 (v0.6 — round-2 finding assemblyinfo-missing-from-a-file-map-annotated-as-verified (L3): §4.2's file-map tree gains `AssemblyInfo.cs`, added at the round-1 Medium/Low pass (2026-08-23) but missing from this list despite its own "verified against src/player-progression/*.cs" claim, with a one-line note on what its `InternalsVisibleTo` grant does and why. No file moved, no reference direction changed. Prior entry below.)
+**Last Updated (prior):** August 24, 2026 (v0.5 — round-2 adversarial finding `construction-day-credit-implemented-twice` (High): §4's file map for `AbilityModel.cs` gains `ConstructionDayCredit`, the single implementation of the §3.1/§3.3 construction-day credit both `PlayerLifecycle` construction sites now call — it was previously written out twice, inlined in `ProgressionEngine.SeedLifecycle` and again as the now-deleted `RegenGenerator.BandStepFor`. No file added or removed, no reference direction changed. Prior entry below.)
+**Last Updated (prior):** August 22, 2026 (v0.4 — **ERR-028-020 / ERR-028-021**: §4's file map for `AbilityModel.cs` brought current — it now carries §3.1.3's age curve (`DailyBandPoints` / `AccruedBandPoints`, with `ClassifyAgeBand` demoted to a read of it) and §3.4's `RetirementAgeDays`, neither of which existed when the map was written. No file added, no reference direction changed. Prior entry below.)
+**Last Updated (prior):** August 10, 2026 (v0.3 — ERR-028-017: §4.2's "Season-save composition" note corrected from a stale "2 → 3" frame-version claim to a citation of #30 Appendix A's 1→5 chain; §4.5's seam sentence restated in `TrainingInputBatch` terms and its "sole seam" claim replaced with the verified full public surface of `ProgressionEngine`)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.3
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -31,16 +34,25 @@ and `TrainingInputBatch.cs` (both public, both load-bearing since T1/T2a) were m
 `RetirementResult.cs`/`RegenResult.cs` do not exist: the season-boundary signals are declared as inline
 `readonly struct` sketches in §2.2's code block, not implemented files — `RunSeasonBoundary` itself is
 deferred (§9.2), so nothing constructs or consumes them yet. Kept in the list as a NOT-YET-BUILT row so
-the deferred boundary is visible rather than silently dropped.**
+the deferred boundary is visible rather than silently dropped. *(Corrected — round-2 finding
+assemblyinfo-missing-from-a-file-map-annotated-as-verified: `AssemblyInfo.cs`, added at the round-1
+Medium/Low pass (2026-08-23), was missing from this list despite the list's own "verified" claim above
+— a file map that claims verification and omits a file is worse than one claiming nothing. Added
+below.)***
 
 ```
 src/player-progression/                 // references PlayerDatabase + DeterministicSim only
 ├── player-progression.asmdef
+├── AssemblyInfo.cs                     // [assembly: InternalsVisibleTo("...Tests")] — grants the test assembly access to the internal TestOnly_* dial overloads and ClassifyAgeBand, none of which has a cross-assembly production caller (FR-CS-015)
 ├── ProgressionEngine.cs                // sealed: AdvanceDay / SquadFor / Snapshot / Restore; sole writer (KD-7); RunSeasonBoundary NOT YET BUILT (§9.2)
 ├── PlayerLifecycle.cs                  // the per-player overlay value type (§2.2)
 ├── ClubCareerStates.cs                 // the per-club (records, lifecycles) pair Encode/Decode and ToBlocks/FromBlocks carry (§3.5)
 ├── GrowthProjection.cs                 // static pure: the §3.1 daily projection (sole attribute-mutation path)
-├── AbilityModel.cs                     // static pure: ComputeCA + ClassifyAgeBand + the weighted spend order (§3.1.2/§3.2)
+├── AbilityModel.cs                     // static pure: ComputeCA, the §3.1.3 age curve (DailyBandPoints /
+│                                       //   AccruedBandPoints) + ClassifyAgeBand as its read, the §3.1/§3.3
+│                                       //   ConstructionDayCredit both PlayerLifecycle construction sites
+│                                       //   call, §3.4's RetirementAgeDays, and the weighted spend order
+│                                       //   (§3.1.2/§3.2)
 ├── RegenGenerator.cs                   // static pure: §3.3 single-player generation (reuses #27's draw pattern)
 ├── TrainingInput.cs                    // the per-player #29 seam element (Neutral identity, §2.2)
 ├── TrainingInputBatch.cs               // the FR-PG-021 batch parameter: ClubTrainingInputs[] + Neutral (§2.2)
@@ -119,4 +131,7 @@ stream); this section's prior text listed it as already part of the seam.
 | 0.1 | 2026-07-23 | — | Initial architecture: assembly placement + one-way reference direction, file layout, determinism-identifier promotion, CS0104 note, no-phantom-interface discipline. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-08-10 | — | ERR-028-017 (AR pass 5 spec-vs-code sweep, no code change): §4.2's file layout was stale against `src/player-progression/*.cs` — missing `ClubCareerStates.cs` and `TrainingInputBatch.cs` (both public, both load-bearing since T1/T2a) and listing `RetirementResult.cs`/`RegenResult.cs`, which do not exist (only sketched inline in §2.2; `RunSeasonBoundary` itself is deferred) — corrected, with the not-yet-built pair marked as such rather than removed. §4.2's "Season-save composition" paragraph carried a stale "2 → 3" `SEASON_SAVE_FORMAT_VERSION` claim — actual is 4 → 5 as of #28 T1 — replaced with a citation to #30 Appendix A rather than a fourth restated copy of a chain #30 already owns (the AR pass 13 "a third copy is not re-synchronised" lesson, applied at the second copy this time). §4.5's seam sentence corrected from "a `TrainingInput` method parameter" to the actual `TrainingInputBatch` shape, and its "sole seam" list — which named `RunSeasonBoundary` (not yet built) and omitted `SeedFrom`/`SquadFor`/`ToBlocks`/`FromBlocks`/`Empty`/`ClubCount`/`NextPlayerId`/`CarriesClub` — replaced with the verified full public surface of `ProgressionEngine`, split into the #30 contract, codec-internal members, observation, and construction convenience. |
+| 0.4 | 2026-08-22 | — | **ERR-028-020 / ERR-028-021** (football-judgment proxy review, batch 1 — spec + code, same commit). §4's file map annotation for `AbilityModel.cs` updated: it now hosts §3.1.3's continuous age curve (`DailyBandPoints` / `AccruedBandPoints`) with `ClassifyAgeBand` as a read of that curve rather than an independent classifier, plus §3.4's `RetirementAgeDays`. No new file, no new assembly reference, no change to the reference direction. |
+| 0.5 | 2026-08-24 | — | Round-2 adversarial finding `construction-day-credit-implemented-twice` (High), spec + code in the same commit. §4's file map for `AbilityModel.cs` now names `ConstructionDayCredit` — the one implementation of the construction-day credit rule §3.1 and §3.3 both state, which `ProgressionEngine.SeedLifecycle` and `RegenGenerator.GenerateRegen` both call. The rule previously had two implementations (inlined at the seed site, and `RegenGenerator.BandStepFor` at the regen site), which is why ERR-028-018 landed at one site only and ERR-028-020 had to revisit both; `BandStepFor` is deleted, so `RegenGenerator.cs`'s own map line is unchanged (it never named the method). No new file, no new assembly reference, no change to the reference direction. |
+| 0.6 | 2026-08-24 | — | Round-2 finding `assemblyinfo-missing-from-a-file-map-annotated-as-verified` (L3), doc-only. §4.2's tree gains `AssemblyInfo.cs` — round 1 (2026-08-23) added the file (the `InternalsVisibleTo` grant for `TacticalDirector.PlayerProgression.Tests`) but never added it to this list, despite the list's own header claiming verification against `src/player-progression/*.cs`. No new file (it already existed), no reference direction change. |
 #endregion

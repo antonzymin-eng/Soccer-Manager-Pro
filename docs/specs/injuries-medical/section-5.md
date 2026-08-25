@@ -1,11 +1,14 @@
 # Injuries & Medical #41 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026, second final entry (v0.6 — AR pass 16 L2: T-MD-MOD-002 covers both clamp arms)
+**Last Updated:** August 23, 2026 (v0.9 — Group-B AR findings: new **T-MD-AGE-008** allocates the id for the parameterised `AgeRiskFor` overload's own `[GT]`-dial guard (negative `perYear` / negative `span`), whose isolating cases were missing entirely (`guards-unexercised`, the #41 half) — locked by `MedicalStepTests.AgeRiskFor_NegativeDials_FailLoud_TTMDAGE008`, mutation-verified against the guard's deletion. §5.8's FR-MD-025a row extended to T-MD-AGE-001..008. Prior entry below.)
+**Last Updated (prior):** August 22, 2026, later same day (v0.8 — **ERR-041-021** (adversarial review over the ERR-041-020 landing, H3 + H4): T-MD-AGE-004 rebuilt — its "position is normative" requirement was the inert before-the-mitigation claim, and all three of a reviewer's mutants passed it; it now has one part per property the position actually carries (inside the sum / before the `OccurrenceRiskMillMult` scaling / before the clamp) and pins the retired robustness-discrimination claim as false. T-MD-AGE-006 gains the standing caveat that the four season-scale bands are AGE-BLIND — forced ages 17/26/35 give 623/783/929 league injuries, all inside the band — so it establishes P5 and must not be cited as evidence the term is wired. New **T-MD-AGE-007** is what does that: the over-30-vs-under-23 split on the instrument's own walk, required to fail if the production call site's age is neutralised. §5.8's FR-MD-025a row extended to T-MD-AGE-001..007. Prior entry below.)
+**Last Updated (prior):** August 22, 2026 (v0.7 — **ERR-041-020**: new **§5.6.1** allocates T-MD-AGE-001..006 for §3.4's age term — the pivot zero that keeps every pre-ERR expectation exact, per-year continuity, symmetric saturation and the negative-age refusal, the normative POSITION of the term inside the sum, the zero-span pre-fix identity required to be EXERCISED rather than asserted, and the season-scale P5 check that the measured bands hold unmoved. §5.8 gains the FR-MD-025a row. Prior entry below.)
+**Last Updated (prior):** August 8, 2026, second final entry (v0.6 — AR pass 16 L2: T-MD-MOD-002 covers both clamp arms)
 **Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 10 L4: T-MD-DET-010 names the existing F8 sentinel lock)
 **Last Updated (prior):** August 8, 2026 (v0.4 — balance-pass AR pass 6 M4: the ERR-041-012 sweep — T-MD-DET-004 / T-MD-NEU-003 / T-MD-SEV-001 restated off the phantom registered stream and its service reservation. Prior header below.)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -96,6 +99,69 @@ Tests land at T-phase; this is the acceptance contract.
 - **T-MD-REC-002** — `RobustnessMitigation` is deterministic over own attributes (identical inputs →
   identical mitigation) — FR-MD-015.
 
+## 5.6.1 The age term (§3.4 / FR-MD-025a / ERR-041-020, rebuilt at ERR-041-021)
+
+- **T-MD-AGE-001 (the pivot, and why nothing else was rebaselined)** — `AgeRiskFor(AGE_RISK_PIVOT_YEARS)`
+  MUST be exactly 0, and one year either side MUST differ by exactly
+  `AGE_RISK_PER_YEAR_FROM_PIVOT`. The zero is what keeps every §5 expectation written before this ERR
+  exact when the pivot age is passed, rather than requiring them all to be re-derived.
+- **T-MD-AGE-002 (continuity, doctrine P1)** — Across the whole football age range every adjacent-year
+  step MUST be the same magnitude (or 0, at saturation) — there MUST be no age at which the term jumps.
+- **T-MD-AGE-003 (saturation + a corrupt age)** — The term saturates symmetrically at `±AGE_RISK_SPAN`,
+  and a **negative** `ageYears` fails loud rather than being clamped (a derived age is never negative —
+  #28 §3.1.1 fails loud on the anchor that would produce one).
+- **T-MD-AGE-004 (position is normative — rebuilt at `ERR-041-021`)** — Three parts, one per property
+  the position actually carries:
+  1. **Inside the sum.** The assembled score for a veteran MUST exceed the same player at the pivot age
+     by exactly `AgeRiskFor(veteranAge)`, below the clamp, with the precondition asserted. Fails if the
+     term is dropped.
+  2. **Before the `OccurrenceRiskMillMult` scaling.** Under a non-identity `MedicalModifier` (a halving
+     seam) the veteran-minus-pivot delta MUST equal `AgeRiskFor(veteranAge) × mult / 1000`, not
+     `AgeRiskFor(veteranAge)` — with a precondition asserting the chosen multiplier actually changes the
+     value, so the case cannot be satisfied by an unscaled term. Fails if the term is applied after the
+     scaling.
+  3. **Before the clamp.** At a risk input that saturates the ceiling, the assembled score for a veteran
+     MUST be **exactly** `INJURY_RISK_MAX` and MUST NOT exceed `OCCURRENCE_DRAW_DENOM`. Fails if the
+     term is applied after the clamp — which returns `ceiling + AgeRiskFor(age)`, a daily probability
+     above 1.
+
+  The suite additionally pins the **retired** claim as the false statement it is: the veteran-minus-pivot
+  delta MUST be identical at robustness 1, 14 and 20, while a frail veteran MUST still assemble more than
+  an iron one of the same age (what the mitigation genuinely does — a level shift on the whole score).
+  *(As written at `ERR-041-020` this test required "the term before the mitigation, so robustness
+  discriminates it". A reviewer's three mutants — term after the mitigation, after the scaling, after the
+  clamp — all passed it. The after-the-mitigation mutant is an **identity** (the mitigation is subtracted;
+  addition commutes — verified byte-identical over 956,480 sampled inputs), so it is not lockable by any
+  test and the claim is withdrawn rather than re-locked; the other two are now caught.)*
+- **T-MD-AGE-005 (the zero-span identity)** — At `AGE_RISK_SPAN = 0` the term MUST be 0 for every age,
+  reproducing the pre-fix assembly exactly. MUST be **exercised** against an explicit span — the `[GT]`
+  is read once at static initialisation and the gate runs config-unbound, so an identity asserted only
+  in prose is the class the `ERR-008-021`/`-022` chain had falsified three times on first run.
+- **T-MD-AGE-006 (P5 at season scale)** — The season-scale realism instrument's league, starter,
+  reserve and squad-unavailability bands MUST hold unmoved with the term live: the pivot is the
+  bootstrap population's mean age, so the aggregate does not move and only the distribution does.
+  **This establishes P5 and NOTHING ELSE** (`ERR-041-021`). All four bands are age-blind — measured,
+  forcing every player's age to 17, 26 and 35 yields 623 / 783 / 929 league injuries a season and all
+  three PASS the asserted band — so this test MUST NOT be cited as evidence that the age term reaches
+  production. T-MD-AGE-007 is what does that.
+- **T-MD-AGE-007 (the age axis reaches production — added at `ERR-041-021`)** — The season-scale
+  instrument MUST split its own `InjuryCount` walk by player age and assert that **over-30s out-injure
+  under-23s by a margin no rounding or selection noise can supply** (measured 1.34× at today's dials;
+  asserted `> 1.25×`), mirroring its starters-out-injure-reserves assert. It MUST fail if the
+  production call site's `ageYears` argument is neutralised — `season-save` is the only assembly that
+  constructs a `PlayerCareerStates`, so this suite is the complete coverage set for that call site, and
+  before this test nothing anywhere locked it (verified: replacing `record.Age` with the pivot literal
+  gives 1.01× and fails, while the four T-MD-AGE-006 bands return the recorded pre-fix
+  783 / 2.08 / 1.13 / 9.5% and all pass). Each seed MUST also assert both age bands are populated, so a
+  change to #27's bootstrap age distribution cannot silently empty the comparison.
+- **T-MD-AGE-008 (the `[GT]` dials' own guard — added at the Group-B AR pass)** — The parameterised
+  `AgeRiskFor(ageYears, pivotYears, perYear, span)` overload MUST fail loud
+  (`InvalidOperationException`) for a negative `perYear` and, separately, for a negative `span` —
+  reachable ONLY through this overload, since `AgeRiskPerYearFromPivot`/`AgeRiskSpan` are `[GT]`s read
+  once at static initialisation and the gate runs config-unbound (the `DrawOccurrence` guard posture).
+  `AgeRiskPivotYears` carries no such guard, deliberately (Appendix A) — no value of it breaks a
+  catalogue invariant the way a negative slope or span does.
+
 ## 5.7 Seams & fail-loud
 
 - **T-MD-MOD-002** — Recovery-speed is applied to **assigned tier-days at injury time**, not per-tick: a
@@ -137,6 +203,7 @@ Tests land at T-phase; this is the acceptance contract.
 | FR-MD-013 | T-MD-NEU-001 |
 | FR-MD-014 | T-MD-REC-001, T-MD-MOD-002 |
 | FR-MD-015 | T-MD-REC-002 |
+| FR-MD-025a | T-MD-AGE-001..008 |
 | FR-MD-016 | T-MD-MOD-001, T-MD-FAIL-006 |
 | FR-MD-017 | T-MD-FAIL-001 |
 | FR-MD-018 | T-MD-DET-001 |
@@ -159,4 +226,7 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.4 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: three test descriptions still asserted against the registered `injuries.occurrence` stream / `DeterministicRngService` reservation that ERR-041-012 established never existed; restated against the keyed derivation the suites actually exercise. |
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 10 (L4)**: **T-MD-DET-010** — the F8 sentinel-as-worldDay refusal (pass 9) gets its §5 id, naming the `AdvancingTheSentinelDay_FailsLoud` lock that already executes it. |
 | 0.6 | 2026-08-08 | — | **Balance-pass AR pass 16 (L2)**: T-MD-MOD-002 covered only the floor arm while pass 15 M2 made the ceiling normative — and a mutant erasing the ceiling left the whole suite green; both arms now stated and locked. |
+| 0.7 | 2026-08-22 | — | **ERR-041-020** (football-judgment proxy review, batch 1 — spec + code, same commit). New §5.6.1 allocates **T-MD-AGE-001..006** for §3.4's age term: the pivot-is-exactly-zero property (which is what leaves every expectation written before this ERR exact when the pivot age is passed, rather than requiring a suite-wide re-derivation), per-year continuity across the football range, symmetric saturation plus the negative-age refusal, the term's normative POSITION inside the sum (an assertion that fails both if the term is dropped and if it is moved after the mitigation or the clamp), the zero-span pre-fix identity — required to be EXERCISED against an explicit span, since the `[GT]` is read once at static init and the gate runs config-unbound — and the season-scale P5 check that the realism instrument's measured bands hold unmoved. §5.8 gains the FR-MD-025a traceability row. |
+| 0.8 | 2026-08-22 | — | **ERR-041-021** (adversarial review over the ERR-041-020 landing, H3 + H4 — spec + code, same commit). **H4 / T-MD-AGE-004 rebuilt.** As allocated at v0.7 the test required the term "before the mitigation, so robustness discriminates it", and a reviewer's three mutants — term after the mitigation, after the `OccurrenceRiskMillMult` scaling, after the clamp — ALL passed the suite; the clamp mutant can return above `INJURY_RISK_MAX`. The after-the-mitigation mutant is an identity (the mitigation is subtracted, addition commutes; byte-identical over 956,480 sampled inputs), so it is unlockable by construction and the claim is withdrawn rather than re-locked. The test now has one part per real property — inside the sum, before the scaling (a halving `MedicalModifier`, with a precondition that the multiplier changes the value), before the clamp (a saturating input returning EXACTLY the ceiling) — plus a pin of the retired claim as false (identical age delta at robustness 1, 14 and 20). **H3 / T-MD-AGE-006 + new T-MD-AGE-007.** The four season-scale bands are age-blind: forced ages 17 / 26 / 35 produce 623 / 783 / 929 league injuries a season and all three pass the asserted band, so "the bands held unmoved" is evidence for P5 and NOT for the term being wired — which is how it was published. T-MD-AGE-006 carries that caveat; new **T-MD-AGE-007** requires the instrument to split its own `InjuryCount` walk by age and assert over-30s out-injure under-23s (measured 1.34×, asserted > 1.25×), and to fail when the production call site's `ageYears` is neutralised — 1.01× and failing, verified. `season-save` is the sole constructor of `PlayerCareerStates`, so nothing outside that suite could ever have seen that call site. §5.8's FR-MD-025a row extended to T-MD-AGE-001..007. |
+| 0.9 | 2026-08-23 | — | **Group-B AR findings (`guards-unexercised`, the #41 half).** New **T-MD-AGE-008**: the parameterised `AgeRiskFor` overload's own `InvalidOperationException` guard (negative `perYear`, negative `span`) had no isolating case anywhere in the suite and was deletable with all 74 `InjuriesMedical.Tests` green — reachable ONLY through this overload under the config-unbound gate. Locked by `MedicalStepTests.AgeRiskFor_NegativeDials_FailLoud_TTMDAGE008`; reverting the guard and re-running fails this test. §5.8's FR-MD-025a row extended to T-MD-AGE-001..008. |
 #endregion

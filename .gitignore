@@ -12,6 +12,11 @@
 # team-wide config (the SessionStart chat-review hook), settings.local.json is per-machine.
 .claude/settings.local.json
 
+# Adversarial-review loop bookkeeping: per-run round state and the finding-ID map that lets round N+1
+# reuse round N's IDs. Session state, not configuration and not the record — the durable record of a
+# review is its ERR- entries in docs/tracking/spec-error-log.md and the changelog chain.
+.adversarial-review/
+
 # Unity
 [Ll]ibrary/
 [Tt]emp/
