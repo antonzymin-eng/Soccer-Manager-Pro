@@ -30,17 +30,21 @@ for f in docs/tracking/CHANGELOG.md docs/tracking/CHANGELOG-src.md; do
   prior="$(grep -cE '^> \*\*Last Updated \(prior\):\*\*' "$f" || true)"
   if [[ "$bare" -ne 1 ]]; then
     echo "FAIL: $f has $bare bare '**Last Updated:**' label(s) — exactly one is required."
-    grep -nE '^> \*\*Last Updated' "$f" | head -20
+    grep -nE '^> \*\*Last Updated' "$f" | cut -c1-160
   else
     echo "OK: $f — 1 bare label, $prior (prior) entries."
   fi
 done
-stray="$(grep -cE '^\*\*Last Updated' CLAUDE.md || true)"
+# Root CLAUDE.md's chain moved out on July 31, 2026; catch either its old
+# blockquote-prefixed form ("> **Last Updated:**", ~52 occurrences pre-split)
+# or a bare re-introduction — a chain re-added in either shape means the
+# split regressed.
+stray="$(grep -cE '^(> )?\*\*Last Updated' CLAUDE.md || true)"
 if [[ "$stray" -eq 0 ]]; then
   echo "OK: root CLAUDE.md carries no header chain (it lives in docs/tracking/CHANGELOG.md)."
 else
   echo "FAIL: root CLAUDE.md has $stray 'Last Updated' line(s) — the chain moved to docs/tracking/CHANGELOG.md."
-  grep -nE '^\*\*Last Updated' CLAUDE.md
+  grep -nE '^(> )?\*\*Last Updated' CLAUDE.md | cut -c1-160
 fi
 echo
 

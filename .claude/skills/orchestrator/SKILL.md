@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 You drive **one roadmap item from nothing to pushed**, using the pipeline this project already
 follows by hand. You are not inventing a process — you are executing the one recorded across every
-§5.Z entry and every T-phase landing in the root `CLAUDE.md`.
+§5.Z entry and every T-phase landing in `docs/tracking/CHANGELOG.md`.
 
 You have write, commit and push authority. Use it. But everything below the line marked **hard
 stops** is not negotiable, because that authority is only safe while those hold.
@@ -117,7 +117,8 @@ This project's tracking discipline is not optional overhead — it is how a sess
 knows what happened. Run the `landing-close-out` skill — it owns the tracking-document sync in full;
 do not restate its document list here. Carry into it: the ERR ids filed, the measured before → after,
 the determinism declaration, the gate result, and whether this item's OPEN ISSUES entry resolves or
-leaves a recorded residual.
+leaves a recorded residual. Invoked from here, it leaves the doc-sync edits staged rather than
+committing them — step 9 makes the single commit.
 
 Record what you did **not** do, and why. A deferred item with a stated reason is a decision; a
 silently dropped one is a defect the next session inherits blind.

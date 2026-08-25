@@ -112,7 +112,7 @@ At approval (once G3 is granted): flip every file in the folder to `Status: APPR
 `section-9-approval-checklist.md` with the §9.5 gate table and §9.6 decision, update the
 `SPEC_INDEX.md` counts, and land the G2 back-props in the same commit.
 
-Then run `landing-close-out`. One thing to carry into the root `CLAUDE.md` entry: state whether the
-newly approved spec has a `src/` assembly. "APPROVED" says nothing about whether code exists — it is
-currently untrue of roughly 42% of the registry, and that gap is the single most misread fact about
-this project's state.
+Then run `landing-close-out`. One thing to carry into the `docs/tracking/CHANGELOG.md` entry: state
+whether the newly approved spec has a `src/` assembly. "APPROVED" says nothing about whether code
+exists — it is currently untrue of roughly 42% of the registry, and that gap is the single most
+misread fact about this project's state.

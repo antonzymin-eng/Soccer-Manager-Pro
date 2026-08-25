@@ -14,7 +14,7 @@ invented: the counts below are from the last 200 commits.
 | Skill | Encodes | Observed repetition |
 |---|---|---|
 | `match-realism-pass` | **wiring gate** (backlog → chain → 6 checks) → measure → localize → fix → calibrate *(gate-permitting; frozen under KD-W1)* → re-measure → lock | 8 passes (§5.Z.17–§5.Z.24) in 9 days; 2 of the 8 (§5.Z.17, §5.Z.23) arrived as quality briefs over a stage that was missing |
-| `snapshot-schema-bump` | the cross-tick decision + serializer/reader/test checklist | 19 schema bumps, 2 of them fixing earlier omissions |
+| `snapshot-schema-bump` | the cross-tick decision + serializer/reader/test checklist | 21 schema bumps (as of August 25, 2026 — run `scripts/version_table.sh` for the live number), 2 of them fixing earlier omissions |
 | `err-file-and-backprop` | ERR id allocation, entry shape, spec-patch-same-commit | `spec-error-log.md` at v1.53; 2 live id collisions |
 | `landing-close-out` | the six-document sync at the end of a landing | every landing; one whole reconciliation pass caused by skipping it |
 | `spec-promotion` | supplement → 11-file spec set → the three gates | 11 promotions, 10 in one day |
@@ -59,7 +59,7 @@ that session's record; summary of what changed:
   ISSUES active/resolved counts against root `CLAUDE.md`'s stated figure, not just a side-by-side
   printout); and `snapshot-schema-bump/scripts/version_table.sh` (every live `*_FORMAT_VERSION`/
   `SNAPSHOT_SCHEMA_VERSION` constant in `src/`, so the skill's own version table can't go stale the way
-  its "1 → 19" claim already had — the real number is 21, across 12 constants, 5 of which the prose
+  its "1 → 19" claim already had — the real number is 21, across 12 constants, 6 of which the prose
   table didn't list).
 - **Composability.** `adversarial-review`'s "Repo obligation" section and `orchestrator` steps 5, 7 and
   8 each restated logic `err-file-and-backprop`, `dotnet-gate`, or `landing-close-out` already own (the

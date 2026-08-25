@@ -257,11 +257,9 @@ constrains, or to an artifact that has no spec — most reviews file nothing.
 2. **The spec text patched, or the entry saying why not.** If the spec is right and the code was
    wrong, say that in the entry. If layer membership, a `[GT]` value, or anything else needs an
    owner's decision, file `Open` and stop — do not write a guess into the authority file.
-3. **The landing ritual.** Run the `landing-close-out` skill — it owns the document sync in full (the
-   `docs/tracking/CHANGELOG.md` entry, the root `CLAUDE.md` OPEN ISSUES entry, `file-manifest.md`,
-   `src/CLAUDE.md`'s version bump, `README.md`, the owning design supplement) along with the
-   conventions each of those files enforces on itself. Do not restate them here; a change to any of
-   those conventions should have exactly one place to land.
+3. **The landing ritual.** Run the `landing-close-out` skill — it owns the full document sync and the
+   conventions each synced file enforces on itself. Do not restate its document list here; a change to
+   any of those conventions should have exactly one place to land.
 4. **Back-props named.** A fix with cross-spec consequences files them as their own `ERR-` entries
    against the consuming specs, landing atomically at approval.
 

@@ -126,6 +126,6 @@ impossible and would have surfaced as an assembly cycle.
 ## Step 5 — Close out
 
 Cite the ERR id in the code comment at the fix site and in the commit message, so the code points back
-at its rationale. Then run the `landing-close-out` skill — the root `CLAUDE.md` entry and the OPEN
-ISSUES section both need the ERR referenced, and the log version bump belongs in the same commit as
-everything else it describes.
+at its rationale. Then run the `landing-close-out` skill — the `docs/tracking/CHANGELOG.md` entry and
+the root `CLAUDE.md` OPEN ISSUES section both need the ERR referenced, and the log version bump belongs
+in the same commit as everything else it describes.

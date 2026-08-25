@@ -94,9 +94,8 @@ new path mints a new URL and orphans the old dashboard — don't.
 ## Repo obligations
 
 This repo records its own history in a specific way, and a review pass is subject
-to it. If a finding leads to a code or spec change, that change carries the
-landing ritual documented in `CLAUDE.md` (header entry, `spec-error-log.md` if an
-`ERR-` is filed, `file-manifest.md`, `src/CLAUDE.md` version bump). A review that
+to it. If a finding leads to a code or spec change, that change runs the
+`landing-close-out` skill (plus `err-file-and-backprop` if an `ERR-` is filed). A review that
 proposes changes does **not** perform that ritual — the change that lands does.
 
 ## What this skill does not do

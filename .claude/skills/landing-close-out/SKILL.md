@@ -14,9 +14,9 @@ description: >-
 
 # Landing Close-Out
 
-This repo's tracking documents *are* the project memory — the root `CLAUDE.md` header chain is how
-any agent picks up context, and it is the only place a landing's measured results live in narrative
-form. When a landing skips the sync, the cost is not cosmetic: commit `9af9626` is a whole
+This repo's tracking documents *are* the project memory — the `docs/tracking/CHANGELOG.md` header
+chain is how any agent picks up context, and it is the only place a landing's measured results live in
+narrative form. When a landing skips the sync, the cost is not cosmetic: commit `9af9626` is a whole
 "Documentation sync: reconcile root docs with codebase" pass that exists because two landings never
 updated the root docs, and it found the assembly count, the spec counts, and the entire assembly map
 stale.
@@ -133,6 +133,11 @@ even when it is boring, because its absence is ambiguous.
 One commit carrying code, spec patches, ERR entry, and doc sync together — so the record and the
 change cannot separate.
 
-**Stop before pushing.** Report the commit and the branch, and ask for confirmation. Push only on an
-explicit go: `git push -u origin <branch>`. Invoked from `orchestrator`, that skill's own push
-authority governs instead and no separate confirmation is needed here.
+**Invoked standalone** (nothing else is about to commit): make that commit yourself, then **stop
+before pushing** — report the commit and the branch, and ask for confirmation. Push only on an
+explicit go: `git push -u origin <branch>`.
+
+**Invoked from `orchestrator`** (its step 8): do not commit here. Leave the doc-sync edits staged and
+uncommitted — `orchestrator` step 9 makes the single commit covering code and docs together, and owns
+the push under its own authority. Two commits from one landing would split the record the "one commit"
+rule above exists to keep whole.
