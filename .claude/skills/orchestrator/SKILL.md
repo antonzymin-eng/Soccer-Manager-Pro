@@ -1,6 +1,7 @@
 ---
 name: orchestrator
 description: Autonomously drive one item of the Tactical Director path-to-playable roadmap end to end — orient, council review, design, implement, adversarial review to convergence, full dotnet gate, tracking-doc update, commit and push to its own branch. Use when asked to take the next roadmap item, land a T-phase, run a §5.Z-shaped match-realism pass, or work the roadmap autonomously. Defaults to ONE item per invocation; longer runs are opt-in and bounded. Has write, commit and push authority; does not open pull requests unless asked.
+disable-model-invocation: true
 ---
 
 # Roadmap Orchestrator
@@ -82,10 +83,11 @@ Write the code. While doing it:
   first. An env-gated diagnostic suite is the established shape (`TD_GK_DIAGNOSTIC`,
   `TD_SHOT_DIAGNOSTIC`). A diagnostic must **never assert current behaviour** — pinning a defect
   turns it into a contract.
-- **When the spec is the defect, patch the spec in the same commit** and file the `ERR-`, having
-  first verified the id is free against `docs/tracking/spec-error-log.md`. Budget for this: roadmap
-  C5 says expect 1–3 spec defects per T-phase landing, and six consecutive landings have hit it. A
-  landing that surfaces none is more likely under-looked than clean.
+- **When the spec is the defect, patch the spec in the same commit** and file the `ERR-` via the
+  `err-file-and-backprop` skill (it owns id allocation and the entry shape — do not re-derive the id
+  by hand here). Budget for this: roadmap C5 says expect 1–3 spec defects per T-phase landing, and six
+  consecutive landings have hit it. A landing that surfaces none is more likely under-looked than
+  clean.
 - **Write the lock, and verify it fails pre-fix by execution.** Create a worktree at the pre-fix
   commit and run the new test there. Inferred pre-fix failure is not verified pre-fix failure, and
   this project states the executed count every time (`3 of 4 predicates fail on the pre-fix engine`).
@@ -100,20 +102,14 @@ new High or Medium. Do not lower a severity to reach termination.
 
 ### 7. Gate
 
-```bash
-bash tools/dotnet-ci/run-gate.sh
-```
-
-The whole tree must be green with zero failures. Report the actual numbers.
+Run the `dotnet-gate` skill — it owns the command, the quarantine rule, and the report format; do not
+restate them here. The whole tree must be green with zero failures. Report the actual numbers.
 
 When the gate fails, **diagnose before assuming**. A failure after a behaviour change is often an
 **instrument**, not the mechanism — a sampling window that no longer contains the event, a counter
 whose definition the change moved. That is not a defect in the landed work, but it is fixed at the
 root rather than worked around, and it is reported as an instrument fix so the record stays honest.
 This has now happened three times in one pass.
-
-Never edit `tools/dotnet-ci/known-failures.txt` to quiet a red test. The quarantine is empty and
-shrinking-only.
 
 ### 8. Record
 

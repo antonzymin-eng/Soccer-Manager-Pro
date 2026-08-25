@@ -32,3 +32,25 @@ the agent definitions under `.claude/agents/` — see `.claude/README.md`, which
 
 Several `docs/tracking/` documents are already skill-shaped prose runbooks — `cert-run-runbook.md`
 most clearly — and could be converted cheaply if that workflow starts recurring.
+
+## Skill audit, August 25, 2026
+
+A visibility/determinism/composability pass over all ten skills. Full findings and rewrites are in
+that session's record; summary of what changed:
+
+- **Visibility.** `orchestrator` and `landing-close-out` both end in an unconfirmed `git push` — the
+  first by design ("has write, commit and push authority"), the second as its final step. Both now
+  carry `disable-model-invocation: true`, so a model-judged auto-trigger can no longer fire either;
+  they still run instantly on explicit invocation (`/orchestrator`, `/landing-close-out`). No other
+  skill here pushes, commits without being asked, or sends anything external, so no other flag changed.
+- **Scripted two fixed lookups that were previously done by an agent reasoning through prose steps:**
+  `err-file-and-backprop/scripts/next_err_id.sh` (grep `docs/`+`src/` for the highest `ERR-<spec>-*`
+  id, print the next one — the allocation step, not the re-verify-at-merge judgment call, which stays
+  prose) and `landing-close-out/scripts/check_drift.sh` (duplicate-`**Last Updated:**`-label check,
+  per-doc declared-vs-git-touched dates, and the OPEN ISSUES active/resolved recount this repo's own
+  changelog has hand-run with `grep -c` repeatedly — and mis-stated at least once, per the August 10
+  correction in root `CLAUDE.md`).
+- **Composability.** `adversarial-review`'s "Repo obligation" section and `orchestrator` steps 5 and 7
+  each restated logic `err-file-and-backprop` and `dotnet-gate` already own (the id-allocation grep,
+  the quarantine rule). Both now point at the owning skill instead of re-describing it, so a future
+  change to either convention has one place to land rather than three.

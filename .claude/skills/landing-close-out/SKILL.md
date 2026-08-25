@@ -9,6 +9,7 @@ description: >-
   "update the docs", or "commit and push", and whenever an ERR was filed or a schema version bumped.
   Trigger it even when the change feels small — the documents drift precisely on the landings that
   seemed too minor to record, and reconstructing them later is a whole separate pass.
+disable-model-invocation: true
 ---
 
 # Landing Close-Out
@@ -20,9 +21,19 @@ form. When a landing skips the sync, the cost is not cosmetic: commit `9af9626` 
 updated the root docs, and it found the assembly count, the spec counts, and the entire assembly map
 stale.
 
-Check the current drift before you start — `README.md` and `docs/tracking/file-manifest.md` both
-carry a `**Last Updated:**` date, and if it trails the last few landings, say so rather than adding a
-seventh layer on top of a stale base.
+Check the current drift before you start. This is a fixed lookup, not a judgment call, so it's
+scripted:
+
+```bash
+.claude/skills/landing-close-out/scripts/check_drift.sh
+```
+
+It flags a duplicate bare `**Last Updated:**` label in root `CLAUDE.md` (found and fixed at least
+three times — see the rule under item 1 below), reports each tracking doc's declared date next to
+when it was actually last touched, and re-derives the OPEN ISSUES active/resolved counts the same way
+this repo's own changelog has had to by hand, repeatedly. If `README.md` or
+`docs/tracking/file-manifest.md` trails the last few landings, say so rather than adding a seventh
+layer on top of a stale base.
 
 ## What to update
 
