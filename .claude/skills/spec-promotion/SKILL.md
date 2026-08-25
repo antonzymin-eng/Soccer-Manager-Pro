@@ -31,8 +31,12 @@ the row lands in `SPEC_INDEX.md` at promotion, never at design-note stage.
 Positional Rotations and is already Pressing AI's. Check before committing to it:
 
 ```bash
-grep -rhoE "\bFR-[A-Z]{2,3}-" docs/specs/ | sort -u
+grep -rhoE "\bFR-[A-Z]{2,3}-" docs/specs/ docs/tracking/ src/ | sort -u
 ```
+
+`docs/tracking/` is included deliberately, not just `docs/specs/` — an unpromoted design supplement
+can already hold a prefix (today `FR-DT-` appears there and in no spec), and checking only the spec
+folders would miss exactly the collision this step exists to catch.
 
 **ERR ids:** any `ERR-` id the supplement proposes must be re-verified free against
 `docs/tracking/spec-error-log.md` *and* the spec folders. Three supplements in the last wave proposed

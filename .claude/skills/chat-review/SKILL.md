@@ -77,10 +77,11 @@ Then one short paragraph per finding — what tripped, the measured number, and 
 proposed fix. Do not paste the JSON. If a finding proposes a skill, offer to
 write it rather than writing it unasked.
 
-## Refresh the dashboard
+## Refresh the dashboard — only when asked
 
-The findings render at the published `chat-review` artifact. To update it, edit
-`docs/design/chat-review.html` and re-publish with the **same file path** so the
+Never publish or re-publish as part of a routine review pass. Only when the user explicitly asks to
+refresh or republish the dashboard: the findings render at the published `chat-review` artifact, so
+edit `docs/design/chat-review.html` and re-publish with the **same file path** so the
 URL is preserved:
 
 ```

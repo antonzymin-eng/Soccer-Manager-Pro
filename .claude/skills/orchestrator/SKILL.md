@@ -114,13 +114,10 @@ This has now happened three times in one pass.
 ### 8. Record
 
 This project's tracking discipline is not optional overhead — it is how a session six weeks from now
-knows what happened. Update, in the same commit as the code:
-
-- The **owning design doc** — findings, decisions, measured before/after, AR rounds.
-- The root **`CLAUDE.md`** — a new Last-Updated header entry in the established style, and the
-  OPEN ISSUES entry for this item (resolve it, or add one for what you deliberately left).
-- **`docs/tracking/spec-error-log.md`** — any `ERR-` filed.
-- **`src/CLAUDE.md`**, **`file-manifest.md`**, `SPEC_INDEX.md` — where touched.
+knows what happened. Run the `landing-close-out` skill — it owns the tracking-document sync in full;
+do not restate its document list here. Carry into it: the ERR ids filed, the measured before → after,
+the determinism declaration, the gate result, and whether this item's OPEN ISSUES entry resolves or
+leaves a recorded residual.
 
 Record what you did **not** do, and why. A deferred item with a stated reason is a decision; a
 silently dropped one is a defect the next session inherits blind.

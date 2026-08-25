@@ -1,15 +1,15 @@
 ---
 name: landing-close-out
 description: >-
-  Close out a landing by syncing every tracking document the change touches — the root CLAUDE.md
-  header chain and OPEN ISSUES entry, src/CLAUDE.md's version bump, file-manifest.md, README.md, the
-  owning design supplement's version history, and the gate-result line — in the same commit as the
-  code. Use this skill at the end of any pass that lands code, a spec change, or a new assembly:
+  Close out a landing by syncing every tracking document the change touches — the
+  docs/tracking/CHANGELOG.md header chain, root CLAUDE.md's OPEN ISSUES entry, src/CLAUDE.md's version
+  bump (and its own CHANGELOG-src.md chain), file-manifest.md, README.md, the owning design
+  supplement's version history, and the gate-result line — in the same commit as the code. Use this
+  skill at the end of any pass that lands code, a spec change, or a new assembly:
   when the work is done and about to be committed, when the user says "wrap this up", "record this",
   "update the docs", or "commit and push", and whenever an ERR was filed or a schema version bumped.
   Trigger it even when the change feels small — the documents drift precisely on the landings that
   seemed too minor to record, and reconstructing them later is a whole separate pass.
-disable-model-invocation: true
 ---
 
 # Landing Close-Out
@@ -28,10 +28,11 @@ scripted:
 .claude/skills/landing-close-out/scripts/check_drift.sh
 ```
 
-It flags a duplicate bare `**Last Updated:**` label in root `CLAUDE.md` (found and fixed at least
+It flags a duplicate bare `**Last Updated:**` label in the changelog chain (found and fixed at least
 three times — see the rule under item 1 below), reports each tracking doc's declared date next to
-when it was actually last touched, and re-derives the OPEN ISSUES active/resolved counts the same way
-this repo's own changelog has had to by hand, repeatedly. If `README.md` or
+when it was actually last touched, and checks the OPEN ISSUES active/resolved counts against a direct
+recount — the same comparison this repo's own changelog has had to make by hand, repeatedly, and got
+wrong at least once (the August 10, 2026 correction in root `CLAUDE.md`). If `README.md` or
 `docs/tracking/file-manifest.md` trails the last few landings, say so rather than adding a seventh
 layer on top of a stale base.
 
@@ -40,13 +41,16 @@ layer on top of a stale base.
 Work through these; skip one only when the change genuinely does not touch it, and say which you
 skipped.
 
-**1. Root `CLAUDE.md` — the header chain.** Add a new `**Last Updated:**` entry summarising the
-landing: what changed, the ERR ids, the measured before → after numbers, the determinism declaration,
-what locks it, and the gate result. Two conventions the file enforces on itself:
+**1. `docs/tracking/CHANGELOG.md` — the header chain.** Root `CLAUDE.md` itself carries no header
+chain any more; the chain was split out on July 31, 2026 and root `CLAUDE.md` only holds OPEN ISSUES
+now. Add a new `**Last Updated:**` entry summarising the landing: what changed, the ERR ids, the
+measured before → after numbers, the determinism declaration, what locks it, and the gate result. Two
+conventions the file enforces on itself:
 
 - Relabel the previous entry to `**Last Updated (prior):**`. **Exactly one bare `**Last Updated:**`
   label may exist** — this file has been found with two, which makes it self-contradictory about its
-  own currency, and it has been fixed at least three times.
+  own currency, and it has been fixed at least three times. (The same rule applies independently to
+  `docs/tracking/CHANGELOG-src.md`, item 3 below.)
 - Historical entries are preserved verbatim. Never rewrite an old entry to match what you now know;
   supersede it in the new entry instead.
 
@@ -59,9 +63,11 @@ own diagnosis, and deleting them would have erased that.
 If the pass recorded a residual it deliberately did not fix, that becomes its own entry with the
 measurement attached. That recorded residual is how the next pass starts.
 
-**3. `src/CLAUDE.md`.** Bump the version (currently in the v2.5x range) and add its own entry — this
-one is file-and-symbol level: which files changed, to what version, and what the new seams are. It is
-the coding guide, so it answers "what does the code look like now", not "what did we learn".
+**3. `src/CLAUDE.md`.** Bump the version (currently in the v2.5x range). Its own entry — the
+`**Last Updated:**` chain and the `VERSION HISTORY` table, file-and-symbol level: which files changed,
+to what version, and what the new seams are — lives in `docs/tracking/CHANGELOG-src.md`, per
+`src/CLAUDE.md`'s own pointer at the top of the file, not inline. It answers "what does the code look
+like now", not "what did we learn".
 
 **4. `docs/tracking/file-manifest.md`.** The authoritative file inventory. Add new files, note
 modified ones with their new versions, and record any new assembly. If the change added an assembly,
@@ -125,4 +131,8 @@ even when it is boring, because its absence is ambiguous.
 ## Commit
 
 One commit carrying code, spec patches, ERR entry, and doc sync together — so the record and the
-change cannot separate. Then push to the designated branch with `git push -u origin <branch>`.
+change cannot separate.
+
+**Stop before pushing.** Report the commit and the branch, and ask for confirmation. Push only on an
+explicit go: `git push -u origin <branch>`. Invoked from `orchestrator`, that skill's own push
+authority governs instead and no separate confirmation is needed here.
