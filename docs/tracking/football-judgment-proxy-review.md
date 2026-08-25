@@ -31,7 +31,7 @@
 > file, `CHANGELOG.md`, `CHANGELOG-src.md`); the superseded wording is quoted in each annotation rather
 > than deleted. Landed in the same pass: the three held ERR bodies — `ERR-028-022`, `ERR-028-023`,
 > `ERR-041-021` — which the batch-1 spec text and code comments had been citing with nothing behind
-> them in `spec-error-log.md` (**v2.20**). **The finding counts are untouched: 34 recorded, 5 fixed, 29
+> them in `spec-error-log.md` (**v2.23**). **The finding counts are untouched: 34 recorded, 5 fixed, 29
 > open, workable queue 21.** Those three are review-over-the-landing findings, not new §2/§3 proxy
 > findings.
 > **Updated (prior):** August 22, 2026, later same day — **BATCH 1 LANDED IN FULL: all three off-pitch findings

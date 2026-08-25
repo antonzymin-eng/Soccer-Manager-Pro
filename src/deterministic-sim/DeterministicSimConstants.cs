@@ -1,6 +1,9 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-08-08 (AR pass 9 M2 sweep: the 0x2A doc stops naming the retired stream — v1.7)
+// Modified: 2026-08-22 (ERR-016-011: ERR_DS_SNAPSHOT_DIGEST_MISMATCH 0x160F, replay step 4b — v1.10;
+//           prior same day ERR-016-010 SNAPSHOT_FILE_MAGIC / _FORMAT_VERSION v1.9;
+//           ERR-016-009 DOMAIN_TAG_BUILD_IDENTITY 0x2E + BUILD_IDENTITY_VERSION +
+//           ERR_DS_REPLAY_BUILD_MISMATCH 0x160E for the §2.3.2 buildHash v1.8)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.4, §3.2.4.1, Code Standards #20
 // Purpose:  All numeric and string constants for the deterministic simulation system.
@@ -36,8 +39,35 @@ namespace TacticalDirector.DeterministicSim
         public const ushort DETERMINISM_DIGEST_VERSION = 1;
 
         /// <summary>[FIXED] Schema version for the snapshot binary format. §3.9.2.
-        /// Bumped whenever the authoritative-state field set changes in a backward-incompatible way.</summary>
+        /// Bumped whenever the authoritative-state field set changes in a backward-incompatible way.
+        /// <para>
+        /// <b>This is NOT the on-disk file frame's version</b> — see <see cref="SNAPSHOT_FILE_FORMAT_VERSION"/>.
+        /// It rides inside the §3.2.3 snapshot-digest preimage, so moving it moves every digest and
+        /// invalidates the golden-vector corpus; only a change to the authoritative STATE shape earns
+        /// that. Identity metadata added to the file frame does not.
+        /// </para></summary>
         public const uint SNAPSHOT_SCHEMA_VERSION = 1;
+
+        /// <summary>
+        /// [FIXED] Magic identifying a <c>SaveManager</c> snapshot file — ASCII <c>'S''N''A''P'</c>.
+        /// §3.9.2.1. Written first and checked first: the magic says WHICH format the bytes are, and
+        /// <see cref="SNAPSHOT_FILE_FORMAT_VERSION"/> says which generation of it (ERR-029-005 /
+        /// ERR-041-009: a format version is not a format identifier). It is also what distinguishes a
+        /// file written by the pre-ERR-016-010 unversioned layout, whose first four bytes were the
+        /// schema version — such a file fails the magic check and is refused, never mis-parsed.
+        /// </summary>
+        public const uint SNAPSHOT_FILE_MAGIC = 0x534E4150;   // 'S''N''A''P'
+
+        /// <summary>
+        /// [FIXED] Generation of the on-disk snapshot FILE frame identified by
+        /// <see cref="SNAPSHOT_FILE_MAGIC"/> (§3.9.2.1). Distinct from both
+        /// <see cref="SNAPSHOT_SCHEMA_VERSION"/> (the #16 header framing schema, which rides in the
+        /// digest preimage) and <see cref="DETERMINISM_DIGEST_VERSION"/> — the same three-version
+        /// split `MATCH_SAVE_FORMAT_VERSION` already draws for the match save file. Version 1 is the
+        /// first frame to carry the <see cref="EnvironmentFingerprint"/> and the §2.3.2 build hash
+        /// (ERR-016-010).
+        /// </summary>
+        public const uint SNAPSHOT_FILE_FORMAT_VERSION = 1;
 
         // ── Serialization format ─────────────────────────────────────────────────────
 
@@ -153,6 +183,28 @@ namespace TacticalDirector.DeterministicSim
         /// </summary>
         public const byte DOMAIN_TAG_INJURIES_MEDICAL = 0x2A;
 
+        /// <summary>
+        /// [FIXED] Domain tag for the §2.3.2 <c>buildHash</c> preimage — the identity of the compiled
+        /// binaries a run executed on. §3.4; resolves the <c>buildHash</c> half of ERR-016-009.
+        /// <para>
+        /// Allocated AFTER the roadmap §6 reserved block (<c>_RESERVED_0x2B_</c>/<c>_0x2C_</c>/<c>_0x2D_</c>,
+        /// held for #42/#43/#45) so every spec-pinned subsystem number stays stable. This is an
+        /// infrastructure tag, not a subsystem allocation, so no <c>SubsystemOrdinals</c> value lands
+        /// with it: an ordinal exists only to key a registered RNG stream, and a build hash registers
+        /// none (the <c>DOMAIN_TAG_INJURIES_MEDICAL</c> / ERR-041-012 precedent).
+        /// </para>
+        /// </summary>
+        public const byte DOMAIN_TAG_BUILD_IDENTITY = 0x2E;
+
+        /// <summary>
+        /// [FIXED] Preimage-layout version of the §2.3.2 <c>buildHash</c>. Separates one GENERATION of
+        /// the preimage from the next; the domain tag above is what separates this format from another
+        /// (ERR-029-005 / ERR-041-009: a format version is not a format identifier). Bumping this
+        /// changes every build's hash, which refuses saves written by earlier builds — the same
+        /// failure direction §2.3.2 rule 4 already accepts.
+        /// </summary>
+        public const ushort BUILD_IDENTITY_VERSION = 1;
+
         // ── Error codes (u16; §3.4 / §3.10) ──────────────────────────────────────────
 
         /// <summary>[FIXED] Phase ownership violation: a system mutated fields outside its declared WriteSet. §3.4 / EC-016-001.</summary>
@@ -193,6 +245,25 @@ namespace TacticalDirector.DeterministicSim
 
         /// <summary>[FIXED] Recording-side EnvironmentFingerprint mutated after match start. §3.4 / EC-016-013.</summary>
         public const ushort ERR_DS_ENV_MUTATION = 0x160D;
+
+        /// <summary>
+        /// [FIXED] Restore/replay refused: the recorded §2.3.2 <c>buildHash</c> differs from the live
+        /// one — the snapshot was produced by different compiled binaries. §3.4 / EC-016-015.
+        /// Distinct from <see cref="ERR_DS_REPLAY_ENV_MISMATCH"/> (0x1604), which is host/float-model
+        /// divergence: the fingerprint pins the HOST, this code pins the BINARY, and collapsing the
+        /// two is the reading ERR-016-009 was filed against.
+        /// </summary>
+        public const ushort ERR_DS_REPLAY_BUILD_MISMATCH = 0x160E;
+
+        /// <summary>
+        /// [FIXED] Replay step 4b refused: a loaded record's OWN §3.2.3 digest, re-derived from the
+        /// header and payload just read, does not match the stored
+        /// <c>currentSnapshotDigest</c> — the record's bytes are not the bytes it was written from.
+        /// §3.4 / EC-016-016. Distinct from <see cref="ERR_DS_DIGEST_CHAIN_BREAK"/> (0x1608), which is
+        /// the chain LINK to the predecessor: step 4a asks "is this the record that should follow the
+        /// last one?", step 4b asks "are these bytes the record they claim to be?".
+        /// </summary>
+        public const ushort ERR_DS_SNAPSHOT_DIGEST_MISMATCH = 0x160F;
 
         // ── RNG cryptographic parameters ──────────────────────────────────────────────
 
@@ -325,4 +396,19 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | doc still designated the draws "the injuries.occurrence          |
 // |         |            |        | world-tick draws" — the retired stream name as the live          |
 // |         |            |        | designation (ERR-041-012); re-anchored to the keyed derivation.  |
+// | 1.8     | 2026-08-22 | —      | ERR-016-009: DOMAIN_TAG_BUILD_IDENTITY = 0x2E allocated at its    |
+// |         |            |        | first (and only) computation site, BuildIdentity.ComputeHash,     |
+// |         |            |        | plus BUILD_IDENTITY_VERSION = 1 and the new refusal code          |
+// |         |            |        | ERR_DS_REPLAY_BUILD_MISMATCH = 0x160E. Allocated AFTER the       |
+// |         |            |        | roadmap §6 reserved block 0x2B-0x2D so every spec-pinned number   |
+// |         |            |        | stays stable; no SubsystemOrdinals mirror (no registered stream). |
+// | 1.9     | 2026-08-22 | —      | ERR-016-010: SNAPSHOT_FILE_MAGIC ('S''N''A''P') +                 |
+// |         |            |        | SNAPSHOT_FILE_FORMAT_VERSION for the §3.9.2.1 record frame, and   |
+// |         |            |        | SNAPSHOT_SCHEMA_VERSION's doc now states why it must NOT be used  |
+// |         |            |        | for a file-frame change (it rides in the §3.2.3 digest preimage). |
+// | 1.10    | 2026-08-22 | —      | ERR-016-011: ERR_DS_SNAPSHOT_DIGEST_MISMATCH = 0x160F for replay  |
+// |         |            |        | step 4b — a loaded record's own digest, re-derived and compared.  |
+// |         |            |        | Distinct from ERR_DS_DIGEST_CHAIN_BREAK (0x1608), which is the    |
+// |         |            |        | chain LINK: 4a asks whether this record follows the last one, 4b  |
+// |         |            |        | asks whether these bytes are the record they claim to be.         |
 #endregion

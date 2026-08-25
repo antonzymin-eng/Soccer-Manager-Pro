@@ -1037,6 +1037,7 @@ namespace TacticalDirector.MatchEngine
                 _clock,
                 _codec,
                 _fingerprint,
+                MatchEngineBuildIdentity.BuildHash, // #16 FR-DS-014 / §2.3.2 — stamped into every header
                 RunInputPhase,
                 RunIntentPhase,
                 RunAiPhase,
@@ -1053,9 +1054,13 @@ namespace TacticalDirector.MatchEngine
         /// instance) is chosen because boot does load-bearing wiring that must happen exactly once, before
         /// any state is applied, and a "half-booted, half-restored" instance is not a valid state to expose.
         ///
-        /// Step 0 (KD-6 / §4.8.2) — validate the runtime float mode AND the header's
-        /// <see cref="EnvironmentFingerprint"/> BEFORE any state is touched, so a rejected restore mutates
-        /// nothing. The float-mode half reads the live MXCSR via <see cref="MxcsrValidator"/> (rejecting a
+        /// Step 0 (KD-6 / §4.8.2 / §2.3.2) — validate the runtime float mode, the header's
+        /// <see cref="SnapshotHeader.BuildHash"/> AND its <see cref="EnvironmentFingerprint"/> BEFORE any
+        /// state is touched, so a rejected restore mutates nothing. The build-identity half
+        /// (ERR-016-009) refuses a snapshot written by different compiled binaries with
+        /// <c>ERR_DS_REPLAY_BUILD_MISMATCH</c> — a different axis from the fingerprint's
+        /// <c>ERR_DS_REPLAY_ENV_MISMATCH</c>, since a recompiled engine on the same host passes the
+        /// environment check and must still be refused. The float-mode half reads the live MXCSR via <see cref="MxcsrValidator"/> (rejecting a
         /// host whose DAZ/FTZ/rounding bits diverge from the Stage-0 pin; a no-op where the native shim is
         /// absent, e.g. the Linux CI gate). The fingerprint half runs only when the header carries a
         /// fingerprint (O3: the deterministic-sim <c>SaveManager</c> writes <c>Fingerprint = null</c>, so a
@@ -1101,6 +1106,24 @@ namespace TacticalDirector.MatchEngine
             // pin, so a restore never resumes a certified snapshot under a divergent float mode. A no-op
             // where the native shim is absent; enforces only where it loads. See MxcsrValidator.
             MxcsrValidator.ValidateStage0FloatMode();
+
+            // Step 0 (ERR-016-009 / #16 §2.3.2 rule 3) — BUILD-identity gate, before any state is
+            // touched. Separate from the fingerprint gate below and not a duplicate of it: the
+            // fingerprint pins the host and float model, this pins the compiled binaries, and a
+            // recompiled engine passes the first while failing the second. A null/empty BuildHash is
+            // skipped with intent, exactly as a null Fingerprint is — the deterministic-sim
+            // SaveManager's Stage-0 87-byte header carries neither. That skip is not a hole in the
+            // on-disk path: MatchSaveCodec refuses to encode or decode an empty build hash (KD-7), so
+            // a header that reached here through a save file always carries one.
+            if (!string.IsNullOrEmpty(header.BuildHash) &&
+                !string.Equals(header.BuildHash, MatchEngineBuildIdentity.BuildHash, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Snapshot build-identity mismatch (code 0x{DeterministicSimConstants.ERR_DS_REPLAY_BUILD_MISMATCH:X4}) — " +
+                    $"the snapshot was written by build {header.BuildHash} and this is build " +
+                    $"{MatchEngineBuildIdentity.BuildHash}; refusing to replay one build's state on " +
+                    "another's code (#16 §2.3.2 / EC-016-015).");
+            }
 
             // Step 0 (KD-6 / O3) — fingerprint gate, before any state is touched.
             if (header.Fingerprint != null)
@@ -2637,6 +2660,7 @@ namespace TacticalDirector.MatchEngine
                 DigestVersion = live.DigestVersion,
                 Tick = live.Tick,
                 Fingerprint = live.Fingerprint,
+                BuildHash = live.BuildHash, // #16 §2.3.2 — a durable copy that dropped it would save an unidentified build
                 Cursor = live.Cursor,
             };
             Array.Copy(live.PrevSnapshotDigest, 0, copy.PrevSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
