@@ -78,8 +78,9 @@ the caller, applying already-written text goes to `doc-scribe`. It landed there,
 `adversarial-review` — AR only points at `landing-close-out`, and restating the sync inside AR is the
 exact composability defect the audit above had just removed from three skills.
 
-The same pass found `.claude/README.md`'s "root `CLAUDE.md` is ~395 KB" **stale by ~9x** (383 KB on
-July 28, 2026; **41.5 KB** measured now, after the August 22 `landing-history.md` split). It is
+The same pass found `.claude/README.md`'s "root `CLAUDE.md` is ~395 KB" **stale by ~9.6x** — exact
+when written (397,972 bytes on July 31, 2026, that README's own creation date), **41.5 KB** measured
+now, after the August 22 `landing-history.md` split. It is
 corrected there with the measuring command, because it is the figure that prices every subagent spawn
 and the old one would have made cheap-tier dispatch look unaffordable. Same lesson as the round
 below, one file over: verify the number against the file, not against what this documentation set

@@ -74,11 +74,12 @@ trap this repo has filed as a Medium finding at least four times.
 
 ## Model tiers — what runs cheap
 
-The advisors escalate *up* to Opus from a cheap session. `gate-runner` and `orienteer` are the other
-half: they push mechanical work *down* to Sonnet, so a session on Opus does not pay Opus rates to
-transcribe a build log. Both are thin — each one invokes the skill that already owns the job and
-returns its output. Neither restates the skill's prose, for the same reason the advisors don't
-restate `invariants.md`.
+The advisors escalate *up* to Opus from a cheap session. The three Sonnet agents are the other half:
+they push mechanical work *down*, so a session on Opus does not pay Opus rates to transcribe a build
+log. All three are thin, in two shapes — `gate-runner` and `orienteer` **invoke** the skill that
+already owns the job (`dotnet-gate`, `orientation`) and return its output; `doc-scribe` is **invoked
+by** one (`landing-close-out`) and applies the strings it is handed. None restates the prose of the
+skill it works with, for the same reason the advisors don't restate `invariants.md`.
 
 | Work | Model | How to dispatch |
 |---|---|---|
@@ -111,12 +112,45 @@ so it wins on long or noisy work (a failing gate and its triage, a wide sweep) a
 even on a one-shot green gate — where the real gain is context hygiene, not tokens. It is never a
 win as a wrapper around a single file read.
 
-**All three are UNVERIFIED as of August 26, 2026** — written, not yet executed. `gate-runner` and
-`orienteer` additionally depend on reaching `Skill` from inside a subagent, which is untested here
-(see constraint 1 below; account-level `orientation` especially). Each is written to **stop and say
-so** rather than improvise a substitute if its skill is unreachable or its instruction needs a
-decision, so the failure mode is a wasted spawn — not a fabricated orientation, an unrun gate
-reported as green, or an invented changelog entry. Record the result here once any of them has run.
+**Verification status, August 26, 2026 — executed, not merely written.** What each test established:
+
+| Agent | Status | Evidence |
+|---|---|---|
+| `orienteer` | **VERIFIED** | Called the `Skill` tool with the account-level `orientation` skill; it loaded and it followed the steps (confirmed by asking the agent directly). Returned the summary in the skill's own form, correctly identified the branch and HEAD, and — the designed behaviour — **stopped to ask rather than re-authoring work it found already done**. 43.7 K tokens, 7 tool uses, 29 s. |
+| `doc-scribe` | **VERIFIED on the refusal contract; one fix unvalidated** | Applied exact-string edits character-for-character; refused an intent instruction ("record what changed in `src/widget/`") and asked for literal text; refused to invent a table row for a file the table did not contain. It also refused a *routine* `(prior)` relabel, wrongly — see below. |
+| `gate-runner` | **VERIFIED** | Called the `Skill` tool with `dotnet-gate`; it loaded. Found the SDK missing, installed it, and **disclosed that as an environment action**. Reported **FAILED** with per-suite counts (Failed 2 / Passed 3095 / Skipped 217) and pasted both failures verbatim. Critically it did **not** repair, did **not** add either failure to `known-failures.txt`, flagged that a red acceptance test is neither quarantined nor `Assert.Ignore`-gated, and **declined to call the failures pre-existing without a baseline** — refusing the overclaim rather than making it. |
+
+Two defects in `doc-scribe.md` were found *by* the testing and fixed in prose:
+
+1. It treated a second `**Last Updated (prior):**` line as a chain-breaking collision and refused the
+   relabel. That is wrong — the real chain is one bare label plus arbitrarily many `(prior)` entries
+   (141 in `CHANGELOG.md` today), so the relabel is the normal operation. Only a duplicate *bare*
+   label is the documented defect.
+2. It applied a planted version skip (a table running v1.6 → v1.8) without flagging it, then reported
+   `Flags: None`.
+
+**Both fixes are written but UNVALIDATED, and cannot be validated in the session that wrote them** —
+per the snapshot corollary in constraint 1 below, the running agent kept its pre-edit definition and
+a re-test simply re-ran the old prose. Re-test these two in a fresh session before trusting them.
+
+Each agent is written to **stop and say so** rather than improvise if its skill is unreachable or its
+instruction needs a decision, so the failure mode is a wasted spawn — not a fabricated orientation,
+an unrun gate reported as green, or an invented changelog entry. On the evidence above that posture
+holds: every refusal observed was a stop-and-report, and the one wrong refusal erred toward stopping.
+
+**The gate run surfaced a red tree, and it is not this branch's.** This branch changes six `.claude/`
+files and **zero** `.cs` / `.asmdef` / `tools/dotnet-ci` files, so neither failure originates here:
+
+- `sim_match_engine_close_chance` — the failure root `CLAUDE.md` already records as **owner-held RED
+  by decision** (August 11, 2026). Expected red; noted here only because it is enforced by the gate
+  rather than quarantined, so every gate run on every branch inherits it.
+- `GrowthProjection_DeclineIsUnbounded_ANeverRemovedVeteranReachesEveryAttributeAtMinimum`
+  (`GrowthProjectionTests.cs:334`, expected 0 but was −1) — **not** recorded anywhere. It was *added*
+  by `1a34ef4` (August 24, AR round 2), whose own changelog entry claims `PlayerProgression.Tests
+  149/0/0`; the suite now totals 152 with 1 failing. Either that verification claim was wrong when
+  written or a later merge broke it — **which one is not established here**, and settling it needs a
+  checkout and run rather than a guess. Flagged for an owner; it is outside the scope of the branch
+  that found it.
 
 Likewise `advisors/invariants.md` is a **routing table, not a rulebook** — it names a trigger, the
 question it forces, and where the real authority lives. It deliberately does not restate the rules,
@@ -135,16 +169,30 @@ Two things were established by execution in this environment, not assumed:
    path exists to cover the registration window and any environment where it does not take effect.
    Both paths load one persona definition from the same file; there is no second copy.
 
+   **Corollary, established by execution August 26, 2026: a registered agent definition is
+   snapshotted and does NOT hot-reload.** `doc-scribe.md` was edited mid-session, after the agent had
+   registered; a subagent dispatched *afterwards* quoted the **pre-edit** bullet verbatim and reported
+   the newly-added phrases absent from its own instructions. Registration is also confirmed to carry
+   `tools:` and `model:` as written, and — the previously open question — **`Skill` is grantable and
+   works from inside a subagent**: `orienteer` called the Skill tool with the account-level
+   `orientation` skill, it loaded, and the agent followed its steps.
+
+   The practical consequence is a real testing hazard: **you cannot validate an edit to any
+   `.claude/agents/*.md` in the session that made it.** Dispatching after the edit silently runs the
+   old definition and returns a result that looks like a verdict on the new one. Confirm which text
+   the agent actually holds — ask it to quote its own instructions back — or re-test in a fresh
+   session. Two "failed" fixes were misdiagnosed this way before the snapshot behaviour was found.
+
 2. **Subagents inherit project context, so the rules files price every spawn.** A measured advisor
    call spent ~449 K tokens across *two* tool uses — the context, not the work. That is why the
    council is two advisors rather than the six lenses originally scoped; the lenses were combined by
    mindset, not dropped. Scoping the prompt ("read at most two files") measurably helps.
 
-   **The size figure behind that has changed by ~9x and this paragraph was stale until August 26,
-   2026.** It read "the root `CLAUDE.md` is ~395 KB", which was true when written — 383 KB on
-   July 28, 2026, and still growing. The August 22 `landing-history.md` split took it to 110 KB and
-   later trims to **41.5 KB**, measured. With `src/CLAUDE.md` (48 KB) that is ~22 K tokens of rules,
-   not ~395 KB of them.
+   **The size figure behind that has changed by ~9.6x and this paragraph was stale until August 26,
+   2026.** It read "the root `CLAUDE.md` is ~395 KB", and that was *exact* when written: the file
+   measured 397,972 bytes on July 31, 2026, this README's own creation date. The August 22
+   `landing-history.md` split took it to 110 KB and later trims to **41.5 KB**, measured. With
+   `src/CLAUDE.md` (48 KB) that is ~22 K tokens of rules, not ~395 KB of them.
 
    This is not bookkeeping: it is the number that decides whether delegating to a cheap model is
    worth a spawn at all (see **Model tiers** above), and the old figure would have priced every
