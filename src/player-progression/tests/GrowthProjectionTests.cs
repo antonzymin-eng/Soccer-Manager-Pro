@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/GrowthProjectionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-24 (round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side —
+// Modified: 2026-08-26 (StepInclusive off-by-one in the decline-tail lock — v1.7)
+//           (round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side —
 //           the pinned degenerate end state — v1.6)
 //           (football-judgment proxy review, batch-1 adversarial finding
 //           growthprojection-test-comment-stale-bands — v1.5)
@@ -319,8 +320,18 @@ namespace TacticalDirector.PlayerProgression.Tests
             // NeutralAttributeSum starts every one of the 31 attributes at 10 — far more decline-years
             // than needed to floor them all (10 - ATTRIBUTE_MIN each) at one point per year, plus
             // headroom so the loop demonstrably runs PAST full degeneracy, not merely up to it.
+            //
+            // The `- 1` is load-bearing, not this file's end-day convention repeated by habit.
+            // StepInclusive runs BOTH ends, so a whole number of years is declineYears * DAYS_PER_YEAR
+            // CALLS and therefore an end day one before that. It matters because the cursor assertion
+            // below pins exactly 0, and at the full decline rate the cursor is a sawtooth of period
+            // POINT_COST — which equals DAYS_PER_YEAR as a locked catalogue invariant
+            // (PlayerProgressionConstantsTests) — so it reads 0 only on exact year boundaries and -1
+            // one day past one. Any future edit to declineYears or to this range must keep the span a
+            // whole number of YEARS for the same reason; the headroom above is in years for this reason.
             uint declineYears = (uint)(NeutralAttributeSum - PlayerProgressionConstants.ATTRIBUTE_MIN * 31 + 50);
-            StepInclusive(ref rec, ref life, BaseDay, BaseDay + declineYears * (uint)PlayerProgressionConstants.DAYS_PER_YEAR);
+            StepInclusive(ref rec, ref life, BaseDay,
+                BaseDay + declineYears * (uint)PlayerProgressionConstants.DAYS_PER_YEAR - 1);
 
             int[] attrs = rec.Attributes.ToArray();
             for (int i = 0; i < attrs.Length; i++)
@@ -443,4 +454,19 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | roadmap-D1 roster-removal landing has a visible diff. No production
 // |         |            |        | code change — PlayerProgressionConstants.cs v1.4 carries the doc
 // |         |            |        | note this test backs.
+// | 1.7     | 2026-08-26 | —      | Test-only fix. GrowthProjection_DeclineIsUnbounded_ANeverRemoved-
+// |         |            |        | Veteran...'s day range omitted the `- 1` that every other
+// |         |            |        | StepInclusive call site in this file uses (the helper runs BOTH
+// |         |            |        | ends), so the lock stepped one day past the whole-year boundary
+// |         |            |        | and the cursor assertion read -1 instead of 0 — the v1.6 test has
+// |         |            |        | been failing since it landed. The span is now an exact whole
+// |         |            |        | number of years. The exact-multiple dependency (POINT_COST ==
+// |         |            |        | DAYS_PER_YEAR makes the cursor a sawtooth reading 0 only on year
+// |         |            |        | boundaries) is now stated in the test's own comment, so a later
+// |         |            |        | edit to declineYears cannot silently reintroduce it. The
+// |         |            |        | assertion stays pinned at exactly 0 rather than a bounded range:
+// |         |            |        | a range would have passed against this very off-by-one, and 0 is
+// |         |            |        | the same no-residue invariant PaBoundSpendRefusal_LeavesNoResidue
+// |         |            |        | and FullyDrainedPlayer_DrainLoopExits_AndDoesNotGrind assert. No
+// |         |            |        | production code change, no other test touched.
 #endregion
