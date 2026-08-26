@@ -152,9 +152,13 @@ files and **zero** `.cs` / `.asmdef` / `tools/dotnet-ci` files, so neither failu
   149/0/0`; the suite now totals 152 with 1 failing. Either that verification claim was wrong when
   written or a later merge broke it — **which one is not established here**, and settling it needs a
   checkout and run rather than a guess. Flagged for an owner; it is outside the scope of the branch
-  that found it. Note the CI log is **not** evidence either way: only the tail of run 476's log was
-  retrieved, and it contains no `PlayerProgression` lines at all, so it neither confirms nor clears
-  this suite on CI. The failure above is from the local gate run, which did execute it.
+  that found it. **Confirmed red on `main` too** (August 26, 2026): run 476 on `2092c8a` fails
+  `GrowthProjection_DeclineIsUnbounded_…` with `PlayerProgression.Tests` Failed 1 / Passed 151 /
+  Total 152 — the same test and the same counts as the local gate run and as PR #334's own CI. An
+  earlier note here said CI "neither confirms nor clears" this suite; that was wrong, and the cause
+  is worth keeping: only the **tail** of the log had been retrieved (~133 K of 436 K chars), and
+  `MatchEngine.Tests` runs 35–45 minutes at the end, so it filled the whole window. **A tail is not
+  a search.** Pull the full log and grep it before concluding a suite is absent from a CI run.
 
 Likewise `advisors/invariants.md` is a **routing table, not a rulebook** — it names a trigger, the
 question it forces, and where the real authority lives. It deliberately does not restate the rules,
