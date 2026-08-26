@@ -77,10 +77,11 @@ Then one short paragraph per finding — what tripped, the measured number, and 
 proposed fix. Do not paste the JSON. If a finding proposes a skill, offer to
 write it rather than writing it unasked.
 
-## Refresh the dashboard
+## Refresh the dashboard — only when asked
 
-The findings render at the published `chat-review` artifact. To update it, edit
-`docs/design/chat-review.html` and re-publish with the **same file path** so the
+Never publish or re-publish as part of a routine review pass. Only when the user explicitly asks to
+refresh or republish the dashboard: the findings render at the published `chat-review` artifact, so
+edit `docs/design/chat-review.html` and re-publish with the **same file path** so the
 URL is preserved:
 
 ```
@@ -93,9 +94,8 @@ new path mints a new URL and orphans the old dashboard — don't.
 ## Repo obligations
 
 This repo records its own history in a specific way, and a review pass is subject
-to it. If a finding leads to a code or spec change, that change carries the
-landing ritual documented in `CLAUDE.md` (header entry, `spec-error-log.md` if an
-`ERR-` is filed, `file-manifest.md`, `src/CLAUDE.md` version bump). A review that
+to it. If a finding leads to a code or spec change, that change runs the
+`landing-close-out` skill (plus `err-file-and-backprop` if an `ERR-` is filed). A review that
 proposes changes does **not** perform that ritual — the change that lands does.
 
 ## What this skill does not do

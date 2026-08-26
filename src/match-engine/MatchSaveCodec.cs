@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchSaveCodec.cs
 // Created:  2026-07-21
-// Modified: 2026-07-21
+// Modified: 2026-08-22 (ERR-016-009 / KD-7: the header block carries the §2.3.2 buildHash; v2)
 // Author:   —
 // Spec:     On-disk match save file (docs/tracking/match-save-file-design.md) §3 layout / KD-1..KD-6;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §3.2.4.1
@@ -57,6 +57,14 @@ namespace TacticalDirector.MatchEngine
                 throw new ArgumentException(
                     "SnapshotHeader digest arrays must each be exactly " + DigestBytes + " bytes.", nameof(header));
             }
+            if (string.IsNullOrEmpty(header.BuildHash))
+            {
+                // KD-7: never write a file this codec's own Decode refuses. A running engine always
+                // knows its build, so an absent one is a wiring defect, not a legal state.
+                throw new ArgumentException(
+                    "SnapshotHeader.BuildHash is empty — a match save must record which compiled " +
+                    "binaries wrote it (#16 §2.3.2 / match-save-file-design.md KD-7).", nameof(header));
+            }
             if (payload.BytesWritten < 0 || payload.BytesWritten > payload.Capacity)
             {
                 throw new ArgumentException(
@@ -65,7 +73,7 @@ namespace TacticalDirector.MatchEngine
             }
 
             EnvironmentFingerprint fp = header.Fingerprint;
-            byte[] buf = new byte[ComputeSize(fp, payload.BytesWritten)];
+            byte[] buf = new byte[ComputeSize(fp, header.BuildHash, payload.BytesWritten)];
             int o = 0;
 
             CanonicalSerializer.WriteU32(buf, ref o, MatchEngineConstants.MATCH_SAVE_FORMAT_VERSION);
@@ -79,6 +87,7 @@ namespace TacticalDirector.MatchEngine
             Array.Copy(header.CurrentSnapshotDigest, 0, buf, o, DigestBytes); o += DigestBytes;
             CanonicalSerializer.WriteU64(buf, ref o, header.Cursor.Tick);
             CanonicalSerializer.WriteU8(buf,  ref o, header.Cursor.PhaseOrdinal);
+            CanonicalSerializer.WriteString(buf, ref o, header.BuildHash); // KD-7 (v2), never empty
 
             if (fp != null)
             {
@@ -142,7 +151,7 @@ namespace TacticalDirector.MatchEngine
             // ── SnapshotHeader block ──────────────────────────────────────────────────
             var header = new SnapshotHeader();
 
-            Require(o, 4 + 2 + 8 + DigestBytes + DigestBytes + 8 + 1 + 1, len, "snapshot header");
+            Require(o, 4 + 2 + 8 + DigestBytes + DigestBytes + 8 + 1, len, "snapshot header");
             header.SchemaVersion = CanonicalSerializer.ReadU32(blob, ref o);
             header.DigestVersion = CanonicalSerializer.ReadU16(blob, ref o);
             header.Tick          = CanonicalSerializer.ReadU64(blob, ref o);
@@ -152,6 +161,18 @@ namespace TacticalDirector.MatchEngine
             byte cursorPhase = CanonicalSerializer.ReadU8(blob, ref o);
             header.Cursor = new ReplayCursor(cursorTick, cursorPhase);
 
+            header.BuildHash = ReadBoundedString(blob, ref o, len, "header buildHash");
+            if (header.BuildHash.Length == 0)
+            {
+                // KD-7, read side: a v2 blob always carries a build hash, so an empty one is a
+                // hand-edited or corrupt file. Admitting it would silently disable the restore-time
+                // build gate, which is the one thing this field exists to arm.
+                throw new InvalidOperationException(
+                    "Match save file carries an empty buildHash — refusing a save whose build identity " +
+                    "is unknown (#16 §2.3.2 / match-save-file-design.md KD-7).");
+            }
+
+            Require(o, 1, len, "fingerprint-present flag");
             byte fpFlag = CanonicalSerializer.ReadU8(blob, ref o);
             if (fpFlag == FingerprintPresent)
             {
@@ -204,13 +225,14 @@ namespace TacticalDirector.MatchEngine
 
         // ── Helpers ───────────────────────────────────────────────────────────────────
 
-        private static int ComputeSize(EnvironmentFingerprint fp, int payloadBytes)
+        private static int ComputeSize(EnvironmentFingerprint fp, string buildHash, int payloadBytes)
         {
             int size = 4                       // MATCH_SAVE_FORMAT_VERSION
                      + 8                       // matchSeed
                      + 4 + 2 + 8               // SchemaVersion + DigestVersion + Tick
                      + DigestBytes + DigestBytes
                      + 8 + 1                   // Cursor.Tick + Cursor.PhaseOrdinal
+                     + StringSize(buildHash)   // KD-7 (v2) header.BuildHash
                      + 1;                      // fingerprintPresent flag
             if (fp != null)
             {
@@ -264,5 +286,12 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-07-21 | —      | Initial implementation. |
+// | 1.0     | 2026-07-21 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-08-22 | —      | ERR-016-009 / KD-7: the header block carries the #16 §2.3.2    |
+// |         |            |        | buildHash (MATCH_SAVE_FORMAT_VERSION 1 -> 2). No presence      |
+// |         |            |        | flag and no absent case — Encode refuses a header without one  |
+// |         |            |        | and Decode refuses a blob carrying an empty one, so the format |
+// |         |            |        | cannot admit a save whose build identity is unknown. The       |
+// |         |            |        | fingerprint-flag read also gains its own bound check, which    |
+// |         |            |        | the fixed-width header Require had been covering.              |
 #endregion

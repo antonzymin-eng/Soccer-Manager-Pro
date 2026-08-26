@@ -24,14 +24,19 @@ Goalkeeper Mechanics #11. The owning spec is the one whose text is wrong, not th
 symptom appeared — the keeper-contact pass filed against #11 *and* #12 because both specs' formulas
 were defective.
 
-**Check the id is free against the log as it exists right now**, not against a plan written earlier:
+**The allocation itself — find the highest used id for this spec, propose the next one — is a fixed
+lookup, not a judgment call, so it's scripted.** Run it against the live tree, not a plan written
+earlier:
 
 ```bash
-grep -n "ERR-011-" docs/tracking/spec-error-log.md | tail
+.claude/skills/err-file-and-backprop/scripts/next_err_id.sh 011
 ```
 
-This repo has hit collisions repeatedly, and every time the proposed id had been written down in
-advance and claimed by someone else in between:
+It greps both `docs/` and `src/` (not only the log — a citation can land in an approved spec or a
+code comment first) and prints every existing id for that spec plus the next free one. This repo has
+hit collisions repeatedly, and every time the proposed id had been written down in advance and claimed
+by someone else in between — which is why the script's output ends with a re-verify reminder rather
+than a green light:
 
 - three design supplements proposed ids that had already been filed the same day the supplements were
   written, and had to be reassigned at promotion;
@@ -43,8 +48,7 @@ advance and claimed by someone else in between:
 
 Two consequences. Treat an id written in a design note as a *suggestion to re-verify*, never a
 reservation. And **re-verify at merge, not only at authoring** — the branch-vs-main case is invisible
-until you rebase. Also check the spec folders themselves (`grep -rn "ERR-030-0" docs/specs/`), since
-a citation can exist in an approved spec before the log entry lands.
+until you rebase, so re-run the script after any rebase, not just once at the start.
 
 Two id conventions worth knowing: numbers are sometimes deliberately **skipped** to soft-reserve them
 for an in-flight cluster, and a duplicate that has already shipped in approved text stays **preserved
@@ -122,6 +126,6 @@ impossible and would have surfaced as an assembly cycle.
 ## Step 5 — Close out
 
 Cite the ERR id in the code comment at the fix site and in the commit message, so the code points back
-at its rationale. Then run the `landing-close-out` skill — the root `CLAUDE.md` entry and the OPEN
-ISSUES section both need the ERR referenced, and the log version bump belongs in the same commit as
-everything else it describes.
+at its rationale. Then run the `landing-close-out` skill — the `docs/tracking/CHANGELOG.md` entry and
+the root `CLAUDE.md` OPEN ISSUES section both need the ERR referenced, and the log version bump belongs
+in the same commit as everything else it describes.
