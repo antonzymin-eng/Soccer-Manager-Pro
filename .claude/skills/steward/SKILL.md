@@ -15,19 +15,23 @@ description: >-
 
 # Steward
 
-The general PR rules — conflict-resolution order, root-cause-before-retry, the
-two postures (a PR you own vs. one you're only watching), the standing-down
-comment, never skip or quarantine a test to get green — already apply and are
-not repeated here. This file is only what those rules cannot know about this
-repo: which script the gate actually runs, which of this project's own skills
-to hand off to, which band is red on purpose, and how this repo's tracking
-documents conflict on a merge (which the generic rules have no idea exist).
+**The authority for the general PR rules is Claude Code's own account-level
+system prompt** — the "GitHub Integration" / "Driving a PR to green" sections
+it carries into every session, not a document in this repo. Conflict-resolution
+order, root-cause-before-retry, the two postures (a PR you own vs. one you're
+only watching), the standing-down comment, never skip or quarantine a test to
+get green: all of that lives there and is not repeated here. This file is only
+what that generic authority cannot know about this repo: which script the gate
+actually runs, which of this project's own skills to hand off to, which band
+is red on purpose, and how this repo's own tracking documents conflict on a
+merge.
 
 **Why this exists.** Five sessions in the last two weeks re-derived this from
 scratch, at a combined ~$133, and three of them ended without finishing: one
 asked whether to even subscribe to a PR's CI rather than just doing it, one
-was left watching CI at 7-passed/3-pending, one left "untangle the CHANGELOG
-v2.84/v2.115 series" as an open decision nobody came back to.
+was left watching CI at 7-passed/3-pending, one left "untangle the
+`CHANGELOG-src.md` v2.84/v2.115 series" as an open decision nobody came back
+to.
 
 ## Before you touch the PR
 
@@ -46,8 +50,7 @@ drifting from the code.
 
 CI's compile/test job runs the same script the `dotnet-gate` skill runs
 locally. Run that skill before every push and read its own output rather than
-the CI log tail. For the quarantine rule (`known-failures.txt` is
-shrinking-only) — see `dotnet-gate`; it is not restated here.
+the CI log tail — including its quarantine rule, not restated here.
 
 Three CI-log-reading traps this repo has actually hit, none of which the
 generic rules know about:
@@ -73,8 +76,9 @@ decision** (`docs/tracking/close-chance-creation-design.md` §10.9 item 6). It
 fails at baseline with recorded values — check the current entry in the root
 `CLAUDE.md` OPEN ISSUES section for the exact numbers, since they get
 re-measured. A CI red that is *only* that predicate, at those same recorded
-values, is the expected state: report it as e.g. **461/1/11 — no new failure,
-no band rebaselined** — and do not "fix" it. Different numbers on the same
+values, is the expected state: report it as e.g. **461/1/11 (the count as of
+Aug 2026 — re-check the live entry)** — no new failure, no band rebaselined —
+and do not "fix" it. Different numbers on the same
 predicate, or any second failure anywhere, is a real finding.
 
 **Never rebaseline an acceptance band just to get green.** That is an owner
@@ -119,6 +123,9 @@ sides" is wrong for most of them:
 - **`docs/tracking/spec-error-log.md`.** Every entry has two surfaces — the
   `## Error Index` summary row and the full `##` body further down. A
   conflict resolved on only one surface ships half an entry. Check both.
+- **`docs/tracking/CHANGELOG-src.md`.** Same append-at-top, one-bare-label
+  treatment as `CHANGELOG.md` above — this is `src/CLAUDE.md`'s own version
+  chain, split into its own file, and it churns on nearly every landing.
 - **`docs/tracking/file-manifest.md`, `src/CLAUDE.md`, spec section files.**
   Version-history rows are a union of both sides; the version *number* itself
   is re-derived from the merged tree, never taken verbatim from either side.
@@ -127,13 +134,15 @@ sides" is wrong for most of them:
 
 ## Where this stops
 
+- **A small, direct review comment** — a nit, a rename, a one-function ask —
+  fix and push per the account-level rules; nothing repo-specific about it.
+  **A review comment asking for judgment over a surface**, not a patch, is the
+  one that hands off — to `adversarial-review`.
 - **A football-plausibility symptom** — goal rate, shots, saves, fouls/cards,
   possession, a moved per-90 band — hand off to `match-realism-pass`,
   including its KD-W1 wiring gate. Under this repo's wire-first posture the
   symptom is often a stage that was never wired; do not tune a `[GT]` from a
   CI log.
-- **A review comment asking for judgment over a surface**, not a patch — hand
-  off to `adversarial-review`.
 - **A design fork, a `[GT]` value with no recorded target, or a layer-membership
   call** — convene `advisor`, or file the ERR `Open` and stop. Do not write a
   guess into an authority file.
@@ -144,6 +153,14 @@ sides" is wrong for most of them:
 Underneath all of it: never punt, address every unresolved thread, and a
 failing test in this tree has never once turned out to be an infra flake.
 
+This file deliberately leaves the mechanics themselves — merge-conflict
+resolution order, the CI-red root-cause sequence, the two postures, the
+"Claude Approvals" check, mergeability notices — to that account-level
+authority, and points at rather than restates three of this repo's own
+skills: the gate's stages (`dotnet-gate`), the ERR entry shape
+(`err-file-and-backprop`), the six-document landing sync
+(`landing-close-out`).
+
 ## Reporting
 
 One form, every time: PR number, head sha, CI run id, per-suite before →
@@ -153,15 +170,3 @@ what remains open. If no `── Gate PASSED ──` line was printed, say so
 plainly and say what was checked instead — the credible green entries in this
 project's history are credible only because the red ones were stated just as
 plainly.
-
-## What this file deliberately leaves to the general rules
-
-Merge-conflict resolution order and mechanics; the CI-red root-cause sequence
-(rule out pre-existing-on-base, port an existing fix, the standing-down
-comment format); the two postures (PRs you created vs. PRs you're asked to
-watch); never-skip/never-quarantine as a general rule; the "Claude Approvals"
-check; mergeability notices (merge-conflict, base-branch-recovered). All of
-that already exists and is not this file's job. Also omitted **by pointer,
-not restatement**: the gate's stages and failure modes (`dotnet-gate`), the
-ERR entry shape (`err-file-and-backprop`), the six-document landing sync
-(`landing-close-out`).

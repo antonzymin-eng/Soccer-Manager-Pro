@@ -9,7 +9,8 @@ sequence, the ERR log format, `SNAPSHOT_SCHEMA_VERSION` discipline, the spec-pro
 that encodes a convention should be versioned alongside it.
 
 Each was derived from repeated evidence in the git history and the `CLAUDE.md` landing chain, not
-invented: the counts below are from the last 200 commits.
+invented: the counts below are from the last 200 commits, except `steward`, derived instead from a
+two-week sweep of Claude Code sessions on this repo (see its row for the numbers).
 
 | Skill | Encodes | Observed repetition |
 |---|---|---|

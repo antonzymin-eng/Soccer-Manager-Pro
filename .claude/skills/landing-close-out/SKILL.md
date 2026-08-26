@@ -1,10 +1,10 @@
 ---
 name: landing-close-out
 description: >-
-  Close out a landing by syncing every tracking document the change touches — the root CLAUDE.md
-  header chain and OPEN ISSUES entry, src/CLAUDE.md's version bump, file-manifest.md, README.md, the
-  owning design supplement's version history, and the gate-result line — in the same commit as the
-  code. Use this skill at the end of any pass that lands code, a spec change, or a new assembly:
+  Close out a landing by syncing every tracking document the change touches — CHANGELOG.md's header
+  chain, the root CLAUDE.md OPEN ISSUES entry, src/CLAUDE.md's version bump, file-manifest.md,
+  README.md, the owning design supplement's version history, and the gate-result line — in the same
+  commit as the code. Use this skill at the end of any pass that lands code, a spec change, or a new assembly:
   when the work is done and about to be committed, when the user says "wrap this up", "record this",
   "update the docs", or "commit and push", and whenever an ERR was filed or a schema version bumped.
   Trigger it even when the change feels small — the documents drift precisely on the landings that
@@ -29,9 +29,11 @@ seventh layer on top of a stale base.
 Work through these; skip one only when the change genuinely does not touch it, and say which you
 skipped.
 
-**1. Root `CLAUDE.md` — the header chain.** Add a new `**Last Updated:**` entry summarising the
-landing: what changed, the ERR ids, the measured before → after numbers, the determinism declaration,
-what locks it, and the gate result. Two conventions the file enforces on itself:
+**1. `docs/tracking/CHANGELOG.md` — the header chain.** (Root `CLAUDE.md` names this file as the
+change log's home — check its own header if this ever seems to move again.) Add a new
+`**Last Updated:**` entry summarising the landing: what changed, the ERR ids, the measured before →
+after numbers, the determinism declaration, what locks it, and the gate result. Two conventions the
+file enforces on itself:
 
 - Relabel the previous entry to `**Last Updated (prior):**`. **Exactly one bare `**Last Updated:**`
   label may exist** — this file has been found with two, which makes it self-contradictory about its
