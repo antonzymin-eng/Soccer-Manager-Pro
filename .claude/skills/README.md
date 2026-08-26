@@ -69,6 +69,22 @@ that session's record; summary of what changed:
   already hold a prefix (`FR-DT-` does, today, in no spec), so the narrower scope would have missed
   exactly the collision the check exists to catch.
 
+### Addendum, August 26, 2026 — cheap-tier delegation
+
+Three Sonnet agent definitions were added (`gate-runner`, `orienteer`, `doc-scribe`) so mechanical
+work stops running at Opus rates, and `landing-close-out` gained a **Delegating the mechanical half**
+section splitting the doc sync by judgment rather than by document: deciding and composing stay with
+the caller, applying already-written text goes to `doc-scribe`. It landed there, not in
+`adversarial-review` — AR only points at `landing-close-out`, and restating the sync inside AR is the
+exact composability defect the audit above had just removed from three skills.
+
+The same pass found `.claude/README.md`'s "root `CLAUDE.md` is ~395 KB" **stale by ~9x** (383 KB on
+July 28, 2026; **41.5 KB** measured now, after the August 22 `landing-history.md` split). It is
+corrected there with the measuring command, because it is the figure that prices every subagent spawn
+and the old one would have made cheap-tier dispatch look unaffordable. Same lesson as the round
+below, one file over: verify the number against the file, not against what this documentation set
+said last time.
+
 This round was caught by an independent Opus review of the first pass, which found the
 `landing-close-out` flag broken by execution (not just reasoned about), the changelog-target drift,
 and the stale facts above. Worth remembering for the next skill audit: verify a claim like "the header
