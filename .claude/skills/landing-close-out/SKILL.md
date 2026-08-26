@@ -128,10 +128,50 @@ whether a new RNG stream, domain tag, draw site, or draw-order change was introd
 change, no new RNG stream / domain tag / draw site, no draw-order change" is a sentence worth writing
 even when it is boring, because its absence is ambiguous.
 
+## Delegating the mechanical half
+
+This sync splits cleanly, and the split is not by document — it is by whether the step needs
+judgment. **Deciding and composing stays with you; applying can go to Sonnet.**
+
+Keep, always — these are the steps that go wrong invisibly:
+
+- **Which documents this landing touches**, and which are genuinely skippable (the sync list above is
+  a checklist, not a script — item 8 in particular is a judgment about whether a roadmap item moved).
+- **The narrative content**: item 1's changelog entry, item 2's OPEN ISSUES entry, item 6's supplement
+  history. The register these are written in — measured, specific, willing to record a null result —
+  is the whole value of the chain.
+- **The determinism declaration** and the **blast-radius** check.
+- **The gate line**, which comes from a real run, not from a previous landing.
+
+Delegate, once the text exists and you are handing over exact strings:
+
+- Item 3's `src/CLAUDE.md` version bump and its `CHANGELOG-src.md` file-and-symbol rows.
+- Item 4's `file-manifest.md` rows, and the assembly-map row if one is needed.
+- Item 5's `README.md` status summary and `Last Updated` line.
+- The `**Last Updated:**` → `**Last Updated (prior):**` relabel, per item 1.
+- Appending a version-history block you have already written.
+
+Dispatch with `Agent`, `subagent_type: "doc-scribe"`. Two conditions make this safe, and it is not
+safe without them:
+
+1. **Hand over exact text, never an intent.** "Add a manifest row for `src/foo/Bar.cs` v1.0 reading
+   `<string>`" is delegable; "record what changed in `src/foo/`" is you asking a cheap model to
+   re-derive the landing, which is the decision you were supposed to keep.
+2. **Read the diff yourself before committing.** `git diff` on the delegated files, every time. The
+   scribe cannot run the drift script's judgment calls and cannot tell a stale base from a current
+   one — the reconciliation pass at `9af9626` exists because nobody checked.
+
+If the change is small enough that writing the exact strings costs more than making the edits, make
+the edits. The delegation pays on a wide sync (six-plus documents, a new assembly, a manifest with
+many rows), not on a two-line date bump.
+
 ## Commit
 
 One commit carrying code, spec patches, ERR entry, and doc sync together — so the record and the
 change cannot separate.
+
+Commit yourself — **never delegate the commit**. The scribe has no commit authority for this reason:
+one agent must hold the whole record at the moment it is written down.
 
 **Invoked standalone** (nothing else is about to commit): make that commit yourself, then **stop
 before pushing** — report the commit and the branch, and ask for confirmation. Push only on an
