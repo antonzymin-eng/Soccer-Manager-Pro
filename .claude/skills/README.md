@@ -9,7 +9,8 @@ sequence, the ERR log format, `SNAPSHOT_SCHEMA_VERSION` discipline, the spec-pro
 that encodes a convention should be versioned alongside it.
 
 Each was derived from repeated evidence in the git history and the `CLAUDE.md` landing chain, not
-invented: the counts below are from the last 200 commits.
+invented: the counts below are from the last 200 commits, except `steward`, derived instead from a
+two-week sweep of Claude Code sessions on this repo (see its row for the numbers).
 
 | Skill | Encodes | Observed repetition |
 |---|---|---|
@@ -19,6 +20,7 @@ invented: the counts below are from the last 200 commits.
 | `landing-close-out` | the six-document sync at the end of a landing | every landing; one whole reconciliation pass caused by skipping it |
 | `spec-promotion` | supplement → 11-file spec set → the three gates | 11 promotions, 10 in one day |
 | `dotnet-gate` | running and reporting the Linux compile/test gate | every landing |
+| `steward` | PR CI triage, mergeability, and this repo's own tracking-doc merge conventions | 5 sessions in 14 days (~$133), 3 left unfinished |
 
 The other most-repeated activity in this repo, `adversarial-review` (40 of the last 200 commits), is
 **not** restated here — `match-realism-pass` and `spec-promotion` invoke it. It landed as a project
