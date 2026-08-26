@@ -117,7 +117,7 @@ win as a wrapper around a single file read.
 | Agent | Status | Evidence |
 |---|---|---|
 | `orienteer` | **VERIFIED** | Called the `Skill` tool with the account-level `orientation` skill; it loaded and it followed the steps (confirmed by asking the agent directly). Returned the summary in the skill's own form, correctly identified the branch and HEAD, and — the designed behaviour — **stopped to ask rather than re-authoring work it found already done**. 43.7 K tokens, 7 tool uses, 29 s. |
-| `doc-scribe` | **VERIFIED on the refusal contract; one fix unvalidated** | Applied exact-string edits character-for-character; refused an intent instruction ("record what changed in `src/widget/`") and asked for literal text; refused to invent a table row for a file the table did not contain. It also refused a *routine* `(prior)` relabel, wrongly — see below. |
+| `doc-scribe` | **VERIFIED, including both fixes** | Applied exact-string edits character-for-character; refused an intent instruction ("record what changed in `src/widget/`") and asked for literal text; refused to invent a table row for a file the table did not contain. Both defects found below were then **re-tested in a fresh session and both fixes hold**: the routine `(prior)` relabel now applies (producing the correct one-bare-plus-two-`(prior)` chain), and the planted `v1.6 → v1.8` skip is now flagged, citing the criterion by name. |
 | `gate-runner` | **VERIFIED** | Called the `Skill` tool with `dotnet-gate`; it loaded. Found the SDK missing, installed it, and **disclosed that as an environment action**. Reported **FAILED** with per-suite counts (Failed 2 / Passed 3095 / Skipped 217) and pasted both failures verbatim. Critically it did **not** repair, did **not** add either failure to `known-failures.txt`, flagged that a red acceptance test is neither quarantined nor `Assert.Ignore`-gated, and **declined to call the failures pre-existing without a baseline** — refusing the overclaim rather than making it. |
 
 Two defects in `doc-scribe.md` were found *by* the testing and fixed in prose:
@@ -143,14 +143,18 @@ files and **zero** `.cs` / `.asmdef` / `tools/dotnet-ci` files, so neither failu
 
 - `sim_match_engine_close_chance` — the failure root `CLAUDE.md` already records as **owner-held RED
   by decision** (August 11, 2026). Expected red; noted here only because it is enforced by the gate
-  rather than quarantined, so every gate run on every branch inherits it.
+  rather than quarantined, so every gate run on every branch inherits it. **Confirmed red on `main`
+  itself**: CI run 476 on `2092c8a` reports `MatchEngine.Tests` Failed 1 / Passed 472 / Skipped 11 /
+  Total 484 — identical to the local run, so this one is demonstrably not any branch's doing.
 - `GrowthProjection_DeclineIsUnbounded_ANeverRemovedVeteranReachesEveryAttributeAtMinimum`
   (`GrowthProjectionTests.cs:334`, expected 0 but was −1) — **not** recorded anywhere. It was *added*
   by `1a34ef4` (August 24, AR round 2), whose own changelog entry claims `PlayerProgression.Tests
   149/0/0`; the suite now totals 152 with 1 failing. Either that verification claim was wrong when
   written or a later merge broke it — **which one is not established here**, and settling it needs a
   checkout and run rather than a guess. Flagged for an owner; it is outside the scope of the branch
-  that found it.
+  that found it. Note the CI log is **not** evidence either way: only the tail of run 476's log was
+  retrieved, and it contains no `PlayerProgression` lines at all, so it neither confirms nor clears
+  this suite on CI. The failure above is from the local gate run, which did execute it.
 
 Likewise `advisors/invariants.md` is a **routing table, not a rulebook** — it names a trigger, the
 question it forces, and where the real authority lives. It deliberately does not restate the rules,
