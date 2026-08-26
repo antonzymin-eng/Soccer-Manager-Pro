@@ -18,7 +18,7 @@
 │   ├── advisor-integrity.md         ← determinism · layering · spec governance   (Opus, read-only)
 │   └── advisor-evidence.md          ← tests · football realism · sequencing      (Opus, read-only)
 └── skills/
-    ├── README.md                    ← why the six workflow skills below exist (repetition evidence)
+    ├── README.md                    ← why the seven workflow skills below exist (repetition evidence)
     │
     │                                  ── agent patterns: who does the work ──
     ├── advisor/SKILL.md             ← /advisor      — convene and synthesize the council
@@ -33,7 +33,8 @@
     ├── err-file-and-backprop/SKILL.md← ERR id allocation, entry shape, spec-patch-same-commit
     ├── landing-close-out/SKILL.md    ← the tracking-document sync at the end of a landing
     ├── spec-promotion/SKILL.md       ← supplement → 11-file spec set → the three gates
-    └── dotnet-gate/SKILL.md          ← run and report the Linux compile/test gate
+    ├── dotnet-gate/SKILL.md          ← run and report the Linux compile/test gate
+    └── steward/SKILL.md              ← PR CI triage, mergeability, and tracking-doc merge conventions
 ```
 
 **Agent patterns** change who does the work; **workflow encodings** change how one person does a

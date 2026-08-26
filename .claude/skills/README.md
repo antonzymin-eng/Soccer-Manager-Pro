@@ -19,6 +19,7 @@ invented: the counts below are from the last 200 commits.
 | `landing-close-out` | the six-document sync at the end of a landing | every landing; one whole reconciliation pass caused by skipping it |
 | `spec-promotion` | supplement → 11-file spec set → the three gates | 11 promotions, 10 in one day |
 | `dotnet-gate` | running and reporting the Linux compile/test gate | every landing |
+| `steward` | PR CI triage, mergeability, and this repo's own tracking-doc merge conventions | 5 sessions in 14 days (~$133), 3 left unfinished |
 
 The other most-repeated activity in this repo, `adversarial-review` (40 of the last 200 commits), is
 **not** restated here — `match-realism-pass` and `spec-promotion` invoke it. It landed as a project

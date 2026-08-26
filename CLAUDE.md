@@ -303,9 +303,11 @@ the boundary table in `.claude/README.md`.
 
 **Workflow encodings** change *how* a recurring job is done correctly:
 `match-realism-pass`, `snapshot-schema-bump`, `err-file-and-backprop`, `landing-close-out`,
-`spec-promotion`, `dotnet-gate`. Each was derived from measured repetition in the last 200 commits
-and carries the traps this project has actually hit; `.claude/skills/README.md` records that
-evidence. The two that need a review step invoke `adversarial-review` rather than restating it.
+`spec-promotion`, `dotnet-gate`, `steward`. Each was derived from measured repetition — most from
+the last 200 commits, `steward` from a two-week session sweep that found PR CI triage and merge
+conflicts costing real work with no repo-specific packaging — and carries the traps this project has
+actually hit; `.claude/skills/README.md` records that evidence. The ones that need a review or gate
+step invoke `adversarial-review` or `dotnet-gate` rather than restating them.
 
 `orientation` is account-level, not in this repo.
 
