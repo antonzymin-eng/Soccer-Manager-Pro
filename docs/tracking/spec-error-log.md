@@ -4526,8 +4526,12 @@ reason.
 the retired step **byte-for-byte**, not identically-in-the-limit — the #41 FR-MD-027 and #30 KD-7a
 posture. It is **exercised**, per day across a 45-year sweep, through a parameterised
 `DailyBandPoints(ageDays, rampHalfWidthYears)` overload: the `[GT]` is read once at static
-initialisation and the gate runs config-unbound, so an identity asserted only in prose is precisely the
-class of claim the `ERR-008-021`/`-022` chain had falsified three times on first execution.
+initialisation, so the parameterised overload is the only way to exercise the OFF identity without
+recompiling. **Corrected August 27, 2026 (round 3 / M10):** the former sentence said the gate
+"runs config-unbound". That premise was false: this catalogue has no config binding yet. The test
+seam remains necessary to execute an alternate dial value, but not for the reason originally given. An
+identity asserted only in prose is still precisely the class of claim the `ERR-008-021`/`-022`
+chain had falsified three times on first execution.
 
 **`ClassifyAgeBand` demoted, not deleted.** It now returns the SIGN of the year's own net accrual, read
 from `AccruedBandPoints`. Re-deriving a band from `GROWTH_AGE`/`DECLINE_AGE` beside the curve would be a
@@ -4734,8 +4738,11 @@ age arm must RE-FIT against this term rather than add beside it, exactly as its 
 `BASELINE_DAILY_RISK` — recorded at §3.4 and in the catalogue.
 
 **`AGE_RISK_SPAN = 0` is the exact pre-fix identity**, exercised through an internal parameterised
-overload rather than asserted (the `[GT]`s are read once at static initialisation and the gate runs
-config-unbound). Both `[GT]`s are guarded non-negative fail-loud at the computing site: a negative slope
+overload rather than asserted (the `[GT]`s are read once at static initialisation, so alternate values
+cannot otherwise be driven without recompiling). **Corrected August 27, 2026 (round 3 / M10):** this
+sentence formerly said the gate "runs config-unbound"; #41 has no config binding yet, so that premise
+was false even though the alternate-value seam remains load-bearing. Both `[GT]`s are guarded
+non-negative fail-loud at the computing site: a negative slope
 makes veterans the most durable players in the league, and a negative span inverts the clamp so every
 player takes the maximum penalty regardless of age.
 
