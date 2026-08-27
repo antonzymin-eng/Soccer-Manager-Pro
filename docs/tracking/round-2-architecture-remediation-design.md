@@ -57,7 +57,7 @@ After D2:
 
 - malformed `[GT]` configuration is rejected at the configuration/boot boundary;
 - caller/state validity remains checked at simulation entry points;
-- cheap runtime catalogue checks may remain temporarily as defense-in-depth, but are no longer the authoritative validation owner.
+- production config-backed calculations do not re-own boot invariants; only caller/state and explicit test-seam preconditions remain at computation boundaries.
 
 ## 1.4 Tests may duplicate expected values, not algorithms
 
@@ -621,7 +621,7 @@ Once the production boot sequence in §4.2 is wired and tested, production confi
 
 That rule has one boot owner after D2.
 
-Parameterised `TestOnly_*` seams may still reject invalid explicit arguments as **function preconditions** so tests can exercise arithmetic safely; those checks must not read `GameplayConfigHolder` or runtime catalogue statics and must be documented as call-contract checks, not configuration ownership.
+Parameterised `TestOnly_*` seams retain invalid-argument rejection as **function preconditions** so tests can exercise arithmetic safely; those checks must not read `GameplayConfigHolder` or runtime catalogue statics and must be documented as call-contract checks, not configuration ownership.
 
 D2 does not land in a state where hot-path guards are called “temporary” with removal deferred to an unspecified future pass.
 
@@ -797,7 +797,7 @@ No field, type, or save-shape change.
 
 Current local `RequireGloballyUniquePlayerIds` dictionary implementation is removed.
 
-`ProgressionEngine` owns a per-career `PlayerIdRegistry` alongside its roster arrays. Construction/reconstruction populates it through #27; future membership mutation stages registry and roster updates together. A small boundary adapter may remain for exception wording/parameter name, but detection delegates to #27.
+`ProgressionEngine` owns a per-career `PlayerIdRegistry` alongside its roster arrays. Construction/reconstruction populates it through #27; future membership mutation stages registry and roster updates together. Boundary adapters are limited to exception type, parameter name, and diagnostic wording; duplicate detection always delegates to #27.
 
 Preserve `SeedFrom` / `FromBlocks` exception semantics.
 
@@ -891,7 +891,7 @@ Required back-propagation targets:
 - relevant version histories
 - `docs/tracking/data-contract-index.md`.
 
-#28 and #41 should cross-reference #27 as owner rather than describing themselves as independent owners.
+#28 and #41 must cross-reference #27 as owner rather than describing themselves as independent owners.
 
 Historical ERR-027-004 / ERR-041-019 records remain history and are not rewritten as though ownership was always centralized.
 
@@ -1300,7 +1300,7 @@ If step 5 cannot be performed because no production root exists, Commit B does n
 7. mutation-check formula owner and wiring owner separately;
 8. correct false “independent implementation” description.
 
-Only after A–D are verified should the remaining arithmetic/mutation/governance adversarial findings be applied.
+Only after A–D are verified may the remaining arithmetic/mutation/governance adversarial findings be applied.
 
 ---
 
@@ -1392,7 +1392,7 @@ Those correctness fixes follow after D1–D4 establish their final owners.
 
 No consumer retains a second implementation of an upstream rule.
 
-That is the architectural target against which the subsequent adversarial-review fixes should be written.
+That is the architectural target against which the subsequent adversarial-review fixes must be written.
 
 
 ---
