@@ -1,7 +1,8 @@
 # Round-2 Architecture Remediation — Design Supplement
 
 > **Created:** August 27, 2026
-> **Status:** DESIGN SUPPLEMENT — owner decisions approved; implementation not yet landed
+> **Amended:** August 27, 2026 — hostile-review closure for D1 equivalence, D2 production boot/atomicity, D3 lifecycle enforcement, and D4 oracle provenance
+> **Status:** DESIGN SUPPLEMENT — owner decisions approved; hostile-review blockers resolved in design; implementation not yet landed
 > **Scope:** Architectural decisions D1–D4 from the round-2 adversarial review of Player Progression & Lifecycle #28 and Injuries & Medical #41, including the shared deterministic/configuration/identity/testing infrastructure they expose.
 > **Governing decisions:** **D1** centralize SplitMix64 in `deterministic-sim`; **D2** centralize `[GT]` invariant validation at boot, coordinated through `GameplayConfigHolder.Bind`; **D3** make `player-database` the canonical owner of career-wide `PlayerId` uniqueness; **D4** keep progression mathematics and its oracle in `player-progression`, with `season-save` testing wiring only.
 >
@@ -137,7 +138,7 @@ No domain-tag, subsystem-ordinal, stream, save-format, or digest-version value c
 
 ## 3.4 Required API semantics
 
-### `Finalize(ulong value)`
+### `Mix13(ulong value)`
 
 Stafford Mix13 finalization only:
 
@@ -149,13 +150,15 @@ Stafford Mix13 finalization only:
 
 It does **not** add `SPLITMIX64_GAMMA`.
 
-Use this where the caller already owns state advancement or input salting.
+The name is deliberately `Mix13`, not `Finalize`: `Finalize` carries CLR finalization/destructor meaning in C# and would make a pure integer transform look lifecycle-related.
+
+Use `Mix13` only where the caller already owns state advancement or input salting.
 
 ### `Step(ulong value)`
 
 Pure complete SplitMix64 step:
 
-`Finalize(value + SPLITMIX64_GAMMA)`
+`Mix13(unchecked(value + SPLITMIX64_GAMMA))`
 
 It does not mutate caller state.
 
@@ -166,7 +169,7 @@ This replaces current pure full-step helpers such as `MedicalStep.Mix`, `RoundRe
 Stateful generator operation:
 
 1. increment `state` by `SPLITMIX64_GAMMA`;
-2. return `Finalize(state)`.
+2. return `Mix13(state)`.
 
 All operations use deliberate `unchecked` arithmetic under Spec #16 §3.4.4.
 
@@ -232,9 +235,9 @@ Migration:
 
 - preserve tuple construction and xxHash-family input multipliers;
 - source gamma from `DeterministicSimConstants.SPLITMIX64_GAMMA`;
-- replace only finalizer arithmetic with `SplitMix64.Finalize(h)`.
+- replace only finalizer arithmetic with `SplitMix64.Mix13(h)`.
 
-This call site is why `Finalize` must remain distinct from `Step`.
+This call site is why `Mix13` must remain distinct from `Step`.
 
 ### `src/season-save/FixtureScheduler.cs`
 
@@ -322,9 +325,9 @@ Any production copy equivalent to the canonical 64-bit algorithm joins the migra
 
 SplitMix32 is separate and is not migrated by D1.
 
-## 3.7 D1 tests
+## 3.7 D1 tests and migration-equivalence locks
 
-New:
+New owner test:
 
 `src/deterministic-sim/tests/SplitMix64Tests.cs`
 
@@ -336,20 +339,40 @@ Required golden categories:
 - `SPLITMIX64_GAMMA`;
 - at least two arbitrary non-pattern values;
 - repeated `Next(ref state)` sequence from a fixed seed;
-- `Step(x) == Finalize(unchecked(x + gamma))`;
+- `Step(x) == Mix13(unchecked(x + gamma))`;
 - `Next(ref state)` mutates state exactly once.
 
-For #41, `MedicalStepTests` adds fixed `DrawOccurrence` vectors for known:
+Those tests prove the shared primitive only. They are **not sufficient** to prove migration equivalence at a consumer whose key packing, state advancement, float mapping, bounding, or fold order can be changed accidentally.
 
-`(worldSeed, playerId, actionOrdinal) → exact draw`
+Before replacing each local implementation, the implementation commit must add or identify fixed external-contract vectors produced by the **pre-migration code at the exact pre-migration commit SHA**. The expected literals are then frozen before that consumer is edited. The same vectors must pass after delegation to `SplitMix64`.
 
-This locks domain-tag participation, fold order, signed-to-unsigned player conversion, action ordinal, SplitMix behavior, and modulus.
+Required consumer locks:
 
-Any pre/post migration golden mismatch is a failed migration and must not be rebaselined automatically.
+| Consumer | Pre/post behavior that must be frozen |
+|---|---|
+| `collision-system/DeterministicRNG` | first several outputs from at least two fixed seeds, including all-zero recovery behavior |
+| `decision-tree/ActionSelector` | exact selection/random scalar for representative fixed `(agentId, heartbeat, seed/input)` tuples |
+| `heading-mechanics/HeadingRngServiceStub` | exact repeated stateful sequence from fixed seeds |
+| `pass-mechanics/PassErrorCalculator` | exact error-direction outputs for fixed input tuples, including the finalizer-only path |
+| `season-save/FixtureScheduler` | exact bounded draws or resulting fixture permutation for fixed state |
+| `season-save/LeagueBootstrap` | exact seed-derived ordering/permutation for fixed bootstrap inputs |
+| `season-save/RoundResolutionModel` | exact mixed fixture/match derivations for fixed fixture keys/seeds |
+| `season-save/SeasonLoop.DeriveNextSeasonSeed` | exact next-season seed vectors |
+| `injuries-medical/MedicalStep.DrawOccurrence` | exact `(worldSeed, playerId, actionOrdinal) → draw` vectors |
+
+A migrated consumer with no pre/post lock is not complete even if `SplitMix64Tests` passes.
+
+Golden provenance rules:
+
+1. record the pre-migration source commit SHA beside the vector;
+2. capture the public/internal contract result **before** replacing the local mixer;
+3. store the expected output as a literal;
+4. do not generate the post-migration expectation from the new helper;
+5. any mismatch is a failed migration and must not be automatically rebaselined.
 
 ## 3.8 D1 documentation
 
-Likely updates:
+Required updates:
 
 - `src/CLAUDE.md`
 - `docs/agent-guides/coding-reference.md`
@@ -383,19 +406,29 @@ Consequences:
 
 Configuration validity belongs to boot.
 
-## 4.2 Existing binding constraint
+## 4.2 Existing binding constraint and mandatory production wiring
 
 `GameplayConfigHolder.Config` locks binding on first read.
 
 `GameplayConfigHolder.Bind` must happen before any `[GT]` catalogue initializes.
 
-Current repository search shows no production call to `GameplayConfigHolder.Bind`; the current direct callers are tests.
+The repository currently has no production call to `GameplayConfigHolder.Bind`; direct callers are tests. That is not a harmless Stage-0 detail once D2 claims boot-owned validation.
 
-D2 must not invent hidden auto-binding to conceal that fact.
+**D2 may not be declared complete while that remains true.**
 
-It establishes the validation protocol and migrates the reviewed catalogues to it. A future executable composition root must explicitly load, validate, and bind configuration.
+The implementation must identify the production composition entry point that first constructs the career/season simulation and wire the following sequence there before any `[GT]` catalogue access:
 
-## 4.3 ProjectConstants owner
+1. load/parse the candidate `GameplayConfig`;
+2. build the explicit validator plan;
+3. validate the candidate and obtain a `ValidatedGameplayConfig`;
+4. bind that validated value;
+5. only then construct/read gameplay catalogues and simulation services.
+
+If the repository still has no executable/composition entry point capable of owning that sequence when D2 implementation begins, **D2 is BLOCKED, not partially complete**. Validation infrastructure may land only if tracking continues to mark D2 open; the D2 acceptance gate cannot pass until a real production call site exists and is tested. No “future composition root” deferral is permitted.
+
+No hidden auto-binding, reflection discovery, or static-registration mechanism may substitute for the explicit production call.
+
+## 4.3 ProjectConstants API and ownership
 
 Modify:
 
@@ -405,50 +438,78 @@ Add:
 
 `src/project-constants/GameplayConfigValidation.cs`
 
-The protocol is boot-only and explicitly supplied.
+Required types/API:
 
-Required flow:
+- `public delegate void GameplayConfigValidator(GameplayConfig candidate)`;
+- `public sealed class ValidatedGameplayConfig` whose constructor is not publicly callable;
+- `GameplayConfigValidation.Validate(GameplayConfig candidate, IReadOnlyList<GameplayConfigValidator> validators) -> ValidatedGameplayConfig`;
+- `GameplayConfigHolder.Bind(ValidatedGameplayConfig validated)`.
 
-`validate candidate config → if all validators succeed, bind → catalogue reads may then lock binding`
+After D2 there is **no production overload** `Bind(GameplayConfig)`. A caller cannot publish an unvalidated candidate by bypassing the validation coordinator.
 
 Constraints:
 
 - no reflection;
 - no assembly scanning;
 - no static mutable validator registry;
-- no downstream assembly reference from `ProjectConstants`.
+- no downstream assembly reference from `ProjectConstants`;
+- validators are supplied explicitly and in deterministic order by the composition root;
+- a `ValidatedGameplayConfig` is only a boot capability token proving the candidate completed that plan; it is not gameplay state and is never serialized.
 
-A composition root explicitly supplies validators from the domain assemblies it loads.
+## 4.4 Atomicity and validator-purity contract
 
-## 4.4 Atomic Bind semantics
+Validation is deliberately separated from publication.
 
-Required ordering:
+Required validation flow:
 
-1. reject null config;
-2. reject binding after lock;
-3. validate validator list/plan;
-4. execute every validator against candidate `GameplayConfig`;
-5. only if all succeed, assign `s_config`;
-6. leave holder lock behavior otherwise unchanged.
+1. reject null candidate;
+2. reject null validator list or null validator entries;
+3. enter ProjectConstants' internal “validation in progress” scope;
+4. execute each validator against the **candidate instance only**;
+5. leave the scope in `finally`;
+6. only if all validators succeed, return `ValidatedGameplayConfig`.
 
-If validation throws:
+Required holder flow:
 
-- `s_config` remains `GameplayConfig.Empty`;
-- `s_locked` remains false;
-- corrected config may be retried;
-- no gameplay catalogue may have initialized during validation.
+1. reject null validated token;
+2. reject binding after the holder has locked;
+3. assign the token's candidate to `s_config`;
+4. leave existing first-read lock semantics unchanged.
 
-Validators may read `GameplayConfig`, but must not read catalogue statics whose initializers read `GameplayConfigHolder.Config`.
+`GameplayConfigHolder.Config` must check the internal validation-in-progress flag **before** setting `s_locked`. A validator that reads the holder therefore fails immediately without publishing or locking a candidate.
 
-## 4.5 Domain validators are separate from catalogue initialization
+Validator purity is a structural boot contract:
 
-New:
+- validators may read only their `GameplayConfig candidate`, literal/schema metadata, and pure resolver functions;
+- validators must not read `GameplayConfigHolder.Config`;
+- validators must not touch static catalogue fields whose initializers read the holder;
+- validators must not mutate global/process state.
 
-`src/injuries-medical/InjuriesMedicalConfigValidation.cs`
+Atomicity guarantees are intentionally precise:
 
-Where validator logic needs config key/default metadata embedded in a static catalogue initializer, move that metadata into a non-initializing schema/helper owned by the same assembly.
+- an ordinary malformed-config exception leaves `s_config == GameplayConfig.Empty` and `s_locked == false`; a corrected candidate may be validated and retried;
+- an attempted holder read during validation throws before the holder locks;
+- if a broken validator triggers a CLR static catalogue initializer and poisons that type, boot aborts as a programmer error and **no in-process retry is promised**. The previous supplement's unconditional retry claim was too strong because CLR type-initializer failure is not roll-backable.
 
-The runtime `public static readonly` field remains the gameplay constant. Schema metadata is loader metadata, not a second gameplay value.
+Thus D2 guarantees “no invalid candidate is published,” not the impossible claim that arbitrary validator side effects can be transactionally undone.
+
+## 4.5 Domain validators are pure and separate from catalogue initialization
+
+Required new files:
+
+- `src/injuries-medical/InjuriesMedicalConfigValidation.cs`;
+- `src/training-system/TrainingSystemConfigValidation.cs`.
+
+Each owns literal key names, fallback metadata, pure candidate resolvers, and validation for its domain without reading runtime catalogue statics.
+
+The runtime `public static readonly` catalogue fields remain the gameplay values loaded after bind. Validation metadata is loader/schema metadata, not a second mutable gameplay value.
+
+Required composition plan order for the reviewed surface:
+
+1. `TrainingSystemConfigValidation.Validate`;
+2. `InjuriesMedicalConfigValidation.Validate`.
+
+That order is explicit for diagnostics only; correctness must not depend on one validator mutating state for another.
 
 ## 4.6 InjuriesMedical configuration surface
 
@@ -526,11 +587,12 @@ fallback:
 
 The architecture must not initialize `TrainingSystemConstants` during pre-bind validation.
 
-Recommended shape:
+Required shape:
 
-- add a pure training-system config resolver/validator for the owned key;
-- #41's validator obtains the candidate value through that non-catalogue resolver;
-- #41 validates compatibility with its fixed denominator.
+- `TrainingSystemConfigValidation.ResolveInjuryRiskMax(GameplayConfig candidate)` reads the owned key/fallback without touching `TrainingSystemConstants`;
+- `TrainingSystemConfigValidation.Validate` enforces #29-owned invariants on that candidate value;
+- `InjuriesMedicalConfigValidation.Validate` obtains the same candidate value through `ResolveInjuryRiskMax` and enforces #41 compatibility with `OCCURRENCE_DRAW_DENOM`;
+- neither validator reads a runtime catalogue static.
 
 Ownership remains:
 
@@ -548,16 +610,20 @@ Ownership remains:
 - invalid purpose ordinal;
 - day-order/state-coherence checks.
 
-### Boot owner + optional defense-in-depth
+### Remove as authoritative config checks from production hot paths
 
-- recovery config guards;
-- severity config guards;
-- age slope/span guards;
-- injury-risk ceiling guard.
+Once the production boot sequence in §4.2 is wired and tested, production config-backed calculations must not independently re-implement:
 
-Initially these may remain as cheap defense-in-depth. Their comments must state that boot validation is authoritative.
+- recovery config validity;
+- severity config validity;
+- age slope/span config validity;
+- injury-risk ceiling validity.
 
-After boot validation is proven and a production composition root exists, redundant hot-path checks may be removed deliberately.
+That rule has one boot owner after D2.
+
+Parameterised `TestOnly_*` seams may still reject invalid explicit arguments as **function preconditions** so tests can exercise arithmetic safely; those checks must not read `GameplayConfigHolder` or runtime catalogue statics and must be documented as call-contract checks, not configuration ownership.
+
+D2 does not land in a state where hot-path guards are called “temporary” with removal deferred to an unspecified future pass.
 
 ## 4.9 D2 tests
 
@@ -569,40 +635,58 @@ Modify:
 
 Add cases proving:
 
-- validation runs before binding;
-- validator receives the candidate config;
-- multiple validators run deterministically in supplied order;
-- validation failure leaves holder unbound and unlocked;
-- retry after correction succeeds;
-- null validators are rejected;
-- Bind-after-first-read fails before validator execution.
+- validation receives the exact candidate instance;
+- validators run in supplied order;
+- malformed candidate failure produces no `ValidatedGameplayConfig`;
+- malformed candidate failure leaves holder empty and unlocked;
+- corrected candidate can be validated and bound afterward;
+- null candidate/list/validator entries are rejected;
+- a validator reading `GameplayConfigHolder.Config` fails before locking the holder;
+- `Bind` accepts only a `ValidatedGameplayConfig`;
+- Bind-after-first-read fails before publication;
+- no raw production `Bind(GameplayConfig)` escape hatch remains.
 
 ### InjuriesMedical
 
 Malformed-config cases:
 
-- `RecoveryMax = 0`
-- `RecoveryDaysPerTickBase = 0`
-- negative Minor
-- negative Moderate
-- severity sum exactly 1000
-- severity sum above 1000
-- extreme severity values that overflow an `int` sum
-- `AppearanceWindowDays = 0`
-- `AppearanceWindowDays = 32`
-- negative age slope
+- `RecoveryMax = 0`;
+- `RecoveryDaysPerTickBase = 0`;
+- negative Minor;
+- negative Moderate;
+- severity sum exactly 1000;
+- severity sum above 1000;
+- extreme severity values that overflow an `int` sum;
+- `AppearanceWindowDays = 0`;
+- `AppearanceWindowDays = 32`;
+- negative age slope;
 - negative age span.
 
 ### TrainingSystem / cross invariant
 
 Add:
 
-- `InjuryRiskMax = 0`
-- negative
-- exactly `OCCURRENCE_DRAW_DENOM`
+- `InjuryRiskMax = 0`;
+- negative;
+- exactly `OCCURRENCE_DRAW_DENOM`;
 - greater than denominator.
 
-No test should mutate process-global catalogue state to reach these conditions.
+No domain-validation test may mutate process-global catalogue state to reach these conditions.
+
+### Production boot integration — mandatory gate
+
+Add a test at the actual production composition boundary proving:
+
+1. a malformed reviewed config fails **before** the first gameplay catalogue/service is constructed;
+2. a valid non-default reviewed config is validated, bound, and then observed by the real catalogue;
+3. attempting to construct/read a catalogue before binding causes the existing fail-loud late-bind behavior;
+4. the production boot path contains the validator plan explicitly.
+
+Without this production-boundary test and call site, D2 remains open regardless of ProjectConstants/domain unit-test coverage.
+
+---
+
+# 5. D3
 
 ---
 
@@ -626,62 +710,73 @@ Consumers need different exception semantics, but not different predicate implem
 
 New:
 
-`src/player-database/PlayerIdUniqueness.cs`
+`src/player-database/PlayerIdRegistry.cs`
 
 Assembly:
 
 `TacticalDirector.PlayerDatabase`
 
-No new assembly dependency is needed.
-
-## 5.3 Data model
-
-Recommended result value:
+Required public value type:
 
 `PlayerIdCollision`
 
 Fields:
 
-- `PlayerId`
-- `ExistingClubId`
-- `IncomingClubId`
+- `PlayerId`;
+- `ExistingClubId`;
+- `IncomingClubId`.
 
-It is a value type.
+Required non-static, per-career registry:
 
-No gameplay state is stored globally.
+`PlayerIdRegistry`
 
-## 5.4 Validation helper
+The registry is derived identity state, not serialized gameplay state. It is rebuilt from canonical roster records on new-game/load and then updated atomically with roster membership changes.
 
-Recommended primitive:
+There is no static/global registry.
 
-`PlayerIdUniquenessTracker` or equivalent.
+## 5.3 Required registry operations
 
-Internal state:
+The #27 owner defines the only production implementation of career-wide ownership:
 
-`PlayerId → first owning ClubId`
+- `TryRegisterExisting(ClubId clubId, PlayerId playerId, out PlayerIdCollision collision)`;
+- `TryReserveNew(ClubId clubId, PlayerId playerId, out PlayerIdCollision collision)`;
+- `Move(PlayerId playerId, ClubId expectedFromClubId, ClubId toClubId)`;
+- `Remove(PlayerId playerId, ClubId expectedClubId)`;
+- read-only owner lookup for diagnostics/tests.
 
-Operation:
+Semantics:
 
-attempt to add `(clubId, playerId)`.
+- registering/reserving an already-owned numeric id reports the first owner;
+- `Move` requires that the id is currently owned by `expectedFromClubId` and changes that single ownership entry rather than transiently registering the id twice;
+- `Remove` requires the expected current owner;
+- failed operations do not mutate the registry.
 
-Result:
+Consumers may adapt a returned collision or registry-state failure into their boundary-specific exception type. They may not implement a second `PlayerId -> ClubId` predicate.
 
-- unique: accepted;
-- duplicate: returns `PlayerIdCollision`.
+## 5.4 Lifecycle-wide enforcement boundary
 
-The owner defines:
+A dictionary utility alone is insufficient. D3 therefore governs **all roster membership mutations**, not only save/load validation.
 
-- what constitutes a collision;
-- first-owner tracking;
-- duplicate detection.
+Today, `ProgressionEngine` explicitly documents itself as the sole writer of the evolving career roster. D3 makes a `PlayerIdRegistry` part of that authority:
 
-Each consumer traverses its own local storage shape:
+- `SeedFrom` rebuilds/registers every day-0 carried player through the registry;
+- `FromBlocks` rebuilds/registers every persisted carried player through the registry;
+- the monotonic `_nextPlayerId` cursor remains #28's allocator, but any future regen insertion must `TryReserveNew` before committing the roster mutation;
+- retiree removal must `Remove` in the same staged mutation;
+- a transfer/club move must use `Move`, never remove-then-register as two externally visible operations.
 
-- `ProgressionEngine` carries `PlayerRecord[]`;
-- `ProgressionSaveCodec` carries `ClubCareerStates[]`;
-- `PlayerCareerStates` carries `_clubIds` + `_playerIds`.
+`PlayerCareerStates` is companion state synchronized to the authoritative roster. Its `ForLeague`, `FromBlocks`, and `PrepareRosterSync` boundaries rebuild/validate through the #27 registry implementation so a drifted external roster fails before state arrays are committed.
 
-No common DTO is required merely to centralize the rule.
+Atomic mutation rule:
+
+1. stage the proposed roster change;
+2. stage/validate the corresponding registry operation;
+3. only after both succeed, commit roster membership and the registry change together;
+4. on validation failure, neither side changes.
+
+Future #31 transfer, #42 youth-intake, import, clone, or other roster-producing code is not allowed to introduce a direct membership write that bypasses this boundary.
+
+Implementation completion requires a repository-wide inventory of production writes to roster membership / `PlayerId` insertion. Every write must either route through `PlayerIdRegistry` or be documented as incapable of changing membership. A grep count alone is evidence, not the ownership mechanism.
 
 ## 5.5 `PlayerRecord.cs`
 
@@ -702,7 +797,7 @@ No field, type, or save-shape change.
 
 Current local `RequireGloballyUniquePlayerIds` dictionary implementation is removed.
 
-A small boundary adapter may remain for exception wording/parameter name, but detection delegates to #27.
+`ProgressionEngine` owns a per-career `PlayerIdRegistry` alongside its roster arrays. Construction/reconstruction populates it through #27; future membership mutation stages registry and roster updates together. A small boundary adapter may remain for exception wording/parameter name, but detection delegates to #27.
 
 Preserve `SeedFrom` / `FromBlocks` exception semantics.
 
@@ -736,9 +831,9 @@ Current:
 
 `PlayerCareerStates.RequireGloballyUniquePlayerIds`
 
-Only duplicate detection moves.
+Only the predicate implementation moves; the class still decides where companion-state validation is required. It rebuilds/validates through `PlayerIdRegistry` rather than maintaining a private duplicate dictionary.
 
-The class still decides where to enforce it:
+The class still enforces it at:
 
 - `ForLeague`;
 - block reconstruction;
@@ -750,25 +845,37 @@ It retains local exception/parameter semantics.
 
 New:
 
-`src/player-database/tests/PlayerIdUniquenessTests.cs`
+`src/player-database/tests/PlayerIdRegistryTests.cs`
 
 Required:
 
-- empty tracker/input;
+- empty registry;
 - one player;
 - multiple unique players in one club;
 - duplicate numeric ID in same club;
 - duplicate ID across clubs;
 - negative ID if accepted structurally — range validity is separate from uniqueness;
-- first-owner information is correct.
+- first-owner information is correct;
+- failed register/reserve leaves state unchanged;
+- valid move changes ownership exactly once;
+- move from the wrong expected owner fails without mutation;
+- remove from the wrong owner fails without mutation.
 
 Existing boundary tests remain in:
 
-- `ProgressionEngineTests`
-- `ProgressionSaveCodecTests`
+- `ProgressionEngineTests`;
+- `ProgressionSaveCodecTests`;
 - `PlayerCareerStatesTests`.
 
-Those prove boundary invocation and failure semantics, not the dictionary algorithm.
+Those must prove not only reconstruction-time rejection but lifecycle invocation:
+
+- seed/load duplicate rejection;
+- roster-sync duplicate rejection before commit;
+- staged membership failure leaves roster and identity registry unchanged;
+- the next-player-id/new-player path cannot commit an already-owned id;
+- transfer/move semantics are locked when that production path exists.
+
+Mutation review for D3 must include bypass mutations at each current roster-membership write site, not only mutations inside the registry dictionary algorithm.
 
 ## 5.10 D3 documentation
 
@@ -776,7 +883,7 @@ Primary back-prop:
 
 Squad / Player Data #27.
 
-Likely touched:
+Required back-propagation targets:
 
 - `docs/specs/squad-player-data/section-1.md`
 - `section-2.md`
@@ -826,15 +933,33 @@ Do not move formula logic into SeasonSave.
 
 Do not create another public formula API solely for integration tests.
 
-## 6.3 Formula-level test ownership
+## 6.3 Formula-level test ownership and oracle provenance
 
-Move mathematical proof entirely into:
+Mathematical proof belongs entirely in:
 
 `TacticalDirector.PlayerProgression.Tests`
 
-Prefer either extending `AbilityModelTests.cs` or adding focused:
+Required focused file:
 
 `src/player-progression/tests/AbilityModelRampTests.cs`
+
+Also add the documentation-only oracle ledger:
+
+`docs/tracking/player-progression-ramp-golden-vectors.md`
+
+The ledger is the provenance source for fixed expected values. Each vector has a stable id such as `PG-RAMP-G001` and records:
+
+- exact inputs;
+- exact expected integer result;
+- governing #28 spec section/equation;
+- explicit arithmetic substitution sufficient to audit the literal;
+- rounding/floor point where applicable;
+- date/reviewer note;
+- the production commit against which it was later compared.
+
+**Production output is not allowed to generate the oracle.** The expected literal is derived from the approved specification before the production formula is edited or used as a calculator. Running current production is only a comparison step; disagreement opens a defect instead of rewriting the ledger.
+
+Prefer vectors whose answers follow directly from structural points of the normative curve — zero width, ramp endpoints, midpoint/symmetry points, stable region, full growth/decline — plus a small number of interior rational cases whose integer floor is shown explicitly.
 
 Formula tests must cover:
 
@@ -848,9 +973,11 @@ Formula tests must cover:
 - integer-overflow boundary;
 - construction-day credit;
 - age-ceiling behavior;
-- representative fixed golden vectors.
+- representative fixed ledger vectors.
 
-Expected values are literals, not calls back into the implementation.
+Test expected values are literals tagged with their ledger vector id. Tests must not call production code to compute their expected side and must not contain a copied general-purpose G(n)/D(n) implementation.
+
+This makes a golden independently auditable rather than merely “a number observed from the current code.”
 
 ## 6.4 SeasonSave integration test after D4
 
@@ -882,7 +1009,7 @@ Remove formula-local constants/calculations used only to reproduce the algorithm
 1. slot 1 runs;
 2. it advances the correct players;
 3. each player advances exactly once on expected days;
-4. representative values reaching #30 match fixed approved #28 outputs.
+4. representative values reaching #30 match a small approved subset of the #28 oracle ledger.
 
 Use representative players in:
 
@@ -891,7 +1018,7 @@ Use representative players in:
 - Stable;
 - full Decline.
 
-Expected cursor values are hardcoded golden values independently reviewed before landing.
+Every hardcoded SeasonSave expectation must cite the corresponding `PG-RAMP-*` vector id from `docs/tracking/player-progression-ramp-golden-vectors.md`. SeasonSave does not invent or regenerate its own expected value.
 
 The test must not calculate expectations through:
 
@@ -901,7 +1028,7 @@ The test must not calculate expectations through:
 
 Thus:
 
-**#28 tests answer “is the mathematics correct?”**
+**#28 tests answer “is the mathematics correct against a spec-derived oracle?”**
 
 **#30 tests answer “did composition invoke #28 correctly?”**
 
@@ -968,21 +1095,24 @@ The later mutation fix for regen at a ramp age must test the call site without r
 
 ## 8.1 New production files
 
-Expected:
+Required:
 
 - `src/deterministic-sim/SplitMix64.cs`
 - `src/project-constants/GameplayConfigValidation.cs`
 - `src/injuries-medical/InjuriesMedicalConfigValidation.cs`
-- training-system config-validation/schema helper as needed for `InjuryRiskMax`
-- `src/player-database/PlayerIdUniqueness.cs`
+- `src/training-system/TrainingSystemConfigValidation.cs`
+- `src/player-database/PlayerIdRegistry.cs`
 
-## 8.2 New test files
+## 8.2 New test/document files
 
-Expected/preferred:
+Required:
 
 - `src/deterministic-sim/tests/SplitMix64Tests.cs`
-- `src/player-database/tests/PlayerIdUniquenessTests.cs`
-- optionally `src/player-progression/tests/AbilityModelRampTests.cs`
+- `src/player-database/tests/PlayerIdRegistryTests.cs`
+- `src/player-progression/tests/AbilityModelRampTests.cs`
+- `docs/tracking/player-progression-ramp-golden-vectors.md`
+
+D1 also modifies or adds consumer-specific tests wherever the required pre/post vectors in §3.7 do not already exist.
 
 ## 8.3 Existing production files modified
 
@@ -1007,7 +1137,8 @@ Any additional local Mix13 production implementation found by the final sweep jo
 - `src/project-constants/GameplayConfigHolder.cs`
 - `src/injuries-medical/InjuriesMedicalConstants.cs`
 - `src/injuries-medical/MedicalStep.cs`
-- `src/training-system/TrainingSystemConstants.cs` if key/default extraction is needed.
+- `src/training-system/TrainingSystemConstants.cs` to delegate key/default loading to the pure schema/resolver metadata where needed;
+- the actual production composition-root file that performs gameplay boot; D2 cannot pass without this concrete call site.
 
 ### D3
 
@@ -1048,7 +1179,7 @@ PlayerProgression and SeasonSave already reference PlayerDatabase.
 
 ProjectConstants must remain reference-free.
 
-D2 therefore uses callbacks/data supplied from above rather than ProjectConstants importing TrainingSystem or InjuriesMedical.
+D2 therefore accepts an explicit validator plan supplied from the production composition root rather than importing TrainingSystem or InjuriesMedical. The production root necessarily references the participating domain assemblies; that is composition-layer coupling, not a foundation reverse dependency.
 
 ---
 
@@ -1120,46 +1251,54 @@ Historical changelog statements are corrected through new entries where history 
 
 ## Commit A — D1 deterministic helper
 
-1. add canonical constants;
-2. add `SplitMix64`;
-3. add golden tests;
-4. migrate one consumer at a time;
-5. add CollisionSystem assembly reference;
-6. run per-assembly tests after each migration;
-7. run whole-tree gate and deterministic/golden suites;
-8. run final literal/helper grep.
+1. record the exact pre-migration commit SHA;
+2. add/freeze every consumer contract vector required by §3.7 **before** editing that consumer;
+3. add canonical constants;
+4. add `SplitMix64` with `Mix13` / `Step` / `Next`;
+5. migrate one consumer at a time;
+6. add CollisionSystem assembly reference;
+7. run that consumer's pre/post vectors immediately after migration;
+8. run per-assembly tests;
+9. run whole-tree gate and deterministic/golden suites;
+10. run final literal/helper grep.
 
 Do not combine D1 with unrelated arithmetic fixes.
 
 ## Commit B — D2 boot validation
 
-1. add ProjectConstants validation protocol;
-2. strengthen `GameplayConfigHolder.Bind` atomicity tests;
-3. add #41 validator;
-4. add #29 raw resolver/validator needed for `InjuryRiskMax`;
-5. add malformed-config cases;
-6. restate runtime guards as defense-in-depth;
-7. back-prop Code Standards/#41/#29 docs.
+1. add `ValidatedGameplayConfig` + explicit validator-plan protocol;
+2. remove the raw production `Bind(GameplayConfig)` escape hatch;
+3. add validation-in-progress holder-read guard and atomicity tests;
+4. add #29 and #41 pure candidate validators/resolvers;
+5. wire the **actual production composition root** to load → validate → bind before catalogue use;
+6. add malformed-config and production boot integration cases;
+7. remove duplicated production config-authority guards while retaining caller/state preconditions;
+8. back-prop Code Standards/#41/#29 docs.
+
+If step 5 cannot be performed because no production root exists, Commit B does not satisfy D2 and D2 remains BLOCKED.
 
 ## Commit C — D3 identity owner
 
-1. add #27 utility/result;
-2. add #27 owner tests;
-3. migrate ProgressionEngine;
-4. migrate ProgressionSaveCodec;
-5. migrate PlayerCareerStates;
-6. remove duplicated predicates/dictionaries;
-7. preserve each boundary's exception semantics;
-8. back-prop #27 and consumer docs.
+1. add #27 `PlayerIdRegistry` / `PlayerIdCollision`;
+2. add registry owner tests including move/remove/no-partial-mutation cases;
+3. make ProgressionEngine's authoritative roster construction/reconstruction use the registry;
+4. migrate ProgressionSaveCodec validation;
+5. migrate PlayerCareerStates construction and staged roster-sync validation;
+6. inventory every current production roster-membership write and close bypasses;
+7. remove duplicated predicates/dictionaries;
+8. preserve each boundary's exception semantics;
+9. back-prop #27 and consumer docs.
 
 ## Commit D — D4 oracle ownership
 
-1. add/strengthen #28 golden formula tests;
-2. record expected integration literals;
-3. delete `ExpectedRampAccrual` from SeasonSave.Tests;
-4. simplify SeasonSave wiring proof;
-5. mutation-check formula owner and wiring owner separately;
-6. correct false “independent implementation” description.
+1. create the spec-derived `PG-RAMP-*` oracle ledger **without using production output as the source**;
+2. add/strengthen #28 formula tests using ledger-tagged literals;
+3. compare current production against those vectors and file/fix any disagreement rather than rebaselining;
+4. delete `ExpectedRampAccrual` from SeasonSave.Tests;
+5. replace SeasonSave expectations with a cited subset of the same ledger vectors;
+6. simplify SeasonSave wiring proof;
+7. mutation-check formula owner and wiring owner separately;
+8. correct false “independent implementation” description.
 
 Only after A–D are verified should the remaining arithmetic/mutation/governance adversarial findings be applied.
 
@@ -1171,29 +1310,41 @@ Only after A–D are verified should the remaining arithmetic/mutation/governanc
 
 - one SplitMix64 implementation exists in production;
 - no local Stafford Mix13 copy remains outside `deterministic-sim`;
-- full-step vs finalizer-only semantics are explicit;
+- `Mix13` vs full-step vs stateful-next semantics are explicit;
+- every migrated consumer has a pre-migration-SHA-anchored external-contract vector;
+- all consumer vectors are byte/value identical after migration;
 - deterministic golden vectors remain unchanged;
 - whole-tree gate including MatchEngine passes.
 
 ## D2
 
-- malformed reviewed `[GT]` configurations are rejectable without executing a gameplay day;
-- validation failure does not partially bind config;
+- malformed reviewed `[GT]` configurations fail before gameplay catalogue/service construction;
+- no raw production `Bind(GameplayConfig)` bypass exists;
+- validation failure cannot publish or lock a candidate;
+- validator access to the holder fails before lock;
 - validators do not initialize catalogues before binding;
-- #41 config invariants have one boot owner;
-- runtime state/caller guards remain distinct.
+- the real production composition path explicitly load → validates → binds;
+- a production-boundary integration test proves a non-default reviewed value is observed after bind;
+- #41/#29 config invariants have their declared boot owners;
+- runtime state/caller guards remain distinct;
+- if no production call site exists, D2 is **not accepted**.
 
 ## D3
 
-- #27 contains the sole duplicate-ID predicate;
-- ProgressionEngine, ProgressionSaveCodec, and PlayerCareerStates do not maintain independent duplicate-detection dictionaries;
+- #27 contains the sole production `PlayerId -> ClubId` ownership implementation;
+- ProgressionEngine's authoritative roster construction/reconstruction uses `PlayerIdRegistry`;
+- every current roster-membership write is inventoried and either routed through the registry or proven incapable of changing membership;
+- PlayerCareerStates staged sync validates through #27 before commit;
+- no consumer maintains an independent duplicate-detection dictionary;
+- failed identity/membership mutations leave both registry and roster state unchanged;
 - each boundary preserves existing failure type and diagnostic context.
 
 ## D4
 
 - no copy of the ramp integral remains in SeasonSave.Tests;
+- every formula golden has a `PG-RAMP-*` provenance entry derived from the approved spec, not observed production;
 - PlayerProgression.Tests kill formula mutations;
-- SeasonSave.Tests kill wiring mutations;
+- SeasonSave.Tests cite the shared oracle ledger and kill wiring mutations;
 - integration expectations do not calculate themselves through #28.
 
 ## Cross-cutting
@@ -1229,16 +1380,31 @@ Those correctness fixes follow after D1–D4 establish their final owners.
 
 **Deterministic Simulation #16** owns SplitMix64 mathematics.
 
-**Project Constants / boot boundary** owns validation sequencing and binding atomicity.
+**Project Constants / boot boundary** owns validation sequencing and binding atomicity, and D2 is incomplete until a real production composition call site executes that sequence.
 
 **Training System #29 / Injuries & Medical #41** own their configuration schemas and domain invariants.
 
-**Squad / Player Data #27** owns player identity and career-global ID uniqueness.
+**Squad / Player Data #27** owns the per-career identity registry and every membership operation that can create, move, or remove a career-global PlayerId ownership.
 
-**Player Progression #28** owns progression mathematics and formula-level proofs.
+**Player Progression #28** owns progression mathematics and formula-level proofs against a spec-derived, provenance-recorded golden ledger.
 
 **Season & Competition Loop #30** owns composition and verifies that those systems are invoked correctly.
 
 No consumer retains a second implementation of an upstream rule.
 
 That is the architectural target against which the subsequent adversarial-review fixes should be written.
+
+
+---
+
+# 16. Hostile-review closure record
+
+This amendment closes the seven issues identified against the first supplement:
+
+1. **D2 production wiring** — no future-root deferral; D2 cannot pass without a real production call site and integration test.
+2. **D2 atomicity** — validation and publication are separated by `ValidatedGameplayConfig`; holder reads during validation fail before locking; CLR type-initializer poisoning is explicitly treated as fatal rather than falsely promised to roll back.
+3. **D3 lifecycle ownership** — #27 now owns a per-career registry with register/reserve/move/remove semantics, and ProgressionEngine's current sole-writer roster boundary must use it.
+4. **D4 oracle provenance** — fixed values come from an auditable spec-derived `PG-RAMP-*` ledger, never from current production output.
+5. **D1 downstream equivalence** — every migrated consumer requires a pre-migration-SHA-anchored external-contract vector, not merely shared-helper tests.
+6. **C# API naming** — Stafford Mix13 finalization is named `Mix13`, not `Finalize`.
+7. **Implementation discretion** — critical seams now use required types/files/operations and explicit BLOCKED/acceptance rules rather than “recommended”, “optional”, or “future” language.
