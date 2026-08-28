@@ -1,6 +1,8 @@
 // File:     src/deterministic-sim/ReplayEngine.cs
 // Created:  2026-05-29
-// Modified: 2026-06-16 (AR fix M-3: step-3 null-fingerprint guard fails closed instead of NRE)
+// Modified: 2026-08-22 (ERR-016-011: new step 4b — ValidateCurrentDigest re-derives the loaded
+//           record's own §3.2.3 digest before any state is rehydrated; ERR-016-010: the step-3
+//           comment no longer describes the disk fingerprint gap as normal)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.2.2, §3.4, Code Standards #20
 // Purpose:  8-step replay lifecycle orchestrator per §4.2.2. Each step must succeed before the next
@@ -73,11 +75,12 @@ namespace TacticalDirector.DeterministicSim
             }
 
             // Step 3: validate EnvironmentFingerprint against live runtime.
-            // AR fix M-3: a header reconstructed from disk carries no embedded fingerprint at
-            // Stage 0 (SaveManager does not yet serialize it — the M-4 wire-format gap), and the
-            // live fingerprint is constructor-injected; a null on either side MUST fail closed with
-            // ERR_DS_REPLAY_ENV_MISMATCH rather than NullReferenceException. An in-process replay
-            // that passes a header carrying its fingerprint is unaffected.
+            // AR fix M-3: a null on either side MUST fail closed with ERR_DS_REPLAY_ENV_MISMATCH
+            // rather than NullReferenceException. ERR-016-010 (2026-08-22) removed the reason this
+            // was the NORMAL disk path — SaveManager now serializes the fingerprint, so a
+            // disk-reconstructed header carries one and this check is a real comparison rather than a
+            // guaranteed refusal. The null arm remains for a header written with no fingerprint at
+            // all, which round-trips as null by contract and must still fail closed.
             if (header.Fingerprint == null || _liveFingerprint == null)
             {
                 return DeterministicSimConstants.ERR_DS_REPLAY_ENV_MISMATCH;
@@ -88,8 +91,20 @@ namespace TacticalDirector.DeterministicSim
                 return err;
             }
 
-            // Step 4: validate prevSnapshotDigest chain link
+            // Step 4a: validate prevSnapshotDigest chain link
             err = _codec.ValidatePrevDigest(header);
+            if (err != 0)
+            {
+                return err;
+            }
+
+            // Step 4b (ERR-016-011): re-derive this record's OWN §3.2.3 digest from the header and
+            // payload just loaded and compare it against the stored currentSnapshotDigest. Step 4a
+            // asks whether this is the record that should follow the last one; 4b asks whether these
+            // bytes are the record they claim to be. Nothing asked the second question before, so an
+            // altered payload — or an altered stored digest — rehydrated clean. It runs BEFORE step 5
+            // because state that has not been verified must not be rehydrated.
+            err = _codec.ValidateCurrentDigest(header, payload);
             if (err != 0)
             {
                 return err;
@@ -144,4 +159,15 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | header.Fingerprint / _liveFingerprint and fails closed with        |
 // |         |            |        | ERR_DS_REPLAY_ENV_MISMATCH. A disk-reconstructed header has a null  |
 // |         |            |        | fingerprint (not serialized at Stage 0), which previously NRE'd.    |
+// | 1.4     | 2026-08-22 | —      | ERR-016-010: the step-3 comment no longer describes the             |
+// |         |            |        | disk-fingerprint gap as the normal case — SaveManager now           |
+// |         |            |        | serializes it, so step 3 is a real comparison rather than a        |
+// |         |            |        | guaranteed refusal. The null arm stays for a record written with   |
+// |         |            |        | no fingerprint at all, which must still fail closed.               |
+// | 1.5     | 2026-08-22 | —      | ERR-016-011: new step 4b. Step 4 is split — 4a is the chain LINK   |
+// |         |            |        | (ValidatePrevDigest, unchanged) and 4b re-derives the record's own |
+// |         |            |        | §3.2.3 digest via SnapshotCodec.ValidateCurrentDigest, refusing    |
+// |         |            |        | with ERR_DS_SNAPSHOT_DIGEST_MISMATCH. Placed before step 5:        |
+// |         |            |        | unverified state must not be rehydrated. The lifecycle stays       |
+// |         |            |        | 8 STEPS (FR-DS-012) — 4a/4b is a split, not a ninth step.          |
 #endregion

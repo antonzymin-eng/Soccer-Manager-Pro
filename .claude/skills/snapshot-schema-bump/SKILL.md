@@ -13,22 +13,31 @@ description: >-
 
 # Snapshot Schema Bump
 
-`SNAPSHOT_SCHEMA_VERSION` has gone 1 → 19 in this repo. The failure mode when it goes wrong is not a
-red test — it is a save that loads cleanly and then diverges, which is the worst shape of defect
-available. Two of the nineteen bumps exist purely because an earlier landing missed a field.
+`MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION` climbs steadily — run
+`scripts/version_table.sh` for today's number and every sibling constant rather than trusting a
+number written into prose here, which goes stale the moment another bump lands elsewhere. The failure
+mode when it goes wrong is not a red test — it is a save that loads cleanly and then diverges, which
+is the worst shape of defect available. At least two prior bumps exist purely because an earlier
+landing missed a field.
 
 ## First: which version are you bumping?
 
 The repo carries several independent format versions and they mean different things. Getting this
-wrong versions the wrong thing and lets a genuinely incompatible payload through:
+wrong versions the wrong thing and lets a genuinely incompatible payload through. Values live in
+`scripts/version_table.sh` (a straight grep of every live `public const … *FORMAT_VERSION` /
+`SNAPSHOT_SCHEMA_VERSION` in `src/`, excluding tests) — this table owns what each one **means**:
 
 | Constant | Owner | Versions |
 |---|---|---|
 | `MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION` | `src/match-engine/` | the world-state **body** inside the payload |
 | `DeterministicSimConstants.SNAPSHOT_SCHEMA_VERSION` | `src/deterministic-sim/` | the `SnapshotHeader` **framing** |
 | `MATCH_SAVE_FORMAT_VERSION` | `src/match-engine/` | the on-disk match-save file frame |
-| `SEASON_SAVE_FORMAT_VERSION` / `SEASON_STATE_FORMAT_VERSION` | `src/season-save/` | the season file frame / the season state blob |
-| `WORLD_STORE_FORMAT_VERSION` | `src/living-world/` | the living-world composite save |
+| `SEASON_SAVE_FORMAT_VERSION` / `SEASON_STATE_FORMAT_VERSION` / `APPEARANCE_SAVE_FORMAT_VERSION` | `src/season-save/` | the season file frame / the season state blob / the per-club appearance sub-blob |
+| `TRAINING_SAVE_FORMAT_VERSION` | `src/training-system/` | the training sub-blob in the season frame |
+| `MEDICAL_SAVE_FORMAT_VERSION` | `src/injuries-medical/` | the medical sub-blob in the season frame |
+| `PROGRESSION_SAVE_FORMAT_VERSION` | `src/player-progression/` | the progression sub-blob in the season frame |
+| `WORLD_STORE_FORMAT_VERSION` / `WORLD_SNAPSHOT_FORMAT_VERSION` | `src/living-world/` | the living-world composite save / its snapshot payload |
+| `SCENARIO_MANIFEST_FORMAT_VERSION` | `src/testing-strategy/` | the `#19` ScenarioRunner manifest format — not a save, but versioned the same way |
 
 A file frame wrapping unchanged opaque sub-blobs bumps only the frame — that is how the season save
 added a third sub-blob without touching any inner version.

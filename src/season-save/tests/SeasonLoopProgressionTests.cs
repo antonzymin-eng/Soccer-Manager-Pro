@@ -1,6 +1,8 @@
 // File:     src/season-save/tests/SeasonLoopProgressionTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-11 (AR pass 6, M2(b) — the BirthWorldDay-vs-clock composition locks — v1.7)
+// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial finding
+//           seasonloop-ramp-lock-nondiscriminating — v1.9)
+//           (ERR-028-020 — football-judgment proxy review batch 1 — v1.8)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 slot 1); Player Progression & Lifecycle #28
 //           KD-4 / FR-PG-021 / FR-PG-022; ERR-029-006 (the batch entry point, closed here);
@@ -45,6 +47,21 @@ namespace TacticalDirector.SeasonSave.Tests
         // club's SquadRating must move, well inside the [1,20] contract the codec range-gates.
         private const int StrengthenedFloor = 18;
 
+        // The ERR-028-020 ramp edges in whole years, read from the catalogue rather than written as
+        // literals: a whole year at or beyond each of these sits entirely in one accrual regime, so an
+        // expectation stated against them is exact without consulting AbilityModel.
+        private static readonly int GrowthRampStartsAt =
+            PlayerProgressionConstants.GROWTH_AGE - PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+
+        private static readonly int GrowthRampEndsAt =
+            PlayerProgressionConstants.GROWTH_AGE + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+
+        private static readonly int DeclineRampStartsAt =
+            PlayerProgressionConstants.DECLINE_AGE - PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+
+        private static readonly int DeclineRampEndsAt =
+            PlayerProgressionConstants.DECLINE_AGE + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+
         // ── The wiring proof ──────────────────────────────────────────────────────────
 
         [Test]
@@ -83,7 +100,8 @@ namespace TacticalDirector.SeasonSave.Tests
             // window shift, not a semantic change.
             const int SeedDayCredit = 1;
 
-            int growth = 0, decline = 0, stable = 0;
+            int growth = 0, decline = 0, stable = 0, inRamp = 0;
+            bool sawFractionalGrowth = false, sawFractionalDecline = false;
             ClubCareerStates[] blocks = progression.ToBlocks();
             for (int c = 0; c < blocks.Length; c++)
             {
@@ -93,15 +111,91 @@ namespace TacticalDirector.SeasonSave.Tests
                     int playerId = blocks[c].Records[p].PlayerId;
                     int bootstrapAge = AgeOf(seeded, playerId);
 
-                    long expected;
-                    if (bootstrapAge < PlayerProgressionConstants.GROWTH_AGE) { expected = +(AccruingDays + SeedDayCredit); growth++; }
-                    else if (bootstrapAge > PlayerProgressionConstants.DECLINE_AGE) { expected = -(AccruingDays + SeedDayCredit); decline++; }
-                    else { expected = 0; stable++; }
+                    // REBASELINED at ERR-028-020. The accrual rate now RAMPS across each band edge. The
+                    // outside-the-ramps expectations below are derived from the bootstrap age and the
+                    // catalogue alone, never from the code under test. A player inside a ramp accrues a
+                    // genuinely fractional share of the six days; his expectation is computed by
+                    // ExpectedRampAccrual, an INDEPENDENT reimplementation of the ramp integral (not a
+                    // call into AbilityModel — see the in-ramp branch below for why that independence is
+                    // load-bearing, seasonloop-ramp-lock-nondiscriminating).
+                    long cursor = blocks[c].Lifecycles[p].GrowthCursor;
+                    long full = AccruingDays + SeedDayCredit;
 
-                    Assert.AreEqual(expected, blocks[c].Lifecycles[p].GrowthCursor,
-                        $"player {playerId} (bootstrap age {bootstrapAge}) must accrue his own band's "
-                        + "step once per advanced day — slot 1 running not at all, twice, or on the "
-                        + "wrong band is each distinguishable here.");
+                    if (bootstrapAge < GrowthRampStartsAt)
+                    {
+                        growth++;
+                        Assert.AreEqual(+full, cursor,
+                            $"player {playerId} (bootstrap age {bootstrapAge}) is below the growth ramp "
+                            + "entirely and must accrue the full step once per advanced day — slot 1 "
+                            + "running not at all, twice, or on the wrong band is each distinguishable "
+                            + "here.");
+                    }
+                    else if (bootstrapAge > DeclineRampEndsAt)
+                    {
+                        decline++;
+                        Assert.AreEqual(-full, cursor,
+                            $"player {playerId} (bootstrap age {bootstrapAge}) is past the decline ramp "
+                            + "entirely and must drain the full step once per advanced day.");
+                    }
+                    else if (bootstrapAge >= GrowthRampEndsAt && bootstrapAge <= DeclineRampStartsAt)
+                    {
+                        stable++;
+                        Assert.AreEqual(0L, cursor,
+                            $"player {playerId} (bootstrap age {bootstrapAge}) is in the genuinely flat "
+                            + "stretch between the two ramps and must accrue nothing.");
+                    }
+                    else
+                    {
+                        inRamp++;
+                        bool growthSide = bootstrapAge < PlayerProgressionConstants.GROWTH_AGE
+                                          + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+
+                        // seasonloop-ramp-lock-nondiscriminating (football-judgment proxy review
+                        // batch-1). The prior sign/bound check (`0 <= cursor <= full`, or its mirror)
+                        // is satisfied by cursor == 0, which is EXACTLY what a step-model cursor would
+                        // read for a player the ramp-window classification above calls "inRamp" but the
+                        // pre-ERR-028-020 step model reads as Stable — mutation-verified: forcing
+                        // `long h = 0` inside AbilityModel.AccruedBandPoints (reverting the whole ramp
+                        // while the catalogue still reads 2) left this fixture green.
+                        //
+                        // Fixed with an EXACT expected value, computed by an INDEPENDENT reimplementation
+                        // of #28 Appendix A / §3.1.3's G(n)/D(n) integral (ExpectedRampAccrual below) —
+                        // deliberately NOT a call into AbilityModel, so a mutation collapsing the ramp
+                        // INSIDE AbilityModel cannot cancel out against this fixture's own oracle the way
+                        // it could if the oracle called AbilityModel too.
+                        long n1 = (long)bootstrapAge * PlayerProgressionConstants.DAYS_PER_YEAR;
+                        long n2 = n1 + Advances;
+                        long h = (long)PlayerProgressionConstants.AgeBandRampHalfWidthYears
+                                 * PlayerProgressionConstants.DAYS_PER_YEAR;
+                        long expected = growthSide
+                            ? PlayerProgressionConstants.GROWTH_DAILY_POINTS * ExpectedRampAccrual(
+                                  n2, (long)PlayerProgressionConstants.GROWTH_AGE * PlayerProgressionConstants.DAYS_PER_YEAR, h, isGrowthPhase: true)
+                              - PlayerProgressionConstants.GROWTH_DAILY_POINTS * ExpectedRampAccrual(
+                                  n1, (long)PlayerProgressionConstants.GROWTH_AGE * PlayerProgressionConstants.DAYS_PER_YEAR, h, isGrowthPhase: true)
+                            : PlayerProgressionConstants.DECLINE_DAILY_POINTS * ExpectedRampAccrual(
+                                  n2, ((long)PlayerProgressionConstants.DECLINE_AGE + 1) * PlayerProgressionConstants.DAYS_PER_YEAR, h, isGrowthPhase: false)
+                              - PlayerProgressionConstants.DECLINE_DAILY_POINTS * ExpectedRampAccrual(
+                                  n1, ((long)PlayerProgressionConstants.DECLINE_AGE + 1) * PlayerProgressionConstants.DAYS_PER_YEAR, h, isGrowthPhase: false);
+
+                        Assert.AreEqual(expected, cursor,
+                            $"player {playerId} (bootstrap age {bootstrapAge}) sits inside a ramp: his "
+                            + "six days must accrue exactly the independently-computed ramp integral, not "
+                            + $"merely a value of the right sign — got {cursor}, expected {expected}.");
+
+                        // Precondition tracking: the case must be genuinely fractional for at least one
+                        // player on each side, or the exact check above could coincidentally pass a
+                        // step-model mutant too (e.g. at a ramp's own outer edge, where the integral
+                        // saturates back to 0 or +-full).
+                        bool fractional = expected != 0 && System.Math.Abs(expected) != full;
+                        if (fractional && growthSide)
+                        {
+                            sawFractionalGrowth = true;
+                        }
+                        else if (fractional)
+                        {
+                            sawFractionalDecline = true;
+                        }
+                    }
                 }
             }
 
@@ -109,7 +203,60 @@ namespace TacticalDirector.SeasonSave.Tests
             // the loop would still pass while proving far less. All three bands must be represented.
             Assert.Greater(growth, 0, "precondition: the league must contain Growth-band players.");
             Assert.Greater(decline, 0, "precondition: the league must contain Decline-band players.");
+            Assert.Greater(inRamp, 0,
+                "precondition: the league must contain players inside a ramp, or the ERR-028-020 curve "
+                + "is never exercised by this lock at all.");
             Assert.Greater(stable, 0, "precondition: the league must contain Stable-band players.");
+            Assert.IsTrue(sawFractionalGrowth,
+                "precondition: at least one growth-side in-ramp player must accrue a genuinely "
+                + "fractional (neither 0 nor full) six-day step, or the exact per-player check above "
+                + "could pass a step-model mutant by landing only on the ramp's saturated edges.");
+            Assert.IsTrue(sawFractionalDecline,
+                "precondition: at least one decline-side in-ramp player must accrue a genuinely "
+                + "fractional six-day step, for the same reason on the mirror side.");
+        }
+
+        // seasonloop-ramp-lock-nondiscriminating. An INDEPENDENT reimplementation of #28 §3.1.3's G(n)
+        // growth-phase (isGrowthPhase: true) / D(n) decline-phase (isGrowthPhase: false) integral —
+        // deliberately not a call into AbilityModel, so this fixture's own oracle cannot be defeated by
+        // the exact class of mutation (collapsing the ramp INSIDE AbilityModel) it exists to catch.
+        // `edge` is `g` (the growth edge, GROWTH_AGE * DAYS_PER_YEAR) or `e` (the decline edge,
+        // (DECLINE_AGE + 1) * DAYS_PER_YEAR); `isGrowthPhase` selects which of the two mirror shapes to
+        // evaluate — growth saturates at `edge` past `edge + h`, decline saturates at `n - edge`.
+        private static long ExpectedRampAccrual(long n, long edge, long h, bool isGrowthPhase)
+        {
+            if (h <= 0)
+            {
+                return isGrowthPhase
+                    ? (n < edge ? n : edge)
+                    : (n > edge ? n - edge : 0);
+            }
+            if (isGrowthPhase)
+            {
+                if (n <= edge - h)
+                {
+                    return n;
+                }
+                if (n >= edge + h)
+                {
+                    return edge;
+                }
+                long u = n - (edge - h);
+                return (edge - h) + u - (u * u) / (4 * h);
+            }
+            else
+            {
+                if (n <= edge - h)
+                {
+                    return 0;
+                }
+                if (n >= edge + h)
+                {
+                    return n - edge;
+                }
+                long v = n - (edge - h);
+                return (v * v) / (4 * h);
+            }
         }
 
         [Test]
@@ -890,4 +1037,27 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | Clock_IsRefused and Constructor_WithABirthWorldDayExactlyOnThe-    |
 // |         |            |        | Clock_IsAccepted — the composition-boundary counterpart of         |
 // |         |            |        | GrowthProjectionTests' M2(a) lock, at the ahead/on-clock boundary. |
+// | 1.8     | 2026-08-22 | —      | ERR-028-020. The slot-1 wiring lock is ramp-aware: the strict three-way
+// |         |            |        | expectation still applies OUTSIDE the ramps, where it is derived from the
+// |         |            |        | bootstrap age and the catalogue alone and never from the code under test;
+// |         |            |        | in-ramp players are asserted on sign and bound instead. + an inRamp
+// |         |            |        | precondition, so a league that never exercised the curve cannot pass.
+// |         |            |        | **CORRECTED 2026-08-23 (seasonloop-ramp-lock-nondiscriminating): this
+// |         |            |        | row's "so a league that never exercised the curve cannot pass" was FALSE**
+// |         |            |        | — the sign/bound check the inRamp branch used is satisfied by cursor ==
+// |         |            |        | 0, which is exactly what a step-model (h = 0) cursor reads for an
+// |         |            |        | inRamp-classified player the step model treats as Stable; mutation-
+// |         |            |        | verified that forcing h = 0 inside AbilityModel.AccruedBandPoints left
+// |         |            |        | this fixture green. See v1.9.
+// | 1.9     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial finding
+// |         |            |        | seasonloop-ramp-lock-nondiscriminating. The in-ramp branch's loose
+// |         |            |        | sign/bound check replaced with an EXACT expected value from the new
+// |         |            |        | ExpectedRampAccrual — an INDEPENDENT reimplementation of #28's G(n)/D(n)
+// |         |            |        | ramp integral, deliberately not a call into AbilityModel, so the exact
+// |         |            |        | class of mutation that defeated v1.8 (collapsing the ramp INSIDE
+// |         |            |        | AbilityModel) cannot cancel out against this fixture's own oracle. +
+// |         |            |        | sawFractionalGrowth/sawFractionalDecline preconditions, so the exact
+// |         |            |        | check cannot vacuously pass by landing only on a ramp's saturated
+// |         |            |        | edges. Mutation-verified: forcing `long h = 0` inside
+// |         |            |        | AbilityModel.AccruedBandPoints now fails this test.
 #endregion

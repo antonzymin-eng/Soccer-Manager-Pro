@@ -260,21 +260,17 @@ constrains, or to an artifact that has no spec — most reviews file nothing.
 2. **The spec text patched, or the entry saying why not.** If the spec is right and the code was
    wrong, say that in the entry. If layer membership, a `[GT]` value, or anything else needs an
    owner's decision, file `Open` and stop — do not write a guess into the authority file.
-3. **The landing ritual**, per the root `CLAUDE.md`: a `docs/tracking/CHANGELOG.md` header entry, a
-   `file-manifest.md` row, and a `src/CLAUDE.md` version bump if code changed.
+3. **The landing ritual.** Run the `landing-close-out` skill — it owns the full document sync and the
+   conventions each synced file enforces on itself. Do not restate its document list here; a change to
+   any of those conventions should have exactly one place to land.
 4. **Back-props named.** A fix with cross-spec consequences files them as their own `ERR-` entries
    against the consuming specs, landing atomically at approval.
 
-**Allocating the id — grep, never read.** `spec-error-log.md` is over 300 KB; reading it whole to
-pick a number is the single most wasteful habit available here. Ids are `ERR-<spec>-<seq>`:
-
-```bash
-grep -rhoE "ERR-020-[0-9]{3}" docs/ src/ | sort -u | tail -1   # highest used; yours is +1
-```
-
-Search `docs/` **and** `src/`, not just the log. This repo has been bitten three times by a proposed
-id that had already been filed the same day — a design supplement's suggested id is a suggestion to
-re-verify, never a reservation.
+**Allocating the id.** Use the `err-file-and-backprop` skill for this — it owns id allocation,
+collision history, and the entry shape, and restating its grep here is exactly the duplicated-logic
+trap this repo files findings against. In short: don't read the 300+ KB log to pick a number; run
+`.claude/skills/err-file-and-backprop/scripts/next_err_id.sh <spec>` and re-verify at merge, not just
+at authoring.
 
 **Reviewers file nothing.** A reviewer names the obligation in its finding ("this contradicts #6
 §3.5; needs an `ERR-006-NNN`") and stops. The change that lands performs the ritual. A review that

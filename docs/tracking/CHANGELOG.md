@@ -933,6 +933,583 @@ break it, and do not edit historical entries.
 > answer. Full account: `docs/tracking/spec-error-log.md` v2.17, `docs/tracking/open-issues.md`.
 > **GATE: RUN TO COMPLETION at `0fb3ff0`, August 13, 2026 — 33 suites, quarantine empty. `Discipline.Tests` 101/101; `SeasonSave.Tests` 431 passed / 0 failed / 3 known skips; `MatchEngine.Tests` 461 passed / **1 failed** / 11 skipped (59 m). The gate's exit status is FAILED (the quarantine is empty, so any failure fails it), and the single failure across the ENTIRE tree is `sim_match_engine_close_chance` — the inherited owner-held red that `close-chance-creation-design.md` §10.9 item 6 rules "hold red, do not rebaseline a third time". Those counts are IDENTICAL to the pre-#44 baseline this branch was cut from (W2, `MatchEngine.Tests` 461/1/11, same single failure), so **#44 adds no new failure**: the landing is gate-clean on its own terms and the tree is red for a reason that predates it and is an owner decision, not a defect.**
 
+> **Last Updated:** August 28, 2026 — **PROJECT ARCHITECTURE GOVERNANCE INTEGRATION PLAN v0.4; documentation only.** Agreed rollout/activation revision: A1 is now an asmdef-only first slice that produces ERR-020-002/003 evidence without Roslyn/schema/#19/#20-governance dependencies; those existing #20 defects close before the coordinated governance amendment, after which the objective asmdef subset may become a required status before A8. Compiler-backed Class-A reachability moves to A4; Class-B gate-firing remains runtime/domain-owned (W12-style) evidence consumed by governance rather than implemented there. Integration contracts gain orthogonal `activation_state = active | intentionally-disabled | pending-integration | unresolved`; intentional disablement requires a machine-resolvable disable anchor and cannot act as a suppression. KD-W1 becomes a machine tuning precondition, proposed as FR-TS-097. Certifying Roslyn extraction must be built from source at the governed checkout with pinned .NET SDK/compiler/config identity. Actual #19/#20 normative files, SPEC_INDEX, and file-manifest remain intentionally untouched at this draft stage; D1–D4 remain frozen; no code, tests, CI workflow, runtime behavior, save/schema version, gameplay constant, RNG stream/domain tag/draw site, or draw order changed.
+
+> **Last Updated (prior):** August 28, 2026 — **PROJECT ARCHITECTURE GOVERNANCE INTEGRATION PLAN v0.3; documentation only.** End-to-end implementation review hardening of `docs/planning/project-architecture-governance-integration-plan.md`: replaces self-referential commit/tree freshness with material `subject_scope_digest` + provenance separation; makes property-history validation compare against a trusted prior registry; closes the A1/A4 plain-C# root bootstrap; freezes executable selector/identity/applicability/dependency-closure semantics at A2; requires compiler-backed C# discovery (including implicit type initialization) rather than a hand-written parser; defines stable component IDs and overload-safe selector history; derives proof-class dependency closure; records explicit execution/failure-injection/mutation truth; splits durable review runs from findings; and requires an `if: always()` architecture aggregator to consume owning-runner results and reject skipped/excluded/quarantined required proof. A0–A9, the Governance/#19/#20 authority split, and ERR-020-002/003 staging remain unchanged. Actual #19/#20 files remain untouched; D1–D4 remain frozen; no `.cs`, `.asmdef`, CI workflow, runtime behavior, save/schema version, gameplay constant, RNG stream/domain tag/draw site, or draw order changed.
+
+> **Last Updated (prior):** August 28, 2026 — **PROJECT ARCHITECTURE GOVERNANCE INTEGRATION PLAN v0.2; documentation only.** Hostile-review hardening of `docs/planning/project-architecture-governance-integration-plan.md`: implementation now requires A0 Governance adoption, A1 read-only current-tree discovery, A2 schema freeze, and A3 coordinated #19/#20 dual reapproval before governance tooling or blocking enforcement; adds closed-world runtime-surface classification, deterministic applicability resolution, typed contract edges, complete proof/tree/inventory/config/tool binding, versioned finding migration, corrected property-vs-FR exception routing, exhaustive #19/#20 file/section amendment matrices, explicit required-status CI activation, finite baseline retirement, and A0–A9 sequencing. The approved #19/#20 specification files themselves were **not** modified in this commit; D1–D4 remain frozen. Modified only the integration plan plus tracking. No `.cs`, `.asmdef`, runtime behavior, save/schema version, gameplay constant, RNG stream/domain tag/draw site, or draw order changed.
+
+> **Last Updated (prior):** August 27, 2026 — **PROJECT ARCHITECTURE GOVERNANCE INTEGRATION PLAN; documentation only.** New `docs/planning/project-architecture-governance-integration-plan.md` v0.1 maps governance v0.4 into Code Standards #20, Testing Strategy #19, the adversarial-review ledger, CI, agent workflows, architecture inventories/contracts, evidence invalidation, and staged enforcement. The frozen D1–D4 remediation supplement is explicitly excluded from implementation authority. Modified tracking: `docs/tracking/CHANGELOG.md`, `docs/tracking/file-manifest.md`. No `.cs`, `.asmdef`, runtime behavior, save/schema version, gameplay constant, RNG stream/domain tag/draw site, or draw order changed.
+
+> **Last Updated (prior):** August 27, 2026 — **FOLLOW-UP: load-on-demand authority boundary clarified; documentation only.** The two expanded agent guides now identify themselves as snapshots/reference material, explicitly defer to the compact guides and owning sources, and no longer instruct agents to read the root guide "completely" or treat the expanded copy as a second authority. Modified: `docs/agent-guides/project-reference.md`, `docs/agent-guides/coding-reference.md`, `docs/tracking/CHANGELOG.md`, and `docs/tracking/file-manifest.md`. No runtime artifacts changed.
+
+> **Last Updated (prior):** August 27, 2026 — **AGENT-CONTEXT REDUCTION; documentation only.** Root `CLAUDE.md` reduced from 41,741 to 4,330 bytes and `src/CLAUDE.md` from 48,041 to 4,955 bytes. Detailed content was preserved in new load-on-demand references: `docs/agent-guides/project-reference.md` and `docs/agent-guides/coding-reference.md`. The compact guides retain non-negotiable rules and explicitly route task-specific detail. Modified: `CLAUDE.md`, `src/CLAUDE.md`, `docs/tracking/CHANGELOG.md`, `docs/tracking/file-manifest.md`. No `.cs`, `.asmdef`, runtime behavior, schema, format version, RNG draw site, stream, or domain tag changed. Markdown and link checks only; no code gate required.
+
+> **Last Updated (prior):** August 26, 2026 — **CHEAP-TIER AGENT DELEGATION: three Sonnet agent definitions under `.claude/agents/`, all three verified BY EXECUTION rather than written and assumed; tooling only — no code, no spec, no `src/` change, no gate run required (zero `.cs` / `.asmdef` / `tools/dotnet-ci` files touched).** **New (3):** `.claude/agents/gate-runner.md` (invokes the `dotnet-gate` skill and reports it verbatim; measurement only — no edits, no quarantine additions, no commits, and exactly three legitimate results: PASSED / FAILED / COULD NOT RUN, where green is the `── Gate PASSED ──` line and nothing else), `.claude/agents/orienteer.md` (invokes the account-level `orientation` skill; read-only; stops rather than improvising a substitute sequence, since a look-around returned under that name would be trusted as the checked one), `.claude/agents/doc-scribe.md` (applies doc edits already decided and drafted; no shell, no git, no `Write`, so it structurally cannot commit, and it refuses an intent rather than inferring one). **Modified (4):** `.claude/skills/landing-close-out/SKILL.md` (new `## Delegating the mechanical half` — the sync splits by JUDGMENT, not by document: which documents a landing touches, the changelog and OPEN ISSUES narrative, the determinism declaration, the blast-radius check and the gate line stay with the caller; version bumps, manifest rows, the `(prior)` relabel and a README status line delegate, with exact strings handed over and `git diff` read before committing — and the commit itself is never delegated), `.claude/README.md` (layout tree, new `## Model tiers — what runs cheap` table, verification-status table, constraint 1 corollary), `.claude/skills/README.md` (August 26 addendum), `file-manifest.md`. **Deliberately NOT in `adversarial-review`** — it only points at `landing-close-out`, and restating the sync there is the exact composability defect the August 25 audit had just removed from three skills. **Three mechanical facts established BY EXECUTION, not assumed: (1)** `Skill` is grantable to a subagent and account-level skills resolve there — `orienteer` called it with `orientation` and it loaded; **(2)** a registered agent definition is **snapshotted and does NOT hot-reload** — an agent dispatched after an edit quoted the PRE-edit bullet verbatim and reported the new phrases absent from its own instructions, so **an edit to any `.claude/agents/*.md` cannot be validated in the session that made it** (two "failed" fixes were misdiagnosed this way before the behaviour was found; both were then re-tested in a fresh session and both hold); **(3)** the per-spawn context cost is ~26–80 K tokens, not the ~449 K the README feared. **A stale figure corrected in passing:** `.claude/README.md`'s "root `CLAUDE.md` is ~395 KB" was **exact when written** (397,972 bytes on July 31, 2026, that file's own creation date) and is now **41.5 KB** after the August 22 `landing-history.md` split — a ~9.6x change in the number that prices every subagent spawn, and the old one would have made cheap-tier dispatch look unaffordable. **The `gate-runner` test surfaced a RED TREE that is not this branch's:** `sim_match_engine_close_chance` is confirmed red on `main` itself (CI run 476 on `2092c8a`: `MatchEngine.Tests` Failed 1 / Passed 472 / Skipped 11 / Total 484, identical to the local run) and is the owner-held RED by decision of August 11. A **second** failure — `GrowthProjection_DeclineIsUnbounded_ANeverRemovedVeteranReachesEveryAttributeAtMinimum` (`GrowthProjectionTests.cs:334`, expected 0 but was −1) — is **recorded nowhere**; it was ADDED by `1a34ef4`, whose own entry above claims `PlayerProgression.Tests 149/0/0`, against a suite now totalling 152 with 1 failing. Whether that claim was wrong when written or a later merge broke it is **NOT established here**. **It IS established that the failure is not this branch's:** run 476 on `main` fails the same test with the same counts (`PlayerProgression.Tests` Failed 1 / Passed 151 / Total 152), as does PR #334's own CI. *(⚠️ CORRECTED at commit time: this entry as first drafted said the CI log was "not evidence either way" because run 476's log showed no `PlayerProgression` lines. That was an artefact of retrieving only the log **tail** — ~133 K of 436 K chars, with `MatchEngine.Tests`' 35–45 minute run filling the whole window. Pulling the full log and grepping it found both failures on both runs. **A tail is not a search**, and the same mistake would hide any suite that finishes early.)* **Flagged for an owner, deliberately not diagnosed** — it is outside the scope of the branch that found it. This landing's own tracking entries were added after a review bot on PR #334 correctly flagged their absence; the precedent reasoning that omitted them (that `.claude/` work stays inside `.claude/`) was drawn from PR #333, which was itself the deviation. Prior entry below.)
+
+> **Last Updated (prior):** August 24, 2026 — **ADVERSARIAL REVIEW ROUND 2 — RAN PARTIALLY, and the partiality is the first thing round 3 must fix: TWO OF FOUR REVIEW LENSES NEVER RAN.** Four fresh Opus reviewers were dispatched over the ENTIRE current state (not a diff) — arithmetic, mutation, spec-governance, architecture. The governance and architecture lenses returned; **the arithmetic and mutation lenses both died on an API session limit before producing a finding.** That matters specifically: those two are the lenses that found round 1's real code defects (the `AgeRiskFor` sign inversion, the overflow-defeated ramp guard), so round 2's silence on arithmetic is ABSENCE OF EVIDENCE, not evidence of absence. **Round 2 therefore does NOT close the loop** — the termination test is a fresh FULL pass returning Low or nothing, and only half a pass ran. **Findings: 3 High, 15 Medium, 7 Low** (one dedupe — both surviving lenses independently flagged `ClassifyAgeBand`). **all three Highs fixed, and 16 of the 22 Medium/Low fixed across three fixer groups; 4 deliberately DEFERRED (D1–D4) and **`M10` NOT FIXED** — verified by grep at commit time, the config-unbound premise still stands at 2 sites in `spec-error-log.md`. *(⚠️ COUNT CORRECTED at commit time: this entry as first drafted said "13 of the M/L set fixed", which was FALSE — Group A's ten findings had not been dispatched at all when it was written, and the true figure at that moment was 6. Caught by reading the change set against the claim rather than trusting the summary. 16 + 4 + 1 = 21 against a 22 total, so **the M/L tally is still not fully reconciled and round 3 must re-derive it from the ledger** — no reconciled number is asserted here.)*** **The two governance Highs are the same defect class round 1 was fixing, recurring inside the fix:** `spec-error-log.md` — the authoritative record — still published, in two entries, the exact claims that later entries in the same file were filed to retract. `ERR-041-020` still asserted the age term sits "before the mitigation … so robustness discriminates it" while `ERR-041-021` forty lines below records that as arithmetically false (the mitigation is SUBTRACTED; addition commutes; a 956,480-input probe returns byte-identical output). `ERR-028-021` still published "the offsets sum to exactly 0 … **Locked.**" — the precise claim `ERR-028-022` retracted after the league was measured retiring ~2 months early. Round 1's sweep reached the specs and the code and stopped one paragraph short inside the log. **Both Error Index rows carried it too and were fixed with the bodies** — a body without its Index row is half a fix, which this project has shipped before. **The residual-carrier sweep that followed is this correction's SIXTH widening**, and one of the surviving carriers was the review document's own "FIXED" note for the very finding; every live carrier is now annotated in place (`MedicalStepTests.cs`, `football-judgment-proxy-review.md`, `CLAUDE.md` ×2, `open-issues.md`). The two `CHANGELOG.md` carriers are **deliberately NOT edited** — that file's own rule is that the chain is the record and historical entries are not edited; they are corrected by this entry instead. **The architecture High was a real structural defect:** the construction-day credit rule had TWO implementations (`RegenGenerator.BandStepFor` and inlined in `ProgressionEngine.SeedLifecycle`), with `BandStepFor`'s own doc declaring itself the owner of a rule it did not own — and **#28 had already paid for this exact duplication twice** (`ERR-028-018` fixed the seed site and missed the regen site; `ERR-028-020` then had to visit both). Collapsed to one owner, `AbilityModel.ConstructionDayCredit`; `BandStepFor` deleted, taking round 1's private→internal widening with it. **The two implementations were verified identical first** (probe: 0 mismatches over ages 0..200 and the `int` edges), so no larger finding. **Mutation evidence, honestly stated:** a PURE REVERT of the collapse passes 149/0 — it is behaviour-identical by construction and no behaviour test can detect it being undone; what the three new locks catch is the DIVERGENCE class, and re-introducing the historical one-site-credits defect now fails 2 tests where nothing previously compared the sites at all. **A claim of this session's own is CORRECTED here:** round 1's record described the new ramp oracle in `SeasonLoopProgressionTests` as "an INDEPENDENT reimplementation". It is not — it is a line-for-line transcription of `GrowthPhaseDays`/`DeclinePhaseDays` (same branch order, same shifted variables). It still detects the mutation it was built for, so the fix stands, but the word was false and is withdrawn. **Also fixed:** the `AgeBand` enum docs still defined the bands by the retired hard predicates in the same file round 1 was correcting; `AssemblyInfo.cs`'s FR-CS-015 rationale was false as applied (the same copied-rationale class as round 1's own `config-unbound-premise-false-28`); `MedicalStep`'s test affordance now follows the house `TestOnly_` convention and `AgeRiskFor(int)` is `internal` to match its twin term; `SPEC_INDEX`'s ordinal-92 promotion claim is re-anchored — and a full re-grep of all 251 `SubsystemOrdinals` sites in `docs/` established SPEC_INDEX was **the only surviving misstatement in the tree**, closing a sweep widened five times before. **DEFERRED, recorded, NOT silently dropped — all four widen the blast radius past the surface under review, and this project does not widen a landing unilaterally: (D1)** hoist the SplitMix64 finalizer, duplicated verbatim in **11 production files**, into `deterministic-sim` — the right answer and byte-identical by construction, but it touches `match-engine` and proving no digest or draw-order move needs a whole-tree gate including `MatchEngine.Tests` that this round cannot run; **(D2)** give the nine per-call catalogue-invariant guards a boot-time owner via `GameplayConfigHolder.Bind` — a redesign affecting every `[GT]` catalogue; **(D3)** hoist the duplicated global-id predicate to `player-database` and back-prop #27, which lands in a third spec's territory (`ERR-027-004` already open there); **(D4)** move the ramp oracle to the assembly that owns the formula and pin oracle == implementation (the false "independent" claim is corrected now; the move is round 3's). **Recorded, not fixed:** no §5 test ids allocated for H3's three new cases (the case they replace had none either); the regen CALL SITE still cannot be driven at a ramp age through the public API, so a mutation of its argument would go uncaught; and `spec-error-log.md`'s `ERR-028-020` Files Affected row now has a second stale item on this rule. **Verification at final HEAD, run rather than asserted:** whole-tree build **0 errors / 0 warnings**; `PlayerProgression.Tests` **149/0/0** (was 147); `InjuriesMedical.Tests` **76/0/0**; `SeasonSave.Tests` **402 passed / 3 known skips**; `TrainingSystem.Tests` **52/0/0**; `recurring-defect-lint.py` **0 ERROR** on a quiet tree. **NOT a whole-tree gate run** — `MatchEngine.Tests` was not executed and no verdict is claimed; nothing in this round runs on a match tick. **The football-judgment queue is untouched: still 29 open, 21 workable, batch 2 (keeper) next.**
+>
+> **Last Updated (prior):** August 23, 2026, latest same day — **ADVERSARIAL REVIEW ROUND 1 over the batch-1 landing — CLOSED August 23, 2026 at owner instruction: 7 High, 9 Medium, 15 Low, all 31 fixed across four commits (`9e41537`, `78b57e2`, `eb23c1c`, `9fca357`). CLOSED IS NOT CONVERGED, and the distinction is the point:** the `/adversarial-review` loop terminates only when a FRESH FULL re-review of the entire current state returns Low findings or none. No such pass ran. Round 1's fixes are verified individually — every behavioural one by actual mutation, reverted and re-run — but nothing has re-reviewed the tree those fixes produced. Recorded here so no later session reads "round 1 closed" as "this surface converged". **Why the round mattered: all seven Highs were claims that had ALREADY been verified once at the batch-1 landing.** Three worth carrying forward. **(1) A real arithmetic defect in the landing's headline fix** — `GameReadingOffsetDays` averaged three attributes with a floored `int` mean, so the offsets did NOT sum to zero over the population as the P5-exactness claim stated; the league retired ~2 months early. Fixed by carrying the undivided sum into the numerator, which sums to exactly 0 AND reproduces every diagonal value bit-for-bit, so nothing needed rebaselining. **(2) Both new production wirings were unlocked** — reverting them left 539 and 405 tests green respectively. **(3) The gate line itself was wrong** (see the entry below). **Two further real arithmetic defects came out of the Medium/Low tier, both the same shape — an `int` computation widened one step too late:** `AgeRiskFor` widened its product but not its subtraction, so at an extreme pivot the age term **changed sign** (measured +1800 with the fix, −1800 without); and `RampHalfWidthDays`'s disjointness guard was **defeated by overflow inside its own predicate**, returning `AccruedBandPoints` = 2,451,094 where it should have thrown. **The round's dominant pattern, and the one to remember: every one of the five new fail-loud config guards was deletable with the whole suite green, and two could never fire at all** — they read catalogue statics directly under a gate that binds no config. That is AR pass 14's own recorded lesson ("a guard on a branch nothing can execute ships green precisely because nothing can fire it") recurring inside the landing that cites its posture. All five now have isolating cases driven through parameterised `internal` overloads; deleting all four `AbilityModel` guards at once now fails exactly six cases (141/6) where it previously left 134/0. **One claim was WITHDRAWN rather than locked, deliberately:** `AgeRiskFor`'s position relative to the mitigation is an arithmetic identity — a 956,480-input checksum probe against the built assemblies returns byte-identical output for the moved term — so no test can distinguish it. The claim was retracted and the position restated as what is actually load-bearing (before the `OccurrenceRiskMillMult` scaling, before the clamp), with those two locked. Inventing a lock that passes vacuously is precisely what the `ERR-008-021`/`-022` chain did three times. **Three ERR ids filed and resolved:** `ERR-028-022` (the floored-mean anti-symmetry break), `ERR-028-023`, `ERR-041-021`. **Recorded, NOT fixed:** a second date inversion in `football-judgment-proxy-review.md`'s Updated chain that no finding diagnosed (an August 6 entry below August 5 ones), left rather than restructured on one reader's interpretation of ambiguous same-day timestamps; and `injuries-medical/section-9-approval-checklist.md`'s R-02 / §9.3.1 rows still saying "27 FRs", outside the three sites its finding named — the grep-boundary class this project has hit five times. **Process, recorded because it nearly cost work:** three agents shared one working tree and one ran `git stash` to measure a lint baseline; `outline.md` came back PARTIALLY restored and two edits were lost and redone. The dropped stash is pinned at tag `rescue/dropped-stash-4255331`. A concurrent-agent pass must not stash a shared tree. **Verification at final HEAD, run rather than asserted:** whole-tree build **0 errors / 0 warnings**; `PlayerProgression.Tests` **147/0/0**; `InjuriesMedical.Tests` **76/0/0**; `SeasonSave.Tests` **402 passed / 3 known skips** — the locked season-injury bands did not move; `TrainingSystem.Tests` **52/0/0**; `recurring-defect-lint.py` **0 ERROR**. **NOT a whole-tree gate run** — `MatchEngine.Tests` was not executed on this tree and no verdict is claimed for it; nothing in this round runs on a match tick. **The football-judgment queue is untouched by this round: still 29 open, 21 workable, batch 2 (keeper) next per §6.3.1.**
+>
+> **Last Updated (prior):** August 23, 2026 (**Documentation-only: the batch-1 landing's OVERSTATED GATE CLAIM
+> corrected at all seven sites, and the three held ERR bodies landed in `spec-error-log.md` (v2.22 →
+> v2.23). No `.cs` file touched, no `[GT]`, no format version, no draw.** **(1) The gate claim.** As
+> published, the batch-1 entry read "31 of 32 suites fully green … quarantine empty", and both halves
+> were false. The tree has **33** test suites — `ls -d src/*/[Tt]ests/*.asmdef` returns 33 and the gate
+> log carries 33 suite result lines; the original count missed every suite whose folder is capitalised
+> `Tests/`, which is 17 of them — so the figure is **32 of 33**. And "quarantine empty" implied a ledger
+> report the run never printed: `run-gate.sh` runs under `set -euo pipefail`, so it exited non-zero on
+> the inherited owner-held-red `sim_match_engine_close_chance` and never reached its quarantine-report
+> section or a `Gate PASSED` line — `grep -c 'Quarantine\|Gate PASSED'` on that log returns **0**. The
+> ledger IS empty, but **by inspection of `tools/dotnet-ci/known-failures.txt`** (zero non-comment
+> lines), not because the gate said so. The restated form says the test sweep ran in full at final HEAD,
+> names the inspection as the source of the empty ledger, and records the formal result as **FAIL on the
+> held-red band — no new failure, no band rebaselined** — rather than rounding it up to PASS. Corrected
+> at `CLAUDE.md`, `open-issues.md`, `spec-error-log.md`, `file-manifest.md`,
+> `football-judgment-proxy-review.md`, this file and `CHANGELOG-src.md`, each with the superseded wording
+> quoted in place rather than deleted. **The August 12 W2 entry further down this chain also says "31 of
+> 32" and is deliberately left alone** — it is a different landing's record, and re-deriving its suite
+> count is not this pass's work. **(2) The three held ERR bodies.** `ERR-028-022`, `ERR-028-023` and
+> `ERR-041-021` were already cited in shipped spec text and code comments while `spec-error-log.md` held
+> nothing behind them — the missing-body class that log recorded at v2.17 for `ERR-008-023`. All three
+> now have both an Error Index row and a `##` body: the floored-mean retirement offset that falsified
+> `ERR-028-021`'s P5 claim (and the two behaviour changes that were locked by nothing at all); the
+> seed-credit MUST that still mandated the band step `ERR-028-020` retired; and `ERR-041-020`'s
+> arithmetically vacuous "before the mitigation, so robustness discriminates it" position claim, whose
+> lock passed against all three mutants it named. Ids re-verified free before writing. `ERR-041-020`'s
+> own "Magnitude, first-guess" epidemiology sentence is corrected in place with them — the shipped
+> monotone age term follows E-4 above the pivot and **inverts** its Strong-rated 16–20 arm below it, with
+> `ERR-041-013` narrowed to that residual. **No gate run in this pass and none claimed:** nothing
+> compilable changed, and `python3 tools/recurring-defect-lint.py --repo .` reports **0 ERROR**.)
+
+> **Last Updated (prior):** August 22, 2026, latest same day (**BATCH 1 of the football-judgment proxy review's
+> workable 24 LANDED IN FULL — three findings, three ERRs filed AND resolved in the same commit, spec +
+> code together, whole-tree gate run.** `ERR-028-020`, `ERR-028-021`, `ERR-041-020`; the review's counts
+> move for the first time since August 5 — **34 recorded, 5 fixed, 29 open, workable queue 24 → 21**.
+> **ERR-028-020 (#28 §3.1, new §3.1.3):** the daily growth rate was `DailyPoints(ClassifyAgeBand(ageYears), …)`
+> — three constants selected by a hard step at an exact integer age, so a player developed at the full
+> rate on the last day of his 23rd year and at exactly zero on the first day of his 24th, with the mirror
+> discontinuity at `DECLINE_AGE`; the "deep" `curveEnabled` tier called the identical classifier, and
+> §1.3's promised "curves keyed to age" existed nowhere in the spec. Now a centred linear ramp of
+> half-width `AGE_BAND_RAMP_HALF_WIDTH_YEARS` at each edge. **The implementation choice is the
+> load-bearing one:** the accrual is the first difference of an exact integer CUMULATIVE, not a per-day
+> rate — `GrowthCursor` is integer fixed-point at one-unit-per-full-growth-day, so a rate has nothing
+> between 0 and 1 to return, and rescaling to milli-points (the obvious alternative) would have forced
+> `PROGRESSION_SAVE_FORMAT_VERSION` 1 → 2 and a refusal of every existing save. The difference form
+> keeps the per-day step in `{0, ±1}` while its DENSITY follows the continuous curve, so **no format
+> moves at all**. **P5 came out exact rather than fitted:** a centred ramp has the same integral as the
+> step it replaces for EVERY half-width, so no growth-rate recalibration is owed and ERR-028-018's
+> no-residue traversal invariant survives by construction. Half-width 0 reproduces the §4.3 step
+> byte-for-byte, exercised per-day across a 45-year sweep through a parameterised overload rather than
+> asserted. `ClassifyAgeBand` demoted to a READ of the curve (two of its answers invert, which is the
+> fix). **ERR-028-021 (#28 §3.4):** retirement was `rec.Age >= RETIREMENT_AGE` — one integer age for the
+> whole league, so goalkeepers retired on a forward's clock and one calendar day was the difference
+> between a career continuing and ending, for everyone at once. Now a per-player `RetirementAgeDays`
+> compared in days: baseline + goalkeeper allowance + a full-range anti-symmetric offset over the
+> Anticipation/Positioning/Composure mean. **The P3 decision is the part worth carrying forward** —
+> robustness was the obvious input and is deliberately NOT used, because #29 and #41 already price
+> Strength/Stamina/Balance twice over (`ERR-041-003`), so a third read would be that recorded defect a
+> third time; recorded in §3.4 as a ledger entry. Zero dials reproduce the retired comparison
+> identically, and the offsets sum to exactly 0 over a uniform attribute population, so the league's
+> retirement RATE is unchanged and only who-retires-when moves. Still draw-free. **ERR-041-020 (#41
+> §3.4):** the risk assembly presented as multi-factor and read player age nowhere — not in the formula,
+> not in the signature, not in §2, so nothing in the spec would have caught it either. `AgeRiskFor` now
+> sits inside the sum BEFORE the mitigation (normative, like `BASELINE_DAILY_RISK`, so robustness
+> discriminates it), linear with no threshold anywhere. **P5 measured rather than argued:** the pivot is
+> #27's bootstrap mean age (26 over `[17, 35]`), so `SeasonInjuryRealismTests`' league (717–816/season),
+> starter (2.08), reserve (1.12) and squad-unavailability (9.4%) bands all held unmoved, and all 26
+> pre-existing `AssembleRiskScore` expectations stay exact by passing the pivot age rather than being
+> rebaselined. First-guess magnitude: a 34-year-old carries ≈1.37× a 20-year-old's daily risk. New
+> **FR-MD-025a** carries the requirement. **Two of the three findings were mandated by their own spec's
+> §2 requirements** — FR-PG-007/KD-8 made the band step the required curve-off behaviour, FR-PG-013
+> required retirement "hard at `RETIREMENT_AGE`" — so both FRs are revised in place with the superseded
+> requirement annotated; that is pattern (d) reaching past §3 into the FR table, and batches 5 and 6
+> should expect it. **Across all three: no RNG draw, no stream registration, no domain tag, no
+> `SNAPSHOT_SCHEMA_VERSION`, no `*_FORMAT_VERSION`, no draw-order change.** Suites at landing:
+> `PlayerProgression.Tests` 127 → **134**, `InjuriesMedical.Tests` 70 → **74**, `SeasonSave.Tests`
+> **402 passed / 3 known skips**, `TrainingSystem.Tests` 52/52. Four pre-existing locks were rebaselined
+> onto the fixes and each rebaseline is annotated in the test itself with what the old assertion was
+> asserting — three of them were asserting the cliff.
+
+> **Gate: the test sweep ran in full at final HEAD; the formal result is the inherited FAIL, not a
+> PASS.** Build 0 errors; **32 of 33 suites fully green** (`PlayerProgression.Tests` 134/0,
+> `InjuriesMedical.Tests` 74/0,
+> `SeasonSave.Tests` 402/0 with its 3 known skips, `TrainingSystem.Tests` 52/0, every other suite 0
+> failed); `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped**. The quarantine ledger is **empty
+> by inspection of `tools/dotnet-ci/known-failures.txt`** — not because the gate reported it:
+> `run-gate.sh` runs under `set -euo pipefail`, so it exited non-zero on the blocking phase and never
+> reached its quarantine-report section or a `Gate PASSED` line, and **no formal verdict was ever
+> printed**. Recorded as FAIL on the inherited owner-held-red band rather than rounded up to PASS.
+> *(⚠️ CORRECTED August 23, 2026 — as first published this entry read "31 of 32 suites fully green …
+> quarantine empty". The suite count was one low: `ls -d src/*/[Tt]ests/*.asmdef` returns **33** and the
+> gate log carries 33 suite result lines, the original count having missed the suites whose folder is
+> capitalised `Tests/`. And "quarantine empty" implied a ledger report the run never printed —
+> `grep -c 'Quarantine\|Gate PASSED'` returns **0** on that log. The ledger IS empty, but by inspection
+> of the file, not by the gate's own report. Annotated in place, never silently replaced.)* The single
+> failure is `sim_match_engine_close_chance` — **owner-held RED since August 11 and failing at
+> baseline** (`close-chance-creation-design.md` §10.9 item 6; §6.3.1's constraint 2 names it as the
+> detector any batch now lands against). Its counts and both failing predicates come back **identical
+> to the recorded baseline**: `MatchEngine.Tests` 461/1/11 exactly as recorded at the W2 landing, mean
+> cosine **−0.165** against the −0.16 bound and goalward share **0.407** against 0.42 — the exact
+> figures the C1 / `ERR-012-011` record carries. Nothing in this landing runs on a match tick (#28 and
+> #41 are world-day subsystems; the one #30 call site is slot 4 of the day loop), so identical figures
+> are the predicted result and the evidence for it, not a coincidence to be explained away. **No new
+> failure, and no band was rebaselined.** An earlier run of this gate was killed and restarted
+> deliberately rather than reported: its test phase had begun before the `RegenGenerator` fix and the
+> `MAX_DERIVABLE_AGE_YEARS` correction below, so its verdict would not have covered the tree it was
+> reported against — the invalidated-gate class this project recorded at AR pass 9.)
+> 
+> Prior entry below.
+> **Last Updated (prior):** August 22, 2026, latest same day (**`ERR-016-011`: the replay lifecycle now
+> re-derives a loaded record's OWN digest — closing the one item `ERR-016-010` had recorded as not
+> fixed, and leaving nothing open on the replay-identity surface.**) **1. The digest existed and was
+> correct; nothing asked it anything.** §3.2.3 defines a snapshot digest that covers the payload,
+> `Encode` has computed it correctly since May, and the on-disk record has carried it — but the
+> §4.2.2 lifecycle only ever validated the chain LINK (`prevSnapshotDigest`). `currentSnapshotDigest`
+> was written, stored, loaded and **never recomputed**, so a record whose stored digest had been
+> altered loaded clean — and so did one whose **payload** had been altered. That second case is the
+> one that matters: the payload IS the Tier A/B state step 5 rehydrates, and every other check on the
+> path (magic, versions, fingerprint, chain link, record trailer) validates metadata around it.
+> **2. Found by a failing assertion, not by reading.** The `ERR-016-010` tampered-digest lock was
+> first drafted asserting that flipping a bit in the stored digest would be refused. It was not; the
+> test failed, and the reason was structural rather than incidental. **3. The fix, and why it is a
+> split rather than a ninth step.** §4.2.2 step 4 becomes **4a** (chain link — is this the record that
+> should follow the last one?) and **4b** (re-derive this record's own §3.2.3 digest — are these bytes
+> the record they claim to be?), with a new `ERR_DS_SNAPSHOT_DIGEST_MISMATCH` (0x160F) and
+> `EC-016-016`. **The lifecycle stays 8 steps**: FR-DS-012 binds an 8-step lifecycle and §4.6.2
+> diagrams one, and spec renumbering cascades are this file's own KNOWN HAZARD, so a split beats a
+> renumbering for an identical outcome. 4b runs **before step 5**, stated normatively — a lifecycle
+> that verifies after rehydrating has already applied the bytes it was about to reject.
+> **4. One preimage, one implementation.** `ComputeSnapshotDigest` is extracted as the single owner
+> of the §3.2.3 preimage, shared by `Encode` and `ValidateCurrentDigest`. Not tidiness: two
+> hand-written derivations of one preimage that agree only by inspection is the `ERR-010-002` class,
+> and here it fails badly in **both** directions — a verifier that drifts from the recorder rejects
+> every honest record, one that omits a field silently accepts tampering in it. §4.2.2 now says so.
+> **5. Switching the check on immediately failed the suite's own happy-path test.**
+> `ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero` had never called `Encode`, so its
+> "well-formed" record carried an all-zero `currentSnapshotDigest` — a value its own comment called
+> "a valid digest value" and which no recording produces. It had been written that way to dodge a
+> real conflation (encoding on the same codec advances that codec's chain authority and then breaks
+> step 4a). The fix is the distinction the comment itself drew: **two codec instances**, a recording
+> codec that encodes and a fresh replay codec that validates. The fixture had been asserting the happy
+> path of a record that cannot exist. **6. Verification.** Four behaviours locked across three new
+> tests and one strengthened existing test: an altered payload refused at 4b; an altered stored digest
+> refused at 4b **while the loader still succeeds** — the pair marks where the boundary sits, storage
+> reports the bytes it found and replay decides whether they are the record they claim to be; an
+> honest round-tripped record **passing** 4b; and `ValidateCurrentDigest` not advancing the chain.
+> **Two mutants executed, killing in both directions:** deleting 4b fails the two tamper locks;
+> making the verifier's preimage differ slightly from the recorder's fails four honest-record locks.
+> **7. No determinism impact.** No `DETERMINISM_DIGEST_VERSION` bump — the digest being checked is
+> the one §3.2.3 already defined; what is new is that something reads it. No preimage, field width,
+> hash-input rule, schema version, file-format version, RNG stream or golden vector moved.
+> **GATE: whole tree, 33 test assemblies, 0 errors and the same 5 warnings as baseline, quarantine
+> empty; `DeterministicSim.Tests` 86/0/1 (from 83/0/1), `MatchEngine.Tests` 472/1/11.** Diffed against
+> the previous commit's run: **exactly one suite changed**, by exactly this landing's locks, every
+> other suite byte-identical; the one failure is the inherited owner-held-red
+> `sim_match_engine_close_chance`. **Nothing remains open on this surface** — the archived
+> `EnvironmentFingerprint.floatModelHash` entry is annotated to say so. **Modified:**
+> `src/deterministic-sim/SnapshotCodec.cs`, `ReplayEngine.cs`, `DeterministicSimConstants.cs`,
+> `tests/DeterministicSimTests.cs`, `docs/specs/deterministic-sim/section-3.md` (v1.0.18),
+> `section-4.md` (v1.2), `spec-error-log.md` (v2.21), `open-issues-resolved.md`, `file-manifest.md`,
+> `CHANGELOG.md`, `CHANGELOG-src.md`.
+
+> **Last Updated (prior):** August 22, 2026, latest same day (**Both `SaveManager` gaps CLOSED as
+> `ERR-016-010`, and two OPEN ISSUES entries archived — the index and the record now agree for the
+> first time in this file's history.**) **1. The gap was bigger than its title.** The
+> `EnvironmentFingerprint.floatModelHash` entry had carried "`SaveManager` still writes
+> `Fingerprint = null`" as a remainder for a month, alongside the `buildHash` sibling closed earlier
+> the same day. Working the fix showed why the field had nowhere to go: **#16 §3.9.2 already
+> specifies a normative on-disk record layout, and the implementation contradicted it in four
+> respects at once** — no `environmentFingerprint` (which FR-DS-010 requires and §3.9.2 already
+> listed), no `recordTrailer` (`grep -rn recordTrailer src/` returned zero files), a
+> `currentSnapshotDigest` stored inside the header block instead of after the payload, and no format
+> identifier of any kind. So this was never a missing field; it was a normative section describing no
+> artifact. **The consequence that mattered:** §4.2.2 step 3 validates the fingerprint, but a disk
+> load always produced `null`, so `ReplayEngine` could only ever fail closed — a step that can only
+> refuse is indistinguishable from a step that is not there, and it had carried an `AR fix M-3`
+> comment naming that as the normal case since June. **2. The fix, and the version that did NOT
+> move.** §3.9.2 is revised to the five-section record now emitted and consumed; new **§3.9.2.1** pins
+> record identity (**magic-led** — `SNAPSHOT_FILE_MAGIC` checked before any later field is
+> interpreted, the ERR-029-005 "a format version is not a format identifier" rule) and separates the
+> three versions that govern a record, with the reason attached. `SaveManager` replaces the fixed
+> 87-byte header codec with `EncodeRecord`/`DecodeRecord`, bounds every read through
+> `SaveBlobFramingHelpers.Require`, and **throws** on a malformed header instead of reporting it as
+> `ERR_DS_STORAGE_ATOMICITY` — a return code from that method means the storage layer failed, and
+> mapping a caller's defect onto it sends the reader to the disk. **`SNAPSHOT_SCHEMA_VERSION` is
+> deliberately unmoved:** it rides in the §3.2.3 digest preimage, so bumping it moves every snapshot
+> digest and invalidates the July-19-certified golden vectors. It versions the authoritative STATE
+> shape; identity metadata in the file frame is not that. The frame carries its own version instead —
+> the split `MATCH_SAVE_FORMAT_VERSION` already draws. **3. A cost estimate this landing corrects.**
+> The entry written one commit earlier priced closing these two gaps as "the
+> `SNAPSHOT_SCHEMA_VERSION` bump the digest-preimage exclusion deliberately declines to spend", at a
+> golden-vector recertification on a host this project cannot currently reach. **That was wrong, and
+> the correction is cheaper rather than dearer:** the right instrument was a file-frame version,
+> already precedented in this tree. No digest moved, no golden vector was touched, no recertification
+> is owed. The estimate stands where it was written — it was the honest reading at the time — and is
+> corrected in `ERR-016-010` and at the archived entry. **4. Verification, and one lock that only
+> exists because a mutant survived.** The three save/load `Assert.Ignore` stubs were **activated, not
+> deleted**: their premise ("activate when Stage 1 CI infrastructure supports file I/O in EditMode
+> tests") was stale, since the gate runs plain NUnit on net8.0 and the sibling `MatchSaveManagerTests`
+> had been doing real file I/O on it for a month. `DeterministicSimSaveLoadTests` goes from **3 ignored
+> stubs to 12 executed locks + 1 genuinely-deferred skip** (`SaveAtomicMidTick`, an API that does not
+> exist). Three mutants executed: never writing the fingerprint fails three tests; accepting an empty
+> build hash fails exactly one; deleting the record-trailer comparison fails exactly one — **and that
+> last lock exists only because the first run of that mutant survived.** The padded-record test had
+> been written as the trailer's lock; the mutant passed it; a test only the trailer can fail (a
+> corrupt trailer value at unchanged file length) was written in response. That is the #29/#41 review
+> loop's "which fixes have a test that fails if the fix is reverted?" applied to this landing and
+> answered honestly. **5. RECORDED, not fixed — a third defect on the same surface.** Nothing in the
+> §4.2.2 lifecycle recomputes `currentSnapshotDigest` from the payload it just read: step 4 validates
+> the chain LINK, and the current digest is stored, loaded and never re-derived, so a record whose
+> stored digest or payload was altered loads clean. Distinct from the two closed here, outside what
+> closing them requires, and pinned by an explicit assertion so the day someone adds the recomputation
+> the test fails and says why. **6. #29 Training / #41 Injuries & Medical — verified resolved and
+> archived.** This is the discrepancy the `landing-history.md` split had recorded and left for an
+> owner call. Checked against the code rather than taken on the bullet's word: `SeasonLoop`
+> slot 1 is **LIVE** (`_progression.AdvanceDay(day, in growth)`), the #41 occurrence dial is **ARMED**
+> (`PlayerCareerStates.InjuryOccurrenceEnabled`), and every chain `ERR-` id reads resolved. Filed
+> straight to `open-issues-resolved.md`, since it never had an `open-issues.md` entry to move. **Three
+> stale status markers were corrected in the same check**, and they are why it needed checking:
+> `ERR-029-006`, `ERR-041-010` and `ERR-041-001` each **led with `◑` while their own cell text already
+> recorded `✅`**. The narratives were not edited; each row now leads with the verdict its own body had
+> been carrying. A row whose marker disagrees with its text is exactly how a closed item goes on
+> reading open. Two `CLAUDE.md` assembly-map rows that still said "slot 1 stays a null seam" and "the
+> occurrence dial ships OFF" were corrected with them. **7. Counts.** `open-issues.md` **15 active**,
+> archive **46**, and root `CLAUDE.md`'s index **15 bullets** — re-derived by direct count, and
+> **agreeing for the first time in the record**. **GATE: whole tree, 33 test assemblies, 0 errors and
+> the same 5 warnings as baseline, quarantine empty; `DeterministicSim.Tests` 83/0/1 (from 72/0/4 —
+> +11 executed locks, and three ignores retired), `MatchEngine.Tests` 472/1/11, byte-identical to the run one commit earlier.** The one failure is the
+> inherited owner-held-red `sim_match_engine_close_chance`. **Modified:**
+> `src/deterministic-sim/SaveManager.cs`, `DeterministicSimConstants.cs`, `ReplayEngine.cs`,
+> `tests/DeterministicSimTests.cs`, `docs/specs/deterministic-sim/section-3.md` (v1.0.17),
+> `spec-error-log.md` (v2.20), `open-issues.md`, `open-issues-resolved.md`, `CLAUDE.md`,
+> `landing-history.md`, `file-manifest.md`, `CHANGELOG.md`, `CHANGELOG-src.md`.
+
+> **Last Updated (prior):** August 22, 2026, latest same day (**`ERR-016-009`'s `buildHash` half CLOSED —
+> spec + code, same commit — and the six long OPEN ISSUES landing narratives moved verbatim out of
+> `CLAUDE.md`.**) **1. What build identity IS.** The previous entry recorded `buildHash` as
+> deliberately not fixed because "what constitutes build identity (assembly MVIDs? a CI-stamped
+> commit? the `.asmdef` closure?) is a decision, not an implementation detail." The decision is made:
+> **SHA-256 over the Module Version IDs of a DECLARED authoritative assembly closure.** A **CI-stamped
+> commit** was rejected because it identifies *source*, not binary — a dirty working tree, a different
+> compiler and a different target framework all produce different binaries under one commit, and the
+> developer builds where determinism defects actually surface carry no stamp at all. The **`.asmdef`
+> closure alone** was rejected because it names *which* assemblies participate, not what is in them,
+> so two builds differing only in compiled code have identical closures. The adopted answer is not a
+> fourth option but the union of the two workable ones: the closure is the **scope selector**, the
+> MVIDs are the **content**. **2. Two rules that are not aesthetic.** The closure is **declared, never
+> discovered** — `AppDomain.GetAssemblies()` returns whatever happens to have been loaded, which
+> differs between a player run, an editor run and a test run of one build, so `MatchEngineBuildIdentity`
+> names its 20 modules with `typeof` expressions and a missing one is a compile error rather than a
+> silently shorter hash. And `buildHash` is **outside every digest preimage**, which is the constraint
+> that held this landing to one save format: `EnvironmentFingerprint.ComputeDigest()` *is* the §3.2.3
+> snapshot-header preimage's envFp slot and `header.SchemaVersion` is in that preimage too, so putting
+> the hash on the fingerprint — or bumping `SNAPSHOT_SCHEMA_VERSION` to widen the deterministic-sim
+> header — would have moved every snapshot digest and invalidated the golden-vector corpus certified
+> July 19, 2026 on a pinned host this project cannot currently re-run. `SnapshotHeader` was the right
+> home for the opposite reason: it already carries `schemaVersion` and `digestVersion`, two of
+> `DeterminismContext`'s four fields, so this **completes the split #16 §2.3 v1.1 documented** rather
+> than creating a parallel type. **3. Landed.** New `BuildIdentity` + `BuildModule` (fail-loud on an
+> empty closure, a duplicate name, a `default(BuildModule)` and a non-ASCII name the §3.2.4.1 encoder
+> would silently mangle); `SnapshotHeader.BuildHash` with a REQUIRED `Initialize` parameter;
+> `TickOrchestrator` takes it beside the fingerprint; `MatchEngine` stamps, copies and gates it;
+> `MatchSaveCodec` carries it at `MATCH_SAVE_FORMAT_VERSION` **1 → 2** and refuses an empty value at
+> **both** ends. Restore fails closed with the new **`ERR_DS_REPLAY_BUILD_MISMATCH` (0x160E)**, kept
+> distinct from `ERR_DS_REPLAY_ENV_MISMATCH` because a recompiled engine on the same host passes the
+> fingerprint check and must still be refused — collapsing those two axes is the reading the ERR was
+> filed against. Spec: #16 §2.3 **v1.2** with new normative **§2.3.2** and **FR-DS-014** (the v1.1
+> "open GAP" paragraph kept **frozen and quoted in place**, not deleted); §3.4 **v1.0.16** adds
+> `DOMAIN_TAG_BUILD_IDENTITY = 0x2E` — allocated *after* the roadmap §6 reserved block `0x2B`–`0x2D`
+> so no spec-pinned subsystem number moves, and with no `SubsystemOrdinals` mirror since it registers
+> no stream; §3.10 adds `EC-016-015`; `match-save-file-design.md` **v0.4** adds **KD-7**.
+> **No `DETERMINISM_DIGEST_VERSION` bump, no `SNAPSHOT_SCHEMA_VERSION` bump, no RNG stream, no draw
+> site, no draw-order change, no golden vector moved.** **4. Verification, including one thing the
+> suite caught that reasoning did not.** 27 locks — 16 on the hasher (an independently derived golden
+> vector from a Python mirror of the preimage, order invariance, name/MVID/count sensitivity, every
+> guard) and 11 on the composition root (closure drift, per-module sensitivity across the *real*
+> closure, header carriage, the KD-7 round-trip, both empty-hash refusals, the restore gate with a
+> positive control). **Three mutants were executed and each was killed by exactly one lock.** And on
+> its first run the suite failed for a real reason: `CaptureDurableHeader` deep-copies the header field
+> by field and dropped the new one, so every save would have carried `BuildHash = null` and the restore
+> gate would have skipped itself — the entire landing green and inert, which is precisely the failure
+> class this project keeps re-meeting. **GATE: whole-tree at HEAD, 33 test assemblies, build 0 errors
+> and the same 5 warnings as baseline, quarantine empty; `DeterministicSim.Tests` 72/0/4 (baseline
+> 56/0/4), `MatchEngine.Tests` 472/1/11 (baseline 461/1/11)** — the one failure in both runs being the
+> inherited owner-held-red `sim_match_engine_close_chance`. The baseline was captured *before* any
+> `src/` file was touched, and a line-by-line diff of the two runs shows **exactly two suites changed,
+> by exactly this landing's 16 + 11 new locks, with every other suite byte-identical** — so "adds no
+> new failure" is a measurement, not an inference.
+> **5. `CLAUDE.md` compression — the owner call taken up.** The previous entry recorded this as NOT
+> done because it "would mean editing historical entries, which this project's convention explicitly
+> forbids", and named the cleanest form: move the long landing narratives to a `landing-history.md`
+> and leave one-paragraph index bullets. That is what happened. **No text was edited, summarised,
+> reordered or deleted** — six bullets' bodies (72,711 bytes; 70% of the file, one of them 38.6% on
+> its own) were moved **verbatim** into the new `docs/tracking/landing-history.md`, each replaced by an
+> index paragraph pointing at its section. `CLAUDE.md` goes **104,292 → 44,244 bytes (−58%)**; all 17
+> bullets remain and **no item's open/closed status changed**. The new file states plainly that it
+> confers no status — `open-issues.md` stays the owning record, `spec-error-log.md` the authority on
+> every `ERR-` id, and a moved narrative is frozen at its move date, exactly as a pre-promotion design
+> supplement is. **6. A discrepancy the move surfaced, recorded and NOT fixed.** `CLAUDE.md`'s OPEN
+> ISSUES index carries **17** bullets against `open-issues.md`'s **16** entries: the **#29/#41** bullet
+> has no owning entry at all, so the "16 active" figure reconciles only because it is counted from the
+> record rather than from the index. That bullet's own text opens "WHAT REMAINS: nothing", which points
+> at the resolved archive — but it was never in `open-issues.md` to archive, and re-classifying it is
+> an owner call about what is open, not a side-effect of moving text. It is written down in three
+> places and left exactly as it stood. **7. What is still open on the same contract.** The
+> `SaveManager` `Fingerprint = null` write-site gap is untouched and has now gained a sibling: that
+> same Stage-0 87-byte header carries no build hash either, deliberately, because widening it is
+> exactly the `SNAPSHOT_SCHEMA_VERSION` bump the digest-preimage exclusion declines to spend. Closing
+> both together still costs a golden-vector re-certification on the pinned host. **Modified:**
+> `src/deterministic-sim/` (6 files + 2 new), `src/match-engine/` (3 files + 2 new),
+> `docs/specs/deterministic-sim/section-2.md`, `section-3.md`, `docs/tracking/match-save-file-design.md`,
+> `spec-error-log.md`, `open-issues.md`, `data-contract-index.md`, `file-manifest.md`, `CLAUDE.md`,
+> `docs/tracking/landing-history.md` (new), `CHANGELOG.md`, `CHANGELOG-src.md`.
+
+> **Last Updated (prior):** August 22, 2026, latest same day (**The four tracking gaps surfaced across this
+> session's passes are now CLOSED — three registers reconciled, one new gap tracked.**) Doc-only; no
+> `.cs` touched. **1. `open-issues.md` was a landing behind its own index.** Root `CLAUDE.md` has
+> carried `ERR-008-023` since the August 7 landing and `open-issues.md` had **zero** mentions of it —
+> and the `spec-error-log.md` body entry for -023 was itself missing until August 17. The surviving
+> proxy-review entry now carries the full -023 record: the keeper's shot-stopping reach priced twice
+> (`GK_BLOCKER_RADIUS_M` = 1.5 m went live at -022 and removed **~42% of the goal arc on every shot**,
+> 1.000 → 0.584 at 16 m, keeper alone), **zero goals across four seeds**, the retirement of the
+> keeper-only radius under P3, suite 15 → 16 with the near-tautology lock rewritten, and the run-419
+> downstream. It also carries the **August 17 amendment**: the close-chance rebaseline was blamed on
+> the wrong thing — an 18-seed paired bisect prices the whole -021/-022/-023 shot-lane chain at
+> **−0.027 ± 0.039 (t = −0.70)** while **C1 / `ERR-012-011` costs −0.189 ± 0.038 (t = −5.05)**, and the
+> −0.119 that drove the rebaseline sits at the **4.6th percentile** of its own two-seed estimator; the
+> band is now owner-held RED. **2. A stale count inside that entry** — §3.2.10's catalogue was recorded
+> as five #8 landings behind; with -023 it is **six**, the figure `CLAUDE.md` and §6.3.1 both carry. The
+> historical "five … at this landing" statements in the review's §6.4 and in this changelog are
+> deliberately NOT edited — they were true at their landing, and this project preserves historical rows
+> verbatim. **3. The `buildHash` gap is now tracked where live blockers live.** `ERR-016-009` recorded
+> it OPEN in the error log yesterday, but `open-issues.md` had no entry — so it was a filed defect
+> nothing would surface. Appended to the existing `EnvironmentFingerprint.floatModelHash` entry rather
+> than filed as a new one (that entry already owns the `SaveManager` writes `Fingerprint = null`
+> remainder on the same contract, and after yesterday's de-duplication pass a near-duplicate entry was
+> the wrong instrument). The distinction is stated: `Fingerprint = null` is a **write-site gap on a
+> field that exists**; `buildHash` is a **field that does not exist** — verified by
+> `git ls-files 'src/*' | xargs grep -il 'buildhash'` returning **zero files**, `EnvironmentFingerprint`
+> included. Consequence recorded: the fingerprint pins the host and float mode, not the binary, so two
+> builds differing only in compiled game code are indistinguishable downstream of §2.3. Deliberately
+> **not** fixed — what constitutes build identity (assembly MVIDs? a CI-stamped commit? the `.asmdef`
+> closure?) is a decision, not an implementation detail. **4. A consistency gap this session created.**
+> `data-contract-index.md` recorded the #16 §2.3 names as *"an observation, not a defect claim"* with a
+> count of **four**; a day later they became filed defect `ERR-016-009` with a count of **six** (the
+> note had omitted `ToleranceRow` and `ComparatorRegistry`). The index goes **v1.1**: the note now cites
+> the ERR, gives the right count, and **points at #16 §2.3 v1.1's mapping table instead of restating
+> it** — which is §0 rule 2 (*the pointer targets win*) working as designed on the file that declares
+> it. No table row changed. **Counts re-verified after all edits:** `open-issues.md` **16 active**,
+> archive **44**, both by direct `grep -c '^- \*\*'`, matching `CLAUDE.md`'s preamble.
+> `recurring-defect-lint.py` **0 ERROR tree-wide**. **NOT done, and why:** compressing `CLAUDE.md`'s
+> OPEN ISSUES bullets — the measured token weight, 67% of the file with the #29/#41 bullet alone at
+> 38.7% — would mean editing historical entries, which this project's convention explicitly forbids
+> ("historical rows preserved verbatim"). That needs an owner decision about what history may be
+> summarised, not a unilateral pass. **Modified:** `docs/tracking/open-issues.md`, `CLAUDE.md`,
+> `docs/tracking/data-contract-index.md` (v1.1), `docs/tracking/file-manifest.md`,
+> `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** August 22, 2026, later same day (**The football-judgment proxy review's DUPLICATE
+> entries de-duplicated — and it was not the duplicate it looked like.**) Doc-only; no `.cs` touched.
+> The review had **two** active entries in `open-issues.md` and **two** bullets in root `CLAUDE.md`.
+> Investigating before deleting showed they are **not two copies of one record**: the second of each is
+> the record of the **concurrent `claude/football-judgment-proxy-review-pq12dz` branch (PR #305)**,
+> which filed its own `ERR-008-021` against the same section with a **different fix** — ability
+> weighting only, explicitly leaving the containment cliff in place — and the **August 7 merge kept the
+> other branch's form, not PR #305's** (`spec-error-log.md`'s superseded `ERR-008-021` entry, annotated
+> 2026-08-11, is the authoritative reconciliation). The two records also disagree on `ERR-008-021`'s
+> landing date (Aug 5 vs Aug 6) and give **different gate results**, which is why a mechanical
+> merge-and-delete would have been wrong. **Resolution.** `CLAUDE.md` and `open-issues.md` each keep
+> ONE entry — this branch's live line, current through `ERR-008-023`. The PR #305 record moved to
+> `open-issues-resolved.md` **verbatim**, under a *blockquote* annotation (deliberately not a bullet, so
+> it is not counted as a resolved issue) stating that it is a superseded parallel record, not a resolved
+> one, and that it describes a fix **not live in `src/decision-tree/OptionGenerator.cs`**. Precedent:
+> this file's own August 2, 2026 archiving of "a duplicated pair". **Two facts were carried forward into
+> both survivors rather than left only in the archive:** PR #305's form **was** genuinely gate-verified
+> at **CI run 404, head `3f207ee`, Aug 7** — a *different run* from the withdrawn CI-402 claim, and
+> **not evidence for the code that shipped** — and that branch's **AR-1 H-1**, selecting a SINGLE
+> goal-line-nearest goalkeeper candidate for the P3 exemption instead of exempting the whole 6 m GK
+> band, which the reconciliation records as *"strictly better… deliberately NOT grafted in this merge"*,
+> i.e. **real, unlanded, follow-up-worthy work** on top of what `ERR-008-023` left. **Counts corrected:
+> the active count had been double-counting this issue.** `open-issues.md` **17 → 16 active** and the
+> archive **43 → 44**, both re-derived by direct `grep -c '^- \*\*'` after the change. **Verified no
+> loss:** the archived body is byte-identical to what was removed, and every distinctive token from the
+> removed `CLAUDE.md` bullet still resolves somewhere in the tree. **Honest note on token cost: this did
+> NOT shrink `CLAUDE.md`** — 3,102 chars of bullet came out, ~2,400 of annotation went in, so the file
+> is roughly flat at ~104k chars (~29k tokens). The win is correctness, not size. **Where the size
+> actually is, measured:** OPEN ISSUES bullets are **67% of the file**, and the single
+> #29-Training/#41-Injuries bullet is **40,214 chars — 38.7% of `CLAUDE.md` on its own**. Any real
+> token-cost work starts there, not here. **Modified:** `CLAUDE.md`, `docs/tracking/open-issues.md`,
+> `docs/tracking/open-issues-resolved.md`, `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** August 22, 2026 (**§6.3.1: the football-judgment backlog now has a LANDING ORDER,
+> not just a taxonomy.**) Doc-only; **no `.cs` touched**, so no gate run (the whole-tree gate ran
+> yesterday on the last `.cs` change — 33 suites, build 0 errors, the single inherited red band).
+> §6.3 classified each finding; nothing said what order to fix them in, and with 24 workable the
+> default "any order" was quietly costing sequencing decisions. **Derived from three things only, and
+> the subsection says outright that for roughly ten of the 24 the order does not matter.** **(A) Is the
+> chain's terminal action wired** — `match-engine-wiring-backlog.md` records **W2 BUILT August 12 but
+> SHIPS DISABLED pending W6**, with `MatchEngineConstants.TackleContactRadiusM` defaulting to **0.0f**
+> (verified in source), and **#14 §3.6 "Tackle Intent" is the section immediately above the §3.6.5
+> Tackle Outcome Resolution W2 added** (`ERR-014-006`) — so fixing the COMMIT gate now tunes the input
+> to a disabled output. That is the root `CLAUDE.md` trap-table row *"tuning a machine that is missing
+> pieces"* verbatim, and it defers **7** findings (#8 PRESS trigger, #13 ×4, #14 ×2). **(B) Does it need
+> a design supplement first** — §6.3's mechanism class already names 4 (#8 §3.2.2.1, #15 ×2, #27); those
+> are serialized on a *document*, so they are scheduled **start-first / land-last** rather than left to
+> become the critical path at the end. **(C) Batch by calibration chain** — P5 calibrates once, so
+> fixes sharing a measured output land together. **Six batches: off-pitch 3 → keeper 4 → contact/duel
+> 4 → singletons 2 → supplement-gated 4 → pressing/defensive 7 = 24.** Batch 2 is newly unblocked: the
+> conversion-at-contact residual was PARKED August 4 *because W1 changes the contact geometry the
+> decision turns on*, and W1 landed that same day — recorded with the caveat that it needs a **fresh
+> measurement against post-W1 geometry**, not a fix written against pre-W1 numbers. Two cross-cutting
+> constraints recorded with it: **#8 §3.2.10's constant catalogue is six #8 landings behind** and must
+> be discharged at the next #8 landing (batches 5 and 6 both touch #8), and **`sim_match_engine_close_chance`
+> is owner-held RED** (hold red, do not rebaseline a third time), so batches 2/3/5 land against an
+> already-tripped detector and need per-fix measurement rather than a band read. **What §6.3.1
+> deliberately does NOT do:** re-prioritise by football impact. None of the 24 has been measured against
+> the others, and ranking them by guess would be the same false precision the §5 spec-count correction
+> was about — so the order comes only from wiring state, document serialization and calibration
+> batching, three things the repo already knows to be true. One honest caveat is stated in the table
+> rather than glossed: #14 §3.5 (threat score → marking priority) is gated by chain-coherence, not by
+> W2 directly, and could move earlier. **Modified:**
+> `docs/tracking/football-judgment-proxy-review.md` (new §6.3.1 + header entry),
+> `docs/tracking/file-manifest.md`, `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** August 21, 2026, later same day (**The three findings reported at the C6 landing
+> are FIXED, and the whole-tree gate ran for the first time this session.**) **1. `ERR-016-009` filed
+> and its spec half RESOLVED same commit** (`spec-error-log.md` v2.18): #16 §2.3's nine "Data
+> Structures" include **six that name no type in `src/deterministic-sim/`** — `DeterminismContext`,
+> `RngStreamKey`, `ToleranceRow` and `ComparatorRegistry` have **zero textual presence in `src/` at
+> all**; `RngCursor` and `RngStreamKey`'s triple are *fields on* `RngStreamState`; `PhaseDigest` is a
+> computation whose preimage is locked by golden-vector corpus D-01/D-02. §2.3 carries the weight
+> because §4.2 has been explicitly non-normative since its own v0.7 and §4.4's module paths
+> (`sim/tick/*` …) match **no directory** in the flat tree — and §2.3's version history revised two of
+> the phantom structures as contract text (v0.7: "corrected `RngStreamKey` … extended `RngCursor`").
+> **The substantive half is `buildHash`:** a declared field of the replay-identity context with no
+> representation anywhere, `EnvironmentFingerprint` included, so two builds differing only in compiled
+> code are indistinguishable to everything downstream of §2.3. Fixed as #16 §2.3 **v1.1** — a per-row
+> implementation-mapping table (TYPE / FIELDS ON / COMPUTED / DEFERRED / SPLIT + GAP) plus a normative
+> declaration that **`src/` is the surface authority and §2.3 the concept inventory**. Recorded OPEN,
+> not fixed: the `buildHash` gap (sits with the existing `SaveManager` writes `Fingerprint = null`
+> item) and the `ToleranceRow`/`ComparatorRegistry` Stage-1+ deferrals. **Deliberately no rename** —
+> the serialized field names are correct as built, and renaming Tier-A state to match a document moves
+> state for no behavioural gain. **2. The FR-CS-057 header regression fixed:**
+> `src/match-viewer/tests/LiveMatchStreamerTests.cs` carried `// Modified: 2026-07-27` against a v1.2
+> row dated 2026-08-15 (the Aug 15 P4b landing added the row and not the field). `recurring-defect-lint.py`
+> is back to **0 ERROR tree-wide**, restoring the state last recorded August 8. **3. The proxy review's
+> two SPEC counts corrected — the three FINDING counts were and are right.** §5 read 24 specs with
+> findings / 29 clean, which is self-consistent (24 + 29 = 53) and matches the §4 parenthetical but
+> matches neither section's content. Re-derived by direct count: **19 spec headings** in §2/§3, **34
+> clean specs** in §4's list, 19 + 34 = 53. The finding counts reconcile exactly and are untouched —
+> 35 `- **§` bullets minus the shot-lane bullet marked "not itemized" = 34 recorded, minus
+> `ERR-008-020` and `ERR-008-019` = 32 open. Corrected in seven places with the correction annotated
+> in place, never silently: the review's §4 and §5, `CLAUDE.md` ×2, `open-issues.md` ×3, `README.md`,
+> `file-manifest.md` (whose "1 already fixed" was also stale). **The C6 text landed earlier today is
+> unaffected** — it states only the six-assembly-less-specs figure, which is directly verifiable.
+> **GATE RUN — the first of this session** (SDK 8.0.130 installed from the Ubuntu apt archive after an
+> `apt-get update`; the initial install 404'd on stale index files, which is worth knowing for the next
+> session). Build **succeeded, 0 errors**, 5 pre-existing CS0649 warnings. **33 suites, 3,024 tests
+> passed, 1 failed, 191 skipped.** The single failure is `sim_match_engine_close_chance`
+> (`MatchEngine.Tests` **461 / 1 / 11**, 1 h) — the **inherited owner-held-red band**, matching the W2
+> landing's recorded baseline of 461/1/11 exactly, so this pass adds **no new failure**. The gate
+> script exits non-zero on the blocking phase and therefore never reached its quarantine-report
+> section: **the formal verdict is FAIL on the inherited red, not PASS**, and it is recorded that way
+> rather than rounded up. Only `.cs` change in the pass is a comment header. **Modified:**
+> `docs/specs/deterministic-sim/section-2.md` (v1.1), `docs/tracking/spec-error-log.md` (v2.18),
+> `src/match-viewer/tests/LiveMatchStreamerTests.cs`, `docs/tracking/football-judgment-proxy-review.md`,
+> `CLAUDE.md`, `README.md`, `docs/tracking/open-issues.md`, `docs/tracking/file-manifest.md`,
+> `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** August 21, 2026 (**Sequencing rule C6 recorded: spec hardening does not precede
+> the assembly — plus the pointer index that replaces a rejected `DATA_SCHEMA.md`.**) Doc-only; **no
+> `.cs` file touched.** Prompted by a review of an externally-suggested "upgrade every legacy spec
+> with a Gen-5 model first, then implement" pipeline. **What was rejected and why:** a blanket rewrite
+> of all 53 specs (this project's most recurring bug class is cross-reference cascades — `XC-`/`FM-`/
+> `EC-`/`ERR-` ids and `[CROSS]` citations — and a 53-way rewrite by a model that cannot see the other
+> 52 is a cascade generator; it would also re-open the ERR back-props landed since May, and its
+> suggested "fixed-point float" type contracts contradict the Stage-0 `float` / Stage-5 Fixed64
+> decision), and a master `DATA_SCHEMA.md` (a second authority over contracts #27/#30/#16 already own
+> — the parallel-surface defect this project has hit as `LineupSelector.CanSelect`, the three copies
+> of the `Save` signature, and the two hand-copied cursor walks). **What was kept:** the spec-only
+> test-generation check, folded forward onto NEW specs at promotion with the pass bar changed from
+> "the test file compiles" to *the test fails when the fix is reverted* — because compiling-and-green
+> is exactly what this project's tautological locks already were. **NEW:** `docs/tracking/data-contract-index.md`
+> v1.0 — entity → owning spec § → assembly, pointer-only, with §0's three rules (restate nothing /
+> the pointer targets win / rows not columns). Two of its rows did not resolve on verification and
+> were corrected before landing rather than shipped: `ScreenId` lives in `ui-framework` (it is
+> `ClientScreens` that `client-app` owns), and **four `#16 §2.3` names — `DeterminismContext`,
+> `PhaseDigest`, `RngStreamKey`, `RngCursor` — have no type of that name in `src/deterministic-sim/`**;
+> recorded in the index as an observation, not filed as a defect. **Modified:**
+> `docs/tracking/path-to-playable-roadmap.md` (v0.21 — new constraint **C6**, the normative source: a
+> spec with no `src/` assembly is not hardened ahead of its own T0 landing; findings are RECORDED and
+> discharged at T0, in the same commit as the code they govern. Three grounds, all already in the
+> repo: §6.3 requires spec + code in one commit and a fix is not landed until a test fails when
+> reverted — both unexecutable with no assembly; C5's own list shows the defects that matter here die
+> on first execution, not on re-reading; and P5/KD-W1 already refuses `[GT]`s over unwired subsystems.
+> **C6 is explicitly NOT "implement all 20 first"** — §6 defers fourteen past PM-3 and §10 disclaims
+> finishing the spec set; the implementation order is unchanged),
+> `docs/tracking/football-judgment-proxy-review.md` (new §6.3 **assembly-less class** + header entry —
+> six finding-bearing specs have no assembly, #31/#34/#36/#43/#46/#54, holding **8 of the 32 open
+> findings**, now deferred to their T0 landings; **the counts are unchanged — 34 recorded, 2 fixed, 32
+> open** — this reclassifies *when* 8 of them are workable, not whether, and leaves 24 as the
+> backlog's actual queue), `CLAUDE.md` (the C6 sentence on the live-gap paragraph + a TRACKING
+> DOCUMENTS row), `docs/tracking/file-manifest.md`, `docs/tracking/CHANGELOG.md`. **Verification:**
+> `tools/recurring-defect-lint.py` reports **0 findings of any class against all six changed files**.
+> Tree-wide it now reports **1 ERROR**, pre-existing and unrelated —
+> `src/match-viewer/tests/LiveMatchStreamerTests.cs:1` FR-CS-057 (`// Modified: 2026-07-27` vs a
+> 2026-08-15 version row, from the P4b landing) — which means the "0 ERROR tree-wide" state recorded
+> on August 8 has since regressed and was NOT re-derived; left unfixed as out of scope and reported.
+> No gate run: no `.cs` changed.
+
+> **Last Updated (prior):** August 17, 2026 (**The shot-lane chain is REFUTED as the cause of the held-red
+> close-chance band, C1's cost is priced, and `ERR-008-023` finally has a body entry.**) A salvage
+> of `claude/shot-lane-regression-bisect-vflxc2`, a branch that measured all this on August 10 and
+> never merged; ported onto `main` selectively, and what was dropped in the port matters as much as
+> what was kept. **Kept — the bisect (`close-chance-creation-design.md` §11, v2.3).** 18 seeds × 90
+> minutes × 6 trees, 108 full matches, the tree held at `64513e4` with only the three shot-lane
+> files swapped so the chain is not confounded with #41 T2, the `LineupSelector` collapse or the
+> `ConfigureSquads` overload. Seed `0xD1A6D05E` is **bit-identical** before `ERR-008-021`, after it,
+> and after `ERR-008-022`, moving only at `-023` — so the Acceptance-3 regression is one commit. But
+> it is a **trajectory resample, not a mechanism**: no DRIBBLE path reads `GoalOpeningScore`, the
+> 8-sector scan's tie resolves to `AgentFacingDirection`, and the whole −0.349 swing rides on four
+> extra final-third shots. Over 18 paired seeds the chain's directional effect is **−0.027 ± 0.039**
+> (t = −0.70, 8 up / 10 down) against a between-seed sd ≈ 0.17; the −0.119 that drove the August 7
+> rebaseline sits at the **4.6th percentile** of that pair's own estimator across all 153 pairs, and
+> 4 of the 18 seeds are already below −0.16 with none of the chain applied. **So Acceptance-3's two
+> named suspects are refuted and its KD-W1 hand-off has nothing to act on.** `-021` is inert on 5 of
+> 6 seeds, which confirms `ERR-008-022`'s own diagnosis by another route — the goal-centre-plane
+> bound was discarding the very blockers `-021` existed to weight. **The regression that is actually
+> live is `ERR-012-011` (wiring-backlog C1), and that one IS a mechanism** — **−0.189 ± 0.038,
+> t = −5.05, 16 of 18 seeds down** — which is exactly the "further from goal" cost this project
+> predicted from C1's `InPoss` `PullFactor` column and never measured. **This independently confirms
+> §10.9**, which reached the same verdict from the post-C1 side and was owner-confirmed August 11;
+> neither was derived from the other. Two bit-identical control rows fall out: everything between
+> `64513e4` and `ba4e194` is inert on the engine, and the `ERR-008-024` refusal's behaviour-neutrality
+> is now verified **by execution** rather than by reading its diff. **Kept — `ERR-008-023`'s body
+> entry** (`spec-error-log.md` v2.17), missing since the August 7 landing while the id was cited from
+> `CLAUDE.md`, `open-issues.md`, the design supplement and an `OptionGenerator.cs` comment; written
+> from those existing records alone, nothing new asserted about the landing. **DROPPED in the port,
+> deliberately: the branch's `ERR-008-021` (a)/(b) retitle.** `main` had already reconciled that
+> double-allocation at `ERR-028-019` (v2.13) — and the branch's accompanying claim that "both
+> landings are live in `ComputeGoalOpeningScore`" is **false**: `git log -S PerceivedBlockAbility`
+> returns exactly one commit, `accc941`, and the merge `14d0796` states outright that PR #305's form
+> was discarded. Porting it would have overwritten a correct annotation with an incorrect one. The
+> ported entry therefore cites the SHIPPED `-021` throughout and says so explicitly. **Two hygiene
+> catches from the port itself**, both this project's recurring classes: the branch allocated
+> `close-chance-creation-design.md` **v1.6**, which `main` had independently used (renumbered to
+> **v2.3** here — the same concurrent-branch collision that produced the `ERR-008-021` mess in the
+> first place); and every figure in §11 **predates the W2 tackle wiring** (`ERR-014-006`, `ba40114`),
+> so the controlled attributions stand but the absolute values are not today's `main` — recorded as
+> a currency caveat at four sites rather than left implicit. **Code:** comments only —
+> `MatchEngineCloseChanceScenarios.cs` → v1.2, the KD-W1 hand-off withdrawn and both bounds restated
+> as **floors, not estimators**, with the limit written at the predicate instead of widened away. **No
+> predicate, bound, seed or `[GT]` changed; nothing re-tuned (KD-W1); the `ERR-008-024` tie-break fix
+> deliberately not re-attempted (§10.5).** The held-red `sim_match_engine_close_chance` stays red and
+> stays C1's to answer. **GATE RUN (whole tree, locally, August 17, 2026): FAILED — and that is the baseline red state, not this landing's.** Build **0 errors**, 32 suites, quarantine unchanged; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** (55 m 11 s). The single failure is `sim_match_engine_close_chance` (2 of 3 predicates), the owner-held-red predicate this pass re-attributes and deliberately does not fix — and the counts are **identical to main's W2 baseline of 461/1/11**, so the change adds no new failure. The `.cs` edit was independently proven comment-only by stripping comment lines from its own diff: **zero non-comment lines remain**. **RE-RUN on the merged tree (August 17, 2026, after merging main's 13 P4b commits): same verdict.** Build 0 errors, 32 suites, quarantine unchanged, `MatchEngine.Tests` **461 / 1 / 11** (40 m 58 s) — identical counts to the pre-merge run and to main's own W2 baseline, with main's P4b client suites green in the same sweep (`MatchClientCore.Tests` 168/168, `ClientApp.Tests` 15/15, `UiFramework.Tests` 50/50). Same single failure, `sim_match_engine_close_chance`.
+>
+> **Last Updated (prior):** August 16, 2026, later same day (**P4b AR round 4 — Medium/Low findings M19-M22/L12-L13, all fixed — and the doc-backprop finding (M13) regressed a THIRD time, now fixed with figures verified fresh rather than copied forward.** M19: round 3's own `RequireMarkingBandFitsBelowShadowLayer` (`MatchClientConstants.cs`) had no lower bound on `MarkingLayerStepM` — a zero or negative step passed the ceiling check trivially (`0 × count` is always under any positive clearance), silently reinstating the exact M16 z-fighting bug with no diagnostic — and its ceiling was the wrong SCALE: the shipped 10-microns-per-step default was 54-100× finer than the 1 mm M12 itself judged sufficient for the SAME z-fighting hazard at the SAME camera distance, with nothing explaining the gap. Fixed: the validator now composes a strictly-positive check first, `MarkingLayerStepM`'s default is raised to 0.001 m (matching M12's own judgment exactly), and `BallShadowLayerHeightM`/`PossessionRingLayerHeightM`/`AgentMarkerLayerHeightM` are raised together (0.08/0.081/0.082) so the resulting 0.027 m band still clears comfortably while the shadow/ring/marker keep the same 1 mm gaps M12 originally chose. M20: `MatchClientBehaviour.cs`'s two rotation checks used sign-sensitive `!= Quaternion.identity` — a legitimately-unrotated transform whose composed quaternion lands on the negative representative of identity was falsely rejected, by a message that printed only `eulerAngles`, itself `(0,0,0)` for that exact case (i.e. "must be identity" next to a value that already read as one). Both sites now use a new double-cover-safe `IsIdentityRotation`, and both messages print the raw `(x,y,z,w)` components too. M21: three doc comments (two in `BallRenderModel.cs`, one in `MatchClientBehaviour.cs`'s `RenderBall`) still described the ball's pre-M17 (round 3) height behaviour; corrected to state the M17 radius floor. M22: the prefab-contract clause 2a never distinguished the marking circle and possession ring (which must be STROKED outlines) from the marking spot/agent marker/ball shadow (which must be FILLED discs) — `PitchMarkingKind.Circle`'s own doc makes the distinction explicit ("a renderer that collapsed the two would draw a solid centre circle") — now named in both the type doc and the README's slot table. L12: `Update` had no H5-shaped guard, so one non-finite frame coordinate (which `MatchRenderProjection` refuses fail-loud, and nothing upstream gates) threw the same exception every frame forever, with the camera and click handler never reached again; now wrapped in a try/catch routing to `RejectWiring`, mirroring H5's own `Awake` catch. L13: the README named no pitch/ground-surface requirement at all, even though the M12/M16 ground-layer scheme's lowest layer (`MarkingLayerHeightM`, default 0) sits exactly where an "obvious" `Y = 0` turf plane would too — a new README section states the surface must sit strictly below it. **M13's third regression:** round 3's landing (`d17ab63`) touched `CLAUDE.md`/`README.md`/`file-manifest.md`/`open-issues.md`/the design supplement but never `CHANGELOG.md` or `CHANGELOG-src.md`, so this entry's predecessor still claimed "three commits, two AR rounds" and `MatchClientCore.Tests` 165/165 — both stale. Verified fresh this round: `MatchClientCore.Tests` **168/168**. *(Round 5 note: the commit count and the `git log` citation that stood here were themselves wrong, and are DELETED rather than corrected — see the round-5 entry above for why this class of claim is no longer made.)* Also fixed: `file-manifest.md`'s three self-contradictions (a stale H1-H6/M1-M13/L1-L8 finding range, "two AR rounds", a README row still describing the assembly as empty), root `CLAUDE.md`'s and `src/match-client-unity/README.md`'s matching stale status lines, and `interactive-unity-client-design.md` §5-P4b's job-list bullet, which still described markings placed "at one of four ordered `[GT]` ground-layer heights" — exactly what round 3's own M16 replaced with the band formula. **Gate: PASSED.** Full solution rebuild: 0 errors, 5 pre-existing warnings (3× CS0649 in `decision-tree/ActionSelector.cs`, 1× CS0649 in `pass-mechanics/Tests/PassMechanicsTests.cs`, 1× CS0219 in `ball-physics/tests/BallIntegrationTests.cs`, none in this landing's files); `MatchClientCore.Tests` **168/168** (0 skipped), verified by an isolated `dotnet test` run since `run-gate.sh`'s `-clp:ErrorsOnly` build step does not preserve a re-inspectable per-suite breakdown; whole-tree gate PASSED, quarantine empty; `SeasonSave.Tests` 320/0/3/323 (3 m 18 s); `MatchEngine.Tests` **436 passed / 0 failed / 10 skipped / 446**, 42 m 3 s — unchanged from round 3's own baseline, confirming no regression from this landing (all its changes are in `match-client-core`/`match-client-unity`, neither referenced by the sim). `match-client-unity` stays outside the shim gate by design; reviewed by hand. No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw-order change.)
+
+> **Last Updated (prior):** August 16, 2026 (**P4b — the Unity client binding, `MatchClientBehaviour.cs` — LANDED and is now GATE-VERIFIED end to end, across three commits and two AR rounds; this entry also backprops the landing into the tracking docs that had none (M13 of round 2's Medium/Low pass).** P4b is the `MonoBehaviour` host `src/CLAUDE.md` recorded as "WHAT IS NOT HERE YET": it owns a `MatchSession`, reads a frame each `Update`, and binds `AgentRenderModel`/`BallRenderModel`/`PitchMarking` onto scene objects, enforcing the prefab contract (neutral root, unit sizing, the colour-property name, no world-space `LineRenderer`) at instantiation rather than leaving it as prose. **Round 1 (commits `97bca12`/`2538147`) — 3 High + 9 Medium + 5 Low, all fixed:** H1 moved the rectangle-into-four-lines marking decomposition out of the binding into `match-client-core`'s new `PitchMarkings.BuildDrawables()` (§12 rule 1 — corner arithmetic belongs where the gate compiles it); H2 turned the prefab contract from a comment into an enforced check; H3 replaced a single "default primitive radius" divisor with a unit-radius/unit-length authoring contract. The Mediums covered wiring validation, the goalkeeper/sent-off marker tints, the possession-ring radius reading its own render model, a once-per-agent `MeshRenderer` resolve, the tick-rate source, the frame latch state machine (extracted into the new `LiveFrameLatch`), the render-count walk, and the Active Input Handling requirement. **Round 2 (commit `5c93940`) — 3 High, all fixed:** a missing `.meta` file (fresh GUID every checkout), an `Awake` exception that used to leave the component enabled with null fields (Unity delivers `Start`/`Update` after logging an `Awake` exception rather than disabling it), and a bare `Shader.PropertyToID("_Color")` literal that silently no-ops under URP — replaced with an inspector-exposed property name plus a per-marker material check. **Round 2's Medium/Low pass (this landing, M10-M13/L6-L8, all fixed):** the goal mouth gets its own prefab and `[GT] GoalMouthWidthM` instead of sharing the marking line's (M10); the prefab contract's unit-sizing clause is split into flat-ground-props-vs-volumetric-ball, with `GroundScale` renamed `FlatGroundScale` to say which rule a call site follows (M11); four new ordered `[GT]` ground-layer heights stop the four previously-coplanar ground layers (markings, ball shadow, possession ring, agent marker) from z-fighting (M12); `BuildMarkings`/`BuildAgentObjects`/`BuildBallObjects`/`BuildScene` now short-circuit on a wiring rejection instead of re-instantiating and re-logging for every remaining object (L6); `MarkingLineWidthM` and the new `GoalMouthWidthM` are validated like their render-cue siblings (L7); and a `CameraTiltDegrees`/`CameraLateralOffsetM` pairing check refuses the one combination (both zero) that degenerates `Transform.LookAt` (L8). M13 itself is this entry, plus corrected `interactive-unity-client-design.md` §5-P4b prose (it still described the pre-H1 contract) and new `file-manifest.md` rows for `MatchClientBehaviour.cs`, `LiveFrameLatch.cs`, `LiveFrameLatchTests.cs` and `PitchMarkingsDrawablesTests.cs`, none of which had one. **Gate: PASSED.** Build succeeded, 0 warnings; `MatchClientCore.Tests` **165/165** (0 skipped); whole-tree gate PASSED with the quarantine empty; `MatchEngine.Tests` **436 passed / 0 failed / 10 skipped / 446**, 28 m 13 s — unchanged by this landing (`match-client-unity` is outside the sim and stays excluded from the shim gate by design; `MatchEngine.Tests`' two previously-red scenario bands are green under the Aug 7 rebaseline, confirming that regression is unrelated to this work). `match-client-unity` itself stays outside the `dotnet-ci` gate (§12 rule 1 — it is never generated on Linux) and was reviewed by hand. No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site / draw-order change — nothing here reaches the sim.)
 > **Last Updated (prior):** August 12, 2026, later still (**Wiring backlog W2 LANDED — a player in control
 > can now be dispossessed for the first time in this engine, and `ERR-014-006` closes the tackle
 > outcome model's governance question.**) New #14 §3.6.5 "Tackle Outcome Resolution" takes the

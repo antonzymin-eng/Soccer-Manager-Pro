@@ -1,6 +1,8 @@
 // File:     src/player-progression/ProgressionSaveCodec.cs
 // Created:  2026-08-08
-// Modified: 2026-08-11 (AR pass 8, M-1/L-4/L-5 — Decode's four shared gates throw
+// Modified: 2026-08-23 (football-judgment proxy review, batch-1 adversarial finding
+//           classifyageband-growth-claim-stale — v1.6)
+//           (AR pass 8, M-1/L-4/L-5 — Decode's four shared gates throw
 //           InvalidOperationException; CurrentAbility and RetirementDay/Flag gated; the null-name
 //           non-idempotency documented — v1.5)
 // Author:   —
@@ -683,11 +685,17 @@ namespace TacticalDirector.PlayerProgression
             // AR pass 5 (recorded), fixed here. BirthWorldDay was the ONLY lifecycle field with no gate,
             // and it is the AUTHORITATIVE age anchor — every other age value in the model is a derived
             // cache of it. An anchor far below the floor narrowed the derived age to int.MinValue, which
-            // ClassifyAgeBand reads as Growth (so the player grows forever and retirement never fires)
-            // and which this very method then refuses as a negative age — making a career that loaded,
-            // advanced and projected fine PERMANENTLY unsavable. The upper bound is the world clock's own
-            // ceiling: a player born on the current day is age 0, which is ordinary, but an anchor beyond
+            // — at the time this gate was written — ClassifyAgeBand read as Growth under the retired
+            // age-only band step (so the player grew forever and retirement never fired), and which this
+            // very method then refuses as a negative age — making a career that loaded, advanced and
+            // projected fine PERMANENTLY unsavable. The upper bound is the world clock's own ceiling: a
+            // player born on the current day is age 0, which is ordinary, but an anchor beyond
             // uint.MaxValue cannot correspond to any reachable world day.
+            // **Corrected (classifyageband-growth-claim-stale, football-judgment proxy review batch-1):**
+            // ClassifyAgeBand no longer reads int.MinValue as Growth — since ERR-028-020 it reads the
+            // continuous accrual curve, and both AccruedBandPoints cumulatives are 0 at a hugely negative
+            // age, so it now returns Stable. The int-narrowing this gate guards against is unchanged;
+            // only that one downstream symptom is history rather than present behaviour.
             // AR pass 6 (High), the structural half being the loop exits in GrowthProjection. Pass 5
             // called BirthWorldDay "the ONLY lifecycle field with no range gate"; that claim was
             // checkable and false — GrowthCursor had none either, and it is the one accumulator every
@@ -1029,4 +1037,12 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | known, deliberate non-idempotency (CanonicalSerializer's own string   |
 // |         |            |        | contract — bytes are identical either way, no sim code reads names,   |
 // |         |            |        | codec unchanged).                                                     |
+// | 1.6     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial finding            |
+// |         |            |        | classifyageband-growth-claim-stale. The DescribeOutOfRangeValues       |
+// |         |            |        | comment for BirthWorldDay's lower bound said ClassifyAgeBand reads     |
+// |         |            |        | int.MinValue as Growth — true when written, false today: since        |
+// |         |            |        | ERR-028-020 ClassifyAgeBand reads the continuous accrual curve and     |
+// |         |            |        | returns Stable at a hugely negative age (both AccruedBandPoints        |
+// |         |            |        | cumulatives are 0 there). Annotated as history; the int-narrowing      |
+// |         |            |        | concern the gate exists for is unchanged. No code change.              |
 #endregion

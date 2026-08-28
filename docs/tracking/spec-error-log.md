@@ -550,6 +550,15 @@ T-phase" mentions corrected to LIVE/landed, now that T2 has shipped; `file-manif
 `Discipline.Tests` count corrected 81 → 83. Prior entry below.)
 **Updated (prior):** August 13, 2026, later same day (v2.18 — **Adversarial review over the #44 Discipline C1/C2 landing: two High findings, both fixed, both mutation-verified.** **H1 (`ERR-030-036`, row below, filed AND resolved in the same commit): a resume-and-save cycle silently forgave every outstanding suspension.** `SeasonLoop.Restore` had no discipline parameter, so a loop rebuilt through the documented restore path could not carry the file's tally *even deliberately*, and `Save(SeasonLoop, …)` then wrote a well-formed zero-entry `DISC` block over the live one. Neither existing destination guard could see it — one keys on #28's club count, the other on the three career blocks, and the reachable case has BOTH populated — so the write landed with the frame still v6 and `Load` still succeeding, while FR-DC-014 keeps no ledgers to recompute the cards from. **ERR-028-008's measured shape in the third block family, for the third time**, with the hazard stated verbatim in the file's own comment one line above the call that caused it. Fixed in the two halves the precedent already has: `Restore` forwards `disciplineOrNull`, and a third sibling guard, `RequireDestinationCarriesNoDiscipline`, refuses an empty tally over a populated destination. Back-propped to #30 Appendix B.1 as a THIRD cross-blob refusal rule beside F8/F10 — deliberately stated as a REFUSAL rule rather than folded into the cursor/anchor walks, since `DisciplineState` carries no per-player world-day cursor and no club dimension, which is the same asymmetry that made it invisible to the two guards. **H2 (no id — code-only, no spec text sourced it): a mid-match restore re-applied #41's filter alone, so a fixture with a suspension restored a DIFFERENT eleven.** `SeasonSaveManager.Load`'s `AvailabilityFilteredSquads` called `PlayerCareerStates.SelectAvailable`, which composes with `discipline: null`, while `SeasonLoop.BootFixtureEngine` had configured the engine through the composed filter WITH the tally — so the re-selection ran over a strictly larger candidate set and put a different eleven's canonical attribute records on the pitch, ClubId matching, size gate passing, digest diverging with nothing to announce it. **That is precisely the H2 the #29/#41 T2 AR filed and closed for injuries, reopened one contributor later by a landing that cites it** — and it answers that AR's own deferred exclusion question: the snapshot's `_slotPlayerIds` exclusion is mechanically sound, but its safety PREMISE ("the provider yields the squad the match was configured with") is what this landing broke, so the inherited `_canonicalAttrs` proof no longer held. The decorator now makes one `AvailabilityComposition.Compose` call mirroring the boot's; #41's club-keyed contributor is still withheld for a club the save carries no career state for, #44's is not club-keyed and applies either way, and an empty tally leaves `Compose` returning the same instance so every existing round-trip stays byte-identical. Locked by a 60-tick digest-continuation seeded with seven suspended first-choice starters — the injury lock's own technique, on the contributor that reopened its defect. **Mutation runs: dropping `Restore`'s forwarding fails 2 locks; disabling the destination guard fails 2 others; composing the decorator with `discipline: null` fails the digest lock at tick 1. No mutant failed anything outside its own finding.** Suite after the fixes: `SeasonSave.Tests` **423 passed / 0 failed / 3 known skips**, build 0 errors. Prior entry below.)
 **Updated (prior):** August 13, 2026 (v2.17 — **Roadmap C1/C2, the #44 Discipline & Suspensions landing: four ERRs filed AND resolved in the same commit, spec + code.** **ERR-044-001** (High, two parts): (a) Appendix B specified the discipline sub-blob **version-first with no magic** — the FOURTH instance of the ERR-029-005/ERR-041-009 MUST (ERR-028-004 the third), acute here because the season frame now carries SEVEN identically `version | count | i32 fields`-shaped sub-blobs, so a transposed `byte[]` among `SeasonSaveCodec.Encode`'s payloads would decode cleanly, completely and silently as the wrong subsystem's state; fixed with `DisciplineConstants.DISCIPLINE_SAVE_MAGIC = 0x44495343` ("DISC") checked BEFORE the version, plus the typed `DisciplineBlock` compile-time half. (b) Appendix C's worked fold example put a bench player at "slot 19" with `SubstitutionEvent{Outgoing: 7, Incoming: 19}`, hedging "(or 19 → 191, absorbed either way)" — §7.1 T2's own obligation to verify `Incoming`-id semantics against the live engine FAILED: `MatchEngineConstants.SQUAD_SIZE = 22` makes 19 an **on-pitch slot**, and `MatchEngine.SubstitutePlayer` derives a bench player's `Incoming` id as the **synthetic** `SQUAD_SIZE + teamId*SUBSTITUTES_PER_TEAM + benchIndex` ∈ [22, 36) — implemented as written, every post-substitution card would have been misattributed and F1 would never have fired; re-derived onto the real formula, hedge deleted. **ERR-044-002** (Medium): FR-DC-010 scoped the availability filter to "the engine-resolved fixture" while FR-DC-011 one row below served bans "regardless of resolution path" and #30 §3.4 (APPROVED later than #44) has the seam LIVE on both resolution paths for both clubs — the narrower wording, implemented, would have let a quick-sim fixture decrement a ban the banned player had just played through, and since nearly every fixture of a career is quick-simmed a ban would have cost essentially nothing; re-scoped to both paths/both clubs at #30's single `SeasonLoop.SelectAvailable` site, locked by an outcome-level test (fewer points, not squad shape) plus the home/away mirror (ERR-008-002's asymmetry class). **ERR-044-003** (Medium): #44 §2.3 F5 demanded a fail-loud when the filter drops a squad below 18; #30 §2.3 F9 (approved AFTER #44) settles the identical event by back-filling instead and states the rule is #30's alone — two opposite-posture viability rules on one shared method, and #44's as written would also have wedged a career permanently mid-save on a mass-suspension season. #30 wins; F5 withdrawn, `src/discipline/Availability.cs` implements no viability gate, and the removal/back-fill responsibility is SPLIT (`PlayerCareerStates.MarkUnavailable` contributes removals, the new `src/season-save/AvailabilityComposition.cs` owns the one intersection and the one back-fill). **RECORDED, NOT FIXED (owner call):** preserving #30's never-worse-than-unfiltered invariant means a suspended player IS reinstatable in extremis, which the Laws of the Game forbid — implemented as a stricter reinstatement TIER (injured pressed back before suspended); #44 §7.2's deferral queue is the alternative if the owner would rather refuse the fixture. **ERR-030-035** (Low): the season frame gains a SEVENTH mandatory sub-blob (`DISC`), `SEASON_SAVE_FORMAT_VERSION` **5 → 6**, Appendix A/B, FR-SN-021's `Save` signature and §4's file layout all amended; also closes stale future-tense text in §3.4 and `SeasonLoop.BootFixtureEngine`'s comment that still read "#44 … joins at its own T-phase" after #44 had already joined — #36 call-ups alone remain a future joiner. **Measured in passing (engine discipline, `FoulRateDiagnosticTests`, 6 seeds × 54,000 ticks): fouls 35.0 / yellows 5.0 / reds 1.00 per 90 vs football's ~22/~3.5/~0.25** — the July-26 §5.Z.9 record was 21.0/3.0/1.0; not retuned here (KD-W1, the subsystem's `[GT]`s are illustrative pending the balance pass).**)
+**Version:** 2.24
+**Updated:** August 24, 2026 (v2.24 — **docs-only, this file only: the two entries in THIS LOG that still published the exact claims later entries in it were filed to retract are annotated in place (adversarial review round 2, H1 + H2).** Round 1's correction sweep reached the APPROVED specs and `src/` and stopped short inside the log itself, so for two days the authoritative resolution record asserted the opposite of what the entry below it proves. **H1 — `ERR-041-020`:** its "The fix" paragraph and its Error Index row still made the age term's position normative "before the mitigation … so robustness discriminates it", which `ERR-041-021` establishes is arithmetically vacuous (`RobustnessMitigation` is SUBTRACTED and addition commutes; the moved-across-the-mitigation form is a proven identity over 956,480 sampled inputs). Both annotated, superseded wording quoted, position restated as **inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE the clamp**. **H2 — `ERR-028-021`:** its "The fix" paragraph still described the retired floored-**mean** offset, and its P5 paragraph and Error Index row still claimed the offsets "sum to exactly 0 … **Locked.**" — the claim `ERR-028-022` was filed because it was FALSE by −204,621 days of the implementation it described, behind a lock that swept only the diagonal where the defect vanishes. All three sites annotated, never restated. **`ERR-041-021`'s own "at all five sites that carried it" is SCOPED rather than renumbered**: the five is exact for the five normative carriers its defect paragraph enumerates and all five are annotated, but "all" claimed a repo-wide reach the sweep did not have — this log's two sites (fixed here), one surviving `MedicalStepTests.cs` comment, and four non-normative tracking records (`football-judgment-proxy-review.md`, `CHANGELOG.md`, `open-issues.md`, root `CLAUDE.md`) are named as RECORDED-not-fixed so a later sweep need not re-derive the list; the enumeration is by grep over two phrasings and is stated as a floor, not a proof of exhaustion. No `src/` file, no `docs/specs/` file and no other tracking document touched by this pass; no gate run and none claimed, nothing compilable changed; `python3 tools/recurring-defect-lint.py --repo .` reports **0 ERROR**. Prior entry below.)
+**Updated (prior):** August 23, 2026 (v2.23 — **ERR-028-022, ERR-028-023 and ERR-041-021 filed AND resolved: the High findings of the adversarial review over the batch-1 landing, all three fixed in commit `9e41537`.** All three ids had already been cited in shipped spec text and code comments while no entry stood behind them here — the missing-body class this log recorded at v2.17 for `ERR-008-023`, closed the same way: an Error Index row and a `##` body for each. **ERR-028-022** (High) — `GameReadingOffsetDays` floored the reading trio's SUM to a mean before an anti-symmetric map, and `floor(sum/3)` is not symmetric about the attribute midpoint, so `ERR-028-021`'s published P5 claim ("the offsets sum to exactly 0 over a uniform population") was false by **−204,621 days over the `[1,20]³` product**; the lock that purported to prove it swept only the diagonal where the defect vanishes, and **neither of ERR-028-021's behaviour changes was locked at all** — restoring the pre-fix `rec.Age >= RETIREMENT_AGE` left every suite green. Fixed by carrying the sum undivided (bit-identical on the diagonal, so nothing was rebaselined), a whole-product lock with a cardinality precondition, and two mutation-verified retirement locks; the `[6,14]` generator residual (≈ −38 d/player) is RECORDED, not fitted away. **ERR-028-023** (High, spec text only — the code was already right) — §3.1's seed-credit MUST and Appendix B still mandated the three-way band step `ERR-028-020` retired one section below, the grep-boundary shape this log has recorded five times. **ERR-041-021** (High) — `ERR-041-020`'s normative "before the mitigation, so robustness discriminates it" is arithmetically vacuous (the mitigation is SUBTRACTED and addition commutes), and all three mutants its lock names left `InjuriesMedical.Tests` 74/74 green, one of them able to return above `InjuryRiskMax`; the position is restated as before-the-scaling-and-before-the-clamp, the after-the-mitigation mutant WITHDRAWN as a proven identity rather than re-locked, the unlocked production call site closed by the new T-MD-AGE-007, and the term's monotone shape recorded as INVERTING E-4's Strong-rated young tail with `ERR-041-013` narrowed to that residual. `ERR-041-020`'s own "Magnitude, first-guess" epidemiology sentence is corrected in place with it (annotated, not deleted). Across all three: no `[GT]` value moved, no RNG draw, no stream, no domain tag, no `SNAPSHOT_SCHEMA_VERSION`, no format version. The v2.22 gate line below is also corrected in place — it overstated the suite count by one and claimed a quarantine report the run never printed. Prior entry below.)
+**Updated (prior):** August 22, 2026 (v2.22 — **ERR-028-020, ERR-028-021 and ERR-041-020 filed AND resolved in the same commit: the first three of the football-judgment proxy review's 24 workable findings (`football-judgment-proxy-review.md` §6.3.1 batch 1 — the off-pitch batch), spec + code together per §6.3.** Two of the three found that the SPEC MANDATED THE DEFECT: FR-PG-007/KD-8 made the three-way age-band step the required curve-off behaviour, and FR-PG-013 required retirement "hard at `RETIREMENT_AGE`" — so both are revised in place with the superseded requirement annotated, not silently restated. **ERR-028-020** replaces the age-band cliff with centred ramps evaluated as the difference of an exact integer cumulative, which keeps the persisted cursor's scale and therefore moves no save format; P5 is exact for every half-width rather than fitted, and the KD-8 identity survives as the dial's off position, exercised per-day rather than asserted. **ERR-028-021** makes retirement a per-player day in days, and records a P3 ledger entry explaining why robustness is deliberately NOT its input (a third read of the trio `ERR-041-003` already records as double-counted). **ERR-041-020** adds the missing age term to #41's risk assembly, pivoted on #27's bootstrap mean age so the measured season bands hold unmoved — verified by running them, and by all 26 pre-existing assembly expectations staying exact. No RNG draw, no stream, no domain tag, no `SNAPSHOT_SCHEMA_VERSION` and no format version across all three. **Gate: the test sweep ran in full at final HEAD; the formal result is the inherited FAIL, not a PASS:** build 0 errors, **32 of 33 suites fully green**, `MatchEngine.Tests` **461/1/11**; the quarantine ledger is **empty by inspection of `tools/dotnet-ci/known-failures.txt`**, not because the gate reported it — `run-gate.sh` runs under `set -euo pipefail`, exited non-zero on the blocking phase, and never reached its quarantine-report section or a `Gate PASSED` line, so **no formal verdict was ever printed**; recorded as FAIL on the inherited owner-held-red band rather than rounded up to PASS *(⚠️ CORRECTED August 23, 2026, v2.23 — as first published this read "31 of 32 suites fully green … quarantine empty"; the suite count is one low (33 test asmdefs, 33 suite result lines in the gate log) and "quarantine empty" implied a ledger report the run never printed. Annotated in place, never silently replaced)* — the one failure is the owner-held-red `sim_match_engine_close_chance`, returning the recorded baseline's exact counts and exact predicate values (cosine −0.165, goalward share 0.407), which is the predicted result since nothing here runs on a match tick. No new failure, no band rebaselined. Prior entry below.)
+**Updated (prior):** August 22, 2026, latest same day (v2.21 — **`ERR-016-011` filed and RESOLVED same commit, closing the one item `ERR-016-010` had recorded as not-fixed: the replay lifecycle never re-derived a loaded record's OWN §3.2.3 digest.** Step 4 checked the chain LINK; `currentSnapshotDigest` was written, stored, loaded and never recomputed — so an altered **payload**, which is the authoritative state step 5 rehydrates, loaded clean, as did an altered stored digest. The digest existed and was correct; nothing asked it anything. §4.2.2 step 4 split into **4a** (chain link) and new **4b** (`ValidateCurrentDigest`), normatively before step 5 since unverified state must not be rehydrated; `ERR_DS_SNAPSHOT_DIGEST_MISMATCH = 0x160F` + `EC-016-016`; the §3.2.3 preimage gets a single owner so recorder and verifier cannot drift (the `ERR-010-002` class, which here fails in BOTH directions). **Lifecycle stays 8 steps** — a split, not a renumbering, because renumbering cascades are this project's most recurring defect class. **Switching the check on immediately failed the suite's own happy-path lifecycle test**, whose "well-formed" fixture had never called `Encode` and carried an all-zero digest its comment called "a valid digest value"; corrected to the two-codec form (recording vs replay chain authority) the comment itself described. 4 new locks; 2 mutants, killing in both directions. No `DETERMINISM_DIGEST_VERSION` bump — the digest checked is the one §3.2.3 already defined. Prior update below.)
+**Updated (prior):** August 22, 2026, later same day (v2.20 — **`ERR-016-010` filed and RESOLVED same commit: #16 §3.9.2's normative on-disk record layout was contradicted by `SaveManager` in FOUR respects, which is why `Fingerprint = null` had nowhere to go.** No `environmentFingerprint` (FR-DS-010 requires it and §3.9.2 already listed it), no `recordTrailer`, `currentSnapshotDigest` inside the header instead of after the payload, and no format identifier at all — so §4.2.2 step 3 could only ever fail closed on a disk-loaded header, which is indistinguishable from no check. §3.9.2 revised to the record now emitted and consumed; new **§3.9.2.1** pins magic-led record identity and separates the three versions that govern a record; §3.4 gains `SNAPSHOT_FILE_MAGIC` / `SNAPSHOT_FILE_FORMAT_VERSION`. **`SNAPSHOT_SCHEMA_VERSION` deliberately NOT moved** — it rides in the §3.2.3 digest preimage, so bumping it would invalidate the July-19-certified golden vectors; the file frame carries its own version, the `MATCH_SAVE_FORMAT_VERSION` precedent. **This corrects the cost estimate v2.19 recorded one commit earlier** ("closing both means widening that header, i.e. the `SNAPSHOT_SCHEMA_VERSION` bump…"): the correct instrument was a file-frame version, so no digest moved and no recertification is owed. 3 `Assert.Ignore` stubs activated into 12 executed locks; 3 mutants, one of which survived its first lock and forced a better one. RECORDED not fixed: nothing in the §4.2.2 lifecycle recomputes `currentSnapshotDigest` from the payload. **Also this pass, three stale status markers corrected without editing their narratives:** `ERR-029-006`, `ERR-041-010` and `ERR-041-001` each led with `◑` while their own cell text already recorded `✅` — the #29/#41 chain reads resolved and was verified against `SeasonLoop` slot 1 (LIVE) and the #41 occurrence dial (ARMED) before archiving. Prior update below.)
+**Updated (prior):** August 22, 2026 (v2.19 — **`ERR-016-009`'s substantive half RESOLVED, spec + code, same commit: `buildHash` exists.** The decision the filing deliberately did not make is made: build identity is a SHA-256 over the **Module Version IDs of a DECLARED authoritative assembly closure** — a CI-stamped commit identifies source rather than binary (and the dirty-tree builds where determinism defects surface carry no stamp), while the `.asmdef` closure alone names which assemblies participate rather than what is in them; the closure survives as the scope selector and the MVIDs supply the content. The closure is named by the composition root with `typeof` expressions, never discovered from loaded assemblies, so a missing module is a compile error rather than a silently shorter hash. It lands on `SnapshotHeader` — which already carries two of `DeterminismContext`'s four fields — and **outside every digest preimage**, which is what held the blast radius to one save format: the fingerprint's digest is the §3.2.3 header preimage's envFp slot and `SchemaVersion` is in that preimage, so either alternative home would have moved every snapshot digest and invalidated the July-19-certified golden-vector corpus. Restore fails closed with the new `ERR_DS_REPLAY_BUILD_MISMATCH` (0x160E), distinct from the environment code because a recompiled engine on the same host passes the fingerprint check. #16 §2.3 v1.2 + new §2.3.2 / FR-DS-014; §3.4 v1.0.16 (`DOMAIN_TAG_BUILD_IDENTITY = 0x2E`, allocated after the roadmap §6 reserved block so no spec-pinned number moves; no `SubsystemOrdinals` mirror); §3.10 EC-016-015; `MATCH_SAVE_FORMAT_VERSION` 1 → 2 (`match-save-file-design.md` KD-7, refusing an empty hash at both ends). 27 locks; 3 mutants executed and each killed by exactly one lock; the suite caught a real defect on first run — `CaptureDurableHeader` would have dropped the field, saving `BuildHash = null` and skipping the gate on every save. `ToleranceRow`/`ComparatorRegistry` stay Stage-1+ deferrals and the `SaveManager` write-site gap stays open. Prior update below.)
+**Updated (prior):** August 21, 2026 (v2.18 — **`ERR-016-009` filed and its spec half RESOLVED same commit: #16 §2.3's nine "Data Structures" include six that name no type in `src/deterministic-sim/`.** Four (`DeterminismContext`, `RngStreamKey`, `ToleranceRow`, `ComparatorRegistry`) have zero textual presence in `src/` at all; `RngCursor` and `RngStreamKey`'s triple are *fields on* `RngStreamState`; `PhaseDigest` is a computation. §2.3 carries the weight because §4.2 has been explicitly non-normative since v0.7 and §4.4's module paths match no directory in the flat tree — and §2.3's own version history revised two of the phantom structures as contract text. **The substantive half is `buildHash`:** a declared field of the replay-identity context with no representation anywhere, `EnvironmentFingerprint` included, so two builds differing only in compiled code are indistinguishable downstream of §2.3. Fixed as a per-row implementation-mapping table + `src/`-is-the-surface-authority declaration; `buildHash` and the two Stage-1+ deferrals recorded OPEN; deliberately no rename, the serialized field names being correct as built. Surfaced by the `data-contract-index.md` landing rule that every named type be verified to exist. Prior update below.)
+**Updated (prior):** August 17, 2026 (v2.17 — **`ERR-008-023`'s body entry WRITTEN; it had been missing since the August 7 landing.** The id has been cited from `CLAUDE.md`, `open-issues.md`, `close-chance-creation-design.md` and an `OptionGenerator.cs` comment, and carried by this header's v1.76/v1.77 rows and the Error Index, while no `##` detail section ever existed — the record was reachable only by reading a commit message. Written in this log's standard shape from those existing records alone; nothing new is asserted about the landing. Two things ARE new: the August 10 bisect isolating this entry as the sole source of the `sim_match_engine_close_chance` cosine movement the v1.77 row queued for KD-W1 (18 paired seeds, chain effect **−0.027 ± 0.039**, a resample rather than a mechanism), and a currency caveat on it — the sweep held the tree at `64513e4`, which predates the W2 tackle wiring, so the controlled comparison stands but the absolute figures are not today's `main`. The entry cites the SHIPPED `ERR-008-021` throughout and says so explicitly, per the `ERR-028-019` reconciliation at v2.13. Docs-only; no `src/` file touched by this edit.**)
 **Updated (prior):** August 12, 2026, later still (v2.16 — **ERR-030-034's successor is PRE-DECIDED and gated as `league-bootstrap-design.md` KD-7a; the ERR stays OPEN.** NB2 marginal, `NegativeBinomialInverseCdf` pinned by name and recurrence, one uniform per side with sub-streams unchanged, and a `[GT] QuickSimDispersion` whose zero case routes to `PoissonInverseCdf` verbatim so α = 0 is bit-identical rather than identical-in-the-limit. **Writing it surfaced a correction that changed the deliverable: α is NOT determined by this corpus** — 0.0773 weighted vs 0.1552 unweighted, one 18-sample cell carrying 36% of the weighted fit — so no initial value is recorded and the fitter now emits the instability every run. Also pinned: NB2 closes only ~0.3 pp of the 7.6 pp draw gap (26.5% vs 26.8%, engine 19.2%), the draw deficit gets NO successor because the family that would explain it needs negative home/away correlation the corpus refutes (+0.044 ± 0.073), and adoption requires a post-defensive-wiring capture. The ERR's two findings — marginal over-dispersion and the draw deficit — are now stated separately, which the original single causal sentence had conflated.**)
 **Updated (prior):** August 12, 2026, later same day (v2.15 — **ERR-030-033 RESOLVED: KD-8's per-bucket acceptance bar re-specified, and the A4a fit now reads mean-agreement PASS.** The flat ±0.25 could not be met by any model at the depth KD-8 itself sizes; it is replaced by a bar stated against the corpus's measured precision, a priori and for any corpus — per-cell `max(0.25, 2·se)` with **±0.25 retained as a floor**, bounded exceedances, a pooled `χ² ≤ χ²₀.₉₅(cells − 3)` where the statistical power actually lives, an 18/bucket scoreability floor so the se-relative form cannot be gamed by shrinking n, and an n ≥ 250 depth pin on the W/D/L bucket with an INCONCLUSIVE verdict when a miss is not distinguishable from noise. Measured: worst |z| = 2.06, one exceedance of an allowed two, pooled **χ² = 16.0 on 19 dof** vs 30.1. **The verdict is now two-part — mean agreement PASS, distribution shape FAIL** — because the halves fail for unrelated reasons and the flat verdict had been making ERR-030-034 read as a fit failure. Everything is computed by `tools/round-resolution-fit.py` (χ² criticals by Wilson–Hilferty, verified against exact values at dof 10 and 19), so no figure is hand-copied.**)
 **Updated (prior):** August 12, 2026 (v2.14 — **ERR-030-033 and ERR-030-034 filed from the roadmap-A4a calibration run, the first execution of KD-8's corpus methodology end to end.** Both are recorded, NOT fixed, because both are owner decisions rather than repairs. **ERR-030-033:** KD-8's ±0.25 per-bucket acceptance bar is below the sampling error of the corpus KD-8 itself sizes — at ~18 matches/bucket the mean carries a standard error of 0.135–0.633 and **15 of 22 bucket-sides exceed the entire bar**, so a perfectly correct model re-scored against a re-run of the same corpus would fail it too; the tolerance and the sample size were set independently and never checked against each other, which is why AR-5 through AR-7 on that note all read the bar as a statement about the model. Resolving ±0.25 needs n ≈ 770/bucket ≈ 210 h against a budgeted ~9 h — a bar to re-specify, not a run to re-size. **ERR-030-034:** KD-7 resolves a fixture as two Poisson draws, whose variance equals their mean by definition, while the engine's scorelines are over-dispersed — mean var/mean **1.395** across 22 bucket-sides, 19 above 1, pooled chi2 521.7 on 374 dof, **z = +5.40** — so the engine makes more blowouts and shut-outs and **far fewer draws** (19.2% vs the fitted model's 26.8% at dSquad ≈ 0, the whole of the 7.6 pp W/D/L miss **⚠️ CORRECTED August 12, 2026 (Fable advisory review, independently reproduced): the causal sentence above is WRONG and would misdirect the fix.** Marginal over-dispersion fattens BOTH tails — more blowouts *and more 0–0s, which are draws* — so it barely moves the draw share. Computed at the fitted bucket-0 lambdas: independent negative-binomial at the measured dispersion gives **26.3%** draws against Poisson's 26.8%, i.e. it closes ~0.5 pp of the 7.6 pp gap. **Dispersion and the draw deficit are substantially INDEPENDENT findings.** The only mixed-Poisson mechanism that cuts draws materially is a shared antithetic swing, and it necessarily implies negative home/away correlation, which this corpus refutes: pooled within-bucket correlation is **+0.004 ± 0.052** (n=378), ~4σ from the ≈ −0.20 such a family predicts. So the draw deficit's mechanism is NOT established and is not expressible by any mixed-Poisson consistent with the measured correlation. Over-dispersion is separately confirmed real and NOT a pooling artifact (within-bucket `dSquad` spread contributes ≤ 0.005 of the ~0.4 excess), and is better specified as `var = μ(1+αμ)`, α ≈ 0.15–0.25, than as a constant 1.395 ratio.). A second-moment gap that no value of the three mean-shaping parameters closes: a statement about the model's FAMILY, filed against KD-7's shape rather than against the fit, and the surviving half of roadmap risk row 1. The three fitted `[GT]`s shipped with the FAIL verdict recorded at their own declaration, and `RoundResolutionFitLockTests` locks the ACHIEVED agreement rather than the unmet bar, so a later improvement tightens a real number instead of re-flying a claim.**)
@@ -872,6 +881,8 @@ different things, each internally self-consistent); no code change proposed. Pri
 | ERR-030-015 | Season & Competition Loop #30, found at **T3 implementation**: `section-3.md` §3.5's `RollToNextSeason` pseudocode regenerates `Fixtures`, resets `Table`, and advances `SeasonNumber`/`Seed`, but **never rebuilds `Calendar`** — whose cursor is at `RoundCount` precisely because the season just ended. Implemented verbatim, the roll yields a season that is permanently unplayable: `SeasonCalendar.IsSeasonComplete` stays true, so `AdvanceToNextFixtureDay` throws F5 and `AdvanceAndPlayNextRound` throws, on every call thereafter. The transform cannot deliver FR-SN-029's multi-season continuity as written, and no unit assertion over the rolled state's *fields* would notice — the schedule, table, seed and season number are all exactly right. | **High** | 1 | ✅ Resolved July 27, 2026 at #30 T3 (roadmap A5) — §3.5 gains step **(c′) rebuild the calendar**, between (c) regenerate and (d) age advance, leaving the surrounding steps and therefore FR-SN-031's (a')/(b') insertion points untouched. `SeasonLoop.ShiftCalendarToNextSeason` implements it by shifting the OLD calendar's day mapping forward by one season length plus a new `[GT] SeasonBreakDays` close season: the roll stays a pure function of the prior `SeasonState` (KD-6 — no clock read, no draw), the new season opens exactly one break after the old one's finale, and a non-uniform schedule keeps its shape instead of being silently flattened to linear. Caught by an acceptance test that plays a **second** season to completion; 9 of the suite's 18 predicates fail against the pre-fix form. No FR text change, no `SEASON_STATE_FORMAT_VERSION` change (the calendar was already serialized), no `DETERMINISM_DIGEST_VERSION` bump. |
 | ERR-041-001 | Injuries & Medical #41 back-prop: `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` + `SubsystemOrdinals.InjuriesMedical = 92` allocation needed in Deterministic Simulation #16 §3.4 (the `injuries.occurrence` world-tick sub-stream, siteId `injuries.occurrence`, `entityId = playerId`, position-independent keyed draws; #41 KD-1 / §5). | Medium | 1 | ◑ Spec-text allocated July 23, 2026 at #41 section-file approval — `deterministic-sim/section-3.md` §3.4 gains the `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` row (v1.0.11; value `0x2A` per roadmap §6, block skips `0x23`–`0x29` reserved for #31–#40). **Spec-text-first like ERR-030-001** (not code-first like ERR-022/027-001): the code const (`DeterministicSimConstants.DOMAIN_TAG_INJURIES_MEDICAL` / `SubsystemOrdinals.InjuriesMedical`) + the `injuries.occurrence` stream registration land at **#41 T2** with the first draw site (FR-LW-031 — no phantom stream). Pure namespace allocation; no `DETERMINISM_DIGEST_VERSION` bump. **✅ Resolved August 5, 2026 at #41 T0** — the code const `DeterministicSimConstants.DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` lands at #41's first draw site (`MedicalStep.DrawOccurrence`), mirrored `[CROSS]` as `InjuriesMedicalConstants.DomainTagInjuriesMedical` and locked by `InjuriesMedicalConstantsTests.DomainTag_MirrorsTheDeterministicSimAllocation`. The draw site arrived at T0 rather than T2 because the T0 step IS the draw site — §7.1 puts `AdvanceMedicalDay` in T0 and §4.5 puts the const at "the first draw site", and those are the same landing. **`SubsystemOrdinals.InjuriesMedical = 92` is deliberately NOT allocated in code** and stays reserved in #16 §3.4 spec text: #41 registers no cursor stream (KD-1 / FR-MD-007), and an ordinal exists only to key a registered stream, so a const with no stream behind it is the zero-consumer phantom FR-LW-031 forbids — the ERR-030-012 precedent, reached independently from the same constraint. See ERR-041-002 for the API-shape half of the same finding. |
 | ERR-020-002 | Code Standards #20 §3.5.2's layer taxonomy places **19 of the 31 assemblies now in `src/`**. The 12 unplaced are `living-world`, `match-analytics`, `match-client-core`, `match-client-unity`, `match-client-web`, `match-engine`, `match-viewer`, `player-database`, `player-progression`, `season-save`, `tactical-instructions`, `ui-framework` — so FR-CS-046 ("references flow one direction only") is unenforceable for ~39% of the tree, including the composition root and every client assembly. *[Annotation, August 17, 2026 (reviewed-findings pass) — the counts in this row are WRONG and are preserved per the annotate-don’t-rewrite convention: the retired §3.5.2 box (`git show 0e78d381~1:docs/specs/code-standards/section-3.md`) names exactly 8 Physics + 4 Mechanics + 2 AI = **14** folders, plus an empty `UI (Stage 1+ — not specified yet)` row — so against the 31 folders of August 2 it placed **14**, leaving **17** unplaced, not 19 and 12. The 12-item list here silently treated `project-constants`, `deterministic-sim`, `event-system`, `performance-optimization` and `testing-strategy` — 3 Foundation + 2 Infrastructure folders the box never names — as placed. The wrong figure propagated into the August 17, 2026 adoption’s version rows, where it was corrected.]* The taxonomy also still carries `UI` as an empty "Stage 1+ — not specified yet" placeholder, though four UI/client assemblies exist. Separately, `src/CLAUDE.md`'s infrastructure table lists `code-standards` as an assembly; no such folder exists (#20 is a style guide). | Medium | 8 | ✅ **RESOLVED August 17, 2026 — adopted by owner decision, extended to all 35 folders.** (As filed, 🟡 PROPOSAL of August 2, 2026, awaiting owner sign-off:) A ten-tier order covering all 31 folders is proposed in the entry body and was verified against every `.asmdef` reference list: **zero upward references** — adopting it constrains future code only, and changes nothing that exists. Layer membership is #20's to decide, so no spec text was edited. |
+| ERR-041-001 | Injuries & Medical #41 back-prop: `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` + `SubsystemOrdinals.InjuriesMedical = 92` allocation needed in Deterministic Simulation #16 §3.4 (the `injuries.occurrence` world-tick sub-stream, siteId `injuries.occurrence`, `entityId = playerId`, position-independent keyed draws; #41 KD-1 / §5). | Medium | 1 | ✅ RESOLVED — see this cell. *(Marker corrected August 22, 2026: the row led with ◑ while its own text records "✅ Resolved August 5, 2026 at #41 T0"; `DeterministicSimConstants.DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` exists and is locked. Narrative below unedited.)* ◑ Spec-text allocated July 23, 2026 at #41 section-file approval — `deterministic-sim/section-3.md` §3.4 gains the `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` row (v1.0.11; value `0x2A` per roadmap §6, block skips `0x23`–`0x29` reserved for #31–#40). **Spec-text-first like ERR-030-001** (not code-first like ERR-022/027-001): the code const (`DeterministicSimConstants.DOMAIN_TAG_INJURIES_MEDICAL` / `SubsystemOrdinals.InjuriesMedical`) + the `injuries.occurrence` stream registration land at **#41 T2** with the first draw site (FR-LW-031 — no phantom stream). Pure namespace allocation; no `DETERMINISM_DIGEST_VERSION` bump. **✅ Resolved August 5, 2026 at #41 T0** — the code const `DeterministicSimConstants.DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` lands at #41's first draw site (`MedicalStep.DrawOccurrence`), mirrored `[CROSS]` as `InjuriesMedicalConstants.DomainTagInjuriesMedical` and locked by `InjuriesMedicalConstantsTests.DomainTag_MirrorsTheDeterministicSimAllocation`. The draw site arrived at T0 rather than T2 because the T0 step IS the draw site — §7.1 puts `AdvanceMedicalDay` in T0 and §4.5 puts the const at "the first draw site", and those are the same landing. **`SubsystemOrdinals.InjuriesMedical = 92` is deliberately NOT allocated in code** and stays reserved in #16 §3.4 spec text: #41 registers no cursor stream (KD-1 / FR-MD-007), and an ordinal exists only to key a registered stream, so a const with no stream behind it is the zero-consumer phantom FR-LW-031 forbids — the ERR-030-012 precedent, reached independently from the same constraint. See ERR-041-002 for the API-shape half of the same finding. |
+| ERR-020-002 | Code Standards #20 §3.5.2's layer taxonomy places **19 of the 31 assemblies now in `src/`**. The 12 unplaced are `living-world`, `match-analytics`, `match-client-core`, `match-client-unity`, `match-client-web`, `match-engine`, `match-viewer`, `player-database`, `player-progression`, `season-save`, `tactical-instructions`, `ui-framework` — so FR-CS-046 ("references flow one direction only") is unenforceable for ~39% of the tree, including the composition root and every client assembly. The taxonomy also still carries `UI` as an empty "Stage 1+ — not specified yet" placeholder, though four UI/client assemblies exist. Separately, `src/CLAUDE.md`'s infrastructure table lists `code-standards` as an assembly; no such folder exists (#20 is a style guide). | Medium | 2 | 🟡 **Open — PROPOSAL filed August 2, 2026, awaiting owner sign-off.** A ten-tier order covering all 31 folders is proposed in the entry body and was verified against every `.asmdef` reference list: **zero upward references** — adopting it constrains future code only, and changes nothing that exists. Layer membership is #20's to decide, so no spec text was edited. |
 | ERR-011-008 | Goalkeeper Mechanics #11 §3.5.2 — **a keeper's CATCH never stopped the ball.** §3.5.2's body has always carried `ball.velocity = gkHandVelocity` ("parked at hand position"), but §3.5's **Outputs** summary named only `Ball.SetPossessor` for the catch branch, and the implementation followed the summary. Possession is a FLAG in this engine, not a kinematic constraint — `RunPhysicsPhase` integrates the ball unconditionally and `CheckRestartAndApply` adjudicates a goal on ball POSITION — so a claimed shot travelled on into the net with the keeper recorded as holding it. Measured over three full matches: ball speed **11.1 m/s in, 10.8 m/s out** of a catch (one tick of drag), against parry 10.8 → 0.0 and deflect 10.3 → 4.2; **7 of 10 catches followed by a goal within 5 s**, and 14 of 15 goals following a keeper contact within 10 s. The same omission is at the Stage-0 smother/1v1 claim. `IGoalkeeperBallSystem` offered no park seam at all, which is why the gap was invisible from the interface. | **High** | 4 | ✅ **Resolved August 3, 2026** (conversion-at-contact pass, §5.Z.23) — `ParkBall()` added to the seam and called at both claim sites; §3.5's Outputs restated to name the catch's two effects (§3.5.2's pseudocode body unchanged — it was correct). No schema / RNG / domain-tag / draw-site / draw-order change. Locked by `match-engine-keeper-claim`: **2 of 3 predicates fail pre-fix, verified by execution — 6 of 6 claims left the ball travelling, 5 of 6 held balls entered the keeper's own net.** Measured: goals 15 → 11 over the corpus (5.0 → 3.7/match). |
 | ERR-011-009 | Goalkeeper Mechanics #11 §3.1.1 / §3.7.2 — **a rush that REACHED its target had no exit.** §3.1.1 gives `Rushing` exactly three exits (hand contact, the 1v1 radius, F-08 interception) and `OneOnOne` two (`SaveIntent`, the smother radius). For a LOOSE ball **none of them can fire**: `existsAttackerWithBallWithinRadius` is false by construction with no possessor, F-08 needs one, and §3.7.2's per-frame update converges on the locked `rushTarget` and stops without overshooting. A keeper who swept a loose ball therefore stood over it in `Rushing` for the remainder of the match. The completion was anticipated everywhere except the table that adjudicates state — `RushPhase.Reached` has been in §2's enum since v0.1 and was never emitted, and §3.7.3 reserves `AbortReason.AttackerBeatGK` for the related case. **Latent, not live**, until wiring backlog W1: `CommitRushIntent` had no production caller, so no rush had ever run in a match. | **High** | 11 | ✅ **Resolved August 4, 2026** (wiring backlog W1) — two new §3.1.1 rows (`Rushing → Recovering`, `OneOnOne → Recovering`) on arrival within the new `[GT] RUSH_TARGET_REACHED_RADIUS_M` (§3.4.6), plus the terminating check in §3.7.2, emitting `GoalkeeperRushEvent { rushPhase: Reached }`. A **completion, not an abort** — FR-GK-018 / KD-15 untouched, since nothing about the ball's trajectory ends the rush, and it is ranked below contact, F-08 and the 1v1 trigger. No schema / RNG / domain-tag / draw-site / draw-order change. Locked by `GoalkeeperRushTests` (both keepers) and the four state-machine priority cases. **Measurement NOT run — no .NET SDK in the authoring environment; see the owner doc §6.** |
 | ERR-011-010 | Goalkeeper Mechanics #11 §3.7 — **the rush decision had no owner, so the whole subsystem never ran.** §3.7's state entry delegated the "when" of a rush entirely to Decision Tree #8. #8 has no goalkeeper model and **structurally cannot acquire one at Stage 0**: `ActionType.SAVE = 7` is the last ordinal that fits the 3-bit composure-noise field in §3.3.3's noise function, so a `RUSH` action would force a composure-noise digest rebaseline (the same cost that defers the DT-emitted HEADER). The condition therefore belonged to nobody, and `CommitRushIntent` had **no caller of any kind — production or test — from May 28 to August 4, 2026**. Every one-on-one in the engine's history was a stationary keeper on his line. Compounding it, the delegation left the *football* undefined too: nothing in the spec said what a keeper is deciding when he comes out. | **High** | 11 | ✅ **Resolved August 4, 2026** (wiring backlog W1) — new **§3.7.0** takes the decision back, the same move §3.3.6 made for dive-commit timing. Normative on two points: (1) a team-mate merely CHASING the carrier is **not** a reason to stay — a recovering defender narrows no shooting angle, and only a goal-side body inside the shot corridor does; (2) how far out the keeper comes is **his own attributes** — `clamp(RUSH_COMMIT_BASE_M + RUSH_COMMIT_K_ONE_VS_ONE·OneVsOne_norm + RUSH_COMMIT_K_COMPOSURE·Composure_norm − RUSH_COMMIT_FATIGUE_PENALTY_M·fatigue, min, max)`, six new `[GT]`s in §3.4.6, with a worked example. `OneVsOne` is consumed for the commit DECISION only — FR-GK-024's closed-form constraint on the §3.2 / §3.5 1v1 SAVE formulas is untouched. No schema / RNG / domain-tag / draw-site / draw-order change. **Measurement NOT run — no .NET SDK in the authoring environment; see the owner doc §6.** |
@@ -892,8 +903,8 @@ different things, each internally self-consistent); no code change proposed. Pri
 | ERR-041-009 | Injuries & Medical #41 — the same defect in the sibling spec, filed separately because §4.4 is its own normative layout and would otherwise stay wrong. The #29 training block decoded as a medical block just as silently in the reverse direction on realistic data: a squad on `Fitness`/`Technical` focus with a healthy `Condition` read back as a squad carrying `Moderate`/`Serious` injuries with thousands of recovery days, F1 coherence satisfied throughout, because a positive `Condition` is indistinguishable from a positive `RecoveryRemaining`. §4.4's ERR-041-008 bullet additionally cited "KD-7 blob independence"; in `unified-season-save-design.md` **KD-2** is the no-cross-parse decision and KD-7 is the codec/disk-I/O split, so the citation pointed at the wrong decision. | **High** | 1 | ✅ Resolved August 6, 2026 at the AR pass — spec + code, same commit. `MEDICAL_SAVE_MAGIC` (ASCII `"MEDL"`) written and checked first, mirroring ERR-029-005; §4.4's property list grows from three MUSTs to four, leading with **the block names its own format**; the `KD-7` citation corrected to `KD-2` in both §4.4 and #29's §4.4.1. Neither sub-blob's format version is bumped and `SEASON_SAVE_FORMAT_VERSION` stays 3: no such block has ever been written to a real save (nothing constructs either state set until T2), and the *frame* layout is untouched — only the contents of two blocks the frame treats as opaque. **Id note:** 009, not 004 — `injury-aging-research-alignment-design.md` still soft-reserves ERR-041-004..007. |
 | ERR-008-021 | Decision Tree #8 §3.1.4.3 / §3.2.3.2 — the shot-lane occlusion test was the pass lane's twin defect, deferred at the ERR-008-020 landing by owner call and closed here. An opponent contributed his **whole** blocking width if his angular centre fell inside the goal arc and **nothing at all** if it fell outside: a defender across the near post scored a fully open goal, and 4 cm of lateral position stepped `GoalOpeningScore` by 0.41 (0.595 → 1.000). The width was body radius alone, so blocker identity never entered the shooter's read of the goal. | Moderate | 3 | ✅ **Resolved August 5, 2026** (spec §3.1.4.3 + §3.2.3.2 + `OptionGenerator`/`UtilityWeights`, same commit; doctrine P1/P2/P3/P5) — the contribution is the true angular OVERLAP of the disc with the goal arc (continuous by construction) × the blocker's Anticipation/Positioning ability (`SHOT_BLOCKER_ABILITY_MIN/MAX` 0.6–1.4 `[GT]`, average exactly 1.0) read through the shooter's Vision fidelity (§3.1.3.3's floor, shared as one dial). **Goalkeeper exempt from the ability term** — #11 owns keeper shot-stopping (P3). P5 exact: old rectangle and new trapezoid both integrate to `4h·halfArc` over a uniformly-placed blocker. Digest invariance **not claimed** — the model is live on every generated shot. 10 `OptionGeneratorTests` locks incl. the GK exemption and the away mirror (counts and adequacy corrected at ERR-008-022). **COMPILED AND EXERCISED, NOT GATE-VERIFIED** — CI run 402 (PR #302, head `301c634`): build 0 errors, `DecisionTree.Tests` 127 passed / 1 failed / 4 skipped, all other suites green. The one failure was -022's far-post lock, not this landing. The gate job was **cancelled before returning a verdict** and four hygiene checks never ran; see the v1.75 header entry. **RECONCILED August 7, 2026 at the main merge — this finding was implemented TWICE, concurrently, by two sessions.** `claude/football-judgment-proxy-review-pq12dz` (PR #305) landed a form that keeps §3.2.3.2's wedge-containment test and §3.1.4.3's `IsInShotPath` goal-centre-plane bound and adds the ability weighting plus a single-goalkeeper-candidate selection (its AR-1 H-1); it merged to main and passed the gate. This branch landed the form recorded above — the containment test replaced by true angular overlap, then ERR-008-022's lane bounds and ERR-008-023's keeper body radius on top. **The merge keeps this branch's form**, because the other retains precisely the 0.595 ⇒ 1.000 cliff this finding was filed against, and the goal-centre-plane bound that ERR-008-022 then measured discarding the far-post blocker on 20,213 of 20,213 sampled off-centre shooters. **Not carried, and open:** PR #305's single-goalkeeper-candidate selection — exactly one keeper (goal-line-nearest within the band) takes the P3 ability exemption — is strictly better than this branch's `gkness`, which exempts the whole 6 m band and so hands the exemption to any defender who has tracked back. That is the same Stage-0 positional-proxy limitation recorded as *not fixed* at -022, and PR #305 solved it. It is deliberately NOT grafted in this merge: it is a behaviour change, the merge is already large, and grafting an unverified behaviour change into a reconciliation commit is how the -022 landing produced `goals-still-scored = 0`. Follow-up work, on its own gate run. |
 | ERR-008-022 | Decision Tree #8 §3.1.4.3 / §3.2.3.2 — the shooting lane's far bound was a plane through the goal **centre**, which cuts diagonally across the goal mouth for any off-centre shooter: the **far-post** blocker was discarded on 100% of 20,213 sampled in-range off-centre shooters, a keeper on his line at goal centre was dropped for every shooter position (reading as a fully open goal), and an opponent standing *behind* the goal line was admitted at the keeper's radius — so ERR-008-021's overlap model was denied much of the geometry it exists to price. Two further hard predicates in the same derivation were larger cliffs than the one -021 removed: `GOAL_MIN_SHOT_DIST` stepped `GoalOpeningScore` 1.000 → 0.050 across 1 cm (and with 0.050 below `MIN_GOAL_VISIBILITY`, decided whether a SHOOT option existed), and the goalkeeper predicate stepped it 0.768 → 0.311 across 2 cm. | Moderate | 3 | ✅ **Resolved August 6, 2026** (spec §3.1.4.3 + §3.2.3.2 + `OptionGenerator`/`UtilityWeights`/`DecisionTreeConstants`, same commit; doctrine P1/P3) — lane bounded by the **goal-line plane**, near bound ramped over new `[GT] SHOT_BLOCKER_NEAR_FADE_M` = 1.0 m, GK predicate replaced by a scalar `gkness` lerping radius **and** the P3 ability exemption over new `[GT] GK_PROXIMITY_FADE_M` = 2.0 m. Also corrects three false -021 verification claims: the **P5 exactness** argument (holds only for `h ≤ halfArc`; up to **2×** above it — the stated reason no recalibration was needed, withdrawn), the **test count** (10 locks / 9 evaluable / 5 fail / 4 pass, not "9 / 5 of 8"), and the **worked example** (its opponent was classified a goalkeeper, so all three of its numbers were unreachable). Suite 10 → 15 locks; the over-blocking mutant that passed all ten now fails, and both `NullAttributeView` tautologies are fixed. **COMPILED AND EXERCISED, NOT GATE-VERIFIED** — CI run 402 (PR #302, head `301c634`): build 0 errors, `DecisionTree.Tests` 127 passed / 1 failed / 4 skipped, every other suite green. The failure was this entry's own `ShotLane_FarPostBlocker_OccludesTheGoal`, which read the NEAR post; fixed in `0612bcc`, **which has never been compiled** — run 403 was evicted from the queue without starting and PR #302 was then closed. The gate job in 402 was itself cancelled before returning a verdict and four hygiene checks never ran; see the header chain v1.75. |
-| ERR-008-023 | Decision Tree #8 §3.2.3.2 — the goalkeeper was assigned a `GK_BLOCKER_RADIUS_M` = **1.5 m** blocking disc rather than the 0.5 m body every other player occludes with, to "approximate arm reach + lateral movement". That is a **shot-stopping** argument, and doctrine P3's ownership ledger assigns keeper shot-stopping to Goalkeeper Mechanics #11 (§3.5 save model, §3.7.0 rush) — which prices the dive at contact — so the shooter's read of the goal charged him a second time for the same keeper. ERR-008-021 had already exempted the keeper from the *ability* term for exactly this reason and left the radius alone. The constant had never been exercised: the pre-ERR-008-022 lane bound discarded a goal-line keeper for **every** shooter position, so the disc went live for the first time at that landing and immediately removed **~42% of the goal arc on every shot** — `GoalOpeningScore` 1.000 → 0.584 at 16 m from the keeper alone, before any outfield defender. `MIN_GOAL_VISIBILITY` (§3.1.4.1 gate 4) then withholds the SHOOT option entirely below 0.12, and `blockedArc` sums blockers with no mutual-overlap correction, so a keeper plus two defenders in the lane compounds to the floor. | **High** | 1 | ✅ **Resolved August 7, 2026** (spec §3.2.3.2 + §3.2.10 + `OptionGenerator`/`UtilityWeights`, same commit; doctrine P3) — `GK_BLOCKER_RADIUS_M` **RETIRED** from the catalogue with a do-not-reintroduce note; `radius` is now `BLOCKER_RADIUS_M` for every blocker. `gkness` survives and still lerps the P3 ability exemption, so -022's continuity fix is untouched. **Found by execution, not review:** `sim_match_engine_shot_outcomes` failed `goals-still-scored = 0` across four seeds × 18 minutes on CI run `31188688249` — the first run ever to reach `MatchEngine.Tests` on this branch, that suite taking 22 m 55 s against the 3 minutes run 402 survived. This is the P5 residual the -022 entry recorded as *recorded, not fixed* under KD-W1: -022 strictly ADDS blockers to the count and landed with no recalibration, one landing after -021's population-preserving claim was withdrawn. Locked by `ShotLane_Goalkeeper_OccludesWithABodyNotAReach` (closed form 0.860770; the retired disc scored the same shot 0.583540, and the lock fails anywhere near it). `ShotLane_FarPostBlocker_OccludesTheGoal` recomputed 0.782157 → 0.927268 — its blocker stands on the goal line, so the GK read saturates. `ShotLane_GoalkeeperRead_IsContinuousAcrossItsBoundary` was about to become the **third tautology of its class in this file**: with the radius half of the read gone it moved only the ability term, which an ability-neutral blocker zeroes, so the sweep would have computed one geometric curve and passed whatever the read did. It now carries live attributes and a swing assertion (0.145 across the ramp, max step 0.004). Suite 15 → 16. **Downstream measured August 7, 2026 (v1.77):** the chain's first full run on main (CI 419) tripped two acceptance bands, both rebaselined by owner call to the post--023 baseline — keeper-contact deep dive-early `== 0` → `<= 1` (one episode 616.7 ms early, inside the pre-fix class) and close-chance cosine −0.10 → −0.16 (pooled −0.119; seed 0xD1A6D05E's entire ERR-008-018 gain returned, −0.232, while its partner held +0.078). The regressions themselves are KD-W1 calibration-pass work; the -021 P5 residual (withdrawn exactness above `h = halfArc`) and this row's uncalibrated blocker additions are the suspects. |
-| ERR-029-006 | Training System #29, found at **T2 implementation**: §3.5 and §4.3 route the growth input through *"#28's public `AdvanceDay(worldDay, in trainingInputs)` (FR-PG-021)"* — a **batch** entry point taking one `TrainingInput` per player. `TacticalDirector.PlayerProgression` exposes no such method. Its only daily entry point is the per-player `GrowthProjection.AdvanceDayForPlayer(ref rec, ref life, worldDay, in training, curveEnabled)`, landed at #28 T0, and #28's own slot-1 wiring (roadmap D1) has not landed either — so #30 has nowhere to hand a batch to. The same class as ERR-041-002 and ERR-030-012: a §3/§4 sketch naming an API the cited assembly does not expose, found by trying to call it. Compounded by **FR-TR-025**, which specifies the roster handoff as reacting to #28 `RegenResult` / `RetirementResult` values — two more types #28 does not define. | Medium | 1 | ◑ Partially resolved August 6, 2026 at #29 T2 — **the handoff half is resolved; the slot-1 half is deferred to D1, deliberately.** FR-TR-025's contract is realized as roster *reconciliation* (`PlayerCareerStates.SyncToRoster`): it diffs the per-club state set against the roster #30 already holds, inserting `TrainingState.Create(Balanced)` for every unseen `PlayerId` and dropping every state whose player has left. That is the same contract keyed the same way — by `PlayerId`, at the season boundary, by the roster owner — stated over state that exists, and it starts inserting exactly the regens and dropping exactly the retirees the moment #28 T2 produces them, with no further change here. Subscribing to `RegenResult` today would be a phantom seam against a type that does not exist. **✅ FULLY RESOLVED August 8, 2026 at #28 T1/T2a (roadmap D1).** #28 now exposes the batch `ProgressionEngine.AdvanceDay(uint worldDay, in TrainingInputBatch)` FR-PG-021 specifies and #29 §3.5 composes against, and #30's slot 1 is **LIVE**: `SeasonLoop.RunCareerDaySteps` gathers the batch through the new `PlayerCareerStates.GatherTrainingInputs` (each player's `ComputeTrainingInput`, keyed by player id) and hands it to `ProgressionEngine.AdvanceDay` at slot 1, before slot 2 runs — so the FR-TR-006 order-independence is a property of the code and not only of the argument for it. The batch is **not** the phantom the deferral feared, because both sides are specified: the ids travel WITH the inputs and #28 refuses a batch that does not describe the players it is about to advance (wrong club, wrong count, wrong id, or a club omitted), which turns a drift between #29's roster view and #28's from silently mis-attributed growth into a fail-loud at the seam. Values are `TrainingInput.Neutral` today because #29's own `deepTrainingEnabled` dial is off at Stage 2 (FR-TR-007) — behaviour-neutral **by construction**, not by accident. The §3.5/§4.3 citation needed no re-anchoring: #28 grew the batch overload, which was the first of the two options this row left open. **The handoff half is unchanged** — `SyncToRoster` still reconciles against the roster #30 holds, and `RetirementResult`/`RegenResult` are deliberately still not defined, because #28's season boundary is NOT in this landing (it needs the `player-progression.regen` stream, whose survival across a save §3.5 does not pin). Retirement FLAGGING is live, being part of the draw-free daily step. **Locked by** `SeasonLoopProgressionTests.AdvanceDays_DrivesSlot1_AndTheCursorTracksTheClock` — the cursor must move by exactly (days x players), so a seam that ran once, twice or not at all is distinguishable — **and mutation-verified**: reverting slot 1 to a bare comment fails that test and the save/resume lock, both. No new RNG stream, no draw site, no `DETERMINISM_DIGEST_VERSION` or `SNAPSHOT_SCHEMA_VERSION` bump; `SEASON_SAVE_FORMAT_VERSION` **4 -> 5** for the new mandatory `PROG` sub-blob. **GATE: run locally, whole tree** (see the landing entry). |
+| ERR-008-023 | Decision Tree #8 §3.2.3.2 — the goalkeeper was assigned a `GK_BLOCKER_RADIUS_M` = **1.5 m** blocking disc rather than the 0.5 m body every other player occludes with, to "approximate arm reach + lateral movement". That is a **shot-stopping** argument, and doctrine P3's ownership ledger assigns keeper shot-stopping to Goalkeeper Mechanics #11 (§3.5 save model, §3.7.0 rush) — which prices the dive at contact — so the shooter's read of the goal charged him a second time for the same keeper. ERR-008-021 had already exempted the keeper from the *ability* term for exactly this reason and left the radius alone. The constant had never been exercised: the pre-ERR-008-022 lane bound discarded a goal-line keeper for **every** shooter position, so the disc went live for the first time at that landing and immediately removed **~42% of the goal arc on every shot** — `GoalOpeningScore` 1.000 → 0.584 at 16 m from the keeper alone, before any outfield defender. `MIN_GOAL_VISIBILITY` (§3.1.4.1 gate 4) then withholds the SHOOT option entirely below 0.12, and `blockedArc` sums blockers with no mutual-overlap correction, so a keeper plus two defenders in the lane compounds to the floor. | **High** | 1 | ✅ **Resolved August 7, 2026** (spec §3.2.3.2 + §3.2.10 + `OptionGenerator`/`UtilityWeights`, same commit; doctrine P3) — `GK_BLOCKER_RADIUS_M` **RETIRED** from the catalogue with a do-not-reintroduce note; `radius` is now `BLOCKER_RADIUS_M` for every blocker. `gkness` survives and still lerps the P3 ability exemption, so -022's continuity fix is untouched. **Found by execution, not review:** `sim_match_engine_shot_outcomes` failed `goals-still-scored = 0` across four seeds × 18 minutes on CI run `31188688249` — the first run ever to reach `MatchEngine.Tests` on this branch, that suite taking 22 m 55 s against the 3 minutes run 402 survived. This is the P5 residual the -022 entry recorded as *recorded, not fixed* under KD-W1: -022 strictly ADDS blockers to the count and landed with no recalibration, one landing after -021's population-preserving claim was withdrawn. Locked by `ShotLane_Goalkeeper_OccludesWithABodyNotAReach` (closed form 0.860770; the retired disc scored the same shot 0.583540, and the lock fails anywhere near it). `ShotLane_FarPostBlocker_OccludesTheGoal` recomputed 0.782157 → 0.927268 — its blocker stands on the goal line, so the GK read saturates. `ShotLane_GoalkeeperRead_IsContinuousAcrossItsBoundary` was about to become the **third tautology of its class in this file**: with the radius half of the read gone it moved only the ability term, which an ability-neutral blocker zeroes, so the sweep would have computed one geometric curve and passed whatever the read did. It now carries live attributes and a swing assertion (0.145 across the ramp, max step 0.004). Suite 15 → 16. **Downstream measured August 7, 2026 (v1.77):** the chain's first full run on main (CI 419) tripped two acceptance bands, both rebaselined by owner call to the post--023 baseline — keeper-contact deep dive-early `== 0` → `<= 1` (one episode 616.7 ms early, inside the pre-fix class) and close-chance cosine −0.10 → −0.16 (pooled −0.119; seed 0xD1A6D05E's entire ERR-008-018 gain returned, −0.232, while its partner held +0.078). The regressions themselves are KD-W1 calibration-pass work; the -021 P5 residual (withdrawn exactness above `h = halfArc`) and this row's uncalibrated blocker additions are the suspects. **BISECTED August 10, 2026 (see the body entry, written August 17):** holding the tree at `64513e4` and swapping only the three shot-lane files, the close-chance cosine movement attributed to the chain is **entirely this entry** — seed `0xD1A6D05E` is bit-identical before -021, after -021 and after -022, and moves only here — but it is a **trajectory resample, not a mechanism** (no DRIBBLE path reads `GoalOpeningScore`), and over 18 paired seeds the chain's directional effect is **−0.027 ± 0.039** (t = −0.70, 8 up / 10 down) against a between-seed sd ≈ 0.17. So the KD-W1 hand-off recorded above **has nothing to act on for this metric**; the live `sim_match_engine_close_chance` failure belongs to `ERR-012-011` (wiring-backlog C1, −0.189 ± 0.038, 16 of 18 seeds down). Measurement predates the W2 tackle wiring. |
+| ERR-029-006 | Training System #29, found at **T2 implementation**: §3.5 and §4.3 route the growth input through *"#28's public `AdvanceDay(worldDay, in trainingInputs)` (FR-PG-021)"* — a **batch** entry point taking one `TrainingInput` per player. `TacticalDirector.PlayerProgression` exposes no such method. Its only daily entry point is the per-player `GrowthProjection.AdvanceDayForPlayer(ref rec, ref life, worldDay, in training, curveEnabled)`, landed at #28 T0, and #28's own slot-1 wiring (roadmap D1) has not landed either — so #30 has nowhere to hand a batch to. The same class as ERR-041-002 and ERR-030-012: a §3/§4 sketch naming an API the cited assembly does not expose, found by trying to call it. Compounded by **FR-TR-025**, which specifies the roster handoff as reacting to #28 `RegenResult` / `RetirementResult` values — two more types #28 does not define. | Medium | 1 | ✅ RESOLVED — see the closing paragraph of this cell. *(Marker corrected August 22, 2026: this row led with ◑ while its own text has recorded "✅ FULLY RESOLVED August 8, 2026" since the #28 T1/T2a landing — verified against `SeasonLoop.RunCareerDaySteps`, where slot 1 is LIVE. The narrative below is unedited.)* ◑ Partially resolved August 6, 2026 at #29 T2 — **the handoff half is resolved; the slot-1 half is deferred to D1, deliberately.** FR-TR-025's contract is realized as roster *reconciliation* (`PlayerCareerStates.SyncToRoster`): it diffs the per-club state set against the roster #30 already holds, inserting `TrainingState.Create(Balanced)` for every unseen `PlayerId` and dropping every state whose player has left. That is the same contract keyed the same way — by `PlayerId`, at the season boundary, by the roster owner — stated over state that exists, and it starts inserting exactly the regens and dropping exactly the retirees the moment #28 T2 produces them, with no further change here. Subscribing to `RegenResult` today would be a phantom seam against a type that does not exist. **✅ FULLY RESOLVED August 8, 2026 at #28 T1/T2a (roadmap D1).** #28 now exposes the batch `ProgressionEngine.AdvanceDay(uint worldDay, in TrainingInputBatch)` FR-PG-021 specifies and #29 §3.5 composes against, and #30's slot 1 is **LIVE**: `SeasonLoop.RunCareerDaySteps` gathers the batch through the new `PlayerCareerStates.GatherTrainingInputs` (each player's `ComputeTrainingInput`, keyed by player id) and hands it to `ProgressionEngine.AdvanceDay` at slot 1, before slot 2 runs — so the FR-TR-006 order-independence is a property of the code and not only of the argument for it. The batch is **not** the phantom the deferral feared, because both sides are specified: the ids travel WITH the inputs and #28 refuses a batch that does not describe the players it is about to advance (wrong club, wrong count, wrong id, or a club omitted), which turns a drift between #29's roster view and #28's from silently mis-attributed growth into a fail-loud at the seam. Values are `TrainingInput.Neutral` today because #29's own `deepTrainingEnabled` dial is off at Stage 2 (FR-TR-007) — behaviour-neutral **by construction**, not by accident. The §3.5/§4.3 citation needed no re-anchoring: #28 grew the batch overload, which was the first of the two options this row left open. **The handoff half is unchanged** — `SyncToRoster` still reconciles against the roster #30 holds, and `RetirementResult`/`RegenResult` are deliberately still not defined, because #28's season boundary is NOT in this landing (it needs the `player-progression.regen` stream, whose survival across a save §3.5 does not pin). Retirement FLAGGING is live, being part of the draw-free daily step. **Locked by** `SeasonLoopProgressionTests.AdvanceDays_DrivesSlot1_AndTheCursorTracksTheClock` — the cursor must move by exactly (days x players), so a seam that ran once, twice or not at all is distinguishable — **and mutation-verified**: reverting slot 1 to a bare comment fails that test and the save/resume lock, both. No new RNG stream, no draw site, no `DETERMINISM_DIGEST_VERSION` or `SNAPSHOT_SCHEMA_VERSION` bump; `SEASON_SAVE_FORMAT_VERSION` **4 -> 5** for the new mandatory `PROG` sub-blob. **GATE: run locally, whole tree** (see the landing entry). |
 | ERR-028-003 | Player Progression & Lifecycle #28, found at **T1/T2a implementation**: §3.2 says `PotentialAbility` is *"generated once at regen/**new-game**"*, and §3.3 gives the formula only for the REGEN path. There is no new-game derivation anywhere — `RosterGenerator` produces no PA and no `PlayerLifecycle`, and `PlayerRecord` gains no CA/PA field by FR-PG-016's own instruction. So the ~500 bootstrapped players of a new game had no PA at all, and the value is not cosmetic: PA is the F1 growth ceiling, so a default of 0 makes `TrySpendOnePoint` refuse at the ceiling on day one and the whole daily step a silent no-op that every existing unit test still passes. The owner's decision is that new-game PA is **authored data owned by #47** (New-Game Setup & Database Editor) and only regens compute it — which is right, and which #28 states nowhere; #47 is APPROVED with **no `src/` assembly**, so the seam had no producer either. | Medium | 1 | ✅ **Resolved August 8, 2026 at #28 T1/T2a, spec + code same commit.** `ProgressionEngine.SeedFrom` seeds every bootstrapped player from the new `[GT]` `NEW_GAME_PA_HEADROOM` (`PA = clamp(CA + headroom, PA_MIN, ABILITY_MAX)`), explicitly documented as a **placeholder for #47's authored value** rather than a model. Deliberately **deterministic, not drawn**: a draw here would be #28's first draw site and would force the `player-progression.regen` stream to register (FR-PG-020) for a number #47 is going to overwrite — so this landing has no draw site at all. **Recorded, NOT fixed, and it survives the owner's decision:** at the §4.3 band step a whole youth career raises CA by only ~421 of `ABILITY_MAX` = 10,000 (8 growth years x ~52.6 per point, ONE attribute per year), so the PA ceiling binds only if the authored gap is under ~420 — which no realistic authored wonderkid gap is. **PA-as-ceiling is therefore decorative whatever PA's source**, because that is a property of the growth RATE, not of PA; closing it is the Stage-3 `curveEnabled` tier's, and KD-W1 forbids retuning it in the pass that wires the subsystem. #28 §3.2/§7 to carry the #47 seam and the ~421 ceiling note. |
 | ERR-028-004 | Player Progression & Lifecycle #28 §3.5: the career-state sub-blob is specified as `PROGRESSION_SAVE_FORMAT_VERSION -> DOMAIN_TAG_PLAYER_PROGRESSION -> NextPlayerId -> …` — version-first, with an **RNG hash-domain tag standing in as the block's identifier**. That is the exact defect ERR-029-005 / ERR-041-009 filed as a MUST against, arriving in a third spec: every sub-blob format in this save stack sits at version 1, so a transposed `byte[]` at the frame decodes a sibling's bytes against this layout cleanly and silently, and a version gate cannot catch it (it separates generations of ONE format, never one format from another). The domain tag is doubly wrong for the job — it is a hash-domain separator with an unrelated purpose, and ERR-029-005 recorded that the magic is *deliberately not* an RNG tag. | Medium | 1 | ✅ **Resolved August 8, 2026 at #28 T1, spec + code same commit.** New `[FIXED]` `PROGRESSION_SAVE_MAGIC` = `0x50524F47` ("PROG") written **before** the version and checked before it on decode, so sibling bytes are refused as the wrong FORMAT rather than mis-diagnosed as the wrong generation; the domain tag is not written at all. The compile-time half lands too, per the same precedent: a typed `ProgressionBlock` at the `SeasonSaveCodec.Encode` seam, joining `TrainingBlock`/`MedicalBlock`/`AppearanceBlock` — the frame now carries FOUR same-shaped opaque payloads, so a positional mistake needs a build error rather than a load-time one. #28 §3.5's layout rewritten to the shipped byte order, which F3 makes permanent (the ERR-029-004 rule). |
 | ERR-028-005 | Player Progression & Lifecycle #28 §5.2 (T-PG-DET-002) and §3.1, found at **T2a implementation**: §5.2 asserts that a *"long single `AdvanceDay` gap"* matches a day-by-day advance for derived age **and** the accumulated cursor. Age is gap-independent, being derived — the cursor is not: `GrowthProjection.AdvanceDayForPlayer` adds `DailyPoints` exactly **once per call**, so a single call across a 400-day gap would bank 1 day and lose 399. The spec's own keystone lock was unsatisfiable as worded, and the existing suite hid it by asserting only the age half. Compounded by a second, sharper gap: §3.1's step carries **no per-day cursor at all**, while #30's `RunCareerDaySteps` runs a fixture day's slots TWICE (pre-round and from the advance loop, ERR-030-027) and relies on each subsystem's own cursor for idempotency — so a wired #28 would have double-accrued growth on every fixture day: a silent ~11% rate error, not a crash. | Medium | 1 | ✅ **Resolved August 8, 2026 at #28 T1/T2a, spec + code same commit.** `PlayerLifecycle` gains `LastAdvancedWorldDay` (sentinel `uint.MaxValue`, never 0 — day 0 is a legitimate world day and a zero default would read as "already advanced" and skip the first real step; the #29 `TRAINING_NOT_ADVANCED_SENTINEL` precedent, same value for the same reason), serialized in the block. `ProgressionEngine.AdvanceDay` is therefore **idempotent per day** (a day at or behind the cursor is a no-op) and **gap-complete** (a day beyond it replays every intervening day), which makes §5.2's claim true as written rather than weakening it. The first call on a never-advanced store advances exactly one day and anchors — it cannot know which day the career began accruing on — and that semantic is itself locked (`AdvanceDay_FirstCall_AdvancesExactlyOneDay`) rather than left as an assumption the gap lock leans on. #28 §3.1/§5.2 to carry the cursor and the anchoring rule. |
@@ -910,7 +921,7 @@ different things, each internally self-consistent); no code change proposed. Pri
 | ERR-030-031 | Season & Competition Loop #30 / Player Progression #28, found by **adversarial review pass 3** — the ERR-028-014 sweep stopped at its own spec folder, which is this project's **fifth** recurrence of the grep-boundary widening class. ERR-028-014 retired the never-advanced sentinel from #28's legal store states and corrected #28 §2 and §3 the same day. Three documents outside that folder still described the retired world as current, and two of them are the ones an implementer of the SAVE ROOT reads: **(a)** #30 §2.3's **F8 row** enumerated only THREE persisted per-player cursors (#29, #41, the appearance anchor) and said the sentinel is exempt — while `SeasonSaveManager.cs` labels #28's in its own source as *"The FOURTH persisted per-player cursor"* and enforces it at Save, Load AND composition. **(b)** #30 **Appendix B.1** made the count explicit — *"all **three** persisted per-player cursors"* — and added the blanket claim *"The sentinel (never-advanced) is **exempt in every case**"*, which ERR-028-014 had made false that same day: #28 alone has no exemption, because it is the only one of the four whose fresh state carries a clock-anchored quantity (age derives from `BirthWorldDay`), so "never advanced" means something different at every clock value for #28 and the same thing at every clock value for its siblings. **(c)** #28 §5.1 still documented the RETIRED behaviour as current, quoting the reasoning ERR-028-014 identified as false — *"since it cannot know how far in the past the career actually began accruing"* — for a test that had been renamed and whose assertion had been **inverted**. A reader following §5 would have rebuilt the defect. | High | 3 | ✅ **Resolved August 9, 2026.** F8 covers all four cursors and states #28's exception; Appendix B.1 carries the corrected count and the REASON for the asymmetry rather than just the rule; §5.1 describes the shipped behaviour and records the inversion. **Also closed with it:** §5 gained ids for the ~17 mutation-audit locks that had landed with none (`T-PG-BLOCK-001..007`, `T-PG-BATCH-001`, `T-PG-CODEC-001..007`, `T-PG-SAVE-007/008` — collision-checked against the 24 pre-existing ids), each recorded as a lock whose guard a mutation sweep had proven untested; and #28 Appendix A, which had not been touched since **before the T0 landing**, gained the seven shipped constants it was missing. |
 | ERR-028-015 | Player Progression #28 / Season & Competition Loop #30, found by **adversarial review pass 3 (High ×2)** — both defects were INTRODUCED by pass 2's own fixes, which is the finding that matters more than either of them. **(a) ERR-028-014 silently disarmed three locks.** Anchoring the cursor at the seed day made `AdvanceDay(seedDay, …)` a total no-op — `AdvancePlayerTo` returns before the growth step and the retirement check — and three tests called exactly that and then asserted on state the code under test never touched. **Verified by mutation, and the mutants overturn the static audit that found them:** deleting the idempotency guard OUTRIGHT left **all 469 tests across both suites green** (ERR-030-027's property — that #30 runs slot 1 twice on every fixture day — was genuinely unguarded, not merely weakly tested); deleting the retirement age comparison so that EVERY player retires on every advance left 85/85 green (FR-PG-013's discrimination unguarded); and reinstating the ERR-028-006 birth clamp no longer failed its own designated regression lock — though, contrary to the audit's claim, two sibling tests still caught it, so that defect was never unguarded. **The ERR-028-014 commit claimed it had swept for this.** It had swept for tests that FAILED, not for tests that started PASSING for the wrong reason — and only the second class is silent. **(b) The ERR-028-013 relaxation reopened the ERR-028-010 gate.** `AdvanceAndPlayNextRound(ISquadProvider)`'s two-provider refusal was keyed on `_career != null`, which was equivalent to `_careerSquads != null` only because the old pairing rule made them a biconditional. ERR-028-013 broke that biconditional deliberately — a populated progression store now composes without #29/#41 career state — and left the gate keyed on the half that had stopped covering the case. A progression-only loop skipped the gate entirely, so a caller could hand in the day-0 bootstrap and have the round resolved against attributes the store had already grown away from, silently. It survived because the composition ERR-028-013 created was only ever exercised through `AdvanceDays`: **a configuration that could advance days and save and nothing else — verbatim the ERR-028-010 shape, in the fix that cites it.** | High | 2 | ✅ **Resolved August 10, 2026.** The three locks now advance to a genuinely LIVED day, and the idempotency case carries a precondition that the first call actually accrued — so the fixture cannot silently stop reaching the code again. The gate is rekeyed to `_careerSquads`, the authority the loop OWNS whichever subsystem put it there. A round-play case for the progression-only composition closes the coverage gap that hid it. Also closed: `SeedFrom` now carries the F8 sentinel refusal (anchoring the cursor made the seed site a second way to write the one value `FromBlocks` refuses, producing a store that can be neither saved, restored nor advanced). |
 | ERR-028-016 | Player Progression #28, **adversarial review pass 4** — the pass's headline finding is a correction to **pass 3's own comment**, and the rest is the half-guard class recurring. **(a) Medium — an over-attributed comment, and a statement with no isolating test.** Pass 3 rewrote `AdvancePlayerTo`'s else-branch comment to say the branch is load-bearing "only against a BACKWARD call" because without it the cursor regresses. That is wrong in a precise way: what prevents cursor regression is the `if` **condition** (the assignment sits inside the `if`, so a backward call never reaches it either way) — the bare `return;` prevents something else entirely, namely the §3.4 **retirement evaluation running on a call that advanced nothing**. Not inert: a player not yet flagged whose `rec.Age` already satisfies `RETIREMENT_AGE` would be flagged on a backward call, stamping `RetirementDay` with a day EARLIER than his own cursor. Worse, pass 3's rewrite **discarded** the original comment's accurate claim ("the retirement flag below is not re-stamped") while fixing a different overclaim — an over-correction. Both halves are now stated separately, and `AdvanceDay_BackwardCall_DoesNotEvaluateRetirement` isolates the `return;` from the condition: deleting ONLY `return;` fails it and nothing else, while the sibling condition lock stays green. **(b) Medium — three decode range checks were half-tested.** `attributes`, `weakFoot` and `potentialAbility` are each a two-sided OR, and each had a test for only ONE side (MAX, MAX, MIN respectively). Deleting the untested half of any one left the whole suite green — the same shape as the 15 survivors pass 2's mutation sweep found. Three new tests, one per missing side. **(c) Low — five guards with no isolating test**: `SeedFrom` duplicate CLUB id (distinct from the duplicate-PLAYER-id case), `SeedFrom` null array and null element, `FromBlocks` null array and unbound element, and `ValidateBatch`'s unbound-entry branch. All now locked. **(d) Low** — `SeedFrom_AtTheSentinelWorldDay_IsRefused` proved the guard FIRES but not that it is NARROW; a seed at `SENTINEL - 1` must succeed, mirroring `AdvanceDay`'s existing narrowness proof. And `SeedFrom`'s XML doc did not declare the `ArgumentOutOfRangeException` its own new guard throws. | Medium | 4 | ✅ **Resolved August 10, 2026.** Suite 89 → **100**, every new lock proven by executing its mutation, not by reasoning. **Two findings recorded, not fixed.** (1) `SeedFrom`'s explicit `byClub.ContainsKey` duplicate-club check is **redundant** — `SortedDictionary.Add` already throws `ArgumentException` on a duplicate key, so deleting the check changes nothing; the discriminating mutation is replacing `Add` with a silent-overwrite indexer assignment, which is what the new test actually locks. The check is kept for the explicit message, and the test comment records why the naive mutation does not kill it. (2) `ValidateBatch` evaluates its positional club-id check BEFORE its bind check, so a `default(ClubTrainingInputs)` entry (whose `ClubId` is 0) is only reachable by the bind check when the store carries a club at id 0 — the new test seeds there deliberately. Ordering is not wrong, but it makes the bind branch unreachable for any other club id. |
-| ERR-041-010 | Injuries & Medical #41, found at **T2 implementation**: two gaps in the same section pair. (a) **FR-MD-025** specifies the roster handoff against #28 `RegenResult` / `RetirementResult` values, which `TacticalDirector.PlayerProgression` does not define — ERR-029-006's finding, mirrored, and filed separately because §2/§5.2 are #41's own normative text. (b) §3.5's composition sketch sources `recentMatchLoad` from *"#30's fixture result"*, and #30 has no per-player appearance record to source it from: `MatchResult` carries a scoreline, `SeasonState` carries fixtures and a table, and neither #29's nor #41's save block may describe the other's domain, so an appearance counter has no persisted home anywhere in the current stack. `AppearanceLoadWeight` is a non-zero `[GT]` (150), so the term is not vacuous — it is simply unsupplied. | Medium | 1 | ◑ Partially resolved August 6, 2026 at #41 T2. (a) resolved exactly as ERR-029-006: `PlayerCareerStates.SyncToRoster` reconciles both state sets against the roster in one pass, inserting `InjuryState.Create()` — never `default`, the F1/F6 day-0 sentinel trap — and removing departures, keyed by `PlayerId` at the season boundary. (b) **✅ closed August 7, 2026 at the balance pass (D2)**: the per-player appearance record lands as #30-side state with its own persisted home — `AppearanceState` (a lazily-shifted day-bitmask: `(RecentBits, BitsAsOfWorldDay)`, shifted at READ time so no daily mutation step, no new KD-2 slot and no third idempotency cursor exists) held by `PlayerCareerStates`, written by `SeasonLoop.AdvanceAndPlayNextRound` for both clubs' fielded XIs after each fixture resolves (the ids come from the new `SquadRating.StartingElevenPlayerIds` — the same single `TrySelect` walk, not a second selection surface), serialized as the frame's new mandatory `APPR` v1 sub-blob (`AppearanceBlock` typed at the Encode seam, magic-led per ERR-029-005; `SEASON_SAVE_FORMAT_VERSION` 3→4), and read into the FR-MD-010 `MatchLoad` at slot 4 through `AppearanceWindow.AppearanceDaysOn` — whose window covers the `AppearanceWindowDays` `[GT]` days strictly BEFORE the draw day, never the current day, which is what makes the term coherent with ERR-030-027's pre-round draw (a match on day *d* first feeds the draw on *d+1*). FR-MD-010's false premise ("a count #30's fixture result already tracks") corrected in the same commit (`section-2.md` v0.5); #30 Appendix B v0.5 + `unified-season-save-design.md` §3.1 carry the frame change. The original entry's recompute-from-fixtures rejection stands — the record is written from who was actually fielded, filter included. `IsAvailable` (FR-MD-023) and the slot-4 step itself are live. Gate: **PASSED** — executed locally, whole tree, quarantine empty (verdict line in `CHANGELOG.md`). |
+| ERR-041-010 | Injuries & Medical #41, found at **T2 implementation**: two gaps in the same section pair. (a) **FR-MD-025** specifies the roster handoff against #28 `RegenResult` / `RetirementResult` values, which `TacticalDirector.PlayerProgression` does not define — ERR-029-006's finding, mirrored, and filed separately because §2/§5.2 are #41's own normative text. (b) §3.5's composition sketch sources `recentMatchLoad` from *"#30's fixture result"*, and #30 has no per-player appearance record to source it from: `MatchResult` carries a scoreline, `SeasonState` carries fixtures and a table, and neither #29's nor #41's save block may describe the other's domain, so an appearance counter has no persisted home anywhere in the current stack. `AppearanceLoadWeight` is a non-zero `[GT]` (150), so the term is not vacuous — it is simply unsupplied. | Medium | 1 | ✅ RESOLVED — both halves; see this cell. *(Marker corrected August 22, 2026: the row led with ◑ while (a) is recorded resolved August 6 and (b) "✅ closed August 7, 2026 at the balance pass (D2)". Narrative below unedited.)* ◑ Partially resolved August 6, 2026 at #41 T2. (a) resolved exactly as ERR-029-006: `PlayerCareerStates.SyncToRoster` reconciles both state sets against the roster in one pass, inserting `InjuryState.Create()` — never `default`, the F1/F6 day-0 sentinel trap — and removing departures, keyed by `PlayerId` at the season boundary. (b) **✅ closed August 7, 2026 at the balance pass (D2)**: the per-player appearance record lands as #30-side state with its own persisted home — `AppearanceState` (a lazily-shifted day-bitmask: `(RecentBits, BitsAsOfWorldDay)`, shifted at READ time so no daily mutation step, no new KD-2 slot and no third idempotency cursor exists) held by `PlayerCareerStates`, written by `SeasonLoop.AdvanceAndPlayNextRound` for both clubs' fielded XIs after each fixture resolves (the ids come from the new `SquadRating.StartingElevenPlayerIds` — the same single `TrySelect` walk, not a second selection surface), serialized as the frame's new mandatory `APPR` v1 sub-blob (`AppearanceBlock` typed at the Encode seam, magic-led per ERR-029-005; `SEASON_SAVE_FORMAT_VERSION` 3→4), and read into the FR-MD-010 `MatchLoad` at slot 4 through `AppearanceWindow.AppearanceDaysOn` — whose window covers the `AppearanceWindowDays` `[GT]` days strictly BEFORE the draw day, never the current day, which is what makes the term coherent with ERR-030-027's pre-round draw (a match on day *d* first feeds the draw on *d+1*). FR-MD-010's false premise ("a count #30's fixture result already tracks") corrected in the same commit (`section-2.md` v0.5); #30 Appendix B v0.5 + `unified-season-save-design.md` §3.1 carry the frame change. The original entry's recompute-from-fixtures rejection stands — the record is written from who was actually fielded, filter included. `IsAvailable` (FR-MD-023) and the slot-4 step itself are live. Gate: **PASSED** — executed locally, whole tree, quarantine empty (verdict line in `CHANGELOG.md`). |
 | ERR-030-026 | Season & Competition Loop #30, found by **adversarial review over the T2 landing (pass 5)**: §3.3's KD-2 tick order pins nine day-slots but has **no slot for playing the round** — a round is resolved by a separate command (`AdvanceAndPlayNextRound`), not by the day advance — so where a fixture sits relative to slot 2 (#29 training) and slot 4 (#41 injuries) is not specified anywhere in #30, and in the implementation it falls out of `AdvanceToNextFixtureDay`'s loop condition alone (`while (CurrentWorldTick < targetDay)`, which stops on *reaching* the fixture day). The emergent answer is **play the round, then process matchday**. That is correct for #41's occurrence draw — an injury sustained in a match must be drawn after it, and it is what makes the FR-MD-010 `MatchLoad` term coherent once ERR-041-010(b) supplies a per-player appearance record — and **wrong for #41's recovery countdown, which shares the same atomic `AdvanceMedicalDay` step**: a player whose `RecoveryRemaining` reaches 0 on matchday has his decrement applied after the round, so he misses a fixture he had served his time for and **every injury runs one matchday longer than its assigned tier**. Invisible today (the occurrence dial ships off, FR-MD-027, so nobody is ever injured) and invisible to the suites either way, since `AWholeSeason_PlaysWithTheCareerWired` asserts `lastLivedDay = CurrentWorldTick - 1` which holds under both orders. The cost is not today's behaviour: it is that the balance pass would fit `RecoveryDaysPerTickBase` and the per-tier day assignments straight through an unstated convention and absorb the bias into the constants. | Medium | 1 | ◑ **Convention stated and pinned August 6, 2026 at the T2 AR pass; the split remains open for the balance pass.** Option (a) taken — the emergent order is adopted rather than changed, because splitting recovery from occurrence would alter #41's step contract (one `AdvanceMedicalDay` per player-day, FR-MD-022) and that is a #41 revision, not a #30 wiring fix. The order is now documented at all three sites that determine it (`AdvanceToNextFixtureDay`, `RunWorldTickInFixedOrder`, `AdvanceAndPlayNextRound`), including the one-matchday recovery bias by name, and locked by `SeasonLoopCareerTests.DayAdvance_StopsBeforeTheFixtureDaysOwnSteps` — which asserts both halves: that `LastAdvancedWorldDay` is `fixtureDay − 1` at kickoff, and that a player with one recovery day outstanding is unavailable for that round and fit immediately after it. **What was deferred:** whether #41 should expose recovery and occurrence as separately callable halves so recovery can run before the round and occurrence after it. **✅ Closed August 7, 2026 by ERR-030-027 (the balance pass, owner-authorized), which achieves both orderings WITHOUT the split**: the fixture day's whole atomic day-step runs pre-round inside `AdvanceAndPlayNextRound`, so recovery lands before selection while match participation reaches the occurrence draw through the FR-MD-010 appearance window (never containing the current day). FR-MD-022's one-step contract, KD-6, and the medical save format all survive verbatim — the split's costs (a second persisted cursor, `MEDICAL_SAVE_FORMAT_VERSION` 1→2, a KD-6 revision) bought nothing the wiring pin did not. See ERR-030-027. |
 | ERR-030-027 | Season & Competition Loop #30, the #29/#41 **balance pass D1** (closing ERR-030-026's deferred half, owner-authorized): §3.3 needed a pinned answer to "where does the round sit relative to the fixture day's own day-slots", and the interim ERR-030-026 convention (play the round, then process matchday) ran every injury one matchday longer than its tier — a bias the balance pass would otherwise have fitted `RecoveryDaysPerTickBase` and every tier-day constant through. The deferred proposal (split `AdvanceMedicalDay` into separately callable halves) prices at a second persisted cursor + `MEDICAL_SAVE_FORMAT_VERSION` 1→2 with no migration (KD-7/F3) + a KD-6 revision, because `AdvanceAndPlayNextRound` returning between the halves is an ordinary save point. | Medium | 1 | ✅ **Resolved August 7, 2026, spec + code same commit** — the no-split shape both council advisors converged on: **the fixture day's own KD-2 slots run at the top of `AdvanceAndPlayNextRound`, pre-round** (new §3.3.2; `SeasonLoop.RunCareerDaySteps` extracted, shared by both callers, placed after every guard so a refused call advances no cursor, run over the WHOLE career so no-fixture clubs stay synchronised). Step 12 (world-day tick) still runs on the next advance, whose re-entry of the same day is a cursor no-op (F6). Recovery therefore lands before selection (tiers mean what they say); the occurrence draw sits on matchday morning, fed by the FR-MD-010 appearance window, which never contains the current day — a match on day *d* first feeds the draw on *d+1*. FR-MD-022, KD-6 and the medical format survive verbatim; no format-version change, no RNG/domain-tag/draw-site change, no `DETERMINISM_DIGEST_VERSION` bump. Behaviour changes only where a career is wired: cursor positions around a round (locked), and the served-his-time player playing his round (locked). `section-3.md` v1.2 (§3.3 comment, §3.3.2, §3.4 opening); `SeasonLoop.cs` v1.9; `DayAdvance_StopsBeforeTheFixtureDaysOwnSteps` rewritten to assert the new convention both ways, `AWholeSeason_PlaysWithTheCareerWired` cursor expectation → `CurrentWorldTick`. |
 | ERR-041-011 | Injuries & Medical #41, the **balance pass (D3)**: §3.4/Appendix A carried three scale defects. (a) `OCCURRENCE_DRAW_DENOM` was `[DERIVED] == INJURY_RISK_MAX`, a `[GT]` — and the draw is `hash % denominator`, so the denominator determines the VALUE of every draw: one config edit re-rolled every career's injury luck, unrecorded (#50's `SaveOriginStamp` is unbuilt). (b) The assembly had no exposure-independent term, so the default focus converged on injury-proof-forever (the fifth AR pass's measured absurdity) — and the other two measured absurdities (23%/43% per day) were two to three orders out because career-scale inputs sat on the same 10,000 scale as the denominator. (c) `APPEARANCE_LOAD_WEIGHT` had never been fitted against a real appearance record (none existed until ERR-041-010(b)). | Medium | 3 | ✅ **Resolved August 7, 2026, spec + code same commit.** `OCCURRENCE_DRAW_DENOM` → `[FIXED]` 1,000,000, decoupled; invariant `INJURY_RISK_MAX ≤ DENOM` fail-loud at the draw site (the old negative-denominator guard is unrepresentable against a const); §3.4 gains `BASELINE_DAILY_RISK` (4000) inside the sum BEFORE the mitigation — position normative; `APPEARANCE_LOAD_WEIGHT` 150 → 5600; `INJURY_RISK_MAX` re-tagged `[CROSS: #29 Appendix A]` (ERR-041-003's back-prop discharged; ERR-029-007 corrects the #29 side). §3.6 re-derived (6600; congestion clamps at the ceiling — 1% when this row was written, 1.6% since the pass-1 headroom raise (InjuryRiskMax 16000); the recorded Stage-2 compression R-2's refit inherits). Measured by the season-scale instrument over 8 seeds: league ~780/season (~39/club), starters 2.08, reserves 1.12, unavailability 9.4% — in the E-1-derived band, locked league-wide with perturbation-proof bands. Characterization test moved to AFTER numbers at per-100k resolution; forced-occurrence tests moved to a deterministic hot-day scan (certainty is structurally unreachable at 1%/day max). `section-3.md` v0.4, `appendices.md` v0.4, `#29 appendices.md` v0.4; `InjuriesMedicalConstants` v1.3, `MedicalStep` v1.4, `TrainingSystemConstants` v1.3. |
@@ -966,6 +977,18 @@ different things, each internally self-consistent); no code change proposed. Pri
 | ERR-030-047 | Season & Competition Loop #30 §3.4 / §3.4.1, found at **adversarial-review round 6 (H1)**, August 18, 2026: §3.4's normative `AdvanceAndPlayNextRound` pseudocode was never updated when `ERR-044-014` (August 16, 2026) changed the call it specifies. The serve step still read the two-argument `OnClubFixturePlayed(f.HomeClubId, homeXi)` / `OnClubFixturePlayed(f.AwayClubId, awayXi)` and the fallibility comment still said the method "has TWO guards", while the real signature has been `OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)` with THREE guards — `clubId < 0` (F2), `clubPlayerIds == null` (the ERR-044-014 addition) and `fieldedPlayerIds == null` (ERR-044-003 stage 1) — since `DisciplineRules.cs` v1.7 / `SeasonLoop.cs` v1.29 (verified by direct read: `src/discipline/DisciplineRules.cs:318-345`, `src/season-save/SeasonLoop.cs:984-985`). Worse than the stale signature, **the unfiltered-roster precondition ERR-044-014 introduced was never propagated into the owning spec**: its own resolution row above states "the unfiltered squad is load-bearing", and its recorded-not-fixed list named #44 `section-5.md`/`section-6.md` and two `src/discipline` doc residuals — but NOT #30 §3.4, the loop spec whose pseudocode a rebuild follows. Nothing in #30 stated that `clubPlayerIds` MUST be the UNFILTERED roster; an implementer wiring the serve step off the filtered squad — the only squad instance the pre-fix pseudocode ever bound — makes every suspension unservable, since every id whose ban is being served is precisely an id the availability filter has just removed: bans never decrement, every suspension is permanent, silently — no throw, no log, ERR-044-014's own failure by the opposite route, rebuilt from the spec. The `ERR-030-037`/`ERR-030-040` staleness class compounded by the `ERR-030-042` shape (a spec-verbatim implementer builds the silent inversion). | High | 1 (`season-competition-loop/section-3.md`) | ✅ **Resolved August 18, 2026, spec-text only, same commit — the code was already correct.** `section-3.md` v2.17: both serve calls corrected to the three-argument form; the guard comment names all THREE guards and both structural null-exclusions (`FieldedXi`'s gate — career OR discipline wired — and `RosterIds`' gate — discipline wired, the serve block's own condition); `PlayThroughEngine`'s pseudocode resolves `homeRoster`/`awayRoster` explicitly and derives `homeRosterIds := RosterIds(homeRoster)` / `awayRosterIds := RosterIds(awayRoster)` off the UNFILTERED `squads.ResolveByClubId(...)` output — resolved one statement above the `SelectAvailable` filter that consumes the same instance — returning the pair; `ResolveRound(f, squads)` outputs the same pair from its own resolve → filter site, because ban serving runs on BOTH resolution paths (now also stated in §3.4.1 prose); and the serve step carries the precondition as a normative MUST with its reason stated (feed the FILTERED roster in and no suspended player is ever a member, so no ban ever decrements). No new lock owed here: the code half is already locked both ways by `DisciplineRulesTests`' membership pair (executed against a restored derivation and observed to fail — ERR-044-014's row) and the null-roster refusal; this entry is the spec-currency half only. |
 
 | ERR-030-048 | Season & Competition Loop #30 §3.4, found at **adversarial-review round 7 (H4)**, August 18, 2026, in the block `ERR-030-047` had rewritten one round earlier: §3.4's `AdvanceAndPlayNextRound` pseudocode ran the `OnClubFixturePlayed` pair and `fold?.Commit(DisciplineRules)` at **the same indent as `f.Played := true`** — i.e. UNGATED inside `for f in roundFixtures:` — while the comment block directly above justified their null-safety by appealing to "the same condition this whole block already runs under". **No such condition existed in the block.** The live code wraps both calls in `if (_disciplineDriver != null)` (`src/season-save/SeasonLoop.cs:982`) and `RosterIds` returns **null** when discipline is unwired (`SeasonLoop.cs:1751-1756`), so an implementer following the pseudocode verbatim passes null and takes the `clubPlayerIds` `ArgumentNullException` (`src/discipline/DisciplineRules.cs:329`) on the **first fixture of any career without discipline wired**. This is the LOUD twin of `ERR-030-047`: same block, same omission, opposite failure mode — -047 was a silent permanent ban, -048 a throw on fixture one. Two aggravating details. (1) The `fold?.Commit` on the next line **is** `?.`-guarded, which made the missing gate read as deliberate rather than absent. (2) The false justification was itself written by -047's fix pass, so the round that closed one half of the defect introduced the other and asserted a gate as its evidence — the failure mode this log exists to make visible. | High | 1 (`season-competition-loop/section-3.md`) | ✅ **Resolved August 18, 2026, spec-text only, same commit — the code was already correct.** `section-3.md` v2.18: the serve pair and the commit now sit under an explicit `if discipline is wired:`, and the null-safety comment cites THAT gate rather than one that was not there. Recorded in the gate's own comment because it is what makes the two defects twins and is easy to get backwards: the block is **not** gated on a CAREER being wired — a ban is served by the club playing WITHOUT him, on both resolution paths (FR-DC-011) — it is gated on DISCIPLINE being wired, which is what `RosterIds`' own null-return encodes. **Recorded, not fixed:** this pair of entries is the second time in two rounds that #30 §3.4's pseudocode has been found to disagree with `SeasonLoop.cs` on a detail no test covers, because the pseudocode is prose and nothing compiles it; the durable answer is a lock that reads the spec block, which is not in scope here. |
+| ERR-030-033 | Season & Competition Loop #30 §3.4.1 / league-bootstrap **KD-8 (acceptance)**, found by **executing A4a's corpus run** (August 12, 2026): KD-8's per-bucket acceptance bar — *"mean home and away goals within ±0.25 of the corpus mean"* — is **below the sampling error of the corpus KD-8 itself specifies**, so it cannot be satisfied by any model, including a correct one. KD-8 sizes the grid at ~18 matches per bucket; a bucket's mean therefore carries a standard error of `sqrt(var/n)`, and the measured per-bucket variances (0.33–7.21, rising with the mean because scorelines are counts) put that error at **0.135–0.633**. **15 of the 22 bucket-sides have a standard error larger than the whole ±0.25 bar.** The bar is stated as an agreement requirement between model and engine, but at this depth it is dominated by how precisely the engine's own mean is known — a perfectly specified model scored against a re-run of the same corpus would fail it too. The two halves were set independently (n from a compute budget, the tolerance from a plausibility judgement) and never checked against each other, which is why the defect survived AR-5 through AR-7 on this note: every review read the bar as a statement about the model. Reaching ±0.25 as a *resolvable* bar needs n ≈ 770/bucket (~8,500 matches, ~210 h serial at the measured 90 s/match) — three orders of magnitude past the budgeted run, so this is a bar to re-specify, not a run to re-size. **Distinct from ERR-030-034**, which is why the fit misses *at all*; this entry is why the miss cannot be measured. | High | 2 (`league-bootstrap-design.md` KD-8, `round-resolution-corpus.md`) | ✅ **RESOLVED August 12, 2026 — the bar is re-specified (owner-approved), and the same fit now reads mean-agreement PASS.** Deliberately NOT closed by widening ±0.25 to whatever this run achieved: a bar moved to fit its own result stops being a bar, and there is a standing owner ruling against exactly that move (`close-chance-creation-design.md` §10.9 item 6). Instead the bar is stated against the precision the corpus actually has, **a priori and for any corpus** — the standard construction of a test with a controlled false-alarm rate. KD-8 now carries **A1** per-cell `|Δ| ≤ max(0.25, 2·se)` (**±0.25 retained as a FLOOR**, so a deeper corpus automatically restores the original requirement rather than abandoning it), **A2** at most `1 + round(0.0455·cells)` exceedances with none over `max(0.40, 3·se)` (a 2σ screen over N cells expects ~4.55% to exceed by chance, so a zero-exceedance rule would fail a correct model on a large grid), **A3** a pooled `χ² ≤ χ²₀.₉₅(cells − 3)` — **where the statistical power actually lives**, since A1/A2 are per-cell screens blind to systematic misfit every individual cell passes — **A4** a scoreability floor of 18/bucket, without which the se-relative form is gameable by shrinking n, and **A5** the unchanged ±5 pp W/D/L bar plus a pinned n ≥ 250 for a resolvable *pass* and a requirement that a *failure* also exceed 2·se or be reported INCONCLUSIVE. **Measured against it, the August 2026 fit passes the mean half**: worst |z| = 2.06, one exceedance of an allowed two, no hard exceedance, pooled χ² = **16.0 on 19 dof** against a 30.1 threshold. The verdict is now reported in two parts — **mean agreement PASS, distribution shape FAIL** — because the two halves fail for unrelated reasons and a single flat verdict hid which, which had the practical effect of making ERR-030-034 look like a fit failure. All of it is computed and emitted by `tools/round-resolution-fit.py` (χ² critical values by Wilson–Hilferty, no third-party dependency, verified against exact values at dof 10 and 19), so no figure here is hand-copied. `league-bootstrap-design.md` KD-8; `RoundResolutionFitLockTests` v1.1 corrects its now-stale FAIL comments — its own tolerance is a regression guard, not this bar, since the suite has no standard errors. |
+| ERR-030-034 | Season & Competition Loop #30 §3.4.1 (FR-SN-013a) / league-bootstrap **KD-7 (model shape)**, found by **executing A4a's corpus run** (August 12, 2026): KD-7 resolves a fixture as two independent **Poisson** draws, and a Poisson variable's variance equals its mean *by definition* — the shape has no spare parameter for spread. The engine's scorelines are **over-dispersed**: across the 198-match corpus the dispersion index `var/mean` averages **1.395** over 22 bucket-sides, **19 of 22 are above 1**, and the pooled test is `chi2 = 521.7` on 374 dof — **z = +5.40**. So the engine produces more blowouts and more shut-outs than any Poisson with the same means can, and correspondingly **fewer draws**: at the `dSquad ≈ 0` acceptance bucket the corpus draws at **19.2%** against the fitted model's **26.8%** — a **7.6 pp** gap, which is the whole of the W/D/L bar's miss. That figure is measured at **n = 198**: the acceptance bucket was deliberately deepened past the grid's 18 (four parallel sample windows, 180 extra matches) precisely because ERR-030-033 makes the bar unresolvable at 18, and the deepening moved the draw share from 11.1% to 19.2% — so the grid-depth reading would have overstated this defect by more than a factor of two while still, correctly, detecting it. The gap is 2.7σ against the deepened corpus's own 2.8 pp standard error. **No choice of the three fitted parameters closes this** — `BaseGoals`, `GoalRatingSlope` and `HomeAdvantageRating` all move the two *means*, and the discrepancy is in the second moment. It is a statement about the model's FAMILY, not its coefficients, which is why it is filed against KD-7's shape rather than against the fit. Consequence if left: a quick-sim league table will show systematically **more draws and fewer decisive results** than the same fixtures played through the engine — the precise "league tables feel wrong" failure roadmap risk row 1 names, surviving a fit that did its job. | High | 2 (`league-bootstrap-design.md` KD-7, `round-resolution-corpus.md`) | ◑ **Recorded, NOT fixed — but the successor is now PRE-DECIDED and gated, August 12, 2026: `league-bootstrap-design.md` **KD-7a**.** The section pins what the successor would be with KD-7's own specificity (S1 NB2 marginal as `var = μ(1+αμ)`, **not** a constant ratio, because dispersion rises with the mean; S2 `NegativeBinomialInverseCdf` by inversion, pinned by name, **one uniform per side with the existing sub-streams unchanged**, so the keyed order-independent fixed-budget contract survives exactly; S3 a new `[GT] QuickSimDispersion` whose **zero case routes to `PoissonInverseCdf` verbatim** — an explicit branch, not a limit, so `α = 0` is bit-identical to today rather than identical-in-the-limit), and states four things that stop it being adopted prematurely. **S4 — α is NOT determined by this corpus**: 0.0773 weighted vs 0.1552 unweighted, a factor of 2.01, with **one 18-sample cell carrying 36% of the weighted fit** (a variance estimate at n=18 has ~33% relative error and the weights go as `1/var²`), so adopting on it would be fitting noise; the fitter now emits both estimators, the max single-cell leverage and a determined/not-determined verdict every run. **S5 — NB2 does not fix the draw deficit and must not be adopted expecting it to**: measured 26.5% draws vs Poisson's 26.8% and the engine's 19.2%, i.e. ~0.3 pp of a 7.6 pp gap. **S6 — the draw deficit gets no pinned successor**, because its mechanism is unestablished: the shared-swing family that would cut draws implies negative home/away correlation and the corpus refutes that (**+0.044 ± 0.073**, n=198, ~3σ from the ≈ −0.20 it predicts); a Dixon–Coles `ρ` remains the candidate but needs the joint scoreline histogram at depth, which is why the raw rows are now committed under `docs/tracking/corpus-data/`. **S7 — the adoption tripwire**: dispersion still z > 3, α determined, the draw gap still beyond 2·se under KD-8's A5, and the capture taken **post-defensive-wiring** — the corpus is produced by an engine in which no player has ever made a tackle (wiring backlog W2), and the second moment of scorelines is exactly what that wiring moves. **S8 corrects this row's own cost claim** (see the ⚠️ above): there is no save-format bump. **Both remaining findings inside this ERR are now separately stated** — marginal over-dispersion (real, family-inexpressible, successor pinned) and the draw deficit (real, mechanism unestablished, no successor) — which the original single causal sentence had conflated. |
+| ERR-016-009 | Deterministic Simulation #16 §2.3 — six of the nine listed data structures name no type in `src/deterministic-sim/`, and one declared field (`buildHash`) has no representation anywhere in `src/`. §2.3 is the spec's only data-structure list (§4.2 has been explicitly non-normative since v0.7; §4.4's module paths match no directory in the tree), so it reads as the type manifest it was never marked as | Moderate | 2 | ◑ Spec RESOLVED August 21, 2026 — §2.3 v1.1 carries a per-row implementation-mapping table and declares `src/` the surface authority. Two items RECORDED-OPEN: the `buildHash` gap (replay-identity contract; sits with the open `SaveManager` writes `Fingerprint = null` item) and the `ToleranceRow`/`ComparatorRegistry` Stage-1+ deferrals. No code change and deliberately no rename |
+| ERR-016-010 | Deterministic Simulation #16 §3.9.2 — the normative on-disk snapshot record layout is contradicted by `SaveManager` in **four** respects at once: no `environmentFingerprint` (which FR-DS-010 requires in every snapshot header and §3.9.2 already listed), no `recordTrailer`, `currentSnapshotDigest` stored inside the header block instead of after the payload, and no format identifier of any kind. Because the fingerprint could not be persisted, §4.2.2 step 3 was a guaranteed refusal on every disk-loaded header rather than a check — indistinguishable from having no check | Moderate | 1 | ✅ RESOLVED August 22, 2026 — spec + code, same commit. §3.9.2 revised to the record now emitted and consumed, new §3.9.2.1 pins record identity (magic-led) and the three-version separation; `SNAPSHOT_FILE_MAGIC` / `SNAPSHOT_FILE_FORMAT_VERSION` allocated in §3.4. **`SNAPSHOT_SCHEMA_VERSION` deliberately NOT moved** — it rides in the §3.2.3 digest preimage, so bumping it would invalidate the certified golden-vector corpus; the file frame carries its own version instead. Closes both `SaveManager` gaps: the `Fingerprint = null` write-site gap and the sibling missing build hash. 13 executed locks replace 3 `Assert.Ignore` stubs; 3 mutants executed. RECORDED, not fixed: nothing in the §4.2.2 lifecycle recomputes `currentSnapshotDigest` from the payload — **that remainder is CLOSED the same day as `ERR-016-011`**, so this entry carries no open item |
+| ERR-028-020 | Player Progression #28 §3.1 — the daily growth rate was `DailyPoints(ClassifyAgeBand(ageYears), …)`: a hard three-way step at an exact integer age on a continuous football judgment, with the identical classifier in the "deep" tier and §1.3's promised age-keyed curve existing nowhere in the spec. **FR-PG-007 and KD-8 REQUIRED the cliff.** Football-judgment proxy review, pattern (b)+(d) | High | 6 spec + 8 src | ✅ **Resolved August 22, 2026, spec + code same commit** — new §3.1.3: centred linear ramps of half-width `AGE_BAND_RAMP_HALF_WIDTH_YEARS` at each edge, evaluated as the difference of an exact integer cumulative so the per-day step stays in `{0, ±1}`, the cursor scale is unchanged and no save format moves. P5 exact for every half-width (a centred ramp has the step's integral), so no growth-rate recalibration is owed and ERR-028-018's no-residue invariant survives by construction; half-width 0 reproduces the §4.3 step byte-for-byte, exercised per-day over 45 years through a parameterised overload. `ClassifyAgeBand` demoted to a READ of the curve. Two invariants fail-loud at the computing site. Recorded-not-fixed: the finding's per-player-variance half is Stage-3 `curveEnabled`'s |
+| ERR-028-021 | Player Progression #28 §3.4 — retirement was `rec.Age >= RETIREMENT_AGE`, one hard integer age for the whole league with no position or attribute input: goalkeepers retired on a forward's clock, and one calendar day separated a career continuing from ending, identically for everyone. **FR-PG-013 REQUIRED it** ("hard at `RETIREMENT_AGE`"). Football-judgment proxy review, pattern (b)/(c) | High | 5 spec + 4 src | ✅ **Resolved August 22, 2026, spec + code same commit** — per-player `RetirementAgeDays(record)` compared in DAYS: baseline + `RETIREMENT_GOALKEEPER_BONUS_YEARS` + a full-range anti-symmetric offset over the Anticipation/Positioning/Composure mean *(**⚠️ CORRECTED August 24, 2026, `ERR-028-022`** — annotated, not restated: the **mean** form is retired. `floor(sum/3)` is not symmetric about the attribute midpoint, so the offset was anti-symmetric only on the `Ant == Pos == Comp` diagonal; the shipped code carries the SUM undivided, `(2·sum − 3·(MIN + MAX))·span / (6·(MAX − MIN))`, bit-for-bit identical on that diagonal)*. **P3 ledger entry recorded**: robustness is the obvious input and is deliberately NOT used — #29 and #41 already price Strength/Stamina/Balance twice over (`ERR-041-003`), so a third read would be that defect a third time. P5 exact at both scales: zero dials reproduce the retired comparison identically, and the offsets sum to exactly 0 over a uniform attribute population, so the league retirement RATE is unchanged. Still draw-free; three fail-loud config guards *(**⚠️ CORRECTED August 24, 2026, `ERR-028-022`** — annotated, not restated: the P5 sentence was FALSE of the implementation it described. The floored mean summed to **−204,621 days (−25.58 d/player)** over the uniform `[1,20]³` product — the whole league retiring ~2 months early, i.e. the rate change the sentence denied — and the lock behind it swept only the diagonal where the defect vanishes, while **neither of this entry's behaviour changes was locked at all**. True of the undivided-sum form now shipped, swept over the whole product; the zero-dial half is executed for the first time at T-PG-RET-008. Residual recorded: #27's `[6,14]` draw leaves ≈ −38 d/player on the generated league)* |
+| ERR-041-020 | Injuries & Medical #41 §3.4 — `AssembleRiskScore` presents as multi-factor risk assembly and omits player **age** entirely: from the sum, from the signature, and from §2's requirements, so nothing in the spec would have caught it. Age is among the best-established real-world risk factors, is already on the `PlayerRecord` the caller resolves to read the attributes it does use, and is already consumed by #31's valuation. Football-judgment proxy review, pattern (c) | Moderate | 4 spec + 5 src | ✅ **Resolved August 22, 2026, spec + code same commit** — `AgeRiskFor(ageYears)`, linear and anti-symmetric about `AGE_RISK_PIVOT_YEARS`, saturating at `±AGE_RISK_SPAN`, with **no threshold anywhere** (P1); positioned inside the sum BEFORE the mitigation, normatively, so robustness discriminates it *(**⚠️ CORRECTED August 24, 2026, `ERR-041-021`** — annotated, not restated: `RobustnessMitigation` is SUBTRACTED and addition commutes, so that position is a no-op for every input and the "so robustness discriminates it" consequence is false in both readings; the moved-across-the-mitigation form is a proven identity over 956,480 sampled inputs. The normative position is **inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE the clamp**. This row and the entry's own "The fix" paragraph are the two sites the `ERR-041-021` sweep did not reach)*. **P5 measured, not argued**: the pivot is #27's bootstrap mean age, so `SeasonInjuryRealismTests`' league/starter/reserve/unavailability bands all hold unmoved and all 26 pre-existing assembly expectations stay exact by passing the pivot. `AGE_RISK_SPAN = 0` is the exact pre-fix identity, exercised not asserted. New **FR-MD-025a** (suffixed deliberately — renumbering FR-MD-016..027 would be the cross-reference cascade `CLAUDE.md` names as this project's most recurring bug class) |
+| ERR-016-011 | Deterministic Simulation #16 §4.2.2 — nothing in the replay lifecycle re-derives a loaded record's OWN §3.2.3 digest. Step 4 validated the chain LINK (`prevSnapshotDigest`) and `currentSnapshotDigest` was stored, loaded and never recomputed, so a record whose payload — the authoritative state step 5 is about to rehydrate — had been altered loaded clean, as did one whose stored digest had been altered. The digest existed and was correct; nothing asked it anything | Moderate | 1 | ✅ RESOLVED August 22, 2026 — spec + code, same commit. §4.2.2 step 4 split into **4a** (chain link, unchanged) and new **4b** (`SnapshotCodec.ValidateCurrentDigest`), running BEFORE step 5 because unverified state must not be rehydrated; `ERR_DS_SNAPSHOT_DIGEST_MISMATCH = 0x160F` + `EC-016-016`. The §3.2.3 preimage gets a single owner (`ComputeSnapshotDigest`) so recorder and verifier cannot drift. **Lifecycle stays 8 steps** (FR-DS-012) — a split, not a renumbering. 3 new test methods carrying 4 locked behaviours (the fourth strengthens an existing test), plus a corrected happy-path fixture; 2 mutants executed, killing in both directions. No `DETERMINISM_DIGEST_VERSION` bump — the digest checked is the one §3.2.3 already defined |
+| ERR-028-022 | Player Progression #28 §3.4 — `GameReadingOffsetDays` floored the Anticipation/Positioning/Composure SUM to a mean before the anti-symmetric map, and `floor(sum/3)` is not symmetric about the attribute midpoint: ERR-028-021's published P5 claim ("the offsets sum to exactly 0 over a uniform attribute population — the league's retirement RATE is unchanged") was FALSE by **−204,621 days over the uniform `[1,20]³` product (−25.58 d/player)**, the whole league retiring ~2 months early, with the lock that purported to prove it sweeping only the `Ant == Pos == Comp` diagonal where the defect vanishes. **And neither of ERR-028-021's behaviour changes was locked at all** — reverting `AdvancePlayerTo` to the verbatim pre-fix `rec.Age >= RETIREMENT_AGE` left `PlayerProgression.Tests` 134/134 and `SeasonSave.Tests` 402/3 green. Adversarial review over the batch-1 landing | High | 3 spec + 3 src | ✅ **Resolved August 22, 2026, spec + code same commit** — the sum is carried undivided (`(2·sum − 3·(MIN + MAX))·span / (6·(MAX − MIN))`): exactly anti-symmetric over all 8,000 triples, and bit-for-bit identical to the retired form on the diagonal, so no expectation was rebaselined and no constant moved. The population lock now sweeps the whole product with a cardinality precondition; two new `ProgressionEngineTests` locks isolate the goalkeeper allowance and the attribute/day-resolution halves, **mutation-verified** to fail against the restored pre-fix predicate and to be the only two that do. **Residual RECORDED, not fitted away:** #27's generator draws `[6,14]` (centre 10) against the offset's neutral 10.5, so ≈ −38 d/player remains on the generated league; re-pivoting on the generator's mean is the coupling `ERR-041-020` refused for `AGE_RISK_PIVOT_YEARS`. Appendix C's worked example is corrected with it — its "average-reading outfielder, whose offset is 0" pivot is unattainable under EITHER form (the neutral point is the midpoint 10.5, which no integer attribute occupies), so that claim was false when written rather than made false here |
+| ERR-028-023 | Player Progression #28 §3.1 — the normative seed-credit MUST still ordered `SeedFrom` to credit "the seed day's own `DailyPoints` step for the player's seed-time age band (`GROWTH_DAILY_POINTS` in Growth, `DECLINE_DAILY_POINTS` in Decline, `0` in Stable)": the three-way step **ERR-028-020 retired**, mandated one section above the curve that replaced it, with `appendices.md` Appendix B asserting the same form in the present tense directly above that landing's own currency note. The two disagree at bootstrap ages **24, 25, 29, 30** — 4 of the 19 ages `RosterGenerator` draws — so an implementer following the spec reopens ERR-028-018's one-day accrual discrepancy for ~21% of the roster, silently and only inside the ramps. Adversarial review over the batch-1 landing | High | 2 spec + 0 src | ✅ **Resolved August 22, 2026, spec text only — the code was already correct** — both sites now name `DailyBandPoints(Age₀ · DAYS_PER_YEAR)` (§3.1.3), mirroring the §3.3 regen paragraph the ERR-028-020 commit amended for exactly this reason and stopped at — the grep-boundary shape the ERR-041-012 sweep hit five times. Superseded form annotated in place at both sites with the four disagreeing ages and the roster share; Appendix B's table arithmetic explicitly unaffected (its player sits far below the growth ramp) |
+| ERR-041-021 | Injuries & Medical #41 §3.4, **adversarial review over the ERR-041-020 landing**: the age term's normative position — "inside the sum, before the mitigation, **so robustness discriminates it**" — is arithmetically vacuous, because `RobustnessMitigation` is SUBTRACTED and addition commutes; the penalty is the same `+1200` at robustness 1, 14 and 20, and *larger in relative terms* for the more robust player, so the stated consequence is wrong in both readings. The claim was APPROVED text in three files plus the code doc, and T-MD-AGE-004 asserted the mutants fail: all three (term after the mitigation / after the `OccurrenceRiskMillMult` scaling / after the clamp) left the suite **74/74 green**, and the clamp mutant can return **above** `InjuryRiskMax`, breaking ERR-041-011's every-daily-probability-≤-1 invariant. The identical wording sat on `BASELINE_DAILY_RISK` from ERR-041-011. Carried with it: **H3** — the production call site (`PlayerCareerStates`, the only one, in the only assembly that constructs one) had **no lock at all**: neutralising `record.Age` left `SeasonSave.Tests` at 402/3, identical to baseline, and the realism bands published as the P5 evidence are **age-blind** (forced ages 17/26/35 give 623/783/929 league injuries, all three inside the band). **H7** — the monotone shape **inverts** E-4's Strong-rated young tail (a 19-year-old gets −1050, making 16–20-year-olds the safest players in the league) and duplicated the still-open R-1 under reserved `ERR-041-013`. | High | 5 spec/doc + 4 src | ✅ **Resolved August 22, 2026, spec + code same commit** — position restated at all five sites as **inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE the clamp** (both load-bearing: the staff seam must modulate the term, and it must not lift the score past the ceiling), the robustness sentence dropped and every superseded sentence annotated in place, `BASELINE_DAILY_RISK` corrected in the same commit rather than deferred. T-MD-AGE-004 rebuilt with a halving-`MedicalModifier` case (kills the scaling mutant) and a saturating-input case asserting exactly `InjuryRiskMax` (kills the clamp mutant), plus a pin of the retired claim as false. The after-the-mitigation mutant is an **identity** — byte-identical checksum over 956,480 sampled inputs — so it is unlockable by construction and the claim is withdrawn rather than re-locked. **H3:** new **T-MD-AGE-007** splits the instrument's own `InjuryCount` walk by age and asserts over-30s out-injure under-23s (measured **1.34×**, asserted `> 1.25×`); mutation-verified at **1.01×** and failing with the call site's age neutralised, where the four age-blind bands return the recorded pre-fix 783/2.08/1.13/9.5% and all pass. T-MD-AGE-006 keeps the P5 claim with the caveat that it establishes P5 and nothing else. **H7:** R-1 annotated in place in the research supplement as landed-in-part, `ERR-041-013` **narrowed** to the residual U-shape / young-tail arm, and #41 §3.4 / Appendix A / the catalogue corrected to say the veteran half follows E-4 and the 16–20 half inverts it. **The shape is deliberately NOT changed** — it is the supplement's design, awaiting owner sign-off. No `[GT]` moved, no draw, no stream, no domain tag, no format version |
+
 ---
 
 ## ERR-001: `IBallPhysicsCallback` fragments a single operation into four methods
@@ -3594,6 +3617,147 @@ share 93% → 36%.
 
 ---
 
+## ERR-008-023: Decision Tree #8 §3.2.3.2 — the keeper's shot-stopping reach was priced twice, and doing so scored zero goals over four seeds
+
+**Filed:** August 7, 2026 — found by execution, not review, on the first CI run to reach
+`MatchEngine.Tests` on this chain. **Status: RESOLVED** (same commit). Owner doc:
+`docs/tracking/football-judgment-proxy-review.md` (§6.4.2, the same owner doc as ERR-008-022).
+Doctrine authority: P3, the attribute ownership ledger.
+
+**This body entry was missing until August 17, 2026.** The Error Index row above (added at the
+landing commit) and this header's own v1.76/v1.77 rows have carried this id's record since
+August 7; `CLAUDE.md`, `open-issues.md`, `close-chance-creation-design.md` and a code comment in
+`OptionGenerator.cs` all cite `ERR-008-023`, but no `##` detail section was ever written for it —
+the gap this entry closes. Content below is sourced only from those existing records (the v1.76/
+v1.77 header rows, the Index row, the landing commit `476e37d`'s message, and the
+`ERR-008-023:` comment in `OptionGenerator.cs`); nothing new is asserted about the landing itself.
+The one genuinely new item is the bisect measurement in the last section. *(Drafted August 10,
+2026 on `claude/shot-lane-regression-bisect-vflxc2`, which never merged; ported here against the
+`ERR-028-019` reconciliation that branch predates — see the cross-reference note below.)*
+
+**Id provenance.** The index row for `ERR-008-023` was filed the same day as the landing
+(`476e37d`) with zero prior `ERR-008-023` citations anywhere in this log, `docs/specs/`, or `src/`.
+Not subject to the `ERR-008-021` double-allocation reconciled below (`ERR-028-019`, v2.13 of this
+header) — this id was never double-filed.
+
+**Cross-reference note.** `ERR-008-021` has two write-ups below. This entry cites the one whose
+form SHIPPED — *"a defender standing across the near post scored a fully open goal"*, filed
+August 5, landed as `accc941` — and never the second, *"the shot-lane occlusion could not tell an
+elite blocker from a poor one"* (PR #305), which the `ERR-028-019` pass marks SUPERSEDED and whose
+implementation was discarded at merge `14d0796`. Where the text below says `ERR-008-021`
+unqualified, the shipped entry is meant.
+
+**How found.** By execution. CI run `31188688249` (PR #303, head `a2987be`) — the **first** run
+ever to reach `MatchEngine.Tests` on this branch, that suite alone taking 22 m 55 s against the
+roughly 3 minutes CI run 402 survived before being cancelled — failed:
+
+```
+sim_match_engine_shot_outcomes
+failed predicate=goals-still-scored expected=true 0
+```
+
+Four seeds × 18 minutes, 72 minutes of football, **zero goals**. This also corrects a claim made
+earlier in the same session: run 402's suite sweep had **not** "run to completion" as recorded
+there — suites run in parallel, and `ui-framework` finishing last alphabetically at 16:57:38
+proved nothing about `MatchEngine.Tests`, the longest suite, which a job cancelled three minutes
+into testing never came near.
+
+**Cause: ERR-008-022's own headline fix.** The goal-centre-plane bound that -022 retired had
+discarded a keeper standing on his line for **every** shooter position (that is -022's own
+headline finding). Consequently the keeper-only `GK_BLOCKER_RADIUS_M` = 1.5 m blocking disc —
+present in the constant catalogue since the shot-lane model was first written — had **never been
+exercised by a single shot** before -022 landed. It went live for the first time at that landing
+and immediately removed roughly 42% of the goal arc on every shot, before any outfield defender is
+even counted:
+
+| shooter distance | arc blocked by the keeper alone | `GoalOpeningScore` |
+|---|---|---|
+| 6 m | 44.7% | 1.000 → 0.553 |
+| 16 m | 41.6% | 1.000 → 0.584 |
+| 25 m | 41.2% | 1.000 → 0.588 |
+
+`MIN_GOAL_VISIBILITY` (§3.1.4.1 gate 4, threshold 0.12) then withholds the SHOOT option from the
+generator entirely once the reading drops far enough, and `blockedArc` sums every blocker's
+contribution with no mutual-overlap correction, so a keeper plus two outfield defenders in the
+lane compounds toward the floor.
+
+**This is the P5 residual the `ERR-008-022` entry itself recorded as "recorded, not fixed" under
+KD-W1** ("the shot chain is not calibrated against a complete engine yet"): -022 strictly ADDS
+blockers to the occlusion count and landed with no recalibration, one landing after
+`ERR-008-021`'s population-preserving claim had itself been withdrawn (see that entry). The
+interest came due four seeds later.
+
+**Fix (spec + code, same commit).** §3.2.3.2 + §3.2.10 and `OptionGenerator.cs` /
+`UtilityWeights.cs`, same commit; doctrine P3. `GK_BLOCKER_RADIUS_M` **RETIRED** from the constant
+catalogue with a do-not-reintroduce note; every blocker, keeper included, now occludes with the
+single `BLOCKER_RADIUS_M` used for outfield players. The `gkness` scalar `ERR-008-022` introduced
+survives unchanged and still lerps the P3 ability exemption alone — a keeper is still read as
+geometry only, never weighted by ability, for the reason `ERR-008-021` gave: keeper shot-stopping
+quality is Goalkeeper Mechanics #11's to price (§3.5 save model, §3.7.0 rush), and #11 already
+prices it at contact. The 1.5 m radius was a **second**, uncredited, shot-stopping charge on top
+of that — "approximate arm reach + lateral movement" is a save-model argument, not a
+shot-lane-geometry one — so the shooter's read of the goal was billed for the same keeper twice.
+Retiring the radius removes the double charge; the ability exemption (which prices a *different*
+thing — perception, not reach) stays.
+
+Per `OptionGenerator.cs`'s own `ERR-008-023:` comment at the fix site: *"every blocker occludes
+with the same BODY radius, keeper included. The keeper's reach beyond his body is shot-stopping,
+which P3 assigns to Goalkeeper Mechanics #11 (§3.5/§3.7.0) and which #11 already prices at contact
+— charging it again here read it twice. The old keeper-only 1.5 m disc was never exercised: the
+pre-ERR-008-022 lane bound dropped a goal-line keeper for every shooter position, so it went live
+for the first time at that landing and removed ~42% of the goal arc on every shot, which is what
+took `goals-still-scored` to zero."*
+
+**Tests.** Suite 15 → **16** `OptionGeneratorTests`. New: `ShotLane_Goalkeeper_OccludesWithABodyNotAReach`
+— closed form 0.860770; the retired disc scored the identical shot 0.583540, and the lock fails
+anywhere near that value. Recomputed: `ShotLane_FarPostBlocker_OccludesTheGoal` 0.782157 →
+**0.927268** (its blocker stands on the goal line, so the GK read saturates and the old value was
+measuring the retired radius, not the far post). `ShotLane_GoalkeeperRead_IsContinuousAcrossItsBoundary`
+was one commit from becoming this file's **third tautology of its class**: with the radius half of
+the read gone, the sweep would have moved only the ability term — which an ability-neutral blocker
+zeroes — so it would have computed one geometric curve and passed regardless of what the read did.
+It now carries live attributes and asserts the actual swing (0.145 across the ramp, max step
+0.004).
+
+**Determinism impact.** Not stated explicitly anywhere in the source records for this landing, so
+recorded here from the evidence available rather than asserted: `git show 476e37d --stat` touches
+only `CLAUDE.md`, two `decision-tree` spec section files, `CHANGELOG.md`/`CHANGELOG-src.md`,
+`file-manifest.md`, `spec-error-log.md`, and `OptionGenerator.cs`/`UtilityWeights.cs`/
+`OptionGeneratorTests.cs` in `src/decision-tree/` — no `deterministic-sim` file, no
+`SNAPSHOT_SCHEMA_VERSION`, RNG stream, domain tag, or draw-order surface is touched. Digests move
+for any generated shot with a keeper in the shot lane, as intended — the same live-on-every-shot
+posture as `ERR-008-021` (the shipped form) and `ERR-008-022`.
+
+**Downstream measured August 7, 2026 (recorded at v1.77 of this header).** The chain's first full
+run on `main` (CI run 419, merge `9b8a7b4`) tripped two acceptance bands, both rebaselined by owner
+call to the post‑023 baseline: `sim_match_engine_keeper_contact`'s `no-deep-dive-early-miss` — one
+crossed episode 616.7 ms early, inside the pre‑`ERR-011-008` 456–2000 ms class — rebaselined `== 0`
+→ `<= 1` rather than widening the ms bound past that episode; and `sim_match_engine_close_chance`
+cosine — pooled −0.119 (seed `0xD1A6D05E`'s entire `ERR-008-018` gain returned, −0.232, while its
+partner held +0.078) — rebaselined −0.10 → −0.16, still refusing the pre‑fix ≈ −0.29. One of the two
+was invisible to the session that first ran PR #303: the 5,000‑line CI log‑tail cap hides
+`sim_match_engine_close_chance`, which prints early, so that run actually had 3 failures, not the 2
+the session could see. Both regressions were queued for the KD‑W1 calibration pass rather than
+fixed here — `ERR-008-021`'s P5 residual (exactness withdrawn in that entry) and this entry's own
+uncalibrated blocker-count increase are the recorded suspects. Test‑only; no spec text was itself
+the defect for this downstream measurement, so no further ERR id was allocated for it.
+
+**Bisected August 10, 2026 (measured, new).** Over the six-seed close-chance corpus plus twelve
+fresh seeds, holding the tree at `64513e4` and swapping only the three shot-lane files across
+`ERR-008-021`/`-022`/`-023`: the `sim_match_engine_close_chance` cosine regression attributed to
+this chain above is **entirely this commit** — seed `0xD1A6D05E` is bit-identical (n=156, +0.1168)
+before `ERR-008-021`, after `ERR-008-021`, and after `ERR-008-022`, and only moves at **this**
+entry (−0.2320). The movement is a trajectory resample, not a mechanism: no DRIBBLE code path
+reads `GoalOpeningScore`. Over 18 paired seeds the chain's directional effect on that metric is
+**−0.027 ± 0.039** (95% CI [−0.110, +0.055]; 8 seeds up, 10 down). See
+`close-chance-creation-design.md` §11. **Measurement currency:** the sweep held the tree at
+`64513e4`, which PREDATES the W2 tackle wiring (`ERR-014-006`, merged `ba40114`). The controlled
+comparison stands — only the three shot-lane files varied within it — but the absolute per-seed
+figures are not the values this metric reads at today's `main`, and re-deriving them needs a
+re-run on a post-W2 tree.
+
+---
+
 ## ERR-008-022: Decision Tree #8 §3.1.4.3 / §3.2.3.2 — the shot lane threw away the far post before the occlusion model ever ran
 
 **Filed:** August 6, 2026 — from the **adversarial review over the ERR-008-021 landing**, one day
@@ -4728,4 +4892,950 @@ correctly bottom-up and several specs cite it in that orientation.
 
 *End of Spec Error Log v2.44 — August 18, 2026.*
 
+---
 
+## ERR-016-011: Deterministic Simulation #16 §4.2.2 — the replay lifecycle never re-derives a loaded record's own digest, so an altered payload rehydrates clean
+
+**Filed and RESOLVED:** August 22, 2026, spec + code, same commit. **Status: ✅**
+
+**How found.** Recorded — not fixed — at the `ERR-016-010` landing, and closed here at the owner's
+direction. Writing that landing's tampered-digest lock, the first draft asserted that flipping a bit
+in the stored `currentSnapshotDigest` would be refused by `PrepareReplay`. It was not: the assertion
+failed, and the reason was that **`ValidatePrevDigest` compares `header.PrevSnapshotDigest` against
+the codec's stored `_prevDigest` and nothing else.** The record's own digest was written by
+`Encode`, stored on disk, loaded back — and never once recomputed.
+
+**What was and was not covered before this entry.**
+
+| Altered | Caught by | Verdict before |
+|---|---|---|
+| `prevSnapshotDigest` | step 4 chain link | refused |
+| `schemaVersion` / `digestVersion` | step 2 | refused |
+| the `EnvironmentFingerprint` | step 3 | refused |
+| record framing (magic, lengths, trailer) | `SaveManager.DecodeRecord` (`ERR-016-010`) | refused |
+| **`currentSnapshotDigest`** | — | **loaded clean** |
+| **the payload — the authoritative state itself** | — | **loaded clean, and rehydrated at step 5** |
+
+The last row is the one that matters. A snapshot's payload IS the Tier A/B state a replay resumes
+from; every other check on the path validates metadata around it. §3.2.3 defines a digest that covers
+the payload, `Encode` computes it correctly, and the on-disk record has carried it since May — the
+defect is not a missing digest, it is that **nothing ever asked the digest anything.**
+
+**Severity Moderate.** No production caller replays from disk today (`SaveManager.CommitAtomic` had
+none until `ERR-016-010` gave the record a correct format), so nothing shipped a silently-accepted
+bad record. The cost is that the integrity property the digest chain exists to provide was, on the
+record's own contents, not actually enforced anywhere.
+
+**Fix (spec + code, same commit).**
+
+- **§4.2.2 step 4 is split into 4a and 4b.** 4a is the chain link, unchanged. 4b re-derives the
+  §3.2.3 digest from the header and payload just loaded and compares it against the stored
+  `currentSnapshotDigest`, failing with the new `ERR_DS_SNAPSHOT_DIGEST_MISMATCH`. **The lifecycle
+  stays 8 steps** — FR-DS-012 binds an 8-step lifecycle and §4.6.2 diagrams one, and spec
+  renumbering cascades are this project's most recurring defect class (`CLAUDE.md`, KNOWN HAZARD), so
+  a split is strictly better than a ninth step for an identical outcome.
+- **4b MUST run before step 5**, stated normatively: a lifecycle that verifies after rehydrating has
+  already applied the bytes it was about to reject.
+- **The §3.2.3 preimage gets a single owner.** `SnapshotCodec.ComputeSnapshotDigest` is extracted and
+  called by both `Encode` and `ValidateCurrentDigest`. This is not tidiness: two hand-written
+  derivations of one preimage that agree only by inspection is the `ERR-010-002` class, and here it
+  fails badly in **both** directions — a verifier whose preimage drifts from the recorder's rejects
+  every honest record, while one that omits a field silently accepts tampering in it. §4.2.2 now
+  states that requirement.
+- `ValidateCurrentDigest` is **pure with respect to the chain**: it does not advance `_prevDigest`,
+  so calling it between 4a and 5 cannot disturb the next record's 4a.
+
+**Determinism impact: none.** No `DETERMINISM_DIGEST_VERSION` bump — the digest being checked is
+exactly the one §3.2.3 already defined and `Encode` already produced; what changed is that something
+now reads it. No preimage, field width or hash-input rule moved, no schema or file-format version
+moved, no RNG stream, no draw site, no golden vector touched.
+
+**Verification, including one thing the check found the moment it was switched on.**
+`ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero` — the suite's happy-path lifecycle test —
+**failed immediately**, because its "well-formed" fixture had never called `Encode` and therefore
+carried an all-zero `currentSnapshotDigest`. Its own comment called that "a valid digest value". It
+is not one; no recording produces it. The fixture had been asserting the happy path of a record that
+cannot exist, and it had been written that way to dodge a real conflation — calling `Encode` on the
+same codec instance advances that codec's chain authority and then breaks step 4a. The fix is the
+distinction the comment itself drew: **two codec instances**, a recording codec that encodes and a
+fresh replay codec that validates, which is what recording-side and replay-side chain authority
+actually are.
+
+Four behaviours are locked, across three new test methods and one strengthened existing test: an altered payload refused at 4b (every other check on the path passes on those
+bytes); an altered stored digest refused at 4b while the LOADER still succeeds — the two assertions
+together mark where the boundary sits, storage reports the bytes it found and replay decides whether
+they are the record they claim to be; an honest round-tripped record **passing** 4b; and
+`ValidateCurrentDigest` not advancing the chain. **Two mutants executed, killing in both
+directions:** deleting step 4b fails the two tamper locks, and making the verifier compute a slightly
+different preimage from the recorder fails four honest-record locks — the failure mode that would
+make a verification step worse than none.
+
+**This closes the item `ERR-016-010` recorded as "not fixed".** That entry's closing paragraph
+stands as written; the defect it named is now this entry's subject and is resolved.
+
+---
+
+## ERR-016-010: Deterministic Simulation #16 §3.9.2 — the normative on-disk record layout is contradicted by the implementation in four respects, and the fingerprint it requires was never persisted
+
+**Filed and RESOLVED:** August 22, 2026, spec + code, same commit. **Status: ✅**
+
+**How found.** Closing the two `SaveManager` gaps carried on the
+`EnvironmentFingerprint.floatModelHash` open-issues entry — `Fingerprint = null` on every disk load,
+and its `ERR-016-009` sibling, no build hash either — required knowing what the on-disk record is
+supposed to look like. §3.9.2 turned out to already specify one, normatively, and the code matched it
+in none of four respects:
+
+| §3.9.2 requires | `SaveManager` wrote |
+|---|---|
+| `environmentFingerprint` in the header bytes | nothing — the field was dropped on write and set to `null` on read |
+| `currentSnapshotDigest` **after** the payload | inside the fixed 87-byte header block |
+| an 8-byte `recordTrailer` (u64 total record size) | nothing — `grep -rn recordTrailer src/` returned zero files |
+| a stated header field order | a different order, plus `digestVersion` and the replay cursor, which §3.9.2 does not list |
+
+So this was never only a missing field. **The consequence that matters is the fingerprint one:**
+FR-DS-010 requires the fingerprint in every snapshot header and §4.2.2 step 3 validates it, but
+`ReplayEngine` had to fail closed on the `null` a disk load always produced — a step that can only
+ever refuse is indistinguishable from a step that is not there, and it had been carrying an
+`AR fix M-3` comment naming the wire-format gap as normal since June.
+
+**Severity Moderate, not Major.** `SaveManager.CommitAtomic` has **no production caller** — the only
+references were three `Assert.Ignore` stubs — so nothing shipped a record in the wrong layout. The
+cost was that a spec section read as normative while describing no artifact, and that the replay
+environment gate could not be exercised through disk at all.
+
+**Fix (spec + code, same commit).**
+
+- **§3.9.2** revised to the five-section record now emitted and consumed: a preamble, the header
+  block (with the fields the runtime actually persists, plus the §2.3.2 `buildHash`), a
+  length-prefixed payload, `currentSnapshotDigest`, and the `recordTrailer`. It also states that a
+  `fingerprintPresent = 0` record is for a genuinely unknown environment and **not** a licence for a
+  writer to drop a fingerprint it holds.
+- **New §3.9.2.1** pins record identity and versioning: the record is **magic-led**
+  (`SNAPSHOT_FILE_MAGIC`, checked before any later field is interpreted), and the three versions that
+  govern a record — `SNAPSHOT_FILE_FORMAT_VERSION`, `SNAPSHOT_SCHEMA_VERSION`,
+  `DETERMINISM_DIGEST_VERSION` — are separated with the reason attached.
+- **§3.4** gains `SNAPSHOT_FILE_MAGIC = 0x534E4150` and `SNAPSHOT_FILE_FORMAT_VERSION = 1`.
+- **Code:** `SaveManager` replaces the fixed 87-byte `WriteHeaderBytes`/`ReadHeaderBytes` pair with
+  `EncodeRecord`/`DecodeRecord`; every bound goes through `SaveBlobFramingHelpers.Require` (the
+  "new callers only" rule that file states, satisfied — this is a new caller rather than a fifth
+  private copy of the same guard). `CommitAtomic` now **throws** on a malformed header instead of
+  reporting it as `ERR_DS_STORAGE_ATOMICITY`: a return code from that method means the storage layer
+  failed, and mapping a caller's defect onto it sends the reader to the disk. `ReplayEngine`'s
+  step-3 comment, which described the wire-format gap as the normal case, is corrected.
+
+**Why `SNAPSHOT_SCHEMA_VERSION` did NOT move, which is the load-bearing decision.** It is written
+into the §3.2.3 snapshot-digest preimage (`SnapshotCodec.Encode` — `0x12 ‖ schemaVersion ‖ tick ‖
+prevDigest ‖ envFpDigest`), so bumping it moves **every** snapshot digest and invalidates the
+golden-vector corpus certified July 19, 2026 on a pinned host this project cannot currently re-run.
+It versions the authoritative STATE shape; identity metadata added to the file frame is not a state
+change. The file frame therefore carries its own version — exactly the split
+`MATCH_SAVE_FORMAT_VERSION` already draws (`match-save-file-design.md` KD-1 / L-1). **This also
+corrects a cost estimate recorded one commit earlier:** the `ERR-016-009` landing said closing these
+two gaps "means widening that header, i.e. the `SNAPSHOT_SCHEMA_VERSION` bump the digest-preimage
+exclusion deliberately declines to spend", and priced it at a golden-vector re-certification. On
+working the design that turned out to be avoidable: the correct instrument was a file-frame version,
+already precedented in this tree. **No digest moved and no golden vector was touched.**
+
+**Determinism impact: none to any existing artifact.** No `DETERMINISM_DIGEST_VERSION` bump, no
+`SNAPSHOT_SCHEMA_VERSION` bump, no RNG stream, no domain tag, no draw site, no draw-order change. The
+only format that changed is the `SaveManager` record, which had no production writer and now gates by
+magic — a file in the old layout is refused, never mis-parsed.
+
+**Verification.** The three `Assert.Ignore` save/load stubs are **activated**, not deleted. Their
+stated premise — "requires temp-directory fixture … activate when Stage 1 CI infrastructure supports
+file I/O in EditMode tests" — was stale: the gate runs plain NUnit on `net8.0` and the sibling
+`MatchSaveManagerTests` had been doing real file I/O on it for a month. `DeterministicSimSaveLoadTests`
+goes from 3 ignored stubs to **12 executed locks + 1 genuinely-deferred skip** (`SaveAtomicMidTick`,
+an API that does not exist): the disk round-trip with the fingerprint and build hash asserted, a
+disk-loaded header **passing** §4.2.2 step 3, a foreign fingerprint **failing** it (the half that
+proves the gate discriminates), null-fingerprint round-trip, the write-side build-hash refusal, bad
+magic, padding, a corrupt trailer, the chain-break path, and the missing-file/storage-code split.
+**Three mutants executed:** never writing the fingerprint fails three tests; accepting an empty build
+hash fails exactly one; deleting the record-trailer comparison fails exactly one — **and that last
+lock exists only because the first mutation run found it did not.** The padded-record test had been
+written as the trailer's lock, the mutant survived it, and a test that only the trailer can fail (a
+corrupt trailer value at unchanged file length) was written in response. That is the
+"which fixes have a test that fails if the fix is reverted?" question from the #29/#41 review loop,
+applied and answered against this landing.
+
+**RECORDED, not fixed — a third defect on the same surface.** *(CLOSED the same day as
+`ERR-016-011`, at the owner's direction — §4.2.2 gained step 4b. The paragraph below is left exactly
+as filed; it is what this entry recorded, and the closure is the successor entry's, not this one's.)*
+Nothing in the §4.2.2 lifecycle recomputes `currentSnapshotDigest` from the payload it just read: step 4 validates the chain LINK
+(`prevSnapshotDigest`) and the current digest is stored, loaded and never re-derived. A record whose
+stored current digest — or whose payload — has been altered therefore loads clean. This is a
+distinct defect from the two closed here, it is outside what closing them requires, and
+`SaveLoad_ValidateHeader_RejectsTamperedDigest` pins today's behaviour explicitly so that the day
+someone adds the recomputation, the test fails and says why.
+
+---
+
+## ERR-016-009: Deterministic Simulation #16 §2.3 — six of the nine listed data structures name nothing in the implementation, and `buildHash` has no representation anywhere
+
+**Filed:** August 21, 2026 — surfaced while building `docs/tracking/data-contract-index.md`, whose
+landing rule is that every type it names must be verified to exist before the row ships. Two of that
+index's own rows failed the check and were corrected pre-landing; this entry is the third failure,
+which turned out to be the spec's defect rather than the index's. **Status: ◑** — spec RESOLVED same
+commit; two recorded gaps stay OPEN.
+
+**How found.** Each of §2.3's nine named structures was checked against the tree with
+`git ls-files 'src/*' | xargs grep -l '\b<Name>\b'` and a declaration grep. Result, verbatim:
+
+| §2.3 name | files mentioning | declared as a type |
+|---|---|---|
+| `DeterminismContext` | **0** | 0 |
+| `PhaseDigest` | 1 (a test comment describing a digest preimage) | 0 |
+| `RngStreamKey` | **0** | 0 |
+| `RngCursor` | 12 (all `RngStreamState.RngCursor`, a *field*) | 0 |
+| `ToleranceRow` | **0** | 0 |
+| `ComparatorRegistry` | **0** | 0 |
+| `SnapshotHeader` | 17 | 1 |
+| `DespawnLog` / `DespawnEntry` | 6 / 4 | 1 / 1 |
+| `ReplayCursor` | 7 | 1 |
+
+Six of nine are not types. Four (`DeterminismContext`, `RngStreamKey`, `ToleranceRow`,
+`ComparatorRegistry`) have **zero textual presence in `src/` at all**.
+
+**Why §2.3 carries the weight.** §4.2 was reframed as *non-normative sketches* at its own v0.7, and
+§4.4 is "recommended module ownership" listing paths (`sim/tick/*`, `sim/rng/*`, `sim/snapshot/*`,
+`sim/replay/*`, `sim/determinism/*`) that match **no directory in the tree** — `src/deterministic-sim/`
+is flat. So §2.3 is the only surviving data-structure list, is not marked non-normative, and its own
+version history treats it as binding: v0.7 records "corrected `RngStreamKey` (removed `actionOrdinal`
+from key) and extended `RngCursor`", i.e. two structures were revised as contract text while neither
+has ever existed as a type.
+
+**The substantive half — `buildHash`.** Four of the six are naming drift with a correct
+implementation underneath (`RngCursor`/`RngStreamKey` are field groups on `RngStreamState`;
+`PhaseDigest` is a computation whose preimage is locked by golden-vector corpus D-01/D-02). Two are
+honest not-yet-built (`ToleranceRow`, `ComparatorRegistry` — the Stage-1+ tolerance matrix; the three
+approved comparators do exist, as `DivergenceDetector.CompareTierAFloat` / `CompareTierBFloat` /
+`CompareDigests`, but no registry does). **`DeterminismContext` is neither.** Its `matchSeed`,
+`schemaVersion` and `digestVersion` all exist, scattered across consumer contexts and
+`SaveManager`/`SnapshotCodec`/`ReplayEngine` — but `buildHash` exists nowhere, and
+`EnvironmentFingerprint` does not carry it either (it has `WorkerCount`, `SchedulerPolicy`,
+`ReductionTopology`, `SimdFeatureLevel`, `FloatModelHash`, `UnicodeNormalizationVersion` — no build
+hash). On a spec whose entire subject is replay identity, **two builds differing only in compiled
+code are currently indistinguishable to everything downstream of §2.3.**
+
+**Severity is Moderate, not Major, and the reason matters.** Nothing reads a `buildHash` today, so
+there is no runtime defect and no digest consequence — this is contract drift, the
+`ERR-029-008` / `ERR-041-012` class (a spec publishing a surface the code does not have). The cost is
+that an implementer reading §2.3 as the type list writes six phantom types, and a reviewer asking
+"does the code match §2.3?" gets no signal in either direction.
+
+**Fix (spec only, same commit).** §2.3 v1.1 gains a per-row implementation-mapping table naming each
+structure's real surface and status (TYPE / FIELDS ON / COMPUTED / DEFERRED / SPLIT + GAP), plus a
+normative declaration that **`src/` is the surface authority and §2.3 is the concept inventory** —
+with each production file's `// Spec:` header as the per-file authority (a header carried by 682 of
+682 non-test `src/*.cs` files, measured this date). Two normative consequences are stated rather
+than silently absorbed: `buildHash` is recorded as an **open GAP**, and the six names are declared
+**NOT rename targets** — `RngStreamState.RngCursor` and its siblings are correct as built and are
+Tier-A serialized state, so renaming a serialized field to match a document would move state for no
+behavioural gain. The spec was the thing that needed to tell the truth.
+
+**Determinism impact:** none. Spec text only — no schema version, no RNG stream, no domain tag, no
+draw site, no draw-order change, no `.cs` touched by this entry. No gate run required; the
+`data-contract-index.md` row that surfaced it is verifiable by the grep commands above.
+
+**Recorded, not fixed (both OPEN):**
+- **`buildHash` has no representation in `src/`.** Sits with the existing open item that
+  `SaveManager` still writes `Fingerprint = null` — the same replay-identity surface, unimplemented
+  from two directions. *(**CLOSED August 22, 2026** — see the resolution below. The bullet is kept
+  as written because it is what the filing recorded.)*
+- **`ToleranceRow` / `ComparatorRegistry` are Stage-1+ deferrals.** Now marked as such in §2.3
+  rather than reading as built. §4.4's `sim/determinism/*` "tolerance matrix" module does not exist.
+  *(Still OPEN.)*
+
+---
+
+### RESOLUTION of the `buildHash` half — August 22, 2026 (spec + code, same commit)
+
+**Status moves ◑ → ◑ (one of the two recorded gaps closed; the Stage-1+ deferrals stay open).**
+
+**The decision.** `buildHash` is a SHA-256 over the **Module Version IDs of a declared authoritative
+assembly closure**:
+
+```
+SHA-256( 0x2E ‖ BUILD_IDENTITY_VERSION ‖ moduleCount ‖ ( assemblyName ‖ moduleVersionIdHex )* )
+```
+
+modules sorted by ordinal assembly name, every field through `CanonicalSerializer`, result 64
+lowercase hex chars. The MVID is the identity Roslyn stamps into each emitted module: it moves
+whenever the emitted IL moves, and under deterministic compilation (the compiler's default) it is
+stable across rebuilds of identical inputs.
+
+**Why not the other two candidates the filing named.** A **CI-stamped commit** identifies *source*,
+not binary — a dirty working tree, a different compiler, or a different target framework all produce
+different binaries under one commit, and the developer builds where determinism defects are actually
+found carry no stamp at all. The **`.asmdef` closure alone** names *which* assemblies participate,
+not what is in them, so two builds differing only in compiled code have identical closures. The
+closure survives as the **scope selector**; the MVIDs supply the **content**, so the adopted answer
+is not a third option but the union of the two workable ones.
+
+**Four rules, each with a reason that is not aesthetic.**
+1. **The closure is DECLARED, never DISCOVERED.** `AppDomain.GetAssemblies()` returns what happens to
+   have been loaded, which differs between a player run, an editor run and a test run of one build.
+   `MatchEngineBuildIdentity` names its 20 modules with `typeof` expressions — the composition root is
+   the one place that already references everything it wires, so a missing module is a compile error,
+   not a silently shorter hash. `deterministic-sim` could not own the list: it is a cross-cutting
+   foundation and may not reference the layers it would have to name.
+2. **`buildHash` is OUTSIDE every digest preimage.** This is the load-bearing constraint, and it is
+   what kept the blast radius at one save format. `EnvironmentFingerprint.ComputeDigest()` is the
+   envFp slot of the §3.2.3 snapshot-header preimage (`SnapshotCodec.Encode` line 77), and
+   `header.SchemaVersion` is in that preimage too — so putting the build hash on the fingerprint, or
+   bumping `SNAPSHOT_SCHEMA_VERSION` to widen the deterministic-sim header, would have moved every
+   snapshot digest and invalidated the golden-vector corpus certified July 19, 2026 on a pinned host
+   this project cannot currently re-run. `SnapshotHeader` was the right home for the opposite reason:
+   it already carries `schemaVersion` and `digestVersion`, i.e. two of `DeterminismContext`'s four
+   fields, so this **completes the split §2.3 v1.1 documented** rather than creating a parallel type.
+3. **Mismatch fails closed, before any state is touched** — `ERR_DS_REPLAY_BUILD_MISMATCH` (0x160E),
+   a code distinct from `ERR_DS_REPLAY_ENV_MISMATCH`: a recompiled engine on the same host passes the
+   fingerprint check and must still be refused, and collapsing the two axes is the reading this entry
+   was filed against.
+4. **Collision-avoidance, not rebuild-stability.** Under a non-deterministic toolchain the MVID moves
+   on every rebuild and prior saves are refused. A false refusal is loud; two different builds hashing
+   alike silently validates a divergent replay.
+
+**Landed.** `src/deterministic-sim/BuildIdentity.cs` (`BuildModule` + the hasher, fail-loud on an
+empty closure, a duplicated name, a `default(BuildModule)`, and a non-ASCII name that §3.2.4.1's
+encoder would silently mangle); `SnapshotHeader.BuildHash` + a **required** `Initialize` parameter;
+`TickOrchestrator`'s constructor takes it beside the fingerprint; `MatchEngineBuildIdentity` declares
+the closure and caches the hash; `MatchEngine` stamps it at boot, copies it in
+`CaptureDurableHeader`, and gates it at `RestoreFromSnapshot` step 0; `MatchSaveCodec` carries it
+(`MATCH_SAVE_FORMAT_VERSION` **1 → 2**, `match-save-file-design.md` KD-7) and refuses an empty value
+at **both** ends. `SaveManager` sets `BuildHash = null` explicitly, recording that its Stage-0 87-byte
+layout carries neither the fingerprint nor the build hash.
+
+**Spec:** #16 §2.3 v1.2 (mapping row GAP → SPLIT; the v1.1 "open GAP" text kept **frozen and quoted**
+rather than deleted), new normative **§2.3.2** and **FR-DS-014**; §3.4 v1.0.16 gains
+`DOMAIN_TAG_BUILD_IDENTITY = 0x2E`, `BUILD_IDENTITY_VERSION = 1`, `ERR_DS_REPLAY_BUILD_MISMATCH =
+0x160E`; §3.10 gains `EC-016-015`. The tag is allocated **after** the roadmap §6 reserved block
+`0x2B`–`0x2D` so every spec-pinned subsystem number stays stable, and takes **no** `SubsystemOrdinals`
+value (no registered stream — the `0x2A` / ERR-041-012 precedent).
+
+**Determinism impact: none to any existing artifact.** No `DETERMINISM_DIGEST_VERSION` bump, no
+`SNAPSHOT_SCHEMA_VERSION` bump (either one), no RNG stream, no draw site, no draw-order change, no
+golden vector moved. The only format that moved is the match save file, which gates by version and
+does not migrate (KD-1).
+
+**Verification.** 27 new locks — 16 in `BuildIdentityTests` (an independently derived golden vector
+from a Python mirror of the preimage, declaration-order invariance, name/MVID/count sensitivity, and
+every guard) and 11 in `MatchEngineBuildIdentityTests` (closure-drift, per-module sensitivity across
+the real closure, header carriage, KD-7 round-trip, both empty-hash refusals, and the restore gate
+with a positive control). **Three mutants were executed, each killed by exactly one lock:** dropping
+one declared assembly fails `DeclaredClosure_CoversEveryReferencedTacticalDirectorAssembly`; deleting
+the restore gate fails `Restore_RefusesAForeignBuildHash`; deleting the decode-side refusal fails
+`Codec_RefusesABlobCarryingAnEmptyBuildHash`. **Whole-tree gate at HEAD: 33 test assemblies, build 0
+errors and the same 5 warnings as baseline, quarantine empty; `DeterministicSim.Tests` 72/0/4 and
+`MatchEngine.Tests` 472/1/11, against a pre-change baseline run of this same tree (captured before any
+`src/` file was touched) of 56/0/4 and 461/1/11.** Diffing the two runs line by line shows **exactly
+two suites changed, by exactly the 16 + 11 new locks, every other suite byte-identical**; the one
+failure in both runs is the inherited owner-held-red `sim_match_engine_close_chance`. **The suite also
+caught a real defect on first run:**
+`CaptureDurableHeader` deep-copies the live header field by field and would have dropped the new
+field, so every save would have carried `BuildHash = null` and the gate would have skipped itself —
+the whole landing green and inert.
+
+**Recorded, not fixed:** the `SaveManager` `Fingerprint = null` write-site gap on the same contract
+is untouched, and now has a sibling — that header carries no build hash either, by the same Stage-0
+wire-format limitation. Both are recorded at their site and in `open-issues.md`. Closing them means
+widening the deterministic-sim header, which is the `SNAPSHOT_SCHEMA_VERSION` bump rule 2 above
+declines to spend today.
+
+---
+
+---
+
+## ERR-028-020: Player Progression #28 §3.1 — the daily growth rate was a hard three-way step at an exact integer age, and §1.3's promised age-keyed curve existed nowhere
+
+**Filed:** August 22, 2026 — the football-judgment proxy review's batch-1 #28 finding
+(`docs/tracking/football-judgment-proxy-review.md` §3 "Player / season core layer", pattern (b) **and**
+(d); landing order §6.3.1 batch 1). **Status: ✅ Resolved August 22, 2026, spec + code, same commit.**
+
+**The defect.** `GrowthProjection.AdvanceDayForPlayer` computed its daily accrual as
+`DailyPoints(ClassifyAgeBand(ageYears), …)`, a three-way lookup returning `GROWTH_DAILY_POINTS`,
+`0`, or `DECLINE_DAILY_POINTS`. So the football judgment *"is this player still developing?"* — continuous
+everywhere in reality — was answered by a step function at an exact integer age: full rate on the last
+day of a player's 23rd year, exactly zero on the first day of his 24th, with the mirror discontinuity at
+`DECLINE_AGE`. Two further consequences the review itemised: the "deep" `curveEnabled` tier calls the
+identical classifier, so the cliff was not something Stage 3 removed; and §1.3 promised "per-attribute
+CA/PA growth-decline curves keyed to age" while **no age-continuous curve existed anywhere in the spec
+text** — pattern (d) on top of pattern (b). The spec did not merely permit the cliff: **FR-PG-007 and
+KD-8 required it**, by making the literal §4.3 band step the mandated curve-off behaviour.
+
+**The fix (doctrine P1 + P5).** Each band edge becomes a linear ramp of half-width
+`AGE_BAND_RAMP_HALF_WIDTH_YEARS`, **centred on the old step**, evaluated in DAYS. New §3.1.3 states the
+rate and the integral.
+
+The implementation is the difference of an exact integer **cumulative**, not a per-day rate, and that
+choice is load-bearing: `GrowthCursor` is integer fixed-point at a scale where one day of full growth is
+one unit (`POINT_COST = DAYS_PER_YEAR`, KD-8), so a per-day rate has nothing between 0 and 1 to return.
+`AccruedBandPoints(n)` closes in `u = n − (g − h)` / `v = n − (e − h)`, both bounded by `2h`, so the
+squared term cannot overflow for an anchor near `MAX_DERIVABLE_AGE_YEARS`, and `DailyBandPoints(ageDays)`
+is its first difference. The per-day step therefore stays in `{0, ±1}` while its DENSITY follows the
+continuous rate exactly — **so the persisted cursor's scale is unchanged and
+`PROGRESSION_SAVE_FORMAT_VERSION` does not move.** The alternative considered and rejected was rescaling
+the cursor to milli-points, which is simpler to read and would have forced a format bump plus a refusal
+of every existing save, to buy a resolution the difference-of-integral form already provides.
+
+**P5 is exact rather than fitted.** A centred ramp has the same integral as the step it replaces, for
+**every** half-width including 0: `G(∞) = GROWTH_AGE · DAYS_PER_YEAR` and the decline total past
+`e + h` is `n − e`, identically to the step model. So the curve redistributes accrual across an edge
+without creating or destroying any, no growth-rate recalibration is owed by the shape change, and
+ERR-028-018's no-residue traversal invariant survives **by construction** rather than by re-fitting —
+the §5 traversal lock now runs to the end of the ramp and asserts the identical totals.
+
+**One consequence that looks like a regression and is not.** A player *seeded inside* a ramp finishes
+growth holding a fractional cursor: his own remaining integral is not a whole multiple of `POINT_COST`,
+and the remainder is carried against his first days of decline. That is arithmetically distinct from
+ERR-028-018's pathology, which was a whole point **short** of the integral on every traversal for every
+seed age — and it is easy to mistake for its recurrence, whose natural "repair" (re-rounding the
+accrual) would put the cliff back. Locked separately, and stated in §3.1.3 and Appendix B for that
+reason.
+
+**KD-8 / FR-PG-007 survive as the dial's OFF position.** `AGE_BAND_RAMP_HALF_WIDTH_YEARS = 0` reproduces
+the retired step **byte-for-byte**, not identically-in-the-limit — the #41 FR-MD-027 and #30 KD-7a
+posture. It is **exercised**, per day across a 45-year sweep, through a parameterised
+`DailyBandPoints(ageDays, rampHalfWidthYears)` overload: the `[GT]` is read once at static
+initialisation, so the parameterised overload is the only way to exercise the OFF identity without
+recompiling. **Corrected August 27, 2026 (round 3 / M10):** the former sentence said the gate
+"runs config-unbound". That premise was false: this catalogue has no config binding yet. The test
+seam remains necessary to execute an alternate dial value, but not for the reason originally given. An
+identity asserted only in prose is still precisely the class of claim the `ERR-008-021`/`-022`
+chain had falsified three times on first execution.
+
+**`ClassifyAgeBand` demoted, not deleted.** It now returns the SIGN of the year's own net accrual, read
+from `AccruedBandPoints`. Re-deriving a band from `GROWTH_AGE`/`DECLINE_AGE` beside the curve would be a
+second surface answering a question the curve already answers — the parallel-surface class this project
+has filed three times (`LineupSelector.CanSelect` nearest). Two of its answers invert, which is the fix:
+`GROWTH_AGE` now reads Growth and `DECLINE_AGE` reads Decline, both being inside their ramps.
+
+**Two catalogue invariants, enforced fail-loud at the computing site** (the `MedicalStep.DrawOccurrence`
+posture, whose rationale is `ERR-041-003`'s: the catalogue lock runs config-unbound and sees only the
+fallback): non-negative half-width, and `2 · half-width ≤ (DECLINE_AGE + 1) − GROWTH_AGE` so the two
+ramps stay disjoint — a day inside both would accrue growth and decline at once.
+
+**Recorded, not fixed.** The review's finding also names "no per-player variance" in the growth rate.
+That is the Stage-3 `curveEnabled` tier's: it needs §3.2's `(PA − CA)` modulation, and a per-player term
+added here would either duplicate that or introduce #28's first RNG draw site — forcing the
+`player-progression.regen` stream to register for a value the season boundary has not yet needed
+(FR-PG-020, FR-LW-031's phantom-surface class). The cliff is what this ERR removes.
+
+**No draw, no stream, no domain tag, no `SNAPSHOT_SCHEMA_VERSION`, no format version.**
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/player-progression-lifecycle/section-1.md` | §1.3, KD-8 | Age-continuity moves Stage 3 → Stage 2; KD-8's identity moves onto the ramp dial's off position (v0.4) |
+| `docs/specs/player-progression-lifecycle/section-2.md` | FR-PG-007 | The FR mandated the defect; conditioned on half-width 0, with the superseded requirement annotated (v0.8) |
+| `docs/specs/player-progression-lifecycle/section-3.md` | §3.1 pseudocode, new §3.1.3 | The rate, the integral, the P5 argument, the invariants, the carried-fraction distinction (v0.9) |
+| `docs/specs/player-progression-lifecycle/section-4.md` | §4 file map | `AbilityModel.cs` now hosts the curve (v0.4) |
+| `docs/specs/player-progression-lifecycle/section-5.md` | §5.3, new §5.3.1 | T-PG-ID-001 revised; T-PG-AGE-001..005 allocated (v0.6) |
+| `docs/specs/player-progression-lifecycle/appendices.md` | Appendix A, Appendix B | The `[GT]` row; `GROWTH_/DECLINE_DAILY_POINTS` re-described; Appendix B's currency note (v0.7) |
+| `src/player-progression/PlayerProgressionConstants.cs` | GT region | `+ AgeBandRampHalfWidthYears` |
+| `src/player-progression/AbilityModel.cs` | — | `+ DailyBandPoints`, `+ AccruedBandPoints`, `+ GrowthPhaseDays`/`DeclinePhaseDays`/`RampHalfWidthDays`; `ClassifyAgeBand` rewritten as a read |
+| `src/player-progression/GrowthProjection.cs` | step 2 | `DailyPoints(ageDays, …)` delegates to the curve |
+| `src/player-progression/ProgressionEngine.cs` | `SeedLifecycle` | The seed-day credit takes the continuous step, not the three-way one |
+| `src/player-progression/RegenGenerator.cs` | `BandStepFor` | The **second** construction site owing the same credit — found on re-reading, inert at today's regen ages and fixed because it diverges silently the first time either the regen band or the ramp moves. *(⚠️ CORRECTED August 23, 2026, adversarial review round 1 — as landed this site had **no test that fails when it is reverted**, because it is inert at today's constants, so the landing's "Both locked" claim was false for this half. A lock now exists: `BandStepFor` is `internal` and `RegenGeneratorTests` drives it at age 24 — inside the growth ramp, where the retired classifier and the curve disagree — asserting delegation to `AbilityModel.DailyBandPoints`. Mutation-verified: restoring the `ClassifyAgeBand`-based form fails it with `Expected: 0, But was: 1`.)* |
+| `src/player-progression/tests/AbilityModelTests.cs` | — | 5 locks (1 rebaselined onto the fix, 4 new; a fifth new lock belongs to `ERR-028-021`) |
+| `src/player-progression/tests/GrowthProjectionTests.cs` | — | Decline lock rebaselined to the full-rate age; `+ InsideTheDeclineRamp_TheDrainIsPartial_NotAllOrNothing` |
+| `src/player-progression/tests/ProgressionEngineTests.cs` | — | Traversal lock extended through the ramp; `+ ASeedInsideTheGrowthRamp_CarriesAFraction_NotALostPoint` |
+| `src/season-save/tests/SeasonLoopProgressionTests.cs` | slot-1 wiring lock | Ramp-aware classification; `+ inRamp` precondition |
+
+---
+
+## ERR-028-021: Player Progression #28 §3.4 — retirement was one integer age for the whole league, with no position or attribute input
+
+**Filed:** August 22, 2026 — the football-judgment proxy review's second batch-1 #28 finding
+(`docs/tracking/football-judgment-proxy-review.md` §3, pattern (b)/(c)).
+**Status: ✅ Resolved August 22, 2026, spec + code, same commit.**
+
+**The defect.** `ProgressionEngine.AdvancePlayerTo` flagged retirement on
+`rec.Age >= PlayerProgressionConstants.RETIREMENT_AGE` — a single hard integer-age comparison with no
+draw and no input of any kind beyond age. Two consequences: **goalkeepers retired on a forward's
+clock**, despite playing markedly longer careers in real football; and one day of the calendar was the
+whole difference between a career continuing and ending, identically for every player in the league.
+As with ERR-028-020 the spec did not merely permit this — **FR-PG-013 required it**, "hard at
+`RETIREMENT_AGE` (the §4.3 literal)".
+
+**The fix (doctrine P1 + P3 + P5).** `AbilityModel.RetirementAgeDays(record)` returns a per-player
+threshold in **days**: `RETIREMENT_AGE · DAYS_PER_YEAR`, plus `RETIREMENT_GOALKEEPER_BONUS_YEARS` for a
+goalkeeper, plus a full-range anti-symmetric offset over the Anticipation / Positioning / Composure
+mean. `AdvancePlayerTo` compares `worldDay − BirthWorldDay` against it. One attribute point moves the
+day by ~76 days at today's span — the cliff removed, not relocated (the full-range ramp form
+`ERR-008-019` was owner-revised to, with no plateau anywhere across `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]`).
+
+*(**⚠️ CORRECTED August 24, 2026 (`ERR-028-022`) — "over the Anticipation / Positioning / Composure
+**mean**" describes a form that no longer exists, and is annotated rather than restated.** The landed
+implementation floored the reading trio's SUM to a mean before the anti-symmetric map, and
+`floor(sum/3)` is not symmetric about the attribute midpoint, so the offset was not anti-symmetric at
+all off the `Ant == Pos == Comp` diagonal. The mean form is **retired**: the shipped code carries the
+SUM undivided — `(2·sum − 3·(MIN + MAX))·span / (6·(MAX − MIN))` — which is exactly anti-symmetric over
+all 8,000 triples and bit-for-bit identical to the retired form on the diagonal, so nothing was
+rebaselined and no constant moved. See `ERR-028-022` below for the measured consequence and the
+`[6,14]` generator residual it records rather than fits away.)*
+
+**P3, and it is the interesting half.** The obvious input is robustness — a durable player lasts longer
+— and it is **deliberately not used**. #29's `TrainingStep.ComputeInjuryRisk` and #41's
+`RobustnessMitigation` already price `Strength`/`Stamina`/`Balance` twice over, which `ERR-041-003`
+records as a contract-level double count that neither spec may unilaterally drop; a third read here
+would be that same defect a third time, in the layer best placed to notice. Career length is instead
+owned by the reading trio, which no other subsystem consumes: the player who ages well is the one whose
+game rests on reading play rather than on the pace he is losing. Recorded in §3.4 as a **ledger entry**,
+so a future spec wanting a career-length term must find its stage there first.
+
+**P5, exact at both scales.** At a zero goalkeeper bonus and a zero reading span,
+`ageDays >= RETIREMENT_AGE · DAYS_PER_YEAR` is *identically* the retired `AgeYears >= RETIREMENT_AGE`
+(age being that quotient, floored) — the dial's off position reproduces the old rule rather than
+approximating it. At the shipped values the offset is anti-symmetric about the attribute midpoint and
+C# integer division truncates toward zero symmetrically, so the offsets over a uniform
+`[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` population **sum to exactly 0**: the league's retirement RATE is
+unchanged and only *which* players retire *when* moves. Locked.
+
+*(**⚠️ CORRECTED August 24, 2026 (`ERR-028-022`) — the paragraph above was published against an
+implementation for which BOTH of its claims were false, and is annotated rather than restated.** The
+P5 claim: the floored mean broke the anti-symmetry the cancellation rests on, and the true sum over the
+uniform `[1,20]³` product was **−204,621 days (−25.58 d/player)** — the whole league retiring roughly
+two months early, which is a change in the retirement RATE, exactly what the sentence denied. The word
+**"Locked."**: the §5 lock that purported to prove it swept only the `Ant == Pos == Comp` diagonal,
+which is precisely the line on which the defect vanishes (there the division by 3 is exact), so it
+passed against the broken model and a mutation to a differently-wrong rounding passed it too — and
+**neither of this entry's two behaviour changes was locked at all**: restoring the verbatim pre-fix
+`rec.Age >= RETIREMENT_AGE` left `PlayerProgression.Tests` 134/134 and `SeasonSave.Tests` 402/3 green.
+As published, therefore, this paragraph asserted a property nothing executed. The claim is true of the
+undivided-sum form the code now carries, over the whole attribute PRODUCT, with a cardinality
+precondition so the sweep cannot silently narrow back to a line; the two behaviour changes have
+mutation-verified locks. **Residual RECORDED, not fitted away:** #27's `RosterGenerator` draws `[6,14]`,
+centred on 10 against the offset's neutral midpoint 10.5, so the generated league still averages
+**≈ −38 days per player**. Landed sites of the same correction: #28 §3.4:493-510, `appendices.md`'s
+`RETIREMENT_GAME_READING_SPAN_YEARS` row, and §5 T-PG-RET-005; the zero-dial identity this paragraph
+asserted and nothing executed is now T-PG-RET-008. See `ERR-028-022` below.)*
+
+**Still draw-free.** A draw here would be #28's first draw site and would force the
+`player-progression.regen` stream to register (FR-PG-020) — the phantom-surface class FR-LW-031 forbids.
+The finding asked for per-player variation, and per-player *attributes* supply it.
+
+**Guarded fail-loud at the computing site:** non-negative bonus and span, and a strictly positive
+computed day — a config that outweighs `RETIREMENT_AGE` would otherwise retire a whole league on the day
+it is generated, silently. (`DrawOccurrence` posture; the catalogue lock runs config-unbound.)
+
+**No draw, no stream, no domain tag, no format version.**
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/player-progression-lifecycle/section-2.md` | FR-PG-013 | The FR mandated the defect; revised to the per-player day, superseded text annotated (v0.8) |
+| `docs/specs/player-progression-lifecycle/section-3.md` | §3.4 | `RetirementAgeDays` pseudocode + the P3 ledger entry + the P5 argument (v0.9) |
+| `docs/specs/player-progression-lifecycle/section-4.md` | §4 file map | `AbilityModel.cs` now hosts `RetirementAgeDays` (v0.4) |
+| `docs/specs/player-progression-lifecycle/section-5.md` | §5.6 | T-PG-RET-001 re-pointed; `+ T-PG-RET-005` (v0.6) |
+| `docs/specs/player-progression-lifecycle/appendices.md` | Appendix A, Appendix C | Two `[GT]` rows; `RETIREMENT_AGE` re-described as the baseline; Appendix C's pivot-case note (v0.7) |
+| `src/player-progression/PlayerProgressionConstants.cs` | GT region | `+ RetirementGoalkeeperBonusYears`, `+ RetirementGameReadingSpanYears`; `RETIREMENT_AGE` doc |
+| `src/player-progression/AbilityModel.cs` | — | `+ RetirementAgeDays`, `+ GameReadingOffsetDays` |
+| `src/player-progression/ProgressionEngine.cs` | `AdvancePlayerTo` | The comparison moves to days against the per-player threshold |
+| `src/player-progression/tests/AbilityModelTests.cs` | — | `+ RetirementAgeDays_IsPerPlayer_ContinuousAndPopulationNeutral` |
+
+---
+
+## ERR-041-020: Injuries & Medical #41 §3.4 — the risk assembly presents as multi-factor and omits player age entirely
+
+**Filed:** August 22, 2026 — the football-judgment proxy review's batch-1 #41 finding
+(`docs/tracking/football-judgment-proxy-review.md` §3 "Management layer — batch A", pattern (c)).
+**Status: ✅ Resolved August 22, 2026, spec + code, same commit.**
+
+**The defect.** `AssembleRiskScore` blends training risk, match-appearance load, hard contacts (zeroed
+at Stage 2) and an attribute-derived robustness term — and never reads player **age**, anywhere: not in
+the formula, not in the method signature, and not in §2's requirements, so nothing in the spec would
+have caught the omission either. Age is among the best-established real-world injury-risk factors; it is
+already carried on the `PlayerRecord` the caller resolves *in order to read the attributes the formula
+does use*; and #31's valuation formula already consumes it. The review's characterisation is the right
+one: a formula that presents as multi-factor risk assembly while omitting a well-established factor
+already available beside it.
+
+**The fix (doctrine P1 + P5, with a P3 note).** `AgeRiskFor(ageYears)` —
+`Clamp(AGE_RISK_PER_YEAR_FROM_PIVOT × (ageYears − AGE_RISK_PIVOT_YEARS), ±AGE_RISK_SPAN)` — added
+**inside the sum, before the mitigation**. The position is normative for the same reason
+`BASELINE_DAILY_RISK`'s is (ERR-041-011): robustness must discriminate it, so a robust veteran carries
+less of his age penalty than a frail one. Added after the mitigation, or after the clamp, the term would
+be attribute-blind, which is the shape being removed.
+**⚠️ CORRECTED August 24, 2026 (`ERR-041-021`, the entry below): every sentence of the position claim
+above is retracted, and is annotated rather than deleted.** `RobustnessMitigation` is **SUBTRACTED**,
+and addition commutes, so the term's position relative to it is a no-op for **every** input: measured,
+the age penalty is the same `+1200` at robustness 1, 14 and 20, and *larger in relative terms* for the
+more robust player, whose assembled score is smaller. "Added after the mitigation … the term would be
+attribute-blind" is false in the same way and is not merely unlocked — that mutation is a proven
+**identity**, byte-identical checksum over 956,480 sampled inputs, so there is nothing there to lock.
+The only true half of the retired sentence is the clamp: applied after the clamp the assembly can
+return **above** `InjuryRiskMax`. **The normative position is now: inside the sum, BEFORE the
+`OccurrenceRiskMillMult` scaling and BEFORE the clamp** — before the scaling so the staff seam
+modulates the term like every other term, before the clamp so it can never lift the result past the
+ceiling. The retracted claim was APPROVED text in three #41 files plus the code doc and T-MD-AGE-004,
+and all of those were corrected at `ERR-041-021`; **this paragraph and this entry's Error Index row
+were not, and are the sites that correction's own sweep missed** — see the scope note on that entry's
+"at all five sites that carried it" sentence.
+
+**No threshold anywhere (P1).** Every year of age moves the term by the same amount — there is no age at
+which risk steps. The input is whole years because whole years is what #27 exposes (`PlayerRecord.Age`,
+kept current by #28's derived cache and refreshed at #30's KD-2 slot 1, before this slot-4 step); a
+uniform per-year increment is *not* the pattern-(b) shape, which is a judgment collapsed onto ONE
+cutoff. Day resolution would mean #41 reading #28's `BirthWorldDay` for a term whose slope is a
+first-guess `[GT]`, and is deliberately not taken — recorded in the method's own doc so a later reader
+does not re-derive the question.
+
+**P5.** `AGE_RISK_PIVOT_YEARS` = 26 is the mean of #27's bootstrap age distribution (`RosterGenerator`
+draws uniformly on `[AgeMin, AgeMax]` = `[17, 35]`), and the term is linear and anti-symmetric about it,
+so the age contributions over that population sum to zero: the league aggregate does not move and only
+the DISTRIBUTION across a squad does, which is the whole content of the finding. **Measured, not
+argued:** with the term live, `SeasonInjuryRealismTests`' league (717–816/season), starter (2.08),
+reserve (1.12) and squad-unavailability (9.4%) bands all hold unmoved, as does every one of the 26
+pre-existing `AssembleRiskScore` expectations, each of which now passes the pivot age and is therefore
+still the pre-fix arithmetic exactly rather than a rebaselined number. The pivot is deliberately **not**
+a `[CROSS]` mirror of #27's generator bounds: it is a balance choice about where risk should be neutral,
+and pinning it to the generator would silently re-pivot #41 the day #47's authored database replaces
+those bounds.
+
+**Magnitude, first-guess.** At the shipped 150/year a 34-year-old assembles 7800 against a 20-year-old's
+5700 on the §3.6 worked example's player — 0.78%/day against 0.57%/day, about **1.37×** — a size that
+cannot dominate the exposure terms beside it. **⚠️ CORRECTED August 22, 2026 (`ERR-041-021`): the
+original wording here — "the direction and rough magnitude the epidemiology supports" — is true of the
+VETERAN arm only, and is annotated rather than deleted.** The research-alignment supplement's **E-4 is
+rated Strong and is U-SHAPED**: musculoskeletal maturity continues to ~24–25 and *the 16–20 band carries
+elevated risk at adult match intensity*. A monotone linear term about a pivot of 26 reproduces E-4 above
+the pivot and **inverts** it below — a 19-year-old receives **−1050**, making 16–20-year-olds the
+**safest players in the league**. The shape is deliberately not changed: the U-shape is supplement
+finding **R-1**'s design, R-1 is awaiting owner sign-off, and its reserved back-prop **`ERR-041-013` is
+now narrowed to exactly that residual young-tail arm** (R-1 is annotated in place as landed-in-part by
+that entry's plumbing). Real calibration waits for the complete-engine pass (P5 / KD-W1). The research-alignment supplement's
+age arm must RE-FIT against this term rather than add beside it, exactly as its R-2 arm must against
+`BASELINE_DAILY_RISK` — recorded at §3.4 and in the catalogue.
+
+**`AGE_RISK_SPAN = 0` is the exact pre-fix identity**, exercised through an internal parameterised
+overload rather than asserted (the `[GT]`s are read once at static initialisation, so alternate values
+cannot otherwise be driven without recompiling). **Corrected August 27, 2026 (round 3 / M10):** this
+sentence formerly said the gate "runs config-unbound"; #41 has no config binding yet, so that premise
+was false even though the alternate-value seam remains load-bearing. Both `[GT]`s are guarded
+non-negative fail-loud at the computing site: a negative slope
+makes veterans the most durable players in the league, and a negative span inverts the clamp so every
+player takes the maximum penalty regardless of age.
+
+**A new FR, deliberately suffixed.** **FR-MD-025a** requires the age term, its continuity and its
+position. The id is suffixed rather than appended after FR-MD-027 because it belongs beside FR-MD-015 in
+the occurrence-inputs group, and renumbering FR-MD-016..027 would be the cross-reference cascade the
+root `CLAUDE.md` names as this project's most recurring bug class.
+
+**No draw, no stream, no domain tag, no format version, no change to the draw key or its order.**
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/injuries-medical/section-2.md` | §2.1, §2.2 | `+ FR-MD-025a`; `AdvanceMedicalDay` signature gains `int ageYears` (v0.11) |
+| `docs/specs/injuries-medical/section-3.md` | §3.1, §3.4, §3.5, §3.6 | The step signature, the term + its four properties, the composition loop, the worked example at three ages (v0.17) |
+| `docs/specs/injuries-medical/section-5.md` | new §5.6.1, §5.8 | T-MD-AGE-001..006 + the traceability row (v0.7) |
+| `docs/specs/injuries-medical/appendices.md` | Appendix A | Three `[GT]` rows with their invariants and the pivot's derivation (v0.14) |
+| `src/injuries-medical/InjuriesMedicalConstants.cs` | GT region | `+ AgeRiskPivotYears`, `+ AgeRiskPerYearFromPivot`, `+ AgeRiskSpan` |
+| `src/injuries-medical/MedicalStep.cs` | `AdvanceMedicalDay`, `AssembleRiskScore` | `+ int ageYears`; `+ AgeRiskFor` (public + parameterised internal overload) |
+| `src/season-save/PlayerCareerStates.cs` | `AdvanceMedicalDay` | Passes `record.Age` — the one production call site |
+| `src/injuries-medical/tests/MedicalStepTests.cs` | — | 26 call sites take the pivot age; `+ 4` age-term locks |
+| `src/season-save/tests/SeasonInjuryRealismTests.cs` | — | 2 call sites take the pivot age |
+
+---
+
+## ERR-028-022: Player Progression #28 §3.4 — the retirement offset's floored mean broke the anti-symmetry the P5 claim rests on, and neither of ERR-028-021's behaviour changes was locked at all
+
+**Filed:** August 22, 2026 — the adversarial review over the ERR-028-020/-021/-041-020 batch-1
+landing (two independent High findings against the same landing, filed under one id because they are
+one failure of verification: the ERR-028-021 fix's stated properties were checked only where they
+could not fail). **Status: ✅ Resolved August 22, 2026, spec + code, same commit.**
+
+**The defect, part 1 — the arithmetic.** `AbilityModel.GameReadingOffsetDays` computed
+`mean = (Anticipation + Positioning + Composure) / 3` and mapped that mean anti-symmetrically about
+the attribute midpoint. `floor(sum / 3)` is **not** symmetric about that midpoint — C# integer
+division truncates toward zero, so on a positive sum truncation always bites downward — and the
+composition therefore loses the anti-symmetry everywhere off the `Ant == Pos == Comp` diagonal, which
+is the one line on which the division by 3 is exact. Measured through the built assembly: **−204,621
+days over the uniform `[1,20]³` product, i.e. −25.58 days per player.** So ERR-028-021's published P5
+claim — *"the offsets over a uniform `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` population **sum to exactly 0**:
+the league's retirement RATE is unchanged and only which players retire when moves"* — was false of
+the implementation it described. The whole league retired roughly two months early. That claim is the
+stated reason no recalibration was owed at the ERR-028-021 landing, and it was published in APPROVED
+spec text in three places (#28 §3.4, Appendix A, §5's T-PG-RET-005).
+
+**Why the lock did not see it.** `AbilityModelTests`' property (3) swept `Ant = Pos = Comp` only —
+the diagonal, i.e. exactly the locus where the defect vanishes. It passed against the broken model,
+and a mutation replacing the floor with a *differently* wrong rounding also left all 539 tests green.
+A P5 population claim is a claim about the whole attribute **product**; sweeping a line through it
+proves nothing about the population, and the line chosen was the degenerate one.
+
+**The defect, part 2 — ERR-028-021's behaviour change was unlocked at its production call site.**
+Restoring the verbatim pre-fix predicate at `ProgressionEngine.AdvancePlayerTo`
+(`rec.Age >= PlayerProgressionConstants.RETIREMENT_AGE`) left **`PlayerProgression.Tests` 134/134 and
+`SeasonSave.Tests` 402/3 — nothing failed.** The goalkeeper allowance, the per-player retirement day
+and the days-vs-years comparison were protected by no test anywhere. The two wiring cases
+(`AdvanceDay_AtRetirementAge_FlagsButDoesNotRemove`,
+`AdvanceDay_BelowRetirementAge_DoesNotFlag`) both use an all-10 **Midfielder** at exactly
+`RETIREMENT_AGE` / `RETIREMENT_AGE − 1`, where the retired league-wide comparison and the per-player
+day agree **by construction** — and the second still asserted, in its own failure message, *"the
+retirement test is hard AT RETIREMENT_AGE"*, which is precisely the property ERR-028-021 was filed to
+remove. §5's T-PG-RET-001 had meanwhile been re-pointed at `RetirementAgeDays` while its implementing
+cases could not distinguish it from `RETIREMENT_AGE`.
+
+**The fix, part 1.** The reading trio's **sum** is carried undivided into the numerator:
+`((2·sum − 3·(ATTRIBUTE_MIN + ATTRIBUTE_MAX)) · span) / (6 · (ATTRIBUTE_MAX − ATTRIBUTE_MIN))`. This
+is exactly anti-symmetric — verified 0 over all 8,000 triples — and it **reproduces every diagonal
+value bit-for-bit**, since for `sum == 3·mean` both numerator and denominator are exactly 3× the
+retired form's and truncation toward zero is invariant under that scaling. No constant moved, no `[GT]`
+was introduced, and the existing diagonal expectations were therefore not rebaselined. The `[1,20]³`
+lock now sweeps the whole product and carries a **cardinality precondition** so it cannot silently
+narrow back to a line.
+
+**The fix, part 2.** Two `ProgressionEngineTests` cases that fail against the pre-fix predicate:
+`AdvanceDay_AtTheBaselineAge_FlagsTheOutfielder_ButNotTheGoalkeeper` (the position half — a
+goalkeeper and an otherwise identical outfielder at the baseline age; only the outfielder may flag,
+and the keeper's later `RetirementDay` is asserted on the DAY, not merely on the flag, so the pre-fix
+predicate's earlier stamp fails too) and
+`AdvanceDay_BelowTheBaselineAge_FlagsTheWeakReader_ButNotTheSharpOne` (the attribute half and the
+days-vs-years half together — two same-position players a year BELOW the baseline, reading trios at
+the two ends of the range, advanced to a day strictly between their two retirement days, where
+exactly one may flag and the retired whole-years comparison flags neither). Both carry preconditions
+asserting the discriminating geometry rather than assuming it. **Mutation-verified:** with line 458
+reverted to the verbatim pre-fix comparison, these two cases fail and **only** these two —
+136 → 134 passed / 2 failed. The stale assertion message is corrected in place, with the superseded
+wording quoted rather than silently deleted.
+
+**The residual, recorded rather than papered over.** "Sums to exactly 0 over a uniform population" is
+a statement about the uniform attribute **product**, which is a modelling idealisation and not this
+game's league: #27's `RosterGenerator` draws each attribute independently on
+`AttributeBaseMean ± AttributeSpread` = `[6,14]`, centred on **10**, while the offset's neutral point
+is the range midpoint **10.5**. Over that population the corrected offset still averages
+**≈ −38 days per generated player** (against the retired form's −63.89). So the generated league does
+retire fractionally early — about five weeks, by half a point of attribute centring rather than by a
+broken map. Closing it would mean either pivoting the offset on the generator's mean — the coupling
+`ERR-041-020` explicitly refused for `AGE_RISK_PIVOT_YEARS`, and one that would re-pivot #28 silently
+the day #47's authored database replaces those bounds — or an odd-width attribute range. Neither is
+this ERR's to decide; the figure is stated in §3.4, Appendix A and §5 so the next reader inherits the
+number rather than the impression that it is zero.
+
+**A third site fell out of the same arithmetic: Appendix C's retirement worked example.** It calls
+its player "the P5 pivot case — an average-reading outfielder, whose offset is 0", and concludes his
+`RetirementAgeDays` is "exactly `RETIREMENT_AGE · DAYS_PER_YEAR`". **No player's offset is 0 under
+either form**: the neutral point is the attribute-range MIDPOINT, `(1 + 20) / 2 = 10.5`, which no
+integer attribute can occupy — so the claim was already false when it was written, not made false
+here. Corrected in place with the reachable values: reading trios summing to 31 or 32 give ∓12 days,
+and an all-10 outfielder — the closest the `[1,20]` scale offers to "average" — gives **−38 days**,
+which is the generated-population residual above arriving as a single player. Under the retired
+floored-mean form that same all-10 player was ALSO −38, so this ERR changes the map's shape, not this
+example's number. The example's flow and its illustrative world-day 4020 crossing stand; what is
+withdrawn is the claim that any player's crossing day equals the baseline exactly.
+
+**Two habits this entry is evidence for.** (1) A population claim must be checked over the
+population, not over a convenient slice of it — and when a slice is chosen, the defect will be the one
+the slice cannot see. (2) `ERR-028-021`'s own record listed a test file under "Files Affected" and
+recorded the properties as "Locked"; the lock existed and was inadequate, which reads identically in a
+version-history row. The passes-3–6 question — *of the fixes landed here, which have a test that fails
+if the fix is reverted?* — is what surfaced part 2, and it was not asked at the batch-1 landing.
+
+**No draw, no stream, no domain tag, no `SNAPSHOT_SCHEMA_VERSION`, no format version.**
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/player-progression-lifecycle/section-3.md` | §3.4 pseudocode + the P5 paragraph | The sum carried undivided; the superseded "sums to exactly 0" claim annotated in place, with the `[6,14]` residual stated (v0.10) |
+| `docs/specs/player-progression-lifecycle/section-5.md` | §5.6 T-PG-RET-001, T-PG-RET-005 | RET-005's population property widened to the whole product + cardinality precondition; RET-001 now MUST carry cases that fail against `AgeYears >= RETIREMENT_AGE` (v0.7) |
+| `docs/specs/player-progression-lifecycle/appendices.md` | Appendix A `RETIREMENT_GAME_READING_SPAN_YEARS`; Appendix C worked example | The row's P5 claim annotated in place and the residual recorded with it; Appendix C's unattainable "offset is 0" pivot claim corrected to the reachable ∓12 / −38 values, flow and crossing day left standing (v0.8) |
+| `src/player-progression/AbilityModel.cs` | `GameReadingOffsetDays` | The floored mean removed — the sum carries into the numerator; diagonal values bit-identical (v1.2) |
+| `src/player-progression/tests/AbilityModelTests.cs` | T-PG-RET-005 property (3) | Diagonal sweep → the full `[1,20]³` product, + a cardinality precondition (v1.2) |
+| `src/player-progression/tests/ProgressionEngineTests.cs` | §3.4 retirement cases | + the two discriminating locks (both mutation-verified); `AdvanceDay_BelowRetirementAge_DoesNotFlag`'s message corrected (v1.10) |
+
+---
+
+## ERR-028-023: Player Progression #28 §3.1 — the normative seed-credit MUST still mandated the three-way band step ERR-028-020 retired
+
+**Filed:** August 22, 2026 — the adversarial review over the ERR-028-020/-021/-041-020 batch-1
+landing. **Status: ✅ Resolved August 22, 2026, spec text only (the code was already correct).**
+
+**The defect.** §3.1's seed-credit requirement read: *"`SeedFrom` (§3.1.1) MUST therefore seed
+`GrowthCursor` at the seed day's own `DailyPoints` step for the player's seed-time age band
+(`GROWTH_DAILY_POINTS` in Growth, `DECLINE_DAILY_POINTS` in Decline, `0` in Stable)"* — the hard
+three-way step **ERR-028-020 retired**, still mandated normatively one section above the continuous
+curve that replaced it, in the same spec, after the same commit. The code computes
+`AbilityModel.DailyBandPoints(rec.Age · DAYS_PER_YEAR)`. The two forms are **not** equivalent: at the
+shipped `AGE_BAND_RAMP_HALF_WIDTH_YEARS` they disagree at bootstrap ages **24, 25, 29 and 30** — 4 of
+the 19 ages #27's `RosterGenerator` draws — so an implementer following the spec would reopen
+ERR-028-018's one-day accrual discrepancy for **~21% of a bootstrapped roster**, silently, and only
+inside the ramps, where nothing outside them would show it. `appendices.md`'s Appendix B carried the
+same three-way form in the **present tense**, directly above the ERR-028-020 currency note that the
+same landing added beneath the same table.
+
+**Why it survived.** The ERR-028-020 commit amended the **sibling** paragraph — §3.3's regen
+construction credit — for exactly this reason, with an explicit "*the two forms agree today… they
+diverge the first time either that band or `AGE_BAND_RAMP_HALF_WIDTH_YEARS` moves*" note, and did not
+reach §3.1's own MUST or Appendix B. That is this project's recurring **grep-boundary** shape: the
+sweep visited the site it was looking at and stopped. It is the same class as the ERR-041-012 phantom
+stream's five widenings, and the fix is likewise applied at every site in one pass rather than at the
+one the reviewer happened to open.
+
+**The fix.** Both sites now name the single authority — `DailyBandPoints(Age₀ · DAYS_PER_YEAR)`,
+§3.1.3 — mirroring §3.3's already-corrected wording. The superseded three-way form is **annotated in
+place** at both, with the disagreeing ages and the affected roster share stated, and Appendix B's
+paragraph is marked as the ERR-028-018-era text it now is. Appendix B's table arithmetic is
+unaffected and that is stated too, so a reader does not have to re-derive it: its player is far below
+the growth ramp, where curve and step agree day for day.
+
+**No code change, and that is the point** — the divergence was between the spec and an implementation
+that was already right, so the cost of leaving it was borne entirely by the next implementer.
+
+**No draw, no stream, no domain tag, no format version.**
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/player-progression-lifecycle/section-3.md` | §3.1, the seed-credit MUST | The MUST names `DailyBandPoints(Age₀ · DAYS_PER_YEAR)`; the three-way form annotated in place with the four disagreeing bootstrap ages (v0.10) |
+| `docs/specs/player-progression-lifecycle/appendices.md` | Appendix B, "The fix" paragraph | Corrected and marked ERR-028-018-era; the table's own arithmetic explicitly unaffected (v0.8) |
+
+---
+
+## ERR-041-021: Injuries & Medical #41 §3.4 — the "before the mitigation, so robustness discriminates it" position claim is arithmetically vacuous, and its lock passes against all three mutations it names
+
+**Filed:** August 22, 2026 — the adversarial review over the `ERR-041-020` landing (H4; found
+independently by two reviewers, one by mutation).
+**Status: ✅ Resolved August 22, 2026, spec + code, same commit.**
+
+**The defect.** `ERR-041-020` placed the new age term "inside the sum, **before** the mitigation, so a
+robust veteran carries less of his age penalty than a frail one", and made that position **normative**
+in three APPROVED files (#41 §2 FR-MD-025a, §3.4, Appendix A), in `MedicalStep.cs`'s doc, and in the
+test T-MD-AGE-004 written to enforce it. The claim is false in both of its readings.
+`RobustnessMitigation` is **SUBTRACTED**, and addition commutes, so the term's position relative to it
+is a no-op for **every** input: measured, the age penalty for a robustness-1, a robustness-14 and a
+robustness-20 player is the same `+1200`, and *larger in relative terms* for the more robust one, whose
+assembled score is smaller. The identical wording sits on `BASELINE_DAILY_RISK` from `ERR-041-011`,
+where it has been inert since the balance pass.
+
+**The lock was worse than the claim.** Three mutations of `AssembleRiskScore` all left
+`InjuriesMedical.Tests` **74/74 green**:
+
+| Mutant | Change | Caught pre-fix? |
+|---|---|---|
+| **A** | age term moved to after `- RobustnessMitigation(...)` | no |
+| **B** | age term applied after the `OccurrenceRiskMillMult` scaling | no |
+| **C** | age term applied after the `InjuryRiskMax` clamp | no |
+
+Only "term dropped entirely" was caught. **C is a real defect, not merely an unlocked one**: applied
+after the clamp the assembly can return **above** `InjuryRiskMax`, breaking `ERR-041-011`'s "every
+daily probability ≤ 1 at the `OCCURRENCE_DRAW_DENOM` scale" invariant.
+
+**The fix — restate the position as what is actually load-bearing.** The normative position is now
+**inside the sum, BEFORE the `OccurrenceRiskMillMult` scaling and BEFORE the clamp**, and both halves
+buy something: before the scaling, the staff seam modulates the term exactly as it modulates every
+other term rather than leaving an unmodulated island inside a scaled score; before the clamp, the term
+can never lift the result past the ceiling. The robustness-discrimination sentence is **dropped**, and
+every superseded sentence is **annotated in place** rather than deleted, at all five sites that carried
+it — including `BASELINE_DAILY_RISK`'s copy from `ERR-041-011`, corrected here rather than left as
+recorded pre-existing debt, because it is the same sentence about the same sum and splitting the two
+would leave a live spec asserting the arithmetic this entry retires.
+
+*(**⚠️ SCOPE CORRECTED August 24, 2026 (adversarial review round 2, H1) — "all five sites" is a
+completeness claim this sweep did not have, and the sentence is scoped rather than renumbered.** The
+**five** is exact for what it enumerates: the five normative carriers this entry's own defect
+paragraph names — #41 §2 FR-MD-025a, §3.4, Appendix A, `MedicalStep.cs`'s doc, and T-MD-AGE-004 — and
+every one of them is annotated, as are `BASELINE_DAILY_RISK`'s two further copies (§3.4's second
+position bullet and `InjuriesMedicalConstants.cs`). Within the APPROVED #41 spec the sweep holds:
+every live carrier of either phrasing is annotated, and the version-history rows that quote the
+retired wording are corrected by a later row rather than edited, per this project's convention. **One
+carrier survives inside `src/injuries-medical/` even so** — `MedicalStepTests.cs`'s
+`WorkedExample_RiskAssembly_Is6600` comment still reads *"4000 (baseline, before the mitigation —
+position normative)"*, which is the retracted normative claim in short form, unannotated. RECORDED,
+not fixed here: this correction is scoped to `spec-error-log.md`. **What "all" wrongly claimed is
+repo-wide reach.**
+The sweep did **not** reach this log's own `ERR-041-020` entry — neither its "The fix" paragraph nor
+its Error Index row — both of which went on publishing the retracted claim for two days and are
+annotated at this correction. It also did not reach the non-normative tracking records that carry it.
+Carrying the claim **in full** (position *and* the robustness rationale):
+`football-judgment-proxy-review.md`'s own FIXED note on this finding (§ "Spec #41", the batch-1
+landing paragraph), `CHANGELOG.md`'s batch-1 entry, and the root `CLAUDE.md`'s `BaselineDailyRisk`
+clause in the #29/#41 balance-pass bullet. Carrying the retired **position wording only**, without the
+rationale: `open-issues.md`'s batch-1 bullet and `CLAUDE.md`'s copy of it. All **RECORDED, not fixed**
+— outside this correction's scope, and named here so a later sweep does not have to re-derive the
+list. The enumeration is by grep over the two known
+phrasings ("before the mitigation" and "robustness discriminates"), so it is a floor, not a proof of
+exhaustion — the grep-boundary shape `ERR-028-023` names, recurring one entry after it was named.)*
+
+**The test now locks what it claims.** `AgeTerm_IsInsideTheSum_BeforeTheModifierScalingAndBeforeTheClamp_ERR041021`
+(renamed from `AgeTerm_EntersTheAssemblyBeforeTheMitigation_SoRobustnessDiscriminatesIt`) has one part
+per surviving property: the undiluted-delta assert at Identity (drop); a **halving `MedicalModifier`**
+asserting the veteran-minus-pivot delta equals `AgeRiskFor(age) × mult / 1000` rather than
+`AgeRiskFor(age)`, with a precondition that the chosen multiplier actually changes the value so the
+case cannot pass against an unscaled term (**kills B**); and a **saturating risk input** asserting the
+result is **exactly** `InjuryRiskMax` and never above `OCCURRENCE_DRAW_DENOM` (**kills C**). It
+additionally pins the retired claim as the false statement it is — the age delta is identical at
+robustness 1, 14 and 20 — so the prose cannot be restored from a passing test.
+
+**Mutation A is not lockable, and is therefore withdrawn rather than re-locked.** It is an **identity**:
+verified by executing a probe against the built assemblies over **956,480** input combinations
+(robustness 1–20 × age 0–60 × training risk 0–20,000 × appearance days 0–7 × occurrence multiplier
+100–2000‰), mutant A returns a byte-identical checksum to the unmutated build
+(`0x7ECF863560438E07`), while B and C diverge (`0xC8F5E2CEF648218F`, `0x3BE31216BCB2B363`). No test can
+fail against a transformation that changes no output; the correct remedy is to stop claiming it, which
+is what this entry does.
+
+**A second finding, landed with it (H3): the production call site had no lock at all, and the evidence
+published for P5 could not see the age axis.** `ERR-041-020`'s record states *"P5 measured, not argued:
+`SeasonInjuryRealismTests`' league/starter/reserve/unavailability bands all held unmoved."* That is
+true and **non-probative**. All four bands are age-blind by construction — the term is anti-symmetric
+about the bootstrap mean age, so it sums to zero over the population each band pools — and measurement
+confirms it: forcing every player's age to **17 / 26 / 35** yields **623 / 783 / 929** league injuries a
+season, and **all three pass the asserted band**, in both directions. Meanwhile `record.Age` at
+`PlayerCareerStates`' single production call site could be replaced with the literal `26` and
+`SeasonSave.Tests` returned **402/3 — identical to baseline**, and `season-save` is the only assembly
+that constructs a `PlayerCareerStates`, so that suite is the complete coverage set. Fixed by splitting
+the instrument's existing `MedicalBlocks()` walk by age band and asserting **over-30s out-injure
+under-23s** by a margin no rounding supplies — measured **1.34×**, asserted `> 1.25×` — mirroring its
+existing starters-out-injure-reserves assert, plus a per-seed assert that both bands are populated so a
+change to #27's bootstrap age distribution cannot silently empty the comparison. Mutation-verified:
+with the call site's age neutralised the split reads **1.01×** and fails, while the four age-blind
+bands return the recorded pre-fix **783 / 2.08 / 1.13 / 9.5%** and all pass. New test id
+**T-MD-AGE-007**; T-MD-AGE-006 gains the standing caveat that it establishes P5 and nothing else.
+**The P5 property itself is undisturbed and is now independently verified** — forcing the pivot
+reproduces the recorded pre-fix figures exactly, and the live term moves the league aggregate by
+−0.5% (783 → 779).
+
+**A third, landed with them (H7 — annotation only, no behaviour change).** The shipped term's monotone
+form **inverts** this repo's own Strong-rated young-tail evidence, and the finding was recorded twice.
+`docs/tracking/injury-aging-research-alignment-design.md` **R-1** is the same defect
+("`AssembleRiskScore` has no age term at all", severity H, back-prop **`ERR-041-013`**) and proposes
+the identical plumbing `ERR-041-020` landed — but its contract is **U-shaped** ("elevated below
+`AGE_MATURITY_YEARS` (24), zero across the prime band, rising above `AGE_VETERAN_YEARS` (31)") from
+evidence **E-4, rated Strong**, whose academy half is explicit: *the 16–20 band carries elevated risk at
+adult match intensity*. The shipped term is monotone linear about pivot 26, so a 19-year-old receives
+**−1050** and 16–20-year-olds are the **safest players in the league**. R-1 is now annotated **in
+place** as landed-in-part, with `ERR-041-013` **narrowed** to the residual U-shape / young-tail arm
+only, and every #41 site that claimed evidential support for the term's shape corrected to the accurate
+statement: the veteran half follows E-4, the 16–20 half inverts it, and closing that is R-1's surviving
+scope. **The shape is deliberately NOT changed here** — the U-shape is the supplement's design, the
+supplement is awaiting owner sign-off, and re-shaping shipped football behaviour is the owner's call
+rather than a review loop's. Two forward notes recorded at R-1 for whoever lands it: the proposed
+piecewise-constant BAND table would reintroduce the age **threshold** doctrine P1 forbids and
+`ERR-028-020` has just removed from the sibling spec, so the U-shape wants a continuous piecewise form;
+and the shipped term's P5 pivot does not survive an asymmetric U, so a refit must re-establish P5
+rather than inherit it.
+
+**No `[GT]` value moved, no age-term shape changed, no draw, no stream, no domain tag, no format
+version, no change to the draw key or its order.** The one behavioural surface this entry touches is
+the test suite; the age term computes exactly what it computed at `ERR-041-020`.
+
+**Gate (targeted, not the full `run-gate.sh`):** build 0 errors, 0 warnings; `InjuriesMedical.Tests`
+**74/74, 0 skipped** (unchanged count — the rebuilt T-MD-AGE-004 replaces its predecessor rather than
+adding a case); `SeasonSave.Tests` **402 passed / 3 known skips / 405** (unchanged count — T-MD-AGE-007's
+asserts land inside the existing dial-on test); `python3 tools/recurring-defect-lint.py --repo .`
+**0 ERROR**.
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/injuries-medical/section-2.md` | §2.1 FR-MD-025a | Positional requirement restated (before the scaling, before the clamp); superseded wording annotated (v0.12) |
+| `docs/specs/injuries-medical/section-3.md` | §3.4 | The age term's and `BASELINE_DAILY_RISK`'s position bullets restated with both superseded sentences annotated in place; the age-blind-bands caveat; the E-4 inversion bullet (v0.18) |
+| `docs/specs/injuries-medical/section-5.md` | §5.6.1, §5.8 | T-MD-AGE-004 rebuilt into three parts + the retired-claim pin; T-MD-AGE-006 caveat; new **T-MD-AGE-007**; traceability row → T-MD-AGE-001..007 (v0.8) |
+| `docs/specs/injuries-medical/appendices.md` | Appendix A | `BASELINE_DAILY_RISK` and `AGE_RISK_PER_YEAR_FROM_PIVOT` rows corrected (position; evidential support) (v0.15) |
+| `docs/tracking/injury-aging-research-alignment-design.md` | header id-map, R-1 | R-1 annotated in place as landed-in-part; `ERR-041-013` narrowed to the U-shape / young-tail residual (v0.5) |
+| `src/injuries-medical/MedicalStep.cs` | `AssembleRiskScore` doc | Position restated for both terms; the inert claim recorded as retired (v1.14, doc only) |
+| `src/injuries-medical/InjuriesMedicalConstants.cs` | `BaselineDailyRisk`, `AgeRiskPerYearFromPivot` | Same two corrections at the catalogue (v1.7, doc only) |
+| `src/injuries-medical/tests/MedicalStepTests.cs` | T-MD-AGE-004 | Test renamed and rebuilt: scaling case, clamp case, retired-claim pin (v1.10) |
+| `src/season-save/tests/SeasonInjuryRealismTests.cs` | `PlaySeason`, dial-on test | Age captured per player; the season walk split into under-23 / over-30 bands; the T-MD-AGE-007 assert (v1.6) |

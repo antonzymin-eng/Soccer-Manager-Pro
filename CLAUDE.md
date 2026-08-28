@@ -1,419 +1,78 @@
-# CLAUDE.md — Tactical Director
-
-> **Created:** March 26, 2026, 11:00 PM PST
-> **Change log:** `docs/tracking/CHANGELOG.md` — the `**Last Updated:**` entry chain.
-> **Open issues:** `docs/tracking/open-issues.md` — live blockers (`open-issues-resolved.md` for closed ones).
-> **Purpose:** Authoritative rules for any AI agent (Claude Code, Claude chat, etc.) working on this project. Read this file completely before every task.
-
----
-
-## PROJECT IDENTITY
-
-**Tactical Director** is a football (soccer) simulation game targeting "Football Manager killer" ambitions. It follows a 10-year, 6-stage development plan. The project is solo-developed with AI assistance.
-
-**Current phase:** Stage 0+1 — Implementation, with the specification frontier now running ahead of the code.
-
-**Specifications:** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved.** The APPROVED set is the Stage-0 twenty (all APPROVED May 18, 2026) plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, #40–#45, #49). The last ten — #53, #35, #46, #36, #54, #47, #48, #50, #51, #39 — were promoted **and approved** on July 27, 2026, emptying the pre-promotion backlog and closing the specification phase entirely. The only candidate without a spec is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration. **Approval approves the forward design, not an implementation** — see the live gap below, which is now the project's dominant fact.
-
-**Implementation:** `src/` holds **35 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0+T1 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`, plus `MatchAnalyticsAggregator` over the `ITickLedgerTap`/`MatchEngineObservation` seam; driven in production only from `match-client-web`, no sim-side driver), giving it a `src/` assembly for the first time.
-
-**The live gap is now the project's dominant fact.** With the specification phase closed, **19 of the 53
-APPROVED specs have no `src/` assembly at all** — the 9 listed below plus the ten approved on July 27.
-(It was 22 until August 5, 2026, when **#29 Training and #41 Injuries & Medical** landed T0 assemblies together.)
-The specification frontier runs a long way ahead of the implementation, which is a deliberate posture
-(specify before coding), and it makes one habit dangerous: **"the spec is APPROVED" now says nothing
-whatsoever about whether code exists.** It is true of ~36% of the registry.
-
-**The 19 with no assembly:** #31 Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #42 Youth, #43 Competition Structure, #45 Board, #49 Localization — plus the ten approved on July 27: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54. (It was 20 until August 13, 2026, when **#44 Discipline & Suspensions** landed T0/T1/T2 together as `src/discipline/`.)
-
-Sequencing for closing the gap is in `docs/tracking/path-to-playable-roadmap.md`, which is now the
-project's live critical path. **Check `src/` before assuming a consumer is available** — the assembly map
-above is the reliable index, not the spec registry.
-
-`src/CLAUDE.md` is the authoritative coding guide. Read it before writing any code.
-
----
-
-## REPO STRUCTURE
-
-```
-Soccer-Manager-Pro/
-├── CLAUDE.md                       ← You are here. Read first. Always.
-├── .claude/                        ← Agent config: advisor council, orchestrator, project skills (see its README)
-├── README.md                       ← Project overview, status, documentation hierarchy
-├── Assets/ Packages/ ProjectSettings/   ← Unity project shell (target editor 6000.4.9f1, DX11)
-├── docs/
-│   ├── planning/                   ← Master volumes I–IV, master development plan, best practices
-│   ├── design/ui-mockups/          ← Non-normative UI visual reference (not on any build path)
-│   ├── specs/
-│   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 53 folders, all APPROVED
-│   │   └── <spec-folder>/          ← One folder per spec; see SPEC_INDEX.md for the number↔folder map
-│   └── tracking/                   ← Progress, error log, file manifest, roadmaps, design supplements
-├── src/                            ← Implementation (coding began May 19, 2026) — 35 production assemblies
-│   ├── CLAUDE.md                   ← Coding guide (read before writing any code)
-│   └── <assembly>/                 ← See the assembly map below
-└── tools/
-    ├── dotnet-ci/                  ← Non-certifying Linux compile/test gate (asmdef→csproj + Unity shim)
-    ├── unity-ci/ perf-harness/ spec-stress/
-    └── *.py, run-perf-local.sh     ← 7 scripts (`ls tools/*.py`): assembly-tier-check,
-                                      budget-auditor, chat-review,
-                                      doc-consistency-check, recurring-defect-lint,
-                                      round-resolution-fit, select-seed
-```
-
-**`src/` assembly map.** Most assemblies are named for their spec folder, but not all — several specs are
-implemented inside a differently-named assembly, and several assemblies are not a numbered spec at all.
-Do not infer the mapping from the folder name:
-
-| Assembly | Spec | Notes |
-|---|---|---|
-| `ball-physics`, `agent-movement`, `collision-system`, `first-touch`, `pass-mechanics`, `shot-mechanics`, `heading-mechanics`, `goalkeeper-mechanics` | #1–#6, #10, #11 | Physics layer |
-| `positioning-ai`, `pressing-ai`, `defensive-ai`, `attacking-ai` | #12–#15 | Mechanics layer. `positioning-ai` **also** hosts #23 dismarking, #24 build-up structures, #25 positional rotations |
-| `decision-tree`, `perception-system` | #8, #7 | AI layer. `decision-tree` also carries #23's marked-pass-target penalty |
-| `deterministic-sim`, `event-system` | #16, #17 | Cross-cutting foundations, referenced by all layers |
-| `tactical-instructions` | #21 | Also hosts #26 tactical presets |
-| `living-world` | #22 | |
-| `player-database` | **#27** Squad / Player Data Layer | Name differs from the spec folder (`squad-player-data/`) |
-| `player-progression` | **#28** | T0 + **T1/T2a (Aug 8, 2026)** — `ProgressionEngine` (KD-7 sole writer), `ProgressionSaveCodec` (magic-led, ERR-028-004), the FR-PG-021 batch `AdvanceDay`, and the `SquadFor` projection. **Owns the career roster** (KD-4): `Squad` is immutable and seed-rebuilt, so evolving attributes live here and nowhere else. Draw-free — the regen stream is NOT promoted, since the season boundary is deferred |
-| `training-system` | **#29** | T0 (Aug 5, 2026) + T1 (Aug 5) — the day step, the growth-input read, the match-entry projection, the `InjuryRiskContribution` #41 reads, and now `TrainingSaveCodec` in #30's season frame. Draw-free by design (FR-TR-008). **T2 (Aug 5) wired it**: `PlayerCareerStates` in `season-save` constructs and owns the per-club set, and `SeasonLoop` drives the day step at slot 2. Slot 1 stays a null seam (ERR-029-006) *(T1/T2 dates corrected Aug 6 → Aug 5 on August 18, 2026, per `git log --diff-filter=A`: `TrainingSaveCodec.cs` 2026-08-05 17:43 UTC, `PlayerCareerStates.cs` 2026-08-05 23:19 UTC — August 5 in both UTC and PST)* |
-| `injuries-medical` | **#41** | T0 (Aug 5, 2026) + T1 (Aug 5) — the recovery-then-draw day step, the keyed occurrence draw (`DOMAIN_TAG_INJURIES_MEDICAL = 0x2A`; **no** registered stream, ERR-041-002), and now `MedicalSaveCodec` in #30's season frame. **T2 (Aug 5) wired it** *(T1/T2 dates corrected Aug 6 → Aug 5 on August 18, 2026, per `git log --diff-filter=A` — `MedicalSaveCodec.cs` 2026-08-05 17:43 UTC, `PlayerCareerStates.cs` 2026-08-05 23:19 UTC, August 5 in both UTC and PST)*: `PlayerCareerStates` owns the per-club set and `SeasonLoop` drives the day step at slot 4, after #29's. The occurrence dial (FR-MD-027) is **ARMED** — the August 7, 2026 balance pass turned it ON: `PlayerCareerStates` takes the dial as a required construction argument, production passes `true`, and OFF stays supported and locked both ways (a dial-off season injures nobody). *(Corrected August 18, 2026: this row still said "ships OFF pending the balance pass" — it became the rules file's only, and wrong, statement of the dial when the August 17 archival of the #29/#41 balance-pass bullet, commit `12eba7d4`, moved the sole ARMED record to `open-issues-resolved.md`.)* |
-| `season-save` | **#30** Season & Competition Loop | Also hosts the league bootstrap, the unified season save-file root, and — since #29/#41 T2 — `PlayerCareerStates`, the #30-side owner of both subsystems' per-club state. Since #28 T2a it also hosts `ProgressionSquads` — the `ISquadProvider` projection over #28's block, which lives here because `ISquadProvider` is a `match-engine` type #28 §4.1 forbids #28 to reference |
-| `match-analytics` | **#37** Match Analytics & Statistics | T0–T1 — value types + `XgLocationModel`, plus `MatchAnalyticsAggregator` and the `ITickLedgerTap`/`MatchEngineObservation` seam; driven in production only from `match-client-web` (no sim-side driver). Presentation-layer derivation: **no sim assembly may reference it** (guarded mechanically) |
-| `discipline` | **#44** Discipline & Suspensions | T0+T1+T2 (Aug 13, 2026, roadmap C1→C2) — the sparse `(PlayerId, CompetitionId)` tally, the occupancy `CardLedgerFold` over the #37-class per-tick tap, the removal-only `Availability` view, and `DisciplineSaveCodec` in #30's season frame (`SEASON_SAVE_FORMAT_VERSION` **5 → 6**). **Draw-free by construction** (FR-DC-019 — no RNG stream, domain tag or subsystem ordinal, a positive property of the read-only class). References only `event-system`, `player-database`, `deterministic-sim`, `project-constants` — **never** the match engine or #30; the composition root mediates. Wired in `season-save`: the filter at the ERR-030-009 seam on both resolution paths, the fold around engine-resolved fixtures, `OnClubFixturePlayed` per played club fixture, and the FR-DC-017 boundary sweep |
-| `ui-framework` | **#38** UI / Client Framework | T0 substrate only; no screens, no UGUI binding |
-| `performance-optimization`, `testing-strategy` | #18, #19 | Infrastructure only — no game-loop types |
-| `project-constants` | — | Shared `[GT]` config; read-only by all |
-| `match-engine` | — | **Composition root.** Not a numbered spec; governed by `docs/tracking/match-engine-design.md` |
-| `match-viewer`, `match-client-core`, `match-client-unity` | — | Presentation tooling / client seams; not numbered specs |
-| `match-client-web` | — | The browser match client (roadmap B6). Not a numbered spec; governed by `docs/tracking/browser-match-client-design.md`. The only assembly above BOTH `ui-framework` and `match-analytics`. **NOT the shipping UI** — B6 was reversed to full Unity on Aug 3, 2026; retained as the host-free reference harness. Keep green, do not extend |
-| `client-app` | — | **The client composition layer** (roadmap B9c, Aug 7, 2026): the four screens' `ScreenId` catalogue + the `ClientScreenFlow` navigation graph, above `ui-framework` (its only reference). Not a numbered spec; governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a resolution / v0.18). Exists because FR-UI-010 forbids the framework hard-coding screens and `match-client-unity` is gate-invisible — the P5b binding navigates only through this assembly's five moves |
-
-**Rules:**
-- Each spec folder contains ONLY current-version files. No version suffixes in filenames. Git tracks history.
-- `SPEC_INDEX.md` is the canonical source of truth for spec numbers, folder names, and approval status.
-- `PROGRESS.md` is the canonical source of truth for schedule and milestone tracking.
-- `src/CLAUDE.md` is the authoritative guide for coding conventions. For the **assembly layer taxonomy it is a reproduction, not the authority** — Spec #20 §3.5.2 owns tier membership, and a new assembly must be placed in **both** in the same commit (the fourteen-month drift `ERR-020-002` records began with a landing that updated neither). The reference-direction rule is **AI → Mechanics → Physics, never the reverse** — an arrow that reads "may reference", pointing from consumer to provider; #20 §3.5.2 draws the same rule with `──►` labelled "is available to", running the other way (`ERR-020-003`). Since August 17, 2026 the taxonomy is the **ten-tier order** of Spec #20 §3.5.2 (`ERR-020-002` adopted) and covers **all 35** assembly folders — Foundation / Physics / Configuration / Mechanics / AI / Data / Composition / Management / Presentation / Client, plus out-of-band Infrastructure. Two things it is easy to get wrong: **a tier is a ceiling, not a licence** (a spec may forbid a reference the tier permits — #44 `discipline` is in Management but must not reference `match-engine` or `season-save`), and **test assemblies are not members of the order** (they legitimately reference upward).
-- An APPROVED spec does not imply an implementation exists. Check `src/` first.
-
----
-
-## CRITICAL DOMAIN CONVENTIONS
-
-These conventions have caused bugs. Memorize them.
-
-### Coordinate System
-
-**Authoritative source:** Ball Physics Spec #1, §1.2 and Appendix C.
-
-| Axis | Direction | Range | Notes |
-|------|-----------|-------|-------|
-| X | Goal-to-goal (pitch length) | 0–105m | |
-| Y | Touchline-to-touchline (pitch width) | 0–68m | |
-| Z | Height (vertical, up) | 0m = ground | Ball center rests at 0.11m |
-
-**Origin:** Corner of pitch (0, 0, 0) — NOT pitch center.
-
-### Fatigue Convention
-
-`0.0 = fully rested`, `1.0 = fully fatigued`. Any inversion is a critical error. This has been found inverted before (Pass Mechanics §2 FR-02, now fixed).
-
-### Constant Tags
-
-Every constant in every spec MUST have exactly one of these source tags:
-
-| Tag | Meaning | Rule |
-|-----|---------|------|
-| `[GT]` | Gameplay-Tuned | Designer sets value; must live in tunable config |
-| `[EST]` | Estimated | Placeholder; must be validated before implementation |
-| `[FIXED]` | Fixed / physical law | Derived from physics; never tune |
-| `[DERIVED]` | Derived from other constants | Formula must be documented; never set independently |
-| `[CROSS]` | Cross-spec constant | Defined in another approved spec; consumed read-only here; never set independently in this spec. Citation must name the authoritative spec and section. Use `[CROSS]` only when the value is copied verbatim without modification — if a formula transforms it, tag the result `[DERIVED]`. |
-| `[CROSS-PENDING]` | Cross-spec constant blocked on an upstream `IN PROGRESS` spec | Used when a spec consumes a constant that will be `[CROSS]` once the upstream authority spec reaches `APPROVED`, but the numeric value is not yet allocated. Citation must name the authoritative spec, section, and the `spec-error-log.md` back-prop ID tracking the allocation. Promoted to `[CROSS]` atomically with upstream approval. Use sparingly — every `[CROSS-PENDING]` tag is an outstanding cross-spec dependency that gates the consuming spec's own `APPROVED` transition. |
-
-Constants live in their designated `.cs` constant catalogues — no magic numbers in formula code.
-
-### Parameter-Based Physics (No Type Enums)
-
-The Decision Tree supplies physical intent parameters (velocity, spin, angle). Physics systems translate these into vectors. There are NO `KickType`, `ShotType`, or `PassType` enums in the physics layer.
-
-### Heartbeat Tick Rate
-
-Tactical/AI loop: **10 Hz** (100ms per tick). Physics/render loop: **60 Hz** (~16.67ms per frame). These are different loops. Do not conflate them.
-
-### Interface Design Principle
-
-**Write interfaces only when both sides are specified.** Do not create interfaces against unspecified systems. This avoids phantom interface proliferation (ERR-001, ERR-004).
-
----
-
-## CROSS-REFERENCE SYSTEM
-
-Specs use typed cross-reference IDs:
-
-| Prefix | Meaning | Example |
-|--------|---------|---------|
-| `XC-` | Cross-spec reference | XC-001 |
-| `FM-` | Formula reference | FM-003 |
-| `EC-` | Edge case reference | EC-012 |
-| `ERR-` | Spec Error Log entry | ERR-010 |
-
-**KNOWN HAZARD — Spec Renumbering Cascades:** When any spec changes its canonical number, ALL cross-references across ALL files must be updated. This has been the single most recurring bug class in this project.
-
-**KNOWN HAZARD — Stale Spec Numbers in Old Files:** Many files written before February 2026 contain wrong spec numbers from an earlier numbering scheme. A complete old-to-correct mapping is in `SPEC_INDEX.md` under "FORMER NUMBERING".
-
----
-
-## SPEC FILE CONVENTIONS
-
-### Template Structure (every spec follows this)
-
-| Section | Content |
-|---------|---------|
-| 1 | Introduction, scope, dependencies, key decisions |
-| 2 | Functional requirements, data structures, failure modes |
-| 3 | Core formulas, algorithms, pseudocode (subsections as needed) |
-| 4 | Architecture, file layout, interface contracts |
-| 5 | Test plan (unit + integration + validation scenarios) |
-| 6 | Performance analysis and budgets |
-| 7 | Future extensions and Stage 1+ deferrals |
-| 8 | References, citations, DOI verification |
-| 9 | Approval Checklist (quality gate) |
-| Appendices | Derivations, verification tables, sensitivity analysis |
-
-### Naming Inside Spec Folders
-
-Files within a spec folder use descriptive names without version suffixes:
-
-```
-pass-mechanics/
-├── outline.md
-├── section-1.md
-├── section-2.md
-├── section-3-1.md          ← Subsections use hyphens
-├── section-3-2.md
-├── section-3-3-to-3-4.md   ← Grouped subsections
-├── section-3-5-to-3-6.md
-├── section-3-7-to-3-9.md
-├── section-4.md
-├── section-5.md
-├── section-6.md
-├── section-7.md
-├── section-8.md
-├── section-9-approval-checklist.md
-├── appendices.md
-└── audit-report.md          ← Comprehensive audit (if completed)
-```
-
----
-
-## AI BEHAVIORAL RULES
-
-### Before Any Task
-
-1. Read this entire `CLAUDE.md`.
-2. Check `SPEC_INDEX.md` for current spec numbers and approval status.
-3. If modifying a spec, read ALL files in that spec's folder first — not just the target file.
-4. If the task involves cross-references, grep the entire `docs/specs/` tree for stale references before finishing.
-
-### When Writing or Editing Specs
-
-- Every constant must have a `[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, or `[CROSS]` tag.
-- Every formula must include units, valid input ranges, and at least one worked example.
-- Never fabricate verification values in Approval Checklists. All values must be programmatically verifiable against source files.
-- Append a version history entry to every modified file.
-- Include creation date and purpose header on every new file.
-
-### Checking Stated Numbers in Documents (use a Sonnet task, not a tool)
-
-This repo writes claims with their proof attached — "60 design supplements
-(`ls docs/tracking/*-design.md | wc -l`)", "218 occurrences (`grep -rn ... | wc -l`)",
-"**148 total** (re-derived by `python3 tools/assembly-tier-check.py --repo .`)". The
-recurring defect is that the number goes stale and nobody re-runs the command: root
-`CLAUDE.md` read 42 for months while the truth was 60.
-
-**To check these, dispatch a Sonnet task.** Something like: *"Sweep CLAUDE.md, README.md
-and docs/tracking/ for sentences stating a number alongside a shell command that would
-verify it. Re-run each command from the repo root and report every case where the stated
-value and the real value disagree. Do not edit anything — report path:line, stated, actual.
-Ignore claims inside frozen history (CHANGELOG entries, Version History rows, resolved
-ERR-log entries): those record what a command returned at the time and are correct as
-written."*
-
-This was previously a checked-in tool (`doc-claim-check.py`, removed August 23, 2026).
-It was deleted because the cost was wildly out of proportion to the value: to verify what
-turned out to be ONE drift-capable claim, it executed command strings taken from document
-text, and four adversarial-review rounds found seven separate ways that execution could be
-escaped — arbitrary file reads, file truncation, and remote code execution from a branch
-name. A Sonnet task does the same checking without a program that runs untrusted input in
-CI. **If you find yourself rebuilding it, don't.**
-
-Two things the tool also did, if either is ever wanted again: it resolved `Type.MEMBER`
-references inside `csharp` spec fences against the same file's declarations (this caught
-`ERR-020-001`'s dangling rename), and it printed a named reason for every claim it could
-not check. The first is worth a small standalone script if dangling spec identifiers
-recur; the second is just a discipline — say what you did not check.
-
-### When Writing Code
-
-- C# with Unity 6 LTS conventions (target editor: 6000.4.9f1; see `docs/tracking/certification-platform.md`).
-- Struct-based, zero-allocation architecture in the game loop.
-- All constants in designated constant catalogue files — no magic numbers.
-- **Stage 0 uses `float`. Fixed64 migration is a Stage 5+ concern** (Spec #9 will define the library; existing approved physics specs are drafted against `float` and re-verified against Fixed64 only when cross-platform multiplayer becomes a requirement). Single-machine determinism (replay, save/load, debug rewind) is achieved via state snapshots, not deterministic arithmetic. Cross-platform bit-exact parity is a Stage 5 deliverable, not a Stage 0 quality gate.
-- Deterministic replay is a hard requirement — no `System.Random`, no `DateTime.Now` in game logic.
-- SplitMix64 for deterministic RNG. In Python tooling: omit `UL` suffix from C# constants; mask all intermediate multiplications with `& 0xFFFFFFFFFFFFFFFF`.
-
-### Things That Have Gone Wrong Before (Learn From History)
-
-| Trap | What happened | Prevention |
-|------|---------------|------------|
-| Stale spec numbers | Decision Tree was #7 in ~75 places; canonical is #8 | Always check SPEC_INDEX.md |
-| Fabricated checklist values | Approval Checklist claimed sections existed that were never written | Verify every checklist entry against actual files |
-| Inverted fatigue | FR-02 said "1 = rested" — opposite of correct | 0 = rested, 1 = fatigued. Always. |
-| Wrong coordinate origin | "Pitch center" comment in Agent Movement §3.5 | Corner-origin is authoritative (Ball Physics §1.2) |
-| Phantom interfaces | Interfaces written against unspecified consumer systems | Only write interfaces when both sides are specified |
-| Superseded file references | Approval checklist pointed to v1.2 when current was v1.3 | Git versioning eliminates this (no version suffixes) |
-| Never-compiled surfaces | Six consecutive spec test suites — and one *production* assembly (#8) — had never compiled; every "the suite enforces X" claim was unverifiable | The `tools/dotnet-ci` gate compiles the whole tree on every push. Never claim a suite enforces something without running it |
-| Tests that verify composition runs, not that it *works* | The 600-tick capstone asserted tick count, cadence, finiteness, bounds and digest advance — all true of a match in which nothing happens. Every match was a 0–0 deadlock with the ball never in motion for months (ERR-030-014) | Assert the *outcome* the system exists to produce, not just that it ticks without throwing |
-| Home-team-only worked examples | Three home/away asymmetry defects (#8 ERR-008-002) shipped because every spec example and every fixture used the home team | Mirror any team-relative geometry test to the away side |
-| Tuning a machine that is missing pieces | Seven §5.Z passes fitted `[GT]`s against an engine where the keeper never left his line and **no player could tackle** (`GetAndClearTackleFlag` hardcoded `false` in both adapters). The hazard is diagnostic, not arithmetic: 18%-vs-11% conversion reads as "the shot model is too generous" when part of it is "nobody narrows the angle" | **KD-W1** — do not land a `[GT]` governing an unwired subsystem. Check `match-engine-wiring-backlog.md` first. Measure and fix defects freely; constants wait for one calibration pass against the complete engine |
-
----
-
-## TRACKING DOCUMENTS
-
-| Document | Location | Purpose |
-|----------|----------|---------|
-| `SPEC_INDEX.md` | `docs/specs/SPEC_INDEX.md` | Canonical spec numbering, folder mapping, approval status |
-| `PROGRESS.md` | `docs/tracking/PROGRESS.md` | Schedule, milestones, weekly log |
-| `CHANGELOG.md` | `docs/tracking/CHANGELOG.md` | The `**Last Updated:**` entry chain (was the CLAUDE.md header) |
-| `open-issues.md` | `docs/tracking/open-issues.md` | Live blockers; `open-issues-resolved.md` holds closed entries |
-| `spec-error-log.md` | `docs/tracking/spec-error-log.md` | Cross-spec architectural errors and remediation status |
-| `file-manifest.md` | `docs/tracking/file-manifest.md` | Authoritative file inventory (update after every file change) |
-| `fix-manifest-pass-mechanics.md` | `docs/tracking/fix-manifest-pass-mechanics.md` | Per-audit fix tracking (Pass Mechanics #5) |
-| `certification-platform.md` | `docs/tracking/certification-platform.md` | Pinned Stage-0 host/engine tuple; recertification rule |
-| `cert-run-runbook.md` | `docs/tracking/cert-run-runbook.md` | Step-by-step certification run procedure |
-
-### Roadmaps (meta-planning — design no system, open no spec)
-
-| Document | Answers |
-|----------|---------|
-| `management-layer-spec-roadmap.md` | *Which specs to author, in what order* — the #27–#54 management/off-pitch set, dependency graph, authoring waves |
-| `path-to-playable-roadmap.md` | *Which code to land, in what order, to reach a playable build* — Track S (simulation) vs Track C (client), and the quantified constraints that ordering must respect |
-| `match-engine-wiring-backlog.md` | *Which already-built match-engine code has no production caller* — the dormant-capability inventory (Aug 4, 2026), its wire-order, and **KD-W1** below. Match engine only; the 19 assembly-less specs stay with the roadmap above |
-
-### Design supplements
-
-`docs/tracking/*-design.md` (60 files — re-derived by `ls docs/tracking/*-design.md | wc -l` on August 18, 2026; this literal read "42" while the true count was 60, so re-derive it rather than trusting it) is a governance class of its own: a **DESIGN SUPPLEMENT** is a
-converged, adversarially-reviewed design note that either (a) precedes promotion to a numbered spec
-(the #21/#22 precedent — a registry row lands only at promotion), or (b) permanently governs a surface that is
-deliberately *not* a numbered spec (`match-engine-design.md` for the composition root is the canonical
-example). A supplement is not a spec: it does not appear in `SPEC_INDEX.md` and confers no approval status.
-Before designing anything, grep `docs/tracking/` — the surface likely already has one.
-
-**As of July 27, 2026 every class-(a) supplement has been promoted**, so a supplement you find in
-`docs/tracking/` is now either class (b) — a permanent governor, like `match-engine-design.md` — or the
-**pre-promotion history of a spec that already exists**. In the second case the spec folder wins: a
-supplement is frozen at its convergence and the section files carry the PASS-1 corrections made after it
-(three supplements' proposed `ERR-` ids, for instance, were already filed and were reassigned at
-promotion). Read the supplement for the *reasoning*; read the spec for the *contract*.
-
----
-
-### Project skills and agent configuration
-
-`.claude/` holds checked-in agent configuration — checked in rather than installed personally because
-each piece encodes conventions that live in this repo and must version with them. `.claude/README.md`
-is its index. Two kinds of thing live there:
-
-**Agent patterns** change *who* does the work: `advisor` (a two-advisor council convened **before**
-implementation, on Opus regardless of the session model), `orchestrator` (drives one
-path-to-playable roadmap item end to end), `adversarial-review` (the **post**-implementation H/M/L
-review loop), and `chat-review` (session analysis). Those surfaces deliberately do not overlap — see
-the boundary table in `.claude/README.md`.
-
-**Workflow encodings** change *how* a recurring job is done correctly:
-`match-realism-pass`, `snapshot-schema-bump`, `err-file-and-backprop`, `landing-close-out`,
-`spec-promotion`, `dotnet-gate`. Each was derived from measured repetition in the last 200 commits
-and carries the traps this project has actually hit; `.claude/skills/README.md` records that
-evidence. The one that needs a review step (`spec-promotion`) invokes `adversarial-review` rather
-than restating it *(corrected August 18, 2026, reviewed finding H2: this read "the two";
-`grep -ci adversarial-review .claude/skills/*/SKILL.md` is non-zero for `spec-promotion`
-alone. `.claude/skills/README.md` was corrected in the same round and this site was left,
-so the rules file and the file it cites for that evidence disagreed).*
-
-`orientation` is account-level, not in this repo.
-
----
-
-## OPEN ISSUES
-
-> Full entries live in **`docs/tracking/open-issues.md`**; closed ones in
-> **`docs/tracking/open-issues-resolved.md`**. Read the owning file before acting on
-> any item below — the titles here are an index, not the record.
->
-> **When resolving an issue, move its entry to the resolved archive in the same
-> commit.** Do not re-inline entries into this file.
-
-**18 active** / **47 resolved** — both re-derived by direct count on 2026-08-17 (re-derived a second time later that day, after the adversarial review over this pass archived a nineteenth-bullet orphan: the #29/#41 balance-pass record had an index bullet here and no entry in EITHER issues file, so it was filed to the archive where it belonged, taking resolved 46 → 47) (⚠️ Corrected August 18, 2026: "a nineteenth-bullet orphan" miscounts — the bullet list here held 20, then 18, never 19. The real defect was a PAIR of one-way orphans that cancelled in the totals: the #29/#41 balance-pass record (an index bullet here with no entry in either issues file — archived as described) and the DisciplineConfig entry (present in `open-issues.md` with no index bullet here — its bullet added the same round). Matching totals prove nothing when orphans cancel; the check is re-deriving each file's list independently, entry against bullet, not comparing the two counts.) (`grep -c '^- \*\*'` over each file), not by arithmetic. One of the 18 is a retained near-duplicate — the older of the two football-judgment-proxy-review bullets below, annotated in place as superseded (August 17, 2026, L7) rather than merged or deleted, per this file's own convention of keeping near-duplicates for history; the count is unchanged by that annotation. *August 17, 2026 — an owner decision pass over the seven open decisions this file had been carrying as advisory recommendations. **Two entries RESOLVED and archived**: the assembly layer taxonomy (`ERR-020-002` + `ERR-020-003` adopted and landed the same day) and the injury/aging research-alignment supplement (signed off). **Five HELD — four with their deciding measurement named rather than a date; the fifth, the DisciplineConfig restructure, instead releases when `DisciplineConfigCompletenessTests` goes red** (corrected August 18, 2026, reviewed finding H16: "the `GameplayConfigHolder.Bind` pass" is an unscheduled intention on no roadmap and in no backlog — its own `open-issues.md` entry says in terms that it names no measured event and must not be counted among the measured-event holds): the DisciplineConfig restructure (deferred to the `GameplayConfigHolder.Bind` pass, tree-wide), the two depleted-squad sub-questions (keep the eighteen-player trigger; keep beyond-cap degrade-to-greedy — both closed in #30 §3.4 itself, not only here), KD-7a (hold for the post-W2-arming capture), `pointQuality` (parked until the close-range conversion comparison on identical seeds exists — corrected August 18, 2026, reviewed finding H13: the rush geometry WAS measured August 12, 2026, five days before this hold was written, per `gk-rush-trigger-design.md` §6 / v1.5; the conversion pair is what §6 still owes) and the foul/card drift (hold; arm W2 first, calibrate once). **One entry stayed open on new grounds**: the approval tags were not "created locally, awaiting push" — verified today that the eight tag objects no longer exist anywhere and the tag-push 403 is still live; what remains is re-creation against resolved targets by an owner with privileged credentials (⚠️ Qualified August 18, 2026: the eight tags WERE re-created later that same session against resolved, ancestry-verified targets — `git tag` in a live container lists all eight — but tag objects do not survive the container, so what actually remains is the PRIVILEGED PUSH, re-running the recorded recipe in any fresh container first; see the `open-issues.md` entry). The unifying reasoning, recorded because it is the thing worth reusing: every held item sits upstream of a deciding event (W2 arming, the youth/generated-cover ladder — and for the DisciplineConfig hold not a measured event at all but the `DisciplineConfigCompletenessTests` tripwire going red; the `Bind` pass was dropped from this list August 18, 2026 per reviewed finding H16) that would force the work to be redone, so the cheap reversible items shipped and the expensive ones wait for their deciding measurement.* *August 16, 2026 — the previous count paragraph follows, re-derived by direct count on 2026-08-16 (`grep -c '^- \*\*'` over each file), not by arithmetic. *August 16, 2026 — the DisciplineConfig-restructure entry added at the head (the #44 adversarial-review rounds 8-9 M2 Fable ruling: the readonly-struct restructure deferred to the `GameplayConfigHolder.Bind` pass), taking the active count to 20 (re-derived by direct count of `open-issues.md`: `grep -c '^- \*\*'` returns 20; resolved unchanged at 44, `grep -c '^- \*\*' open-issues-resolved.md` returns 44).* *August 15, 2026, later — the #44 adversarial-review round-4 entry RESOLVED and moved to the archive (all ten findings fixed, gate run to completion), taking resolved 43 → 44. **Correction, recorded rather than quietly fixed:** the "19 active" figure written earlier the same day was reached by incrementing the stated 18, and that 18 had itself never been re-derived — the true count before that addition was 19, so it should have read 20. Removing the round-4 entry brings the direct count back to 19, which makes the current figure right by coincidence rather than by arithmetic. This is the third time this file has recorded an active count that was incremented off an unverified base (see the August 10 correction below); the fix is to re-derive, which is one command.* *August 15, 2026 — the ERR-044-003 stage-1 entry added at the head (the depleted-squad cover ladder: stage 1 landed, stages 2 and 3 blocked), taking the active count to 19; the same pass recorded an owner SEQUENCING decision on the foul/card entry — arm W2 first, calibrate once — which changes that entry's next step without resolving it.* *August 13, 2026 — the #44 Discipline C1/C2 landing entry added at the head, taking the active count to 18 (re-derived by direct count of `open-issues.md`: `grep -c '^- \*\*'` returns 18). The same pass CORRECTED, rather than resolved, the foul/card entry below: its "~7 red cards per 9 minutes" figure had been stale since July 26, 2026 and the re-measurement it prompted found a real 67% drift in fouls and yellows — so the entry stays open on different, measured grounds.* *August 12, 2026 — the A4a calibration entry added at the head, taking the active count to 17 (re-derived by direct count of `open-issues.md`: `grep -c '^- \*\*'` returns 17).* *Re-filed August 2, 2026 — eight entries archived (six closed-but-unmoved, plus a duplicated pair); three titles amended to lead with what remains open rather than what has landed. August 4, 2026 — the wiring-backlog entry added at the head; later same day, the football-judgment remediation entry added above it. August 7, 2026 — a two-red-scenario-locks entry was filed at the head from the B9c gate run and RESOLVED the same evening at the `80d97c8` merge: main's `b162a00` had already diagnosed both failures per-seed and rebaselined both bands by owner call, 45 minutes before the entry was filed. It lived ~1 hour; see the archive. August 8, 2026 — the tree-wide header/version hygiene backlog entry added at the head from `tools/recurring-defect-lint.py`'s first sweep, taking the active count to 15; RESOLVED later the same day by a dedicated hygiene pass (owner chose the hygiene pass over a CI ratchet) — all 275 ERRORs fixed, `python3 tools/recurring-defect-lint.py --repo .` now reports 0 ERROR tree-wide — taking the active count back to 14. **CORRECTION, August 10, 2026: the "14 active" claim above was already wrong before this branch existed** — a direct count of `docs/tracking/open-issues.md` (`grep -c '^- \*\*'`) returns **15**, not 14, against the unchanged 43 resolved; no entry in the file accounts for the sixteenth-vs-fifteenth discrepancy, so the prior figure was never re-derived after some earlier edit. This branch then added one further active entry (the `#28 Player Progression` bullet's owning record, filed to `open-issues.md` to match this file's own index bullet — see above), taking the true count to **16 active / 43 resolved**, re-derived by direct count of both files on 2026-08-10.*
-
-- **DisciplineConfig restructure — DEFERRED by owner decision (ratified August 17, 2026); RELEASES when `DisciplineConfigCompletenessTests` goes red — the checkable condition — and executes in the `GameplayConfigHolder.Bind` composition-root pass, tree-wide, when one is scheduled; never as a #44 one-off.** The completeness tripwire already makes the hazard a red test rather than a silent one
-- **Depleted-squad cover — ERR-044-003 STAGE 1 LANDED August 15, 2026: an extremis appearance no longer serves the ban it was fielded through. WHAT REMAINS: the two better tiers, both blocked — youth call-ups (#42 has no `src/` assembly) and generated "greyed-out" cover (the `PlayerId` space is packed).** The C1/C2 landing recorded, explicitly as an owner call, that #30 §2.3 F9's back-fill can press a **suspended** player onto the pitch and that `OnClubFixturePlayed` then served his ban for that same fixture — so the appearance was **strictly free**. Decided: exempt it. `OnClubFixturePlayed` takes a required `int[] fieldedPlayerIds`, because the rule is not "the club played" but "the club played **without** him"; fixed at the *serving* site, so the reinstatement tier order is untouched, and the eleven is the array the FR-MD-010 appearance record already derived. Behaviour-identical off the extremis path by construction. **The open remainder is the Football Manager posture** — youth, then generated low-attribute cover, both ahead of any suspended player, under which a banned man never takes the field and the suspended tier becomes *unreachable* rather than merely expensive. Stage 2 has nothing to draw from; stage 3 needs `PlayerId = clubId × CLUB_SQUAD_SIZE + local` widened off its packed 25, which touches #27 FR-SQ-010, every save, and ERR-041-019's uniqueness guard.
-- **#44 Discipline & Suspensions — C1 (T0+T1) and C2 (T2) LANDED August 13, 2026: `src/discipline/` is the 35th production assembly, suspensions are LIVE end to end, and the last gap in the season spine for PM-2 is closed. WHAT REMAINS: #44 T3 — the #30-owned quick-sim card synthesis, without which suspensions are live for ONE club in twenty.** The subsystem is a third consumer of two proven seams rather than new plumbing, exactly as the roadmap predicted: the #37-class per-tick ledger tap (B3) feeds a `CardLedgerFold`, and the ERR-030-009 resolve→filter→configure seam takes a third contributor. **Draw-free by construction** — no RNG stream, no domain tag, no `SubsystemOrdinals` entry, no `SNAPSHOT_SCHEMA_VERSION` bump (still 21). `SEASON_SAVE_FORMAT_VERSION` **5 → 6** for the seventh mandatory sub-blob. **The pre-implementation council changed the design on two of five forks, and the authority it cited was one neither the roadmap nor #44 had named: `season-competition-loop/section-3.md` §3.4 (APPROVED, and LATER than #44), which overrides #44's own text twice.** **(1) FR-DC-010 scoped the filter to "the engine-resolved fixture"** while FR-DC-011 one row below serves bans on both paths — a self-contradiction whose narrower half would have made a ban cost nothing, since nearly every fixture of a career is quick-simmed (`ERR-044-002`). **(2) #44 §2.3 F5 required the filter to fail loud below eighteen players**, while #30 §2.3 F9 settles the same event by back-filling and states outright that "#44/#36 contribute removals only and inherit the rule unchanged" (`ERR-044-003`). The second is the landing's real structural cost: `PlayerCareerStates.SelectAvailable` filtered AND back-filled in one method, which **no second contributor can compose with** — chained after, the back-fill runs before #44's removals are known; chained before, #41's back-fill presses a suspended player onto the pitch without knowing he is suspended. Split into `PlayerCareerStates.MarkUnavailable` (a removal SET) + the new `AvailabilityComposition` (one intersection, one back-fill), which makes #30 §3.4's "order-independent BECAUSE both are removals" property structural rather than conventional. **RECORDED, NOT FIXED — an owner decision:** preserving #30's stated invariant ("the composed filter can never leave a club worse off than having no filter at all") means a suspended player IS reinstatable in extremis, which the Laws do not allow; implemented as a **stricter reinstatement tier** (every injured player is pressed back before any suspended one, and — per `ERR-044-019`/`ERR-030-045`/`ERR-030-046` — a reinstated suspended player is benched whenever any completing choice permits it — the extremis tier runs an exhaustive clean-completion search (capped at 12 candidates) whose composed XI carries the minimum achievable number of reinstated-suspended starters — and he starts only in a probe-verified forced start, where every completing choice within the search bound starts at least as many; only then does the stage-1 exemption stall his ban. Residual: forced starts, and the beyond-cap corner (>12 concurrent suspended candidates, unreachable at measured card rates), where the choice degrades to greedy with no minimality claim), with #44 §7.2's deferral queue as the designed alternative if the owner would rather refuse the fixture. **DECIDED August 15, 2026 (ERR-044-003 stage 1) — the deferral queue was NOT chosen, and the half of this that made the compromise *free* is fixed:** an extremis appearance no longer serves the ban it was fielded through (`OnClubFixturePlayed` now takes the fielded eleven). The tier order stands; the chosen fuller answer is a youth/generated-cover ladder, blocked — see the entry at the head of this list. **`ERR-044-001` is the fourth instance of a defect this project has now filed four times**: Appendix B specified the sub-blob version-first with no magic, and at seven identically-shaped `byte[]` payloads in one `Encode` signature a transposition decodes silently as the wrong subsystem — `DISCIPLINE_SAVE_MAGIC` ('DISC') plus the typed `DisciplineBlock`. Its second half is worth more: **#44 §7.1 T2's own verification obligation ("the `Incoming`-id semantics verified against the live engine") FAILED.** Appendix C's worked example puts a bench player at "slot 19" and hedges "(absorbed either way)"; `SQUAD_SIZE = 22`, so 19 is an ON-PITCH slot, and `SubstitutePlayer` derives `Incoming` as the synthetic `SQUAD_SIZE + teamId × SUBSTITUTES_PER_TEAM + benchIndex` ∈ [22, 36). Implemented as written, every post-substitution card would have been misattributed and F1 would never have fired — the spec's hedge was the spec declining to verify a fact. **The occupancy seed comes OUT of the engine** (`MatchEngine.PlayerIdsByAgentId`, written one statement from the `_canonicalAttrs` assignment at all four sites that move a player) rather than being re-derived by a second `LineupSelector` walk in `season-save` — the parallel-surface trap `SquadRating` exists to prevent and that #29/#41's T2 AR pass 2 filed. Boot-constant snapshot exclusion, `_canonicalAttrs`'s own proof unchanged. **Tests: `Discipline.Tests` 83/83 (⚠️ CORRECTED August 15, 2026, later still, reviewed-findings pass: stale — re-measured today by direct execution (`dotnet test src/discipline/tests/discipline-tests.gen.csproj -c Debug`) at 118/118, 0 failed, 0 skipped, itself now superseded — **re-measured August 16, 2026 by direct execution at 143/143, 0 failed, 0 skipped**, over AR rounds 8-9 below, itself now superseded — **re-measured August 16, 2026, later, by direct execution (`dotnet test src/discipline/tests/discipline-tests.gen.csproj -c Debug`) at 146/146, 0 failed, 0 skipped**, over AR rounds 10-12 below; the C1/C2 landing's own count is left as landing-time history — corrected 81→83 per `file-manifest.md`'s same-day L6 correction — see `spec-error-log.md` ERR-044-006) with four mutants killed** (residual-vs-reset, the FR-DC-017 drop, the magic check, the substitution swap — and the suite's author caught his own first residual test being tautological, because `AddYellow` only ever advances by one so a crossing reached by repeated single cards cannot distinguish `-= threshold` from `= 0`); **`SeasonLoopDisciplineTests` +14 wiring locks**, every one failing if its wiring point is reverted, including a real 90-minute engine fixture whose observer-neutrality assertion is PAIRED with a positive control — #44 §5's T-DC-NEU-001 as written is green if the fold never runs at all, which is ERR-030-014's shape one layer up. **THE THING TO KNOW BEFORE READING A LEAGUE TABLE:** in `ManagedThroughEngine` only the managed fixture runs the engine, and only engine fixtures generate cards, so at the August-13 measured rate the managed club accrues ~95 yellows and ~19 reds a season while every rival accrues ~5 and ~1. **#44 does not make suspensions live; it makes them live for one club in twenty, and that club is the human's.** #44 §1.1 concedes the generation asymmetry but not its competitive consequence; T3's #30-owned quick-sim card synthesis is the named answer, and until it lands a suspension count is a fact about the resolution mode, not about the football. **Adversarial-review rounds 8-9 landed August 16, 2026** (round 8: 3 High / 12 Medium / 7 Low; round 9, a fresh full re-review: 1 High / 10 Medium / 5 Low — all fixed, incl. the `ERR-030-045` k≥2 multi-reinstatement fix cited above and `PlayerCareerStates.SelectAvailable`'s full deletion), gate at `051c25a` — meta-integrity OK, build 0 errors, 34 suites, quarantine empty, `MatchEngine.Tests` 461/1/11 (inherited owner-held-red, no new failure), `SeasonSave.Tests` 441/0/3, `Discipline.Tests` 143/143, `MatchAnalytics.Tests` 58/58; see `docs/tracking/CHANGELOG.md`. Full account: `docs/tracking/spec-error-log.md` v2.17. **Adversarial-review ROUNDS 10-12 landed August 16, 2026, later** — round 10 (`a4a672b`) M/L only; round 11 (`21bde36`) 1 High, `ERR-030-046`, the tier-2 reinstatement rule ESCALATED to a capped exhaustive clean-completion search after two successive greedy keys were defeated by the same element-wise-decision-of-a-set-valued-constraint defect (guarantee restated as a theorem: zero reinstated-suspended starters whenever any completing choice benches them all); round 12 (`d0f534a`) 0 High / 1 Medium / 5 Low, all fixed, stating and proving the search's monotonicity lemma and genuinely locking the `ERR-044-022` ordering claim via a new `CardLedgerFold.OccupancyAt` seam — gate at `d0f534a`: meta-integrity OK, build 0 errors, 34 suites, quarantine empty, `MatchEngine.Tests` 461/1/11 (no new failure), `SeasonSave.Tests` 447/0/3, `Discipline.Tests` 146/146, `MatchAnalytics.Tests` 59/59; see `docs/tracking/CHANGELOG.md`, `docs/tracking/spec-error-log.md` v2.42
-- **A4a round-resolution calibration RAN (August 12, 2026) — corpus captured, the three `[GT]`s fitted, and the verdict is TWO-PART: mean agreement PASS (after `ERR-030-033` re-specified the bar, same day), distribution shape FAIL (`ERR-030-034`); KD-7a's NB2 successor is HELD by owner decision (S9, August 17, 2026) until the post-W2-arming capture.** *(Re-titled August 18, 2026, reviewed finding H-C — the title had kept reading "BOTH KD-8 acceptance bars recorded FAILED", contradicting this bullet's own ERR-030-033 resolution below and the owning record at `open-issues.md`, and carried no trace of the August-17 S9 HOLD for its own issue.)* KD-8 **Step 0 PASSED** first (strong-at-home mean margin **+4.000**, strong-away **−3.500**, upsets present; the July-28 record was +7.100 / −4.700). Corpus: **198 real 90-minute `MatchEngine` matches**, 11 `dSquad` buckets × 18, ~90 s/match over four processes, ~1.4 h — inside C1a's ~9 h budget. Fitted by least squares: **`QuickSimBaseGoals` 1.35 → 1.2325, `QuickSimGoalRatingSlope` 0.35 → 0.2162, `QuickSimHomeAdvantageRating` 0.30 → 0.4996**. Those three had carried a "provisional, not fitted" warning at their own declaration since #30 T2 and no longer do. **`ERR-030-033`: the ±0.25 per-bucket bar is below the corpus's own noise floor at the depth KD-8 specifies** — 15 of 22 bucket-sides have a standard error on their own mean larger than the whole bar, so a perfectly correct model would fail it too; resolving ±0.25 needs ~770/bucket ≈ 210 h against a budgeted ~9 h, making it a bar to re-specify rather than a run to re-size. **✅ ERR-030-033 RESOLVED August 12, 2026 — the bar is re-specified and the same fit now reads mean-agreement PASS.** KD-8 carries a per-cell `max(0.25, 2·se)` screen (±0.25 kept as a FLOOR, so a deeper corpus restores the original requirement automatically), a bounded-exceedance rule, a pooled `χ² ≤ χ²₀.₉₅(cells−3)` — where the power actually lives — an 18/bucket scoreability floor, and an n ≥ 250 depth pin on the W/D/L bucket. Measured: worst |z| = 2.06, 1 exceedance of an allowed 2, pooled **χ² = 16.0 on 19 dof** vs 30.1. **The verdict is now two-part: mean agreement PASS, distribution shape FAIL** — they fail for unrelated reasons, and the single flat verdict had been making ERR-030-034 look like a fit failure. **`ERR-030-034`: KD-7's Poisson shape cannot express the engine's spread** — the engine is over-dispersed at **z = +5.40** (mean var/mean 1.395, 19 of 22 bucket-sides above 1), so it makes more blowouts and shut-outs and **far fewer draws** (19.2% vs the model's 26.8% at `dSquad ≈ 0`, the whole of the 7.6 pp W/D/L miss **⚠️ CORRECTED August 12, 2026 (Fable advisory review, independently reproduced): the causal sentence above is WRONG and would misdirect the fix.** Marginal over-dispersion fattens BOTH tails — more blowouts *and more 0–0s, which are draws* — so it barely moves the draw share. Computed at the fitted bucket-0 lambdas: independent negative-binomial at the measured dispersion gives **26.3%** draws against Poisson's 26.8%, i.e. it closes ~0.5 pp of the 7.6 pp gap. **Dispersion and the draw deficit are substantially INDEPENDENT findings.** The only mixed-Poisson mechanism that cuts draws materially is a shared antithetic swing, and it necessarily implies negative home/away correlation, which this corpus refutes: pooled within-bucket correlation is **+0.044 ± 0.073** (n=198), ~3σ from the ≈ −0.20 such a family predicts *(⚠️ corrected August 18, 2026, reviewed adversarial-review finding H8: this clause carried **+0.004 ± 0.052 (n=378)** — a pooling of the W/D/L depth rows into the fit corpus, not the sanctioned invocation `round-resolution-corpus.md` records, and a pooling that flips the α verdict this same bullet quotes)*. So the draw deficit's mechanism is NOT established and is not expressible by any mixed-Poisson consistent with the measured correlation. Over-dispersion is separately confirmed real and NOT a pooling artifact (within-bucket `dSquad` spread contributes ≤ 0.005 of the ~0.4 excess), and is better specified as `var = μ(1+αμ)`, α ≈ 0.15–0.25, than as a constant 1.395 ratio.); that is a second-moment gap no mean-shaping parameter closes, and it is **the surviving half of roadmap risk row 1**. **The successor is now PRE-DECIDED and gated (August 12, 2026): `league-bootstrap-design.md` **KD-7a**** — NB2 (`var = μ(1+αμ)`), `NegativeBinomialInverseCdf` pinned by name and by algorithm, one uniform per side with the existing sub-streams unchanged, and a `[GT] QuickSimDispersion` whose zero case routes to today's `PoissonInverseCdf` verbatim so `α = 0` is bit-identical rather than identical-in-the-limit. **It is deliberately NOT adopted** — ratified as an owner decision August 17, 2026 (**S9**, `league-bootstrap-design.md`): **HOLD, neither adopt nor reject; decide after the W2 calibration capture**, exactly as KD-7a's own tripwire (S7) says — on four measured gates: **α is not determined by this corpus** (0.0773 weighted vs 0.1552 unweighted, one 18-sample cell carrying 36% of the weighted fit); **NB2 does not fix the draw deficit** (26.5% vs Poisson's 26.8%, engine 19.2% — ~0.3 pp of a 7.6 pp gap); the draw deficit's own mechanism is unestablished (the shared-swing family that would cut draws implies negative home/away correlation, and the corpus measures **+0.044 ± 0.073**, n=198); and the capture predates the defensive wiring that moves the second moment (**no player has ever made a tackle** — written August 12 and corrected in place at `league-bootstrap-design.md` on August 17 to the **post-arming** reading, annotated here August 18: W2's same-day landing made the clause false about the CODE while leaving it true of a shipped match at `TackleContactRadiusM = 0`, and the tripwire reads post-arming or it would fire against a corpus statistically identical to the one it exists to reject). The tripwire is stated so the next capture decides rather than re-litigates. Neither is fixed here: widening a bar to fit its own result stops it being a bar, and changing the distribution family moves persisted season state **⚠️ CORRECTED August 12, 2026 (Fable advisory review, verified in code): the "moves persisted season state" premise is OVERSTATED.** `SeasonStateCodec` serializes a per-fixture `Played` flag and aggregate `LeagueTableRow` totals — **individual scorelines are folded into the table at resolution and never re-derived from their key afterwards** — so a successor family with no persisted-layout change forces no format bump. Decisive evidence: the A4a refit itself changed all three `[GT]`s, i.e. every future draw in every save, and `SEASON_STATE_FORMAT_VERSION` is still **1**. What KD-7's pin-by-name protects is implementation identity, not save layout. The real cost of a family change is mid-save future-draw drift (already accepted at the refit), the KD-7 revision, and lock updates. (the scoreline reaches `LeagueTable`, which `SeasonStateCodec` serializes). **The corpus is committed, so a re-fit against a new family costs seconds, not hours.** **Measured in passing: the corpus's grid-weighted goal rate is 3.09/match.** **⚠️ CORRECTED August 12, 2026, by the goal-rate match-realism pass — the claim above is FALSE and is annotated rather than deleted.** 3.09 is the **grid-weighted** corpus mean, and the calibration grid samples `dSquad` −5…+5 **uniformly**, which a real season does not: its fixtures cluster near 0 (|dSquad| ≤ 1 is ~39% of a 380-fixture season against the grid's 27%), and mismatched fixtures score more (4.78 goals/match at +5). Re-measured on the football-comparable population: **balanced fixtures (`dSquad ≈ 0`, n=198) produce 2.70 ± 0.13 goals/match against football's ~2.7 — 0.02σ**, and the **league-weighted** rate (per-bucket rates re-weighted by the actual `StrengthDelta` fixture distribution) is **2.93 ± 0.15, +1.47σ — not significant**. Bucket-to-bucket variation is marginal (χ² = 21.8 on 10 dof). **The engine has NOT overshot football's goal rate; there was no defect, and no `[GT]` was moved.** The error was reading a calibration grid as if it were a league. `tools/round-resolution-fit.py` now emits all three figures side by side so the corpus mean cannot be quoted as a realism number again. Also landed: a **sample-window** knob (`TD_CALIBRATION_SAMPLE_FROM`) so a single bucket can be deepened across processes (KD-8's acceptance bucket could previously only be deepened serially), per-bucket standard errors + the dispersion test emitted by the fitter so a verdict is interpretable rather than merely reported, and `RoundResolutionFitLockTests`. **Two methodology properties were verified rather than assumed** — a slice reproduces byte-for-byte in isolation, and the split ±6 run reproduced the sanctioned pilot's own 20 rows exactly
-- **Football-judgment proxy review — 32 itemized findings open across 24 specs; doctrine (§6) governs the fixes; ERR-008-020 (template), ERR-008-019 (the founding long-shot cliff), ERR-008-021 (the shot lane) and ERR-008-022 (the review over -021) LANDED.** The review (`football-judgment-proxy-review.md`) swept all 53 APPROVED specs for continuous football judgments collapsed into thresholds/bare geometry. Its §6 remediation doctrine (owner-converged Aug 4) is binding on every fix: P1 continuous-never-cliff, P2 skill-as-discrimination-fidelity, P3 the attribute ownership ledger, P4 intent-as-first-class-object, P5 chain calibration pivoted on today's baseline (KD-W1). **ERR-008-020** (#8 §3.1.3.3 pass-lane threat model) landed Aug 4 as the template — spec+code same commit, gate NOT runnable in the authoring environment. **ERR-008-019** (#8 §3.2.3.1 long-shot cliff — the review's founding finding, whose original "FIXED" record was verified false at the -020 landing) landed Aug 5 under the soft-reserved id, re-verified free, and owner-revised the same day to the FULL-RANGE ramp (half-width 0.25 = the whole attribute: raw 1 exactly 0.05, raw 20 exactly 0.55, ~0.026 per point, no plateaus; P5 mean 0.30 preserved): **digest invariance was RETRACTED at the same-day adversarial review over that landing** — the argument assumed a 0.5 m possession radius, but the KD-H3 loose-ball pickup grants possession at **1.0 m** and leaves the ball where it lies, which makes a raw-19 MIDFIELD shot marginally generator-reachable (just above 34.0 m vs a 34.21 m range gate) and there ramp (≈ 0.524) ≠ step (0.55); behaviour change owner-intended, formula/constants/tests untouched; gate likewise not runnable. **ERR-008-021** (the §6.4 shot-lane follow-up -020 deferred) landed Aug 5: #8 §3.1.4.3/§3.2.3.2's occlusion test counted an opponent's WHOLE angular width when his angular centre fell inside the goal arc and NOTHING when it fell outside — a defender standing squarely across the near post scored the shooter a fully open goal, and 4 cm of lateral position stepped `GoalOpeningScore` 0.595 → 1.000 — and the width was body radius alone. Now the true angular OVERLAP of the blocking disc with the arc (continuous by construction — this one needed no ramp constant and deletes a tolerance epsilon) × Anticipation/Positioning ability read through the SHOOTER's Vision fidelity, with the **goalkeeper exempt from the ability term** because #11 §3.5/§3.7.0 owns keeper shot-stopping (P3). P5 exact: old rectangle and new trapezoid both integrate to `4h·halfArc` over a uniformly-placed blocker. **Digest invariance NOT claimed** — live on every generated shot; 10 test locks, 5 of the 9 evaluable against the old model failing on it (published as "9 / 5 of 8" and corrected at ERR-008-022); gate not runnable here. The 34-finding tally is unchanged (the shot lane was never itemized — it surfaced in §6.4), so 32 remain open. Recorded-not-fixed: `IsInShotPath`'s hard corridor end-bounds, and §3.2.10's constant catalogue, now left behind by five consecutive #8 landings. **ERR-008-022** landed Aug 6 from the **adversarial review over the -021 landing**: §3.1.4.3's lane test bounded the shooting lane by a plane through the goal **CENTRE**, which for any off-centre shooter cuts diagonally across the goal mouth — it discarded the **far-post** blocker on **20,213 of 20,213** sampled in-range off-centre shooters, dropped a keeper on his line at goal centre for *every* shooter position (shooter (95,20) read a **completely open goal**), and admitted an opponent standing *behind* the goal line at the keeper's radius, so -021's overlap model was denied much of the geometry it exists to price and **achieved substantially less than it claimed**. Two further predicates in the same derivation were **larger cliffs than the one -021 removed**: `GOAL_MIN_SHOT_DIST` (1.000 → 0.050 across 1 cm, taking the SHOOT option with it) and the goalkeeper classification (0.768 → 0.311 across 2 cm, which -021 *widened* to 0.551). All three fixed — goal-line-plane bound + two `[GT]` ramp widths, `gkness` lerping radius and the P3 exemption together. **Three -021 verification claims were false and are corrected:** the P5 exactness argument (holds only for `h ≤ halfArc`, up to **2×** above it — the stated reason no recalibration was needed, withdrawn), the test count ("9 locks / 5 of 8" → **10** / 9 evaluable / 5 fail / 4 pass), and the §3.2.3.2 worked example (its opponent was classified a **goalkeeper**, so all three of its numbers were unreachable). The suite was inadequate too — the over-blocking half had **no lock**, a mutant restoring the pre-fix full width passed all ten, and `NullAttributeView` was a **tautology** in both the pass and shot suites. Suite 10 → **15**; gate likewise not runnable. Tally still 32 (the shot lane was never itemized). Recorded-not-fixed: `MIN_GOAL_VISIBILITY` is still a hard predicate on option *existence*, the GK positional proxy still reads a deep defender as part-keeper, and §3.2.10's constant catalogue is now **six** #8 landings behind. **FIRST COMPILE + TEST EXECUTION (CI 402, PR #302, Aug 6): build 0 errors; `DecisionTree.Tests` 127 passed / 1 failed / 4 skipped; every other suite green — but NOT a gate pass.** The `Compile + test` job was cancelled at 16:59:45, 2 m after its last suite reported and before `run-gate.sh` reached `Gate PASSED`, so no verdict was ever returned; four hygiene checks (link check, spec hygiene, file manifest, `.meta` integrity) were cancelled with `runner_id: 0`, never having run. The one failure was ERR-008-022's own far-post lock — it read `OpponentGoalPostL`, y = 30.34 in the home fixture, the post *nearer* the (90,24) shooter, while asserting the far post's value. Because the pre-fix bound KEPT the near post, that lock would have passed against the broken model: it was never a lock on the fix. Corrected to select the post by geometry — a correction that has itself **never been compiled**: run 403 sat 1 h 39 m without a runner and was evicted, and PR #302 was then closed. The recorded 12-of-12 mutant kill overstates the far-bound mutant accordingly, and this is the third hand-derived verification claim in the -021/-022 chain that execution falsified; the "GATE-VERIFIED" status briefly written over these two entries on Aug 6 was the fourth, and is withdrawn (`spec-error-log.md` v1.75). **ERR-008-023 (Aug 7) — the -022 landing scored ZERO GOALS, and the acceptance scenario caught it.** CI run `31188688249` (PR #303) is the first run ever to reach `MatchEngine.Tests` on this branch: that suite takes **22 m 55 s**, and run 402 was cancelled 3 minutes into testing, so the match engine had never been exercised here — correcting this session's claim that 402's sweep "ran to completion" (suites run in parallel; `ui-framework` finishing last alphabetically proved nothing). `sim_match_engine_shot_outcomes` failed `goals-still-scored = 0` across four seeds × 18 minutes. Cause: -022's own headline fix. The retired goal-centre-plane bound had discarded a goal-line keeper for EVERY shooter position, so the keeper-only `GK_BLOCKER_RADIUS_M` = 1.5 m disc — in the catalogue since the model was written — had **never been exercised**; it went live at -022 and removed **~42% of the goal arc on every shot** (1.000 → 0.584 at 16 m, keeper alone, before any outfield defender), which `MIN_GOAL_VISIBILITY` turns into SHOOT options that are never generated. RETIRED: every blocker occludes with `BLOCKER_RADIUS_M`, keeper included — reach beyond the body is shot-stopping, P3 assigns that to #11, and #11 prices it at contact, so the read was charging one keeper twice. `gkness` survives, lerping the P3 exemption alone. **This is the P5 residual -022 recorded as "recorded, not fixed" under KD-W1, arriving with interest** — -022 strictly ADDS blockers and landed with no recalibration, one landing after -021's population-preserving claim was itself withdrawn. Suite 15 → **16**; a GK-read continuity lock was one commit from becoming this file's **third tautology of its class** (with the radius gone the read moved only the ability term, which an ability-neutral blocker zeroes) and now carries live attributes plus a swing assertion. **-023's downstream, measured on main (run 419, Aug 7): two acceptance bands tripped and were rebaselined by owner call** — keeper-contact deep dive-early `== 0` → `<= 1` (one episode 616.7 ms early, inside the pre-fix class — a real recurrence) and close-chance cosine −0.10 → −0.16 (pooled −0.119; seed 0xD1A6D05E's entire ERR-008-018 gain returned while its partner held +0.078); regressions queued for the P5/KD-W1 pass (`open-issues.md`, both design supplements). The second failure was invisible until now — the 5,000-line CI log-tail cap hides early-printing failures, so PR #303's run actually had 3, not the 2 its session saw. Diagnosed by local reproduction: **the full gate runs in Claude remote sessions** (Ubuntu-archive `dotnet-sdk-8.0`; `tools/dotnet-ci/README.md` v1.2 — the founding 403 was `dot.net`, not the archive). Next in line per §6.3: the remaining formula-patch findings; mechanism-class items (pass-to-space, run signaling, #36/#27 selection) need design supplements first
-- **Football-judgment proxy review — 32 findings open across 24 specs; doctrine (§6) governs the fixes; ERR-008-020 (template) and ERR-008-019 (the founding long-shot cliff) LANDED.** **⚠️ SUPERSEDED August 17, 2026 (L7, reviewed-findings pass) — this is an older near-duplicate of the entry above (which continues through ERR-008-023, two landings further than this one's ERR-008-021 — "one landing further" corrected August 18, 2026, reviewed finding H14); kept only as history per this file's retained-near-duplicate convention, not as the current record.** The review (`football-judgment-proxy-review.md`) swept all 53 APPROVED specs for continuous football judgments collapsed into thresholds/bare geometry. Its §6 remediation doctrine (owner-converged Aug 4) is binding on every fix: P1 continuous-never-cliff, P2 skill-as-discrimination-fidelity, P3 the attribute ownership ledger, P4 intent-as-first-class-object, P5 chain calibration pivoted on today's baseline (KD-W1). **ERR-008-020** (#8 §3.1.3.3 pass-lane threat model) landed Aug 4 as the template — spec+code same commit, gate NOT runnable in the authoring environment. **ERR-008-019** (#8 §3.2.3.1 long-shot cliff — the review's founding finding, whose original "FIXED" record was verified false at the -020 landing) landed Aug 5 under the soft-reserved id, re-verified free, and owner-revised the same day to the FULL-RANGE ramp (half-width 0.25 = the whole attribute: raw 1 exactly 0.05, raw 20 exactly 0.55, ~0.026 per point, no plateaus; P5 mean 0.30 preserved): **digest invariance was RETRACTED at the same-day adversarial review over that landing** — the argument assumed a 0.5 m possession radius, but the KD-H3 loose-ball pickup grants possession at **1.0 m** and leaves the ball where it lies, which makes a raw-19 MIDFIELD shot marginally generator-reachable (just above 34.0 m vs a 34.21 m range gate) and there ramp (≈ 0.524) ≠ step (0.55); behaviour change owner-intended, formula/constants/tests untouched; gate likewise not runnable. **ERR-008-021 (Aug 6) closed the shot-lane follow-up deferred at the -020 landing** (#8 §3.1.4.3/§3.2.3.2 step 3a: blocker occlusion × the shooter's Vision-read Anticipation/Pace `perceived_ability`; **no new constants** — the -020 `[GT]`s reused so one lever calibrates both lanes at the KD-W1 pass; not one of the 34 itemized findings, so the counts stand; gate likewise not runnable, CI on push is the gate). **Its same-day AR found 1 High, 7 Medium, 5 Low, all fixed** — headline H-1: the P3 keeper exemption had been keyed on the whole 6 m GK band, so every near-goal defender escaped the weighting exactly where shots are blocked; now a single GK candidate (goal-line-nearest in band) is exempt, everyone else weighted; and the P5 "today's arcs exactly" claim was corrected to midpoint/null-view-only (the all-default 10/10 squad reads ≈ 0.979) — the ERR-008-019 overclaim shape, one day later. **Both are GATE-VERIFIED (PR #305, run 404, head `3f207ee`, Aug 7):** build 0 errors, `DecisionTree.Tests` 120/124 passed (4 skipped, 0 failed) with all 7 `ShotLane_*` locks executed, whole-tree gate PASSED with the quarantine empty, and `MatchEngine.Tests` 420/430 unchanged — the intended digest movement tripped no scenario band. Next in line per §6.3: the remaining formula-patch findings; mechanism-class items (pass-to-space, run signaling, #36/#27 selection) need design supplements first
-
-- **#28 Player Progression — T1 + T2a LANDED August 8, 2026 (roadmap D1, part one): ERR-029-006 CLOSED, #30's KD-2 slot 1 is LIVE, and the career roster has MOVED OFF THE WORLD SEED. WHAT REMAINS: the season boundary (retiree removal + 1:1 regen) and with it the `player-progression.regen` stream, plus T3's deep curve.** `ProgressionEngine` is the KD-7 sole writer; `SeasonLoop` gathers #29's `ComputeTrainingInput` batch through the new `PlayerCareerStates.GatherTrainingInputs` and hands it to the FR-PG-021 batch `AdvanceDay`. **The load-bearing decision is KD-4**, and it is the one to remember: `Squad` is immutable and `League` is rebuilt from the world seed at load, so a player's evolving `[1,20]` attributes had *nowhere to live and nowhere to persist* — growth could not be represented at all. #28's block is now the serialized roster and `ProgressionSquads` is the single provider every consumer reads through, so there is one authority at every moment rather than two reconciled at save/load (the shape #29/#41 T2's H2 filed). **This retires roadmap A3's property that a career is reopenable from the world seed alone**; `SavedWorldSeed_RebuildsTheSameLeague` asserted exactly the retired rule and was NARROWED to the half that survives (generation is still seed-pure), not deleted. `SEASON_SAVE_FORMAT_VERSION` **4 → 5**. **The landing has NO draw site at all** — no stream registration, no `0x20` promotion, no `DETERMINISM_DIGEST_VERSION` or `SNAPSHOT_SCHEMA_VERSION` question — because new-game `PotentialAbility` is seeded deterministically. Four ERRs filed AND resolved in the same commit. **ERR-028-003:** new-game PA had no derivation in spec or code, and the value is not cosmetic — PA is the F1 ceiling, so a 0 default makes the whole daily step a silent no-op that every existing unit test still passes; owner's call is that new-game PA is **#47 authored data** and only regens compute it, with a deterministic `[GT]` placeholder until #47 has an assembly. **Recorded, not fixed, and it survives that decision:** at the §4.3 band step a whole youth career raises CA by only **~421 of `ABILITY_MAX` = 10,000** (8 growth years × ~52.6, ONE attribute per year), so the PA ceiling binds only for authored gaps under ~420 — narrower than any realistic wonderkid gap. **PA-as-ceiling is decorative whatever PA's source**, because that is a property of the growth RATE; Stage-3 `curveEnabled` owns it and KD-W1 forbids retuning it in the pass that wires the subsystem. **ERR-028-004:** §3.5 specified the save block version-first with the **RNG domain tag as its identifier** — the ERR-029-005/ERR-041-009 MUST arriving in a third spec; now magic-led ("PROG" before the version) plus a typed `ProgressionBlock`, the frame's fourth same-shaped opaque payload. **ERR-028-005:** §5.2's keystone T-PG-DET-002 was unsatisfiable as worded (age is gap-independent, the cursor is an accumulator), and §3.1 carried **no per-day cursor** while `RunCareerDaySteps` runs a fixture day's slots TWICE (ERR-030-027) — so a wired #28 would have double-accrued growth on every fixture day: a silent ~11% rate error, not a crash. Fixed with `LastAdvancedWorldDay` (sentinel `uint.MaxValue`, never 0 — the day-0 trap), making the step idempotent per day and gap-complete, which makes §5.2 true as written rather than weakening it. **ERR-030-030:** five stale #28-null-seam sites + the v4 frame description. **Slot 1 is mutation-verified** — reverting it to a bare comment fails the cursor-tracks-the-clock lock and the save/resume lock, both. Suites: `PlayerProgression.Tests` 26 → **41**, `SeasonSave.Tests` **356 passed / 3 known skips**. The season boundary is deferred **deliberately**: it needs the regen stream, whose survival across a save §3.5 does not pin, and ERR-029-006 closes without it — retirement FLAGGING is live, being part of the draw-free daily step
-- **Match-engine wiring backlog — W1, C1 and W2 BUILT-BUT-DISABLED; 8 built subsystems (W3–W10) still have no production caller, and the `[GT]` freeze (KD-W1) that follows.** **W1 landed August 4, 2026** — the keeper now comes off his line to reduce the shooting angle (`TryCommitRushIntents` gives `CommitRushIntent` its first production caller; a *chasing* defender does not keep him home, only a goal-side one, and how far he comes is his own `OneVsOne`/`Composure`/fatigue via new #11 §3.7.0). It surfaced two spec defects — `ERR-011-010` (§3.7 delegated the rush decision to Decision Tree #8, which has no keeper model and cannot acquire one, so the condition had no owner for ten weeks) and `ERR-011-009` (a rush that reached its target had no state-machine exit at all) — **and its owed measurement was DISCHARGED August 12, 2026** — 23–46 rush intents committed per match against a pre-W1 baseline of exactly 0 by construction, keepers reaching 9.1–14.1 m off their own goal line, no `ERR-011-009` re-stall (`gk-rush-trigger-design.md` §6 / v1.5). *(Corrected August 17, 2026: this bullet read "nothing in that landing has been executed: no .NET SDK in the authoring environment, so no gate run and no measurement" — true when written on August 4, false since August 12, and the origin of the same stale claim in `gk-conversion-at-contact-design.md` KD-CC6a, corrected there at v1.2.)* What W1 still owes is the CONVERSION effect §6 was ultimately for: a pre/post outcome pair on identical seeds. **W2 BUILT August 12, 2026 (`ERR-014-006`) — and SHIPS DISABLED pending W6.** The mechanism is complete, measured and locked: armed, a player in control is dispossessed for the first time in this engine (~47 challenges and ~13 dispossessions per team per 90). But `TackleContactRadiusM` ships at **0**, because with the challenge live `sim_match_engine_inposs_gate` collapsed to 0.501 against its 0.70 bound — a **stall**, not a rate effect (one scenario seed collapses after as few as THREE decisive tackles, and which seed moves with the radius). Root cause NOT isolated; leading candidate is **W6**. Disabled rather than held red because that predicate is the only detector of the 0.24-class possession collapse and W4/W12 land on this branch — held red on an un-isolated cause it could no longer catch a NEW regression of the same class (ERR-030-014 one layer up). Recorded as overridden: **KD-7a's tripwire waits on the tackle being WIRED, and radius-0 is behaviourally unwired**, so the next dispersion capture stays pre-tackle. Arming is one constant. So **"no player has ever made a tackle" is retired as a statement about the CODE, not yet about a shipped match.** New #14 §3.6.5 "Tackle Outcome Resolution" takes the tackle outcome decision back into the spec that owns the players (the W1 precedent), resolving the governance question the wiring investigation could not settle unilaterally: neither #8 (its `ActionType` ordinals are exhausted by the 3-bit composure-noise field) nor #3 (defers slide tackles to Stage 2) can accept the KD-6 delegation. Four outcomes, not the obvious three — `MISSED` / `BALL_WON` / **`BALL_LOOSE`** / `FOUL`, `BALL_LOOSE` at owner direction so a won challenge does not have to mean a clean turnover. `MatchEngine.cs` wires the resolver at the COMMIT contact gate, measured to the BALL and pinned to `LooseBallPickupRadiusM` (a 2.5 m reach was tried and is a defect — it knocks the ball free from beyond every reclaim path; now fail-loud guarded); a tackle foul enters the existing single foul-candidate slot rather than a second authority; `ContactType.SLIDE_TACKLE` gets its first producer. `SNAPSHOT_SCHEMA_VERSION` **20 → 21**; `DOMAIN_TAG_DEFENSIVE_AI` (0x1A) gets its first draw site anywhere in `src/`; the `match-flow.card-severity` draw order **moves by design**; **no digest invariance claimed**. Ten new `[GT]` + one `[FIXED]`, all un-calibrated per KD-W1. Tests: 12 pure resolver locks + 10 composed engine locks, all green, with the challenge armed through `TestOnly_ArmTackleChallenge` and locked BOTH ways (#41 FR-MD-027 posture). **GATE PASSED** — whole-tree, quarantine empty, `MatchEngine.Tests` **461/1/11**; the one failure is the inherited owner-held-red `sim_match_engine_close_chance`, which also fails at baseline `4b9271c`, so W2 adds no new failure (baseline 451/1/10). Full account: `docs/tracking/tackle-wiring-design.md`, `docs/tracking/match-engine-wiring-backlog.md` v1.8, now v1.13. Next in sequence: **W4** (keeper perception), then **W12**. **C1 LANDED August 8, 2026 (`ERR-012-011`)** — #12 §3.0.2 classified phase from the ON-BALL CARRIER, absent for the entire flight of every pass, so a passing team read as being in transition; phase now classifies from TEAM possession (carrier's team ∪ the intended receiver of a pass in flight) over a new `_passInFlightReceiverId` latch that expires with **no new `[GT]`** by reusing `RunFirstTouch`'s receding predicate. `SNAPSHOT_SCHEMA_VERSION` 19 → 20; no RNG/draw-order change. **Measured: final-third `InPoss` 7.5% → 40.8%, possession-phase share 24.2% → 96.8%**, away mirror clean. **But this backlog's own claim that C1 was "probably the highest-value item" is RETRACTED, and the football got slightly worse** — the pre-implementation council refuted the rationale before any code: `TacticalContext.HasAttackIntent` has no production reader (new Class-A **C5**), #13's press targets have no consumer outside `pressing-ai`, and #12's `PullFactor` `InPoss` column is LESS advanced than the `TransToAtk` column it replaces, so the deepest composed slot moved 23.0 → **25.7 m** further from goal and box occupancy 0.04 → 0.02, exactly as predicted. C1's value is a correct label plus a first-time-exercisable `InPoss` column for the calibration pass — **not** a creation fix; that remains C4. Also filed: **C6**, `GkHeadingWorldAdapter.ApplyKick` is unreachable from any test. **GATE: FAILED — `MatchEngine.Tests` 446/2/10; `sim_match_engine_close_chance` (cosine −0.165 vs −0.16; share 0.407 vs 0.42) and `sim_match_engine_shot_outcomes` (`fast-balls-deflect-off-bodies` = 0) both PASS at pre-fix `ba4e194`, so C1 caused both. Bounds deliberately NOT moved. **`sim_match_engine_close_chance` RESOLVED by owner call, August 11, 2026: hold red, do not rebaseline a third time** (`close-chance-creation-design.md` §10.9 item 6) — the failure is queued for the KD-W1 calibration pass, not fitted around today. `sim_match_engine_shot_outcomes`'s deflection-reachability predicate is a separate lock and stays open, awaiting its own owner call; the branch is red by design.** Full inventory and wire-order: `match-engine-wiring-backlog.md`
-- Conversion at contact — the CLAIM defect FIXED (ERR-011-008, §5.Z.23); REMAINDER: the `pointQuality` lottery is blocked on a design decision (measured: the geometry-aware form collapses catches to zero and no `[GT]` in range recovers them) — **PARKED (owner decision ratified August 17, 2026, KD-CC6a): stays parked until the close-range CONVERSION comparison on identical seeds exists** — `gk-rush-trigger-design.md` §6's still-owed pre/post pair, NOT W1's rush anatomy, which landed August 4 and WAS measured August 12, 2026 (the §4 ladder's refusal was measured against a keeper who never left his line, so re-fitting before the conversion pair exists is KD-W1's mistake with the names swapped) — and parry placement is unfixed but currently costless *(bullet corrected August 18, 2026, reviewed finding H-B — it had still read "PARKED August 4 … W1 changes the contact geometry", with no mention of the August-17 decision, after the same wording was fixed at KD-CC6a and at this file's wiring bullet)*
-- Close-chance creation — the DRIBBLE-direction defect FIXED (ERR-008-018, §5.Z.24: the average final-third dribble pointed AWAY from goal); REMAINDER: the funnel itself did not move — the ball still enters the box on 5% of final-third episodes, and the bound is now localized to #8 §3.1.3 generating PASS candidates only at a teammate's CURRENT POSITION, so the tree cannot pass to a place
-- **Foul/card rate — the "~7 red cards per 9 minutes" claim this entry carried for months is STALE and is corrected here, and the re-measurement it prompted found a real drift.** The 7-reds figure was **RESOLVED July 26, 2026** by the §5.Z.9 foul-discipline balance pass (`foul-discipline-balance-design.md`; `match-engine-design.md:1003` records the resolution verbatim), which took fouls 480 → 21.0, yellows 147 → 3.0 and reds 75 → 1.0 per 90. This entry simply outlived its own fix — flagged by the pre-implementation council at the #44 landing, which refused to size a suspension subsystem against a number nobody had re-measured. **Re-measured August 13, 2026** on the committed instrument (`FoulRateDiagnosticTests`, `TD_FOUL_DIAGNOSTIC=1`, 6 seeds × 54 000 ticks = one 90-minute equivalent): **fouls 35.0 / yellows 5.0 / reds 1.00 per 90** against football's ~22 / ~3.5 / ~0.25. **Fouls and yellows are both ~67% above their own post-fix figures** — the balance design's stated tripwire ("`FoulCallProbability` is a rate knob calibrated against *that* contact stream; if it changes, re-measure") fired and nobody was watching: C1 phase classification (Aug 8) moved possession-phase share 24.2% → 96.8% and final-third `InPoss` 7.5% → 40.8%, which is directly upstream of the cross-team contact stream. **Reds remain 4× football**, unmoved since July. **The acceptance bands cannot see any of this** — `MatchEngineDisciplineScenarios` caps fouls at 90, yellows at 20 and reds at 5, so reds could quintuple and eleven consecutive whole-tree PASSES would still read green; that is deliberate as a plausibility floor and worthless as a calibration signal. **Not fixed here, by KD-W1**: `defensive-ai`'s tackle challenge ships at `TackleContactRadiusM = 0` (W2), so today's foul population is pre-tackle and arming W2 routes ~47 challenges per team per 90 into the same single foul-candidate slot. This is now the most load-bearing open realism item — #44 turns cards into suspensions, so a 4× red rate is a 4× suspension rate. **SEQUENCING DECIDED August 15, 2026 (owner call): arm W2 FIRST, then calibrate ONCE.** Today's figures measure a *pre-tackle* contact stream, so a fit landed now would be re-fitted immediately and its intermediate value would sit in the tree looking calibrated — KD-W1 applied literally, with the July-26 pass as the counter-example (it fitted against the contact stream of its day; C1 moved that stream in August and the fit drifted 67% unnoticed). **The accepted cost:** the drift stays live until the W2 calibration pass, so the card rate — and the suspension rate #44 derives from it — is knowingly wrong meanwhile, with the acceptance bands reading green throughout
-- `EnvironmentFingerprint.floatModelHash` — hasher + §4.8.3 Mono mapping LANDED (Option A); §4.8.2 runtime MXCSR gate code LANDED (July 21, 2026); compiled plugin + certified live read LANDED July 22, 2026 (ERR-016-006) — REMAINDER: `SaveManager` still writes `Fingerprint = null`; load-bearing only where a real cert run reads a `SaveManager`-written save — no longer host-blocked (the certification host block cleared July 19, 2026 and the MXCSR plugin host block cleared July 22, 2026); the gap is unimplemented code, not host access
-- Goalkeeper Mechanics (#11) / Heading Mechanics (#10) engine integration — Phase 1 (opt-in) LANDED; the GK/Heading attribute projections now have a live consumer — REMAINDER: `CollisionConsumer` AGENT_BALL duel fan-out, DT-emitted HEADER (ordinal 8 → composure-noise rebaseline), attribute-modulated save commit
-- Advanced positional behaviors + game-model/AI-manager tactics — design supplements OPENED (candidate specs #23–#26) — all four promoted to specs and landed; REMAINDER: #26 §9.2 own-`[GT]` balance review
-- Living World (#22) season/world loop — slices 1–7 LANDED (incl. the KD-10 season composition root + the InteractionTextGenerator wired into it + deep-memory auto-cite + the opt-in arc-trigger evaluator / `world.arcs` sub-stream); upstream-gated services open
-- UI / Client Framework (#38) — T0 substrate LANDED; Wave-7 screens + the UGUI binding remain open.
-  **The governance question the August 7, 2026 P5a landing surfaced — where the four screens'
-  `ScreenId` catalogue and navigation graph live — was RESOLVED by owner decision later the same day
-  and LANDED as `src/client-app/`** (`TacticalDirector.ClientApp`, references only `ui-framework`;
-  roadmap B9c, `interactive-unity-client-design.md` v0.18). The `match-engine` composition-root
-  precedent carried it: FR-UI-010 makes a concrete screen set composition, not framework, and
-  composition lives above what it wires; `match-client-unity` was rejected as gate-invisible (§12
-  rule 1). Roadmap §6 item 2's C3 management screens inherit the same home by precedent. What
-  remains open of #38 is unchanged: the Wave-7 screens (each gated on its data spec having `src/`)
-  and the UGUI binding
-- Presentation layer — minimal match viewer LANDED; interactive Unity client remains open. Its host-free
-  phases are now ALL complete: P0/P2 (July 24), P1/P3 (July 27), **the head-less half of P6
-  (August 3)** — `MatchSession.TickOnce/CaptureSave/RestoreFrom`, `TickStampedCommandReplay`, and the
-  two §5-P6 closed-loop scenarios, which meet PM-1's determinism exit criterion — and **P4a, the render
-  model (August 3)**: `PitchViewProjection` (the one corner-origin ⇄ centre-origin adapter),
-  `PitchMarkings` (the IFAB catalogue as shapes, off the existing `[FIXED]` values),
-  `MatchRoster`, and `MatchRenderProjection` → `AgentRenderModel`/`BallRenderModel`. P4 was split on
-  the standing "keep logic out of `MonoBehaviour`s" rule: **P4a is every render decision, P4b is the
-  binding.** — and **P5a, the shell's decisions (August 7, 2026)**: `PlaybackSpeedLadder` (the four
-  `[GT]` playback multipliers as an *ordered* ladder — opening rung named, stepping clamps rather than
-  wraps, pause deliberately not a rung) and `MatchControlAvailability`/`MatchControlLockReason`
-  (§5-P5's "gate tactical input at full time so a click does not silently no-op", as three states
-  carrying why each is locked; **save stays enabled at full time** per §6.3, and a frameless streamer
-  does **not** resolve to Live, since `default(LiveMatchFrame).MatchEnded` is false). **P5 was split
-  P4a-style on the same rule: P5a is every shell decision, P5b is the binding.** Its one finding: the
-  §5-P0 note requiring `MaxLiveSpeedMultiplier ≥ 10` had nothing enforcing it, and because
-  `SetSpeedMultiplier` fail-louds rather than clamping, a cap below a step would have shipped a 10×
-  button that throws mid-match while 1×/3×/5× worked — now a load-time cross-catalogue pairing check.
-  REMAINDER: **P4b/P5b and the on-host half of P6** — the Unity binding, the UGUI shell,
-  scene boot, 60 FPS, live tactical input through a screen, and the FR-PO-052-class render-loop perf
-  capture. All need the pinned host; the host block itself cleared July 19, 2026, so the gap is
-  unwritten code, not access. **P5b's one open layering decision was resolved August 7, 2026** — the
-  four screens' `ScreenId` catalogue and navigation graph landed in the new `src/client-app/`
-  assembly (see the #38 entry above); nothing but the host is now ahead of P4b/P5b.
-  **ESCALATED August 3, 2026 — owner reversed roadmap B6: the product ships this Unity client, not the
-  web-hosted viewer, so P4 is now the critical path rather than a later native target.** Two standing
-  rules, recorded in `interactive-unity-client-design.md` §12 and `path-to-playable-roadmap.md` §7/C2:
-  (1) **keep logic out of `MonoBehaviour`s** — the CI gate cannot compile `match-client-unity` and never
-  will, so every decision lives in gate-compiled `match-client-core`/`ui-framework` and the Unity types
-  only assign transforms and forward input; extending the Unity shim to fake `MonoBehaviour`/`GameObject`
-  is **explicitly refused**, since a lifecycle-free stand-in lets a dead render loop report green
-  (ERR-030-014's failure mode one layer up). (2) Budget a cert-host run **per P4/P5 landing**, not one at
-  the end. Note `PM-1`'s three screen-facing exit criteria are open again — they were demonstrated on a
-  surface that is no longer the product; its determinism criterion is met head-lessly and stays met
-- Approval tags — the eight objects RE-CREATED locally Aug 17, 2026 against resolved, ancestry-verified targets (they do not survive the container); the tag-push 403 is still live — what remains is the PRIVILEGED PUSH by the owner, re-running the recorded recipe in a fresh container first (re-titled Aug 18, 2026 to match the entry, which had recorded the re-creation while this bullet still said re-creation was what remained)
+# CLAUDE.md — Tactical Director agent guide
+
+> **Purpose:** Small, always-loaded routing guide for AI agents.
+> **Expanded reference:** [`docs/agent-guides/project-reference.md`](docs/agent-guides/project-reference.md).
+> Load that reference only when a task needs its repository map, document catalogue, historical traps,
+> or open-issue index. Live status belongs to the tracking documents linked below.
+
+## Start here
+
+1. Read this file before every task.
+2. Inspect the files relevant to the task; do not preload the expanded reference by default.
+3. For code changes, read [`src/CLAUDE.md`](src/CLAUDE.md). It routes detailed coding topics on demand.
+4. For specification changes, check [`docs/specs/SPEC_INDEX.md`](docs/specs/SPEC_INDEX.md), then read
+   every file in the affected spec folder.
+5. Use [`docs/tracking/path-to-playable-roadmap.md`](docs/tracking/path-to-playable-roadmap.md) for
+   implementation order and [`docs/tracking/open-issues.md`](docs/tracking/open-issues.md) for live blockers.
+
+## Project essentials
+
+Tactical Director is a Unity 6 LTS football simulation. Specifications intentionally run ahead of
+implementation: **APPROVED does not mean implemented**. Check `src/` before assuming a consumer exists,
+and do not wire or harden an assembly-less specification ahead of its T0 landing.
+
+Authoritative indexes:
+
+- Spec number, folder, and status: `docs/specs/SPEC_INDEX.md`.
+- Schedule and milestones: `docs/tracking/PROGRESS.md`.
+- Entity ownership and implementation pointer: `docs/tracking/data-contract-index.md`.
+- Match-engine dormant capabilities and tuning freeze: `docs/tracking/match-engine-wiring-backlog.md`.
+- File inventory: `docs/tracking/file-manifest.md`.
+- Change history: `docs/tracking/CHANGELOG.md` and `docs/tracking/CHANGELOG-src.md`.
+
+## Non-negotiable domain rules
+
+- Coordinates use a corner origin: X is goal-to-goal (0–105 m), Y is touchline-to-touchline
+  (0–68 m), and Z is height. Ball Physics Spec #1 §1.2 and Appendix C are authoritative.
+- Fatigue is `0.0 = fully rested`, `1.0 = fully fatigued`.
+- Every spec constant has exactly one source tag: `[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, `[CROSS]`,
+  or (only for a blocked upstream allocation) `[CROSS-PENDING]`.
+- The Decision Tree emits physical parameters, never physics-layer `KickType`, `ShotType`, or
+  `PassType` enums.
+- Tactical/AI ticks at 10 Hz; physics/render runs at 60 Hz. Do not conflate the loops.
+- Create an interface only when both producer and consumer are specified.
+- Stage 0 uses `float`; Fixed64 is deferred to Stage 5+.
+- Deterministic replay is mandatory: no `System.Random` or wall-clock state in game logic. Use
+  SplitMix64; Python mirrors omit `UL` and mask intermediate products with `& 0xFFFFFFFFFFFFFFFF`.
+
+## Specification work
+
+- Cross-references use `XC-`, `FM-`, `EC-`, and `ERR-` IDs. Renumbering requires a repository-wide
+  search; old documents may contain former numbers, whose mapping is in `SPEC_INDEX.md`.
+- Every formula includes units, valid ranges, and a worked example.
+- Never fabricate approval-checklist evidence; verify it programmatically against source files.
+- Append a version-history row to every modified spec file and include creation date and purpose in
+  every new file.
+- If cross-references change, search all of `docs/specs/` for stale references before finishing.
+- `docs/tracking/*-design.md` files are design supplements, not approved specs. When a promoted spec
+  and its historical supplement differ, the spec wins.
+
+## Evidence and sequencing
+
+- Run the relevant compile/test gate before claiming a suite enforces a behavior.
+- Assert outcomes, not merely that a composition loop completes.
+- Mirror team-relative geometry tests for home and away teams.
+- Do not tune a subsystem that is not wired. Check the wiring backlog and honor KD-W1.
+- A specification defect and its implementation back-propagation land together.
+
+## Load-on-demand reference
+
+Read `docs/agent-guides/project-reference.md` when you need:
+
+- the expanded repository and assembly maps;
+- the full tracking-document and agent-skill catalogue;
+- historical failure narratives and prevention notes;
+- the snapshot of the open-issue index.
+
+Treat status and counts in that expanded file as historical context. The owning spec and tracking
+files remain authoritative.

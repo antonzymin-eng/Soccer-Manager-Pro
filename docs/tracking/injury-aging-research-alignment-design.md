@@ -28,6 +28,10 @@
 > at re-basing; every `Back-prop:` line below is re-pointed. Note for R-2: `BASELINE_DAILY_RISK`
 > (ERR-041-011) is now the exposure-INDEPENDENT term — R-2's under-exposure arm must re-fit against it
 > rather than add beside it, per #41 Appendix A's note.)*
+> *(**`ERR-041-013` NARROWED August 22, 2026 at `ERR-041-021`.** R-1's plumbing half landed
+> independently as `ERR-041-020` — the `int ageYears` parameter and a monotone linear age term — so
+> -013's reserved scope is now the **residual U-shape / young-tail arm only**. The other five
+> reservations (014..018) are untouched. See the box at R-1 before acting on it.)*
 > **Determinism impact:** none — no new RNG stream, no new domain tag, no new `SubsystemOrdinal`,
 > no `DETERMINISM_DIGEST_VERSION` bump (§5).
 > **Save impact (corrected v0.6):** R-4's two `InjuryState` fields and R-6's `PlayerLifecycle` field are
@@ -101,7 +105,41 @@ outright *and* the fix is structural; **M** = a missing modulator or input; **L*
 
 ### R-1 (H) — `AssembleRiskScore` has no age term at all
 
-**Evidence:** E-4. **Owner:** #41 §3.4 / Appendix A. **Back-prop:** ERR-041-013 *(re-based; originally -002, since taken)*.
+> ### ⚠️ LANDED IN PART, August 22, 2026 — `ERR-041-020`. Read this box before acting on R-1.
+>
+> The finding below was filed independently by the football-judgment proxy review and **its plumbing
+> half shipped** as `ERR-041-020` (spec + code, same commit): `AdvanceMedicalDay` and
+> `AssembleRiskScore` now take `int ageYears` — caller-supplied at #30's composition root, exactly the
+> KD-R2 value-not-reference shape this finding proposed — and §3.4 assembles an integer age term
+> before the `OccurrenceRiskMillMult` scaling and the clamp. `#41` now has a `src/` assembly, so the
+> §11 note below ("R-1..R-5 are spec text until #41 T0 opens") is spent for this finding.
+>
+> **The shapes DIVERGE, and the difference is the whole of what remains.** R-1's contract is
+> **U-shaped** — elevated below `AGE_MATURITY_YEARS` (24), zero across the prime band, rising above
+> `AGE_VETERAN_YEARS` (31) — from **E-4, rated Strong**, whose academy half is explicit: *the 16–20
+> band carries elevated risk at adult match intensity*. What shipped is **monotone linear** about a
+> pivot of 26, so a 19-year-old receives **−1050** and 16–20-year-olds become **the safest players in
+> the league**. That reproduces E-4 above the pivot and **inverts** it below. `ERR-041-020`'s claim
+> that the term is "the direction and rough magnitude the epidemiology supports" is accordingly true
+> of the veteran arm only; `ERR-041-021` corrected that claim at #41 §3.4, Appendix A and the
+> catalogue, and this box is its counterpart here.
+>
+> **`ERR-041-013` is NOT spent — it is narrowed.** Its reserved scope is now exactly the residual:
+> the **U-shape / young-tail arm**. The plumbing (the `ageYears` parameter, the seam shape, the
+> KD-R2 argument) is closed by `ERR-041-020` and must not be re-proposed. A refit **re-shapes the
+> shipped term** rather than adding a second age term beside it — the same instruction #41 Appendix A
+> already carries for R-2 against `BASELINE_DAILY_RISK`.
+>
+> **Nothing here re-shapes the term.** The U-shape is this supplement's design, this supplement is
+> **awaiting owner sign-off**, and changing shipped football behaviour is the owner's call rather than
+> a review loop's. Two implementation notes for whoever lands it: the band-table form proposed below
+> would reintroduce the age **threshold** doctrine P1 forbids and `ERR-028-020` has just removed from
+> the sibling spec, so the U-shape wants a continuous piecewise form; and the shipped term's P5 pivot
+> (the bootstrap mean age, which is why the landing moved no measured aggregate) does not survive an
+> asymmetric U — a refit must re-establish P5 rather than inherit it.
+
+**Evidence:** E-4. **Owner:** #41 §3.4 / Appendix A. **Back-prop:** ERR-041-013 — **narrowed at
+`ERR-041-021` to the residual U-shape / young-tail arm only** *(re-based; originally -002, since taken)*.
 
 `AssembleRiskScore(trainingRisk, load, attributes, medical)` (#41 §3.4) assembles risk from training fatigue,
 appearance load, a robustness term derived from `Strength`/`Stamina`/`Balance`, and the staff modifier.
@@ -679,3 +717,4 @@ public static void DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life)
 | v0.4 | August 8, 2026 | — | **Balance-pass AR pass 9 (M2)**: two lines still named "#41's existing `injuries.occurrence` stream" (KD-R4a's deep-tier routing and §5's determinism-impact bullet) — ERR-041-012 established that stream never existed and may not; both re-anchored to the keyed `DOMAIN_TAG_INJURIES_MEDICAL` derivation. Matters here because this supplement is LIVE (awaiting owner sign-off) and will drive #41's next landing. |
 | v0.5 | August 17, 2026 | — | **SIGNED OFF (owner decision).** No design content changed — the three structural decisions (R-5, R-6/KD-R4, KD-R4a) are accepted as written at v0.3/v0.4. Status header and §11 steps 1–2 updated to record it. What this unblocks: §11 step 3 (file ERR-041-013..018 and ERR-028-002..004, the soft-reserved ids re-verified free at the August-7 re-basing — **⚠️ CORRECTED at v0.6: false in its #28 half on its own date.** The August-7 re-basing only ever re-verified the **#41-side** block (013..018); the #28 ids were never re-checked, and ERR-028-002 had already been consumed July 27, 2026 at #53's approval — ten days before that re-basing — with -003/-004 consumed August 8 at the #28 T1/T2a landing. The #28 block is re-allocated to ERR-028-020..022 at v0.6), step 4 (patch #41 §2.2/§3.1/§3.2/§3.4/Appendix A and #28 §3.1/§4.3/Appendix A, appending FR-MD-028..034 / FR-PG-025..028, with **no** `SPEC_INDEX.md` row change — both specs stay APPROVED, these are back-props), and step 5's two tranches. None of that is scheduled here. **Standing caveat, unchanged and load-bearing for step 5:** R-2's under-exposure arm must re-fit against `BaselineDailyRisk` (ERR-041-011) as the exposure-independent term rather than add beside it, and every `[GT]` this supplement moves is subject to KD-W1 — #41's occurrence dial is armed but the tackle challenge that feeds the contact stream ships at `TackleContactRadiusM = 0` (W2), so a fit landed before the W2 calibration capture would be re-fitted immediately. |
 | v0.6 | August 17, 2026 | — | **Post-sign-off factual correction (reviewed adversarial-review findings H2 + H3). The sign-off's factual premise was re-verified after the fact and found EXPIRED; the owner's sign-off of the three structural decisions — R-5, R-6/KD-R4, KD-R4a — is UNCHANGED. What changed is the cost/timing argument (KD-R1), which is now VOID.** **H2 (five falsified sites):** §1's implementation-state table claimed #41 had "no `src/` at all" and #28's T1/T2 were unbuilt — false since August 5 and August 8, 2026 respectively (`src/injuries-medical/MedicalSaveCodec.cs` at `MEDICAL_SAVE_FORMAT_VERSION` = 1; `src/player-progression/ProgressionSaveCodec.cs` at `PROGRESSION_SAVE_FORMAT_VERSION` = 1; both mandatory sub-blobs of #30's frame, `SEASON_SAVE_FORMAT_VERSION` = 6; #28's `ProgressionEngine` live at slot 1, #41's `MedicalStep` at slot 4, occurrence dial armed). §1 re-verified and rewritten; §6's "None" save-impact cells for R-4/R-6 replaced with the real 1 → 2 format bumps under KD-7/F3's no-migration refusal; §10's "window is closing" restated as closed; §11 step 5's premises corrected (every tranche now lands against live, wired code); the header's save-impact line corrected; and R-4's "neither costs a format bump" corrected in place. Separately, the three ERR-030-014 live-blocker citations (§3 R-10, §9 item 7, §10) retired — that ERR was **resolved July 26, 2026** (same day this supplement was written), production matches develop play, and what actually gates validation today is KD-W1 (the contact stream is pre-tackle until W2 arms at `TackleContactRadiusM` = 0). **H3 (id collision):** all three #28-side back-prop ids the sign-off unblocked were already taken — ERR-028-002 filed July 27, 2026 at #53's approval (published in #28 §1/§7), ERR-028-003/-004 filed August 8, 2026 at the #28 T1/T2a landing; the v0.5 row's "re-verified free at the August-7 re-basing" claim was false on its own date and is annotated in place (that re-basing only re-verified the #41 side). **Re-allocated by repo-wide grep over `docs/` AND `src/`** (highest in use: ERR-028-019): **old → new mapping -002 → -020 (R-7), -003 → -021 (R-8), -004 → -022 (R-6 consumer + R-11)**; every citation re-pointed (header block, R-6/R-7/R-8/R-11 `Back-prop:` lines, §11 step 3). The ERR-041-013..018 block was re-verified by the same method and **is still free** (cited only by this supplement and CHANGELOG references to it; nothing in `spec-error-log.md`); it stands unchanged. No design content changed; the R-1..R-12 findings' substance is untouched. |
+| v0.5 | August 22, 2026 | — | **`ERR-041-021` (adversarial review over the `ERR-041-020` landing, H7): R-1 annotated IN PLACE as landed-in-part; no other finding touched, and no shape changed.** The football-judgment proxy review filed R-1's defect independently and landed its **plumbing half** on August 22 as `ERR-041-020` — the `int ageYears` parameter through `AdvanceMedicalDay`/`AssembleRiskScore`, caller-supplied at #30's composition root, i.e. exactly R-1's own KD-R2 value-not-reference shape — so the defect was momentarily recorded twice, once resolved and once open, with `ERR-041-013` reserved for a finding whose primary half was already spent. **The shapes diverge:** R-1's contract is U-shaped from E-4 (rated *Strong*, whose academy half is explicit — the 16–20 band carries elevated risk at adult match intensity), while the shipped term is monotone linear about pivot 26, giving a 19-year-old −1050 and making 16–20-year-olds the safest players in the league — E-4 reproduced above the pivot and INVERTED below it. `ERR-041-013` is therefore **narrowed, not closed**: its remaining scope is the U-shape / young-tail arm alone, and a refit RE-SHAPES the shipped term rather than adding beside it (the instruction #41 Appendix A already carries for R-2 against `BASELINE_DAILY_RISK`). The term is deliberately **not** re-shaped by this pass — the U-shape is this supplement's design, the supplement is still awaiting owner sign-off, and changing shipped football behaviour is the owner's call. Two forward notes recorded in the R-1 box: the proposed piecewise-constant BAND table would reintroduce the age threshold doctrine P1 forbids and `ERR-028-020` has just removed from the sibling spec, and the shipped term's P5 pivot does not survive an asymmetric U — a refit must re-establish P5 rather than inherit it. |

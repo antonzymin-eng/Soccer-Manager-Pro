@@ -1,8 +1,10 @@
 // File:     src/match-client-core/MatchClientConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-07
+// Modified: 2026-08-16 (P4b AR round 4, M19: RequireMarkingBandFitsBelowShadowLayer gains a strictly-
+//           positive lower bound on MarkingLayerStepM, and the four ground-layer heights are rescaled
+//           together so the intra-class step matches M12's own 1mm inter-class judgment)
 // Author:   —
-// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a/§5-P5),
+// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a/§5-P4b/§5-P5),
 //           Code Standards #20 (constant catalogue; no magic numbers)
 // Purpose:  Constant catalogue for the host-free interactive-client core: the master-plan
 //           playback-speed set the UI presents (Pause is a streamer state, not a multiplier), the P3
@@ -163,9 +165,18 @@ namespace TacticalDirector.MatchClientCore
         /// finiteness rather than range — but it IS checked. It is the one dial that lands directly
         /// in the camera's world position, so a non-finite value here puts the camera nowhere while
         /// every assertion about the aim point still passes.</para>
+        ///
+        /// <para>L8: also paired against <see cref="CameraTiltDegrees"/> via
+        /// <see cref="RequireTiltOrOffsetNonzero"/> — each dial is individually legal at zero, but
+        /// BOTH at zero sits the camera directly above its look-at target, where
+        /// <c>Transform.LookAt</c>'s forward is antiparallel to the default up vector, an undefined
+        /// rotation. Declared after <see cref="CameraTiltDegrees"/> deliberately, for the same
+        /// static-init-order reason <see cref="CameraVerticalFovDegrees"/> is declared after it too —
+        /// a pairing check that read a [GT] declared below it would see zero and pass vacuously.</para>
         /// </summary>
-        public static readonly float CameraLateralOffsetM = RequireFinite(
-            Config.GetFloat("match-client", "CameraLateralOffsetM", 5f), "CameraLateralOffsetM");
+        public static readonly float CameraLateralOffsetM = RequireTiltOrOffsetNonzero(
+            RequireFinite(Config.GetFloat("match-client", "CameraLateralOffsetM", 5f), "CameraLateralOffsetM"),
+            CameraTiltDegrees);
 
         /// <summary>
         /// [GT] Vertical field of view of the match camera, degrees. Config key [match-client]
@@ -212,6 +223,45 @@ namespace TacticalDirector.MatchClientCore
             Config.GetFloat("match-client", "MarkingSpotRadiusM", 0.2f);
 
         /// <summary>
+        /// [GT] Width (m) of a drawn marking line — the boundary, the halfway line and the end-box
+        /// edges (not the goal mouth; see <see cref="GoalMouthWidthM"/>). Config key [match-client]
+        /// MarkingLineWidthM.
+        ///
+        /// <para>Presentation, not Law 1, like <see cref="MarkingSpotRadiusM"/> above: IFAB caps a
+        /// real line at 12 cm, and at the default framing (a 52 m span,
+        /// 2 × <see cref="CameraViewHalfWidthM"/>, so ~37 px per metre on a 1920-px-wide view) that is
+        /// about 4 px — legible standing still, but a line that thin crawls and drops out as the
+        /// follow camera moves. The drawn line is deliberately wider than the painted one; nothing in
+        /// the simulation reads it.</para>
+        ///
+        /// <para>It exists as a constant at all because the binding assigns it: a marking prefab is
+        /// authored at unit cross-section, so without this the width is whatever the prefab happened
+        /// to be scaled to — a tuning value living in a scene asset, where neither the gate nor the
+        /// config file can see it.</para>
+        ///
+        /// <para>M10/L7: bounded to a small positive span — a marking line "shouldn't sanely exceed a
+        /// metre or so" of drawn width, and zero or negative would make the boundary invisible while
+        /// every gate above still reported success.</para>
+        /// </summary>
+        public static readonly float MarkingLineWidthM = RequireInRange(
+            Config.GetFloat("match-client", "MarkingLineWidthM", 0.2f), 0.01f, 1f, "MarkingLineWidthM");
+
+        /// <summary>
+        /// [GT] Width (m) of the drawn goal mouth — post to post. Config key [match-client]
+        /// GoalMouthWidthM.
+        ///
+        /// <para>M10: <see cref="TacticalDirector.MatchClientCore.PitchMarkingKind.GoalMouth"/>'s own
+        /// doc is explicit that it is "drawn heavier than a marking line... goal furniture, not a
+        /// Law 1 marking" — the round-1 binding shared <see cref="MarkingLineWidthM"/> and
+        /// <c>_markingLinePrefab</c> for both cases, which is exactly the "may want it in a different
+        /// colour or as a mesh" distinction that member's doc calls out, collapsed back to one. This
+        /// is the goal mouth's own dial, deliberately wider by default so it reads as furniture
+        /// rather than turf paint.</para>
+        /// </summary>
+        public static readonly float GoalMouthWidthM = RequireInRange(
+            Config.GetFloat("match-client", "GoalMouthWidthM", 0.3f), 0.01f, 1f, "GoalMouthWidthM");
+
+        /// <summary>
         /// [GT] Radius (view units, 1 unit = 1 m) of an agent's marker. Config key [match-client]
         /// AgentMarkerRadiusM.
         ///
@@ -237,6 +287,133 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>[GT] Radius (view units) of the ball marker at ground level. Config key [match-client] BallMarkerRadiusM.</summary>
         public static readonly float BallMarkerRadiusM =
             Config.GetFloat("match-client", "BallMarkerRadiusM", 0.35f);
+
+        /// <summary>
+        /// [GT] Blend factor (0 = no change, 1 = solid white) lightening a goalkeeper's marker
+        /// towards white. Config key [match-client] GoalkeeperTintFactor.
+        ///
+        /// <para>AR pass M-2 over the P4b binding: <c>AgentRenderModel.IsGoalkeeper</c> was resolved
+        /// upstream but read by nobody. A shade of the agent's own team colour needs no new palette
+        /// entry or prefab slot — <c>UnityEngine.Color</c> is not in the CI shim's surface (see
+        /// <c>AgentRenderModel</c>'s class doc), so the blend itself lives in the binding; this dial
+        /// is just how far it goes.</para>
+        /// </summary>
+        public static readonly float GoalkeeperTintFactor = RequireInRange(
+            Config.GetFloat("match-client", "GoalkeeperTintFactor", 0.35f), 0f, 1f, "GoalkeeperTintFactor");
+
+        /// <summary>
+        /// [GT] Blend factor (0 = no change, 1 = solid black) darkening a sent-off player's marker
+        /// towards black. Config key [match-client] SentOffTintFactor.
+        ///
+        /// <para>Same AR pass M-2 as <see cref="GoalkeeperTintFactor"/> above:
+        /// <c>AgentRenderModel.IsSentOff</c> documents that a dismissed player keeps a position on
+        /// the pitch and must be MARKED, not hidden or drawn identically to a player still in the
+        /// game — a darkened marker is that mark.</para>
+        /// </summary>
+        public static readonly float SentOffTintFactor = RequireInRange(
+            Config.GetFloat("match-client", "SentOffTintFactor", 0.55f), 0f, 1f, "SentOffTintFactor");
+
+        #endregion
+
+        #region GT — ground-layer heights (M12: coplanar ground objects z-fight)
+
+        /// <summary>
+        /// [GT] World-Y height (m) at which pitch markings are drawn. Config key [match-client]
+        /// MarkingLayerHeightM.
+        ///
+        /// <para>M12: four ground layers — markings, the ball's shadow, the possession ring and the
+        /// agent marker — were all placed at world Y = 0, which z-fights in a real renderer wherever
+        /// two of them overlap (a shadow crossing a painted line; a ring sitting under the marker it
+        /// annotates). Zero is legal here and is today's default: a painted line sits ON the turf, and
+        /// every layer above this one is defined to sit strictly above it (see the three
+        /// <c>RequireGreaterThan</c> checks below), so this is the one layer nothing else needs to
+        /// clear.</para>
+        /// </summary>
+        public static readonly float MarkingLayerHeightM =
+            RequireAtLeast(Config.GetFloat("match-client", "MarkingLayerHeightM", 0f), 0f, "MarkingLayerHeightM");
+
+        /// <summary>
+        /// [GT] World-Y height (m) at which the ball's ground shadow is drawn. Config key
+        /// [match-client] BallShadowLayerHeightM. Must exceed <see cref="MarkingLayerHeightM"/> — the
+        /// shadow is an opaque disc that regularly crosses a painted line (a ball rolling over the
+        /// six-yard box, say), and two coplanar opaque surfaces z-fight.
+        ///
+        /// <para>M19: raised from 0.001 to 0.08 alongside <see cref="MarkingLayerStepM"/>'s own
+        /// raise — the marking BAND (see <see cref="MarkingLayerStepM"/>) now tops out at 0.027 m
+        /// (<see cref="PitchMarkings.DRAWABLE_COUNT"/> × 0.001), and
+        /// <see cref="RequireMarkingBandFitsBelowShadowLayer"/> requires that to sit comfortably
+        /// (under half the clearance) below this value. 0.08 clears it with headroom (half-clearance
+        /// 0.04 m vs a 0.027 m band top) while staying two orders of magnitude below anything a
+        /// viewer could perceive from the camera rig's default 38 m height.</para>
+        /// </summary>
+        public static readonly float BallShadowLayerHeightM = RequireGreaterThan(
+            Config.GetFloat("match-client", "BallShadowLayerHeightM", 0.08f),
+            MarkingLayerHeightM, "BallShadowLayerHeightM", "MarkingLayerHeightM");
+
+        /// <summary>
+        /// [GT] World-Y height (m) at which the possession ring is drawn. Config key [match-client]
+        /// PossessionRingLayerHeightM. Must exceed <see cref="BallShadowLayerHeightM"/> — the ring is
+        /// drawn around whichever agent is in possession, and that agent's marker sits over the same
+        /// ground point the ball's shadow can also occupy, so the ring is ordered above the shadow
+        /// the way it is ordered below the marker (see <see cref="AgentMarkerLayerHeightM"/>).
+        ///
+        /// <para>M19: raised from 0.002 to 0.081 — a single quad against another single quad (not a
+        /// band), so the original 1 mm gap above <see cref="BallShadowLayerHeightM"/> that M12 judged
+        /// sufficient is kept exactly; only the base it is measured from moved.</para>
+        /// </summary>
+        public static readonly float PossessionRingLayerHeightM = RequireGreaterThan(
+            Config.GetFloat("match-client", "PossessionRingLayerHeightM", 0.081f),
+            BallShadowLayerHeightM, "PossessionRingLayerHeightM", "BallShadowLayerHeightM");
+
+        /// <summary>
+        /// [GT] World-Y height (m) at which an agent marker is drawn. Config key [match-client]
+        /// AgentMarkerLayerHeightM. Must exceed <see cref="PossessionRingLayerHeightM"/> — the ring is
+        /// explicitly meant to sit visually UNDER the marker it annotates (the marker is the player;
+        /// the ring is drawn around him), so the marker is topmost of the four ground layers.
+        ///
+        /// <para>M19: raised from 0.003 to 0.082, the same 1 mm-above-its-neighbour pattern as
+        /// <see cref="PossessionRingLayerHeightM"/>.</para>
+        /// </summary>
+        public static readonly float AgentMarkerLayerHeightM = RequireGreaterThan(
+            Config.GetFloat("match-client", "AgentMarkerLayerHeightM", 0.082f),
+            PossessionRingLayerHeightM, "AgentMarkerLayerHeightM", "PossessionRingLayerHeightM");
+
+        /// <summary>
+        /// [GT] Height (m) between successive drawables within the marking layer band (M16). Config
+        /// key [match-client] MarkingLayerStepM.
+        ///
+        /// <para>M12's four ground layers keep markings/shadow/ring/marker from z-fighting BETWEEN
+        /// classes, but every entry <see cref="PitchMarkings.BuildDrawables"/> returns was still
+        /// placed at the exact same <see cref="MarkingLayerHeightM"/> — so the boundary, the penalty
+        /// areas, the goal areas and the goal mouths all overlap at each goal line, the centre spot
+        /// sits exactly on the halfway line, and the centre circle crosses it twice. This turns the
+        /// marking layer from a plane into a band: drawable index <c>i</c> is placed at
+        /// <c>MarkingLayerHeightM + i * MarkingLayerStepM</c> — <see cref="PitchMarkings.BuildDrawables"/>'s
+        /// ordering is already a stated, deterministic contract (its own doc), so indexing into it is
+        /// safe.</para>
+        ///
+        /// <para>Bounded on BOTH sides (M19). <b>Ceiling:</b> <see cref="PitchMarkings.DRAWABLE_COUNT"/>
+        /// steps of it must stay comfortably below the clearance to <see cref="BallShadowLayerHeightM"/>
+        /// (see <see cref="RequireMarkingBandFitsBelowShadowLayer"/>) — otherwise the top of the
+        /// marking band would itself z-fight with the ball's shadow, reopening the exact hazard M12
+        /// fixed one layer up. <b>Floor:</b> the same method also refuses a step that is not strictly
+        /// positive — the original 0.00001 m default left a 27-step band topping out at 0.00027 m
+        /// (barely under the ceiling), and neither a zero step (every drawable coplanar again — the
+        /// exact bug this constant exists to fix, passing the ceiling check trivially since
+        /// <c>0 × count</c> is always comfortably under any positive clearance) nor a negative one
+        /// (the band walking DOWN through the ground plane) was rejected. <b>Scale, not just
+        /// direction:</b> the shipped default is now 0.001 m — the same magnitude M12 itself judged
+        /// (the three sibling ground-layer heights above) sufficient to stop coplanar-quad z-fighting at this
+        /// camera's distance, since a drawable overlapping its neighbour WITHIN the marking layer (a
+        /// goal-line rectangle edge meeting a goal mouth, the centre spot on the halfway line) is the
+        /// identical depth-buffer hazard M12 priced between classes, not a smaller one — there is no
+        /// reason a step 100× finer would be enough where M12's own 1 mm was needed. The three ground
+        /// layers above were raised together so the resulting 0.027 m band (27 × 0.001) still clears
+        /// them comfortably.</para>
+        /// </summary>
+        public static readonly float MarkingLayerStepM = RequireMarkingBandFitsBelowShadowLayer(
+            Config.GetFloat("match-client", "MarkingLayerStepM", 0.001f),
+            PitchMarkings.DRAWABLE_COUNT, MarkingLayerHeightM, BallShadowLayerHeightM, "MarkingLayerStepM");
 
         #endregion
 
@@ -300,6 +477,31 @@ namespace TacticalDirector.MatchClientCore
         }
 
         /// <summary>
+        /// Returns <paramref name="lateralOffsetM"/>, or throws when it is zero AND
+        /// <paramref name="tiltDegrees"/> is also zero. Each dial is individually legal at zero — a
+        /// straight-down tilt, or dead-centre framing — but together they sit the camera directly
+        /// above its look-at target, where <c>Transform.LookAt</c>'s forward direction is antiparallel
+        /// to the default world-up vector: an undefined/degenerate rotation. Two individually-legal
+        /// dials pairing into an illegal camera is the same shape <see cref="RequireFarRayMeetsGround"/>
+        /// guards, which is why this follows it rather than being folded into either dial's own range
+        /// check.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Both dials are zero.</exception>
+        internal static float RequireTiltOrOffsetNonzero(float lateralOffsetM, float tiltDegrees)
+        {
+            if (tiltDegrees == 0f && lateralOffsetM == 0f)
+            {
+                throw new InvalidOperationException(
+                    "[match-client] CameraTiltDegrees is 0 and CameraLateralOffsetM is 0; the camera " +
+                    "would sit directly above its look-at target, making Transform.LookAt's forward " +
+                    "antiparallel to the default up vector — an undefined rotation. Set at least one " +
+                    "of the two config keys away from zero.");
+            }
+
+            return lateralOffsetM;
+        }
+
+        /// <summary>
         /// Returns <paramref name="value"/>, or throws when it does not exceed
         /// <paramref name="floor"/>. For invariants between two constants in this catalogue, which a
         /// per-key range check cannot express.
@@ -315,6 +517,49 @@ namespace TacticalDirector.MatchClientCore
             }
 
             return value;
+        }
+
+        /// <summary>
+        /// Returns <paramref name="stepM"/>, or throws when it is not strictly positive (M19), or when
+        /// <paramref name="drawableCount"/> steps of it would push the TOP of the marking band (M16)
+        /// past the MIDPOINT of the clearance between <paramref name="baseHeightM"/> and
+        /// <paramref name="shadowHeightM"/> — "comfortably below" the shadow layer, not merely under
+        /// it. Two individually-legal values (a small step, a large drawable count) can pair into a
+        /// band that reaches the next ground layer up, which is the same shape
+        /// <see cref="RequireFarRayMeetsGround"/> and <see cref="RequireTiltOrOffsetNonzero"/> guard,
+        /// so this follows their shape rather than being folded into a per-key range check.
+        ///
+        /// <para>M19: the lower bound is checked FIRST and composed via the existing
+        /// <see cref="RequireGreaterThan"/>, because the ceiling check alone cannot catch a step of
+        /// zero or below — <c>0 × drawableCount</c> is always comfortably under any positive
+        /// clearance, so a zero step passed the ceiling check trivially and silently reinstated the
+        /// exact M16 z-fighting bug (every drawable coplanar again) with no diagnostic; a negative
+        /// step passed it too, while driving the band DOWNWARD through the ground plane.</para>
+        /// </summary>
+        /// <exception cref="InvalidOperationException">
+        /// <paramref name="stepM"/> is not strictly positive, or the band does not fit comfortably
+        /// below the shadow layer.
+        /// </exception>
+        internal static float RequireMarkingBandFitsBelowShadowLayer(
+            float stepM, int drawableCount, float baseHeightM, float shadowHeightM, string key)
+        {
+            RequireGreaterThan(stepM, 0f, key, "zero");
+
+            float bandTopM = baseHeightM + stepM * drawableCount;
+            float halfClearanceM = baseHeightM + (shadowHeightM - baseHeightM) * 0.5f;
+
+            if (!(bandTopM < halfClearanceM))
+            {
+                throw new InvalidOperationException(
+                    "[match-client] " + key + " (" + Inv(stepM) + ") * PitchMarkings.DRAWABLE_COUNT (" +
+                    Inv(drawableCount) + ") puts the top of the marking band at " + Inv(bandTopM) +
+                    "m, which is not comfortably below BallShadowLayerHeightM (" + Inv(shadowHeightM) +
+                    "m) — it must stay under the midpoint of the clearance above MarkingLayerHeightM (" +
+                    Inv(halfClearanceM) + "m), or the highest drawable in the marking band would " +
+                    "z-fight with the ball's shadow.");
+            }
+
+            return stepM;
         }
 
         /// <summary>
@@ -423,4 +668,73 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | fail-louds, so a cap below a step used to surface as one speed  |
 // |         |            |        | button throwing mid-match while the others worked — the §5-P0   |
 // |         |            |        | "cap must be >= 10" note was prose with nothing enforcing it.   |
+// | 1.7     | 2026-08-15 | —      | P4b AR pass H-2: + MarkingLineWidthM. The binding set a marking |
+// |         |            |        | line's LENGTH and left its width at whatever localScale.x the   |
+// |         |            |        | prefab happened to carry — a tuning value living in a scene     |
+// |         |            |        | asset, invisible to the gate and unreachable from the config    |
+// |         |            |        | file. Now assigned explicitly from here.                        |
+// | 1.8     | 2026-08-15 | —      | P4b AR pass M-2: + GoalkeeperTintFactor / SentOffTintFactor.    |
+// |         |            |        | AgentRenderModel.IsGoalkeeper/IsSentOff were resolved upstream  |
+// |         |            |        | but read by nobody; both are now bound as a lighten/darken of   |
+// |         |            |        | the agent's own team colour, so no new palette entry or prefab  |
+// |         |            |        | slot is needed (Color is not in the CI shim's surface, so the   |
+// |         |            |        | blend itself lives in MatchClientBehaviour — these are only the |
+// |         |            |        | [GT] amounts).                                                  |
+// | 1.9     | 2026-08-15 | —      | P4b AR round 2, Medium/Low pass. M10: + GoalMouthWidthM — the   |
+// |         |            |        | goal mouth is goal furniture, not a Law 1 marking line          |
+// |         |            |        | (PitchMarkingKind.GoalMouth's own doc), and now has its own     |
+// |         |            |        | drawn width instead of sharing MarkingLineWidthM. M12: + the    |
+// |         |            |        | four ground-layer height [GT]s (Marking/BallShadow/             |
+// |         |            |        | PossessionRing/AgentMarker), millimetre-scale and strictly      |
+// |         |            |        | ascending via the existing RequireGreaterThan chain shape, so   |
+// |         |            |        | the four coplanar ground layers a real renderer would z-fight   |
+// |         |            |        | (markings, the ball's shadow, the possession ring, the agent    |
+// |         |            |        | marker) resolve to a named, boot-validated ordering instead of  |
+// |         |            |        | an inline literal the binding would otherwise have to invent.   |
+// |         |            |        | L7: MarkingLineWidthM (and the new GoalMouthWidthM from the     |
+// |         |            |        | start) now go through RequireInRange like every other [GT]      |
+// |         |            |        | render-cue sibling, instead of an unvalidated Config.GetFloat.  |
+// |         |            |        | L8: + RequireTiltOrOffsetNonzero, the CameraTiltDegrees /       |
+// |         |            |        | CameraLateralOffsetM pairing check in RequireFarRayMeetsGround's|
+// |         |            |        | own shape — both dials are individually legal at zero, but      |
+// |         |            |        | together they put the camera directly above its look-at target,|
+// |         |            |        | where Transform.LookAt's forward is antiparallel to the default |
+// |         |            |        | up vector.                                                       |
+// | 1.10    | 2026-08-16 | —      | P4b AR round 3, M16: + MarkingLayerStepM and                    |
+// |         |            |        | RequireMarkingBandFitsBelowShadowLayer. The four M12 ground-     |
+// |         |            |        | layer heights stopped markings z-fighting BETWEEN classes, but  |
+// |         |            |        | every PitchMarkings.BuildDrawables() entry still landed at the  |
+// |         |            |        | exact same MarkingLayerHeightM, so drawables z-fought WITHIN     |
+// |         |            |        | their own class (goal-line overlaps, the centre spot on the     |
+// |         |            |        | halfway line, the centre circle crossing it twice). The new     |
+// |         |            |        | [GT] turns the marking layer into a band; its pairing check     |
+// |         |            |        | follows RequireFarRayMeetsGround's shape — the band's TOP must  |
+// |         |            |        | stay comfortably (under the midpoint of the clearance) below    |
+// |         |            |        | BallShadowLayerHeightM, or it would reopen the exact M12 hazard  |
+// |         |            |        | one layer up.                                                    |
+// | 1.11    | 2026-08-16 | —      | P4b AR round 4, M19: two bugs in v1.10's own check. (1) No       |
+// |         |            |        | LOWER bound: RequireMarkingBandFitsBelowShadowLayer now calls    |
+// |         |            |        | RequireGreaterThan(stepM, 0f, ...) before the ceiling check — a  |
+// |         |            |        | step of exactly 0 passed the ceiling trivially (0 * count is     |
+// |         |            |        | always under any positive clearance), silently reinstating the   |
+// |         |            |        | exact M16 z-fighting bug with no diagnostic, and a negative step  |
+// |         |            |        | passed too while driving the band below the ground plane. (2)    |
+// |         |            |        | Wrong CEILING SCALE: at DRAWABLE_COUNT = 27 the old ceiling       |
+// |         |            |        | admitted at most ~18.5 microns/step against a shipped default of  |
+// |         |            |        | 10 microns, while M12 (the finding this constant answers to one   |
+// |         |            |        | layer up) judged 1 mm the separation needed to stop the SAME      |
+// |         |            |        | z-fighting hazard at the SAME camera distance — the intra-class   |
+// |         |            |        | step was 54-100x finer than the inter-class step chosen for an    |
+// |         |            |        | identical purpose, with no reasoning for the gap: a drawable       |
+// |         |            |        | overlapping its neighbour WITHIN the marking layer is the same     |
+// |         |            |        | depth-buffer hazard M12 priced BETWEEN layers, not a smaller one.  |
+// |         |            |        | MarkingLayerStepM's default is raised to 0.001 (1 mm, matching     |
+// |         |            |        | M12's own judgment exactly), and BallShadowLayerHeightM/           |
+// |         |            |        | PossessionRingLayerHeightM/AgentMarkerLayerHeightM raised together |
+// |         |            |        | (0.08/0.081/0.082) so the resulting 0.027 m band (27 * 0.001)      |
+// |         |            |        | still clears BallShadowLayerHeightM comfortably (half-clearance    |
+// |         |            |        | 0.04 m) while the shadow/ring/marker keep the same 1 mm gaps       |
+// |         |            |        | between each other that M12 originally chose — only the base they  |
+// |         |            |        | are measured from moved. All four remain millimetre-to-centimetre  |
+// |         |            |        | scale, imperceptible from the camera rig's default 38 m height.    |
 #endregion

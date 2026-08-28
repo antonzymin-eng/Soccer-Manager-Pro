@@ -1,6 +1,8 @@
 // File:     src/player-progression/tests/RegenGeneratorTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-11 (AR pass 7 — the GrowthCursor construction-day-credit lock restated as a
+// Modified: 2026-08-24 (construction-day-credit-implemented-twice — the cross-site lock — v1.4)
+//           (football-judgment proxy review, batch-1 adversarial findings — v1.3)
+//           (AR pass 7 — the GrowthCursor construction-day-credit lock restated as a
 //           property — v1.2)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.3 / §4.3; Deterministic Simulation #16 (RNG); Code Standards #20
@@ -173,6 +175,39 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.Throws<System.ArgumentNullException>(
                 () => RegenGenerator.GenerateRegen(null, 0, 0, 1, WorldDay));
         }
+
+        [Test]
+        public void GenerateRegen_AndSeedFrom_CreditTheSameConstructionDayStep_ForTheSamePlayer()
+        {
+            // construction-day-credit-implemented-twice (round-2 High): the DIVERGENCE lock the two
+            // implementations never had. `RegenGenerator` and `ProgressionEngine.SeedLifecycle` are the
+            // only two sites that construct a PlayerLifecycle from scratch, both anchor
+            // LastAdvancedWorldDay at their own construction day, and both therefore owe that day's band
+            // step to GrowthCursor. Until this case, NOTHING compared them — which is why ERR-028-018
+            // could credit the seed site and leave the regen site at 0 (found a day later, AR pass 7),
+            // and why ERR-028-020 then had to visit both again.
+            //
+            // The comparison is made honest by feeding the SAME player to both: the regen's own returned
+            // record is seeded into a one-man club at the same world day, so age, position and
+            // attributes are identical by construction and the only thing that can differ is the rule.
+            var rng = NewRng(2024UL, clubId: 3, out int idx);
+            (PlayerRecord rec, PlayerLifecycle regenLife) =
+                RegenGenerator.GenerateRegen(rng, idx, clubId: 3, newPlayerId: 701, WorldDay);
+
+            ProgressionEngine seeded = ProgressionEngine.SeedFrom(
+                new[] { new Squad(3, new[] { rec }) }, WorldDay);
+            long seededCursor = seeded.ToBlocks()[0].Lifecycles[0].GrowthCursor;
+
+            Assert.AreEqual(seededCursor, regenLife.GrowthCursor,
+                "the two PlayerLifecycle construction sites must credit the same construction-day step "
+                + "for the same player — a regen that starts one day of accrual behind an identically "
+                + "generated seeded player ends a whole [1,20] point behind him per band traversal "
+                + "(ERR-028-018, measured +5 vs +6).");
+
+            Assert.AreEqual(AbilityModel.ConstructionDayCredit(rec.Age), regenLife.GrowthCursor,
+                "…and both must be the value AbilityModel owns, not a third answer either site "
+                + "computes for itself.");
+        }
     }
 }
 
@@ -192,4 +227,25 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | not re-derived through ClassifyAgeBand. This landing was       |
 // |         |            |        | recorded at 8556ddd with no version row (L-1) — this row and   |
 // |         |            |        | the corrected `Modified` header above backfill it.             |
+// | 1.3     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial finding    |
+// |         |            |        | regen-bandstep-both-locked-false: + BandStepFor_AtAnAgeInside- |
+// |         |            |        | TheRamp_DelegatesToTheContinuousCurve, driving RegenGenerator's |
+// |         |            |        | now-internal BandStepFor at an age inside the growth ramp,     |
+// |         |            |        | where its ERR-028-020 delegation to DailyBandPoints and the     |
+// |         |            |        | retired ClassifyAgeBand-based form disagree — the divergence   |
+// |         |            |        | GenerateRegen's own 16-20 regen-age range can never reach.      |
+// | 1.4     | 2026-08-24 | —      | Round-2 adversarial finding construction-day-credit-           |
+// |         |            |        | implemented-twice (High). BandStepFor_AtAnAgeInsideTheRamp_    |
+// |         |            |        | DelegatesToTheContinuousCurve DELETED with the method it       |
+// |         |            |        | drove; its ramp discrimination moves to the rule's owner as    |
+// |         |            |        | AbilityModelTests.ConstructionDayCredit_InsideARamp_IsThe-     |
+// |         |            |        | ContinuousStep_NotTheRetiredBandStep. + GenerateRegen_And-     |
+// |         |            |        | SeedFrom_CreditTheSameConstructionDayStep_ForTheSamePlayer:    |
+// |         |            |        | the cross-SITE lock neither implementation ever had — it       |
+// |         |            |        | seeds a ProgressionEngine from the regen's OWN returned        |
+// |         |            |        | record at the same world day and requires both construction    |
+// |         |            |        | sites to credit the same step. Mutation-verified: restoring    |
+// |         |            |        | the pre-ERR-028-018 regen credit (GrowthCursor = 0) fails      |
+// |         |            |        | this case, which is the exact defect that shipped once and     |
+// |         |            |        | went a day undetected because nothing compared the two sites.  |
 #endregion

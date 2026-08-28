@@ -97,12 +97,15 @@ Do not stop at the first — this chain has produced multi-gap passes more than 
 (ERR-011-002/003/004). Stopping at the first means flipping a flag and then measuring a keeper that
 still cannot move.
 
-1. **Does an assembly exist at all?** Check `src/` against the assembly map in the root `CLAUDE.md` —
-   not `SPEC_INDEX.md`, which records approval, not code. #37 Match Analytics and #28 Progression are
-   T0-only and not engine-wired; #44 Discipline, #41 Injuries, #29 Training and nineteen others have
-   no assembly. **If the brief names one of those specs** — "implement discipline", "wire up
-   injuries" — the deliverable is that spec's T0 landing off `path-to-playable-roadmap.md` and this
-   skill is the wrong one. A brief that names a *symptom* is check 5, not this one.
+1. **Does an assembly exist at all?** `ls -d src/*/` is ground truth; the assembly map in the root
+   `CLAUDE.md` is the annotated index — not `SPEC_INDEX.md`, which records approval, not code, and not
+   any spec list restated in this file, which goes stale the moment the next T0 lands (this file once
+   listed #41 Injuries and #29 Training as assembly-less; both landed August 5, 2026). Two shapes to
+   check for: a spec with **no assembly at all**, and one whose assembly is **T0-only and not
+   engine-wired** — #37 Match Analytics is the standing example (no sim assembly may reference it, by
+   design). **If the brief names either shape** — "implement discipline", "wire up injuries" — the
+   deliverable is that spec's T0 landing (or its engine wiring) off `path-to-playable-roadmap.md`, and
+   this skill is the wrong one. A brief that names a *symptom* is check 5, not this one.
 2. **Is it constructed at the composition root, and does a phase actually reach it?** Grep
    `src/match-engine/MatchEngine.cs` for the type *and* for its flag. Both halves have failed here in
    the same pass: #11 was constructed, snapshot-safe and `EnableGkHeading`-gated **default false**

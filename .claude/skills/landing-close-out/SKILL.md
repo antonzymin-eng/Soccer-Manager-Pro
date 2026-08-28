@@ -1,10 +1,11 @@
 ---
 name: landing-close-out
 description: >-
-  Close out a landing by syncing every tracking document the change touches — the root CLAUDE.md
-  header chain and OPEN ISSUES entry, src/CLAUDE.md's version bump, file-manifest.md, README.md, the
-  owning design supplement's version history, and the gate-result line — in the same commit as the
-  code. Use this skill at the end of any pass that lands code, a spec change, or a new assembly:
+  Close out a landing by syncing every tracking document the change touches — the
+  docs/tracking/CHANGELOG.md header chain, root CLAUDE.md's OPEN ISSUES entry, src/CLAUDE.md's version
+  bump (and its own CHANGELOG-src.md chain), file-manifest.md, README.md, the owning design
+  supplement's version history, and the gate-result line — in the same commit as the code. Use this
+  skill at the end of any pass that lands code, a spec change, or a new assembly:
   when the work is done and about to be committed, when the user says "wrap this up", "record this",
   "update the docs", or "commit and push", and whenever an ERR was filed or a schema version bumped.
   Trigger it even when the change feels small — the documents drift precisely on the landings that
@@ -13,29 +14,43 @@ description: >-
 
 # Landing Close-Out
 
-This repo's tracking documents *are* the project memory — the root `CLAUDE.md` header chain is how
-any agent picks up context, and it is the only place a landing's measured results live in narrative
-form. When a landing skips the sync, the cost is not cosmetic: commit `9af9626` is a whole
+This repo's tracking documents *are* the project memory — the `docs/tracking/CHANGELOG.md` header
+chain is how any agent picks up context, and it is the only place a landing's measured results live in
+narrative form. When a landing skips the sync, the cost is not cosmetic: commit `9af9626` is a whole
 "Documentation sync: reconcile root docs with codebase" pass that exists because two landings never
 updated the root docs, and it found the assembly count, the spec counts, and the entire assembly map
 stale.
 
-Check the current drift before you start — `README.md` and `docs/tracking/file-manifest.md` both
-carry a `**Last Updated:**` date, and if it trails the last few landings, say so rather than adding a
-seventh layer on top of a stale base.
+Check the current drift before you start. This is a fixed lookup, not a judgment call, so it's
+scripted:
+
+```bash
+.claude/skills/landing-close-out/scripts/check_drift.sh
+```
+
+It flags a duplicate bare `**Last Updated:**` label in the changelog chain (found and fixed at least
+three times — see the rule under item 1 below), reports each tracking doc's declared date next to
+when it was actually last touched, and checks the OPEN ISSUES active/resolved counts against a direct
+recount — the same comparison this repo's own changelog has had to make by hand, repeatedly, and got
+wrong at least once (the August 10, 2026 correction in root `CLAUDE.md`). If `README.md` or
+`docs/tracking/file-manifest.md` trails the last few landings, say so rather than adding a seventh
+layer on top of a stale base.
 
 ## What to update
 
 Work through these; skip one only when the change genuinely does not touch it, and say which you
 skipped.
 
-**1. Root `CLAUDE.md` — the header chain.** Add a new `**Last Updated:**` entry summarising the
-landing: what changed, the ERR ids, the measured before → after numbers, the determinism declaration,
-what locks it, and the gate result. Two conventions the file enforces on itself:
+**1. `docs/tracking/CHANGELOG.md` — the header chain.** Root `CLAUDE.md` itself carries no header
+chain any more; the chain was split out on July 31, 2026 and root `CLAUDE.md` only holds OPEN ISSUES
+now. Add a new `**Last Updated:**` entry summarising the landing: what changed, the ERR ids, the
+measured before → after numbers, the determinism declaration, what locks it, and the gate result. Two
+conventions the file enforces on itself:
 
 - Relabel the previous entry to `**Last Updated (prior):**`. **Exactly one bare `**Last Updated:**`
   label may exist** — this file has been found with two, which makes it self-contradictory about its
-  own currency, and it has been fixed at least three times.
+  own currency, and it has been fixed at least three times. (The same rule applies independently to
+  `docs/tracking/CHANGELOG-src.md`, item 3 below.)
 - Historical entries are preserved verbatim. Never rewrite an old entry to match what you now know;
   supersede it in the new entry instead.
 
@@ -48,9 +63,11 @@ own diagnosis, and deleting them would have erased that.
 If the pass recorded a residual it deliberately did not fix, that becomes its own entry with the
 measurement attached. That recorded residual is how the next pass starts.
 
-**3. `src/CLAUDE.md`.** Bump the version (currently in the v2.5x range) and add its own entry — this
-one is file-and-symbol level: which files changed, to what version, and what the new seams are. It is
-the coding guide, so it answers "what does the code look like now", not "what did we learn".
+**3. `src/CLAUDE.md`.** Bump the version (currently in the v2.5x range). Its own entry — the
+`**Last Updated:**` chain and the `VERSION HISTORY` table, file-and-symbol level: which files changed,
+to what version, and what the new seams are — lives in `docs/tracking/CHANGELOG-src.md`, per
+`src/CLAUDE.md`'s own pointer at the top of the file, not inline. It answers "what does the code look
+like now", not "what did we learn".
 
 **4. `docs/tracking/file-manifest.md`.** The authoritative file inventory. Add new files, note
 modified ones with their new versions, and record any new assembly. If the change added an assembly,
@@ -111,7 +128,56 @@ whether a new RNG stream, domain tag, draw site, or draw-order change was introd
 change, no new RNG stream / domain tag / draw site, no draw-order change" is a sentence worth writing
 even when it is boring, because its absence is ambiguous.
 
+## Delegating the mechanical half
+
+This sync splits cleanly, and the split is not by document — it is by whether the step needs
+judgment. **Deciding and composing stays with you; applying can go to Sonnet.**
+
+Keep, always — these are the steps that go wrong invisibly:
+
+- **Which documents this landing touches**, and which are genuinely skippable (the sync list above is
+  a checklist, not a script — item 8 in particular is a judgment about whether a roadmap item moved).
+- **The narrative content**: item 1's changelog entry, item 2's OPEN ISSUES entry, item 6's supplement
+  history. The register these are written in — measured, specific, willing to record a null result —
+  is the whole value of the chain.
+- **The determinism declaration** and the **blast-radius** check.
+- **The gate line**, which comes from a real run, not from a previous landing.
+
+Delegate, once the text exists and you are handing over exact strings:
+
+- Item 3's `src/CLAUDE.md` version bump and its `CHANGELOG-src.md` file-and-symbol rows.
+- Item 4's `file-manifest.md` rows, and the assembly-map row if one is needed.
+- Item 5's `README.md` status summary and `Last Updated` line.
+- The `**Last Updated:**` → `**Last Updated (prior):**` relabel, per item 1.
+- Appending a version-history block you have already written.
+
+Dispatch with `Agent`, `subagent_type: "doc-scribe"`. Two conditions make this safe, and it is not
+safe without them:
+
+1. **Hand over exact text, never an intent.** "Add a manifest row for `src/foo/Bar.cs` v1.0 reading
+   `<string>`" is delegable; "record what changed in `src/foo/`" is you asking a cheap model to
+   re-derive the landing, which is the decision you were supposed to keep.
+2. **Read the diff yourself before committing.** `git diff` on the delegated files, every time. The
+   scribe cannot run the drift script's judgment calls and cannot tell a stale base from a current
+   one — the reconciliation pass at `9af9626` exists because nobody checked.
+
+If the change is small enough that writing the exact strings costs more than making the edits, make
+the edits. The delegation pays on a wide sync (six-plus documents, a new assembly, a manifest with
+many rows), not on a two-line date bump.
+
 ## Commit
 
 One commit carrying code, spec patches, ERR entry, and doc sync together — so the record and the
-change cannot separate. Then push to the designated branch with `git push -u origin <branch>`.
+change cannot separate.
+
+Commit yourself — **never delegate the commit**. The scribe has no commit authority for this reason:
+one agent must hold the whole record at the moment it is written down.
+
+**Invoked standalone** (nothing else is about to commit): make that commit yourself, then **stop
+before pushing** — report the commit and the branch, and ask for confirmation. Push only on an
+explicit go: `git push -u origin <branch>`.
+
+**Invoked from `orchestrator`** (its step 8): do not commit here. Leave the doc-sync edits staged and
+uncommitted — `orchestrator` step 9 makes the single commit covering code and docs together, and owns
+the push under its own authority. Two commits from one landing would split the record the "one commit"
+rule above exists to keep whole.

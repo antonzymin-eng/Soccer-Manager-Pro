@@ -305,8 +305,13 @@ namespace TacticalDirector.MatchEngine
         /// <c>MatchSaveCodec</c> (a new boot-header field, a header/fingerprint field, or a reorder) —
         /// the two inner schema versions ride inside the blob and are re-checked by
         /// <see cref="MatchEngine.RestoreFromSnapshot"/> itself, so this one need only track the OUTER
-        /// file frame.</summary>
-        public const uint MATCH_SAVE_FORMAT_VERSION = 1;
+        /// file frame.
+        /// <para>
+        /// <b>v2 (August 22, 2026, ERR-016-009 / KD-7):</b> the header block gained the #16 §2.3.2
+        /// <c>buildHash</c> string between <c>Cursor.PhaseOrdinal</c> and the fingerprint-present flag.
+        /// KD-1 stands — a v1 blob is refused, not migrated.
+        /// </para></summary>
+        public const uint MATCH_SAVE_FORMAT_VERSION = 2;
 
         /// <summary>[FIXED] Regulation match length, minutes (Laws of the Game — two 45-minute
         /// halves). Stage 0 models no stoppage time and no extra time; the engine's match-length

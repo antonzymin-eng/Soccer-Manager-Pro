@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonInjuryRealismTests.cs
 // Created:  2026-08-07
-// Modified: 2026-08-08
+// Modified: 2026-08-22 (ERR-041-021 — AR over the ERR-041-020 landing, H3 — v1.6)
 // Author:   —
 // Spec:     Injuries & Medical #41 §5 (the balance pass), FR-MD-027; Training System #29 §5;
 //           Season & Competition Loop #30 §3.3/§3.4; ERR-041-010(b) / ERR-030-027; Code Standards #20
@@ -40,11 +40,21 @@ namespace TacticalDirector.SeasonSave.Tests
     {
         private const int ManagerId = 77;
 
+        // ERR-041-020: the §3.4 age term's zero point — this probe compares two assemblies that differ
+        // only in match load, so both take the pivot and the age axis stays out of the comparison.
+        private static readonly int PivotAge = InjuriesMedicalConstants.AgeRiskPivotYears;
+
         private static readonly ulong[] Seeds =
         {
             0x5EED1EA6D0DEC0DEUL, 0xA11CE5EA50000001UL, 0xB16B00B5C0FFEE02UL, 0xD00DFEEDFACade03UL,
             0x0DDBA11DEADBEA04UL, 0xF00DF00DF00DF005UL, 0xCAFEBABE12345606UL, 0x8BADF00D0BADF007UL,
         };
+
+        // ERR-041-021: the age-split bands. Deliberately NOT derived from AgeRiskPivotYears — they are
+        // football populations ("kids" and "veterans"), and pinning them to the [GT] would make the
+        // assertion below move with the dial it exists to detect.
+        private const int YoungMaxAge = 22;
+        private const int VeteranMinAge = 31;
 
         private sealed class SeasonMeasurement
         {
@@ -56,6 +66,17 @@ namespace TacticalDirector.SeasonSave.Tests
             public int Reserves;
             public double UnavailableFractionSum;   // summed over matchday observations
             public int MatchdayObservations;
+
+            // ERR-041-021: the age axis. The four bands above are age-BLIND — every one of them pools
+            // the whole league, and the §3.4 age term is anti-symmetric about the bootstrap mean age,
+            // so it sums to zero over the population each band measures. A reviewer confirmed that by
+            // measurement: forcing every player's age to 17, 26 and 35 yields 623 / 783 / 929 league
+            // injuries, and ALL THREE sit inside the asserted league band. The bands therefore cannot
+            // witness the age term in either direction, and these two counters are what can.
+            public int YoungInjuries;        // Age <= YoungMaxAge
+            public int Young;
+            public int VeteranInjuries;      // Age >= VeteranMinAge
+            public int Veterans;
         }
 
         /// <summary>Plays one full quick-sim season with the career wired and the dial as given.</summary>
@@ -77,6 +98,21 @@ namespace TacticalDirector.SeasonSave.Tests
 
             var m = new SeasonMeasurement();
             var appearances = new System.Collections.Generic.Dictionary<long, int>();
+
+            // ERR-041-021: each player's age, captured from the same rosters the day steps read, so
+            // the season totals below can be split on the axis §3.4's age term actually moves. Taken
+            // before the season because nothing in Stage 0 ages a roster mid-season (#28's season
+            // boundary is deferred), so this is the age every occurrence draw of the season saw.
+            var ages = new System.Collections.Generic.Dictionary<long, int>();
+            for (int c = 0; c < clubIds.Length; c++)
+            {
+                Squad startSquad = provider.ResolveByClubId(clubIds[c]);
+                for (int p = 0; p < startSquad.Count; p++)
+                {
+                    PlayerRecord record = startSquad.GetPlayer(p);
+                    ages[((long)clubIds[c] << 32) | (uint)record.PlayerId] = record.Age;
+                }
+            }
 
             int rounds = 0;
             while (!loop.IsSeasonComplete)
@@ -135,6 +171,22 @@ namespace TacticalDirector.SeasonSave.Tests
                     m.TotalInjuries += injuries;
 
                     long key = ((long)medical[c].ClubId << 32) | (uint)medical[c].PlayerIds[p];
+
+                    // ERR-041-021: the age split, off the SAME walk as the four age-blind bands.
+                    if (ages.TryGetValue(key, out int age))
+                    {
+                        if (age <= YoungMaxAge)
+                        {
+                            m.Young++;
+                            m.YoungInjuries += injuries;
+                        }
+                        else if (age >= VeteranMinAge)
+                        {
+                            m.Veterans++;
+                            m.VeteranInjuries += injuries;
+                        }
+                    }
+
                     appearances.TryGetValue(key, out int fieldedRounds);
                     if (fieldedRounds * 2 >= rounds)
                     {
@@ -174,6 +226,8 @@ namespace TacticalDirector.SeasonSave.Tests
             double pooledUnavailable = 0;
             double pooledStarterMean = 0;
             double pooledReserveMean = 0;
+            double pooledYoungMean = 0;
+            double pooledVeteranMean = 0;
 
             foreach (ulong seed in Seeds)
             {
@@ -181,11 +235,21 @@ namespace TacticalDirector.SeasonSave.Tests
                 double perClub = m.TotalInjuries / (double)LeagueBootstrapConstants.DefaultClubCount;
                 double starterMean = m.Starters > 0 ? (double)m.StarterInjuries / m.Starters : 0;
                 double reserveMean = m.Reserves > 0 ? (double)m.ReserveInjuries / m.Reserves : 0;
+                double youngMean = m.Young > 0 ? (double)m.YoungInjuries / m.Young : 0;
+                double veteranMean = m.Veterans > 0 ? (double)m.VeteranInjuries / m.Veterans : 0;
                 double unavailable = m.UnavailableFractionSum / m.MatchdayObservations;
+
+                Assert.Greater(m.Young, 20,
+                    $"seed 0x{seed:X16}: too few under-{YoungMaxAge + 1}s for the age split to mean " +
+                    "anything — the bootstrap age distribution must have moved (ERR-041-021)");
+                Assert.Greater(m.Veterans, 20,
+                    $"seed 0x{seed:X16}: too few over-{VeteranMinAge - 1}s for the age split to mean " +
+                    "anything — the bootstrap age distribution must have moved (ERR-041-021)");
 
                 TestContext.WriteLine(
                     $"seed 0x{seed:X16}: injuries {m.TotalInjuries} ({perClub:F1}/club), " +
                     $"starters {m.Starters} @ {starterMean:F2}, reserves {m.Reserves} @ {reserveMean:F2}, " +
+                    $"young {m.Young} @ {youngMean:F2}, veterans {m.Veterans} @ {veteranMean:F2}, " +
                     $"unavailable {unavailable:P1}");
 
                 Assert.Greater(m.TotalInjuries, 300,
@@ -199,12 +263,15 @@ namespace TacticalDirector.SeasonSave.Tests
                 pooledUnavailable += unavailable;
                 pooledStarterMean += starterMean;
                 pooledReserveMean += reserveMean;
+                pooledYoungMean += youngMean;
+                pooledVeteranMean += veteranMean;
             }
 
             int n = Seeds.Length;
             TestContext.WriteLine(
                 $"pooled: {pooledInjuries / n:F0} injuries/season, starter {pooledStarterMean / n:F2}, " +
-                $"reserve {pooledReserveMean / n:F2}, unavailable {pooledUnavailable / n:P1}");
+                $"reserve {pooledReserveMean / n:F2}, young {pooledYoungMean / n:F2}, " +
+                $"veteran {pooledVeteranMean / n:F2}, unavailable {pooledUnavailable / n:P1}");
 
             Assert.That(pooledInjuries / n, Is.InRange(500.0, 1200.0),
                 "pooled league injuries/season must sit in the football band (~830 at the E-1 targets)");
@@ -218,6 +285,35 @@ namespace TacticalDirector.SeasonSave.Tests
                 "thing that can produce this split, so its death is visible here");
             Assert.That(pooledUnavailable / n, Is.InRange(0.04, 0.18),
                 "squad unavailability at a matchday sits near football's published ~12-14%");
+
+            // ERR-041-021 — THE AGE-AXIS LOCK, and the reason it had to be added separately.
+            //
+            // Every band above is age-BLIND. The §3.4 age term (ERR-041-020) is anti-symmetric about
+            // the bootstrap mean age, so it sums to zero over the population each of those bands
+            // pools: they hold unmoved whether the term is live, dropped, or replaced by a constant.
+            // A reviewer measured exactly that — forcing every player's age to 17 / 26 / 35 gives
+            // 623 / 783 / 929 league injuries, and all three PASS the league band, in both
+            // directions. So "the bands held unmoved" is evidence for P5 (the term does not move the
+            // aggregate) and is NOT evidence that the term is wired at all. This assert is.
+            //
+            // It is also the only lock on `PlayerCareerStates`' production call site: `season-save`
+            // is the sole assembly that constructs a `PlayerCareerStates`, so nothing outside this
+            // suite can see `record.Age` being replaced by a literal there. Measured at today's
+            // dials: 1.79 vs 1.33 = 1.34x. Mutation-verified — replacing `record.Age` with the pivot
+            // literal at that call site gives 1.57 vs 1.55 = 1.01x and fails this assert, while the
+            // four bands above return 783 / 2.08 / 1.13 / 9.5%, i.e. the recorded pre-fix figures,
+            // all four green.
+            double youngPooled = pooledYoungMean / n;
+            double veteranPooled = pooledVeteranMean / n;
+            TestContext.WriteLine(
+                $"age split: under-{YoungMaxAge + 1} {youngPooled:F2} vs over-{VeteranMinAge - 1} " +
+                $"{veteranPooled:F2} injuries/player-season (ratio {veteranPooled / youngPooled:F2}x)");
+
+            Assert.Greater(veteranPooled, youngPooled * 1.25,
+                $"over-{VeteranMinAge - 1}s must out-injure under-{YoungMaxAge + 1}s by a margin no " +
+                "rounding or selection noise can supply — §3.4's age term is the only thing in the "
+                + "chain that can produce this split, so its death (or a neutralised age at the "
+                + "production call site) is visible here and NOWHERE else in this file");
         }
 
         [Test]
@@ -319,10 +415,10 @@ namespace TacticalDirector.SeasonSave.Tests
 
             int baselineOnly = MedicalStep.AssembleRiskScore(
                 TrainingStep.ComputeInjuryRisk(peak, average),
-                MatchLoad.None, average, MedicalModifier.Identity);
+                MatchLoad.None, average, PivotAge, MedicalModifier.Identity);
             int withOneAppearance = MedicalStep.AssembleRiskScore(
                 TrainingStep.ComputeInjuryRisk(peak, average),
-                new MatchLoad(1, 0), average, MedicalModifier.Identity);
+                new MatchLoad(1, 0), average, PivotAge, MedicalModifier.Identity);
             int appearanceDelta = withOneAppearance - baselineOnly;
 
             Assert.Greater(baselineOnly, 0,
@@ -405,4 +501,22 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 8 (L6): the per-club diagnostic log line     |
 // |         |            |        | reads DefaultClubCount instead of a hard-coded 20 — log-only, but |
 // |         |            |        | a club-count retune silently mislabelled the diagnostic.          |
+// | 1.5     | 2026-08-22 | —      | ERR-041-020. The two AssembleRiskScore probes take the pivot age — they
+// |         |            |        | compare assemblies differing only in match load, so the age axis stays out
+// |         |            |        | of the comparison. The season-scale bands are unchanged and held unmoved
+// |         |            |        | with the term live, which is this landing's P5 evidence.
+// | 1.6     | 2026-08-22 | —      | ERR-041-021 (AR over the ERR-041-020 landing, H3). The age axis gets its
+// |         |            |        | own lock: PlaySeason captures each player's age off the same rosters the
+// |         |            |        | day steps read and splits the season's InjuryCount totals into an
+// |         |            |        | under-23 and an over-30 band on the SAME walk as the four existing ones,
+// |         |            |        | and the dial-on test asserts over-30s out-injure under-23s by >1.25x
+// |         |            |        | (measured 1.34x), mirroring the starters-out-injure-reserves assert.
+// |         |            |        | Mutation-verified: neutralising record.Age at PlayerCareerStates' one
+// |         |            |        | production call site gives 1.01x and fails, where the four pre-existing
+// |         |            |        | bands return the recorded pre-fix 783/2.08/1.13/9.5% and all pass.
+// |         |            |        | CORRECTS row 1.5's last sentence, which is annotated rather than edited:
+// |         |            |        | the bands holding unmoved is evidence for P5 (the anti-symmetric term
+// |         |            |        | does not move the aggregate) and is NOT evidence that the term is wired
+// |         |            |        | — a reviewer measured 623/783/929 league injuries at forced ages
+// |         |            |        | 17/26/35, all three inside the asserted band. The bands are age-blind.
 #endregion

@@ -1,6 +1,8 @@
 // File:     src/match-client-core/tests/MatchRenderProjectionTests.cs
 // Created:  2026-08-03
-// Modified: 2026-08-04
+// Modified: 2026-08-16 (P4b AR round 5, M23: the three ball-floor locks are re-anchored on
+//           radius + AgentMarkerLayerHeightM — the >= 0 form stayed green through round 4's M19
+//           ground-layer rescale while the layers were visibly passing through the ball)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a),
 //           Testing Strategy #19, Code Standards #20
@@ -327,7 +329,16 @@ namespace TacticalDirector.MatchClientCore.Tests
             BallRenderModel ball = MatchRenderProjection.ProjectBall(new Vector3(52.5f, 34f, 0f));
 
             Assert.AreEqual(Vector3.zero, ball.ShadowPosition, "the centre spot is the world origin");
-            Assert.AreEqual(ball.ShadowPosition, ball.WorldPosition);
+            Assert.AreEqual(ball.ShadowPosition.x, ball.WorldPosition.x, Tolerance);
+            Assert.AreEqual(ball.ShadowPosition.z, ball.WorldPosition.z, Tolerance);
+            // M17/M23: a grounded ball's world Y is floored on the DRAWN radius PLUS the topmost
+            // ground layer, not on the shadow's ground Y (0) and not on the radius alone — the drawn
+            // sphere's centre must clear its own radius or its lower hemisphere sinks through the
+            // shadow it sits on, and must clear the ground LAYERS too or they pass through it (M23).
+            Assert.AreEqual(
+                MatchClientConstants.BallMarkerRadiusM + MatchClientConstants.AgentMarkerLayerHeightM,
+                ball.WorldPosition.y, Tolerance,
+                "the sphere's centre sits one drawn radius above the highest ground layer");
             Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.Radius, Tolerance);
             Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.ShadowRadius, Tolerance);
         }
@@ -388,9 +399,57 @@ namespace TacticalDirector.MatchClientCore.Tests
 
                 Assert.AreEqual(expectedGround.x, ball.ShadowPosition.x, Tolerance, "height " + height);
                 Assert.AreEqual(expectedGround.z, ball.ShadowPosition.z, Tolerance, "height " + height);
-                Assert.AreEqual(ball.ShadowPosition, ball.WorldPosition, "height " + height);
+                Assert.AreEqual(ball.ShadowPosition.x, ball.WorldPosition.x, Tolerance, "height " + height);
+                Assert.AreEqual(ball.ShadowPosition.z, ball.WorldPosition.z, Tolerance, "height " + height);
+                // M17/M23: a degenerate height sanitizes to ground (0), which the floor then lifts to
+                // radius + the topmost ground layer — same reasoning as AGroundedBall_SitsOnItsOwnShadow.
+                Assert.AreEqual(
+                    MatchClientConstants.BallMarkerRadiusM + MatchClientConstants.AgentMarkerLayerHeightM,
+                    ball.WorldPosition.y, Tolerance, "height " + height);
                 Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.Radius, Tolerance, "height " + height);
             }
+        }
+
+        [Test]
+        public void TheBallNeverSinksThroughTheGroundLayers_M17_M23()
+        {
+            // BallMarkerRadiusM (0.35 m by default) is a legibility figure, not the engine's physical
+            // ball radius (0.11 m at rest, Ball Physics #1 §1.2/Appendix C) — a sphere of the DRAWN
+            // radius centred at the engine's raw physics height has its lower hemisphere below the
+            // turf whenever the raw height is under that radius, which is most of a match including
+            // its single most common state (resting on the ground).
+            //
+            // M23 — WHY THIS ASSERTS AGAINST AgentMarkerLayerHeightM RATHER THAN 0. As originally
+            // written (M17, round 3) this test asserted the sphere's lowest point stayed >= 0, i.e.
+            // above the bare ground PLANE. That is not what the ball has to clear: the M12/M16 scheme
+            // draws four ordered ground layers ABOVE that plane, and round 4's M19 rescaled all four
+            // from millimetres to centimetres — the ball's own shadow to 0.08 m and the agent marker
+            // to 0.082 m — WITHOUT moving the ball's floor with them. A >= 0 assertion stayed green
+            // through that change while the shipped picture had the shadow, the ring, the marker and
+            // the marking band all passing visibly through a ball resting on the turf. Anchoring on
+            // AgentMarkerLayerHeightM (the HIGHEST of the four) instead ties this lock to the same
+            // constants the regression moved, so the identical rescale cannot silently reopen it.
+            float topGroundLayerY = MatchClientConstants.AgentMarkerLayerHeightM;
+
+            foreach (float height in new[]
+                     {
+                         0f, 0.11f, 0.2f, MatchClientConstants.BallMarkerRadiusM,
+                         MatchClientConstants.BallMarkerRadiusM + topGroundLayerY, 1f, 25f
+                     })
+            {
+                BallRenderModel ball = MatchRenderProjection.ProjectBall(new Vector3(20f, 50f, height));
+
+                float lowestPointY = ball.WorldPosition.y - ball.Radius;
+                Assert.GreaterOrEqual(lowestPointY, topGroundLayerY - Tolerance,
+                    "the drawn sphere's underside must clear the topmost ground layer, height " + height);
+            }
+
+            // And the floor is a FLOOR: a ball genuinely above it keeps its raw physics height, so
+            // this fix cannot be mistaken for a constant offset applied to every ball in flight.
+            float wellAboveFloor = MatchClientConstants.BallMarkerRadiusM + topGroundLayerY + 5f;
+            BallRenderModel lofted = MatchRenderProjection.ProjectBall(new Vector3(20f, 50f, wellAboveFloor));
+            Assert.AreEqual(wellAboveFloor, lofted.WorldPosition.y, Tolerance,
+                "above the floor the ball rides on its own height, unshifted");
         }
 
     }
@@ -418,4 +477,24 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | they covered, replaced by TheBallRadiusDoesNotVaryWithHeight — |
 // |         |            |        | which asserts the ramp is really absent rather than merely     |
 // |         |            |        | unused, since an unused ramp would pass every other test here. |
+// | 1.3     | 2026-08-16 | —      | P4b AR round 3, M17: AGroundedBall_SitsOnItsOwnShadow and       |
+// |         |            |        | ADegenerateHeight_PutsTheBallOnTheGroundRatherThanNowhere no    |
+// |         |            |        | longer assert WorldPosition == ShadowPosition outright — X/Z    |
+// |         |            |        | stay equal, but WorldPosition.y is now the DRAWN radius, not    |
+// |         |            |        | the shadow's ground Y (0), since ProjectBall floors world Y on  |
+// |         |            |        | the radius rather than zero. + TheBallNeverSinksBelowTheGround- |
+// |         |            |        | Plane_M17, which locks the invariant across a spread of heights |
+// |         |            |        | including the engine's real 0.11 m rest height.                |
+// | 1.4     | 2026-08-16 | —      | P4b AR round 5, M23. The v1.3 locks asserted the ball's floor   |
+// |         |            |        | against the bare ground PLANE (radius, and lowest point >= 0),  |
+// |         |            |        | which is not what the ball has to clear — round 4's M19         |
+// |         |            |        | rescaled the four M12/M16 ground layers to centimetres and all  |
+// |         |            |        | three locks stayed green while the shadow, ring, marker and     |
+// |         |            |        | marking band passed visibly through a resting ball. All three   |
+// |         |            |        | are re-anchored on radius + AgentMarkerLayerHeightM (the        |
+// |         |            |        | HIGHEST layer), tying them to the same constants the regression |
+// |         |            |        | moved; the renamed TheBallNeverSinksThroughTheGroundLayers_     |
+// |         |            |        | M17_M23 carries the reasoning as a comment and gains a          |
+// |         |            |        | lofted-ball case proving the fix is a FLOOR, not an offset      |
+// |         |            |        | added to every ball in flight.                                  |
 #endregion

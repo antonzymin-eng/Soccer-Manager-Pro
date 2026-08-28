@@ -30,6 +30,7 @@ The earlier `FR-DET-` / `VR-DET-` / `OPS-DET-` outline prefixes are deprecated a
 - **FR-DS-010:** At match start the runtime MUST capture `EnvironmentFingerprint` (worker count, scheduler policy, reduction topology, SIMD level, float-model hash) and embed it in every snapshot header for that match; mid-match mutation of any pinned field is forbidden.
 - **FR-DS-011:** A Tier-B field present in digest scope without an approved tolerance row in the tolerance matrix MUST fail validation with `ERR_DS_TIERB_TOLERANCE_MISSING`; no silent fallback epsilon is permitted.
 - **FR-DS-012:** The replay engine MUST execute the 8-step lifecycle (§4.2.2) in strict order; each step MUST fail deterministically with its assigned error code and MUST NOT proceed to the next step on failure.
+- **FR-DS-014:** Every snapshot header MUST carry a `buildHash` identifying the compiled binaries the run executed on, computed per §2.3.2 over a **declared** authoritative assembly closure; a restore or replay whose recorded `buildHash` differs from the live one MUST abort with `ERR_DS_REPLAY_BUILD_MISMATCH` before any state is rehydrated. `buildHash` MUST NOT appear in any digest preimage. Added v1.2 (`ERR-016-009`).
 - **FR-DS-013:** Stage-0 `float` fields classified Tier-A MUST satisfy both §1.3.1.1 conditions (pinned execution environment recorded in `EnvironmentFingerprint`, and deterministic reduction topology); fields that cannot satisfy these conditions MUST be classified Tier-B with an approved tolerance row.
 
 ## 2.2 Architecture Overview
@@ -61,6 +62,37 @@ Core components:
 - `ToleranceRow { fieldPath, tier, comparator, toleranceValue, rationale, owner, reviewDate }`
 - `ComparatorRegistry = { BitwiseEqual, AbsEpsilon, RelEpsilon }` (normative v1)
 
+**Implementation mapping (added v1.1, `ERR-016-009`).** The list above is the **concept**
+inventory. It is NOT a type manifest, and six of its nine entries name no type in
+`src/deterministic-sim/` — a reader who took it for one would write six phantom types. **`src/` is
+the surface authority; this section is the contract those surfaces satisfy.** Every production file
+carries a `// Spec:` header naming the section it implements; that header is the per-file authority.
+
+| §2.3 name | Actual `src/deterministic-sim/` surface | Status |
+|---|---|---|
+| `DeterminismContext` | never aggregated into one type — `matchSeed` rides consumer contexts (e.g. `DecisionContext.MatchSeed`) and the match-save blob, `schemaVersion` / `digestVersion` ride `SnapshotHeader` / `SaveManager` / `SnapshotCodec` / `ReplayEngine`, and **`buildHash` is `SnapshotHeader.BuildHash`**, computed by `BuildIdentity.ComputeHash` over the closure `MatchEngineBuildIdentity` declares (v1.2, `ERR-016-009`) | **SPLIT** |
+| `PhaseDigest` | computed, never stored — the preimage is locked by the golden-vector corpus (D-01/D-02); the phase enum is `PhaseId.cs` | COMPUTED |
+| `RngStreamKey` | three fields on `RngStreamState` (`SubsystemOrdinal`, `EntityId`, `StreamVersion`) plus the packed `StreamKey`; ordinals in `SubsystemOrdinals.cs` | FIELDS ON `RngStreamState` |
+| `RngCursor` | two fields on `RngStreamState` (`RngCursor`, `ActionOrdinal`) | FIELDS ON `RngStreamState` |
+| `SnapshotHeader` | `SnapshotHeader.cs` | TYPE |
+| `DespawnLog` / `DespawnEntry` | `DespawnLog.cs` / `DespawnEntry.cs` | TYPE |
+| `ReplayCursor` | `ReplayCursor.cs` | TYPE |
+| `ToleranceRow` (§2.3.1) | none | **DEFERRED — Stage 1+** |
+| `ComparatorRegistry` | no registry exists; the three approved comparators exist as `DivergenceDetector.CompareTierAFloat` (BitwiseEqual), `CompareTierBFloat` (AbsEpsilon) and `CompareDigests` | **DEFERRED — Stage 1+** |
+
+**Two normative consequences.**
+
+1. **`buildHash` is normative, and it is now built** (v1.2, August 22, 2026 — `ERR-016-009`'s
+   substantive half). *Frozen v1.1 text, for the record: "`buildHash` is an open GAP, not an omission
+   of convenience. It is a declared field of the replay-identity context and nothing in `src/` carries
+   it or a synonym. Until it exists, two builds differing only in compiled code are indistinguishable
+   to everything downstream of this section."* That is no longer true. §2.3.2 below defines what
+   `buildHash` **is**; the `SaveManager` `Fingerprint = null` item on the same contract stays open and
+   is tracked separately.
+2. **The names above are NOT rename targets.** `RngStreamState.RngCursor` and its siblings are
+   correct as built and are Tier-A serialized state; renaming a serialized field to match a document
+   would move state for no behavioural gain. The spec was the thing that needed to tell the truth.
+
 ### 2.3.1 Tolerance row operational schema
 | Column | Type | Rule |
 |---|---|---|
@@ -71,6 +103,57 @@ Core components:
 | `rationale` | string | mandatory for tier != `A` |
 | `owner` | string | team alias |
 | `reviewDate` | date | must be <= 180 days old |
+
+### 2.3.2 `buildHash` — build identity (normative, added v1.2)
+
+`buildHash` identifies **the compiled binaries a run executed on**, as distinct from
+`EnvironmentFingerprint` (§4.8), which identifies the **host and float model**. Two builds differing
+only in compiled game code MUST produce different `buildHash` values; conflating the two axes — so
+that a recompiled engine reads as the same run environment — is the defect `ERR-016-009` was filed
+against.
+
+**FR-DS-014.** `buildHash` MUST be
+
+```
+SHA-256( DOMAIN_TAG_BUILD_IDENTITY ‖ BUILD_IDENTITY_VERSION ‖ moduleCount
+         ‖ ( assemblyName ‖ moduleVersionIdHex )* )
+```
+
+encoded as 64 lowercase hex characters, where the module list is the **authoritative assembly
+closure**, sorted by ordinal `assemblyName`; `moduleVersionIdHex` is the module's compiler-stamped
+Module Version ID in canonical 32-char lowercase hex; and every field is written through the
+§3.2.4.1 canonical serializer. Constants: §3.4.
+
+**Four binding rules.**
+
+1. **The closure is DECLARED, never DISCOVERED.** Enumerating loaded assemblies at runtime returns
+   whatever happens to have been loaded, which differs between a player run, an editor run and a test
+   run of one build. The closure is named by the composition root — the one place that already
+   references everything it wires — so a missing module is a compile error, not a silently shorter
+   hash. Stage-0 closure: the `match-engine` `.asmdef` reference set plus `match-engine` itself.
+2. **`buildHash` is OUTSIDE every digest preimage.** It MUST NOT enter the §3.2.3 snapshot-header
+   preimage, the §4.8 `EnvironmentFingerprint` preimage, or any `PhaseDigest`. It is an identity
+   compared by equality at restore, not state whose integrity a digest protects — and a per-build
+   value inside a digest preimage would make every golden vector unreproducible by construction.
+3. **Mismatch fails closed, before any state is touched.** A restore or replay whose recorded
+   `buildHash` differs from the live one MUST abort with `ERR_DS_REPLAY_BUILD_MISMATCH`
+   (§3.4 / EC-016-015).
+4. **Collision-avoidance, not rebuild-stability.** Under a toolchain that compiles
+   non-deterministically the MVID moves on every rebuild and prior saves are refused. That is the
+   accepted direction: a false refusal is loud, whereas two different builds hashing alike silently
+   validates a divergent replay.
+
+**Why not a CI-stamped commit or the `.asmdef` closure alone** (the two candidates weighed at
+`ERR-016-009`): a commit identifies *source*, and the builds where determinism defects actually
+surface — a dirty tree, a different compiler, a different target framework — differ as binaries while
+sharing one commit, or carry no stamp at all; and the `.asmdef` closure names *which* assemblies
+participate, not what is in them, so two builds differing only in compiled code have identical
+closures. The closure survives here as the **scope selector**; the MVIDs supply the **content**.
+
+**A format that does not carry `buildHash` records its absence, it does not fake one.** The Stage-0
+`SaveManager` header (§3.9.2) carries neither the fingerprint nor the build hash and leaves both null
+on load; a format that *does* carry it MUST refuse to write or read an empty value rather than admit
+a save whose build identity is unknown.
 
 ## 2.4 Failure Modes and Recovery
 - **Non-canonical ordering detected:** fail fast with deterministic error ID; reject tick commit.
@@ -88,6 +171,27 @@ Core components:
 | Tier B drift | continue replay with warning | fail if out-of-bound |
 
 ## 2.5 Version History
+- **v1.2 (August 22, 2026):** `ERR-016-009`'s substantive half CLOSED — `buildHash` exists. New
+  **§2.3.2** defines it normatively (preimage, the declared-not-discovered closure rule, the
+  digest-preimage exclusion, the fail-closed mismatch, and the collision-avoidance-not-rebuild-stability
+  contract), new **FR-DS-014** binds it, and the §2.3 mapping table's `DeterminismContext` row moves
+  **GAP → SPLIT**: `buildHash` is `SnapshotHeader.BuildHash`, computed by `BuildIdentity.ComputeHash`
+  over the closure `MatchEngineBuildIdentity` declares. The v1.1 "open GAP" consequence text is kept
+  **frozen and quoted in place** rather than deleted, per this project's preserve-the-record
+  convention. §3.4 gains `DOMAIN_TAG_BUILD_IDENTITY = 0x2E`, `BUILD_IDENTITY_VERSION = 1` and
+  `ERR_DS_REPLAY_BUILD_MISMATCH = 0x160E`; §3.10 gains EC-016-015. **No `DETERMINISM_DIGEST_VERSION`
+  bump and no golden vector moved** — rule 2 is what buys that. The `SaveManager` `Fingerprint = null`
+  item on the same contract, and the `ToleranceRow` / `ComparatorRegistry` Stage-1+ deferrals, stay
+  open unchanged.
+- **v1.1 (August 21, 2026):** `ERR-016-009` — §2.3 gains an implementation-mapping table. Six of the nine
+  listed structures (`DeterminismContext`, `PhaseDigest`, `RngStreamKey`, `RngCursor`, `ToleranceRow`,
+  `ComparatorRegistry`) name no type in `src/deterministic-sim/`, while §4.2 has been explicitly
+  non-normative since v0.7 and §4.4 gives module paths (`sim/tick/*` …) that match no directory in the
+  tree — leaving §2.3 as the de facto type manifest it was never marked as. Each row now names its real
+  surface and status; `src/` is declared the surface authority. Two items are recorded rather than
+  fixed: **`buildHash` has no representation anywhere in `src/`** (an open gap on the replay-identity
+  contract), and `ToleranceRow`/`ComparatorRegistry` are marked Stage-1+ deferrals rather than left
+  reading as built. No rename and no code change — the serialized field names are correct as built.
 - **v1.0 (May 4, 2026):** Pass 4 / Pass 5 critique resolution. (a) Pass 4 L-3: FR-DS-009 stage-qualified ("Stage 5+") and pointed at `FR-DS-009-GATE` (§5.5) for operational binding. (b) Pass 5 M-3: `DespawnLog` and `DespawnEntry` added to §2.3 data structures, classified Tier A, canonical sort key declared. (c) Pass 5 M-4: `ReplayCursor { tick, phaseOrdinal }` data structure added with legal-value definition keyed to the §4.2.2 step 7 `EndOfSnapshot[T]` assertion. (d) Pass 4 L-2: §2.6.2 replay-lifecycle example mirrored to the 8-step §4.2.2 normative form with explicit "see §4.2.2 for normative" pointer.
 - **v0.8 (May 2, 2026):** Added FR-DS-010..013: EnvironmentFingerprint recording, Tier-B tolerance enforcement, replay 8-step lifecycle, Stage-0 float Tier-A classification gate (B-8).
 - **v0.7 (May 2, 2026):** Added §2.0 Identifier Taxonomy; corrected `RngStreamKey` (removed `actionOrdinal` from key) and extended `RngCursor` (added `actionOrdinal`); extended `SnapshotHeader` with `environmentFingerprint`.

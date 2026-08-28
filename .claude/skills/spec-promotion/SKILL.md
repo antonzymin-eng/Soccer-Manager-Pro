@@ -31,8 +31,12 @@ the row lands in `SPEC_INDEX.md` at promotion, never at design-note stage.
 Positional Rotations and is already Pressing AI's. Check before committing to it:
 
 ```bash
-grep -rhoE "\bFR-[A-Z]{2,3}-" docs/specs/ | sort -u
+grep -rhoE "\bFR-[A-Z]{2,3}-" docs/specs/ docs/tracking/ src/ | sort -u
 ```
+
+`docs/tracking/` is included deliberately, not just `docs/specs/` — an unpromoted design supplement
+can already hold a prefix (today `FR-DT-` appears there and in no spec), and checking only the spec
+folders would miss exactly the collision this step exists to catch.
 
 **ERR ids:** any `ERR-` id the supplement proposes must be re-verified free against
 `docs/tracking/spec-error-log.md` *and* the spec folders. Three supplements in the last wave proposed
@@ -108,7 +112,7 @@ At approval (once G3 is granted): flip every file in the folder to `Status: APPR
 `section-9-approval-checklist.md` with the §9.5 gate table and §9.6 decision, update the
 `SPEC_INDEX.md` counts, and land the G2 back-props in the same commit.
 
-Then run `landing-close-out`. One thing to carry into the root `CLAUDE.md` entry: state whether the
-newly approved spec has a `src/` assembly. "APPROVED" says nothing about whether code exists — it is
-currently untrue of roughly 36% of the registry (19 of 53, re-derived August 18, 2026), and that gap is the single most misread fact about
-this project's state.
+Then run `landing-close-out`. One thing to carry into the `docs/tracking/CHANGELOG.md` entry: state
+whether the newly approved spec has a `src/` assembly. "APPROVED" says nothing about whether code
+exists — it is currently untrue of roughly 42% of the registry, and that gap is the single most
+misread fact about this project's state.

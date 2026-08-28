@@ -1,6 +1,11 @@
 // File:     src/player-progression/tests/GrowthProjectionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-11 (AR pass 8, L-2 — stale comment corrected, no assertion change — v1.3)
+// Modified: 2026-08-26 (StepInclusive off-by-one in the decline-tail lock — v1.7)
+//           (round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side —
+//           the pinned degenerate end state — v1.6)
+//           (football-judgment proxy review, batch-1 adversarial finding
+//           growthprojection-test-comment-stale-bands — v1.5)
+//           (ERR-028-020 — football-judgment proxy review batch 1 — v1.4)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 + Appendix B; Code Standards #20
 // Purpose:  T-PG-DET-001/002, T-PG-ID-001/002 — byte-exact growth across a value-copy "save", age
@@ -37,13 +42,38 @@ namespace TacticalDirector.PlayerProgression.Tests
         [Test]
         public void DeclineBand_DrainsExactlyOnePointPerYear_CurveOff()
         {
-            (PlayerRecord rec, PlayerLifecycle life) = NewPlayer(ageAtBase: 32); // > DECLINE_AGE ⇒ Decline
+            // REBASELINED at ERR-028-020 from a hard-coded age 32. Since the decline rate now ramps in
+            // across the DECLINE_AGE edge, "the full decline rate" starts one half-width past it —
+            // age 32 sits INSIDE the ramp and drains less than a whole point, which is the fix
+            // working, not a regression. The property under test is unchanged: at the full rate the
+            // drain is exactly one point per year with no residue.
+            int fullRateAge = PlayerProgressionConstants.DECLINE_AGE + 1
+                              + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+            (PlayerRecord rec, PlayerLifecycle life) = NewPlayer(ageAtBase: fullRateAge);
 
             StepInclusive(ref rec, ref life, BaseDay, BaseDay + 364);
 
             Assert.AreEqual(NeutralAttributeSum - 1, SumAttributes(rec.Attributes),
                 "the symmetric decline step: exactly one attribute point drained per year.");
             Assert.AreEqual(0L, life.GrowthCursor);
+        }
+
+        [Test]
+        public void InsideTheDeclineRamp_TheDrainIsPartial_NotAllOrNothing()
+        {
+            // ERR-028-020's own lock, and the one that fails against the pre-fix model: a year spent
+            // inside the ramp must drain SOMETHING and less than a full point. The retired band step
+            // could only ever answer 0 or 1 — that is the whole defect.
+            (PlayerRecord rec, PlayerLifecycle life) = NewPlayer(ageAtBase: PlayerProgressionConstants.DECLINE_AGE);
+
+            StepInclusive(ref rec, ref life, BaseDay, BaseDay + 364);
+
+            Assert.AreEqual(NeutralAttributeSum, SumAttributes(rec.Attributes),
+                "a mid-ramp year does not yet cost a whole attribute point…");
+            Assert.Less(life.GrowthCursor, 0L,
+                "…but it does move the cursor toward one, where the band step moved it not at all.");
+            Assert.Greater(life.GrowthCursor, -PlayerProgressionConstants.POINT_COST,
+                "…and by less than a full point, or the ramp is not a ramp.");
         }
 
         [Test]
@@ -194,7 +224,15 @@ namespace TacticalDirector.PlayerProgression.Tests
                 RetirementDay = 0
             };
 
-            // Growth (18..23, 6 years) + Stable (24..30, 7 years) = 13 years, every Growth day refused.
+            // 13 years, ages 18..30 (growthprojection-test-comment-stale-bands, football-judgment
+            // proxy review batch-1: this comment described the retired flat step — "Growth (18..23, 6
+            // years) + Stable (24..30, 7 years)" — which is no longer the shipped model). Under the
+            // shipped ramp (AgeBandRampHalfWidthYears = 2 today) growth runs at full rate through age
+            // GROWTH_AGE - Ramp - 1 (21), tapers across GROWTH_AGE +/- Ramp (22..26), and is genuinely
+            // flat from age 26 until the decline ramp begins at (DECLINE_AGE + 1) - Ramp (29) — so this
+            // 13-year window now spans two years of decline-ramp accrual (ages 29-30) before this loop
+            // ends. Every Growth-band day is still refused (CA == PA throughout); the loop below is
+            // bounds-only and holds regardless of which band a given day falls in.
             uint growthStableDays = 13 * (uint)PlayerProgressionConstants.DAYS_PER_YEAR;
             for (uint d = BaseDay; d < BaseDay + growthStableDays; d++)
             {
@@ -210,9 +248,15 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.AreEqual(initialCA, AbilityModel.ComputeCA(in rec.Attributes, rec.Position),
                 "at the PA ceiling for the entire Growth band, no point was ever actually spent.");
 
-            // 10 years of Decline (age 31..40). A bounded residual (< POINT_COST) can delay the FIRST
-            // decline point by at most one point's worth — not the years-long cancellation the unbounded
-            // bank produced (measured pre-fix: 3 attributes lost at 40 where an unbanked player loses 9).
+            // 10 more years, ages 31..40 (growthprojection-test-comment-stale-bands: this comment
+            // previously read "10 years of Decline (age 31..40)" against the retired flat step). The
+            // decline ramp is centred on (DECLINE_AGE + 1) = 31, spanning ages 29..33 at today's
+            // AgeBandRampHalfWidthYears = 2, so this window picks up where the first loop left off
+            // (age 31, mid-ramp), covers two more ramp years (31-32) before reaching the full Decline
+            // rate at age 33, then continues full-rate through age 40. A bounded residual (< POINT_COST)
+            // can delay the FIRST decline point by at most one point's worth — not the years-long
+            // cancellation the unbounded bank produced (measured pre-fix: 3 attributes lost at 40 where
+            // an unbanked player loses 9).
             int sumBeforeDecline = SumAttributes(rec.Attributes);
             uint declineDays = 10 * (uint)PlayerProgressionConstants.DAYS_PER_YEAR;
             uint declineStart = BaseDay + growthStableDays;
@@ -256,6 +300,51 @@ namespace TacticalDirector.PlayerProgression.Tests
                     ref rec, ref life, BaseDay, TrainingInput.Neutral, curveEnabled: false),
                 "a BirthWorldDay ahead of worldDay is corrupt state — the retired else-branch silently "
                 + "read this as age 0 instead of refusing it.");
+        }
+
+        [Test]
+        public void GrowthProjection_DeclineIsUnbounded_ANeverRemovedVeteranReachesEveryAttributeAtMinimum()
+        {
+            // round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side. §3.1.3's decline
+            // phase has NO ceiling — every day past DECLINE_AGE's ramp drains one more point,
+            // unconditionally — and #28's retirement is FLAG-ONLY (ProgressionEngine.SquadFor returns
+            // every carried record regardless of RetirementFlag; roster removal is roadmap D1's
+            // deferred half). Pin the honest end state rather than leave it unmeasured: a player who
+            // never leaves the roster and is stepped for long enough at the full decline rate reaches
+            // EVERY attribute at ATTRIBUTE_MIN and stays there — the degenerate population any
+            // long-career measurement taken before roster removal lands would be sampling from.
+            int fullRateAge = PlayerProgressionConstants.DECLINE_AGE + 1
+                              + PlayerProgressionConstants.AgeBandRampHalfWidthYears;
+            (PlayerRecord rec, PlayerLifecycle life) = NewPlayer(ageAtBase: fullRateAge);
+
+            // NeutralAttributeSum starts every one of the 31 attributes at 10 — far more decline-years
+            // than needed to floor them all (10 - ATTRIBUTE_MIN each) at one point per year, plus
+            // headroom so the loop demonstrably runs PAST full degeneracy, not merely up to it.
+            //
+            // The `- 1` is load-bearing, not this file's end-day convention repeated by habit.
+            // StepInclusive runs BOTH ends, so a whole number of years is declineYears * DAYS_PER_YEAR
+            // CALLS and therefore an end day one before that. It matters because the cursor assertion
+            // below pins exactly 0, and at the full decline rate the cursor is a sawtooth of period
+            // POINT_COST — which equals DAYS_PER_YEAR as a locked catalogue invariant
+            // (PlayerProgressionConstantsTests) — so it reads 0 only on exact year boundaries and -1
+            // one day past one. Any future edit to declineYears or to this range must keep the span a
+            // whole number of YEARS for the same reason; the headroom above is in years for this reason.
+            uint declineYears = (uint)(NeutralAttributeSum - PlayerProgressionConstants.ATTRIBUTE_MIN * 31 + 50);
+            StepInclusive(ref rec, ref life, BaseDay,
+                BaseDay + declineYears * (uint)PlayerProgressionConstants.DAYS_PER_YEAR - 1);
+
+            int[] attrs = rec.Attributes.ToArray();
+            for (int i = 0; i < attrs.Length; i++)
+            {
+                Assert.AreEqual(PlayerProgressionConstants.ATTRIBUTE_MIN, attrs[i],
+                    $"attribute index {i} must have reached the floor — decline has no ceiling to stop it.");
+            }
+            Assert.AreEqual(0, AbilityModel.ComputeCA(in rec.Attributes, rec.Position),
+                "every attribute at ATTRIBUTE_MIN must derive CA of exactly 0 (ComputeCAFromArray's own "
+                + "floor-scaling arithmetic, exercised at its own boundary).");
+            Assert.AreEqual(0L, life.GrowthCursor,
+                "fully drained: DrainOnePoint's refusal exit discards the cursor to 0 (AR pass 6), it "
+                + "does not grind — see FullyDrainedPlayer_DrainLoopExits_AndDoesNotGrind above.");
         }
 
         [Test]
@@ -341,4 +430,43 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | comment was never updated. Corrected; the assertions are       |
 // |         |            |        | property-based (bounded in both directions) and were already   |
 // |         |            |        | correct — this is a prose-only fix, no behavior or lock change.|
+// | 1.4     | 2026-08-22 | —      | ERR-028-020. The decline-band lock REBASELINED from a hard-coded age 32 to
+// |         |            |        | the first full-rate age past the ramp (age 32 now sits inside it and drains
+// |         |            |        | less than a point — the fix working). + InsideTheDeclineRamp_TheDrainIs-
+// |         |            |        | Partial_NotAllOrNothing, which the retired band step cannot satisfy.
+// | 1.5     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial finding
+// |         |            |        | growthprojection-test-comment-stale-bands (doc only, no assertion
+// |         |            |        | change). PaBoundYoungster_...'s two band-arithmetic comments still
+// |         |            |        | read "Growth (18..23, 6 years) + Stable (24..30, 7 years)" and "10
+// |         |            |        | years of Decline (age 31..40)" — the retired flat step's edges, not
+// |         |            |        | the shipped ramp's. Restated against GROWTH_AGE +/- Ramp and
+// |         |            |        | (DECLINE_AGE + 1) +/- Ramp, as GrowthProjectionTests 1.4 and
+// |         |            |        | AbilityModelTests already do; the assertions themselves were already
+// |         |            |        | correct (traced: 2190 growth days, 6 refusals, cursor 0, then -182
+// |         |            |        | by the end) and are unchanged.
+// | 1.6     | 2026-08-24 | —      | Round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-
+// |         |            |        | side. + GrowthProjection_DeclineIsUnbounded_ANeverRemovedVeteran-
+// |         |            |        | ReachesEveryAttributeAtMinimum: a player stepped for far longer
+// |         |            |        | than any real career at the full decline rate reaches EVERY
+// |         |            |        | attribute at ATTRIBUTE_MIN, derives CA == 0, and the cursor stays
+// |         |            |        | at 0 (DrainOnePoint's refusal exit). Pins the honest degenerate end
+// |         |            |        | state §3.1.3's decline phase has no ceiling against, so the
+// |         |            |        | roadmap-D1 roster-removal landing has a visible diff. No production
+// |         |            |        | code change — PlayerProgressionConstants.cs v1.4 carries the doc
+// |         |            |        | note this test backs.
+// | 1.7     | 2026-08-26 | —      | Test-only fix. GrowthProjection_DeclineIsUnbounded_ANeverRemoved-
+// |         |            |        | Veteran...'s day range omitted the `- 1` that every other
+// |         |            |        | StepInclusive call site in this file uses (the helper runs BOTH
+// |         |            |        | ends), so the lock stepped one day past the whole-year boundary
+// |         |            |        | and the cursor assertion read -1 instead of 0 — the v1.6 test has
+// |         |            |        | been failing since it landed. The span is now an exact whole
+// |         |            |        | number of years. The exact-multiple dependency (POINT_COST ==
+// |         |            |        | DAYS_PER_YEAR makes the cursor a sawtooth reading 0 only on year
+// |         |            |        | boundaries) is now stated in the test's own comment, so a later
+// |         |            |        | edit to declineYears cannot silently reintroduce it. The
+// |         |            |        | assertion stays pinned at exactly 0 rather than a bounded range:
+// |         |            |        | a range would have passed against this very off-by-one, and 0 is
+// |         |            |        | the same no-residue invariant PaBoundSpendRefusal_LeavesNoResidue
+// |         |            |        | and FullyDrainedPlayer_DrainLoopExits_AndDoesNotGrind assert. No
+// |         |            |        | production code change, no other test touched.
 #endregion
