@@ -2,12 +2,12 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.3  
+**Version:** 0.4  
 **Created:** August 27, 2026  
 **Governing authority:** docs/planning/project-architecture-governance.md v0.4  
 **Primary downstream specifications:** Testing Strategy & Framework #19; Code Standards & Style Guide #20  
 **Related project authorities:** Master Development Plan; adversarial-review process; root and src agent guides  
-**Review/authoring base:** branch docs/round-2-architecture-remediation-design at commit 9b03dad3997ad927e2f81044ec747e596a58273b (provenance only; not an evidence-freshness key)
+**Review/authoring base:** branch docs/round-2-architecture-remediation-design at commit 12abb982c45f667fb90311320997b6d7f00dc8cf (provenance only; not an evidence-freshness key)
 
 ---
 
@@ -132,7 +132,7 @@ Generated reports may repeat data for readability but are never authoritative.
 
 ## 0.5 Amendment precedence and activation prerequisites
 
-Version 0.3 preserves the v0.2 sequencing decisions and adds the end-to-end implementation constraints required to make those stages mechanically sound without reopening the architectural decisions in project-architecture-governance.md.
+Version 0.4 preserves the settled governance architecture and v0.3 hardening while splitting rollout into an early structural track and a domain-owned behavioral-evidence track. It does not reopen the architectural decisions in project-architecture-governance.md.
 
 The following rules override earlier sequencing in this plan:
 
@@ -144,10 +144,15 @@ The following rules override earlier sequencing in this plan:
 6. No CI job is a merge gate merely because it exists. Required-status configuration and skipped/cancelled/unavailable behavior are part of activation.
 7. A temporary baseline is permitted only as a finite migration artifact and MUST be mechanically empty at final strict activation.
 8. Committed governance artifacts MUST separate the material subject they prove from the Git commit/tree that happens to contain the evidence record. A committed artifact MUST NOT require equality with its own containing commit/tree as a freshness condition.
-9. A1 closed-world discovery uses the union of compiler/mechanical candidates and a finite bootstrap intent declaration for roots that syntax cannot infer. A4 promotes those declarations into final contracts; it does not introduce previously invisible runtime roots.
+9. A1 is deliberately asmdef-only and requires no Roslyn extractor, governance schema freeze, or #19/#20 governance amendment. Compiler-backed runtime/root reachability occurs only after selector/identity semantics exist; bootstrap declarations then close what compiler facts cannot infer.
 10. Merge-blocking C# symbol/public-surface/static-initialization discovery MUST consume compiler-backed semantic facts. The Python governance tool may orchestrate those facts, but MUST NOT implement a regex or hand-written C# parser and call the result closed-world proof.
 11. A2 freezes not only JSON shapes but the executable identity, selector, applicability, dependency-closure, and freshness semantics needed to interpret them. Those semantics MUST pass representative fixtures before A3 reapproval.
 12. Required executable proof is satisfied only by an explicit successful execution state. Skipped, excluded, unavailable, not-run, or runner-failed evidence does not satisfy a required proof unless #19 permits and records a bounded substitute.
+13. Structural classification and activation state are orthogonal. A component remains a production runtime component even when deliberately disabled or not yet integrated.
+14. `intentionally-disabled` is valid only when its disabled state is independently machine-verifiable from a resolvable source/config selector plus a typed expected predicate/value; prose alone cannot create a suppression.
+15. Static discovery covers Class A dormancy (exists but has no production activation/reachability). It MUST NOT claim to prove Class B gate firing. Runtime gate/trigger instrumentation remains owned by the component/domain and governance consumes its evidence when an applicable rule requires it.
+16. The full architecture-evidence gate still activates at A8, but a narrow asmdef check MAY become a required merge status earlier once its objective rules are approved.
+17. Changes to declared `[GT]`/calibration tuning surfaces are prohibited while the owning component is `intentionally-disabled`, `pending-integration`, or `unresolved`, unless the approved exception path explicitly authorizes the change.
 
 This document remains an implementation plan. It does not itself approve Governance v0.4 or modify approved #19/#20 requirements.
 
@@ -230,6 +235,17 @@ Therefore:
 
 The implementation MUST regenerate the asmdef graph at that landing. The old proposed tier table is evidence/history, not a substitute for checking current HEAD.
 
+## 1.5 Empirical integration failure classes
+
+`docs/tracking/match-engine-wiring-backlog.md` independently documents the target failure mode: subsystem code can be built, tested, and assembly-reachable while having no production caller. It also records seven successive `[GT]` realism/calibration passes against an engine containing dormant subsystems, turning integration gaps into misleading calibration evidence rather than merely missing features.
+
+The plan keeps two failure classes separate:
+
+- **Class A — structurally dormant:** capability exists but no production activation/caller reaches it. Static/compiler-backed reachability can detect this.
+- **Class B — behaviorally starved:** the call exists and executes, but a gate/trigger almost never becomes true. Static reachability cannot prove meaningful firing; W12-style runtime instrumentation is the existing answer.
+
+Tackling demonstrates a valid third condition: deliberately disabled behavior. `TackleContactRadiusM = 0` is behaviorally unwired by owner decision, so structural role and activation state must be separate axes.
+
 ---
 
 # 2. Target governance control flow
@@ -302,7 +318,9 @@ Any change after A2 that materially changes those semantics reopens the affected
 
 Create `docs/tracking/architecture-governance/runtime-surface-classifications.json` for durable classification intent. Generated discovery output remains ephemeral evidence; the committed file MUST NOT become a hand-maintained copy of the source tree.
 
-Allowed classifications remain: `production-runtime-root`; `contracted-child`; `test-only`; `tooling-only`; `generated-or-external`; `non-runtime-bearing`.
+Allowed structural classifications remain: `production-runtime-root`; `contracted-child`; `test-only`; `tooling-only`; `generated-or-external`; `non-runtime-bearing`.
+
+Activation state is **not** another classification value. Structural role answers what the surface is; activation state answers whether a production capability is currently expected to execute.
 
 ### 3.2.1 Subject identity versus provenance
 
@@ -321,9 +339,7 @@ Freshness is decided by recomputing `subject_scope_digest` and the proof-class-s
 
 The discovery universe MUST include all asmdefs; Unity lifecycle/initialization entry surfaces; conventional `Main` entry points; supported serialized/factory activation surfaces; testhosts/tooling assemblies; explicit static constructors; and compiler-generated type initialization caused by static field initializers.
 
-Plain-C# architectural roots cannot always be inferred from syntax or present production callers. A1 therefore permits a finite temporary file `docs/tracking/architecture-governance/bootstrap-runtime-surfaces.json` containing only the architectural intent needed to close the initial universe: stable logical component ID, canonical selector, intended root/host classification, and rationale. It MUST NOT contain a copied source-tree inventory.
-
-A1 computes the fixed-point union of compiler-discovered candidates plus bootstrap declarations and classifies every emitted surface or records it unresolved. A2 freezes final selector/identity semantics and reruns A1 through those semantics before A3. At A4 the bootstrap declarations are migrated into final integration contracts/classifications and the temporary bootstrap file is retired.
+The compiler-backed Class-A pass permits a finite temporary `docs/tracking/architecture-governance/bootstrap-runtime-surfaces.json` containing only non-inferable runtime intent. A1 does not create this runtime universe; it produces the asmdef graph only. After A2 freezes selector/identity semantics and A3 lands the governance amendments, A4 computes the fixed-point union of compiler-discovered candidates plus bootstrap declarations, classifies every emitted surface or records it unresolved, promotes those declarations into final contracts/classifications, and retires the temporary bootstrap file.
 
 Test classification MUST NOT rely on a `.Tests` suffix alone. Assembly metadata, path, platform/define constraints, references, compiler facts, and explicit classification are considered. `TacticalDirector.TestingStrategy` or any similar assembly must be explicitly classified.
 
@@ -347,17 +363,22 @@ Strict mode fails when a newly discovered surface is unclassified after initial 
 
 The validator enforces legal transitions and append-only decision history; it does not judge admission quality.
 
-## 3.4 Typed integration ownership contracts
+## 3.4 Typed integration ownership and activation contracts
 
-`integration-contracts.json` uses typed fields including: stable `component_id`; current `source_selector`; `selector_history`; assembly; `owning_host_component_id`; `composition_root_selector`; typed construction edges; typed lifecycle edges; activation phase; update/use owner; shutdown/disposal owner or justified N/A; `testhost_component_ids`; `alternate_supported_component_ids`; public activation selectors; prohibited bypass selectors; static-initialization selectors; requirement refs; evidence refs.
+`integration-contracts.json` retains the typed ownership/lifecycle fields and adds `activation_state`, activation-state metadata, and `tuning_surface_selectors`.
 
-Edges refer to stable logical component IDs where architectural identity exists and to canonical compiler selectors for concrete symbols. A rename/move therefore updates selector binding without rewriting every dependent architectural record.
+Allowed activation states are `active | intentionally-disabled | pending-integration | unresolved`, independent of structural classification.
 
-Narrative fields MAY explain intent but cannot satisfy a blocking mechanical ownership proof.
+- `active`: production execution is intended now; applicable Class-A reachability and required runtime evidence must not contradict it.
+- `intentionally-disabled`: deliberate owner decision. Requires `activation_owner`, `decision_ref`, `disable_anchor`, and `reactivation_condition`. The anchor is a canonical selector plus typed predicate/value that the checker must resolve and verify. Missing/drifted anchors fail.
+- `pending-integration`: known incomplete integration. Requires owner, exact gap, and exit/activation condition; it does not satisfy an active requirement.
+- `unresolved`: activation intent is not established and cannot be treated as compliant in strict mode.
 
-Blocking is allowed only for assertions independently verifiable through typed selectors/edges, compiler-backed closed-universe absence checks, or current #19 proof. Unsupported semantic claims remain Hybrid/Judgment and report-only.
+An `active` component with missing production reachability is a Class-A defect. Class-B firing/starvation can contradict `active` only when an owning FR/AP/contract defines the runtime condition; governance does not invent firing thresholds.
 
-The contract schema does NOT attempt to encode every component's full runtime state machine or concurrency semantics. Complex single-use, mutual-exclusion, lock-order, thread-affinity, and equivalent lifecycle invariants remain component-owned behavior demonstrated through applicable #19 evidence; their proof dependency closure MUST nevertheless include the members/owners on which the invariant depends.
+Components calibrated through `[GT]` or equivalent owner-declared tuning constants provide canonical `tuning_surface_selectors`. A tuning change is permitted normally only when every applicable owning component is `active`. Otherwise KD-W1 fails unless an approved exception explicitly authorizes the tuning scope.
+
+Narrative fields may explain intent but cannot satisfy blocking ownership, activation, or disable-state assertions. Complex internal state-machine/concurrency semantics remain component-owned behavior proved through #19 evidence.
 
 ## 3.5 Applicability manifest and deterministic resolver
 
@@ -445,13 +466,21 @@ ERR-020-002/003 are resolved from that graph, not the old 31-assembly model. The
 
 Full tier-direction legality remains report-only until taxonomy and semantics are approved.
 
-## 4.2 Runtime roots and host discovery
+## 4.2 Structural versus behavioral activation evidence
 
-Discovery is closed over the supported mechanisms in §3.2 by combining compiler-backed candidates with the finite A1 bootstrap declarations. Present caller reachability alone MUST NOT classify a public/plain-C# surface as production, dormant-supported, or test-only because several supported architecture surfaces may have no current production construction site.
+### 4.2.1 Track A — Class-A structural discovery
 
-A1 is two-pass: produce provisional mechanical candidates + bootstrap classifications, then after A2 selector/identity semantics are executable, rerun the same universe through the frozen semantics before A3. A4 may enrich final contracts but MUST NOT introduce a runtime root that was absent from the A1/A2 closed universe without reopening discovery.
+A1 is asmdef-only: it inventories assemblies/references/cycles and produces the evidence needed to repair ERR-020-002/003. It requires no Roslyn and makes no source-level reachability claim.
 
-Additions and removals change the applicable subject/inventory digest. Renames preserve stable component identity when selector history resolves the move. New roots fail classification completeness after A4.
+After A2/A3, A4 performs compiler-backed runtime/root discovery over §3.2, combining semantic candidates with finite bootstrap declarations. A4 computes the closed runtime universe, detects Class-A dormancy, and seeds final structural classifications/contracts.
+
+Static discovery can establish that production activation is absent; it cannot establish that an existing gate fires often enough to be behaviorally meaningful.
+
+### 4.2.2 Track B — Class-B runtime firing evidence
+
+Gate/trigger firing instrumentation remains in the owning runtime/domain, not `tools/architecture-governance`. For the match engine, W12-style instrumentation counts whether relevant phases, gates, and trigger conditions fire over representative match execution.
+
+Governance consumes the resulting evidence only when an approved FR, admitted AP, or component contract requires it. It validates identity/freshness/runner configuration and the owning rule's condition; it does not own the counters or choose domain thresholds.
 
 ## 4.3 Lifecycle and ordering
 
@@ -487,13 +516,13 @@ Existing domain owners remain authoritative. Triggered proof binds failure/resto
 
 ## 5.1 Responsibility and implementation split
 
-`tools/architecture-governance` is the governance orchestrator: it resolves settled applicability, validates records, computes scoped fingerprints/closure, and evaluates evidence/review/baseline state. It does not admit properties, invent tiers, choose owners, or convert novel reviewer preferences into rules.
+`tools/architecture-governance` remains the policy orchestrator. A1's asmdef-only slice is intentionally independent of the C# extractor.
 
-C# language facts required for blocking discovery are produced by a small compiler-backed extractor under `tools/architecture-governance/csharp-discovery/` (Roslyn/compiler APIs) and emitted as deterministic canonical JSON for the Python orchestrator. The extractor owns C# symbol/signature/accessibility/attribute/preprocessor/type-initialization facts; it does not own architectural classification or policy.
+Later blocking Class-A discovery uses a small compiled .NET extractor under `tools/architecture-governance/csharp-discovery/` with Roslyn/compiler APIs. For certifying execution it MUST be built **from source at the governed checkout**. Checked-in/downloaded/prebuilt binaries cannot satisfy governance proof.
 
-The Python layer MUST NOT implement a regex/hand-written C# parser and treat that output as closed-world semantic proof. Regex/grep inventories remain diagnostics only. If the compiler-backed extractor cannot run or cannot resolve the configured compilation universe, any check requiring those facts returns discovery uncertainty rather than a false pass.
+CI provisions the pinned .NET SDK/compiler toolchain, builds the extractor from the checkout, and fingerprints source/project/config/compiler identity before use. If the source build or semantic extraction cannot run, checks depending on those facts return discovery uncertainty rather than a false pass.
 
-Asmdef parsing remains source-JSON driven. C# semantic extraction and asmdef discovery are combined through stable assembly/symbol identities in the A2 reference semantics.
+The Python layer does not implement a hand-written C# parser. Asmdef parsing remains source-JSON driven.
 
 ## 5.2 Versioned CLI contract
 
@@ -509,6 +538,7 @@ AG-CHECK-DISCOVERY: asmdefs, runtime surfaces, classifications, digests.
 AG-CHECK-REGISTRY: property transitions and governance exceptions.
 AG-CHECK-APPLICABILITY: trigger resolution, precedence conflicts, N/A, fallback.
 AG-CHECK-CONTRACTS: typed selectors/edges/references.
+AG-CHECK-ACTIVATION: activation state, machine-verifiable disable anchors, pending-integration ownership, and KD-W1 tuning preconditions.
 AG-CHECK-EVIDENCE: proof-class schema, mechanically derived dependency closure, execution truth, scoped freshness.
 AG-CHECK-ASMDEF: unknown refs, approved production/test/tooling rules, cycles, later tier direction.
 AG-CHECK-REVIEW: review-run/finding state machines and fresh subject-scope final marker.
@@ -524,6 +554,9 @@ Before a check blocks merge, tests cover obvious failures and false-negative bou
 - preprocessor-dependent public/activation symbol;
 - overloaded selector resolution and ambiguous selector failure;
 - source move/rename that preserves stable component identity;
+- structural classification with independently varying activation states;
+- valid and drifted/missing `intentionally-disabled` anchors;
+- `[GT]`/tuning-surface change while `pending-integration` or `intentionally-disabled`;
 - lifecycle reorder and missing alternate host/testhost;
 - non-`.Tests` test/tooling classification;
 - incomplete mechanically required proof dependency closure;
