@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.1  
+**Version:** 0.2  
 **Created:** August 27, 2026  
 **Governing authority:** docs/planning/project-architecture-governance.md v0.4  
 **Primary downstream specifications:** Testing Strategy & Framework #19; Code Standards & Style Guide #20  
@@ -129,6 +129,22 @@ Each durable architecture datum has one source:
 - source/file existence → repository itself.
 
 Generated reports may repeat data for readability but are never authoritative.
+
+## 0.5 Amendment precedence and activation prerequisites
+
+Version 0.2 hardens implementation sequencing without reopening the architectural decisions in project-architecture-governance.md.
+
+The following rules override earlier sequencing in this plan:
+
+1. Governance v0.4 is currently Draft. It is design input until an explicit adoption gate records approval, completed self-checklist, SPEC_INDEX/status alignment, and the exact governing commit/version.
+2. Dependency-direction enforcement MUST NOT become blocking until a read-only current-tree discovery pass has produced the complete asmdef graph, every assembly has an explicit production/test/tooling/out-of-band classification, arrow semantics are fixed, and ERR-020-002 / ERR-020-003 are resolved.
+3. Machine-readable schemas for discovery classification, applicability, integration contracts, proof, finding ledgers, and any temporary baseline MUST be frozen before #19/#20 normative amendments are finalized.
+4. #19 and #20 are amended and reapproved as one coordinated governance-integration bundle. Enforcement eligibility requires both amendments approved against the same repository base and governance version.
+5. No checker may make an absence claim blocking unless the relevant search universe is closed and mechanically enumerated. Known-path lists and naming heuristics are not proof of absence.
+6. No CI job is a merge gate merely because it exists. Required-status configuration and skipped/cancelled/unavailable behavior are part of activation.
+7. A temporary baseline is permitted only as a finite commit-bound migration artifact and MUST be mechanically empty at final strict activation.
+
+This document remains an implementation plan. It does not itself approve Governance v0.4 or modify approved #19/#20 requirements.
 
 ---
 
@@ -263,1202 +279,391 @@ It only proves repository facts and enforces already-settled rules.
 
 ---
 
-# 3. Durable governance artifacts
+# 3. Durable governance artifacts and frozen machine contracts
 
-## 3.1 Property registry
+## 3.1 Schema-freeze rule
 
-### Location
+Before any merge-blocking architecture tool is implemented, A2 freezes versioned schemas for runtime-surface classification, applicability resolution, integration contracts, property records, governance exceptions, proof artifacts, adversarial-review findings, and any temporary activation baseline.
 
-Create:
+Every schema carries schema_version and rejects unknown major versions. Schema evolution that changes discovery, applicability, gating, or proof semantics invalidates affected downstream evidence and reopens the corresponding approval step.
 
-docs/tracking/architecture-governance/property-registry.json
+Free-text narrative MAY supplement a record, but blocking checks MUST depend only on typed fields whose semantics are defined and tested.
 
-### Purpose
+## 3.2 Closed-world runtime-surface classification
 
-This is the canonical lifecycle record for generalized architectural properties that enter the governance property process.
+Create docs/tracking/architecture-governance/runtime-surface-classifications.json.
 
-It is not a duplicate FR catalogue.
+This stores classification decisions for every surface emitted by the generated discovery universe and binds them to repository_commit, repository_tree, discovery_tool_identity, discovery_roots, inventory_digest, and asmdef_graph_digest.
 
-If a concern is already owned by Code Standards #20, Testing Strategy #19, Deterministic Simulation #16, or another approved authority, the finding cites that authority instead of creating an AP record.
+Each record contains surface_id, kind, source_path, symbol, assembly, classification, contract_id when required, and rationale when not contract-required.
 
-### Record shape
+Allowed classifications: production-runtime-root; contracted-child; test-only; tooling-only; generated-or-external; non-runtime-bearing.
 
-Each property record contains:
+The discovery universe MUST include all asmdefs, Unity lifecycle/initialization entry surfaces, explicit static constructors, conventional Main entry points, supported serialized/factory activation surfaces, typed plain-C# roots, testhosts, and tooling assemblies.
 
-| Field | Required | Notes |
-|---|---:|---|
-| id | Yes | Stable AP-### |
-| title | Yes | Short name |
-| state | Yes | Candidate / Admitted / Superseded / Retired / Rejected |
-| normative_statement | For Admitted | Property text when governance itself owns the invariant |
-| failure_mode | Yes | Concrete debt/failure prevented |
-| scope | Yes | Paths/assemblies/hosts/surfaces |
-| exclusions | Optional | Explicit non-scope |
-| authority | Yes | Exactly one normative owner |
-| existing_requirement | Optional | FR/spec pointer when property process maps to existing authority |
-| evidence | Yes for Admitted | Required proof class/mechanism |
-| enforcement_class | Yes | Machine / Hybrid / Judgment |
-| activation | Yes for Admitted | Immediate or staged |
-| exceptions_allowed | Yes | Boolean/mechanism |
-| supersedes | Conditional | Prior AP |
-| decision_rationale | Yes for terminal/admitted states | Why |
-| last_reviewed | Yes | Date + commit/version |
+Test classification MUST NOT rely on a .Tests suffix alone. Assembly metadata, path, platform/define constraints, references, and explicit classification are considered. TacticalDirector.TestingStrategy or any similar assembly must be explicitly classified.
 
-### Registry rules
+Strict mode fails when a newly discovered surface is unclassified after initial baseline acceptance.
 
-The validator rejects:
+## 3.3 Property registry
 
-- duplicate AP IDs;
-- unknown states;
-- Admitted records without authority/evidence/scope;
-- more than one authority;
-- Superseded without replacement linkage;
-- Retired without rationale;
-- exception references to nonexistent properties;
-- malformed stable IDs.
+property-registry.json adds schema_version, decision_id, decision_actor, decision_commit, transition_from, transition_to, decision_rationale, and revalidation_history. The validator enforces legal transitions and immutable decision history but does not judge admission quality.
 
-The registry validator does **not** judge whether the property deserves admission. That remains architectural judgment.
+## 3.4 Typed integration ownership contracts
 
-## 3.2 Integration ownership contracts
+integration-contracts.json uses typed fields: component_id; source_selector; assembly; owning_host_surface_id; composition_root_selector; construction_edges; lifecycle_edges; activation_phase; update_use_owner; shutdown_disposal_owner or justified_na; testhost_surface_ids; alternate_supported_surface_ids; public_activation_surfaces; prohibited_bypass_selectors; static_initialization_selectors; requirement_refs; evidence_refs.
 
-### Location
+Narrative fields MAY explain intent but cannot satisfy a blocking mechanical ownership proof.
 
-Create:
+Blocking is allowed only for assertions independently verifiable through typed selectors/edges, closed-universe absence checks, or current #19 proof. Unsupported semantic claims remain Hybrid/Judgment and report-only.
 
-docs/tracking/architecture-governance/integration-contracts.json
+## 3.5 Applicability manifest and deterministic resolver
 
-### Purpose
+Create docs/tracking/architecture-governance/applicability-rules.json.
 
-This implements the integration/lifecycle contract from Governance Appendix C without adding annotations to gameplay code.
+Each rule contains rule_id, selectors, trigger_ref, requirement_refs, proof_classes, gate_classes, allowed_na_reasons, precedence, and fallback_scope.
 
-Only runtime-bearing components whose correctness depends on activation need a contract.
+All matches are evaluated. Schema-defined specificity controls precedence; equal-precedence conflicts fail. N/A is valid only for an enumerated reason and required approval reference. --changed optimizes after applicability is resolved and falls back to the full relevant universe whenever non-impact cannot be proven. Unresolved applicability fails strict mode.
 
-### Record shape
+Representative fixtures must prove identical changes resolve to identical obligation sets.
 
-Each record contains:
+## 3.6 Exception routing and precedence
 
-| Field | Meaning |
-|---|---|
-| component_id | Stable local ID, e.g. IC-MATCH-SESSION |
-| component | Type/service/component name |
-| source | Repository file and symbol |
-| assembly | Owning asmdef assembly |
-| owning_host | Host responsible for activation |
-| composition_root | Exact integration point |
-| construction_path | File/symbol chain or declared factory |
-| activation_phase | Awake/start/constructor/day-start/etc. |
-| update_use_owner | Tick/update/service owner |
-| shutdown_disposal_owner | Stop/dispose/teardown owner or justified N/A |
-| testhost_paths | Supported testhost equivalents |
-| alternate_supported_paths | Other supported boot paths |
-| prohibited_bypass_paths | Known forbidden direct routes |
-| static_initialization | None or explicit static-init dependency |
-| lifecycle_ordering | Required before/after relationships |
-| requirement_refs | FR/AP links |
-| evidence_refs | Reusable proof IDs if applicable |
+Governance exceptions remain property-oriented exactly as Governance §7 defines them. This integration MUST NOT route FR-CS or FR-TS waivers directly into exceptions.json unless the affected obligation is an admitted AP that explicitly allows an exception.
 
-### Contract design rule
+Existing #19/#20 exception mechanisms remain owner-specific. They cannot waive an admitted AP, missing required evidence, concrete correctness/integrity failure, or Governance Blocker.
 
-Do not copy derived facts into the contract when the audit tool can discover them.
+## 3.7 Canonical proof artifact schema
 
-For example, the contract names TacticalDirector.MatchClientCore as the owning assembly; the audit checks the asmdef and source file rather than storing the entire reference list in the contract.
+The #19 amendment MUST land the canonical schema before proof workflow or CI gating.
 
-### Initial classification target
+Reusable proof records require: schema_version; proof_id; proof_class; requirement/property refs; applicability_rule_ids; result pass/fail/na/bounded; N/A or bounded justification/approval; repository_commit; repository_tree; inventory_digest; asmdef_graph_digest; relevant configuration fingerprints; tool identities; dependency selectors/fingerprints; execution records; conditional failure-injection and mutation results; created metadata; revalidation history.
 
-The first integration-contract pass must mechanically enumerate and then classify all runtime-bearing roots, including at least the current candidates in §1.3.
+Proof-class validation is conditional. A triggered mutation/failure proof without its result is invalid. Structural proof without required closed-world inventory binding is invalid.
 
-An item may be classified as:
+Freshness must detect additions, deletions, renames, generated/config changes, new roots, asmdef changes, and checker-semantic changes inside the proof universe. The audit validates dependency coverage against applicability; it does not trust a self-declared dependency list merely because one exists.
 
-- contract-required;
-- ordinary runtime class whose activation is entirely owned by a contracted parent;
-- test-only;
-- tooling-only;
-- not runtime-bearing.
+## 3.8 Versioned adversarial-review ledger
 
-That classification closes the inventory without forcing a contract for every class.
+New finding records carry schema_version, finding_id, stable_key, review_scope, reviewed_commit/tree, review_round, reviewer_identity, evidence, severity, requirement_or_property, disposition, status, required_action, owner, resolution_evidence, disposition_approval where required, and final_review_marker.
 
-## 3.3 Exception registry
+Disposition and status are distinct. Legacy ledgers are deterministically migrated or read-only; silent permissive defaults are forbidden. A fresh final-review marker is valid only for the current tree and scope.
 
-### Location
+## 3.9 Temporary activation baseline
 
-Create:
+If required, the baseline is finite and versioned. Each item records violation_id, exact selector, baseline_commit, inventory_digest, owner, disposition, required_action, and expiry_trigger.
 
-docs/tracking/architecture-governance/exceptions.json
-
-### Record shape
-
-Each exception contains the fields required by Governance §7.1:
-
-- exception_id;
-- property;
-- scope;
-- reason;
-- risk;
-- mitigation;
-- owner;
-- expiry_trigger;
-- approval;
-- status.
-
-### Rules
-
-Exceptions must be narrow.
-
-The validator rejects:
-
-- missing expiry trigger;
-- property that forbids exceptions;
-- unknown property ID;
-- active exception with empty scope;
-- expired exception still marked active.
-
-No generic "legacy architecture" exception is permitted.
-
-## 3.4 Architecture proof artifacts
-
-### Location
-
-Reusable proof:
-
-docs/tracking/architecture-evidence/<proof-id>.json
-
-Transient PR-only proof may remain a CI artifact when no later change needs to rely on it.
-
-### When proof must be committed
-
-Commit a proof artifact when one or more are true:
-
-- an admitted property cites it;
-- an exception mitigation cites it;
-- later work is expected to reuse/revalidate it;
-- it is required to explain an architectural baseline or supported host path;
-- the implementation changes a high-risk architectural surface and its acceptance record must remain reproducible after the PR.
-
-Do not commit every ordinary test log.
-
-### Dependency surface
-
-Each reusable proof contains a file-level dependency surface at minimum.
-
-Initial supported dependency selectors:
-
-- exact repository path;
-- exact asmdef edge;
-- exact integration contract ID;
-- exact test project;
-- exact governance tool version/commit.
-
-Symbol-level dependency hashing MAY be added later for high-churn files.
-
-File-level dependencies are intentionally the first implementation: they invalidate far less than repository-wide hashing while avoiding a fragile source parser.
-
-### Invalidation
-
-The audit tool calculates current dependency fingerprints.
-
-A reusable proof becomes stale only when a declared dependency changes.
-
-Unrelated repository changes do not invalidate it.
-
-A stale proof blocks only when the associated property/change requires current proof.
-
-## 3.5 Generated architecture inventory
-
-Generated output is not committed as an authority.
-
-The audit command can emit:
-
-artifacts/architecture/architecture-inventory.json
-
-or CI-equivalent output.
-
-It contains:
-
-- all asmdefs;
-- production/test classification;
-- reference graph;
-- graph cycles;
-- known framework entry points;
-- static initialization sites within supported detection;
-- integration contracts and their source resolution;
-- governed evidence records and freshness;
-- property and exception state.
-
-The generated inventory is evidence and diagnostic input, not a second registry.
+New violations fail. Changed baseline violations require explicit review. Final strict activation requires zero active items and retirement of activation-only baseline machinery.
 
 ---
 
-# 4. Codebase integration map
+# 4. Codebase integration and closed-world enforcement boundaries
 
 ## 4.1 Assembly and dependency graph
 
-### Source of truth
+All src/**/*.asmdef files remain the source of edges. A1 performs read-only discovery before #20 amendment and emits every asmdef/reference, cycles, explicit production/test/tooling/out-of-band classification, graph digest, proposed normative category for each production assembly, and unresolved items.
 
-All src/**/*.asmdef files remain the source of dependency edges.
+ERR-020-002/003 are resolved from that graph, not the old 31-assembly model. The approved model must define one arrow convention in text and machine data.
 
-### New checker behavior
+Full tier-direction legality remains report-only until taxonomy and semantics are approved.
 
-The governance audit reads every asmdef, including Unity-only assemblies excluded by the Linux shim.
+## 4.2 Runtime roots and host discovery
 
-Checks:
+Discovery is closed over the supported mechanisms in §3.2. Plain C# roots syntax cannot infer safely are included through typed contract selectors and become part of the classified universe.
 
-1. duplicate assembly name;
-2. reference to unknown project assembly;
-3. production assembly referencing a test assembly;
-4. dependency cycle;
-5. declared architecture tier when full #20 taxonomy is active;
-6. forbidden upward edge under the approved taxonomy;
-7. runtime reference to infrastructure-only tooling assembly;
-8. integration-contract assembly name resolves to a real asmdef.
-
-### Relationship to tools/dotnet-ci/generate_projects.py
-
-Do not treat generated .csproj output as the complete architecture source.
-
-generate_projects.py deliberately excludes TacticalDirector.MatchClientUnity because the Unity shim cannot compile its engine-facing types.
-
-The architecture scanner must include that assembly.
-
-The two tools may both parse asmdefs because their scopes differ:
-
-- dotnet-ci builds the shim-compatible graph;
-- architecture-governance audits the complete Unity project graph.
-
-The architecture parser remains small and deterministic JSON parsing; it does not copy dotnet project-generation logic.
-
-## 4.2 Hosts and composition roots
-
-The governance implementation needs two classes of discovery.
-
-### Mechanically recognizable hosts
-
-The scanner detects repository-language/framework constructs with reliable syntax patterns:
-
-- MonoBehaviour subclasses;
-- Awake / Start / OnEnable / OnDisable / OnDestroy lifecycle methods on those subclasses;
-- RuntimeInitializeOnLoadMethod if introduced;
-- static constructors;
-- conventional executable Main entry points;
-- test asmdefs and generated test projects.
-
-### Plain C# application roots
-
-Types such as MatchClientHost and MatchSession are ordinary classes and cannot be distinguished safely from a domain service solely by syntax.
-
-These are explicitly declared in integration-contracts.json.
-
-The audit verifies that the declared source/type/member exists.
-
-This avoids heuristic "class name contains Host" enforcement.
+Additions, deletions, and renames alter the inventory digest. New roots fail classification completeness after A4.
 
 ## 4.3 Lifecycle and ordering
 
-Lifecycle rules are expressed in integration contracts and proven through normal tests where possible.
-
-Examples of existing surfaces that should receive lifecycle classification:
-
-- MatchClientBehaviour: Awake → Start → Update;
-- MatchClientHost: construction → Start → Stop;
-- MatchSession: construction → Start/Service/Tick → Stop;
-- LiveMatchStreamer: hook configuration before Start; Start single-use; Stop; Pause/Resume;
-- MatchClientServer / LiveMatchServer: construction → listener Start → accept-thread lifecycle → Stop;
-- SeasonLoop: construction/restore → day/round/season operations;
-- WorldStore: construction/restore → AdvanceDay.
-
-The plan does not prescribe new lifecycle behavior for these types.
-
-It requires the existing intended behavior to be declared and, when the governance trigger matrix applies, proven.
+Lifecycle requirements use typed lifecycle_edges plus owners. Blocking proof requires mechanically verifiable order evidence, an execution record, or a #19-approved bounded substitute. Narrative statements alone do not satisfy the proof.
 
 ## 4.4 Static initialization
 
-The scanner inventories:
+Supported static-init constructs are inventoried. They block only when #20 prohibits the construct or an applicable ownership/lifecycle declaration is missing/inconsistent. Unsupported patterns remain report-only until coverage is demonstrated.
 
-- explicit static constructors;
-- mutable static fields in governed runtime surfaces;
-- Unity runtime initialization attributes;
-- assembly-level initialization hooks that match supported patterns.
+## 4.5 Runtime public surfaces and bypasses
 
-Code Standards #20 owns whether a pattern is allowed.
+Regex/public-member inventory is not an absence proof.
 
-The governance tool owns only discovery and comparison to declared/allowed state.
+No-bypass or no-unclassified-public-entry claims may block only for categories with a demonstrated closed world and blind-spot fixtures covering alternate factories/callers. Before that, inventory is diagnostic and semantic absence claims remain Hybrid/Judgment.
 
-A static field is not automatically a defect.
+Known prohibited bypass selectors are enforceable only inside their defined closed search universe. A known-path list never proves no other bypass exists.
 
-The checker should fail only for a settled prohibited pattern or a missing required lifecycle declaration.
+## 4.6 Testhosts/tooling
 
-## 4.5 Runtime public surfaces
+Testhosts are first-class when integration/lifecycle equivalence is claimed. Classification is explicit and not suffix-only. Pure low-level tests may construct calculations directly without becoming production hosts.
 
-A public type or member is not automatically a supported architecture entry point.
+## 4.7 Persistence/external resources
 
-Code Standards #20 will add the rule that a runtime-bearing public surface that creates an alternate activation path must be one of:
-
-- supported and declared;
-- test-only with enforced visibility/scope;
-- intentionally public data/query surface with no activation authority;
-- reduced to internal if cross-assembly use does not exist.
-
-The first implementation should not attempt to semantically classify every public member with a regex.
-
-Instead:
-
-1. mechanically inventory public types for affected assemblies during property-specific proof;
-2. require integration contracts to identify activation-bearing public surfaces;
-3. use repository search/compilation to prove callers where needed;
-4. promote a generalized public-surface analyzer only after its detection semantics are reliable.
-
-This obeys the governance ratchet rather than prematurely creating a fragile checker.
-
-## 4.6 Bypass paths
-
-A bypass is any supported/direct path that can construct or activate a component outside its declared owner.
-
-The integration contract records known supported alternatives and prohibited bypasses.
-
-Proof mechanisms may include:
-
-- call-site inventory;
-- constructor visibility;
-- testhost construction;
-- dependency graph;
-- targeted mutation removing the intended root;
-- failure test for direct unbound construction where an invariant requires it.
-
-The checker must not invent a bypass rule from naming convention alone.
-
-## 4.7 Testhosts
-
-Test assemblies are first-class architectural surfaces when production correctness depends on equivalent boot or lifecycle behavior.
-
-The scanner already has an exact source for test assemblies: asmdef names ending in .Tests and their platform declarations/references.
-
-For each applicable integration contract, testhost_paths identifies:
-
-- owning test asmdef;
-- fixture/bootstrap entry;
-- intentional divergence from production;
-- evidence demonstrating the divergence is safe.
-
-A low-level unit test that constructs a pure calculation directly does not need to emulate an application host.
-
-The requirement applies only when the test claims to verify integration/lifecycle behavior.
-
-## 4.8 Persistence and external resources
-
-Persistence boundaries and external resources already trigger stronger proof under Governance §5.2.
-
-The integration plan does not centralize persistence ownership.
-
-It adds evidence expectations:
-
-- corrupted/invalid input failure path;
-- load/restore ordering;
-- resource acquisition failure where meaningful;
-- teardown/close ordering;
-- mutation only for specific integrity invariants.
-
-Existing owner specs continue to define format and domain behavior.
+Existing domain owners remain authoritative. Triggered proof binds failure/restore/teardown evidence to the relevant closed universe and configuration.
 
 ---
 
 # 5. Governance tooling design
 
-## 5.1 Tool location
+## 5.1 Responsibility
 
-Create a focused package:
+tools/architecture-governance discovers facts, resolves settled applicability, validates records, and evaluates evidence freshness. It does not admit properties, invent tiers, choose owners, or convert novel reviewer preferences into rules.
 
-tools/architecture-governance/
+## 5.2 Versioned CLI contract
 
-Recommended initial files:
+The amendment pins minimum Python version, UTF-8, repository-relative normalized paths, deterministic ordering, schema handling, malformed-input behavior, generated-input handling, full/--changed semantics, and exact exit codes.
 
-- audit.py — command entry point;
-- model.py — record parsing and validation;
-- asmdef_graph.py — complete asmdef discovery/graph checks;
-- evidence.py — dependency fingerprint/freshness logic;
-- source_inventory.py — narrow, testable source-surface discovery;
-- tests/ — stdlib unittest suite and fixtures.
+Required exits: 0 pass; 1 activated check failure; 2 CLI/schema error; 3 applicability/discovery uncertainty prevents a sound strict result.
 
-No third-party Python dependency is required for the first version.
-
-## 5.2 Command surface
-
-Primary command:
-
-python3 tools/architecture-governance/audit.py --repo .
-
-Useful modes:
-
-- --check registry
-- --check contracts
-- --check asmdefs
-- --check evidence
-- --inventory <output>
-- --changed <base-ref> for local/CI optimization
-- --strict for merge-blocking mode
-
-Default local behavior should run all active checks.
+--strict fails closed on unresolved applicability, unclassified closed-world surfaces, stale required evidence, or unsupported schemas.
 
 ## 5.3 Check classes
 
-### AG-CHECK-REGISTRY
+AG-CHECK-DISCOVERY: asmdefs, runtime surfaces, classifications, digests.
+AG-CHECK-REGISTRY: property transitions and governance exceptions.
+AG-CHECK-APPLICABILITY: trigger resolution, precedence conflicts, N/A, fallback.
+AG-CHECK-CONTRACTS: typed selectors/edges/references.
+AG-CHECK-EVIDENCE: proof-class schema, scope coverage, freshness.
+AG-CHECK-ASMDEF: unknown refs, approved production/test/tooling rules, cycles, later tier direction.
+AG-CHECK-REVIEW: finding state machine and current-tree final marker.
+AG-CHECK-BASELINE: finite baseline, no new violations, expiry, zero-item final gate.
 
-Validates:
+## 5.4 Verification boundary
 
-- property schema;
-- property IDs/state;
-- single authority;
-- exception integrity;
-- cross-reference existence.
+Before a check blocks merge, tests cover obvious failures and false-negative boundaries, including omitted plain-C# root, new public/runtime factory, constructor bypass, lifecycle reorder, missing alternate host, non-.Tests test/tooling classification, incomplete proof dependencies, add/delete/rename, generated/config change, --changed uncertainty, legacy finding defaults, stale final marker, and nonempty final baseline.
 
-### AG-CHECK-CONTRACTS
+One negative fixture per check is a floor, not sufficient evidence for absence claims.
 
-Validates:
+## 5.5 Tool semantic changes
 
-- required integration-contract fields;
-- source path exists;
-- owning asmdef exists;
-- declared symbol/member can be found by supported source inventory;
-- referenced testhost asmdef exists;
-- no duplicate component ID;
-- requirement/evidence references resolve.
-
-It does not judge whether ownership is architecturally good.
-
-### AG-CHECK-ASMDEF
-
-Validates:
-
-- complete asmdef parse;
-- unknown references;
-- production→test dependency;
-- cycles;
-- infrastructure rules;
-- approved tier direction when activated.
-
-### AG-CHECK-EVIDENCE
-
-Validates:
-
-- proof record schema;
-- evidence commit/version;
-- dependency surface present;
-- dependency fingerprints;
-- stale/current state;
-- required proof references resolve;
-- governance tool version used by the proof.
-
-### AG-CHECK-SOURCE-SURFACE
-
-Initial reliable discovery only:
-
-- MonoBehaviour declarations and lifecycle methods;
-- runtime-init attributes;
-- explicit static constructors;
-- conventional Main methods;
-- public top-level type inventory where syntax is unambiguous.
-
-Ambiguous semantic questions remain property-specific judgment/proof until a reliable analyzer is admitted.
-
-## 5.4 Tool verification
-
-Because this checker will become merge-critical, its own tests are mandatory before CI activation.
-
-Required known-bad fixtures:
-
-1. duplicate AP ID;
-2. Admitted property missing authority;
-3. retired property without rationale;
-4. exception with no expiry;
-5. integration contract pointing to missing file;
-6. integration contract pointing to missing asmdef;
-7. duplicate integration component ID;
-8. asmdef unknown reference;
-9. production assembly referencing test assembly;
-10. asmdef dependency cycle;
-11. forbidden upward edge after taxonomy activation;
-12. stale proof dependency;
-13. proof with unrelated repository change remaining current;
-14. unsupported/malformed evidence selector;
-15. missing required testhost reference.
-
-Required known-good fixtures mirror the same classes.
-
-At least one negative fixture per merge-blocking check must prove the checker exits non-zero.
-
-## 5.5 Tool change invalidation
-
-A change to architecture-governance tooling that changes discovery/classification semantics must:
-
-1. run its own tests;
-2. identify which reusable proofs cite the previous tool behavior;
-3. revalidate or regenerate affected proof;
-4. avoid invalidating proof that does not depend on that tool.
-
-This is implemented by storing tool identity in proof artifacts.
+Discovery/classification/applicability/blocking semantic changes alter tool identity and stale affected proofs unless compatibility is established.
 
 ---
 
-# 6. Code Standards #20 amendment map
+# 6. Code Standards #20 proposed amendment package
 
-## 6.1 New functional requirements
+A3 may edit #20 only after A0–A2 pass.
 
-Append after existing FR-CS-073. The exact numbering below is reserved by this plan for the implementation amendment.
+## 6.1 Proposed FR rows
 
-| ID | Planned normative rule |
+Append after FR-CS-073 using #20's existing columns ID | Statement | Level | Source | Mechanics §.
+
+| ID | Statement | Level | Source | Mechanics § |
+|---|---|---|---|---|
+| FR-CS-074 | Every runtime-bearing component whose correctness depends on activation MUST have an explicit integration owner and exact integration point. | MUST | Governance FR-AG-021/022 | §3.5.6 |
+| FR-CS-075 | Every production host/composition root in the approved runtime discovery universe MUST be classified and mechanically accounted for. | MUST | Governance FR-AG-024/026 | §3.5.6–3.5.7 |
+| FR-CS-076 | Applicable runtime components MUST declare construction, activation, update/use, and shutdown/disposal ownership through typed lifecycle records, with schema-valid N/A only where a phase does not exist. | MUST | Governance FR-AG-023 | §3.5.6 |
+| FR-CS-077 | Applicable alternate hosts/testhosts MUST preserve the invariant or declare an approved divergence linked to current evidence. | MUST | Governance FR-AG-024 | §3.5.7 |
+| FR-CS-078 | Activation bypasses inside a mechanically closed governed surface MUST be prohibited or explicitly supported. | MUST | Governance FR-AG-025/026 | §3.5.7 |
+| FR-CS-079 | Activation-capable public runtime surfaces inside an activated closed-world category MUST be classified supported, test-only, non-activating, or made non-public. | MUST | Governance FR-AG-026/027; §5.3 | §3.5.7 |
+| FR-CS-080 | Static initialization participating in runtime ownership/order MUST be declared and MUST NOT bypass applicable composition/lifecycle requirements. | MUST | Governance FR-AG-023/025; §5.4 | §3.5.6–3.5.7 |
+| FR-CS-081 | Blocking integration declarations MUST be mechanically resolvable to repository selectors and independently verifiable facts; unsupported semantic assertions remain non-blocking evidence. | MUST | Governance FR-AG-034/035/036A | §3.5.6–3.5.7; §5 |
+
+§2.2 updates the 73 total to 81 and adds the architecture range without renumbering existing IDs.
+
+## 6.2 FR-CS-046 / dependency repair
+
+Resolve ERR-020-002/003 from A1 evidence: every production assembly classified or explicitly out-of-band; test/tooling/generated categories distinct; arrow meaning stated; machine data and diagrams identical; cycle rules explicit; unknown/new production assemblies fail classification before direction legality.
+
+## 6.3 Exception boundary
+
+#20 Mode 3 remains #20-owned. FR-level exceptions affect only #20 conformance and cannot waive an admitted AP, required proof, concrete correctness/integrity failure, or Governance Blocker.
+
+## 6.4 Exhaustive #20 amendment matrix
+
+| File | Required work |
 |---|---|
-| FR-CS-074 | Every runtime-bearing component whose correctness depends on activation MUST have an explicit integration owner and integration point. |
-| FR-CS-075 | Every production host and composition root MUST be represented in the mechanically checked host/integration inventory. |
-| FR-CS-076 | Applicable runtime components MUST declare construction/registration, activation, update/use, and shutdown/disposal ownership, with justified N/A where a phase does not exist. |
-| FR-CS-077 | Supported alternate hosts and testhosts MUST preserve applicable architectural invariants or explicitly declare their intentional divergence and evidence. |
-| FR-CS-078 | Known bypass activation paths MUST be either prohibited or explicitly classified as supported. |
-| FR-CS-079 | A runtime-bearing public surface that creates or implies an activation path MUST be classified as supported, test-only, non-activating public data/query surface, or made non-public. |
-| FR-CS-080 | Static initialization that materially participates in runtime ownership or ordering MUST be declared in the component lifecycle contract and MUST NOT bypass required composition ownership. |
-| FR-CS-081 | Integration ownership declarations MUST be mechanically validated against repository files, symbols, asmdefs, and supported host/testhost records. |
+| section-1.md | Authority/scope references if affected; synchronized status/version history. |
+| section-2.md | FR-CS-074–081; 73→81 counts/partition/TOC; Mode 1/3 boundary; history. |
+| section-3.md | §3.5.2 taxonomy/arrow repair; new typed integration/lifecycle/runtime-surface mechanics; history. |
+| section-4.md | Contract/discovery relationships and diagrams; no runtime dependency. |
+| section-5.md | Checklist; FR-to-verification rows 074–081; report-only vs blocking; history. |
+| section-6.md | Repair only references/counts made stale; no duplicate authority. |
+| section-7.md | Activation/deferral text tied to real prerequisites. |
+| section-8.md | Governance/#19 references and traceability. |
+| section-9-approval-checklist.md | FR count/range, traceability, reapproval evidence, status/history. |
+| appendices.md | Typed contract schema/examples; examples illustrative only. |
+| outline.md / outline-mid.md / outline-detailed.md | Repair stale 73-count/section/dependency claims where current. |
+| docs/specs/SPEC_INDEX.md | #20 status/version updated atomically with §9 decision. |
+| docs/tracking/spec-error-log.md | Resolve ERR-020-002/003 with exact evidence. |
+| docs/tracking/file-manifest.md / CHANGELOG.md | Record amendment without claiming enforcement before A8. |
 
-These rules implement FR-AG-021–025.
+Acceptance requires repo-wide sweeps for 73-count claims, FR-CS-073/074 boundaries, arrow wording, and approval/status assertions.
 
-They must not duplicate the proof mechanics owned by #19.
+## 6.5 Activation boundary
 
-## 6.2 Existing requirements to amend
-
-### FR-CS-046 / §3.5.2
-
-Resolve ERR-020-002 and ERR-020-003 in the same #20 amendment that activates the dependency-direction checker.
-
-Required outcome:
-
-- every current production assembly is classified in the approved dependency model or explicitly out-of-band;
-- arrow notation states whether an arrow means "depends on" or "is available to";
-- intra-tier acyclicity is explicit;
-- machine checking reads the approved model rather than a stale copy in an agent guide.
-
-The implementation-time asmdef graph must be regenerated before the taxonomy text is finalized.
-
-### FR-CS-055 / §4.3
-
-Keep asmdefs as the source of cross-assembly dependency facts.
-
-Add a pointer that architecture-governance tooling validates the complete reference graph, including assemblies excluded by the Linux shim.
-
-## 6.3 Section-by-section file map
-
-### docs/specs/code-standards/section-2.md
-
-- append FR-CS-074–081;
-- update failure-to-comply text so active machine-enforced architecture violations are Mode 1;
-- route temporary waivers to the project architecture-governance exception record rather than inventing a second exception shape for these FRs.
-
-### docs/specs/code-standards/section-3.md
-
-Add a new subsection under architecture mechanics covering:
-
-- integration owner;
-- host/composition-root inventory;
-- lifecycle declaration;
-- alternate/testhost rule;
-- bypass classification;
-- runtime public-surface classification;
-- static initialization participation.
-
-Resolve the complete dependency taxonomy/arrow semantics in §3.5.2.
-
-### docs/specs/code-standards/section-4.md
-
-Add:
-
-- integration-contract location;
-- rule that integration contracts are architectural intent, not a copied source tree;
-- generated asmdef/host inventory relationship;
-- composition-root and host boundary diagram.
-
-Do not add a new runtime assembly.
-
-### docs/specs/code-standards/section-5.md
-
-Add review/checklist items:
-
-- changed host/composition root;
-- changed lifecycle owner/order;
-- changed public activation surface;
-- changed static-init path;
-- alternate/testhost impact;
-- integration-contract update;
-- architecture audit result.
-
-### docs/specs/code-standards/appendices.md
-
-Add paste-ready integration ownership record schema and examples.
-
-Examples should use existing repository components but remain clearly illustrative; the JSON registry is the live record.
-
-## 6.4 #20 enforcement ownership
-
-#20 owns the rule.
-
-tools/architecture-governance proves objective structural facts.
-
-#19 decides how a failed required proof/gate affects merge.
-
-The audit tool must not invent a new dependency tier or architecture property.
+#20 owns code architecture rules; governance tooling supplies objective facts; #19 owns proof/gate mechanics. A rule may be normative before its machine check is blocking, so enforcement state must be explicit.
 
 ---
 
-# 7. Testing Strategy #19 amendment map
+# 7. Testing Strategy #19 proposed amendment package
 
-## 7.1 New functional requirements
+A3 may edit #19 only after A0–A2 pass.
 
-Append after FR-TS-085.
+## 7.1 Proposed FR rows
 
-| ID | Planned normative rule |
+Append after FR-TS-085 using ID | Statement | Level | Activation.
+
+| ID | Statement | Level | Activation |
+|---|---|---|---|
+| FR-TS-086 | Architectural changes MUST resolve the versioned applicability manifest and record every matched trigger/requirement/proof class. | MUST | Stage 0+1 |
+| FR-TS-087 | Required architectural proof MUST use the canonical versioned artifact and bind repository/tree/inventory/config/tool identity. | MUST | Stage 0+1 |
+| FR-TS-088 | Structural proof MUST cover the complete applicability-resolved host/root/alternate/test/public universe or record an approved bounded substitute and omitted uncertainty. | MUST | Stage 0+1 |
+| FR-TS-089 | Lifecycle/order proof MUST independently demonstrate required construction/activation/use/teardown/restore ordering rather than rely on declaration text. | MUST | Stage 0+1 |
+| FR-TS-090 | Meaningful triggered failure paths MUST be deliberately executed where reasonably inducible. | MUST | Stage 0+1 |
+| FR-TS-091 | Triggered mutation MUST demonstrate evidence sensitivity for the named critical invariant; no project-wide mutation-score target is created. | MUST | Stage 0+1 |
+| FR-TS-092 | Reusable proof MUST declare and validate a complete relevant dependency universe and stale on material add/delete/rename/config/tool-semantic changes inside it. | MUST | Stage 0+1 |
+| FR-TS-093 | #19 merge/review mechanics MUST consume Governance disposition/convergence state and MUST NOT rederive convergence from severity. | MUST | Stage 0 |
+| FR-TS-094 | Missing, failed, stale, schema-invalid, or applicability-incomplete required architectural proof MUST block merge once the gate is active. | MUST | Stage 0+1 |
+| FR-TS-095 | Merge-critical governance tooling MUST have known-good, known-bad, and blind-spot verification proportionate to false-positive/negative consequence. | MUST | Stage 0+1 |
+| FR-TS-096 | Bounded substitutes for computationally disproportionate exhaustive proof MUST record scope, rationale, omitted uncertainty, and approval. | MUST | Stage 0+1 |
+
+§2.2 gains FR-TS-086–096 as Architecture proof/evidence integration, mechanics in new §3.11, verification through §5.6/architecture gate. Total becomes 96.
+
+## 7.2 Existing FR amendments
+
+FR-TS-084: authority linkage may be FR, admitted AP, approved invariant/equivalent authority, or concrete independently established correctness/integrity failure. Novel generalized preferences become Candidate Property.
+
+FR-TS-076: add architecture/evidence gate while preserving #16/#18 ownership.
+
+FR-TS-077: flake quarantine cannot waive missing architecture proof or structural governance gates.
+
+FR-TS-093 remains pointer-style; Governance owns convergence, #19 consumes it.
+
+## 7.3 Canonical proof appendix
+
+appendices.md publishes §3.7's schema before proof implementation. It defines pass/fail/na/bounded, N/A approval, execution identity, conditional mutation/failure fields, inventory/tree/config/tool binding, dependency coverage, revalidation, and bounded uncertainty.
+
+## 7.4 Exhaustive #19 amendment matrix
+
+| File | Required work |
 |---|---|
-| FR-TS-086 | An architectural change MUST resolve the Governance §5 trigger matrix and identify which proof classes apply. |
-| FR-TS-087 | Required architectural proof MUST use a reproducible proof artifact containing applicable requirement/property, repository surface, result, evidence commit/version, and evidence dependencies. |
-| FR-TS-088 | Structural reachability proof MUST enumerate applicable hosts, composition roots, alternate paths, testhosts, and relevant public/runtime surfaces when triggered. |
-| FR-TS-089 | Lifecycle/order proof MUST execute or otherwise independently prove required construction, activation, use, teardown, restore, and ordering relationships when triggered. |
-| FR-TS-090 | Meaningful failure paths covered by the Governance trigger matrix MUST be deliberately executed; static inspection alone is insufficient where the failure can reasonably be induced. |
-| FR-TS-091 | Targeted mutation MUST demonstrate evidence sensitivity for critical integration/integrity invariants when triggered; no project-wide mutation-score target is created. |
-| FR-TS-092 | Reusable architectural proof MUST declare a precise dependency surface and is invalidated only by material change to that surface. |
-| FR-TS-093 | A review may converge only when all applicable required proof is current, every substantive finding has a valid disposition, no Blocker remains, and a fresh final review has completed. |
-| FR-TS-094 | Missing, failed, or stale required architectural proof is a merge blocker once the corresponding governance gate is active. |
-| FR-TS-095 | Merge-critical governance tooling MUST have known-good/known-bad verification appropriate to its false-positive/false-negative consequence. |
-| FR-TS-096 | When exhaustive machine execution is computationally disproportionate, the approved bounded substitute and omitted uncertainty MUST be recorded in the proof artifact. |
+| section-1.md | Governance boundary references; revision status/history. |
+| section-2.md | FR-TS-086–096; 85→96 partition/count; FR-TS-084/076/077; exception boundary; failure modes/history. |
+| section-3.md | New §3.11 applicability/proof mechanics; no #20 ownership duplication. |
+| section-4.md | Proof/test structures/interfaces only where §4 owns them. |
+| section-5.md | FR-to-verification through 096; stale/missing/applicability/blind-spot fixtures; history. |
+| section-6.md | Architecture/evidence gate topology, triage, exits, no-soft-gate. |
+| section-7.md | Remove deferrals only when prerequisites exist. |
+| section-8.md | Governance/#20 references and traceability. |
+| section-9-approval-checklist.md | FR range/count, self-check rows, reapproval status/history. |
+| appendices.md | Canonical proof schema/examples; TOC/history. |
+| outline.md / outline-detailed.md | Repair stale 85-count/section claims where current. |
+| docs/specs/SPEC_INDEX.md | #19 status/version updated atomically with §9 reapproval. |
+| tests/exceptions.md / coverage-exemptions.md references | State they cannot waive Governance-required evidence/property obligations. |
+| docs/tracking/file-manifest.md / CHANGELOG.md | Record amendment without enforcement claim before A8. |
 
-These mechanics implement FR-AG-026–032A and FR-AG-036A/B.
+Acceptance requires repo-wide sweeps for FR-TS-001…085/85-count claims, gate lists, severity-driven convergence, exception routes, and §5.6 coverage.
 
-## 7.2 Existing requirements to amend
+## 7.5 Test placement
 
-### FR-TS-084 — defect-to-FR traceability
-
-The current wording requires every defect to cite an FR.
-
-That is too narrow under the governance model.
-
-Amend it so a blocker/finding may link to:
-
-- an FR;
-- an admitted AP;
-- an approved invariant or equivalent authoritative requirement;
-- a concrete independently established correctness/integrity failure where no prior FR exists.
-
-A generalized new preference with no authority becomes a Candidate Property rather than an uncited blocker.
-
-### FR-TS-076 / gate composition
-
-Extend the merge-gate model from three classes to include an **architecture/evidence gate**.
-
-Authority split:
-
-- Governance spec decides applicability/property/disposition rules;
-- #20 owns structural code architecture rules;
-- #19 owns proof execution/freshness and merge-gate mechanics.
-
-No separate soft architecture gate is created.
-
-## 7.3 Section-by-section file map
-
-### docs/specs/testing-strategy/section-2.md
-
-- append FR-TS-086–096;
-- amend FR-TS-084;
-- add architecture proof/evidence failure mode.
-
-### docs/specs/testing-strategy/section-3.md
-
-Add mechanics for:
-
-- trigger resolution;
-- proof artifact;
-- structural reachability;
-- lifecycle/order;
-- failure injection;
-- targeted mutation;
-- evidence dependencies/invalidation;
-- bounded proof recording.
-
-Do not restate Code Standards ownership rules.
-
-### docs/specs/testing-strategy/section-4.md
-
-Extend CI topology with the architecture/evidence gate.
-
-Map:
-
-- pre-commit/local: fast schema/registry/asmdef checks;
-- PR: full active architecture audit + applicable architectural integration tests/proof;
-- nightly: only architecture proof whose owner explicitly requires a nightly/soak surface.
-
-### docs/specs/testing-strategy/section-5.md
-
-Add conformance tests for #19's own new governance obligations:
-
-- proof schema checker;
-- stale-evidence fixture;
-- required-proof missing fixture;
-- governance-tool negative fixture;
-- review convergence fixture.
-
-### docs/specs/testing-strategy/section-6.md
-
-Update gate composition and triage:
-
-- architecture/evidence failure is blocking when active;
-- severity is not equivalent to governance disposition;
-- finding requirement linkage follows amended FR-TS-084;
-- flake quarantine does not waive missing architectural proof.
-
-### docs/specs/testing-strategy/section-7.md
-
-Remove any newly-obsolete deferral if the governance checker is now present.
-
-Do not create future extensions merely for completeness.
-
-### docs/specs/testing-strategy/appendices.md
-
-Add canonical proof artifact schema and examples.
-
-## 7.4 Test placement
-
-Runtime architecture tests stay with the assembly that owns the behavior unless cross-assembly composition requires a higher-level integration test.
-
-Examples:
-
-- a MatchSession Start/Stop invariant belongs with MatchClientCore tests;
-- a MatchEngine composition invariant belongs with MatchEngine tests;
-- a SeasonLoop ordering invariant belongs with SeasonSave tests;
-- a cross-host equivalence proof may require a dedicated integration test assembly only if no existing test assembly can own the consumer-side behavior cleanly.
-
-No central mega test assembly should become the owner of every architectural invariant.
+Runtime architecture tests remain with owning behavior unless genuinely cross-host composition has no clean existing owner. The governance tool validates metadata; it does not become a mega test assembly.
 
 ---
 
 # 8. Adversarial-review integration
 
-## 8.1 Current incompatibility
+New findings use a versioned state machine: Open → Dispositioned → Resolved/Accepted/Recorded. Disposition and status are separate.
 
-The existing adversarial-review process terminates when only Low findings or none remain.
+Before convergence behavior changes, version the schema, define required fields per disposition, legal transitions, approval authorities, review scope/commit/tree binding, final-review marker, legacy conversion/read-only policy, and rejection of silent defaults. Every producer and consumer migrates in one stage.
 
-findings.py currently computes:
+Convergence requires no open Blocker, every substantive finding validly dispositioned, current required proof, and a fresh full review marker for the current tree/scope. Round-budget exhaustion with any gating obligation is NON-CONVERGED. Severity never independently decides convergence.
 
-- High/Medium = gating;
-- Low = non-gating;
-- round cap with High open = stop.
-
-That conflicts with Governance §§2.2–2.3 and §4:
-
-- severity is impact, not disposition;
-- a Low finding can block if it violates a MUST;
-- a High finding can be an accepted tradeoff if no MUST is violated and the correct authority accepts it;
-- Candidate Properties do not independently block;
-- round-budget exhaustion with any unresolved Blocker yields NON-CONVERGED.
-
-## 8.2 Review finding schema change
-
-Extend each finding record with:
-
-- evidence;
-- requirement_or_property;
-- disposition;
-- required_action;
-- owner;
-- status;
-- resolution_evidence.
-
-Preserve:
-
-- stable key;
-- stable finding ID;
-- severity;
-- title;
-- location;
-- problem/fix text.
-
-Do not renumber historical H/M/L IDs merely because the semantics improve. Stability is more valuable than cosmetic ID normalization.
-
-## 8.3 Triage responsibilities
-
-Reviewer:
-
-- reports defect/concern;
-- supplies concrete evidence;
-- states severity;
-- identifies known governing requirement if one is clear;
-- may flag that a concern appears novel.
-
-Orchestrator/architectural decision layer:
-
-- deduplicates;
-- resolves requirement linkage;
-- assigns disposition;
-- decides whether a novel generalized concern enters Candidate Property process;
-- accepts tradeoff/residual risk only with appropriate authority.
-
-Ledger:
-
-- validates fields;
-- persists stable IDs;
-- computes open blockers;
-- computes convergence state;
-- never decides architectural quality.
-
-## 8.4 New exit semantics
-
-Recommended:
-
-| Exit | Meaning |
-|---|---|
-| 0 | Review can converge: no open Blocker, every finding dispositioned, required proof state supplied, fresh round complete |
-| 1 | Open Blocker or incomplete mandatory disposition/proof |
-| 2 | Usage/schema error |
-| 3 | Round budget exhausted while gating obligations remain → NON-CONVERGED |
-
-The exact numeric codes may remain compatible where practical, but their meaning changes from severity to governance state.
-
-## 8.5 Fix routing
-
-Severity may still route model capability and work order.
-
-For example:
-
-- High Blocker → strongest fixer first;
-- Medium Blocker → normal fixer;
-- Low Blocker → still gates despite Low impact;
-- Accepted Tradeoff → no fixer unless mitigation is required;
-- Residual Risk → record/revisit trigger, not forced repair;
-- Candidate Property → property process, not current-review fix;
-- Resolved → verify next fresh pass.
-
-Thus severity remains useful without controlling convergence.
-
-## 8.6 findings.py verification
-
-Add tests covering:
-
-1. Low + Blocker → gates;
-2. High + Accepted Tradeoff → does not gate after valid approval fields;
-3. High + Residual Risk → does not gate after valid risk fields;
-4. Candidate Property → does not gate current review;
-5. open Blocker at round cap → NON-CONVERGED;
-6. unresolved required evidence → gates;
-7. all findings dispositioned but no fresh review marker → does not converge;
-8. stable key retains ID across severity/disposition changes;
-9. malformed Blocker with no authority/correctness basis is rejected;
-10. duplicate key still rejected.
-
-## 8.7 Skill text changes
-
-Update .claude/skills/adversarial-review/SKILL.md:
-
-- replace "only Low or none" termination;
-- separate severity and disposition definitions;
-- add property/requirement linkage;
-- add Candidate Property handling;
-- explain that review does not invent a generalized merge rule mid-round;
-- retain fresh full re-review;
-- retain stable finding identity;
-- retain round budget, but record NON-CONVERGED rather than approval;
-- keep existing ERR/back-prop obligation for approved-spec defects;
-- keep reviewers independent and evidence-driven.
+Required fixtures include Low Blocker, accepted High, residual-risk High, Candidate Property, round-cap blocker, missing evidence, stale final marker, stable ID, legacy-no-default, and duplicate key.
 
 ---
 
 # 9. Agent workflow integration
 
-## 9.1 Root CLAUDE.md
+Dependency guidance is synchronized at A1/A3 when taxonomy and arrow semantics are approved for drafting; otherwise implementation on that surface remains frozen until guidance is consistent.
 
-Add only a compact routing rule.
+Root CLAUDE.md and src/CLAUDE.md receive routing only: consult Governance plus approved #19/#20 amendments, inspect applicable contracts/rules, and run settled objective checks instead of asserting from memory.
 
-Suggested substance:
+Expanded guides document commands/examples only after commands exist.
 
-- architecture/cross-system/runtime-ownership changes must read project-architecture-governance.md;
-- consult the architecture property registry and integration contracts;
-- settled objective architecture rules must be proven by the governance audit, not asserted from memory.
+landing-close-out verifies applicable classification/contract state, applicability result, current proof, review marker, architecture audit, and that tracking does not claim report-only checks are blocking.
 
-Do not copy property schemas or proof mechanics into root CLAUDE.md.
-
-## 9.2 src/CLAUDE.md
-
-Under "Before writing code" / Architecture add:
-
-- if changing an application host, composition root, runtime service activation, lifecycle order, cross-assembly public activation surface, static initialization, or alternate testhost path, inspect/update the relevant integration contract;
-- run the architecture audit for affected work;
-- no new hand-maintained assembly list.
-
-## 9.3 docs/agent-guides/coding-reference.md
-
-Add:
-
-- governance audit commands;
-- integration contract examples;
-- explanation of generated inventory versus declared intent;
-- how to identify an affected proof dependency;
-- how to record a bounded proof.
-
-The reference guide remains non-authoritative.
-
-## 9.4 docs/agent-guides/project-reference.md
-
-Add locations for:
-
-- governance spec;
-- property registry;
-- integration contracts;
-- exception registry;
-- evidence folder;
-- audit tool.
-
-## 9.5 landing-close-out skill
-
-Add an architecture-governance applicability check.
-
-When a landing changes any governed architecture surface, close-out verifies:
-
-- applicable integration contract updated;
-- required proof exists/current;
-- property/exception references resolve;
-- governance audit executed;
-- changelog/manifest statements do not overclaim gate status.
-
-Do not duplicate the governance schema in the skill.
-
-## 9.6 orchestrator skill
-
-The orchestrator should route architectural work through the governance applicability check before final close-out.
-
-It must not automatically create an AP for every reviewer suggestion.
+The orchestrator MUST NOT create APs automatically from reviewer suggestions.
 
 ---
 
-# 10. CI integration
+# 10. CI and merge-gate integration
 
-## 10.1 New job
+## 10.1 Architecture job
 
-Add a dedicated job to .github/workflows/ci.yml:
+After A5/A6, architecture-governance runs tool self-tests; discovery/classification/applicability; registry/contract/proof/ledger validation; activated asmdef checks; strict current-tree audit; diagnostics.
 
-architecture-governance
+## 10.2 Required-status activation
 
-Initial steps:
+A8 is incomplete until repository configuration requires the exact architecture-governance status on protected merge paths.
 
-1. checkout;
-2. setup Python already available on runner;
-3. run governance-tool unit tests;
-4. run architecture audit in strict mode for activated checks;
-5. emit generated inventory/evidence diagnostics.
+The implementation record defines exact workflow/job/check name, needs/order, ruleset/branch protection, skipped/cancelled/unavailable/tool-crash behavior, fork/permission behavior, and diagnostic artifact retention.
 
-This job is separate from recurring-defect-lint because the responsibilities differ.
-
-## 10.2 Why separate from dotnet-ci
-
-Static governance validation is fast and should fail before the 30–50 minute match-engine suite.
-
-Runtime architectural tests remain ordinary NUnit tests and continue through run-gate.sh.
-
-This provides:
-
-- fast structural failure;
-- no second test runner;
-- no special architecture mega-suite;
-- clear owner for failures.
+Skipped/cancelled/unavailable is not success for a required check. If settings cannot be modified by the implementation agent, that operator action is a blocking prerequisite and enforcement MUST NOT be claimed active.
 
 ## 10.3 Activation tiers
 
-### Immediately blocking once tooling lands
+May block before full taxonomy: malformed records, unknown asmdef refs, production→explicit-test/tooling edges where classification is approved, cycles, schema/applicability inconsistency.
 
-- governance tool self-tests;
-- malformed property/exception/contract records;
-- duplicate IDs;
-- dangling file/asmdef references in contracts;
-- asmdef unknown reference;
-- production→test assembly reference;
-- dependency cycles;
-- stale required proof that explicitly declares its dependency surface.
+Report-only until prerequisites: full direction before #20 repair/reapproval; host completeness before A4; public/bypass absence without closed coverage; semantic lifecycle ownership without independent proof.
 
-### Report-only until prerequisite closes
+Block after A4–A8: new unclassified root; changed governed lifecycle without proof; prohibited bypass in closed universe; missing triggered proof; open Blocker; stale final review; invalid active baseline.
 
-- full dependency-tier direction legality until ERR-020-002/003 and #20 taxonomy amendment land;
-- completeness of integration contracts until the initial current-root inventory has been reviewed and accepted;
-- any source-surface heuristic that has not yet demonstrated acceptable false-positive/false-negative behavior.
+## 10.4 --changed
 
-### Blocking after baseline acceptance
-
-- new/changed runtime root missing a required integration contract;
-- changed lifecycle dependency without updated evidence;
-- prohibited bypass path;
-- missing required structural/lifecycle/failure/mutation proof;
-- open adversarial-review Blocker at merge convergence.
-
-## 10.4 Changed-surface optimization
-
-The audit may accept a base ref to identify which committed contracts/proofs need revalidation.
-
-Optimization must not change semantics.
-
-If changed-file optimization cannot prove a dependency is unaffected, it falls back to the full relevant check.
+Applicability resolves first. --changed never weakens obligation semantics and falls back to full relevant checks whenever non-impact cannot be proven.
 
 ---
 
 # 11. Staged implementation sequence
 
-## G0 — Adopt the integration plan
+The previous G0–G8 order is replaced by A0–A9.
 
-Deliverables:
+## A0 — Adopt Governance authority
 
-- this document reviewed;
-- frozen D1–D4 scope explicitly separated;
-- no code/tool/spec claim of implementation yet.
+Governance v0.4 must pass its own checklist, receive explicit approval/sign-off, align status/SPEC_INDEX/version/history, and pin exact governing commit/version. Material Governance changes re-open affected downstream prerequisites.
 
-Gate:
+## A1 — Read-only current-tree discovery
 
-- no accidental normative rule duplicated into this plan.
+Produce complete asmdef graph; supported runtime-surface universe; explicit production/test/tooling/generated/out-of-band classifications; inventory/graph digests; proposed taxonomy/arrow convention; ERR-020-002/003 resolution evidence. No #19/#20 normative change yet.
 
-## G1 — Land downstream specification amendments
+Gate: every discovered assembly/surface classified or explicitly unresolved; no suffix-only test inference; artifact bound to commit/tree/tool.
 
-Files:
+## A2 — Freeze machine schemas
 
-- Testing Strategy #19 sections 2–7 + appendices as applicable;
-- Code Standards #20 sections 2–5 + appendices as applicable;
-- Master Development Plan pointer;
-- SPEC_INDEX/version histories;
-- resolve ERR-020-002/003 as part of #20 dependency-model amendment.
+Freeze classifications, applicability, contracts, proof, property/exception, finding ledger, and temporary-baseline schemas.
 
-Rules:
+Gate: representative good/bad records and conflicts/N/A/transitions behave deterministically.
 
-- governance spec remains decision owner;
-- #19/#20 become the mechanical normative owners named by governance;
-- no CI code yet claims enforcement.
+## A3 — Amend and reapprove #19/#20 as one bundle
 
-Gate:
+Bundle states: PLANNED → DISCOVERED → SCHEMAS_FROZEN → AMENDMENTS_IN_REVIEW → DUAL_APPROVED → ENFORCEMENT_ELIGIBLE.
 
-- fresh spec review;
-- cross-reference sweep;
-- complete current asmdef taxonomy approved before direction gate can later block.
+Each spec uses its own defined status transitions, but section headers, §9, SPEC_INDEX, version history, and changelog must agree. Enforcement eligibility requires both specs approved against the same Governance version/base.
 
-## G2 — Create governance state records
+Gate: exhaustive matrices complete; counts/traceability/checklists/outlines/status synchronized; ERR-020-002/003 resolved; fresh spec review complete.
 
-Create:
+## A4 — Seed classifications/contracts/registries
 
-- property-registry.json;
-- integration-contracts.json;
-- exceptions.json;
-- architecture-evidence directory convention/README only if needed.
+Create state from A1. Gate: no unclassified current runtime surface, every selector/reference resolves, no invented exceptions.
 
-Seed policy:
+## A5 — Implement audit and blind-spot fixtures
 
-- do not invent APs merely to populate the registry;
-- carry active Candidate/Admitted properties only when formally identified;
-- seed integration contracts from a complete current runtime-root inventory;
-- exceptions start empty unless a real active deviation exists.
+Implement §5. Gate: known-good/bad and blind-spot fixtures pass; report-only heuristics cannot accidentally become strict.
 
-Gate:
+## A6 — Migrate review ledger and proof mechanics
 
-- every seeded record has a concrete repository referent;
-- no copied assembly list beyond contract fields needed for intent.
+Migrate all finding producers/consumers and implement proof validation/freshness. Gate: legacy policy deterministic; disposition fixtures correct; add/delete/rename/config/tool changes stale affected proof; unrelated changes do not.
 
-## G3 — Implement architecture-governance audit tool
+## A7 — Finite baseline only if required
 
-Implement:
+Create §3.9 baseline only when immediate strict activation is impossible. Every item is commit/inventory-bound with owner/action/expiry; new violations fail.
 
-- registry validation;
-- exception validation;
-- contract resolution;
-- complete asmdef graph;
-- cycle and test-reference checks;
-- source-surface inventory for reliable patterns;
-- evidence freshness/fingerprint logic;
-- deterministic output ordering.
+## A8 — Activate CI and required merge status
 
-Add unit fixtures.
+Add workflow plus actual required-status/ruleset configuration. Gate: representative violation blocks merge; skipped/cancelled/unavailable cannot pass; required check is actually configured.
 
-Gate:
+## A9 — Synchronize guides and final strict review
 
-- all known-bad fixtures fail;
-- all known-good fixtures pass;
-- no third-party dependency required;
-- MatchClientUnity included in asmdef inventory;
-- tool does not read generated .csproj as authority.
+Update guidance to actual approved authority/commands. Run strict current-tree audit, require zero active baseline items, perform fresh full adversarial review, and record final review marker.
 
-## G4 — Migrate adversarial review semantics
-
-Modify:
-
-- SKILL.md;
-- findings.py;
-- findings.py tests/fixtures.
-
-Migration behavior:
-
-- historical ledgers remain readable where practical;
-- new fields may default only when legacy input is explicitly recognized;
-- new reviews require disposition fields;
-- convergence no longer depends on severity alone.
-
-Gate:
-
-- Low Blocker mutation proves gate sensitivity;
-- High accepted non-blocker fixture proves severity is independent;
-- round-cap NON-CONVERGED fixture passes;
-- fresh-review requirement enforced.
-
-## G5 — Integrate architecture proof mechanics
-
-Implement #19-owned proof workflow:
-
-- proof artifact validation;
-- dependency fingerprint generation;
-- evidence current/stale result;
-- affected tests remain in owning assemblies;
-- failure/mutation evidence recorded only when triggered.
-
-Gate:
-
-- stale dependency fixture blocks;
-- unrelated change fixture does not stale proof;
-- proof artifact without applicable property/requirement is rejected when required.
-
-## G6 — Activate CI
-
-Modify:
-
-- .github/workflows/ci.yml;
-- optionally local pre-commit/runbook references;
-- do not merge architecture checks into recurring-defect-lint.
-
-Activation order:
-
-1. tool self-tests;
-2. record/schema integrity;
-3. graph integrity;
-4. accepted current integration-contract completeness;
-5. #20 tier-direction legality;
-6. required proof freshness.
-
-Gate:
-
-- representative violation PR/fixture demonstrably fails CI;
-- checker false-positive path has documented ordinary debugging route;
-- no soft pass on a required architecture failure.
-
-## G7 — Agent-guide and close-out integration
-
-Modify compact guides and load-on-demand references after the commands and files actually exist.
-
-Update landing-close-out/orchestrator routing.
-
-Gate:
-
-- compact guides remain compact;
-- no stale command advertised before tooling exists;
-- no duplicate authority text.
-
-## G8 — Baseline retirement
-
-If staged activation required temporary baseline records:
-
-- every baseline item must be either fixed, formally excepted, or classified as non-applicable;
-- delete activation-only baseline machinery after convergence;
-- do not carry a permanent "legacy" suppression file.
-
-Gate:
-
-- architecture job can run strict against current tree without hidden baseline debt.
+Production architecture remediation begins only after the applicable A-stage prerequisites for that rule are satisfied.
 
 ---
 
@@ -1625,66 +830,53 @@ Prevention:
 
 ---
 
-# 15. Acceptance gates for the completed governance integration
+# 15. Acceptance gates for completed governance integration
 
-## 15.1 Authority
+## Authority
+- [ ] Governance approved/pinned to exact version/commit.
+- [ ] #19/#20 dual-approved against same Governance/base state.
+- [ ] Headers, §9, SPEC_INDEX, histories, traceability, counts, changelog agree.
+- [ ] D1–D4 remain excluded.
 
-- [ ] Governance specification remains the only owner of property/disposition/convergence policy.
-- [ ] #19 owns proof/evidence/merge mechanics.
-- [ ] #20 owns integration/lifecycle/dependency code rules.
-- [ ] Master plan contains pointer-level text only.
-- [ ] Agent guides contain routing/examples, not duplicate authority.
+## Discovery/applicability
+- [ ] Complete asmdef graph generated.
+- [ ] Every assembly explicitly classified without suffix-only inference.
+- [ ] Activated runtime-surface universe is closed over supported mechanisms.
+- [ ] New roots fail until classified.
+- [ ] Applicability resolver deterministic/conflict-tested/fail-closed.
+- [ ] --changed cannot weaken obligations.
 
-## 15.2 Repository state
+## Contracts/public/bypass
+- [ ] Blocking contract assertions use typed independently verifiable selectors/edges.
+- [ ] Narrative semantic claims are not treated as machine proof.
+- [ ] Public/bypass absence blocks only in demonstrated closed universes.
+- [ ] Alternate hosts/testhosts classified.
 
-- [ ] Complete current asmdef graph is mechanically generated.
-- [ ] Full #20 dependency taxonomy covers current production assemblies.
-- [ ] ERR-020-002/003 are resolved before direction legality blocks merge.
-- [ ] Runtime-root inventory is complete and reviewed.
-- [ ] Required integration contracts resolve to real files/types/assemblies.
-- [ ] No permanent broad baseline/suppression hides unresolved architecture debt.
+## Proof
+- [ ] Canonical schema approved before proof gating.
+- [ ] Triggered classes require class-specific fields.
+- [ ] Proof binds tree, inventory/graph, relevant config, tool identity.
+- [ ] Dependency coverage validated against applicability.
+- [ ] Add/delete/rename/new-root/config/tool changes invalidate affected proof.
+- [ ] Unrelated changes leave unaffected proof valid.
+- [ ] N/A/bounded substitutes follow explicit rules/approval.
 
-## 15.3 Property and exception state
+## Review/baseline
+- [ ] Finding schema/state machine versioned; disposition ≠ status.
+- [ ] Legacy records explicitly migrated or read-only.
+- [ ] Low Blocker gates; accepted High does not gate by severity.
+- [ ] Round cap + blocker = NON-CONVERGED.
+- [ ] Final-review marker bound to current tree/scope.
+- [ ] Temporary baseline finite; final strict gate requires zero active items.
 
-- [ ] Property registry exists and validates.
-- [ ] No duplicate AP ID.
-- [ ] Admitted properties have one authority, scope, evidence, enforcement class.
-- [ ] Exception registry exists and validates.
-- [ ] Every active exception has owner, risk, mitigation, expiry.
-
-## 15.4 Proof
-
-- [ ] Proof artifact schema implemented by #19.
-- [ ] Structural/lifecycle/failure/mutation triggers implemented.
-- [ ] Reusable proof declares dependencies.
-- [ ] Stale required evidence blocks.
-- [ ] Unrelated changes do not invalidate proof.
-- [ ] Bounded proof records omitted uncertainty.
-
-## 15.5 Review
-
-- [ ] findings.py supports requirement/property and disposition.
-- [ ] Low Blocker gates.
-- [ ] Accepted High tradeoff does not gate solely because it is High.
-- [ ] Candidate Property does not independently block.
-- [ ] Round budget produces NON-CONVERGED when blockers remain.
-- [ ] Fresh final review is required.
-- [ ] Stable finding identity survives severity/disposition changes.
-
-## 15.6 Tool verification
-
-- [ ] Architecture audit tests contain known-good and known-bad fixtures.
-- [ ] Every merge-blocking check has at least one negative fixture.
-- [ ] Tool changes identify affected reusable proof.
-- [ ] Tool validation stops at ordinary software testing; no recursive governance chain.
-
-## 15.7 CI
-
-- [ ] Architecture-governance static job runs before expensive suites where possible.
-- [ ] Runtime architecture tests continue through normal owning test assemblies.
-- [ ] Required architecture failure is not soft.
-- [ ] Flake quarantine cannot waive missing architectural proof.
-- [ ] The CI result differentiates structural audit failure from runtime-test failure.
+## Tool/CI/guidance
+- [ ] CLI/environment/path/schema/exit semantics pinned.
+- [ ] Blind-spot fixtures cover false-negative boundaries.
+- [ ] Report-only checks cannot block.
+- [ ] Exact architecture check required by merge protection/ruleset.
+- [ ] Skipped/cancelled/unavailable required check is not success.
+- [ ] Representative violation demonstrably blocks merge.
+- [ ] Guidance synchronized and contains routing, not duplicate authority.
 
 ---
 
@@ -1732,4 +924,5 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.2 | August 28, 2026 | — | Hostile-review hardening: A0 Governance adoption; A1 discovery; A2 schema freeze; A3 dual #19/#20 reapproval; closed-world classification; deterministic applicability; typed contracts; complete proof binding; versioned ledger; exception-boundary correction; exhaustive amendment matrices; required-status CI; finite baseline; A0–A9 sequencing. No #19/#20 normative files or implementation changed. |
 | 0.1 | August 27, 2026 | — | Initial detailed integration map for Project Architecture Governance v0.4. Maps #19/#20 amendments, runtime/code surfaces, governance state records, audit tooling, adversarial-review migration, CI activation, evidence invalidation, and staged implementation. Explicitly excludes the frozen D1–D4 remediation supplement. |
