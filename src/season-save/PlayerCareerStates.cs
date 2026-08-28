@@ -1,5 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
+// Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.27)
 // Modified: 2026-08-16, later (adversarial-review Medium — SelectAvailable was production-dead (its
 //           stated reason for existing named a call site that does not exist) and five tests used it
 //           as the oracle for what the composed AvailabilityComposition.Compose seam produced, silently
@@ -28,7 +29,6 @@
 //           DisciplineConstants.LeagueCompetitionKey for a value it provably never reads, dropping
 //           this file's #44 import. v1.19 SelectAvailable split into MarkUnavailable +
 //           AvailabilityComposition.)
-// Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.27)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
