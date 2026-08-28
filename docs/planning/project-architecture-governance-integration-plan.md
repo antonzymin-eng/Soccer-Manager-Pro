@@ -132,7 +132,7 @@ Generated reports may repeat data for readability but are never authoritative.
 
 ## 0.5 Amendment precedence and activation prerequisites
 
-Version 0.2 hardens implementation sequencing without reopening the architectural decisions in project-architecture-governance.md.
+Version 0.3 preserves the v0.2 sequencing decisions and adds the end-to-end implementation constraints required to make those stages mechanically sound without reopening the architectural decisions in project-architecture-governance.md.
 
 The following rules override earlier sequencing in this plan:
 
@@ -437,10 +437,6 @@ Creation provenance is not the freshness key. New violations fail; a baseline it
 
 # 4. Codebase integration and closed-world enforcement boundaries
 
----
-
-# 4. Codebase integration and closed-world enforcement boundaries
-
 ## 4.1 Assembly and dependency graph
 
 All src/**/*.asmdef files remain the source of edges. A1 performs read-only discovery before #20 amendment and emits every asmdef/reference, cycles, explicit production/test/tooling/out-of-band classification, graph digest, proposed normative category for each production assembly, and unresolved items.
@@ -548,10 +544,6 @@ One negative fixture per check is a floor, not sufficient evidence for absence c
 Discovery/classification/applicability/closure/blocking semantic changes alter tool identity and stale only affected proofs unless compatibility is explicitly established.
 
 The C# extractor carries its own semantic identity/version. A material change in compiler version, preprocessor symbol set, extraction algorithm, or canonical symbol-key behavior invalidates proof whose closure depends on those facts unless compatibility is demonstrated.
-
----
-
-# 6. Code Standards #20 proposed amendment package
 
 ---
 
@@ -812,10 +804,6 @@ Production architecture remediation begins only after the applicable A-stage pre
 
 # 12. Detailed change-impact matrix
 
----
-
-# 12. Detailed change-impact matrix
-
 | Area | New files | Modified files | Runtime behavior |
 |---|---|---|---|
 | Governance state | property-registry.json, integration-contracts.json, exceptions.json, runtime-surface-classifications.json, review-ledger.json; temporary bootstrap-runtime-surfaces.json during A1 only | project governance pointer/history only if needed | None |
@@ -1059,10 +1047,6 @@ Prevention:
 - [ ] Required tests cannot be hidden by `known-failures.txt`, flake quarantine, Ignore/Assert.Ignore, unsupported-assembly filtering, or skipped Unity jobs.
 - [ ] Representative violation demonstrably blocks merge.
 - [ ] Guidance/workflow ordering synchronized so final review record does not recursively stale itself.
-
----
-
-# 16. Explicit non-goals
 
 ---
 
