@@ -590,20 +590,24 @@ Append after FR-CS-073 using #20's existing columns ID | Statement | Level | Sou
 
 | ID | Statement | Level | Source | Mechanics § |
 |---|---|---|---|---|
-| FR-CS-074 | Every runtime-bearing component whose correctness depends on activation MUST have an explicit integration owner and exact integration point. | MUST | Governance FR-AG-021/022 | §3.5.6 |
+| FR-CS-074 | Every runtime-bearing component whose correctness depends on activation MUST have an explicit integration owner, exact integration point, and orthogonal activation state. | MUST | Governance FR-AG-021/022 | §3.5.6 |
 | FR-CS-075 | Every production host/composition root in the approved runtime discovery universe MUST be classified and mechanically accounted for. | MUST | Governance FR-AG-024/026 | §3.5.6–3.5.7 |
 | FR-CS-076 | Applicable runtime components MUST declare construction, activation, update/use, and shutdown/disposal ownership through typed lifecycle records, with schema-valid N/A only where a phase does not exist. | MUST | Governance FR-AG-023 | §3.5.6 |
 | FR-CS-077 | Applicable alternate hosts/testhosts MUST preserve the invariant or declare an approved divergence linked to current evidence. | MUST | Governance FR-AG-024 | §3.5.7 |
 | FR-CS-078 | Activation bypasses inside a mechanically closed governed surface MUST be prohibited or explicitly supported. | MUST | Governance FR-AG-025/026 | §3.5.7 |
 | FR-CS-079 | Activation-capable public runtime surfaces inside an activated closed-world category MUST be classified supported, test-only, non-activating, or made non-public. | MUST | Governance FR-AG-026/027; §5.3 | §3.5.7 |
 | FR-CS-080 | Static initialization participating in runtime ownership/order MUST be declared and MUST NOT bypass applicable composition/lifecycle requirements. | MUST | Governance FR-AG-023/025; §5.4 | §3.5.6–3.5.7 |
-| FR-CS-081 | Blocking integration declarations MUST be mechanically resolvable to repository selectors and independently verifiable facts; unsupported semantic assertions remain non-blocking evidence. | MUST | Governance FR-AG-034/035/036A | §3.5.6–3.5.7; §5 |
+| FR-CS-081 | Blocking integration/activation declarations MUST be mechanically resolvable to repository selectors and independently verifiable facts; `intentionally-disabled` requires a verifiable disable anchor, and unsupported semantic assertions remain non-blocking evidence. | MUST | Governance FR-AG-034/035/036A | §3.5.6–3.5.7; §5 |
 
 §2.2 updates the 73 total to 81 and adds the architecture range without renumbering existing IDs.
 
 ## 6.2 FR-CS-046 / dependency repair
 
-Resolve ERR-020-002/003 from A1 evidence: every production assembly classified or explicitly out-of-band; test/tooling/generated categories distinct; arrow meaning stated; machine data and diagrams identical; cycle rules explicit; unknown/new production assemblies fail classification before direction legality.
+ERR-020-002/003 are resolved **before** the A3 governance-amendment bundle using A1's asmdef-only graph evidence. This is correction of existing #20 dependency authority, not a dependency on the new governance schemas.
+
+The repair classifies current assemblies in the dependency policy, fixes one arrow convention, aligns diagrams/machine policy, and defines cycle/unknown/new-assembly handling. Once approved, the objective asmdef policy subset may become blocking before A8.
+
+A3 consumes that repaired dependency model and adds governance-specific ownership/activation mechanics; it does not reopen ERR-020-002/003 unless current-tree discovery proves the repair incomplete.
 
 ## 6.3 Exception boundary
 
@@ -657,8 +661,9 @@ Append after FR-TS-085 using ID | Statement | Level | Activation.
 | FR-TS-094 | Missing, failed, stale, schema-invalid, applicability-incomplete, skipped, excluded, unavailable, not-run, or runner-failed required architectural proof MUST block merge once the gate is active unless an approved bounded substitute explicitly satisfies the obligation. | MUST | Stage 0+1 |
 | FR-TS-095 | Merge-critical governance tooling MUST have known-good, known-bad, and blind-spot verification proportionate to false-positive/negative consequence. | MUST | Stage 0+1 |
 | FR-TS-096 | Bounded substitutes for computationally disproportionate exhaustive proof MUST record scope, rationale, omitted uncertainty, and approval. | MUST | Stage 0+1 |
+| FR-TS-097 | A `[GT]` or owner-declared calibration/tuning change MUST NOT land for a component whose activation state is intentionally-disabled, pending-integration, or unresolved unless an approved exception explicitly authorizes that tuning scope. | MUST | Stage 0+1 |
 
-§2.2 gains FR-TS-086–096 as Architecture proof/evidence integration, mechanics in new §3.11, verification through §5.6/architecture gate. Total becomes 96.
+§2.2 gains FR-TS-086–097 as Architecture proof/evidence integration, mechanics in new §3.11, verification through §5.6/architecture gate. Total becomes 97.
 
 ## 7.2 Existing FR amendments
 
@@ -681,10 +686,10 @@ Examples MUST include a committed reusable artifact whose freshness does not dep
 | File | Required work |
 |---|---|
 | section-1.md | Governance boundary references; revision status/history. |
-| section-2.md | FR-TS-086–096; 85→96 partition/count; FR-TS-084/076/077; exception boundary; failure modes/history. |
+| section-2.md | FR-TS-086–097; 85→97 partition/count; FR-TS-084/076/077; KD-W1 activation/tuning precondition; exception boundary; failure modes/history. |
 | section-3.md | New §3.11 applicability/proof mechanics: subject/provenance split, proof-class closure, execution-state and revalidation semantics; no #20 ownership duplication. |
 | section-4.md | Proof/test structures/interfaces only where §4 owns them. |
-| section-5.md | FR-to-verification through 096; stale/missing/applicability/closure/skip-exclusion/wrong-mutant blind-spot fixtures; history. |
+| section-5.md | FR-to-verification through 097; stale/missing/applicability/closure/activation-anchor/KD-W1/skip-exclusion/wrong-mutant blind-spot fixtures; history. |
 | section-6.md | Architecture/evidence gate topology, owning-runner/result bridge, triage, exits, no-soft-gate. |
 | section-7.md | Remove deferrals only when prerequisites exist. |
 | section-8.md | Governance/#20 references and traceability. |
@@ -741,97 +746,93 @@ The orchestrator MUST NOT create APs automatically from reviewer suggestions.
 
 # 10. CI and merge-gate integration
 
-## 10.1 Architecture aggregator job
+## 10.1 Early asmdef slice
 
-After A5/A6, the required `architecture-governance` job runs with `if: always()` (or provider-equivalent semantics) so failed/skipped dependencies cannot silently skip the architecture status itself. It runs tool/extractor self-tests; discovery/classification/applicability; registry/contract/proof/ledger validation; activated asmdef checks; scoped strict audit; and diagnostics.
+A1 first lands a narrow asmdef graph command/report that reads `src/**/*.asmdef` directly and requires no Roslyn extractor, governance registries, proof ledger, or A2 schema freeze. Initially report-only, it produces the graph evidence used to close ERR-020-002/003.
 
-The job consumes the conclusion/result artifacts of every runner needed by the applicability-resolved proof set. For each required execution it maps runner/test state to the §3.7.2 execution enum. It fails when a required execution is not `passed` unless an approved bounded substitute applies.
+After the #20 dependency repair is approved, an `architecture-asmdef` status may become required before A8. Its blocking universe is limited to objective rules supported by the repaired dependency authority: malformed/unknown references, cycles, classification completeness required by that policy, and prohibited dependency directions whose semantics are unambiguous.
 
-## 10.2 Required runner bridge
+The early status MUST NOT evaluate lifecycle ownership, proof freshness, review convergence, activation state, Class-B firing, or any rule that depends on later governance machinery.
 
-The Linux shim gate, Unity Test Runner, and any future specialized runner remain owners of executing tests in their supported universes. The governance layer does not infer execution from test existence.
+## 10.2 Full architecture aggregator
 
-Current repo-specific hazards that A8 MUST close include: `TacticalDirector.MatchClientUnity` is excluded from the Linux generated-project gate; Unity tests are conditionally skipped when licensing is unavailable; and `run-gate.sh` can filter names listed in `known-failures.txt`. The architecture job therefore validates runner capability, required-job conclusion, exact test result identity, and zero intersection between required tests and active exclusion/quarantine sources.
+After A5/A6, the full `architecture-governance` job runs with `if: always()` (or equivalent), source-builds the C# extractor with the pinned .NET SDK, runs extractor/tool self-tests, then performs discovery/classification/applicability, registry/contract/activation/proof/ledger validation, activated asmdef checks, and strict audit.
 
-If a required host has no executable runner/test path, the proof remains unsatisfied until that path exists or #19 approves a bounded substitute. A report-only inventory cannot masquerade as executed lifecycle proof.
+## 10.3 Required runner bridge
 
-## 10.3 Required-status activation
+Owning runners remain responsible for executable proof. Class-B gate/trigger instrumentation is another owning-runner input, not a governance-tool responsibility. Missing/stale required runtime evidence is unsatisfied under the same execution-truth rules.
 
-A8 is incomplete until repository configuration requires the exact `architecture-governance` status on protected merge paths.
+## 10.4 Required-status activation
 
-The implementation record defines exact workflow/job/check name, `needs`/ordering, unconditional aggregator behavior, ruleset/branch protection, failed/skipped/cancelled/unavailable/tool-crash behavior, fork/permission behavior, and diagnostic/result artifact retention.
+A8 is incomplete until the exact full `architecture-governance` status is required on protected merge paths. This does not prevent §10.1's narrow asmdef status from becoming required earlier.
 
-Skipped/cancelled/unavailable is not success for the required architecture status. If settings cannot be modified by the implementation agent, that operator action is a blocking prerequisite and enforcement MUST NOT be claimed active.
+CI configuration records the pinned .NET SDK, source-build command/fingerprint for the extractor, job ordering, skipped/cancelled/unavailable behavior, and required-status settings.
 
-## 10.4 Activation tiers and `--changed`
+## 10.5 Activation tiers
 
-May block before full taxonomy: malformed records, unknown asmdef refs, production→explicit-test/tooling edges where classification is approved, cycles, schema/applicability inconsistency.
+Early asmdef status: objective dependency checks only.
 
-Report-only until prerequisites: full direction before #20 repair/reapproval; host completeness before A4; public/bypass absence without compiler-backed closed coverage; semantic lifecycle ownership without independent proof.
+Report-only until prerequisites: source-level Class-A absence before compiler-backed closed coverage; host/public/bypass completeness before A4; semantic lifecycle rules without proof; Class-B firing without an owner-defined evidence contract.
 
-Block after A4–A8: new unclassified root; changed governed lifecycle without current proof; prohibited bypass in closed universe; missing/unsatisfied triggered proof; open Blocker; stale final review run; invalid active baseline.
+Block after A4–A8 as applicable: new unclassified root; `active` component with prohibited Class-A dormancy; invalid/drifted intentional-disable anchor; KD-W1 tuning violation; changed governed lifecycle without proof; prohibited bypass; missing required proof; open Blocker; stale final review; invalid active baseline.
 
-Applicability resolves first. `--changed` never weakens obligation semantics and falls back to the full relevant checks whenever non-impact cannot be proven.
+`--changed` never weakens applicability and falls back when non-impact cannot be proven.
+
+---
 
 ---
 
 # 11. Staged implementation sequence
 
-The A0–A9 stage model remains. Version 0.3 tightens the dependencies inside those stages so schema approval cannot precede the semantics needed to make the schemas sound.
+The A0–A9 model remains the lifecycle for full governance activation. v0.4 adds an intentionally narrow structural slice that can deliver evidence—and later objective enforcement—without waiting for the full stack.
 
 ## A0 — Adopt Governance authority
 
-Governance v0.4 must pass its own checklist, receive explicit approval/sign-off, align status/SPEC_INDEX/version/history, and pin exact governing version plus canonical Governance content/blob digest. A provenance revision may also be recorded, but the landing MUST NOT require the document to contain its own future commit SHA. Material Governance changes re-open affected downstream prerequisites.
+Governance v0.4 passes its own adoption gate and pins its exact version/content digest. Draft-stage governance documents do not require SPEC_INDEX registration or file-manifest rows merely to exist; those remain landing obligations when their owning process requires them.
 
-## A1 — Bootstrap intent plus read-only current-tree discovery
+## A1 — Asmdef-only structural discovery and dependency repair
 
-Pass 1: mechanically produce the complete asmdef graph and compiler-backed candidate universe; seed only non-inferable root/host intent through the finite `bootstrap-runtime-surfaces.json`; explicitly classify production/test/tooling/generated/out-of-band surfaces; emit provisional scoped inventory/graph digests; produce proposed taxonomy/arrow convention and ERR-020-002/003 resolution evidence. No #19/#20 normative change yet.
+**A1a — report-only graph.** Produce the complete asmdef/reference graph, cycles, unknown references, current assembly set, and classification evidence. No Roslyn, governance schema freeze, proof ledger, or #19/#20 governance amendment is required. A1a may run before A0 because it asserts no new governance authority.
 
-Gate: every mechanically discovered or bootstrap-declared assembly/surface is classified or explicitly unresolved; implicit static initialization is included; no suffix-only test inference; bootstrap contains intent only, not a copied tree.
+**A1b — repair #20.** Resolve ERR-020-002/003 from A1a evidence as an existing #20 defect correction.
 
-## A2 — Freeze schemas **and executable semantics**, then rerun A1
+**A1c — early enforcement.** After A1b, require `architecture-asmdef` for only the objective dependency rules §10.1 can prove.
 
-Freeze classification, stable identity/selector grammar, applicability, integration-contract, proof/closure, property/exception, review-run/finding, and temporary-baseline schemas.
+## A2 — Freeze schemas and executable semantics
 
-Implement the minimal deterministic reference semantics for compiler-fact ingestion, selector resolution, applicability precedence, proof closure/fingerprinting, execution-state validation, property-history comparison, and review transitions. Run representative good/bad/conflict/N/A/rename/closure fixtures.
+Freeze identity/selectors, activation-state/disable-anchor semantics, applicability, contracts, proof/closure, property/exception, review, and baseline schemas. The reference semantics include activation-anchor evaluation and KD-W1 tuning-surface matching. Any compiler reference implementation is source-built with the pinned .NET SDK/toolchain.
 
-Then rerun A1 through the frozen semantics. Gate: the closed universe is reproducible or every delta from Pass 1 is explicitly reconciled; no unresolved selector/closure semantics remain that A3 would normatively depend on.
+## A3 — Amend and reapprove #19/#20 governance integration
 
-## A3 — Amend and reapprove #19/#20 as one bundle
+The coordinated bundle consumes the already-repaired #20 dependency model. Add activation-state mechanics to #20 and FR-TS-097/KD-W1 to #19 alongside the existing governance amendments.
 
-Bundle states remain: `PLANNED → DISCOVERED → SCHEMAS_FROZEN → AMENDMENTS_IN_REVIEW → DUAL_APPROVED → ENFORCEMENT_ELIGIBLE`.
+## A4 — Compiler-backed Class-A discovery and state seeding
 
-Each spec uses its own defined status transitions. Enforcement eligibility requires both specs approved against the same Governance version/content digest and the same A2 semantic/schema baseline.
-
-Gate: exhaustive matrices complete; ERR-020-002/003 resolved; #19 proof text uses subject/closure/execution semantics rather than containing-tree equality; fresh spec review complete.
-
-## A4 — Seed final classifications/contracts/registries
-
-Promote A1 bootstrap intent into final integration contracts/classifications, retire the temporary bootstrap file, and seed registries. Gate: no unclassified current runtime surface; every stable component/selector/reference resolves; ordinary rename fixtures preserve component identity; no invented exceptions.
+Build/run the extractor from the governed checkout, combine semantic candidates with finite bootstrap intent, compute the closed runtime universe, classify every surface, assign activation state, and seed final contracts/registries. Intentional-disable anchors must resolve/evaluate; pending-integration records need owner/exit condition.
 
 ## A5 — Productionize audit/extractor and blind-spot fixtures
 
-Implement §5 around the frozen A2 semantics. Gate: Roslyn/compiler extractor and Python orchestrator known-good/bad/blind-spot fixtures pass; regex diagnostics cannot become strict semantic checks; implementation output matches the A2 reference semantics.
+Productionize §5 around A2 semantics. Certifying runs source-build the Roslyn extractor with the pinned SDK; prebuilt binaries cannot certify.
 
 ## A6 — Migrate durable review ledger and proof mechanics
 
-Create the durable review-run/finding ledger; migrate all producers/consumers prospectively; implement proof closure/freshness and execution-record validation. Keep `.adversarial-review/` as scratch only.
-
-Gate: clean zero-finding review can converge; legacy policy deterministic/no inferred approvals; relevant transitive add/delete/rename/config/asmdef/tool changes stale affected proof; unrelated changes do not; committed evidence does not self-invalidate from its containing commit/tree.
+Implement durable review state, proof closure/freshness, activation/KD-W1 validation, and execution-result validation.
 
 ## A7 — Finite baseline only if required
 
-Create §3.9 baseline only when immediate strict activation is impossible. Every item is subject-scope/selector-bound with owner/action/expiry; new violations fail. Final strict activation requires zero active items.
+A baseline remains finite. `intentionally-disabled` is never represented as a baseline waiver; it must satisfy its own machine-anchored contract.
 
-## A8 — Activate runner bridge, CI aggregator, and required merge status
+## A8 — Activate full runner bridge, aggregator, and required status
 
-Add the `architecture-governance` aggregator plus actual required-status/ruleset configuration. Gate: representative violation blocks merge; aggregator still reports failure when a needed job is failed/skipped/cancelled/unavailable; required tests cannot be quarantined/excluded; Unity-only proof cannot pass via the Linux gate; exact required status is configured.
+Provision the pinned .NET SDK, source-build the extractor, require the full status, and verify Class-B required evidence cannot be substituted by static reachability.
 
 ## A9 — Synchronize guides and final strict review
 
-Update guidance/workflow ordering to actual approved authority/commands. Stage deterministic material tracking changes, compute the final material subject digest, run strict audit and fresh full adversarial review over that subject, require zero active baseline items, then record the run-level final marker without recursively changing the subject digest.
+Synchronize guidance to actual commands/authority and perform the final strict review using the non-self-invalidating subject-digest model.
 
-Production architecture remediation begins only after the applicable A-stage prerequisites for that rule are satisfied.
+Production architecture remediation begins only after its applicable prerequisites. Domain-owned Class-B instrumentation may proceed independently whenever its owning backlog/spec requires measurement.
+
+---
 
 ---
 
@@ -840,12 +841,12 @@ Production architecture remediation begins only after the applicable A-stage pre
 | Area | New files | Modified files | Runtime behavior |
 |---|---|---|---|
 | Governance state | property-registry.json, integration-contracts.json, exceptions.json, runtime-surface-classifications.json, review-ledger.json; temporary bootstrap-runtime-surfaces.json during A1 only | project governance pointer/history only if needed | None |
-| Architecture tooling | tools/architecture-governance/* including compiler-backed csharp-discovery extractor | none initially | None |
+| Architecture tooling | tools/architecture-governance/* including asmdef-only audit and source-built compiler-backed csharp-discovery extractor | none initially | None |
 | Review tooling | durable review-ledger + tests/fixtures for run/finding state | adversarial-review SKILL.md, findings.py | None |
 | Code Standards | none | #20 sections 2–5, appendices, SPEC_INDEX | Normative code rules only |
 | Testing Strategy | none | #19 sections 2–7, appendices, SPEC_INDEX | Normative test/gate rules only |
 | Master plan | none | master-development-plan.md pointer | None |
-| CI | none | .github/workflows/ci.yml | Build/merge behavior only |
+| CI | none | .github/workflows/ci.yml | Early asmdef merge status, later full governance merge behavior only |
 | Agent guidance | none | CLAUDE.md, src/CLAUDE.md, expanded references | None |
 | Landing workflow | none | landing-close-out/orchestrator skills | Process only |
 | Runtime tests | property-specific as triggered | existing owning test assemblies | Test behavior only |
@@ -1027,6 +1028,18 @@ Prevention:
 - review-run records separate from findings;
 - run-level final marker supports zero-finding reviews;
 - durable ledger separate from ignored scratch state.
+
+## FM-GI-15 — Deliberately disabled code is misreported as accidental dormancy
+
+Prevention: orthogonal activation state plus machine-verifiable disable anchor.
+
+## FM-GI-16 — Static reachability passes while runtime gates never fire
+
+Prevention: Class A/Class B evidence separation; W12-style instrumentation stays with the runtime owner.
+
+## FM-GI-17 — Calibration tunes a subsystem that is not active
+
+Prevention: component-owned tuning selectors plus the KD-W1 activation precondition.
 ---
 
 # 15. Acceptance gates for completed governance integration
@@ -1037,9 +1050,10 @@ Prevention:
 - [ ] D1–D4 remain excluded.
 
 ## Discovery, identity, and applicability
-- [ ] Complete asmdef graph generated.
+- [ ] A1 asmdef-only graph generated without Roslyn/schema dependencies.
+- [ ] ERR-020-002/003 resolved from that graph and narrow objective dependency status can block before A8.
 - [ ] Compiler-backed C# discovery covers configured public/lifecycle/factory and explicit+implicit static-init mechanisms.
-- [ ] A1 bootstrap contains only non-inferable intent and is retired into final contracts at A4.
+- [ ] A4 bootstrap contains only non-inferable runtime intent and is retired into final contracts within A4.
 - [ ] Every assembly/runtime surface explicitly classified without suffix-only inference.
 - [ ] Stable component identity survives ordinary file/type moves through selector history.
 - [ ] Selector grammar distinguishes overloads and fails ambiguous/missing bindings.
@@ -1051,6 +1065,10 @@ Prevention:
 - [ ] Narrative semantic claims are not treated as machine proof.
 - [ ] Public/bypass absence blocks only from compiler-backed demonstrated closed universes.
 - [ ] Alternate hosts/testhosts classified.
+- [ ] Structural classification and `activation_state` are independently represented.
+- [ ] `intentionally-disabled` has a resolvable anchor, owner/decision reference, and reactivation condition.
+- [ ] Drift/missing disable anchor fails; `pending-integration` has owner/exit condition.
+- [ ] `[GT]`/declared tuning changes fail KD-W1 while an owning component is not active unless explicitly excepted.
 
 ## Proof/freshness
 - [ ] Canonical schema approved after executable A2 semantics exist.
@@ -1074,6 +1092,8 @@ Prevention:
 
 ## Tool/CI/guidance
 - [ ] Compiler-backed extractor and Python orchestrator identities/semantics pinned and verified with blind-spot fixtures.
+- [ ] Certifying extractor is built from source at the governed checkout with pinned .NET SDK/compiler/config identity; no prebuilt binary certifies.
+- [ ] Class-B runtime firing instrumentation remains domain-owned and is consumed as evidence.
 - [ ] Regex diagnostics cannot satisfy blocking semantic absence proof.
 - [ ] Exact architecture aggregator status required by merge protection/ruleset.
 - [ ] Aggregator runs even when dependencies fail/skip and maps required runner conclusions to execution truth.
@@ -1127,6 +1147,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.4 | August 28, 2026 | — | Two-track rollout and activation-state hardening: asmdef-only A1 first slice; ERR-020-002/003 repair and early objective enforcement before A8; compiler-backed Class-A reachability at A4; domain-owned Class-B runtime evidence; orthogonal activation state with machine disable anchors; KD-W1 tuning precondition / proposed FR-TS-097; source-built Roslyn extractor with pinned .NET SDK/compiler identity. No #19/#20 normative files, SPEC_INDEX, file-manifest, code, CI workflow, or runtime implementation changed. |
 | 0.3 | August 28, 2026 | — | End-to-end implementation hardening: separates evidence subject identity from Git/artifact provenance; removes self-referential governance/property pins; closes A1/A4 root bootstrap; freezes executable selector/identity/applicability/closure semantics at A2; requires compiler-backed C# discovery including implicit type initialization; defines stable component/symbol identities and selector history; derives proof-class dependency closure; records exact execution/failure/mutation truth; splits durable review runs from findings; bridges owning tests to mandatory runner results/CI aggregation; preserves A0–A9, Governance authority split, and ERR-020-002/003 staging. No #19/#20 normative files or implementation changed. |
 | 0.2 | August 28, 2026 | — | Hostile-review hardening: A0 Governance adoption; A1 discovery; A2 schema freeze; A3 dual #19/#20 reapproval; closed-world classification; deterministic applicability; typed contracts; complete proof binding; versioned ledger; exception-boundary correction; exhaustive amendment matrices; required-status CI; finite baseline; A0–A9 sequencing. No #19/#20 normative files or implementation changed. |
 | 0.1 | August 27, 2026 | — | Initial detailed integration map for Project Architecture Governance v0.4. Maps #19/#20 amendments, runtime/code surfaces, governance state records, audit tooling, adversarial-review migration, CI activation, evidence invalidation, and staged implementation. Explicitly excludes the frozen D1–D4 remediation supplement. |
