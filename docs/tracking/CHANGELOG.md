@@ -12,7 +12,34 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 29, 2026 — **Architecture governance A1 corrected to the live repository; tooling and planning only.**
+> **Last Updated:** August 29, 2026, later — **Architecture governance A1c slice 1: merge-protection state read, blocker filed, nothing activated. Tracking documentation only.**
+> No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, and no protection
+> setting was altered, so no gate run is owed.
+>
+> A1c is a configuration step, not a code step. The verification half is done and its result is one sentence: **the right
+> context is already required, and the requirement is switched off.** `Spec hygiene checks` exists in
+> `.github/workflows/ci.yml` and already runs `tools/assembly-tier-check.py --repo .` and the
+> `tools/tests/test_assembly_tier_check.py` suite under `if: always()`, so the objective §3.5.2 asmdef check A1 exists to
+> activate executes on every pull request. Repository ruleset `CI for Main branch` targets `main` and lists that exact
+> context — but the ruleset carries `enforcement: disabled`, so the job reports and blocks nothing. That is
+> `project-architecture-governance-integration-plan.md` v0.5's non-negotiable 6 in the concrete: a CI job is not a merge
+> gate merely because it exists.
+>
+> **No parallel status was created and no code change was made**, because none is appropriate: v0.5 §10.1 and
+> non-negotiable 16 permit an `architecture-asmdef` status only if the existing context cannot express the approved
+> requirement, and it can. **Classic branch protection on `main` remains unread** — it returned 403 through the current
+> GitHub integration, the gap v0.5 §1.4 flagged in advance — so neither "protected" nor "unprotected" is established, and
+> A1c must not claim merge blocking from the ruleset alone.
+>
+> Enabling the ruleset is a repository-settings action for an admin. The GitHub tooling available to sessions in this
+> repository exposes no ruleset and no branch-protection tool, read or write, so an agent can neither re-read the live
+> enforcement state nor change it; the ruleset state recorded here is carried from the slice-1 read and agrees with the
+> observation already published at v0.5 §1.4. Filed as a live blocker in `docs/tracking/open-issues.md` with the exact
+> settings path and a checkable release condition — **A1c closes on an observed blocked merge**, a pull request against
+> `main` with a failing `Spec hygiene checks` reported non-mergeable by GitHub, not on the ruleset showing Active
+> (v0.5 non-negotiable 12: a required proof is satisfied only by an explicit execution state).
+
+> **Last Updated (prior):** August 29, 2026 — **Architecture governance A1 corrected to the live repository; tooling and planning only.**
 > The rejected standalone `tools/architecture-governance/asmdef_discovery.py` approach was abandoned before merge. The existing
 > `tools/assembly-tier-check.py` remains the single parser/checker for Code Standards #20 §3.5.2 and gains deterministic
 > `--json` complete-graph evidence, separate graph/classification/subject SHA-256 digests, and all-assembly cycle reporting
