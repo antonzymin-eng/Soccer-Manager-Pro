@@ -855,5 +855,9 @@ if __name__ == "__main__":
 # |         |            |             | --json complete-graph evidence, graph/ |
 # |         |            |             | classification/subject digests, all-  |
 # |         |            |             | assembly cycle reporting, and shared  |
-# |         |            |             | one-pass asmdef parsing. No new policy |
-# |         |            |             | rule or production behavior.           |
+# |         |            |             | one-pass asmdef parsing. Verdict-      |
+# |         |            |             | semantics change: a stray src/*.asmdef |
+# |         |            |             | with no top-level folder was skipped   |
+# |         |            |             | by v1.4; v1.5 reports it unresolved    |
+# |         |            |             | and fails because §3.5.2 is folder-    |
+# |         |            |             | keyed. Current tree is unaffected.     |
