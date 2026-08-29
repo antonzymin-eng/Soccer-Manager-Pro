@@ -101,6 +101,26 @@ jobs:
             echo "$hits"
             exit 1
           fi
+      - name: Assembly tier order (§3.5.2 table vs production .asmdef graph)
+        # Enforces the Spec #20 §3.5.2 placement rule mechanically: every
+        # production src/<folder>/<name>.asmdef must be seated in the tier
+        # table (same commit), no upward references (FR-CS-046), FR-CS-046b
+        # both directions, graph acyclic (FR-CS-046a), and the out-of-band
+        # Infrastructure row pinned BY NAME to the pair FR-CS-046b binds.
+        # Pure stdlib Python — no dependencies, runs in under a second.
+        if: always()
+        run: python3 tools/assembly-tier-check.py --repo .
+      - name: Cross-document consistency (stale version citations and cardinalities)
+        # Catches the defect class four adversarial-review rounds surfaced more than
+        # any other and that no other gate sees: a value corrected in the document
+        # that owns it while restatements elsewhere keep publishing the retracted one.
+        # Two checks, both oracle-free: a version citation of another document must
+        # match that document's own newest version-history row (or carry the repo's
+        # `vOLD, now vNEW` / `*(since vNEW)*` annotation), and a hard-coded cardinality
+        # must equal what it counts — with cross-file AGREEMENT standing in where no
+        # ground truth exists. Pure stdlib Python.
+        if: always()
+        run: python3 tools/doc-consistency-check.py --repo .
       - name: Constants must carry source tag in spec text
         run: |
           set -e

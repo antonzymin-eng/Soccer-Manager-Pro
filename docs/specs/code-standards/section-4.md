@@ -7,8 +7,9 @@ and `src/CLAUDE.md` (concrete paths). Spec #20 does not publish a runtime interf
 §4.4 records the N/A justification.
 
 **Created:** May 7, 2026
-**Version:** 1.0.1
-**Status:** DRAFT
+**Last Updated:** August 18, 2026
+**Version:** 1.3
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 4
 **Subsection target lengths:** §4.1 ~50 lines · §4.2 ~40 lines · §4.3 ~70 lines ·
@@ -74,26 +75,34 @@ src/
 │   └── …
 │
 └── code-standards/                   ← Spec #20 (no runtime code; governance only)
-    └── (empty at Stage 0 — this spec produces no source files)
+    └── (this spec produces no source files — no src/code-standards/ folder exists
+        in the live tree, and none ever will; the leaf appears here only to
+        complete the one-folder-per-spec map)
 ```
 
 ### Dependency graph shape
 
-Assembly references follow the layer order established in §3.5.2. The `src/` folder
-tree reflects this: a Physics-layer folder's `.asmdef` references only other
-Physics-layer `.asmdef` files or lower; it never references a Mechanics-, AI-, or
-UI-layer `.asmdef`. This makes illegal dependencies a build error, not just a review
-finding.
-
-```
-project-constants  ◄── (referenced by all assemblies read-only)
-       ▲
-  ball-physics  ◄──── agent-movement  ◄──── collision-system  ◄──── …
-       ▲
-  pass-mechanics ──► shot-mechanics ──► first-touch ──► …     (Mechanics layer)
-       ▲
-  decision-tree ──► perception-system ──► …                   (AI layer)
-```
+Assembly references follow the ten-tier order established in §3.5.2, and **§3.5.2's
+table is the single rendering of the dependency graph** — this section deliberately
+carries no second drawing. (A retired ASCII rendering here mixed `◄──` and `──►`
+arrows with no label — the exact ambiguity `ERR-020-003` was filed against, and which
+both §3.5.2 and `src/CLAUDE.md` were amended to remove — labelled
+`pass-mechanics`/`shot-mechanics`/`first-touch` a "Mechanics layer" where §3.5.2 seats
+all three in tier 1 Physics, and asserted three edges the `.asmdef` reference graph
+contains in NEITHER direction: `agent-movement`↔`ball-physics` (`agent-movement`
+references only `project-constants`), `pass-mechanics`↔`shot-mechanics`, and
+`shot-mechanics`↔`first-touch` — re-verified against `src/*/[a-z]*.asmdef` on
+August 18, 2026 and deleted at v1.1, round-6 finding H3.) The rule the drawing existed
+to illustrate is stated by FR-CS-046 and FR-CS-046a: an assembly **MUST NOT** reference
+any assembly seated in a higher tier — the upward-reference ban, across all ten tiers,
+Foundation through Client — and intra-tier references are permitted provided the
+intra-tier graph stays acyclic. Because the reference graph is encoded in `.asmdef`
+files, `tools/assembly-tier-check.py` (wired into `.github/workflows/ci.yml`) verifies
+every reference against the §3.5.2 table on every push to `main` and every pull request
+targeting `main`. Note what the compiler does and does not do here: Unity rejects a
+reference **cycle** outright, but a non-cyclic *upward* reference compiles cleanly, so
+the tier order is enforced by that check and by review — not by the build. §3.5.2 says
+the same thing from the other side: adopting the order "changed nothing that compiles".
 
 ---
 
@@ -118,8 +127,40 @@ is the PascalCase form of the spec's folder name:
 
 The project-wide root catalogue, `ProjectConstants.cs`, lives in the
 `project-constants/` folder. It is the sole source of truth for `[CROSS]` constants
-that are shared across more than one spec assembly. A constant that appears in only one
-spec's catalogue is **not** promoted to `ProjectConstants.cs`.
+that are shared across more than one spec assembly **and have no single owning
+catalogue** — see the carve-out below. A constant that appears in only one spec's
+catalogue is **not** promoted to `ProjectConstants.cs`.
+
+**Owning-catalogue carve-out (ERR-020-004, added August 15, 2026).** A constant whose
+owning spec already has its own constant catalogue mirrors from THAT catalogue
+directly, regardless of how many other specs consume it — `ProjectConstants.cs`
+routing is for constants with no single owning catalogue (a project-wide physical
+value like `PHYSICS_TICK_HZ`, which no one spec owns outright). Example: Event
+System #17 owns the `CardIssuedEvent.CardKind` domain-ordinal encoding (Appendix A:
+"#17 default owner") and declares it once in `EventSystemConstants.cs`; three
+downstream catalogues — `MatchEngineConstants`, `DisciplineConstants`, and
+`MatchAnalyticsConstants` — each mirror it directly from `EventSystemConstants`, none
+routed through `ProjectConstants.cs`, even though the encoding plainly has more than
+one consumer. This is not a violation of the multi-consumer rule above; it is the case
+that rule's two-way split (declared here vs. shared bucket) never named. Routing a
+spec-owned encoding through `ProjectConstants.cs` would add a hop without adding an
+authority — the owning spec's catalogue already IS the authority. (ERR-020-004 found
+this gap because a compliant mirror — `DisciplineConstants.CardKindYellow` — had to
+justify itself with a false "single consumer" claim for want of a rule that fit the
+actual shape.)
+
+**Storage-class note (round-6 finding H7, filed as `ERR-020-007`, August 18, 2026).** The mirrors this
+carve-out describes are declared `public const` (e.g.
+`public const byte CardKindYellow = EventSystemConstants.CARD_KIND_YELLOW;`), which
+the base FR-CS-022 / §3.2.3 rule — `[CROSS]` → `public static readonly`, PascalCase —
+did not permit: as first written, this paragraph certified as "compliant" a declaration
+its own spec's MUST forbade. Resolved by the **const-mirror carve-out** in §3.2.3
+(carried by FR-CS-022 since section-2.md v1.4): a `[CROSS]` mirror whose initializer
+references the owning catalogue's own compile-time constant MAY itself be
+`public const`, because the compiler enforces value identity on every build and the
+divergence risk the `static readonly` default guards against cannot arise;
+literal-initialized mirrors never qualify and stay on the default. `CardKindYellow`
+above is now a conforming example of that carve-out, not an exception to FR-CS-022.
 
 ### Per-Tag Region Ordering
 
@@ -127,11 +168,14 @@ Constants within a catalogue file are grouped in `#region` blocks in the followi
 order (most-immutable to most-mutable):
 
 ```
-1. #region Fixed       — [FIXED]   → public const; ALL_CAPS
-2. #region Derived     — [DERIVED] → public static readonly; PascalCase
-3. #region Cross       — [CROSS]   → public static readonly; PascalCase
-4. #region GT          — [GT]      → public static readonly; PascalCase
-5. #region EST         — [EST]     → public static readonly; PascalCase + TODO
+1. #region Fixed        — [FIXED]         → public const; ALL_CAPS
+2. #region Derived      — [DERIVED]       → public static readonly; PascalCase
+3. #region Cross        — [CROSS]         → public static readonly; PascalCase
+                                            (const-mirror carve-out: §3.2.3)
+4. #region CrossPending — [CROSS-PENDING] → public static readonly; PascalCase
+                                            (transitional; promotes into #region Cross)
+5. #region GT           — [GT]            → public static readonly; PascalCase
+6. #region EST          — [EST]           → public static readonly; PascalCase + TODO
 ```
 
 **Rationale:** Physical constants (`[FIXED]`) never change; estimated placeholders
@@ -146,9 +190,18 @@ A spec that has no constants in a given tag category simply omits that region. A
 ### `ProjectConstants.cs` — Cross-Spec Source of Truth
 
 `[CROSS]` constants declared in individual spec catalogues are **mirrors** — they copy
-the value from the primary declaration and must not diverge. The primary declaration for
-any constant that multiple specs consume lives in `ProjectConstants.cs`. The mirroring
-catalogue file's `[CROSS]` entry cites the source:
+the value from the primary declaration and must not diverge. **Subject to the
+owning-catalogue carve-out above** (ERR-020-004): for a constant with a single owning
+spec, the primary declaration is that spec's own catalogue, mirrored directly regardless
+of consumer count. `ProjectConstants.cs` is the primary declaration only for the
+remaining case — a constant with no single owning catalogue, shared across specs by
+convention rather than ownership (`PHYSICS_TICK_HZ` below is exactly that case: no one
+spec owns the tick rate). ERR-020-005 (reviewed-findings pass, 2026-08-15) qualifies this
+sentence in place: as written it restated the pre-carve-out two-way split directly under
+the heading a reader looks to for the routing rule, 25 lines below the carve-out
+paragraph that already narrowed it — under the unqualified sentence, the three
+`CardKind*` mirrors the carve-out exists to legitimise all read as non-compliant. The
+mirroring catalogue file's `[CROSS]` entry cites the source:
 
 ```csharp
 // In BallPhysicsConstants.cs (mirror)
@@ -291,6 +344,12 @@ concretises, establishing the Spec #20 ↔ `src/CLAUDE.md` cite-chain.
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 4. | — |
 | 1.0.1 | May 22, 2026 | — | ERR-020-001: §4.2 `[CROSS]` mirror example field name corrected `PHYSICS_TICK_HZ` (ALL_CAPS) → `PhysicsTickHz` (PascalCase) per §3.2.3 authoritative rule; XML doc updated to include spec+section citation and value per FR-CS-022. | — |
+| 1.0.2 | August 15, 2026 | Claude Code | ERR-020-004 (reviewed-findings pass, M4/owner decision 2): §4.2's `[CROSS]` routing rule stated only a two-way split (multi-consumer → `ProjectConstants.cs`; single-consumer → local) with no accommodation for a constant that has ≥ 2 consumers but a single owning spec's catalogue to mirror from. New "Owning-catalogue carve-out" paragraph: such a constant mirrors from its owning spec's catalogue directly regardless of consumer count (the `CardIssuedEvent.CardKind` / `EventSystemConstants` example, mirrored by three downstream catalogues with none routed through `ProjectConstants.cs`). Found because `src/discipline/DisciplineConstants.cs`'s compliant mirror had invented a false "single consumer" justification for want of a rule that fit its actual shape. `src/CLAUDE.md`'s `[CROSS]` mirrors section gains the identical carve-out. | — |
+| 1.0.3 | August 15, 2026, later | Claude Code | ERR-020-005 (extends ERR-020-004; reviewed-findings pass): the "`ProjectConstants.cs` — Cross-Spec Source of Truth" subsection's opening sentence still stated the pre-carve-out two-way split unqualified, 25 lines below the carve-out paragraph that had already narrowed it — the heading a reader looks under for the routing rule, restating the rule the carve-out exists to correct. Qualified in place: the primary declaration for a singly-owned constant is that spec's own catalogue (the carve-out), and `ProjectConstants.cs` is primary only for a constant with no single owning catalogue — the worked example immediately below (`PHYSICS_TICK_HZ`) is exactly that case, so the example is now internally consistent with the rule text above it. | — |
+| 1.0.4 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
+| 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H3 + H5 + H6 + H7.** H3: §4.1's "Dependency graph shape" ASCII block DELETED — a retired rendering with three edges the `.asmdef` graph contains in neither direction (`agent-movement`↔`ball-physics`, `pass-mechanics`↔`shot-mechanics`, `shot-mechanics`↔`first-touch`; re-verified August 18, 2026 by reading `src/*/[a-z]*.asmdef` references), a "(Mechanics layer)" label on three assemblies §3.5.2 seats in tier 1 Physics, unlabelled mixed `◄──`/`──►` arrows (the `ERR-020-003` ambiguity), and prose that under-scoped the ban to "Mechanics-, AI-, or UI-layer" — six tiers short. §3.5.2 is named the single rendering; the prose restated as the FR-CS-046 upward-reference ban + FR-CS-046a intra-tier permission, with `tools/assembly-tier-check.py` (CI-wired) named as the mechanical check. H5: the tree's `code-standards/` leaf no longer claims "empty at Stage 0" — no `src/code-standards/` folder exists at all (verified: `ls -d src/code-standards` fails), and the leaf now says so. H6: the §4.2 per-tag `#region` ordering gains the `[CROSS-PENDING]` slot (position 4, directly after the `Cross` region it promotes into — a promotion is a one-region move), extending the list 5 → 6. H7: the ERR-020-004 carve-out gains the Storage-class note — it had cited `DisciplineConstants.CardKindYellow` (a `public const byte`) as "a compliant mirror" while FR-CS-022/§3.2.3 required `public static readonly`; the §3.2.3 const-mirror carve-out resolves the contradiction in the spec and the paragraph now cites it. | — |
+| 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings H2 + H3.** H2: §4.1 asserted "an illegal dependency is a build error, not just a review finding" — false, and contradicting §3.5.2's "adopting the order changed nothing that compiles", written the same day. Unity rejects a reference CYCLE, but a non-cyclic UPWARD reference compiles cleanly — which is exactly why `ERR-020-002` drifted for fourteen months and why `tools/assembly-tier-check.py` had to be written and CI-wired. The clause is deleted, the real enforcement stated (the tool, plus Unity's cycle rejection), and §3.5.2 cross-referenced so the two now agree. H3: "on every push" corrected to `ci.yml`'s real triggers — `branches: [main]` on both `push` and `pull_request`, so a push to a topic branch runs nothing. §3.5.2 had corrected the identical phrase about the identical tool the previous day. | — |
+| 1.3 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding M1.** `ERR-020-007` was cited nowhere in the spec it patches — the Storage-class note said only "round-6 finding H7". Now cites the id directly. | — |
 
 ---
 

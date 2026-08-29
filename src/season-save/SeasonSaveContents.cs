@@ -1,15 +1,17 @@
 // File:     src/season-save/SeasonSaveContents.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.5)
+// Modified: 2026-08-13 (#44 T1, roadmap C1 — gains the restored DisciplineState)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / G4 / KD-3;
 //           Season & Competition Loop #30 FR-SN-021; Training System #29 FR-TR-019;
-//           Injuries & Medical #41 FR-MD-018; Code Standards #20
+//           Injuries & Medical #41 FR-MD-018; Discipline & Suspensions #44 Appendix B; Code Standards #20
 // Purpose:  The reconstructed contents of a season save: the living-world WorldStore (always), the
 //           season state (always), the per-club #29 training, #41 medical and #30 appearance states
-//           (always, possibly empty), and the in-progress MatchEngine (null when the season carried
+//           (always, possibly empty), the #28 career store and the #44 discipline state, and the
+//           in-progress MatchEngine (null when the season carried
 //           no match). SeasonSaveManager.Load returns this.
 
+using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
@@ -22,7 +24,8 @@ namespace TacticalDirector.SeasonSave
     /// The parts a season save reconstructs (unified-season-save-design.md §4 + #30 FR-SN-021): the
     /// living-world <see cref="World"/> and the <see cref="Season"/> (never null — a season save always
     /// carries both), the per-club <see cref="TrainingClubs"/> / <see cref="MedicalClubs"/> /
-    /// <see cref="AppearanceClubs"/> (never null, possibly empty), and the in-progress <see cref="Match"/> (<c>null</c> when
+    /// <see cref="AppearanceClubs"/> (never null, possibly empty), the restored <see cref="Progression"/> /
+    /// <see cref="Discipline"/> state (never null), and the in-progress <see cref="Match"/> (<c>null</c> when
     /// the save carried no match, KD-3). Returned by <see cref="SeasonSaveManager.Load"/>; the caller
     /// checks <see cref="Match"/> for null before using it.
     /// </summary>
@@ -54,6 +57,12 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         public readonly ProgressionEngine Progression;
 
+        /// <summary>
+        /// The reconstructed #44 discipline state — the sparse (PlayerId, CompetitionId) tally map.
+        /// Never null; empty when the save tracked no cards (#44 Appendix B / FR-DC-017).
+        /// </summary>
+        public readonly DisciplineState Discipline;
+
         /// <summary>The reconstructed in-progress match, or <c>null</c> if the season had no match.</summary>
         public readonly MatchEngine.MatchEngine Match;
 
@@ -65,6 +74,7 @@ namespace TacticalDirector.SeasonSave
             ClubInjuryStates[] medicalClubs,
             ClubAppearanceStates[] appearanceClubs,
             ProgressionEngine progression,
+            DisciplineState discipline,
             MatchEngine.MatchEngine match)
         {
             World = world;
@@ -73,6 +83,7 @@ namespace TacticalDirector.SeasonSave
             MedicalClubs = medicalClubs;
             AppearanceClubs = appearanceClubs;
             Progression = progression;
+            Discipline = discipline;
             Match = match;
         }
     }
@@ -92,4 +103,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | one file over, again.                                             |
 // | 1.5     | 2026-08-08 | —      | #28 T2a: gains the restored ProgressionEngine — the roster a    |
 // |         |            |        | caller must resume against (#28 KD-4), not merely an overlay.   |
+// | 1.6     | 2026-08-13 | —      | #44 T1 (roadmap C1): gains the restored DisciplineState (never  |
+// |         |            |        | null; empty when the save tracked no cards).                    |
 #endregion

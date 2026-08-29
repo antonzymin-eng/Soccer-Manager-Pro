@@ -1,8 +1,8 @@
 # Event System Specification #17 — Section 3: Technical Specification
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
-**Version:** 1.0.2
+**Last Updated:** August 16, 2026
+**Version:** 1.0.7
 **Status:** DRAFT
 
 > This section provides the **mechanics** for every FR-EVT-### named
@@ -630,12 +630,18 @@ implementation time (Stage 0+1).
 | `MAX_EVENT_DISPATCH_DEPTH` | `8` | `[GT]` | §3.2.5; BFS depth bound for second-order Tier A/B dispatch. |
 | `EVENT_TYPE_ORDINAL_WIDTH` | `1 byte` (`0x00`–`0xFF`) | `[GT]` | §3.1.2; design decision (not a physical constant). Stage 5+ expansion to 2 bytes reserved in §7.3 / D5 §7.5. |
 | `PAYLOAD_VERSION_WIDTH` | `1 byte` (`0x00`–`0xFF`) | `[GT]` | §3.1; §3.7; design decision. |
+| `CARD_KIND_YELLOW` | `0` | `[FIXED]` | Appendix A row 0x06; `CardIssuedEvent.CardKind` domain-ordinal encoding for a first (or non-promoting) caution — the wire encoding a producer (match-engine) writes and a consumer (discipline) reads, not a designer-tunable value (so `[GT]`, including the design-fixed sub-class below, is the wrong tag; `[FIXED]` per the root `CLAUDE.md` tag table). Added ERR-017-004: the encoding had no catalogue home in this spec despite #17 owning it (Appendix A: "#17 (default owner)"), so two downstream catalogues had each declared it independently, under two different tags. |
+| `CARD_KIND_RED` | `1` | `[FIXED]` | Appendix A row 0x06; `CardIssuedEvent.CardKind` domain-ordinal encoding for a straight red, as `CARD_KIND_YELLOW`. ERR-017-004. |
+| `CARD_KIND_SECOND_YELLOW` | `2` | `[FIXED]` | Appendix A row 0x06; `CardIssuedEvent.CardKind` domain-ordinal encoding for a second caution promoted to a dismissal — the producer emits this as ONE event, never a yellow-then-red pair, as `CARD_KIND_YELLOW`. ERR-017-004. |
+| `FOUL_ORDINAL_NONE` | `0xFFFF` | `[FIXED]` | Appendix A row 0x06; `CardIssuedEvent.FoulOrdinal` sentinel for "procedural card, no associated `FoulCommittedEvent`" — widened from `0xFF` alongside the field's `byte`→`ushort` widening (AR-5 L-1, `CardIssuedEvent.cs` v1.2, 2026-06-02). Same wire-format reasoning as the `CARD_KIND_*` rows immediately above: a producer/consumer-agreed sentinel, not designer-tunable. Had no catalogue home in this spec until now (L3, reviewed-findings pass, 2026-08-15) — the sentinel existed only as prose in `CardIssuedEvent.cs`, ERR-017-004's exact defect recurring on the sibling payload field of the same event. |
 | `DOMAIN_TAG_EVENT_LEDGER` | `0x15` | `[CROSS]` | §3.4.2; allocated in #16 §3.4 v1.0.1 (next value after `DOMAIN_TAG_ENV_FP = 0x14`) per ERR-017-001 RESOLVED May 14, 2026; #16 owns the namespace, #17 consumes read-only. |
 | `ERR_EVT_QUEUE_OVERFLOW` | `0x1701` | `[GT]` | §2.5 / §3.6.1; error-code allocation from `0x17NN` reserved block; designer-chosen, locked at approval. |
 | *(reserved slot `0x1702`)* | — | — | Tier-marker mismatch is compile-time only (FR-EVT-016, FR-EVT-076); slot recovered; no runtime code allocated. |
 | `ERR_EVT_ORDINAL_UNKNOWN` | `0x1703` | `[GT]` | §2.5 / §3.7.2. |
 | `ERR_EVT_VERSION_INCOMPATIBLE` | `0x1704` | `[GT]` | §2.5 / §3.7.2. |
 | `ERR_EVT_REGISTRATION_PHASE` | `0x1705` | `[GT]` | §2.5 / §3.2.2; lifecycle violation (runtime register/unregister of Tier A/B subscribers post-boot). |
+| `ERR_EVT_UNREGISTERED_ORDINAL` | `0x1706` | `[GT]` | Design-fixed sub-class (below). Publish or subscribe before the owning spec's `EventBusRegistrar.Initialize()` ran — `EventOrdinalCache<T>.Ordinal` is still 0 (the CLR default). FR-EVT-020; AR-2 M-1. In `EventSystemConstants.cs` since v1.1 (May 30, 2026) with no catalogue row until now (ERR-017-006, extending ERR-017-005, reviewed-findings pass, 2026-08-15) — ERR-017-004's exact defect recurring on a code carrying its own name in this section's design-fixed-`[GT]` note below. |
+| `ERR_EVT_ORDINAL_COLLISION` | `0x1707` | `[GT]` | Design-fixed sub-class (below). Two distinct `IEventC` types mapped to the same ordinal via erroneous `RegisterExternalRow` calls; thrown by `CosmeticChannel.Subscribe` when the dispatcher already bound at the ordinal is typed for a different event. AR-4 L. In `EventSystemConstants.cs` since v1.2 (May 31, 2026) with no catalogue row until now (ERR-017-006). |
 
 Notes:
 
@@ -651,13 +657,35 @@ Notes:
   `APPROVED` on May 14, 2026 (ERR-017-001 RESOLVED).
 - **`[GT]` tag sub-classes.** CLAUDE.md "Constant Tags" defines
   `[GT]` as "Designer sets value; must live in tunable config".
-  Spec #17 uses `[GT]` for two sub-classes which the §6.3.4
-  re-tuning trigger distinguishes:
+  Spec #17 uses `[GT]` for one sub-class the §6.3.4 re-tuning
+  trigger distinguishes from the runtime-tunable set, plus a
+  **wire-format carve-out (added 2026-08-15, ERR-017-005)** that
+  is `[FIXED]`, not `[GT]`, at all:
   - **Runtime-tunable `[GT]`** — `EVENT_QUEUE_CAPACITY`,
     `COSMETIC_PER_TICK_PUBLICATION_BUDGET`,
     `MAX_EVENT_DISPATCH_DEPTH`. These are the standard
     designer-set sizing constants; re-tuned per §6.3.4 against
-    first measurements.
+    first measurements. Declared `public static readonly` +
+    `Config.GetInt(...)` in the implementing catalogue — the
+    storage shape a `[GT]` constant needs to actually be
+    config-bindable.
+  - **Wire-format encodings — `[FIXED]`, not a `[GT]` sub-class**
+    (ERR-017-004 / ERR-017-005) — `CARD_KIND_YELLOW`,
+    `CARD_KIND_RED`, `CARD_KIND_SECOND_YELLOW`. A value a producer
+    (match-engine) writes and a consumer (discipline) reads, where
+    a change after publication is a payload-format break rather
+    than a balance edit — the same consequence class as
+    `EVENT_TYPE_ORDINAL_WIDTH` below, not something a designer
+    tunes. Declared `public const byte`, which is structurally
+    incompatible with `[GT]`'s config-loader contract (a `const`
+    inlines at compile time into every consuming assembly; it
+    cannot be read from `Config.GetX` at boot). `[FIXED]` is
+    correct here per the root `CLAUDE.md` tag table even though the
+    value is a design decision rather than a physical law: the tag
+    records *how* a value may change (never, once published), not
+    *why* it has the value it has. This corrects the reading below
+    that reserved `[FIXED]` for physics-law-derived values only —
+    see the note after the list.
   - **Design-fixed `[GT]`** — `EVENT_TYPE_ORDINAL_WIDTH`,
     `PAYLOAD_VERSION_WIDTH`, and the `ERR_EVT_*` numeric codes.
     These are designer-set **at design time** but are NOT
@@ -666,10 +694,36 @@ Notes:
     crash-dump triage (error codes). The §6.3.4 re-tuning trigger
     does NOT apply to design-fixed `[GT]` constants; their
     rationale is recorded once (§3.10 row) and locked at
-    approval. CLAUDE.md's `[FIXED]` tag is reserved for
-    physics-law-derived values; design-fixed-but-not-physics is
-    therefore captured here as a `[GT]` sub-class rather than
-    introducing a new tag.
+    approval.
+    **Checked 2026-08-15 (ERR-017-005), not fixed here: every
+    constant in this sub-class is ALSO declared `public const`**
+    (`EventTypeOrdinalWidth`, `PayloadVersionWidth`,
+    `ErrEvtQueueOverflow`, `ErrEvtOrdinalUnknown`,
+    `ErrEvtVersionIncompatible`, `ErrEvtRegistrationPhase`,
+    `ErrEvtUnregisteredOrdinal`, `ErrEvtOrdinalCollision`, all in
+    `EventSystemConstants.cs`) — the identical structural shape
+    that failed `CARD_KIND_*`'s `[GT]` test above at ERR-017-004.
+    Recorded, not resolved, in this pass: closing the inconsistency
+    means either retagging this whole sub-class `[FIXED]` (matching
+    what the code already does) or converting it to
+    `public static readonly` + `Config.GetX` (matching what `[GT]`
+    promises), and that choice is a separate decision this note
+    does not make.
+
+  CLAUDE.md's `[FIXED]` tag was read here, until 2026-08-15, as
+  reserved for physics-law-derived values — which is why the
+  wire-format encodings above were first captured as a `[GT]`
+  sub-class rather than tagged `[FIXED]`. That reading is corrected
+  by ERR-017-004/ERR-017-005: the root tag table defines `[FIXED]`
+  structurally ("Derived from physics; never tune" is the physics
+  *example*, not the whole rule — a `public const` value a
+  producer/consumer pair agrees on as wire format is equally
+  "never tune"), not by physical origin, so a payload encoding
+  meets it without introducing a new tag. The remaining two
+  design-fixed-`[GT]` rows (ordinal/version width, error codes) are
+  unaffected by this correction; whether they too should move is
+  the open question the checked-but-not-fixed note above leaves for
+  a later pass.
 
 ## 3.11 Version History
 
@@ -680,3 +734,8 @@ Notes:
 | 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-1: §3.3.1 cadence map row reverted to `Snapshot`; §3.3.2 rewritten so `Snapshot` is canonical producer and `AI_NoOp` MAY is retained as non-binding example. H-2-2: §3.2.2 "separate from ERR_EVT_TIER_MISMATCH" reworded to compile-time-only; EC-017-005a updated to compile-time/lint-only; §3.10 `ERR_EVT_TIER_MISMATCH` row replaced with reserved-slot note; `ERR_EVT_REGISTRATION_PHASE` note simplified. |
 | 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). `[CROSS-PENDING]` → `[CROSS]` promotion of `DOMAIN_TAG_EVENT_LEDGER` following #16 §3.4 v1.0.1 allocation of value `0x15` (May 14, 2026). §3.4.2 prose updated to inline the literal value and re-tag; §3.10 catalogue row updated to `0x15` / `[CROSS]`; §3.10 trailing notes prose updated. ERR-017-001 RESOLVED; this revision closes the #17-side mechanical residual. |
 | 1.0.2   | June 12, 2026 | Claude Code | ERR-017-002 patch (behavioral surface unchanged at call sites). §3.2.1 / §3.2.2 Publish/Subscribe API corrected from three constraint-only overloads to ONE method with cached tier-marker dispatch — C# forbids overloading on generic constraints alone (CS0111), so the v1.0 surface could never compile; the implementation (`EventBus.cs` v1.9, `EventTierCache.cs` v1.0, `CosmeticChannel.cs` v1.9, five spec `EventBusStub.cs` files) was patched in the same commit. Exactly-one-marker contract (FR-EVT-009a) now enforced at the entry point at runtime; §3.2.2 compile-time-mismatch note re-anchored accordingly. Found by the first-ever compile of the assembly on the dotnet CI gate (tools/dotnet-ci). |
+| 1.0.3   | August 15, 2026 | Claude Code | ERR-017-004 back-prop (Discipline & Suspensions #44 adversarial review round 4, M24). §3.10 gained three new catalogue rows — `CARD_KIND_YELLOW` / `CARD_KIND_RED` / `CARD_KIND_SECOND_YELLOW`, tagged `[FIXED]` — the `CardIssuedEvent.CardKind` domain-ordinal encoding already normative in Appendix A row 0x06 but never given a catalogue home. `[FIXED]`, not `[GT]`: these are not designer-tunable (the M24 fix's own first draft mistagged them `[GT]`, self-corrected before landing — a producer/consumer wire-format byte is a `[FIXED]`-per-root-`CLAUDE.md` case, and the design-fixed-`[GT]`-subclass bullet list is unchanged). `src/event-system/EventSystemConstants.cs` is the implementing catalogue (`CARD_KIND_YELLOW`/`CARD_KIND_RED`/`CARD_KIND_SECOND_YELLOW`, ALL_CAPS in a new `#region Fixed`); `src/match-engine/MatchEngineConstants.cs` and `src/discipline/DisciplineConstants.cs` mirror it `[CROSS]`/PascalCase (single-consumer routing, src/CLAUDE.md's "[CROSS] mirrors" rule) instead of each declaring the encoding independently. No behavioral change — same byte values (0/1/2) throughout; pure catalogue/documentation addition. |
+| 1.0.4   | August 15, 2026, later | Claude Code | ERR-017-005 (reviewed-findings pass, M2). §3.10's "`[GT]` tag sub-classes" note reworded: the wire-format carve-out (`CARD_KIND_*`, now `[FIXED]` per ERR-017-004) is stated explicitly instead of folded silently into the "design-fixed `[GT]`" bullet it used to share a sentence with, and the closing sentence that read "CLAUDE.md's `[FIXED]` tag is reserved for physics-law-derived values" — no longer accurate once a wire-format encoding is tagged `[FIXED]` — is corrected. Also records, checked but not resolved, that the remaining design-fixed-`[GT]` rows (`EVENT_TYPE_ORDINAL_WIDTH`, `PAYLOAD_VERSION_WIDTH`, the `ERR_EVT_*` codes) are themselves declared `public const` in `EventSystemConstants.cs` — the same structural shape ERR-017-004 used to retag `CARD_KIND_*` — an open question this revision does not decide. No code change; `EventSystemConstants.cs` was already correct (v1.5). |
+| 1.0.5   | August 15, 2026, later | Claude Code | Reviewed-findings pass, L3. New §3.10 row `FOUL_ORDINAL_NONE = 0xFFFF`, `[FIXED]` — `CardIssuedEvent.FoulOrdinal`'s "no associated foul" sentinel, which had no catalogue home anywhere in this spec (it existed only as prose in `CardIssuedEvent.cs`) despite being ERR-017-004's exact defect shape on the sibling payload field of the same event. Declared in `src/event-system/EventSystemConstants.cs` beside the `CARD_KIND_*` rows and mirrored `[CROSS]` in `src/match-engine/MatchEngineConstants.cs`; the one production call site (`MatchEngine.cs`'s `foulOrdinal: 0xFFFF` literal) is outside this pass's ownership and still needs repointing at the new mirror. **DISCHARGED August 16, 2026 (reviewed-findings pass, L7):** the repointing landed on this branch — `MatchEngine.cs` now reads `MatchEngineConstants.FoulOrdinalNone` at its one production call site (verified by grep, `MatchEngine.cs` v1.x header + line 5286), so no repointing remains outstanding. |
+| 1.0.6   | August 15, 2026, later still | Claude Code | ERR-017-006 (extends ERR-017-005; reviewed-findings pass, M2). §3.10's preamble claims every constant this spec declares appears in the catalogue with its source tag — false for two of the four codes ERR-017-005's own design-fixed-`[GT]` note names: `ErrEvtUnregisteredOrdinal` (`0x1706`, in code since v1.1) and `ErrEvtOrdinalCollision` (`0x1707`, since v1.2) had no catalogue row at all. Two rows added, both `[GT]` under the existing design-fixed sub-class, citing `EventSystemConstants.cs`'s own doc comments (FR-EVT-020 / AR-2 M-1; `CosmeticChannel.Subscribe` / AR-4 L). No code change; no tag or value moved. |
+| 1.0.7   | August 16, 2026 | Claude Code | Reviewed-findings pass, L4 + L7 (one row covers both — both touch only this table). L4: rows 1.0.5 and 1.0.6 were appended out of chronological order (1.0.6, dated "later still", sat above 1.0.5, dated "later") — swapped so the table reads chronologically; rows are appended, never reordered, so this is a positional fix only, no row's own text altered by the swap. L7: row 1.0.5's "still needs repointing" claim annotated in place as DISCHARGED — the named call site (`MatchEngine.cs`'s `foulOrdinal: 0xFFFF` literal) was repointed to `MatchEngineConstants.FoulOrdinalNone` on this branch. No tag, value, or normative text changed. |

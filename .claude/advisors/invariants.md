@@ -64,7 +64,7 @@ not just what it would forget.
 
 | Trigger | Question | Authority |
 |---|---|---|
-| A new assembly reference | Does it run AI → Mechanics → Physics, never the reverse? | `src/CLAUDE.md` layer taxonomy |
+| A new assembly reference | Does it run **downward in the ten-tier order** (Foundation → Physics → Configuration → Mechanics → AI → Data → Composition → Management → Presentation → Client)? Intra-tier is permitted, cycles are not (FR-CS-046a). A tier is a **ceiling, not a licence** — a spec may forbid a reference the tier allows (#44 `discipline` must not reference `match-engine` or `season-save`). | **Spec #20 §3.5.2** owns tier membership — `src/CLAUDE.md` reproduces it and is NOT the authority. Mechanically: `python3 tools/assembly-tier-check.py` |
 | Two assemblies that must not see each other | Is a root **above both** composing them, rather than one referencing the other? | FR-LW-003; the `season-save` precedent above `match-engine` + `living-world` |
 | A reference into `match-analytics` or `ui-framework` | Is the consumer sanctioned? No sim assembly may reference either | The mechanical layer-guard tests (allow-list **plus** explicit never-reference list) |
 | A rule implemented in a second place | Is this a parallel surface? Move it to the type that owns the concept | `BoardState.EvaluateAtSeasonEnd` (the fix); `TrainingInput` (the seam-ownership precedent) |
@@ -90,7 +90,7 @@ Linux gate closes that now — but layering violations still compile fine.
 | Filing a new `ERR-` id | Verified free against `docs/tracking/spec-error-log.md` **now**? | The July-27 promotion wave: three supplements proposed ids already filed. A proposed id is a suggestion, never a reservation |
 | A spec number appears in prose | Checked against `SPEC_INDEX.md`? | Renumbering cascades are this project's single most recurring bug class |
 | A cross-spec obligation discovered | Does it need a back-prop, and does that land atomically? | #30 §3.3.1; the July-27 wave, where landing 23 back-props together exposed a defect no single filing could have |
-| "The spec is APPROVED" used as evidence | APPROVED says nothing about whether code exists — 22 of 53 specs have no assembly | Root `CLAUDE.md` PROJECT IDENTITY. **Check `src/` first** |
+| "The spec is APPROVED" used as evidence | APPROVED says nothing about whether code exists — 19 of 53 specs have no assembly (re-derived August 18, 2026) | Root `CLAUDE.md` PROJECT IDENTITY. **Check `src/` first** |
 | A `[GT]` magnitude introduced | Illustrative pending a balance pass, or actually fitted? Say which | #21 G2 precedent |
 
 ---

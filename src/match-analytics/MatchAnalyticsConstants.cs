@@ -1,12 +1,29 @@
 // File:     src/match-analytics/MatchAnalyticsConstants.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-08-16 (reviewed-findings pass, M4/ERR-037-003 — added CardKindYellow and
+//           CardKindSecondYellow [CROSS] mirrors of EventSystemConstants.CARD_KIND_YELLOW/
+//           CARD_KIND_SECOND_YELLOW, alongside the existing CardKindRed. MatchAnalyticsAggregator.cs's
+//           CardIssuedEvent routing was a two-way `== red ? … : …` test with no row for kind 2 at all,
+//           so a second-yellow dismissal silently counted as a plain yellow and never as a red —
+//           contradicting MatchStatline.RedCards's own documented contract. Consumer
+//           MatchAnalyticsAggregator.cs updated in the same commit — v1.5)
+// Modified: 2026-08-15, later (reviewed-findings pass, L2 — CARD_KIND_RED renamed CardKindRed
+//           (PascalCase): a [CROSS] mirror was left ALL_CAPS when its MatchEngineConstants/
+//           DisciplineConstants siblings were renamed in the same M24/ERR-017-004 round. Consumers
+//           MatchAnalyticsAggregator.cs and MatchAnalyticsAggregatorTests.cs updated in the same
+//           commit. No value change — v1.4)
+// Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — CARD_KIND_RED
+//           repointed from MatchEngineConstants.CardKindRed to EventSystemConstants.CARD_KIND_RED
+//           directly (the .asmdef already references TacticalDirector.EventSystem), avoiding a
+//           mirror-of-a-mirror once match-engine's own CardKindRed became a [CROSS] mirror itself —
+//           v1.3)
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §6 / Appendix A, Code Standards #20
 // Purpose:  The #37 constant catalogue — the xG model coefficients, the positional-bin grid, the
 //           territorial sample cadence, and the pitch geometry the xG angle term needs.
 
 using TacticalDirector.BallPhysics;
+using TacticalDirector.EventSystem;
 using TacticalDirector.MatchEngine;
 
 namespace TacticalDirector.MatchAnalytics
@@ -73,9 +90,66 @@ namespace TacticalDirector.MatchAnalytics
         // future re-encoding fails to compile here instead of silently re-labelling every card and
         // restart in the statline.
 
+        /// <summary>[CROSS] <c>CardIssuedEvent.CardKind</c> value for a first (or non-promoting)
+        /// caution. Authoritative source: <c>EventSystemConstants.CARD_KIND_YELLOW</c> (Event System
+        /// #17, <c>[FIXED]</c>, Appendix A row 0x06 / §3.10: "Card kind: 0=Yellow, 1=Red,
+        /// 2=SecondYellow (domain ordinal)" — #17 owns this encoding, not match-engine). Owning-catalogue
+        /// carve-out mirror (ERR-020-004, <c>src/CLAUDE.md</c> §"[CROSS] mirrors") — mirrored directly
+        /// from #17's own catalogue regardless of consumer count, the <c>DisciplineConstants.CardKindYellow</c>
+        /// precedent.
+        /// <para>
+        /// <b>ERR-037-003 (reviewed-findings pass M4, 2026-08-16).</b> Added alongside
+        /// <see cref="CardKindSecondYellow"/> so <c>MatchAnalyticsAggregator.RouteRecord</c>'s
+        /// <c>CardIssuedEvent</c> branch can name all three kinds explicitly instead of a two-way
+        /// <c>== red ? … : …</c> test that silently swallowed the third value into the yellow branch.
+        /// </para>
+        /// </summary>
+        public const byte CardKindYellow = EventSystemConstants.CARD_KIND_YELLOW;
+
         /// <summary>[CROSS] <c>CardIssuedEvent.CardKind</c> value for a dismissal. Authoritative
-        /// source: <c>MatchEngineConstants.CARD_KIND_RED</c> (§3.2 card routing).</summary>
-        public const byte CARD_KIND_RED = MatchEngineConstants.CARD_KIND_RED;
+        /// source: <c>EventSystemConstants.CARD_KIND_RED</c> (Event System #17, <c>[FIXED]</c>,
+        /// Appendix A row 0x06 / §3.10 — #17 owns this encoding, not match-engine).
+        /// <para>
+        /// M24/ERR-017-004: was <c>MatchEngineConstants.CARD_KIND_RED</c>, itself a mirror of
+        /// match-engine's own (then-independent) declaration. Repointed straight at the #17 authority
+        /// rather than through match-engine's <c>[CROSS]</c> mirror — a mirror-of-a-mirror gives the
+        /// "a <c>[CROSS]</c> mirror must not diverge from its source" rule two hops to fail at, and it
+        /// made this catalogue look like it depended on match-engine for an encoding neither assembly
+        /// owns. This assembly's <c>.asmdef</c> already references <c>TacticalDirector.EventSystem</c>
+        /// (also used for <c>CardIssuedEvent</c> itself, read in <c>MatchAnalyticsAggregator</c>), so no
+        /// new assembly reference was needed.
+        /// </para>
+        /// <para>
+        /// L2 (reviewed-findings pass, 2026-08-15): renamed <c>CARD_KIND_RED</c> → <c>CardKindRed</c>.
+        /// <c>src/CLAUDE.md</c>'s naming table and the ERR-020-001 note require PascalCase for
+        /// <c>[CROSS]</c> mirrors; this field was left ALL_CAPS when <c>MatchEngineConstants</c> and
+        /// <c>DisciplineConstants</c>'s equivalent mirrors were renamed to <c>CardKindRed</c> in the same
+        /// M24/ERR-017-004 round. The rest of this file is ALL_CAPS for other <c>[CROSS]</c>/<c>[GT]</c>
+        /// constants too (a pre-existing, file-wide deviation) — out of scope here; only the field this
+        /// pass's other findings touch is renamed.
+        /// </para>
+        /// </summary>
+        public const byte CardKindRed = EventSystemConstants.CARD_KIND_RED;
+
+        /// <summary>[CROSS] <c>CardIssuedEvent.CardKind</c> value for a second caution promoted to a
+        /// dismissal. Authoritative source: <c>EventSystemConstants.CARD_KIND_SECOND_YELLOW</c> (Event
+        /// System #17, <c>[FIXED]</c>, Appendix A row 0x06 / §3.10) — the producer
+        /// (<c>MatchEngine.ApplyCardAndCheckSentOff</c>) emits this as ONE event, never a
+        /// yellow-then-red pair. Owning-catalogue carve-out mirror (ERR-020-004), as
+        /// <see cref="CardKindYellow"/>.
+        /// <para>
+        /// <b>ERR-037-003 (reviewed-findings pass M4, 2026-08-16): this catalogue had no row for kind 2
+        /// at all</b>, so <c>MatchAnalyticsAggregator</c>'s <c>evt.CardKind == CardKindRed ? red : yellow</c>
+        /// routing silently counted every second-yellow dismissal as a plain yellow and never as a red —
+        /// contradicting <c>MatchStatline.RedCards</c>'s own documented contract ("Red cards received
+        /// (including second-yellow dismissals)"). Added to close that gap; see
+        /// <c>MatchAnalyticsAggregator.RouteRecord</c> for the routing decision this enables (a kind-2
+        /// event counts as one yellow AND one red — the <c>DisciplineRules.ApplyCard</c> kind-2 branch's
+        /// "one yellow AND one dismissal ban" precedent, discipline #44, converged over several
+        /// adversarial-review passes).
+        /// </para>
+        /// </summary>
+        public const byte CardKindSecondYellow = EventSystemConstants.CARD_KIND_SECOND_YELLOW;
 
         /// <summary>[CROSS] <c>RestartAwardedEvent.RestartKind</c> value for a throw-in. Authoritative
         /// source: Ball Physics #1 <c>RestartType.ThrowIn</c>.</summary>
@@ -106,4 +180,30 @@ namespace TacticalDirector.MatchAnalytics
 // |         |            |        | the pre-AR literal back while leaving the v1.1 row claiming    |
 // |         |            |        | the mirror, which is the one shape nothing would have caught:  |
 // |         |            |        | both values are 2, so no test could fail on the difference.    |
+// | 1.3     | 2026-08-15 | —      | AR round 4 fix (M24/ERR-017-004, discipline C1/C2 landing):    |
+// |         |            |        | CARD_KIND_RED repointed from MatchEngineConstants.CardKindRed  |
+// |         |            |        | (itself now a [CROSS] mirror) straight to the #17 authority,   |
+// |         |            |        | EventSystemConstants.CARD_KIND_RED — a mirror-of-a-mirror was  |
+// |         |            |        | this M24 fix's own first-draft defect (two hops for the "must  |
+// |         |            |        | not diverge from its source" rule to fail at). No asmdef change|
+// |         |            |        | needed — TacticalDirector.EventSystem was already referenced.  |
+// | 1.4     | 2026-08-15, later | — | Reviewed-findings pass (L2). CARD_KIND_RED renamed          |
+// |         |            |        | CardKindRed (PascalCase) — src/CLAUDE.md's naming table and the |
+// |         |            |        | ERR-020-001 note require PascalCase for [CROSS] mirrors, and    |
+// |         |            |        | this field was left ALL_CAPS when MatchEngineConstants and      |
+// |         |            |        | DisciplineConstants's equivalent mirrors were renamed to        |
+// |         |            |        | CardKindRed in the same M24/ERR-017-004 round (v1.33/v1.2        |
+// |         |            |        | respectively). Consumers updated: MatchAnalyticsAggregator.cs   |
+// |         |            |        | (line ~235) and MatchAnalyticsAggregatorTests.cs (line ~163).   |
+// |         |            |        | No value change. The rest of this file's [CROSS]/[GT] constants |
+// |         |            |        | remain ALL_CAPS (a pre-existing, file-wide deviation) — out of  |
+// |         |            |        | scope for this pass.                                             |
+// | 1.5     | 2026-08-16 | —      | Reviewed-findings pass (M4/ERR-037-003). Added CardKindYellow    |
+// |         |            |        | and CardKindSecondYellow [CROSS] mirrors of                      |
+// |         |            |        | EventSystemConstants.CARD_KIND_YELLOW/CARD_KIND_SECOND_YELLOW,   |
+// |         |            |        | alongside the existing CardKindRed — MatchAnalyticsConstants had |
+// |         |            |        | no row for kind 2, so MatchAnalyticsAggregator's two-way         |
+// |         |            |        | `== red ? … : …` routing silently swallowed every second-yellow  |
+// |         |            |        | dismissal into the yellow tally. Consumer                        |
+// |         |            |        | MatchAnalyticsAggregator.cs updated in the same commit.          |
 #endregion

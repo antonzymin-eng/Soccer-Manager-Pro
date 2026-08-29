@@ -23,7 +23,7 @@ two-week sweep of Claude Code sessions on this repo (see its row for the numbers
 | `steward` | PR CI triage, mergeability, and this repo's own tracking-doc merge conventions | 5 sessions in 14 days (~$133), 3 left unfinished |
 
 The other most-repeated activity in this repo, `adversarial-review` (40 of the last 200 commits), is
-**not** restated here — `match-realism-pass` and `spec-promotion` invoke it. It landed as a project
+**not** restated here — `spec-promotion` invokes it; `match-realism-pass` does not. It landed as a project
 skill of its own in PR #283 and now lives at `.claude/skills/adversarial-review/`; `orientation`
 remains account-level. Either way the rule is the same: invoke, never re-describe.
 

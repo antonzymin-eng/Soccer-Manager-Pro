@@ -45,7 +45,7 @@ around a recorded blocker.
 Read `docs/tracking/path-to-playable-roadmap.md` and the OPEN ISSUES section of the root `CLAUDE.md`.
 
 Pick the first item that is genuinely unblocked. "Unblocked" means the upstream it depends on exists
-in `src/` — not that its spec is APPROVED. **22 of 53 approved specs have no assembly**, so approval
+in `src/` — not that its spec is APPROVED. **19 of 53 approved specs have no assembly**, so approval
 proves nothing about availability. Grep `src/` before believing a consumer exists.
 
 If the user named an item, that wins. If nothing is unblocked, say so and stop — do not invent work.

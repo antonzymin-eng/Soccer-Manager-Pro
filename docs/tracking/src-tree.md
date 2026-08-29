@@ -632,13 +632,17 @@ src/
 │   ├── SeasonSaveCodec.cs             ← pure static: Encode(world, season, training, medical, matchOrNull) / Decode → v3 frame + matchPresent flag + 5 length-prefixed opaque blocks; overflow-safe bounds + fail-loud (KD-7/KD-8)
 │   ├── SeasonSaveContents.cs          ← Load result: reconstructed WorldStore (never null) + nullable MatchEngine
 │   ├── SeasonSaveManager.cs           ← static: Save(world, matchOrNull, path) (capture both → Encode → atomic temp→fsync→rename) / Load(path, ISquadProvider = null) → SeasonSaveContents (KD-1/KD-5/KD-6/KD-8)
+│   ├── AvailabilityComposition.cs     ← #44 C2 (Aug 13, 2026): the composed removal-set intersection + back-fill split out of PlayerCareerStates.SelectAvailable so a second contributor (#44) can join before the back-fill runs
+│   ├── DisciplineBlock.cs             ← #44 C2: typed handle on the seventh sub-blob's bytes (DISC-magic-led, ERR-044-001)
+│   ├── MatchEngineDisciplineTap.cs    ← #44 C2: wires discipline/CardLedgerFold into the engine's per-tick observation surface via IDisciplineTickLedgerTap
 │   └── tests/
-│       ├── season-save-tests.asmdef   ← EditMode; references season-save + match-engine + living-world + deterministic-sim + player-database
+│       ├── season-save-tests.asmdef   ← EditMode; references season-save + match-engine + living-world + deterministic-sim + player-database + discipline
 │       ├── SeasonSaveManagerTests.cs  ← disk round-trip determinism (no-match / neutral+distinct-squad match via ISquadProvider) + SeasonSaveCodec round-trip/fail-loud + manager fail-loud paths
 │       ├── SeasonStateTests.cs        ← #30 T0 value-type + aggregate-field-count coupling guards
 │       ├── SeasonStateCodecTests.cs   ← #30 T1 round-trip / pinned-offset layout lock / FR-SN-023 fail-loud gates
 │       ├── SeasonLoopTests.cs         ← #30 T2: day advance + FR-SN-026 floor, round completeness, order-independence, F4/F5/F6, mid-sequence restore, 380-fixture season
 │       ├── SeasonRollTests.cs         ← #30 T3: pure roll helpers, F5 + cursor gates and their atomicity, FR-SN-029 restartability, and a rolled season played to completion (ERR-030-015)
+│       ├── SeasonLoopDisciplineTests.cs ← #44 C2 (Aug 13, 2026): +14 wiring locks, incl. a real 90-minute engine fixture pairing observer-neutrality with a positive control
 │       ├── RoundResolutionModelTests.cs ← #30 T2: keyed determinism, per-input key sensitivity, lambda clamps, inverse-CDF endpoints/cap/mean
 │       ├── SeasonLoopScenarios.cs / SeasonLoopScenarioTests.cs ← #30 §5.7 season-multi-fixture capstone on the #19 ScenarioRunner (one real engine match)
 │       ├── RoundResolutionCalibrationHarness.cs / ...Tests.cs ← A4a corpus harness + env-gated KD-8 Step 0 pilot / corpus driver (ERR-030-014 blocks the fit)
@@ -728,6 +732,29 @@ src/
 │       ├── MedicalStepTests.cs          ← §3.6 term by term + T-MD-DET/ORD/SEV/REC/MOD/NEU/AVAIL/FAIL
 │       ├── MedicalSaveCodecTests.cs      ← round-trip field identity, every severity tier, the no-RNG-cursor block-size lock, F1/F3/F4/F5
 │       └── InjuriesMedicalConstantsTests.cs ← catalogue invariants, the [CROSS] tag mirror, the #29/#41 shared-scale lock
+│
+├── discipline/                        ← Discipline & Suspensions #44 C1 (T0+T1) + C2 (T2) LANDED (Aug 13, 2026; APPROVED spec)
+│   │                                    │   References EventSystem + PlayerDatabase + DeterministicSim + ProjectConstants only.
+│   │                                    │   Draw-free by construction (FR-DC-019) — no RNG stream, no domain tag, no SubsystemOrdinals entry.
+│   │                                    │   The 35th production assembly; third consumer of the #37-class per-tick ledger tap (B3)
+│   │                                    │   and the ERR-030-009 resolve→filter→configure seam in season-save.
+│   ├── discipline.asmdef
+│   ├── AssemblyInfo.cs                  ← InternalsVisibleTo the test assembly
+│   ├── DisciplineState.cs               ← per-player yellow/red card ledger
+│   ├── DisciplineRules.cs               ← crossing/reset rules (FR-DC-017)
+│   ├── CardLedgerFold.cs                ← the #37-class per-tick ledger tap consumer
+│   ├── Availability.cs                  ← per-club suspension-availability view, consumed by season-save's AvailabilityComposition
+│   ├── DisciplineEntry.cs               ← one recorded card/suspension entry
+│   ├── IDisciplineTickLedgerTap.cs      ← per-tick ledger tap contract MatchEngineDisciplineTap implements
+│   ├── DisciplineSaveCodec.cs           ← the DISC-magic-led sub-blob codec (ERR-044-001 — Appendix B originally specified version-first with no magic)
+│   ├── DisciplineConstants.cs           ← Appendix A catalogue; MIGRATED (Config.GetInt, four `// TODO: balance pass` markers — a different marker class from the loader TODO)
+│   └── tests/
+│       ├── discipline-tests.asmdef
+│       ├── DisciplineStateTests.cs      ← incl. the residual-vs-reset mutant kill
+│       ├── DisciplineRulesTests.cs      ← incl. the FR-DC-017 drop mutant kill
+│       ├── AvailabilityTests.cs
+│       ├── CardLedgerFoldTests.cs
+│       └── DisciplineSaveCodecTests.cs  ← incl. the magic-check and substitution-swap mutant kills
 │
 └── tactical-instructions/             ← Spec #21  (T0 — bottom-of-graph data assembly; behaviour-neutral)
     │                                  │   References only project-constants (FR-TI-002); empty asmdef refs until that assembly exists.

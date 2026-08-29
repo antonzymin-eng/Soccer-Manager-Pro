@@ -12,7 +12,1020 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 28, 2026 — **PROJECT ARCHITECTURE GOVERNANCE INTEGRATION PLAN v0.4; documentation only.** Agreed rollout/activation revision: A1 is now an asmdef-only first slice that produces ERR-020-002/003 evidence without Roslyn/schema/#19/#20-governance dependencies; those existing #20 defects close before the coordinated governance amendment, after which the objective asmdef subset may become a required status before A8. Compiler-backed Class-A reachability moves to A4; Class-B gate-firing remains runtime/domain-owned (W12-style) evidence consumed by governance rather than implemented there. Integration contracts gain orthogonal `activation_state = active | intentionally-disabled | pending-integration | unresolved`; intentional disablement requires a machine-resolvable disable anchor and cannot act as a suppression. KD-W1 becomes a machine tuning precondition, proposed as FR-TS-097. Certifying Roslyn extraction must be built from source at the governed checkout with pinned .NET SDK/compiler/config identity. Actual #19/#20 normative files, SPEC_INDEX, and file-manifest remain intentionally untouched at this draft stage; D1–D4 remain frozen; no code, tests, CI workflow, runtime behavior, save/schema version, gameplay constant, RNG stream/domain tag/draw site, or draw order changed.
+> **Last Updated:** August 29, 2026 — **CI TRIAGE on PR #341: three of the four red checks fixed;
+> the fourth is the owner-held band and was not touched.** Tooling and documentation only; no `.cs`
+> and no `.asmdef` changed, so no gate run is owed. The three fixed checks were all introduced by this
+> branch — `doc-consistency-check.py` and its CI step do not exist on `main` at `ec555e6`, `main`'s
+> `README.md` has no MD018 hit, and `spec-error-log.md` is 824,073 bytes there against 1,057,156 here.
+>
+> **Markdown lint (3 × MD018).** `README.md` paragraph wraps had put `#29`, `#34`, `#41` and `#44` at
+> the start of a line, where markdownlint reads a spec reference as an ATX heading. Rewrapped so the
+> reference ends the previous line; MD013 is off in `.markdownlint-cli2.yaml`, so nothing else moved.
+> Verified with `markdownlint-cli2@0.13.0` under the CI globs: 3 errors → 0.
+>
+> **Unity asset hygiene — the binary guard was asking a Markdown file to go to Git LFS.**
+> `check-binaries.sh` failed on `spec-error-log.md` at 1,057,156 bytes, 8,580 over its 1 MiB line. Its
+> own header says it exists for "binary game assets (textures, models, audio, prebuilt libraries)", and
+> the five largest tracked files are now all append-only text — `spec-error-log.md` 1,057,156,
+> `CHANGELOG-src.md` 809,677, `MatchEngine.cs` 650,383, `file-manifest.md` 618,508, `CHANGELOG.md`
+> 600,254 — so three more cross the same line shortly. LFS is the wrong home for every one of them: it
+> would break the grep-based tools in `tools/` (`doc-consistency-check.py` reads these files directly)
+> and destroy the line-level diff that makes an append-only chain auditable at all. The guard now
+> classifies by git's own heuristic (a NUL byte in the first 8000 bytes) and holds text to its own
+> ceiling — `TD_TEXT_THRESHOLD_BYTES`, default 4 MiB — never to the LFS requirement. Binaries are
+> unchanged at 1 MiB. **Not a threshold raise:** the binary path was not weakened, and a runaway text
+> file still fails. Both paths negative-tested — a planted 2 MiB non-LFS binary is still caught, a
+> planted 5.4 MB text file trips the new ceiling, and the real tree passes. One latent defect fixed on
+> the way in: the first form of the exit test was `[ a ] || [ b ] && exit 1`, which under this script's
+> `set -euo pipefail` exits 1 on the *success* path.
+>
+> **Spec hygiene — 24 findings → 0, and 8 of them were a bad merge, not stale prose.** The merge at
+> `d83e893`/`a605f77` resolved three `open-issues.md` entries and five `file-manifest.md` supplement
+> rows by keeping **both sides as separate records** instead of unioning them. In every one of the
+> eight, the shorter copy carried the currency annotation and the longer copy carried the newer body,
+> so the file simultaneously published two versions of the same issue — and the duplicate entries were
+> inflating this file's own active count, the exact defect a de-duplication pass had to correct here
+> once already. Resolved as unions: the longer body kept, the annotation re-inserted at its original
+> offset and advanced to the target's actual newest version, the duplicate dropped. Active open issues
+> 22 → **19** by recount; `file-manifest.md` supplement rows lost five stale twins (`gk-conversion-at-
+> contact` v1.0 under a live v1.3, `gk-rush-trigger` v1.1 under v1.5, `close-chance-creation` v1.0
+> under v2.2, `match-engine-wiring-backlog` v1.0 under v1.13, `gk-contact-rate` v1.0 under v1.4).
+>
+> The remaining ten citations were genuinely stale and were advanced in the file's own documented
+> `vOLD, now vNEW` form rather than by rewriting the dated half: `close-chance-creation-design.md`
+> → v2.3 (four sites), `match-engine-wiring-backlog.md` → v1.13 (two),
+> `interactive-unity-client-design.md` → v0.21 (two), `injury-aging-research-alignment-design.md`
+> → v0.7 (two). Two were checker false positives rather than stale claims, and were fixed at the
+> prose rather than by loosening the tool: in `spec-error-log.md` a "Files Affected" row read
+> "`AbilityModel.cs` **now** hosts the curve (v0.4)", where "now" within ~30 characters of a version
+> is read as a currency assertion by the checker's closed marker set — the "now" is dropped, matching
+> every sibling row in that same table; and in `open-issues.md` a bare "backlog v1.9" let the version
+> bind to `close-chance-creation-design.md` two clauses earlier, so the backlog is now named in
+> backticks, which is what makes the binding refuse.
+>
+> **Cardinalities.** Design supplements 60 → **61** on two surfaces (`README.md`,
+> `adversarial-review/SKILL.md`); `ls docs/tracking/*-design.md` measures 61. The assembly-less
+> agreement set had seven surfaces at 19 and `orienteer.md` alone at "roughly 20" — set to 19, the
+> value `README.md` carries a derivation for. The roadmap's "**eight of the 32 open findings**" was
+> **not** an assembly-less figure at all: it counts football-judgment-proxy-review findings and was
+> pooled into that agreement set only because "have no `src/` assembly" sits in the preceding clause.
+> Reworded so the two figures are not adjacent, and its totals brought up to the record in
+> `open-issues.md` — 32 open → **29**, 24 workable → **21**, since batch 1 landed August 22. The
+> deferred count of eight is unchanged and still reconciles (29 − 21 = 8).
+>
+> **Also repaired, same merge, same class:** `CHANGELOG.md` and `CHANGELOG-src.md` each carried **two**
+> bare `**Last Updated:**` labels, which makes each file self-contradictory about its own currency —
+> the defect this chain's own rule exists to prevent and that has been fixed here at least three times.
+> Both relabelled to `(prior)` under this entry; `CHANGELOG-src.md` keeps its v2.125 head bare and
+> marks main's v2.124 `(prior)`. No historical entry was edited.
+>
+> **RECORDED, NOT FIXED.** `CHANGELOG.md` now holds two *concatenated* chains rather than one
+> date-ordered one: this branch's August 19-and-earlier entries sit above `main`'s August 28 head, so
+> the file is newest-first *within* each half and not across the seam. Every entry is present and
+> dated and no entry was rewritten, so the record is intact; interleaving ~920 lines of someone else's
+> chain is a restructuring, not a CI fix, and it is left for an owner call. The same seam is why
+> `CHANGELOG-src.md`'s v2.125/v2.124 heads disagree between date order and version order.
+>
+> **Determinism:** no `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream, domain tag, draw site, or
+> draw-order change. No production or test source was touched, so nothing was perturbed downstream —
+> no scenario tick window, no per-90 band, no A4a round-resolution fit, no `FR-PO-052` perf baseline.
+> Checked, nothing moved.
+>
+> **Gate:** not re-run for this change, and none is owed — no `.cs`, no `.asmdef`, and nothing under
+> `tools/dotnet-ci/` moved, so the tree the gate compiles is byte-identical to the one CI already
+> measured. Quoting that run rather than a fresh one: **CI run 33217732663, head `a605f77`, all 34
+> suites reported against 34 `src/*/[Tt]ests/*.asmdef` — a complete sweep — 3,040 passed, 1 failed,
+> 207 skipped.** The single failure is `sim_match_engine_close_chance` in `MatchEngine.Tests`
+> (**472 passed / 1 failed / 11 skipped**), the band held RED by owner decision at
+> `close-chance-creation-design.md` §10.9 item 6, failing at **exactly** its recorded values —
+> `meanCosine` −0.165 against the −0.16 bound and `goalwardShare` 0.407 against 0.42, 2 of 3
+> predicates. No new failure, no band rebaselined, and it was not touched. Per this repo's own trap
+> list the gate script is `set -euo pipefail` and exits before its own verdict, so **no
+> `── Gate PASSED ──` line and no quarantine report was printed** — the quarantine state below comes
+> from inspecting `tools/dotnet-ci/known-failures.txt` directly, which holds no entries.
+
+> **Last Updated (prior):** August 19, 2026, evening — **Round 14: an EXTERNAL reviewer found two exploitable
+> holes in round 9's own security fix, and both were confirmed by execution before being fixed.** This is
+> the first round of this series with fresh eyes on it, and it immediately found what four single-handed
+> rounds did not. Tooling and documentation only; no `.cs` and no `.asmdef` changed, so no gate run is
+> owed.
+>
+> **The finding that matters is not either bug — it is that both have one root error.** Round 9's H1 fix
+> validated a *shape* rather than the argv that actually executes. Everything downstream of that was
+> sound reasoning about the wrong object.
+>
+> **P1(a) — `awk -v` walked straight past the program.** The program was located as "the first operand
+> that does not start with `-`", but `-v` and `-F` take a SEPARATE argument, so
+> `awk -v x=1 'BEGIN{system("touch /tmp/pwn")}END{print 1}' CLAUDE.md` handed the escape check `x=1`,
+> never examined the program, ran `system()`, and returned the claimed integer under a printed **PASS**.
+> Reproduced here before fixing: the artefact was created. Fixed by scanning EVERY token rather than the
+> one guessed to be the program — that needs no awk option grammar and cannot be outflanked by adding
+> one, since `system`/`getline` must appear literally to be called. The same heuristic was wrong for
+> `python3` (`-X foo.py bar.py` executes `bar.py`), so the script must now be `argv[1]` with no
+> interpreter flags at all.
+>
+> **P1(b) — the flag check ran before glob expansion.** With a repo file named `--output=canary`, the
+> validated command `sort * \| wc -l` expanded to `sort --output=canary …` and **wrote that file**.
+> Reproduced here before fixing. Both halves closed: an expanded filename that would be read as an
+> option is refused by name, and the entire escape-hatch check re-runs on the post-expansion argv.
+>
+> **P2 — the derived denominator was still baked into the pattern.** Round 9 derived the registry size
+> instead of hard-coding 53, but the pattern still searched only for the CURRENT size, so on the day the
+> registry grows the group matches nothing, prints a NOTE, and CI passes — leaving the "19 of the 53"
+> prose stale and unreported, which is the exact transition that fix existed to catch. Measured: at
+> `spec_folders=54` against today's prose, the old form raised **0** findings. The denominator is now
+> matched and checked against the measured count, naming each stale site directly; at 54 that is **9**
+> findings, at today's 53 it is clean. A stale-denominator site is no longer pooled into the agreement
+> numerator either, since a figure whose denominator moved cannot be compared with one whose did not.
+>
+> **What this costs the record.** The standing caveat in the three entries below — that delegation was
+> unavailable and the fresh-eyes property was never obtained — was not a formality. Two exploitable
+> holes sat in a security fix through rounds 10, 11, 12 and 13, all of which re-read that file, and none
+> of which found them, because the reviewer and the author were the same. **A delegated pass over
+> `tools/doc-claim-check.py` is no longer "worth the tokens"; it is the demonstrated gap**, and it
+> remains owed even after this round.
+>
+> **Verification:** `doc-claim-check` PASS (3 executed, unchanged; the two exploit commands are declined
+> and NAMED, and neither artefact is created); `doc-consistency-check` PASS (34 excusals 23/4/7/0,
+> 16 unresolvable); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
+> `assembly-tier-check` PASS. Figures measured AFTER this entry was written, per the correction
+> annotated on the round-13 entry below.
+
+> **Last Updated (prior):** August 19, 2026, later still — **Round 13: `doc-claim-check.py` gains the
+> dated-record model, ported from the citation checker rather than reinvented.** Tooling and
+> documentation only; no `.cs` and no `.asmdef` changed over `12eba7d~1..HEAD`, so no gate run is owed.
+>
+> **The hazard, and why a mechanism rather than a resolution.** A claim written into an append-only
+> record states what a command returned AT THE TIME. When the underlying figure later moves, the record
+> is still correct — and this gate would fail CI on it. That is not hypothetical and it was not someone
+> else's mistake: **at round 12 the pass writing the CHANGELOG entry quoted Spec #20's own drift-prone
+> example verbatim, with its value, into the chain**, which fails the day the 36th assembly lands. It
+> was caught before landing and the example is now described rather than quoted — but "remember not to
+> write that" is not a mechanism, and this series exists because relying on remembering is what failed.
+>
+> **Ported, not reinvented.** The regions come from `doc-consistency-check.py` — its
+> `record_regions` plus a new `frozen_chain_span()` extracted out of `blank_frozen_history` for the
+> purpose — so the two checkers cannot disagree about which bytes are frozen history. A second copy of
+> that definition would show up as one tool excusing a record the other reports, which is the
+> duplicate-claim defect this repo files repeatedly. Both of the model's load-bearing properties are
+> kept: the claim is still **executed** and the mismatch **excused rather than skipped**, counted and
+> named so "this historical figure no longer reproduces" stays visible without gating; and an explicit
+> **"now" / "currently" / "today" pierces** the excusal, because a record asserting a value is current
+> is a present-tense claim wherever it sits.
+>
+> **0 excusals on today's tree — this is prophylactic, and is stated as such rather than dressed up as
+> a fix.** Proved four ways on a scratch mirror, in both region kinds (frozen header chain and log
+> body): the head entry above the marker is REPORTED, a plain record below it is EXCUSED and named, a
+> reasserted record below it is REPORTED. `doc-consistency-check` output verified byte-identical either
+> side of the extraction.
+>
+> **Verification:** `doc-claim-check` PASS (3 executed, 30 declined, 0 excused); `doc-consistency-check`
+> PASS (34 excusals 23/4/7/0, 15 unresolvable *(⚠️ corrected August 19, 2026, round 14: **16**. The figure was measured before this entry was written, and WRITING it moved the number — a new head entry pushes the previous one below the `(prior)` marker, which changes what the citation scan reads. So this checker's own coverage figures cannot be measured before the entry that quotes them. Third recorded instance of "a count taken mid-pass does not survive the pass", and the first where the act of recording is itself what invalidated it.)*); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
+> `assembly-tier-check` PASS. **Still owed, unchanged:** a DELEGATED review pass over
+> `tools/doc-claim-check.py` — every round from 9 on ran single-handed, so the fresh-eyes property was
+> never obtained on code whose author was also its reviewer.
+
+> **Last Updated (prior):** August 19, 2026, later — **Adversarial-review rounds 10–12, and a premature
+> closure withdrawn.** Documentation and tooling only; no `.cs` and no `.asmdef` changed (verified over
+> `12eba7d~1..HEAD`, where the only `src/` path touched is `src/CLAUDE.md`, the coding guide), so no
+> gate run is owed.
+>
+> **The withdrawal first, because it is the finding about the process rather than the code.** The
+> round-11 commit declared the cycle converged on an L-only round. That claim does not hold: this
+> skill's termination rule is a **full fresh review over the entire scope** returning only Lows, and
+> round 11 read ONE FILE. An L-only sweep of the file you just edited is not a clean pass over the
+> estate — it is the narrowest possible reading of the bar, made by the author of the code under
+> review. Withdrawn, and the loop continued. **This is the round-8 diagnosis one level up:** rounds
+> 5–8 kept finding fixes that enumerated instances where the defect was a class; round 11 declared
+> convergence on a scope that was a fraction of the artifact.
+>
+> **Round 10 — 1 Medium, 1 Low, both in round 9's own output.** The Medium was in the RECORD: round 9's
+> entry claimed "no `.cs` and no `.asmdef` changed anywhere on the branch", which is false — the branch
+> carries the merged #44 discipline work from PR #322, some 60 `.cs` files. The phrasing was inherited
+> verbatim from the round-7 and rounds-4–7 entries, so **three consecutive entries asserted a scope none
+> of them measured**. Corrected to the range that is true, and stated AS a range. The Low was in the
+> tool: the negation test ran before the is-this-a-command test, so a backticked IDENTIFIER standing
+> near a negation was counted and printed as a declined CLAIM — five of eight "negated" declines were
+> of that kind, overstating the coverage being given up in the one figure whose purpose is to state it
+> honestly. Declines 30 → 25, every remaining line naming a real command.
+>
+> **Round 11 — 2 Low.** `SEP = object()` was dead the moment round 9 wrote it: a pipeline-separator
+> sentinel standing beside a tokenizer that appends segments directly, with a comment describing a
+> mechanism that does not exist. Plus one blank line.
+>
+> **Round 12 — the coverage gap round 9 named and did not close.** Round 9 filed the unrecognised
+> VALUE-FIRST claim shape — a count stated before the command that checks it — as a Low and stated it
+> in the header. Stating
+> a gap is not closing one, and the live instances are the drift-prone kind: **Spec #20 §5.4.5 states
+> the `src/` assembly count in that shape, in APPROVED text, and it goes stale the day the 36th
+> assembly lands.** The pre-fix sweep found seven live instances, of which **six** quote a real command (the
+> seventh, `permille/1000f > 0.6f`, is an expression that merely looks path-shaped); every one was
+> evaluated by hand first and all are currently TRUE, so this adds coverage rather than findings —
+> executed claims 2 → **3**, and the #20 figure is now under the checker. *(Two things the first draft
+> of this entry got wrong, recorded because both are the trap the rounds-4–7 entry below already named.
+> **(1)** It said "seven claims, all real": that count was taken before the discriminator was tightened,
+> and it then went stale the moment this pass kept writing — a count taken mid-pass does not survive the
+> pass. **(2)** The draft restated Spec #20's example HERE, verbatim with its value, which put a live
+> drift-prone claim inside an append-only chronicle: `doc-claim-check` has no dated-record model, so the
+> day the 36th assembly lands it would have failed CI on a correct historical record. The example is now
+> DESCRIBED rather than quoted, here and in the manifest row. One authoritative site per claim — the
+> spec's — is the whole point of checking it.)* **The complement test caught a defect in the addition
+> before it landed**: in this shape the negator PRECEDES the number ("no longer 3 files (`cmd`)"), so
+> reusing the forward shape's forward-looking gap reported a correctly-negated claim as a mismatch. The
+> window now looks back, bounded to the line. That is the third time in this series that constructing
+> the complement, rather than testing the motivating instance, is what found the defect.
+>
+> **Also checked and clean, so that the next round does not re-derive it:** the delegated version-history
+> parser in `recurring-defect-lint.py` — which `doc-consistency-check.py` depends on for every citation
+> it resolves — was swept for disagreement between a file's `**Version:**` header and its parsed table
+> across every markdown file in `docs/`, root and `.claude/`. One disagreement exists
+> (`ui-framework-t0-implementation-plan.md`, header 0.3 vs table 0.2) and it is already documented and
+> handled in `open-issues.md` as an unversioned edit, with the citing text carrying a "now v0.2" pointer
+> the checker accepts. No parser defect.
+>
+> **Standing caveat, restated because it bounds every round above:** delegation was unavailable in this
+> session, so all four passes ran single-handed rather than through fresh reviewer subagents. The
+> fresh-eyes property this loop normally buys was NOT obtained, and it matters most exactly where
+> rounds 10–12 operated — on code whose author was the reviewer. A delegated pass over
+> `tools/doc-claim-check.py` remains worth the tokens.
+>
+> **Verification:** `doc-claim-check` PASS (3 executed, 30 declined, each named); `doc-consistency-check`
+> PASS (34 excusals 23/4/7/0, 15 unresolvable); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
+> `assembly-tier-check` PASS. Value-first coverage proved in all three directions on a scratch mirror:
+> a correct claim is silent, a wrong one is reported, a negated one is declined and named.
+
+> **Last Updated (prior):** August 19, 2026 — **Adversarial-review round 9: the tool round 8 built to end the
+> recurring defect class shipped WITH that class in it — three High findings in
+> `tools/doc-claim-check.py`, every one proven by reproduction before the fix and re-proven in both
+> directions after.** Documentation and tooling only: no `.cs` and no `.asmdef` has changed anywhere
+> in this adversarial-review series — verified over `12eba7d~1..HEAD`, where the only `src/` path
+> touched is `src/CLAUDE.md`, the coding guide — so no gate run is owed. *(That range is stated
+> because the looser phrasing this entry first used, "anywhere on the branch", is FALSE and was
+> inherited from the round-7 and rounds-4–7 entries below: the branch also carries the merged #44
+> discipline work from PR #322, which is 60-odd `.cs` files. Caught in the round-10 pass over this
+> entry, by re-deriving the claim instead of re-reading it — which is the whole method this series
+> exists to install, applied to the entry announcing it.)*
+>
+> **Why this round existed, and what it confirms.** Round 8's own diagnosis was that a correction pass
+> is itself a high-defect-rate activity — nine of its ten Highs had been introduced or missed by the
+> previous fix pass — and its answer was to stop reviewing harder and build a checker. Round 9 is the
+> fresh pass over that answer. The checker is real and it works; it also arrived with a silent decline
+> path and a header asserting a safety property it did not have. **The lesson is not "the tool was
+> bad" — it is that building the detector does not exempt the detector from the class.** The three
+> Highs below were all invisible to reading and obvious to running.
+>
+> **H1 — "read-only by construction (no writing command is on the list)" was false, and the tool
+> executes untrusted document text in CI.** The allow-list gates `argv[0]` only, and several genuinely
+> read-only binaries carry a write or execute escape hatch behind a flag. Demonstrated: a document
+> containing ``sed -i s/canary/PWNED/ victim.txt`` → 0 REWROTE the file while the tool printed **PASS**.
+> `python3 -c`, `find -delete`/`-exec`, `sort -o`, `rg --pre`, `git -c`, `uniq IN OUT` and
+> `awk 'BEGIN{system()}'` were reachable the same way, and `ci.yml` runs this step on `pull_request`,
+> so the input is a PR's own markdown. Fixed by naming the hatches per binary rather than trusting the
+> list: `DENIED_FLAGS`/`DENIED_FLAG_PREFIXES`, git globals scoped to before the subcommand, `sed`
+> dropped outright (its write lives in its script, where no flag list can reach it), `awk` KEPT with
+> `system`/`getline` refused — because both of the repo's only two executable claims use `awk` and
+> dropping it would have made every run a vacuous pass. **The git-global scoping is the part worth
+> keeping:** refusing `-c` anywhere broke `git grep -c`, i.e. both live claims, taking the tool to
+> zero verified claims. Nothing in the reasoning showed that; re-measuring against the corpus did.
+>
+> **H2 — quoted regex patterns were glob-expanded into filenames, silently changing the command.**
+> `shlex.split` discards quoting, so `find . -name '*.md' \| wc -l` ran as
+> `find . -name CLAUDE.md doc.md`. All 7 glob-character tokens in the live corpus are quoted regex,
+> not shell globs. Replaced with a quote-preserving tokenizer; only tokens whose glob characters are
+> all unquoted expand. It also splits pipelines on unquoted `|` alone, so `grep -c 'a|b' f` stops
+> being a parse failure.
+>
+> **H3 — pipeline exit status was never checked, so the tool fabricated a mismatch against a correct
+> document.** A failing segment's empty output flowed downstream: `grep -rn 'X' nosuchdir/ | wc -l`
+> printed `0`, reported as "document says 218; command returns 0". Combined with H2 that is a complete
+> false-failure path on correct prose — the defect this tool exists to catch, wearing the other sign,
+> in a step wired to fail CI. A non-zero exit now DECLINES the claim, with grep/rg/diff/git `1` (no
+> match / files differ) as the named benign case.
+>
+> **M1 — the third, silent decline path.** An unlisted binary was dropped by a bare `continue`,
+> counted nowhere and named nowhere, while the header, the file-manifest row and the round-8 entry all
+> published "every declined claim is counted AND NAMED". 9 live instances, all real
+> (`tools/recurring-defect-lint.py` at seven sites, `curl`, `ps … | grep`). Counted and named now,
+> behind a command-SHAPE discriminator, because `CLAIM` also matches ~1,100 backticked IDENTIFIERS
+> (`SNAPSHOT_SCHEMA_VERSION` **20 → 21**) that are not commands and would drown the signal.
+> **M2** — an absolute glob (`ls /etc/*.conf`) crashed the tool with an uncaught `NotImplementedError`;
+> document text must not be able to crash the checker. **M3/M4, in `doc-consistency-check.py`** — the
+> historical-marker suppression was the one excusal path incrementing no counter, while every run
+> printed "excusals are counted, never silent" (0 live, so latent — and it is the most heuristic of the
+> four mechanisms, so the one whose silence costs most); and the oracle-less agreement group hard-coded
+> the registry size 53, so on the day the registry reaches 54 it silently checks nothing, with no
+> zero-self-check to catch that. Both mutation-proved in both directions. **L1** — a backticked run of
+> whitespace crashed on `"".split()[0]`. **L2** — the header never stated that only the
+> command-then-value claim SHAPE is recognised, so root `CLAUDE.md`'s "8 scripts (`ls tools/*.py`)" is
+> invisible AND uncounted.
+>
+> **Two findings outside the tools.** `docs/specs/code-standards/appendices.md` carried **two rows
+> numbered v1.4** — round 8's own fix pass took a number round 7's had already used — which
+> `recurring-defect-lint.py` reported as the tree's ONLY ERROR while root `CLAUDE.md` still recorded
+> "0 ERROR tree-wide". Renumbered ascending (round-7 L3 keeps 1.4, round-8 H1 becomes 1.5, header
+> follows) → `docs/specs/code-standards/appendices.md` **v1.5**, and the lint is back to 0 ERROR /
+> 122 WARN / 27 INFO. And the round-8 entry below published "7 negated-or-historical" where its own
+> tool, run at its own commit, prints 8 — annotated in place rather than rewritten.
+>
+> **Deliberately NOT done: no `ERR-` id was filed.** The repo obligation covers a finding that
+> contradicts APPROVED spec TEXT; these are tool defects, and the duplicate version row is a hygiene
+> slip the lint already reports mechanically — the August 8, 2026 pass over 275 such ERRORs fixed them
+> without filing ids, and that precedent is the right one. **Verification:** `doc-claim-check` PASS,
+> 2 executed (unchanged), declines 21 → **25** (+9 previously-silent unlisted-binary, −5 identifier
+> pseudo-claims dropped in the round-10 pass — a backticked IDENTIFIER beside a negation was being
+> counted and printed as a declined CLAIM, overstating the coverage the tool was giving up in the very
+> figure that exists to state it honestly — and the rest recategorised), every remaining line naming a
+> real command;
+> `doc-consistency-check` PASS, 34 excusals (23 region / 4 chronicle / 7 phrasing / 0 marker), 15
+> unresolvable; `recurring-defect-lint` 0 ERROR; `assembly-tier-check` PASS. The security fixes were
+> verified on a scratch mirror in both directions: ten hatch attempts all refused with the canary file
+> intact and no file created, and the complement — the same quoted-glob command with its TRUE value
+> stated — passes.
+
+> **Last Updated (prior):** August 18, 2026, later — **Adversarial-review round 8, and the conclusion drawn from
+> five rounds of it: `tools/doc-claim-check.py` CREATED, because the recurring defect could not be closed
+> by reviewing harder.** Documentation only; no `src/` code changed, so no gate run is owed.
+>
+> **The diagnosis, which is the part worth reusing.** Rounds 5–8 kept surfacing the same three shapes, and
+> round 8 found that **nine of its ten High findings were introduced or missed by the previous FIX pass**,
+> most of them by mine. (1) **Fixes enumerate instances; defects are classes** — `ERR-020-001` renamed a
+> constant in §4.2 but not the appendix; round 7 renamed §C.1 but not §C.2 one section below; "on every
+> push" was corrected at Spec #20's four sites and left at three more. (2) **Verification prose is never
+> itself verified** — root `CLAUDE.md` cites a grep that refutes its own claim, §9.2 Q-04 ratified "three
+> IDs" against six, §9.1 C-02's recorded value broke *inside* the commit that claimed to re-run every
+> checklist command. (3) **The detector inherits the author's blind spot** — a comment justifying the code
+> beside it, a checker heuristic tuned on its motivating example. `ERR-030-048` is the pure case: a comment
+> asserting a gate that did not exist, written by the pass fixing the defect whose own comment asserted a
+> gate that did not exist.
+>
+> **Root cause: prose has no compiler.** In `src/` a missed rename is a build error and a dangling
+> reference will not link. In specs and tracking documents nothing binds, so the same classes fail
+> silently — which is why the defects cluster in the FIX passes rather than the original work.
+>
+> **So the answer was a tool, not another round.** `doc-claim-check.py` runs two oracle-free checks.
+> (1) It **executes the verification commands the documents quote** and diffs the stated value — this repo
+> writes claims in machine-checkable form constantly and nothing ever re-ran them. (2) It **resolves
+> `Type.MEMBER` references inside csharp spec fences** against the same file's own declarations, the class
+> that let `ERR-020-001` dangle in Appendix C for three months. On first run it found one live dangling
+> reference (`BallPhysicsConstants.MAX_SUBSTEPS`, round 7's own rename) and one un-annotated stale proof
+> (`ERR-020-006`'s live command offered as evidence for a historical 218, now 251; and 218 counts LINES,
+> not occurrences — the real figure is 235). Both fixed here.
+>
+> **What it deliberately does not do, recorded because overclaiming is the failure mode this series is
+> about:** it verifies only claims whose command prints a single integer, and resolves identifiers only
+> within one file. **Every claim it declines is counted AND NAMED** — 2 unsafe, 5 not-self-contained,
+> 6 not-a-single-integer, 7 negated-or-historical against 2 executed —
+> *(⚠️ both halves corrected August 19, 2026, adversarial-review round 9. The FIGURE: run at
+> this entry's own commit `f23f480`, the tool prints **8** negated-or-historical, not 7 — a
+> count published in the entry announcing the tool built because this project kept publishing
+> verification figures nobody re-ran, and one its own checker cannot catch, since the value
+> comes from a multi-line report rather than a single-integer command. The CLAIM: "every
+> declined claim is counted AND NAMED" was false as written — an unlisted BINARY was dropped
+> by a third, silent `continue`, 9 live instances, now counted and named.)* — because rounds 5 and 6 both found
+> this project's checkers hiding real defects behind silent skips. Commands are untrusted document text:
+> allow-listed read-only binaries, no shell, globs expanded in-process.
+>
+> **Its own first run produced two false positives, both fixed and both instructive**: `grep -c '^- \*\*'`
+> quoted without its file operand reads empty stdin and returns 0 (declined as not-runnable-as-written,
+> not reported as a mismatch), and "the plain `grep …` **no longer returns 218**" was read as an assertion
+> that it does (negation detection added). Tuning a matcher on the instances that motivated it and never
+> on their complement is defect shape (3), committed by the tool written to catch it.
+>
+> Also landed: the three hygiene checkers now carry `if: always()` in `ci.yml`, so one failure no longer
+> masks the others (round-8 tooling M3) — a reviewer had been learning one problem per push.
+
+> **Last Updated (prior):** August 18, 2026 — **Adversarial-review rounds 4–7 over the documentation estate: two
+> checker tools built and CI-wired, two APPROVED specs corrected, four ERR ids filed. No `src/` code changed,
+> no `.cs` or `.asmdef` touched anywhere on the branch, so no gate run is owed.**
+>
+> **What the series was actually for, recorded because it is the reusable part:** this project's rules files
+> and tracking documents had become large enough that their claims drifted faster than anyone re-derived them,
+> and the drift was invisible because every check was a human reading prose. Rounds 4–5 built the two tools
+> that make it mechanical — `tools/assembly-tier-check.py` (the §3.5.2 tier order against the real `.asmdef`
+> graph) and `tools/doc-consistency-check.py` (cross-document version citations and cardinalities) — and wired
+> both into `ci.yml`'s `Spec hygiene checks` job. **Both tools were found INVERTED by the review that
+> followed them**, twice: round 5 found the citation checker registering this repo's phrase for stating the
+> CURRENT version as a marker meaning "superseded", and round 6 found a guard meant for version-history rows
+> exempting **every** markdown table row — 27% of all citations, including the manifest inventory, which is
+> the exact surface round 3's headline defect lived on. A checker that reports green over the class it exists
+> to catch is worse than no checker, and it took an adversarial pass to see it each time.
+>
+> **Round 6 — 19 High / 24 Medium / 19 Low across four lanes.** The load-bearing ones: **`ERR-030-047`**, #30
+> §3.4's normative pseudocode specifying a two-argument `OnClubFixturePlayed` that `ERR-044-014` had changed
+> two days earlier, together with the unfiltered-roster precondition it never propagated — an implementer
+> following the spec makes **every suspension permanent, silently**. **`ERR-020-006`**, Spec #20's constant-tag
+> list forbidding `[CROSS-PENDING]`, one of root `CLAUDE.md`'s six mandated tags, making all 218 uses in
+> `docs/specs/` MUST-level violations of an APPROVED spec. **`ERR-020-007`**, the `[CROSS]` const-mirror
+> carve-out, filed because #20 certified as compliant a declaration its own FR-CS-022 forbade. Plus README
+> reporting four wired subsystems as unimplemented and running four format-versions stale on
+> `SEASON_SAVE_FORMAT_VERSION`, and the A4a home/away correlation published at two mutually exclusive values
+> in files that carried both at once.
+>
+> **Round 7 — 8 High / 17 Medium / 6 Low.** Notable because **three of its Highs were introduced or preserved
+> by round 6's own fix pass**: §4.1 asserting an upward `.asmdef` reference is "a build error" (it compiles
+> cleanly — that is why the drift lasted fourteen months and why the tier checker had to be written); four new
+> "on every push" claims written the same day §3.5.2 corrected that exact phrase about that exact tool; and
+> **`ERR-030-048`**, the loud twin of `ERR-030-047` — the serve pair left UNGATED in the very block -047
+> rewrote, with a comment justifying its null-safety by citing a gate that did not exist. Implemented verbatim
+> it throws on the first fixture of any career without discipline wired. **The fix pass wrote the false
+> justification.** That is the finding worth keeping from this series: a correction round is itself a
+> high-defect-rate activity, and the only thing that caught these was re-reviewing the fixes as hostilely as
+> the original.
+>
+> **The checker's scope gap, closed at round 7.** With both inversions fixed the tool reported 37 findings,
+> essentially all false: it could not distinguish a **currency claim** ("X is at v1.5") from a **dated record**
+> ("filed against X v1.5"), and the tracking estate is mostly dated records. Closed with three mechanisms,
+> structure first and phrasing last — record REGIONS (`open-issues-resolved.md` whole-file; `spec-error-log.md`
+> from the Error Index to EOF), CHRONICLE targets (citations of the three append-only logs, where a version is
+> a timestamp), and four narrow record phrasings — under a **currency-reassertion override that pierces all
+> three**, so "now v1.6" is still reported inside a frozen region. That override is what stops the fix becoming
+> the blindness it replaced. Every excusal is **counted and printed**, never silent: 37 → 2, each mechanism
+> mutation-proven in both directions, and the two survivors were real. The tool then caught four stale currency
+> chains created by this pass's own version bumps, which is the first time it has policed its own author.
+>
+> **Files:** Spec #20 (all ten files), #30 `section-3.md` v2.18, `spec-error-log.md` v2.47, root `CLAUDE.md`,
+> `src/CLAUDE.md`, `README.md` v1.38, `file-manifest.md`, `open-issues.md`, `open-issues-resolved.md`,
+> `path-to-playable-roadmap.md` v0.23, `league-bootstrap-design.md` v1.7, `.claude/skills/**`, and the two
+> tools. **Deliberately NOT done:** the 37-residual doctrine question is answered in the tool, not by editing
+> the records it excuses — a dated record that names a superseded version is correct as history, and
+> "fixing" one to satisfy a checker falsifies the thing the record exists for.
+
+> **Last Updated (prior):** August 17, 2026 — **An owner decision pass over the seven decisions this project had
+> been carrying as advisory recommendations. Two shipped, five held, one found to rest on a false
+> premise. No `src/` code changed and no `.asmdef` moved, so no gate run is owed.**
+>
+> **The unifying reasoning, recorded because it is the reusable part:** every candidate for doing-it-now
+> except the two that shipped sits **upstream of a measured event** — the `GameplayConfigHolder.Bind`
+> pass, W2's arming, the youth/generated-cover ladder — that would force the work to be redone. So the
+> cheap, reversible items shipped and the expensive ones wait for their deciding measurement. Each hold
+> below names that measurement rather than a date, which is the difference between a hold and a stall.
+> ⚠️ CORRECTED August 18, 2026 (reviewed adversarial-review finding H16): the last sentence overclaims
+> by one, and the `Bind` pass does not belong in the measured-event list above. **Four of the five
+> holds name a deciding measurement**; the fifth — the DisciplineConfig restructure, HELD (4) — does
+> not, because "the `GameplayConfigHolder.Bind` pass" is an unscheduled intention that appears on no
+> roadmap and in no backlog (`open-issues.md`'s own entry, rewritten after review the same day, says
+> so in terms and says it should not be counted among the measured-event holds). Its checkable release
+> condition is instead **`DisciplineConfigCompletenessTests` going red** — the tripwire firing when a
+> non-`int` `[GT]` is added to `DisciplineConstants`.
+>
+> **SHIPPED (1) — `ERR-020-002` + `ERR-020-003` ADOPTED: the assembly layer taxonomy covers the whole
+> tree for the first time since it was written.** Spec #20 §3.5.2's three-gameplay-layer box placed 19
+> of 35 assembly folders and carried an empty `UI (Stage 1+ — not specified yet)` row; FR-CS-046
+> ("references flow one direction only") is decided relative to two layer memberships, so for ~46% of
+> the tree — including **every reference into or out of the composition root** — it decided nothing.
+> ⚠️ CORRECTED August 18, 2026 (reviewed finding H11; source: #20 `section-3.md` v1.2, which corrected
+> the same figure in its own 1.1 row): the retired box placed **14** of 35, not 19 — 8 Physics +
+> 4 Mechanics + 2 AI, the `UI` row empty — leaving **21** undecided, i.e. **60%** of the tree, not
+> ~46%. The 19 was the FORMER `src/CLAUDE.md` accounting (14 layer rows + 3 infrastructure rows +
+> 2 cross-cutting assemblies in prose), a way of counting #20 v1.2 explicitly rejected; v1.2
+> re-derived the 14 by counting the retired box itself (`git show 0e78d381~1`).
+> The August-2 ten-tier proposal is adopted, extended from the 31 folders it was drafted against to the
+> **35** now in `src/`: `training-system`, `injuries-medical` and `discipline` into **Management**,
+> `client-app` into **Client**, each placed from its `.asmdef` references rather than its name.
+> **Re-verified against the live graph at adoption, not carried over from the draft: 35/35 folders
+> placed, 0 upward references, 105 downward, 38 intra-tier, graph acyclic.** Adopting changed nothing
+> that compiles — it constrains only what is written next, which is the whole value and also why the
+> cost was zero. **Two rules were added that the proposal did not contain, both surfaced by the new
+> placements:** (a) **a tier is a ceiling, not a licence** — `discipline` sits in Management but #44's
+> own FRs forbid it `match-engine` and `season-save`, so without this sentence adoption would have read
+> as *widening* a constraint #44 deliberately took on; (b) **test assemblies are not members of the
+> order** — `event-system.Tests` references `decision-tree`, tier 0 to tier 4 and entirely legitimate,
+> so an adopted order silent on this would have made every test assembly a violation. `ERR-020-003`
+> closed with it: both files now **label** their arrow (`──►` "is available to" in #20, `←` "is
+> referenced by" in `src/CLAUDE.md`), so a reader checks the label rather than the arrowhead. Files:
+> #20 `section-2.md` **v1.1** *(since v1.2, the same-day reviewed-findings pass)* (FR-CS-046 restated; **FR-CS-046a** registered as a sub-clause so the
+> FR-CS-046…055 span and the 73-FR count are unchanged; the published double negative "No assembly
+> **MUST NOT** reference…" repaired), `section-3.md` **v1.1** *(since v1.3)* (§3.5.2 replaced), `section-5.md`
+> **v1.0.2** (§5.4.5 item 1), `src/CLAUDE.md` (taxonomy + Reference Direction rewritten, the ⚠️
+> 16-unlisted banner retired, the `code-standards` phantom infrastructure row struck,
+> `project-constants` stated as tier 0 rather than infrastructure). Three FR-CS-056/057 header defects
+> corrected in passing: those three section files each read `Status: DRAFT` against a SPEC_INDEX status
+> of APPROVED, two of them behind their own version history. **Deliberately not swept, and listed so a
+> later widening does not have to rediscover it:** `outline.md` / `outline-mid.md` /
+> `outline-detailed.md` still describe the three-layer chain — pre-authoring artifacts, not normative
+> text; every *normative* site was swept and no other hit exists in `docs/specs/`.
+>
+> **SHIPPED (2) — the injury/aging research-alignment supplement SIGNED OFF** (v0.5; the file is now
+> at **v0.6** — see the ⚠️ correction at the end of this block). All three
+> structural decisions accepted as written: the `Severe` tier + `RECOVERY_MAX` raise (R-5), the #41→#28
+> aftermath seam (R-6 / KD-R4, with v0.3's consumer-owns-the-seam-type correction), and the
+> deterministic-not-drawn PA reduction (KD-R4a). It was AR-converged and blocking only alignment work,
+> and a later revision costs one supplement edit — against the standing cost of a live-but-unsigned
+> design the next #41 landing has to read and guess at. §11 steps 1–2 complete; steps 3–5 (the
+> ERR-041-013..018 / **ERR-028-020..022** back-props (re-allocated August 17, 2026 — the -002..-004 block named here was already consumed: -002 at #53's approval on July 27, -003/-004 at the #28 T1/T2a landing), the section patches, the two implementation tranches)
+> are unblocked and **unscheduled**. The standing caveat is unchanged and load-bearing: R-2's
+> under-exposure arm must re-fit *against* `BaselineDailyRisk` rather than beside it, and every `[GT]`
+> it moves is subject to KD-W1 — which is the same W2 dependency four of these seven items share.
+> ⚠️ CORRECTED August 18, 2026 (propagating the supplement's own v0.6 post-sign-off correction,
+> reviewed findings H2 + H3): this block recorded the id re-allocation but not the finding that
+> mattered — the sign-off's factual premise **KD-R1, "both specs are pre-code so the changes are
+> free", was re-verified after the fact and found VOID.** #41 and #28 both have live save codecs
+> (`MedicalSaveCodec` since August 5, `ProgressionSaveCodec` since August 8, both mandatory sub-blobs
+> of #30's frame), so **R-4 and R-6 now cost a `MEDICAL_SAVE_FORMAT_VERSION` 1 → 2 and a
+> `PROGRESSION_SAVE_FORMAT_VERSION` 1 → 2 bump with no migration path** (the KD-7/F3 no-migration
+> refusal). The owner's sign-off of the three structural decisions (R-5, R-6/KD-R4, KD-R4a) is
+> unchanged; the cost/timing argument is not.
+>
+> **HELD (3) — the two depleted-squad sub-questions, closed in the owning spec rather than only in a
+> tracking file** (#30 `section-3.md` **v2.12** *(since v2.14)*). **(a) The back-fill trigger stays the eighteen-player
+> selection walk; the short-bench posture is NOT built** — the honest fix for a depleted club is cover,
+> not a shorter bench, so `ERR-044-003`'s stages 2–3 (youth call-ups, then generated low-attribute
+> cover) *retire* the eleven-vs-eighteen question rather than answer it, and a short-bench mechanism
+> built now would be thrown away when that ladder lands; it is also engine surgery, and narrowing the
+> probe without narrowing selection reproduces the divergence `LineupSelector.TrySelect` was collapsed
+> to one walk to prevent. `ERR-030-044`'s open half is CLOSED. **(b) The beyond-cap branch keeps
+> degrading to greedy; refusing the fixture is REJECTED** — refusal breaks the twice-affirmed "the
+> composed filter can never leave a club worse off than having no filter at all" invariant to buy a
+> corner (`m > 12` concurrently suspended in one squad) that is unreachable at measured card rates.
+> Both are written inline at the rules they govern, so a reader meets the decision where the question
+> was, and both name what would reopen them.
+>
+> **HELD (4) — the DisciplineConfig restructure stays deferred to the `GameplayConfigHolder.Bind`
+> composition-root pass, tree-wide.** The defect is future-conditional, the completeness tripwire
+> already converts it from silent to a red test, and a #44-only restructure would create precisely the
+> parallel-surface asymmetry this repo keeps filing — one subsystem on a validated readonly-struct
+> config while every sibling keeps the guard-and-pre-flight shape.
+>
+> **HELD (5) — KD-7a: neither adopt nor reject; decide after the post-W2-arming capture, exactly as its
+> own tripwire says** (`league-bootstrap-design.md` **v1.5** *(since v1.7)*, new **S9**). The corpus that would
+> determine `α` predates tackle wiring, so S7 condition 4 fails on its own terms. **S7's condition 4
+> was also corrected in place:** it was written on August 12 as "no player has ever made a tackle",
+> which W2's landing *that same day* made false about the code while leaving it true about a shipped
+> match (`TackleContactRadiusM = 0`) — it now reads as **post-arming**, or the tripwire would fire
+> against a corpus statistically identical to the one it exists to reject.
+>
+> **HELD (6) — `pointQuality` stays parked until the close-range CONVERSION comparison on identical
+> seeds exists** *(heading corrected August 18, 2026, reviewed finding H13: it read "until W1's rush
+> geometry is MEASURED" — a condition satisfied August 12, 2026, five days before this hold was
+> written; the rush ANATOMY is measured, and the conversion pair is what `gk-rush-trigger-design.md`
+> §6 still owes — see the ⚠️ H6 correction in the body below)*
+> (`gk-conversion-at-contact-design.md` **v1.1** *(since v1.3 — the currency pointer here read "since v1.2" and was itself overtaken when the KD-CC6a heading was corrected on August 18, 2026)*, new **KD-CC6a**). The §4 ladder's refusal was
+> measured against a keeper who never left his line; W1 moves the contact geometry the whole ladder is
+> a function of. **The unparking condition is a measurement, not a landing** — W1 landed August 4, 2026
+> and has never been executed. **⚠️ CORRECTED August 17, 2026, same day (adversarial-review finding
+> H6): the "never been executed" clause is FALSE and is annotated rather than deleted.** W1's rush
+> anatomy WAS measured on August 12, 2026 — 23–46 rush intents committed per match against a pre-W1
+> baseline of exactly 0 by construction, keepers reaching 9.1–14.1 m off their own goal line, no
+> `ERR-011-009` re-stall (`gk-rush-trigger-design.md` §6 / v1.5, and `match-engine-wiring-backlog.md`
+> §5 row 1: "Its owed measurement is discharged"). What remains unmeasured — and is the real
+> unparking condition, now stated in KD-CC6a (v1.2) — is the close-range **conversion** comparison on
+> identical seeds that §6 names as still owed. The park's conclusion survives on that ground. Until
+> that pair exists the recorded refusal is a fact about the pre-rush keeper and
+> must not be quoted as a fact about the mechanism.
+>
+> **HELD (7) — the foul/card drift stays accepted: arm W2 first, then calibrate ONCE**
+> (`foul-discipline-balance-design.md` **v1.1** *(since v1.2)*, new §7 item **2a** *(renumbered to item **3** at v1.2 — `2a.` is not a valid list marker)*). That note's own item 2 said
+> `FoulCallProbability` must be re-measured if the contact stream changes; C1 changed it on August 8
+> and the fit drifted **~67%** unnoticed for **five days** — August 8 to the August 13 re-measurement; eighteen days from the July-26 fit itself. *(Corrected August 17, 2026: this entry first said "five weeks", wrong by ~5× under every anchoring, and load-bearing, since the interval is the counter-example the hold is justified by.)* Applying the rule literally means *not*
+> landing an interim fit against a pre-tackle stream that W2's arming will change again. **Accepted
+> cost, stated plainly:** the card rate — and since #44 the suspension rate derived from it — stays
+> knowingly wrong meanwhile, with the acceptance bands (fouls ≤ 90, yellows ≤ 20, reds ≤ 5) reading
+> green throughout.
+>
+> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.13)* records the consequence none of these three holds could
+> see individually: W2's *arming* now gates three separate decisions** — the foul/card calibration,
+> KD-7a's successor distribution, and everything behind the un-isolated `sim_match_engine_inposs_gate`
+> stall whose leading candidate is W6. The path **W4 → W12 → W6** therefore unblocks three decisions,
+> not just the next wired subsystem, and `TackleContactRadiusM = 0` is doing far more holding-back than
+> its one-constant footprint suggests.
+> ⚠️ CORRECTED August 18, 2026 (propagating the backlog's own v1.11 L11 correction): "gates three" is
+> FALSE — W2's arming gates **two** held decisions (the foul/card calibration and KD-7a's successor
+> distribution); the third item, the un-isolated `sim_match_engine_inposs_gate` stall, is what BLOCKS
+> arming, not something arming unblocks, so it does not belong beside them. The citation above is
+> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.13)*, whose §5 note carries the corrected
+> two-plus-the-blocker form; the W4 → W12 → W6 path aims to clear the blocker and thereby unblock
+> the two.
+>
+> **THE PREMISE THAT WAS FALSE — the approval tags.** The instruction was "push them; no downside", and
+> the attempt found the entry had been wrong for four months. **The eight annotated tag objects do not
+> exist anywhere**: `git tag` in a fresh clone returns nothing, `git ls-remote --tags origin` returns
+> nothing. They were created in the April/May 2026 authoring containers, never pushed, and are
+> unrecoverable — their messages, which recorded each original sign-off date and §9 checklist status,
+> are gone with them. Every session since has read "created locally, not yet pushed" as meaning they
+> were sitting somewhere ready to go. **The precondition check as written cannot run**, because all
+> three of its steps take a tag object as input; what it was really asking was answered without one —
+> `origin/main` uses true merge commits, so it is path (3), not the squash-merge path (2). **The 403 is
+> still live**, reproduced today from this session on both `--tags` and a single-tag push, with the
+> proxy healthy: the refusal is GitHub-side and this session's credentials push branches but not tags.
+> **Re-creation is possible and its targets are now resolved** — eight tags against four commits
+> (`caaf5cf0`, `a88dba03`, `bcf94199`, `7dbcf121`), each verified an ancestor of `origin/main`; the
+> recipe is recorded in the open-issues entry because tags created in this container die with it.
+> **One honesty point carried into the recipe:** #1/#3/#4 were signed off in February 2026, before any
+> spec text existed in git, so **no commit represents the moment of their approval** — `caaf5cf0` is
+> the earliest commit that *contains* them at APPROVED, and must be tagged as a containment claim, not
+> an approval claim. That is still better than what the originals did, which was to point all four
+> April-26 tags at one branch HEAD with no per-spec meaning at all.
+>
+> **Open issues: 20 → 18 active / 44 → **47** resolved**, both re-derived by direct count
+> (`grep -c '^- \*\*'`) rather than by arithmetic — this file has recorded three counts reached by
+> incrementing an unverified base, so the count is measured every time.
+
+> **Last Updated (prior):** August 16, 2026 (rounds 10-12) — **#44/#30 adversarial-review ROUNDS 10-12, a
+> continuation of the rounds-8-9 chain over the SAME `ERR-030-044`/`ERR-044-019` tier-2 reinstatement
+> landing.** Commits `a4a672b..d0f534a` (`ba2c574..HEAD`). **Round 10 (`a4a672b`, wave A) — M/L
+> findings, visibility/locks/text residues, no High:** the `DisciplineConfigCompletenessTests`
+> reflection scan widened to see `NonPublic` fields (an internal `[GT]` can no longer ship unguarded);
+> the constructor's `onPitchAgentIdCount` range guard and the production `SQUAD_SIZE` cross-assembly
+> occupancy-swap argument both gained mutation-verified locks; `ERR-044-013`'s owed `NO_PLAYER` spec
+> note discharged; stale `SelectAvailable` references in `LineupSelector`/`SeasonSaveManager`
+> re-pointed or past-tensed (the type itself was deleted at round 9, before `ba2c574`; this closes the
+> citations round 9 left behind); twelve duplicated oracle comments collapsed into one `ComposedOracle`
+> helper; a division-derived club-membership assertion replaced with real roster-array membership;
+> `match-analytics` card routing now fails loud on an unknown kind. Text: section-2's four-vs-five
+> miscount corrected, `ERR-044-014`'s stale remainder list closed, the `open-issues.md` #44 GATE
+> placeholder filled with the `051c25a` verdict, Appendix C's `onPitchAgentIdCount = 22`.
+> **Round 11 (`21bde36`, wave B) — 1 High, `ERR-030-046` ESCALATED under the no-third-identical-retry
+> rule:** the SAME tier-2 within-tier defect survived TWO successive fixes (`ERR-030-044`'s roster-order
+> key, `ERR-030-045`'s ascending-`PlayerRating` re-key) because both were an element-wise greedy
+> decision of a fundamentally set-valued, per-position constraint — a global scalar cannot see that a
+> squad has no room for the globally weakest banned player at HIS position, and measured on generated
+> mass-suspension fixtures, **≥ 476 of 1920** had a clean completing choice the algorithm missed. The
+> third attempt was ruled, not iterated: `ChooseSuspendedCandidate` becomes a capped exhaustive
+> clean-completion search over subsets of the still-removed candidates (new `[FIXED]
+> EXTREMIS_SEARCH_CANDIDATE_CAP = 12`, an algorithmic budget, not a `[GT]`), with the guarantee restated
+> as a THEOREM — the composed squad fields the minimum achievable number of reinstated-suspended
+> players, zero whenever any completing choice benches them all. Locked by three new
+> `AvailabilityCompositionExtremisTests` cases (`WeakPositionExtremis`, `MinimalStallExtremis`,
+> `CapFallbackExtremis`; suite 5 → 8), cross-filed at #44 as an extension of `ERR-044-019`.
+> **Round 12 (`d0f534a`) — 0 High / 1 Medium / 5 Low, all fixed in this commit, over the round-11
+> landing.** The Commit rule's third branch (`|R*| ≥ 2` with every member singly completing) was
+> unreachable, unproven, and would have violated round 11's own theorem if it were ever live: a
+> **monotonicity lemma** is now STATED and proven — `LineupSelector`'s per-position top-`k` selection
+> makes `dirty(R)` monotone non-decreasing under adding candidates, so a completing singleton is
+> already the global minimum — verified `thirdBranchReachable = 0` over 6,858 generated oracle cases,
+> with the collapsed `order[bestSubset[0]]` form behaviour-identical over 3,966 further cases and
+> 11/11 tests (an independent monotonicity proof over the code slice, not merely a restatement of
+> round 11's claim). The third branch is now a fail-loud `InvalidOperationException` naming the lemma,
+> its re-choice machinery deleted rather than kept dead; a fourth Commit case binds "no subset completes
+> at all" for the first time, with a hoisted full-set probe skipping the whole `m·2^m` enumeration on
+> that branch. Both "self-heals" beyond-cap residual statements were wrong the same way — conflating the
+> SEARCH resuming with the GUARANTEE resuming — corrected at six sites (a later reviewed-findings pass
+> found this same commit's own test-file comment had been missed, making the real total nine; see
+> `spec-error-log.md`'s `ERR-030-046` annotation). Two new mutant-killers, `InCapBoundaryExtremis`
+> (`m == CAP` exactly) and `TiedForcedStartExtremis` (a tied positive dirty count), each verified by
+> actually applying its named mutant and observing the failure before reverting; the discipline slice's
+> `ERR-044-022` ordering claim — previously unfalsifiable, since the constructor copies the seed and a
+> fresh fold is pristine regardless of guard ordering — is now genuinely locked through a new internal
+> `CardLedgerFold.OccupancyAt(int)` observation seam, with the guard-reordering mutation observed
+> FAILING 145/146; a null-seed constructor lock added. Five mutations executed and observed across the
+> round: the two `AvailabilityCompositionExtremisTests` mutant-killers above, the `OccupancyAt`
+> guard-reorder, the null-seed guard deletion, and the collapsed-commit-rule equivalence check.
+> **THE GATE (measured at `d0f534a`):** meta-integrity OK; build 0 errors; 34 suites, quarantine empty;
+> `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** — the sole failure is the inherited
+> owner-held-red `sim_match_engine_close_chance`, identical at baseline, no new failure;
+> `Discipline.Tests` **146/146**; `SeasonSave.Tests` **447 passed / 0 failed / 3 known skips**;
+> `MatchAnalytics.Tests` **59/59**. Assemblies touched: `src/discipline/`, `src/season-save/`,
+> `src/match-engine/` (`SquadRating.cs` + `LineupSelector.cs`, doc/lock only), `src/match-analytics/`
+> — **no `src/deterministic-sim/` change this stretch**, unlike the rounds-8-9 entry. No new files (21
+> files modified across the three commits, zero added). Full account: `CHANGELOG-src.md`,
+> `spec-error-log.md` v2.42 (`ERR-030-046` and its round-12 annotation).
+>
+> **Last Updated (prior):** August 16, 2026 (rounds 8-9) — **#44 adversarial-review ROUNDS 8-9, a fresh
+> three-reviewer pass over the WHOLE branch state (AR-8 and AR-9 in the chain — the prior chain ended
+> at round 7). Round 8: 3 High / 12 Medium / 7 Low, all fixed. Round 9, a fresh full re-review of
+> round 8's own landing: 1 High / 10 Medium / 5 Low, all fixed.** Commits `2f4626f..051c25a`.
+> **Round 8's Highs:** **`ERR-044-014`** — `DisciplineRules.OnClubFixturePlayed` decided club
+> membership by `PlayerId / CLUB_SQUAD_SIZE == clubId`, a second notion of membership from
+> `Availability.MarkSuspended`'s real roster walk, agreeing only while #27's id packing holds and
+> validated by nothing; the derivation is DELETED, not guarded — `SeasonLoop` now supplies the
+> unfiltered roster ids at the same resolve→filter→configure site the fielded XIs come from. **
+> `ERR-044-015`** — #44 §4.5's composition-root MUST named `FilterAvailable`, the one method four
+> other sections forbid the root to call; rewritten to the landed `MarkSuspended` →
+> `AvailabilityComposition` contract. **`ERR-030-044` + `ERR-044-019`** (cross-filed at both owners)
+> — the extremis back-fill fired on a BENCH shortfall rather than an inability to field an eleven, so
+> a club seventeen fit and one bench short could have its best banned man reinstated into the
+> rating-greedy selector's STARTING eleven; tier 2's key becomes probe-qualified (prefer the first
+> candidate, in roster order, the selector would BENCH — his ban then advances normally), forced-start
+> corrected to the honest two-case form (benched ⇒ ban advances; forced start ⇒ exempt, and only then
+> does ERR-044-003 stage 1's serving exemption stall it). **Round 8 also:** `ERR-037-003` (M4) —
+> match-analytics routed second-yellow dismissals to plain yellows (a two-way branch over a
+> three-value ordinal domain), now counting one yellow AND one red per the box-score precedent;
+> `ERR-044-016`/`017`/`018` — Appendix C's worked fold example (an engine-unproducible kind-2-as-
+> first-booking) fixed with a preceding kind-0 card, the four `[GT]` threshold/ban constants renamed
+> ALL_CAPS → PascalCase across every spec file to match the code, and §2.2 declares `DisciplineState`'s
+> full landed API; `ERR-044-020`/`021` — the tap's `CurrentTick` member + `CardLedgerFold.ObserveTick`'s
+> consecutive-tick refusal and partial-application poison latch synced into sections 2/3/4; both
+> `DisciplineRules` card-accumulation paths (`AddYellow`/`AddBan`) now route through guarded overflow
+> helpers, locked at `int.MaxValue`; `CardLedgerFold` occupancy made injective by construction
+> (`ApplySubstitution` clears the vacated slot, refuses `outgoing == incoming`, the constructor refuses
+> a non-injective seed). **M2, an owner (Fable) ruling rather than a fix:** the reviewer's proposed
+> `DisciplineConfig` readonly-struct restructure (retiring `CommitWithExplicitConfig`, both
+> `RequireCommittableConfig` forms, and the driver pre-flight/guard seams) is recorded and DEFERRED —
+> it needs #44 §2.3 F6 and #30 §3.4 spec edits and belongs at (or after) the `GameplayConfigHolder.Bind`
+> composition-root pass, as the tree-wide pattern rather than a #44-local fix; landed instead as the
+> minimal completeness lock plus five pointer comments (see `open-issues.md`'s new head bullet).
+> **Round 9's High, `ERR-030-045`** — a second adversarial pass over the `ERR-030-044` landing found
+> its fix incomplete: fieldability is monotone, so while a club is short by more than one, NO candidate
+> is fieldable and passes 1-2 are structurally unreachable — pass 3's OLD earliest-roster key decided
+> every reinstatement but the last blindly, recreating the pre-fix defect for exactly the
+> multi-reinstatement population #44 exists for. Fixed with pass 3's key as ASCENDING SELECTOR RANK
+> (new `SquadRating.PlayerRating`, a delegation to the engine's own `LineupSelector.MeanAttribute` —
+> one selector, four read shapes, not a second rating formula), ties on roster order; the weakest
+> banned are pressed back first, so the final pick's pass 1 still finds a non-starting candidate
+> whenever one exists. Stated as a minimisation, not a guarantee — the k≥2 residual (no candidate
+> choice avoids starting a suspended player) and positional forcing both survive by design. **Round 9
+> also:** **`ERR-044-022`** (M13) — `CardLedgerFold`'s constructor gains a required
+> `onPitchAgentIdCount`; `ApplySubstitution` now refuses an on-pitch `Incoming` and a bench `Outgoing`
+> — Appendix C's slot-19 malformation throws instead of silently destroying the outgoing player's
+> occupancy mapping (the v1.8 row's false "impossible" claim annotated in place). **`ERR-044-023`**
+> (M14) — the seed's one-to-one precondition `CardLedgerFold` assumes is violated by its only
+> documented producer (`MatchEngine.PlayerIdsByAgentId` is injective only AT BOOT, never again after a
+> substitution); bound normatively at #44 §4.3, doc-only at `MatchEngine.cs`, locked against the real
+> engine. **M5 closed for good:** `PlayerCareerStates.SelectAvailable` — made internal at round 8,
+> DELETED entirely at round 9 (its "one call site needs it" justification named a call site that goes
+> straight to `Compose`) — the production-dead oracle surface that shipped the C1/C2 landing's own H2;
+> all ten test oracle sites re-pointed at `AvailabilityComposition.Compose(squad, career,
+> discipline: null, 0)` with explicit oracle-scope comments. **The round's final wave (text residues)**
+> swept the refuted "plays only when the club cannot take the field at all" sentence to its three
+> remaining live sites (root `CLAUDE.md`, `open-issues.md`, one `SeasonLoopDisciplineTests` assertion
+> message), annotated the `ERR-044-020` row's own CLOSED note (it had lived only in this file's header
+> chain), completed the section-1.3 reference DAG and the section-6.2 drifted line-citations → member
+> names, and finished the section-3.2 ALL_CAPS → PascalCase sweep. **The two Lows round 9 left open —
+> the missing landing record for rounds 8-9 in this chain, and the stale `Discipline.Tests` suite
+> count carried in `file-manifest.md`/root `CLAUDE.md`/`open-issues.md` (81 → 118, never advanced past
+> either round) — are the two this close-out entry itself lands**, re-derived by direct execution
+> rather than incremented. **GATE at `051c25a`, August 16, 2026:** meta-integrity OK; build 0 errors;
+> 34 suites, quarantine empty; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** — the one
+> failure is the inherited owner-held-red `sim_match_engine_close_chance` (also failing at the
+> pre-branch baseline; owner call August 11: hold red), so the branch adds no new failure;
+> `SeasonSave.Tests` **441 passed / 0 failed / 3 known skips**; `Discipline.Tests` **143 passed / 0
+> failed**; `MatchAnalytics.Tests` **58 passed / 0 failed**. Assemblies touched: `src/discipline/`,
+> `src/season-save/`, `src/match-engine/` (`SquadRating.cs` + `MatchEngine.cs` doc-only), `src/
+> match-analytics/`, `src/deterministic-sim/` (doc-only) — full account in `CHANGELOG-src.md` and
+> `spec-error-log.md` v2.39.
+>
+> **Last Updated (prior):** August 15, 2026, later still again (round 7) — **#44 adversarial-review ROUND 7: 0
+> High / 0 Medium / 3 Low, all fixed — the first clean round in the chain, and docs-only.** Three Lows
+> surfaced on the surface six prior rounds had never read — `src/season-save/PlayerCareerStates.cs` and
+> `SeasonSaveManager.cs`, explicitly named unread by round 6's own reviewer. **L1** —
+> `SeasonSaveManager.Load`'s doc claimed the career-coherence gate is match-only ("a save with no match
+> is untouched by this"); false since the AR-pass-5-era load-side landing — `RequireCoherentCareerBlocks`
+> runs unconditionally, before the `MatchBlob` branch — corrected to state the guarantee holds on every
+> load rather than leaving a maintainer to read the careerless path as ungated. **L2** — three sites
+> still described a five-blob frame, one of them omitting three of `Save`'s ten parameters including the
+> roster and the suspension tally; fixed by pointing at `SeasonSaveBlobs`/`SeasonSaveContents` rather
+> than a fourth hand-restatement, since restating the frame shape is what produced the third and fourth
+> divergence (this file's own recorded omission class, filed twice before at v1.6 and v1.17). **L3** —
+> `SelectAvailable`'s doc still claimed to own the depleted-squad rule and viability check that moved to
+> `AvailabilityComposition` at v1.19, and described #44's filter in future tense for a filter that has
+> been live since August 13. **Checked before landing, not after:** the new text says "eight-blob frame"
+> while this branch's other records say "seven mandatory sub-blobs" — both correct, describing different
+> sets (`SeasonSaveBlobs` carries eight: World, Season, Training, Medical, Appearance, Progression,
+> Discipline, Match — of which Match is optional, leaving seven mandatory); no divergence introduced.
+> **What the round did NOT find is the substantive result** — it chased this branch's own recorded
+> defect classes (a fourth save/restore entry point, partial writes, the cursor-vs-clock guard family,
+> aliasing, numeric edges, restore fidelity) and cleared every one by tracing rather than asserting,
+> including withdrawing its own hypothesis after measurement (suspected the Save-side calendar-cursor
+> invariant was unlocked; a `Load_`-prefixed test was found to assert the Save side too, so the guard is
+> locked and the hypothesis was wrong). **No production behaviour changed** — `PlayerCareerStates.cs`
+> and `SeasonSaveManager.cs` gained doc-comment corrections only, no logic, signature or method body
+> changed; `season-save` builds 0 warnings / 0 errors. **No whole-tree gate run this round** — nothing
+> outside doc comments changed, so none was needed. **Aggregate across rounds 5-7 (this entry and the
+> two below):** 3 High / 25 Medium / 21 Low, all fixed (round 5: 1H/14M/10L; round 6: 2H/11M/8L; round
+> 7: 0H/0M/3L); **16 new ERR ids filed** — 11 in round 5 (`ERR-017-005`, `ERR-020-004`, `ERR-030-040`,
+> `ERR-030-041`, `ERR-044-006` through `ERR-044-012`), 5 in round 6 (`ERR-017-006`, `ERR-020-005`,
+> `ERR-030-042`, `ERR-030-043`, `ERR-044-013`), 0 in round 7; production code changed across five
+> assemblies — `src/discipline/`, `src/season-save/`, `src/event-system/`, `src/match-analytics/`,
+> `src/match-engine/` — plus `src/CLAUDE.md` (round 5, the ERR-020-004 carve-out). This corrects the
+> reviewed-findings brief that seeded this close-out, which had cited "2 High … 11 new ERR ids" for the
+> three rounds combined; the figures above are re-derived from `git log --stat 45a29ae^..5c2e4a6`, the
+> corresponding `ERR-044-0NN` body entries, and the round commit messages themselves, not carried
+> forward from that brief.
+>
+> **Last Updated (prior):** August 15, 2026, later still (round 6) — **#44 adversarial-review ROUND 6:
+> 2 High / 11 Medium / 8 Low, all fixed; gate run to completion, 34 suites, quarantine empty, and the
+> FIRST gate on this branch whose verdict actually covers the CI surface.** **H1 (`ERR-030-042`)** — #30
+> §3.4, the OWNING normative text for the depleted-squad back-fill, stated ONE ordering key and asserted
+> #44 "inherit[s] the rule unchanged"; `AvailabilityComposition.Reinstate` has implemented TWO tiers
+> since the C1/C2 landing (injured before suspended). Because `recoveryRemaining` is written only by
+> `PlayerCareerStates.MarkUnavailable`, a suspended-but-uninjured player keeps the `int` default 0 — an
+> implementer following §3.4 verbatim sorts him to the FRONT of the ascending-recovery order and presses
+> banned players back ahead of every injured one, the exact inversion of the owner's ERR-044-003-stage-1
+> decision, and silently: the never-worse-off invariant still holds, the selector still returns a
+> fieldable eleven, nothing fires. Fixed spec-only — the code was already correct — by stating both
+> tiers as part of the rule #30 owns, requalifying "inherit the rule unchanged" to mean the INVARIANT
+> rather than the ORDERING, and writing the zero-default trap into §3.4 as an explicit MUST NOT.
+> `section-3.md` v2.6, `section-2.md` v2.0. **H2** — four files under `src/` (three from the C1/C2
+> landing, one from round 5) had no `.meta`, and the required `unity-meta-integrity` CI job had been RED
+> on this branch since August 13 — missed by five prior review rounds and four landing records all
+> reading "GATE: RUN TO COMPLETION", because `run-gate.sh` never invoked that job at all; it is a
+> separate CI job (`ci.yml:201`) from the one this project's gate runs. `.meta` files generated, and
+> `run-gate.sh` now runs the meta check FIRST, before the ~90-minute build/test pass. **Spec Mediums
+> (M1-M5, `docs/specs/discipline-suspensions/` + cross-spec):** the shared-tap claim `ERR-044-008` had
+> already refuted survived in §4.5 and `outline.md` KD-2, and had escaped the spec set entirely —
+> `match-presentation-depth/section-1.md` §1 built #48's whole live-capture argument on "one shared tap"
+> (cross-spec back-prop, same id); `FilterAvailable(in Squad)`'s signature was wrong in two more places
+> (FR-DC-009, §1 KD-4) after an earlier fix corrected only the illustration; §1 KD-4 still asserted the
+> "byte-identity-locked" claim `ERR-044-006` withdrew the same day; §6.2 priced the zero-call-site
+> `FilterAvailable` while the real production surface, `MarkSuspended`, had no bullet; `CardLedgerFold.
+> NO_PLAYER` — caller-facing, throws-if-violated, used normatively in Appendix C — had no declaration
+> and no tag anywhere, filed **`ERR-044-013`**. **#30/#17/#20 Mediums:** `ERR-030-043` (§4.3's
+> `SeasonLoop` holdings list had no #44 entry — the THIRD recurrence of that section's own recorded
+> omission class), `ERR-017-006` (§3.10 claims every constant it declares appears in its own catalogue
+> while omitting two of its own allocated error codes, `0x1706`/`0x1707`), `ERR-020-005` (§4.2's
+> `ERR-020-004` carve-out was contradicted 25 lines later, under the heading a reader actually looks
+> under). **The count correction, caught inside the round that made it:** `ERR-044-006`'s own body said
+> "105/105 — the suite's measured count today" when the true figure was already 118 two commits earlier,
+> and root `CLAUDE.md` said 81/81; the fixer re-derived it by RUNNING the suite (118/118) rather than
+> copying the brief's figure. **`src/` Mediums/Lows:** **M1** — the AWAY club's `fieldedPlayerIds`
+> argument was unlocked; swapping `awayXi` for `homeXi` in the away call still passed 22/22, because
+> round 5's own new end-to-end exemption test banned home-club players only — the home-team-only trap
+> (`ERR-008-002`) recurring inside that same round's new lock, in a file that cites `ERR-008-002` by name
+> two tests earlier. Now `[TestCase(true/false)]`-parameterised over the club under test rather than a
+> copy. **M2** — the round-level `[GT]` pre-check's "runs before anything is written at all" claim had no
+> defending test; the only lock asserted `Played == False`, which stays green if the pre-check moves
+> below `RunCareerDaySteps`. **M3** — #30 §5's `T-SN-DET-004` had no locking test for the back-fill TIER
+> ORDER at all, which is exactly why `ERR-030-042` had no detector; added (with both an injured and a
+> suspended player removed and the club unable to field a formation, the injured one is reinstated
+> first) — its first version was itself wrong (failed against correct code on a seed one player short of
+> position-complete) and was corrected before landing, recorded rather than silently fixed. **Four
+> Lows** on stale `FoulOrdinalNone` / single-consumer-mirror claims and one misplaced comment splice;
+> `LEAGUE_COMPETITION_KEY` renamed `LeagueCompetitionKey` (PascalCase, matching its `[CROSS]` tag) with
+> call sites. **GATE:** `Discipline.Tests` **118**/0, `SeasonSave.Tests` **435**/0/3 known skips (+2, the
+> away-club and tier-order locks), `MatchAnalytics.Tests` 57/0, `EventSystem.Tests` 54/0,
+> `MatchEngine.Tests` 461/**1**/11 (37 m 43 s). Single failure tree-wide is `sim_match_engine_close_
+> chance`, read by name out of the gate log — the inherited owner-held red, identical to baseline; round
+> 6 adds no new failure. **All three new locks mutation-verified on uncontested trees, each restored to
+> zero diff afterward:** M1 away-club exemption (clean 24/0; `awayXi`→`homeXi` fails the `_Away` case
+> only), M2 write-ordering (clean 1/0; pre-check moved below `RunCareerDaySteps` fails), M3 tier order
+> (clean 24/0; the tier skip deleted fails both cases). **Process error, recorded because it cost
+> hours:** three overlapping verification scripts ran against one working tree, so a run written off as
+> dead was still applying and restoring mutants under the others; three stated conclusions were false
+> and withdrawn — that a subagent applied the mutations (it was the reviewer's own script), that a
+> killed run would not notify, and that a corrupted baseline showed a real failure (the clean baseline
+> is 24/0).
+>
+> **Last Updated (prior):** August 15, 2026 (round 5) — **#44 adversarial-review ROUND 5: 1 High / 14
+> Medium / 10 Low, all fixed; gate run to completion, 34 suites, quarantine empty.** Three fresh Opus
+> reviewers ran over disjoint slices (`src/discipline/`, the `season-save` composition layer, the
+> card-kind chain + #44/#30 specs); the High by Opus, Medium/Low by Sonnet. **The High (`ERR-044-006`)
+> is the repo's founding trap recurring inside its own fix:** #44 §5's traceability table named two
+> tests that do not exist — `T-DC-VIEW-001`'s only test was deliberately deleted at round 1 as
+> tautological with no replacement, and `T-DC-INT-001`'s reflection assertion was never written at all —
+> while §9 ratified G6/G13/G14 on them. Round 4's own pass, which existed to fix §5's staleness, had
+> verified only the four rows it added and then re-certified G14 against "the corrected table".
+> Verifying every surviving row found three MORE false rows (`T-DC-VIEW-002`, `T-DC-FOLD-001`,
+> `T-DC-DET-001`) and two FRs (FR-DC-002, FR-DC-022) traced by nothing; G14's wording widened to three
+> dispositions (Test / Construction / Deferral), §5.6 replaced by a per-FR map so it is re-derivable by
+> grep. **`src/discipline/` findings:** eight fail-loud guards survived deletion against the whole
+> suite with `DisciplineEntry` carrying no test file at all — new `DisciplineEntryTests.cs` plus cases
+> added to `CardLedgerFoldTests`/`DisciplineRulesTests`, `Discipline.Tests` 105 → 118;
+> `LEAGUE_COMPETITION_KEY` re-tagged `[FIXED]` → `[CROSS]` as a verbatim copy of APPROVED #43's
+> `LEAGUE_COMPETITION_ID`; four Lows on stale/vacuous test claims and one previously-undocumented
+> ordering dependency (the fold's reliance on `RunResolvePhase` flushing substitutions before card
+> issuance, now stated and locked by a Sub-then-Card test). **Season-save + #30/#17/#20 findings (landed
+> in a second commit, with the gate still running at commit time — recorded as such rather than claimed
+> verified early):** `ERR-030-040` — the "`OnClubFixturePlayed`'s only guard is `clubId < 0`" claim
+> (both the code comment and #30 §3.4's mirror) was stale since ERR-044-003 stage 1 added a mandatory
+> `fieldedPlayerIds == null` guard in the same block; both now name two guards and state why the null
+> case is structurally excluded. A recorded verification (M3) was retracted as FALSE and corrected in
+> place: deleting the pre-check does NOT make `Assert.Throws` see no exception (the method still
+> throws) — the only discriminating assertion is `Played == False`, and the retraction preserves the
+> original wrong text so the next reader cannot trim the assertion actually doing the work. **M4** — 53
+> of 63 public `Save` call sites answered `disciplineWired: true` while driving no discipline: round 4's
+> High deleted a forwarding overload that hardcoded `true`, and the suite then re-established `true` as
+> the reflexive value at 53 hand-written sites — the hardcode merely redistributed. Now 60 `false` / 16
+> `true`, each checked individually. `ERR-030-041` — #30 §3.5 justified the sweep's placement with "the
+> sweep is NOT idempotent"; it is (`RollToNextSeason` sets `Yellows := 0`, so a second run finds every
+> row already zero and writes nothing) — placement kept, justification corrected. **Both owner
+> decisions, decided on evidence rather than preference:** the card-kind tag stays `[FIXED]` — the three
+> ordinals are `public const byte` with zero `Config.Get` reads anywhere in `src/`, and a `const` inlines
+> into every consumer, so the code is structurally incapable of being `[GT]`; and the `[CROSS]` routing
+> rule gains an owning-catalogue carve-out (a spec-owned encoding mirrors from its owner regardless of
+> consumer count), the false "#44 is the only consumer" justification deleted since three assemblies
+> consume it — filed `ERR-017-005` / `ERR-020-004`. Also: #17 Appendix A's `foulOrdinal` row corrected
+> `byte` → `ushort` (the struct has been `ushort` since June and the engine publishes `0xFFFF`, a value
+> `byte` cannot hold), and `MatchEngineConstants.FoulOrdinalNone` gets its own catalogue home as the
+> `[CROSS]` mirror of #17's new `FOUL_ORDINAL_NONE`. **Six guards mutation-verified individually** (three
+> `DisciplineEntry` constructor guards, `AddBan`'s `matches < 0`, `CardLedgerFold`'s empty-seed and
+> negative-seed guards) — neutering any one now fails exactly one test. **`src/CLAUDE.md` also edited
+> this round** (the `ERR-020-004` carve-out) — see that file's own version chain (`CHANGELOG-src.md`).
+> **GATE:** `Discipline.Tests` **118**/0, `SeasonSave.Tests` **433**/0/3, `MatchAnalytics.Tests` 57/0,
+> `MatchEngine.Tests` 461/1/11 (38 m 35 s), every other suite green. Single failure tree-wide is
+> `sim_match_engine_close_chance`, read by name out of the gate log — the inherited owner-held red,
+> identical to baseline; round 5 adds no new failure. **11 new ERR ids filed this round:** `ERR-017-005`,
+> `ERR-020-004`, `ERR-030-040`, `ERR-030-041`, `ERR-044-006` through `ERR-044-012` (seven ids).
+>
+> **Last Updated (prior):** August 15, 2026, later (**#44 adversarial-review round 4 CLOSED — all ten findings (0 High / 6 Medium / 4 Low) fixed, gate
+> run to completion.** The round-4 findings had sat unapplied since August 13 (a session ended at a
+> usage limit). Split by file domain across two delegated agents so they could not collide. **M22** —
+> the round-level `[GT]` pre-check called a static nothing in `src/` binds a config for, so deleting
+> it left the tree green; routed through the `IFixtureDisciplineDriver` seam. Verified by deletion,
+> and the result needs stating precisely because the naive reading is wrong: deleting the call DOES
+> fail a test, but not on the thrown exception — that still arrives via the per-fixture driver call —
+> it fails on the assertion that no fixture was touched, the fixture being already marked `Played` by
+> then under M6's ordering. That is exactly the wedge the pre-check exists to prevent. **M23** —
+> claims corrected, **no lock manufactured**: an inline copy of the delegated-to body passes either
+> test, so the pair structurally cannot prove delegation and now says so. **M24** — the card-kind
+> encoding, which lived four times bound nowhere under two tags, is declared ONCE as `[FIXED]`/
+> ALL_CAPS in `EventSystemConstants` (#17 owns the `CardIssuedEvent` payload) with `[CROSS]`/
+> PascalCase mirrors in `MatchEngineConstants` and `DisciplineConstants`, `MatchEngine.cs`'s bare
+> `0/1/2` literals replaced (FR-CS-016), and `MatchAnalyticsConstants` repointed at the authority;
+> filed as **ERR-017-004**. **Two defects in the first draft of that fix were caught on review and
+> fixed before landing** — the new constants were tagged `[GT]` (designer-tunable-via-config), which
+> is M24's own defect class recurring inside M24's fix, and `MatchAnalyticsConstants` had been
+> repointed at a MIRROR rather than the authority, giving the "must not diverge from its source" rule
+> two hops to fail at. **M25** — #44 §5, untouched since July 24, had `T-DC-BAN-004` marked WITHDRAWN
+> in place rather than deleted (the row records why the test existed and what retired it), four rows
+> added for tests that existed with no §5 entry, and §9's G14 re-checked and correctly left ✅ — the
+> checklist row was never wrong, only the table it cited. Every cited test name was verified to exist
+> in `src/discipline/tests/` before being written into the spec; fabricated checklist values are this
+> project's oldest recorded trap and a traceability table is where they hide. **M26** — FR-SN-021's
+> `Save` signature corrected 9 → 10 arguments (`disciplineWired`, ERR-030-039). **M27** — §3.1's fold
+> pseudocode rewritten to `CardLedgerFold`'s real buffer-then-commit-atomically shape, which an
+> implementer following the old text would not have reproduced. **L18–L21** fixed; the four stale
+> counts by direct measurement rather than by copying another document's figure. **The round-numbering
+> divergence was recorded, not "corrected"** — file headers count review passes (to 5), `git log`
+> groups the same work into 3 fix-commits; both are internally consistent and there is no single right
+> number. **No production behaviour change.** **GATE: run to completion, 34 suites, quarantine empty** —
+> `Discipline.Tests` 105/0, `SeasonSave.Tests` **433**/0/3 (+1, the M22 driver lock),
+> `MatchAnalytics.Tests` 57/0, `MatchEngine.Tests` 461/1/11 (1 h 1 m), every other suite green. The one
+> failure tree-wide is `sim_match_engine_close_chance`, **read by name out of the gate log rather than
+> inferred from matching counts** — the inherited owner-held red; `MatchEngine.Tests` is identical to
+> baseline, so this adds no new failure.)
+>
+> **Last Updated (prior):** August 15, 2026 (**Two owner decisions landed, one as code and one as sequencing.**)
+>
+> **(1) `ERR-044-003` stage 1 — an extremis appearance no longer serves the ban it was fielded
+> through.** The #44 C1/C2 landing recorded, twice and explicitly as an owner call, that #30 §2.3 F9's
+> depleted-squad back-fill can press a **suspended** player onto the pitch when a club would otherwise
+> be unable to field a formation, and that the same fixture's `OnClubFixturePlayed` then decremented
+> his ban anyway — so the appearance was **strictly free**, and a two-match red cost a mass-suspension
+> club nothing at all. The decision is exemption. `DisciplineRules.OnClubFixturePlayed` takes a
+> **required** `int[] fieldedPlayerIds` and skips the decrement for anyone in it, because the rule is
+> not "the club played" but "the club played **without** him". Required rather than optional-with-a-
+> default: an omitting call site would silently restore the free appearance, which is this same
+> landing's own H1/H4 shape. **Fixed at the serving site, not in `AvailabilityComposition`** — the
+> football rule is about who PLAYED — so the reinstatement tier order is untouched. The eleven passed
+> is the array `ERR-041-010(b)`'s appearance record **already** derived at the filter+configure site,
+> so no second selection walk appears (AR pass 2's parallel-surface finding); `SeasonLoop.FieldedXi`
+> widens that derivation's gate from `_career` alone to the union of its two consumers, keyed on
+> `_disciplineDriver` so a substituted driver cannot be handed a null eleven the production path would
+> have filled. **Behaviour-identical on every fixture that does not reach the extremis tier, by
+> construction** — the filter removes every suspended player before selection, so nothing but the
+> back-fill can put a banned id in the eleven. No format bump, no schema bump, no draw-order change;
+> #44 stays draw-free. **The better answer is agreed and NOT built, with both blockers named:** the
+> Football Manager posture is a tier ladder — promote **youth**, then field **generated low-attribute
+> cover**, both ahead of any suspended player — under which a banned man never takes the field at all
+> and the suspended tier becomes *unreachable* rather than merely expensive, letting #30's liveness
+> invariant and the Laws of the Game both hold instead of trading one against the other. Stage 2 is
+> blocked on **#42 Youth having no `src/` assembly** (nothing to draw from); stage 3 on the id space —
+> `PlayerId = clubId × CLUB_SQUAD_SIZE + local` is **fully packed at 25**, so a 26th player for club N
+> collides with club N+1's first, and widening it touches #27 FR-SQ-010 (as amended by ERR-027-004),
+> every save file, and ERR-041-019's global-uniqueness guard. `spec-error-log.md` v2.25.
+>
+> **(2) The foul/card calibration is sequenced behind W2 — arm the tackle first, then calibrate once.**
+> The August-13 re-measurement (**fouls 35.0 / yellows 5.0 / reds 1.00 per 90** against football's
+> ~22 / ~3.5 / ~0.25, fouls and yellows both ~67% above their own July-26 post-balance-pass figures)
+> will **not** be fitted against today's engine. Today's foul population is **pre-tackle** —
+> `TackleContactRadiusM` ships at 0 — and arming W2 routes ~47 challenges per team per 90 into the
+> same single foul-candidate slot, so a fit landed now would be re-fitted immediately while its
+> intermediate value sat in the tree looking calibrated. That is **KD-W1 read literally**, and the
+> July-26 pass is the counter-example that makes it concrete: it fitted correctly against the contact
+> stream of its day, C1's phase reclassification moved that stream in August, and nobody re-measured
+> for four months. **The accepted cost is stated rather than hidden:** the drift stays live until the
+> W2 calibration pass, so the card rate — and the suspension rate #44 now derives from it — is
+> knowingly wrong meanwhile, with the acceptance bands reading green throughout (they cap fouls at 90,
+> yellows at 20 and reds at 5; a plausibility floor, not a calibration signal). Consequence for the
+> wiring backlog's own ordering: **W2 is now the precondition for the most load-bearing open realism
+> item**, not merely the next wiring item. `match-engine-wiring-backlog.md` v1.9.
+>
+> **GATE: RUN TO COMPLETION at `eec95d0`, August 15, 2026** — quarantine empty. `Discipline.Tests` **105 / 0**, `SeasonSave.Tests` **432 / 0 / 3 known skips**, `MatchEngine.Tests` **461 / 1 / 11**. The one failure tree-wide is the close-chance scenario, identified by a name-filtered re-run rather than inferred from matching counts — the inherited owner-held red (`close-chance-creation-design.md` §10.9 item 6). `MatchEngine.Tests` is identical to the pre-change baseline, so this landing adds no new failure; nothing in it touches the match engine.
+>
+> **Last Updated (prior):** August 13, 2026 (**#44 Discipline & Suspensions — C1 (T0+T1) and C2 (T2) LANDED:
+> `src/discipline/` is the 35th production assembly, suspensions are LIVE end to end, and the last
+> gap in the season spine for PM-2 is closed.**) WHAT REMAINS: #44 T3 — the #30-owned quick-sim card
+> synthesis, without which suspensions are live for one club in twenty. The subsystem is a third
+> consumer of two proven seams rather than new plumbing: the #37-class per-tick ledger tap (B3) feeds
+> a `CardLedgerFold`, and the ERR-030-009 resolve→filter→configure seam takes a third contributor.
+> **Draw-free by construction** — no RNG stream, no domain tag, no `SubsystemOrdinals` entry, no
+> `SNAPSHOT_SCHEMA_VERSION` bump (still 21). `SEASON_SAVE_FORMAT_VERSION` **5 → 6** for the seventh
+> mandatory sub-blob. The pre-implementation council changed the design on two of five forks against
+> `season-competition-loop/section-3.md` §3.4 (APPROVED, and later than #44): **(1)** FR-DC-010's
+> engine-only filter scope contradicted FR-DC-011 and #30 §3.4 (`ERR-044-002`); **(2)** #44 §2.3 F5's
+> fail-loud-below-eighteen requirement contradicted #30 §2.3 F9's back-fill rule, so
+> `PlayerCareerStates.SelectAvailable` was split into `MarkUnavailable` (a removal set) + the new
+> `AvailabilityComposition` (one intersection, one back-fill), letting a second contributor compose
+> with #41's back-fill without either racing the other (`ERR-044-003`; recorded, not fixed, that a
+> suspended player is reinstatable in extremis by owner decision — a stricter reinstatement tier, not
+> a refused fixture). `ERR-044-001` (the fourth instance of the ERR-029-005/ERR-041-009 magic-header
+> class) also closed a T2 verification failure: Appendix C's "slot 19" worked example was an on-pitch
+> index under `SQUAD_SIZE = 22`, not the synthetic post-substitution `Incoming` id range `[22, 36)`,
+> so every post-substitution card would have been misattributed as written. The occupancy seed now
+> comes OUT of the engine (`MatchEngine.PlayerIdsByAgentId`) rather than a second `LineupSelector`
+> walk in `season-save`. **Tests:** `Discipline.Tests` 81/81 (four mutants killed);
+> `SeasonLoopDisciplineTests` +14 wiring locks, including a real 90-minute engine fixture pairing
+> observer-neutrality with a positive control. **Measured, same session:** engine discipline fouls
+> 35.0 / yellows 5.0 / reds 1.00 per 90 (`FoulRateDiagnosticTests`, 6 seeds × 54 000 ticks) against
+> the July-26 record of 21.0 / 3.0 / 1.0 and football's ~22 / ~3.5 / ~0.25 — corrected in the OPEN
+> ISSUES foul/card entry, which had gone stale. **Recorded, not fixed:** in `ManagedThroughEngine`
+> only the managed fixture runs the engine and only engine fixtures generate cards, so the managed
+> club accrues roughly 20× the yellows and reds of every quick-simmed rival — #44 makes suspensions
+> live for one club in twenty, and #44 T3 (the #30-owned quick-sim card synthesis) is the named
+> answer. Full account: `docs/tracking/spec-error-log.md` v2.17, `docs/tracking/open-issues.md`.
+> **GATE: RUN TO COMPLETION at `0fb3ff0`, August 13, 2026 — 33 suites, quarantine empty. `Discipline.Tests` 101/101; `SeasonSave.Tests` 431 passed / 0 failed / 3 known skips; `MatchEngine.Tests` 461 passed / **1 failed** / 11 skipped (59 m). The gate's exit status is FAILED (the quarantine is empty, so any failure fails it), and the single failure across the ENTIRE tree is `sim_match_engine_close_chance` — the inherited owner-held red that `close-chance-creation-design.md` §10.9 item 6 rules "hold red, do not rebaseline a third time". Those counts are IDENTICAL to the pre-#44 baseline this branch was cut from (W2, `MatchEngine.Tests` 461/1/11, same single failure), so **#44 adds no new failure**: the landing is gate-clean on its own terms and the tree is red for a reason that predates it and is an owner decision, not a defect.**
+
+> **Last Updated (prior):** August 28, 2026 — **PROJECT ARCHITECTURE GOVERNANCE INTEGRATION PLAN v0.4; documentation only.** Agreed rollout/activation revision: A1 is now an asmdef-only first slice that produces ERR-020-002/003 evidence without Roslyn/schema/#19/#20-governance dependencies; those existing #20 defects close before the coordinated governance amendment, after which the objective asmdef subset may become a required status before A8. Compiler-backed Class-A reachability moves to A4; Class-B gate-firing remains runtime/domain-owned (W12-style) evidence consumed by governance rather than implemented there. Integration contracts gain orthogonal `activation_state = active | intentionally-disabled | pending-integration | unresolved`; intentional disablement requires a machine-resolvable disable anchor and cannot act as a suppression. KD-W1 becomes a machine tuning precondition, proposed as FR-TS-097. Certifying Roslyn extraction must be built from source at the governed checkout with pinned .NET SDK/compiler/config identity. Actual #19/#20 normative files, SPEC_INDEX, and file-manifest remain intentionally untouched at this draft stage; D1–D4 remain frozen; no code, tests, CI workflow, runtime behavior, save/schema version, gameplay constant, RNG stream/domain tag/draw site, or draw order changed.
 
 > **Last Updated (prior):** August 28, 2026 — **PROJECT ARCHITECTURE GOVERNANCE INTEGRATION PLAN v0.3; documentation only.** End-to-end implementation review hardening of `docs/planning/project-architecture-governance-integration-plan.md`: replaces self-referential commit/tree freshness with material `subject_scope_digest` + provenance separation; makes property-history validation compare against a trusted prior registry; closes the A1/A4 plain-C# root bootstrap; freezes executable selector/identity/applicability/dependency-closure semantics at A2; requires compiler-backed C# discovery (including implicit type initialization) rather than a hand-written parser; defines stable component IDs and overload-safe selector history; derives proof-class dependency closure; records explicit execution/failure-injection/mutation truth; splits durable review runs from findings; and requires an `if: always()` architecture aggregator to consume owning-runner results and reject skipped/excluded/quarantined required proof. A0–A9, the Governance/#19/#20 authority split, and ERR-020-002/003 staging remain unchanged. Actual #19/#20 files remain untouched; D1–D4 remain frozen; no `.cs`, `.asmdef`, CI workflow, runtime behavior, save/schema version, gameplay constant, RNG stream/domain tag/draw site, or draw order changed.
 
@@ -781,8 +1794,19 @@ break it, and do not edit historical entries.
 > 26.8% — it closes ~0.5 pp of 7.6. So dispersion and the draw deficit are **substantially independent
 > findings**, and the textbook answer to the one does nothing for the other. The only mixed-Poisson
 > mechanism that cuts draws materially is a shared antithetic swing, which implies negative home/away
-> correlation — and the corpus refutes it: pooled within-bucket correlation **+0.004 ± 0.052** (n=378),
-> ~4σ from the ≈ −0.20 such a family predicts. **The draw deficit's mechanism is therefore NOT
+> correlation — and the corpus refutes it: pooled within-bucket correlation **+0.044 ± 0.073** (n=198),
+> ~3σ from the ≈ −0.20 such a family predicts.
+> ⚠️ CORRECTED August 18, 2026 (reviewed adversarial-review round-7 finding H1): this clause read
+> **+0.004 ± 0.052 (n=378), ~4σ**. That figure is reproducible only by pooling the 180 W/D/L depth
+> rows into the fit corpus — not the sanctioned invocation `round-resolution-corpus.md` §0.a records —
+> and that pooling also flips the α verdict to DETERMINED, contradicting the α figures (0.0773 /
+> 0.1552, 36% single-cell leverage) quoted in this same entry. It is therefore decision-relevant to
+> KD-7a, not a rounding difference. The sanctioned run prints `pooled within-bucket home/away
+> corr = +0.044 +/- 0.073 (n=198)`. The August-18 round-6 pass corrected the same clause in
+> `league-bootstrap-design.md`, `open-issues.md`, the roadmap and root `CLAUDE.md` and missed this
+> site, which left this file contradicting itself — line 745 above already carries +0.044 ± 0.073.
+> The refutation itself is unaffected: both values are far from −0.20, so the shared-swing family
+> stays refuted and the draw deficit's mechanism stays unestablished. **The draw deficit's mechanism is therefore NOT
 > established.** The over-dispersion half stands and is NOT a pooling artifact — the hostile question
 > asked at filing has a clean negative answer, within-bucket `dSquad` spread contributing ≤ 0.005 of
 > the ~0.4 excess — but it is better specified as `var = μ(1+αμ)` with α ≈ 0.15–0.25 than as the

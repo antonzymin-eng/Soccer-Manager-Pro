@@ -7,8 +7,8 @@ Appendix D is the KD-6 single source of truth; §3.3, §3.4, §5.2, and §7.1 ci
 by category name and must not reproduce its symbol lists.
 
 **Created:** May 7, 2026
-**Version:** 1.1
-**Status:** DRAFT
+**Version:** 1.5
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §APPENDICES
 **Appendix target lengths:** A ~50 lines · B ~30 lines · C ~150 lines ·
@@ -177,28 +177,39 @@ namespace TacticalDirector.BallPhysics   // §3.1.2, §4.3 — one namespace per
 
         /// <summary>
         /// [DERIVED] Ball centre height when resting on ground (m).
-        /// Formula: BALL_GROUND_HEIGHT = BALL_RADIUS. Spec #1 §2.1.
+        /// Formula: BallGroundHeight = BALL_RADIUS. Spec #1 §2.1.
         /// </summary>
-        public static readonly float BALL_GROUND_HEIGHT = BALL_RADIUS;  // §3.2.3
+        public static readonly float BallGroundHeight = BALL_RADIUS;    // §3.2.3
 
         // ── [CROSS] ── read-only mirror; cite authoritative source ────────────
         // §3.2.3 (FR-CS-022)
 
         /// <summary>
-        /// [CROSS] Physics loop tick rate (Hz).
-        /// Authoritative source: root CLAUDE.md — "Heartbeat Tick Rate".
-        /// Never set independently in this file.
+        /// [CROSS] Tick rate of the tactical/AI loop (Hz).
+        /// Authoritative source: root CLAUDE.md, "Heartbeat Tick Rate" — which is
+        /// where this particular value is genuinely owned, and is what the live
+        /// declaration cites. Where a NUMBERED spec owns the value, FR-CS-022 requires
+        /// the citation to name that spec and section instead: the 60 Hz half of the
+        /// same block cites Ball Physics #1 §1.2.
+        /// Never set independently here: the initializer BINDS the source symbol, so
+        /// the compiler enforces the mirror and divergence is impossible. A literal
+        /// (`= 10.0f`) would make this a SECOND authority — that is the
+        /// literal-initialized shape §3.2.3 excludes from the const carve-out, and the
+        /// tree's own `// TODO: mirror from ProjectConstants` tick-rate declarations
+        /// are the standing example of it. Illustrative symbol: this appendix is a
+        /// worked example, not compiled code.
         /// </summary>
-        public static readonly float PHYSICS_TICK_HZ = 60.0f;           // §3.2.3
+        public static readonly float TacticalTickHz = DeterministicSimConstants.TACTICAL_TICK_HZ;
 
         // ── [GT] ── static readonly; loaded from tunable config at boot ───────
         // §3.2.3 (FR-CS-019)
 
         /// <summary>
         /// [GT] Maximum drag-integration substeps per frame.
-        /// Loaded from GameplayConfig at boot; not a compile-time literal.
+        /// Loaded from GameplayConfig at boot; not a compile-time literal (FR-CS-019),
+        /// which is why the initializer is the config read and not `= 4`.
         /// </summary>
-        public static readonly int MAX_SUBSTEPS = 4;   // §3.2.3 — placeholder; config-loaded
+        public static readonly int MaxSubsteps = Config.GetInt("ball-physics", "MaxSubsteps", 4);
 
         // ── [EST] ── static readonly; TODO validate; spec-error-log entry ─────
         // §3.2.3 (FR-CS-020)
@@ -207,7 +218,7 @@ namespace TacticalDirector.BallPhysics   // §3.1.2, §4.3 — one namespace per
         /// [EST] Estimated terminal velocity (m/s) for a regulation football.
         /// Must be validated against wind-tunnel data before Stage 1.
         /// </summary>
-        public static readonly float TERMINAL_VELOCITY = 38.0f; // TODO: validate — spec-error-log entry required (FR-CS-020)
+        public static readonly float TerminalVelocity = 38.0f; // TODO: validate — spec-error-log entry required (FR-CS-020)
     }
 }
 
@@ -279,7 +290,7 @@ namespace TacticalDirector.BallPhysics  // §3.1.2, §4.3 — flat namespace; fo
 
                 // Inner hot-path loop: no boxing, no LINQ, no virtual calls (FR-CS-027–032, FR-CS-068)
                 // §3.2.4 (FR-CS-024) — loop bounds 0 / i++ are permitted literals
-                for (int i = 0; i < BallPhysicsConstants.MAX_SUBSTEPS; i++)  // §3.2.3 — named constant
+                for (int i = 0; i < BallPhysicsConstants.MaxSubsteps; i++)  // §3.2.3 — named constant
                 {
                     ApplyDrag(ref state, dt);
                 }
@@ -434,13 +445,14 @@ redefined.
 | Term | Definition |
 |---|---|
 | **Constants catalogue file** | A `.cs` file whose sole purpose is to declare named constants for one specification (or the project as a whole). Named `<SpecName>Constants.cs` or `ProjectConstants.cs`. No logic, no type declarations other than the enclosing `static class`. See §4.2. |
+| **`[CROSS-PENDING]` (constant tag)** | The sixth root `CLAUDE.md` constant tag: a cross-spec constant blocked on an upstream spec, whose numeric value is not yet allocated; promoted to `[CROSS]` atomically with upstream approval. Reproduced verbatim in §3.2.1; storage-class mapping in §3.2.3; `#region` slot in §4.2. Added to this spec August 18, 2026 (round-6 finding H6, honouring §9.4 re-approval trigger 1). |
 | **det-banned** | The category name (Appendix D §D.1) for APIs and constructs prohibited in game-logic code because their use would break deterministic replay. References in §3.4.2 and §5.2. |
 | **det-required-apis** | The category name (Appendix D §D.3) for APIs that **MUST** be used in place of their det-banned equivalents. References in §3.4.3 and §5.2. |
 | **det-required-patterns** | The category name (Appendix D §D.4) for C# language patterns (not named API symbols) that **MUST** be applied to preserve determinism. References in §3.4.3 and §5.2. |
 | **alloc-hot-path** | The category name (Appendix D §D.2) for constructs that allocate managed memory and are prohibited in hot-path code. References in §3.3.2 and §5.2. |
 | **Exception with sign-off** | A lead-developer-recorded override permitting temporary deviation from a MUST or MUST NOT FR. Defined in §2.1 and §2.3 Mode 3. Applies to the specific use site only; expires at next refactor of the affected file. |
 | **Game-loop method** | Any method on the 60 Hz physics/render update path. Subject to the zero-allocation budget (FR-CS-026, FR-CS-066) and hot-path rules (FR-CS-027–034, FR-CS-068–069). The 10 Hz AI/tactical loop is also covered when its methods are called from within a 60 Hz frame. See root `CLAUDE.md` — "Heartbeat Tick Rate" for the authoritative loop definitions. |
-| **Game-state assembly** | A Unity Assembly Definition (`.asmdef`) that participates in the deterministic simulation. All assemblies under the Physics, Mechanics, and AI layers (§3.5.2) are game-state assemblies. Editor-only and benchmark assemblies are not. |
+| **Game-state assembly** | A Unity Assembly Definition (`.asmdef`) that is subject to the det-banned API ban (§3.4.2) and the determinism patterns (FR-CS-051–054), whether or not it participates in the simulation. Scope: **every production assembly under `src/`** — Foundation through Client in the §3.5.2 tier order, *including* the two out-of-band Infrastructure assemblies — the same scope §3.7.1 states for FR-CS-071; this reaches Presentation/Client-tier assemblies (`ui-framework`, `client-app`, `match-client-web`, `match-viewer`, etc.) and the Infrastructure pair even though none of them participates in the deterministic simulation. Editor-only and benchmark assemblies (§3.9.3, §3.9.5) are not game-state assemblies; test assemblies are not production assemblies. *(Rescoped August 18, 2026, round-6 finding H2: the prior "Physics, Mechanics, and AI layers" wording predated the §3.5.2 ten-tier order and read the deterministic core — `deterministic-sim`, `event-system`, `match-engine`, `season-save` among others — out of the determinism rules entirely. Definitional clause corrected round-7 finding L3: it still read "participates in the deterministic simulation" against a scope clause that is rule-EXTENSION, not participation — `ui-framework`, `client-app`, `match-client-web`, `match-viewer`, and the two Infrastructure assemblies are in scope without participating.)* |
 | **Hot path** | Code executed on every physics or AI tick — i.e., code called 10–60 times per second during active gameplay. Boxing, LINQ, `string.Format`, closures, and reflection in hot-path code violate allocation rules. See §3.3 and §6.2. |
 | **Magic number** | A literal numeric value in formula, system, or struct code that is not referenced through a named constant in a catalogue file. Prohibited by FR-CS-023. Permitted exceptions enumerated in FR-CS-024. |
 | **Per-frame path** | Synonym for **game-loop method** (see that entry for the canonical loop-rate scope and rule citations). Used in the context of allocation rules (§3.3.2, FR-CS-030) when the emphasis is on per-frame repetition rather than method shape. |
@@ -456,6 +468,11 @@ redefined.
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §APPENDICES. Appendix D authored to KD-6 single-source-of-truth standard. All five appendices present. | — |
 | 1.1 | May 11, 2026 | Claude Code | Adversarial review fixes (audit findings H-04 demoted to M, L-03): Appendix D §D.1 expanded to include FR-CS-010's remaining banned constructs — `async`/`await` for game-state work (CS-DET-014 placeholder) and `unsafe` without sign-off (CS-DET-015 placeholder). Closes the KD-6 enforcement gap whereby FR-CS-010's rule text banned these constructs but Appendix D's BannedSymbols seed listed only `dynamic`. §D.1 header text expanded to make the dual rationale (determinism + compile-time safety) explicit. Appendix E "Per-frame path" glossary entry tightened to point to "Game-loop method" rather than restating loop-rate scope, eliminating the prior overlap. Minor version (additive — new rows, new wording; no removals or rule changes). | — |
+| 1.1.1 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
+| 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H2 + H6.** H2: the Appendix E "Game-state assembly" entry still scoped the term to "the Physics, Mechanics, and AI layers (§3.5.2)" — a taxonomy §3.5.2 has not held since the ten-tier order was adopted (`ERR-020-002`). Under the stale wording the deterministic simulation's own assemblies (`deterministic-sim`, `event-system`, `match-engine`, `season-save`, `discipline`, `player-progression`, `training-system`, `injuries-medical`, `living-world`, `player-database`, `tactical-instructions`, `project-constants`) were NOT game-state assemblies and so were exempt from §3.4.2's det-banned ban and FR-CS-051–054, while §3.7.1 had already been rescoped to every production assembly under `src/` — the two sections contradicted each other. Rescoped identically to §3.7.1. H6: Appendix E gains a `[CROSS-PENDING]` entry (the tag — one of root `CLAUDE.md`'s six — was unknown to #20 anywhere; see section-3.md v1.6 for the primary fix). Appendix D reviewed per §9.4 re-approval trigger 1 and deliberately unchanged: `[CROSS-PENDING]` implies no banned or required API symbol, so there is no D-row to add. | — |
+| 1.3 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H5.** Appendix C §C.1 — #20's own "compliant exemplar", the file §3.9's coverage map and Appendix C's rule-coverage table point readers at for FR-CS-016–025 — violated §3.2.3 for four of its five tags: `BALL_GROUND_HEIGHT`, `PHYSICS_TICK_HZ`, `MAX_SUBSTEPS` and `TERMINAL_VELOCITY` were `public static readonly` in ALL_CAPS where `[DERIVED]`/`[CROSS]`/`[GT]`/`[EST]` all require PascalCase. This is `ERR-020-001` itself: that entry renamed `PHYSICS_TICK_HZ → PhysicsTickHz` in §4.2 in May 2026 and its file list never included this appendix, so the defect survived in the exemplar. Two further violations in the same block: the `[CROSS]` mirror was LITERAL-initialized (`= 60.0f`) — the shape §3.2.3's own carve-out names as never qualifying — and cited "root CLAUDE.md" where FR-CS-022 requires spec and section; and `[GT] MAX_SUBSTEPS = 4` was a compile-time literal against FR-CS-019's explicit MUST NOT while its own doc comment claimed it was config-loaded. All four renamed; the `[CROSS]` mirror now BINDS `DeterministicSimConstants.TACTICAL_TICK_HZ` (verified to exist) and names the authority that owns the value; `MaxSubsteps` shows the config read its comment promised. | — |
+| 1.4 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding L3.** The "Game-state assembly" glossary entry's definitional clause ("participates in the deterministic simulation") contradicted its own scope clause ("every production assembly under `src/`") — `ui-framework`, `client-app`, `match-client-web`, `match-viewer`, and the two Infrastructure assemblies do not participate in the simulation, so the definition was false of the scope it names two sentences later. The scope (a rule EXTENSION) is correct and unchanged; the definition restated as "subject to the det-banned API ban … whether or not it participates in the simulation." | — |
+| 1.5 | August 18, 2026 | Claude Code | **Adversarial-review round-8 finding H1, found mechanically by the new `tools/doc-claim-check.py`.** *(Renumbered 1.4 → 1.5 at adversarial-review round 9: this row landed in `f23f480` as a SECOND `1.4`, above the round-7 L3 row that had already taken that number in `20760cf`. `recurring-defect-lint.py` reported it as the tree's only ERROR — while root `CLAUDE.md` still claimed 0 ERROR tree-wide — so the round that added a mechanical checker for dangling identifiers introduced a defect a mechanical checker the repo already had was reporting. Rows reordered ascending with it; no content changed.)* §C.2 still called `BallPhysicsConstants.MAX_SUBSTEPS` after v1.3 renamed the declaration to `MaxSubsteps` in §C.1 one section above — a dangling reference inside the pair #20 offers as its COMPLIANT exemplar, annotated `// §3.2.3 — named constant`, i.e. claiming conformance to the rule that forced the rename. **This is `ERR-020-001` for the third time**: that entry renamed `PHYSICS_TICK_HZ → PhysicsTickHz` in §4.2 in May 2026 and its file list never included this appendix; v1.3's own history row named that failure while repeating it one section away. In `src/` the compiler would have rejected it; in a spec fence nothing binds, which is exactly why the identifier check now exists and why it is wired into CI rather than left to review. | — |
 
 ---
 

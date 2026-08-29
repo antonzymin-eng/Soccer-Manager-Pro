@@ -5,7 +5,7 @@
 from `IN REVIEW` to `APPROVED` in `SPEC_INDEX.md`. Items are programmatically verifiable
 against source files unless marked `[manual]`.
 **Created:** May 8, 2026
-**Version:** 1.1
+**Version:** 1.1.3
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 9; `outline-mid.md` v1.2, §9.1–§9.4
@@ -94,11 +94,16 @@ mechanics-section pointer.
 # 2119 keyword. This excludes the §2.2.9 partition-footer rows which use "FR-CS-NNN …
 # FR-CS-NNN" range notation rather than a single-FR cell, and would otherwise inflate
 # the count with false positives.
-grep -oP "\| FR-CS-\d{3} \|.*" docs/specs/code-standards/section-2.md \
+grep -oP "\| FR-CS-\d{3}[a-z]? \|.*" docs/specs/code-standards/section-2.md \
   | grep -v "MUST\|SHOULD\|MAY"
 # Expected: zero output (every FR row contains a RFC 2119 keyword).
 ```
 
+- [x] Re-verified August 17, 2026 — the regex gained an optional lower-case suffix
+  (`\d{3}[a-z]?`) so it also sees the sub-numbered clauses FR-CS-046a and FR-CS-046b,
+  which the three-digit form could not match: both are MUST-level rows and were
+  therefore silently untested by this check between their introduction and this
+  correction. Returns zero lines over all 75 rows (73 numbered FRs + 2 sub-clauses).
 - [x] Re-verified May 11, 2026 — proxy command rewritten to match single-FR rows only;
   returns zero lines. All 73 FR rows contain a conformance keyword. (Original May 8, 2026
   proxy was looser and matched §2.2.9 partition-footer rows as false positives; corrected
@@ -132,7 +137,13 @@ grep "^## Appendix" docs/specs/code-standards/appendices.md
 ---
 
 **C-07** — Exemplar pair (`ExemplarConstants.cs` and `ExemplarStruct.cs`) is present in
-Appendix C. `[manual]` — compilation check is manual at Stage 0 (no `src/` toolchain).
+Appendix C. `[manual]` — the compilation check is manual because the pair lives in a
+spec appendix as fenced markdown, which no toolchain compiles. *(Premise corrected
+August 18, 2026, round-6 finding H5: the original "(no `src/` toolchain)" grounds are
+stale — `tools/dotnet-ci/run-gate.sh` has compiled the entire `src/` tree on every push to `main` and every PR targeting `main`
+since the gate landed (`.github/workflows/ci.yml`); it does not, and cannot, compile
+markdown code blocks, so the manual marker stands on the corrected grounds. The
+May 8, 2026 verification record below is untouched history.)*
 
 ```bash
 grep -c "ExemplarConstants\|ExemplarStruct" docs/specs/code-standards/appendices.md
@@ -186,8 +197,10 @@ done
 ## 9.2 Quality Checklist
 
 **Q-01** — Cite-not-redefine audit: the constant tag definitions (GT/EST/FIXED/DERIVED/
-CROSS) are reproduced in §3.2.1 with explicit attribution to root `CLAUDE.md`, and no
-other section restates the definitions.
+CROSS/CROSS-PENDING) are reproduced in §3.2.1 with explicit attribution to root
+`CLAUDE.md`, and no other section restates the definitions. *(Enumeration extended to
+six tags August 18, 2026, round-6 finding H6; the May 8, 2026 verification below
+predates the sixth tag.)*
 
 ```bash
 # Count "CLAUDE.md" attribution lines adjacent to the tag table in §3.
@@ -195,7 +208,7 @@ grep -n "CLAUDE.md" docs/specs/code-standards/section-3.md | head -5
 # Expected: at least one attribution in §3.2.1 naming CLAUDE.md as source.
 
 # Confirm the tag definitions do not appear in §2, §4, §5, §6 as fresh definitions.
-grep "\[GT\]\|\[EST\]\|\[FIXED\]\|\[DERIVED\]\|\[CROSS\]" \
+grep "\[GT\]\|\[EST\]\|\[FIXED\]\|\[DERIVED\]\|\[CROSS\]\|\[CROSS-PENDING\]" \
      docs/specs/code-standards/section-2.md \
      docs/specs/code-standards/section-4.md \
      docs/specs/code-standards/section-6.md | grep -v "FR-CS-\|§3.2"
@@ -250,22 +263,40 @@ root `CLAUDE.md` "Things That Have Gone Wrong Before" or `docs/tracking/spec-err
 ```bash
 grep -oP "ERR-\d+" docs/specs/code-standards/section-*.md \
   docs/specs/code-standards/appendices.md | sort -u
-# Expected: three distinct IDs —
+# Expected: six distinct ID prefixes —
 #   ERR-001 — phantom-interface hazard, cited in §1.3 KD-1 rationale, §3.5.3, §8.2,
 #             Appendix E "Phantom interface" glossary entry.
-#   ERR-004 — same hazard class; same citation sites.
+#   ERR-002 — cited in this file's own R-03 evidence note (§9.3), naming it an open,
+#             low-priority spec-error-log entry checked during the R-03 intersection scan.
+#   ERR-003 — same R-03 note, same status.
+#   ERR-004 — same hazard class as ERR-001; same citation sites.
 #   ERR-016 — surfaced via the §3.6.5 cross-reference exemplar (section-3.md line 755),
 #             which uses ERR-016-002 as an illustration of the typed-ID style.
+#   ERR-020 — the #20-self-referential family (ERR-020-001 … ERR-020-007), cited at every
+#             fix site the round-6/round-7 adversarial-review passes landed: §3.2.1/§3.2.3
+#             (section-3.md), §4.1/§4.2 (section-4.md), the header-correction rows
+#             (section-1.md, section-5.md, section-6.md, section-7.md, section-8.md), and
+#             this file's own §9.5 history.
 # Verify each ID in root CLAUDE.md or docs/tracking/spec-error-log.md.
 ```
 
-- [x] Re-verified May 11, 2026 — three IDs found: ERR-001 and ERR-004 confirmed in
-  root `CLAUDE.md` "Things That Have Gone Wrong Before" (phantom interfaces row) and
-  `docs/tracking/spec-error-log.md`; ERR-016 (specifically ERR-016-002) confirmed in
-  `docs/tracking/spec-error-log.md` and root `CLAUDE.md` OPEN ISSUES. All three resolve.
+- [x] Re-verified August 18, 2026 (round-7 finding M2) — the command returns **six**
+  distinct prefixes, not three: `ERR-001 ERR-002 ERR-003 ERR-004 ERR-016 ERR-020`. The
+  May 11, 2026 "three distinct IDs" expected value was correct only until `ERR-020-001`
+  was first cited (May 22, 2026, `section-4.md` v1.0.1) and had gone unrun since —
+  §9.4 trigger 1 requires re-verification of every §9.1/§9.2 item on a root-`CLAUDE.md`
+  tag change, and the `[CROSS-PENDING]` addition (round-6, ERR-020-006) triggered that
+  requirement without the sweep actually being run. All six IDs resolve: ERR-001/ERR-004
+  in root `CLAUDE.md` "Things That Have Gone Wrong Before" (phantom interfaces row) and
+  `docs/tracking/spec-error-log.md`; ERR-002/ERR-003 in `docs/tracking/spec-error-log.md`
+  (open, low-priority, per this file's own R-03 note); ERR-016 (specifically ERR-016-002)
+  in `docs/tracking/spec-error-log.md` and root `CLAUDE.md` OPEN ISSUES; ERR-020
+  (specifically ERR-020-001 through ERR-020-007) in `docs/tracking/spec-error-log.md`.
   (Original May 8, 2026 expected list omitted ERR-016 because the §3.6.5 exemplar was
   authored after the §9 checklist was scaffolded; list corrected May 11, 2026 per
-  adversarial review finding H-03.)
+  adversarial review finding H-03; corrected again August 18, 2026 for the two IDs the
+  May 11 pass never counted — ERR-002/ERR-003, present since drafting via R-03's own
+  prose — and the ERR-020 family, added by the code-standards self-amendment history.)
 
 ---
 
@@ -454,6 +485,17 @@ re-verification of all §9.1 and §9.2 checklist items:
    verbatim; any tag addition, removal, or definition change requires §3.2.1 and
    Appendix D to be updated and re-reviewed.
 
+   **Re-verification record (trigger 1, fired August 10, 2026 by the `[CROSS-PENDING]`
+   tag addition to root `CLAUDE.md`; honoured August 18, 2026, round-7 finding M2):**
+   §3.2.1 and Appendix D were updated at the round-6 landing (ERR-020-006), but the
+   mandated re-verification of *every* §9.1/§9.2 checklist item was never actually run —
+   only §9.2 Q-01's note was touched. Run in full August 18, 2026: all nine §9.1 items
+   (C-01…C-09) and all eight §9.2 items (Q-01…Q-08) re-executed against the current tree.
+   Eight of nine plus all eight reproduced their recorded expected values unchanged;
+   **Q-04 did not** — its "three distinct IDs" expected value was stale (see the Q-04
+   entry above, corrected to six). No other item's command returned a different result
+   than recorded.
+
 2. **Root `CLAUDE.md` — "When Writing Code" determinism rules change.** §3.4 (Determinism
    Rules) is derived from these rules; any change to SplitMix64 requirements, `unchecked{}`
    scope, Python masking convention, or `MatchClock` requirement propagates to §3.4 and
@@ -478,6 +520,9 @@ re-verification of all §9.1 and §9.2 checklist items:
 | 1.0 | May 8, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 9. All §9.1 and §9.2 items verified on drafting date; §9.3 items pending lead-developer review. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fixes (audit finding H-03 — fabricated expected values; M-02; L-02): re-ran every §9.1/§9.2 verification command and replaced unrun expected counts with actual outputs — C-02 (2 → 3), C-04 (proxy regex tightened to single-FR rows only), C-05 (2 → 1), C-08 (1 → 1 for nine files, 2 for this file with documented self-reference rationale), Q-04 (added ERR-016 to expected list), Q-08 (line 862 correctly identified as a §3.8 table cell, not a code block). Q-07 partition table rebuilt from 6 synthetic rows to 7 rows matching §5.4.1–§5.4.7 actual subsection structure. No content changes to §9.3 review items. | — |
 | 1.1 | May 11, 2026 | Lead Developer | §9.3 review items R-01 through R-05 all ticked; §9.4 Decision flipped from DRAFT to APPROVED. R-01 cross-spec drift review clean; R-02 lead-developer sign-off captured; R-03 spec-error-log.md intersection check returned no matches; R-04 file-manifest.md convention recognised as folder-level (not per-file); R-05 SPEC_INDEX.md advanced from NOT STARTED directly to APPROVED (intermediate IN REVIEW elided since R-01..R-04 resolved in same cycle as draft). Approval Evidence table populated with May 11, 2026 re-run results. Status field at top of file updated from DRAFT to APPROVED. | Lead Developer |
+| 1.1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H5 (this file's site).** C-07's `[manual]` justification read "(no `src/` toolchain)" — false since the `tools/dotnet-ci` gate began compiling the whole `src/` tree on every push. The item's conclusion survives on corrected grounds (the exemplar pair is fenced markdown in a spec appendix; no toolchain compiles that), so the marker stays `[manual]` and the May 8, 2026 verification record is untouched. Wording-only patch; no checklist outcome, count, or §9.4 decision changed. Consequential to round-6 H6: Q-01's tag enumeration and grep pattern extended to the six-tag vocabulary (the sixth tag postdates the May 8, 2026 verification, which is noted in place and left standing). | — |
+| 1.1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H3.** C-07's justification said the `tools/dotnet-ci` gate compiles the whole tree "on every push"; corrected to `ci.yml`'s real triggers (`branches: [main]`, `push` and `pull_request`). Wording only — no checklist outcome, count, or §9.4 decision changed. | — |
+| 1.1.3 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding M2.** Q-04's "three distinct IDs" expected value was false and untouched since May 11, 2026: re-running its command today returns **six** (`ERR-001 ERR-002 ERR-003 ERR-004 ERR-016 ERR-020`), not three — stale since `ERR-020-001` was first cited May 22, 2026. §9.4 trigger 1's mandated re-verification of every §9.1/§9.2 item had never actually been run despite the round-6 `[CROSS-PENDING]` tag addition firing it (only Q-01's note was touched at that landing). Fixed by re-running EVERY §9.1 (C-01…C-09) and §9.2 (Q-01…Q-08) command against the current tree: eight of nine §9.1 items and seven of eight §9.2 items reproduced their recorded values unchanged; only Q-04 did not (corrected in place, with the six-ID citation list and sources). §9.4 trigger 1 gains a re-verification record documenting this sweep. No §9.4 Decision change — Spec #20 remains APPROVED; the correction is evidentiary only. | — |
 
 ---
 

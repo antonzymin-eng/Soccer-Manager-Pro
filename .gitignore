@@ -55,3 +55,7 @@ Thumbs.db
 *.csproj
 *.sln
 .vsconfig
+
+# Adversarial-review loop ledger (session-local bookkeeping written by
+# .claude/skills/adversarial-review/scripts/findings.py; regenerated per loop).
+.adversarial-review/

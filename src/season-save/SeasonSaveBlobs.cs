@@ -1,24 +1,26 @@
 // File:     src/season-save/SeasonSaveBlobs.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08
+// Modified: 2026-08-13 (#44 T1, roadmap C1 — gains DisciplineBlob)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-2 / KD-7 / §4;
 //           Season & Competition Loop #30 Appendix B (frame), FR-SN-019; Training System #29 FR-TR-018;
-//           Injuries & Medical #41 FR-MD-017; Code Standards #20
-// Purpose:  The deframe result of a season save blob: the seven opaque sub-blobs (the living-world
+//           Injuries & Medical #41 FR-MD-017; Discipline & Suspensions #44 Appendix B; Code Standards #20
+// Purpose:  The deframe result of a season save blob: the eight opaque sub-blobs (the living-world
 //           composite, the season state, the #29 training block, the #41 medical block, the #30
-//           appearance block, the #28 career-state block, and — when present — the match save). Pure bytes; the codec never reconstructs objects (that is
+//           appearance block, the #28 career-state block, the #44 discipline block, and — when present
+//           — the match save). Pure bytes; the codec never reconstructs objects (that is
 //           SeasonSaveManager), so it stays free of match-engine / living-world / season-state types.
 
 namespace TacticalDirector.SeasonSave
 {
     /// <summary>
-    /// The seven byte sub-blobs a season save carries (unified-season-save-design.md KD-2 + #30
-    /// FR-SN-019 + #29 FR-TR-018 + #41 FR-MD-017 + #28 FR-PG-017): the living-world composite
+    /// The eight byte sub-blobs a season save carries (unified-season-save-design.md KD-2 + #30
+    /// FR-SN-019 + #29 FR-TR-018 + #41 FR-MD-017 + #28 FR-PG-017 + #44 Appendix B): the living-world composite
     /// (<see cref="WorldBlob"/>), the season state (<see cref="SeasonBlob"/>), the #29 training block
     /// (<see cref="TrainingBlob"/>), the #41 medical block (<see cref="MedicalBlob"/>), the #30
-    /// appearance block (<see cref="AppearanceBlob"/>) and the #28 career-state block
-    /// (<see cref="ProgressionBlob"/>) — all six always present — and the match save (<see cref="MatchBlob"/>, <c>null</c> when the season had no
+    /// appearance block (<see cref="AppearanceBlob"/>), the #28 career-state block
+    /// (<see cref="ProgressionBlob"/>) and the #44 discipline block (<see cref="DisciplineBlob"/>) — all
+    /// seven always present — and the match save (<see cref="MatchBlob"/>, <c>null</c> when the season had no
     /// in-progress match — KD-3). Produced by <see cref="SeasonSaveCodec.Decode"/>;
     /// <see cref="SeasonSaveManager"/> reconstructs the actual <c>WorldStore</c> /
     /// <see cref="SeasonState"/> / training + medical state / <c>MatchEngine</c> from them. Kept opaque
@@ -53,6 +55,11 @@ namespace TacticalDirector.SeasonSave
         /// siblings this block carries the evolving <c>PlayerRecord</c> set itself (#28 KD-4).</summary>
         public readonly byte[] ProgressionBlob;
 
+        /// <summary>The #44 discipline block
+        /// (<see cref="TacticalDirector.Discipline.DisciplineSaveCodec.Encode"/>). Never null; a game
+        /// tracking no cards carries a well-formed zero-entry block (#44 Appendix B).</summary>
+        public readonly byte[] DisciplineBlob;
+
         /// <summary>The match save blob (<c>MatchSaveManager.Encode</c>), or <c>null</c> if the season
         /// had no in-progress match (KD-3).</summary>
         public readonly byte[] MatchBlob;
@@ -65,6 +72,7 @@ namespace TacticalDirector.SeasonSave
             byte[] medicalBlob,
             byte[] appearanceBlob,
             byte[] progressionBlob,
+            byte[] disciplineBlob,
             byte[] matchBlob)
         {
             WorldBlob = worldBlob;
@@ -73,6 +81,7 @@ namespace TacticalDirector.SeasonSave
             MedicalBlob = medicalBlob;
             AppearanceBlob = appearanceBlob;
             ProgressionBlob = progressionBlob;
+            DisciplineBlob = disciplineBlob;
             MatchBlob = matchBlob;
         }
     }
@@ -88,4 +97,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | sixth sub-blob (ERR-041-010(b)).                                  |
 // | 1.4     | 2026-08-08 | —      | #28 T1: gains ProgressionBlob (always present) — the seventh     |
 // |         |            |        | sub-blob, and the first to carry roster data (KD-4).             |
+// | 1.5     | 2026-08-13 | —      | #44 T1 (roadmap C1): gains DisciplineBlob (always present) —     |
+// |         |            |        | the eighth sub-blob.                                              |
 #endregion

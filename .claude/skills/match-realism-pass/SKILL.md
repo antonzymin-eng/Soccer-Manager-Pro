@@ -54,8 +54,9 @@ depends on which check failed, and the three routes are different work: **check 
 spec's T0 landing and ends this skill's involvement; **check 5** measures, records, and calibrates
 nothing; **checks 2–4 and 6** are a wiring task, which is the branch the rest of §0 describes.
 
-This gate is first because the project's position makes that failure routine rather than rare. **22
-of 53 APPROVED specs have no `src/` assembly at all**, and several that do exist are wired only
+This gate is first because the project's position makes that failure routine rather than rare. **19
+of 53 APPROVED specs have no `src/` assembly at all** (re-derived August 18, 2026 against the root
+`CLAUDE.md` enumerated list), and several that do exist are wired only
 partially — T0 cores with no engine consumer, orchestrators behind opt-in flags, branches implemented
 to half their pseudocode. "The spec is APPROVED" says nothing whatsoever about whether code runs.
 

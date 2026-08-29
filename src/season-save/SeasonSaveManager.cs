@@ -1,27 +1,50 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-11 (AR pass 6, M2(b) — the BirthWorldDay-vs-clock check joins the block-level walk — v1.21)
+// Modified: 2026-08-16 (L-2, adversarial review, doc only — v1.29: the H2 comment at the restore
+//           decorator named PlayerCareerStates.SelectAvailable using present-tense grammar ("which
+//           composes with...") for a method #44 C1/C2 has since deleted. Qualified both mentions as
+//           "the then-extant" method and switched "composes" -> "composed" (past tense) so the text no
+//           longer reads as describing a method that still exists. No behaviour change.)
+// Modified: 2026-08-15, later still (reviewed findings pass, L1+L2 — L2: three sites (the Save summary,
+//           the header Purpose's Load-rebuild sentence, the Load summary) still described a five/six-blob
+//           frame after two prior additions (appearance, progression); pointed each at
+//           SeasonSaveBlobs / SeasonSaveContents, which already enumerate the full eight-blob frame,
+//           rather than restating the list a fourth time. L1: the Load summary's closing sentence
+//           claimed a save with no match is "untouched" by the career-block coherence gate, but
+//           RequireCoherentCareerBlocks (verified at its call site, which precedes and sits outside the
+//           `if (blobs.MatchBlob != null)` branch) runs unconditionally — corrected to say every save is checked,
+//           match or not. No behaviour change — v1.28)
+// Modified: 2026-08-15, later (reviewed findings pass, L4 — DisciplineConstants.LEAGUE_COMPETITION_KEY
+//           reference renamed for that constant's ALL_CAPS -> LeagueCompetitionKey rename
+//           (DisciplineConstants.cs v1.5). No behaviour change — v1.27)
+// Modified: 2026-08-15 (L3, reviewed-findings pass — formatting only: trailing whitespace removed and
+//           a method-closing brace moved from column 0 to column 8, per FR-CS-011/012 — v1.26)
+//           Prior: 2026-08-13 (#44 C1/C2 adversarial review round 4 — H4/ERR-030-039: `disciplineWired` is
+//           promoted onto the PUBLIC long form and the forwarding overload that hardcoded `true` is
+//           deleted, so no entry point can assert wiring on the caller's behalf — v1.25)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
+//           Discipline & Suspensions #44 Appendix B;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §4.6.1.1
 //           (atomic-write contract); Living World #22 §4.6/§7.1; Code Standards #20
 // Purpose:  The season save-file root — writes a season (the living-world WorldStore composite, the
-//           season state, the #29 per-club training states, the #41 per-club medical states, and the
-//           #30 per-club appearance records, plus
+//           season state, the #29 per-club training states, the #41 per-club medical states, the
+//           #30 per-club appearance records, the #28 progression store and the #44 discipline state, plus
 //           an optional in-progress MatchEngine) to disk as one file and reconstructs all of them. This
 //           is the only assembly that may reference both match-engine and living-world (FR-LW-003 keeps
 //           them independent; the season root sits above both, like match-viewer over match-engine).
 //           Save captures every sub-blob, encodes the season frame (SeasonSaveCodec), and writes
-//           atomically (temp -> fsync -> rename). Load reads the file, deframes it, and rebuilds the
-//           WorldStore, the season state, and the training/medical states (always) plus the MatchEngine
-//           (only when the save carried a match).
+//           atomically (temp -> fsync -> rename). Load reads the file, deframes it, and rebuilds all
+//           eight sub-blobs the frame carries (see SeasonSaveBlobs for the enumeration) plus the
+//           MatchEngine (only when the save carried a match).
 
 using System;
 using System.IO;
 
 using Unity.Profiling;
 
+using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
@@ -34,7 +57,8 @@ namespace TacticalDirector.SeasonSave
     /// <summary>
     /// On-disk save/load for a season: one file carrying the living-world <see cref="WorldStore"/>
     /// composite, the <see cref="SeasonState"/>, the #29 per-club training states, the #41 per-club
-    /// medical states, and the #30 per-club appearance records — all five always present — and, when a match is in progress, a running
+    /// medical states, the #30 per-club appearance records, the #28 progression store and the #44
+    /// discipline state — all seven always present — and, when a match is in progress, a running
     /// <see cref="MatchEngine.MatchEngine"/> (unified-season-save-design.md). These are nested as
     /// opaque, independently version-gated sub-blobs (KD-2) — this root never parses any of them, it
     /// only frames/deframes and reconstructs.
@@ -49,10 +73,13 @@ namespace TacticalDirector.SeasonSave
         private static readonly ProfilerMarker s_loadMarker = new ProfilerMarker("SeasonSave.Load");
 
         /// <summary>
-        /// Captures <paramref name="world"/>, <paramref name="season"/>, <paramref name="trainingClubs"/>,
-        /// <paramref name="medicalClubs"/> and (when present) <paramref name="matchOrNull"/>, encodes
-        /// the season frame, and writes it to <paramref name="path"/> atomically (the §4.6.1.1 temp -> fsync -> rename
-        /// contract). Every sub-blob is captured and the frame encoded BEFORE the file is opened (the
+        /// Captures <paramref name="world"/>, <paramref name="season"/>, this root's five other REQUIRED
+        /// sub-blob sources, and (when present) <paramref name="matchOrNull"/>; encodes the season
+        /// frame; and writes it to <paramref name="path"/> atomically (the §4.6.1.1 temp -> fsync ->
+        /// rename contract). See <see cref="SeasonSaveBlobs"/> for the full eight-blob enumeration this
+        /// frame carries — restating that list in a doc comment has drifted from the real parameter set
+        /// twice before (v1.6, v1.17), so this summary points at the one place it is kept exact rather
+        /// than repeating it a fourth time. Every sub-blob is captured and the frame encoded BEFORE the file is opened (the
         /// <see cref="MatchSaveManager.Save"/> blob-before-file precedent, restated by FR-SN-021); no
         /// capture mutates its source, so a write failure leaves the live objects and any existing
         /// destination untouched (KD-8 / AR-2 L-1). Pass <c>null</c> for
@@ -70,6 +97,35 @@ namespace TacticalDirector.SeasonSave
         /// (FR-MD-017).</param>
         /// <param name="appearanceClubs">The per-club #30 appearance states, on the same terms —
         /// REQUIRED, never null-meaning-empty (#30 Appendix B / ERR-041-010(b)).</param>
+        /// <param name="progression">The #28 career store — REQUIRED, never null-meaning-empty; this
+        /// block IS the roster (KD-4).</param>
+        /// <param name="discipline">The #44 discipline state (the sparse per-player tally). REQUIRED,
+        /// never null: pass <c>new DisciplineState()</c> to say "no cards recorded yet", which still
+        /// writes a well-formed zero-entry block rather than omitting one (#44 Appendix B), on the same
+        /// terms as <paramref name="trainingClubs"/> / <paramref name="medicalClubs"/> /
+        /// <paramref name="appearanceClubs"/> / <paramref name="progression"/> above.</param>
+        /// <param name="disciplineWired">Whether a #44 discipline subsystem is driven behind this save
+        /// at all — the fact <see cref="RequireDestinationCarriesNoDiscipline"/> keys on (ERR-030-038),
+        /// and a REQUIRED parameter on this, the outermost write entry point (ERR-030-039).
+        /// <para>
+        /// It is <b>not</b> derivable from <paramref name="discipline"/>: FR-DC-017 drops a row the
+        /// instant it reaches <c>(0, 0)</c> — mid-season when a ban is served out with no residual
+        /// yellows, and again for every yellows-only row at the boundary sweep — so <c>Count == 0</c>
+        /// is the NORMAL state of a correctly wired tally, not evidence that one was dropped. Pass
+        /// <c>true</c> when the caller drives a tally (including one that has legitimately drained to
+        /// zero entries), <c>false</c> when there is no discipline subsystem behind this save, which is
+        /// the sole composition from which an empty <c>DISC</c> block is evidence of a drop.
+        /// </para>
+        /// <para>
+        /// Never defaulted, and never asserted on the caller's behalf, for the same reason the five
+        /// block parameters above reject null: a caller that can stay silent about wiring is a caller
+        /// whose silence is indistinguishable from the loss. ERR-030-039 is what happens when one entry
+        /// point does assert it — this method previously forwarded from a nine-argument public form
+        /// that hardcoded <c>true</c>, on the reasoning that handing over a tally proves the caller
+        /// drives #44. It proves only that the tally is not null: <c>new DisciplineState()</c> is
+        /// exactly what an unwired caller passes (this parameter's own documentation sanctions it), and
+        /// over a populated destination that is the ERR-030-036 loss with the guard bypassed.
+        /// </para></param>
         public static void Save(
             WorldStore world,
             SeasonState season,
@@ -78,7 +134,9 @@ namespace TacticalDirector.SeasonSave
             ClubTrainingStates[] trainingClubs,
             ClubInjuryStates[] medicalClubs,
             ClubAppearanceStates[] appearanceClubs,
-            ProgressionEngine progression)
+            ProgressionEngine progression,
+            DisciplineState discipline,
+            bool disciplineWired)
         {
             if (world == null)
             {
@@ -128,6 +186,15 @@ namespace TacticalDirector.SeasonSave
                     "Pass a ProgressionEngine (empty if the season tracks no careers) — null is not " +
                     "the empty set, and this block carries the roster (FR-PG-017 / #28 KD-4).");
             }
+            // Required on the same terms as its four siblings above (#44 Appendix B): a defaulted
+            // null-meaning-empty parameter would let a call site omit a season's discipline history and
+            // still compile, save and load — indistinguishable from a game that never showed a card.
+            if (discipline == null)
+            {
+                throw new ArgumentNullException(nameof(discipline),
+                    "Pass a DisciplineState (new DisciplineState() if the season tracks no cards) — " +
+                    "null is not the empty set (#44 Appendix B).");
+            }
             if (string.IsNullOrEmpty(path))
             {
                 throw new ArgumentException("Save path must be non-empty.", nameof(path));
@@ -158,10 +225,11 @@ namespace TacticalDirector.SeasonSave
             var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(medicalClubs));
             var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(appearanceClubs));
             var progressionBlock = new ProgressionBlock(progression.Snapshot());
+            var disciplineBlock = new DisciplineBlock(DisciplineSaveCodec.Encode(discipline));
             byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
             byte[] blob = SeasonSaveCodec.Encode(
                 worldBlob, seasonBlob, in trainingBlock, in medicalBlock, in appearanceBlock,
-                in progressionBlock, matchBlob);
+                in progressionBlock, in disciplineBlock, matchBlob);
 
             // ERR-028-008: refuse to overwrite a roster with an empty one. #28's block is the
             // serialized roster (KD-4), so writing a zero-club block over a file that carries one
@@ -192,6 +260,47 @@ namespace TacticalDirector.SeasonSave
             if (trainingClubs.Length == 0 && medicalClubs.Length == 0 && appearanceClubs.Length == 0)
             {
                 RequireDestinationCarriesNoCareer(path);
+            }
+
+            // The THIRD instance of the same defect, in the third block family (ERR-030-036, the C1/C2
+            // AR's H1). Neither guard above can see it: the roster guard fires only when the #28 store
+            // is empty, the career guard only when all three career blocks are, and the reachable case
+            // is a resumed career with BOTH populated and the tally dropped — so a save sailed through
+            // both and deleted every ban and every yellow in the destination, frame still v6, Load still
+            // succeeding. FR-DC-014 retains no ledgers (§4.5), so the cards exist nowhere else and
+            // nothing downstream can recompute them; a forgiven ban is simply gone.
+            //
+            // The realistic way to reach it was structural rather than careless: SeasonLoop.Restore had
+            // no discipline parameter at all until this fix, so the documented resume path could not
+            // carry SeasonSaveContents.Discipline even deliberately. That half is fixed at the source;
+            // this half is the one that survives a future call site forgetting the argument, the same
+            // argument the required `discipline` parameter above already makes for null.
+            //
+            // ERR-030-038: keyed on WIRING, not on the tally being empty — that inference was this
+            // guard's own defect. It holds for the two siblings, whose families have no legitimate
+            // empty state (a career roster never empties), and it is FALSE for #44: FR-DC-017 makes
+            // the empty tally the canonical clean state, dropping a row the instant it reaches (0,0) —
+            // mid-season the moment a served ban leaves no residual yellows, and every yellows-only row
+            // at the boundary sweep. Keyed on Count, a correctly wired and correctly resumed loop whose
+            // last row cleared could never save over its own file again, and stayed unsaveable until
+            // fresh cards accrued, because the destination keeps the old rows forever — with the thrown
+            // message telling the operator to do the very thing they had already done. `disciplineWired`
+            // is the fact that actually distinguishes the loss, and it exists only at the call site.
+            //
+            // ERR-030-039: and it is now asked of EVERY caller. ERR-030-038 landed the flag on an
+            // INTERNAL overload behind a public nine-argument form that passed `true` unconditionally,
+            // so the guard was live on one of the two write entry points and bypassed on the other —
+            // and the bypassed one is the form every external caller reaches. The reasoning ("a caller
+            // that hands over a tally drives #44 by construction") excludes only null: `new
+            // DisciplineState()` is exactly what an unwired caller passes, because the `discipline`
+            // parameter's own doc sanctions it as the way to say "no cards recorded yet". Measured
+            // against the built assemblies: two identical public calls, the second with a fresh tally,
+            // took the destination from 1 row to 0 with no refusal. Appendix B.1's "passed to the
+            // write, not re-derived from the block" is a rule about the WRITE, so it holds only when no
+            // entry point can answer for the caller.
+            if (!disciplineWired)
+            {
+                RequireDestinationCarriesNoDiscipline(path);
             }
 
             string tempPath = path + ".tmp";
@@ -283,7 +392,23 @@ namespace TacticalDirector.SeasonSave
                 // round-trips correctly. What must never happen is an empty block overwriting a file
                 // whose roster came from #28; that is guarded at the write itself, below, because it is
                 // a property of the DESTINATION rather than of this loop.
-                loop.Progression ?? ProgressionEngine.Empty);
+                loop.Progression ?? ProgressionEngine.Empty,
+                // A loop with no #44 state saves a well-formed EMPTY block, the same honest posture the
+                // progression block takes above: a career composed without discipline round-trips to
+                // the zero-entry block it was built from. When discipline IS wired this is the live
+                // tally, and it must be — a save that silently wrote an empty block would forgive
+                // every outstanding suspension in the career, and FR-DC-014 rules out recomputing them
+                // (no ledgers are retained, so the cards exist nowhere else). That hazard was stated
+                // here one line above the call that caused it and nothing enforced it (ERR-030-036);
+                // it is a property of the DESTINATION, not of this loop, so it is guarded at the write
+                // itself — RequireDestinationCarriesNoDiscipline — exactly as the roster is.
+                //
+                // The `??` is where the two cases become indistinguishable, so the fact is passed
+                // alongside it rather than re-derived from the result (ERR-030-038): `loop.Discipline`
+                // is null for a loop that drives no discipline and non-null — possibly with zero
+                // entries, which FR-DC-017 makes the ordinary state — for one that does.
+                loop.Discipline ?? new DisciplineState(),
+                disciplineWired: loop.Discipline != null);
         }
 
         // Reads the destination's progression block, if the destination exists and is a well-formed
@@ -374,9 +499,78 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the
-        /// living-world <see cref="WorldStore"/>, the <see cref="SeasonState"/> and the per-club #29
-        /// training / #41 medical state (all always — the last two possibly empty) and the
+        /// The THIRD sibling (ERR-030-036), for the #44 discipline tally. A save that drives no
+        /// discipline subsystem may create a file and may overwrite a card-less one, never one that
+        /// carries rows.
+        /// <para>
+        /// Invoked on <c>disciplineWired == false</c>, NOT on the tally being empty (ERR-030-038) —
+        /// and <c>disciplineWired</c> is a required parameter of the one public long-form
+        /// <see cref="Save(WorldStore,SeasonState,MatchEngine.MatchEngine,string,ClubTrainingStates[],ClubInjuryStates[],ClubAppearanceStates[],ProgressionEngine,DisciplineState,bool)"/>,
+        /// never asserted on a caller's behalf by a forwarding overload (ERR-030-039). The
+        /// two sibling guards may key on emptiness because their families have no legitimate empty
+        /// state — a career roster never empties — but #44's does: FR-DC-017 drops a row the instant it
+        /// reaches <c>(0, 0)</c>, so the empty tally is the canonical clean state and reads as a drop
+        /// only when nothing was driving discipline in the first place.
+        /// </para>
+        /// <para>
+        /// Its subject is a family the two guards above share no key with — #44's state is keyed by
+        /// <c>(PlayerId, CompetitionId)</c> with no club dimension at all — which is precisely why a
+        /// resumed career with a populated store AND populated career blocks passed both while dropping
+        /// every ban.
+        /// </para>
+        /// <para>
+        /// The loss this refuses is unrecoverable in a way the sibling guards' is not: FR-DC-014 keeps
+        /// no card ledgers, only the running <c>(Yellows, BanMatchesRemaining)</c> tally, so a forgiven
+        /// suspension cannot be re-derived from anything else in the file.
+        /// </para>
+        /// <para>
+        /// <b>Recorded, not fixed:</b> a loop wired with a FRESH <see cref="DisciplineState"/> instead
+        /// of the file's is wired, so this guard passes it — and it is indistinguishable at this
+        /// boundary from a tally that drained legitimately, since both present as "wired, zero rows".
+        /// The documented resume path (<c>SeasonLoop.Restore</c>'s <c>disciplineOrNull</c>, fed from
+        /// <see cref="SeasonSaveContents.Discipline"/>) is what closes that case; no destination
+        /// predicate can.
+        /// </para>
+        /// </summary>
+        private static void RequireDestinationCarriesNoDiscipline(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            int existingEntries;
+            try
+            {
+                SeasonSaveBlobs existing = SeasonSaveCodec.Decode(File.ReadAllBytes(path));
+                existingEntries = DisciplineSaveCodec.Decode(existing.DisciplineBlob).Count;
+            }
+            catch (Exception)
+            {
+                // Not a readable season save (corrupt, truncated, a different format, or a pre-v6
+                // frame). Nothing to protect — both sibling guards reason identically.
+                return;
+            }
+
+            if (existingEntries > 0)
+            {
+                throw new InvalidOperationException(
+                    "Refusing to overwrite " + path + ": it carries #44 discipline state for " +
+                    existingEntries + " player(s) and this save drives no discipline subsystem at " +
+                    "all. Every outstanding suspension and every yellow would be forgiven silently, " +
+                    "and FR-DC-014 retains no card ledgers, so nothing can recompute them. Resume the " +
+                    "loop with the tally from SeasonSaveContents.Discipline (SeasonLoop.Restore's " +
+                    "disciplineOrNull, or the constructor's seventh argument) rather than composing a " +
+                    "discipline-less loop over a populated file. A wired tally that has legitimately " +
+                    "drained to zero rows (FR-DC-017) is NOT this case and saves freely.");
+            }
+        }
+
+        /// <summary>
+        /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the full
+        /// <see cref="SeasonSaveContents"/> this method returns — see its own summary for the complete
+        /// enumeration (the world, the season, the per-club #29 training / #41 medical / #30 appearance
+        /// states, the #28 progression store, and the #44 discipline state) — plus the
         /// in-progress <see cref="MatchEngine.MatchEngine"/> (only when the save carried a match —
         /// otherwise <see cref="SeasonSaveContents.Match"/> is null, KD-3). Fail-loud: a missing /
         /// unreadable file surfaces the IO exception; a corrupt / version-mismatched / trailing-byte
@@ -394,7 +588,8 @@ namespace TacticalDirector.SeasonSave
         /// (<see cref="PlayerCareerStates.FromBlocks"/>), because the availability filter has to be
         /// rebuilt from them — see the match branch below. So a file whose training, medical and
         /// appearance blocks describe different squads is refused here rather than restoring a match
-        /// against a career nothing else would have validated. A save with no match is untouched by this.
+        /// against a career nothing else would have validated. Every save is checked, match or not; a
+        /// save carrying a match additionally needs the blocks to rebuild the availability filter.
         /// </para>
         /// </summary>
         /// <param name="path">The season save file to read.</param>
@@ -423,6 +618,7 @@ namespace TacticalDirector.SeasonSave
             ClubInjuryStates[] medicalClubs = MedicalSaveCodec.Decode(blobs.MedicalBlob);
             ClubAppearanceStates[] appearanceClubs = AppearanceSaveCodec.Decode(blobs.AppearanceBlob);
             ProgressionEngine progression = ProgressionEngine.Restore(blobs.ProgressionBlob);
+            DisciplineState discipline = DisciplineSaveCodec.Decode(blobs.DisciplineBlob);
 
             // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the one coherence rule that spans the
             // world and season blobs, so it can only be checked HERE — the two codecs each see one blob,
@@ -452,20 +648,35 @@ namespace TacticalDirector.SeasonSave
             RequireCoherentCareerBlocks(
                 trainingClubs, medicalClubs, appearanceClubs, progression);
 
-            // The in-progress match was configured with the AVAILABILITY-FILTERED squad (#41 FR-MD-023,
-            // #29/#41 T2), and the snapshot records only each team's ClubId — it cannot record "which
+            // The in-progress match was configured with the COMPOSED availability filter (#30 §3.4 —
+            // #41's FR-MD-023 injury removals AND #44's FR-DC-010 suspension removals since the C1/C2
+            // landing), and the snapshot records only each team's ClubId — it cannot record "which
             // eighteen of the twenty-five". So restoring through the raw provider hands
             // ReprojectDistinctSquads the FULL roster, it re-runs LineupSelector over a different
             // candidate set, and the restored eleven is not the eleven that took the pitch: different
             // canonical attribute records on every slot, every gate green (the ClubId matches, the size
             // check passes), and the match then diverges from the pre-save run with nothing to announce
-            // it. Re-applying the same filter — from the medical state carried in THIS file, which is
-            // the state the match was configured against — reproduces the exact squad, so selection
-            // lands on the same eleven.
+            // it. Re-applying the same filter — over the medical state AND the discipline tally carried
+            // in THIS file, which is the state the match was configured against — reproduces the exact
+            // squad, so selection lands on the same eleven.
+            //
+            // BOTH contributors, not just #41 (the C1/C2 AR's H2): the decorator originally called the
+            // then-extant PlayerCareerStates.SelectAvailable (since deleted at the #44 C1/C2 landing;
+            // AvailabilityComposition.Compose now holds this role), which composed with
+            // `discipline: null`, while SeasonLoop.BootFixtureEngine configured the engine through that
+            // same then-extant method WITH the tally. A fixture in which a suspension changed the eleven
+            // therefore restored a strictly larger candidate set and re-selected a DIFFERENT eleven —
+            // the identical defect this decorator was created to close, reopened one contributor later.
+            // It also retires the inherited proof for the snapshot's `_slotPlayerIds` exclusion: that
+            // exclusion is mechanically sound (both reprojection paths write it and `_activeBenchSlot`
+            // is serialized), but its safety PREMISE is "the provider yields the squad the match was
+            // configured with", and only a composed filter makes that true again.
             //
             // Pass-through for a club the career does not carry, which is every club of every
             // careerless save (all three career blocks empty — a literally pre-T2 v3 FILE is refused
-            // by F3): the decorator is then the identity and the restore is bit-for-bit what it was.
+            // by F3). #44 has no club dimension — its tally is keyed (PlayerId, CompetitionId) — so
+            // its removals still apply there; with an empty tally that is the identity and the restore
+            // is bit-for-bit what it was.
             MatchEngine.MatchEngine match = null;
             if (blobs.MatchBlob != null)
             {
@@ -489,23 +700,36 @@ namespace TacticalDirector.SeasonSave
                     : squads;
                 ISquadProvider asConfigured = rosterSource == null
                     ? null
-                    : new AvailabilityFilteredSquads(rosterSource, career);
+                    : new AvailabilityFilteredSquads(rosterSource, career, discipline);
                 match = MatchSaveManager.Restore(blobs.MatchBlob, asConfigured);
             }
 
             return new SeasonSaveContents(
-                world, season, trainingClubs, medicalClubs, appearanceClubs, progression, match);
+                world, season, trainingClubs, medicalClubs, appearanceClubs, progression, discipline,
+                match);
         }
 
         /// <summary>
-        /// An <see cref="ISquadProvider"/> that applies the #41 availability filter on the way out, so a
+        /// An <see cref="ISquadProvider"/> that applies #30 §3.4's COMPOSED availability filter on the
+        /// way out — both contributors, #41's injury removals and #44's suspension removals — so a
         /// restore re-selects from the same squad the match was configured with. Load-time only; never
         /// persisted (the <c>squads</c> / <c>canon</c> precedent).
         /// <para>
-        /// It only reads the career, so the throwaway instance <see cref="Load"/> builds for this
-        /// cannot disturb the blocks handed back in <see cref="SeasonSaveContents"/> — and would not
-        /// reach them in any case, since <see cref="PlayerCareerStates.FromBlocks"/> copies the state
-        /// arrays rather than borrowing them.
+        /// <b>Both contributors, because the boot uses both</b> (the C1/C2 AR's H2).
+        /// <see cref="SeasonLoop.BootFixtureEngine"/> filters through the same
+        /// <see cref="AvailabilityComposition.Compose"/> call carrying the loop's tally, so a decorator
+        /// that composed with <c>discipline: null</c> handed the re-selection a strictly LARGER
+        /// candidate set on any fixture a suspension had touched — a different eleven on the pitch,
+        /// ClubId matching, size gate passing, digest diverging with nothing to announce it. That is
+        /// the defect this decorator was created to close, reopened one contributor later.
+        /// </para>
+        /// <para>
+        /// It only reads the career and the tally, so the throwaway instances <see cref="Load"/> builds
+        /// for this cannot disturb what is handed back in <see cref="SeasonSaveContents"/> — and would
+        /// not reach the career blocks in any case, since
+        /// <see cref="PlayerCareerStates.FromBlocks"/> copies the state arrays rather than borrowing
+        /// them. The tally IS the instance handed back, which is safe for the same reason: every read
+        /// here goes through <see cref="AvailabilityComposition"/>, which only queries it.
         /// </para>
         /// <para>
         /// A roster that has drifted from the save — a squad player the save's career carries no state
@@ -518,26 +742,34 @@ namespace TacticalDirector.SeasonSave
         {
             private readonly ISquadProvider _inner;
             private readonly PlayerCareerStates _career;
+            private readonly DisciplineState _discipline;
 
-            internal AvailabilityFilteredSquads(ISquadProvider inner, PlayerCareerStates career)
+            internal AvailabilityFilteredSquads(
+                ISquadProvider inner, PlayerCareerStates career, DisciplineState discipline)
             {
                 _inner = inner;
                 _career = career;
+                _discipline = discipline;
             }
 
             /// <inheritdoc />
             public Squad ResolveByClubId(int clubId)
             {
                 Squad squad = _inner.ResolveByClubId(clubId);
-                if (squad == null || !_career.CarriesClub(clubId))
+                if (squad == null)
                 {
                     // Null is the provider's own "unknown club" answer and the restore factory's
-                    // fail-loud input — do not turn it into an exception here, and do not filter a club
-                    // this save carries no medical state for.
+                    // fail-loud input — do not turn it into an exception here.
                     return squad;
                 }
 
-                return _career.SelectAvailable(squad);
+                // #41's contributor is club-keyed and fail-louds on a club it does not carry, so it is
+                // withheld for a club this save has no career state for (every club of a careerless
+                // save). #44's is not club-keyed at all — its tally is (PlayerId, CompetitionId) — so
+                // it applies either way, and an empty tally makes Compose return the same instance.
+                PlayerCareerStates careerOrNull = _career.CarriesClub(clubId) ? _career : null;
+                return AvailabilityComposition.Compose(
+                    squad, careerOrNull, _discipline, DisciplineConstants.LeagueCompetitionKey);
             }
         }
 
@@ -791,7 +1023,7 @@ namespace TacticalDirector.SeasonSave
                         appearanceClubs[c].States[i].BitsAsOfWorldDay, "Career save");
                 }
             }
-        
+
             // The FOURTH persisted per-player cursor (ERR-028-007). Added to this walker rather than
             // checked separately, because a second walk over the same rule is the parallel-surface
             // defect AR pass 9 collapsed for the first three.
@@ -820,7 +1052,7 @@ namespace TacticalDirector.SeasonSave
                     }
                 }
             }
-}
+        }
     }
 }
 
@@ -948,4 +1180,104 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | RequireProgressionCursorWithinClock — the file-boundary twin of    |
 // |         |            |        | SeasonLoop.cs v1.19's composition-boundary check. One owner, both  |
 // |         |            |        | boundaries delegating (the AR pass-9 M1 shape).                    |
+// | 1.22    | 2026-08-13 | —      | #44 T1 (roadmap C1): Save gains a required DisciplineState        |
+// |         |            |        | parameter (rejects null, the progression/appearance precedent)    |
+// |         |            |        | and encodes it as the new mandatory discipline sub-blob; Load     |
+// |         |            |        | decodes it and threads it into SeasonSaveContents. The             |
+// |         |            |        | Save(SeasonLoop, …) forwarding overload passes a fresh             |
+// |         |            |        | new DisciplineState() — #44 has no SeasonLoop seam yet and         |
+// |         |            |        | SeasonLoop.cs is out of scope for this landing (concurrent edit).  |
+// |         |            |        | Deliberately NOT added to RequireCoherentCareerBlocks /            |
+// |         |            |        | RequireCareerCursorsWithinClock: DisciplineState carries no        |
+// |         |            |        | per-player world-day cursor and is keyed by                        |
+// |         |            |        | (PlayerId, CompetitionId) rather than by club, so neither of the   |
+// |         |            |        | existing cross-block coherence walks has a natural analogue for    |
+// |         |            |        | it; flagged for owner review rather than invented here.            |
+// | 1.23    | 2026-08-13 | —      | #44 C1/C2 adversarial review, H1 + H2.                             |
+// |         |            |        | H1 (ERR-030-036): new RequireDestinationCarriesNoDiscipline,       |
+// |         |            |        | invoked when the tally is empty — the third sibling of the roster  |
+// |         |            |        | and career-triple guards, in the third block family, and the one   |
+// |         |            |        | neither of those could see: they key on #28's club count and on    |
+// |         |            |        | the three career blocks, so a resumed career with BOTH populated   |
+// |         |            |        | and the tally dropped passed both and deleted every ban and every  |
+// |         |            |        | yellow in the destination — a hazard this file's own comment       |
+// |         |            |        | stated verbatim one line above the call that caused it. Paired     |
+// |         |            |        | with SeasonLoop.Restore's new disciplineOrNull (SeasonLoop v1.21), |
+// |         |            |        | without which the documented resume path could not carry the       |
+// |         |            |        | tally at all.                                                      |
+// |         |            |        | H2: AvailabilityFilteredSquads composes BOTH contributors. It      |
+// |         |            |        | called PlayerCareerStates.SelectAvailable (discipline: null) while |
+// |         |            |        | SeasonLoop.BootFixtureEngine configured the engine WITH the tally, |
+// |         |            |        | so a mid-match save of a fixture a suspension had touched restored |
+// |         |            |        | a strictly larger candidate set and re-selected a different eleven |
+// |         |            |        | — the exact H2 the #29/#41 T2 AR closed for injuries, reopened one |
+// |         |            |        | contributor later. Now one AvailabilityComposition.Compose call,   |
+// |         |            |        | mirroring the boot's.                                              |
+// | 1.24    | 2026-08-13 | —      | #44 C1/C2 adversarial review round 3, H3 (ERR-030-038): v1.23's    |
+// |         |            |        | own guard refused a LEGITIMATE save and made a career's file       |
+// |         |            |        | permanently unsaveable. It keyed on discipline.Count == 0 and read |
+// |         |            |        | that as proof the tally was dropped — true for the roster and the  |
+// |         |            |        | career triple, FALSE for #44, where FR-DC-017 makes the empty      |
+// |         |            |        | tally the canonical clean state (a served ban with no residual     |
+// |         |            |        | yellows is dropped mid-season; the boundary sweep drops every      |
+// |         |            |        | yellows-only row). A correctly wired, correctly resumed loop whose |
+// |         |            |        | last row cleared could never overwrite its own file again, and     |
+// |         |            |        | stayed unsaveable until fresh cards accrued. Re-keyed on WIRING:   |
+// |         |            |        | a new internal Save overload takes a required disciplineWired      |
+// |         |            |        | flag, the public long form passes true (a caller that hands over a |
+// |         |            |        | tally drives #44 by construction — null is refused), and           |
+// |         |            |        | Save(SeasonLoop, …) passes loop.Discipline != null, which is where |
+// |         |            |        | the `??` would otherwise discard the distinction. Mutation-        |
+// |         |            |        | verified: restoring the Count == 0 predicate fails both new locks. |
+// | 1.25    | 2026-08-13 | —      | #44 C1/C2 adversarial review round 4, H4 (ERR-030-039): a defect   |
+// |         |            |        | in v1.24's own fix. The flag landed on an INTERNAL overload while  |
+// |         |            |        | the public nine-argument form forwarded disciplineWired: true      |
+// |         |            |        | unconditionally, so the guard was live on one write entry point    |
+// |         |            |        | and bypassed on the other — the one every external caller reaches. |
+// |         |            |        | The stated reasoning ("a caller that hands over a tally drives #44 |
+// |         |            |        | by construction") excludes only null, and the `discipline`         |
+// |         |            |        | parameter's own doc sanctions new DisciplineState() as the way to  |
+// |         |            |        | say "no cards recorded yet" — which over a populated destination   |
+// |         |            |        | is the ERR-030-036 loss with the guard bypassed (measured against  |
+// |         |            |        | the built assemblies: file rows 1 -> 0, no refusal). It also       |
+// |         |            |        | contradicted #30 Appendix B.1 v1.4's own MUST, which requires the  |
+// |         |            |        | wiring fact to be PASSED to the write rather than re-derived —     |
+// |         |            |        | satisfied at one of the two entry points and re-derived from       |
+// |         |            |        | nothing at all at the other. Fixed by promoting disciplineWired    |
+// |         |            |        | onto the PUBLIC long form (required, never defaulted — the five    |
+// |         |            |        | block parameters' own convention) and deleting the forwarding      |
+// |         |            |        | overload, so one long form exists and no entry point can answer    |
+// |         |            |        | for its caller. Locked by                                          |
+// |         |            |        | Save_ThePublicLongForm_DrivingNoDiscipline_CannotEmptyAPopulated-  |
+// |         |            |        | Tally; mutation-verified by reinstating the hardcode inside the    |
+// |         |            |        | promoted method (disciplineWired = true).                          |
+// | 1.26    | 2026-08-15 | —      | L3 (reviewed-findings pass), formatting only: trailing whitespace  |
+// |         |            |        | removed after RequireCareerCursorsWithinClock's appearance-anchor  |
+// |         |            |        | loop, and that method's closing brace moved from column 0 to       |
+// |         |            |        | column 8 to match its own opening indent (FR-CS-011/012). No       |
+// |         |            |        | behaviour change.                                                  |
+// | 1.27    | 2026-08-15, later | — | Reviewed findings pass, L4. DisciplineConstants.                |
+// |         |            |        | LEAGUE_COMPETITION_KEY -> LeagueCompetitionKey rename. One         |
+// |         |            |        | reference updated. No behaviour change.                            |
+// | 1.28    | 2026-08-15, later still | — | Reviewed findings pass, L1+L2 (doc only).                 |
+// |         |            |        | L1: Load's summary said a save with no match is "untouched" by     |
+// |         |            |        | the career-coherence gate; RequireCoherentCareerBlocks actually    |
+// |         |            |        | runs unconditionally, before and outside the MatchBlob != null     |
+// |         |            |        | branch — corrected to say every save is checked, only the          |
+// |         |            |        | availability-filter rebuild (PlayerCareerStates.FromBlocks) is     |
+// |         |            |        | match-only. L2: the Save summary, the header Purpose's             |
+// |         |            |        | Load-rebuild sentence, and the Load summary each still enumerated  |
+// |         |            |        | a five/six-blob frame after two later additions (appearance,       |
+// |         |            |        | progression) — this file's own third and fourth instance of that   |
+// |         |            |        | class (v1.6, v1.17). Pointed each at SeasonSaveBlobs /              |
+// |         |            |        | SeasonSaveContents, whose own summaries already enumerate all      |
+// |         |            |        | eight sub-blobs, rather than restating the list a fifth time. No   |
+// |         |            |        | behaviour change.                                                   |
+// | 1.29    | 2026-08-16 | —      | L-2 (adversarial review), doc only. The H2 comment naming        |
+// |         |            |        | PlayerCareerStates.SelectAvailable at the restore decorator used   |
+// |         |            |        | present-tense grammar ("which composes with `discipline: null`")   |
+// |         |            |        | for a method #44 C1/C2 has since deleted. Qualified both mentions  |
+// |         |            |        | as "the then-extant" method, "composes" -> "composed" (past        |
+// |         |            |        | tense), and noted AvailabilityComposition.Compose now holds the    |
+// |         |            |        | role. No behaviour change.                                          |
 #endregion

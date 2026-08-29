@@ -8,8 +8,9 @@ does not restate them. Appendix D is the single source of truth for banned/requi
 API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
-**Version:** 1.0
-**Status:** DRAFT
+**Modified:** August 18, 2026
+**Version:** 1.8
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
 **Subsection target lengths:** §3.1 ~150 lines · §3.2 ~120 lines · §3.3 ~100 lines ·
@@ -222,8 +223,25 @@ is authoritative.
 | `[FIXED]` | Fixed / physical law | Derived from physics; never tune |
 | `[DERIVED]` | Derived from other constants | Formula must be documented; never set independently |
 | `[CROSS]` | Cross-spec constant | Defined in another approved spec; consumed read-only here; never set independently in this spec. Citation must name the authoritative spec and section. Use `[CROSS]` only when the value is copied verbatim without modification — if a formula transforms it, tag the result `[DERIVED]`. |
+| `[CROSS-PENDING]` | Cross-spec constant blocked on an upstream `IN PROGRESS` spec | Used when a spec consumes a constant that will be `[CROSS]` once the upstream authority spec reaches `APPROVED`, but the numeric value is not yet allocated. Citation must name the authoritative spec, section, and the `spec-error-log.md` back-prop ID tracking the allocation. Promoted to `[CROSS]` atomically with upstream approval. Use sparingly — every `[CROSS-PENDING]` tag is an outstanding cross-spec dependency that gates the consuming spec's own `APPROVED` transition. |
 
-*(Source: root `CLAUDE.md` — "Constant Tags", retrieved May 7, 2026.)*
+*(Source: root `CLAUDE.md` — "Constant Tags", retrieved May 7, 2026; the `[CROSS-PENDING]`
+row re-retrieved verbatim August 18, 2026 — round-6 finding H6, filed as `ERR-020-006`:
+the root table holds SIX tags and this citation had reproduced five, so every constant
+carrying the tag was formally outside FR-CS-017's closed enumeration — a MUST-level
+violation of an APPROVED spec — while the tag stood at **218** occurrences under
+`docs/specs/` immediately BEFORE this fix (`git grep -c 'CROSS-PENDING' 9b841d1^ --
+docs/specs | awk -F: '{s+=$NF} END {print s}'`, re-verified August 18, 2026; the plain
+`grep -rn 'CROSS-PENDING' docs/specs/ | wc -l` no longer returns 218 — later same-day
+passes, this one included, keep adding citations of the tag itself and the count keeps
+climbing, so a live command is not stable proof of a historical figure) and the
+`.github/workflows/ci.yml` tag lint accepted it throughout.
+§9.4 re-approval trigger 1 required this table to track any root-table tag addition and
+was not honoured when the tag was added on August 10, 2026; the table update landed with
+this fix, but the trigger's FULL mandate — re-verification of every §9.1/§9.2 checklist
+item — was not actually run until round-7 finding M2 (August 18, 2026, later; see
+`section-9-approval-checklist.md` §9.4's re-verification record), which is when the
+trigger was genuinely honoured.)*
 
 ---
 
@@ -262,14 +280,53 @@ public void ApplyGravity(ref BallState state, float dt)
 | `[GT]` | `public static readonly` | PascalCase | Tag + config-key reference | Loaded from tunable config at boot; not a `const` (FR-CS-019) |
 | `[EST]` | `public static readonly` | PascalCase | Tag + validation requirement | `// TODO: validate` on declaration line; `spec-error-log.md` entry required (FR-CS-020) |
 | `[DERIVED]` | `public static readonly` | PascalCase | Tag + formula + source constants | Formula derivation cited in summary; never set independently (FR-CS-021) |
-| `[CROSS]` | `public static readonly` | PascalCase | Tag + authoritative spec & section | Mirror of source-of-truth; never modified here (FR-CS-022) |
+| `[CROSS]` | `public static readonly` | PascalCase (see const-mirror carve-out) | Tag + authoritative spec & section | Mirror of source-of-truth; never modified here (FR-CS-022). Const-mirror carve-out below |
+| `[CROSS-PENDING]` | `public static readonly` | PascalCase | Tag + authoritative spec & section + the `spec-error-log.md` back-prop ID tracking the allocation | Transitional pre-state of `[CROSS]`: the upstream value is not yet allocated, so the tag normally lives in the consuming SPEC rather than in code; a code-level declaration follows `[CROSS]`'s storage class and is re-tagged `[CROSS]` atomically with upstream approval (root `CLAUDE.md` — "Constant Tags"; FR-CS-017) |
 
-Per-tag region ordering within a catalogue file (FR-CS-025, §4.2):
-`[FIXED]` → `[DERIVED]` → `[CROSS]` → `[GT]` → `[EST]`
+Per-tag region ordering within a catalogue file (§4.2; round-7 finding M5 — FR-CS-025
+governs catalogue file NAMING only, not per-tag region ordering, so the authority cited
+here is §4.2 directly rather than that FR):
+`[FIXED]` → `[DERIVED]` → `[CROSS]` → `[CROSS-PENDING]` → `[GT]` → `[EST]`
 
 Rationale: most-immutable to most-mutable. `[FIXED]` constants never change; `[EST]`
 constants are placeholders. Readers scanning a catalogue file encounter the stable
-values first. See Appendix C §C.1 for a complete worked example.
+values first. See Appendix C §C.1 for a complete worked example. (`[CROSS-PENDING]`
+sits directly after the `[CROSS]` region it promotes into, so a promotion is a
+one-region move; Appendix C's exemplar predates the tag and demonstrates the other
+five.)
+
+**Const-mirror carve-out (extends ERR-020-004; added August 18, 2026, round-6 finding
+H7, filed as `ERR-020-007`).** A `[CROSS]` mirror whose initializer is a compile-time constant expression
+referencing the owning catalogue's own `public const` (or enum-member) declaration —
+e.g. `public const byte CardKindYellow = EventSystemConstants.CARD_KIND_YELLOW;` —
+**MAY** be declared `public const` instead of `public static readonly`. Reasoning: the
+`static readonly` default exists so a mirror can bind to a runtime-initialized source
+and to signal "not a locally-owned literal"; when the source is itself a compile-time
+constant and the mirror's initializer *is* the source symbol, the compiler enforces
+value identity on every build of the tree, so the divergence risk the default guards
+against cannot arise — and only a `const` mirror stays usable where the language
+requires a constant expression (`switch` labels, attribute arguments, other `const`
+initializers), which is what pushed the live tree to this shape (19 such declarations
+across `discipline`, `match-engine`, `match-analytics`, and `player-progression` on
+August 18, 2026). Two bounds. (1) A **literal-initialized** mirror never qualifies:
+with no source symbol in the initializer there is nothing for the compiler to enforce,
+so it keeps the `public static readonly` default — the `// TODO: mirror from
+ProjectConstants` tick-rate declarations are the standing example and remain
+non-conformant under this carve-out exactly as before it. (2) Naming: a qualifying
+`const` mirror **MAY** keep the `[CROSS]` PascalCase default, **or** carry an `ALL_CAPS`
+identifier consistent with the owning catalogue's `[FIXED]` convention — both forms are
+live in the tree; PascalCase keeps the mirror visually consistent with its `[CROSS]`
+siblings, while `ALL_CAPS` keeps it consistent with the `[FIXED]` block it sits beside.
+The `ALL_CAPS` arm deliberately does **not** require the source identifier *unchanged*:
+of the nine `ALL_CAPS` mirrors measured on August 18, 2026, only three reuse the source
+name (`TEAM_COUNT`, `ATTRIBUTE_MIN`, `ATTRIBUTE_MAX`); the other six rename to
+disambiguate at the destination — `MatchAnalyticsConstants.PITCH_LENGTH_M`,
+`PITCH_WIDTH_M` and `GOAL_WIDTH_M` add the unit suffix their `BallPhysicsConstants.Pitch`
+sources lack, and `RESTART_KIND_THROW_IN`/`_GOAL_KICK`/`_CORNER` mirror `RestartType`
+enum members, whose source identifiers are not `ALL_CAPS` at all and so could not be
+reused unchanged even in principle. An "unchanged identifier" rule would leave those six
+non-conformant while the carve-out's own evidence counted them as conforming. §4.2's
+owning-catalogue carve-out cites a conforming example.
 
 ---
 
@@ -384,13 +441,13 @@ Additional required patterns:
 
 ---
 
-### 3.3.4 UI / Non-Loop Allocation Budget
+### 3.3.4 Presentation / Client (Non-Loop) Allocation Budget
 
-Code in the UI layer is not on the 60 Hz game-loop path. Its allocation budget is
+Code in the **Presentation and Client tiers** (§3.5.2 tiers 8 and 9), plus the Unity host code outside the gate, is not on the 60 Hz game-loop path. Its allocation budget is
 **< 1 MB per frame** (FR-CS-067), sourced from
 `docs/planning/development-best-practices.md`. The "alloc-hot-path" bans (§3.3.2)
-are relaxed for UI code, except where a UI method directly calls into a game-loop
-system.
+are relaxed for code in these tiers, except where a method there directly calls
+into a game-loop system.
 
 ---
 
@@ -541,40 +598,134 @@ The interface design principle for this project is **owned by root `CLAUDE.md` �
 > *(root `CLAUDE.md` — "Interface Design Principle", retrieved May 7, 2026)*
 
 This subsection does not redefine the principle; it binds it to file-level placement
-rules (§3.5.3) and extends it with the layer-order and event-dispatch rules below.
+rules (§3.5.3) and extends it with the tier-order and event-dispatch rules below.
 
 ---
 
-### 3.5.2 Layer Order and Dependency Arrows
+### 3.5.2 Tier Order and Dependency Arrows
 
-Assembly references must flow in one direction only (FR-CS-046). The canonical layer
-order is:
+Assembly references must flow in one direction only (FR-CS-046). The canonical order
+is a **ten-tier** order covering every assembly folder in `src/`. Two terms used by
+the table are fixed here so every row means the same thing by them: the **gameplay
+tiers** are tiers 1–4 — Physics, Configuration, Mechanics and AI, the tiers that
+decide what happens on the pitch — and the table *covers* the two
+**Infrastructure** assemblies without *ordering* them: their row is out of band
+(FR-CS-046b binds them by name), and it must never be folded into the numbered
+order:
+
+| Tier | Assemblies | Why this tier |
+|---|---|---|
+| 0 **Foundation** | `project-constants`, `deterministic-sim`, `event-system` | Referenceable by everything; reference nothing but each other. |
+| 1 **Physics** | `ball-physics`, `agent-movement`, `collision-system`, `first-touch`, `pass-mechanics`, `shot-mechanics`, `heading-mechanics`, `goalkeeper-mechanics` | Ball, body and contact. Parameter-driven — no type enums (see root `CLAUDE.md`). |
+| 2 **Configuration** | `tactical-instructions` (#21) | May be referenced by Mechanics, AI, Data, Composition, Management, Presentation and Client — everything above; references only `project-constants`. Today's consumers are Mechanics (all four), AI's `decision-tree` (`perception-system` does not reference it), Composition's `match-engine`, and Client's `match-client-core`, `match-client-web` and `ui-framework` — no Data or Management or Presentation assembly, and neither `client-app` nor `match-client-unity`, references it yet. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
+| 3 **Mechanics** | `positioning-ai`, `pressing-ai`, `defensive-ai`, `attacking-ai` | Off-ball and on-ball behaviour over the physics primitives. |
+| 4 **AI** | `decision-tree`, `perception-system` | Choice and what a player can know. |
+| 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, five of the six Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save` — not `living-world`) and Client's `match-client-core` — and by **no gameplay-tier assembly**. Seating it above AI preserves that: the gameplay tiers keep operating on struct parameters, not squad rows. |
+| 6 **Composition** | `match-engine` | References all four gameplay tiers plus Data; the only assembly that does. Not a numbered spec — governed by `docs/tracking/match-engine-design.md`. |
+| 7 **Management** | `living-world` (#22), `player-progression` (#28), `training-system` (#29), `injuries-medical` (#41), `discipline` (#44), `season-save` (#30) | Long-horizon state above a single match. |
+| 8 **Presentation** | `match-viewer`, `match-analytics` (#37) | Derived from a played match. This tier is what keeps the root `CLAUDE.md` rule that **no sim assembly may reference `match-analytics`** true. |
+| 9 **Client** | `match-client-core`, `ui-framework` (#38), `client-app`, `match-client-unity`, `match-client-web` | Screens, shells and hosts. |
+| — **Infrastructure** | `performance-optimization` (#18), `testing-strategy` (#19) | Out of band: not members of the order, and no tier may reference them at runtime. |
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  Layer      │  Contains                              │
-├──────────────────────────────────────────────────────┤
-│  Physics    │  ball-physics, agent-movement,         │
-│             │  collision-system, first-touch,        │
-│             │  pass-mechanics, shot-mechanics,       │
-│             │  heading-mechanics, goalkeeper-…       │
-├──────────────────────────────────────────────────────┤
-│  Mechanics  │  positioning-ai, pressing-ai,          │
-│             │  defensive-ai, attacking-ai            │
-├──────────────────────────────────────────────────────┤
-│  AI         │  decision-tree, perception-system      │
-├──────────────────────────────────────────────────────┤
-│  UI         │  (Stage 1+ — not specified yet)        │
-└──────────────────────────────────────────────────────┘
+  Foundation ──► Physics ──► Configuration ──► Mechanics ──► AI ──► Data
+      ──► Composition ──► Management ──► Presentation ──► Client
 
-        Physics ──► Mechanics ──► AI ──► UI
-           ▲            ▲          ▲
-           │            │          │
+        ──►  reads "is available to"
+
         NO upward references permitted (FR-CS-046)
 ```
 
+Stated the other way round, in the words the root `CLAUDE.md` uses: **AI → Mechanics →
+Physics, never the reverse** — an assembly may reference assemblies below it in the
+order, never above. The two notations are the same rule; `──►` above points from the
+provider to the consumer, the root `CLAUDE.md` arrow points from the consumer to the
+provider. Both files label their arrow so the reader never has to reconstruct which
+convention is in force.
+
+**A tier is a ceiling, not a licence.** An individual spec may forbid a reference the
+tier order permits — #44 Discipline sits in Management but its FR-DC set forbids it to
+reference `match-engine` or `season-save`, and the composition root mediates instead.
+Where a spec is stricter, the spec wins.
+
+**Intra-tier references are permitted; intra-tier cycles are not.** An assembly MAY
+reference another assembly in the same tier (`pressing-ai` → `positioning-ai` is the
+standing example), but the assembly reference graph as a whole MUST remain acyclic
+(FR-CS-046a). This is already enforced mechanically — Unity rejects circular `.asmdef`
+references, and `tools/dotnet-ci/generate_projects.py` emits one `<ProjectReference>`
+per `.asmdef` reference, so a cycle also fails the Linux compile gate. It is written
+down because a build error reports what broke, not why the constraint exists.
+
+**Placement rule for new assemblies.** A commit that adds a production
+`src/<folder>/<name>.asmdef` **MUST** place that folder in the table above in the
+same commit — the table enumerates, so an unamended table is stale the moment the
+folder lands. The seating is a **bound plus a justified choice**, not a derivation:
+an assembly **MUST NOT** be seated at or below the tier of any assembly it
+references, except that FR-CS-046a permits seating it *at* the tier of an assembly
+it references intra-tier (`pressing-ai` → `positioning-ai` is the standing example).
+Within that bound the tier **is a design choice** and **MUST** be justified in the
+row's *Why this tier* cell — the justification is what the table's third column
+exists to hold, and a brief characterisation of the tier's role ("Long-horizon state
+above a single match") satisfies it for an assembly that fits the characterisation.
+The bound is exactly FR-CS-046/046a read from the seating side, so it holds of a
+table iff the graph has no upward reference. *(An earlier form of this rule stated
+the seating as an equality — "the lowest tier strictly above every assembly it
+references" — which 27 of the 33 ordered seatings do not satisfy, would have
+mandated seating a Management-shaped assembly that reads only `player-database`
+into Composition, and was unsatisfiable for the four assemblies whose highest
+reference is tier 9; restated as the bound at v1.4.)* The two out-of-band
+**Infrastructure** assemblies are outside the seating rule twice over: the
+references they source seat them in no tier — FR-CS-046b binds them instead — and a
+new assembly cannot acquire a tier through them, since no ordered tier may reference
+them at runtime. Because the table is **folder-keyed**, a top-level `src/<folder>/`
+**MUST** hold exactly one production `.asmdef`: a second one under the same folder
+(at any nesting depth outside `[Tt]ests/`) has no seat of its own and is a hard
+failure of the mechanical check below — this constraint was previously enforced by
+the tool but written nowhere.
+
+This rule is enforced mechanically by `tools/assembly-tier-check.py`
+(`python3 tools/assembly-tier-check.py --repo .`), **run by the `Spec hygiene
+checks` job in `.github/workflows/ci.yml` on every push to `main` and every pull
+request targeting `main`** — that workflow's triggers are `main`-scoped, so a push
+to a topic branch runs nothing and the gate binds at the merge point. *(Corrected
+August 18, 2026: this sentence read "on every push and pull request", which
+overstates the workflow's actual triggers.)* The tool
+re-parses the table above rather than carrying its own copy, enumerates every
+production `src/<folder>/<name>.asmdef`, and fails on a folder absent from the
+table, a table entry naming no existing folder, a top-level folder holding more
+than one production `.asmdef`, a tier row whose *Why this tier* cell is empty, any
+upward reference, any reference that breaks FR-CS-046b in either direction (an
+ordered-tier assembly referencing Infrastructure, or an Infrastructure assembly
+referencing anything other than tier 0 or its Infrastructure peer), any cycle, or
+an Infrastructure row that no longer names exactly the assemblies FR-CS-046b binds
+— membership in the out-of-band set is asserted **by name** against FR-CS-046b's
+own list in §2.2.5 (parsed, not duplicated), so reseating that row into the
+numbered order cannot silently disable the FR-CS-046b checks — re-running the
+adoption verification below on every invocation instead of leaving it a one-off
+hand check. Two halves of the placement rule remain review matters, not mechanical
+ones: whether the table was amended *in the same commit* as the `.asmdef` (CI sees
+only the resulting tree, so a stale table fails the next run, whichever commit
+caused it), and whether a *Why this tier* justification is *adequate* — the tool
+verifies only that the cell is non-empty.
+
+**Verification at adoption (August 17, 2026).** The order was derived from the
+`.asmdef` reference graph, not from folder names, and checked against it: all **35**
+production assembly folders in `src/` are placed, none is named that does not exist,
+and across every production `.asmdef` reference there are **zero upward references**.
+The 148 production→production references partition as **105 downward, 38 intra-tier, and
+5 sourced by the two out-of-band Infrastructure assemblies** (`performance-optimization`
+→ `deterministic-sim`, `project-constants`; `testing-strategy` → `deterministic-sim`,
+`performance-optimization`, `project-constants`), which the order does not rank — all of
+them already present and the whole graph acyclic. Quoting 105 + 38 as if it were the
+whole is what makes the count unreconcilable for a reader who re-derives it: the total is
+148, and `tools/assembly-tier-check.py` prints all four figures for exactly that reason. Adopting the order therefore changed nothing that compiles; it
+constrains only what can be written next. Test assemblies (`src/*/[Tt]ests/`) are **not**
+members of the order and are excluded from the check: a test assembly legitimately
+references upward (`event-system.Tests` → `decision-tree`), which is why FR-CS-046 binds
+production assemblies only.
+
 **Struct-event upward flow** (FR-CS-047): when an event must propagate upward through
-the layer order (e.g., a physics system notifying an AI system), it is dispatched as
+the tier order (e.g., a physics system notifying an AI system), it is dispatched as
 a `struct` via a pre-allocated event bus, not as a class-based `event Action<T>` or
 delegate. This keeps the physics assembly free of any reference to the AI assembly
 while preserving the event-notification pattern.
@@ -630,15 +781,15 @@ Cross-assembly communication needed?
                       ├─ YES ─► Interface (FR-CS-048).
                       │          Place in consumer's assembly.
                       │
-                      └─ NO ──► Is this a cross-layer notification
-                                 (producer is lower layer than consumer)?
+                      └─ NO ──► Is this a cross-tier notification
+                                 (producer in a lower tier than consumer)?
                                  │
                                  ├─ YES ─► Struct event on event bus
                                  │          (FR-CS-047). Zero-alloc;
                                  │          no upward assembly reference.
                                  │
                                  └─ NO ──► Direct method call.
-                                            (Same-layer or downward call.)
+                                            (Intra-tier or downward call.)
 ```
 
 ---
@@ -797,8 +948,14 @@ These rules cite root `CLAUDE.md` — "When Writing Code" as their source.
 
 All continuous numeric quantities in game-logic code at Stage 0 use `float`
 (FR-CS-071). This includes positions, velocities, angles, forces, attribute values,
-and time deltas. The rule applies to every game-state assembly in the Physics,
-Mechanics, and AI layers.
+and time deltas. The rule applies to **every production assembly under `src/`** —
+Foundation through Client, *including* the two out-of-band **Infrastructure**
+assemblies (`performance-optimization`, `testing-strategy`), which acquire no tier
+under FR-CS-046 but are production code all the same — FR-CS-071 itself carries no narrower scoping, and the
+retired three-layer wording (*"the Physics, Mechanics, and AI layers"*) was near-vacuous
+under the four-layer taxonomy but under the ten-tier order would exclude six tiers,
+`deterministic-sim`, `player-database`, `match-engine`, `season-save`, `discipline` and
+`match-analytics` among them.
 
 The decision to use `float` at Stage 0 is owned by root `CLAUDE.md` — "When Writing
 Code": *"Stage 0 uses float. Fixed64 migration is a Stage 5+ concern."* Single-machine
@@ -850,7 +1007,7 @@ specific lines in those files where each rule is demonstrated.
 | Language features allowed / banned | FR-CS-009–010 | Appendix C §C.2 | `sealed` class, no `dynamic` |
 | 4-space indent, Allman braces | FR-CS-011–012 | Both exemplars | All method bodies |
 | Explicit access modifiers | FR-CS-014–015 | Both exemplars | Every declaration |
-| All five tag types, per-tag region ordering | FR-CS-016–025 | Appendix C §C.1 | Constants regions |
+| Five of the six tag types, per-tag region ordering (`[CROSS-PENDING]` postdates the exemplar — §3.2.3) | FR-CS-016–025 | Appendix C §C.1 | Constants regions |
 | Ref-passed struct, no boxing | FR-CS-026–035 | Appendix C §C.2 | `Update(ref BallState state)` |
 | MatchClock injection, no DateTime.Now | FR-CS-041–042 | Appendix C §C.2 | Constructor + `Update` |
 | `unchecked` 64-bit multiplication | FR-CS-044 | §3.4.4 code block | Inline in §3.4.4 |
@@ -957,8 +1114,8 @@ file; excluded from game-state assembly graph; BannedApiAnalyzers not referenced
 ## 3.10 Constants Catalogue
 
 Spec #20 is a meta-specification. It declares **no physical constants** and introduces
-no numeric values that require `[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, or `[CROSS]`
-tags.
+no numeric values that require `[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, `[CROSS]`, or
+`[CROSS-PENDING]` tags.
 
 The tag vocabulary itself is governance metadata owned by root `CLAUDE.md` — "Constant
 Tags". This section is retained per the CLAUDE.md 9-section template (KD-3 in §1.3).
@@ -973,6 +1130,14 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 3. All eleven subsections present. Appendix D cited by category name in §3.3.2 and §3.4.2; no symbol lists duplicated. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fixes: (a) §3.2.1 [CROSS] tag-table row restored to verbatim CLAUDE.md text — missing phrase "without modification" added (closes audit finding H-01); (b) §3.9.4 added required marker for property-based / fuzz tests with non-deterministic seed source (closes L-04); (c) §3.9.5 added criterion #4 requiring benchmark `.csproj` to omit the `BannedApiAnalyzers` package reference (closes M-B — assembly-level isolation alone is insufficient). | — |
+| 1.1 | August 17, 2026 | Claude Code | **`ERR-020-002` + `ERR-020-003` adopted by owner decision.** §3.5.2 replaced: the three-gameplay-layer box (which placed 14 of the 35 assembly folders — leaving 21 undecided; figures re-derived August 17, 2026 by counting the retired box, see the 1.2 row — and left the stale empty `UI (Stage 1+ — not specified yet)` row) becomes the **ten-tier order** covering all 35, derived from the `.asmdef` reference graph and re-verified at adoption — 0 upward references, 105 downward, 38 intra-tier, graph acyclic. Adds **FR-CS-046a** (intra-layer references permitted, intra-layer cycles not), the tier-is-a-ceiling rule (#44 Discipline as the worked case), the explicit test-assembly exclusion, and — closing `ERR-020-003` — an arrow label (`──►` reads "is available to") plus the root `CLAUDE.md` sentence verbatim, so both files state one rule in one vocabulary. Header corrected: it read `Version 1.0 / Status DRAFT` against a §3.11 row at 1.0.1 and a SPEC_INDEX status of APPROVED. | — |
+| 1.2 | August 17, 2026 | Claude Code | **Adversarial-review findings H4 + H7.** H4: the 1.1 row above originally said the retired three-gameplay-layer box "placed 19 of the 35 assembly folders"; the true figure is **14** (8 Physics + 4 Mechanics + 2 AI, `UI` row empty), leaving 21 undecided — corrected in place, **re-derived by counting the retired box** (`git show 0e78d381~1`) rather than rescaled from the earlier 31-assembly error-log count, which is how the wrong 19 arose. H7: §3.5.2 gains the **placement rule for new assemblies** — a commit adding a production `.asmdef` MUST amend the table in the same commit, and a tier is derived (lowest tier strictly above every referenced assembly) unless a lower seating is stated with its reason — enforced mechanically by the new `tools/assembly-tier-check.py`, which parses the table rather than duplicating it and re-runs the adoption verification on every invocation. **⚠️ ANNOTATED (v1.4, August 18, 2026): this row is INCOMPLETE of its own commit** — the same commit also rescoped §3.3.4 from "the UI layer" to the Presentation and Client tiers (FR-CS-067's mechanics), rewrote §3.7.1's scoping sentence off the retired three-layer wording, rewrote the §3.5.2 adoption-verification paragraph (the 105 + 38 partition became 105/38/5 of 148, naming the five Infrastructure-sourced references), and changed the tier-2 *Why this tier* cell's rationale; none was recorded until this annotation and the 1.4 row below. Left in place per the annotate-don't-rewrite convention. | — |
+| 1.3 | August 17, 2026 | Claude Code | **Adversarial-review findings L1 + L2, both re-verified against the `.asmdef` reference graph.** L1: the tier-2 (`tactical-instructions`) and tier-5 (`player-database`) "Why this tier" cells stated their consumer sets as exhaustive facts that were false — eleven assemblies above tier 2 do not reference `tactical-instructions` (`player-database`, all six Management assemblies, both Presentation assemblies, `client-app`, `match-client-unity`) and `living-world` (Management) does not reference `player-database`. Both cells recast as permission ("may be referenced by … and everything above") plus a separately-stated today's-consumers list, so the two claims cannot drift apart again. L2: §3.5.2's heading ("Layer Order and Dependency Arrows" → **"Tier Order and Dependency Arrows"**), its §3.5.1 forward-reference ("layer-order … rules below" → "tier-order … rules below"), its intra-tier paragraph ("Intra-layer references are permitted; intra-layer cycles are not" → "Intra-tier"), and its FR-CS-047 sentence ("propagate upward through the layer order" → "tier order") standardised on **tier**, matching FR-CS-046a in §2.2.5 and §5.4.5 item 1, both of which already said "tier" *(⚠️ CORRECTED at v1.4, August 18, 2026: the §5.4.5 half of this claim was FALSE — item 1's checkbox title still read "**Layer order** —" until section-5.md v1.0.3 standardised it; §2.2.5's FR-CS-046a did already say "tier")*. `git grep -n '3.5.2 Layer Order'` found two prose citations of the old heading text in `docs/tracking/spec-error-log.md` (§4430, §4622) — neither is a markdown anchor link (no generated `#325-layer-order…` anchor is referenced anywhere in the tree), so nothing breaks; `spec-error-log.md` is outside this pass's owned-file list and is left for its own citation-refresh pass. The retired three-gameplay-layer wording quoted historically in §3.7.1 and in the 1.1/1.2 rows above is left as "layer" deliberately — it names the box this order replaced, not the current vocabulary. | — |
+| 1.4 | August 18, 2026 | Claude Code | **Adversarial-review findings H8 + H10 (reviewed round), plus one Medium.** H8: §3.5.2's placement rule **contradicted the table it governs for 27 of the 33 ordered seatings** — "the tier is derived, not chosen: … the lowest tier strictly above every assembly it references, unless a lower seating is stated in the table with its reason" mandated 8 seatings HIGHER than any exception covered (e.g. `player-database` derives to 1, seated 5; a new Management assembly reading only `player-database` would have been mandated into Composition), allowed the 19 seated LOWER only via a "stated … with its reason" clause that only tier 0's cell satisfied, and was **unsatisfiable** for the four assemblies whose highest reference is tier 9 (derived tier 10 does not exist). Restated as a **bound plus a justified choice**: seating at or below a referenced assembly's tier is forbidden (intra-tier permitted per FR-CS-046a), and within that bound the tier is a design choice justified in the *Why this tier* cell — verified against all 35 seatings (0 upward references, 38 intra-tier, every row's third cell non-empty). The rule's tool-enumeration sentence now also names the FR-CS-046b checks `tools/assembly-tier-check.py` gained the same day (it previously skipped every Infrastructure-sourced reference unchecked — reviewed finding H9, whose spec half lands in section-2.md v1.3). H10 (this file's half): the 1.2 row is annotated in place as incomplete of its own commit (four unrecorded changes, enumerated there), and the 1.3 row's false "§5.4.5 … already said 'tier'" claim is corrected in place. Medium: §3.7.1 rescoped from "every production assembly in the §3.5.2 tier order" — which excluded the two Infrastructure assemblies, since FR-CS-046 says they acquire no tier — to "every production assembly under `src/`", Infrastructure included. | — |
+| 1.5 | August 18, 2026 | Claude Code | **Reviewed-findings pass H1 + M1 (+ four Lows), spec halves.** H1: §3.5.2's "enforced mechanically" sentence claimed an enforcement that did not exist — nothing ran `tools/assembly-tier-check.py` (no CI step, not in `run-gate.sh`, no hook), so an unamended table stayed green, exactly the `ERR-020-002` drift condition. The tool is now WIRED: the `Spec hygiene checks` job in `.github/workflows/ci.yml` runs it on every push and pull request, and the sentence now states that, enumerates the checks the tool actually performs (including the new ones below), and scopes what stays review — same-commit atomicity (CI sees trees, not commits) and the *adequacy* of a *Why this tier* justification (the tool checks the cell is non-empty only, closing the half-mechanical overclaim). M1 (tool v1.2, spec side): the out-of-band Infrastructure set is now asserted **by name** against FR-CS-046b's own list in §2.2.5 — previously one character of drift in the tier cell ("—" → "0" or "10") emptied the infra set and PASSED with both FR-CS-046b checks silently disabled (mutation-proved); the §3.5.2 preamble now also states the row is covered-not-ordered and must never be folded into the numbered order, retiring the wording that invited exactly that. Lows: the one-production-`.asmdef`-per-top-level-folder constraint the tool enforced but no spec stated is written into the placement rule; **gameplay tiers** defined once in the preamble (tiers 1–4 — the tier-5 cell had parenthesised it as three tiers while the tier-6 cell counted four) and the tier-5 cell recast on the defined term; §3.5.4's decision tree de-"layer"ed ("cross-tier notification", "producer in a lower tier", "Intra-tier or downward call" — "layer order" is undefined since v1.3); §3.3.4's heading renamed "UI / Non-Loop Allocation Budget" → "Presentation / Client (Non-Loop) Allocation Budget", matching the body FR-CS-067 rescoped at v1.2, and its trailing "UI code / UI method" phrasing aligned. | — |
+| 1.6 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H6 + H7.** H6: §3.2.1 — introduced as reproducing root `CLAUDE.md`'s tag table "verbatim as a citation" — had five rows against the root table's six: `[CROSS-PENDING]` (root `CLAUDE.md` line 128, verified August 18, 2026) was missing, and with it the tag was unknown to #20 anywhere, making all 218 `docs/specs/` occurrences formal FR-CS-017 violations of an APPROVED spec. The row is now reproduced verbatim; the source note records the re-retrieval and the un-honoured §9.4 re-approval trigger 1; §3.2.3 gains the storage-class row (transitional pre-state of `[CROSS]` — normally a spec-side tag; a code declaration follows `[CROSS]`'s storage class); the §3.2.3 region-ordering line and §3.10's own vacuous-tag enumeration extended to six. H7: §3.2.3 gains the **const-mirror carve-out** (extends ERR-020-004) — the base `[CROSS]` → `public static readonly` rule forbade the compiler-enforced `public const` mirror shape that §4.2's ERR-020-004 carve-out cites as compliant (`DisciplineConstants.CardKindYellow` et al., 19 declarations tree-wide, re-derived August 18, 2026 from the `[CROSS]`-tagged `public const` declarations whose initializers reference the owning catalogue's symbol), so #20 certified as compliant a declaration its own MUST forbade. Resolved in the spec: symbol-referencing compile-time-constant mirrors MAY be `public const` (value identity is compiler-enforced; no divergence risk), literal-initialized mirrors never qualify (the five TODO-tick-rate declarations and `DisciplineConstants.LeagueCompetitionKey` remain non-conformant), and naming MAY keep either PascalCase or the source's ALL_CAPS identifier (both live in the tree: 10 PascalCase / 9 ALL_CAPS among the 19). FR-CS-022's row in section-2.md v1.4 carries the same carve-out. | — |
+| 1.7 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H1.** §3.2.3's `[CROSS]` const-mirror carve-out (landed at v1.6) stated its naming arm as "keep PascalCase **or** reuse the source's `ALL_CAPS` identifier unchanged", and cited "10 PascalCase / 9 ALL_CAPS among the 19" as evidence that all 19 conform. Only **three** of the nine reuse the source name (`TEAM_COUNT`, `ATTRIBUTE_MIN`, `ATTRIBUTE_MAX`); the other six RENAME — `MatchAnalyticsConstants.PITCH_LENGTH_M`/`PITCH_WIDTH_M`/`GOAL_WIDTH_M` add the unit suffix their `BallPhysicsConstants.Pitch` sources lack, and `RESTART_KIND_THROW_IN`/`_GOAL_KICK`/`_CORNER` mirror `RestartType` enum members, whose identifiers are not `ALL_CAPS` at all and so could not be reused unchanged even in principle. Under the rule as written those six remained FR-CS-022 violations while the carve-out's own count called them conforming — the overclaim shape v1.6 filed H7 against, reproduced one revision later. Naming arm restated as "PascalCase, **or** an `ALL_CAPS` identifier consistent with the owning catalogue's `[FIXED]` convention", with the three/six split written out so the rule and its evidence agree. | — |
+| 1.8 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings M1 + M5 + M6, and L4.** M1: `ERR-020-006` and `ERR-020-007` were cited nowhere in the spec they patch — every prior #20 ERR is cited at its fix site, but round-6's text said only "round-6 finding H6/H7". Both ids now cited in place: §3.2.1's source note (`ERR-020-006`) and the §3.2.3 const-mirror carve-out heading (`ERR-020-007`). M5: §3.2.3's per-tag region-ordering line cited `FR-CS-025` as its authority; verified against §2.2.2 (`grep -n 'FR-CS-025 |' section-2.md`) that FR-CS-025 governs catalogue file NAMING only (`<SpecName>Constants.cs`) and says nothing about region ordering — re-cited to §4.2 directly. M6: the §3.2.1 source note offered "the tag stood at 218 occurrences (`grep -rn 'CROSS-PENDING' docs/specs/ \| wc -l`, August 18, 2026)" as proof of a figure that command no longer reproduces (245 today; every subsequent citation of the tag, including this row, keeps raising it) — re-derived against the pre-fix commit instead (`git grep -c 'CROSS-PENDING' 9b841d1^ -- docs/specs \| awk -F: '{s+=$NF} END {print s}'` → 218) and labelled explicitly as the pre-fix figure; the note's "honoured now" claim about §9.4 trigger 1 is corrected to name when the trigger's full re-verification mandate was actually run (round-7 M2, `section-9-approval-checklist.md`). L4: the `[CROSS]` row's Naming cell read a bare "PascalCase" while the carve-out qualifying it was signalled only in the Notes cell — Naming cell now reads "PascalCase (see const-mirror carve-out)". | — |
 
 ---
 

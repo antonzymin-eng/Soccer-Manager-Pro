@@ -1,5 +1,13 @@
 // File:     src/season-save/tests/SeasonSaveCareerRestoreTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-16, latest (L-3, adversarial review — v1.4: the "Oracle = the composed seam..."
+//           comment was documented, not enforced. The call site now routes through the new
+//           SeasonLoopScenarios.ComposedOracle, whose doc states the oracle's scope once for every
+//           caller across the folder. No behaviour change.)
+// Modified: 2026-08-16, later (adversarial-review Medium — the restore-fidelity precondition's
+//           PlayerCareerStates.SelectAvailable oracle call re-pointed at
+//           AvailabilityComposition.Compose(discipline: null) directly, since the method was deleted
+//           as production-dead — v1.3)
 // Modified: 2026-08-08
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-3 / KD-6;
@@ -137,7 +145,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 career.SetMedicalState(0, full.GetPlayer(local).PlayerId, in injured);
             }
 
-            Squad fielded = career.SelectAvailable(full);
+            Squad fielded =
+                SeasonLoopScenarios.ComposedOracle(full, career, discipline: null, competitionId: 0);
             Assert.AreNotSame(full, fielded, "Precondition: the filter must have removed somebody.");
             Assert.AreNotEqual(
                 SquadRating.StartingElevenMean(full), SquadRating.StartingElevenMean(fielded),
@@ -199,4 +208,16 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | restore fidelity, not occurrence).                                 |
 // | 1.2     | 2026-08-08 | —      | Balance-pass AR pass 3 (L3): the unwired-loop empty-blocks lock    |
 // |         |            |        | asserts the appearance set too.                                    |
+// | 1.3     | 2026-08-16, later | — | Adversarial-review Medium: the restore-fidelity precondition's   |
+// |         |            |        | oracle used the now-deleted PlayerCareerStates.SelectAvailable,   |
+// |         |            |        | which agreed with the composed production seam only while no      |
+// |         |            |        | discipline tally was wired (see PlayerCareerStates.cs v1.26).     |
+// |         |            |        | Re-pointed at AvailabilityComposition.Compose(discipline: null)   |
+// |         |            |        | directly, with a comment stating the oracle's scope explicitly.   |
+// |         |            |        | No assertion or fixture changed.                                   |
+// | 1.4     | 2026-08-16, latest | — | L-3 (adversarial review). The "Oracle = ..." comment v1.3      |
+// |         |            |        | added was documented, not enforced. The call site now routes      |
+// |         |            |        | through the new SeasonLoopScenarios.ComposedOracle, whose doc      |
+// |         |            |        | states the oracle's scope once for every caller. No behaviour      |
+// |         |            |        | change.                                                             |
 #endregion

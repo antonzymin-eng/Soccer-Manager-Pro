@@ -114,5 +114,5 @@ At approval (once G3 is granted): flip every file in the folder to `Status: APPR
 
 Then run `landing-close-out`. One thing to carry into the `docs/tracking/CHANGELOG.md` entry: state
 whether the newly approved spec has a `src/` assembly. "APPROVED" says nothing about whether code
-exists — it is currently untrue of roughly 42% of the registry, and that gap is the single most
-misread fact about this project's state.
+exists; derive the live count from `docs/specs/SPEC_INDEX.md` and `src/` rather than copying a
+percentage into this workflow, because that gap changes as assemblies land.

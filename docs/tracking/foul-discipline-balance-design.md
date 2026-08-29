@@ -271,7 +271,32 @@ a way to find the right *shape* cheaply, never the final value.
 2. **`FoulCallProbability` is a rate knob, not a physical quantity.** Its value is only meaningful
    relative to the contact stream of item 1. If that stream changes, this must be re-measured — the
    diagnostic driver exists for exactly that and is committed alongside.
-3. **Every engine digest moves.** The draw now fires per candidate rather than per foul, so the
+3. **THE TRIPWIRE FIRED, and nobody was watching — recorded August 13, 2026, decision taken August 17,
+   2026.** Item 2 above is not hypothetical any more. **C1** (phase classification, August 8, 2026)
+   moved possession-phase share 24.2% → 96.8% and final-third `InPoss` 7.5% → 40.8%, which is directly
+   upstream of the cross-team contact stream this fit was calibrated against. Re-measured on the
+   committed diagnostic (`FoulRateDiagnosticTests`, `TD_FOUL_DIAGNOSTIC=1`, 6 seeds × 54 000 ticks):
+   **fouls 35.0 / yellows 5.0 / reds 1.00 per 90** against this pass's own post-fix 21.0 / 3.0 / 1.0 —
+   fouls and yellows both **~67% above** where this note left them, and reds still **4×** football's
+   ~0.25. The acceptance bands cannot see any of it: `MatchEngineDisciplineScenarios` caps fouls at 90,
+   yellows at 20 and reds at 5, so reds could quintuple and the gate would read green. That is correct
+   as a plausibility floor and worthless as a calibration signal.
+
+   **✅ OWNER DECISION, August 17, 2026: hold the drift. Arm W2 first, then calibrate ONCE.** No interim
+   fit is landed. The reasoning, and the accepted cost, both recorded because this is knowingly shipping
+   a wrong number: today's figures measure a **pre-tackle** contact stream — `defensive-ai`'s tackle
+   challenge ships at `TackleContactRadiusM = 0` (wiring backlog W2), and arming it routes ~47
+   challenges per team per 90 into the same single foul-candidate slot. A fit landed now would be
+   re-fitted immediately, and in the meantime an intermediate value would sit in the tree *looking*
+   calibrated — which is precisely how the July-26 fit drifted 67% unnoticed — five days from the C1 change that caused it (August 8 → the August 13 re-measurement), eighteen days from the fit itself. **This note
+   is the counter-example to its own item 2**, so the rule is applied literally rather than restated.
+   **Accepted cost:** the card rate — and, since #44, the suspension rate derived from it — stays
+   knowingly wrong until the post-W2 calibration pass, with the acceptance bands reading green
+   throughout. **What un-holds it:** W2 armed at a non-zero `TackleContactRadiusM` with the
+   `sim_match_engine_inposs_gate` stall root-caused (leading candidate W6), then one calibration pass
+   over the complete contact stream.
+
+4. **Every engine digest moves.** The draw now fires per candidate rather than per foul, so the
    `match-flow.card-severity` cursor advances differently from tick one. All determinism tests are
    comparative (two runs, same seed) so none needed rebaselining, but the `FR-PO-052` certified perf
    baseline — already stale since Phase H — remains to be re-captured on the pinned host.
@@ -324,4 +349,6 @@ injection seam defaults to the certainty force.
 |---|---|---|---|
 | 0.1 | 2026-07-26 | — | Initial: the measurement result, the refutation of the threshold framing, KD-F1..KD-F5, the constant table, and the acceptance scenario. |
 | 1.0 | 2026-07-26 | — | LANDED. §5 filled with the measured pre/post per-predicate margins (9 of 10 predicates fail pre-fix); §6 with the verification numbers (480 → 21 fouls, 147 → 3.0 yellows, 75 → 1.0 reds per 90 min) and the finding that calibration needed a live run because giving fewer fouls raises the contact rate; §9 with the code-review pass (0H+3M). |
+| 1.1 | 2026-08-17 | — | **§7 item 2's tripwire recorded as FIRED, and the owner's sequencing decision taken: hold the drift, arm W2 first, calibrate once.** No `[GT]` moved and no measurement redone here — the August-13 re-measurement (35.0 fouls / 5.0 yellows / 1.00 reds per 90, against this note's post-fix 21.0 / 3.0 / 1.0) is recorded as new item 2a together with its cause (C1's August-8 phase-classification change, upstream of the contact stream), the acceptance bands' blindness to it, the accepted cost of holding, and the condition that un-holds it. |
+| 1.2 | 2026-08-17 | — | **Adversarial-review fixes over the v1.1 landing (M20, M21), documentation only; no `[GT]` moved and no measurement redone.** **M21:** v1.1 said the fit "drifted ~67% unnoticed for **five weeks**" — wrong by roughly 5× under every anchoring, and load-bearing, since this interval is the counter-example the hold is justified by. The measured intervals are **five days** from the C1 change that caused the drift (August 8 → the August 13 re-measurement) and **eighteen days** from the July-26 fit itself. **M20:** §7's new entry was numbered `2a.`, which is not a valid ordered-list marker — it rendered as a lazy continuation of item 2 rather than as its own item; renumbered to 3 with the following item renumbered to 4. ⚠️ L1 (reviewed-findings pass, 2026-08-18): this row had landed OUTSIDE the `#region VersionHistory`/`#endregion` block below (`#endregion` sat between the 1.1 and this row), so this row rendered as an orphan with no table header and `tools/recurring-defect-lint.py`'s `collect_md_version_rows` never saw it. `#endregion` moved to below this row; no content, formula, or `[GT]` changed. |
 #endregion

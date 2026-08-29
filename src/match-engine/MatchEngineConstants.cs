@@ -1,5 +1,24 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
+// Modified: 2026-08-15, later still (reviewed findings pass, L1 — corrected the L3 entry directly below:
+//           MatchEngine.cs's card-issuing call site (MatchEngine.cs:5286) WAS repointed onto
+//           FoulOrdinalNone, by the SAME DAY's later "#44 AR round 5, L3" pass on MatchEngine.cs — so
+//           "not repointed / out of this pass's ownership / open call site" below is SUPERSEDED, not
+//           true of the tree today. Left in place per this repo's annotate-in-place convention; see the
+//           FoulOrdinalNone XML doc for the corrected statement)
+// Modified: 2026-08-15, later (reviewed-findings pass, L3 — new #region Cross entry FoulOrdinalNone,
+//           a [CROSS] mirror of the new EventSystemConstants.FOUL_ORDINAL_NONE; MatchEngine.cs's own
+//           0xFFFF literal call site not repointed, out of this pass's ownership) — SUPERSEDED, see the
+//           entry above.
+// Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — CARD_KIND_YELLOW/RED
+//           deleted from #region Fixed; replaced by CardKindYellow/CardKindRed [CROSS] mirrors of the
+//           new EventSystemConstants.CARD_KIND_YELLOW/RED (now the [FIXED] ALL_CAPS source, per
+//           src/CLAUDE.md's [CROSS]-mirror worked example) in a new #region Cross, plus a new
+//           CardKindSecondYellow mirror (MatchEngine.ApplyCardAndCheckSentOff previously returned the
+//           bare literal 2 with no named constant anywhere in this catalogue). #17 owns the
+//           CardIssuedEvent.CardKind domain-ordinal encoding (Appendix A: "#17 (default owner)"); this
+//           catalogue does not, so [FIXED] was the wrong tag even before the source constant existed
+//           to mirror. No value change (0/1/2 throughout).
 // Modified: 2026-07-27  (B3: CARD_KIND_YELLOW / CARD_KIND_RED)
 // Modified: 2026-07-11 (#26 manager-AI wiring — SNAPSHOT_SCHEMA_VERSION 12 → 13, v13 ManagerState doc)
 // Modified: 2026-07-11 (engine substrate — match-length/halves model + SNAPSHOT_SCHEMA_VERSION 13 → 14)
@@ -15,6 +34,8 @@
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: + [GT] FoulCallProbability; Yellow 0.35 -> 0.16, Red 0.05 -> 0.011, FoulCooldownTicks 60 -> 180; no schema change. See docs/tracking/foul-discipline-balance-design.md)
 // Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: + [FIXED] GK_RUSH_DEGENERACY_EPSILON + 5 [GT] GkRush* trigger constants; no schema change. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (W1 AR-1 L: GK_RUSH_SOLVE_EPSILON renamed GK_RUSH_DEGENERACY_EPSILON — it guards three dimensionally different quantities, not just the solve)
+// Modified: 2026-08-13 (#44 T2: + [DERIVED] AGENT_ID_SPACE and [FIXED] NO_PLAYER_ID — the id space and sentinel MatchEngine.PlayerIdsByAgentId reports in; no schema change)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L15 — AGENT_ID_SPACE was [DERIVED] but named/regioned as [FIXED] (ALL_CAPS, #region Fixed); moved to #region Derived and renamed AgentIdSpace per src/CLAUDE.md; every reference updated; no behaviour change)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -25,6 +46,7 @@
 
 using System;
 
+using TacticalDirector.EventSystem;
 using TacticalDirector.PositioningAI;
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
@@ -88,15 +110,6 @@ namespace TacticalDirector.MatchEngine
         /// <c>RestartCue.None</c>. Presentation-only observation state (interactive Unity client
         /// §5-P1 KD-P1-3); mirrors the −1 sentinel convention (<see cref="NO_POSSESSION"/>).</summary>
         public const int NO_RESTART_TEAM = -1;
-
-        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> value for a caution. The wire encoding of
-        /// the card severity a foul draws; named here so an observer (Match Analytics #37) reads the
-        /// same source the producer writes from rather than carrying a private 0/1 literal.</summary>
-        public const byte CARD_KIND_YELLOW = 0;
-
-        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> value for a dismissal (straight red, or a
-        /// second yellow promoted by <c>ApplyCardAndCheckSentOff</c>).</summary>
-        public const byte CARD_KIND_RED = 1;
 
         /// <summary>[FIXED] Reason ordinal written into the Phase E PossessionChangedEvent (#17 ordinal
         /// 0x04) payload. Stage 0 has no possession-change reason taxonomy (a kick release, a first-touch
@@ -323,6 +336,19 @@ namespace TacticalDirector.MatchEngine
         public const int MAX_SUBSTITUTIONS_PER_TEAM = 5;
 
         /// <summary>
+        /// [FIXED] Sentinel for "no player identity is known for this agent id"
+        /// (<c>MatchEngine.PlayerIdsByAgentId</c>). Negative because <c>0</c> is a valid
+        /// <c>PlayerId</c> and a zero sentinel would silently attribute a card to player 0.
+        /// <para>
+        /// Numerically equal to <c>Discipline.CardLedgerFold.NO_PLAYER</c> so the array crosses that
+        /// boundary untranslated; <c>match-engine</c> cannot reference <c>discipline</c> (the
+        /// composition root sits above both), so the agreement is pinned by a lock in
+        /// <c>season-save</c>, the one assembly that sees both.
+        /// </para>
+        /// </summary>
+        public const int NO_PLAYER_ID = -1;
+
+        /// <summary>
         /// [FIXED] Team id awarded the FIRST-half kickoff. Stage 0 has no coin toss (that draw would need
         /// its own registered RNG stream and buys nothing yet), so the home side kicks off — a fixed
         /// convention, not a tunable. Match Engine design note §5.Z (Phase H).
@@ -362,6 +388,21 @@ namespace TacticalDirector.MatchEngine
 #endregion
 
         #region Derived
+
+        /// <summary>
+        /// [DERIVED] Size of the engine's whole agent-id space: the on-pitch slots plus every team's
+        /// synthetic bench ids. Formula: <c>SQUAD_SIZE + TEAM_COUNT * SUBSTITUTES_PER_TEAM</c>.
+        /// Source constants: <see cref="SQUAD_SIZE"/>, <see cref="TEAM_COUNT"/>,
+        /// <see cref="SUBSTITUTES_PER_TEAM"/>.
+        /// <para>
+        /// This is the id space <c>SubstitutionEvent.Incoming</c> lives in — <c>SubstitutePlayer</c>
+        /// derives an incoming id as <c>SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex</c>,
+        /// deliberately disjoint from any on-pitch slot index — and therefore the length any consumer
+        /// indexing by agent id must allocate (#44's occupancy fold, via
+        /// <c>MatchEngine.PlayerIdsByAgentId</c>).
+        /// </para>
+        /// </summary>
+        public static readonly int AgentIdSpace = SQUAD_SIZE + TEAM_COUNT * SUBSTITUTES_PER_TEAM;
 
         /// <summary>
         /// [DERIVED] Kickoff ball X (centre spot) = PITCH_LENGTH_M / 2, metres.
@@ -430,6 +471,55 @@ namespace TacticalDirector.MatchEngine
         /// Source constants: MatchEngineConstants.MATCH_TICKS_TOTAL.
         /// </summary>
         public const long HALF_TIME_BOUNDARY_TICK = MATCH_TICKS_TOTAL / 2;
+
+        #endregion
+
+        #region Cross
+
+        /// <summary>[CROSS] <c>CardIssuedEvent.CardKind</c> domain ordinal for a caution — the wire
+        /// encoding of the card severity a foul draws; named here so an observer (Match Analytics #37)
+        /// reads the same source the producer writes from rather than carrying a private 0/1 literal.
+        /// Authoritative source: <c>EventSystemConstants.CARD_KIND_YELLOW</c> (Event System #17,
+        /// <c>[FIXED]</c>, Appendix A row 0x06 / §3.10).
+        /// <para>
+        /// M24/ERR-017-004: was <c>[FIXED]</c> and ALL_CAPS here — this catalogue does not own the
+        /// encoding (#17 does, "default owner" in Appendix A), so a local literal could drift from the
+        /// spec's own definition with nothing to catch it. Retagged <c>[CROSS]</c> (PascalCase per
+        /// src/CLAUDE.md §3.2.3) and rebound to the real, now-`[FIXED]`, source.
+        /// </para>
+        /// </summary>
+        public const byte CardKindYellow = EventSystemConstants.CARD_KIND_YELLOW;
+
+        /// <summary>[CROSS] <c>CardIssuedEvent.CardKind</c> domain ordinal for a dismissal (straight
+        /// red, or a second yellow promoted by <c>ApplyCardAndCheckSentOff</c>). Authoritative source:
+        /// <c>EventSystemConstants.CARD_KIND_RED</c>, as <see cref="CardKindYellow"/>. M24/ERR-017-004.
+        /// </summary>
+        public const byte CardKindRed = EventSystemConstants.CARD_KIND_RED;
+
+        /// <summary>[CROSS] <c>CardIssuedEvent.CardKind</c> domain ordinal for a second caution promoted
+        /// to a dismissal — this engine emits it as ONE event, never a yellow-then-red pair
+        /// (<c>ApplyCardAndCheckSentOff</c>). Authoritative source:
+        /// <c>EventSystemConstants.CARD_KIND_SECOND_YELLOW</c>, as <see cref="CardKindYellow"/>. Newly
+        /// named at M24/ERR-017-004 — <c>ApplyCardAndCheckSentOff</c> previously returned the bare
+        /// literal <c>2</c> with no named constant anywhere in this catalogue.
+        /// </summary>
+        public const byte CardKindSecondYellow = EventSystemConstants.CARD_KIND_SECOND_YELLOW;
+
+        /// <summary>[CROSS] <c>CardIssuedEvent.FoulOrdinal</c> sentinel for "procedural card, no
+        /// associated <c>FoulCommittedEvent</c>" — the wire-format value this engine's card-issuing call
+        /// sites publish. Authoritative source: <c>EventSystemConstants.FOUL_ORDINAL_NONE</c> (Event
+        /// System #17, <c>[FIXED]</c>, Appendix A row 0x06 / §3.10).
+        /// <para>
+        /// Reviewed-findings pass, L3 (2026-08-15): added as the `[CROSS]` mirror of the new #17
+        /// catalogue row, matching the <see cref="CardKindYellow"/> precedent one commit earlier
+        /// (M24/ERR-017-004) exactly. <b>Consumed</b> — the same day's later "#44 AR round 5, L3" pass
+        /// repointed <c>MatchEngine.cs</c>'s card-issuing call site (<c>MatchEngine.cs:5286</c>) from the
+        /// bare literal <c>0xFFFF</c> onto this constant. (Reviewed findings pass, 2026-08-15, corrected
+        /// this doc — it previously reported the call site as open, superseded the same day it was
+        /// written.)
+        /// </para>
+        /// </summary>
+        public const ushort FoulOrdinalNone = EventSystemConstants.FOUL_ORDINAL_NONE;
 
         #endregion
 
@@ -926,4 +1016,55 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | meaning a LUNGE, not fitted to a measurement) and                     |
 // |         |            |        | TackleCooldownStrides. Both UN-CALIBRATED per KD-W1. The OUTCOME      |
 // |         |            |        | constants live in #14's catalogue, not here (ERR-014-006).            |
+// | 1.31    | 2026-08-13 | —      | #44 T2 (roadmap C2): + [DERIVED] AGENT_ID_SPACE (SQUAD_SIZE +   |
+// |         |            |        | TEAM_COUNT * SUBSTITUTES_PER_TEAM = 36), the id space           |
+// |         |            |        | SubstitutionEvent.Incoming actually lives in and therefore the  |
+// |         |            |        | length any consumer indexing by agent id must allocate; and     |
+// |         |            |        | [FIXED] NO_PLAYER_ID = -1, negative because 0 is a valid        |
+// |         |            |        | PlayerId and a zero sentinel would attribute a card to player   |
+// |         |            |        | 0. Its numeric agreement with CardLedgerFold.NO_PLAYER is       |
+// |         |            |        | locked in season-save, the one assembly that sees both. No      |
+// |         |            |        | schema change, no draw site.                                    |
+// | 1.32    | 2026-08-13 | —      | AR round 5 fix (L15): AGENT_ID_SPACE was declared [DERIVED] but |
+// |         |            |        | lived in #region Fixed with ALL_CAPS naming — src/CLAUDE.md      |
+// |         |            |        | reserves ALL_CAPS/#region Fixed for [FIXED] and requires         |
+// |         |            |        | PascalCase in #region Derived for [DERIVED]. Moved to #region    |
+// |         |            |        | Derived and renamed AgentIdSpace (public static readonly, the    |
+// |         |            |        | MaxEntityId precedent already in this region); every reference   |
+// |         |            |        | in MatchEngine.cs and SeasonLoopDisciplineTests.cs updated. No   |
+// |         |            |        | behaviour change. NO_PLAYER_ID is correctly [FIXED] — untouched. |
+// | 1.33    | 2026-08-15 | —      | AR round 4 fix (M24/ERR-017-004, discipline C1/C2 landing).      |
+// |         |            |        | CARD_KIND_YELLOW/CARD_KIND_RED deleted from #region Fixed — #17  |
+// |         |            |        | owns the CardIssuedEvent.CardKind domain-ordinal encoding         |
+// |         |            |        | (Appendix A: "#17 (default owner)"), not this catalogue, so       |
+// |         |            |        | [FIXED] was always the wrong tag and the value was a private       |
+// |         |            |        | literal rather than bound to anything. New #region Cross (between |
+// |         |            |        | Derived and GT, per src/CLAUDE.md's canonical region order) with  |
+// |         |            |        | CardKindYellow/CardKindRed/CardKindSecondYellow, all [CROSS]       |
+// |         |            |        | PascalCase mirrors of the new EventSystemConstants.CARD_KIND_     |
+// |         |            |        | YELLOW/RED/SECOND_YELLOW ([FIXED], ALL_CAPS — the src/CLAUDE.md    |
+// |         |            |        | [CROSS]-mirror worked example's shape). CardKindSecondYellow is    |
+// |         |            |        | new — MatchEngine.ApplyCardAndCheckSentOff previously returned the |
+// |         |            |        | bare literal 2 with no named constant anywhere in this catalogue. |
+// |         |            |        | Every call site in MatchEngine.cs updated (v1.70);                |
+// |         |            |        | MatchAnalyticsConstants.CARD_KIND_RED repointed directly at        |
+// |         |            |        | EventSystemConstants.CARD_KIND_RED (not through this catalogue —   |
+// |         |            |        | a mirror-of-a-mirror was the review-round-4 M24 fix's own first    |
+// |         |            |        | draft defect). No value change (0/1/2 throughout), no behaviour    |
+// |         |            |        | change.                                                            |
+// | 1.34    | 2026-08-15, later | — | Reviewed-findings pass (L3). New #region Cross entry           |
+// |         |            |        | FoulOrdinalNone, a [CROSS] PascalCase mirror of the new             |
+// |         |            |        | EventSystemConstants.FOUL_ORDINAL_NONE ([FIXED], 0xFFFF —          |
+// |         |            |        | CardIssuedEvent.FoulOrdinal's "no associated foul" sentinel).      |
+// |         |            |        | Matches the v1.33 CardKind* mirror precedent exactly. NOT wired    |
+// |         |            |        | into MatchEngine.cs — the card-issuing call site still writes the |
+// |         |            |        | bare 0xFFFF literal; repointing it is outside this pass's          |
+// |         |            |        | ownership (constants catalogues only). No value change, no         |
+// |         |            |        | behaviour change. **SUPERSEDED same day** — see v1.35 below: the   |
+// |         |            |        | later "#44 AR round 5, L3" pass (MatchEngine.cs v1.71) repointed   |
+// |         |            |        | the call site onto this constant after this row was written.       |
+// | 1.35    | 2026-08-15, later still | — | Reviewed findings pass (L1). Corrected v1.34 above and the  |
+// |         |            |        | FoulOrdinalNone XML doc, both of which still claimed the call     |
+// |         |            |        | site was open — MatchEngine.cs:5286 reads this constant. No code  |
+// |         |            |        | change in this file.                                              |
 #endregion

@@ -1,6 +1,21 @@
 // File:     src/match-analytics/MatchAnalyticsAggregator.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-08-16, later (L-6, adversarial review — v1.4: the card routing's final `else` still
+//           absorbed any FUTURE fourth CardKind as a plain yellow, even after M4/ERR-037-003 made the
+//           SecondYellow branch explicit — the spec's card table (section-3.md) is exhaustive over
+//           #17's three-value domain and states no fourth-value posture. Widened to an explicit
+//           CardKindYellow branch (Yellow is no longer the implicit catch-all) plus a fail-loud
+//           ArgumentOutOfRangeException naming the kind for anything else, mirroring the #44
+//           CardLedgerFold.RequireKnownCardKind (F4) precedent over the identical domain. Behaviour
+//           change: a CardKind outside {0, 1, 2} now throws instead of silently counting as a yellow —
+//           unreachable today (#17's own producer emits only 0/1/2), so no live match is affected.)
+// Modified: 2026-08-16 (reviewed-findings pass, M4/ERR-037-003 — CardIssuedEvent routing widened from
+//           a two-way `CardKind == CardKindRed ? red : yellow` test to a three-way switch over #17's
+//           full CardKind domain: a kind-2 (second-yellow dismissal) event now increments BOTH
+//           YellowCards and RedCards, instead of silently falling into the yellow-only else branch and
+//           never touching RedCards at all. Behaviour change: any match with a second-yellow dismissal
+//           now reports a nonzero RedCards for that team, matching MatchStatline.RedCards's documented
+//           contract. New MatchAnalyticsConstants.CardKindSecondYellow (and CardKindYellow) consumed.)
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §3.1–§3.5 (KD-3), FR-AN-003..012 / 016..018,
 //           Code Standards #20
@@ -232,13 +247,56 @@ namespace TacticalDirector.MatchAnalytics
             {
                 CardIssuedEvent evt = tap.ReadRecord<CardIssuedEvent>(index);
                 int team = TeamOfAgent(sample, evt.Recipient, "CardIssuedEvent.Recipient");
-                if (evt.CardKind == MatchAnalyticsConstants.CARD_KIND_RED)
+
+                // ERR-037-003 (reviewed-findings pass M4): CardKind is #17's three-value domain ordinal
+                // (0=Yellow, 1=Red, 2=SecondYellow — EventSystemConstants.CARD_KIND_*), not a boolean.
+                // The old `== red ? red : yellow` test had no branch for kind 2 at all, so a
+                // second-yellow dismissal fell into the else and counted as a plain yellow — RedCards
+                // stayed 0 for every match with one, contradicting MatchStatline.RedCards's own
+                // documented contract ("Red cards received (including second-yellow dismissals)").
+                //
+                // A kind-2 event still counts toward BOTH tallies, not just red: the producer
+                // (MatchEngine.ApplyCardAndCheckSentOff) emits it as ONE event standing in for the
+                // second caution AND the resulting dismissal, never a yellow-then-red pair, so nothing
+                // else will ever increment a yellow for that caution. Splitting it into a yellow and a
+                // red here is what makes the box score match the two bookings a real match report would
+                // show (the player's first caution earlier in the match already published its own
+                // separate kind-0 event and is counted there). This mirrors the discipline #44 precedent
+                // — DisciplineRules.ApplyCard's kind-2 branch is documented as "one yellow AND one
+                // dismissal ban" for the identical reason.
+                //
+                // L-6 (reviewed findings pass): the routing is now the SAME three-way exhaustive mapping
+                // #37 section-3.md's CardIssuedEvent row states — Yellow, Red, SecondYellow, each its
+                // own explicit branch — rather than two explicit checks with Yellow left as the catch-all
+                // else. That else silently absorbed any FUTURE fourth CardKind value as a plain yellow,
+                // which is wrong in a different way than the ERR-037-003 defect this same block already
+                // fixed once. The spec's table is exhaustive over #17's three-value domain and states no
+                // fourth-value posture; F5 is a different failure mode (an unrecognized ORDINAL, handled
+                // by ignoring the whole record, FR-AN-019) and does not license silently ignoring a
+                // malformed VALUE within a record #37 DOES recognize. Fails loud instead, naming the
+                // value — the #44 CardLedgerFold.RequireKnownCardKind (F4) precedent for the identical
+                // domain.
+                if (evt.CardKind == MatchAnalyticsConstants.CardKindYellow)
                 {
+                    _yellowCards[team]++;
+                }
+                else if (evt.CardKind == MatchAnalyticsConstants.CardKindRed)
+                {
+                    _redCards[team]++;
+                }
+                else if (evt.CardKind == MatchAnalyticsConstants.CardKindSecondYellow)
+                {
+                    _yellowCards[team]++;
                     _redCards[team]++;
                 }
                 else
                 {
-                    _yellowCards[team]++;
+                    throw new ArgumentOutOfRangeException(
+                        nameof(evt.CardKind), evt.CardKind,
+                        "MatchAnalyticsAggregator: CardIssuedEvent.CardKind must be 0 (yellow), 1 (red) "
+                        + "or 2 (second yellow) — #37 section-3.md's card table is exhaustive over #17's "
+                        + "three-value domain and states no fourth-value posture; absorbing an unknown "
+                        + "kind as a plain yellow would silently corrupt the box score.");
                 }
                 return;
             }
@@ -462,4 +520,27 @@ namespace TacticalDirector.MatchAnalytics
 // |         |            |        | the §3.4 binning loop (they are frozen ON the pitch per §5.Z   |
 // |         |            |        | Phase H, so one red card dominated the heatmap thereafter).    |
 // |         |            |        | AR-1 L: FR-CS-071 justification recorded for Percent's double. |
+// | 1.2     | 2026-08-15 | —      | Reviewed-findings pass (L2). CARD_KIND_RED reference updated   |
+// |         |            |        | to MatchAnalyticsConstants.CardKindRed (PascalCase rename of   |
+// |         |            |        | the [CROSS] mirror). No behaviour change.                      |
+// | 1.3     | 2026-08-16 | —      | Reviewed-findings pass (M4/ERR-037-003). CardIssuedEvent        |
+// |         |            |        | routing widened to a three-way switch over #17's full CardKind |
+// |         |            |        | domain (0/1/2): a kind-2 second-yellow dismissal now increments|
+// |         |            |        | BOTH YellowCards and RedCards, instead of falling into the     |
+// |         |            |        | yellow-only else branch and leaving RedCards at 0 for every    |
+// |         |            |        | such match — MatchStatline.RedCards's own documented contract  |
+// |         |            |        | ("including second-yellow dismissals") was being contradicted. |
+// |         |            |        | Behaviour change (RedCards is now nonzero where it wasn't).    |
+// | 1.4     | 2026-08-16, later | — | L-6 (adversarial review). The v1.3 routing's final `else`   |
+// |         |            |        | still absorbed any FUTURE fourth CardKind as a plain yellow —  |
+// |         |            |        | the spec's card table (section-3.md) is exhaustive over #17's  |
+// |         |            |        | three-value domain and states no fourth-value posture, and F5  |
+// |         |            |        | (an unrecognized ordinal, ignored) does not license ignoring a |
+// |         |            |        | malformed value inside a record #37 DOES recognize. Widened to |
+// |         |            |        | an explicit CardKindYellow branch plus a fail-loud             |
+// |         |            |        | ArgumentOutOfRangeException naming the kind for anything else, |
+// |         |            |        | mirroring #44 CardLedgerFold.RequireKnownCardKind (F4) over    |
+// |         |            |        | the identical domain. Test: Card_WithAnUnknownKind_ThrowsAnd-  |
+// |         |            |        | NamesTheKind. Unreachable today (#17's own producer emits only |
+// |         |            |        | 0/1/2), so no live match is affected.                           |
 #endregion

@@ -4,8 +4,8 @@
 **Purpose:** Registers all sources cited by Spec #20, records verification status for
 every citation, audits cross-spec references, and summarises constant provenance.
 **Created:** May 8, 2026
-**Version:** 1.1
-**Status:** DRAFT
+**Version:** 1.2
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 8; `outline-mid.md` v1.2, §8.1–§8.4
 
@@ -55,7 +55,10 @@ All direct CLAUDE.md citations in Spec #20 were re-verified against the current
 
 - **Constant tag table** (§3.2.1): reproduced verbatim from CLAUDE.md "Constant Tags"
   section; five tags (GT, EST, FIXED, DERIVED, CROSS) with definitions match current
-  CLAUDE.md text exactly. Attribution line present.
+  CLAUDE.md text exactly. Attribution line present. *(Superseded August 18, 2026,
+  round-6 finding H6: root `CLAUDE.md`'s table holds SIX tags — `[CROSS-PENDING]` —
+  and §3.2.1 now reproduces all six; see section-3.md v1.6. The May 8, 2026 record
+  above is left as the check performed on its date.)*
 - **Tick rates** (§3.2.2, §3.4.1): 60 Hz physics / 10 Hz tactical loop values verified
   against CLAUDE.md "Heartbeat Tick Rate." Both loops cited with their canonical ms
   equivalents (~16.67 ms, 100 ms).
@@ -154,7 +157,8 @@ historical reference, not a normative cross-reference.
 Spec #20 **declares no physical constants** of any kind. It is a governance
 meta-specification; its subject matter is code conventions, not game physics.
 
-The constant tag vocabulary (`[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, `[CROSS]`) is
+The constant tag vocabulary (`[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, `[CROSS]`,
+`[CROSS-PENDING]`) is
 governance metadata owned by root `CLAUDE.md` (S-01, "Constant Tags" section). Spec #20
 §3.2.1 reproduces the tag table verbatim with explicit attribution — this is the one
 sanctioned verbatim cite in the spec (KD-6 permits verbatim reproduction of the tag
@@ -169,8 +173,11 @@ vacuously satisfied:
 - No `[FIXED]` physical-law constants: N/A.
 - No `[DERIVED]` formula-derived constants: N/A.
 - No `[CROSS]` mirror entries: N/A (§8.3 confirms no imports).
-- No constant catalogue file: N/A (no `CodeStandardsConstants.cs` exists or will exist;
-  §4.1 tree diagram marks this folder empty at Stage 0).
+- No `[CROSS-PENDING]` constants: N/A (tag added to the citation table August 18, 2026 —
+  see §3.2.1; a governance spec declares none).
+- No constant catalogue file: N/A (no `CodeStandardsConstants.cs` exists or will exist,
+  and no `src/code-standards/` folder exists in the live tree — §4.1's tree records this
+  spec as producing no source files).
 
 ---
 
@@ -180,6 +187,8 @@ vacuously satisfied:
 |---|---|---|---|---|
 | 1.0 | May 8, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 8 and `outline-mid.md` v1.2 §8.1–§8.4. All eight sources verified on drafting date. | — |
 | 1.1 | June 15, 2026 | — | S-06 (Unity Performance Best Practices) URL re-pinned per the §8.4 retire-or-redirect rule: the unversioned `docs.unity3d.com/Manual/…` path drifts to Unity's latest manual and began returning HTTP 503 (CI Markdown link check, PR #169). Replaced with the 2022.3 versioned path matching the certified engine (`certification-platform.md` v1.2). Same page/content; retrieved-date refreshed. No normative spec text changed. | — |
+| 1.1.1 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
+| 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H6 + H2/H5-adjacent.** H6: §8.4's tag-vocabulary enumeration extended from five tags to six (`[CROSS-PENDING]` — the root `CLAUDE.md` table this section attributes ownership to has held six tags while the reproduction chain in #20 held five; see section-3.md v1.6), and the vacuously-satisfied audit list gains the matching sixth N/A row. Consistency fix (the round-6 report cited this file's line 173 under H2 as "restates the retired framing" — the line holds no three-layer wording; what it held was the same stale "§4.1 tree diagram marks this folder empty at Stage 0" claim H5 catalogues): the §4.1 citation now states what §4.1 says post-v1.1 — the spec produces no source files and no `src/code-standards/` folder exists (verified August 18, 2026: `ls -d src/code-standards` fails). | — |
 
 ---
 

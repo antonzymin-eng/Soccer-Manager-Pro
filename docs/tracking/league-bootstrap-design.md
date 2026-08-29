@@ -3,8 +3,13 @@
 > **Created:** July 25, 2026
 > **Status:** DESIGN SUPPLEMENT — **A3 LANDED July 25, 2026** (design converged AR-1..AR-3;
 > implemented, then code-reviewed AR-4 → AR-5 (whole-file, 1H+4M+3L) → AR-6 (1M) — full gate green
-> at each step, then AR-7 over the spec/tests/governance — 1H+4M). **A4a is designed here but NOT executed** — its
-> ~9 h corpus run is its own roadmap item. Same governance class as `lineup-selection-design.md`,
+> at each step, then AR-7 over the spec/tests/governance — 1H+4M). **A4a RAN August 12, 2026** — the ~9 h
+> corpus run is executed, not outstanding: 198 real 90-minute `MatchEngine` matches captured and
+> committed under `docs/tracking/corpus-data/`, all three round-resolution `[GT]`s re-fitted, and
+> KD-8's two bars recorded **mean agreement PASS, distribution shape FAIL** (`ERR-030-033`
+> re-specified the mean bar; `ERR-030-034` is the surviving over-dispersion gap). The whole KD-7a
+> section below exists because it ran. *(Corrected August 17, 2026: this header read "designed here
+> but NOT executed" for five days after the run, while the body it introduces was written by it.)* Same governance class as `lineup-selection-design.md`,
 > `match-save-file-design.md`, `unified-season-save-design.md`. Opens **no numbered spec** and
 > changes no `SPEC_INDEX.md` row.
 > **Governs:** `docs/tracking/path-to-playable-roadmap.md` items **A3** (league bootstrap) and
@@ -353,10 +358,18 @@ is why the raw rows are now committed under `docs/tracking/corpus-data/`.
 2. `α` is **determined** — max single-cell leverage < 25% and the weighted/unweighted estimators
    within a factor of 1.5;
 3. The draw gap still exceeds `2·se` under KD-8's re-specified A5 bar; and
-4. The capture is **post-defensive-wiring**. The corpus is produced by an engine in which *no player
-   has ever made a tackle* (`match-engine-wiring-backlog.md` W2), and the second moment of scorelines
-   is precisely the statistic that wiring moves. KD-W1 does not formally bind here — the model itself
-   is wired — but the *target* is not, which is the same trap with the roles reversed.
+4. The capture is **post-defensive-*arming***. The corpus was produced by an engine in which no
+   player had ever made a tackle (`match-engine-wiring-backlog.md` W2), and the second moment of
+   scorelines is precisely the statistic that wiring moves. KD-W1 does not formally bind here — the
+   model itself is wired — but the *target* is not, which is the same trap with the roles reversed.
+   **⚠️ AMENDED August 17, 2026 — read this condition as post-*arming*, not post-*building*.** As
+   written on August 12 it said the engine is one "in which *no player has ever made a tackle*". W2
+   landed **later that same day** (`fc8f81f`, ~3.5 h after this section), so that clause is now false
+   about the **code** and still true about a **shipped match**: the tackle challenge ships at
+   `TackleContactRadiusM = 0`. Satisfying condition 4 therefore requires a capture from an engine
+   running a **non-zero** `TackleContactRadiusM`. Read the other way — treating W2's landing as
+   satisfying it — the tripwire would fire against a corpus statistically identical to the one it
+   exists to reject. See **S9**.
 
 Condition 4 is not a delay tactic: KD-8's own re-capture trigger invalidates this fit at the next
 scoring-relevant landing regardless, so the decision is being made against a corpus that is going to
@@ -378,6 +391,24 @@ engine exactly would make the unwatched 90% of the league *less* football-like i
 an engine whose draw share should rise toward football as defensive behaviour wires in. That is an
 argument the draw gap may be an engine defect rather than a model defect, and it is why S6 pins no
 successor for it.
+
+**S9 — Owner decision, August 17, 2026: HOLD. Adopt-or-reject after the W2 calibration capture,
+exactly as S7 says.** KD-7a stays pre-decided and unadopted. The reasoning recorded with the
+decision: the corpus that would settle `α` predates tackle wiring, so condition 4 fails on its own
+terms and conditions 1–3 would be re-tested against a replaced corpus anyway. Adopting now would
+pin a dispersion parameter fitted to a contact stream the next landing changes; rejecting now would
+discard a pre-decided successor for want of a measurement that is already scheduled. Neither is a
+decision, so neither is taken.
+
+**Condition 4's wording, corrected in place rather than quietly reinterpreted.** S7 was written on
+August 12 when the tackle challenge did not exist. It exists now: W2 landed August 12 (`ERR-014-006`)
+and **ships disabled** — `TackleContactRadiusM = 0`, held there because arming it collapsed
+`sim_match_engine_inposs_gate` to 0.501 against a 0.70 bound, an un-isolated stall whose leading
+candidate is W6. So "the corpus is produced by an engine in which *no player has ever made a tackle*"
+is now false about the **code** and still true about a **shipped match**. Condition 4 is therefore read
+as **post-*arming***, not post-building: the capture must come from an engine running a non-zero
+`TackleContactRadiusM`. Read the other way — treating W2's landing as satisfying condition 4 — the
+tripwire would fire against a corpus statistically identical to the one it was written to reject.
 
 ### KD-8 — Calibration methodology (A4a).
 
@@ -482,8 +513,10 @@ pooled χ² = 16.0 on 19 dof against a 30.1 threshold) and **distribution shape 
 All of it is emitted by `tools/round-resolution-fit.py` and recorded in the artifact, so a later
 re-fit is measured against the same bar.
 
-> **⚠️ BOTH BARS WERE MISSED WHEN A4a ACTUALLY RAN (August 12, 2026), and neither miss is a fit
-> failure. Read `round-resolution-corpus.md` before re-using either number.**
+> **⚠️ WHEN A4a ACTUALLY RAN (August 12, 2026) THE VERDICT CAME BACK TWO-PART — mean agreement
+> PASS (after `ERR-030-033` re-specified the bar, same day), distribution shape FAIL
+> (`ERR-030-034`) — and neither miss as first scored was a fit failure. Read
+> `round-resolution-corpus.md` before re-using either number.**
 >
 > - **The ±0.25 bar was not measurable at the depth this same section specifies (`ERR-030-033`) —
 >   RESOLVED August 12, 2026: the bar is re-specified above (A1–A5).** At ~18 matches per bucket a
@@ -496,7 +529,7 @@ re-fit is measured against the same bar.
 >   tails and 0–0 is a draw, so an independent negative-binomial closes only ~0.5 pp of the 7.6 pp draw
 >   gap. Dispersion and the draw deficit are substantially independent findings, and the draw deficit's
 >   mechanism is **not established** — the shared-swing family that would explain it implies negative
->   home/away correlation, which this corpus refutes (+0.004 ± 0.052, n=378).
+>   home/away correlation, which this corpus refutes (+0.044 ± 0.073, n=198, ~3σ — S6).
 >
 > The bar half is now fixed (above); the family half is deliberately still open. Neither was closed by
 > widening a number to fit its own result. **The family change is cheaper than first recorded** — it
@@ -805,3 +838,6 @@ Windows certification host.
 | 1.2 | 2026-07-25 | — | **AR-5** (hostile re-read of the whole landing, not the diff): 1H+4M+3L, all resolved. **H-1** the generation path is persistence-equivalent — rosters are regenerated from the world seed, not saved, so any change to it silently invalidates every save while self-referential determinism tests stay green; closed by new **KD-10** + a pinned golden vector, verified non-vacuous by perturbing `AttributeBaseMean`. **M-1** the world seed was write-only, so a saved career could not rebuild its `ISquadProvider` at all; closed by a `WorldStore.WorldSeed` accessor + the KD-9 resume recipe. **M-2** the league-size-independence claim was true only of the base roster; narrowed everywhere and the #43 consequence named. **M-3** `SquadPositionCounts` was a public mutable array gating squad validity. **M-4** the strength spread's sufficiency was unverified; discharged as KD-8 Step 0. Plus 3 L. Also corrected a claim made during the review itself: `AttributeBaseMean` is not config-overridable (`player-database` is carved out of the FR-CS-019 migration). |
 | 1.3 | 2026-07-25 | — | **AR-6** (over the AR-5 fixes): 0H+1M+0L. The new golden vector pinned only a 4-club league, leaving everything that varies with league size unguarded — the permutation length, the ramp denominator, name indexing, and the `delta == 0` branch that does not occur at N=4 at all. A second digest + delta row pinned at `DefaultClubCount`, guarded so a retuned default fails loudly rather than leaving the vector pinned to a size nobody generates. |
 | 1.4 | 2026-07-25 | — | **AR-7** (passes 4-6: the note as a *specification*, the test bodies vs their names, and governance): 1H+4M, all resolved. **H-1** KD-8 bucketed the calibration corpus on `dRating`, which includes the to-be-fitted `HomeAdvantageRating` — the harness was asked to record a value that cannot exist at capture time; axis re-based on the measured `dSquad`, `edge` separated model-side, pairs built by direct `ApplyStrength` rather than from league clubs. **M-1** `PoissonDraw` pinned to inverse-CDF and the float posture stated (the scoreline is persisted). **M-2** `League`-as-`ISquadProvider` now tested through a real save/restore. **M-3** three test names over-claimed (WeakFoot exclusion, delta permutation, roster-vs-seed divergence). **M-4** KD-6 claimed a back-prop that was never filed, against a spec that had since been promoted — filed as **ERR-027-002** against `docs/specs/squad-player-data/`. |
+| 1.5 | 2026-08-17 | — | **KD-7a HOLD ratified (owner decision) — S9 added; S7 condition 4 corrected in place.** No successor adopted and none rejected: the corpus that would determine `α` predates tackle wiring, so S7's own condition 4 fails and conditions 1–3 would be re-tested against a corpus KD-8's re-capture trigger replaces anyway. Condition 4's wording was written on August 12 when the tackle challenge did not exist; W2 landed that same day and **ships disabled** (`TackleContactRadiusM = 0`), so "no player has ever made a tackle" is now false about the code and still true about a shipped match — condition 4 is read as post-***arming***, not post-building, or the tripwire would fire against a corpus statistically identical to the one it exists to reject. **Rowless-edit note (FR-CS-057):** this table stopped at v1.4 (July 25) while the August 12 A4a calibration pass added the whole KD-7a section, S1–S8, and the `ERR-030-033`/`ERR-030-034` records. Those edits are left as found per the no-edit rule and are not retro-rowed; this row records that the gap exists so the next reader does not read v1.4 as the file's true state. |
+| 1.6 | 2026-08-17 | — | **Adversarial-review fixes over the v1.5 landing (M16, M19), documentation only.** **M19:** v1.5 claimed S7 condition 4 was "corrected in place"; it was not — the correction sat ~30 lines below, past S8 and the football-check paragraph, so a reader working the four-condition tripwire in order never reached it. The amendment now sits **at condition 4 itself**, with S9 retained as the decision record. **M16:** the file's status header still read "A4a is designed here but NOT executed" five days after A4a ran — corrected to record the run, the committed corpus, the re-fitted `[GT]`s and KD-8's split PASS/FAIL verdict. No decision changed: KD-7a remains HELD, and no successor distribution is adopted or rejected. |
+| 1.7 | 2026-08-18 | — | **Adversarial-review round-6 corrections (H1, H2), documentation only — no decision changed.** **H1:** the KD-8 callout was still headlined "BOTH BARS WERE MISSED WHEN A4a ACTUALLY RAN" — the retracted flat verdict, contradicted by the callout's own first bullet (mean bar RESOLVED → PASS), by the verdict paragraph directly above it, and by `round-resolution-corpus.md`; re-titled to the two-part verdict (mean agreement PASS, distribution shape FAIL). **H2:** the same callout quoted the pooled home/away correlation as "+0.004 ± 0.052, n=378", contradicting S6's "+0.044 ± 0.073 (n = 198), ~3σ" in this same file — the n=378 figure is reproducible only by pooling the 180 W/D/L depth rows into the fit corpus, an unsanctioned invocation that also flips the α verdict to DETERMINED and so contradicts the α figures S7 condition 2 and S9 rely on; corrected to the sanctioned invocation's printed value, **+0.044 ± 0.073 (n=198), ~3σ**. Verified by re-running `tools/round-resolution-fit.py` on the four sanctioned slices with `--wdl-csv`: `-> MEAN: PASS`, `-> SHAPE (W/D/L): FAIL`, `pooled within-bucket home/away corr = +0.044 +/- 0.073 (n=198)`. |

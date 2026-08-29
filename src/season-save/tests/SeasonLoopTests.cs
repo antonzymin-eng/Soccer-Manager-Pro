@@ -1,6 +1,10 @@
 // File:     src/season-save/tests/SeasonLoopTests.cs
 // Created:  2026-07-26
-// Modified: 2026-08-08
+// Modified: 2026-08-15 (M4, reviewed-findings pass — the one Save call site here drives no #44
+//           subsystem; flipped disciplineWired: true → false, matching SeasonSaveManagerTests.cs'
+//           companion fix — v1.5)
+//           Prior: 2026-08-13 (#44 C1/C2 AR round 4, H4/ERR-030-039 — call site updated for the required
+//           disciplineWired parameter now on the public Save long form — v1.4)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §5.4 (T-SN-CAL-001..006), §5.6 (T-SN-DET-001/002),
 //           FR-SN-010..013b / 016 / 024 / 026 / 030 / 032 / 033; path-to-playable A4; Code Standards #20
@@ -19,6 +23,7 @@ using System.IO;
 
 using NUnit.Framework;
 
+using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.PlayerProgression;
@@ -448,7 +453,7 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(firstWorld, first.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
@@ -684,4 +689,15 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.2     | 2026-08-08 | —      | #28 T1: call sites updated for SeasonSaveManager.Save's / Season-  |
 // |         |            |        | SaveCodec.Encode's new required progression-block parameter. No    |
 // |         |            |        | assertion or intent change.                                        |
+// | 1.3     | 2026-08-13 | —      | #44 T1 (roadmap C1): the Save call site carries the required       |
+// |         |            |        | (empty) discipline block. No assertion or intent change.           |
+// | 1.4     | 2026-08-13 | —      | #44 C1/C2 AR round 4 (H4, ERR-030-039): the Save call site passes  |
+// |         |            |        | the now-required disciplineWired: true, which is what the deleted  |
+// |         |            |        | forwarding overload used to assert for it. No assertion or intent  |
+// |         |            |        | change.                                                            |
+// | 1.5     | 2026-08-15 | —      | M4 (reviewed-findings pass): the one Save call site (Mid-           |
+// |         |            |        | SequenceRestore_EqualsAnUninterruptedRun) saves an empty tally to a |
+// |         |            |        | fresh temp path and drives no #44 subsystem — disciplineWired: true |
+// |         |            |        | flipped to false to match the parameter's own contract. No          |
+// |         |            |        | assertion or intent change; suite still green.                     |
 #endregion

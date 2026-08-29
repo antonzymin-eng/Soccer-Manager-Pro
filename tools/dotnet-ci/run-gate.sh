@@ -7,12 +7,25 @@
 #          known-failures.txt (tracked in docs/tracking/dotnet-ci-quarantine.md).
 #          NOT a determinism certification — that remains the pinned
 #          Windows/Unity tuple in docs/tracking/certification-platform.md.
+#
+#          Modified 2026-08-15 (#44 AR round 6, H1): this gate now also runs the
+#          unity-meta-integrity check, because it did not, and four files went
+#          .meta-less for two days while FIVE review rounds and four separate
+#          "GATE: RUN TO COMPLETION" landing records all read green. The gate's
+#          verdict is quoted in landing entries as though it covered CI; it
+#          covered one job of it. A missing .meta makes Unity mint a fresh random
+#          GUID on checkout, silently breaking every reference to the file — so
+#          this is cheap to check and expensive to miss. Run FIRST: it costs
+#          milliseconds and fails before an hour of tests.
 # Usage:   bash tools/dotnet-ci/run-gate.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SLN="$ROOT/tools/dotnet-ci/TacticalDirector.gen.sln"
 QUARANTINE="$ROOT/tools/dotnet-ci/known-failures.txt"
+
+echo "── Unity .meta integrity (blocking; mirrors the unity-meta-integrity CI job) ─"
+bash "$ROOT/tools/unity-ci/check-meta-integrity.sh"
 
 echo "── Generate csproj/sln from asmdefs ────────────────────────────────"
 python3 "$ROOT/tools/dotnet-ci/generate_projects.py"

@@ -1,5 +1,24 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-08-16, latest (reviewed findings pass, finding B — v1.72, DOC ONLY, no code change).
+//           PlayerIdsByAgentId's XML doc now states the boot-only one-to-one precondition explicitly
+//           (ERR-044-023): SubstitutePlayer copies the incoming player's identity onto the outgoing
+//           on-pitch slot but never clears his OWN bench-origin entry, so after any substitution the
+//           returned array maps that player to TWO agent ids and is no longer one-to-one over its
+//           non-sentinel entries. A caller building a CardLedgerFold (or anything else that depends on
+//           the mapping being one-to-one) must take the seed AT BOOT, before any substitution — matching
+//           CardLedgerFold's own corrected constructor doc and the new SeasonLoopDisciplineTests
+//           cross-assembly lock. No behaviour change; the array's contents and the method's return type
+//           are unchanged.
+// Modified: 2026-08-15, later (#44 AR round 5, L3 — the bare 0xFFFF "no associated foul" sentinel in
+//           the card-issue publish now reads MatchEngineConstants.FoulOrdinalNone, the [CROSS] mirror of
+//           #17's new FOUL_ORDINAL_NONE; same value, FR-CS-016 — v1.71.
+//           Prior: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — DetermineCardKind and
+//           ApplyCardAndCheckSentOff now read MatchEngineConstants.CardKindYellow/Red/SecondYellow
+//           instead of MatchEngineConstants.CARD_KIND_YELLOW/RED and the bare literals 0/1/2; the
+//           constants themselves moved from [FIXED] to [CROSS] mirrors of the new authoritative
+//           EventSystemConstants declaration. No behaviour change — same byte values throughout.)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L15 — PlayerIdsByAgentId's two AGENT_ID_SPACE references updated for MatchEngineConstants' AGENT_ID_SPACE -> AgentIdSpace rename ([FIXED] -> [DERIVED] region fix); no behaviour change)
 // Modified: 2026-08-04 (ERR-008-020: SetAllAgentAttributes(_dtAttrs) wired per DecisionTree at boot — the §3.1.3.3 pass-lane attribute view)
 // Modified: 2026-08-12 (wiring backlog W2 instrument: the episode-based tackle-intent census — CensusTackleIntents + the TackleIntentCensus accumulator; observation only, no gameplay path, not serialized)
 // Modified: 2026-08-12 (wiring backlog W2 — the tackle: TryResolveTackles + #14 §3.6.5 duel + tackle flag; SNAPSHOT_SCHEMA_VERSION 20 -> 21; card-severity draw order moves by design)
@@ -55,6 +74,7 @@
 // Modified: 2026-08-04 (W1 AR-2: RefreshGkAgentIds detects a CHANGE of keeper-slot occupant and calls GoalkeeperMechanics.ResetSlot — a substitute keeper was inheriting the dismissed keeper's locked RushIntent. No new state, no schema change. See docs/tracking/gk-rush-trigger-design.md v1.3)
 // Modified: 2026-08-06 (#29 T2 match-boot fatigue seam: a four-argument ConfigureSquads overload taking each squad's per-local-index match-entry fatigue (#29 §3.3 / KD-1), seeded onto each starter's AerobicPool as 1 − fatigue. The reservoir is already the engine's live-fatigue quantity and already serialized, so no schema change; null ⇒ rested ⇒ byte-identical to the two-argument form.)
 // Modified: 2026-08-09 (ERR-010-002: TryCommitHeaderIntents' HeaderIntent.TargetIntent now sourced from GkHeadingIntentSource.HeaderAimTarget — the situational aim — instead of a fixed opponent-goal-centre point. No new engine state, no schema change. See docs/tracking/gk-heading-engine-integration-design.md §4.2a)
+// Modified: 2026-08-13 (#44 T2: + _slotPlayerIds / _benchPlayerIds + PlayerIdsByAgentId() — the identity half of the per-slot record, written beside _canonicalAttrs at all four sites; boot-constant exclusion, no schema change)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -508,6 +528,10 @@ namespace TacticalDirector.MatchEngine
         // projection). Substitution copies the canonical record onto the outgoing slot and
         // re-projects every per-slot surface — see SubstitutePlayer. Fully qualified per KD-P6.
         private readonly TacticalDirector.PlayerDatabase.PlayerAttributes[][] _benchCanonicalAttrs; // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
+        // #44 T2: the _slotPlayerIds sibling for the bench — see that field. Indexed the way
+        // SubstitutionEvent.Incoming is derived, so a consumer folding the event can resolve the
+        // arriving player without knowing anything about LineupSelector.
+        private readonly int[][] _benchPlayerIds; // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
 
         // Match-flow clock (design note §7): half-time ends-swap and full-time gameplay freeze, each
         // fired exactly once (guarded by these flags). Serialized at v15 (cross-tick).
@@ -593,6 +617,19 @@ namespace TacticalDirector.MatchEngine
         // path, NOT serialized (same B3 exclusion class as _attrs; distinct-squad restore is the T3
         // roster-reference deliverable — KD-P10, see the exclusion proof in SerializeWorldState).
         private readonly TacticalDirector.PlayerDatabase.PlayerAttributes[] _canonicalAttrs; // [SQUAD_SIZE]
+
+        // #44 T2: which PLAYER occupies each agent slot. The engine's own discipline state is per-SLOT
+        // and a substitution resets it (v1.33, correctly — the slot holds someone else now), so a
+        // consumer that must attribute a card to a career record needs the identity the slot state
+        // cannot carry. Written at exactly the sites that write _canonicalAttrs, one statement apart,
+        // because "which record" and "whose record" must never be derivable to different answers — the
+        // parallel-surface trap SquadRating exists to prevent, and the shape #29/#41's T2 AR pass 2
+        // filed when a second selection walk re-derived a fielded XI.
+        // Boot-deterministic on the default path, NOT serialized: same B3 exclusion class as
+        // _canonicalAttrs, and re-derived by the same #27 T3 restore path (ReprojectBaseLineup +
+        // ReprojectSubstitutions over the serialized _rosterClubId and _activeBenchSlot), so the
+        // exclusion proof is _canonicalAttrs's own, unchanged.
+        private readonly int[] _slotPlayerIds;            // [SQUAD_SIZE]
         private readonly MovementCommand[] _commands;     // per-agent held command (AI owns it at Phase D)
         private readonly int[] _teamIds;
         private readonly bool[] _isGoalkeeper;
@@ -670,9 +707,13 @@ namespace TacticalDirector.MatchEngine
             // #27 T1 — canonical player records default to all-neutral; every attribute surface below
             // is a projection of this array (allocated before InitializeKickoffState, its first reader).
             _canonicalAttrs = new TacticalDirector.PlayerDatabase.PlayerAttributes[MatchEngineConstants.SQUAD_SIZE];
+            _slotPlayerIds = new int[MatchEngineConstants.SQUAD_SIZE];
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 _canonicalAttrs[i] = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+                // #44 T2: a match that never calls ConfigureSquads has no player identities at all —
+                // the neutral-squad path. NO_PLAYER_ID rather than 0, because 0 IS a valid PlayerId.
+                _slotPlayerIds[i] = MatchEngineConstants.NO_PLAYER_ID;
             }
 
             // §4 step 4 — initialise kickoff world state (deterministic; no RNG).
@@ -813,12 +854,18 @@ namespace TacticalDirector.MatchEngine
             _benchPerfs = new PerformanceContext[MatchEngineConstants.TEAM_COUNT][];
             _benchIsGoalkeeper = new bool[MatchEngineConstants.TEAM_COUNT][];
             _benchCanonicalAttrs = new TacticalDirector.PlayerDatabase.PlayerAttributes[MatchEngineConstants.TEAM_COUNT][];
+            _benchPlayerIds = new int[MatchEngineConstants.TEAM_COUNT][];
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 _benchAttrs[t] = new PlayerAttributes[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
                 _benchPerfs[t] = new PerformanceContext[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
                 _benchIsGoalkeeper[t] = new bool[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
                 _benchCanonicalAttrs[t] = new TacticalDirector.PlayerDatabase.PlayerAttributes[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                _benchPlayerIds[t] = new int[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
+                {
+                    _benchPlayerIds[t][b] = MatchEngineConstants.NO_PLAYER_ID;
+                }
                 for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
                 {
                     // #27 T1: bench attrs are the #2 projection of the canonical bench record
@@ -1283,6 +1330,7 @@ namespace TacticalDirector.MatchEngine
                 int i = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + k;
                 int local = plan.StarterLocalIndices[k];
                 _canonicalAttrs[i] = squad.GetPlayer(local).Attributes;
+                _slotPlayerIds[i] = squad.GetPlayer(local).PlayerId;   // #44 T2 — re-derived, not serialized
                 _attrs[i] = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
                 _dtAttrs[i] = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
                 _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
@@ -1292,6 +1340,7 @@ namespace TacticalDirector.MatchEngine
             {
                 int local = plan.BenchLocalIndices[b];
                 _benchCanonicalAttrs[teamId][b] = squad.GetPlayer(local).Attributes;
+                _benchPlayerIds[teamId][b] = squad.GetPlayer(local).PlayerId;   // #44 T2
                 _benchAttrs[teamId][b] =
                     PlayerAttributeProjection.ToAgentMovement(in _benchCanonicalAttrs[teamId][b]);
                 _benchIsGoalkeeper[teamId][b] = plan.BenchIsGoalkeeper[b];
@@ -1324,6 +1373,7 @@ namespace TacticalDirector.MatchEngine
                 }
                 _attrs[i] = _benchAttrs[teamId][benchIndex];
                 _canonicalAttrs[i] = _benchCanonicalAttrs[teamId][benchIndex];
+                _slotPlayerIds[i] = _benchPlayerIds[teamId][benchIndex];   // #44 T2 — the identity half
                 _dtAttrs[i] = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
                 _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
                     in _canonicalAttrs[i], teamId, _perceptionAttrs[i].IsHalfTurned);
@@ -1520,6 +1570,10 @@ namespace TacticalDirector.MatchEngine
             // substitution's bench record is reconstructible from the v16 roster reference (#27 T3)
             // + the serialized _activeBenchSlot, once a snapshot-deserialize path exists (KD-P10/KD-T3-3).
             _canonicalAttrs[outSlotIndex] = _benchCanonicalAttrs[teamId][benchIndex];
+            // #44 T2: the identity half of the same swap. It moves with _canonicalAttrs deliberately —
+            // the yellow-card reset three lines below is exactly the information loss #44's occupancy
+            // fold exists to survive, and it survives it by knowing WHO now stands in this slot.
+            _slotPlayerIds[outSlotIndex] = _benchPlayerIds[teamId][benchIndex];
             _dtAttrs[outSlotIndex] = PlayerAttributeProjection.ToDecisionTree(
                 in _canonicalAttrs[outSlotIndex], teamId);
             _perceptionAttrs[outSlotIndex] = PlayerAttributeProjection.ToPerception(
@@ -1767,6 +1821,7 @@ namespace TacticalDirector.MatchEngine
                 int i = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + k;
                 int local = plan.StarterLocalIndices[k];
                 _canonicalAttrs[i] = squad.GetPlayer(local).Attributes;
+                _slotPlayerIds[i] = squad.GetPlayer(local).PlayerId;   // #44 T2 — see _slotPlayerIds
                 _attrs[i] = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
                 _dtAttrs[i] = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
                 _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
@@ -1785,6 +1840,7 @@ namespace TacticalDirector.MatchEngine
             {
                 int local = plan.BenchLocalIndices[b];
                 _benchCanonicalAttrs[teamId][b] = squad.GetPlayer(local).Attributes;
+                _benchPlayerIds[teamId][b] = squad.GetPlayer(local).PlayerId;   // #44 T2
                 _benchAttrs[teamId][b] =
                     PlayerAttributeProjection.ToAgentMovement(in _benchCanonicalAttrs[teamId][b]);
                 _benchIsGoalkeeper[teamId][b] = plan.BenchIsGoalkeeper[b];
@@ -2132,6 +2188,61 @@ namespace TacticalDirector.MatchEngine
         /// fails loud rather than reading past it.
         /// </summary>
         public T TickLedgerRecord<T>(int index) where T : struct => _tickLedger.ReadAt<T>(index);
+
+        /// <summary>
+        /// Which <c>PlayerId</c> currently occupies each of the engine's agent ids (#44 T2) — a fresh
+        /// array of length <see cref="MatchEngineConstants.AgentIdSpace"/>, indexed exactly the way
+        /// <c>CardIssuedEvent.Recipient</c> and <c>SubstitutionEvent.Outgoing</c>/<c>Incoming</c> are:
+        /// on-pitch slots <c>[0, SQUAD_SIZE)</c> first, then the synthetic bench ids
+        /// <c>SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex</c> that
+        /// <see cref="SubstitutePlayer"/> derives.
+        /// <para>
+        /// <b>Why this comes out of the engine rather than being re-derived.</b> A caller could run
+        /// <c>LineupSelector</c> itself and reproduce the mapping — and that is precisely the second
+        /// selection walk <see cref="SquadRating"/> exists to prevent, an unenforced agreement that
+        /// diverges silently the day a manager-chosen XI lands. The engine assigned these slots; the
+        /// engine reports them.
+        /// </para>
+        /// <para>
+        /// Entries are <see cref="MatchEngineConstants.NO_PLAYER_ID"/> where no player is known — every
+        /// entry, on a neutral match that never called <c>ConfigureSquads</c>, and the bench entries of
+        /// a team whose bench was never configured. <c>0</c> could not serve as that sentinel: it is a
+        /// valid <c>PlayerId</c>.
+        /// </para>
+        /// <para>
+        /// Boot / fixture cadence, never per-tick — the copy is deliberate so no caller can alias the
+        /// engine's own array and become a second writer of match identity.
+        /// </para>
+        /// <para>
+        /// <b>One-to-one over non-sentinel entries AT BOOT ONLY (ERR-044-023).</b> <c>SubstitutePlayer</c>
+        /// copies the incoming player's identity onto the OUTGOING on-pitch slot but never clears his
+        /// OWN bench-origin entry (<c>_benchPlayerIds[team][bench]</c> keeps pointing at him) — so after
+        /// any substitution this array maps that player to TWO agent ids at once and is no longer
+        /// one-to-one. A caller that depends on the mapping being one-to-one (e.g. seeding a
+        /// <c>Discipline.CardLedgerFold</c>, whose constructor enforces exactly that property and would
+        /// correctly refuse a post-substitution seed) MUST take the seed AT BOOT, before any
+        /// substitution — as <c>SeasonLoop.PlayThroughEngine</c> does, calling this method immediately
+        /// after <c>BootFixtureEngine</c> and before the tick loop that could ever call
+        /// <c>SubstitutePlayer</c> runs.
+        /// </para>
+        /// </summary>
+        public int[] PlayerIdsByAgentId()
+        {
+            var ids = new int[MatchEngineConstants.AgentIdSpace];
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                ids[i] = _slotPlayerIds[i];
+            }
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
+                {
+                    ids[MatchEngineConstants.SQUAD_SIZE + t * MatchEngineConstants.SUBSTITUTES_PER_TEAM + b] =
+                        _benchPlayerIds[t][b];
+                }
+            }
+            return ids;
+        }
 
         /// <summary>Home team's (team 0) current goal count.</summary>
         public int HomeScore => _goals[0];
@@ -5217,7 +5328,8 @@ namespace TacticalDirector.MatchEngine
             if (drawnKind.HasValue)
             {
                 byte cardKind = ApplyCardAndCheckSentOff(offender, drawnKind.Value);
-                var cardEvt = new CardIssuedEvent(offender, cardKind, foulOrdinal: 0xFFFF);
+                var cardEvt = new CardIssuedEvent(
+                    offender, cardKind, MatchEngineConstants.FoulOrdinalNone);
                 EventBus.Publish(in cardEvt);
             }
 
@@ -5264,11 +5376,11 @@ namespace TacticalDirector.MatchEngine
         {
             if (u < MatchEngineConstants.RedCardProbability)
             {
-                return MatchEngineConstants.CARD_KIND_RED;
+                return MatchEngineConstants.CardKindRed;
             }
             if (u < MatchEngineConstants.RedCardProbability + MatchEngineConstants.YellowCardProbability)
             {
-                return MatchEngineConstants.CARD_KIND_YELLOW;
+                return MatchEngineConstants.CardKindYellow;
             }
             return null;
         }
@@ -5286,19 +5398,19 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private byte ApplyCardAndCheckSentOff(int offender, byte drawnKind)
         {
-            if (drawnKind == 0)
+            if (drawnKind == MatchEngineConstants.CardKindYellow)
             {
                 _yellowCards[offender]++;
                 if (_yellowCards[offender] >= 2)
                 {
                     _isSentOff[offender] = true;
-                    return 2; // SecondYellow
+                    return MatchEngineConstants.CardKindSecondYellow;
                 }
-                return 0;
+                return MatchEngineConstants.CardKindYellow;
             }
 
             _isSentOff[offender] = true; // straight red
-            return 1;
+            return MatchEngineConstants.CardKindRed;
         }
 
         /// <summary>Test-only seam: the card-kind-to-effect resolution, directly testable without a real
@@ -9213,4 +9325,50 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | still read as holding the ball, so his next pass drained the very     |
 // |         |            |        | flag the tackle raised. AR-1 H-4/M-9: a keeper in possession and a     |
 // |         |            |        | restart taker cannot be tackled.                                       |
+// | 1.68    | 2026-08-13 | —      | #44 T2 (roadmap C2): + _slotPlayerIds / _benchPlayerIds and the       |
+// |         |            |        | public PlayerIdsByAgentId() read over them — WHICH PLAYER occupies    |
+// |         |            |        | each agent id, on-pitch slots and synthetic bench ids alike. The      |
+// |         |            |        | engine's own discipline state is per-SLOT and a substitution resets   |
+// |         |            |        | it (v1.33, correctly — the slot holds someone else now), so a         |
+// |         |            |        | consumer attributing a card to a CAREER record needs the identity     |
+// |         |            |        | the slot state cannot carry. Written at exactly the four sites that   |
+// |         |            |        | write _canonicalAttrs — ApplySquad, ReprojectBaseLineup,              |
+// |         |            |        | ReprojectSubstitutions, SubstitutePlayer — one statement apart, so    |
+// |         |            |        | "which record" and "whose record" can never be derivable to           |
+// |         |            |        | different answers (the parallel-surface trap SquadRating exists to    |
+// |         |            |        | prevent, and the shape #29/#41's T2 AR pass 2 filed when a second     |
+// |         |            |        | selection walk re-derived a fielded XI). NOT serialized: the same     |
+// |         |            |        | boot-constant exclusion class as _canonicalAttrs, re-derived by the   |
+// |         |            |        | same #27 T3 restore path over the serialized _rosterClubId and        |
+// |         |            |        | _activeBenchSlot, so that exclusion proof is unchanged. No            |
+// |         |            |        | SNAPSHOT_SCHEMA_VERSION change (stays 21), no draw site, no RNG       |
+// |         |            |        | stream, no behaviour change on any existing path.                     |
+// | 1.69    | 2026-08-13 | —      | AR round 5 fix (L15, discipline C1/C2 landing): PlayerIdsByAgentId's  |
+// |         |            |        | two MatchEngineConstants.AGENT_ID_SPACE references updated to        |
+// |         |            |        | AgentIdSpace ([FIXED]-region -> [DERIVED]-region rename, no value     |
+// |         |            |        | change). No behaviour change.                                         |
+// | 1.70    | 2026-08-15 | —      | AR round 4 fix (M24/ERR-017-004, discipline C1/C2 landing):           |
+// |         |            |        | DetermineCardKind's two returns and ApplyCardAndCheckSentOff's        |
+// |         |            |        | drawnKind comparison + three returns now read the named               |
+// |         |            |        | MatchEngineConstants.CardKindYellow/Red/SecondYellow constants        |
+// |         |            |        | instead of MatchEngineConstants.CARD_KIND_YELLOW/RED and bare 0/1/2   |
+// |         |            |        | literals — the encoding is now declared once, in event-system, and    |
+// |         |            |        | mirrored here. Same byte values (0/1/2) at every site; no behaviour   |
+// |         |            |        | change.                                                                |
+// | 1.71    | 2026-08-15 | —      | AR round 5 fix (L3). The card-issue publish carried a bare       |
+// |         |            |        | 0xFFFF "procedural, no associated foul" sentinel with no        |
+// |         |            |        | catalogue home in any assembly — ERR-017-004's exact defect on   |
+// |         |            |        | the SIBLING payload field of the same event, in the same        |
+// |         |            |        | statement that fix rewrote to remove the bare 0/1/2 card-kind   |
+// |         |            |        | literals. Now MatchEngineConstants.FoulOrdinalNone, the [CROSS]  |
+// |         |            |        | mirror of #17's FOUL_ORDINAL_NONE. Same value; no behaviour     |
+// |         |            |        | change.                                                         |
+// | 1.72    | 2026-08-16, latest | — | Reviewed findings pass, finding B (ERR-044-023), DOC     |
+// |         |            |        | ONLY. PlayerIdsByAgentId's XML doc now states the boot-only      |
+// |         |            |        | one-to-one precondition explicitly: SubstitutePlayer never       |
+// |         |            |        | clears the incoming player's own bench-origin entry, so after    |
+// |         |            |        | any substitution the array maps him to two agent ids and is no   |
+// |         |            |        | longer one-to-one. Matches the corrected CardLedgerFold           |
+// |         |            |        | constructor doc and the new SeasonLoopDisciplineTests             |
+// |         |            |        | cross-assembly lock. No code change.                              |
 #endregion

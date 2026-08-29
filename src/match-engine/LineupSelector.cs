@@ -1,5 +1,11 @@
 // File:     src/match-engine/LineupSelector.cs
 // Created:  2026-07-19
+// Modified: 2026-08-16 (L-2, adversarial review, doc only — v1.4: TrySelect's doc cited the deleted
+//           PlayerCareerStates.SelectAvailable in present tense; re-pointed at
+//           AvailabilityComposition.Compose, the type that now holds that press-back-in loop. The v1.3
+//           history row's own "SelectAvailable" reference is historically accurate (true as of
+//           2026-08-06) and left as written, with a dated annotation pointing at the current name. No
+//           behaviour change.)
 // Modified: 2026-08-06 (#41 T2: + TrySelect — the one selection walk — with Select and CanSelect as its two wrappers; the viability probe #30's availability filter loops on)
 // Author:   —
 // Spec:     Lineup Selection (Plan-3) design supplement (docs/tracking/lineup-selection-design.md);
@@ -87,8 +93,10 @@ namespace TacticalDirector.MatchEngine
         /// <see cref="Select"/> and <see cref="CanSelect"/> are both thin wrappers over it — there is
         /// exactly ONE implementation of "which eleven does this squad field", which is the point: a
         /// second copy would answer the old question the first time a selection rule changed, and
-        /// <c>SelectAvailable</c>'s press-back-in loop would then exit on a squad
-        /// <c>ConfigureSquads</c> refuses.
+        /// <c>AvailabilityComposition.Compose</c>'s press-back-in loop would then exit on a squad
+        /// <c>ConfigureSquads</c> refuses (L-2, reviewed findings pass: re-pointed from the deleted
+        /// <c>PlayerCareerStates.SelectAvailable</c>, which this exact press-back-in loop moved out of
+        /// at the #44 C1/C2 landing).
         /// </summary>
         /// <param name="squad">The full club roster.</param>
         /// <param name="family">The formation whose slot positions the starters must fill.</param>
@@ -292,4 +300,18 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | parallel-surface trap SquadRating exists to prevent. Collapsed |
 // |         |            |        | to ONE walk: internal TrySelect(out plan, out failure); Select |
 // |         |            |        | throws on false, CanSelect discards both.                      |
+// |         |            |        | **ANNOTATED 2026-08-16 (L-2, reviewed findings pass):** this   |
+// |         |            |        | row's "SelectAvailable" named PlayerCareerStates.SelectAvailable|
+// |         |            |        | as it stood on 2026-08-06 — true then. #44 C1/C2 split that    |
+// |         |            |        | method's press-back-in loop out into AvailabilityComposition.  |
+// |         |            |        | Compose, which is where the loop this row describes now lives. |
+// |         |            |        | Historical text left as written; see the type doc above (§88-92)|
+// |         |            |        | for the current pointer.                                        |
+// | 1.4     | 2026-08-16 | —      | L-2 (adversarial review), doc only. TrySelect's own summary    |
+// |         |            |        | doc cited SelectAvailable in PRESENT tense (§88-92) — false     |
+// |         |            |        | since #44 C1/C2 deleted that method. Re-pointed at              |
+// |         |            |        | AvailabilityComposition.Compose, the type that now holds the    |
+// |         |            |        | press-back-in loop. v1.3's own historical reference annotated  |
+// |         |            |        | in place, not rewritten (it was true when written). No          |
+// |         |            |        | behaviour change.                                                |
 #endregion
