@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.4  
+**Version:** 0.5  
 **Created:** August 27, 2026  
 **Governing authority:** docs/planning/project-architecture-governance.md v0.4  
 **Primary downstream specifications:** Testing Strategy & Framework #19; Code Standards & Style Guide #20  
@@ -51,7 +51,7 @@ The ownership split remains exactly the one established by project-architecture-
 | Architectural property admission | Project Architecture Governance | Provides registry/storage mechanics |
 | Finding disposition / convergence semantics | Project Architecture Governance | Reworks review ledger and process integration |
 | Integration ownership code rules | Code Standards #20 | Specifies exact amendments and enforcement points |
-| Dependency direction | Code Standards #20 | Adds machine checking once the current taxonomy defect is resolved |
+| Dependency direction | Code Standards #20 | Reuses the existing assembly-tier checker; adds machine-readable evidence and activation mechanics without a second parser |
 | Composition/lifecycle rules | Code Standards #20 | Adds declaration and verification mechanics |
 | Proof/evidence requirements | Testing Strategy #19 | Specifies exact amendments and evidence tooling |
 | Failure injection / mutation | Testing Strategy #19 | Adds trigger-driven execution/evidence integration |
@@ -132,26 +132,26 @@ Generated reports may repeat data for readability but are never authoritative.
 
 ## 0.5 Amendment precedence and activation prerequisites
 
-Version 0.4 preserves the settled governance architecture and v0.3 hardening while splitting rollout into an early structural track and a domain-owned behavioral-evidence track. It does not reopen the architectural decisions in project-architecture-governance.md.
+Version 0.5 corrects the A1 rollout against the live repository while preserving the settled governance architecture and the two-track structural/behavioral model. ERR-020-002 and ERR-020-003 were already resolved on August 17, 2026; Code Standards #20 §3.5.2 already contains the complete ten-tier/out-of-band dependency model; and `tools/assembly-tier-check.py` already enforces that model inside the `Spec hygiene checks` CI job. A1 therefore consolidates machine-readable evidence into that existing checker and separates CI execution from merge-protection activation. It does not reopen the architectural decisions in project-architecture-governance.md.
 
 The following rules override earlier sequencing in this plan:
 
 1. Governance v0.4 is currently Draft. It is design input until an explicit adoption gate records approval, completed self-checklist, SPEC_INDEX/status alignment, and the exact governing version plus canonical Governance content/blob digest. A Git revision MAY be recorded as provenance but is not required to be self-embedded in the landing that creates the approved artifact.
-2. Dependency-direction enforcement MUST NOT become blocking until a read-only current-tree discovery pass has produced the complete asmdef graph, every assembly has an explicit production/test/tooling/out-of-band classification, arrow semantics are fixed, and ERR-020-002 / ERR-020-003 are resolved.
+2. Dependency-direction policy is already approved and mechanically enforced by `tools/assembly-tier-check.py` inside `Spec hygiene checks`. A1 MUST reuse that checker rather than create a second §3.5.2 parser. Its machine report covers the complete `src/**/*.asmdef` universe, classifies production/test/out-of-band assemblies from existing #20 rules, reports unresolved items explicitly, and does not publish a fictitious tooling count when no tooling asmdef exists in that source universe.
 3. Machine-readable schemas for discovery classification, applicability, integration contracts, proof, finding ledgers, and any temporary baseline MUST be frozen before #19/#20 normative amendments are finalized.
 4. #19 and #20 are amended and reapproved as one coordinated governance-integration bundle. Enforcement eligibility requires both amendments approved against the same repository base and governance version.
 5. No checker may make an absence claim blocking unless the relevant search universe is closed and mechanically enumerated. Known-path lists and naming heuristics are not proof of absence.
 6. No CI job is a merge gate merely because it exists. Required-status configuration and skipped/cancelled/unavailable behavior are part of activation.
 7. A temporary baseline is permitted only as a finite migration artifact and MUST be mechanically empty at final strict activation.
 8. Committed governance artifacts MUST separate the material subject they prove from the Git commit/tree that happens to contain the evidence record. A committed artifact MUST NOT require equality with its own containing commit/tree as a freshness condition.
-9. A1 is deliberately asmdef-only and requires no Roslyn extractor, governance schema freeze, or #19/#20 governance amendment. Compiler-backed runtime/root reachability occurs only after selector/identity semantics exist; bootstrap declarations then close what compiler facts cannot infer.
+9. A1 remains deliberately asmdef-only and requires no Roslyn extractor, governance schema freeze, or #19/#20 governance amendment. It extends the existing `assembly-tier-check.py` evidence surface rather than introducing another parser. Compiler-backed runtime/root reachability occurs only after selector/identity semantics exist; bootstrap declarations then close what compiler facts cannot infer.
 10. Merge-blocking C# symbol/public-surface/static-initialization discovery MUST consume compiler-backed semantic facts. The Python governance tool may orchestrate those facts, but MUST NOT implement a regex or hand-written C# parser and call the result closed-world proof.
 11. A2 freezes not only JSON shapes but the executable identity, selector, applicability, dependency-closure, and freshness semantics needed to interpret them. Those semantics MUST pass representative fixtures before A3 reapproval.
 12. Required executable proof is satisfied only by an explicit successful execution state. Skipped, excluded, unavailable, not-run, or runner-failed evidence does not satisfy a required proof unless #19 permits and records a bounded substitute.
 13. Structural classification and activation state are orthogonal. A component remains a production runtime component even when deliberately disabled or not yet integrated.
 14. `intentionally-disabled` is valid only when its disabled state is independently machine-verifiable from a resolvable source/config selector plus a typed expected predicate/value; prose alone cannot create a suppression.
 15. Static discovery covers Class A dormancy (exists but has no production activation/reachability). It MUST NOT claim to prove Class B gate firing. Runtime gate/trigger instrumentation remains owned by the component/domain and governance consumes its evidence when an applicable rule requires it.
-16. The full architecture-evidence gate still activates at A8, but a narrow asmdef check MAY become a required merge status earlier once its objective rules are approved.
+16. The objective asmdef check already executes inside `Spec hygiene checks`. A1c is therefore an activation/configuration step: verify merge-protection state and enable the existing required status where enforcement is disabled; it MUST NOT create a parallel `architecture-asmdef` status unless the existing status cannot express the approved requirement.
 17. Changes to declared `[GT]`/calibration tuning surfaces are prohibited while the owning component is `intentionally-disabled`, `pending-integration`, or `unresolved`, unless the approved exception path explicitly authorizes the change.
 
 This document remains an implementation plan. It does not itself approve Governance v0.4 or modify approved #19/#20 requirements.
@@ -182,7 +182,8 @@ The repository already contains useful enforcement machinery:
 
 | Existing component | Current strength | Limitation relevant to governance |
 |---|---|---|
-| .asmdef files | Exact production/test assembly references | No project-level legality check against a complete approved tier model |
+| .asmdef files | Exact production/test assembly references | Source of graph facts; legality is already checked by the existing #20 checker |
+| tools/assembly-tier-check.py | Authoritative #20 §3.5.2 parser/checker; already runs inside `Spec hygiene checks` | Human-oriented output only before A1; lacks machine-readable complete-graph evidence and checker self-tests |
 | tools/dotnet-ci/generate_projects.py | Rebuilds .NET project graph from asmdefs and fails unknown references | Excludes MatchClientUnity; designed for compilation, not complete architecture inventory |
 | tools/dotnet-ci/run-gate.sh | Whole-tree build/test gate | Does not validate architecture property records or evidence artifacts |
 | .github/workflows/ci.yml | Merge-time static/build/test jobs | No architecture-governance job |
@@ -214,26 +215,24 @@ This is an **initial candidate map, not a replacement for mechanical discovery**
 
 The implementation-time scanner MUST discover the current repository again. The table above is a starting review set, not the acceptance inventory.
 
-## 1.4 Existing specification defect that affects enforcement activation
+## 1.4 Existing dependency authority and corrected A1 premise
 
-Two open Code Standards defects are directly relevant:
+The dependency-policy premise carried by v0.4 was stale.
 
-- ERR-020-002 — current #20 layer taxonomy does not classify a substantial portion of the present assembly tree;
-- ERR-020-003 — reference-direction diagrams use opposite arrow conventions without labeling the meaning.
+- ERR-020-002 and ERR-020-003 were resolved on August 17, 2026.
+- Code Standards #20 §3.5.2 already contains the complete ten-tier order, the two out-of-band Infrastructure assemblies, and both labeled arrow conventions.
+- `tools/assembly-tier-check.py` already parses that authority directly and enforces placement completeness, FR-CS-046/046a/046b direction rules, duplicate production names/folders, production→test references, unknown production references, and production-graph cycles.
+- `.github/workflows/ci.yml` already runs that checker in the `Spec hygiene checks` job.
 
-These do not prevent all governance work.
+Therefore A1 has no dependency-policy repair to perform. The former A1b step is retired rather than re-executed.
 
-They **do** prevent a new merge-blocking checker from deciding full tier-direction legality until the normative taxonomy is corrected.
+The remaining A1 work is narrower:
 
-Therefore:
+1. extend the existing checker with deterministic machine-readable complete-graph evidence, classification-aware digests, and report-only all-assembly cycle visibility while preserving its existing production-policy verdict;
+2. wire focused checker self-tests into CI; and
+3. verify merge-protection state, then activate the existing required status where enforcement is disabled.
 
-- cycle detection may block immediately;
-- unknown/missing asmdef references may block immediately;
-- exact current graph inventory may block on internal inconsistency immediately;
-- full tier-direction legality remains report-only until #20 receives the approved complete taxonomy and notation correction;
-- the #20 governance amendment is the natural landing in which ERR-020-002/003 should be resolved.
-
-The implementation MUST regenerate the asmdef graph at that landing. The old proposed tier table is evidence/history, not a substitute for checking current HEAD.
+As observed during the v0.5 correction, repository ruleset `CI for Main branch` already lists `Spec hygiene checks` among its required contexts but the ruleset itself is disabled. Classic branch-protection state was not readable through the current integration and MUST be verified at A1c before claiming merge blocking.
 
 ## 1.5 Empirical integration failure classes
 
@@ -460,17 +459,17 @@ Creation provenance is not the freshness key. New violations fail; a baseline it
 
 ## 4.1 Assembly and dependency graph
 
-All src/**/*.asmdef files remain the source of edges. A1 performs read-only discovery before #20 amendment and emits every asmdef/reference, cycles, explicit production/test/tooling/out-of-band classification, graph digest, proposed normative category for each production assembly, and unresolved items.
+All `src/**/*.asmdef` files remain the source of edges. Code Standards #20 §3.5.2 and FR-CS-046/046a/046b already own the approved dependency classifications and direction semantics; `tools/assembly-tier-check.py` is the single parser/checker for those rules.
 
-ERR-020-002/003 are resolved from that graph, not the old 31-assembly model. The approved model must define one arrow convention in text and machine data.
+A1 extends that checker with deterministic JSON evidence covering every asmdef/reference, production/test/out-of-band classification, external and ambiguous references, production and all-assembly cycle components, and separate graph/classification/subject digests. Tooling is not emitted as a zero-valued pseudo-class when no tooling asmdef belongs to the `src/**/*.asmdef` universe.
 
-Full tier-direction legality remains report-only until taxonomy and semantics are approved.
+The existing production-policy verdict remains blocking within its CI job; all-assembly cycle visibility is report evidence only unless a later approved rule gives test-graph cycles gating semantics.
 
 ## 4.2 Structural versus behavioral activation evidence
 
 ### 4.2.1 Track A — Class-A structural discovery
 
-A1 is asmdef-only: it inventories assemblies/references/cycles and produces the evidence needed to repair ERR-020-002/003. It requires no Roslyn and makes no source-level reachability claim.
+A1 is asmdef-only: it reuses the existing #20 checker to emit complete machine-readable assembly/reference/classification evidence and all-assembly cycle visibility. It requires no Roslyn and makes no source-level reachability claim.
 
 After A2/A3, A4 performs compiler-backed runtime/root discovery over §3.2, combining semantic candidates with finite bootstrap declarations. A4 computes the closed runtime universe, detects Class-A dormancy, and seeds final structural classifications/contracts.
 
@@ -516,7 +515,7 @@ Existing domain owners remain authoritative. Triggered proof binds failure/resto
 
 ## 5.1 Responsibility and implementation split
 
-`tools/architecture-governance` remains the policy orchestrator. A1's asmdef-only slice is intentionally independent of the C# extractor.
+`tools/architecture-governance` remains the later governance policy orchestrator. A1 does not create a second asmdef parser: its asmdef-only evidence is produced by the existing `tools/assembly-tier-check.py`, independently of the later C# extractor.
 
 Later blocking Class-A discovery uses a small compiled .NET extractor under `tools/architecture-governance/csharp-discovery/` with Roslyn/compiler APIs. For certifying execution it MUST be built **from source at the governed checkout**. Checked-in/downloaded/prebuilt binaries cannot satisfy governance proof.
 
@@ -601,13 +600,11 @@ Append after FR-CS-073 using #20's existing columns ID | Statement | Level | Sou
 
 §2.2 updates the 73 total to 81 and adds the architecture range without renumbering existing IDs.
 
-## 6.2 FR-CS-046 / dependency repair
+## 6.2 FR-CS-046 / dependency authority
 
-ERR-020-002/003 are resolved **before** the A3 governance-amendment bundle using A1's asmdef-only graph evidence. This is correction of existing #20 dependency authority, not a dependency on the new governance schemas.
+ERR-020-002/003 and the #20 dependency repair were already completed on August 17, 2026. A3 consumes that approved dependency model as existing authority; it does not reopen or re-land the taxonomy or arrow semantics.
 
-The repair classifies current assemblies in the dependency policy, fixes one arrow convention, aligns diagrams/machine policy, and defines cycle/unknown/new-assembly handling. Once approved, the objective asmdef policy subset may become blocking before A8.
-
-A3 consumes that repaired dependency model and adds governance-specific ownership/activation mechanics; it does not reopen ERR-020-002/003 unless current-tree discovery proves the repair incomplete.
+The A1 implementation delta is tooling/evidence only: machine-readable output and self-tests are added to the checker that already enforces FR-CS-046/046a/046b. Any future dependency-policy change remains a normal #20 amendment and is not smuggled through governance tooling.
 
 ## 6.3 Exception boundary
 
@@ -619,7 +616,7 @@ A3 consumes that repaired dependency model and adds governance-specific ownershi
 |---|---|
 | section-1.md | Authority/scope references if affected; synchronized status/version history. |
 | section-2.md | FR-CS-074–081; 73→81 counts/partition/TOC; Mode 1/3 boundary; history. |
-| section-3.md | §3.5.2 taxonomy/arrow repair; stable component/canonical selector semantics; typed integration/lifecycle/runtime-surface mechanics; explicit + implicit static-initialization treatment; history. |
+| section-3.md | Existing §3.5.2 dependency authority remains intact; add only governance-specific stable component/canonical selector semantics, typed integration/lifecycle/runtime-surface mechanics, explicit + implicit static-initialization treatment, and history. |
 | section-4.md | Contract/discovery relationships and diagrams; no runtime dependency. |
 | section-5.md | Checklist; FR-to-verification rows 074–081; compiler-backed semantic fact source; report-only vs blocking boundaries; history. |
 | section-6.md | Repair only references/counts made stale; no duplicate authority. |
@@ -629,8 +626,8 @@ A3 consumes that repaired dependency model and adds governance-specific ownershi
 | appendices.md | Typed contract schema/examples; stable component/symbol identities, overload-safe selectors, rename migration; examples illustrative only. |
 | outline.md / outline-mid.md / outline-detailed.md | Repair stale 73-count/section/dependency claims where current. |
 | docs/specs/SPEC_INDEX.md | #20 status/version updated atomically with §9 decision. |
-| docs/tracking/spec-error-log.md | Resolve ERR-020-002/003 with exact evidence. |
-| docs/tracking/file-manifest.md / CHANGELOG.md | Record amendment without claiming enforcement before A8. |
+| docs/tracking/spec-error-log.md | No new ERR-020-002/003 action; preserve their existing resolved record and correct only stale duplicate/index state if independently encountered. |
+| docs/tracking/file-manifest.md / CHANGELOG.md | Record the governance amendment and distinguish CI execution from actual required-status activation. |
 
 Acceptance requires repo-wide sweeps for 73-count claims, FR-CS-073/074 boundaries, arrow wording, and approval/status assertions.
 
@@ -746,13 +743,23 @@ The orchestrator MUST NOT create APs automatically from reviewer suggestions.
 
 # 10. CI and merge-gate integration
 
-## 10.1 Early asmdef slice
+## 10.1 Existing asmdef checker and A1 activation
 
-A1 first lands a narrow asmdef graph command/report that reads `src/**/*.asmdef` directly and requires no Roslyn extractor, governance registries, proof ledger, or A2 schema freeze. Initially report-only, it produces the graph evidence used to close ERR-020-002/003.
+A1 reuses `tools/assembly-tier-check.py`, which already reads `src/**/*.asmdef`, parses #20 §3.5.2/FR-CS-046/046b, and runs inside `Spec hygiene checks`.
 
-After the #20 dependency repair is approved, an `architecture-asmdef` status may become required before A8. Its blocking universe is limited to objective rules supported by the repaired dependency authority: malformed/unknown references, cycles, classification completeness required by that policy, and prohibited dependency directions whose semantics are unambiguous.
+A1a extends that checker in place with:
 
-The early status MUST NOT evaluate lifecycle ownership, proof freshness, review convergence, activation state, Class-B firing, or any rule that depends on later governance machinery.
+- deterministic `--json` output for the complete asmdef graph;
+- explicit production/test/out-of-band/unresolved classification evidence without a fictitious tooling bucket;
+- separate graph, classification, and combined subject digests;
+- all-assembly cycle components as report evidence while preserving production-cycle gating semantics; and
+- focused unit tests wired into CI.
+
+No standalone governance asmdef parser is permitted.
+
+A1c then verifies the repository's actual merge-protection configuration and enables the existing required `Spec hygiene checks` context where enforcement is disabled. The repository ruleset observed during v0.5 already names that context but is disabled. A1c MUST verify the live state immediately before mutation and MUST NOT claim merge blocking merely because the CI job runs.
+
+The early asmdef path MUST NOT evaluate lifecycle ownership, proof freshness, review convergence, activation state, Class-B firing, or any rule that depends on later governance machinery.
 
 ## 10.2 Full architecture aggregator
 
@@ -790,13 +797,13 @@ The A0–A9 model remains the lifecycle for full governance activation. v0.4 add
 
 Governance v0.4 passes its own adoption gate and pins its exact version/content digest. Draft-stage governance documents do not require SPEC_INDEX registration or file-manifest rows merely to exist; those remain landing obligations when their owning process requires them.
 
-## A1 — Asmdef-only structural discovery and dependency repair
+## A1 — Consolidate existing asmdef evidence and activate enforcement
 
-**A1a — report-only graph.** Produce the complete asmdef/reference graph, cycles, unknown references, current assembly set, and classification evidence. No Roslyn, governance schema freeze, proof ledger, or #19/#20 governance amendment is required. A1a may run before A0 because it asserts no new governance authority.
+**A1a — single-checker machine evidence.** Extend `tools/assembly-tier-check.py` rather than creating a second parser. Add deterministic JSON complete-graph output, production/test/out-of-band/unresolved classification evidence, graph/classification/subject digests, all-assembly cycle reporting, and focused CI-wired unit tests. Preserve the existing #20 production-policy verdict and its human output.
 
-**A1b — repair #20.** Resolve ERR-020-002/003 from A1a evidence as an existing #20 defect correction.
+The former dependency-repair step is removed: ERR-020-002/003 and the ten-tier/arrow repair already landed August 17, 2026.
 
-**A1c — early enforcement.** After A1b, require `architecture-asmdef` for only the objective dependency rules §10.1 can prove.
+**A1c — activate the existing status.** Re-read live protection/ruleset state, then enable the existing required `Spec hygiene checks` context if it remains disabled. Do not create a parallel `architecture-asmdef` status unless the existing context is technically incapable of expressing the requirement.
 
 ## A2 — Freeze schemas and executable semantics
 
@@ -841,12 +848,12 @@ Production architecture remediation begins only after its applicable prerequisit
 | Area | New files | Modified files | Runtime behavior |
 |---|---|---|---|
 | Governance state | property-registry.json, integration-contracts.json, exceptions.json, runtime-surface-classifications.json, review-ledger.json; temporary bootstrap-runtime-surfaces.json during A1 only | project governance pointer/history only if needed | None |
-| Architecture tooling | tools/architecture-governance/* including asmdef-only audit and source-built compiler-backed csharp-discovery extractor | none initially | None |
+| Architecture tooling | `tools/tests/test_assembly_tier_check.py`; later `tools/architecture-governance/*` including the source-built compiler-backed csharp-discovery extractor | `tools/assembly-tier-check.py` gains machine-report evidence; no second asmdef parser | None |
 | Review tooling | durable review-ledger + tests/fixtures for run/finding state | adversarial-review SKILL.md, findings.py | None |
 | Code Standards | none | #20 sections 2–5, appendices, SPEC_INDEX | Normative code rules only |
 | Testing Strategy | none | #19 sections 2–7, appendices, SPEC_INDEX | Normative test/gate rules only |
 | Master plan | none | master-development-plan.md pointer | None |
-| CI | none | .github/workflows/ci.yml | Early asmdef merge status, later full governance merge behavior only |
+| CI | none | .github/workflows/ci.yml plus repository protection/ruleset configuration | CI-wire checker self-tests; activate the existing `Spec hygiene checks` required context, later full governance merge behavior |
 | Agent guidance | none | CLAUDE.md, src/CLAUDE.md, expanded references | None |
 | Landing workflow | none | landing-close-out/orchestrator skills | Process only |
 | Runtime tests | property-specific as triggered | existing owning test assemblies | Test behavior only |
@@ -1050,8 +1057,8 @@ Prevention: component-owned tuning selectors plus the KD-W1 activation precondit
 - [ ] D1–D4 remain excluded.
 
 ## Discovery, identity, and applicability
-- [ ] A1 asmdef-only graph generated without Roslyn/schema dependencies.
-- [ ] ERR-020-002/003 resolved from that graph and narrow objective dependency status can block before A8.
+- [ ] A1 machine-readable asmdef graph is emitted by the existing `assembly-tier-check.py` without Roslyn/schema dependencies or a second §3.5.2 parser.
+- [ ] Existing ERR-020-002/003 resolution is preserved; checker self-tests run in CI; live protection state is verified and the existing `Spec hygiene checks` required context is activated where disabled.
 - [ ] Compiler-backed C# discovery covers configured public/lifecycle/factory and explicit+implicit static-init mechanisms.
 - [ ] A4 bootstrap contains only non-inferable runtime intent and is retired into final contracts within A4.
 - [ ] Every assembly/runtime surface explicitly classified without suffix-only inference.
@@ -1147,6 +1154,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.5 | August 29, 2026 | — | Repository-reality correction for A1: records ERR-020-002/003 as already resolved; recognizes `tools/assembly-tier-check.py` and its existing `Spec hygiene checks` wiring; removes the obsolete A1b dependency repair; prohibits a second §3.5.2 parser; scopes A1a to JSON complete-graph evidence, classification-aware digests, all-assembly cycle visibility and CI-wired checker tests; scopes A1c to activating the existing required status after re-reading live protection state. A2+ semantic/governance sequence otherwise unchanged. |
 | 0.4 | August 28, 2026 | — | Two-track rollout and activation-state hardening: asmdef-only A1 first slice; ERR-020-002/003 repair and early objective enforcement before A8; compiler-backed Class-A reachability at A4; domain-owned Class-B runtime evidence; orthogonal activation state with machine disable anchors; KD-W1 tuning precondition / proposed FR-TS-097; source-built Roslyn extractor with pinned .NET SDK/compiler identity. No #19/#20 normative files, SPEC_INDEX, file-manifest, code, CI workflow, or runtime implementation changed. |
 | 0.3 | August 28, 2026 | — | End-to-end implementation hardening: separates evidence subject identity from Git/artifact provenance; removes self-referential governance/property pins; closes A1/A4 root bootstrap; freezes executable selector/identity/applicability/closure semantics at A2; requires compiler-backed C# discovery including implicit type initialization; defines stable component/symbol identities and selector history; derives proof-class dependency closure; records exact execution/failure/mutation truth; splits durable review runs from findings; bridges owning tests to mandatory runner results/CI aggregation; preserves A0–A9, Governance authority split, and ERR-020-002/003 staging. No #19/#20 normative files or implementation changed. |
 | 0.2 | August 28, 2026 | — | Hostile-review hardening: A0 Governance adoption; A1 discovery; A2 schema freeze; A3 dual #19/#20 reapproval; closed-world classification; deterministic applicability; typed contracts; complete proof binding; versioned ledger; exception-boundary correction; exhaustive amendment matrices; required-status CI; finite baseline; A0–A9 sequencing. No #19/#20 normative files or implementation changed. |

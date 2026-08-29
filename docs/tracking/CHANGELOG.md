@@ -12,7 +12,21 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 29, 2026 — **CI TRIAGE on PR #341: three of the four red checks fixed;
+> **Last Updated:** August 29, 2026 — **Architecture governance A1 corrected to the live repository; tooling and planning only.**
+> The rejected standalone `tools/architecture-governance/asmdef_discovery.py` approach was abandoned before merge. The existing
+> `tools/assembly-tier-check.py` remains the single parser/checker for Code Standards #20 §3.5.2 and gains deterministic
+> `--json` complete-graph evidence, separate graph/classification/subject SHA-256 digests, and all-assembly cycle reporting
+> without changing its existing production-policy verdict. New `tools/tests/test_assembly_tier_check.py` locks classification
+> digest movement, heading-title independence, FR-CS-046b Infrastructure binding, test-only cycles, test-only external refs,
+> JSON CLI output, and stray root-level asmdef visibility; `.github/workflows/ci.yml` now runs that suite in `Spec hygiene checks`.
+>
+> `project-architecture-governance-integration-plan.md` advances to v0.5: ERR-020-002/003 are recorded as already resolved,
+> obsolete A1b is removed, A1a is consolidation into the existing checker, and A1c is re-scoped to activating the existing
+> required `Spec hygiene checks` context after re-reading live protection state. The repository ruleset observed during review
+> already names that context but is disabled; no protection setting is changed in this slice. No `src/`, `.cs`, `.asmdef`,
+> save format, RNG, tuning, or simulation behavior changed.
+
+> **Last Updated (prior):** August 29, 2026 — **CI TRIAGE on PR #341: three of the four red checks fixed;
 > the fourth is the owner-held band and was not touched.** Tooling and documentation only; no `.cs`
 > and no `.asmdef` changed, so no gate run is owed. The three fixed checks were all introduced by this
 > branch — `doc-consistency-check.py` and its CI step do not exist on `main` at `ec555e6`, `main`'s
