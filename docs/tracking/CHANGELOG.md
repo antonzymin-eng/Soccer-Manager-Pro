@@ -12,7 +12,32 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 29, 2026, later — **Architecture governance A1c slice 1: merge-protection state read, blocker filed, nothing activated. Tracking documentation only.**
+> **Last Updated:** August 29, 2026, later still — **A1c CLOSED: enforcement is active and PROVEN by an observed blocked merge. Tracking documentation only.**
+> No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, so no gate run is owed.
+>
+> The owner set the `CI for Main branch` ruleset to Active. PR #343 was then used as the negative control the release
+> condition demanded, because a ruleset reading Active is a configuration screenshot and v0.5's non-negotiable 12 asks for
+> an execution state. A temporary commit (`1a1385e`) added `docs/specs/_a1c-enforcement-negative-control.md` carrying a
+> stale `Decision Tree #7` line — checked beforehand against the job's own grep to be the single hit in the tree — which
+> turned `Spec hygiene checks` to `failure`. GitHub reported PR #343 `mergeable_state: blocked`. The control was reverted
+> at `b37e2ab` (`git diff 1c6fa2f b37e2ab` empty) and the check returned to `success`. **A red required check
+> demonstrably stops a merge.**
+>
+> **The practical question this raised is also answered.** A ruleset requiring `Compile + test (Linux shim gate,
+> non-certifying)` would have frozen the repository outright, since that job carries `sim_match_engine_close_chance` —
+> red by owner decision since August 11, 2026, and red on `main` itself. The owner read the required-checks list directly
+> in repository settings: it contains `Spec hygiene checks` and does NOT contain the gate. The owner-held band stays red
+> without blocking anything, and that is a configuration fact invisible from the CI logs, so it is recorded rather than
+> left to be rediscovered.
+>
+> **Still unread, and not claimed either way:** classic branch protection on `main` returns 403 through the GitHub
+> integration, so this closes the ruleset layer only. The negative control surfaced no interacting classic rule on this
+> path, but that is an absence of evidence over one pull request, not the closed enumeration non-negotiable 5 requires.
+>
+> The `open-issues.md` entry filed earlier today moves to `open-issues-resolved.md` in this commit, per its own release
+> condition.
+
+> **Last Updated (prior):** August 29, 2026, later — **Architecture governance A1c slice 1: merge-protection state read, blocker filed, nothing activated. Tracking documentation only.**
 > No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, and no protection
 > setting was altered, so no gate run is owed.
 >
