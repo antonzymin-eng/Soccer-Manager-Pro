@@ -1,7 +1,16 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 17, 2026 (*One correction to the entry below, which is left as written per
+**Last Updated:** August 29, 2026 (*CI triage on PR #341; documentation only. Two corrections to this
+file, no prose below rewritten. The design-supplement count read **60**; `ls docs/tracking/*-design.md`
+measures **61**, and `adversarial-review/SKILL.md` carried the same stale 60. Four paragraph wraps had
+put a `#NN` spec reference at the start of a line — `#29`, `#34`, `#41`, `#44` — where markdownlint
+reads it as an ATX heading (MD018); each reference now ends the previous line and no wording changed.
+The assembly-less figure this file states as **19 of the 53** is unchanged and is now the value all
+eight scanned surfaces agree on: `.claude/agents/orienteer.md` alone had said "roughly 20". Full
+account: `docs/tracking/CHANGELOG.md`, August 29, 2026.*)
+
+**Last Updated (prior):** August 17, 2026 (*One correction to the entry below, which is left as written per
 this file's no-edit rule: it says a suspended player is reinstated "only when the alternative is a
 club that cannot take the field at all." That is a single-case claim, and `discipline-suspensions/
 section-2.md` §2.3 states it as two: **benched**, the common case, where the reinstated player "is
@@ -687,8 +696,8 @@ specs #40–#45, #49), plus the **ten promoted on July 27, 2026** (#53, #35, #46
 and runs the full NUnit suite on every push; the quarantine list is empty.
 
 **Note the direction of travel — it is now the project's dominant fact.** The ten approvals add
-specification, not code, so **19 of the 53 APPROVED specs have no `src/` assembly at all** (22 until
-#29 Training and #41 Injuries & Medical landed T0 assemblies on August 5, 2026 and #44 Discipline
+specification, not code, so **19 of the 53 APPROVED specs have no `src/` assembly at all** (22 until #29
+Training and #41 Injuries & Medical landed T0 assemblies on August 5, 2026 and #44 Discipline
 landed T0/T1/T2 on August 13, 2026). *"The spec is APPROVED"* now says nothing whatsoever about
 whether code exists, and that is true of **~36% of the registry**. What remains is implementation:
 see `path-to-playable-roadmap.md`.
@@ -706,8 +715,8 @@ predicate of which fails on the pre-fix engine.
 **The live gap: 19 of the 53 APPROVED specs have no assembly at all** (list re-derived August 18,
 2026 against the root `CLAUDE.md` assembly map, the authoritative index — this paragraph had been
 carrying an 11-spec list that wrongly included #29 Training and #41 Injuries & Medical, both of
-which landed T0 assemblies August 5, 2026): **#31 Transfers, #32 Scouting, #33 Personalities/Morale,
-#34 Staff, #40 Finances, #42 Youth, #43 Competition Structure, #45 Board, #49 Localization — plus
+which landed T0 assemblies August 5, 2026): **#31 Transfers, #32 Scouting, #33 Personalities/Morale, #34
+Staff, #40 Finances, #42 Youth, #43 Competition Structure, #45 Board, #49 Localization — plus
 the ten approved on July 27, 2026: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54.** (#44
 Discipline left the list August 13, 2026 — `src/discipline/` landed T0+T1+T2, suspensions live end
 to end. #37 Match Analytics left it July 27, 2026 — `src/match-analytics/` T0–T1, value types + the
@@ -819,8 +828,8 @@ back-props filed atomically at the flip; **none has an assembly**):
 - ✅ Approved
 - 🔒 Locked (implementation begun)
 
-**Locked (implementation begun) — 32 of 53 approved specs:** #1–#8, #10–#19, #21–#30, #37, #38,
-#41, #44. That is the full Stage-0 physics/AI/systems stack, the tactical layer (#21, #23–#26), the
+**Locked (implementation begun) — 32 of 53 approved specs:** #1–#8, #10–#19, #21–#30, #37, #38, #41, #44.
+That is the full Stage-0 physics/AI/systems stack, the tactical layer (#21, #23–#26), the
 living world (#22), the squad data layer (#27), progression (#28, T0–T2a), training (#29, T0–T2),
 the season loop (#30, T0–T2), match analytics (#37, T0–T1), the UI framework substrate (#38, T0),
 injuries & medical (#41, T0–T2), and discipline (#44, T0–T2).
@@ -930,7 +939,7 @@ Soccer-Manager-Pro/
 │       │   ├── management-layer-spec-roadmap.md  [Which specs to author, in what order]
 │       │   └── path-to-playable-roadmap.md       [Which code to land, in what order]
 │       ├── certification-platform.md   [Pinned host/engine tuple] + cert-run-runbook.md
-│       └── *-design.md                 [60 design supplements — re-derive with
+│       └── *-design.md                 [61 design supplements — re-derive with
 │                                        `ls docs/tracking/*-design.md | wc -l`; see note below]
 ├── src/                                [35 production assemblies — coding begun May 19, 2026]
 │   ├── CLAUDE.md                       [Coding guide — read before writing code]

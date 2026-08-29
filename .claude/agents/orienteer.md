@@ -29,7 +29,7 @@ needs doing, name it; do not do it.
 
 ## The one claim you must never make from memory
 
-**APPROVED says nothing about whether code exists.** Roughly 20 of the 53 approved specs have no
+**APPROVED says nothing about whether code exists.** 19 of the 53 approved specs have no
 `src/` assembly at all, and folder names do not map to spec numbers (#27 lives in `player-database`,
 #30 in `season-save`, #38 in `ui-framework`, #37 in `match-analytics`). Root `CLAUDE.md` is a record
 of what was true when each line was written, not a description of the current tree.

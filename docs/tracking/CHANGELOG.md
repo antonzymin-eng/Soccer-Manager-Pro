@@ -12,7 +12,99 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 19, 2026, evening — **Round 14: an EXTERNAL reviewer found two exploitable
+> **Last Updated:** August 29, 2026 — **CI TRIAGE on PR #341: three of the four red checks fixed;
+> the fourth is the owner-held band and was not touched.** Tooling and documentation only; no `.cs`
+> and no `.asmdef` changed, so no gate run is owed. The three fixed checks were all introduced by this
+> branch — `doc-consistency-check.py` and its CI step do not exist on `main` at `ec555e6`, `main`'s
+> `README.md` has no MD018 hit, and `spec-error-log.md` is 824,073 bytes there against 1,057,156 here.
+>
+> **Markdown lint (3 × MD018).** `README.md` paragraph wraps had put `#29`, `#34`, `#41` and `#44` at
+> the start of a line, where markdownlint reads a spec reference as an ATX heading. Rewrapped so the
+> reference ends the previous line; MD013 is off in `.markdownlint-cli2.yaml`, so nothing else moved.
+> Verified with `markdownlint-cli2@0.13.0` under the CI globs: 3 errors → 0.
+>
+> **Unity asset hygiene — the binary guard was asking a Markdown file to go to Git LFS.**
+> `check-binaries.sh` failed on `spec-error-log.md` at 1,057,156 bytes, 8,580 over its 1 MiB line. Its
+> own header says it exists for "binary game assets (textures, models, audio, prebuilt libraries)", and
+> the five largest tracked files are now all append-only text — `spec-error-log.md` 1,057,156,
+> `CHANGELOG-src.md` 809,677, `MatchEngine.cs` 650,383, `file-manifest.md` 618,508, `CHANGELOG.md`
+> 600,254 — so three more cross the same line shortly. LFS is the wrong home for every one of them: it
+> would break the grep-based tools in `tools/` (`doc-consistency-check.py` reads these files directly)
+> and destroy the line-level diff that makes an append-only chain auditable at all. The guard now
+> classifies by git's own heuristic (a NUL byte in the first 8000 bytes) and holds text to its own
+> ceiling — `TD_TEXT_THRESHOLD_BYTES`, default 4 MiB — never to the LFS requirement. Binaries are
+> unchanged at 1 MiB. **Not a threshold raise:** the binary path was not weakened, and a runaway text
+> file still fails. Both paths negative-tested — a planted 2 MiB non-LFS binary is still caught, a
+> planted 5.4 MB text file trips the new ceiling, and the real tree passes. One latent defect fixed on
+> the way in: the first form of the exit test was `[ a ] || [ b ] && exit 1`, which under this script's
+> `set -euo pipefail` exits 1 on the *success* path.
+>
+> **Spec hygiene — 24 findings → 0, and 8 of them were a bad merge, not stale prose.** The merge at
+> `d83e893`/`a605f77` resolved three `open-issues.md` entries and five `file-manifest.md` supplement
+> rows by keeping **both sides as separate records** instead of unioning them. In every one of the
+> eight, the shorter copy carried the currency annotation and the longer copy carried the newer body,
+> so the file simultaneously published two versions of the same issue — and the duplicate entries were
+> inflating this file's own active count, the exact defect a de-duplication pass had to correct here
+> once already. Resolved as unions: the longer body kept, the annotation re-inserted at its original
+> offset and advanced to the target's actual newest version, the duplicate dropped. Active open issues
+> 22 → **19** by recount; `file-manifest.md` supplement rows lost five stale twins (`gk-conversion-at-
+> contact` v1.0 under a live v1.3, `gk-rush-trigger` v1.1 under v1.5, `close-chance-creation` v1.0
+> under v2.2, `match-engine-wiring-backlog` v1.0 under v1.13, `gk-contact-rate` v1.0 under v1.4).
+>
+> The remaining ten citations were genuinely stale and were advanced in the file's own documented
+> `vOLD, now vNEW` form rather than by rewriting the dated half: `close-chance-creation-design.md`
+> → v2.3 (four sites), `match-engine-wiring-backlog.md` → v1.13 (two),
+> `interactive-unity-client-design.md` → v0.21 (two), `injury-aging-research-alignment-design.md`
+> → v0.7 (two). Two were checker false positives rather than stale claims, and were fixed at the
+> prose rather than by loosening the tool: in `spec-error-log.md` a "Files Affected" row read
+> "`AbilityModel.cs` **now** hosts the curve (v0.4)", where "now" within ~30 characters of a version
+> is read as a currency assertion by the checker's closed marker set — the "now" is dropped, matching
+> every sibling row in that same table; and in `open-issues.md` a bare "backlog v1.9" let the version
+> bind to `close-chance-creation-design.md` two clauses earlier, so the backlog is now named in
+> backticks, which is what makes the binding refuse.
+>
+> **Cardinalities.** Design supplements 60 → **61** on two surfaces (`README.md`,
+> `adversarial-review/SKILL.md`); `ls docs/tracking/*-design.md` measures 61. The assembly-less
+> agreement set had seven surfaces at 19 and `orienteer.md` alone at "roughly 20" — set to 19, the
+> value `README.md` carries a derivation for. The roadmap's "**eight of the 32 open findings**" was
+> **not** an assembly-less figure at all: it counts football-judgment-proxy-review findings and was
+> pooled into that agreement set only because "have no `src/` assembly" sits in the preceding clause.
+> Reworded so the two figures are not adjacent, and its totals brought up to the record in
+> `open-issues.md` — 32 open → **29**, 24 workable → **21**, since batch 1 landed August 22. The
+> deferred count of eight is unchanged and still reconciles (29 − 21 = 8).
+>
+> **Also repaired, same merge, same class:** `CHANGELOG.md` and `CHANGELOG-src.md` each carried **two**
+> bare `**Last Updated:**` labels, which makes each file self-contradictory about its own currency —
+> the defect this chain's own rule exists to prevent and that has been fixed here at least three times.
+> Both relabelled to `(prior)` under this entry; `CHANGELOG-src.md` keeps its v2.125 head bare and
+> marks main's v2.124 `(prior)`. No historical entry was edited.
+>
+> **RECORDED, NOT FIXED.** `CHANGELOG.md` now holds two *concatenated* chains rather than one
+> date-ordered one: this branch's August 19-and-earlier entries sit above `main`'s August 28 head, so
+> the file is newest-first *within* each half and not across the seam. Every entry is present and
+> dated and no entry was rewritten, so the record is intact; interleaving ~920 lines of someone else's
+> chain is a restructuring, not a CI fix, and it is left for an owner call. The same seam is why
+> `CHANGELOG-src.md`'s v2.125/v2.124 heads disagree between date order and version order.
+>
+> **Determinism:** no `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream, domain tag, draw site, or
+> draw-order change. No production or test source was touched, so nothing was perturbed downstream —
+> no scenario tick window, no per-90 band, no A4a round-resolution fit, no `FR-PO-052` perf baseline.
+> Checked, nothing moved.
+>
+> **Gate:** not re-run for this change, and none is owed — no `.cs`, no `.asmdef`, and nothing under
+> `tools/dotnet-ci/` moved, so the tree the gate compiles is byte-identical to the one CI already
+> measured. Quoting that run rather than a fresh one: **CI run 33217732663, head `a605f77`, all 34
+> suites reported against 34 `src/*/[Tt]ests/*.asmdef` — a complete sweep — 3,040 passed, 1 failed,
+> 207 skipped.** The single failure is `sim_match_engine_close_chance` in `MatchEngine.Tests`
+> (**472 passed / 1 failed / 11 skipped**), the band held RED by owner decision at
+> `close-chance-creation-design.md` §10.9 item 6, failing at **exactly** its recorded values —
+> `meanCosine` −0.165 against the −0.16 bound and `goalwardShare` 0.407 against 0.42, 2 of 3
+> predicates. No new failure, no band rebaselined, and it was not touched. Per this repo's own trap
+> list the gate script is `set -euo pipefail` and exits before its own verdict, so **no
+> `── Gate PASSED ──` line and no quarantine report was printed** — the quarantine state below comes
+> from inspecting `tools/dotnet-ci/known-failures.txt` directly, which holds no entries.
+
+> **Last Updated (prior):** August 19, 2026, evening — **Round 14: an EXTERNAL reviewer found two exploitable
 > holes in round 9's own security fix, and both were confirmed by execution before being fixed.** This is
 > the first round of this series with fresh eyes on it, and it immediately found what four single-handed
 > rounds did not. Tooling and documentation only; no `.cs` and no `.asmdef` changed, so no gate run is
@@ -933,7 +1025,7 @@ break it, and do not edit historical entries.
 > answer. Full account: `docs/tracking/spec-error-log.md` v2.17, `docs/tracking/open-issues.md`.
 > **GATE: RUN TO COMPLETION at `0fb3ff0`, August 13, 2026 — 33 suites, quarantine empty. `Discipline.Tests` 101/101; `SeasonSave.Tests` 431 passed / 0 failed / 3 known skips; `MatchEngine.Tests` 461 passed / **1 failed** / 11 skipped (59 m). The gate's exit status is FAILED (the quarantine is empty, so any failure fails it), and the single failure across the ENTIRE tree is `sim_match_engine_close_chance` — the inherited owner-held red that `close-chance-creation-design.md` §10.9 item 6 rules "hold red, do not rebaseline a third time". Those counts are IDENTICAL to the pre-#44 baseline this branch was cut from (W2, `MatchEngine.Tests` 461/1/11, same single failure), so **#44 adds no new failure**: the landing is gate-clean on its own terms and the tree is red for a reason that predates it and is an owner decision, not a defect.**
 
-> **Last Updated:** August 28, 2026 — **PROJECT ARCHITECTURE GOVERNANCE INTEGRATION PLAN v0.4; documentation only.** Agreed rollout/activation revision: A1 is now an asmdef-only first slice that produces ERR-020-002/003 evidence without Roslyn/schema/#19/#20-governance dependencies; those existing #20 defects close before the coordinated governance amendment, after which the objective asmdef subset may become a required status before A8. Compiler-backed Class-A reachability moves to A4; Class-B gate-firing remains runtime/domain-owned (W12-style) evidence consumed by governance rather than implemented there. Integration contracts gain orthogonal `activation_state = active | intentionally-disabled | pending-integration | unresolved`; intentional disablement requires a machine-resolvable disable anchor and cannot act as a suppression. KD-W1 becomes a machine tuning precondition, proposed as FR-TS-097. Certifying Roslyn extraction must be built from source at the governed checkout with pinned .NET SDK/compiler/config identity. Actual #19/#20 normative files, SPEC_INDEX, and file-manifest remain intentionally untouched at this draft stage; D1–D4 remain frozen; no code, tests, CI workflow, runtime behavior, save/schema version, gameplay constant, RNG stream/domain tag/draw site, or draw order changed.
+> **Last Updated (prior):** August 28, 2026 — **PROJECT ARCHITECTURE GOVERNANCE INTEGRATION PLAN v0.4; documentation only.** Agreed rollout/activation revision: A1 is now an asmdef-only first slice that produces ERR-020-002/003 evidence without Roslyn/schema/#19/#20-governance dependencies; those existing #20 defects close before the coordinated governance amendment, after which the objective asmdef subset may become a required status before A8. Compiler-backed Class-A reachability moves to A4; Class-B gate-firing remains runtime/domain-owned (W12-style) evidence consumed by governance rather than implemented there. Integration contracts gain orthogonal `activation_state = active | intentionally-disabled | pending-integration | unresolved`; intentional disablement requires a machine-resolvable disable anchor and cannot act as a suppression. KD-W1 becomes a machine tuning precondition, proposed as FR-TS-097. Certifying Roslyn extraction must be built from source at the governed checkout with pinned .NET SDK/compiler/config identity. Actual #19/#20 normative files, SPEC_INDEX, and file-manifest remain intentionally untouched at this draft stage; D1–D4 remain frozen; no code, tests, CI workflow, runtime behavior, save/schema version, gameplay constant, RNG stream/domain tag/draw site, or draw order changed.
 
 > **Last Updated (prior):** August 28, 2026 — **PROJECT ARCHITECTURE GOVERNANCE INTEGRATION PLAN v0.3; documentation only.** End-to-end implementation review hardening of `docs/planning/project-architecture-governance-integration-plan.md`: replaces self-referential commit/tree freshness with material `subject_scope_digest` + provenance separation; makes property-history validation compare against a trusted prior registry; closes the A1/A4 plain-C# root bootstrap; freezes executable selector/identity/applicability/dependency-closure semantics at A2; requires compiler-backed C# discovery (including implicit type initialization) rather than a hand-written parser; defines stable component IDs and overload-safe selector history; derives proof-class dependency closure; records explicit execution/failure-injection/mutation truth; splits durable review runs from findings; and requires an `if: always()` architecture aggregator to consume owning-runner results and reject skipped/excluded/quarantined required proof. A0–A9, the Governance/#19/#20 authority split, and ERR-020-002/003 staging remain unchanged. Actual #19/#20 files remain untouched; D1–D4 remain frozen; no `.cs`, `.asmdef`, CI workflow, runtime behavior, save/schema version, gameplay constant, RNG stream/domain tag/draw site, or draw order changed.
 

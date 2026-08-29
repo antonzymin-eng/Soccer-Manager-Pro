@@ -5329,7 +5329,7 @@ added here would either duplicate that or introduce #28's first RNG draw site �
 | `docs/specs/player-progression-lifecycle/section-1.md` | §1.3, KD-8 | Age-continuity moves Stage 3 → Stage 2; KD-8's identity moves onto the ramp dial's off position (v0.4) |
 | `docs/specs/player-progression-lifecycle/section-2.md` | FR-PG-007 | The FR mandated the defect; conditioned on half-width 0, with the superseded requirement annotated (v0.8) |
 | `docs/specs/player-progression-lifecycle/section-3.md` | §3.1 pseudocode, new §3.1.3 | The rate, the integral, the P5 argument, the invariants, the carried-fraction distinction (v0.9) |
-| `docs/specs/player-progression-lifecycle/section-4.md` | §4 file map | `AbilityModel.cs` now hosts the curve (v0.4) |
+| `docs/specs/player-progression-lifecycle/section-4.md` | §4 file map | `AbilityModel.cs` hosts the curve (v0.4) |
 | `docs/specs/player-progression-lifecycle/section-5.md` | §5.3, new §5.3.1 | T-PG-ID-001 revised; T-PG-AGE-001..005 allocated (v0.6) |
 | `docs/specs/player-progression-lifecycle/appendices.md` | Appendix A, Appendix B | The `[GT]` row; `GROWTH_/DECLINE_DAILY_POINTS` re-described; Appendix B's currency note (v0.7) |
 | `src/player-progression/PlayerProgressionConstants.cs` | GT region | `+ AgeBandRampHalfWidthYears` |
