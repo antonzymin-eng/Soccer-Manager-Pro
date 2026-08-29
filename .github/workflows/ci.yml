@@ -110,6 +110,10 @@ jobs:
         # Pure stdlib Python — no dependencies, runs in under a second.
         if: always()
         run: python3 tools/assembly-tier-check.py --repo .
+      - name: Assembly tier checker unit tests
+        # Locks the machine-report additions without creating a second parser.
+        if: always()
+        run: python3 -m unittest discover -s tools/tests -p 'test_assembly_tier_check.py'
       - name: Cross-document consistency (stale version citations and cardinalities)
         # Catches the defect class four adversarial-review rounds surfaced more than
         # any other and that no other gate sees: a value corrected in the document

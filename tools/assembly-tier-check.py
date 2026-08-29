@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # File: tools/assembly-tier-check.py
 # Created: August 17, 2026
-# Modified: August 18, 2026
+# Modified: August 29, 2026
 # Purpose: Mechanical guard for the Spec #20 §3.5.2 ten-tier assembly order
 #          (FR-CS-046 / FR-CS-046a / FR-CS-046b). Parses the tier table OUT OF
 #          the spec — docs/specs/code-standards/section-3.md §3.5.2 — rather
@@ -48,11 +48,13 @@
 #          push to any other branch runs no CI, an owner call about CI cost).
 #
 # Usage:  python3 tools/assembly-tier-check.py --repo .
+#         python3 tools/assembly-tier-check.py --repo . --json
 # Exit:   0 on pass, 1 on any failure, 2 on inability to parse inputs.
 #
 # Plain Python 3, standard library only.
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -207,66 +209,75 @@ def parse_infra_binding(section2_text):
     return sorted(set(names)), None
 
 
-def load_production_asmdefs(repo):
-    """Enumerate production asmdefs under src/, recursively.
+def load_asmdefs(repo):
+    """Enumerate and parse every src/**/*.asmdef once.
 
-    docs/specs/code-standards/section-3.md §3.5.2 states the exclusion rule
-    as: test assemblies live in src/<folder>/[Tt]ests/. So a production
-    asmdef is any src/**/*.asmdef whose path (below the top-level src/<folder>/
-    it lives in) does not pass through a path segment matching [Tt]ests --
-    depth alone is not the rule.
+    Test classification follows #20 §3.5.2 exactly: a path segment matching
+    [Tt]ests below src/<folder>/ marks a test assembly. A stray .asmdef
+    directly under src/ remains in the complete graph but is reported as an
+    unclassifiable policy failure because §3.5.2 is folder-keyed.
 
-    The §3.5.2 tier table is FOLDER-keyed, so exactly ONE production .asmdef
-    may exist per top-level src/<folder>/ (the §3.5.2 placement rule). A
-    second one — nested or not, e.g. src/foo/editor/foo-editor.asmdef beside
-    src/foo/foo.asmdef — is a HARD FAILURE: there is no rule for seating two
-    assemblies under one folder key. Which of the two survives into the graph
-    is an accident of path sort order (the first wins), so the failure
-    message names both paths and says which one was dropped; the run's other
-    figures must not be trusted while that failure stands.
-
-    TEST assemblies (any asmdef under a [Tt]ests path segment) are enumerated
-    too — not to seat them (they are outside the order) but so a PRODUCTION
-    assembly referencing one can FAIL: §3.5.2's exclusion is test→production
-    only, and "ignore any target that is not a production assembly" also
-    swallowed production→test, the worst direction available.
-
-    Returns (folder_of_name, name_of_folder, refs, test_names, errors) where
-    refs maps assembly name -> list of referenced assembly names, test_names
-    is the set of test assembly names, and errors is a list of parse-failure
-    strings.
+    Returns (records, errors). Each record carries path, folder, name,
+    references and is_test.
     """
     src = repo / "src"
-    folder_of_name = {}
-    name_of_folder = {}
-    path_of_folder = {}
-    refs = {}
-    test_names = set()
+    records = []
     errors = []
     for asmdef in sorted(src.glob("**/*.asmdef")):
         rel_parts = asmdef.relative_to(src).parts
-        if len(rel_parts) < 2:
-            continue  # stray file directly under src/, not inside any folder
-        folder = rel_parts[0]
-        if any(re.fullmatch(r"[Tt]ests", part) for part in rel_parts[1:-1]):
-            # A test assembly, per §3.5.2 — record its NAME so production→test
-            # references can be failed, then keep it out of the seated graph.
-            try:
-                tname = json.loads(asmdef.read_text(encoding="utf-8")).get("name")
-            except (OSError, ValueError) as exc:
-                errors.append("cannot parse %s: %s" % (asmdef, exc))
-                continue
-            if tname:
-                test_names.add(tname)
-            continue
+        stray = len(rel_parts) < 2
         try:
             data = json.loads(asmdef.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
             errors.append("cannot parse %s: %s" % (asmdef, exc))
             continue
         name = data.get("name")
+        refs = data.get("references", [])
         if not name:
             errors.append("%s has no 'name' field" % asmdef)
+            continue
+        if not isinstance(refs, list) or not all(isinstance(ref, str) for ref in refs):
+            errors.append("%s has an invalid 'references' field" % asmdef)
+            continue
+        is_test = (not stray) and any(
+            re.fullmatch(r"[Tt]ests", part)
+            for part in rel_parts[1:-1]
+        )
+        records.append({
+            "path": asmdef.relative_to(repo).as_posix(),
+            "folder": None if stray else rel_parts[0],
+            "name": name,
+            "references": sorted(refs),
+            "is_test": is_test,
+        })
+        if stray:
+            errors.append(
+                "%s is directly under src/ and has no top-level folder; "
+                "§3.5.2 is folder-keyed, so the assembly cannot be classified"
+                % asmdef)
+    return records, errors
+
+
+def load_production_asmdefs(records):
+    """Derive the existing production policy view from parsed asmdef records."""
+    folder_of_name = {}
+    name_of_folder = {}
+    path_of_folder = {}
+    refs = {}
+    test_names = set()
+    errors = []
+
+    for record in records:
+        if record["is_test"]:
+            test_names.add(record["name"])
+
+    for record in records:
+        if record["is_test"]:
+            continue
+        folder = record["folder"]
+        name = record["name"]
+        path = record["path"]
+        if folder is None:
             continue
         if folder in name_of_folder:
             errors.append(
@@ -274,7 +285,7 @@ def load_production_asmdefs(repo):
                 "§3.5.2 tier table is folder-keyed, exactly one is allowed; "
                 "kept '%s' (first in path sort order), DROPPED '%s' and all "
                 "of its references from the graph"
-                % (folder, path_of_folder[folder], asmdef))
+                % (folder, path_of_folder[folder], path))
             continue
         if name in folder_of_name:
             errors.append(
@@ -283,12 +294,12 @@ def load_production_asmdefs(repo):
                 "the second would silently REPLACE the first's reference list "
                 "and drop a whole assembly's edges from the tier and cycle "
                 "checks while the folder count still reads complete"
-                % (name, folder_of_name[name], asmdef))
+                % (name, folder_of_name[name], path))
             continue
         folder_of_name[name] = folder
         name_of_folder[folder] = name
-        path_of_folder[folder] = asmdef
-        refs[name] = [r for r in data.get("references", [])]
+        path_of_folder[folder] = path
+        refs[name] = list(record["references"])
     return folder_of_name, name_of_folder, refs, test_names, errors
 
 
@@ -322,46 +333,282 @@ def find_cycle(graph):
     return None
 
 
-def main():
-    ap = argparse.ArgumentParser(
-        description="Check the Spec #20 §3.5.2 ten-tier assembly order against "
-                    "the production .asmdef reference graph.")
-    ap.add_argument("--repo", default=".", help="repository root (default: .)")
-    args = ap.parse_args()
-    repo = Path(args.repo)
+def find_cycle_components(graph):
+    """Return deterministic strongly-connected components that contain cycles."""
+    index = 0
+    stack = []
+    on_stack = set()
+    indices = {}
+    lowlinks = {}
+    components = []
 
+    def strongconnect(node):
+        nonlocal index
+        indices[node] = index
+        lowlinks[node] = index
+        index += 1
+        stack.append(node)
+        on_stack.add(node)
+
+        for nxt in sorted(graph.get(node, ())):
+            if nxt not in graph:
+                continue
+            if nxt not in indices:
+                strongconnect(nxt)
+                lowlinks[node] = min(lowlinks[node], lowlinks[nxt])
+            elif nxt in on_stack:
+                lowlinks[node] = min(lowlinks[node], indices[nxt])
+
+        if lowlinks[node] != indices[node]:
+            return
+        component = []
+        while True:
+            member = stack.pop()
+            on_stack.remove(member)
+            component.append(member)
+            if member == node:
+                break
+        component.sort()
+        if len(component) > 1 or (
+                len(component) == 1 and component[0] in graph.get(component[0], ())):
+            components.append(component)
+
+    for node in sorted(graph):
+        if node not in indices:
+            strongconnect(node)
+    components.sort(key=lambda item: tuple(item))
+    return components
+
+
+def _digest(value):
+    payload = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def build_machine_report(
+        records, tier_of, ordered_rows, infra_folders, bound_infra,
+        bound_sequence, folder_of_name, failures, stats):
+    """Build the machine-readable A1 evidence view from the checker's facts."""
+    tier_names = dict(ordered_rows)
+    by_name = {}
+    for record in records:
+        by_name.setdefault(record["name"], []).append(record)
+
+    nodes = []
+    classification_counts = {}
+    for record in sorted(records, key=lambda item: item["path"]):
+        if record["is_test"]:
+            classification = "test"
+            normative_category = None
+        else:
+            tier = tier_of.get(record["folder"])
+            if tier is None:
+                classification = "unresolved"
+                normative_category = None
+            elif tier == "infra":
+                classification = "out-of-band"
+                normative_category = {
+                    "kind": "out-of-band",
+                    "name": "Infrastructure",
+                }
+            else:
+                classification = "production"
+                normative_category = {
+                    "kind": "tier",
+                    "tier": tier,
+                    "name": tier_names.get(tier),
+                }
+        classification_counts[classification] = (
+            classification_counts.get(classification, 0) + 1)
+        nodes.append({
+            "path": record["path"],
+            "folder": record["folder"],
+            "name": record["name"],
+            "classification": classification,
+            "normative_category": normative_category,
+            "references": list(record["references"]),
+        })
+
+    unique_by_name = {
+        name: items[0] for name, items in by_name.items() if len(items) == 1
+    }
+    duplicate_names = [
+        {
+            "name": name,
+            "paths": sorted(item["path"] for item in items),
+        }
+        for name, items in sorted(by_name.items())
+        if len(items) > 1
+    ]
+
+    internal_edges = []
+    external_references = []
+    ambiguous_references = []
+    all_graph = {node["path"]: [] for node in nodes}
+    production_paths = {
+        node["path"] for node in nodes
+        if node["classification"] in ("production", "out-of-band")
+    }
+
+    node_by_path = {node["path"]: node for node in nodes}
+    for node in nodes:
+        for ref in node["references"]:
+            target = unique_by_name.get(ref)
+            if target is not None:
+                edge = {
+                    "source": node["path"],
+                    "source_name": node["name"],
+                    "target": target["path"],
+                    "target_name": ref,
+                }
+                internal_edges.append(edge)
+                all_graph[node["path"]].append(target["path"])
+            elif ref in by_name:
+                ambiguous_references.append({
+                    "source": node["path"],
+                    "source_name": node["name"],
+                    "reference": ref,
+                    "candidate_targets": sorted(
+                        item["path"] for item in by_name[ref]),
+                })
+            else:
+                external_references.append({
+                    "source": node["path"],
+                    "source_name": node["name"],
+                    "source_classification": node["classification"],
+                    "reference": ref,
+                })
+
+    internal_edges.sort(
+        key=lambda edge: (edge["source"], edge["target"], edge["target_name"]))
+    external_references.sort(
+        key=lambda item: (item["source"], item["reference"]))
+    ambiguous_references.sort(
+        key=lambda item: (item["source"], item["reference"]))
+
+    production_graph = {
+        path: sorted(
+            target for target in all_graph[path] if target in production_paths)
+        for path in sorted(production_paths)
+    }
+    all_cycles = find_cycle_components(all_graph)
+    production_cycles = find_cycle_components(production_graph)
+
+    graph_material = {
+        "nodes": [
+            {
+                "path": node["path"],
+                "name": node["name"],
+                "references": node["references"],
+            }
+            for node in nodes
+        ],
+        "internal_edges": internal_edges,
+        "external_references": external_references,
+        "ambiguous_references": ambiguous_references,
+    }
+    classification_material = {
+        "ordered_tiers": [
+            {"tier": tier, "name": name}
+            for tier, name in ordered_rows
+        ],
+        "folder_classifications": [
+            {
+                "folder": folder,
+                "kind": "out-of-band" if tier == "infra" else "tier",
+                "tier": None if tier == "infra" else tier,
+            }
+            for folder, tier in sorted(tier_of.items())
+        ],
+        "bound_tier_sequence": list(bound_sequence),
+        "bound_infrastructure": list(bound_infra),
+        "table_infrastructure": list(infra_folders),
+    }
+    subject_material = {
+        "graph": graph_material,
+        "classification": classification_material,
+    }
+
+    production_unknown = [
+        item for item in external_references
+        if item["source_classification"] in ("production", "out-of-band")
+    ]
+
+    summary = dict(stats)
+    summary.update({
+        "asmdef_count": len(records),
+        "classification_counts": classification_counts,
+        "internal_edge_count": len(internal_edges),
+        "external_reference_count": len(external_references),
+        "production_unknown_reference_count": len(production_unknown),
+        "ambiguous_reference_count": len(ambiguous_references),
+        "duplicate_name_count": len(duplicate_names),
+        "all_cycle_component_count": len(all_cycles),
+        "production_cycle_component_count": len(production_cycles),
+        "policy_failure_count": len(failures),
+    })
+
+    return {
+        "report_version": 1,
+        "mode": "enforcing-check-with-machine-report",
+        "status": "fail" if failures else "pass",
+        "source_universe": "src/**/*.asmdef below src/<folder>/",
+        "classification_authority": {
+            "section_2": SECTION2_PATH.as_posix(),
+            "section_3": SPEC_PATH.as_posix(),
+            "section": "3.5.2",
+        },
+        "digests": {
+            "graph_sha256": _digest(graph_material),
+            "classification_sha256": _digest(classification_material),
+            "subject_sha256": _digest(subject_material),
+        },
+        "summary": summary,
+        "assemblies": nodes,
+        "internal_edges": internal_edges,
+        "external_references": external_references,
+        "production_unknown_references": production_unknown,
+        "ambiguous_references": ambiguous_references,
+        "duplicate_names": duplicate_names,
+        "cycles": {
+            "all": all_cycles,
+            "production": production_cycles,
+        },
+        "policy_failures": list(failures),
+    }
+
+
+def analyze(repo):
+    """Run the existing policy checks and return a machine-readable report."""
     spec_file = repo / SPEC_PATH
     if not spec_file.is_file():
-        print("FATAL: %s not found (is --repo the repository root?)" % spec_file)
-        return 2
+        raise RuntimeError(
+            "%s not found (is --repo the repository root?)" % spec_file)
     section2_file = repo / SECTION2_PATH
     if not section2_file.is_file():
-        print("FATAL: %s not found (is --repo the repository root?)" % section2_file)
-        return 2
+        raise RuntimeError(
+            "%s not found (is --repo the repository root?)" % section2_file)
 
     section2_text = section2_file.read_text(encoding="utf-8")
     tier_of, ordered_rows, infra_folders, parse_errors = parse_tier_table(
         spec_file.read_text(encoding="utf-8"))
     bound_infra, infra_err = parse_infra_binding(section2_text)
     if infra_err:
-        print("FATAL: %s" % infra_err)
-        return 2
+        raise RuntimeError(infra_err)
     bound_sequence, seq_err = parse_tier_sequence(section2_text)
     if seq_err:
-        print("FATAL: %s" % seq_err)
-        return 2
-    folder_of_name, name_of_folder, refs, test_names, asmdef_errors = \
-        load_production_asmdefs(repo)
+        raise RuntimeError(seq_err)
 
-    failures = list(parse_errors) + list(asmdef_errors)
+    records, asmdef_parse_errors = load_asmdefs(repo)
+    folder_of_name, name_of_folder, refs, test_names, view_errors = (
+        load_production_asmdefs(records))
+
+    failures = (
+        list(parse_errors) + list(asmdef_parse_errors) + list(view_errors))
     if not name_of_folder:
         failures.append("no production .asmdef found under %s" % (repo / "src"))
 
-    # 0a. The table's numbered rows must be exactly the ten tiers FR-CS-046
-    #     states, numbered 0..9 contiguously, ascending in table order, with
-    #     each row's (number, name) pair matching the authority's sequence.
-    #     Without this, swapping two rows' tier numbers (or renumbering,
-    #     dropping or duplicating a tier) still PASSED.
     expected = list(enumerate(bound_sequence))
     if ordered_rows != expected:
         failures.append(
@@ -373,11 +620,6 @@ def main():
                SECTION2_PATH,
                ", ".join("%s %s" % (t, n) for t, n in expected)))
 
-    # 0. The table's out-of-band Infrastructure set must be exactly the pair
-    #    FR-CS-046b binds BY NAME. Membership above is derived only from the
-    #    tier cell's leading glyph, so one character of drift (an ordered
-    #    number where "—" stood) would otherwise empty this set silently and
-    #    disable every FR-CS-046b check while the run still passes.
     if set(infra_folders) != set(bound_infra):
         failures.append(
             "the §3.5.2 Infrastructure row no longer names the assemblies "
@@ -389,25 +631,19 @@ def main():
             % (", ".join(infra_folders) or "empty",
                SECTION2_PATH, ", ".join(bound_infra)))
 
-    # 1. Every production folder must appear in the table.
     for folder in sorted(name_of_folder):
         if folder not in tier_of:
             failures.append(
-                "production folder 'src/%s/' is ABSENT from the §3.5.2 tier table "
-                "(the placement rule requires the same commit that adds the .asmdef "
-                "to seat it)" % folder)
+                "production folder 'src/%s/' is ABSENT from the §3.5.2 tier "
+                "table (the placement rule requires the same commit that adds "
+                "the .asmdef to seat it)" % folder)
 
-    # 2. Every table entry must name an existing production folder.
     for folder in sorted(tier_of):
         if folder not in name_of_folder:
             failures.append(
                 "§3.5.2 tier table names '%s' but src/%s/ holds no production "
                 ".asmdef" % (folder, folder))
 
-    # 3. Classify every production-sourced reference. A reference into a TEST
-    #    assembly or to a name resolving to nothing under src/ is a FAILURE,
-    #    not an ignorable external: "ignore any non-production target" also
-    #    swallowed production→test (the worst direction available) and typos.
     downward = intra = upward = infra_sourced = 0
     total = 0
     for name in sorted(refs):
@@ -424,32 +660,31 @@ def main():
             if ref not in folder_of_name:
                 failures.append(
                     "production assembly 'src/%s/' references '%s', which "
-                    "resolves to no production or test assembly under src/ — "
-                    "an unresolvable reference name must fail, not be "
-                    "silently ignored" % (src_folder, ref))
+                    "resolves to no production assembly under src/ — an "
+                    "unresolvable reference name must fail, not be silently "
+                    "ignored" % (src_folder, ref))
                 continue
             total += 1
             dst_folder = folder_of_name[ref]
             dst_tier = tier_of.get(dst_folder)
             if src_tier is None or dst_tier is None:
-                continue  # already failed above as absent-from-table
+                continue
             if src_tier == "infra":
                 infra_sourced += 1
-                # FR-CS-046b clause 2: an Infrastructure assembly may reference
-                # only tier-0 (Foundation) assemblies and the other
-                # Infrastructure assembly — nothing else.
                 if dst_tier != "infra" and dst_tier != 0:
                     failures.append(
-                        "Infrastructure assembly 'src/%s/' references 'src/%s/' "
-                        "(tier %s) — FR-CS-046b: an Infrastructure assembly MUST "
-                        "NOT reference any ordered-tier assembly other than "
-                        "tier 0 (Foundation)" % (src_folder, dst_folder, dst_tier))
+                        "Infrastructure assembly 'src/%s/' references "
+                        "'src/%s/' (tier %s) — FR-CS-046b: an Infrastructure "
+                        "assembly MUST NOT reference any ordered-tier assembly "
+                        "other than tier 0 (Foundation)"
+                        % (src_folder, dst_folder, dst_tier))
                 continue
             if dst_tier == "infra":
                 failures.append(
                     "ordered-tier assembly 'src/%s/' references out-of-band "
                     "Infrastructure assembly 'src/%s/' — §3.5.2: no tier may "
-                    "reference Infrastructure at runtime" % (src_folder, dst_folder))
+                    "reference Infrastructure at runtime"
+                    % (src_folder, dst_folder))
                 continue
             if dst_tier < src_tier:
                 downward += 1
@@ -458,40 +693,102 @@ def main():
             else:
                 upward += 1
                 failures.append(
-                    "UPWARD reference (FR-CS-046): 'src/%s/' (tier %s) references "
-                    "'src/%s/' (tier %s)" % (src_folder, src_tier, dst_folder, dst_tier))
+                    "UPWARD reference (FR-CS-046): 'src/%s/' (tier %s) "
+                    "references 'src/%s/' (tier %s)"
+                    % (src_folder, src_tier, dst_folder, dst_tier))
 
-    # 4. The whole production reference graph must be acyclic (FR-CS-046a).
-    graph = {n: [r for r in rs if r in folder_of_name] for n, rs in refs.items()}
-    cycle = find_cycle(graph)
+    production_graph = {
+        name: [ref for ref in values if ref in folder_of_name]
+        for name, values in refs.items()
+    }
+    cycle = find_cycle(production_graph)
     if cycle:
         failures.append(
             "CYCLE in production reference graph (FR-CS-046a): %s"
-            % " -> ".join(folder_of_name[n] for n in cycle))
+            % " -> ".join(folder_of_name[name] for name in cycle))
 
-    placed = sum(1 for f in tier_of if f in name_of_folder)
+    placed = sum(1 for folder in tier_of if folder in name_of_folder)
+    stats = {
+        "production_assembly_folder_count": len(name_of_folder),
+        "placed_folder_count": placed,
+        "ordered_tier_folder_count": sum(
+            1 for folder in tier_of
+            if folder in name_of_folder and tier_of[folder] != "infra"),
+        "out_of_band_folder_count": sum(
+            1 for folder in infra_folders if folder in name_of_folder),
+        "production_to_production_reference_count": total,
+        "downward_reference_count": downward,
+        "intra_tier_reference_count": intra,
+        "upward_reference_count": upward,
+        "infrastructure_sourced_reference_count": infra_sourced,
+        "test_assembly_count": sum(1 for record in records if record["is_test"]),
+    }
+    return build_machine_report(
+        records, tier_of, ordered_rows, infra_folders, bound_infra,
+        bound_sequence, folder_of_name, failures, stats)
+
+
+def print_human_report(report):
+    summary = report["summary"]
     print("assembly-tier-check: §3.5.2 table vs production .asmdef graph")
-    print("  production assembly folders under src/ : %d" % len(name_of_folder))
+    print("  production assembly folders under src/ : %d"
+          % summary["production_assembly_folder_count"])
     print("  folders placed in the tier table       : %d  (%d in ordered tiers + "
           "%d out-of-band Infrastructure)" % (
-              placed, sum(1 for f in tier_of
-                          if f in name_of_folder and tier_of[f] != "infra"),
-              sum(1 for f in infra_folders if f in name_of_folder)))
-    print("  production->production references      : %d" % total)
-    print("    downward                             : %d" % downward)
-    print("    intra-tier                           : %d" % intra)
-    print("    upward                               : %d" % upward)
-    print("    sourced by out-of-band Infrastructure: %d" % infra_sourced)
-    print("  test assemblies enumerated (outside the order): %d" % len(test_names))
+              summary["placed_folder_count"],
+              summary["ordered_tier_folder_count"],
+              summary["out_of_band_folder_count"]))
+    print("  production->production references      : %d"
+          % summary["production_to_production_reference_count"])
+    print("    downward                             : %d"
+          % summary["downward_reference_count"])
+    print("    intra-tier                           : %d"
+          % summary["intra_tier_reference_count"])
+    print("    upward                               : %d"
+          % summary["upward_reference_count"])
+    print("    sourced by out-of-band Infrastructure: %d"
+          % summary["infrastructure_sourced_reference_count"])
+    print("  test assemblies enumerated (outside the order): %d"
+          % summary["test_assembly_count"])
 
+    failures = report["policy_failures"]
     if failures:
         print()
         print("FAIL — %d problem(s):" % len(failures))
-        for f in failures:
-            print("  * %s" % f)
-        return 1
+        for failure in failures:
+            print("  * %s" % failure)
+        return
     print("PASS — every folder placed, no upward reference, graph acyclic.")
-    return 0
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(
+        description="Check the Spec #20 §3.5.2 ten-tier assembly order against "
+                    "the production .asmdef reference graph.")
+    ap.add_argument("--repo", default=".", help="repository root (default: .)")
+    ap.add_argument(
+        "--json", action="store_true",
+        help="emit deterministic machine-readable graph/evidence JSON")
+    args = ap.parse_args(argv)
+    repo = Path(args.repo)
+
+    try:
+        report = analyze(repo)
+    except (OSError, UnicodeError, RuntimeError) as exc:
+        if args.json:
+            print(json.dumps(
+                {"report_version": 1, "status": "error", "error": str(exc)},
+                ensure_ascii=False, sort_keys=True))
+        else:
+            print("FATAL: %s" % exc)
+        return 2
+
+    if args.json:
+        print(json.dumps(
+            report, ensure_ascii=False, sort_keys=True, indent=2))
+    else:
+        print_human_report(report)
+    return 1 if report["policy_failures"] else 0
 
 
 if __name__ == "__main__":
@@ -553,3 +850,14 @@ if __name__ == "__main__":
 # |         |            |             | downstream unresolvable references — and a   |
 # |         |            |             | duplicate naming an unreferenced assembly    |
 # |         |            |             | would have PASSED silently).                 |
+# | 1.5     | 2026-08-29 | ChatGPT     | A1 consolidation: retain this file as |
+# |         |            |             | the single §3.5.2 parser/checker; add |
+# |         |            |             | --json complete-graph evidence, graph/ |
+# |         |            |             | classification/subject digests, all-  |
+# |         |            |             | assembly cycle reporting, and shared  |
+# |         |            |             | one-pass asmdef parsing. Verdict-      |
+# |         |            |             | semantics change: a stray src/*.asmdef |
+# |         |            |             | with no top-level folder was skipped   |
+# |         |            |             | by v1.4; v1.5 reports it unresolved    |
+# |         |            |             | and fails because §3.5.2 is folder-    |
+# |         |            |             | keyed. Current tree is unaffected.     |
