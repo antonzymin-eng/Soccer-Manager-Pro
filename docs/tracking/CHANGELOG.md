@@ -36,6 +36,18 @@ break it, and do not edit historical entries.
 >
 > The `open-issues.md` entry filed earlier today moves to `open-issues-resolved.md` in this commit, per its own release
 > condition.
+>
+> **⚠️ CORRECTION to the entry immediately below, from a review finding on PR #343 (`chatgpt-codex-connector`, P2).**
+> That entry — and the open-issues text it described — said the disabled ruleset meant the job *"reports and blocks
+> nothing"*, while in the same breath recording classic branch protection as unread and not to be assumed either way.
+> Those contradict: *"blocks nothing"* is a claim about every protection layer, and only one had been read. Had classic
+> protection independently required `Spec hygiene checks`, the context would already have been merge-blocking with the
+> ruleset disabled — A1c misclassified, and an admin pointed at configuration that needed no change. **The supported
+> claim was narrower: the ruleset supplied no enforcement.** Read *"blocks nothing"* as ruleset-scoped in both places.
+> Per the annotate-don't-delete convention the published entry stands as written and is corrected here rather than
+> edited. This does not disturb the close-out above, which rests on an observed blocked merge under an Active ruleset,
+> and it does not settle the original question: the negative control ran only after enablement, so **whether the check
+> was already merge-blocking beforehand was never tested.**
 
 > **Last Updated (prior):** August 29, 2026, later — **Architecture governance A1c slice 1: merge-protection state read, blocker filed, nothing activated. Tracking documentation only.**
 > No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, and no protection
