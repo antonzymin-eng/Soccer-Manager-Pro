@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.5  
+**Version:** 0.6  
 **Created:** August 27, 2026  
 **Governing authority:** docs/planning/project-architecture-governance.md v0.4  
 **Primary downstream specifications:** Testing Strategy & Framework #19; Code Standards & Style Guide #20  
@@ -759,6 +759,8 @@ No standalone governance asmdef parser is permitted.
 
 A1c then verifies the repository's actual merge-protection configuration and enables the existing required `Spec hygiene checks` context where enforcement is disabled. The repository ruleset observed during v0.5 already names that context but is disabled. A1c MUST verify the live state immediately before mutation and MUST NOT claim merge blocking merely because the CI job runs.
 
+*(v0.6: done — ruleset set Active August 29, 2026 and enforcement measured August 30, 2026. See §11 A1c and `docs/tracking/a1c-enforcement-evidence.md`.)*
+
 The early asmdef path MUST NOT evaluate lifecycle ownership, proof freshness, review convergence, activation state, Class-B firing, or any rule that depends on later governance machinery.
 
 ## 10.2 Full architecture aggregator
@@ -804,6 +806,16 @@ Governance v0.4 passes its own adoption gate and pins its exact version/content 
 The former dependency-repair step is removed: ERR-020-002/003 and the ten-tier/arrow repair already landed August 17, 2026.
 
 **A1c — activate the existing status.** Re-read live protection/ruleset state, then enable the existing required `Spec hygiene checks` context if it remains disabled. Do not create a parallel `architecture-asmdef` status unless the existing context is technically incapable of expressing the requirement.
+
+**A1c completion criteria, amended in v0.6; A1c COMPLETE August 30, 2026.** A1c was previously written to close on *an observed blocked merge*. That condition is not measurable as stated: `mergeable_state: blocked` is returned for an unmet approving review, an unresolved conversation, a *pending* required check, or a *failing* one, and does not name which. A1c closes when all three of the following hold, and the record MUST state which are configuration and which are execution:
+
+1. **(Configuration)** The ruleset governing `main` is Active and its *Require status checks to pass* list is read directly in repository settings and recorded **in full** — reader, date, and every entry — not merely the presence of the context of interest. It MUST contain `Spec hygiene checks`. It MUST NOT contain a context that reports `failure` as its steady state, which on this repository means `Compile + test (Linux shim gate, non-certifying)` — it carries the owner-held `sim_match_engine_close_chance` red and would freeze every merge. *(v0.6 correction: an earlier draft of this criterion also named `Unity tests`, on the reasoning that a required-but-`skipped` context would freeze merges. That is wrong — GitHub documents `skipped` as satisfying a required check — and the claim is withdrawn. `skipped` is still worth recording in the evidence, because a context that never truly executes provides no assurance whatever it does to mergeability, which is the substance of non-negotiable 12; but it is not a freeze risk.)*
+2. **(Execution)** `Spec hygiene checks` is observed reporting a real conclusion — not `skipped`, `cancelled`, or absent — in both a passing and a failing arm.
+3. **(Execution)** Blocking is demonstrated by a **paired two-arm comparison varying exactly one required check**: every other required check green in both arms, every non-required check in the same state in both, and no approval or unresolved conversation outstanding in either. The record MUST name both head commits, the varied check's conclusion in each arm, and the resulting `mergeable_state`. **A single-arm reading is NOT acceptable** — see the reason above.
+
+Non-negotiable 12 is **not** relaxed by this amendment and continues to govern every runner-supplied proof unchanged.
+
+**Satisfied August 30, 2026.** Evidence, captured durably because `mergeable_state` is point-in-time and not retrievable later: `docs/tracking/a1c-enforcement-evidence.md`. Green arm `d689f2b` — all six required checks green — `mergeable_state: unstable`, mergeable. Red arm `d497a4d` — identical but for one stale `Decision Tree #7` line turning `Spec hygiene checks` to `failure`, the other five still green — `mergeable_state: blocked`. **A red required check stops the merge; A1 has objective enforcement.** The evidence record also carries the required-checks list in full and the required-approving-reviews 1 → 0 owner decision taken during this work, with its cost stated. Classic branch protection on `main` remains unread (403 through the current integration); the ruleset layer only is claimed.
 
 ## A2 — Freeze schemas and executable semantics
 
@@ -1154,6 +1166,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.6 | August 30, 2026 | — | A1c amended and COMPLETE. The original "observed blocked merge" condition is not measurable: `mergeable_state: blocked` is returned for an unmet approving review, an unresolved conversation, a pending required check, or a failing one, and does not name which. A1c now closes on the full required-checks list read in settings (configuration), the check observed reporting a real conclusion in both arms, and a paired two-arm comparison varying exactly one required check — a single-arm reading is explicitly not acceptable. Satisfied August 30, 2026: `d689f2b` all six required green -> `unstable`; `d497a4d` differing only by one stale `Decision Tree #7` line -> `Spec hygiene checks` failure -> `blocked`. New `docs/tracking/a1c-enforcement-evidence.md` v1.1 captures the run/job ids, the full required list, and the required-approving-reviews 1 -> 0 owner decision. The arm commits are preserved as remote branches `evidence/a1c-green-arm` / `evidence/a1c-red-arm` (the squash orphaned them). Two claims from the first draft are withdrawn as false: that a required-but-`skipped` context would freeze merges (GitHub treats `skipped` as satisfying a required check), and that the 1-approval rule was self-approval ceremony (GitHub forbids authors approving their own PRs, so it was unsatisfiable with one maintainer). Non-negotiable 12 unchanged. |
 | 0.5 | August 29, 2026 | — | Repository-reality correction for A1: records ERR-020-002/003 as already resolved; recognizes `tools/assembly-tier-check.py` and its existing `Spec hygiene checks` wiring; removes the obsolete A1b dependency repair; prohibits a second §3.5.2 parser; scopes A1a to JSON complete-graph evidence, classification-aware digests, all-assembly cycle visibility and CI-wired checker tests; scopes A1c to activating the existing required status after re-reading live protection state. A2+ semantic/governance sequence otherwise unchanged. |
 | 0.4 | August 28, 2026 | — | Two-track rollout and activation-state hardening: asmdef-only A1 first slice; ERR-020-002/003 repair and early objective enforcement before A8; compiler-backed Class-A reachability at A4; domain-owned Class-B runtime evidence; orthogonal activation state with machine disable anchors; KD-W1 tuning precondition / proposed FR-TS-097; source-built Roslyn extractor with pinned .NET SDK/compiler identity. No #19/#20 normative files, SPEC_INDEX, file-manifest, code, CI workflow, or runtime implementation changed. |
 | 0.3 | August 28, 2026 | — | End-to-end implementation hardening: separates evidence subject identity from Git/artifact provenance; removes self-referential governance/property pins; closes A1/A4 root bootstrap; freezes executable selector/identity/applicability/closure semantics at A2; requires compiler-backed C# discovery including implicit type initialization; defines stable component/symbol identities and selector history; derives proof-class dependency closure; records exact execution/failure/mutation truth; splits durable review runs from findings; bridges owning tests to mandatory runner results/CI aggregation; preserves A0–A9, Governance authority split, and ERR-020-002/003 staging. No #19/#20 normative files or implementation changed. |

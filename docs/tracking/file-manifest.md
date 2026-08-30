@@ -1,11 +1,19 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** August 29, 2026 — **Architecture governance A1 corrected; tooling/planning only.**
+**Last Updated:** August 30, 2026 — **A1c complete; one file added, tracking/planning only.** New
+`docs/tracking/a1c-enforcement-evidence.md` v1.2 — durable capture of the merge-enforcement measurement, which
+`mergeable_state` cannot supply later because GitHub does not retain it: run and job ids for both arms, the full
+*Require status checks to pass* list read in settings, and the required-approving-reviews 1 → 0 owner decision with
+its cost. `docs/planning/project-architecture-governance-integration-plan.md` v0.5 → v0.6 (A1c completion criteria
+amended and satisfied). No `src/`, `.cs`, `.asmdef`, or workflow changed; no file removed or renamed. Full account:
+`docs/tracking/CHANGELOG.md`, August 30, 2026.
+
+**Last Updated (prior):** August 29, 2026 — **Architecture governance A1 corrected; tooling/planning only.**
 Modified `tools/assembly-tier-check.py` in place as the sole §3.5.2 parser/checker: v1.5 adds deterministic
 `--json` complete-graph output, graph/classification/subject digests, and all-assembly cycle visibility while
 preserving the existing production-policy verdict. Added `tools/tests/test_assembly_tier_check.py` and wired it
 into `Spec hygiene checks` in `.github/workflows/ci.yml`. Updated
-`docs/planning/project-architecture-governance-integration-plan.md` to v0.5: ERR-020-002/003 are already resolved,
+`docs/planning/project-architecture-governance-integration-plan.md` to v0.5, now v0.6: ERR-020-002/003 are already resolved,
 A1b is removed, and A1c now activates the existing required status rather than creating a parallel checker/status.
 No protection setting is changed in this slice; no `src/`, `.cs`, or `.asmdef` changed. Full account:
 `docs/tracking/CHANGELOG.md`, August 29, 2026.

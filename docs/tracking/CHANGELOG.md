@@ -12,7 +12,54 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 29, 2026 — **Architecture governance A1 corrected to the live repository; tooling and planning only.**
+> **Last Updated:** August 30, 2026 — **A1c COMPLETE: merge enforcement is active and MEASURED. Integration plan
+> v0.5 → v0.6. Tracking and planning documentation only.**
+> No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, so no gate
+> run is owed.
+>
+> The owner set the `CI for Main branch` ruleset to **Active**. Enforcement was then measured by a paired two-arm
+> comparison on PR #343 varying exactly one required check: **`d689f2b`** all six required checks green →
+> `mergeable_state: unstable`, mergeable; **`d497a4d`** identical but for one stale `Decision Tree #7` line under
+> `docs/specs/` — verified beforehand against the job's own grep as the single hit in the tree — turning
+> `Spec hygiene checks` to `failure` while the other five stayed green → **`blocked`**. Control reverted
+> immediately. **A red required check stops the merge; A1 has objective enforcement.**
+>
+> **New `docs/tracking/a1c-enforcement-evidence.md`** captures this durably, because `mergeable_state` is a
+> point-in-time value GitHub does not retain: run and job ids for both arms, every conclusion, and the full
+> *Require status checks to pass* list read in settings — `Markdown lint`, `YAML lint`, `Markdown link check`,
+> `Spec hygiene checks`, `File manifest sanity`, `C# format check`.
+>
+> **The two arm commits are preserved as remote branches `evidence/a1c-green-arm` and `evidence/a1c-red-arm`.**
+> The branch was squashed for landing, which orphaned them — they are NOT ancestors of this commit, and an earlier
+> draft wrongly said they were. `git diff evidence/a1c-green-arm evidence/a1c-red-arm` is the whole experiment:
+> one file, thirteen lines. Do not delete those branches.
+>
+> **One absence in that list is load-bearing**, and is why the criterion demands the whole list rather than a
+> spot-check: the shim gate is not required, so the owner-held `sim_match_engine_close_chance` red gates nothing.
+> `Unity tests` is also absent and resolves to `skipped` every run; that is recorded as context, not as a freeze
+> risk — an earlier draft claimed a required-but-skipped context would freeze merges, which is false (GitHub
+> treats `skipped` as satisfying a required check) and is withdrawn.
+>
+> **Method, now normative in v0.6 §11 A1c: a single `blocked` reading is not evidence about any check.** `blocked`
+> is returned for an unmet approving review, an unresolved conversation, a pending required check, or a failing one.
+> A first attempt at this measurement read `blocked` with the check red and called it proof while a then-standing
+> approval requirement was producing that same value in *both* arms; that claim was withdrawn. Criterion 3 now
+> requires paired arms and forbids the single-arm reading.
+>
+> **Required approving reviews were set 1 → 0 by the owner during this work, and that is recorded as a decision,
+> not left implicit** — A1c would otherwise read as strengthening one gate while quietly removing another. The
+> analysis is in the evidence record §4, and it inverts the obvious reading: **GitHub forbids a pull request's
+> author from approving their own pull request**, so with one maintainer the 1-approval rule was not ceremony but
+> **unsatisfiable** — every PR mergeable only by admin override, which trains the bypass habit. It had never
+> bitten because the ruleset was disabled until August 29; PR #343 is the first it ever held. Setting it to 0 was
+> necessary for normal, non-bypass merging, not the removal of a working review gate. The real cost is that **no
+> human-review gate now exists to strengthen later**, on a repository where much of what lands is agent-authored.
+> Revisit condition, concrete: restore to 1 if a second write-access reviewer ever exists.
+>
+> Classic branch protection on `main` remains unread (403 through the current integration); the ruleset layer only
+> is claimed.
+
+> **Last Updated (prior):** August 29, 2026 — **Architecture governance A1 corrected to the live repository; tooling and planning only.**
 > The rejected standalone `tools/architecture-governance/asmdef_discovery.py` approach was abandoned before merge. The existing
 > `tools/assembly-tier-check.py` remains the single parser/checker for Code Standards #20 §3.5.2 and gains deterministic
 > `--json` complete-graph evidence, separate graph/classification/subject SHA-256 digests, and all-assembly cycle reporting
