@@ -12,7 +12,30 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 29, 2026, later still — **A1c CLOSED: enforcement is active and PROVEN by an observed blocked merge. Tracking documentation only.**
+> **Last Updated:** August 29, 2026, latest — **A1c REOPENED in substance: the negative control had no discriminating
+> power and its proof claim is WITHDRAWN. Tracking documentation only.**
+> No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed.
+>
+> PR #343 was still reported `mergeable_state: blocked` with `Spec hygiene checks` green, every job finished, and the
+> review thread resolved. The merge box named the reason: **"Review required — at least 1 approving review is required
+> by reviewers with write access."** That rule is standing and was in force for every sample, so `blocked` was
+> guaranteed throughout — with the check red at `1a1385e` and green at `b37e2ab` alike. **The control observed the same
+> value in both arms, so it measured nothing**, and the entry below's claim that a red required check demonstrably
+> stops a merge is withdrawn.
+>
+> What survives is configuration evidence: the ruleset is Active, and the required-checks list read in repository
+> settings contains `Spec hygiene checks` and not `Compile + test (Linux shim gate, non-certifying)`. Non-negotiable 12
+> declines exactly that in place of an execution state, so **A1c's release condition is unmet** and enforcement is
+> *configured and believed, not proven*.
+>
+> **The structural finding matters more than the result: the release condition is unusable as written.** While a
+> mandatory approval stands on every pull request, `mergeable_state: blocked` can never isolate a failing status check,
+> so "an observed blocked merge" does not discriminate on this repository. A valid run needs an *approved* pull request
+> compared with the check red against the same one with it green, after confirming the trip push does not dismiss the
+> approval — otherwise the confound returns. This is the same defect class as the P2 finding corrected below, one layer
+> up: a conclusion drawn wider than what was measured.
+
+> **Last Updated (prior):** August 29, 2026, later still — **A1c CLOSED: enforcement is active and PROVEN by an observed blocked merge. Tracking documentation only.**
 > No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, so no gate run is owed.
 >
 > The owner set the `CI for Main branch` ruleset to Active. PR #343 was then used as the negative control the release
