@@ -12,6 +12,29 @@ break it, and do not edit historical entries.
 
 ---
 
+> **Last Updated:** August 29, 2026, latest — **A1c completion criteria amended to what is actually observable here; integration plan v0.5 → v0.6. Tracking and planning documentation only.**
+> No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed.
+>
+> The original A1c condition — close on *an observed blocked merge* — is unmeasurable on this repository, for the
+> reason recorded in the entry below: a standing *"at least 1 approving review is required"* rule holds every pull
+> request in `blocked` regardless of any status check, so `mergeable_state` cannot isolate a failing one. The plan
+> now closes A1c on three things, each labelled as configuration or execution: **(1)** the ruleset Active and its
+> full *Require status checks to pass* list read in settings and recorded with reader and date — containing
+> `Spec hygiene checks`, and NOT `Compile + test (Linux shim gate, non-certifying)`, whose owner-held red would
+> freeze all merges; **(2)** the check observed reporting a real conclusion — not `skipped`, `cancelled`, or absent
+> — in both a passing and a failing arm, which is the part that genuinely executes; **(3)** an explicit statement
+> that merge blocking itself rests on GitHub's required-checks semantics plus (1) and is not independently
+> demonstrated, naming the approval confound.
+>
+> **Non-negotiable 12 is not relaxed** and still governs every runner-supplied proof unchanged. The amendment is a
+> narrow acknowledgement that merge blocking is a property of the forge's configuration rather than of anything
+> this repository executes, and that the one observable which would have demonstrated it is confounded here by an
+> unrelated rule. The discriminating run is recorded as available again should the approval requirement ever be
+> lifted, and SHOULD then be executed to upgrade (3) to a measured result.
+>
+> Two historical v0.5 citations carry the repo's `v0.5, now v0.6` annotation rather than being rewritten
+> (`open-issues.md`, `file-manifest.md`).
+
 > **Last Updated:** August 29, 2026, latest — **A1c REOPENED in substance: the negative control had no discriminating
 > power and its proof claim is WITHDRAWN. Tracking documentation only.**
 > No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed.

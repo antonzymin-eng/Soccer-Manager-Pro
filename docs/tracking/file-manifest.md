@@ -5,7 +5,7 @@ Modified `tools/assembly-tier-check.py` in place as the sole §3.5.2 parser/chec
 `--json` complete-graph output, graph/classification/subject digests, and all-assembly cycle visibility while
 preserving the existing production-policy verdict. Added `tools/tests/test_assembly_tier_check.py` and wired it
 into `Spec hygiene checks` in `.github/workflows/ci.yml`. Updated
-`docs/planning/project-architecture-governance-integration-plan.md` to v0.5: ERR-020-002/003 are already resolved,
+`docs/planning/project-architecture-governance-integration-plan.md` to v0.5, now v0.6: ERR-020-002/003 are already resolved,
 A1b is removed, and A1c now activates the existing required status rather than creating a parallel checker/status.
 No protection setting is changed in this slice; no `src/`, `.cs`, or `.asmdef` changed. Full account:
 `docs/tracking/CHANGELOG.md`, August 29, 2026.
