@@ -8,10 +8,11 @@
 
 import hashlib
 import json
+import math
 
-REFERENCE_SEMANTICS_VERSION = "1.1.0"
+REFERENCE_SEMANTICS_VERSION = "1.2.0"
 
-_SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property"}
+_SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property", "event"}
 _ACTIVATION_STATES = {"active", "intentionally-disabled", "pending-integration", "unresolved"}
 _VALUE_TYPES = {"boolean", "integer", "number", "string", "enum", "null"}
 _ANCHOR_OPERATORS = {"equals", "not-equals"}
@@ -34,7 +35,16 @@ class ActivationError(SemanticsError):
 
 
 def canonical_json(value):
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    try:
+        return json.dumps(
+            value,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        )
+    except (TypeError, ValueError) as exc:
+        raise SemanticsError("value is not canonical JSON: %s" % exc) from exc
 
 
 def digest(value):
@@ -71,6 +81,8 @@ def normalize_selector(selector):
 
     All type ids are compiler-canonical ids. This reference implementation
     compares typed compiler facts and does not infer symbols from source text.
+    Constructors carry is_static so .cctor cannot collide with .ctor.
+    Properties carry parameter_type_ids so indexer overloads are addressable.
     """
     if not isinstance(selector, dict):
         raise SelectorError("selector must be an object")
@@ -88,9 +100,18 @@ def normalize_selector(selector):
         out["type_id"] = _nonempty(selector, "type_id")
         return out
     if kind == "constructor":
-        _exact(selector, {"assembly", "kind", "containing_type_id", "parameter_type_ids"})
+        _exact(selector, {
+            "assembly", "kind", "containing_type_id",
+            "parameter_type_ids", "is_static",
+        })
         out["containing_type_id"] = _nonempty(selector, "containing_type_id")
         out["parameter_type_ids"] = _type_ids(selector)
+        is_static = selector.get("is_static")
+        if not isinstance(is_static, bool):
+            raise SelectorError("selector.is_static must be boolean")
+        if is_static and out["parameter_type_ids"]:
+            raise SelectorError("static constructor selector cannot have parameters")
+        out["is_static"] = is_static
         return out
 
     out["containing_type_id"] = _nonempty(selector, "containing_type_id")
@@ -105,6 +126,12 @@ def normalize_selector(selector):
         if not isinstance(arity, int) or isinstance(arity, bool) or arity < 0:
             raise SelectorError("selector.generic_arity must be an integer >= 0")
         out["generic_arity"] = arity
+    elif kind == "property":
+        _exact(selector, {
+            "assembly", "kind", "containing_type_id", "member_name",
+            "parameter_type_ids", "is_static",
+        })
+        out["parameter_type_ids"] = _type_ids(selector)
     else:
         _exact(selector, {
             "assembly", "kind", "containing_type_id", "member_name", "is_static",
@@ -120,30 +147,48 @@ def selector_key(selector):
     return "selector-v1:" + digest(normalize_selector(selector))
 
 
-def resolve_selector(selector, semantic_facts):
-    target = normalize_selector(selector)
-    matches = []
-    for fact in semantic_facts:
+def _index_semantic_facts(semantic_facts):
+    index = {}
+    symbol_keys = {}
+    for position, fact in enumerate(semantic_facts):
         if not isinstance(fact, dict) or "selector" not in fact:
-            raise SelectorError("semantic fact must contain selector")
-        if normalize_selector(fact["selector"]) == target:
-            matches.append(fact)
+            raise SelectorError("semantic fact[%d] must contain selector" % position)
+        normalized = normalize_selector(fact["selector"])
+        key = selector_key(normalized)
+        symbol_key = fact.get("symbol_key")
+        if not isinstance(symbol_key, str) or not symbol_key.strip():
+            raise SelectorError("semantic fact[%d] has no symbol_key" % position)
+        symbol_key = symbol_key.strip()
+        index.setdefault(key, []).append(fact)
+        symbol_keys.setdefault(symbol_key, []).append(key)
+    return index, symbol_keys
+
+
+def _resolve_from_index(selector, fact_index, allow_missing=False):
+    target = normalize_selector(selector)
+    matches = fact_index.get(selector_key(target), [])
     if not matches:
+        if allow_missing:
+            return None
         raise SelectorError("selector does not resolve: %s" % canonical_json(target))
     if len(matches) != 1:
         raise SelectorError("selector resolves ambiguously to %d facts" % len(matches))
-    symbol_key = matches[0].get("symbol_key")
-    if not isinstance(symbol_key, str) or not symbol_key.strip():
-        raise SelectorError("resolved semantic fact has no symbol_key")
     return matches[0]
+
+
+def resolve_selector(selector, semantic_facts):
+    fact_index, _ = _index_semantic_facts(semantic_facts)
+    return _resolve_from_index(selector, fact_index)
 
 
 def validate_component_identities(records, semantic_facts):
     """Bind current selectors while preserving non-resolving historical selectors."""
     if not isinstance(records, list):
         raise IdentityError("component records must be a list")
+    fact_index, _ = _index_semantic_facts(semantic_facts)
     component_ids = set()
     selector_owner = {}
+    symbol_owner = {}
     bindings = {}
     for index, record in enumerate(records):
         if not isinstance(record, dict):
@@ -168,7 +213,11 @@ def validate_component_identities(records, semantic_facts):
                 raise IdentityError("selector_history entries require selector")
             unknown = sorted(set(item) - {"selector", "superseded_reason"})
             if unknown:
-                raise IdentityError("selector_history contains unknown field(s): %s" % ", ".join(unknown))
+                raise IdentityError(
+                    "selector_history contains unknown field(s): %s" % ", ".join(unknown))
+            reason = item.get("superseded_reason")
+            if not isinstance(reason, str) or not reason.strip():
+                raise IdentityError("selector_history entries require superseded_reason")
             selectors.append(normalize_selector(item["selector"]))
 
         local = set()
@@ -179,9 +228,19 @@ def validate_component_identities(records, semantic_facts):
             local.add(key)
             owner = selector_owner.get(key)
             if owner is not None and owner != component_id:
-                raise IdentityError("selector is claimed by both %s and %s" % (owner, component_id))
+                raise IdentityError(
+                    "selector is claimed by both %s and %s" % (owner, component_id))
             selector_owner[key] = component_id
-        bindings[component_id] = resolve_selector(current, semantic_facts)["symbol_key"]
+
+        resolved = _resolve_from_index(current, fact_index)
+        symbol_key = resolved["symbol_key"].strip()
+        owner = symbol_owner.get(symbol_key)
+        if owner is not None and owner != component_id:
+            raise IdentityError(
+                "symbol_key %s is bound by both %s and %s"
+                % (symbol_key, owner, component_id))
+        symbol_owner[symbol_key] = component_id
+        bindings[component_id] = symbol_key
     return bindings
 
 
@@ -203,8 +262,11 @@ def normalize_typed_value(value):
         raise ActivationError("boolean typed value requires bool")
     if kind == "integer" and (not isinstance(raw, int) or isinstance(raw, bool)):
         raise ActivationError("integer typed value requires int")
-    if kind == "number" and (not isinstance(raw, (int, float)) or isinstance(raw, bool)):
-        raise ActivationError("number typed value requires int or float")
+    if kind == "number":
+        if not isinstance(raw, (int, float)) or isinstance(raw, bool):
+            raise ActivationError("number typed value requires int or float")
+        if not math.isfinite(float(raw)):
+            raise ActivationError("number typed value must be finite")
     if kind == "string" and not isinstance(raw, str):
         raise ActivationError("string typed value requires string")
     out = {"value_type": kind, "value": raw}
@@ -269,17 +331,31 @@ def evaluate_disable_anchor(contract, semantic_facts):
     }
 
 
-def _symbol_keys(selectors, semantic_facts):
-    return {resolve_selector(item, semantic_facts)["symbol_key"] for item in selectors}
+def _selector_key_set(selectors):
+    if not isinstance(selectors, list):
+        raise ActivationError("selector collection must be a list")
+    return {selector_key(item) for item in selectors}
 
 
 def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_scopes=None):
-    """Return inactive-owner tuning changes not covered by an exact approved scope."""
-    changed = _symbol_keys(changed_selectors, semantic_facts)
+    """Return inactive-owner tuning changes not covered by an exact approved scope.
+
+    Matching is performed on canonical selector identity, not current symbol
+    resolution, so deleting/renaming a dormant tuning surface is reportable
+    rather than crashing. Current symbol keys are attached where resolvable.
+    """
+    changed = _selector_key_set(changed_selectors)
+    fact_index, _ = _index_semantic_facts(semantic_facts)
+
     scopes = []
     for scope in exception_scopes or []:
         if not isinstance(scope, dict):
             raise ActivationError("exception scope must be an object")
+        unknown = sorted(
+            set(scope) - {"component_id", "approval_ref", "tuning_surface_selectors"})
+        if unknown:
+            raise ActivationError(
+                "exception scope contains unknown field(s): %s" % ", ".join(unknown))
         component_id = scope.get("component_id")
         approval_ref = scope.get("approval_ref")
         selectors = scope.get("tuning_surface_selectors")
@@ -289,7 +365,7 @@ def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_sco
             raise ActivationError("exception scope requires approval_ref")
         if not isinstance(selectors, list) or not selectors:
             raise ActivationError("exception scope requires tuning_surface_selectors")
-        scopes.append((component_id.strip(), _symbol_keys(selectors, semantic_facts)))
+        scopes.append((component_id.strip(), _selector_key_set(selectors)))
 
     violations = []
     for contract in contracts:
@@ -297,24 +373,42 @@ def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_sco
         component_id = contract.get("component_id")
         if not isinstance(component_id, str) or not component_id.strip():
             raise ActivationError("integration contract requires component_id")
+        component_id = component_id.strip()
         tuning = contract.get("tuning_surface_selectors", [])
         if not isinstance(tuning, list):
             raise ActivationError("tuning_surface_selectors must be a list")
-        affected = changed & _symbol_keys(tuning, semantic_facts)
+        tuning_by_key = {selector_key(item): item for item in tuning}
+        affected = changed & set(tuning_by_key)
         if not affected or state == "active":
             continue
+
         authorized = set()
         for scoped_component, scoped_keys in scopes:
             if scoped_component == component_id:
                 authorized.update(affected & scoped_keys)
         unauthorized = sorted(affected - authorized)
-        if unauthorized:
-            violations.append({
-                "component_id": component_id,
-                "activation_state": state,
-                "changed_symbol_keys": unauthorized,
-            })
-    return sorted(violations, key=lambda item: (item["component_id"], tuple(item["changed_symbol_keys"])))
+        if not unauthorized:
+            continue
+
+        changed_symbol_keys = []
+        unresolved_selector_keys = []
+        for key in unauthorized:
+            fact = _resolve_from_index(tuning_by_key[key], fact_index, allow_missing=True)
+            if fact is None:
+                unresolved_selector_keys.append(key)
+            else:
+                changed_symbol_keys.append(fact["symbol_key"].strip())
+        violations.append({
+            "component_id": component_id,
+            "activation_state": state,
+            "changed_selector_keys": unauthorized,
+            "changed_symbol_keys": sorted(changed_symbol_keys),
+            "unresolved_selector_keys": sorted(unresolved_selector_keys),
+        })
+    return sorted(
+        violations,
+        key=lambda item: (item["component_id"], tuple(item["changed_selector_keys"])),
+    )
 
 
 _STRUCTURAL_CLASSIFICATIONS = {

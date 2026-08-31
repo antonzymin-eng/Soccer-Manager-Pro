@@ -42,6 +42,68 @@ def field(name, symbol_key, value):
     }
 
 
+def namespace_fact(name, symbol_key):
+    return {
+        "selector": {
+            "assembly": "Example.Runtime",
+            "kind": "namespace",
+            "namespace": name,
+        },
+        "symbol_key": symbol_key,
+    }
+
+
+def type_fact(type_id, symbol_key):
+    return {
+        "selector": {
+            "assembly": "Example.Runtime",
+            "kind": "type",
+            "type_id": type_id,
+        },
+        "symbol_key": symbol_key,
+    }
+
+
+def constructor(type_id, params, symbol_key, is_static=False):
+    return {
+        "selector": {
+            "assembly": "Example.Runtime",
+            "kind": "constructor",
+            "containing_type_id": type_id,
+            "parameter_type_ids": params,
+            "is_static": is_static,
+        },
+        "symbol_key": symbol_key,
+    }
+
+
+def property_fact(name, params, symbol_key, is_static=False):
+    return {
+        "selector": {
+            "assembly": "Example.Runtime",
+            "kind": "property",
+            "containing_type_id": "Example.Component",
+            "member_name": name,
+            "parameter_type_ids": params,
+            "is_static": is_static,
+        },
+        "symbol_key": symbol_key,
+    }
+
+
+def event_fact(name, symbol_key, is_static=False):
+    return {
+        "selector": {
+            "assembly": "Example.Runtime",
+            "kind": "event",
+            "containing_type_id": "Example.Component",
+            "member_name": name,
+            "is_static": is_static,
+        },
+        "symbol_key": symbol_key,
+    }
+
+
 class SelectorTests(unittest.TestCase):
     def test_overloads_resolve_by_parameter_types(self):
         no_arg = method("Start", [], "M:Start()")
@@ -76,6 +138,51 @@ class SelectorTests(unittest.TestCase):
             sem.normalize_selector(bad)
 
 
+    def test_namespace_and_type_selectors_resolve(self):
+        ns = namespace_fact("Example", "N:Example")
+        typ = type_fact("Example.Component", "T:Example.Component")
+        self.assertEqual(
+            "N:Example",
+            sem.resolve_selector(ns["selector"], [ns, typ])["symbol_key"],
+        )
+        self.assertEqual(
+            "T:Example.Component",
+            sem.resolve_selector(typ["selector"], [ns, typ])["symbol_key"],
+        )
+
+    def test_static_constructor_is_distinct_from_parameterless_instance_constructor(self):
+        instance = constructor("Example.Component", [], "M:.ctor", False)
+        static = constructor("Example.Component", [], "M:.cctor", True)
+        self.assertNotEqual(
+            sem.selector_key(instance["selector"]),
+            sem.selector_key(static["selector"]),
+        )
+        self.assertEqual(
+            "M:.cctor",
+            sem.resolve_selector(static["selector"], [instance, static])["symbol_key"],
+        )
+
+    def test_static_constructor_cannot_declare_parameters(self):
+        bad = constructor("Example.Component", ["System.Int32"], "M:.cctor", True)
+        with self.assertRaises(sem.SelectorError):
+            sem.normalize_selector(bad["selector"])
+
+    def test_indexer_overloads_are_distinguished_by_parameter_types(self):
+        by_int = property_fact("Item", ["System.Int32"], "P:Item(Int32)")
+        by_string = property_fact("Item", ["System.String"], "P:Item(String)")
+        self.assertNotEqual(
+            sem.selector_key(by_int["selector"]),
+            sem.selector_key(by_string["selector"]),
+        )
+
+    def test_event_selector_is_addressable(self):
+        event = event_fact("Changed", "E:Changed")
+        self.assertEqual(
+            "E:Changed",
+            sem.resolve_selector(event["selector"], [event])["symbol_key"],
+        )
+
+
 class IdentityTests(unittest.TestCase):
     def test_component_id_survives_move_via_history(self):
         old = method("Start", [], "M:Old.Start")
@@ -104,11 +211,35 @@ class IdentityTests(unittest.TestCase):
             {
                 "component_id": "component:b",
                 "current_selector": other["selector"],
-                "selector_history": [{"selector": fact["selector"]}],
+                "selector_history": [{
+                    "selector": fact["selector"],
+                    "superseded_reason": "previous binding",
+                }],
             },
         ]
         with self.assertRaises(sem.IdentityError):
             sem.validate_component_identities(records, [fact, other])
+
+    def test_two_components_cannot_bind_distinct_selectors_to_one_symbol_key(self):
+        first = method("Start", [], "M:Same")
+        second = method("Other", [], "M:Same")
+        records = [
+            {"component_id": "component:a", "current_selector": first["selector"]},
+            {"component_id": "component:b", "current_selector": second["selector"]},
+        ]
+        with self.assertRaises(sem.IdentityError):
+            sem.validate_component_identities(records, [first, second])
+
+    def test_selector_history_requires_reason(self):
+        old = method("Old", [], "M:Old")
+        current = method("Current", [], "M:Current")
+        records = [{
+            "component_id": "component:a",
+            "current_selector": current["selector"],
+            "selector_history": [{"selector": old["selector"]}],
+        }]
+        with self.assertRaises(sem.IdentityError):
+            sem.validate_component_identities(records, [current])
 
 
 class ActivationTests(unittest.TestCase):
@@ -182,6 +313,95 @@ class ActivationTests(unittest.TestCase):
                 [self.disabled, self.other],
             ),
         )
+
+
+    def test_deleted_tuning_surface_is_reported_without_crashing(self):
+        violations = sem.kd_w1_violations(
+            [self.other["selector"]],
+            [self.contract()],
+            [self.disabled],
+        )
+        self.assertEqual(1, len(violations))
+        self.assertEqual([], violations[0]["changed_symbol_keys"])
+        self.assertEqual(
+            [sem.selector_key(self.other["selector"])],
+            violations[0]["unresolved_selector_keys"],
+        )
+
+    def test_exception_scope_rejects_unknown_fields(self):
+        with self.assertRaises(sem.ActivationError):
+            sem.kd_w1_violations(
+                [self.other["selector"]],
+                [self.contract()],
+                [self.disabled, self.other],
+                exception_scopes=[{
+                    "component_id": "component:tackling",
+                    "approval_ref": "EX-TS-001",
+                    "tuning_surface_selectors": [self.other["selector"]],
+                    "revoked": True,
+                }],
+            )
+
+    def test_contract_component_id_is_trimmed_before_exception_matching(self):
+        contract = self.contract()
+        contract["component_id"] = "component:tackling "
+        self.assertEqual(
+            [],
+            sem.kd_w1_violations(
+                [self.other["selector"]],
+                [contract],
+                [self.disabled, self.other],
+                exception_scopes=[{
+                    "component_id": "component:tackling",
+                    "approval_ref": "EX-TS-001",
+                    "tuning_surface_selectors": [self.other["selector"]],
+                }],
+            ),
+        )
+
+    def test_pending_integration_requires_gap_and_activation_condition(self):
+        contract = {
+            "component_id": "component:x",
+            "activation_state": "pending-integration",
+            "activation_owner": "owner",
+            "integration_gap": "missing production caller",
+            "activation_condition": "caller lands",
+        }
+        self.assertEqual("pending-integration", sem.validate_activation_contract(contract))
+        del contract["integration_gap"]
+        with self.assertRaises(sem.ActivationError):
+            sem.validate_activation_contract(contract)
+
+    def test_enum_typed_value_is_canonical(self):
+        self.assertEqual(
+            {
+                "value_type": "enum",
+                "value": "Disabled",
+                "enum_type_id": "Example.Mode",
+            },
+            sem.normalize_typed_value({
+                "value_type": "enum",
+                "value": "Disabled",
+                "enum_type_id": "Example.Mode",
+            }),
+        )
+
+    def test_not_equals_disable_anchor(self):
+        contract = self.contract()
+        contract["disable_anchor"]["operator"] = "not-equals"
+        contract["disable_anchor"]["expected"] = {
+            "value_type": "number",
+            "value": 1,
+        }
+        self.assertTrue(
+            sem.evaluate_disable_anchor(
+                contract, [self.disabled, self.other])["passed"])
+
+    def test_non_finite_numbers_are_rejected(self):
+        with self.assertRaises(sem.ActivationError):
+            sem.normalize_typed_value({"value_type": "number", "value": float("nan")})
+        with self.assertRaises(sem.SemanticsError):
+            sem.digest({"value": float("inf")})
 
 
 def applicability_rule(
