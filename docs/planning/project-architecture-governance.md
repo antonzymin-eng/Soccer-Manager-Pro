@@ -3,8 +3,9 @@
 
 **Document Class:** Project-level governance specification  
 **Status:** Draft  
-**Version:** 0.4  
+**Version:** 0.5  
 **Created:** August 27, 2026  
+**Last Updated:** August 31, 2026  
 **Primary downstream authorities:** Testing Strategy & Framework Specification #19; Code Standards & Style Guide Specification #20  
 **Related authorities:** Master Development Plan; Development Best Practices; adversarial-review process  
 **Normative language:** MUST / MUST NOT / SHOULD / SHOULD NOT / MAY are normative requirements.
@@ -727,7 +728,7 @@ Failure injection answers:
 
 > Has the relevant failure behavior actually executed?
 
-Where meaningful, tests SHOULD intentionally cause:
+Where meaningful, the proof scope SHOULD include deliberately causing:
 
 - unavailable dependency;
 - registration failure;
@@ -1471,3 +1472,12 @@ The project adopts the following architectural-governance loop:
 The desired long-term state is not zero architectural judgment.
 
 It is a project in which agents do not repeatedly rediscover settled architectural rules, reviewers cannot create arbitrary new blockers during an active review, mechanical compliance cannot substitute for architectural quality, stale evidence cannot silently survive changes to the surface it proves, enforcement tooling is itself verified without recursive checker hierarchies, targeted mutation does not become a permanently expanding suite, obsolete properties do not remain active by inertia, and exhaustive proof does not become an uncontrolled computational burden.
+
+---
+
+# Version History
+
+| Version | Date | Author | Notes |
+|---|---|---|---|
+| 0.5 | August 31, 2026 | — | A0 adoption review, round 1. §5.5 reworded from "tests SHOULD intentionally cause" to "the proof scope SHOULD include deliberately causing" — finding AG-A0-001, the one place the document addressed test authoring directly rather than proof scope, which §1.3 reserves to Spec #19. No normative obligation changed: the modality stays SHOULD and the nine failure conditions are unchanged. Status remains Draft pending human sign-off; see `docs/tracking/a0-governance-adoption-review.md`. |
+| 0.4 | August 27, 2026 | — | Draft as created. Version history introduced retroactively at 0.5; rows before this one are reconstructed from the document header, not from a contemporaneous log. |
