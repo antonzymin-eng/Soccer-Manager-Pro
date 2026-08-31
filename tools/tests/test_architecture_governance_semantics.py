@@ -106,7 +106,7 @@ def event_fact(name, symbol_key, is_static=False):
 
 class SelectorTests(unittest.TestCase):
     def test_reference_semantics_version_is_pinned(self):
-        self.assertEqual("1.3.0", sem.REFERENCE_SEMANTICS_VERSION)
+        self.assertEqual("1.4.0", sem.REFERENCE_SEMANTICS_VERSION)
 
     def test_reusable_fact_index_avoids_reindexing_contract(self):
         fact = method("Start", [], "M:Start()")
@@ -259,6 +259,16 @@ class IdentityTests(unittest.TestCase):
             sem.validate_component_identities(records, [current])
 
 
+    def test_deleted_current_selector_is_identity_error(self):
+        missing = method("Missing", [], "M:Missing")
+        records = [{
+            "component_id": "component:a",
+            "current_selector": missing["selector"],
+        }]
+        with self.assertRaises(sem.IdentityError):
+            sem.validate_component_identities(records, [])
+
+
 class ActivationTests(unittest.TestCase):
     def setUp(self):
         self.disabled = field(
@@ -310,7 +320,7 @@ class ActivationTests(unittest.TestCase):
             sem.validate_activation_contract(contract)
 
     def test_kd_w1_exact_exception_scope_only(self):
-        violations = sem.kd_w1_violations(
+        findings = sem.kd_w1_violations(
             [self.disabled["selector"], self.other["selector"]],
             [self.contract()],
             [self.disabled, self.other],
@@ -320,8 +330,9 @@ class ActivationTests(unittest.TestCase):
                 "tuning_surface_selectors": [self.disabled["selector"]],
             }],
         )
-        self.assertEqual(1, len(violations))
-        self.assertEqual(["F:PressureThreshold"], violations[0]["changed_symbol_keys"])
+        self.assertEqual(1, len(findings))
+        self.assertEqual("inactive-tuning-change", findings[0]["finding_kind"])
+        self.assertEqual(["F:PressureThreshold"], findings[0]["changed_symbol_keys"])
 
     def test_kd_w1_allows_active_owner(self):
         contract = self.contract()
@@ -336,31 +347,51 @@ class ActivationTests(unittest.TestCase):
         )
 
 
-    def test_deleted_tuning_surface_is_reported_without_crashing(self):
-        violations = sem.kd_w1_violations(
+    def test_deleted_changed_tuning_surface_emits_two_typed_findings(self):
+        findings = sem.kd_w1_violations(
             [self.other["selector"]],
             [self.contract()],
             [self.disabled],
         )
-        self.assertEqual(1, len(violations))
-        self.assertEqual([], violations[0]["changed_symbol_keys"])
         self.assertEqual(
-            [sem.selector_key(self.other["selector"])],
-            violations[0]["unresolved_selector_keys"],
+            ["inactive-tuning-change", "stale-tuning-selector"],
+            sorted(item["finding_kind"] for item in findings),
         )
+        stale = next(
+            item for item in findings
+            if item["finding_kind"] == "stale-tuning-selector")
+        change = next(
+            item for item in findings
+            if item["finding_kind"] == "inactive-tuning-change")
+        key = sem.selector_key(self.other["selector"])
+        self.assertEqual([key], stale["selector_keys"])
+        self.assertEqual([key], change["selector_keys"])
+        self.assertEqual([key], change["unresolved_selector_keys"])
+        self.assertEqual([], change["changed_symbol_keys"])
 
-    def test_stale_tuning_selector_is_reported_without_changed_surface(self):
-        violations = sem.kd_w1_violations(
+    def test_stale_tuning_selector_is_distinct_without_changed_surface(self):
+        findings = sem.kd_w1_violations(
             [],
             [self.contract()],
             [self.disabled],
         )
-        self.assertEqual(1, len(violations))
-        self.assertEqual([], violations[0]["changed_selector_keys"])
+        self.assertEqual(1, len(findings))
+        self.assertEqual("stale-tuning-selector", findings[0]["finding_kind"])
         self.assertEqual(
             [sem.selector_key(self.other["selector"])],
-            violations[0]["unresolved_selector_keys"],
+            findings[0]["selector_keys"],
         )
+
+    def test_active_component_still_reports_contract_staleness(self):
+        contract = self.contract()
+        contract["activation_state"] = "active"
+        findings = sem.kd_w1_violations(
+            [],
+            [contract],
+            [self.disabled],
+        )
+        self.assertEqual(1, len(findings))
+        self.assertEqual("stale-tuning-selector", findings[0]["finding_kind"])
 
     def test_duplicate_contract_component_ids_fail_closed(self):
         duplicate = self.contract()

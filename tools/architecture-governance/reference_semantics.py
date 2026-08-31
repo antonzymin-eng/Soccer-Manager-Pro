@@ -10,7 +10,7 @@ import hashlib
 import json
 import math
 
-REFERENCE_SEMANTICS_VERSION = "1.3.0"
+REFERENCE_SEMANTICS_VERSION = "1.4.0"
 
 _SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property", "event"}
 _ACTIVATION_STATES = {"active", "intentionally-disabled", "pending-integration", "unresolved"}
@@ -247,7 +247,12 @@ def validate_component_identities(records, semantic_facts):
                     "selector is claimed by both %s and %s" % (owner, component_id))
             selector_owner[key] = component_id
 
-        resolved = _resolve_from_index(current, fact_index)
+        try:
+            resolved = _resolve_from_index(current, fact_index)
+        except SelectorError as exc:
+            raise IdentityError(
+                "%s current_selector does not resolve uniquely: %s"
+                % (component_id, exc)) from exc
         symbol_key = resolved["symbol_key"].strip()
         owner = symbol_owner.get(symbol_key)
         if owner is not None and owner != component_id:
@@ -357,12 +362,15 @@ def _selector_key_set(selectors):
 
 
 def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_scopes=None):
-    """Return inactive-owner tuning drift not covered by an exact approved scope.
+    """Return typed KD-W1/contract-integrity findings.
 
-    Every inactive contract's tuning selectors are validated against the current
-    fact universe even when the caller does not report them as changed. This
-    makes stale/deleted/renamed governance selectors independently visible.
-    Changed-surface matching still uses canonical selector identity.
+    Two finding kinds are emitted and never conflated:
+      * stale-tuning-selector — a contract tuning selector no longer resolves;
+        this is contract integrity and applies to every activation state.
+      * inactive-tuning-change — an inactive component had an unauthorized
+        changed tuning surface; this is the KD-W1 tuning prohibition.
+
+    Changed-surface matching uses canonical selector identity.
     """
     changed = _selector_key_set(changed_selectors)
     fact_index = _index_semantic_facts(semantic_facts)
@@ -391,7 +399,7 @@ def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_sco
         raise ActivationError("integration contracts must be a list")
 
     seen_components = set()
-    violations = []
+    findings = []
     for contract in contracts:
         state = validate_activation_contract(contract)
         component_id = contract.get("component_id")
@@ -414,36 +422,51 @@ def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_sco
             key for key, selector in tuning_by_key.items()
             if _resolve_from_index(selector, fact_index, allow_missing=True) is None
         )
+        if unresolved:
+            findings.append({
+                "finding_kind": "stale-tuning-selector",
+                "component_id": component_id,
+                "activation_state": state,
+                "selector_keys": unresolved,
+            })
 
-        affected = changed & set(tuning_by_key)
         if state == "active":
             continue
 
+        affected = changed & set(tuning_by_key)
         authorized = set()
         for scoped_component, scoped_keys in scopes:
             if scoped_component == component_id:
                 authorized.update(affected & scoped_keys)
         unauthorized = sorted(affected - authorized)
-
-        if not unauthorized and not unresolved:
+        if not unauthorized:
             continue
 
         changed_symbol_keys = []
+        unresolved_changed_keys = []
         for key in unauthorized:
             fact = _resolve_from_index(tuning_by_key[key], fact_index, allow_missing=True)
-            if fact is not None:
+            if fact is None:
+                unresolved_changed_keys.append(key)
+            else:
                 changed_symbol_keys.append(fact["symbol_key"].strip())
 
-        violations.append({
+        findings.append({
+            "finding_kind": "inactive-tuning-change",
             "component_id": component_id,
             "activation_state": state,
-            "changed_selector_keys": unauthorized,
+            "selector_keys": unauthorized,
             "changed_symbol_keys": sorted(changed_symbol_keys),
-            "unresolved_selector_keys": unresolved,
+            "unresolved_selector_keys": sorted(unresolved_changed_keys),
         })
+
     return sorted(
-        violations,
-        key=lambda item: (item["component_id"], tuple(item["changed_selector_keys"])),
+        findings,
+        key=lambda item: (
+            item["component_id"],
+            item["finding_kind"],
+            tuple(item["selector_keys"]),
+        ),
     )
 
 

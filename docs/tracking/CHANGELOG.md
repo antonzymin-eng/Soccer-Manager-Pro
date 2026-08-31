@@ -12,7 +12,12 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **A2 second hostile-review hardening; stale-selector fail-open closed.**
+> **Last Updated:** August 31, 2026 — **A2 third hostile-review hardening; finding contract made explicit.**
+> Claude's verification of `bb200ec4` found one missed identity-error wrap and two output-contract ambiguities. `validate_component_identities` now converts a deleted/renamed current selector to `IdentityError`, not raw `SelectorError`. KD-W1 output is now explicitly typed: `stale-tuning-selector` records contract-integrity drift, while `inactive-tuning-change` records the actual KD-W1 tuning prohibition. Staleness is deliberately activation-independent, so active components also report stale governance selectors instead of silently discarding them.
+>
+> `reference_semantics.py` advances v1.3.0 → v1.4.0 and the governance suite grows 48 → 50 fixtures; total tooling discovery is now 58 tests including the unchanged 8 assembly-tier fixtures. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+>
+> **Last Updated (prior):** August 31, 2026 — **A2 second hostile-review hardening; stale-selector fail-open closed.**
 > Claude's re-review of `f954371` was revalidated against the PR head. KD-W1 now performs an unconditional resolution pass over every inactive contract's tuning selectors before changed-surface filtering, so stale/deleted/renamed governance selectors report even when the caller supplies no matching old selector. Duplicate normalized `component_id` contracts fail closed; duplicate compiler `symbol_key`→selector mappings fail when the semantic-fact universe is indexed; disable-anchor selector drift is rethrown as `ActivationError`; and callers that resolve repeatedly can construct/reuse `SemanticFactIndex` rather than rebuilding the index per lookup.
 >
 > `reference_semantics.py` advances v1.2.0 → v1.3.0 and its suite grows 42 → 48 fixtures, including a direct version assertion. `assembly-tier-check.py` advances v1.5 → v1.6: machine-report serialization and evidence digests share one finite-JSON helper, so NaN/Infinity are rejected consistently; its suite grows 7 → 8 fixtures. The existing `tools/tests/test_*.py` CI discovery runs all 56 tooling tests. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
