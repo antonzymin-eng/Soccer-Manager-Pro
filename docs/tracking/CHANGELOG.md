@@ -12,8 +12,8 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **A0 adoption review run, three rounds, not yet converged; Governance
-> v0.4 → v0.7, still Draft. Integration
+> **Last Updated:** August 31, 2026 — **A0 adoption review run, four rounds, not yet converged; Governance
+> v0.4 → v0.8, still Draft. Integration
 > plan v0.6 → v0.7. Awaiting human sign-off. Planning and tracking documentation only.**
 > No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, so no gate
 > run is owed.
@@ -28,15 +28,15 @@ break it, and do not edit historical entries.
 > **before** computing the content digest, recorded outside the Governance file. A0 explicitly does **not** require
 > the property registry, finding ledger, review tooling, or any #19/#20 amendment.
 >
-> **New `docs/tracking/a0-governance-adoption-review.md` v1.1** is the review record. **Three fresh rounds
-> complete over v0.4 → v0.7; round 4 over v0.7 is dispatched and outstanding**, and the record says so rather than
+> **New `docs/tracking/a0-governance-adoption-review.md` v1.2** is the review record. **Four fresh rounds
+> complete over v0.4 → v0.8; round 5 over v0.8 is dispatched and outstanding**, and the record says so rather than
 > assuming it clean. **46 of the 52 in-scope boxes verified against cited line ranges**; five of the six §9.6
 > process-state boxes are discharged by the record itself, two of those **vacuously** — no architectural property
 > has been admitted anywhere in the repository — which is recorded as a limitation rather than passed silently.
 > The sixth, "fresh final review completed", stays unticked until a round returns only Low findings or none.
 >
-> **Outcome: NOT YET CONVERGED, deliberately not rounded up.** Twelve findings, all Resolved, none a Blocker —
-> but convergence needs a round that comes back clean, and **round 3 returned three Medium**. That is not a
+> **Outcome: NOT YET CONVERGED, deliberately not rounded up.** Fourteen findings, all Resolved, none a Blocker —
+> but convergence needs a round that comes back clean, and **round 4 returned two Medium**. That is not a
 > formality here, and the round-by-round record is the argument:
 >
 > — **Round 2 found a High inside the very passage round 1 had just amended.** AG-A0-002: §5.5 stated the
@@ -61,8 +61,21 @@ break it, and do not edit historical entries.
 > modal verb where its siblings carry a MUST; §7.1 still mandated the bare `AP-###`; "Tradeoff" vs "Accepted
 > Tradeoff" drift; Appendix A's paraphrased field labels; two property transitions missing from Appendix F.
 >
-> **The pattern worth carrying forward: incomplete propagation has now recurred three times**, in different
-> sections each time. That is why a clean round, not a diminishing count, is the only thing that closes this.
+> — **Round 4 found a fourth propagation miss, and this one had been seen and deliberately left.** Two Medium.
+> AG-A0-013: §9.3's checklist still read "Tradeoff defined." The site was noticed at the 0.7 landing, classified as
+> a checklist label rather than an enum site, and skipped — a judgment call that was wrong, because §9 is the
+> approval gate and it named a disposition existing nowhere else in the document. AG-A0-014: §6.6 stated
+> verification "SHOULD be proportionate to the consequence of tool failure" where FR-AG-036A makes it a MUST;
+> since §4.3 item 1 makes a violated MUST-level property a Blocker, the SHOULD left room to treat disproportionate
+> tool verification as a mere shortfall. Round 4 also independently verified all eight 0.7 changes and all twelve
+> claims the 0.7 version-history row makes about the document — those held.
+>
+> **Two defect classes account for nearly all of it, and each has now recurred four times.** Incomplete
+> propagation: a term or enum corrected in some sites but not all (§4.1, §7.1, §9.3, the Status enum). Modality
+> mismatch: an FR-AG rule stating MUST while its elaborating section says SHOULD or carries no modal verb (§5.4,
+> §5.5, §6.6). Round 5 was dispatched with instructions to sweep both classes exhaustively rather than
+> opportunistically. **No prediction is made about its outcome** — the severity trend is downward, but a
+> diminishing count is not convergence, and this review has twice been wrong about what the next round would find.
 >
 > **A first reading that reported §9.1 boxes 1–3 as FAIL was rejected on verification.** Its reasoning — that the
 > Authority Matrix names #19/#20 as owners of rules those specs do not yet contain — conflates *unlanded* with

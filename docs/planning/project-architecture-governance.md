@@ -3,7 +3,7 @@
 
 **Document Class:** Project-level governance specification  
 **Status:** Draft  
-**Version:** 0.7  
+**Version:** 0.8  
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  
 **Primary downstream authorities:** Testing Strategy & Framework Specification #19; Code Standards & Style Guide Specification #20  
@@ -926,7 +926,11 @@ Machine enforcement is evidence, not an infallible authority.
 
 Any tool whose output becomes required evidence or a merge-blocking architectural gate MUST itself be subject to appropriate verification.
 
-Verification SHOULD be proportionate to the consequence of tool failure and MAY include:
+Verification MUST be proportionate to the consequence of false negatives and false positives.
+FR-AG-036A carries this obligation; this section does not weaken it.
+
+The depth of that verification is a judgment call within the MUST, not an escape from it. It MAY
+include:
 
 - unit tests for discovery and classification logic;
 - fixtures containing known violations and known compliant cases;
@@ -1166,7 +1170,7 @@ This specification MUST satisfy its own governance model before becoming authori
 ## 9.3 Finding Governance Checklist
 
 - [ ] Blocker defined.
-- [ ] Tradeoff defined.
+- [ ] Accepted Tradeoff defined.
 - [ ] Residual Risk defined.
 - [ ] Candidate Property defined.
 - [ ] Severity separated from disposition.
@@ -1509,6 +1513,7 @@ It is a project in which agents do not repeatedly rediscover settled architectur
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.8 | August 31, 2026 | — | A0 adoption review, round 4 — fresh pass over v0.7. **Two Medium findings, no Blocker.** Round 4 confirmed all eight of the 0.7 changes landed correctly and verified all twelve claims this history's 0.7 row makes about the document against the live text. **AG-A0-013 (Medium):** §9.3's Finding Governance Checklist still read "Tradeoff defined." — the bare term AG-A0-010 replaced everywhere else. This is the **fourth** instance of the incomplete-propagation class, and it sat inside §9, the self-check gate whose whole purpose is catching exactly this drift. It was also a judgment call made and got wrong at the 0.7 landing: the site was seen, classified as a checklist label rather than an enum site, and deliberately left. It is an enum site — §9 is the approval gate, and it named a disposition that no longer existed anywhere else in the document. **AG-A0-014 (Medium):** §6.6 stated *"Verification SHOULD be proportionate to the consequence of tool failure"* while FR-AG-036A requires verification *"appropriate to the consequence of false negatives and false positives"* as a MUST. Because §4.3 item 1 makes a violated MUST-level property a Blocker, the SHOULD left room to treat disproportionate tool verification as a mere shortfall. §6.6 now carries the MUST anchored to FR-AG-036A, with depth-of-verification framed as judgment *within* the obligation rather than an escape from it — the same shape §5.4 and §5.5 already use. Status remains Draft pending human sign-off. |
 | 0.7 | August 31, 2026 | — | A0 adoption review, round 3 — fresh pass over v0.6. **Eight findings, three Medium and five Low; no Blocker.** Two of them falsify claims this document's own 0.6 row made about itself, and both are annotated in that row rather than silently rewritten. **AG-A0-005 (Medium):** §4.1's finding-lifecycle line still listed three terminal states after 0.6 extended the §4.2 enum to five — the same defect class as AG-A0-003, one section over, which is why "extended to match §4.1" was false. §4.1 now carries all four terminal states and maps each to its disposition. **AG-A0-006 (Medium):** the 0.6 row attributed the Blocker trigger to FR-AG-011, which only requires a Blocker to cite an authority; the rule is §4.3 item 5. **AG-A0-007 (Medium):** FR-AG-026's "unless an approved exclusion exists" named no mechanism, leaving a MUST-level rule with an undefined escape hatch; it is now closed to exactly two recorded artifacts — a property's §3.3 Non-scope, or a §7.1 exception — and prose assertion is explicitly excluded. **AG-A0-008 (Low):** §5.4 stated its evidence list with no modal verb at all while §5.3 and the fixed §5.5 anchor theirs to a MUST; now anchored to FR-AG-028 in the same shape. **AG-A0-009 (Low):** §7.1's exception schema still mandated the bare `AP-###` that FR-AG-004 calls recommended; hedged, closing the third and last site of AG-A0-004's defect. **AG-A0-010 (Low):** §4.2 and Appendix F said "Tradeoff" where FR-AG-009 and Appendix B say "Accepted Tradeoff"; unified. **AG-A0-011 (Low):** Appendix A paraphrases five of §3.3's field labels, which works against the machine-checkable-schema ambition in §6.1; Appendix A now states that §3.3 governs and that a schema is generated from §3.3, not from the template. **AG-A0-012 (Low):** Appendix F's property summary omitted §3.1's `Rejected → Candidate` and `Superseded → Retired` edges; both added. Status remains Draft pending human sign-off. |
 | 0.6 | August 31, 2026 | — | A0 adoption review, round 2 — a fresh pass over the amended artifact, per FR-AG-018. Three further findings fixed. **AG-A0-002 (High):** §5.5 stated the failure-injection obligation as SHOULD while FR-AG-029 states it as MUST, gated on the identical "meaningful" condition. Since an unmet mandatory proof trigger is a Blocker, the weaker reading made FR-AG-029 unenforceable. *(⚠️ CORRECTED at 0.7, finding AG-A0-006 — this row as published attributed that rule to **FR-AG-011**, which is wrong: FR-AG-011 requires only that a Blocker **cite** an authority. The rule that makes an unmet mandatory proof trigger a Blocker is **§4.3 item 5**. Annotated, not deleted.)* §5.5 now carries the MUST explicitly and marks the nine failure types as illustrative, which is what the SHOULD was actually for. §5.3 and §5.6 already did this correctly; §5.5 was the outlier. **AG-A0-003 (Medium):** the §4.2 Status enum offered only Open / Resolved / Accepted, leaving no valid value for a Residual-Risk finding (Appendix F: "Recorded") or a Candidate-Property one ("Property process"). Enum extended. *(⚠️ CORRECTED at 0.7, finding AG-A0-005 — this row as published said the enum was extended "to match §4.1 and Appendix F". It matched Appendix F only: **§4.1's own lifecycle line still listed three terminal states** and was not updated until 0.7, so the fix was incomplete and this claim was false when written.)* **AG-A0-004 (Low):** §3.3 stated `AP-###` as a MUST-level schema requirement while FR-AG-004 calls it "Recommended"; the schema cell now hedges to match. Full record: `docs/tracking/a0-governance-adoption-review.md`. Status remains Draft pending human sign-off. |
 | 0.5 | August 31, 2026 | — | A0 adoption review, round 1. §5.5 reworded from "tests SHOULD intentionally cause" to "the proof scope SHOULD include deliberately causing" — finding AG-A0-001, the one place the document addressed test authoring directly rather than proof scope, which §1.3 reserves to Spec #19. No normative obligation changed: the modality stays SHOULD and the nine failure conditions are unchanged. Status remains Draft pending human sign-off; see `docs/tracking/a0-governance-adoption-review.md`. |
