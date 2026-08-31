@@ -1,10 +1,11 @@
 # File Manifest (Post-Migration Baseline)
 
 **Last Updated:** August 31, 2026 — **A0 adoption review; one file added, planning/tracking only.** New
-`docs/tracking/a0-governance-adoption-review.md` v1.2 — the review-level record for stage A0: subject digests for
+`docs/tracking/a0-governance-adoption-review.md` v1.3 — the review-level record for stage A0: subject digests for
 each reviewed version, scope (Governance §9.1–§9.6; §9.7 explicitly out and owned by A3–A9), method and its
-verification depth, the 52-box result, and fourteen findings across four rounds, all Resolved, none a Blocker;
-round 5 dispatched and outstanding, so the review is recorded NOT YET CONVERGED.
+verification depth, the 52-box result, and twenty-two findings across five rounds — fourteen Resolved, and
+round 5's eight recorded open and unfixed at owner instruction, which withdraws the "every finding
+dispositioned" discharge. The review is recorded NOT CONVERGED and PAUSED.
 `docs/planning/project-architecture-governance.md` v0.4 → v0.8 (§5.5 and §5.4 modalities reconciled with
 FR-AG-029/FR-AG-028; §4.1 lifecycle and §4.2 Status enum aligned with Appendix F; `AP-###` hedged to match
 FR-AG-004 at all three sites; FR-AG-026's "approved exclusion" defined; "Accepted Tradeoff" unified; two Appendix F

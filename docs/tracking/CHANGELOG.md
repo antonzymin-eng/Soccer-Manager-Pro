@@ -12,8 +12,8 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **A0 adoption review run, four rounds, not yet converged; Governance
-> v0.4 → v0.8, still Draft. Integration
+> **Last Updated:** August 31, 2026 — **A0 adoption review run, five rounds, NOT converged, PAUSED at owner
+> instruction with round 5's findings unfixed; Governance v0.4 → v0.8, still Draft. Integration
 > plan v0.6 → v0.7. Awaiting human sign-off. Planning and tracking documentation only.**
 > No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, so no gate
 > run is owed.
@@ -28,15 +28,18 @@ break it, and do not edit historical entries.
 > **before** computing the content digest, recorded outside the Governance file. A0 explicitly does **not** require
 > the property registry, finding ledger, review tooling, or any #19/#20 amendment.
 >
-> **New `docs/tracking/a0-governance-adoption-review.md` v1.2** is the review record. **Four fresh rounds
-> complete over v0.4 → v0.8; round 5 over v0.8 is dispatched and outstanding**, and the record says so rather than
+> **New `docs/tracking/a0-governance-adoption-review.md` v1.3** is the review record. **Five fresh rounds
+> complete over v0.4 → v0.8; none clean, and round 5's findings are recorded but deliberately NOT fixed**, and the record says so rather than
 > assuming it clean. **46 of the 52 in-scope boxes verified against cited line ranges**; five of the six §9.6
 > process-state boxes are discharged by the record itself, two of those **vacuously** — no architectural property
 > has been admitted anywhere in the repository — which is recorded as a limitation rather than passed silently.
 > The sixth, "fresh final review completed", stays unticked until a round returns only Low findings or none.
 >
-> **Outcome: NOT YET CONVERGED, deliberately not rounded up.** Fourteen findings, all Resolved, none a Blocker —
-> but convergence needs a round that comes back clean, and **round 4 returned two Medium**. That is not a
+> **Outcome: NOT CONVERGED, PAUSED.** Twenty-two findings across five rounds. Fourteen dispositioned and
+> Resolved; **round 5's eight are open and unfixed by instruction**, and **that withdraws a §9.6 discharge**:
+> "Every finding dispositioned" no longer holds, because "Open" is a Status and not a disposition under
+> FR-AG-009. A0 cannot close in this state — not because a High is open, since severity does not gate approval,
+> but because two of the six boxes the review record exists to discharge are no longer discharged by it. That is not a
 > formality here, and the round-by-round record is the argument:
 >
 > — **Round 2 found a High inside the very passage round 1 had just amended.** AG-A0-002: §5.5 stated the
@@ -70,7 +73,23 @@ break it, and do not edit historical entries.
 > tool verification as a mere shortfall. Round 4 also independently verified all eight 0.7 changes and all twelve
 > claims the 0.7 version-history row makes about the document — those held.
 >
-> **Two defect classes account for nearly all of it, and each has now recurred four times.** Incomplete
+> — **Round 5 (v0.8): one High, one Medium, six Low — recorded, not fixed, per owner instruction.** The High,
+> AG-A0-015, is the Disposition enum disagreeing with itself on its own size: FR-AG-009, §4.2's Disposition row
+> and Appendix B's checklist list five values ending in "Resolved", while §4.1, §4.3–§4.6 and Appendix F all
+> treat it as four — there is no §4.7 and no fifth Appendix F chain. "Resolved" is legitimately a *Status* value
+> that leaked into the Disposition enum at three sites. Verified independently at both ends. AG-A0-016 (Medium):
+> "runtime-bearing component" vs "runtime component" across four MUST-level sites with no glossary. Six Low
+> covering §5.7 and §6.6 modality gaps and three appendix field-label drifts. **AG-A0-015 should not be fixed by
+> reflex** — deleting the fifth value is probably right, but "Resolved is a real fifth disposition and §4.7 is
+> missing" is also coherent, and choosing is a governance decision, not a typo correction.
+>
+> **The finding that matters most is about the process, not the document: round 5 was dispatched with explicit
+> instructions to enumerate every enum site and walk every FR-AG rule against its elaborating section — and still
+> found a fifth instance of each recurring class**, one of them in §6.6, the very section hardened in v0.8 for a
+> sibling requirement. Five rounds of targeted fixing have not exhausted either class, which is evidence the
+> document needs a systematic consistency pass rather than another round of point fixes.
+>
+> **Two defect classes account for nearly all of it, and each has now recurred five times.** Incomplete
 > propagation: a term or enum corrected in some sites but not all (§4.1, §7.1, §9.3, the Status enum). Modality
 > mismatch: an FR-AG rule stating MUST while its elaborating section says SHOULD or carries no modal verb (§5.4,
 > §5.5, §6.6). Round 5 was dispatched with instructions to sweep both classes exhaustively rather than
