@@ -2,9 +2,10 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.6  
+**Version:** 0.11\
 **Created:** August 27, 2026  
-**Governing authority:** docs/planning/project-architecture-governance.md v0.4  
+**Last Updated:** August 31, 2026  
+**Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
 **Primary downstream specifications:** Testing Strategy & Framework #19; Code Standards & Style Guide #20  
 **Related project authorities:** Master Development Plan; adversarial-review process; root and src agent guides  
 **Review/authoring base:** branch docs/round-2-architecture-remediation-design at commit 12abb982c45f667fb90311320997b6d7f00dc8cf (provenance only; not an evidence-freshness key)
@@ -83,7 +84,7 @@ Examples:
 
 Human- or agent-authored declarations are reserved for facts that code cannot infer safely:
 
-- which host owns a runtime component;
+- which host owns a runtime-bearing component;
 - whether a public surface is supported or accidental;
 - required lifecycle ordering;
 - supported alternate paths;
@@ -136,7 +137,9 @@ Version 0.5 corrects the A1 rollout against the live repository while preserving
 
 The following rules override earlier sequencing in this plan:
 
-1. Governance v0.4 is currently Draft. It is design input until an explicit adoption gate records approval, completed self-checklist, SPEC_INDEX/status alignment, and the exact governing version plus canonical Governance content/blob digest. A Git revision MAY be recorded as provenance but is not required to be self-embedded in the landing that creates the approved artifact.
+1. Governance v0.10 is **Approved and authoritative under A0**. Before A0 closed it was design input only. The adoption gate requires human approval, the §9.1–§9.6 self-check, the current fresh-review/finding conditions, and the exact approved Governance content digest. SPEC_INDEX registration is not an A0 prerequisite; downstream registration/alignment remains owned by the later landing stage that requires it. A Git revision MAY be recorded as provenance but is not required to be self-embedded in the approved artifact.
+
+   **"Completed self-checklist" means Governance §9.1–§9.6 only, amended in v0.7.** The earlier wording said "completed self-checklist" without qualification, which read as all 59 boxes including §9.7. That is circular and was never the intent: §9.7 is headed *"Before this specification is considered **fully adopted**"* and asks for #19/#20 amendments, the Master Development Plan pointer, adversarial-review reconciliation, the property registry, finding-schema tooling, and inventory tooling — work this plan itself assigns to A3–A9. Requiring it at A0 would make Governance's authority depend on stages that cannot start until Governance has authority. The two gates are therefore distinct and are named separately below.
 2. Dependency-direction policy is already approved and mechanically enforced by `tools/assembly-tier-check.py` inside `Spec hygiene checks`. A1 MUST reuse that checker rather than create a second §3.5.2 parser. Its machine report covers the complete `src/**/*.asmdef` universe, classifies production/test/out-of-band assemblies from existing #20 rules, reports unresolved items explicitly, and does not publish a fictitious tooling count when no tooling asmdef exists in that source universe.
 3. Machine-readable schemas for discovery classification, applicability, integration contracts, proof, finding ledgers, and any temporary baseline MUST be frozen before #19/#20 normative amendments are finalized.
 4. #19 and #20 are amended and reapproved as one coordinated governance-integration bundle. Enforcement eligibility requires both amendments approved against the same repository base and governance version.
@@ -148,13 +151,13 @@ The following rules override earlier sequencing in this plan:
 10. Merge-blocking C# symbol/public-surface/static-initialization discovery MUST consume compiler-backed semantic facts. The Python governance tool may orchestrate those facts, but MUST NOT implement a regex or hand-written C# parser and call the result closed-world proof.
 11. A2 freezes not only JSON shapes but the executable identity, selector, applicability, dependency-closure, and freshness semantics needed to interpret them. Those semantics MUST pass representative fixtures before A3 reapproval.
 12. Required executable proof is satisfied only by an explicit successful execution state. Skipped, excluded, unavailable, not-run, or runner-failed evidence does not satisfy a required proof unless #19 permits and records a bounded substitute.
-13. Structural classification and activation state are orthogonal. A component remains a production runtime component even when deliberately disabled or not yet integrated.
+13. Structural classification and activation state are orthogonal. A component remains a production runtime-bearing component even when deliberately disabled or not yet integrated.
 14. `intentionally-disabled` is valid only when its disabled state is independently machine-verifiable from a resolvable source/config selector plus a typed expected predicate/value; prose alone cannot create a suppression.
 15. Static discovery covers Class A dormancy (exists but has no production activation/reachability). It MUST NOT claim to prove Class B gate firing. Runtime gate/trigger instrumentation remains owned by the component/domain and governance consumes its evidence when an applicable rule requires it.
 16. The objective asmdef check already executes inside `Spec hygiene checks`. A1c is therefore an activation/configuration step: verify merge-protection state and enable the existing required status where enforcement is disabled; it MUST NOT create a parallel `architecture-asmdef` status unless the existing status cannot express the approved requirement.
 17. Changes to declared `[GT]`/calibration tuning surfaces are prohibited while the owning component is `intentionally-disabled`, `pending-integration`, or `unresolved`, unless the approved exception path explicitly authorizes the change.
 
-This document remains an implementation plan. It does not itself approve Governance v0.4 or modify approved #19/#20 requirements.
+This document remains an implementation plan and does not itself modify approved #19/#20 requirements. Governance v0.10 approval is recorded by the completed A0 gate; the required human sign-off was supplied by the project owner on August 31, 2026.
 
 ---
 
@@ -285,8 +288,8 @@ The target project-control flow is:
         v
     convergence decision
         |
-        +--> no open Blocker
-        +--> every finding dispositioned
+        +--> no Blocker with Status Open
+        +--> every finding has one valid Disposition
         +--> all required proof current
         +--> fresh full review complete
         |
@@ -346,7 +349,7 @@ Test classification MUST NOT rely on a `.Tests` suffix alone. Assembly metadata,
 
 Compiler-discovered source surfaces use deterministic mechanical `symbol_key` values derived from canonical compiler symbols/signatures. Those keys are discovery identities, not permanent architectural IDs.
 
-Stable `component_id` values are allocated only for durable declared architectural concepts such as a supported host, composition root, runtime component, or testhost. A file/symbol rename updates that component's selector/history; it does not create a new architectural component solely because a path changed.
+Stable `component_id` values are allocated only for durable declared architectural concepts such as a supported host, composition root, runtime-bearing component, or testhost. A file/symbol rename updates that component's selector/history; it does not create a new architectural component solely because a path changed.
 
 The selector grammar MUST be frozen in A2 and MUST distinguish namespaces/types, constructors, overloaded method signatures, static members, and assembly identity. Contracts keep `selector_history` sufficient to migrate ordinary moves/renames while preserving logical identity. Ambiguous or multiply resolving selectors fail strict mode.
 
@@ -437,7 +440,7 @@ Create a canonical durable `docs/tracking/architecture-governance/review-ledger.
 The durable ledger has two entity types:
 
 1. **Review run/series records** — `schema_version`, `review_run_id`, optional series ID, review scope, `subject_scope_digest`, provenance revision/tree, review round, reviewer identity, coverage/unverified surfaces, convergence state, and the final-review marker.
-2. **Finding records** — `finding_id`, namespaced `stable_key`, parent review/series ID, evidence, severity, requirement/property, disposition, status, required action, owner, resolution evidence, and disposition approval where required.
+2. **Finding records** — `finding_id`, `summary`, `evidence`, `severity`, `requirement_property`, `disposition`, `required_action`, `owner`, `status`, `round_introduced`, and `resolution_evidence`, plus namespaced `stable_key`, parent review/series ID, and disposition approval where required. The first eleven fields are the machine-field equivalents of Governance §4.2's required finding schema; extensions do not replace them.
 
 The final-review marker belongs to the review run, not to each finding. A clean final review with zero findings is therefore representable without inventing a synthetic finding, and a finding-heavy review does not duplicate run metadata across every record.
 
@@ -591,7 +594,7 @@ Append after FR-CS-073 using #20's existing columns ID | Statement | Level | Sou
 |---|---|---|---|---|
 | FR-CS-074 | Every runtime-bearing component whose correctness depends on activation MUST have an explicit integration owner, exact integration point, and orthogonal activation state. | MUST | Governance FR-AG-021/022 | §3.5.6 |
 | FR-CS-075 | Every production host/composition root in the approved runtime discovery universe MUST be classified and mechanically accounted for. | MUST | Governance FR-AG-024/026 | §3.5.6–3.5.7 |
-| FR-CS-076 | Applicable runtime components MUST declare construction, activation, update/use, and shutdown/disposal ownership through typed lifecycle records, with schema-valid N/A only where a phase does not exist. | MUST | Governance FR-AG-023 | §3.5.6 |
+| FR-CS-076 | Applicable runtime-bearing components MUST declare construction, activation, update/use, and teardown ownership through typed lifecycle records, with schema-valid N/A only where a phase does not exist. | MUST | Governance FR-AG-023 | §3.5.6 |
 | FR-CS-077 | Applicable alternate hosts/testhosts MUST preserve the invariant or declare an approved divergence linked to current evidence. | MUST | Governance FR-AG-024 | §3.5.7 |
 | FR-CS-078 | Activation bypasses inside a mechanically closed governed surface MUST be prohibited or explicitly supported. | MUST | Governance FR-AG-025/026 | §3.5.7 |
 | FR-CS-079 | Activation-capable public runtime surfaces inside an activated closed-world category MUST be classified supported, test-only, non-activating, or made non-public. | MUST | Governance FR-AG-026/027; §5.3 | §3.5.7 |
@@ -713,13 +716,13 @@ Targeted governance mutation at Stage 0+1 does not depend on project-wide Stryke
 
 # 8. Adversarial-review integration
 
-New governance-aware reviews use the durable two-entity model in §3.8: review runs/series plus findings. The state machine remains `Open → Dispositioned → Resolved/Accepted/Recorded` for findings, while the review run separately records coverage and convergence.
+New governance-aware reviews use the durable two-entity model in §3.8: review runs/series plus findings. A finding begins with Status `Open`, carries exactly one Disposition, and completes as `Blocker → Resolved`, `Accepted Tradeoff → Accepted`, `Residual Risk → Recorded`, or `Candidate Property → In property process`. For a selected Disposition, only `Open` or that mapped terminal Status is legal; all other pairings are rejected. `Dispositioned` is not a Status. The review run separately records coverage and convergence.
 
 Before convergence behavior changes, version both schemas; define required fields per disposition; legal transitions; approval authorities; review-series/stable-key namespaces; subject-scope digest calculation; run-level final marker; prospective legacy cutover/read-only policy; and rejection of silent defaults. Every producer and consumer migrates in A6.
 
 The current `.adversarial-review/round-*.json` and `ids.json` remain scratch inputs only. They are not treated as durable governance evidence because the directory is intentionally ignored. Historical prose/ERR records are not reverse-engineered into approvals they never encoded.
 
-Convergence requires no open Blocker, every substantive finding validly dispositioned, current required proof, and a fresh full review **run** whose material subject digest matches the current reviewed scope. A clean final review may contain zero findings and still record convergence. Round-budget exhaustion with any gating obligation is NON-CONVERGED. Severity never independently decides convergence.
+Convergence requires every substantive finding to carry exactly one valid Disposition and its Governance §4.1-mapped terminal Status; therefore no `Open` finding of any Disposition and no invalid Disposition/Status pairing may remain. It also requires current required proof and a fresh full review **run** whose material subject digest matches the current reviewed scope. A clean final review may contain zero findings and still record convergence. Round-budget exhaustion with any gating obligation is NON-CONVERGED. Severity never independently decides convergence.
 
 Required fixtures include Low Blocker, accepted High, residual-risk High, Candidate Property, round-cap blocker, missing evidence, clean zero-finding convergence, stale run marker, stable ID across rename/rounds, duplicate key within one series, same key in independent series, and legacy-no-default.
 
@@ -797,7 +800,37 @@ The A0–A9 model remains the lifecycle for full governance activation. v0.4 add
 
 ## A0 — Adopt Governance authority
 
-Governance v0.4 passes its own adoption gate and pins its exact version/content digest. Draft-stage governance documents do not require SPEC_INDEX registration or file-manifest rows merely to exist; those remain landing obligations when their owning process requires them.
+Governance passes its own adoption gate and pins its exact version/content digest. Draft-stage governance documents do not require SPEC_INDEX registration or file-manifest rows merely to exist; those remain landing obligations when their owning process requires them.
+
+**A0 gate boundary, amended in v0.7.** Governance §9 carries two different bars, and A0 is the first one only:
+
+| Gate | Governance text | Scope | Owning stage |
+|---|---|---|---|
+| **Authority approval — this is A0** | §9 preamble: *"MUST satisfy its own governance model before becoming **authoritative**"* | §9.1–§9.6 | A0 |
+| **Full operational adoption** | §9.7 heading: *"Before this specification is considered **fully adopted**"* | §9.7 | A3–A9 |
+
+A0 closes when all of the following hold:
+
+1. **(Verification)** Every box in §9.1–§9.6 is either verified against the document's own text with a cited line range, or is one of the six §9.6 process-state assertions discharged by the adoption review record itself.
+2. **(Review)** A fresh review over the *current* artifact is completed and recorded, per Governance FR-AG-018. The record MUST carry review-level evidence — subject identity and digest, scope, method, reviewer, date, round, and outcome — and MUST record every finding in the Appendix B field set with an explicit disposition. Appendix B is a finding-record template only; it does not by itself constitute a review record, and a bare list of findings does not evidence that a review occurred.
+3. **(Findings)** Every substantive finding has exactly one valid Disposition and is in its Governance §4.1-mapped terminal Status. No `Open` finding of any Disposition and no invalid Disposition/Status pairing remains. Per FR-AG-020, a round budget that ends with Blockers open is recorded NON-CONVERGED, not approved.
+4. **(Sign-off)** A human records approval. This is not delegable to an agent.
+5. **(Landing, in this order)** `Status: Draft` → `Approved` is written **first**; the SHA-256 of that exact resulting file is computed **after** that edit and recorded **here, outside the Governance file**. Computing the digest before the status edit pins a superseded artifact; writing the digest into the file it covers invalidates itself.
+
+A0 explicitly does **not** require the property registry, the durable finding ledger, review tooling, or any #19/#20 amendment. Those are §9.7 items owned by A3–A9. Building them to approve the document would invert this plan's own sequencing.
+
+**A0 review record:** `docs/tracking/a0-governance-adoption-review.md`. **A0 CLOSED August 31, 2026.** The project owner explicitly approved Governance v0.10; the Governance file was then changed from `Status: Draft` to `Status: Approved`; only after that edit was the approved file hashed. All §9.1–§9.6 boxes verify and every finding is in its mapped terminal Status.
+
+| A0 closure field | Recorded value |
+|---|---|
+| Human sign-off | Project owner — Approved, August 31, 2026 |
+| Governance version / status | v0.10 / `Approved` |
+| Approved Governance Git blob | `76502282f205f5c4fd77c79c3309766c4dbd4498` |
+| **Adoption SHA-256** | **`aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6`** |
+| Review record | `docs/tracking/a0-governance-adoption-review.md` v1.8 |
+| A0 status | **CLOSED** |
+
+The SHA-256 above is the canonical A0 adoption pin. It covers the exact approved Governance file and is stored outside that file, so recording the pin does not invalidate its subject.
 
 ## A1 — Consolidate existing asmdef evidence and activate enforcement
 
@@ -1166,6 +1199,11 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.11 | August 31, 2026 | — | Post-A0 evidence correction only: review-record pointer advances v1.7 → v1.8 after Codex correctly identified that §11 A0 condition 2 required a stable reviewer identity rather than the relative phrase `same assistant`. Governance v0.10, its Approved status, canonical adoption digest, and A0 CLOSED state are unchanged. |
+| 0.10 | August 31, 2026 | — | **A0 CLOSED.** Records project-owner human sign-off, Governance v0.10 `Draft → Approved`, and the post-status-edit canonical adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` (Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`). Removes the stale pre-A0 claim that SPEC_INDEX alignment is an A0 prerequisite; §9.7/downstream registration remains owned by later stages. A2 is now the next stage. No #19/#20 normative file, code, workflow, or runtime behavior changed. |
+| 0.9 | August 31, 2026 | — | Synchronizes with Governance v0.10 after hostile review: rejects invalid Disposition/Status pairings, requires every finding to reach its mapped terminal Status before convergence, and updates A0's findings gate accordingly. Governing authority reference advances to v0.10. No #19/#20 normative file, code, workflow, or runtime behavior changed. |
+| 0.8 | August 31, 2026 | — | Synchronizes the plan with Governance v0.9's settled four-Disposition/five-Status model. Replaces all live `runtime component` uses with `runtime-bearing component`; aligns proposed FR-CS-076 on canonical `teardown`; makes the A0 finding condition test `Disposition: Blocker` plus `Status: Open`; completes the durable finding field set with `round_introduced`; and replaces the stale `Open → Dispositioned` lifecycle summary. A0 remains unapproved pending human sign-off; no #19/#20 normative file, code, workflow, or runtime behavior changed. |
+| 0.7 | August 31, 2026 | — | A0 gate boundary made explicit, removing a circular dependency. Non-negotiable 1 required a "completed self-checklist" at A0 while this plan assigns Governance §9.7's downstream landings to A3–A9 — so A0 could not close until stages that depend on A0 had run. Governance §9 in fact carries two bars: the §9 preamble gates becoming *authoritative* (§9.1–§9.6), and §9.7 gates being *fully adopted*. A0 is now scoped to the first only, with five closure conditions including a fresh recorded review per FR-AG-018 and an explicit digest-after-status-edit ordering. A0 explicitly does not require the property registry, finding ledger, review tooling, or #19/#20 amendments. Governing authority reference updated v0.4 → v0.5. New `docs/tracking/a0-governance-adoption-review.md` carries the review. No #19/#20 normative files, code, or CI changed. |
 | 0.6 | August 30, 2026 | — | A1c amended and COMPLETE. The original "observed blocked merge" condition is not measurable: `mergeable_state: blocked` is returned for an unmet approving review, an unresolved conversation, a pending required check, or a failing one, and does not name which. A1c now closes on the full required-checks list read in settings (configuration), the check observed reporting a real conclusion in both arms, and a paired two-arm comparison varying exactly one required check — a single-arm reading is explicitly not acceptable. Satisfied August 30, 2026: `d689f2b` all six required green -> `unstable`; `d497a4d` differing only by one stale `Decision Tree #7` line -> `Spec hygiene checks` failure -> `blocked`. New `docs/tracking/a1c-enforcement-evidence.md` v1.1 captures the run/job ids, the full required list, and the required-approving-reviews 1 -> 0 owner decision. The arm commits are preserved as remote branches `evidence/a1c-green-arm` / `evidence/a1c-red-arm` (the squash orphaned them). Two claims from the first draft are withdrawn as false: that a required-but-`skipped` context would freeze merges (GitHub treats `skipped` as satisfying a required check), and that the 1-approval rule was self-approval ceremony (GitHub forbids authors approving their own PRs, so it was unsatisfiable with one maintainer). Non-negotiable 12 unchanged. |
 | 0.5 | August 29, 2026 | — | Repository-reality correction for A1: records ERR-020-002/003 as already resolved; recognizes `tools/assembly-tier-check.py` and its existing `Spec hygiene checks` wiring; removes the obsolete A1b dependency repair; prohibits a second §3.5.2 parser; scopes A1a to JSON complete-graph evidence, classification-aware digests, all-assembly cycle visibility and CI-wired checker tests; scopes A1c to activating the existing required status after re-reading live protection state. A2+ semantic/governance sequence otherwise unchanged. |
 | 0.4 | August 28, 2026 | — | Two-track rollout and activation-state hardening: asmdef-only A1 first slice; ERR-020-002/003 repair and early objective enforcement before A8; compiler-backed Class-A reachability at A4; domain-owned Class-B runtime evidence; orthogonal activation state with machine disable anchors; KD-W1 tuning precondition / proposed FR-TS-097; source-built Roslyn extractor with pinned .NET SDK/compiler identity. No #19/#20 normative files, SPEC_INDEX, file-manifest, code, CI workflow, or runtime implementation changed. |

@@ -1,6 +1,68 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** August 30, 2026 — **A1c complete; one file added, tracking/planning only.** New
+**Last Updated:** August 31, 2026 — **PR #344 CI/link-check and Codex-review corrections; tooling/tracking only.**
+`.github/markdown-link-check.json` now ignores exactly two Microsoft Learn URLs that are current but
+return transport status `0` to the GitHub markdown-link-check runner; no broader `learn.microsoft.com`
+exemption was added. `a0-governance-adoption-review.md` v1.7 → v1.8 adds the stable reviewer identity
+required by A0 condition 2. Integration plan v0.10 → v0.11 updates that record pointer. The Tracking
+Documents row no longer says human sign-off is pending after A0 closure. Governance v0.10, Approved
+status, adoption digest, and semantics are unchanged. No `src/`, `.cs`, `.asmdef`, or runtime change.
+**Last Updated (prior):** August 31, 2026 — **A0 CLOSED; Governance v0.10 approved; planning/tracking only.**
+Project-owner sign-off recorded. `docs/planning/project-architecture-governance.md` changes only
+`Status: Draft` → `Approved`; integration plan v0.9 → v0.10 records the post-status-edit canonical
+adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` and Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`;
+`docs/tracking/a0-governance-adoption-review.md` v1.6 → v1.7 records owner approval and A0 closure.
+`CHANGELOG.md` synchronized. No `src/`, `.cs`, `.asmdef`, tool, workflow, runtime, save, RNG, or tuning
+surface changed; no file added, removed, or renamed. A2 is next.
+**Last Updated (prior):** August 31, 2026 — **A0 evidence-record reconciliation after Claude's pre-fix critique; tracking only.**
+Updated `docs/tracking/a0-governance-adoption-review.md` v1.5 → v1.6: round-5 state is explicitly
+historical, current v0.10 §9.6 labels/discharges are exact, every Blocker now names its specific
+unsatisfied §9 gate condition instead of relying on a blanket A0 citation, the deleted historical
+`None is a Blocker` claim is restored with correction, and reviewer independence is recorded as a
+limitation rather than invented as a requirement. Added the adoption-review and consistency-audit
+files to the Tracking Documents table in this manifest. Governance remains v0.10 with identical blob
+and SHA-256; no planning/spec/code/workflow/runtime file changed.
+**Last Updated (prior):** August 31, 2026 — **Governance hostile-review closure; planning/tracking only.**
+Updated `docs/planning/project-architecture-governance.md` v0.9 → v0.10, the integration plan v0.8 →
+v0.9, `a0-governance-consistency-audit.md` v1.0 → v1.1, and `a0-governance-adoption-review.md`
+v1.4 → v1.5. Fixes: Disposition/Status legality and terminal convergence, FR-AG-026 Non-scope
+orientation, and bounded pre-adoption/review-gate authorization. Records AG-A0-023–025 as resolved,
+marks the v0.9 zero-finding review historical/superseded, and records a fresh zero-finding v0.10
+closure review. `CHANGELOG.md` and the current A1c plan pointer in `open-issues-resolved.md` are
+synchronized. Governance remains `Draft` pending human sign-off. No `src/`, `.cs`, `.asmdef`, or
+workflow changed; no file added, removed, or renamed.
+
+**Last Updated (prior):** August 31, 2026 — **Systematic Governance consistency remediation and fresh A0 review;
+planning/tracking only.** Added `docs/tracking/a0-governance-consistency-audit.md` v1.0, the durable
+47-FR modality and schema/template/transition audit. Updated
+`docs/planning/project-architecture-governance.md` v0.8 → v0.9: four Dispositions/five Statuses,
+canonical `runtime-bearing component`, direct elaborating modalities, exact Appendix A/B fields,
+`Teardown owner`, separated proof-path fields, and a coherent review state model. Updated
+`docs/planning/project-architecture-governance-integration-plan.md` v0.7 → v0.8 and
+`docs/tracking/a0-governance-adoption-review.md` v1.3 → v1.4: current ledger fields and state
+representations now agree; all 52 A0-scope boxes verify in the fresh review, with no open Blocker.
+`docs/tracking/CHANGELOG.md`, this manifest, and the current A1c plan pointer in
+`docs/tracking/open-issues-resolved.md` were synchronized. Governance remains `Draft` pending human
+sign-off, then the required status edit and post-edit adoption digest. No `src/`, `.cs`, `.asmdef`, or
+workflow changed; no file removed or renamed. Full account: `docs/tracking/CHANGELOG.md`, August 31,
+2026.
+
+**Last Updated (prior):** August 31, 2026 — **A0 adoption review; one file added, planning/tracking only.** New
+`docs/tracking/a0-governance-adoption-review.md` v1.3 — the review-level record for stage A0: subject digests for
+each reviewed version, scope (Governance §9.1–§9.6; §9.7 explicitly out and owned by A3–A9), method and its
+verification depth, the 52-box result, and twenty-two findings across five rounds — fourteen Resolved, and
+round 5's eight recorded open and unfixed at owner instruction, which withdraws the "every finding
+dispositioned" discharge. The review is recorded NOT CONVERGED and PAUSED.
+`docs/planning/project-architecture-governance.md` v0.4 → v0.8 (§5.5 and §5.4 modalities reconciled with
+FR-AG-029/FR-AG-028; §4.1 lifecycle and §4.2 Status enum aligned with Appendix F; `AP-###` hedged to match
+FR-AG-004 at all three sites; FR-AG-026's "approved exclusion" defined; "Accepted Tradeoff" unified; two Appendix F
+property transitions restored; Appendix A subordinated to §3.3; §6.6 anchored to FR-AG-036A; §9.3's checklist
+term unified; Version History section added). `docs/planning/project-architecture-governance-integration-plan.md` v0.6 → v0.7 (A0 gate
+boundary made explicit, removing the §9.7 circularity). Governance `Status:` remains `Draft` — sign-off pending.
+No `src/`, `.cs`, `.asmdef`, or workflow changed; no file removed or renamed. Full account:
+`docs/tracking/CHANGELOG.md`, August 31, 2026.
+
+**Last Updated (prior):** August 30, 2026 — **A1c complete; one file added, tracking/planning only.** New
 `docs/tracking/a1c-enforcement-evidence.md` v1.2 — durable capture of the merge-enforcement measurement, which
 `mergeable_state` cannot supply later because GitHub does not retain it: run and job ids for both arms, the full
 *Require status checks to pass* list read in settings, and the required-approving-reviews 1 → 0 owner decision with
@@ -13,7 +75,7 @@ Modified `tools/assembly-tier-check.py` in place as the sole §3.5.2 parser/chec
 `--json` complete-graph output, graph/classification/subject digests, and all-assembly cycle visibility while
 preserving the existing production-policy verdict. Added `tools/tests/test_assembly_tier_check.py` and wired it
 into `Spec hygiene checks` in `.github/workflows/ci.yml`. Updated
-`docs/planning/project-architecture-governance-integration-plan.md` to v0.5, now v0.6: ERR-020-002/003 are already resolved,
+`docs/planning/project-architecture-governance-integration-plan.md` v0.8 (historical v0.5 → v0.6 A1 change): ERR-020-002/003 are already resolved,
 A1b is removed, and A1c now activates the existing required status rather than creating a parallel checker/status.
 No protection setting is changed in this slice; no `src/`, `.cs`, or `.asmdef` changed. Full account:
 `docs/tracking/CHANGELOG.md`, August 29, 2026.
@@ -2741,6 +2803,8 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 | `docs/tracking/fix-manifest-pass-mechanics.md` | Pass Mechanics audit/fix closure tracking |
 | `docs/tracking/certification-platform.md` | Stage 0 host platform version pin (required before first Spec #16 certification run) |
 | `docs/tracking/file-manifest.md` | This manifest |
+| `docs/tracking/a0-governance-adoption-review.md` | A0 review-level evidence for Project Architecture Governance: reviewed subject digests, reviewer identity, scope/method, finding ledger, §9.1–§9.6 discharge, owner approval, and A0 CLOSED state |
+| `docs/tracking/a0-governance-consistency-audit.md` | Systematic A0 governance consistency audit: exhaustive 47-FR modality matrix plus schema/enum/transition/terminology comparison and hostile-review closure corrections |
 | `docs/tracking/football-judgment-proxy-review.md` | **FINDINGS LOG + REMEDIATION DOCTRINE** (Aug 4, 2026) — the football-judgment proxy review: all 53 APPROVED specs read for the ERR-008-019 defect shape (a continuous football judgment collapsed into bare geometry, a hard threshold, or a small raw-attribute set); 34 findings across **19** specs (2 since fixed: `ERR-008-020`, `ERR-008-019`), **34** specs clean — spec counts corrected Aug 21, 2026 from 24/29 and the fixed count from 1; see the review's §5 note. §6 (added same day, owner-converged) is the remediation doctrine every fix must cite: P1 continuous-never-cliff, P2 skill-as-discrimination-fidelity, P3 the attribute ownership ledger (Vision = on-ball recognition; no new attribute), P4 intent-as-first-class-object (pass-to-space, run signaling, routine targets), P5 chain calibration pivoted on today's baseline (KD-W1); finding classes (formula-patch / mechanism / governance), the §3.1.3.3 pass-lane template fix (chosen, not yet implemented), and the pairwise-familiarity gap ; **§6.3.1 (Aug 22, 2026)** adds the LANDING ORDER for the workable 24 — six batches derived from wiring state (W2 built but disabled, `TackleContactRadiusM` = 0), design-supplement serialization, and calibration batching, explicitly not from guessed football impact |
 | `docs/tracking/advanced-positional-behaviors-design.md` | Design supplement (v0.4, Jul 8, 2026 — PROMOTED) — dismarking, scripted build-up structures, positional rotations; promoted to specs #23–#25 (`dismarking-ai/`, `build-up-structures/`, `positional-rotations/`, all APPROVED Jul 10, 2026); superseded by the specs on deviation |
 | `docs/tracking/game-model-ai-manager-design.md` | Design supplement (v0.5, Jul 8, 2026 — PROMOTED) — tactical preset library + AI-manager selection/adaptation; promoted to spec #26 (`tactical-presets/`, APPROVED Jul 10, 2026); superseded by the spec on deviation |

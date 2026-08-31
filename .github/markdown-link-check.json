@@ -5,7 +5,9 @@
     { "pattern": "^https://github.com/.*/issues/" },
     { "pattern": "^https://www\\.fifa\\.com/" },
     { "pattern": "^https://docs\\.unity3d\\.com/" },
-    { "pattern": "^https://www\\.chrishecker\\.com/" }
+    { "pattern": "^https://www\\.chrishecker\\.com/" },
+    { "pattern": "^https://learn\\.microsoft\\.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions$" },
+    { "pattern": "^https://learn\\.microsoft\\.com/en-us/visualstudio/code-quality/roslyn-analyzers-overview$" }
   ],
   "timeout": "20s",
   "retryOn429": true,

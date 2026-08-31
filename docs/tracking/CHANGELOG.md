@@ -12,7 +12,196 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 30, 2026 — **A1c COMPLETE: merge enforcement is active and MEASURED. Integration plan
+> **Last Updated:** August 31, 2026 — **PR #344 Markdown-link false-negative and Codex-review corrections.**
+> CI's Markdown link check failed only on two live Microsoft Learn references in Code Standards §8;
+> the action returned status `0` (transport failure), not HTTP 404/410. Both URLs remain current.
+> `.github/markdown-link-check.json` now exempts those two exact URLs only, preserving all other
+> Microsoft Learn link checking.
+>
+> Codex automated review raised three P2 suggestions. Two are valid and fixed: the A0 review record
+> now carries a stable reviewer identity (OpenAI ChatGPT / GPT-5.6 Sol, PR #344), and the manifest
+> Tracking Documents row now reflects owner approval/A0 CLOSED rather than pending sign-off. The third
+> suggestion — broadening FR-AG-020's Blocker-specific budget case — was rejected after full-context
+> verification: §9.6 already requires generic budget exhaustion → NON-CONVERGED, Appendix F defines
+> NON-CONVERGED as unresolved gating obligations, and §4.7 forbids convergence for every open/invalid
+> finding state. Changing approved Governance v0.10 would add redundant clarity, not repair a semantic gap.
+>
+> Integration plan v0.10 → v0.11 and A0 review record v1.7 → v1.8. Governance v0.10, Approved status,
+> canonical adoption digest, and A0 CLOSED state are unchanged. No runtime/code/spec semantics changed.
+>
+> **Last Updated (prior):** August 31, 2026 — **A0 CLOSED; Project Architecture Governance v0.10 approved.**
+> The project owner explicitly approved Governance v0.10. The required adoption order was followed:
+> Governance `Status: Draft` → `Approved` first, then the exact approved file was hashed, then the
+> canonical adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` (Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`) was recorded in
+> integration-plan §11 A0. Integration plan advances v0.9 → v0.10; A0 review record v1.6 → v1.7.
+>
+> Governance semantics were not changed after the converged v0.10 review; its only edit is the Status
+> field. The plan also removes a stale pre-A0 SPEC_INDEX-alignment prerequisite that conflicted with
+> the already-adopted §9.7/A3–A9 boundary. A0 is now CLOSED and A2 is next.
+>
+> Planning/tracking documentation only; no `src/`, `.cs`, `.asmdef`, tool, workflow, save, RNG, tuning,
+> or simulation behavior changed, so no code gate is owed.
+>
+> **Last Updated (prior):** August 31, 2026 — **A0 evidence-record reconciliation after Claude's pre-fix critique.**
+> Tracking documentation only. `a0-governance-adoption-review.md` v1.5 → v1.6; `file-manifest.md`
+> updated. Governance v0.10 and its recorded blob/SHA-256 are unchanged.
+>
+> Five surviving record/manifest defects were corrected: round-5 verdict text is explicitly historical;
+> the current v0.10 §9.6 discharge uses exact checklist labels; the blanket A0-gate Blocker citation is
+> replaced by a specific unsatisfied §9 gate condition for every corrective finding; the deleted
+> historical `None is a Blocker` claim is restored and annotated rather than silently rewritten; and
+> both A0 tracking files now have Tracking Documents table rows. Claude's sixth observation — no
+> independent reviewer on the fresh closure — is recorded transparently as a limitation, not promoted
+> into a requirement FR-AG-018 does not contain.
+>
+> No `src/`, planning/spec, tool, workflow, save, RNG, tuning, or simulation behavior changed; no code
+> gate is owed.
+>
+> **Last Updated (prior):** August 31, 2026 — **Governance hostile-review closure after the systematic remediation.**
+> Governance advances v0.9 → v0.10; integration plan v0.8 → v0.9; A0 consistency audit v1.0 → v1.1;
+> A0 adoption review v1.4 → v1.5. Planning/tracking documentation only; Governance remains `Draft`
+> pending human sign-off.
+>
+> Three semantic defects found in the v0.9 follow-up are fixed together. The finding state machine now
+> rejects every Disposition/Status pairing except `Open` or that Disposition's mapped terminal Status,
+> and convergence requires every substantive finding to be terminal; Candidate admission during the
+> same review forces applicability recomputation. FR-AG-026's exclusion route now correctly means a
+> surface explicitly **within** recorded Non-scope (or a §7.1 exception), not outside Non-scope. The
+> pre-adoption/review-gate Blocker route now requires a durable pre-existing gate authorized by the
+> project lead/owner or an existing governing authority, with scope and closure condition; the current
+> reviewer cannot self-authorize or invent one retroactively.
+>
+> AG-A0-023–025 record those defects as Blocker/Resolved under the A0 corrective route. The prior v0.9
+> zero-finding review is retained as historical and explicitly superseded. A fresh full review over
+> Governance v0.10 verifies all 52 A0-scope boxes and returns zero additional findings.
+>
+> No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed.
+>
+> **Last Updated (prior):** August 31, 2026 — **Systematic Governance consistency remediation and fresh A0 adoption review.**
+> Governance advances v0.8 → v0.9; the integration plan v0.7 → v0.8; the A0 review record v1.3 → v1.4;
+> and new `docs/tracking/a0-governance-consistency-audit.md` v1.0 records the exhaustive audit. Planning
+> and tracking documentation only. `Status:` remains `Draft`; human sign-off is still required before the
+> status edit and post-edit adoption digest.
+>
+> **One settled model, propagated everywhere:** exactly four finding Dispositions — `Blocker`, `Accepted
+> Tradeoff`, `Residual Risk`, `Candidate Property` — and five Status values. `Resolved` is a Status, not
+> a Disposition; `Dispositioned` is not a Status. The High severity of AG-A0-015 did not decide its
+> Disposition. Its corrective route is `Blocker → Resolved` because the explicit, already-applicable
+> Governance §9 / integration-plan §11 A0 gate had to be satisfied; severity and disposition remain
+> independent.
+>
+> **The systematic pass was exhaustive, not selective:** it built a 47-row FR-AG-to-elaboration modality
+> matrix; defined `runtime-bearing component` as the sole normative term; compared every live schema,
+> enum, transition, template, checklist, summary, and downstream-plan representation; corrected every
+> Round 5 finding plus audit-exposed state, field-order, direct-modality, and stale-plan defects in one
+> batch; and added the exact comparison evidence to the new audit record. Appendix A/B field labels now
+> reproduce their canonical schemas; Appendix C uses `Teardown owner`; Appendix D keeps static,
+> alternate, and bypass paths separate; and the integration plan's durable ledger/A0 state model matches.
+>
+> **Fresh full review result:** all 52 A0-scope boxes verify against Governance v0.9, its 47 FR rows,
+> and the mechanical comparison; no new finding was returned. All twenty-two historical corrective
+> findings are schema-complete with `Disposition: Blocker`, `Status: Resolved`; no Blocker remains open.
+> This means the review is converged **for A0**, not that Governance is approved. §9.7 remains owned by
+> A3–A9. The repository documentation-consistency checker, cross-reference inventory, and schema/enum
+> audit are rerun for this landing. The CI Markdown-lint scope excludes these long-form planning and
+> tracking documents.
+>
+> No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed,
+> so no runtime/build gate is owed.
+>
+> **Last Updated (prior):** August 31, 2026 — **A0 adoption review run, five rounds, NOT converged, PAUSED at owner
+> instruction with round 5's findings unfixed; Governance v0.4 → v0.8, still Draft. Integration
+> plan v0.6 → v0.7. Awaiting human sign-off. Planning and tracking documentation only.**
+> No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, so no gate
+> run is owed.
+>
+> **The A0 gate was circular and is now scoped.** Integration-plan non-negotiable 1 required a "completed
+> self-checklist" at A0, while the plan itself assigns Governance §9.7's downstream landings to A3–A9 — so A0
+> could not close until stages depending on A0 had already run. Governance §9 in fact carries two bars: its
+> preamble gates becoming *authoritative* (§9.1–§9.6), and §9.7 is headed *"Before this specification is
+> considered fully adopted"*. **A0 is now scoped to the first bar only**, with five explicit closure conditions —
+> §9.1–§9.6 verified with cited line ranges, a fresh recorded review per FR-AG-018 carrying review-level evidence
+> and Appendix B findings, no open Blocker, human sign-off, and a landing order that writes `Status: Approved`
+> **before** computing the content digest, recorded outside the Governance file. A0 explicitly does **not** require
+> the property registry, finding ledger, review tooling, or any #19/#20 amendment.
+>
+> **New `docs/tracking/a0-governance-adoption-review.md` v1.3** is the review record. **Five fresh rounds
+> complete over v0.4 → v0.8; none clean, and round 5's findings are recorded but deliberately NOT fixed**, and the record says so rather than
+> assuming it clean. **46 of the 52 in-scope boxes verified against cited line ranges**; five of the six §9.6
+> process-state boxes are discharged by the record itself, two of those **vacuously** — no architectural property
+> has been admitted anywhere in the repository — which is recorded as a limitation rather than passed silently.
+> The sixth, "fresh final review completed", stays unticked until a round returns only Low findings or none.
+>
+> **Outcome: NOT CONVERGED, PAUSED.** Twenty-two findings across five rounds. Fourteen dispositioned and
+> Resolved; **round 5's eight are open and unfixed by instruction**, and **that withdraws a §9.6 discharge**:
+> "Every finding dispositioned" no longer holds, because "Open" is a Status and not a disposition under
+> FR-AG-009. A0 cannot close in this state — not because a High is open, since severity does not gate approval,
+> but because two of the six boxes the review record exists to discharge are no longer discharged by it. That is not a
+> formality here, and the round-by-round record is the argument:
+>
+> — **Round 2 found a High inside the very passage round 1 had just amended.** AG-A0-002: §5.5 stated the
+> failure-injection obligation as SHOULD while FR-AG-029 states it as MUST on the identical "meaningful"
+> condition, and since an unmet mandatory proof trigger is a Blocker, the weaker reading left FR-AG-029
+> unenforceable. *(⚠️ CORRECTED — this entry as first published attributed that Blocker rule to **FR-AG-011**,
+> which is wrong: FR-AG-011 requires only that a Blocker **cite** an authority. The rule is **§4.3 item 5**. The
+> misattribution came from the round-2 reader and was propagated into three documents before round 3 caught it as
+> AG-A0-006. Annotated here rather than rewritten, per this file's own rule.)* §5.5 now carries the MUST and
+> marks its nine failure types illustrative. AG-A0-003 (Medium): the §4.2 Status enum had no valid value for a
+> Residual-Risk or Candidate-Property finding; extended. AG-A0-004 (Low): §3.3 mandated the `AP-###` format that
+> FR-AG-004 calls merely recommended; hedged. AG-A0-001 (Low): §5.5 addressed test authoring rather than proof
+> scope, wording §1.3 reserves to Spec #19.
+>
+> — **Round 3 then found that round 2's own fix was incompletely propagated, and that two claims round 2 wrote
+> into the Governance version history about itself were false.** Eight findings, three Medium and five Low.
+> AG-A0-005: §4.1's lifecycle line still listed three terminal states after §4.2's enum went to five — AG-A0-003's
+> defect one section over, and the reason "extended to match §4.1" was untrue. AG-A0-006: the FR-AG-011
+> misattribution above. AG-A0-007: FR-AG-026's "unless an approved exclusion exists" named no mechanism at all,
+> leaving a MUST-level rule with an undefined escape hatch; now closed to exactly two recorded artifacts — a
+> property's §3.3 Non-scope, or a §7.1 exception — with prose assertion explicitly excluded. Five Low: §5.4 had no
+> modal verb where its siblings carry a MUST; §7.1 still mandated the bare `AP-###`; "Tradeoff" vs "Accepted
+> Tradeoff" drift; Appendix A's paraphrased field labels; two property transitions missing from Appendix F.
+>
+> — **Round 4 found a fourth propagation miss, and this one had been seen and deliberately left.** Two Medium.
+> AG-A0-013: §9.3's checklist still read "Tradeoff defined." The site was noticed at the 0.7 landing, classified as
+> a checklist label rather than an enum site, and skipped — a judgment call that was wrong, because §9 is the
+> approval gate and it named a disposition existing nowhere else in the document. AG-A0-014: §6.6 stated
+> verification "SHOULD be proportionate to the consequence of tool failure" where FR-AG-036A makes it a MUST;
+> since §4.3 item 1 makes a violated MUST-level property a Blocker, the SHOULD left room to treat disproportionate
+> tool verification as a mere shortfall. Round 4 also independently verified all eight 0.7 changes and all twelve
+> claims the 0.7 version-history row makes about the document — those held.
+>
+> — **Round 5 (v0.8): one High, one Medium, six Low — recorded, not fixed, per owner instruction.** The High,
+> AG-A0-015, is the Disposition enum disagreeing with itself on its own size: FR-AG-009, §4.2's Disposition row
+> and Appendix B's checklist list five values ending in "Resolved", while §4.1, §4.3–§4.6 and Appendix F all
+> treat it as four — there is no §4.7 and no fifth Appendix F chain. "Resolved" is legitimately a *Status* value
+> that leaked into the Disposition enum at three sites. Verified independently at both ends. AG-A0-016 (Medium):
+> "runtime-bearing component" vs "runtime component" across four MUST-level sites with no glossary. Six Low
+> covering §5.7 and §6.6 modality gaps and three appendix field-label drifts. **AG-A0-015 should not be fixed by
+> reflex** — deleting the fifth value is probably right, but "Resolved is a real fifth disposition and §4.7 is
+> missing" is also coherent, and choosing is a governance decision, not a typo correction.
+>
+> **The finding that matters most is about the process, not the document: round 5 was dispatched with explicit
+> instructions to enumerate every enum site and walk every FR-AG rule against its elaborating section — and still
+> found a fifth instance of each recurring class**, one of them in §6.6, the very section hardened in v0.8 for a
+> sibling requirement. Five rounds of targeted fixing have not exhausted either class, which is evidence the
+> document needs a systematic consistency pass rather than another round of point fixes.
+>
+> **Two defect classes account for nearly all of it, and each has now recurred five times.** Incomplete
+> propagation: a term or enum corrected in some sites but not all (§4.1, §7.1, §9.3, the Status enum). Modality
+> mismatch: an FR-AG rule stating MUST while its elaborating section says SHOULD or carries no modal verb (§5.4,
+> §5.5, §6.6). Round 5 was dispatched with instructions to sweep both classes exhaustively rather than
+> opportunistically. **No prediction is made about its outcome** — the severity trend is downward, but a
+> diminishing count is not convergence, and this review has twice been wrong about what the next round would find.
+>
+> **A first reading that reported §9.1 boxes 1–3 as FAIL was rejected on verification.** Its reasoning — that the
+> Authority Matrix names #19/#20 as owners of rules those specs do not yet contain — conflates *unlanded* with
+> *duplicated*, and misses that §1.4's column is *Authoritative Owner* while §8.5's is *Enforcement Owner*. Those
+> are different concepts, and a rule normatively owned in Governance with enforcement owned by #20 is the design.
+>
+> **Deliberately not done:** `Status:` remains `Draft` and no adoption digest is pinned. Both wait on human
+> sign-off, which is not delegable. §9.7 remains open and owned by A3–A9.
+>
+> **Last Updated (prior):** August 30, 2026 — **A1c COMPLETE: merge enforcement is active and MEASURED. Integration plan
 > v0.5 → v0.6. Tracking and planning documentation only.**
 > No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, so no gate
 > run is owed.
