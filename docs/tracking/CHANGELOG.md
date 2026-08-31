@@ -12,7 +12,12 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **A2 hostile-review hardening of frozen selector/activation semantics.**
+> **Last Updated:** August 31, 2026 — **A2 second hostile-review hardening; stale-selector fail-open closed.**
+> Claude's re-review of `f954371` was revalidated against the PR head. KD-W1 now performs an unconditional resolution pass over every inactive contract's tuning selectors before changed-surface filtering, so stale/deleted/renamed governance selectors report even when the caller supplies no matching old selector. Duplicate normalized `component_id` contracts fail closed; duplicate compiler `symbol_key`→selector mappings fail when the semantic-fact universe is indexed; disable-anchor selector drift is rethrown as `ActivationError`; and callers that resolve repeatedly can construct/reuse `SemanticFactIndex` rather than rebuilding the index per lookup.
+>
+> `reference_semantics.py` advances v1.2.0 → v1.3.0 and its suite grows 42 → 48 fixtures, including a direct version assertion. `assembly-tier-check.py` advances v1.5 → v1.6: machine-report serialization and evidence digests share one finite-JSON helper, so NaN/Infinity are rejected consistently; its suite grows 7 → 8 fixtures. The existing `tools/tests/test_*.py` CI discovery runs all 56 tooling tests. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+>
+> **Last Updated (prior):** August 31, 2026 — **A2 hostile-review hardening of frozen selector/activation semantics.**
 > Claude's review of the original `2be53ff4` slice was revalidated against the current PR. The substantive freeze defects are fixed: KD-W1 now matches canonical selectors so deleted/renamed dormant tuning surfaces become structured violations instead of uncaught resolution errors; exception scopes reject unknown fields; contract/scope component IDs normalize identically; selector-v1 now distinguishes static constructors, indexer overloads, and events; non-finite numeric values are rejected; two stable components cannot bind one compiler `symbol_key`; selector-history entries require a supersession reason; and tooling CI now discovers `tools/tests/test_*.py` rather than hard-coding individual files.
 >
 > `reference_semantics.py` advances v1.1.0 → v1.2.0 and the reference suite grows 28 → 42 fixtures, now directly covering every selector kind plus `pending-integration`, enum typed values, `not-equals`, deleted tuning surfaces, exception-scope closure, whitespace normalization, NaN/Infinity rejection, duplicate symbol ownership, and selector-history rationale. The previously reported manifest table break had already been fixed in A2 slice 2. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.

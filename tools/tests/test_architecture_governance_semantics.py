@@ -105,6 +105,23 @@ def event_fact(name, symbol_key, is_static=False):
 
 
 class SelectorTests(unittest.TestCase):
+    def test_reference_semantics_version_is_pinned(self):
+        self.assertEqual("1.3.0", sem.REFERENCE_SEMANTICS_VERSION)
+
+    def test_reusable_fact_index_avoids_reindexing_contract(self):
+        fact = method("Start", [], "M:Start()")
+        index = sem.SemanticFactIndex([fact])
+        self.assertEqual(
+            "M:Start()",
+            sem.resolve_selector(fact["selector"], index)["symbol_key"],
+        )
+
+    def test_fact_universe_rejects_one_symbol_key_for_multiple_selectors(self):
+        first = method("Start", [], "M:Same")
+        second = method("Other", [], "M:Same")
+        with self.assertRaises(sem.SelectorError):
+            sem.SemanticFactIndex([first, second])
+
     def test_overloads_resolve_by_parameter_types(self):
         no_arg = method("Start", [], "M:Start()")
         int_arg = method("Start", ["System.Int32"], "M:Start(Int32)")
@@ -282,6 +299,10 @@ class ActivationTests(unittest.TestCase):
             sem.evaluate_disable_anchor(self.contract(), [drifted, self.other])["passed"]
         )
 
+    def test_disable_anchor_resolution_failure_is_activation_error(self):
+        with self.assertRaises(sem.ActivationError):
+            sem.evaluate_disable_anchor(self.contract(), [self.other])
+
     def test_intentionally_disabled_requires_decision_metadata(self):
         contract = self.contract()
         del contract["decision_ref"]
@@ -327,6 +348,29 @@ class ActivationTests(unittest.TestCase):
             [sem.selector_key(self.other["selector"])],
             violations[0]["unresolved_selector_keys"],
         )
+
+    def test_stale_tuning_selector_is_reported_without_changed_surface(self):
+        violations = sem.kd_w1_violations(
+            [],
+            [self.contract()],
+            [self.disabled],
+        )
+        self.assertEqual(1, len(violations))
+        self.assertEqual([], violations[0]["changed_selector_keys"])
+        self.assertEqual(
+            [sem.selector_key(self.other["selector"])],
+            violations[0]["unresolved_selector_keys"],
+        )
+
+    def test_duplicate_contract_component_ids_fail_closed(self):
+        duplicate = self.contract()
+        duplicate["component_id"] = " component:tackling "
+        with self.assertRaises(sem.ActivationError):
+            sem.kd_w1_violations(
+                [],
+                [self.contract(), duplicate],
+                [self.disabled, self.other],
+            )
 
     def test_exception_scope_rejects_unknown_fields(self):
         with self.assertRaises(sem.ActivationError):

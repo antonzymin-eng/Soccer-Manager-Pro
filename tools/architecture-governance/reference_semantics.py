@@ -10,7 +10,7 @@ import hashlib
 import json
 import math
 
-REFERENCE_SEMANTICS_VERSION = "1.2.0"
+REFERENCE_SEMANTICS_VERSION = "1.3.0"
 
 _SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property", "event"}
 _ACTIVATION_STATES = {"active", "intentionally-disabled", "pending-integration", "unresolved"}
@@ -147,26 +147,38 @@ def selector_key(selector):
     return "selector-v1:" + digest(normalize_selector(selector))
 
 
+class SemanticFactIndex:
+    """Validated reusable lookup for one typed compiler-fact universe."""
+
+    def __init__(self, semantic_facts):
+        self.by_selector = {}
+        symbol_owner = {}
+        for position, fact in enumerate(semantic_facts):
+            if not isinstance(fact, dict) or "selector" not in fact:
+                raise SelectorError("semantic fact[%d] must contain selector" % position)
+            normalized = normalize_selector(fact["selector"])
+            key = selector_key(normalized)
+            symbol_key = fact.get("symbol_key")
+            if not isinstance(symbol_key, str) or not symbol_key.strip():
+                raise SelectorError("semantic fact[%d] has no symbol_key" % position)
+            symbol_key = symbol_key.strip()
+            previous_key = symbol_owner.get(symbol_key)
+            if previous_key is not None and previous_key != key:
+                raise SelectorError(
+                    "symbol_key %s is claimed by multiple selectors" % symbol_key)
+            symbol_owner[symbol_key] = key
+            self.by_selector.setdefault(key, []).append(fact)
+
+
 def _index_semantic_facts(semantic_facts):
-    index = {}
-    symbol_keys = {}
-    for position, fact in enumerate(semantic_facts):
-        if not isinstance(fact, dict) or "selector" not in fact:
-            raise SelectorError("semantic fact[%d] must contain selector" % position)
-        normalized = normalize_selector(fact["selector"])
-        key = selector_key(normalized)
-        symbol_key = fact.get("symbol_key")
-        if not isinstance(symbol_key, str) or not symbol_key.strip():
-            raise SelectorError("semantic fact[%d] has no symbol_key" % position)
-        symbol_key = symbol_key.strip()
-        index.setdefault(key, []).append(fact)
-        symbol_keys.setdefault(symbol_key, []).append(key)
-    return index, symbol_keys
+    if isinstance(semantic_facts, SemanticFactIndex):
+        return semantic_facts
+    return SemanticFactIndex(semantic_facts)
 
 
 def _resolve_from_index(selector, fact_index, allow_missing=False):
     target = normalize_selector(selector)
-    matches = fact_index.get(selector_key(target), [])
+    matches = fact_index.by_selector.get(selector_key(target), [])
     if not matches:
         if allow_missing:
             return None
@@ -177,15 +189,18 @@ def _resolve_from_index(selector, fact_index, allow_missing=False):
 
 
 def resolve_selector(selector, semantic_facts):
-    fact_index, _ = _index_semantic_facts(semantic_facts)
-    return _resolve_from_index(selector, fact_index)
+    """Resolve against raw facts or a reusable SemanticFactIndex."""
+    return _resolve_from_index(selector, _index_semantic_facts(semantic_facts))
 
 
 def validate_component_identities(records, semantic_facts):
     """Bind current selectors while preserving non-resolving historical selectors."""
     if not isinstance(records, list):
         raise IdentityError("component records must be a list")
-    fact_index, _ = _index_semantic_facts(semantic_facts)
+    try:
+        fact_index = _index_semantic_facts(semantic_facts)
+    except SelectorError as exc:
+        raise IdentityError("invalid semantic fact universe: %s" % exc) from exc
     component_ids = set()
     selector_owner = {}
     symbol_owner = {}
@@ -317,7 +332,11 @@ def evaluate_disable_anchor(contract, semantic_facts):
     if operator not in _ANCHOR_OPERATORS:
         raise ActivationError("invalid disable-anchor operator: %r" % operator)
     expected = normalize_typed_value(anchor["expected"])
-    fact = resolve_selector(anchor["selector"], semantic_facts)
+    try:
+        fact = resolve_selector(anchor["selector"], semantic_facts)
+    except SelectorError as exc:
+        raise ActivationError(
+            "disable_anchor selector does not resolve uniquely: %s" % exc) from exc
     if "value" not in fact:
         raise ActivationError("disable-anchor fact exposes no typed value")
     actual = normalize_typed_value(fact["value"])
@@ -338,14 +357,15 @@ def _selector_key_set(selectors):
 
 
 def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_scopes=None):
-    """Return inactive-owner tuning changes not covered by an exact approved scope.
+    """Return inactive-owner tuning drift not covered by an exact approved scope.
 
-    Matching is performed on canonical selector identity, not current symbol
-    resolution, so deleting/renaming a dormant tuning surface is reportable
-    rather than crashing. Current symbol keys are attached where resolvable.
+    Every inactive contract's tuning selectors are validated against the current
+    fact universe even when the caller does not report them as changed. This
+    makes stale/deleted/renamed governance selectors independently visible.
+    Changed-surface matching still uses canonical selector identity.
     """
     changed = _selector_key_set(changed_selectors)
-    fact_index, _ = _index_semantic_facts(semantic_facts)
+    fact_index = _index_semantic_facts(semantic_facts)
 
     scopes = []
     for scope in exception_scopes or []:
@@ -367,6 +387,10 @@ def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_sco
             raise ActivationError("exception scope requires tuning_surface_selectors")
         scopes.append((component_id.strip(), _selector_key_set(selectors)))
 
+    if not isinstance(contracts, list):
+        raise ActivationError("integration contracts must be a list")
+
+    seen_components = set()
     violations = []
     for contract in contracts:
         state = validate_activation_contract(contract)
@@ -374,12 +398,25 @@ def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_sco
         if not isinstance(component_id, str) or not component_id.strip():
             raise ActivationError("integration contract requires component_id")
         component_id = component_id.strip()
+        if component_id in seen_components:
+            raise ActivationError("duplicate integration contract component_id: %s" % component_id)
+        seen_components.add(component_id)
+
         tuning = contract.get("tuning_surface_selectors", [])
         if not isinstance(tuning, list):
             raise ActivationError("tuning_surface_selectors must be a list")
         tuning_by_key = {selector_key(item): item for item in tuning}
+        if len(tuning_by_key) != len(tuning):
+            raise ActivationError(
+                "tuning_surface_selectors contains duplicate canonical selectors")
+
+        unresolved = sorted(
+            key for key, selector in tuning_by_key.items()
+            if _resolve_from_index(selector, fact_index, allow_missing=True) is None
+        )
+
         affected = changed & set(tuning_by_key)
-        if not affected or state == "active":
+        if state == "active":
             continue
 
         authorized = set()
@@ -387,23 +424,22 @@ def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_sco
             if scoped_component == component_id:
                 authorized.update(affected & scoped_keys)
         unauthorized = sorted(affected - authorized)
-        if not unauthorized:
+
+        if not unauthorized and not unresolved:
             continue
 
         changed_symbol_keys = []
-        unresolved_selector_keys = []
         for key in unauthorized:
             fact = _resolve_from_index(tuning_by_key[key], fact_index, allow_missing=True)
-            if fact is None:
-                unresolved_selector_keys.append(key)
-            else:
+            if fact is not None:
                 changed_symbol_keys.append(fact["symbol_key"].strip())
+
         violations.append({
             "component_id": component_id,
             "activation_state": state,
             "changed_selector_keys": unauthorized,
             "changed_symbol_keys": sorted(changed_symbol_keys),
-            "unresolved_selector_keys": sorted(unresolved_selector_keys),
+            "unresolved_selector_keys": unresolved,
         })
     return sorted(
         violations,
