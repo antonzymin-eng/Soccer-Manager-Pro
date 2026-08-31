@@ -12,7 +12,12 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **PR #344 Markdown-link false-negative and Codex-review corrections.**
+> **Last Updated:** August 31, 2026 — **A2 slice 1: executable selector/identity/activation semantics.**
+> Added `tools/architecture-governance/reference_semantics.py` v1.0.0 as the A2 reference implementation over typed compiler facts; it does not parse C# source. It freezes exact selector-v1 matching for namespaces/types/constructors/overloaded methods/static members and assembly identity, stable `component_id` migration via selector history, typed disable-anchor evaluation, and KD-W1 tuning-surface matching with exact approved exception scope.
+>
+> Added `tools/tests/test_architecture_governance_semantics.py` with ten fail-closed fixtures covering overload/static discrimination, missing/ambiguous resolution, selector-history identity, anchor drift, required disable metadata, and KD-W1 active/inactive/exception behavior. The existing `Spec hygiene checks` job now runs this suite; no new CI status was created. This is A2 foundation only: applicability, proof-closure/freshness, review-state, and canonical JSON schemas remain for later A2 slices. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+>
+> **Last Updated (prior):** August 31, 2026 — **PR #344 Markdown-link false-negative and Codex-review corrections.**
 > CI's Markdown link check failed only on two live Microsoft Learn references in Code Standards §8;
 > the action returned status `0` (transport failure), not HTTP 404/410. Both URLs remain current.
 > `.github/markdown-link-check.json` now exempts those two exact URLs only, preserving all other

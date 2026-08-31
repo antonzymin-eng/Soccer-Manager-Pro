@@ -114,6 +114,10 @@ jobs:
         # Locks the machine-report additions without creating a second parser.
         if: always()
         run: python3 -m unittest discover -s tools/tests -p 'test_assembly_tier_check.py'
+      - name: Architecture governance A2 reference semantics tests
+        # Locks selector/identity/activation/KD-W1 semantics before A3 consumes them.
+        if: always()
+        run: python3 -m unittest discover -s tools/tests -p 'test_architecture_governance_semantics.py'
       - name: Cross-document consistency (stale version citations and cardinalities)
         # Catches the defect class four adversarial-review rounds surfaced more than
         # any other and that no other gate sees: a value corrected in the document
