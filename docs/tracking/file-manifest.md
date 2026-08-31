@@ -1,6 +1,17 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** August 30, 2026 — **A1c complete; one file added, tracking/planning only.** New
+**Last Updated:** August 31, 2026 — **A0 adoption review; one file added, planning/tracking only.** New
+`docs/tracking/a0-governance-adoption-review.md` v1.0 — the review-level record for stage A0: subject digests for
+each reviewed version, scope (Governance §9.1–§9.6; §9.7 explicitly out and owned by A3–A9), method and its
+verification depth, the 52-box result, and four findings in Appendix B field order, all Resolved, none a Blocker.
+`docs/planning/project-architecture-governance.md` v0.4 → v0.6 (§5.5 failure-injection modality reconciled with
+FR-AG-029; §4.2 Status enum aligned to §4.1/Appendix F; §3.3 property-ID cell hedged to match FR-AG-004; Version
+History section added). `docs/planning/project-architecture-governance-integration-plan.md` v0.6 → v0.7 (A0 gate
+boundary made explicit, removing the §9.7 circularity). Governance `Status:` remains `Draft` — sign-off pending.
+No `src/`, `.cs`, `.asmdef`, or workflow changed; no file removed or renamed. Full account:
+`docs/tracking/CHANGELOG.md`, August 31, 2026.
+
+**Last Updated (prior):** August 30, 2026 — **A1c complete; one file added, tracking/planning only.** New
 `docs/tracking/a1c-enforcement-evidence.md` v1.2 — durable capture of the merge-enforcement measurement, which
 `mergeable_state` cannot supply later because GitHub does not retain it: run and job ids for both arms, the full
 *Require status checks to pass* list read in settings, and the required-approving-reviews 1 → 0 owner decision with

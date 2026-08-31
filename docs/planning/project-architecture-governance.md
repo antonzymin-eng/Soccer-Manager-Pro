@@ -3,7 +3,7 @@
 
 **Document Class:** Project-level governance specification  
 **Status:** Draft  
-**Version:** 0.5  
+**Version:** 0.6  
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  
 **Primary downstream authorities:** Testing Strategy & Framework Specification #19; Code Standards & Style Guide Specification #20  
@@ -490,7 +490,7 @@ Every admitted property MUST record:
 
 | Field | Requirement |
 |---|---|
-| Property ID | Stable `AP-###` |
+| Property ID | Stable identifier; recommended form `AP-###` (FR-AG-004) |
 | Title | Short descriptive name |
 | State | Candidate / Admitted / Superseded / Retired / Rejected |
 | Statement | Normative property text |
@@ -570,7 +570,7 @@ A finding MUST retain a stable identifier across review rounds.
 | Disposition | Blocker / Tradeoff / Residual Risk / Candidate Property / Resolved |
 | Required action | Fix / document / admit property / none |
 | Owner | Responsible resolver where applicable |
-| Status | Open / Resolved / Accepted |
+| Status | Open / Resolved / Accepted / Recorded / In property process |
 | Round introduced | Review round |
 | Resolution evidence | Proof of final disposition |
 
@@ -728,7 +728,9 @@ Failure injection answers:
 
 > Has the relevant failure behavior actually executed?
 
-Where meaningful, the proof scope SHOULD include deliberately causing:
+Applicable meaningful failure paths MUST be deliberately exercised. FR-AG-029 carries this obligation; this section does not weaken it.
+
+The following failure types are illustrative rather than exhaustive. Where meaningful, the proof scope SHOULD include deliberately causing:
 
 - unavailable dependency;
 - registration failure;
@@ -1479,5 +1481,6 @@ It is a project in which agents do not repeatedly rediscover settled architectur
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.6 | August 31, 2026 | — | A0 adoption review, round 2 — a fresh pass over the amended artifact, per FR-AG-018. Three further findings fixed. **AG-A0-002 (High):** §5.5 stated the failure-injection obligation as SHOULD while FR-AG-029 states it as MUST, gated on the identical "meaningful" condition. Since FR-AG-011 makes an unmet mandatory proof trigger a Blocker, the weaker reading made FR-AG-029 unenforceable. §5.5 now carries the MUST explicitly and marks the nine failure types as illustrative, which is what the SHOULD was actually for. §5.3 and §5.6 already did this correctly; §5.5 was the outlier. **AG-A0-003 (Medium):** the §4.2 Status enum offered only Open / Resolved / Accepted, leaving no valid value for a Residual-Risk finding (Appendix F: "Recorded") or a Candidate-Property one ("Property process"). Enum extended to match §4.1 and Appendix F. **AG-A0-004 (Low):** §3.3 stated `AP-###` as a MUST-level schema requirement while FR-AG-004 calls it "Recommended"; the schema cell now hedges to match. Full record: `docs/tracking/a0-governance-adoption-review.md`. Status remains Draft pending human sign-off. |
 | 0.5 | August 31, 2026 | — | A0 adoption review, round 1. §5.5 reworded from "tests SHOULD intentionally cause" to "the proof scope SHOULD include deliberately causing" — finding AG-A0-001, the one place the document addressed test authoring directly rather than proof scope, which §1.3 reserves to Spec #19. No normative obligation changed: the modality stays SHOULD and the nine failure conditions are unchanged. Status remains Draft pending human sign-off; see `docs/tracking/a0-governance-adoption-review.md`. |
 | 0.4 | August 27, 2026 | — | Draft as created. Version history introduced retroactively at 0.5; rows before this one are reconstructed from the document header, not from a contemporaneous log. |
