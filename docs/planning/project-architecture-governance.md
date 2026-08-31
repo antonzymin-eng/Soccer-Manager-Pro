@@ -3,7 +3,7 @@
 
 **Document Class:** Project-level governance specification  
 **Status:** Draft  
-**Version:** 0.9\
+**Version:** 0.10\
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  
 **Primary downstream authorities:** Testing Strategy & Framework Specification #19; Code Standards & Style Guide Specification #20  
@@ -167,6 +167,22 @@ only through an alternate supported host; applicability determines which obligat
 `runtime-bearing component` is the canonical term in every normative provision of this specification.
 “Runtime component” has no distinct meaning here and is not used normatively.
 
+### Authorized pre-adoption or review gate
+
+An **authorized pre-adoption or review gate** is a gating condition that already governs the reviewed
+scope independently of the finding that cites it. It is valid as a Blocker basis only when all of the
+following hold:
+
+- the gate is durably recorded before the finding is classified as a Blocker;
+- it is authorized by the project lead/owner or by an existing authority that already governs the
+  reviewed scope; a reviewer acting alone cannot self-authorize it;
+- the record identifies the review/artifact scope and the condition that must be satisfied; and
+- the gate remains applicable to the current reviewed artifact.
+
+A reviewer MUST NOT create or retroactively authorize a gate solely to convert a novel concern into a
+Blocker. A novel generalized concern without another Blocker basis remains a Candidate Property under
+FR-AG-014.
+
 ---
 
 # 2. Normative Requirement Registry
@@ -234,7 +250,7 @@ Every Blocker MUST cite:
 
 - an admitted architectural property; or
 - an existing approved specification, invariant, or other authoritative requirement; or
-- an explicit, already-applicable pre-adoption or review gate authorized for the current review; or
+- an explicit, already-applicable pre-adoption or review gate authorized under §1.6 for the current review; or
 - a concrete independently established correctness/integrity failure.
 
 ### FR-AG-012 — Tradeoff integrity
@@ -263,7 +279,7 @@ A review MUST NOT converge while any Blocker remains unresolved.
 
 ### FR-AG-017 — Required disposition completeness
 
-Every substantive finding MUST have an explicit disposition before review converges.
+Every substantive finding MUST have an explicit disposition and MUST be in the terminal Status mapped to that Disposition by §4.1 before review converges.
 
 ### FR-AG-018 — Fresh review requirement
 
@@ -311,7 +327,7 @@ Where an architectural property applies to a finite mechanically discoverable re
 
 An **approved exclusion** is one of exactly two things, and no other route excludes a surface from enumeration:
 
-- the surface falls outside the property's **Non-scope** as recorded in that property's admission record (§3.3); or
+- the surface is explicitly included in the property's **Non-scope** as recorded in that property's admission record (§3.3); or
 - the surface is covered by a granted **exception** under §7.1, with the full exception record that section requires.
 
 Both are recorded artifacts. An exclusion asserted in review prose, without one of these two records behind it, is not an approved exclusion.
@@ -598,6 +614,10 @@ in progress. Its terminal Status is determined by that Disposition:
 `Resolved`, `Accepted`, `Recorded`, and `In property process` are Status values only.
 `Dispositioned` is not a Status.
 
+For a selected Disposition, Status MUST be either `Open` or the terminal Status mapped to that
+Disposition above. Any other Disposition/Status pairing is invalid. A finding MUST NOT enter a
+terminal Status other than the one mapped to its selected Disposition.
+
 A finding MUST retain a stable identifier across review rounds.
 
 ---
@@ -614,7 +634,7 @@ A finding MUST retain a stable identifier across review rounds.
 | Disposition | Exactly one: Blocker / Accepted Tradeoff / Residual Risk / Candidate Property |
 | Required action | Fix / document / admit property / none |
 | Owner | Responsible resolver where applicable |
-| Status | Open / Resolved / Accepted / Recorded / In property process |
+| Status | Open / Resolved / Accepted / Recorded / In property process; only `Open` or the §4.1 terminal Status mapped to the selected Disposition is valid |
 | Round introduced | Review round |
 | Resolution evidence | Evidence that the Status transition for the selected Disposition is complete |
 
@@ -630,7 +650,7 @@ A finding is a Blocker only when at least one of the following holds:
 4. required integration ownership is absent;
 5. a mandatory proof trigger is unmet;
 6. concrete correctness, integrity, determinism, security, or equivalent established behavior is broken; or
-7. an explicit, already-applicable pre-adoption or review gate authorized for this review is unsatisfied.
+7. an explicit, already-applicable pre-adoption or review gate authorized under §1.6 for this review is unsatisfied.
 
 A reviewer preference alone MUST NOT classify a finding as a Blocker, as FR-AG-010 requires.
 
@@ -689,6 +709,10 @@ A finding becomes Candidate Property when:
 
 Candidate Property findings leave the current review unless and until the property is formally admitted.
 
+If a Candidate Property is admitted before the current review converges and the admitted property
+applies to the reviewed work, the review MUST recompute its applicable-property set and satisfy the
+newly applicable property and proof obligations before convergence.
+
 A Candidate Property MUST NOT independently block the current review unless it is admitted and applies
 to the reviewed work, as FR-AG-014 requires.
 
@@ -700,7 +724,9 @@ reviewer imagination, as FR-AG-015 requires.
 A review MUST NOT converge while a Blocker remains unresolved. For this purpose, a Blocker remains
 open exactly when its Disposition is `Blocker` and its Status is `Open`.
 
-Every substantive finding MUST have exactly one valid Disposition before review convergence.
+Every substantive finding MUST have exactly one valid Disposition and MUST be in the terminal Status
+mapped to that Disposition by §4.1 before review convergence. An `Open` finding of any Disposition
+prevents convergence, and any invalid Disposition/Status pairing prevents convergence.
 
 Final convergence MUST include a fresh review over the current artifact.
 
@@ -1309,7 +1335,7 @@ This specification MUST satisfy its own governance model before becoming authori
 - [ ] Every MUST-level property satisfied.
 - [ ] Required proof complete.
 - [ ] No finding with Disposition `Blocker` remains Status `Open`.
-- [ ] Every substantive finding has exactly one valid Disposition.
+- [ ] Every substantive finding has exactly one valid Disposition and is in its §4.1-mapped terminal Status.
 - [ ] Fresh final review completed.
 - [ ] Round-budget exhaustion produces NON-CONVERGED, not APPROVED.
 
@@ -1372,7 +1398,8 @@ Last reviewed:
 # Appendix B — Review Finding Record Template
 
 **§4.2 is the authoritative field list and allowed-value set.** The labels and choices below
-reproduce it exactly.
+reproduce it exactly. For a selected Disposition, only `Open` or its §4.1-mapped terminal Status is
+valid; every other pairing is invalid.
 
 ```text
 Finding ID:
@@ -1585,7 +1612,8 @@ Examples:
 | Residual Risk | `Open → Recorded` |
 | Candidate Property | `Open → In property process` |
 
-§4.1 is authoritative. A finding has exactly one Disposition and `Dispositioned` is not a Status.
+§4.1 is authoritative. A finding has exactly one Disposition; only `Open` or the mapped terminal
+Status is valid for that Disposition, and `Dispositioned` is not a Status.
 
 ### Review
 
@@ -1618,6 +1646,7 @@ It is a project in which agents do not repeatedly rediscover settled architectur
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.10 | August 31, 2026 | — | **Hostile-review closure after the systematic remediation.** Makes the finding state machine normative rather than descriptive: only `Open` or the Disposition-specific terminal Status is valid, all findings must be terminal before convergence, and admission of a Candidate Property during a review forces applicability recomputation. Corrects FR-AG-026's inverted Non-scope exclusion wording so an excluded surface must be inside the recorded Non-scope, not outside it. Defines an authorized pre-adoption/review gate in §1.6: durable pre-existing record, owner/existing-authority authorization, scoped closure condition, and no reviewer self-authorization or retroactive gate creation. Status remains Draft pending human sign-off. |
 | 0.9 | August 31, 2026 | — | **Systematic consistency remediation before a fresh A0 adoption review.** Settles the finding model as exactly four Dispositions — Blocker, Accepted Tradeoff, Residual Risk, Candidate Property — and five Status values; `Resolved` is a Status only, and `Dispositioned` is not a Status. Defines **runtime-bearing component** as the one canonical normative term and replaces the former `runtime component` uses. FR-AG-011 now permits only an explicit, already-applicable, authorized pre-adoption/review gate as the narrow Draft-stage Blocker basis; severity never decides Disposition. Reconciles FR-AG-011–020, FR-AG-026–035, FR-AG-036, FR-AG-039–040D with their elaborations; §4.7 now defines review-state semantics directly. The property/finding templates now reproduce their governing schemas exactly; Appendix C uses `Teardown owner`; Appendix D keeps static, alternate, and bypass surfaces separate; Appendix F mirrors the settled state model. Status remains Draft pending the separately recorded fresh review and human sign-off. |
 | 0.8 | August 31, 2026 | — | A0 adoption review, round 4 — fresh pass over v0.7. **Two Medium findings, no Blocker.** Round 4 confirmed all eight of the 0.7 changes landed correctly and verified all twelve claims this history's 0.7 row makes about the document against the live text. **AG-A0-013 (Medium):** §9.3's Finding Governance Checklist still read "Tradeoff defined." — the bare term AG-A0-010 replaced everywhere else. This is the **fourth** instance of the incomplete-propagation class, and it sat inside §9, the self-check gate whose whole purpose is catching exactly this drift. It was also a judgment call made and got wrong at the 0.7 landing: the site was seen, classified as a checklist label rather than an enum site, and deliberately left. It is an enum site — §9 is the approval gate, and it named a disposition that no longer existed anywhere else in the document. **AG-A0-014 (Medium):** §6.6 stated *"Verification SHOULD be proportionate to the consequence of tool failure"* while FR-AG-036A requires verification *"appropriate to the consequence of false negatives and false positives"* as a MUST. Because §4.3 item 1 makes a violated MUST-level property a Blocker, the SHOULD left room to treat disproportionate tool verification as a mere shortfall. §6.6 now carries the MUST anchored to FR-AG-036A, with depth-of-verification framed as judgment *within* the obligation rather than an escape from it — the same shape §5.4 and §5.5 already use. Status remains Draft pending human sign-off. |
 | 0.7 | August 31, 2026 | — | A0 adoption review, round 3 — fresh pass over v0.6. **Eight findings, three Medium and five Low; no Blocker.** Two of them falsify claims this document's own 0.6 row made about itself, and both are annotated in that row rather than silently rewritten. **AG-A0-005 (Medium):** §4.1's finding-lifecycle line still listed three terminal states after 0.6 extended the §4.2 enum to five — the same defect class as AG-A0-003, one section over, which is why "extended to match §4.1" was false. §4.1 now carries all four terminal states and maps each to its disposition. **AG-A0-006 (Medium):** the 0.6 row attributed the Blocker trigger to FR-AG-011, which only requires a Blocker to cite an authority; the rule is §4.3 item 5. **AG-A0-007 (Medium):** FR-AG-026's "unless an approved exclusion exists" named no mechanism, leaving a MUST-level rule with an undefined escape hatch; it is now closed to exactly two recorded artifacts — a property's §3.3 Non-scope, or a §7.1 exception — and prose assertion is explicitly excluded. **AG-A0-008 (Low):** §5.4 stated its evidence list with no modal verb at all while §5.3 and the fixed §5.5 anchor theirs to a MUST; now anchored to FR-AG-028 in the same shape. **AG-A0-009 (Low):** §7.1's exception schema still mandated the bare `AP-###` that FR-AG-004 calls recommended; hedged, closing the third and last site of AG-A0-004's defect. **AG-A0-010 (Low):** §4.2 and Appendix F said "Tradeoff" where FR-AG-009 and Appendix B say "Accepted Tradeoff"; unified. **AG-A0-011 (Low):** Appendix A paraphrases five of §3.3's field labels, which works against the machine-checkable-schema ambition in §6.1; Appendix A now states that §3.3 governs and that a schema is generated from §3.3, not from the template. **AG-A0-012 (Low):** Appendix F's property summary omitted §3.1's `Rejected → Candidate` and `Superseded → Retired` edges; both added. Status remains Draft pending human sign-off. |

@@ -18,7 +18,7 @@
 |---|---|
 | Artifact | `docs/planning/project-architecture-governance.md` |
 | Version at review open | 0.4 |
-| Version at latest revision of this record | 0.9 — systematic remediation complete; the review is converged for A0 but awaits human sign-off |
+| Version at latest revision of this record | 0.10 — hostile-review follow-up fixed; the review is converged for A0 but awaits human sign-off |
 | Status throughout | `Draft` — unchanged by this review |
 | Blob digest, v0.4 (as reviewed, round 1) | `f00032cf2f16971ffbef51f6bbe307fac51a31d3` |
 | SHA-256, v0.4 | `412c38eceba7a00d67ee7eb7631863bd550e29fed3e033fef75c55e7690ba316` |
@@ -32,6 +32,8 @@
 | SHA-256, v0.8 | `224c9aff822258bf139f1d089c442d1b0625b39d9bde81ab102ce9ad9555cd5b` |
 | Blob digest, v0.9 (fresh post-remediation review) | `bd709b2eccd765a319c861d6d9081f30a552922f` |
 | SHA-256, v0.9 | `b25f4d4ea138ab20854d1f2d2340c0ed0e9c81ea13cac4c55e9b3581f94c671e` |
+| Blob digest, v0.10 (fresh hostile-review closure) | `ad261addb906e5ca5e8d8c4b39711abe93e7774d` |
+| SHA-256, v0.10 | `f40be7aef9c505677f1120e366246a82c3c542db0a742e5a34ab981a55e26bf0` |
 
 ⚠️ **The round-5 pause is historical.** At owner direction, it was followed by one systematic
 consistency-remediation pass rather than another point-fix round. That pass produced Governance v0.9,
@@ -173,7 +175,11 @@ review's conclusion on them does not transfer. Recorded here rather than left im
 
 ### 4.4 Fresh full post-remediation review — Governance v0.9
 
-**Result: 52 of 52 A0-scope boxes verified; no new findings.** The review re-read the whole current
+⚠️ **Historical result, superseded by §4.5.** A hostile follow-up over this exact v0.9 artifact found
+AG-A0-023 through AG-A0-025. The zero-new-findings conclusion below is retained as the published
+review result, not treated as the current conclusion.
+
+**Result as recorded at v0.9: 52 of 52 A0-scope boxes verified; no new findings.** The review re-read the whole current
 Governance artifact rather than only Round 5's cited passages. It also re-ran the mechanical inventory
 recorded in `a0-governance-consistency-audit.md`: 47 FR rows; matching four-value Disposition and
 five-value Status sets; exact property/finding template field order; six matching property transitions;
@@ -207,9 +213,30 @@ A0 gate. Severity and Disposition remain independent.
 
 ---
 
+### 4.5 Fresh full hostile-review closure — Governance v0.10
+
+**Result: 52 of 52 A0-scope boxes verified; zero new findings after AG-A0-023–025 were fixed.** This
+review re-read the full current Governance artifact after the three hostile-review repairs and reran
+the same mechanical inventories used by the systematic audit.
+
+The closure specifically verified the three previously missed failure modes:
+
+- for each Disposition, only `Open` or its mapped terminal Status is legal, and every substantive finding
+  must be terminal before convergence;
+- FR-AG-026 excludes a surface only when it is explicitly **within** recorded Non-scope or covered by a
+  §7.1 exception; and
+- a pre-adoption/review gate can ground a Blocker only under the §1.6 authorization contract and cannot
+  be invented or self-authorized by the current reviewer.
+
+The 47 FR headings remain unique; the four-Disposition/five-Status sets remain aligned; Appendix B/F
+and integration-plan §8 carry the same transition semantics; all §9.1–§9.6 boxes remain satisfied.
+No additional inconsistency was found in the current v0.10 artifact.
+
+---
+
 ## 5. Findings
 
-Twenty-two findings were recorded across five historical rounds. The Round 5 entries and the
+Twenty-five findings were recorded across five historical rounds, the systematic remediation, and one hostile follow-up. The Round 5 entries and the
 previously compressed Round 3–4 entries are schema-completed in §5.3 so every live record can be read
 under Governance v0.9's Appendix B field set. `Resolved` is recorded as Status, never Disposition.
 
@@ -392,6 +419,18 @@ The four findings from rounds 1 and 2 follow in full Appendix B form.
 - **Resolution evidence:** Schema cell now reads *"Stable identifier; recommended form `AP-###`
   (FR-AG-004)"* in v0.6.
 
+### 5.4 Hostile follow-up findings over Governance v0.9
+
+| ID | Round introduced | Severity | Summary | Requirement/Property | Required action | Owner | Disposition | Status | Resolution evidence |
+|---|---:|---|---|---|---|---|---|---|---|
+| AG-A0-023 | Hostile follow-up | High | The four terminal mappings were descriptive but invalid Disposition/Status pairs were not prohibited, and §4.7 allowed non-Blocker findings to remain `Open` at convergence. | FR-AG-017; §4.1–§4.2; §4.7; Appendix F | Fix | A0 review | Blocker | Resolved | Governance v0.10 makes only `Open` or the mapped terminal Status legal and requires every finding to be terminal before convergence; same-review Candidate admission recomputes applicability. |
+| AG-A0-024 | Hostile follow-up | High | FR-AG-026 inverted its Non-scope route by saying a surface outside Non-scope was excluded, which is the in-scope side of the boundary. | FR-AG-026; §3.3; §5.3; §7.1 | Fix | A0 review | Blocker | Resolved | Governance v0.10 states that an excluded surface must be explicitly included within recorded Non-scope or covered by a §7.1 exception. |
+| AG-A0-025 | Hostile follow-up | Medium | The newly added review-gate Blocker basis did not define who authorizes a gate, when authorization exists, or how retroactive reviewer-created gates are prevented. | FR-AG-011; §1.6; §4.3 | Fix | A0 review | Blocker | Resolved | Governance v0.10 requires a durable pre-existing gate record authorized by the project lead/owner or existing governing authority, scoped to the artifact with a closure condition, and prohibits reviewer self-authorization/retroactive invention. |
+
+All three were classified Blocker because they contradicted the already-applicable A0 self-governance
+and review gate, not because of severity. Their current Status is the §4.1-mapped terminal Status
+`Resolved`.
+
 ### Not filed as findings
 
 One round-2 observation is deliberately not filed: that the v0.5 version history cited this file
@@ -402,10 +441,11 @@ commits, not a document defect, and it resolves on this file landing.
 
 ## 6. Outcome and what remains
 
-**Review outcome: CONVERGED FOR A0; NOT YET APPROVED.** The systematic remediation resolved all
-Round 5 and audit-exposed inconsistencies in one batch. The fresh full review over Governance v0.9
-found no new finding. Every recorded corrective finding is now `Disposition: Blocker`,
-`Status: Resolved`; no Blocker remains open. This is an A0 gate result, not a claim that a High
+**Review outcome: CONVERGED FOR A0; NOT YET APPROVED.** The systematic remediation resolved the
+Round 5 and audit-exposed inconsistencies, but the subsequent hostile follow-up found AG-A0-023–025
+in Governance v0.9. Governance v0.10 resolves those three findings, and the fresh full closure review
+in §4.5 found no additional finding. Every recorded corrective finding is now `Disposition: Blocker`,
+`Status: Resolved`; every finding is in its Disposition-mapped terminal Status. This is an A0 gate result, not a claim that a High
 severity always selects `Blocker`.
 
 | Review activity | Subject | Result |
@@ -416,7 +456,9 @@ severity always selects `Blocker`.
 | 4 | v0.7 | 2 Medium — a fourth propagation miss, this one a site seen and deliberately left on a judgment call that was wrong |
 | 5 | v0.8 | **1 High, 1 Medium, 6 Low** — historical pause record; all eight are dispositioned and resolved in §5.3 |
 | Systematic remediation | v0.8 → v0.9 | One exhaustive FR/modality/schema/terminology pass; all listed corrections applied together |
-| Fresh full adoption review | v0.9 | 52/52 A0 boxes verified; zero new findings |
+| Fresh full adoption review | v0.9 | Historical zero-finding result; superseded when hostile follow-up found AG-A0-023–025 |
+| Hostile follow-up | v0.9 | 2 High, 1 Medium — all fixed in v0.10 |
+| Fresh hostile-review closure | v0.10 | 52/52 A0 boxes verified; zero new findings |
 
 **Two defect classes account for nearly all twenty-two findings, and round 5 found a fifth instance
 of each even after being told to sweep them exhaustively.** Incomplete propagation — a term or enum
@@ -428,8 +470,8 @@ carries no modal verb: §5.4, §5.5, §6.6, and now §5.7 and §6.6 again agains
 enumerate every enum site and walk every FR-AG rule against its elaborating section — and still found
 new instances of both classes, including one in §6.6, the very section hardened in v0.8 for a sibling
 requirement. Five rounds of targeted fixing have not exhausted either class. That is evidence the
-document needed a systematic consistency pass rather than another round of point fixes. That pass is
-the v0.9 remediation documented in the companion audit.
+document needed a systematic consistency pass rather than another round of point fixes. That pass is the v0.9 remediation documented in the companion audit; the v0.10 hostile-review closure
+then fixes the three semantic defects the systematic matrix itself did not detect.
 
 **AG-A0-015 was not fixed by reflex.** The remediation settled the model explicitly: four
 Dispositions select handling; five Status values represent lifecycle. That makes `Resolved` a Status,
@@ -457,6 +499,7 @@ specification is authoritative at A0 but not *fully adopted* until then.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.5 | August 31, 2026 | — | **Hostile-review closure.** Records AG-A0-023–025 against Governance v0.9: invalid cross-axis finding states/open non-Blocker convergence, inverted FR-AG-026 Non-scope semantics, and under-specified review-gate authorization. Governance v0.10 resolves all three, the companion audit advances to v1.1, and a fresh full v0.10 review returns zero new findings with all 52 A0-scope boxes verified. The v0.9 zero-finding review is retained but explicitly marked superseded. Outcome remains **CONVERGED FOR A0; NOT YET APPROVED** pending human sign-off. |
 | 1.4 | August 31, 2026 | — | **Systematic remediation and fresh full adoption review.** Governance v0.8 → v0.9 settles four Dispositions and five Statuses, canonically defines `runtime-bearing component`, and reconciles the full FR modality/schema/template surface in one batch; the companion audit carries the 47-row matrix. Round 5's eight historical open findings are now complete `Blocker` / `Resolved` records, and the earlier compressed record fields are schema-completed without inferring tradeoff/risk approval. The A0 corrective route is explicitly grounded in the authorized Governance §9 / plan §11 pre-adoption gate, never in severity. The fresh whole-artifact v0.9 review verifies all 52 A0-scope boxes and returns zero new findings. Review outcome: **CONVERGED FOR A0; NOT YET APPROVED** — human sign-off, then the status edit and post-edit adoption digest, remain. |
 | 1.3 | August 31, 2026 | — | **Round 5 recorded; review PAUSED at owner instruction with its findings deliberately unfixed.** One High, one Medium, six Low — AG-A0-015 to AG-A0-022 — bringing the total to twenty-two across five rounds, none clean. The High (AG-A0-015) is the Disposition enum disagreeing with itself on its own size: FR-AG-009, §4.2 and Appendix B list five values ending in "Resolved" while §4.1, §4.3–§4.6 and Appendix F treat it as four; independently verified at both ends. Governance stays at v0.8 with these findings open against it. **Two §9.6 discharges change as a direct result:** "Every finding dispositioned" is **withdrawn**, because "Open" is a Status and not a disposition under FR-AG-009, and "No Blockers open" is weakened to rest on severity assessment rather than formal disposition. A0 therefore cannot close in this state — not because a High is open, since severity does not gate approval, but because two of the six boxes this record exists to discharge are no longer discharged by it. Also recorded: round 5 found a fifth instance of each of the two recurring defect classes *despite* being dispatched with instructions to sweep both exhaustively, which is the argument that a systematic consistency pass is now owed rather than another round of point fixes. |
 | 1.2 | August 31, 2026 | — | Round 4 recorded; Governance v0.7 → v0.8. Two Medium findings, fourteen in total, none a Blocker. **AG-A0-013** is the fourth instance of the incomplete-propagation class and the first that was seen and deliberately left: §9.3's checklist item was classified at the 0.7 landing as a label rather than an enum site, which was wrong — §9 is the approval gate, and it named a disposition that existed nowhere else. **AG-A0-014**: §6.6 stated FR-AG-036A's MUST as a SHOULD. Round 4 independently verified all eight of the 0.7 changes and all twelve claims the 0.7 version-history row makes about the document. Round 4 did not converge, so round 5 over v0.8 is dispatched, with instructions to sweep the two recurring defect classes exhaustively rather than opportunistically. Also corrected in this record: the review-subject table said the review closed at v0.6, which was false — the review is open; and §4's cited line numbers, correct when written, have drifted as the document grew, which is now stated with the §-anchors named as the durable reference. |

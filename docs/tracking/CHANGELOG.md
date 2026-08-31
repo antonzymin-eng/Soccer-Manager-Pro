@@ -12,7 +12,27 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **Systematic Governance consistency remediation and fresh A0 adoption review.**
+> **Last Updated:** August 31, 2026 — **Governance hostile-review closure after the systematic remediation.**
+> Governance advances v0.9 → v0.10; integration plan v0.8 → v0.9; A0 consistency audit v1.0 → v1.1;
+> A0 adoption review v1.4 → v1.5. Planning/tracking documentation only; Governance remains `Draft`
+> pending human sign-off.
+>
+> Three semantic defects found in the v0.9 follow-up are fixed together. The finding state machine now
+> rejects every Disposition/Status pairing except `Open` or that Disposition's mapped terminal Status,
+> and convergence requires every substantive finding to be terminal; Candidate admission during the
+> same review forces applicability recomputation. FR-AG-026's exclusion route now correctly means a
+> surface explicitly **within** recorded Non-scope (or a §7.1 exception), not outside Non-scope. The
+> pre-adoption/review-gate Blocker route now requires a durable pre-existing gate authorized by the
+> project lead/owner or an existing governing authority, with scope and closure condition; the current
+> reviewer cannot self-authorize or invent one retroactively.
+>
+> AG-A0-023–025 record those defects as Blocker/Resolved under the A0 corrective route. The prior v0.9
+> zero-finding review is retained as historical and explicitly superseded. A fresh full review over
+> Governance v0.10 verifies all 52 A0-scope boxes and returns zero additional findings.
+>
+> No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed.
+>
+> **Last Updated (prior):** August 31, 2026 — **Systematic Governance consistency remediation and fresh A0 adoption review.**
 > Governance advances v0.8 → v0.9; the integration plan v0.7 → v0.8; the A0 review record v1.3 → v1.4;
 > and new `docs/tracking/a0-governance-consistency-audit.md` v1.0 records the exhaustive audit. Planning
 > and tracking documentation only. `Status:` remains `Draft`; human sign-off is still required before the

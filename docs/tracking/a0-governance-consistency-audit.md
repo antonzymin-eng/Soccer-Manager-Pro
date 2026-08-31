@@ -4,7 +4,7 @@
 > **Purpose:** Durable evidence for the one systematic consistency-remediation pass directed after
 > A0 adoption review round 5. This is a non-normative audit record. The governing source remains
 > [`project-architecture-governance.md`](../planning/project-architecture-governance.md).
-> **Subject:** Governance v0.8 at audit start; Governance v0.9 after remediation.\
+> **Subject:** Governance v0.8 at audit start; Governance v0.9 after the systematic remediation; Governance v0.10 after hostile-review closure.\
 > **Related records:** [`a0-governance-adoption-review.md`](a0-governance-adoption-review.md) and
 > [`project-architecture-governance-integration-plan.md`](../planning/project-architecture-governance-integration-plan.md).
 
@@ -64,13 +64,13 @@ modal rule.
 | FR-AG-008 | §3.2 AC-7, §3.3, Appendix E | Exact `Machine` / `Hybrid` / `Judgment` classification. |
 | FR-AG-009 | §4.1–§4.2, Appendix B, Appendix F | Exact four-value Disposition enum. |
 | FR-AG-010 | §4.3 | Exact prohibition on preference-only Blockers. |
-| FR-AG-011 | §4.2–§4.3 | Exact mandatory Blocker authority, authorized review-gate, or failure citation. |
+| FR-AG-011 | §1.6, §4.2–§4.3 | Exact mandatory Blocker authority/failure citation; review-gate use is limited to a durably recorded, owner/existing-authority-authorized gate that cannot be self-authorized or retroactively invented by the reviewer. |
 | FR-AG-012 | §4.4 | Exact MUST NOT on waiving an admitted MUST-level property. |
 | FR-AG-013 | §4.5 | Exact MUST NOT on concealing missing required evidence. |
 | FR-AG-014 | §4.6 | Exact MUST NOT on independent Candidate-Property blocking. |
 | FR-AG-015 | §4.7, §9.6, Appendix F | Exact property-based convergence condition. |
 | FR-AG-016 | §4.7, §9.6, Appendix F | Exact no-open-Blocker condition. |
-| FR-AG-017 | §4.7, §9.6 | Exact complete-Disposition condition. |
+| FR-AG-017 | §4.1–§4.2, §4.7, §9.6 | Exact complete-Disposition plus mapped-terminal-Status condition; every `Open` finding prevents convergence. |
 | FR-AG-018 | §4.7, §9.6 | Exact fresh-current-artifact condition. |
 | FR-AG-019 | §4.7 | Exact round budget cannot grant approval. |
 | FR-AG-020 | §4.7, §9.6, Appendix F | Exact open-Blocker result is `NON-CONVERGED`. |
@@ -79,7 +79,7 @@ modal rule.
 | FR-AG-023 | §1.6, Appendix C | Exact construction, activation, update/use, and teardown ownership. |
 | FR-AG-024 | Appendix C | Exact testhost/tool/alternate-path coverage. |
 | FR-AG-025 | Appendix C | Exact prohibited-or-classified bypass coverage. |
-| FR-AG-026 | §5.3 | Exact complete finite-surface inventory unless approved exclusion. |
+| FR-AG-026 | registry definition, §3.3, §5.3, §7.1 | Exact complete finite-surface inventory unless the surface is explicitly within recorded Non-scope or covered by a §7.1 exception. |
 | FR-AG-027 | §1.6, §5.3 | Exact structural-reachability requirement. |
 | FR-AG-028 | §5.4 | Exact lifecycle/order evidence requirement. |
 | FR-AG-029 | §5.5 | Exact meaningful-failure-path exercise requirement. |
@@ -112,7 +112,7 @@ modal rule.
 | Property-record field set | §3.3 | Appendix A | Aligned; Appendix A now uses the exact 15 field labels. |
 | Enforcement-class enum | FR-AG-008, §3.2 AC-7, §3.3 | Appendix A, Appendix E | Aligned: `Machine` / `Hybrid` / `Judgment`. |
 | Finding Disposition enum | FR-AG-009, §4.1–§4.2 | Appendix B, Appendix F, integration plan §§3.8/8/A0 | Aligned: exactly four values; `Resolved` removed from all live enum sites. |
-| Finding Status enum and terminal mapping | §4.1–§4.2 | Appendix B, Appendix F, integration plan §8 | Aligned: five Status values; no `Dispositioned` pseudo-state. |
+| Finding Status enum and terminal mapping | §4.1–§4.2 | Appendix B, Appendix F, integration plan §8 | Aligned: five Status values; no `Dispositioned` pseudo-state; for each Disposition only `Open` or its mapped terminal Status is legal, and convergence requires the terminal Status. |
 | Finding-record fields | §4.2 | Appendix B, integration plan §3.8 | Aligned; the plan preserves all 11 required machine-field equivalents and may add ledger metadata. |
 | Integration ownership/lifecycle contract | FR-AG-021–025 | Appendix C, integration plan §§3.4 and 6.1 | Aligned; `runtime-bearing component` and `teardown` are canonical. |
 | Proof dependency surface | FR-AG-031/032/032A/040D, §5.7 | Appendix D, integration plan §3.7 | Aligned; static, alternate, and bypass paths are separate entries. |
@@ -139,7 +139,10 @@ modal rule.
 | SC-12 | Systematic audit | Restored direct modalities for FR-AG-026/027/030–035/037–040D where the audit found no explicit elaborating anchor. |
 | SC-13 | Systematic audit | Normalized the integration plan's finding field set, state model, A0 condition, canonical term use, and current governing-version reference. |
 | SC-14 | Systematic audit | Replaced Appendix A paraphrased field labels with exact §3.3 labels and corrected Appendix B `Requirement/Property` spelling and field order. |
-| SC-15 | Final coherence check | Added the narrow, authorized pre-adoption/review-gate Blocker basis so an A0 corrective finding is never classified from severity alone. |
+| SC-15 | Final coherence check | Added the narrow pre-adoption/review-gate Blocker basis so an A0 corrective finding is never classified from severity alone. |
+| SC-16 | Hostile follow-up | Made the Disposition/Status transition contract normative: only `Open` or the mapped terminal Status is legal; all findings must be terminal before convergence; same-review Candidate admission forces applicability recomputation. |
+| SC-17 | Hostile follow-up | Corrected FR-AG-026's inverted Non-scope wording: the exclusion applies when a surface is explicitly **within** recorded Non-scope, not outside it. |
+| SC-18 | Hostile follow-up | Defined review-gate authorization: durable pre-existing record, project lead/owner or existing-authority authorization, scoped closure condition, current applicability, and no reviewer self-authorization/retroactive invention. |
 
 ---
 
@@ -151,14 +154,14 @@ considered complete:
 - 47 and only 47 live `FR-AG-*` registry headings;
 - identical four-value Disposition sets in FR-AG-009, §4.2, Appendix B, and Appendix F;
 - identical five-value Status sets in §4.2 and Appendix B, with the same terminal mapping in Appendix
-  F and integration-plan §8;
+  F and integration-plan §8, plus rejection of every pairing other than `Open` or the mapped terminal Status;
 - exact field labels in §3.3/Appendix A and §4.2/Appendix B;
 - no live normative `runtime component` use; the sole retained phrase is the §1.6 non-normative
   statement that it has no distinct meaning;
 - separate static, alternate, and bypass dependency entries in Appendix D; and
 - no stale current A0 or governing-version assertion in the integration plan.
 
-The fresh adoption review records the result of those checks against Governance v0.9. It does not
+The fresh adoption review records the final result of those checks against Governance v0.10. It does not
 approve the document; human sign-off remains required by the A0 gate.
 
 ---
@@ -167,4 +170,5 @@ approve the document; human sign-off remains required by the A0 gate.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.1 | August 31, 2026 | — | Hostile-review closure over v0.9: adds SC-16–SC-18, corrects the FR-AG-026 audit result, makes state-pair validity and terminal convergence explicit, and records the bounded review-gate authorization contract. Final checked subject is Governance v0.10. |
 | 1.0 | August 31, 2026 | — | Initial systematic remediation audit over Governance v0.8 → v0.9 and the current integration-plan representations. |

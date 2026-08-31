@@ -1,6 +1,16 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** August 31, 2026 — **Systematic Governance consistency remediation and fresh A0 review;
+**Last Updated:** August 31, 2026 — **Governance hostile-review closure; planning/tracking only.**
+Updated `docs/planning/project-architecture-governance.md` v0.9 → v0.10, the integration plan v0.8 →
+v0.9, `a0-governance-consistency-audit.md` v1.0 → v1.1, and `a0-governance-adoption-review.md`
+v1.4 → v1.5. Fixes: Disposition/Status legality and terminal convergence, FR-AG-026 Non-scope
+orientation, and bounded pre-adoption/review-gate authorization. Records AG-A0-023–025 as resolved,
+marks the v0.9 zero-finding review historical/superseded, and records a fresh zero-finding v0.10
+closure review. `CHANGELOG.md` and the current A1c plan pointer in `open-issues-resolved.md` are
+synchronized. Governance remains `Draft` pending human sign-off. No `src/`, `.cs`, `.asmdef`, or
+workflow changed; no file added, removed, or renamed.
+
+**Last Updated (prior):** August 31, 2026 — **Systematic Governance consistency remediation and fresh A0 review;
 planning/tracking only.** Added `docs/tracking/a0-governance-consistency-audit.md` v1.0, the durable
 47-FR modality and schema/template/transition audit. Updated
 `docs/planning/project-architecture-governance.md` v0.8 → v0.9: four Dispositions/five Statuses,
