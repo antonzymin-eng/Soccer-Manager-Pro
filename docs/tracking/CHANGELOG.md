@@ -12,7 +12,20 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **A0 evidence-record reconciliation after Claude's pre-fix critique.**
+> **Last Updated:** August 31, 2026 — **A0 CLOSED; Project Architecture Governance v0.10 approved.**
+> The project owner explicitly approved Governance v0.10. The required adoption order was followed:
+> Governance `Status: Draft` → `Approved` first, then the exact approved file was hashed, then the
+> canonical adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` (Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`) was recorded in
+> integration-plan §11 A0. Integration plan advances v0.9 → v0.10; A0 review record v1.6 → v1.7.
+>
+> Governance semantics were not changed after the converged v0.10 review; its only edit is the Status
+> field. The plan also removes a stale pre-A0 SPEC_INDEX-alignment prerequisite that conflicted with
+> the already-adopted §9.7/A3–A9 boundary. A0 is now CLOSED and A2 is next.
+>
+> Planning/tracking documentation only; no `src/`, `.cs`, `.asmdef`, tool, workflow, save, RNG, tuning,
+> or simulation behavior changed, so no code gate is owed.
+>
+> **Last Updated (prior):** August 31, 2026 — **A0 evidence-record reconciliation after Claude's pre-fix critique.**
 > Tracking documentation only. `a0-governance-adoption-review.md` v1.5 → v1.6; `file-manifest.md`
 > updated. Governance v0.10 and its recorded blob/SHA-256 are unchanged.
 >

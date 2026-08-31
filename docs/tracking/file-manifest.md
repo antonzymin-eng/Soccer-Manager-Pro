@@ -1,6 +1,13 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** August 31, 2026 — **A0 evidence-record reconciliation after Claude's pre-fix critique; tracking only.**
+**Last Updated:** August 31, 2026 — **A0 CLOSED; Governance v0.10 approved; planning/tracking only.**
+Project-owner sign-off recorded. `docs/planning/project-architecture-governance.md` changes only
+`Status: Draft` → `Approved`; integration plan v0.9 → v0.10 records the post-status-edit canonical
+adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` and Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`;
+`docs/tracking/a0-governance-adoption-review.md` v1.6 → v1.7 records owner approval and A0 closure.
+`CHANGELOG.md` synchronized. No `src/`, `.cs`, `.asmdef`, tool, workflow, runtime, save, RNG, or tuning
+surface changed; no file added, removed, or renamed. A2 is next.
+**Last Updated (prior):** August 31, 2026 — **A0 evidence-record reconciliation after Claude's pre-fix critique; tracking only.**
 Updated `docs/tracking/a0-governance-adoption-review.md` v1.5 → v1.6: round-5 state is explicitly
 historical, current v0.10 §9.6 labels/discharges are exact, every Blocker now names its specific
 unsatisfied §9 gate condition instead of relying on a blanket A0 citation, the deleted historical

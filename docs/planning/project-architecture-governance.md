@@ -2,7 +2,7 @@
 ## Evidence, Review, and Agentic Development Governance
 
 **Document Class:** Project-level governance specification  
-**Status:** Draft  
+**Status:** Approved  
 **Version:** 0.10\
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  

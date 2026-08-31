@@ -8,7 +8,7 @@
 > evidence that a review occurred. This file supplies the review-level record — subject identity and
 > digest, scope, method, rounds, and outcome — and carries each finding in the Appendix B field set.
 > **Owning plan:** integration plan §11 A0.
-> **This review does not approve anything.** Approval is a human act; see §6.
+> **This review itself does not approve anything.** Approval is a human act. The project owner's August 31, 2026 approval and A0 closure are recorded in §6.
 
 ---
 
@@ -18,8 +18,8 @@
 |---|---|
 | Artifact | `docs/planning/project-architecture-governance.md` |
 | Version at review open | 0.4 |
-| Version at latest revision of this record | 0.10 — hostile-review follow-up fixed; the review is converged for A0 but awaits human sign-off |
-| Status throughout | `Draft` — unchanged by this review |
+| Version at latest revision of this record | 0.10 — hostile-review follow-up fixed; owner-approved and authoritative under closed A0 |
+| Status during review | `Draft`; changed to `Approved` only after the fresh review converged and the project owner signed off |
 | Blob digest, v0.4 (as reviewed, round 1) | `f00032cf2f16971ffbef51f6bbe307fac51a31d3` |
 | SHA-256, v0.4 | `412c38eceba7a00d67ee7eb7631863bd550e29fed3e033fef75c55e7690ba316` |
 | Blob digest, v0.5 (as reviewed, round 2) | `f5d0c487f14c525fa75f038cb3254c3e4bdd9417` |
@@ -38,7 +38,8 @@
 ⚠️ **The round-5 pause is historical.** At owner direction, it was followed by one systematic
 consistency-remediation pass rather than another point-fix round. That pass produced Governance v0.9,
 explicitly dispositioned and resolved round 5's eight findings, and then performed the fresh full
-adoption review recorded in §4.4. The document remains `Draft`; convergence is not approval.
+adoption review recorded in §4.4. At that point the document remained `Draft`; convergence was not
+approval. The later owner approval and approved-file digest are recorded in §6.
 
 **These digests are review-subject identities, not the adoption pin.** The A0 adoption digest is
 computed *after* `Status: Draft` → `Approved` is written, over that resulting file, and recorded in
@@ -252,7 +253,7 @@ The current §9.6 discharge is:
 
 **Reviewer-independence limitation:** the v0.10 closure review was performed by the same assistant that
 applied AG-A0-023–025. FR-AG-018 requires a fresh review over the current artifact; it does not require
-a different reviewer. No independence is claimed here. Human sign-off remains a separate A0 condition.
+a different reviewer. No independence is claimed here. Human sign-off was a separate A0 condition and is recorded as completed in §6.
 
 ---
 
@@ -489,7 +490,7 @@ commits, not a document defect, and it resolves on this file landing.
 
 ## 6. Outcome and what remains
 
-**Review outcome: CONVERGED FOR A0; NOT YET APPROVED.** The systematic remediation resolved the
+**Review outcome: CONVERGED FOR A0; OWNER APPROVED; A0 CLOSED.** The systematic remediation resolved the
 Round 5 and audit-exposed inconsistencies, but the subsequent hostile follow-up found AG-A0-023–025
 in Governance v0.9. Governance v0.10 resolves those three findings, and the fresh full closure review
 in §4.5 found no additional finding. Every recorded corrective finding is now `Disposition: Blocker`,
@@ -526,19 +527,18 @@ Dispositions select handling; five Status values represent lifecycle. That makes
 not an unmodelled fifth Disposition, and makes `Dispositioned` non-status prose rather than a missing
 enum member.
 
-**This review does not approve the Governance specification, and nothing in this file should be read
-as approval.** `Status:` remains `Draft`. The A0 verification, finding, and fresh-review conditions
-are now satisfied. The remaining actions are, in order:
+**The review did not itself approve Governance; the project owner did.** On August 31, 2026 the owner
+explicitly approved Governance v0.10. The required landing sequence then completed in order:
 
-1. **Human sign-off.** Not delegable to an agent.
-2. **Then** write `Status: Draft` → `Approved` in the Governance file.
-3. **Then** compute the SHA-256 of that resulting file and record it in integration plan §11 A0.
+1. Human sign-off recorded.
+2. Governance `Status: Draft` → `Approved`.
+3. The exact resulting approved file was hashed and its canonical adoption pin recorded in integration
+   plan §11 A0.
 
-Steps 2 and 3 are ordered and the order matters: a digest computed before the status edit pins a
-superseded artifact, and a digest written into the file it covers invalidates itself. The digests in
-§1 above are review-subject identities and are **not** the adoption pin.
+**A0 is CLOSED.** The canonical adoption pin is owned by integration plan §11 A0; the digests in §1
+remain review-subject identities and are not substituted for that pin.
 
-Once A0 closes, A2 is the next stage. Governance §9.7 remains open and is owned by A3–A9; the
+A2 is the next stage. Governance §9.7 remains open and is owned by A3–A9; the
 specification is authoritative at A0 but not *fully adopted* until then.
 
 ---
@@ -547,6 +547,7 @@ specification is authoritative at A0 but not *fully adopted* until then.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.7 | August 31, 2026 | — | **A0 closure.** Records explicit project-owner approval of Governance v0.10, confirms the required landing order was followed (`Draft → Approved` first, hash second), and points to integration plan §11 A0 as the owner of the canonical approved-file adoption pin `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6`. Review outcome advances from converged/not-yet-approved to **OWNER APPROVED; A0 CLOSED**. Governance semantics were not changed after review; the Governance file itself changed only in its Status field. |
 | 1.6 | August 31, 2026 | — | **Claude pre-fix critique reconciliation.** Marks §§4.1–4.3 explicitly historical, preserves the stale v0.8 box labels in §4.4 with an annotation, adds the exact current v0.10 §9.6 discharge table, and records that the v0.10 fresh review was not reviewer-independent because FR-AG-018 does not require independence. Replaces the blanket A0-gate Blocker citation with row-specific §9 gate linkage for every corrective finding, restores/annotates the deleted historical `None is a Blocker` claim, and records the companion manifest-table repair. Governance v0.10 content and digests are unchanged. |
 | 1.5 | August 31, 2026 | — | **Hostile-review closure.** Records AG-A0-023–025 against Governance v0.9: invalid cross-axis finding states/open non-Blocker convergence, inverted FR-AG-026 Non-scope semantics, and under-specified review-gate authorization. Governance v0.10 resolves all three, the companion audit advances to v1.1, and a fresh full v0.10 review returns zero new findings with all 52 A0-scope boxes verified. The v0.9 zero-finding review is retained but explicitly marked superseded. Outcome remains **CONVERGED FOR A0; NOT YET APPROVED** pending human sign-off. |
 | 1.4 | August 31, 2026 | — | **Systematic remediation and fresh full adoption review.** Governance v0.8 → v0.9 settles four Dispositions and five Statuses, canonically defines `runtime-bearing component`, and reconciles the full FR modality/schema/template surface in one batch; the companion audit carries the 47-row matrix. Round 5's eight historical open findings are now complete `Blocker` / `Resolved` records, and the earlier compressed record fields are schema-completed without inferring tradeoff/risk approval. The A0 corrective route is explicitly grounded in the authorized Governance §9 / plan §11 pre-adoption gate, never in severity. The fresh whole-artifact v0.9 review verifies all 52 A0-scope boxes and returns zero new findings. Review outcome: **CONVERGED FOR A0; NOT YET APPROVED** — human sign-off, then the status edit and post-edit adoption digest, remain. |

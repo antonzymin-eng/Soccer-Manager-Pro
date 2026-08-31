@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.9\
+**Version:** 0.10\
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
@@ -137,7 +137,7 @@ Version 0.5 corrects the A1 rollout against the live repository while preserving
 
 The following rules override earlier sequencing in this plan:
 
-1. Governance (v0.4 at the time this rule was written, now v0.10) is currently Draft. It is design input until an explicit adoption gate records approval, completed self-checklist, SPEC_INDEX/status alignment, and the exact governing version plus canonical Governance content/blob digest. A Git revision MAY be recorded as provenance but is not required to be self-embedded in the landing that creates the approved artifact.
+1. Governance v0.10 is **Approved and authoritative under A0**. Before A0 closed it was design input only. The adoption gate requires human approval, the §9.1–§9.6 self-check, the current fresh-review/finding conditions, and the exact approved Governance content digest. SPEC_INDEX registration is not an A0 prerequisite; downstream registration/alignment remains owned by the later landing stage that requires it. A Git revision MAY be recorded as provenance but is not required to be self-embedded in the approved artifact.
 
    **"Completed self-checklist" means Governance §9.1–§9.6 only, amended in v0.7.** The earlier wording said "completed self-checklist" without qualification, which read as all 59 boxes including §9.7. That is circular and was never the intent: §9.7 is headed *"Before this specification is considered **fully adopted**"* and asks for #19/#20 amendments, the Master Development Plan pointer, adversarial-review reconciliation, the property registry, finding-schema tooling, and inventory tooling — work this plan itself assigns to A3–A9. Requiring it at A0 would make Governance's authority depend on stages that cannot start until Governance has authority. The two gates are therefore distinct and are named separately below.
 2. Dependency-direction policy is already approved and mechanically enforced by `tools/assembly-tier-check.py` inside `Spec hygiene checks`. A1 MUST reuse that checker rather than create a second §3.5.2 parser. Its machine report covers the complete `src/**/*.asmdef` universe, classifies production/test/out-of-band assemblies from existing #20 rules, reports unresolved items explicitly, and does not publish a fictitious tooling count when no tooling asmdef exists in that source universe.
@@ -157,7 +157,7 @@ The following rules override earlier sequencing in this plan:
 16. The objective asmdef check already executes inside `Spec hygiene checks`. A1c is therefore an activation/configuration step: verify merge-protection state and enable the existing required status where enforcement is disabled; it MUST NOT create a parallel `architecture-asmdef` status unless the existing status cannot express the approved requirement.
 17. Changes to declared `[GT]`/calibration tuning surfaces are prohibited while the owning component is `intentionally-disabled`, `pending-integration`, or `unresolved`, unless the approved exception path explicitly authorizes the change.
 
-This document remains an implementation plan. It does not itself approve Governance (v0.4 when this line was written, now v0.10) or modify approved #19/#20 requirements. Approval is recorded by the A0 gate above and requires human sign-off.
+This document remains an implementation plan and does not itself modify approved #19/#20 requirements. Governance v0.10 approval is recorded by the completed A0 gate; the required human sign-off was supplied by the project owner on August 31, 2026.
 
 ---
 
@@ -819,7 +819,18 @@ A0 closes when all of the following hold:
 
 A0 explicitly does **not** require the property registry, the durable finding ledger, review tooling, or any #19/#20 amendment. Those are §9.7 items owned by A3–A9. Building them to approve the document would invert this plan's own sequencing.
 
-**A0 review record:** `docs/tracking/a0-governance-adoption-review.md`. Status: the hostile-review follow-up fixes and fresh full review over Governance v0.10 are complete; all §9.1–§9.6 boxes verify and every finding is in its mapped terminal Status. **Human sign-off remains required**, after which the status edit and digest landing occur in that order.
+**A0 review record:** `docs/tracking/a0-governance-adoption-review.md`. **A0 CLOSED August 31, 2026.** The project owner explicitly approved Governance v0.10; the Governance file was then changed from `Status: Draft` to `Status: Approved`; only after that edit was the approved file hashed. All §9.1–§9.6 boxes verify and every finding is in its mapped terminal Status.
+
+| A0 closure field | Recorded value |
+|---|---|
+| Human sign-off | Project owner — Approved, August 31, 2026 |
+| Governance version / status | v0.10 / `Approved` |
+| Approved Governance Git blob | `76502282f205f5c4fd77c79c3309766c4dbd4498` |
+| **Adoption SHA-256** | **`aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6`** |
+| Review record | `docs/tracking/a0-governance-adoption-review.md` v1.7 |
+| A0 status | **CLOSED** |
+
+The SHA-256 above is the canonical A0 adoption pin. It covers the exact approved Governance file and is stored outside that file, so recording the pin does not invalidate its subject.
 
 ## A1 — Consolidate existing asmdef evidence and activate enforcement
 
@@ -1188,6 +1199,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.10 | August 31, 2026 | — | **A0 CLOSED.** Records project-owner human sign-off, Governance v0.10 `Draft → Approved`, and the post-status-edit canonical adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` (Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`). Removes the stale pre-A0 claim that SPEC_INDEX alignment is an A0 prerequisite; §9.7/downstream registration remains owned by later stages. A2 is now the next stage. No #19/#20 normative file, code, workflow, or runtime behavior changed. |
 | 0.9 | August 31, 2026 | — | Synchronizes with Governance v0.10 after hostile review: rejects invalid Disposition/Status pairings, requires every finding to reach its mapped terminal Status before convergence, and updates A0's findings gate accordingly. Governing authority reference advances to v0.10. No #19/#20 normative file, code, workflow, or runtime behavior changed. |
 | 0.8 | August 31, 2026 | — | Synchronizes the plan with Governance v0.9's settled four-Disposition/five-Status model. Replaces all live `runtime component` uses with `runtime-bearing component`; aligns proposed FR-CS-076 on canonical `teardown`; makes the A0 finding condition test `Disposition: Blocker` plus `Status: Open`; completes the durable finding field set with `round_introduced`; and replaces the stale `Open → Dispositioned` lifecycle summary. A0 remains unapproved pending human sign-off; no #19/#20 normative file, code, workflow, or runtime behavior changed. |
 | 0.7 | August 31, 2026 | — | A0 gate boundary made explicit, removing a circular dependency. Non-negotiable 1 required a "completed self-checklist" at A0 while this plan assigns Governance §9.7's downstream landings to A3–A9 — so A0 could not close until stages that depend on A0 had run. Governance §9 in fact carries two bars: the §9 preamble gates becoming *authoritative* (§9.1–§9.6), and §9.7 gates being *fully adopted*. A0 is now scoped to the first only, with five closure conditions including a fresh recorded review per FR-AG-018 and an explicit digest-after-status-edit ordering. A0 explicitly does not require the property registry, finding ledger, review tooling, or #19/#20 amendments. Governing authority reference updated v0.4 → v0.5. New `docs/tracking/a0-governance-adoption-review.md` carries the review. No #19/#20 normative files, code, or CI changed. |
