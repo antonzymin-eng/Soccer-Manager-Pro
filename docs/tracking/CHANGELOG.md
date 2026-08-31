@@ -12,7 +12,12 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **A2 slice 1: executable selector/identity/activation semantics.**
+> **Last Updated:** August 31, 2026 — **A2 slice 2: applicability + proof closure/freshness semantics.**
+> `reference_semantics.py` advances v1.0.0 → v1.1.0. Applicability now evaluates every matching rule, derives precedence mechanically from selector specificity, rejects author-chosen precedence drift, fails equal-precedence conflicts, validates bounded N/A reasons/approvals, and fails unmatched strict subjects. Proof semantics now derive class-specific dependency closures from resolved obligations and typed graph edges, bind applicability + semantic-policy identity into `subject_scope_digest`, separate provenance from freshness, and conservatively fall back when `--changed` encounters an unmapped surface.
+>
+> The reference suite grows 10 → 28 fixtures. New cases lock deterministic rule-order behavior, specificity/fallback resolution, equal-precedence conflict/coalescing, N/A approval, strict no-match behavior, structural/lifecycle/persistence/executable closure expansion, missing requirement bindings, unrelated-vs-reachable freshness, new reachable dependencies, provenance independence, applicability-scope invalidation, and conservative changed-surface handling. No canonical JSON schemas or review-state transitions land in this slice; those remain A2 work. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+>
+> **Last Updated (prior):** August 31, 2026 — **A2 slice 1: executable selector/identity/activation semantics.**
 > Added `tools/architecture-governance/reference_semantics.py` v1.0.0 as the A2 reference implementation over typed compiler facts; it does not parse C# source. It freezes exact selector-v1 matching for namespaces/types/constructors/overloaded methods/static members and assembly identity, stable `component_id` migration via selector history, typed disable-anchor evaluation, and KD-W1 tuning-surface matching with exact approved exception scope.
 >
 > Added `tools/tests/test_architecture_governance_semantics.py` with ten fail-closed fixtures covering overload/static discrimination, missing/ambiguous resolution, selector-history identity, anchor drift, required disable metadata, and KD-W1 active/inactive/exception behavior. The existing `Spec hygiene checks` job now runs this suite; no new CI status was created. This is A2 foundation only: applicability, proof-closure/freshness, review-state, and canonical JSON schemas remain for later A2 slices. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
