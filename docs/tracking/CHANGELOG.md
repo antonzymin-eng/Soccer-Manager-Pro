@@ -12,7 +12,22 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **Governance hostile-review closure after the systematic remediation.**
+> **Last Updated:** August 31, 2026 — **A0 evidence-record reconciliation after Claude's pre-fix critique.**
+> Tracking documentation only. `a0-governance-adoption-review.md` v1.5 → v1.6; `file-manifest.md`
+> updated. Governance v0.10 and its recorded blob/SHA-256 are unchanged.
+>
+> Five surviving record/manifest defects were corrected: round-5 verdict text is explicitly historical;
+> the current v0.10 §9.6 discharge uses exact checklist labels; the blanket A0-gate Blocker citation is
+> replaced by a specific unsatisfied §9 gate condition for every corrective finding; the deleted
+> historical `None is a Blocker` claim is restored and annotated rather than silently rewritten; and
+> both A0 tracking files now have Tracking Documents table rows. Claude's sixth observation — no
+> independent reviewer on the fresh closure — is recorded transparently as a limitation, not promoted
+> into a requirement FR-AG-018 does not contain.
+>
+> No `src/`, planning/spec, tool, workflow, save, RNG, tuning, or simulation behavior changed; no code
+> gate is owed.
+>
+> **Last Updated (prior):** August 31, 2026 — **Governance hostile-review closure after the systematic remediation.**
 > Governance advances v0.9 → v0.10; integration plan v0.8 → v0.9; A0 consistency audit v1.0 → v1.1;
 > A0 adoption review v1.4 → v1.5. Planning/tracking documentation only; Governance remains `Draft`
 > pending human sign-off.

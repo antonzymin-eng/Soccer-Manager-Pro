@@ -1,6 +1,14 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** August 31, 2026 — **Governance hostile-review closure; planning/tracking only.**
+**Last Updated:** August 31, 2026 — **A0 evidence-record reconciliation after Claude's pre-fix critique; tracking only.**
+Updated `docs/tracking/a0-governance-adoption-review.md` v1.5 → v1.6: round-5 state is explicitly
+historical, current v0.10 §9.6 labels/discharges are exact, every Blocker now names its specific
+unsatisfied §9 gate condition instead of relying on a blanket A0 citation, the deleted historical
+`None is a Blocker` claim is restored with correction, and reviewer independence is recorded as a
+limitation rather than invented as a requirement. Added the adoption-review and consistency-audit
+files to the Tracking Documents table in this manifest. Governance remains v0.10 with identical blob
+and SHA-256; no planning/spec/code/workflow/runtime file changed.
+**Last Updated (prior):** August 31, 2026 — **Governance hostile-review closure; planning/tracking only.**
 Updated `docs/planning/project-architecture-governance.md` v0.9 → v0.10, the integration plan v0.8 →
 v0.9, `a0-governance-consistency-audit.md` v1.0 → v1.1, and `a0-governance-adoption-review.md`
 v1.4 → v1.5. Fixes: Disposition/Status legality and terminal convergence, FR-AG-026 Non-scope
@@ -2781,6 +2789,8 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 | `docs/tracking/fix-manifest-pass-mechanics.md` | Pass Mechanics audit/fix closure tracking |
 | `docs/tracking/certification-platform.md` | Stage 0 host platform version pin (required before first Spec #16 certification run) |
 | `docs/tracking/file-manifest.md` | This manifest |
+| `docs/tracking/a0-governance-adoption-review.md` | A0 review-level evidence for Project Architecture Governance: reviewed subject digests, scope/method, finding ledger, §9.1–§9.6 discharge, convergence state, and pending human sign-off |
+| `docs/tracking/a0-governance-consistency-audit.md` | Systematic A0 governance consistency audit: exhaustive 47-FR modality matrix plus schema/enum/transition/terminology comparison and hostile-review closure corrections |
 | `docs/tracking/football-judgment-proxy-review.md` | **FINDINGS LOG + REMEDIATION DOCTRINE** (Aug 4, 2026) — the football-judgment proxy review: all 53 APPROVED specs read for the ERR-008-019 defect shape (a continuous football judgment collapsed into bare geometry, a hard threshold, or a small raw-attribute set); 34 findings across **19** specs (2 since fixed: `ERR-008-020`, `ERR-008-019`), **34** specs clean — spec counts corrected Aug 21, 2026 from 24/29 and the fixed count from 1; see the review's §5 note. §6 (added same day, owner-converged) is the remediation doctrine every fix must cite: P1 continuous-never-cliff, P2 skill-as-discrimination-fidelity, P3 the attribute ownership ledger (Vision = on-ball recognition; no new attribute), P4 intent-as-first-class-object (pass-to-space, run signaling, routine targets), P5 chain calibration pivoted on today's baseline (KD-W1); finding classes (formula-patch / mechanism / governance), the §3.1.3.3 pass-lane template fix (chosen, not yet implemented), and the pairwise-familiarity gap ; **§6.3.1 (Aug 22, 2026)** adds the LANDING ORDER for the workable 24 — six batches derived from wiring state (W2 built but disabled, `TackleContactRadiusM` = 0), design-supplement serialization, and calibration batching, explicitly not from guessed football impact |
 | `docs/tracking/advanced-positional-behaviors-design.md` | Design supplement (v0.4, Jul 8, 2026 — PROMOTED) — dismarking, scripted build-up structures, positional rotations; promoted to specs #23–#25 (`dismarking-ai/`, `build-up-structures/`, `positional-rotations/`, all APPROVED Jul 10, 2026); superseded by the specs on deviation |
 | `docs/tracking/game-model-ai-manager-design.md` | Design supplement (v0.5, Jul 8, 2026 — PROMOTED) — tactical preset library + AI-manager selection/adaptation; promoted to spec #26 (`tactical-presets/`, APPROVED Jul 10, 2026); superseded by the spec on deviation |
