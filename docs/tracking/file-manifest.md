@@ -1,6 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** August 31, 2026 — **A0 adoption review; one file added, planning/tracking only.** New
+**Last Updated:** August 31, 2026 — **Systematic Governance consistency remediation and fresh A0 review;
+planning/tracking only.** Added `docs/tracking/a0-governance-consistency-audit.md` v1.0, the durable
+47-FR modality and schema/template/transition audit. Updated
+`docs/planning/project-architecture-governance.md` v0.8 → v0.9: four Dispositions/five Statuses,
+canonical `runtime-bearing component`, direct elaborating modalities, exact Appendix A/B fields,
+`Teardown owner`, separated proof-path fields, and a coherent review state model. Updated
+`docs/planning/project-architecture-governance-integration-plan.md` v0.7 → v0.8 and
+`docs/tracking/a0-governance-adoption-review.md` v1.3 → v1.4: current ledger fields and state
+representations now agree; all 52 A0-scope boxes verify in the fresh review, with no open Blocker.
+`docs/tracking/CHANGELOG.md`, this manifest, and the current A1c plan pointer in
+`docs/tracking/open-issues-resolved.md` were synchronized. Governance remains `Draft` pending human
+sign-off, then the required status edit and post-edit adoption digest. No `src/`, `.cs`, `.asmdef`, or
+workflow changed; no file removed or renamed. Full account: `docs/tracking/CHANGELOG.md`, August 31,
+2026.
+
+**Last Updated (prior):** August 31, 2026 — **A0 adoption review; one file added, planning/tracking only.** New
 `docs/tracking/a0-governance-adoption-review.md` v1.3 — the review-level record for stage A0: subject digests for
 each reviewed version, scope (Governance §9.1–§9.6; §9.7 explicitly out and owned by A3–A9), method and its
 verification depth, the 52-box result, and twenty-two findings across five rounds — fourteen Resolved, and
@@ -28,7 +43,7 @@ Modified `tools/assembly-tier-check.py` in place as the sole §3.5.2 parser/chec
 `--json` complete-graph output, graph/classification/subject digests, and all-assembly cycle visibility while
 preserving the existing production-policy verdict. Added `tools/tests/test_assembly_tier_check.py` and wired it
 into `Spec hygiene checks` in `.github/workflows/ci.yml`. Updated
-`docs/planning/project-architecture-governance-integration-plan.md` to v0.5, now v0.6: ERR-020-002/003 are already resolved,
+`docs/planning/project-architecture-governance-integration-plan.md` v0.8 (historical v0.5 → v0.6 A1 change): ERR-020-002/003 are already resolved,
 A1b is removed, and A1c now activates the existing required status rather than creating a parallel checker/status.
 No protection setting is changed in this slice; no `src/`, `.cs`, or `.asmdef` changed. Full account:
 `docs/tracking/CHANGELOG.md`, August 29, 2026.

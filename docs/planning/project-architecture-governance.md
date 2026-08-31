@@ -3,7 +3,7 @@
 
 **Document Class:** Project-level governance specification  
 **Status:** Draft  
-**Version:** 0.8  
+**Version:** 0.9\
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  
 **Primary downstream authorities:** Testing Strategy & Framework Specification #19; Code Standards & Style Guide Specification #20  
@@ -155,6 +155,20 @@ Rules MAY later be narrowed, replaced, or retired if their premises cease to hol
 
 ---
 
+## 1.6 Defined Terms
+
+### Runtime-bearing component
+
+For this specification, a **runtime-bearing component** is a component whose construction,
+activation, use, lifecycle, reachability, or bypass behavior can affect a supported runtime path. A
+component remains runtime-bearing when it is deliberately disabled, pending integration, or exercised
+only through an alternate supported host; applicability determines which obligations apply.
+
+`runtime-bearing component` is the canonical term in every normative provision of this specification.
+“Runtime component” has no distinct meaning here and is not used normatively.
+
+---
+
 # 2. Normative Requirement Registry
 
 ## 2.1 Architectural Property Governance
@@ -208,8 +222,7 @@ Every substantive architectural review finding MUST end in exactly one dispositi
 - Blocker;
 - Accepted Tradeoff;
 - Residual Risk;
-- Candidate Property;
-- Resolved.
+- Candidate Property.
 
 ### FR-AG-010 — Evidence-based blocker
 
@@ -221,6 +234,7 @@ Every Blocker MUST cite:
 
 - an admitted architectural property; or
 - an existing approved specification, invariant, or other authoritative requirement; or
+- an explicit, already-applicable pre-adoption or review gate authorized for the current review; or
 - a concrete independently established correctness/integrity failure.
 
 ### FR-AG-012 — Tradeoff integrity
@@ -277,7 +291,7 @@ Statements such as “wire later,” “register at composition root,” or equi
 
 ### FR-AG-023 — Lifecycle ownership
 
-Applicable runtime components MUST identify construction, activation, update/use, and teardown ownership.
+Applicable runtime-bearing components MUST identify construction, activation, update/use, and teardown ownership.
 
 ### FR-AG-024 — Alternate-host coverage
 
@@ -304,7 +318,7 @@ Both are recorded artifacts. An exclusion asserted in review prose, without one 
 
 ### FR-AG-027 — Structural reachability proof
 
-Applicable runtime components MUST have structural reachability evidence.
+Applicable runtime-bearing components MUST have structural reachability evidence.
 
 ### FR-AG-028 — Lifecycle/order proof
 
@@ -489,6 +503,10 @@ However, proportionality MUST also consider actual computational cost, including
 
 Where exhaustive proof is computationally disproportionate, the strongest practical bounded proof MAY be used, provided the limitation and remaining uncertainty are explicit.
 
+The agent-heavy development assumption MUST NOT require mechanically exhaustive proof where the
+computational cost is materially disproportionate to architectural risk. A bounded substitute MUST
+explicitly identify its omitted proof surface or remaining uncertainty, as FR-AG-036B requires.
+
 ---
 
 ## 3.3 Property Record Schema
@@ -519,7 +537,9 @@ Every admitted property MUST record:
 
 Admission is an architectural judgment decision.
 
-The deciding agent or project lead MUST evaluate the complete record against §3.2.
+The deciding agent or project lead MUST evaluate the complete record against §3.2 and MUST first
+check whether an existing authoritative rule already governs the concern, as FR-AG-003 and FR-AG-038
+require. If one does, the decision record MUST cite that rule rather than create a duplicate property.
 
 Admission MUST NOT be based on reviewer severity alone.
 
@@ -551,19 +571,32 @@ However, a Candidate Property SHOULD be reconsidered when:
 
 Repeated appearance triggers **consideration**, not automatic rule creation.
 
+Repeated Candidate Properties SHOULD be reviewed for formal admission, as FR-AG-037 requires.
+
 ---
 
 # 4. Finding Disposition Model
 
 ## 4.1 Finding States
 
-Each finding moves through:
+Each substantive finding has two distinct axes:
 
-**Open → Dispositioned → Resolved / Accepted / Recorded / In property process**
+- **Disposition** selects exactly one handling path: Blocker, Accepted Tradeoff, Residual Risk, or
+  Candidate Property.
+- **Status** tracks lifecycle: Open, Resolved, Accepted, Recorded, or In property process.
 
-The four terminal states correspond to the dispositions in §4.2 and the transitions in Appendix F:
-a Blocker ends Resolved, an Accepted Tradeoff ends Accepted, a Residual Risk ends Recorded, and a
-Candidate Property leaves the current review and ends In property process.
+A finding begins with Status **Open**. It may carry its selected Disposition while required action is
+in progress. Its terminal Status is determined by that Disposition:
+
+| Disposition | Terminal Status | Completion condition |
+|---|---|---|
+| Blocker | Resolved | Required corrective action and its resolution evidence are accepted. |
+| Accepted Tradeoff | Accepted | The appropriate decision-maker accepts the documented consequence and rationale. |
+| Residual Risk | Recorded | The risk and its required mitigation/consequence record are accepted. |
+| Candidate Property | In property process | The concern leaves the review for the §3 admission process. |
+
+`Resolved`, `Accepted`, `Recorded`, and `In property process` are Status values only.
+`Dispositioned` is not a Status.
 
 A finding MUST retain a stable identifier across review rounds.
 
@@ -577,13 +610,13 @@ A finding MUST retain a stable identifier across review rounds.
 | Summary | Short defect/concern statement |
 | Evidence | Concrete supporting evidence |
 | Severity | Critical / High / Medium / Low or project equivalent |
-| Requirement/Property | Cited authority, if any |
-| Disposition | Blocker / Accepted Tradeoff / Residual Risk / Candidate Property / Resolved |
+| Requirement/Property | Cited authority, applicable authorized review gate, or independent failure evidence; mandatory for a Blocker |
+| Disposition | Exactly one: Blocker / Accepted Tradeoff / Residual Risk / Candidate Property |
 | Required action | Fix / document / admit property / none |
 | Owner | Responsible resolver where applicable |
 | Status | Open / Resolved / Accepted / Recorded / In property process |
 | Round introduced | Review round |
-| Resolution evidence | Proof of final disposition |
+| Resolution evidence | Evidence that the Status transition for the selected Disposition is complete |
 
 ---
 
@@ -596,7 +629,13 @@ A finding is a Blocker only when at least one of the following holds:
 3. required evidence is absent or failed;
 4. required integration ownership is absent;
 5. a mandatory proof trigger is unmet;
-6. concrete correctness, integrity, determinism, security, or equivalent established behavior is broken.
+6. concrete correctness, integrity, determinism, security, or equivalent established behavior is broken; or
+7. an explicit, already-applicable pre-adoption or review gate authorized for this review is unsatisfied.
+
+A reviewer preference alone MUST NOT classify a finding as a Blocker, as FR-AG-010 requires.
+
+Every Blocker record MUST cite the admitted property, existing authority, applicable authorized review
+gate, or independently established failure that satisfies this test, as FR-AG-011 requires.
 
 ---
 
@@ -609,6 +648,9 @@ Accepted Tradeoff requires:
 - explicit consequence;
 - explicit rationale;
 - acceptance by the appropriate architectural decision-maker.
+
+An Accepted Tradeoff MUST NOT be used to waive violation of an admitted MUST-level property, as
+FR-AG-012 requires.
 
 Examples:
 
@@ -627,6 +669,8 @@ Residual Risk requires:
 - mitigation judged disproportionate, unavailable, or intentionally deferred;
 - material consequence documented.
 
+Residual Risk MUST NOT be used to conceal missing required evidence, as FR-AG-013 requires.
+
 Material residual risk SHOULD include:
 
 - owner;
@@ -644,6 +688,24 @@ A finding becomes Candidate Property when:
 - current evidence does not independently establish a concrete existing-rule defect.
 
 Candidate Property findings leave the current review unless and until the property is formally admitted.
+
+A Candidate Property MUST NOT independently block the current review unless it is admitted and applies
+to the reviewed work, as FR-AG-014 requires.
+
+## 4.7 Review-State Semantics
+
+A review MUST be evaluated against applicable admitted properties, not hypothetical preferences or
+reviewer imagination, as FR-AG-015 requires.
+
+A review MUST NOT converge while a Blocker remains unresolved. For this purpose, a Blocker remains
+open exactly when its Disposition is `Blocker` and its Status is `Open`.
+
+Every substantive finding MUST have exactly one valid Disposition before review convergence.
+
+Final convergence MUST include a fresh review over the current artifact.
+
+A round budget limits process execution but MUST NOT convert an open Blocker into approval. If the
+budget ends with an open Blocker, the result MUST be recorded as **NON-CONVERGED**.
 
 ---
 
@@ -691,6 +753,12 @@ Where a theoretically exhaustive proof would impose computational cost materiall
 Structural reachability answers:
 
 > Is the required runtime behavior actually reachable through every applicable supported path?
+
+Where an architectural property applies to a finite mechanically discoverable surface, the proof MUST
+enumerate that complete surface unless an approved exclusion exists, as FR-AG-026 requires.
+
+Applicable runtime-bearing components MUST have structural reachability evidence, as FR-AG-027
+requires.
 
 Evidence MUST identify:
 
@@ -766,7 +834,9 @@ Mutation answers:
 
 > Would the evidence fail if the protected invariant were deliberately broken?
 
-Mutation MUST be targeted.
+Important invariants whose tests could plausibly pass despite a broken implementation MUST have
+targeted mutation evidence whenever §5.2 triggers it, as FR-AG-030 requires. Mutation MUST be
+targeted.
 
 Examples:
 
@@ -790,6 +860,9 @@ A mutation requirement MAY be retired when:
 - the architecture removes the relevant failure mode; or
 - another verification mechanism provides equivalent or stronger evidence that the defect class cannot escape detection.
 
+The governance process MUST permit this retirement when those conditions hold, as FR-AG-040B
+requires; whether a particular replacement is equivalent or stronger remains an architectural judgment.
+
 Mutation tests MUST NOT be retained solely because they were previously required.
 
 The purpose of mutation is to validate that important evidence is sensitive to the defect it claims to detect, not to create a permanently expanding mutation suite.
@@ -798,9 +871,15 @@ The purpose of mutation is to validate that important evidence is sensitive to t
 
 ## 5.7 Evidence Dependency, Invalidation, and Revalidation
 
-Architectural proof is valid only while the material surface on which it depends remains unchanged or has been explicitly revalidated.
+Architectural evidence MUST correspond to the current materially relevant repository state, and
+required proof MUST be independently reproducible by another reviewer or agent, as FR-AG-031 and
+FR-AG-032 require.
 
-Every reusable proof artifact MUST identify its **specific evidence dependency surface** with sufficient precision to determine whether a later repository change can affect the proof.
+Architectural proof is valid only while the material surface on which it depends remains unchanged or
+has been explicitly revalidated.
+
+Every reusable proof artifact MUST identify its **specific evidence dependency surface** with sufficient
+precision to determine whether a later repository change can affect the proof, as FR-AG-040D requires.
 
 The dependency surface SHOULD be expressed in terms such as:
 
@@ -815,7 +894,9 @@ The dependency surface SHOULD be expressed in terms such as:
 - relevant tests;
 - governance tools used to generate or validate the proof.
 
-Changes to an identified dependency invalidate the affected proof unless compatibility is established.
+When a change materially alters an identified dependency surface, the affected proof MUST be
+regenerated or revalidated, as FR-AG-032A requires. If the proof is retained rather than regenerated,
+compatibility may be established only through that revalidation.
 
 Changes outside the declared dependency surface MUST NOT automatically invalidate the proof.
 
@@ -835,7 +916,7 @@ The objective is **precise invalidation**, not routine regeneration of all archi
 
 ## 6.1 Machine-Enforced Domain
 
-Objective repeatable rules SHOULD move into automation.
+Objective repeatable rules SHOULD move into automation, as FR-AG-035 requires.
 
 Examples:
 
@@ -857,7 +938,7 @@ Examples:
 
 ## 6.2 Judgment Domain
 
-Judgment remains required for:
+Architectural judgment MUST remain available for:
 
 - property admission;
 - abstraction selection;
@@ -889,7 +970,10 @@ The underlying rule must first be architecturally justified.
 
 This project assumes implementation and repository analysis are predominantly agent-assisted.
 
-Therefore exhaustive repository work is normally reasonable when the set is mechanically finite.
+Human effort required for enumeration, indexing, cross-reference discovery, or other mechanical search
+work MUST NOT by itself justify sampling when the set is mechanically discoverable, as FR-AG-033
+requires. Therefore exhaustive repository work is normally reasonable when the set is mechanically
+finite.
 
 Examples:
 
@@ -902,7 +986,7 @@ Examples:
 - find every bypass call;
 - validate every cross-reference.
 
-Sampling is insufficient merely because exhaustive inspection would be tedious for a human.
+Sampling MUST NOT be justified solely because exhaustive inspection would be tedious for a human.
 
 This principle does not require exhaustive execution when computational cost becomes materially disproportionate under §3.2 AC-8.
 
@@ -916,7 +1000,9 @@ It increases the amount of evidence reasonably obtainable.
 
 An agent statement is not proof merely because the agent is capable of exhaustive analysis.
 
-The result MUST be reproducible.
+Mechanically discoverable agent claims such as “all call sites were checked” MUST be backed by an
+inventory, executable check, or equivalent reproducible evidence, as FR-AG-034 requires. The result
+MUST be reproducible.
 
 ---
 
@@ -944,7 +1030,7 @@ Changes to a governance tool that materially alter what it discovers, classifies
 
 The fact that an architectural rule is machine-enforced does not remove architectural responsibility for validating that the enforcement mechanism actually represents the rule.
 
-Governance-tool verification terminates at ordinary software verification.
+Governance-tool verification MUST terminate at ordinary software verification, as FR-AG-040C requires.
 
 A governance checker does **not** require a second governance checker merely because its output is merge-critical.
 
@@ -959,6 +1045,9 @@ Additional meta-verification MUST NOT be introduced recursively unless an indepe
 ## 7.1 Exception Rule
 
 An admitted MUST-level property MAY be temporarily waived only through an explicit exception record if the property allows exceptions.
+
+Any temporary exception to an admitted property MUST be recorded through this mechanism, as
+FR-AG-039 requires.
 
 An exception MUST contain:
 
@@ -1015,6 +1104,8 @@ Historical references MUST remain resolvable.
 ---
 
 ## 7.5 Retirement
+
+An admitted property MUST NOT silently disappear, as FR-AG-040 requires.
 
 Retirement requires evidence that:
 
@@ -1217,8 +1308,8 @@ This specification MUST satisfy its own governance model before becoming authori
 - [ ] Applicable admitted properties identified.
 - [ ] Every MUST-level property satisfied.
 - [ ] Required proof complete.
-- [ ] No Blockers open.
-- [ ] Every finding dispositioned.
+- [ ] No finding with Disposition `Blocker` remains Status `Open`.
+- [ ] Every substantive finding has exactly one valid Disposition.
 - [ ] Fresh final review completed.
 - [ ] Round-budget exhaustion produces NON-CONVERGED, not APPROVED.
 
@@ -1240,28 +1331,25 @@ Before this specification is considered fully adopted:
 
 # Appendix A — Architectural Property Record Template
 
-**§3.3 is the authoritative field list.** This template paraphrases several of its labels for
-readability in a fill-in form — "Normative statement" for Statement, "Explicit exclusions" for
-Non-scope, "Authoritative owner" for Authority, "Evidence required" for Evidence, and "Exceptions
-permitted" for Exceptions allowed. The fields correspond one-to-one; where the two differ in wording,
-§3.3 governs. A machine-checked schema should be generated from §3.3, not from this template.
+**§3.3 is the authoritative field list.** The field labels below reproduce that schema exactly. A
+machine-checked schema should be generated from §3.3, not from this template.
 
 ```text
 Property ID:
 Title:
 State:
 
-Normative statement:
+Statement:
 
 Failure mode:
 
 Scope:
 
-Explicit exclusions:
+Non-scope:
 
-Authoritative owner:
+Authority:
 
-Evidence required:
+Evidence:
 
 Enforcement class:
 [ ] Machine
@@ -1270,7 +1358,7 @@ Enforcement class:
 
 Activation:
 
-Exceptions permitted:
+Exceptions allowed:
 
 Supersedes:
 
@@ -1283,29 +1371,38 @@ Last reviewed:
 
 # Appendix B — Review Finding Record Template
 
+**§4.2 is the authoritative field list and allowed-value set.** The labels and choices below
+reproduce it exactly.
+
 ```text
 Finding ID:
-Round:
-Severity:
 
 Summary:
 
 Evidence:
 
-Requirement / Property:
+Severity:
+
+Requirement/Property:
 
 Disposition:
 [ ] Blocker
 [ ] Accepted Tradeoff
 [ ] Residual Risk
 [ ] Candidate Property
-[ ] Resolved
 
 Required action:
 
 Owner:
 
 Status:
+[ ] Open
+[ ] Resolved
+[ ] Accepted
+[ ] Recorded
+[ ] In property process
+
+Round introduced:
 
 Resolution evidence:
 ```
@@ -1314,7 +1411,10 @@ Resolution evidence:
 
 # Appendix C — Integration Ownership Contract
 
-Applicable runtime-bearing components MUST provide:
+**FR-AG-021 through FR-AG-025 are authoritative.** Applicable runtime-bearing components MUST provide:
+
+Narrative placeholders such as “wire later” or “register at composition root” do not satisfy this
+contract without the exact owner and integration point required by FR-AG-022.
 
 ```text
 Component:
@@ -1331,7 +1431,7 @@ Activation phase:
 
 Update/use owner:
 
-Shutdown/disposal owner:
+Teardown owner:
 
 Relevant testhost path:
 
@@ -1351,6 +1451,9 @@ N/A fields with justification:
 
 # Appendix D — Architectural Proof Artifact
 
+**§5.2 through §5.7 are authoritative.** The surface and dependency labels below reproduce their
+required categories; the artifact does not merge static, alternate, and bypass paths.
+
 ```text
 Change / Component:
 
@@ -1364,6 +1467,7 @@ ENTRY-POINT INVENTORY
 - Tools:
 - Alternate bootstrap paths:
 - Static initialization paths:
+- Bypass paths:
 
 STRUCTURAL REACHABILITY
 - Required path:
@@ -1398,7 +1502,9 @@ Evidence dependencies:
 - Construction / registration paths:
 - Lifecycle / ordering relationships:
 - Public runtime surfaces:
-- Static / alternate / bypass paths:
+- Static initialization paths:
+- Alternate paths:
+- Bypass paths:
 - Relevant tests:
 - Governance tool/version:
 
@@ -1459,29 +1565,27 @@ Examples:
 
 ### Property
 
-`Candidate → Admitted → Superseded/Retired`
+| From | To |
+|---|---|
+| Candidate | Admitted |
+| Candidate | Rejected |
+| Admitted | Superseded |
+| Admitted | Retired |
+| Rejected | Candidate |
+| Superseded | Retired |
 
-or
-
-`Candidate → Rejected`
-
-and the two re-entry/cleanup edges from §3.1's transition table:
-
-`Rejected → Candidate` (reopened on new evidence)
-
-`Superseded → Retired` (historical cleanup)
-
-§3.1's table is authoritative; this summary now carries the same six transitions.
+§3.1's table is authoritative; this summary reproduces the same six transitions exactly.
 
 ### Finding
 
-`Open → Blocker → Resolved`
+| Disposition | Status transition |
+|---|---|
+| Blocker | `Open → Resolved` |
+| Accepted Tradeoff | `Open → Accepted` |
+| Residual Risk | `Open → Recorded` |
+| Candidate Property | `Open → In property process` |
 
-`Open → Accepted Tradeoff → Accepted`
-
-`Open → Residual Risk → Recorded`
-
-`Open → Candidate Property → In property process`
+§4.1 is authoritative. A finding has exactly one Disposition and `Dispositioned` is not a Status.
 
 ### Review
 
@@ -1491,7 +1595,8 @@ or
 
 `OPEN → NON-CONVERGED`
 
-`CONVERGED` requires all applicable mandatory properties proven.
+`CONVERGED` requires the §4.7 conditions, including applicable admitted properties proven, no open
+Blocker, complete dispositions, and a fresh review.
 
 `NON-CONVERGED` means the process ended with unresolved gating obligations.
 
@@ -1513,6 +1618,7 @@ It is a project in which agents do not repeatedly rediscover settled architectur
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.9 | August 31, 2026 | — | **Systematic consistency remediation before a fresh A0 adoption review.** Settles the finding model as exactly four Dispositions — Blocker, Accepted Tradeoff, Residual Risk, Candidate Property — and five Status values; `Resolved` is a Status only, and `Dispositioned` is not a Status. Defines **runtime-bearing component** as the one canonical normative term and replaces the former `runtime component` uses. FR-AG-011 now permits only an explicit, already-applicable, authorized pre-adoption/review gate as the narrow Draft-stage Blocker basis; severity never decides Disposition. Reconciles FR-AG-011–020, FR-AG-026–035, FR-AG-036, FR-AG-039–040D with their elaborations; §4.7 now defines review-state semantics directly. The property/finding templates now reproduce their governing schemas exactly; Appendix C uses `Teardown owner`; Appendix D keeps static, alternate, and bypass surfaces separate; Appendix F mirrors the settled state model. Status remains Draft pending the separately recorded fresh review and human sign-off. |
 | 0.8 | August 31, 2026 | — | A0 adoption review, round 4 — fresh pass over v0.7. **Two Medium findings, no Blocker.** Round 4 confirmed all eight of the 0.7 changes landed correctly and verified all twelve claims this history's 0.7 row makes about the document against the live text. **AG-A0-013 (Medium):** §9.3's Finding Governance Checklist still read "Tradeoff defined." — the bare term AG-A0-010 replaced everywhere else. This is the **fourth** instance of the incomplete-propagation class, and it sat inside §9, the self-check gate whose whole purpose is catching exactly this drift. It was also a judgment call made and got wrong at the 0.7 landing: the site was seen, classified as a checklist label rather than an enum site, and deliberately left. It is an enum site — §9 is the approval gate, and it named a disposition that no longer existed anywhere else in the document. **AG-A0-014 (Medium):** §6.6 stated *"Verification SHOULD be proportionate to the consequence of tool failure"* while FR-AG-036A requires verification *"appropriate to the consequence of false negatives and false positives"* as a MUST. Because §4.3 item 1 makes a violated MUST-level property a Blocker, the SHOULD left room to treat disproportionate tool verification as a mere shortfall. §6.6 now carries the MUST anchored to FR-AG-036A, with depth-of-verification framed as judgment *within* the obligation rather than an escape from it — the same shape §5.4 and §5.5 already use. Status remains Draft pending human sign-off. |
 | 0.7 | August 31, 2026 | — | A0 adoption review, round 3 — fresh pass over v0.6. **Eight findings, three Medium and five Low; no Blocker.** Two of them falsify claims this document's own 0.6 row made about itself, and both are annotated in that row rather than silently rewritten. **AG-A0-005 (Medium):** §4.1's finding-lifecycle line still listed three terminal states after 0.6 extended the §4.2 enum to five — the same defect class as AG-A0-003, one section over, which is why "extended to match §4.1" was false. §4.1 now carries all four terminal states and maps each to its disposition. **AG-A0-006 (Medium):** the 0.6 row attributed the Blocker trigger to FR-AG-011, which only requires a Blocker to cite an authority; the rule is §4.3 item 5. **AG-A0-007 (Medium):** FR-AG-026's "unless an approved exclusion exists" named no mechanism, leaving a MUST-level rule with an undefined escape hatch; it is now closed to exactly two recorded artifacts — a property's §3.3 Non-scope, or a §7.1 exception — and prose assertion is explicitly excluded. **AG-A0-008 (Low):** §5.4 stated its evidence list with no modal verb at all while §5.3 and the fixed §5.5 anchor theirs to a MUST; now anchored to FR-AG-028 in the same shape. **AG-A0-009 (Low):** §7.1's exception schema still mandated the bare `AP-###` that FR-AG-004 calls recommended; hedged, closing the third and last site of AG-A0-004's defect. **AG-A0-010 (Low):** §4.2 and Appendix F said "Tradeoff" where FR-AG-009 and Appendix B say "Accepted Tradeoff"; unified. **AG-A0-011 (Low):** Appendix A paraphrases five of §3.3's field labels, which works against the machine-checkable-schema ambition in §6.1; Appendix A now states that §3.3 governs and that a schema is generated from §3.3, not from the template. **AG-A0-012 (Low):** Appendix F's property summary omitted §3.1's `Rejected → Candidate` and `Superseded → Retired` edges; both added. Status remains Draft pending human sign-off. |
 | 0.6 | August 31, 2026 | — | A0 adoption review, round 2 — a fresh pass over the amended artifact, per FR-AG-018. Three further findings fixed. **AG-A0-002 (High):** §5.5 stated the failure-injection obligation as SHOULD while FR-AG-029 states it as MUST, gated on the identical "meaningful" condition. Since an unmet mandatory proof trigger is a Blocker, the weaker reading made FR-AG-029 unenforceable. *(⚠️ CORRECTED at 0.7, finding AG-A0-006 — this row as published attributed that rule to **FR-AG-011**, which is wrong: FR-AG-011 requires only that a Blocker **cite** an authority. The rule that makes an unmet mandatory proof trigger a Blocker is **§4.3 item 5**. Annotated, not deleted.)* §5.5 now carries the MUST explicitly and marks the nine failure types as illustrative, which is what the SHOULD was actually for. §5.3 and §5.6 already did this correctly; §5.5 was the outlier. **AG-A0-003 (Medium):** the §4.2 Status enum offered only Open / Resolved / Accepted, leaving no valid value for a Residual-Risk finding (Appendix F: "Recorded") or a Candidate-Property one ("Property process"). Enum extended. *(⚠️ CORRECTED at 0.7, finding AG-A0-005 — this row as published said the enum was extended "to match §4.1 and Appendix F". It matched Appendix F only: **§4.1's own lifecycle line still listed three terminal states** and was not updated until 0.7, so the fix was incomplete and this claim was false when written.)* **AG-A0-004 (Low):** §3.3 stated `AP-###` as a MUST-level schema requirement while FR-AG-004 calls it "Recommended"; the schema cell now hedges to match. Full record: `docs/tracking/a0-governance-adoption-review.md`. Status remains Draft pending human sign-off. |

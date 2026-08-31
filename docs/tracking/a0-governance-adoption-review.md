@@ -18,7 +18,7 @@
 |---|---|
 | Artifact | `docs/planning/project-architecture-governance.md` |
 | Version at review open | 0.4 |
-| Version at latest revision of this record | 0.8 — the review is open, so there is no close version yet |
+| Version at latest revision of this record | 0.9 — systematic remediation complete; the review is converged for A0 but awaits human sign-off |
 | Status throughout | `Draft` — unchanged by this review |
 | Blob digest, v0.4 (as reviewed, round 1) | `f00032cf2f16971ffbef51f6bbe307fac51a31d3` |
 | SHA-256, v0.4 | `412c38eceba7a00d67ee7eb7631863bd550e29fed3e033fef75c55e7690ba316` |
@@ -30,11 +30,13 @@
 | SHA-256, v0.7 | `6364689fd4c436bbf9787d259206f2c9ebb25d7d51e79eb231862d07b7223dc0` |
 | Blob digest, v0.8 (as reviewed, round 5) | `929815352f497d7e21e0e6eb063025f89acaf576` |
 | SHA-256, v0.8 | `224c9aff822258bf139f1d089c442d1b0625b39d9bde81ab102ce9ad9555cd5b` |
+| Blob digest, v0.9 (fresh post-remediation review) | `bd709b2eccd765a319c861d6d9081f30a552922f` |
+| SHA-256, v0.9 | `b25f4d4ea138ab20854d1f2d2340c0ed0e9c81ea13cac4c55e9b3581f94c671e` |
 
-⚠️ **The review is PAUSED at owner instruction, August 31, 2026, after round 5 reported.** Round 5
-returned one High and seven Medium/Low findings. **They are recorded here and deliberately NOT
-fixed**, and the document therefore remains at v0.8 with round 5's findings open against it. This is
-the first round whose findings were not actioned; §5.2 and §6 state the consequences precisely.
+⚠️ **The round-5 pause is historical.** At owner direction, it was followed by one systematic
+consistency-remediation pass rather than another point-fix round. That pass produced Governance v0.9,
+explicitly dispositioned and resolved round 5's eight findings, and then performed the fresh full
+adoption review recorded in §4.4. The document remains `Draft`; convergence is not approval.
 
 **These digests are review-subject identities, not the adoption pin.** The A0 adoption digest is
 computed *after* `Status: Draft` → `Approved` is written, over that resulting file, and recorded in
@@ -82,13 +84,17 @@ is cheap for a later reviewer to re-check. Two readers' conclusions were overtur
 
 Every round after the first is a fresh review over the *amended* artifact rather than a re-read of
 the previous round's output, because FR-AG-018 requires convergence to include a fresh review over
-the current artifact — and each round of fixes produces a new current artifact. Rounds 1–5 are complete over v0.4 through v0.8. **Round 5's findings are unfixed by instruction, so
-the artifact still stands at v0.8 with those findings open against it** — the next round, whenever it
-runs, is owed over whatever version their fixes produce.
+the current artifact. Rounds 1–5 are complete over v0.4 through v0.8. Round 5 was paused before its
+findings were fixed.
 
-**Convergence rule applied.** A round returning only Low findings, or none, converges. Round 5
-returned one High and one Medium among eight, so it did not. This is the same rule the repository's
-`adversarial-review` skill uses.
+The owner then directed one systematic consistency-remediation pass, documented in
+[`a0-governance-consistency-audit.md`](a0-governance-consistency-audit.md): four disposition values,
+one canonical runtime-bearing term, an exhaustive 47-row FR-to-elaboration modality matrix, and a
+schema/template/transition comparison. The fresh full review over v0.9 follows that remediation; it
+is not an incremental “round 6” point-fix cycle.
+
+**Convergence rule applied.** The fresh review checks the actual FR-AG-015–020 conditions. Its
+zero-finding result is recorded in §4.4; no forecast was used to reach it.
 
 **What the rounds have actually demonstrated.** Round 2 found a High inside the passage round 1 had
 just amended. Round 3 then found that round 2's own fix was incompletely propagated — §4.2's enum was
@@ -165,21 +171,52 @@ downstream work. This is an honest reading of an empty set, but it means those t
 assurance. They will acquire real content the first time a property is admitted, at which point this
 review's conclusion on them does not transfer. Recorded here rather than left implicit.
 
+### 4.4 Fresh full post-remediation review — Governance v0.9
+
+**Result: 52 of 52 A0-scope boxes verified; no new findings.** The review re-read the whole current
+Governance artifact rather than only Round 5's cited passages. It also re-ran the mechanical inventory
+recorded in `a0-governance-consistency-audit.md`: 47 FR rows; matching four-value Disposition and
+five-value Status sets; exact property/finding template field order; six matching property transitions;
+separate static, alternate, and bypass proof dependencies; no live noncanonical normative runtime
+term; and no unresolved numeric-section reference.
+
+| Section | Boxes | Current result | Evidence |
+|---|---:|---:|---|
+| 9.1 Authority | 5 | 5 | §1.4; §8.1–§8.5; no owner overlap introduced. |
+| 9.2 Property governance | 10 | 10 | §3.1–§3.5; §7.1–§7.6; Appendix A. |
+| 9.3 Finding governance | 8 | 8 | KD-AG-2; FR-AG-009–014; §4.1–§4.6; Appendix B and F. |
+| 9.4 Proof | 15 | 15 | FR-AG-026–032A and 040B–040D; §5.2–§5.7; §6.6; Appendix D. |
+| 9.5 Agentic development | 7 | 7 | FR-AG-033–036B; §3.2 AC-8; §6.1–§6.6; Appendix E. |
+| 9.6 Review termination | 7 | 7 | FR-AG-015–020; §4.7; §5.3 below; this fresh review. |
+
+The six review-state boxes discharge as follows:
+
+| Box | Current discharge |
+|---|---|
+| Applicable admitted properties identified | No property has been admitted; the applicable set remains empty and the result is vacuous, as §4.3 records. |
+| Every MUST-level property satisfied | Vacuous for the same empty admitted-property set. |
+| Required proof complete | The §5.2 Trigger Matrix applies to code/change classes; this document-only remediation triggers none. |
+| No Blockers open | Every recorded corrective finding now has `Disposition: Blocker` and `Status: Resolved`; none has the `Blocker`/`Open` combination defined by §4.7. |
+| Every finding dispositioned | The Round 5 records are complete in §5.3. Historical records are schema-completed there without inferring tradeoff/risk approval. |
+| Fresh final review completed | This whole-artifact v0.9 review, performed after the systematic remediation, found no new finding. |
+
+The High severity of AG-A0-015 was **not** treated as a reason by itself to choose `Blocker`. The
+current `Blocker` disposition records the A0 corrective route: its self-governance contradiction had
+to be corrected before the candidate could satisfy the authorized Governance §9 / integration-plan §11
+A0 gate. Severity and Disposition remain independent.
+
 ---
 
 ## 5. Findings
 
-Fourteen findings across four rounds, in Governance Appendix B field order. None is a Blocker.
+Twenty-two findings were recorded across five historical rounds. The Round 5 entries and the
+previously compressed Round 3–4 entries are schema-completed in §5.3 so every live record can be read
+under Governance v0.9's Appendix B field set. `Resolved` is recorded as Status, never Disposition.
 
-**Rounds 3 and 4's findings are summarised in the table below rather than written out in full field
-form, and that is a deliberate, recorded shortfall.** Governance FR-AG-009 requires every substantive
-finding to end in exactly one disposition, which they do, and each row carries the Appendix B fields
-that bear on disposition. But five of the Appendix B fields — Round, Requirement/Property, Required
-action, Owner, Resolution evidence — are collapsed into the row text rather than listed. If this
-record is ever cited as an example of Appendix B compliance, cite AG-A0-001 to AG-A0-004 below, not
-the table.
+The following table preserves the original short historical summaries for Rounds 3–4. Its historical
+outcome text is not the authoritative current schema record; §5.3 supplies the missing fields.
 
-| ID | Round | Severity | Summary | Disposition / evidence |
+| ID | Round introduced | Severity | Summary | Historical outcome / evidence |
 |---|---|---|---|---|
 | AG-A0-005 | 3 | Medium | §4.1's finding-lifecycle line still listed three terminal states after v0.6 extended §4.2's enum to five — AG-A0-003's defect one section over, and the reason v0.6's "extended to match §4.1" was false | Resolved. §4.1 now lists all four terminal states and maps each to its disposition; the false claim is annotated in the v0.6 row, not deleted |
 | AG-A0-006 | 3 | Medium | The v0.6 version-history row attributed the Blocker trigger to FR-AG-011, which requires only that a Blocker *cite* an authority | Resolved. The rule is §4.3 item 5; the row is corrected in place with a ⚠️ annotation |
@@ -192,13 +229,13 @@ the table.
 | AG-A0-013 | 4 | Medium | §9.3's checklist still read "Tradeoff defined." — the bare term AG-A0-010 replaced everywhere else. Fourth instance of the propagation class, and it sat inside §9, the self-check gate meant to catch exactly this | Resolved. **This one was a judgment call made and got wrong at the 0.7 landing:** the site was seen, classified as a checklist label rather than an enum site, and deliberately left. §9 is the approval gate; naming a disposition that exists nowhere else makes it an enum site |
 | AG-A0-014 | 4 | Medium | §6.6 said verification "SHOULD be proportionate to the consequence of tool failure" while FR-AG-036A requires it as a MUST. Since §4.3 item 1 makes a violated MUST-level property a Blocker, the SHOULD left room to treat disproportionate tool verification as a mere shortfall | Resolved. §6.6 now carries the MUST anchored to FR-AG-036A, with depth framed as judgment *within* the obligation — the shape §5.4 and §5.5 already use |
 
-### 5.2 Round 5 — RECORDED, NOT DISPOSITIONED
+### 5.2 Round 5 — historical open record at Governance v0.8
 
-**Round 5's eight findings are open.** The review was paused at owner instruction immediately after
-round 5 reported, with the explicit instruction not to fix anything. They are recorded here so they
-are not lost, but they have **no disposition** — and that distinction is load-bearing, not
-bookkeeping. Governance FR-AG-009 requires every substantive finding to end in exactly one
-disposition drawn from a fixed set, and "Open" is a *Status* value, not a disposition.
+**At v0.8, Round 5's eight findings were open.** The review was paused at owner instruction
+immediately after it reported, with the explicit instruction not to fix anything. They were recorded
+without a disposition — and that distinction was load-bearing, not bookkeeping. Governance FR-AG-009
+requires every substantive finding to end in exactly one disposition drawn from a fixed set, and
+"Open" is a *Status* value, not a disposition.
 
 **Two consequences, stated plainly rather than left implicit:**
 
@@ -224,6 +261,37 @@ because two of the six §9.6 boxes this record exists to discharge are no longer
 | AG-A0-021 | Low | Appendix D merges §5.7's separate "static initialization paths" and "alternate or bypass paths" bullets into one field, with no note that §5.7 governs | Open |
 | AG-A0-022 | Low | Appendix C paraphrases FR-AG-023's "teardown" as "Shutdown/disposal owner" — the same unflagged-paraphrase class Appendix A was given a disclaimer for at v0.7 | Open |
 
+### 5.3 Current schema-completion ledger
+
+AG-A0-001 through AG-A0-004 already carry complete field records below. Their prior
+`Disposition: Resolved` values are normalized to `Disposition: Blocker`, `Status: Resolved`; this is
+an A0 corrective-route classification, not a severity conversion. The preceding tables provide each
+remaining record's Finding ID, Round introduced, Severity, and Summary. The table below supplies its
+remaining required Appendix B fields. For every row, Governance §9's pre-authoritative self-check and
+integration-plan §11 A0 are the explicit, authorized review gate cited under FR-AG-011 / §4.3 item 7.
+Together they are the current complete record.
+
+| ID | Evidence | Requirement/Property | Required action | Owner | Disposition | Status | Resolution evidence |
+|---|---|---|---|---|---|---|---|
+| AG-A0-005 | §4.1 omitted two terminal mappings that §4.2/Appendix F required. | §4.1; §4.2; Appendix F | Fix | A0 review | Blocker | Resolved | Governance v0.7 completed the mappings; v0.9 retains their exact Status semantics. |
+| AG-A0-006 | The v0.6 history named FR-AG-011 instead of §4.3 item 5 for the Blocker trigger. | §4.3 item 5 | Fix | A0 review | Blocker | Resolved | v0.7 annotates the false historical attribution rather than deleting it. |
+| AG-A0-007 | FR-AG-026's approved-exclusion route was unspecified. | FR-AG-026; §3.3; §7.1 | Fix | A0 review | Blocker | Resolved | v0.7 restricts it to Non-scope or a §7.1 exception. |
+| AG-A0-008 | §5.4 lacked FR-AG-028's required modality. | FR-AG-028; §5.4 | Fix | A0 review | Blocker | Resolved | v0.7 added the explicit lifecycle/order obligation. |
+| AG-A0-009 | §7.1 made the recommended `AP-###` form mandatory. | FR-AG-004; §7.1 | Fix | A0 review | Blocker | Resolved | v0.7 makes the form recommended. |
+| AG-A0-010 | §4.2/Appendix F used bare Tradeoff against the defined term. | FR-AG-009; §4.2; Appendix F | Fix | A0 review | Blocker | Resolved | v0.7 uses Accepted Tradeoff consistently. |
+| AG-A0-011 | Appendix A paraphrased §3.3 field labels. | §3.3; Appendix A | Fix | A0 review | Blocker | Resolved | v0.9 replaces the remaining aliases with exact field labels. |
+| AG-A0-012 | Appendix F omitted two §3.1 transitions. | §3.1; Appendix F | Fix | A0 review | Blocker | Resolved | v0.9 reproduces all six transitions as a table. |
+| AG-A0-013 | §9.3 named a non-existent bare Tradeoff disposition. | FR-AG-009; §9.3 | Fix | A0 review | Blocker | Resolved | v0.8 changed the checklist label to Accepted Tradeoff. |
+| AG-A0-014 | §6.6 weakened FR-AG-036A from MUST to SHOULD. | FR-AG-036A; §6.6 | Fix | A0 review | Blocker | Resolved | v0.8 restores the MUST; v0.9 retains it. |
+| AG-A0-015 | FR-AG-009, §4.2, and Appendix B had five Dispositions while all lifecycle treatment had four. | FR-AG-009; §4.1–§4.2; Appendix B; Appendix F | Fix | A0 review | Blocker | Resolved | v0.9 settles four Dispositions and five Statuses; `Resolved` is Status only. |
+| AG-A0-016 | Four MUST-level sites used two undefined runtime component terms. | FR-AG-021; FR-AG-023; FR-AG-027; Appendix C | Fix | A0 review | Blocker | Resolved | v0.9 defines and uses runtime-bearing component canonically. |
+| AG-A0-017 | §5.7 did not state FR-AG-032A's positive invalidation trigger normatively. | FR-AG-032A; §5.7 | Fix | A0 review | Blocker | Resolved | v0.9 requires regeneration or revalidation after material dependency change. |
+| AG-A0-018 | §6.6 did not state FR-AG-040C's terminal boundary normatively. | FR-AG-040C; §6.6 | Fix | A0 review | Blocker | Resolved | v0.9 makes ordinary-verification termination an explicit MUST. |
+| AG-A0-019 | §§6.2, 6.4, and 6.5 elided the FR-AG-036/033/034 modalities. | FR-AG-033; FR-AG-034; FR-AG-036 | Fix | A0 review | Blocker | Resolved | v0.9 restores each direct governing modality. |
+| AG-A0-020 | Appendix B used `Round` instead of §4.2's `Round introduced`. | §4.2; Appendix B | Fix | A0 review | Blocker | Resolved | v0.9 reproduces the exact name and field order. |
+| AG-A0-021 | Appendix D merged static, alternate, and bypass dependencies. | §5.7; Appendix D | Fix | A0 review | Blocker | Resolved | v0.9 keeps all three categories separate. |
+| AG-A0-022 | Appendix C used Shutdown/disposal rather than the mandated teardown term. | FR-AG-023; Appendix C | Fix | A0 review | Blocker | Resolved | v0.9 uses `Teardown owner` exactly. |
+
 **Two judgment calls round 5 made that I checked and agree with**, recorded because a later reviewer
 will otherwise re-raise them: FR-AG-012's heading "Tradeoff integrity" is **not** a propagation site
 — FR-AG-010, FR-AG-013 and FR-AG-014 all use short glosses rather than the full defined term, so
@@ -241,15 +309,15 @@ The four findings from rounds 1 and 2 follow in full Appendix B form.
 
 ### AG-A0-001
 
-- **Round:** 1
+- **Round introduced:** 1
 - **Severity:** Low
 - **Summary:** §5.5 was the only place in the document that addressed test authoring directly rather
   than proof scope, wording §1.3 reserves to Spec #19.
 - **Evidence:** §5.5 line 730 read *"Where meaningful, tests SHOULD intentionally cause:"*. Every
   sibling subsection (§5.3, §5.4, §5.6) phrases its obligation as what the *proof* or *evidence* must
   do. §1.3 line 73 disclaims "detailed test framework implementation".
-- **Requirement / Property:** §9.1 box 2; §1.3; §1.4 line 102
-- **Disposition:** Resolved
+- **Requirement/Property:** §9.1 box 2; §1.3; §1.4 line 102
+- **Disposition:** Blocker
 - **Required action:** Fix
 - **Owner:** A0 review
 - **Status:** Resolved
@@ -258,7 +326,7 @@ The four findings from rounds 1 and 2 follow in full Appendix B form.
 
 ### AG-A0-002
 
-- **Round:** 2
+- **Round introduced:** 2
 - **Severity:** High
 - **Summary:** §5.5 stated the failure-injection obligation as SHOULD while FR-AG-029 states it as
   MUST, gated on the identical "meaningful" condition — making a mandatory proof trigger read as
@@ -274,8 +342,8 @@ The four findings from rounds 1 and 2 follow in full Appendix B form.
   triggers. The misattribution came from the round-2 reader and was propagated here, into the
   Governance version history, and into the CHANGELOG before round 3 caught it. The finding itself
   stands — only its cited authority was wrong.)*
-- **Requirement / Property:** FR-AG-029; §4.3 item 5; FR-AG-016
-- **Disposition:** Resolved
+- **Requirement/Property:** FR-AG-029; §4.3 item 5; FR-AG-016
+- **Disposition:** Blocker
 - **Required action:** Fix
 - **Owner:** A0 review
 - **Status:** Resolved
@@ -289,7 +357,7 @@ The four findings from rounds 1 and 2 follow in full Appendix B form.
 
 ### AG-A0-003
 
-- **Round:** 2
+- **Round introduced:** 2
 - **Severity:** Medium
 - **Summary:** The §4.2 Finding Record Schema's Status enum offered no valid value for a
   Residual-Risk or Candidate-Property finding.
@@ -298,8 +366,8 @@ The four findings from rounds 1 and 2 follow in full Appendix B form.
   *"Open → Residual Risk → Recorded"* and *"Open → Candidate Property → Property process"*. The
   analogous Property State field (§3.3 line 495) correctly mirrors all five states from §3.1, so the
   asymmetry was an oversight rather than a design choice.
-- **Requirement / Property:** §4.1; Appendix F; §9.3 box 6
-- **Disposition:** Resolved
+- **Requirement/Property:** §4.1; Appendix F; §9.3 box 6
+- **Disposition:** Blocker
 - **Required action:** Fix
 - **Owner:** A0 review
 - **Status:** Resolved
@@ -308,7 +376,7 @@ The four findings from rounds 1 and 2 follow in full Appendix B form.
 
 ### AG-A0-004
 
-- **Round:** 2
+- **Round introduced:** 2
 - **Severity:** Low
 - **Summary:** §3.3 stated the `AP-###` identifier format as a MUST-level schema requirement while
   FR-AG-004 calls the same format merely "Recommended".
@@ -316,8 +384,8 @@ The four findings from rounds 1 and 2 follow in full Appendix B form.
   identifier. Recommended form: `AP-###`."* §3.3 line 489 introduces its table with *"Every admitted
   property MUST record:"*, and line 493 read *"| Property ID | Stable `AP-###` |"* — mandating the
   exact format FR-AG-004 hedges.
-- **Requirement / Property:** FR-AG-004; §9.2 box 3
-- **Disposition:** Resolved
+- **Requirement/Property:** FR-AG-004; §9.2 box 3
+- **Disposition:** Blocker
 - **Required action:** Fix
 - **Owner:** A0 review
 - **Status:** Resolved
@@ -334,17 +402,21 @@ commits, not a document defect, and it resolves on this file landing.
 
 ## 6. Outcome and what remains
 
-**Review outcome: NOT CONVERGED — PAUSED at owner instruction after round 5.** Five rounds, none
-clean. Fourteen findings dispositioned and Resolved; round 5's eight recorded, open, and unfixed by
-instruction.
+**Review outcome: CONVERGED FOR A0; NOT YET APPROVED.** The systematic remediation resolved all
+Round 5 and audit-exposed inconsistencies in one batch. The fresh full review over Governance v0.9
+found no new finding. Every recorded corrective finding is now `Disposition: Blocker`,
+`Status: Resolved`; no Blocker remains open. This is an A0 gate result, not a claim that a High
+severity always selects `Blocker`.
 
-| Round | Subject | Found |
+| Review activity | Subject | Result |
 |---|---|---|
 | 1 | v0.4 | 1 Low |
 | 2 | v0.5 | 1 High, 1 Medium, 1 Low — the High inside the passage round 1 had just amended |
 | 3 | v0.6 | 3 Medium, 5 Low — including that round 2's fix was incompletely propagated, and that two claims round 2 wrote into the document's own version history were false |
 | 4 | v0.7 | 2 Medium — a fourth propagation miss, this one a site seen and deliberately left on a judgment call that was wrong |
-| 5 | v0.8 | **1 High, 1 Medium, 6 Low** — the High is the Disposition enum disagreeing with itself on its own size. Not fixed; see §5.2 |
+| 5 | v0.8 | **1 High, 1 Medium, 6 Low** — historical pause record; all eight are dispositioned and resolved in §5.3 |
+| Systematic remediation | v0.8 → v0.9 | One exhaustive FR/modality/schema/terminology pass; all listed corrections applied together |
+| Fresh full adoption review | v0.9 | 52/52 A0 boxes verified; zero new findings |
 
 **Two defect classes account for nearly all twenty-two findings, and round 5 found a fifth instance
 of each even after being told to sweep them exhaustively.** Incomplete propagation — a term or enum
@@ -356,25 +428,23 @@ carries no modal verb: §5.4, §5.5, §6.6, and now §5.7 and §6.6 again agains
 enumerate every enum site and walk every FR-AG rule against its elaborating section — and still found
 new instances of both classes, including one in §6.6, the very section hardened in v0.8 for a sibling
 requirement. Five rounds of targeted fixing have not exhausted either class. That is evidence the
-document needs a systematic consistency pass rather than another round of point fixes, and it is the
-substantive argument for pausing here rather than continuing to iterate.
+document needed a systematic consistency pass rather than another round of point fixes. That pass is
+the v0.9 remediation documented in the companion audit.
 
-**AG-A0-015 in particular should not be fixed by reflex.** Deleting "Resolved" from the three
-five-value sites is round 5's recommended minimal fix and is probably right, but the opposite reading
-— that "Resolved" is a legitimate fifth disposition and §4.3–§4.6 are missing a §4.7 — is coherent
-too, and choosing between them is a governance decision about what the disposition model *is*, not a
-typo correction.
+**AG-A0-015 was not fixed by reflex.** The remediation settled the model explicitly: four
+Dispositions select handling; five Status values represent lifecycle. That makes `Resolved` a Status,
+not an unmodelled fifth Disposition, and makes `Dispositioned` non-status prose rather than a missing
+enum member.
 
 **This review does not approve the Governance specification, and nothing in this file should be read
-as approval.** `Status:` remains `Draft`. The remaining A0 conditions are, in order:
+as approval.** `Status:` remains `Draft`. The A0 verification, finding, and fresh-review conditions
+are now satisfied. The remaining actions are, in order:
 
-1. **A review round returns only Low findings, or none.** Outstanding — five rounds, none clean.
-   Round 5's eight findings must first be dispositioned and, where accepted, fixed.
-2. **Human sign-off.** Not delegable to an agent.
-3. **Then** write `Status: Draft` → `Approved` in the Governance file.
-4. **Then** compute the SHA-256 of that resulting file and record it in integration plan §11 A0.
+1. **Human sign-off.** Not delegable to an agent.
+2. **Then** write `Status: Draft` → `Approved` in the Governance file.
+3. **Then** compute the SHA-256 of that resulting file and record it in integration plan §11 A0.
 
-Steps 3 and 4 are ordered and the order matters: a digest computed before the status edit pins a
+Steps 2 and 3 are ordered and the order matters: a digest computed before the status edit pins a
 superseded artifact, and a digest written into the file it covers invalidates itself. The digests in
 §1 above are review-subject identities and are **not** the adoption pin.
 
@@ -387,6 +457,7 @@ specification is authoritative at A0 but not *fully adopted* until then.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.4 | August 31, 2026 | — | **Systematic remediation and fresh full adoption review.** Governance v0.8 → v0.9 settles four Dispositions and five Statuses, canonically defines `runtime-bearing component`, and reconciles the full FR modality/schema/template surface in one batch; the companion audit carries the 47-row matrix. Round 5's eight historical open findings are now complete `Blocker` / `Resolved` records, and the earlier compressed record fields are schema-completed without inferring tradeoff/risk approval. The A0 corrective route is explicitly grounded in the authorized Governance §9 / plan §11 pre-adoption gate, never in severity. The fresh whole-artifact v0.9 review verifies all 52 A0-scope boxes and returns zero new findings. Review outcome: **CONVERGED FOR A0; NOT YET APPROVED** — human sign-off, then the status edit and post-edit adoption digest, remain. |
 | 1.3 | August 31, 2026 | — | **Round 5 recorded; review PAUSED at owner instruction with its findings deliberately unfixed.** One High, one Medium, six Low — AG-A0-015 to AG-A0-022 — bringing the total to twenty-two across five rounds, none clean. The High (AG-A0-015) is the Disposition enum disagreeing with itself on its own size: FR-AG-009, §4.2 and Appendix B list five values ending in "Resolved" while §4.1, §4.3–§4.6 and Appendix F treat it as four; independently verified at both ends. Governance stays at v0.8 with these findings open against it. **Two §9.6 discharges change as a direct result:** "Every finding dispositioned" is **withdrawn**, because "Open" is a Status and not a disposition under FR-AG-009, and "No Blockers open" is weakened to rest on severity assessment rather than formal disposition. A0 therefore cannot close in this state — not because a High is open, since severity does not gate approval, but because two of the six boxes this record exists to discharge are no longer discharged by it. Also recorded: round 5 found a fifth instance of each of the two recurring defect classes *despite* being dispatched with instructions to sweep both exhaustively, which is the argument that a systematic consistency pass is now owed rather than another round of point fixes. |
 | 1.2 | August 31, 2026 | — | Round 4 recorded; Governance v0.7 → v0.8. Two Medium findings, fourteen in total, none a Blocker. **AG-A0-013** is the fourth instance of the incomplete-propagation class and the first that was seen and deliberately left: §9.3's checklist item was classified at the 0.7 landing as a label rather than an enum site, which was wrong — §9 is the approval gate, and it named a disposition that existed nowhere else. **AG-A0-014**: §6.6 stated FR-AG-036A's MUST as a SHOULD. Round 4 independently verified all eight of the 0.7 changes and all twelve claims the 0.7 version-history row makes about the document. Round 4 did not converge, so round 5 over v0.8 is dispatched, with instructions to sweep the two recurring defect classes exhaustively rather than opportunistically. Also corrected in this record: the review-subject table said the review closed at v0.6, which was false — the review is open; and §4's cited line numbers, correct when written, have drifted as the document grew, which is now stated with the §-anchors named as the durable reference. |
 | 1.1 | August 31, 2026 | — | Round 3 recorded; Governance v0.6 → v0.7. Eight further findings, three Medium and five Low, none a Blocker — twelve in total. Two of them (AG-A0-005, AG-A0-006) falsify claims round 2 wrote into the Governance version history about its own fix, and one of those, the FR-AG-011 misattribution, had been propagated into this record, the Governance history and the CHANGELOG before round 3 caught it; all three sites are corrected by annotation rather than rewrite. AG-A0-007 closes FR-AG-026's previously undefined "approved exclusion" to two recorded artifacts. Round 3 did not converge — three Medium — so round 4 over v0.7 is dispatched and outstanding, and the convergence rule now applied is the repository's own: a round returning only Low findings or none. Recorded shortfall: round 3's eight findings are tabulated rather than written in full Appendix B field form, and the record says so. |

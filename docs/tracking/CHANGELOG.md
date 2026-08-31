@@ -12,7 +12,39 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **A0 adoption review run, five rounds, NOT converged, PAUSED at owner
+> **Last Updated:** August 31, 2026 — **Systematic Governance consistency remediation and fresh A0 adoption review.**
+> Governance advances v0.8 → v0.9; the integration plan v0.7 → v0.8; the A0 review record v1.3 → v1.4;
+> and new `docs/tracking/a0-governance-consistency-audit.md` v1.0 records the exhaustive audit. Planning
+> and tracking documentation only. `Status:` remains `Draft`; human sign-off is still required before the
+> status edit and post-edit adoption digest.
+>
+> **One settled model, propagated everywhere:** exactly four finding Dispositions — `Blocker`, `Accepted
+> Tradeoff`, `Residual Risk`, `Candidate Property` — and five Status values. `Resolved` is a Status, not
+> a Disposition; `Dispositioned` is not a Status. The High severity of AG-A0-015 did not decide its
+> Disposition. Its corrective route is `Blocker → Resolved` because the explicit, already-applicable
+> Governance §9 / integration-plan §11 A0 gate had to be satisfied; severity and disposition remain
+> independent.
+>
+> **The systematic pass was exhaustive, not selective:** it built a 47-row FR-AG-to-elaboration modality
+> matrix; defined `runtime-bearing component` as the sole normative term; compared every live schema,
+> enum, transition, template, checklist, summary, and downstream-plan representation; corrected every
+> Round 5 finding plus audit-exposed state, field-order, direct-modality, and stale-plan defects in one
+> batch; and added the exact comparison evidence to the new audit record. Appendix A/B field labels now
+> reproduce their canonical schemas; Appendix C uses `Teardown owner`; Appendix D keeps static,
+> alternate, and bypass paths separate; and the integration plan's durable ledger/A0 state model matches.
+>
+> **Fresh full review result:** all 52 A0-scope boxes verify against Governance v0.9, its 47 FR rows,
+> and the mechanical comparison; no new finding was returned. All twenty-two historical corrective
+> findings are schema-complete with `Disposition: Blocker`, `Status: Resolved`; no Blocker remains open.
+> This means the review is converged **for A0**, not that Governance is approved. §9.7 remains owned by
+> A3–A9. The repository documentation-consistency checker, cross-reference inventory, and schema/enum
+> audit are rerun for this landing. The CI Markdown-lint scope excludes these long-form planning and
+> tracking documents.
+>
+> No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed,
+> so no runtime/build gate is owed.
+>
+> **Last Updated (prior):** August 31, 2026 — **A0 adoption review run, five rounds, NOT converged, PAUSED at owner
 > instruction with round 5's findings unfixed; Governance v0.4 → v0.8, still Draft. Integration
 > plan v0.6 → v0.7. Awaiting human sign-off. Planning and tracking documentation only.**
 > No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, so no gate
