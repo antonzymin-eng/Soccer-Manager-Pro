@@ -3,7 +3,7 @@
 
 **Document Class:** Project-level governance specification  
 **Status:** Draft  
-**Version:** 0.6  
+**Version:** 0.7  
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  
 **Primary downstream authorities:** Testing Strategy & Framework Specification #19; Code Standards & Style Guide Specification #20  
@@ -295,6 +295,13 @@ Known alternate or bypass activation paths MUST either be prohibited or explicit
 
 Where an architectural property applies to a finite mechanically discoverable repository surface, the proof MUST enumerate that complete surface unless an approved exclusion exists.
 
+An **approved exclusion** is one of exactly two things, and no other route excludes a surface from enumeration:
+
+- the surface falls outside the property's **Non-scope** as recorded in that property's admission record (§3.3); or
+- the surface is covered by a granted **exception** under §7.1, with the full exception record that section requires.
+
+Both are recorded artifacts. An exclusion asserted in review prose, without one of these two records behind it, is not an approved exclusion.
+
 ### FR-AG-027 — Structural reachability proof
 
 Applicable runtime components MUST have structural reachability evidence.
@@ -552,7 +559,11 @@ Repeated appearance triggers **consideration**, not automatic rule creation.
 
 Each finding moves through:
 
-**Open → Dispositioned → Resolved/Accepted/Recorded**
+**Open → Dispositioned → Resolved / Accepted / Recorded / In property process**
+
+The four terminal states correspond to the dispositions in §4.2 and the transitions in Appendix F:
+a Blocker ends Resolved, an Accepted Tradeoff ends Accepted, a Residual Risk ends Recorded, and a
+Candidate Property leaves the current review and ends In property process.
 
 A finding MUST retain a stable identifier across review rounds.
 
@@ -567,7 +578,7 @@ A finding MUST retain a stable identifier across review rounds.
 | Evidence | Concrete supporting evidence |
 | Severity | Critical / High / Medium / Low or project equivalent |
 | Requirement/Property | Cited authority, if any |
-| Disposition | Blocker / Tradeoff / Residual Risk / Candidate Property / Resolved |
+| Disposition | Blocker / Accepted Tradeoff / Residual Risk / Candidate Property / Resolved |
 | Required action | Fix / document / admit property / none |
 | Owner | Responsible resolver where applicable |
 | Status | Open / Resolved / Accepted / Recorded / In property process |
@@ -708,7 +719,10 @@ Lifecycle proof answers:
 
 > Does the component exist and execute in the required phase and order?
 
-Applicable evidence includes:
+Lifecycle-sensitive behavior MUST have lifecycle/order evidence. FR-AG-028 carries this obligation;
+this section does not weaken it.
+
+The following evidence types are illustrative rather than exhaustive. Applicable evidence includes:
 
 - construction-before-use;
 - registration-before-resolution;
@@ -947,7 +961,7 @@ An exception MUST contain:
 | Field | Requirement |
 |---|---|
 | Exception ID | Stable ID |
-| Property | Affected `AP-###` |
+| Property | Affected property ID (recommended form `AP-###`, per FR-AG-004) |
 | Scope | Exact files/components/hosts |
 | Reason | Why compliance is currently inappropriate |
 | Risk | Consequence |
@@ -1222,6 +1236,12 @@ Before this specification is considered fully adopted:
 
 # Appendix A — Architectural Property Record Template
 
+**§3.3 is the authoritative field list.** This template paraphrases several of its labels for
+readability in a fill-in form — "Normative statement" for Statement, "Explicit exclusions" for
+Non-scope, "Authoritative owner" for Authority, "Evidence required" for Evidence, and "Exceptions
+permitted" for Exceptions allowed. The fields correspond one-to-one; where the two differ in wording,
+§3.3 governs. A machine-checked schema should be generated from §3.3, not from this template.
+
 ```text
 Property ID:
 Title:
@@ -1441,15 +1461,23 @@ or
 
 `Candidate → Rejected`
 
+and the two re-entry/cleanup edges from §3.1's transition table:
+
+`Rejected → Candidate` (reopened on new evidence)
+
+`Superseded → Retired` (historical cleanup)
+
+§3.1's table is authoritative; this summary now carries the same six transitions.
+
 ### Finding
 
 `Open → Blocker → Resolved`
 
-`Open → Tradeoff → Accepted`
+`Open → Accepted Tradeoff → Accepted`
 
 `Open → Residual Risk → Recorded`
 
-`Open → Candidate Property → Property process`
+`Open → Candidate Property → In property process`
 
 ### Review
 
@@ -1481,6 +1509,7 @@ It is a project in which agents do not repeatedly rediscover settled architectur
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 0.6 | August 31, 2026 | — | A0 adoption review, round 2 — a fresh pass over the amended artifact, per FR-AG-018. Three further findings fixed. **AG-A0-002 (High):** §5.5 stated the failure-injection obligation as SHOULD while FR-AG-029 states it as MUST, gated on the identical "meaningful" condition. Since FR-AG-011 makes an unmet mandatory proof trigger a Blocker, the weaker reading made FR-AG-029 unenforceable. §5.5 now carries the MUST explicitly and marks the nine failure types as illustrative, which is what the SHOULD was actually for. §5.3 and §5.6 already did this correctly; §5.5 was the outlier. **AG-A0-003 (Medium):** the §4.2 Status enum offered only Open / Resolved / Accepted, leaving no valid value for a Residual-Risk finding (Appendix F: "Recorded") or a Candidate-Property one ("Property process"). Enum extended to match §4.1 and Appendix F. **AG-A0-004 (Low):** §3.3 stated `AP-###` as a MUST-level schema requirement while FR-AG-004 calls it "Recommended"; the schema cell now hedges to match. Full record: `docs/tracking/a0-governance-adoption-review.md`. Status remains Draft pending human sign-off. |
+| 0.7 | August 31, 2026 | — | A0 adoption review, round 3 — fresh pass over v0.6. **Eight findings, three Medium and five Low; no Blocker.** Two of them falsify claims this document's own 0.6 row made about itself, and both are annotated in that row rather than silently rewritten. **AG-A0-005 (Medium):** §4.1's finding-lifecycle line still listed three terminal states after 0.6 extended the §4.2 enum to five — the same defect class as AG-A0-003, one section over, which is why "extended to match §4.1" was false. §4.1 now carries all four terminal states and maps each to its disposition. **AG-A0-006 (Medium):** the 0.6 row attributed the Blocker trigger to FR-AG-011, which only requires a Blocker to cite an authority; the rule is §4.3 item 5. **AG-A0-007 (Medium):** FR-AG-026's "unless an approved exclusion exists" named no mechanism, leaving a MUST-level rule with an undefined escape hatch; it is now closed to exactly two recorded artifacts — a property's §3.3 Non-scope, or a §7.1 exception — and prose assertion is explicitly excluded. **AG-A0-008 (Low):** §5.4 stated its evidence list with no modal verb at all while §5.3 and the fixed §5.5 anchor theirs to a MUST; now anchored to FR-AG-028 in the same shape. **AG-A0-009 (Low):** §7.1's exception schema still mandated the bare `AP-###` that FR-AG-004 calls recommended; hedged, closing the third and last site of AG-A0-004's defect. **AG-A0-010 (Low):** §4.2 and Appendix F said "Tradeoff" where FR-AG-009 and Appendix B say "Accepted Tradeoff"; unified. **AG-A0-011 (Low):** Appendix A paraphrases five of §3.3's field labels, which works against the machine-checkable-schema ambition in §6.1; Appendix A now states that §3.3 governs and that a schema is generated from §3.3, not from the template. **AG-A0-012 (Low):** Appendix F's property summary omitted §3.1's `Rejected → Candidate` and `Superseded → Retired` edges; both added. Status remains Draft pending human sign-off. |
+| 0.6 | August 31, 2026 | — | A0 adoption review, round 2 — a fresh pass over the amended artifact, per FR-AG-018. Three further findings fixed. **AG-A0-002 (High):** §5.5 stated the failure-injection obligation as SHOULD while FR-AG-029 states it as MUST, gated on the identical "meaningful" condition. Since an unmet mandatory proof trigger is a Blocker, the weaker reading made FR-AG-029 unenforceable. *(⚠️ CORRECTED at 0.7, finding AG-A0-006 — this row as published attributed that rule to **FR-AG-011**, which is wrong: FR-AG-011 requires only that a Blocker **cite** an authority. The rule that makes an unmet mandatory proof trigger a Blocker is **§4.3 item 5**. Annotated, not deleted.)* §5.5 now carries the MUST explicitly and marks the nine failure types as illustrative, which is what the SHOULD was actually for. §5.3 and §5.6 already did this correctly; §5.5 was the outlier. **AG-A0-003 (Medium):** the §4.2 Status enum offered only Open / Resolved / Accepted, leaving no valid value for a Residual-Risk finding (Appendix F: "Recorded") or a Candidate-Property one ("Property process"). Enum extended. *(⚠️ CORRECTED at 0.7, finding AG-A0-005 — this row as published said the enum was extended "to match §4.1 and Appendix F". It matched Appendix F only: **§4.1's own lifecycle line still listed three terminal states** and was not updated until 0.7, so the fix was incomplete and this claim was false when written.)* **AG-A0-004 (Low):** §3.3 stated `AP-###` as a MUST-level schema requirement while FR-AG-004 calls it "Recommended"; the schema cell now hedges to match. Full record: `docs/tracking/a0-governance-adoption-review.md`. Status remains Draft pending human sign-off. |
 | 0.5 | August 31, 2026 | — | A0 adoption review, round 1. §5.5 reworded from "tests SHOULD intentionally cause" to "the proof scope SHOULD include deliberately causing" — finding AG-A0-001, the one place the document addressed test authoring directly rather than proof scope, which §1.3 reserves to Spec #19. No normative obligation changed: the modality stays SHOULD and the nine failure conditions are unchanged. Status remains Draft pending human sign-off; see `docs/tracking/a0-governance-adoption-review.md`. |
 | 0.4 | August 27, 2026 | — | Draft as created. Version history introduced retroactively at 0.5; rows before this one are reconstructed from the document header, not from a contemporaneous log. |

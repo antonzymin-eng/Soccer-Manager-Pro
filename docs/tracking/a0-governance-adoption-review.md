@@ -24,14 +24,15 @@
 | SHA-256, v0.4 | `412c38eceba7a00d67ee7eb7631863bd550e29fed3e033fef75c55e7690ba316` |
 | Blob digest, v0.5 (as reviewed, round 2) | `f5d0c487f14c525fa75f038cb3254c3e4bdd9417` |
 | SHA-256, v0.5 | `14b940f29a4fdac867ae329ce02bf21fa257ec408c1b676bbfacd545ea22bfde` |
-| Blob digest, v0.6 (round 3 subject) | `e8ebad7443f8484df4355bc2355a6988df2570bb` |
+| Blob digest, v0.6 (as reviewed, round 3) | `e8ebad7443f8484df4355bc2355a6988df2570bb` |
 | SHA-256, v0.6 | `3d66c5bd8cc87901bbdf07245ca9a7d1e3e686989641b85731cc2753ff4dadb2` |
+| Blob digest, v0.7 (round 4 subject) | `f32649a66f01db4606c7212c1a3c93ecf5e089f3` |
+| SHA-256, v0.7 | `6364689fd4c436bbf9787d259206f2c9ebb25d7d51e79eb231862d07b7223dc0` |
 
-⚠️ **Round 3 is dispatched but has not reported as of this revision.** This file is committed at
-v1.0 with rounds 1 and 2 complete and round 3 in flight, rather than held back or written as though
-its result were known. §6 states the outcome accordingly. When round 3 reports, this record is
-updated to v1.1 with its findings, and the FR-AG-018 fresh-review condition is settled then — not
-before.
+⚠️ **Round 4 is dispatched but has not reported as of this revision.** Rounds 1–3 are complete.
+Round 3 returned three Medium findings, so the review has not converged and a fourth round is owed;
+this file records that state rather than one it cannot yet evidence. §6 states the outcome
+accordingly.
 
 **These digests are review-subject identities, not the adoption pin.** The A0 adoption digest is
 computed *after* `Status: Draft` → `Approved` is written, over that resulting file, and recorded in
@@ -77,10 +78,22 @@ rest on a single reader's citation. Every citation in §4 below names a line ran
 is cheap for a later reviewer to re-check. Two readers' conclusions were overturned on verification
 (§5), which is the evidence that the verification step was real rather than nominal.
 
-Round 2, and round 3 once it reports, are fresh reviews over the *amended* artifact rather than
-re-reads of the previous round's output, because FR-AG-018 requires convergence to include a fresh
-review over the current artifact — and each round of fixes produces a new current artifact. Round 3
-was dispatched against v0.6 and is outstanding at this revision.
+Every round after the first is a fresh review over the *amended* artifact rather than a re-read of
+the previous round's output, because FR-AG-018 requires convergence to include a fresh review over
+the current artifact — and each round of fixes produces a new current artifact. Rounds 1–3 are
+complete over v0.4, v0.5 and v0.6 respectively; round 4 was dispatched against v0.7 and is
+outstanding at this revision.
+
+**Convergence rule applied.** A round returning only Low findings, or none, converges. Round 3
+returned three Medium, so it did not, and a fourth round is owed. This is the same rule the
+repository's `adversarial-review` skill uses.
+
+**What the rounds have actually demonstrated.** Round 2 found a High inside the passage round 1 had
+just amended. Round 3 then found that round 2's own fix was incompletely propagated — §4.2's enum was
+extended while §4.1's lifecycle line was not — and that two claims round 2 wrote into the document's
+version history about itself were false. Each round has found defects introduced or missed by the
+previous one. That is the argument for not treating the fresh-review condition as a formality, and
+for not predicting a round's outcome before it reports.
 
 ---
 
@@ -130,9 +143,9 @@ that discharges them**, as follows:
 | Applicable admitted properties identified | §4.3 below — none admitted; the registry is an A6 artifact and no property has been admitted through it, so the applicable set is empty and the obligation is vacuous, not skipped |
 | Every MUST-level property satisfied | Vacuous for the same reason. The document's own FR-AG requirements were verified in §4 above; those are requirements, not admitted properties |
 | Required proof complete | §5.2's Trigger Matrix maps proof obligations to *code* change types. This artifact is a document, and no row applies. Recorded rather than silently passed |
-| No Blockers open | §5 — four findings, none dispositioned Blocker |
-| Every finding dispositioned | §5 — all four carry an explicit disposition |
-| Fresh final review completed | **Not yet.** Rounds 1–2 are complete; round 3 over the current artifact is outstanding. This box stays unticked until round 3 reports, per FR-AG-018 |
+| No Blockers open | §5 — twelve findings, none dispositioned Blocker |
+| Every finding dispositioned | §5 — all twelve carry an explicit disposition |
+| Fresh final review completed | **Not yet.** Rounds 1–3 are complete but round 3 returned three Medium findings, so the review has not converged; round 4 over the current artifact is outstanding. This box stays unticked until a round returns only Low findings or none, per FR-AG-018 |
 
 ### 4.3 A recorded limitation
 
@@ -146,8 +159,28 @@ review's conclusion on them does not transfer. Recorded here rather than left im
 
 ## 5. Findings
 
-Four findings, in Governance Appendix B field order. None is a Blocker; per FR-AG-020 the review
-therefore converges rather than recording NON-CONVERGED.
+Twelve findings across three rounds, in Governance Appendix B field order. None is a Blocker.
+
+**Round 3's eight findings are summarised in the table below rather than written out in full field
+form, and that is a deliberate, recorded shortfall.** Governance FR-AG-009 requires every substantive
+finding to end in exactly one disposition, which they do, and each row carries the Appendix B fields
+that bear on disposition. But five of the Appendix B fields — Round, Requirement/Property, Required
+action, Owner, Resolution evidence — are collapsed into the row text rather than listed. If this
+record is ever cited as an example of Appendix B compliance, cite AG-A0-001 to AG-A0-004 below, not
+the table.
+
+| ID | Round | Severity | Summary | Disposition / evidence |
+|---|---|---|---|---|
+| AG-A0-005 | 3 | Medium | §4.1's finding-lifecycle line still listed three terminal states after v0.6 extended §4.2's enum to five — AG-A0-003's defect one section over, and the reason v0.6's "extended to match §4.1" was false | Resolved. §4.1 now lists all four terminal states and maps each to its disposition; the false claim is annotated in the v0.6 row, not deleted |
+| AG-A0-006 | 3 | Medium | The v0.6 version-history row attributed the Blocker trigger to FR-AG-011, which requires only that a Blocker *cite* an authority | Resolved. The rule is §4.3 item 5; the row is corrected in place with a ⚠️ annotation |
+| AG-A0-007 | 3 | Medium | FR-AG-026's "unless an approved exclusion exists" named no mechanism — a MUST-level rule with an undefined escape hatch | Resolved. Closed to exactly two recorded artifacts: a property's §3.3 Non-scope, or a §7.1 exception. Prose assertion explicitly excluded |
+| AG-A0-008 | 3 | Low | §5.4 stated its evidence list with no modal verb while §5.3 and the fixed §5.5 anchor theirs to a MUST | Resolved. Anchored to FR-AG-028 in the same shape |
+| AG-A0-009 | 3 | Low | §7.1's exception schema still mandated the bare `AP-###` that FR-AG-004 calls recommended | Resolved. Hedged — the third and last site of AG-A0-004's defect |
+| AG-A0-010 | 3 | Low | §4.2 and Appendix F said "Tradeoff" where FR-AG-009 and Appendix B say "Accepted Tradeoff" | Resolved. Unified |
+| AG-A0-011 | 3 | Low | Appendix A paraphrases five of §3.3's field labels, working against the machine-checkable-schema ambition in §6.1 | Resolved. Appendix A now states §3.3 governs and that a schema is generated from §3.3, not the template |
+| AG-A0-012 | 3 | Low | Appendix F's property summary omitted §3.1's `Rejected → Candidate` and `Superseded → Retired` edges | Resolved. Both added |
+
+The four findings from rounds 1 and 2 follow in full Appendix B form.
 
 ### AG-A0-001
 
@@ -175,11 +208,16 @@ therefore converges rather than recording NON-CONVERGED.
   optional.
 - **Evidence:** FR-AG-029 (line 307): *"Applicable meaningful failure paths MUST be deliberately
   exercised."* §5.5 (line 730, as amended by AG-A0-001): *"Where meaningful, the proof scope SHOULD
-  include deliberately causing:"*. FR-AG-011 item 5 (line 587) makes an unmet mandatory proof trigger
+  include deliberately causing:"*. **§4.3 item 5** (line 587) makes an unmet mandatory proof trigger
   grounds for a Blocker, and FR-AG-016 forbids convergence with Blockers open — so under the weaker
   reading FR-AG-029 could not be enforced as written. §5.3 (lines 684, 694) and §5.6 (line 753) use
   MUST for their own obligations; §5.5 was the outlier.
-- **Requirement / Property:** FR-AG-029; FR-AG-011; FR-AG-016
+  *(⚠️ CORRECTED by AG-A0-006 — this finding as first written cited **FR-AG-011** for the Blocker
+  trigger. FR-AG-011 requires only that a Blocker cite an authority; it says nothing about proof
+  triggers. The misattribution came from the round-2 reader and was propagated here, into the
+  Governance version history, and into the CHANGELOG before round 3 caught it. The finding itself
+  stands — only its cited authority was wrong.)*
+- **Requirement / Property:** FR-AG-029; §4.3 item 5; FR-AG-016
 - **Disposition:** Resolved
 - **Required action:** Fix
 - **Owner:** A0 review
@@ -239,19 +277,26 @@ commits, not a document defect, and it resolves on this file landing.
 
 ## 6. Outcome and what remains
 
-**Review outcome: NOT YET CONVERGED — round 3 outstanding.** All four findings to date are
+**Review outcome: NOT YET CONVERGED — round 4 outstanding.** All twelve findings to date are
 dispositioned and none is a Blocker, which is what convergence needs on the findings side. What is
-missing is FR-AG-018's fresh review over the current artifact: round 2's fixes produced v0.6, and
-v0.6 has not yet been reviewed. Round 3 is dispatched.
+missing is a round that comes back clean: round 3 returned three Medium findings, and its fixes
+produced v0.7, which has not yet been reviewed. Round 4 is dispatched.
 
-This is deliberately not rounded up to CONVERGED. Round 2 found a High defect in the passage round 1
-had just amended, which is precisely why FR-AG-018 exists and precisely why a round that has not
-reported cannot be assumed clean.
+This is deliberately not rounded up. The rounds have not been a formality: round 2 found a High in
+the passage round 1 had just amended, and round 3 found that round 2's fix was incompletely
+propagated *and* that two things round 2 wrote into the document's own version history were false.
+On that record, predicting round 4 clean would be unfounded.
+
+**Expect this to take another round or two.** Each pass has surfaced fewer and lighter findings —
+High, then Medium, and the trend is the useful signal — but the propagation defects in particular
+have recurred three times across different sections, so a clean round is the only thing that should
+close this.
 
 **This review does not approve the Governance specification, and nothing in this file should be read
 as approval.** `Status:` remains `Draft`. The remaining A0 conditions are, in order:
 
-1. **Round 3 reports and any findings are dispositioned.** Outstanding.
+1. **A review round returns only Low findings, or none.** Outstanding — round 4 is dispatched
+   against v0.7. Rounds continue until one comes back clean.
 2. **Human sign-off.** Not delegable to an agent.
 3. **Then** write `Status: Draft` → `Approved` in the Governance file.
 4. **Then** compute the SHA-256 of that resulting file and record it in integration plan §11 A0.
@@ -269,4 +314,5 @@ specification is authoritative at A0 but not *fully adopted* until then.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.1 | August 31, 2026 | — | Round 3 recorded; Governance v0.6 → v0.7. Eight further findings, three Medium and five Low, none a Blocker — twelve in total. Two of them (AG-A0-005, AG-A0-006) falsify claims round 2 wrote into the Governance version history about its own fix, and one of those, the FR-AG-011 misattribution, had been propagated into this record, the Governance history and the CHANGELOG before round 3 caught it; all three sites are corrected by annotation rather than rewrite. AG-A0-007 closes FR-AG-026's previously undefined "approved exclusion" to two recorded artifacts. Round 3 did not converge — three Medium — so round 4 over v0.7 is dispatched and outstanding, and the convergence rule now applied is the repository's own: a round returning only Low findings or none. Recorded shortfall: round 3's eight findings are tabulated rather than written in full Appendix B field form, and the record says so. |
 | 1.0 | August 31, 2026 | — | Initial record. Two review rounds complete over Governance v0.4 → v0.6, §9.1–§9.6 in scope; round 3 over v0.6 dispatched and outstanding at this revision. 46 of 52 boxes verified against cited line ranges; five of the six §9.6 process-state boxes discharged by this record, two of those vacuously and recorded as such, and "fresh final review completed" left unticked pending round 3. Four findings, all Resolved, none a Blocker. Outcome recorded as NOT YET CONVERGED rather than rounded up — round 2 found a High defect inside the passage round 1 had just amended, which is the whole reason FR-AG-018 requires a fresh pass over the current artifact. §9.7 confirmed unlanded and scoped out to A3–A9. Status and adoption digest deliberately not written. |

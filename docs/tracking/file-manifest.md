@@ -1,12 +1,14 @@
 # File Manifest (Post-Migration Baseline)
 
 **Last Updated:** August 31, 2026 — **A0 adoption review; one file added, planning/tracking only.** New
-`docs/tracking/a0-governance-adoption-review.md` v1.0 — the review-level record for stage A0: subject digests for
+`docs/tracking/a0-governance-adoption-review.md` v1.1 — the review-level record for stage A0: subject digests for
 each reviewed version, scope (Governance §9.1–§9.6; §9.7 explicitly out and owned by A3–A9), method and its
-verification depth, the 52-box result, and four findings in Appendix B field order, all Resolved, none a Blocker.
-`docs/planning/project-architecture-governance.md` v0.4 → v0.6 (§5.5 failure-injection modality reconciled with
-FR-AG-029; §4.2 Status enum aligned to §4.1/Appendix F; §3.3 property-ID cell hedged to match FR-AG-004; Version
-History section added). `docs/planning/project-architecture-governance-integration-plan.md` v0.6 → v0.7 (A0 gate
+verification depth, the 52-box result, and twelve findings across three rounds, all Resolved, none a Blocker;
+round 4 dispatched and outstanding, so the review is recorded NOT YET CONVERGED.
+`docs/planning/project-architecture-governance.md` v0.4 → v0.7 (§5.5 and §5.4 modalities reconciled with
+FR-AG-029/FR-AG-028; §4.1 lifecycle and §4.2 Status enum aligned with Appendix F; `AP-###` hedged to match
+FR-AG-004 at all three sites; FR-AG-026's "approved exclusion" defined; "Accepted Tradeoff" unified; two Appendix F
+property transitions restored; Appendix A subordinated to §3.3; Version History section added). `docs/planning/project-architecture-governance-integration-plan.md` v0.6 → v0.7 (A0 gate
 boundary made explicit, removing the §9.7 circularity). Governance `Status:` remains `Draft` — sign-off pending.
 No `src/`, `.cs`, `.asmdef`, or workflow changed; no file removed or renamed. Full account:
 `docs/tracking/CHANGELOG.md`, August 31, 2026.

@@ -12,7 +12,8 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **A0 adoption review run; Governance v0.4 → v0.6, still Draft. Integration
+> **Last Updated:** August 31, 2026 — **A0 adoption review run, three rounds, not yet converged; Governance
+> v0.4 → v0.7, still Draft. Integration
 > plan v0.6 → v0.7. Awaiting human sign-off. Planning and tracking documentation only.**
 > No `src/`, `.cs`, `.asmdef`, workflow, tool, save format, RNG, tuning, or simulation behavior changed, so no gate
 > run is owed.
@@ -27,24 +28,41 @@ break it, and do not edit historical entries.
 > **before** computing the content digest, recorded outside the Governance file. A0 explicitly does **not** require
 > the property registry, finding ledger, review tooling, or any #19/#20 amendment.
 >
-> **New `docs/tracking/a0-governance-adoption-review.md` v1.0** is the review record. Two fresh rounds complete
-> over v0.4 → v0.6; **round 3 over v0.6 is dispatched and outstanding**, and the record says so rather than
+> **New `docs/tracking/a0-governance-adoption-review.md` v1.1** is the review record. **Three fresh rounds
+> complete over v0.4 → v0.7; round 4 over v0.7 is dispatched and outstanding**, and the record says so rather than
 > assuming it clean. **46 of the 52 in-scope boxes verified against cited line ranges**; five of the six §9.6
 > process-state boxes are discharged by the record itself, two of those **vacuously** — no architectural property
 > has been admitted anywhere in the repository — which is recorded as a limitation rather than passed silently.
-> The sixth, "fresh final review completed", is left unticked until round 3 reports.
+> The sixth, "fresh final review completed", stays unticked until a round returns only Low findings or none.
 >
-> **Outcome: NOT YET CONVERGED, deliberately not rounded up.** The findings side is clean — four findings, all
-> Resolved, none a Blocker — but FR-AG-018 wants a fresh pass over the *current* artifact, and round 2's fixes
-> produced a new one. That is not a formality here: **round 2 found a High defect inside the very passage round 1
-> had just amended.** AG-A0-002 is that finding:
-> §5.5 stated the failure-injection obligation as SHOULD while FR-AG-029 states it as MUST on the identical
-> "meaningful" condition, and since FR-AG-011 makes an unmet mandatory proof trigger a Blocker, the weaker reading
-> left FR-AG-029 unenforceable. §5.5 now carries the MUST and marks its nine failure types illustrative.
-> AG-A0-003 (Medium): the §4.2 Status enum had no valid value for a Residual-Risk or Candidate-Property finding,
-> contradicting §4.1 and Appendix F; extended. AG-A0-004 (Low): §3.3 mandated the `AP-###` format that FR-AG-004
-> calls merely recommended; hedged. AG-A0-001 (Low): §5.5 addressed test authoring rather than proof scope,
-> wording §1.3 reserves to Spec #19.
+> **Outcome: NOT YET CONVERGED, deliberately not rounded up.** Twelve findings, all Resolved, none a Blocker —
+> but convergence needs a round that comes back clean, and **round 3 returned three Medium**. That is not a
+> formality here, and the round-by-round record is the argument:
+>
+> — **Round 2 found a High inside the very passage round 1 had just amended.** AG-A0-002: §5.5 stated the
+> failure-injection obligation as SHOULD while FR-AG-029 states it as MUST on the identical "meaningful"
+> condition, and since an unmet mandatory proof trigger is a Blocker, the weaker reading left FR-AG-029
+> unenforceable. *(⚠️ CORRECTED — this entry as first published attributed that Blocker rule to **FR-AG-011**,
+> which is wrong: FR-AG-011 requires only that a Blocker **cite** an authority. The rule is **§4.3 item 5**. The
+> misattribution came from the round-2 reader and was propagated into three documents before round 3 caught it as
+> AG-A0-006. Annotated here rather than rewritten, per this file's own rule.)* §5.5 now carries the MUST and
+> marks its nine failure types illustrative. AG-A0-003 (Medium): the §4.2 Status enum had no valid value for a
+> Residual-Risk or Candidate-Property finding; extended. AG-A0-004 (Low): §3.3 mandated the `AP-###` format that
+> FR-AG-004 calls merely recommended; hedged. AG-A0-001 (Low): §5.5 addressed test authoring rather than proof
+> scope, wording §1.3 reserves to Spec #19.
+>
+> — **Round 3 then found that round 2's own fix was incompletely propagated, and that two claims round 2 wrote
+> into the Governance version history about itself were false.** Eight findings, three Medium and five Low.
+> AG-A0-005: §4.1's lifecycle line still listed three terminal states after §4.2's enum went to five — AG-A0-003's
+> defect one section over, and the reason "extended to match §4.1" was untrue. AG-A0-006: the FR-AG-011
+> misattribution above. AG-A0-007: FR-AG-026's "unless an approved exclusion exists" named no mechanism at all,
+> leaving a MUST-level rule with an undefined escape hatch; now closed to exactly two recorded artifacts — a
+> property's §3.3 Non-scope, or a §7.1 exception — with prose assertion explicitly excluded. Five Low: §5.4 had no
+> modal verb where its siblings carry a MUST; §7.1 still mandated the bare `AP-###`; "Tradeoff" vs "Accepted
+> Tradeoff" drift; Appendix A's paraphrased field labels; two property transitions missing from Appendix F.
+>
+> **The pattern worth carrying forward: incomplete propagation has now recurred three times**, in different
+> sections each time. That is why a clean round, not a diminishing count, is the only thing that closes this.
 >
 > **A first reading that reported §9.1 boxes 1–3 as FAIL was rejected on verification.** Its reasoning — that the
 > Authority Matrix names #19/#20 as owners of rules those specs do not yet contain — conflates *unlanded* with
