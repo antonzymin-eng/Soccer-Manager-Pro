@@ -1,6 +1,13 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** August 31, 2026 — **A0 CLOSED; Governance v0.10 approved; planning/tracking only.**
+**Last Updated:** August 31, 2026 — **PR #344 CI/link-check and Codex-review corrections; tooling/tracking only.**
+`.github/markdown-link-check.json` now ignores exactly two Microsoft Learn URLs that are current but
+return transport status `0` to the GitHub markdown-link-check runner; no broader `learn.microsoft.com`
+exemption was added. `a0-governance-adoption-review.md` v1.7 → v1.8 adds the stable reviewer identity
+required by A0 condition 2. Integration plan v0.10 → v0.11 updates that record pointer. The Tracking
+Documents row no longer says human sign-off is pending after A0 closure. Governance v0.10, Approved
+status, adoption digest, and semantics are unchanged. No `src/`, `.cs`, `.asmdef`, or runtime change.
+**Last Updated (prior):** August 31, 2026 — **A0 CLOSED; Governance v0.10 approved; planning/tracking only.**
 Project-owner sign-off recorded. `docs/planning/project-architecture-governance.md` changes only
 `Status: Draft` → `Approved`; integration plan v0.9 → v0.10 records the post-status-edit canonical
 adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` and Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`;
@@ -2796,7 +2803,7 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 | `docs/tracking/fix-manifest-pass-mechanics.md` | Pass Mechanics audit/fix closure tracking |
 | `docs/tracking/certification-platform.md` | Stage 0 host platform version pin (required before first Spec #16 certification run) |
 | `docs/tracking/file-manifest.md` | This manifest |
-| `docs/tracking/a0-governance-adoption-review.md` | A0 review-level evidence for Project Architecture Governance: reviewed subject digests, scope/method, finding ledger, §9.1–§9.6 discharge, convergence state, and pending human sign-off |
+| `docs/tracking/a0-governance-adoption-review.md` | A0 review-level evidence for Project Architecture Governance: reviewed subject digests, reviewer identity, scope/method, finding ledger, §9.1–§9.6 discharge, owner approval, and A0 CLOSED state |
 | `docs/tracking/a0-governance-consistency-audit.md` | Systematic A0 governance consistency audit: exhaustive 47-FR modality matrix plus schema/enum/transition/terminology comparison and hostile-review closure corrections |
 | `docs/tracking/football-judgment-proxy-review.md` | **FINDINGS LOG + REMEDIATION DOCTRINE** (Aug 4, 2026) — the football-judgment proxy review: all 53 APPROVED specs read for the ERR-008-019 defect shape (a continuous football judgment collapsed into bare geometry, a hard threshold, or a small raw-attribute set); 34 findings across **19** specs (2 since fixed: `ERR-008-020`, `ERR-008-019`), **34** specs clean — spec counts corrected Aug 21, 2026 from 24/29 and the fixed count from 1; see the review's §5 note. §6 (added same day, owner-converged) is the remediation doctrine every fix must cite: P1 continuous-never-cliff, P2 skill-as-discrimination-fidelity, P3 the attribute ownership ledger (Vision = on-ball recognition; no new attribute), P4 intent-as-first-class-object (pass-to-space, run signaling, routine targets), P5 chain calibration pivoted on today's baseline (KD-W1); finding classes (formula-patch / mechanism / governance), the §3.1.3.3 pass-lane template fix (chosen, not yet implemented), and the pairwise-familiarity gap ; **§6.3.1 (Aug 22, 2026)** adds the LANDING ORDER for the workable 24 — six batches derived from wiring state (W2 built but disabled, `TackleContactRadiusM` = 0), design-supplement serialization, and calibration batching, explicitly not from guessed football impact |
 | `docs/tracking/advanced-positional-behaviors-design.md` | Design supplement (v0.4, Jul 8, 2026 — PROMOTED) — dismarking, scripted build-up structures, positional rotations; promoted to specs #23–#25 (`dismarking-ai/`, `build-up-structures/`, `positional-rotations/`, all APPROVED Jul 10, 2026); superseded by the specs on deviation |

@@ -20,6 +20,7 @@
 | Version at review open | 0.4 |
 | Version at latest revision of this record | 0.10 — hostile-review follow-up fixed; owner-approved and authoritative under closed A0 |
 | Status during review | `Draft`; changed to `Approved` only after the fresh review converged and the project owner signed off |
+| Reviewer | OpenAI ChatGPT — GPT-5.6 Sol, orchestrating reviewer for the v0.10 closure review on PR #344 |
 | Blob digest, v0.4 (as reviewed, round 1) | `f00032cf2f16971ffbef51f6bbe307fac51a31d3` |
 | SHA-256, v0.4 | `412c38eceba7a00d67ee7eb7631863bd550e29fed3e033fef75c55e7690ba316` |
 | Blob digest, v0.5 (as reviewed, round 2) | `f5d0c487f14c525fa75f038cb3254c3e4bdd9417` |
@@ -251,7 +252,7 @@ The current §9.6 discharge is:
 | Fresh final review completed | This v0.10 whole-artifact review was performed after AG-A0-023–025 were fixed and returned no additional Governance finding. |
 | Round-budget exhaustion produces NON-CONVERGED, not APPROVED | Verified directly in FR-AG-019/020 and §4.7; no round-budget shortcut was used. |
 
-**Reviewer-independence limitation:** the v0.10 closure review was performed by the same assistant that
+**Reviewer-independence limitation:** the v0.10 closure review was performed by the reviewer identified in §1, the same assistant that
 applied AG-A0-023–025. FR-AG-018 requires a fresh review over the current artifact; it does not require
 a different reviewer. No independence is claimed here. Human sign-off was a separate A0 condition and is recorded as completed in §6.
 
@@ -547,6 +548,7 @@ specification is authoritative at A0 but not *fully adopted* until then.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.8 | August 31, 2026 | — | **Codex PR-review correction.** Adds the stable reviewer identity required by integration-plan §11 A0 condition 2: OpenAI ChatGPT / GPT-5.6 Sol, orchestrating reviewer for the v0.10 closure review on PR #344. No review outcome, Governance content, adoption digest, or A0 status changes. |
 | 1.7 | August 31, 2026 | — | **A0 closure.** Records explicit project-owner approval of Governance v0.10, confirms the required landing order was followed (`Draft → Approved` first, hash second), and points to integration plan §11 A0 as the owner of the canonical approved-file adoption pin `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6`. Review outcome advances from converged/not-yet-approved to **OWNER APPROVED; A0 CLOSED**. Governance semantics were not changed after review; the Governance file itself changed only in its Status field. |
 | 1.6 | August 31, 2026 | — | **Claude pre-fix critique reconciliation.** Marks §§4.1–4.3 explicitly historical, preserves the stale v0.8 box labels in §4.4 with an annotation, adds the exact current v0.10 §9.6 discharge table, and records that the v0.10 fresh review was not reviewer-independent because FR-AG-018 does not require independence. Replaces the blanket A0-gate Blocker citation with row-specific §9 gate linkage for every corrective finding, restores/annotates the deleted historical `None is a Blocker` claim, and records the companion manifest-table repair. Governance v0.10 content and digests are unchanged. |
 | 1.5 | August 31, 2026 | — | **Hostile-review closure.** Records AG-A0-023–025 against Governance v0.9: invalid cross-axis finding states/open non-Blocker convergence, inverted FR-AG-026 Non-scope semantics, and under-specified review-gate authorization. Governance v0.10 resolves all three, the companion audit advances to v1.1, and a fresh full v0.10 review returns zero new findings with all 52 A0-scope boxes verified. The v0.9 zero-finding review is retained but explicitly marked superseded. Outcome remains **CONVERGED FOR A0; NOT YET APPROVED** pending human sign-off. |

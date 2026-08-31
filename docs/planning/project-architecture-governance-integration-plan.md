@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.10\
+**Version:** 0.11\
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
@@ -827,7 +827,7 @@ A0 explicitly does **not** require the property registry, the durable finding le
 | Governance version / status | v0.10 / `Approved` |
 | Approved Governance Git blob | `76502282f205f5c4fd77c79c3309766c4dbd4498` |
 | **Adoption SHA-256** | **`aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6`** |
-| Review record | `docs/tracking/a0-governance-adoption-review.md` v1.7 |
+| Review record | `docs/tracking/a0-governance-adoption-review.md` v1.8 |
 | A0 status | **CLOSED** |
 
 The SHA-256 above is the canonical A0 adoption pin. It covers the exact approved Governance file and is stored outside that file, so recording the pin does not invalidate its subject.
@@ -1199,6 +1199,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.11 | August 31, 2026 | — | Post-A0 evidence correction only: review-record pointer advances v1.7 → v1.8 after Codex correctly identified that §11 A0 condition 2 required a stable reviewer identity rather than the relative phrase `same assistant`. Governance v0.10, its Approved status, canonical adoption digest, and A0 CLOSED state are unchanged. |
 | 0.10 | August 31, 2026 | — | **A0 CLOSED.** Records project-owner human sign-off, Governance v0.10 `Draft → Approved`, and the post-status-edit canonical adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` (Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`). Removes the stale pre-A0 claim that SPEC_INDEX alignment is an A0 prerequisite; §9.7/downstream registration remains owned by later stages. A2 is now the next stage. No #19/#20 normative file, code, workflow, or runtime behavior changed. |
 | 0.9 | August 31, 2026 | — | Synchronizes with Governance v0.10 after hostile review: rejects invalid Disposition/Status pairings, requires every finding to reach its mapped terminal Status before convergence, and updates A0's findings gate accordingly. Governing authority reference advances to v0.10. No #19/#20 normative file, code, workflow, or runtime behavior changed. |
 | 0.8 | August 31, 2026 | — | Synchronizes the plan with Governance v0.9's settled four-Disposition/five-Status model. Replaces all live `runtime component` uses with `runtime-bearing component`; aligns proposed FR-CS-076 on canonical `teardown`; makes the A0 finding condition test `Disposition: Blocker` plus `Status: Open`; completes the durable finding field set with `round_introduced`; and replaces the stale `Open → Dispositioned` lifecycle summary. A0 remains unapproved pending human sign-off; no #19/#20 normative file, code, workflow, or runtime behavior changed. |

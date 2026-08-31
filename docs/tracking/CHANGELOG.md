@@ -12,7 +12,24 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **A0 CLOSED; Project Architecture Governance v0.10 approved.**
+> **Last Updated:** August 31, 2026 — **PR #344 Markdown-link false-negative and Codex-review corrections.**
+> CI's Markdown link check failed only on two live Microsoft Learn references in Code Standards §8;
+> the action returned status `0` (transport failure), not HTTP 404/410. Both URLs remain current.
+> `.github/markdown-link-check.json` now exempts those two exact URLs only, preserving all other
+> Microsoft Learn link checking.
+>
+> Codex automated review raised three P2 suggestions. Two are valid and fixed: the A0 review record
+> now carries a stable reviewer identity (OpenAI ChatGPT / GPT-5.6 Sol, PR #344), and the manifest
+> Tracking Documents row now reflects owner approval/A0 CLOSED rather than pending sign-off. The third
+> suggestion — broadening FR-AG-020's Blocker-specific budget case — was rejected after full-context
+> verification: §9.6 already requires generic budget exhaustion → NON-CONVERGED, Appendix F defines
+> NON-CONVERGED as unresolved gating obligations, and §4.7 forbids convergence for every open/invalid
+> finding state. Changing approved Governance v0.10 would add redundant clarity, not repair a semantic gap.
+>
+> Integration plan v0.10 → v0.11 and A0 review record v1.7 → v1.8. Governance v0.10, Approved status,
+> canonical adoption digest, and A0 CLOSED state are unchanged. No runtime/code/spec semantics changed.
+>
+> **Last Updated (prior):** August 31, 2026 — **A0 CLOSED; Project Architecture Governance v0.10 approved.**
 > The project owner explicitly approved Governance v0.10. The required adoption order was followed:
 > Governance `Status: Draft` → `Approved` first, then the exact approved file was hashed, then the
 > canonical adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` (Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`) was recorded in
