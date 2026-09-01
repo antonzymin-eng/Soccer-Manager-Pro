@@ -2300,29 +2300,18 @@ class DurableReviewLedgerTests(unittest.TestCase):
         match = re.search(r"\bat ([0-9a-f]{7,40})\b", " ".join(run["review_scope"]))
         return match.group(1) if match else None
 
-    def test_status_timestamps_are_bracketed_by_their_real_provenance(self):
-        """Verify the provenance model the ledger actually claims.
+    def test_status_timestamps_equal_first_publication_commit_time(self):
+        """Verify the publication provenance the ledger actually claims.
 
-        `at` is the time a transition was RECORDED into this ledger -- the only
-        time that is known. The review itself happened somewhere between the
-        artifact it reviewed and the record of it, and that interval is not
-        recoverable, so the record does not pretend to a point in it.
+        Exact review-event times are not recoverable. The durable `at` field is
+        therefore NOT an event-occurrence timestamp: it is the commit time at
+        which the finding first appeared in the committed ledger. The reviewed
+        and resolving revisions carry event provenance separately in evidence.
 
-        An earlier version claimed `at` was "the commit time of the artifact
-        reviewed", which placed each discovery at or before the thing
-        discovered, and checked only `<= wall clock` plus monotonicity -- which
-        could not see that error, nor that the resolution stamps were not commit
-        times at all. This brackets every timestamp in its real interval:
-
-            commit time of the artifact reviewed  <  at  <=  the commit that
-            published the record (or now, if it is not yet published).
-
-        The lower bound is STRICT. A first cut used `>=` and did not catch the
-        very defect it replaced, because the bad value was exactly the reviewed
-        commit's timestamp.
-
-        All-or-nothing on missing history, for the same reason the digest check
-        is: a partial result must not present itself as a complete one.
+        This test deliberately requires equality, not merely an interval bound.
+        The previous regression accepted any value between the reviewed artifact
+        and publication while the documentation claimed the publication time
+        itself, so it could still pass an unsupported invented timestamp.
         """
         import datetime
         import subprocess
@@ -2346,32 +2335,24 @@ class DurableReviewLedgerTests(unittest.TestCase):
                 % ", ".join(missing))
 
         published = self.publication_times()
-        now = datetime.datetime.now(datetime.timezone.utc)
+        if len(published) != len(ledger["findings"]):
+            self.skipTest(
+                "ledger publication history is incomplete -- verification is all-or-nothing")
+
         for item in ledger["findings"]:
             reviewed = commit_time(
                 self.named_revision(runs[item["parent_review_run_id"]]))
-            upper = published.get(item["finding_id"], now)
-            previous = None
+            recorded = published[item["finding_id"]]
+            self.assertGreater(
+                recorded, reviewed,
+                "%s was published at or before the artifact it reviewed"
+                % item["finding_id"])
             for event in item["status_history"]:
                 stamp = parse(event["at"])
-                # STRICTLY after: an independent review of a pushed artifact
-                # happens after that artifact exists, so a record dated AT the
-                # reviewed commit places the discovery at the thing discovered.
-                # That is the exact shape of the defect this replaced, and `>=`
-                # let it through.
-                self.assertGreater(
-                    stamp, reviewed,
-                    "%s is dated at or before the artifact it reviewed"
-                    % item["finding_id"])
-                self.assertLessEqual(
-                    stamp, upper,
-                    "%s is dated after the commit that published it"
-                    % item["finding_id"])
-                if previous is not None:
-                    self.assertGreaterEqual(
-                        stamp, previous,
-                        "%s status history runs backwards" % item["finding_id"])
-                previous = stamp
+                self.assertEqual(
+                    recorded, stamp,
+                    "%s.%s does not equal its first publication commit time"
+                    % (item["finding_id"], event["event_id"]))
 
     @classmethod
     def publication_times(cls):

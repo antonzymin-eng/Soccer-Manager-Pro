@@ -2,7 +2,7 @@
 
 **Document Class:** Stage-gate evidence record\
 **Status:** OPEN — implemented candidate; review and owner approval pending\
-**Version:** 0.6\
+**Version:** 0.7\
 **Created:** September 1, 2026\
 **Owning plan:** `docs/planning/project-architecture-governance-integration-plan.md` §11 A2\
 **Candidate branch:** `codex/a2-complete-schema-freeze`\
@@ -22,7 +22,7 @@ Implementation, merge, review, approval, and closure are distinct. A2 remains **
 | 1 | Eight-category scope map | **Complete** | §2 |
 | 2 | Canonical schemas / single control source | **Complete** | §3, §7 |
 | 3 | Executable representative fixtures | **Complete** | §4, §7 |
-| 4 | Fresh review over pushed current candidate | **PENDING** | §8. Retracted at v0.4 (`A2-R4-001`) and still open at v0.5: five rounds are recorded, but the current artifact carries round-5 corrections and no round has reviewed it. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` now enforces the link between this cell and the ledger |
+| 4 | Fresh review over pushed current candidate | **PENDING** | §8. Retracted at v0.4 (`A2-R4-001`) and still open at v0.7: six rounds are recorded, but the current artifact carries round-6 corrections and no round has reviewed that corrected artifact. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link between this cell and the ledger |
 | 5 | Every finding terminal | **Complete** | §8; sixteen findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
 | 6 | Project-owner approval | **PENDING** | Non-delegable. No agent may satisfy this row |
 | 7 | Approved candidate landed on A3 base | **PENDING** | Blocked by rows 4 and 6; must match the approved digest bundle |
@@ -219,24 +219,22 @@ No run is marked `CONVERGED` and no run carries `final_review`. That is delibera
 test: convergence is not an agent's to declare while the owner gate is open, and FR-AG-018's fresh
 review over the current artifact is a separate question from FR-AG-019/020 convergence.
 
-**Status timestamps — the model, stated plainly.** *The exact review times are not recoverable, and
-this record does not pretend otherwise.* `at` is the time a transition was **recorded into this
-ledger**, derived from the commit that first published the finding. The reviewed and resolving
-revisions are carried in `evidence`. The review itself happened somewhere between the artifact it
-reviewed and the record of it; that interval is real, and the record does not invent a point inside it.
+**Status timestamps — the model, stated plainly.** *The exact review and resolution event
+times are not recoverable, and this record does not pretend otherwise.* `at` is **publication/recording
+provenance**: the commit time at which the finding first appeared in the committed ledger. It is not the
+time the review occurred or the time the resolution was performed. The reviewed and resolving revisions
+remain separate evidence.
 
-Two earlier attempts got this wrong and are worth keeping visible. v0.3 used invented round times, one
-of which post-dated the commit asserting those events complete (`A2-R5-002`). v0.5 then replaced them
-with the commit time *of the artifact reviewed* — which places each discovery at or before the thing
-discovered, and described resolutions as commit times when they were build times (`A2-R6-001`). The
-regression now brackets every timestamp in its real interval, with a **strict** lower bound:
+Three iterations exposed why this distinction matters. v0.3 used invented round times; v0.5 replaced
+those with artifact/build times while describing them as event/commit times (`A2-R5-002`,
+`A2-R6-001`). v0.6 then documented `at` as derived from first publication but only tested that it fell
+somewhere between the reviewed artifact and publication. That still admitted unsupported intermediate
+timestamps. The regression now checks the claim it actually makes:
 
-> commit time of the artifact reviewed **<** `at` **≤** the commit that published the record.
+> `at` **=** commit time where the finding first appears in the committed ledger.
 
-The strictness matters and was not free. A first cut of the replacement used `≥`, and a probe showed
-it did not catch the very defect it replaced, because the bad value was exactly the reviewed commit's
-timestamp. All three shapes — dated at, dated before, dated after publication — are now proven to
-fail.
+It separately requires that publication to occur strictly after the artifact reviewed. On incomplete
+history the check skips wholesale rather than presenting partial verification as complete.
 
 **Reviewer independence — partially addressed at v0.4.** Rounds 2 and 3 were performed by the same
 assistant that applied the remediation for the findings they raised; no independence was claimed for
@@ -251,7 +249,8 @@ replaced fictional future times with fictional earlier ones. **Round 5** was a s
 over `5ebc3f7`. It found three further issues, two of them
 in the round-4 remediation itself. Its corrections are again non-independent, so a **round-6** pass
 over the pushed result is owed before row 4 is claimed. Each independent round so far has found a
-defect the preceding non-independent work did not.
+defect the preceding non-independent work did not. Round 6's corrections therefore still require a fresh
+round-7 review before row 4 can be claimed.
 
 **Surfaces this review did not exhaustively verify**, recorded rather than implied: a field-by-field
 re-derivation of each schema against Governance §3.3 and §7.1, and line-by-line reading of every
@@ -263,6 +262,7 @@ validator branch. Both are recorded in the ledger's `unverified_surfaces`.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.7 | September 1, 2026 | — | Follow-up provenance correction after independent review: v0.6 said `at` was derived from the commit that first published a finding but its regression accepted any timestamp inside the review→publication interval, and `A2-R6-001` itself carried such an unsupported intermediate value. `at` is now unambiguously first-publication commit time; the regression requires exact equality and separately proves publication is after the reviewed artifact. `A2-R6-001` is corrected to `c349fb6`'s `2026-09-01T23:13:27Z`. Row 4 remains PENDING; no frozen schema/semantics mechanism changed. |
 | 0.6 | September 1, 2026 | — | Third independent review; row 4 stays PENDING. `A2-R6-001`: round 5's timestamp fix replaced fictional future times with fictional earlier ones — a finding's Open event was stamped at the commit time of the artifact reviewed, placing each discovery at or before the thing discovered, while resolutions were build times described as commit times. The record now states plainly that exact review times are **not recoverable**: `at` is when a transition was RECORDED into this ledger, derived from the commit that first published the finding, with reviewed and resolving revisions in `evidence`. The regression brackets every timestamp between the reviewed artifact and the publishing commit, with a **strict** lower bound — a first cut used `≥` and a probe showed it missed the very defect it replaced. All three shapes are proven to fail. Test split 138/9/8 = 155 → 139/9/8 = 156. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.5 | September 1, 2026 | — | Second independent review; row 4 stays PENDING. `A2-R5-001`: historical-digest verification skipped unavailable revisions one at a time and skipped the test only when none resolved, so a shallow checkout could verify one digest of five and still report PASS under a name asserting all — it is now all-or-nothing and names what is missing. `A2-R5-002`: round-4 status events were stamped 69 minutes after the commit asserting them complete; every timestamp now derives from a real commit and a regression rejects future-dated or out-of-order history. `A2-R5-003`: `A2-R4-002` cited FR-AG-034 for FR-AG-032's text; both are now cited correctly. Also drops the round-digest distinctness assertion, an invariant governance does not require, and removes a self-referential parameter that fed the ledger its own digests. Row 4's cell is now mechanically tied to the ledger. Test split 138/9/8 = 155 → 139/9/8 = 156. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.4 | September 1, 2026 | — | **Retracts the v0.3 claim that condition 4 was complete**, on independent review finding `A2-R4-001`: round 3 reviewed `678f0f2`, the material subject then moved 150 lines, and the commit asserting completion was itself never reviewed. Row 4 returns to PENDING and a test now fails if any round claims the current tree without a review of it. Round 3's recorded digest is corrected to the tree it actually reviewed. `A2-R4-002`: every recorded digest is now recomputed from the commit its scope names, rather than only the latest being verified while more was claimed; the shallow-clone bound is stated and skips explicitly. `A2-R4-003`: `tools/tests/test_recurring_defect_lint.py` adds mixed positive/negative context fixtures and pins the adjacent-negation bound; the reviewer's bullet-in-a-negative-list concern was checked and is correct suppression. Round 4 is the first independent review of this candidate. Test split 137/8/145 → 138 governance + 9 lint + 8 assembly-tier = 155. A2 remains OPEN; A3 remains BLOCKED. |
