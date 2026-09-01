@@ -26,38 +26,25 @@
           "assemblies": { "$ref": "common.schema.json#/$defs/stringList" },
           "classifications": {
             "type": "array",
-            "items": {
-              "enum": [
-                "production-runtime-root", "contracted-child", "test-only", "tooling-only",
-                "generated-or-external", "non-runtime-bearing"
-              ]
-            },
+            "items": { "$ref": "common.schema.json#/$defs/structuralClassification" },
             "uniqueItems": true
           },
           "activation_states": {
             "type": "array",
-            "items": { "enum": ["active", "intentionally-disabled", "pending-integration", "unresolved"] },
+            "items": { "$ref": "common.schema.json#/$defs/activationState" },
             "uniqueItems": true
           },
           "trigger_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
           "change_types": {
             "type": "array",
-            "items": {
-              "enum": [
-                "pure-local-calculation", "new-public-cross-assembly-api", "new-runtime-service",
-                "new-composition-root-registration", "host-bootstrap-change",
-                "static-initialization-change", "persistence-boundary",
-                "external-resource-dependency", "testhost-runtime-divergence-fix",
-                "dependency-graph-only-refactor", "pure-data-schema-no-runtime-behavior"
-              ]
-            },
+            "items": { "$ref": "common.schema.json#/$defs/changeType" },
             "uniqueItems": true
           },
           "requirement_refs": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
           "proof_classes": {
             "type": "array",
             "minItems": 1,
-            "items": { "enum": ["structural-reachability", "lifecycle-order", "failure-injection", "mutation"] },
+            "items": { "$ref": "common.schema.json#/$defs/proofClass" },
             "uniqueItems": true
           },
           "gate_classes": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
@@ -75,7 +62,10 @@
           },
           "precedence": { "type": "integer" },
           "fallback_scope": {
-            "enum": [null, "repository", "runtime-bearing", "non-runtime-bearing"]
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "common.schema.json#/$defs/fallbackScope" }
+            ]
           }
         },
         "additionalProperties": false

@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.17\
+**Version:** 0.18\
 **Created:** August 27, 2026  
 **Last Updated:** September 1, 2026\
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
@@ -310,7 +310,7 @@ Before any merge-blocking architecture tool is implemented, A2 freezes versioned
 
 Every schema carries schema_version and rejects unknown major versions. Schema evolution that changes discovery, applicability, gating, or proof semantics invalidates affected downstream evidence and reopens the corresponding approval step.
 
-Canonical Draft 2020-12 schemas live under `docs/tracking/architecture-governance/schemas/`. The directory contains shared selector/value definitions plus domain schemas for classification, bootstrap intent, integration contracts, applicability, properties, exceptions, reusable proof, review state, and the temporary activation baseline. The seven committed state artifacts are seeded separately under `docs/tracking/architecture-governance/`; proof records are per-proof artifacts rather than an empty registry, and the finite bootstrap file is created only if A4 needs non-inferable runtime intent.
+Canonical Draft 2020-12 schemas live under `docs/tracking/architecture-governance/schemas/`. `common.schema.json` is the single machine source for shared enums, transition maps, fallback maps, and dependency-relation groups; the pure-stdlib reference module consumes that file rather than restating those values in Python. The remaining files are eight §3.1 category schemas plus the A4 bootstrap auxiliary schema. Seven committed state registries are seeded separately under `docs/tracking/architecture-governance/`; proof records are per-proof artifacts rather than an empty registry, and the finite bootstrap file is created only if A4 needs non-inferable runtime intent.
 
 Free-text narrative MAY supplement a record, but blocking checks MUST depend only on typed fields whose semantics are defined and tested.
 
@@ -882,7 +882,17 @@ Non-negotiable 12 is **not** relaxed by this amendment and continues to govern e
 
 Freeze identity/selectors, activation-state/disable-anchor semantics, applicability with required strict-mode Governance §5.2 subject change context plus optional rule `change_types` filters, contracts, the exact four Governance proof classes and their conditional closure/freshness behavior, execution-truth/bounded-substitute semantics, property/exception, review, and baseline schemas. The selector contract pins C# XML documentation ID type-signature spelling for every selector type ID, including byref `@`, so the future compiler fact producer cannot collapse legal overloads by using display/plain type names. The reference semantics include activation-anchor evaluation, KD-W1 tuning-surface matching, typed enum validation for untrusted JSON, schema-derived fallback/context precedence with narrower matching context sets outranking broader ones without crossing surface precedence, explicit non-strict incomplete-context diagnostics, persistence/resource closure activation from the evaluated subject change type rather than rule payload, fail-closed proof closure when change context is absent, and conservative changed-surface rerun decisions. Any compiler reference implementation is source-built with the pinned .NET SDK/toolchain.
 
-**COMPLETE September 1, 2026.** Canonical schemas and seven versioned seed artifacts now exist; reference semantics v2.0.0 validates property history against a trusted merge-base, exclusive exception routing, Governance Disposition×Status/final-review convergence, and finite/empty strict baselines. Representative good/bad/uncertainty fixtures are CI-discovered. A3 remains blocked only until this A2 completion slice lands on its base.
+**A2 closure gate, added in v0.18.** Implementation, merge, and approval are separate states. A2 closes only when all of the following hold:
+
+1. **(Scope)** The closure record maps all eight §3.1 categories to their canonical schemas and, where durable registry state exists, their committed state files. The proof category is per-proof and MUST NOT gain a meaningless empty registry merely to make the file counts equal. Shared control data and the A4 bootstrap auxiliary are identified separately.
+2. **(Single source / schema verification)** Every schema and seed parses; every `$ref` resolves inside the canonical schema set; every seed carries a supported `schema_version`; and enum/transition/fallback/relation control data has one machine source in `common.schema.json` that the executable reference consumes. No manually duplicated Python enum is accepted.
+3. **(Executable verification)** The pure-stdlib reference suite passes representative good, bad, conflict, transition, stale-history, uncertainty, authority-routing, convergence, and strict-baseline fixtures. The exact test split and command output are recorded; a bare aggregate count is insufficient.
+4. **(Fresh review)** A fresh review is performed over the pushed current candidate, with subject identity/digests, reviewer, scope, method, findings, and outcome recorded. A local-only commit cannot satisfy this condition.
+5. **(Findings)** Every substantive finding has one valid Governance Disposition and its §4.1-mapped terminal Status; no open or invalid finding remains.
+6. **(Sign-off)** The project owner records explicit approval of the frozen A2 contract. This is not delegable to an agent.
+7. **(Landing)** The approved candidate lands on the base used by A3, and the closure record is marked `CLOSED` with its approved subject-digest bundle. Merge alone does not close A2, and approval of a different digest does not transfer.
+
+**Current state: IMPLEMENTED, NOT CLOSED.** The candidate provides ten schema documents, seven versioned seed registries, and reference semantics v1.10.0. The local verification split is 104 governance fixtures plus 8 assembly-tier fixtures, but fresh review, terminal finding disposition, owner sign-off, approved digest recording, and landing remain pending. `docs/tracking/a2-schema-semantics-closure.md` owns this gate. **A3 remains BLOCKED.**
 
 ## A3 — Amend and reapprove #19/#20 governance integration
 
@@ -1229,6 +1239,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.18 | September 1, 2026 | — | Corrects v0.17's invalid equation of implementation/merge with A2 closure. Adds an explicit seven-condition A2 gate: eight-category scope map, schema/control-data single source, exact executable verification split, fresh review over a pushed candidate, terminal finding state, non-delegable project-owner approval, and landing of the approved digest on A3's base. `common.schema.json` becomes the single machine source consumed by pure-stdlib reference semantics v1.10.0. A2 is IMPLEMENTED but OPEN; A3 remains BLOCKED. |
 | 0.17 | September 1, 2026 | — | **A2 schema freeze completed.** Adds canonical Draft 2020-12 schemas for classification, bootstrap intent, integration contracts, applicability, properties, exceptions, reusable proof, review state, and temporary activation baseline; seeds the seven durable state artifacts at schema v1.0.0. Reference semantics v2.0.0 now enforces trusted-merge-base property-history immutability and Governance §3.1 transitions, property-only exception routing with #19/#20 owner separation, Governance §4.1 Disposition×Status and §4.7 convergence/freshness, and finite baseline transitions with a mechanically empty strict state. A3 remains blocked only until this slice lands. |
 | 0.16 | September 1, 2026 | — | A2 selector type-ID canonicalization after Codex review: pins every selector type ID to the C# XML documentation ID type-signature convention emitted from compiler symbols, including byref `@`; adds a value-vs-ref overload regression proving `M(System.Int32)` and `M(System.Int32@)` resolve distinctly without introducing a redundant `parameter_ref_kinds` field. Selector-v1 shape, execution truth, applicability, proof closure, Governance v0.10/A0, and #19/#20 normative files remain unchanged. |
 | 0.15 | September 1, 2026 | — | A2 residual hardening after verification of v0.14: normalizes every enum-valued untrusted JSON boundary through typed semantics errors instead of host-language `TypeError`; makes narrower matching `change_types` sets outrank broader matching sets while preserving the surface-specificity ordering; and makes non-strict missing change context explicitly diagnostic rather than silently indistinguishable from no applicable context-gated rule. Execution truth and the v0.14 subject-side change-context model are otherwise unchanged. Governance v0.10/A0 and #19/#20 normative files remain unchanged. |

@@ -6,7 +6,7 @@
   "properties": {
     "schema_version": { "$ref": "common.schema.json#/$defs/schemaVersion" },
     "baseline_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
-    "mode": { "enum": ["inactive", "migration", "strict"] },
+    "mode": { "$ref": "common.schema.json#/$defs/baselineMode" },
     "sealed": { "type": "boolean" },
     "items": {
       "type": "array",
@@ -51,9 +51,7 @@
         "baseline_subject_scope_digest": { "$ref": "common.schema.json#/$defs/sha256" },
         "creation_provenance_revision": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "owner": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
-        "disposition": {
-          "enum": ["Blocker", "Accepted Tradeoff", "Residual Risk", "Candidate Property"]
-        },
+        "disposition": { "$ref": "common.schema.json#/$defs/disposition" },
         "required_action": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "expiry_trigger": { "$ref": "common.schema.json#/$defs/expiryTrigger" }
       },

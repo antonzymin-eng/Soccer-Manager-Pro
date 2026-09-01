@@ -12,7 +12,14 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 1, 2026 — **A2 canonical schema and governance-state freeze completed.**
+> **Last Updated:** September 1, 2026 — **A2 review corrections; closure remains OPEN.**
+> The first attempted review could not resolve local commit `b5e80832` from GitHub and correctly rejected it as unreviewable. It also exposed two real gaps: shared enum/control values were duplicated between Python and the JSON schemas, violating IP-5, and integration-plan v0.17 incorrectly equated landing with A2 closure. The integration plan advances v0.17 → v0.18 and adds a seven-condition A2 gate with fresh pushed-candidate review, terminal findings, non-delegable owner approval, approved digest binding, and landing all distinct. New `docs/tracking/a2-schema-semantics-closure.md` v0.1 owns that gate; A2 is implemented but OPEN and A3 remains BLOCKED.
+>
+> `reference_semantics.py` is corrected from the unpublished v2.0.0 label to v1.10.0 and now consumes `common.schema.json` as the single machine source for enums, transitions, fallback maps, and dependency-relation groups using only stdlib `json`/`pathlib`. All other schemas reference the common definitions. New regressions reject independent enum declarations, schema-reference drift, selector-discriminator mismatch, and non-stdlib imports. The explicit mapping is eight §3.1 categories → ten schemas (eight category schemas + common control + A4 bootstrap auxiliary) → seven seed state registries because proof evidence is per-proof, not an empty registry.
+>
+> Governance fixtures grow 102 → 104; with 8 assembly-tier fixtures, discovery runs 112 tooling tests. No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed. The branch must be pushed and freshly reviewed before any approval can be requested.
+>
+> **Last Updated (prior):** September 1, 2026 — **A2 canonical schema and governance-state freeze completed.**
 > The final A2 slice creates `docs/tracking/architecture-governance/` with seven schema-v1.0.0 seed artifacts and canonical Draft 2020-12 schemas for classification, bootstrap intent, integration contracts, applicability, properties, Governance exceptions, reusable proof, review state, and the temporary activation baseline. The integration plan advances v0.16 → v0.17 and records A2 COMPLETE; A3 remains blocked only until this slice lands.
 >
 > `reference_semantics.py` advances v1.9.0 → v2.0.0. Property transitions are checked against Governance §3.1 and a trusted merge-base with append-only decision/revalidation history; an unavailable prior is explicit uncertainty. `exceptions.json` accepts only admitted APs that permit exceptions and cannot absorb FR-CS/FR-TS owner-specific waivers. Review runs and finding histories enforce the four Disposition×Status mappings, severity-independent convergence, current-subject final-review freshness, zero-finding final reviews, and round-budget NON-CONVERGED behavior. The finite activation baseline rejects new violations, cannot grow after sealing, and must be strict/sealed/mechanically empty at strict activation.

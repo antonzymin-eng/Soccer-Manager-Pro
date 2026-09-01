@@ -28,7 +28,7 @@
           "owner": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
           "expiry_trigger": { "$ref": "common.schema.json#/$defs/expiryTrigger" },
           "approval": { "$ref": "common.schema.json#/$defs/decision" },
-          "status": { "enum": ["active", "expired", "revoked"] }
+          "status": { "$ref": "common.schema.json#/$defs/exceptionStatus" }
         },
         "additionalProperties": false
       }

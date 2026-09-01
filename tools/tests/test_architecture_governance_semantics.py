@@ -2,6 +2,7 @@
 # Created: August 31, 2026
 # Purpose: A2 fixtures for selector/identity/activation, applicability, and proof freshness semantics.
 
+import ast
 import copy
 import importlib.util
 import json
@@ -114,7 +115,7 @@ class SelectorTests(unittest.TestCase):
             })
 
     def test_reference_semantics_version_is_pinned(self):
-        self.assertEqual("2.0.0", sem.REFERENCE_SEMANTICS_VERSION)
+        self.assertEqual("1.10.0", sem.REFERENCE_SEMANTICS_VERSION)
         self.assertEqual("1.0.0", sem.SCHEMA_VERSION)
 
     def test_reusable_fact_index_avoids_reindexing_contract(self):
@@ -1266,6 +1267,55 @@ class CanonicalArtifactSchemaTests(unittest.TestCase):
 
         for name, schema in schemas.items():
             walk(schema, name)
+
+    def test_common_schema_is_the_single_enum_control_source(self):
+        common = self.load("schemas/common.schema.json")
+        expected_runtime_bindings = {
+            "selectorKind": sem._SELECTOR_KINDS,
+            "structuralClassification": sem._STRUCTURAL_CLASSIFICATIONS,
+            "activationState": sem._ACTIVATION_STATES,
+            "valueType": sem._VALUE_TYPES,
+            "anchorOperator": sem._ANCHOR_OPERATORS,
+            "propertyState": sem._PROPERTY_STATES,
+            "enforcementClass": sem._ENFORCEMENT_CLASSES,
+            "propertyActivation": sem._PROPERTY_ACTIVATIONS,
+            "disposition": sem._DISPOSITIONS,
+            "findingStatus": sem._FINDING_STATUSES,
+            "reviewState": sem._REVIEW_STATES,
+            "baselineMode": sem._BASELINE_MODES,
+            "proofClass": sem._PROOF_CLASSES,
+            "changeType": sem._CHANGE_TYPES,
+            "executionState": sem._EXECUTION_STATES,
+            "dependencyKind": sem._DEPENDENCY_KINDS,
+        }
+        for name, runtime_values in expected_runtime_bindings.items():
+            self.assertEqual(set(common["$defs"][name]["enum"]), set(runtime_values))
+
+        for path in (self.ROOT / "schemas").glob("*.json"):
+            if path.name == "common.schema.json":
+                continue
+            self.assertNotIn(
+                '"enum"', path.read_text(encoding="utf-8"),
+                "%s duplicates canonical enum control data" % path.name,
+            )
+
+        selector_branches = common["$defs"]["selector"]["oneOf"]
+        branch_kinds = set()
+        for branch in selector_branches:
+            kind = branch["properties"]["kind"]
+            branch_kinds.update([kind["const"]] if "const" in kind else kind["enum"])
+        self.assertEqual(set(common["$defs"]["selectorKind"]["enum"]), branch_kinds)
+
+    def test_reference_semantics_keeps_the_ci_pure_stdlib(self):
+        tree = ast.parse(TOOL_PATH.read_text(encoding="utf-8"))
+        imported_roots = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported_roots.update(alias.name.split(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                imported_roots.add(node.module.split(".")[0])
+        self.assertEqual(
+            {"hashlib", "json", "math", "pathlib"}, imported_roots)
 
     def test_seven_seed_artifacts_validate(self):
         sem.validate_runtime_surface_classifications_document(

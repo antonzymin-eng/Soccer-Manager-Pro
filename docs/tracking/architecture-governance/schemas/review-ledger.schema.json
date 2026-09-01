@@ -40,7 +40,7 @@
           "type": "array",
           "items": { "$ref": "#/$defs/propertyResult" }
         },
-        "convergence_state": { "enum": ["IN_PROGRESS", "CONVERGED", "NON-CONVERGED"] },
+        "convergence_state": { "$ref": "common.schema.json#/$defs/reviewState" },
         "final_review": { "type": "boolean" },
         "round_budget_exhausted": { "type": "boolean" }
       },
@@ -51,7 +51,7 @@
       "required": ["property_id", "result", "evidence_refs"],
       "properties": {
         "property_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
-        "result": { "enum": ["pass", "fail", "na"] },
+        "result": { "$ref": "common.schema.json#/$defs/propertyResult" },
         "evidence_refs": { "$ref": "common.schema.json#/$defs/stringList" },
         "approval_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
       },
@@ -83,14 +83,12 @@
         "parent_review_run_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "summary": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "evidence": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
-        "severity": { "enum": ["Critical", "High", "Medium", "Low"] },
+        "severity": { "$ref": "common.schema.json#/$defs/severity" },
         "requirement_property": { "$ref": "common.schema.json#/$defs/stringList" },
-        "disposition": {
-          "enum": ["Blocker", "Accepted Tradeoff", "Residual Risk", "Candidate Property"]
-        },
+        "disposition": { "$ref": "common.schema.json#/$defs/disposition" },
         "required_action": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "owner": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
-        "status": { "enum": ["Open", "Resolved", "Accepted", "Recorded", "In property process"] },
+        "status": { "$ref": "common.schema.json#/$defs/findingStatus" },
         "round_introduced": { "type": "integer", "minimum": 1 },
         "resolution_evidence": { "$ref": "common.schema.json#/$defs/stringList" },
         "status_history": {
@@ -109,11 +107,12 @@
       "properties": {
         "event_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "transition_from": {
-          "enum": [null, "Open", "Resolved", "Accepted", "Recorded", "In property process"]
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "common.schema.json#/$defs/findingStatus" }
+          ]
         },
-        "transition_to": {
-          "enum": ["Open", "Resolved", "Accepted", "Recorded", "In property process"]
-        },
+        "transition_to": { "$ref": "common.schema.json#/$defs/findingStatus" },
         "actor": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "at": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "evidence": { "$ref": "common.schema.json#/$defs/stringList" },

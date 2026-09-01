@@ -62,9 +62,7 @@
             "additionalProperties": false
           }
         },
-        "activation_state": {
-          "enum": ["active", "intentionally-disabled", "pending-integration", "unresolved"]
-        },
+        "activation_state": { "$ref": "common.schema.json#/$defs/activationState" },
         "activation_owner": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "decision_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "disable_anchor": {
@@ -72,7 +70,7 @@
           "required": ["selector", "operator", "expected"],
           "properties": {
             "selector": { "$ref": "common.schema.json#/$defs/selector" },
-            "operator": { "enum": ["equals", "not-equals"] },
+            "operator": { "$ref": "common.schema.json#/$defs/anchorOperator" },
             "expected": { "$ref": "common.schema.json#/$defs/typedValue" }
           },
           "additionalProperties": false

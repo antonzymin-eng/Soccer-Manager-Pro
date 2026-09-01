@@ -9,39 +9,71 @@
 import hashlib
 import json
 import math
+from pathlib import Path
 
-REFERENCE_SEMANTICS_VERSION = "2.0.0"
-SCHEMA_VERSION = "1.0.0"
+REFERENCE_SEMANTICS_VERSION = "1.10.0"
 
-_SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property", "event"}
-_ACTIVATION_STATES = {"active", "intentionally-disabled", "pending-integration", "unresolved"}
-_VALUE_TYPES = {"boolean", "integer", "number", "string", "enum", "null"}
-_ANCHOR_OPERATORS = {"equals", "not-equals"}
-_PROPERTY_STATES = {"Candidate", "Admitted", "Superseded", "Retired", "Rejected"}
-_PROPERTY_TRANSITIONS = {
-    ("Candidate", "Admitted"),
-    ("Candidate", "Rejected"),
-    ("Admitted", "Superseded"),
-    ("Admitted", "Retired"),
-    ("Rejected", "Candidate"),
-    ("Superseded", "Retired"),
-}
-_ENFORCEMENT_CLASSES = {"Machine", "Hybrid", "Judgment"}
-_PROPERTY_ACTIVATIONS = {"Immediate", "Staged"}
-_DISPOSITION_TERMINAL_STATUS = {
-    "Blocker": "Resolved",
-    "Accepted Tradeoff": "Accepted",
-    "Residual Risk": "Recorded",
-    "Candidate Property": "In property process",
-}
-_FINDING_STATUSES = {"Open"} | set(_DISPOSITION_TERMINAL_STATUS.values())
-_REVIEW_STATES = {"IN_PROGRESS", "CONVERGED", "NON-CONVERGED"}
-_BASELINE_MODES = {"inactive", "migration", "strict"}
-_BASELINE_MODE_TRANSITIONS = {
-    ("inactive", "migration"),
-    ("inactive", "strict"),
-    ("migration", "strict"),
-}
+_CONTROL_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "docs" / "tracking" / "architecture-governance" / "schemas" / "common.schema.json"
+)
+try:
+    with _CONTROL_SCHEMA_PATH.open(encoding="utf-8") as _control_schema_file:
+        _CONTROL_SCHEMA = json.load(_control_schema_file)
+    _CONTROL_DEFS = _CONTROL_SCHEMA["$defs"]
+    _CONTROL_DATA = _CONTROL_SCHEMA["x-governance-control-data"]
+except (OSError, KeyError, TypeError, ValueError) as exc:
+    raise RuntimeError(
+        "cannot load canonical architecture-governance control schema: %s" % exc
+    ) from exc
+
+
+def _schema_enum(name):
+    values = _CONTROL_DEFS.get(name, {}).get("enum")
+    if not isinstance(values, list) or not values or any(
+            not isinstance(item, str) for item in values):
+        raise RuntimeError("canonical schema enum %s is missing or invalid" % name)
+    if len(values) != len(set(values)):
+        raise RuntimeError("canonical schema enum %s contains duplicates" % name)
+    return frozenset(values)
+
+
+SCHEMA_VERSION = _CONTROL_DEFS["currentSchemaVersion"]["const"]
+_SELECTOR_KINDS = _schema_enum("selectorKind")
+_ACTIVATION_STATES = _schema_enum("activationState")
+_VALUE_TYPES = _schema_enum("valueType")
+_ANCHOR_OPERATORS = _schema_enum("anchorOperator")
+_PROPERTY_STATES = _schema_enum("propertyState")
+_PROPERTY_TRANSITIONS = frozenset(
+    tuple(item) for item in _CONTROL_DATA["property_transitions"])
+_ENFORCEMENT_CLASSES = _schema_enum("enforcementClass")
+_PROPERTY_ACTIVATIONS = _schema_enum("propertyActivation")
+_DISPOSITION_TERMINAL_STATUS = dict(
+    _CONTROL_DATA["disposition_terminal_status"])
+_DISPOSITIONS = _schema_enum("disposition")
+_FINDING_STATUSES = _schema_enum("findingStatus")
+_REVIEW_STATES = _schema_enum("reviewState")
+_BASELINE_MODES = _schema_enum("baselineMode")
+_EXPIRY_TRIGGER_TYPES = _schema_enum("expiryTriggerType")
+_EXCEPTION_STATUSES = _schema_enum("exceptionStatus")
+_PROPERTY_RESULTS = _schema_enum("propertyResult")
+_REVALIDATION_OUTCOMES = _schema_enum("revalidationOutcome")
+_SEVERITIES = _schema_enum("severity")
+_BASELINE_MODE_TRANSITIONS = frozenset(
+    tuple(item) for item in _CONTROL_DATA["baseline_mode_transitions"])
+if any(
+        len(item) != 2 or item[0] not in _PROPERTY_STATES or item[1] not in _PROPERTY_STATES
+        for item in _PROPERTY_TRANSITIONS):
+    raise RuntimeError("canonical property transition control data is invalid")
+if (
+        set(_DISPOSITION_TERMINAL_STATUS) != _DISPOSITIONS
+        or not set(_DISPOSITION_TERMINAL_STATUS.values()) < _FINDING_STATUSES
+        or "Open" not in _FINDING_STATUSES):
+    raise RuntimeError("canonical disposition/status control data is invalid")
+if any(
+        len(item) != 2 or item[0] not in _BASELINE_MODES or item[1] not in _BASELINE_MODES
+        for item in _BASELINE_MODE_TRANSITIONS):
+    raise RuntimeError("canonical baseline transition control data is invalid")
 
 _TRUSTED_PRIOR_NOT_PROVIDED = object()
 
@@ -537,109 +569,27 @@ def kd_w1_violations(changed_selectors, contracts, semantic_facts, exception_sco
     )
 
 
-_STRUCTURAL_CLASSIFICATIONS = {
-    "production-runtime-root",
-    "contracted-child",
-    "test-only",
-    "tooling-only",
-    "generated-or-external",
-    "non-runtime-bearing",
-}
-_FALLBACK_SCOPES = {"repository", "runtime-bearing", "non-runtime-bearing"}
+_STRUCTURAL_CLASSIFICATIONS = _schema_enum("structuralClassification")
+_FALLBACK_SCOPES = _schema_enum("fallbackScope")
 _FALLBACK_CLASSIFICATIONS = {
-    "repository": _STRUCTURAL_CLASSIFICATIONS,
-    "runtime-bearing": {"production-runtime-root", "contracted-child"},
-    "non-runtime-bearing": {
-        "test-only",
-        "tooling-only",
-        "generated-or-external",
-        "non-runtime-bearing",
-    },
+    scope: frozenset(classifications)
+    for scope, classifications in _CONTROL_DATA["fallback_classifications"].items()
 }
-_FALLBACK_PRECEDENCE = {
-    "repository": 0,
-    "runtime-bearing": 1,
-    "non-runtime-bearing": 1,
+_FALLBACK_PRECEDENCE = dict(_CONTROL_DATA["fallback_precedence"])
+_PROOF_CLASSES = _schema_enum("proofClass")
+_CHANGE_TYPES = _schema_enum("changeType")
+_PERSISTENCE_CHANGE_TYPES = frozenset(_CONTROL_DATA["persistence_change_types"])
+_EXECUTION_STATES = _schema_enum("executionState")
+_DEPENDENCY_KINDS = _schema_enum("dependencyKind")
+_RELATION_GROUPS = {
+    name: frozenset(values)
+    for name, values in _CONTROL_DATA["dependency_relation_groups"].items()
 }
-_PROOF_CLASSES = {
-    "structural-reachability",
-    "lifecycle-order",
-    "failure-injection",
-    "mutation",
-}
-_CHANGE_TYPES = {
-    "pure-local-calculation",
-    "new-public-cross-assembly-api",
-    "new-runtime-service",
-    "new-composition-root-registration",
-    "host-bootstrap-change",
-    "static-initialization-change",
-    "persistence-boundary",
-    "external-resource-dependency",
-    "testhost-runtime-divergence-fix",
-    "dependency-graph-only-refactor",
-    "pure-data-schema-no-runtime-behavior",
-}
-_PERSISTENCE_CHANGE_TYPES = {
-    "persistence-boundary",
-    "external-resource-dependency",
-}
-_EXECUTION_STATES = {
-    "passed",
-    "failed",
-    "skipped",
-    "excluded",
-    "unavailable",
-    "not-run",
-    "runner-failed",
-}
-_DEPENDENCY_KINDS = {
-    "requirement",
-    "property",
-    "contract",
-    "runtime-root",
-    "symbol",
-    "public-surface",
-    "bypass-surface",
-    "asmdef",
-    "lifecycle",
-    "synchronization",
-    "testhost",
-    "serializer",
-    "schema",
-    "resource",
-    "configuration",
-    "test",
-    "fixture",
-    "runner",
-    "environment",
-    "tool",
-    "extractor",
-}
-_COMMON_RELATIONS = {
-    "requires",
-    "contract",
-    "root",
-    "tool-semantic",
-    "extractor-semantic",
-    "configuration",
-}
-_STRUCTURAL_RELATIONS = {
-    "construction",
-    "registration",
-    "public-surface",
-    "bypass-surface",
-    "assembly-reference",
-}
-_LIFECYCLE_RELATIONS = {
-    "lifecycle-member",
-    "ordering",
-    "synchronization",
-    "thread-affinity",
-    "testhost-equivalent",
-}
-_PERSISTENCE_RELATIONS = {"serializer", "schema", "resource"}
-_EXECUTABLE_RELATIONS = {"target", "test", "fixture", "runner", "environment"}
+_COMMON_RELATIONS = _RELATION_GROUPS["common"]
+_STRUCTURAL_RELATIONS = _RELATION_GROUPS["structural"]
+_LIFECYCLE_RELATIONS = _RELATION_GROUPS["lifecycle"]
+_PERSISTENCE_RELATIONS = _RELATION_GROUPS["persistence"]
+_EXECUTABLE_RELATIONS = _RELATION_GROUPS["executable"]
 _ALL_DEPENDENCY_RELATIONS = (
     _COMMON_RELATIONS
     | _STRUCTURAL_RELATIONS
@@ -647,6 +597,9 @@ _ALL_DEPENDENCY_RELATIONS = (
     | _PERSISTENCE_RELATIONS
     | _EXECUTABLE_RELATIONS
 )
+if _ALL_DEPENDENCY_RELATIONS != _schema_enum("dependencyRelation"):
+    raise RuntimeError(
+        "canonical dependency relation enum and relation groups disagree")
 _EXECUTABLE_PROOF_RELATIONS = (
     _COMMON_RELATIONS
     | _STRUCTURAL_RELATIONS
@@ -1701,7 +1654,7 @@ def _normalize_revalidation_history(record, property_id):
                 item.get("subject_scope_digest"), "subject_scope_digest",
                 PropertyRegistryError),
             "outcome": _enum(
-                item.get("outcome"), {"confirmed", "amended", "reopened"},
+                item.get("outcome"), _REVALIDATION_OUTCOMES,
                 "revalidation outcome", PropertyRegistryError),
             "decision_rationale": _text(
                 item, "decision_rationale", PropertyRegistryError),
@@ -1856,7 +1809,7 @@ def _normalize_exception_record(record, index):
         "owner": _text(record, "owner", ExceptionRegistryError),
         "expiry_trigger": {
             "type": _enum(
-                expiry.get("type"), {"date", "milestone", "condition"},
+                expiry.get("type"), _EXPIRY_TRIGGER_TYPES,
                 "expiry_trigger.type", ExceptionRegistryError),
             "value": _text(expiry, "value", ExceptionRegistryError),
         },
@@ -1869,7 +1822,7 @@ def _normalize_exception_record(record, index):
                is not None else {}),
         },
         "status": _enum(
-            record.get("status"), {"active", "expired", "revoked"},
+            record.get("status"), _EXCEPTION_STATUSES,
             "exception.status", ExceptionRegistryError),
     }
 
@@ -2015,7 +1968,9 @@ def _normalize_review_run(record, index):
         if property_id in seen:
             raise ReviewLedgerError("duplicate applicable property: %s" % property_id)
         seen.add(property_id)
-        result = _enum(item.get("result"), {"pass", "fail", "na"}, "property result", ReviewLedgerError)
+        result = _enum(
+            item.get("result"), _PROPERTY_RESULTS,
+            "property result", ReviewLedgerError)
         _text_list(item, "evidence_refs", ReviewLedgerError, required=result == "pass")
         if result == "na":
             _text(item, "approval_ref", ReviewLedgerError)
@@ -2034,7 +1989,7 @@ def _normalize_finding(record, index):
     optional = {"disposition_approval", "resolution_property_id"}
     _exact_record(record, required, optional, "findings[%d]" % index, ReviewLedgerError)
     disposition = _enum(
-        record.get("disposition"), set(_DISPOSITION_TERMINAL_STATUS),
+        record.get("disposition"), _DISPOSITIONS,
         "disposition", ReviewLedgerError)
     status = _enum(record.get("status"), _FINDING_STATUSES, "status", ReviewLedgerError)
     if status not in {"Open", _DISPOSITION_TERMINAL_STATUS[disposition]}:
@@ -2052,7 +2007,7 @@ def _normalize_finding(record, index):
     requirements = _text_list(
         record, "requirement_property", ReviewLedgerError,
         required=disposition == "Blocker")
-    _enum(record.get("severity"), {"Critical", "High", "Medium", "Low"}, "severity", ReviewLedgerError)
+    _enum(record.get("severity"), _SEVERITIES, "severity", ReviewLedgerError)
     resolution = _text_list(
         record, "resolution_evidence", ReviewLedgerError,
         required=status != "Open")
@@ -2190,12 +2145,12 @@ def _normalize_baseline_item(item, index):
             item, "creation_provenance_revision", ActivationBaselineError),
         "owner": _text(item, "owner", ActivationBaselineError),
         "disposition": _enum(
-            item.get("disposition"), set(_DISPOSITION_TERMINAL_STATUS),
+            item.get("disposition"), _DISPOSITIONS,
             "baseline disposition", ActivationBaselineError),
         "required_action": _text(item, "required_action", ActivationBaselineError),
         "expiry_trigger": {
             "type": _enum(
-                expiry.get("type"), {"date", "milestone", "condition"},
+                expiry.get("type"), _EXPIRY_TRIGGER_TYPES,
                 "expiry_trigger.type", ActivationBaselineError),
             "value": _text(expiry, "value", ActivationBaselineError),
         },

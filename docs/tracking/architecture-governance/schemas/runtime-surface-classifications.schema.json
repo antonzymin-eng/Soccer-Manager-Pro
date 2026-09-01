@@ -16,16 +16,11 @@
         "properties": {
           "surface_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
           "symbol_key": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
-          "kind": { "enum": ["namespace", "type", "constructor", "method", "field", "property", "event"] },
+          "kind": { "$ref": "common.schema.json#/$defs/selectorKind" },
           "source_path": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
           "signature": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
           "assembly": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
-          "classification": {
-            "enum": [
-              "production-runtime-root", "contracted-child", "test-only", "tooling-only",
-              "generated-or-external", "non-runtime-bearing"
-            ]
-          },
+          "classification": { "$ref": "common.schema.json#/$defs/structuralClassification" },
           "component_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
           "contract_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
         },
