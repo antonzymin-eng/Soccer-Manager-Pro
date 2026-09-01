@@ -12,7 +12,12 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 31, 2026 — **A2 third hostile-review hardening; finding contract made explicit.**
+> **Last Updated:** August 31, 2026 — **A2 cross-surface authority correction and execution-truth freeze.**
+> A hostile sweep across approved Governance v0.10, the Draft integration plan, and A2 found four semantic conflicts plus the remaining execution-truth obligation. The integration plan advances v0.11 → v0.12 and `reference_semantics.py` v1.4.0 → v1.5.0. A2 now exposes exactly Governance's four proof classes; persistence/external-resource remains a §5.2 trigger surface whose serializer/schema/resource edges participate in applicable structural/lifecycle closures rather than a fifth proof class. Applicability now maps all six structural classifications into the three fallback scopes and derives fallback precedence explicitly. `--changed` reruns when changed material is unmapped, stale, or inside the derived closure, and skips only on proven non-impact.
+>
+> A2 also freezes execution truth: the seven execution states are executable semantics; only `passed` satisfies an ordinary required execution, while a non-passed state can satisfy only through an explicitly permitted, approved bounded substitute carrying authority, approval, justification, and omitted-surface/uncertainty fields. Governance fixtures grow 50 → 58; with the unchanged 8 assembly-tier fixtures, `tools/tests/test_*.py` discovers 66 tooling tests. Governance v0.10/A0 approval and #19/#20 normative files are unchanged. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+>
+> **Last Updated (prior):** August 31, 2026 — **A2 third hostile-review hardening; finding contract made explicit.**
 > Claude's verification of `bb200ec4` found one missed identity-error wrap and two output-contract ambiguities. `validate_component_identities` now converts a deleted/renamed current selector to `IdentityError`, not raw `SelectorError`. KD-W1 output is now explicitly typed: `stale-tuning-selector` records contract-integrity drift, while `inactive-tuning-change` records the actual KD-W1 tuning prohibition. Staleness is deliberately activation-independent, so active components also report stale governance selectors instead of silently discarding them.
 >
 > `reference_semantics.py` advances v1.3.0 → v1.4.0 and the governance suite grows 48 → 50 fixtures; total tooling discovery is now 58 tests including the unchanged 8 assembly-tier fixtures. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.

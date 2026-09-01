@@ -106,7 +106,7 @@ def event_fact(name, symbol_key, is_static=False):
 
 class SelectorTests(unittest.TestCase):
     def test_reference_semantics_version_is_pinned(self):
-        self.assertEqual("1.4.0", sem.REFERENCE_SEMANTICS_VERSION)
+        self.assertEqual("1.5.0", sem.REFERENCE_SEMANTICS_VERSION)
 
     def test_reusable_fact_index_avoids_reindexing_contract(self):
         fact = method("Start", [], "M:Start()")
@@ -488,13 +488,17 @@ def applicability_rule(
     assemblies = assemblies or []
     classifications = classifications or []
     activation_states = activation_states or []
-    precedence = (
-        (16 if selectors else 0)
-        | (8 if component_ids else 0)
-        | (4 if assemblies else 0)
-        | (2 if classifications else 0)
-        | (1 if activation_states else 0)
-    )
+    if fallback_scope is not None:
+        precedence = 0 if fallback_scope == "repository" else 1
+    else:
+        precedence = (
+            32
+            | (16 if selectors else 0)
+            | (8 if component_ids else 0)
+            | (4 if assemblies else 0)
+            | (2 if classifications else 0)
+            | (1 if activation_states else 0)
+        )
     return {
         "rule_id": rule_id,
         "selectors": selectors,
@@ -630,6 +634,38 @@ class ApplicabilityTests(unittest.TestCase):
         with self.assertRaises(sem.ApplicabilityError):
             sem.resolve_applicability(self.subject(), [rule])
 
+    def test_category_fallback_outranks_repository_default(self):
+        rules = [
+            applicability_rule(
+                "repo", "T", "FR-REPO", fallback_scope="repository"),
+            applicability_rule(
+                "runtime", "T", "FR-RUNTIME", fallback_scope="runtime-bearing"),
+        ]
+        result = sem.resolve_applicability(self.subject(), rules)
+        self.assertEqual(["FR-RUNTIME"], result["requirement_refs"])
+        self.assertEqual(["runtime"], result["selected_rule_ids"])
+
+    def test_non_runtime_fallback_covers_all_four_non_runtime_classifications(self):
+        rule = applicability_rule(
+            "nonruntime", "T", "FR-NONRUNTIME", fallback_scope="non-runtime-bearing")
+        for classification in (
+                "test-only", "tooling-only", "generated-or-external",
+                "non-runtime-bearing"):
+            result = sem.resolve_applicability(
+                {"classification": classification}, [rule])
+            self.assertEqual(["FR-NONRUNTIME"], result["requirement_refs"])
+
+    def test_explicit_rule_outranks_category_fallback(self):
+        rules = [
+            applicability_rule(
+                "runtime", "T", "FR-RUNTIME", fallback_scope="runtime-bearing"),
+            applicability_rule(
+                "activation", "T", "FR-ACTIVE", activation_states=["active"]),
+        ]
+        result = sem.resolve_applicability(self.subject(), rules)
+        self.assertEqual(["FR-ACTIVE"], result["requirement_refs"])
+        self.assertEqual(["activation"], result["selected_rule_ids"])
+
     def test_na_requires_enumerated_reason_and_approval_when_declared(self):
         rule = applicability_rule(
             "a",
@@ -664,7 +700,7 @@ class ApplicabilityTests(unittest.TestCase):
 
 
 class ProofClosureTests(unittest.TestCase):
-    def test_structural_closure_includes_structural_and_tool_semantics_only(self):
+    def test_structural_closure_includes_persistence_trigger_surfaces(self):
         closure = sem.derive_proof_closure(
             "structural-reachability",
             proof_resolution(),
@@ -673,25 +709,22 @@ class ProofClosureTests(unittest.TestCase):
         self.assertIn("symbol:child", closure["dependency_ids"])
         self.assertIn("asmdef:runtime", closure["dependency_ids"])
         self.assertIn("tool:extractor", closure["dependency_ids"])
+        self.assertIn("serializer:save", closure["dependency_ids"])
         self.assertNotIn("life:start", closure["dependency_ids"])
-        self.assertNotIn("serializer:save", closure["dependency_ids"])
         self.assertNotIn("test:proof", closure["dependency_ids"])
 
-    def test_lifecycle_and_persistence_expand_the_structural_closure(self):
+    def test_lifecycle_closure_extends_structural_and_keeps_persistence_surfaces(self):
         lifecycle = sem.derive_proof_closure(
             "lifecycle-order",
             proof_resolution(proof_class="lifecycle-order"),
             proof_graph(),
         )
-        persistence = sem.derive_proof_closure(
-            "persistence-external-resource",
-            proof_resolution(proof_class="persistence-external-resource"),
-            proof_graph(),
-        )
         self.assertIn("life:start", lifecycle["dependency_ids"])
-        self.assertNotIn("serializer:save", lifecycle["dependency_ids"])
-        self.assertIn("life:start", persistence["dependency_ids"])
-        self.assertIn("serializer:save", persistence["dependency_ids"])
+        self.assertIn("serializer:save", lifecycle["dependency_ids"])
+
+    def test_persistence_is_not_a_fifth_proof_class(self):
+        with self.assertRaises(sem.ApplicabilityError):
+            proof_resolution(proof_class="persistence-external-resource")
 
     def test_executable_closure_adds_test_runner_and_environment_path(self):
         closure = sem.derive_proof_closure(
@@ -803,7 +836,19 @@ class FreshnessTests(unittest.TestCase):
         self.assertTrue(decision["run_required"])
         self.assertEqual("unmapped-changed-surface", decision["reason"])
 
-    def test_changed_optimization_can_skip_known_unrelated_material(self):
+    def test_changed_surface_inside_closure_requires_full_relevant_run(self):
+        decision = sem.changed_proof_decision(
+            self.snapshot(),
+            proof_resolution(),
+            proof_graph(),
+            ["root:host"],
+        )
+        self.assertTrue(decision["run_required"])
+        self.assertEqual(
+            "changed-surface-in-proof-closure", decision["reason"])
+        self.assertEqual(["root:host"], decision["changed_dependency_ids"])
+
+    def test_changed_optimization_can_skip_only_proven_unrelated_material(self):
         decision = sem.changed_proof_decision(
             self.snapshot(),
             proof_resolution(),
@@ -811,7 +856,50 @@ class FreshnessTests(unittest.TestCase):
             ["unrelated:docs"],
         )
         self.assertFalse(decision["run_required"])
-        self.assertEqual("material-scope-unchanged", decision["reason"])
+        self.assertEqual("proven-non-impact", decision["reason"])
+
+
+class ExecutionTruthTests(unittest.TestCase):
+    def substitute(self):
+        return {
+            "authority_ref": "FR-TS-BOUND-001",
+            "approval_ref": "APPROVAL-1",
+            "justification": "exhaustive execution is disproportionate",
+            "omitted_surface_or_uncertainty": "rare platform branch remains unexecuted",
+        }
+
+    def test_only_passed_satisfies_unqualified_required_execution(self):
+        for state in (
+                "failed", "skipped", "excluded", "unavailable",
+                "not-run", "runner-failed"):
+            result = sem.evaluate_execution_truth(state)
+            self.assertFalse(result["satisfied"])
+            self.assertEqual("unsatisfied", result["basis"])
+        self.assertTrue(sem.evaluate_execution_truth("passed")["satisfied"])
+
+    def test_bounded_substitute_requires_explicit_permission_and_complete_record(self):
+        denied = sem.evaluate_execution_truth(
+            "unavailable", self.substitute(), bounded_substitute_permitted=False)
+        self.assertFalse(denied["satisfied"])
+        self.assertEqual("bounded-substitute-not-permitted", denied["basis"])
+
+        allowed = sem.evaluate_execution_truth(
+            "unavailable", self.substitute(), bounded_substitute_permitted=True)
+        self.assertTrue(allowed["satisfied"])
+        self.assertEqual("bounded-substitute", allowed["basis"])
+
+        incomplete = self.substitute()
+        del incomplete["approval_ref"]
+        with self.assertRaises(sem.SemanticsError):
+            sem.evaluate_execution_truth(
+                "unavailable", incomplete, bounded_substitute_permitted=True)
+
+    def test_unknown_execution_state_and_passed_plus_bounded_fail_closed(self):
+        with self.assertRaises(sem.SemanticsError):
+            sem.evaluate_execution_truth("green")
+        with self.assertRaises(sem.SemanticsError):
+            sem.evaluate_execution_truth(
+                "passed", self.substitute(), bounded_substitute_permitted=True)
 
 
 if __name__ == "__main__":

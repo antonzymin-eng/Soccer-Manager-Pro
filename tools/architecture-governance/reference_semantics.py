@@ -10,7 +10,7 @@ import hashlib
 import json
 import math
 
-REFERENCE_SEMANTICS_VERSION = "1.4.0"
+REFERENCE_SEMANTICS_VERSION = "1.5.0"
 
 _SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property", "event"}
 _ACTIVATION_STATES = {"active", "intentionally-disabled", "pending-integration", "unresolved"}
@@ -479,12 +479,35 @@ _STRUCTURAL_CLASSIFICATIONS = {
     "non-runtime-bearing",
 }
 _FALLBACK_SCOPES = {"repository", "runtime-bearing", "non-runtime-bearing"}
+_FALLBACK_CLASSIFICATIONS = {
+    "repository": _STRUCTURAL_CLASSIFICATIONS,
+    "runtime-bearing": {"production-runtime-root", "contracted-child"},
+    "non-runtime-bearing": {
+        "test-only",
+        "tooling-only",
+        "generated-or-external",
+        "non-runtime-bearing",
+    },
+}
+_FALLBACK_PRECEDENCE = {
+    "repository": 0,
+    "runtime-bearing": 1,
+    "non-runtime-bearing": 1,
+}
 _PROOF_CLASSES = {
     "structural-reachability",
     "lifecycle-order",
-    "persistence-external-resource",
     "failure-injection",
     "mutation",
+}
+_EXECUTION_STATES = {
+    "passed",
+    "failed",
+    "skipped",
+    "excluded",
+    "unavailable",
+    "not-run",
+    "runner-failed",
 }
 _DEPENDENCY_KINDS = {
     "requirement",
@@ -541,13 +564,17 @@ _ALL_DEPENDENCY_RELATIONS = (
     | _EXECUTABLE_RELATIONS
 )
 _PROOF_RELATIONS = {
-    "structural-reachability": _COMMON_RELATIONS | _STRUCTURAL_RELATIONS,
-    "lifecycle-order": _COMMON_RELATIONS | _STRUCTURAL_RELATIONS | _LIFECYCLE_RELATIONS,
-    "persistence-external-resource": (
+    # Persistence/resource boundaries are trigger surfaces, not a fifth proof
+    # class. Their graph edges therefore remain in the applicable structural
+    # and lifecycle closures owned by Governance's four proof classes.
+    "structural-reachability": (
+        _COMMON_RELATIONS | _STRUCTURAL_RELATIONS | _PERSISTENCE_RELATIONS
+    ),
+    "lifecycle-order": (
         _COMMON_RELATIONS
         | _STRUCTURAL_RELATIONS
-        | _LIFECYCLE_RELATIONS
         | _PERSISTENCE_RELATIONS
+        | _LIFECYCLE_RELATIONS
     ),
     "failure-injection": _ALL_DEPENDENCY_RELATIONS,
     "mutation": _ALL_DEPENDENCY_RELATIONS,
@@ -614,10 +641,14 @@ def _normalize_na_reasons(rule):
 
 
 def _specificity(rule):
-    # Bit weights make every selector-bound rule outrank every rule without a
-    # selector, then component > assembly > classification > activation.
-    # Authors store this value, but cannot choose it: normalization verifies it.
-    score = 0
+    # Fallback precedence is schema-defined: a category fallback outranks the
+    # repository default, while every explicit selector/identity rule outranks
+    # every fallback. Authors store this value but cannot choose it.
+    fallback_scope = rule.get("fallback_scope")
+    if fallback_scope is not None:
+        return _FALLBACK_PRECEDENCE[fallback_scope]
+
+    score = 32
     if rule["selectors"]:
         score |= 16
     if rule["component_ids"]:
@@ -754,14 +785,12 @@ def normalize_applicability_subject(subject):
 
 
 def _fallback_matches(scope, subject):
+    classification = subject.get("classification")
     if scope == "repository":
         return True
-    classification = subject.get("classification")
-    if scope == "runtime-bearing":
-        return classification in {"production-runtime-root", "contracted-child"}
-    if scope == "non-runtime-bearing":
-        return classification == "non-runtime-bearing"
-    return False
+    if classification is None:
+        return False
+    return classification in _FALLBACK_CLASSIFICATIONS[scope]
 
 
 def _rule_matches(rule, subject):
@@ -912,6 +941,71 @@ def resolve_applicability(subject, rules, na_requests=None, strict=True):
         "obligations": result["obligations"],
     })
     return result
+
+
+def evaluate_execution_truth(
+        execution_state, bounded_substitute=None, bounded_substitute_permitted=False):
+    """Evaluate the A2 execution-truth state machine.
+
+    Only passed satisfies an ordinary required execution. A non-passed state
+    can satisfy only when the owning #19 rule explicitly permits a bounded
+    substitute and the approved substitute record is complete.
+    """
+    if execution_state not in _EXECUTION_STATES:
+        raise SemanticsError("invalid execution_state: %r" % execution_state)
+    if not isinstance(bounded_substitute_permitted, bool):
+        raise SemanticsError("bounded_substitute_permitted must be boolean")
+
+    if execution_state == "passed":
+        if bounded_substitute is not None:
+            raise SemanticsError(
+                "passed execution cannot also claim a bounded substitute")
+        return {
+            "execution_state": execution_state,
+            "satisfied": True,
+            "basis": "passed",
+        }
+
+    if bounded_substitute is None:
+        return {
+            "execution_state": execution_state,
+            "satisfied": False,
+            "basis": "unsatisfied",
+        }
+
+    if not isinstance(bounded_substitute, dict):
+        raise SemanticsError("bounded_substitute must be an object")
+    allowed = {
+        "authority_ref",
+        "approval_ref",
+        "justification",
+        "omitted_surface_or_uncertainty",
+    }
+    unknown = sorted(set(bounded_substitute) - allowed)
+    if unknown:
+        raise SemanticsError(
+            "bounded_substitute contains unknown field(s): %s" % ", ".join(unknown))
+    normalized = {}
+    for field in sorted(allowed):
+        value = bounded_substitute.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise SemanticsError("bounded_substitute requires %s" % field)
+        normalized[field] = value.strip()
+
+    if not bounded_substitute_permitted:
+        return {
+            "execution_state": execution_state,
+            "satisfied": False,
+            "basis": "bounded-substitute-not-permitted",
+            "bounded_substitute": normalized,
+        }
+
+    return {
+        "execution_state": execution_state,
+        "satisfied": True,
+        "basis": "bounded-substitute",
+        "bounded_substitute": normalized,
+    }
 
 
 def _validate_fingerprint(value, field):
@@ -1163,7 +1257,13 @@ def assess_proof_freshness(recorded, current_resolution, current_graph):
 
 def changed_proof_decision(
         recorded, current_resolution, current_graph, changed_dependency_ids):
-    """Conservative --changed optimization after full applicability/closure resolution."""
+    """Conservative --changed optimization after full applicability/closure resolution.
+
+    A known changed surface inside the derived proof closure always requires the
+    full relevant proof run. Skipping is allowed only when every changed surface
+    is mapped, none belongs to the closure, and the recorded proof is otherwise
+    fresh.
+    """
     if not isinstance(changed_dependency_ids, list):
         raise FreshnessError("changed_dependency_ids must be a list")
     changed = []
@@ -1180,6 +1280,7 @@ def changed_proof_decision(
             "reason": "unmapped-changed-surface",
             "unmapped_dependency_ids": unknown,
         }
+
     freshness = assess_proof_freshness(recorded, current_resolution, current_graph)
     if not freshness["fresh"]:
         return {
@@ -1187,7 +1288,17 @@ def changed_proof_decision(
             "reason": "proof-stale",
             "freshness_reasons": freshness["reasons"],
         }
+
+    in_scope = sorted(
+        set(changed) & set(freshness["current"]["dependency_ids"]))
+    if in_scope:
+        return {
+            "run_required": True,
+            "reason": "changed-surface-in-proof-closure",
+            "changed_dependency_ids": in_scope,
+        }
+
     return {
         "run_required": False,
-        "reason": "material-scope-unchanged",
+        "reason": "proven-non-impact",
     }

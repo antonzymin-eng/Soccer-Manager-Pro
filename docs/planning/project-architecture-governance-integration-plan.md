@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.11\
+**Version:** 0.12\
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
@@ -322,6 +322,12 @@ Create `docs/tracking/architecture-governance/runtime-surface-classifications.js
 
 Allowed structural classifications remain: `production-runtime-root`; `contracted-child`; `test-only`; `tooling-only`; `generated-or-external`; `non-runtime-bearing`.
 
+Applicability fallback scopes are selectors over those six classifications; they are not additional classifications. Their mapping is frozen as:
+
+- `runtime-bearing` → `production-runtime-root`, `contracted-child`;
+- `non-runtime-bearing` → `test-only`, `tooling-only`, `generated-or-external`, `non-runtime-bearing`;
+- `repository` → all six classifications plus repository-level subjects that do not carry a structural classification.
+
 Activation state is **not** another classification value. Structural role answers what the surface is; activation state answers whether a production capability is currently expected to execute.
 
 ### 3.2.1 Subject identity versus provenance
@@ -388,7 +394,9 @@ Create `docs/tracking/architecture-governance/applicability-rules.json`.
 
 Each rule contains `rule_id`, selectors, trigger ref, requirement refs, proof classes, gate classes, allowed N/A reasons, precedence, and fallback scope.
 
-All matches are evaluated. Schema-defined specificity controls precedence; equal-precedence conflicts fail. N/A is valid only for an enumerated reason and required approval reference. `--changed` optimizes only after applicability is resolved and falls back to the full relevant universe whenever non-impact cannot be proven. Unresolved applicability fails strict mode.
+All matches are evaluated. Schema-defined specificity controls precedence; equal-precedence conflicts fail. Precedence is not author-chosen: every explicit selector/identity/classification/activation rule outranks every fallback rule; among fallback rules, `runtime-bearing` and `non-runtime-bearing` outrank `repository`; the two category fallbacks are disjoint under §3.2's mapping; conflicting rules at the same derived precedence fail. N/A is valid only for an enumerated reason and required approval reference.
+
+`--changed` optimizes only after applicability and the full proof-class closure are resolved. It MUST fall back to the full relevant proof universe when any changed surface is unmapped, when the current proof is stale, or when a changed surface is a member of the derived closure. It MAY skip only when every changed surface is mapped, none belongs to the closure, and the current applicability/closure fingerprints remain fresh. Unresolved applicability fails strict mode.
 
 Applicability answers **which obligations apply**. It does not itself define the complete freshness dependency surface of a proof. The proof-class closure resolver in §3.7 derives that surface from the matched obligations, integration contracts, compiler/asmdef facts, tests/fixtures, configuration, and tooling required by the proof class.
 
@@ -408,12 +416,12 @@ Reusable proof records require: `schema_version`; `proof_id`; `proof_class`; req
 
 ### 3.7.1 Proof-class closure resolution
 
-The audit MUST derive and validate closure using the proof class rather than trusting an author-supplied file list:
+The audit MUST derive and validate closure using the proof class rather than trusting an author-supplied file list. The proof-class enum is exactly the four classes owned by Governance §5 and FR-AG-027–030: `structural-reachability`, `lifecycle-order`, `failure-injection`, and `mutation`. Persistence boundaries and external resources are applicability/change triggers from Governance §5.2, not additional proof classes.
 
-- structural reachability: matched contract + owning roots + construction/registration edges + applicable public/bypass surfaces + relevant asmdef nodes/edges;
+- structural reachability: matched contract + owning roots + construction/registration edges + applicable public/bypass surfaces + relevant asmdef nodes/edges; serializer/schema/resource/configuration edges are included when they are reachable members of a persistence/external-resource boundary;
 - lifecycle/order: structural closure + lifecycle members, owners, ordering edges, relevant synchronization/thread-affinity members, and testhost equivalents;
-- persistence/external-resource proof: applicable structural/lifecycle closure + serializer/schema/resource/configuration surfaces;
-- executable failure/mutation proof: applicable closure + exact target symbol, test/fixture, runner configuration/environment, and tool semantics.
+- failure-injection: applicable structural/lifecycle closure + exact failure target, test/fixture, runner configuration/environment, and tool semantics;
+- mutation: applicable structural/lifecycle closure + exact mutation target, test/fixture, runner configuration/environment, and tool semantics.
 
 Proof records MAY include additional declared dependencies, but the resolver verifies they are not narrower than the mechanically required closure. If the resolver cannot prove closure completeness, strict mode fails or the proof must use a #19-approved bounded substitute.
 
@@ -422,6 +430,8 @@ Freshness must detect material additions, deletions, renames, generated/config c
 ### 3.7.2 Execution truth
 
 Every required executable record carries `execution_state` from: `passed`, `failed`, `skipped`, `excluded`, `unavailable`, `not-run`, `runner-failed`. Only `passed` satisfies an unqualified required execution obligation. Any other state is unsatisfied unless #19 explicitly permits a bounded substitute and that substitute is recorded/approved.
+
+A2 freezes the executable state machine before A3 consumes it. A bounded substitute cannot satisfy execution merely because a justification string exists: the caller must establish that the owning #19 rule permits substitution, and the record must carry the exact authority reference, approval reference, justification, and omitted proof surface or remaining uncertainty. `passed` and bounded-substitute claims are mutually exclusive.
 
 Execution records bind the exact test/command/runner, environment/configuration, subject digest, start/end result, and machine-readable result artifact when the runner provides one.
 
@@ -788,7 +798,7 @@ Report-only until prerequisites: source-level Class-A absence before compiler-ba
 
 Block after A4–A8 as applicable: new unclassified root; `active` component with prohibited Class-A dormancy; invalid/drifted intentional-disable anchor; KD-W1 tuning violation; changed governed lifecycle without proof; prohibited bypass; missing required proof; open Blocker; stale final review; invalid active baseline.
 
-`--changed` never weakens applicability and falls back when non-impact cannot be proven.
+`--changed` never weakens applicability. After full closure resolution it falls back when a changed surface is unmapped, the proof is stale, or the changed surface belongs to the derived closure; it skips only on proven non-impact.
 
 ---
 
@@ -852,7 +862,7 @@ Non-negotiable 12 is **not** relaxed by this amendment and continues to govern e
 
 ## A2 — Freeze schemas and executable semantics
 
-Freeze identity/selectors, activation-state/disable-anchor semantics, applicability, contracts, proof/closure, property/exception, review, and baseline schemas. The reference semantics include activation-anchor evaluation and KD-W1 tuning-surface matching. Any compiler reference implementation is source-built with the pinned .NET SDK/toolchain.
+Freeze identity/selectors, activation-state/disable-anchor semantics, applicability, contracts, the exact four Governance proof classes and their closure/freshness behavior, execution-truth/bounded-substitute semantics, property/exception, review, and baseline schemas. The reference semantics include activation-anchor evaluation, KD-W1 tuning-surface matching, schema-derived fallback precedence/classification mapping, and conservative changed-surface rerun decisions. Any compiler reference implementation is source-built with the pinned .NET SDK/toolchain.
 
 ## A3 — Amend and reapprove #19/#20 governance integration
 
@@ -1199,6 +1209,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.12 | August 31, 2026 | — | A2 cross-surface authority correction after hostile sweep: removes the invented persistence/external-resource fifth proof class and freezes Governance's exact four proof classes; maps all six structural classifications into the three applicability fallback scopes and defines fallback precedence; makes `--changed` rerun whenever changed material is inside the derived closure; and requires A2 executable execution-truth/bounded-substitute semantics before A3. Governance v0.10 and A0 approval are unchanged. |
 | 0.11 | August 31, 2026 | — | Post-A0 evidence correction only: review-record pointer advances v1.7 → v1.8 after Codex correctly identified that §11 A0 condition 2 required a stable reviewer identity rather than the relative phrase `same assistant`. Governance v0.10, its Approved status, canonical adoption digest, and A0 CLOSED state are unchanged. |
 | 0.10 | August 31, 2026 | — | **A0 CLOSED.** Records project-owner human sign-off, Governance v0.10 `Draft → Approved`, and the post-status-edit canonical adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` (Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`). Removes the stale pre-A0 claim that SPEC_INDEX alignment is an A0 prerequisite; §9.7/downstream registration remains owned by later stages. A2 is now the next stage. No #19/#20 normative file, code, workflow, or runtime behavior changed. |
 | 0.9 | August 31, 2026 | — | Synchronizes with Governance v0.10 after hostile review: rejects invalid Disposition/Status pairings, requires every finding to reach its mapped terminal Status before convergence, and updates A0's findings gate accordingly. Governing authority reference advances to v0.10. No #19/#20 normative file, code, workflow, or runtime behavior changed. |
