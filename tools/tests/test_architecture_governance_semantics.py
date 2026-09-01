@@ -113,7 +113,7 @@ class SelectorTests(unittest.TestCase):
             })
 
     def test_reference_semantics_version_is_pinned(self):
-        self.assertEqual("1.8.0", sem.REFERENCE_SEMANTICS_VERSION)
+        self.assertEqual("1.9.0", sem.REFERENCE_SEMANTICS_VERSION)
 
     def test_reusable_fact_index_avoids_reindexing_contract(self):
         fact = method("Start", [], "M:Start()")
@@ -137,6 +137,26 @@ class SelectorTests(unittest.TestCase):
         self.assertNotEqual(
             sem.selector_key(no_arg["selector"]),
             sem.selector_key(int_arg["selector"]),
+        )
+
+    def test_value_and_byref_overloads_resolve_by_xml_doc_type_ids(self):
+        by_value = method(
+            "Mutate", ["System.Int32"], "M:Mutate(System.Int32)")
+        by_ref = method(
+            "Mutate", ["System.Int32@"], "M:Mutate(System.Int32@)")
+        self.assertNotEqual(
+            sem.selector_key(by_value["selector"]),
+            sem.selector_key(by_ref["selector"]),
+        )
+        self.assertEqual(
+            "M:Mutate(System.Int32)",
+            sem.resolve_selector(
+                by_value["selector"], [by_value, by_ref])["symbol_key"],
+        )
+        self.assertEqual(
+            "M:Mutate(System.Int32@)",
+            sem.resolve_selector(
+                by_ref["selector"], [by_value, by_ref])["symbol_key"],
         )
 
     def test_static_and_instance_members_are_distinct(self):

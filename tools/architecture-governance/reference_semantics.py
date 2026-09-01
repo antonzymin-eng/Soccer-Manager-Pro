@@ -10,7 +10,7 @@ import hashlib
 import json
 import math
 
-REFERENCE_SEMANTICS_VERSION = "1.8.0"
+REFERENCE_SEMANTICS_VERSION = "1.9.0"
 
 _SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property", "event"}
 _ACTIVATION_STATES = {"active", "intentionally-disabled", "pending-integration", "unresolved"}
@@ -79,8 +79,15 @@ def _type_ids(value):
 def normalize_selector(selector):
     """Validate selector-v1.
 
-    All type ids are compiler-canonical ids. This reference implementation
-    compares typed compiler facts and does not infer symbols from source text.
+    All selector type ids use the C# XML documentation ID type-signature
+    spelling (the type portion used inside member IDs), emitted from compiler
+    symbols rather than inferred from source text. In particular, by-reference
+    parameters use the XML-doc `@` suffix, so M(System.Int32) and
+    M(System.Int32@) are distinct selector signatures. The same convention
+    canonically carries generic parameters/types, arrays, pointers, and nested
+    type structure; producers MUST NOT substitute display names or plain type
+    names that erase those distinctions.
+
     Constructors carry is_static so .cctor cannot collide with .ctor.
     Properties carry parameter_type_ids so indexer overloads are addressable.
     """
