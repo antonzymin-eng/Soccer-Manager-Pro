@@ -1,6 +1,13 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 1, 2026 — **A2 third independent review; condition 4 still open. Planning/tooling only.**
+**Last Updated:** September 1, 2026 — **A2 review-record publication provenance corrected; planning/tooling only.**
+Integration plan v0.23 → v0.24 and A2 closure record v0.6 → v0.7. Durable review status `at` now means
+exactly the commit time where a finding first appears in the committed ledger; the regression requires equality
+to that publication time and separately proves publication is after the reviewed artifact. `A2-R6-001` is
+corrected from unsupported `20:29:43Z` to `c349fb6`'s `23:13:27Z`. Test count remains 156
+(139 governance + 9 lint + 8 assembly-tier). Row 4 remains PENDING. No frozen schema/semantics mechanism,
+#19/#20 normative file, `src/`, gameplay, save, RNG, or tuning behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 third independent review; condition 4 still open. Planning/tooling only.**
 A third independent pass over `7d4e949` found that round 5's timestamp fix had replaced fictional future
 times with fictional earlier ones: Open events were stamped at the commit time of the artifact reviewed,
 placing each discovery at or before the thing discovered, while resolutions were build times described as

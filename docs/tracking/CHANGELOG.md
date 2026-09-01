@@ -12,7 +12,12 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 1, 2026 — **A2 third independent review; condition 4 still open. Planning/tooling only.**
+> **Last Updated:** September 1, 2026 — **A2 review-record publication provenance corrected. Planning/tooling only.**
+> Follow-up review found that v0.23/v0.6 still described `at` as publication/recording provenance while the regression accepted any timestamp inside the reviewed-artifact→publication interval. `A2-R6-001` itself demonstrated the mismatch: `20:29:43Z` was accepted although the finding first appeared in committed history in `c349fb6` at `23:13:27Z`.
+>
+> The model is now exact: `at` equals the first-publication commit time for that finding; reviewed/resolving revisions remain separate evidence and no exact review-event time is invented. The regression requires equality and separately requires publication strictly after the reviewed artifact, with all-or-nothing behavior when publication history is incomplete. Integration plan v0.23 → v0.24; A2 closure record v0.6 → v0.7. Test cardinality is unchanged at 139 governance + 9 lint + 8 assembly-tier = 156. Row 4 remains PENDING. No frozen schema/semantics mechanism, #19/#20 normative file, `src/`, gameplay, save, RNG, or tuning behavior changed.
+>
+> **Last Updated (prior):** September 1, 2026 — **A2 third independent review; condition 4 still open. Planning/tooling only.**
 > A third independent pass over `7d4e949` found one substantive defect, again inside the previous round's remediation. The integration plan advances v0.22 → v0.23 and `docs/tracking/a2-schema-semantics-closure.md` v0.5 → v0.6. Conditions 1, 2, 3 and 5 stand; row 4 stays **PENDING**. **A2 stays OPEN and A3 stays BLOCKED.**
 >
 > **A2-R6-001 (Medium).** Round 5's timestamp remediation replaced fictional *future* timestamps with fictional *earlier* ones. A finding's `Open` event was stamped at the commit time of the artifact reviewed — `11547d4` at `19:24:32Z` for round 4 — but an independent review necessarily happens **after** the artifact it reviews is pushed, so the record placed each discovery at or before the thing discovered. The resolution stamps were not commit times at all: `20:11:08Z` against `7d4e949`'s `20:13:03Z`, while the record described them as "the commit time that carried the fix". `test_status_history_is_neither_future_dated_nor_out_of_order` checked only `<=` wall clock and monotonicity, so it could see neither error — the document and its test again claimed more than they verified.
