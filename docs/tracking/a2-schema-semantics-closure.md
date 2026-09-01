@@ -2,7 +2,7 @@
 
 **Document Class:** Stage-gate evidence record\
 **Status:** OPEN — implemented candidate; review and owner approval pending\
-**Version:** 0.3\
+**Version:** 0.4\
 **Created:** September 1, 2026\
 **Owning plan:** `docs/planning/project-architecture-governance-integration-plan.md` §11 A2\
 **Candidate branch:** `codex/a2-complete-schema-freeze`\
@@ -22,13 +22,20 @@ Implementation, merge, review, approval, and closure are distinct. A2 remains **
 | 1 | Eight-category scope map | **Complete** | §2 |
 | 2 | Canonical schemas / single control source | **Complete** | §3, §7 |
 | 3 | Executable representative fixtures | **Complete** | §4, §7 |
-| 4 | Fresh review over pushed current candidate | **Complete** | §8; three recorded rounds, each bound to the tree it reviewed. Carries a reviewer-independence limitation |
-| 5 | Every finding terminal | **Complete** | §8; nine findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
+| 4 | Fresh review over pushed current candidate | **PENDING** | §8. Retracted at v0.4 — see `A2-R4-001`. Four rounds are recorded, but the current artifact carries corrections that post-date round 4 and no round has reviewed it |
+| 5 | Every finding terminal | **Complete** | §8; twelve findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
 | 6 | Project-owner approval | **PENDING** | Non-delegable. No agent may satisfy this row |
-| 7 | Approved candidate landed on A3 base | **PENDING** | Blocked by row 6; must match the approved digest bundle |
+| 7 | Approved candidate landed on A3 base | **PENDING** | Blocked by rows 4 and 6; must match the approved digest bundle |
 
-Rows 1–5 are agent-satisfiable and are satisfied. Rows 6 and 7 are not, and nothing in this
-record should be read as advancing them. **A2 is OPEN. A3 is BLOCKED.**
+**Row 4 was claimed at v0.3 and is retracted.** The claim was wrong in a way worth stating
+plainly rather than quietly correcting: round 3 reviewed `678f0f2`, the material subject then moved
+by 150 lines — the `A2-R3-001` fix, its schema change, its tests — and the commit carrying the
+completion claim was itself never reviewed. The gate's pushed-candidate wording is stronger than
+FR-AG-018's, and the party satisfying a condition does not get to relax it. Row 4 becomes claimable
+only after a fresh review of the artifact as pushed, and `test_the_current_artifact_has_not_yet_been_reviewed`
+now fails if a round claims the current tree without one.
+
+Rows 1, 2, 3 and 5 are satisfied. Rows 4, 6 and 7 are not. **A2 is OPEN. A3 is BLOCKED.**
 
 ## 2. Eight-category scope map
 
@@ -77,9 +84,10 @@ The expected split is explicit so an aggregate cannot hide missing discovery:
 
 | Command | Expected result |
 |---|---|
-| `python3 -m unittest tools.tests.test_architecture_governance_semantics` | 137 governance fixtures, PASS |
+| `python3 -m unittest tools.tests.test_architecture_governance_semantics` | 138 governance fixtures, PASS |
+| `python3 -m unittest tools.tests.test_recurring_defect_lint` | 9 phantom-stream context fixtures, PASS |
 | `python3 -m unittest tools.tests.test_assembly_tier_check` | 8 assembly-tier fixtures, PASS |
-| `python3 -m unittest discover -s tools/tests -p 'test_*.py'` | 145 total fixtures, PASS |
+| `python3 -m unittest discover -s tools/tests -p 'test_*.py'` | 155 total fixtures, PASS |
 | `python3 tools/recurring-defect-lint.py --repo .` | 0 ERROR |
 | `python3 tools/assembly-tier-check.py --repo .` | PASS |
 | `python3 tools/doc-consistency-check.py --repo .` | PASS |
@@ -140,13 +148,21 @@ contract.
 |---|---|---|
 | 1 | `origin/main` at `e7a3ba13` — the candidate as reported did not exist | `b422ac967703dcd59c70c8e18adb0d5ed9ab8c37276863e4e5e9821f269bcbd2` |
 | 2 | `dae398a6` | `5e1dd7fc8811a1b2eba91aa576c5c5222403c0e9fe2042524b17a917e65f439b` |
-| 3 | This candidate | `5d4daacd091c2afae57ff00d9c3f99ddff8a3a179654fb21f1f6b06e7fcc0bba` |
+| 3 | `678f0f2` — corrected at v0.4; v0.3 recorded the post-fix digest for a review performed pre-fix | `77c1d54643b287bf7bd4b0b901e419e4ca02aaf370befe3db6b473ec487e2bd7` |
+| 4 | `11547d4` as pushed — independent review | `5d4daacd091c2afae57ff00d9c3f99ddff8a3a179654fb21f1f6b06e7fcc0bba` |
 
-Each round binds the tree it actually reviewed; stamping one digest across all three would misreport
-rounds 1 and 2. The digests are **mechanically reproducible**, not asserted: the latest round's value
-recomputes in `DurableReviewLedgerTests`, which also proves the three are distinct. A later reviewer
-verifies this record with `python3 -m unittest tools.tests.test_architecture_governance_semantics`
-on any checkout — no trust in this document is required.
+The current working tree is **not** in this table. That is the point of row 4 being open.
+
+Each round binds the tree it actually reviewed; stamping one digest across all of them would
+misreport the earlier rounds. **Every** recorded digest is recomputed from the commit its scope
+names — corrected at v0.4 per `A2-R4-002`, which found that v0.3 verified only the latest and merely
+asserted the rest were distinct, while claiming more than that. Distinctness is not identity.
+
+The verification is bounded, and the bound is stated rather than glossed: `git` history must be
+present. CI checks out shallow, so an unavailable revision **skips explicitly** instead of passing as
+though the check had run. Where history is present,
+`python3 -m unittest tools.tests.test_architecture_governance_semantics` verifies every digest in this
+table.
 
 ### 8.2 Method
 
@@ -160,7 +176,7 @@ not at document validation). One was a real defect, recorded below as `A2-R3-001
 
 ### 8.3 Findings
 
-Nine findings across three rounds, all `Disposition: Blocker` / `Status: Resolved`, recorded in
+Twelve findings across four rounds, all `Disposition: Blocker` / `Status: Resolved`, recorded in
 `docs/tracking/architecture-governance/review-ledger.json` under series `A2-SCHEMA-FREEZE`.
 
 Following the A0 record's rule, the A2 gate is **not a blanket Blocker citation**: each finding's
@@ -181,6 +197,9 @@ way because no live divergence was demonstrated; it is a regression guard.
 | A2-R2-004 | 2 | Low | Nothing enforced schema/semantics agreement beyond the shared enums |
 | A2-R2-005 | 2 | Low | `REFERENCE_SEMANTICS_VERSION` regressed within the branch, undocumented |
 | A2-R3-001 | 3 | Medium | A property under an `FR-CS-`/`FR-TS-` id captured that requirement's waiver authority |
+| A2-R4-001 | 4 | High | Condition 4 was marked complete before any review of the artifact it names |
+| A2-R4-002 | 4 | Medium | The digest proof was overstated for the historical rounds |
+| A2-R4-003 | 4 | Low | Phantom-stream regression coverage used isolated positives only |
 
 ### 8.4 Outcome and limitations
 
@@ -188,11 +207,13 @@ No run is marked `CONVERGED` and no run carries `final_review`. That is delibera
 test: convergence is not an agent's to declare while the owner gate is open, and FR-AG-018's fresh
 review over the current artifact is a separate question from FR-AG-019/020 convergence.
 
-**Reviewer-independence limitation.** Rounds 2 and 3 were performed by the same assistant that applied
-the remediation for the findings they raised. FR-AG-018 requires a fresh review over the current
-artifact; it does not require a different reviewer, and the A0 closure review recorded the identical
-limitation (`a0-governance-adoption-review.md` §4). **No independence is claimed here.** Project-owner
-approval is a separate condition and remains open at row 6.
+**Reviewer independence — partially addressed at v0.4.** Rounds 2 and 3 were performed by the same
+assistant that applied the remediation for the findings they raised; no independence was claimed for
+them, on the A0 precedent (`a0-governance-adoption-review.md` §4). **Round 4 was performed by a
+different reviewer** and is the first independent pass over this candidate. It found the condition-4
+sequencing defect that the non-independent rounds had missed — which is the argument for independence
+made concretely rather than in principle. The corrections it produced are again non-independent, so a
+round-5 pass over the pushed result is owed before row 4 is claimed.
 
 **Surfaces this review did not exhaustively verify**, recorded rather than implied: a field-by-field
 re-derivation of each schema against Governance §3.3 and §7.1, and line-by-line reading of every
@@ -204,6 +225,7 @@ validator branch. Both are recorded in the ledger's `unverified_surfaces`.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.4 | September 1, 2026 | — | **Retracts the v0.3 claim that condition 4 was complete**, on independent review finding `A2-R4-001`: round 3 reviewed `678f0f2`, the material subject then moved 150 lines, and the commit asserting completion was itself never reviewed. Row 4 returns to PENDING and a test now fails if any round claims the current tree without a review of it. Round 3's recorded digest is corrected to the tree it actually reviewed. `A2-R4-002`: every recorded digest is now recomputed from the commit its scope names, rather than only the latest being verified while more was claimed; the shallow-clone bound is stated and skips explicitly. `A2-R4-003`: `tools/tests/test_recurring_defect_lint.py` adds mixed positive/negative context fixtures and pins the adjacent-negation bound; the reviewer's bullet-in-a-negative-list concern was checked and is correct suppression. Round 4 is the first independent review of this candidate. Test split 137/8/145 → 138 governance + 9 lint + 8 assembly-tier = 155. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.3 | September 1, 2026 | — | Satisfies the five agent-satisfiable closure conditions and records the evidence. New §8 carries the fresh-review record: per-round material subject digests (mechanically recomputed by `DurableReviewLedgerTests`, not asserted), method, and the nine-finding set now recorded in the durable `review-ledger.json` under series `A2-SCHEMA-FREEZE`, all `Blocker`/`Resolved`. Round 3 found and fixed `A2-R3-001`, an authority-boundary defect letting a property under an `FR-CS-`/`FR-TS-` id capture that requirement's waiver routing. Records the reviewer-independence limitation and the unverified surfaces explicitly. Conditions 6 (owner approval) and 7 (landing) remain **PENDING** and are not agent-satisfiable. Test split 128/8/136 → 137/8/145. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.2 | September 1, 2026 | — | Records second-review remediation in new §7: the per-proof artifact validator that closes the last frozen contract without an executable counterpart; fail-closed sentinel defaults on the review-ledger and activation-baseline validators, with `strict_activation` deliberately excluded; canonical `$id` on all ten schemas so relative `$ref` resolves by URI; and the bounded stdlib Draft 2020-12 validator behind a one-directional schema/semantics differential that raises on any unimplemented keyword. Restores `REFERENCE_SEMANTICS_VERSION` 2.0.0 by owner decision. Test split 104/8/112 → 128/8/136. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.1 | September 1, 2026 | — | Creates the explicit A2 closure gate record after the first review found the candidate unpushed, shared enum control duplicated, and A2 completion undefined. Records the eight-category/ten-schema/seven-state-file mapping, pure-stdlib single-source design, exact test split, and pending non-delegable approval. A2 OPEN; A3 BLOCKED. |

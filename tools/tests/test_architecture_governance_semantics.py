@@ -2195,26 +2195,45 @@ class DurableReviewLedgerTests(unittest.TestCase):
     ROOT = Path(__file__).resolve().parents[2]
     LEDGER = ROOT / "docs" / "tracking" / "architecture-governance" / "review-ledger.json"
 
+    # One definition of the material subject, used by both the working-tree and
+    # the historical-tree digests so they cannot drift apart.
+    SUBJECT_DIRS = (
+        "docs/tracking/architecture-governance/schemas/",
+        "docs/tracking/architecture-governance/",
+        "tools/architecture-governance/",
+    )
+    SUBJECT_FILE = "tools/tests/test_architecture_governance_semantics.py"
+    SUBJECT_EXCLUDED = "docs/tracking/architecture-governance/review-ledger.json"
+
     @classmethod
-    def material_subject_digest(cls):
-        """Digest of the A2 material review subject.
+    def in_material_subject(cls, rel):
+        """The frozen contract itself -- not the record of reviewing it.
 
         review-ledger.json is excluded deliberately: §3.8 says recording the
-        review run itself must not recursively invalidate the subject it records.
+        review run must not recursively invalidate the subject it records.
         Tracking prose is excluded for the same reason -- it is not the contract.
         """
+        if rel == cls.SUBJECT_EXCLUDED:
+            return False
+        if rel == cls.SUBJECT_FILE:
+            return True
+        if not (rel.endswith(".json") or rel.endswith(".py")):
+            return False
+        return any(
+            rel.startswith(prefix) and "/" not in rel[len(prefix):]
+            for prefix in cls.SUBJECT_DIRS)
+
+    @classmethod
+    def material_subject_digest(cls):
+        """Material subject digest of the working tree."""
         import hashlib
-        governance = cls.ROOT / "docs" / "tracking" / "architecture-governance"
         files = {}
-        paths = sorted(governance.glob("schemas/*.json")) \
-            + sorted(governance.glob("*.json")) \
-            + sorted((cls.ROOT / "tools" / "architecture-governance").glob("*.py")) \
-            + [cls.ROOT / "tools" / "tests" / "test_architecture_governance_semantics.py"]
-        for path in paths:
-            rel = path.relative_to(cls.ROOT).as_posix()
-            if rel.endswith("architecture-governance/review-ledger.json"):
+        for path in sorted(cls.ROOT.rglob("*")):
+            if not path.is_file():
                 continue
-            files[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+            rel = path.relative_to(cls.ROOT).as_posix()
+            if cls.in_material_subject(rel):
+                files[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
         return sem.digest(files)
 
     def ledger(self):
@@ -2231,19 +2250,68 @@ class DurableReviewLedgerTests(unittest.TestCase):
         self.assertEqual(
             [], jsv.default_schema_set().validate(ledger, "review-ledger.schema.json"))
 
-    def test_latest_round_subject_digest_recomputes_from_the_material_subject(self):
-        runs = sorted(self.ledger()["review_runs"], key=lambda item: item["review_round"])
-        self.assertEqual(
-            self.material_subject_digest(), runs[-1]["subject_scope_digest"])
+    def test_every_round_digest_recomputes_from_the_tree_it_names(self):
+        """Distinctness is not identity: prove each digest IS its named tree.
 
-    def test_each_round_binds_the_artifact_it_actually_reviewed(self):
-        """A per-round digest is the point: rounds reviewed different trees.
-
-        Stamping one digest across every round would misreport rounds 1 and 2 as
-        having reviewed the artifact only round 3 saw.
+        Each run's scope names its revision as "at <rev>", so the ledger is
+        self-describing and this needs no second table to drift against. CI
+        checks out shallow, so an unavailable revision skips explicitly rather
+        than passing as though the check had run.
         """
+        import re
+        import subprocess
+        checked = 0
+        for run in self.ledger()["review_runs"]:
+            match = re.search(r"\bat ([0-9a-f]{7,40})\b", " ".join(run["review_scope"]))
+            self.assertIsNotNone(
+                match, "run %s does not name its revision" % run["review_run_id"])
+            revision = match.group(1)
+            probe = subprocess.run(
+                ["git", "-C", str(self.ROOT), "cat-file", "-e", revision + "^{commit}"],
+                capture_output=True)
+            if probe.returncode != 0:
+                continue
+            self.assertEqual(
+                self.subject_digest_at(revision), run["subject_scope_digest"],
+                "%s digest does not match %s" % (run["review_run_id"], revision))
+            checked += 1
+        if not checked:
+            self.skipTest("no reviewed revision is present (shallow clone)")
+
+    def test_each_round_binds_a_distinct_artifact(self):
         digests = [run["subject_scope_digest"] for run in self.ledger()["review_runs"]]
         self.assertEqual(len(digests), len(set(digests)))
+
+    def test_the_current_artifact_has_not_yet_been_reviewed(self):
+        """Honest state, not a green tick: the working tree post-dates round 4.
+
+        Condition 4 requires a fresh review of the PUSHED candidate. This fails
+        the moment a round claims the current tree without that review having
+        happened, and is inverted by the round that legitimately reviews it.
+        """
+        recorded = {run["subject_scope_digest"] for run in self.ledger()["review_runs"]}
+        self.assertNotIn(
+            self.material_subject_digest(), recorded,
+            "a recorded round already claims this tree; if a genuine fresh "
+            "review of it happened, invert this test with that round")
+
+    @classmethod
+    def subject_digest_at(cls, revision):
+        """Material subject digest of a committed tree, by the same rule."""
+        import hashlib
+        import subprocess
+        listing = subprocess.run(
+            ["git", "-C", str(cls.ROOT), "ls-tree", "-r", "--name-only", revision],
+            capture_output=True, text=True, check=True).stdout.split()
+        files = {}
+        for rel in sorted(listing):
+            if not cls.in_material_subject(rel):
+                continue
+            blob = subprocess.run(
+                ["git", "-C", str(cls.ROOT), "show", "%s:%s" % (revision, rel)],
+                capture_output=True, check=True).stdout
+            files[rel] = hashlib.sha256(blob).hexdigest()
+        return sem.digest(files)
 
     def test_every_recorded_finding_is_terminal(self):
         """Closure condition 5: no open or invalid finding remains."""

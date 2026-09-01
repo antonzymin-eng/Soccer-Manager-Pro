@@ -6,7 +6,7 @@
       "review_run_id": "A2-RUN-001",
       "review_series_id": "A2-SCHEMA-FREEZE",
       "review_scope": [
-        "A2 candidate as reported: commit b5e80832 / codex/a2-complete-schema-freeze"
+        "origin/main at e7a3ba13 -- the reported candidate b5e80832 did not exist"
       ],
       "subject_scope_digest": "b422ac967703dcd59c70c8e18adb0d5ed9ab8c37276863e4e5e9821f269bcbd2",
       "review_round": 1,
@@ -54,9 +54,9 @@
       "review_run_id": "A2-RUN-003",
       "review_series_id": "A2-SCHEMA-FREEZE",
       "review_scope": [
-        "A2 candidate at 678f0f2 plus the second-review remediation"
+        "A2 candidate at 678f0f2"
       ],
-      "subject_scope_digest": "5d4daacd091c2afae57ff00d9c3f99ddff8a3a179654fb21f1f6b06e7fcc0bba",
+      "subject_scope_digest": "77c1d54643b287bf7bd4b0b901e419e4ca02aaf370befe3db6b473ec487e2bd7",
       "review_round": 3,
       "reviewer_identity": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
       "coverage": [
@@ -70,10 +70,34 @@
       ],
       "unverified_surfaces": [
         "reviewer independence -- see the limitation recorded in the closure record",
-        "field-by-field re-derivation of each schema against Governance \u00a73.3/\u00a77.1"
+        "field-by-field re-derivation of each schema against Governance \u00a73.3/\u00a77.1",
+        "the A2-R3-001 fix itself, which post-dates this round's subject"
       ],
       "applicable_properties": [],
       "convergence_state": "IN_PROGRESS",
+      "final_review": false,
+      "round_budget_exhausted": false
+    },
+    {
+      "review_run_id": "A2-RUN-004",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate at 11547d4 as pushed"
+      ],
+      "subject_scope_digest": "5d4daacd091c2afae57ff00d9c3f99ddff8a3a179654fb21f1f6b06e7fcc0bba",
+      "review_round": 4,
+      "reviewer_identity": "OpenAI ChatGPT, independent reviewer of the pushed 11547d4 candidate",
+      "coverage": [
+        "closure-gate self-certification sequencing",
+        "digest proof strength",
+        "phantom-stream negation regression coverage"
+      ],
+      "unverified_surfaces": [
+        "re-derivation of the schema field sets",
+        "the corrections this round produced, which post-date its subject"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "NON-CONVERGED",
       "final_review": false,
       "round_budget_exhausted": false
     }
@@ -479,6 +503,141 @@
           "at": "2026-09-01T18:00:00Z",
           "evidence": [
             "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; \u00a73.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R4-001",
+      "stable_key": "a2/r4-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-004",
+      "summary": "Closure condition 4 was marked complete before any review of the artifact it names.",
+      "evidence": [
+        "Round 3 reviewed 678f0f2, but the material subject then changed by 150 lines -- the A2-R3-001 fix, its schema change and its tests -- before 11547d4 was pushed carrying the claim that condition 4 was complete. The round-3 record bound the POST-fix digest to a review performed on the PRE-fix tree, and no review of the pushed candidate existed. The gate's pushed-candidate wording is stronger than FR-AG-018 and cannot be weakened by the party satisfying it."
+      ],
+      "severity": "High",
+      "requirement_property": [
+        "A2 closure gate condition 4 (a local-only commit cannot satisfy it)",
+        "Governance FR-AG-018"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 4,
+      "resolution_evidence": [
+        "Row 4 returned to PENDING. Round 3 now binds 678f0f2, the tree it actually reviewed. Round 4 is this independent review of the pushed 11547d4; the corrected artifact awaits a round-5 fresh review before row 4 may be claimed again."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R4-001-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T21:00:00Z",
+          "evidence": [
+            "Round 3 reviewed 678f0f2, but the material subject then changed by 150 lines -- the A2-R3-001 fix, its schema change and its tests -- before 11547d4 was pushed carrying the claim that condition 4 was complete. The round-3 record bound the POST-fix digest to a review performed on the PRE-fix tree, and no review of the pushed candidate existed. The gate's pushed-candidate wording is stronger than FR-AG-018 and cannot be weakened by the party satisfying it."
+          ]
+        },
+        {
+          "event_id": "A2-R4-001-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T21:00:00Z",
+          "evidence": [
+            "Row 4 returned to PENDING. Round 3 now binds 678f0f2, the tree it actually reviewed. Round 4 is this independent review of the pushed 11547d4; the corrected artifact awaits a round-5 fresh review before row 4 may be claimed again."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R4-002",
+      "stable_key": "a2/r4-002",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-004",
+      "summary": "The digest proof was overstated for the historical rounds.",
+      "evidence": [
+        "DurableReviewLedgerTests recomputed only the latest round's digest and merely asserted the three were distinct, which does not establish that b422.. represents e7a3ba13 or 5e1d.. represents dae398a6. The closure record nonetheless claimed the digests were mechanically reproducible and that no trust in the document was required."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Governance FR-AG-034 (required proof MUST be independently reproducible)",
+        "concrete independently established defect"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 4,
+      "resolution_evidence": [
+        "The historical digests are now recomputed from the commits the record names, rather than the claim being narrowed. CI checks out shallow, so an absent history skips explicitly instead of passing as though it had run. The overstated wording is corrected."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R4-002-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T21:00:00Z",
+          "evidence": [
+            "DurableReviewLedgerTests recomputed only the latest round's digest and merely asserted the three were distinct, which does not establish that b422.. represents e7a3ba13 or 5e1d.. represents dae398a6. The closure record nonetheless claimed the digests were mechanically reproducible and that no trust in the document was required."
+          ]
+        },
+        {
+          "event_id": "A2-R4-002-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T21:00:00Z",
+          "evidence": [
+            "The historical digests are now recomputed from the commits the record names, rather than the claim being narrowed. CI checks out shallow, so an absent history skips explicitly instead of passing as though it had run. The overstated wording is corrected."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R4-003",
+      "stable_key": "a2/r4-003",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-004",
+      "summary": "Phantom-stream regression coverage used isolated positives only.",
+      "evidence": [
+        "The negation probe was re-run with the cases separated after they were seen to interfere, which demonstrated a context-bleed mode rather than testing it. No committed fixture covered mixed positive/negative context."
+      ],
+      "severity": "Low",
+      "requirement_property": [
+        "Project-owner-relayed review finding",
+        "the lint class's own stated intent that legitimate negations must not re-raise"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 4,
+      "resolution_evidence": [
+        "tools/tests/test_recurring_defect_lint.py adds nine mixed-context fixtures. The reviewer's concern is confirmed for an adjacent unrelated negation and that bound is now pinned by an explicit test: it pre-dates this work and narrowing the window to zero re-raises three genuinely wrapped negations, so the trade is deliberate. The suggested bullet-in-a-negative-list mode was checked and is correct suppression, not a false negative -- a non-goals bullet is elliptical."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R4-003-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T21:00:00Z",
+          "evidence": [
+            "The negation probe was re-run with the cases separated after they were seen to interfere, which demonstrated a context-bleed mode rather than testing it. No committed fixture covered mixed positive/negative context."
+          ]
+        },
+        {
+          "event_id": "A2-R4-003-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T21:00:00Z",
+          "evidence": [
+            "tools/tests/test_recurring_defect_lint.py adds nine mixed-context fixtures. The reviewer's concern is confirmed for an adjacent unrelated negation and that bound is now pinned by an explicit test: it pre-dates this work and narrowing the window to zero re-raises three genuinely wrapped negations, so the trade is deliberate. The suggested bullet-in-a-negative-list mode was checked and is correct suppression, not a false negative -- a non-goals bullet is elliptical."
           ]
         }
       ]
