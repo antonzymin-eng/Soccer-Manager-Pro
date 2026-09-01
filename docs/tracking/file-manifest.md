@@ -1,6 +1,94 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** August 31, 2026 — **PR #344 CI/link-check and Codex-review corrections; tooling/tracking only.**
+**Last Updated:** September 1, 2026 — **A2 selector type-ID canonicalization; planning/tooling only.**
+`docs/planning/project-architecture-governance-integration-plan.md` advances v0.15 → v0.16 and
+`tools/architecture-governance/reference_semantics.py` v1.8.0 → v1.9.0. Selector type IDs are now
+normatively pinned to the C# XML documentation ID type-signature convention emitted from compiler symbols,
+including byref `@`; a regression proves legal value/ref overloads resolve distinctly without adding a
+parallel `parameter_ref_kinds` field. The governance suite grows 76 → 77 fixtures; with 8 assembly-tier
+fixtures, existing `tools/tests/test_*.py` discovery runs 85 tooling tests. Selector-v1 shape, execution
+truth, applicability/proof semantics, Governance v0.10/A0, and #19/#20 normative files are unchanged. No
+`src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+**Last Updated (prior):** September 1, 2026 — **A2 enum/context-specificity residual hardening; planning/tooling only.**
+`docs/planning/project-architecture-governance-integration-plan.md` advances v0.14 → v0.15 and
+`tools/architecture-governance/reference_semantics.py` v1.7.0 → v1.8.0. Enum-valued untrusted JSON inputs
+now share typed validation and cannot leak raw `TypeError`; narrower matching `change_types` sets outrank
+broader matching sets without crossing surface specificity; non-strict missing change context reports
+`context_complete: false` plus `missing-change-type` while remaining proof-ineligible. The governance suite
+grows 69 → 76 fixtures; with 8 assembly-tier fixtures, existing `tools/tests/test_*.py` discovery runs 84
+tooling tests. Execution truth and subject-side change-context semantics are otherwise unchanged. Approved
+Governance v0.10/A0 and #19/#20 normative files are unchanged. No `src/`, `.cs`, `.asmdef`, gameplay,
+save, RNG, or tuning value changed.
+**Last Updated (prior):** August 31, 2026 — **A2 applicability change context stabilized; planning/tooling only.**
+`docs/planning/project-architecture-governance-integration-plan.md` advances v0.13 → v0.14 and
+`tools/architecture-governance/reference_semantics.py` v1.6.0 → v1.7.0. Governance §5.2 `change_type`
+is now required on the strict applicability subject and independently required by proof closure; rules may
+optionally filter with `change_types`, with context-specific matches outranking otherwise-identical generic
+rules. Persistence/resource closure activation reads only the evaluated subject context, and change-context
+changes participate in freshness. The governance suite grows 64 → 69 fixtures; with 8 assembly-tier fixtures,
+existing `tools/tests/test_*.py` discovery runs 77 tooling tests. Execution truth remains unchanged. Approved
+Governance v0.10/A0 and #19/#20 normative files are unchanged. No `src/`, `.cs`, `.asmdef`, gameplay,
+save, RNG, or tuning value changed.
+**Last Updated (prior):** August 31, 2026 — **A2 conditional proof closure and execution truth; planning/tooling only.**
+`docs/planning/project-architecture-governance-integration-plan.md` advances v0.12 → v0.13 and
+`tools/architecture-governance/reference_semantics.py` v1.5.0 → v1.6.0. Applicability adds optional typed
+Governance §5.2 `change_type`; persistence serializer/schema/resource relations enter proof closure only for
+`persistence-boundary` or `external-resource-dependency` triggers, across all four proof classes. Execution
+truth gains `ExecutionError`; bounded substitutes are restricted to `excluded`/`unavailable`/`not-run`
+and cannot convert `failed`/`skipped`/`runner-failed`. The governance suite grows 58 → 64 fixtures; with
+8 assembly-tier fixtures, existing `tools/tests/test_*.py` discovery runs 72 tooling tests. Approved Governance
+v0.10/A0 and #19/#20 normative files are unchanged. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or
+tuning value changed.
+**Last Updated (prior):** August 31, 2026 — **A2 authority alignment and execution truth; planning/tooling only.**
+`docs/planning/project-architecture-governance-integration-plan.md` advances v0.11 → v0.12 and
+`tools/architecture-governance/reference_semantics.py` v1.4.0 → v1.5.0. The plan/code now use exactly
+Governance's four proof classes; persistence/external-resource remains a trigger surface, fallback scopes map all
+six structural classifications with deterministic precedence, and changed-surface optimization reruns for any
+changed member of the derived closure. Execution truth is executable for all seven states with explicit bounded-
+substitute permission/approval semantics. The governance suite grows 50 → 58 fixtures; with 8 assembly-tier
+fixtures, existing `tools/tests/test_*.py` discovery runs 66 tooling tests. Governance v0.10/A0 and #19/#20
+normative files are unchanged. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+**Last Updated (prior):** August 31, 2026 — **A2 third hostile-review hardening; typed governance findings.**
+`tools/architecture-governance/reference_semantics.py` advances v1.3.0 → v1.4.0: deleted/renamed
+current component selectors surface as `IdentityError`; KD-W1 output separates `stale-tuning-selector`
+contract-integrity findings from `inactive-tuning-change` KD-W1 violations; stale tuning selectors are
+deliberately reported for active as well as inactive components. The governance suite grows 48 → 50 fixtures;
+with 8 assembly-tier fixtures, existing `tools/tests/test_*.py` discovery now runs 58 tooling tests. No
+`src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+**Last Updated (prior):** August 31, 2026 — **A2 second hostile-review hardening; tooling/tracking only.**
+`tools/architecture-governance/reference_semantics.py` advances v1.2.0 → v1.3.0: inactive-contract
+tuning selectors are resolved independently of the changed set, duplicate contract identities and duplicate
+semantic-fact symbol mappings fail closed, anchor resolution drift is normalized to `ActivationError`, and a
+reusable `SemanticFactIndex` is available for repeated resolution. Its suite grows 42 → 48 fixtures and pins
+v1.3.0 directly. `tools/assembly-tier-check.py` advances v1.5 → v1.6 so machine JSON and evidence digests share
+finite-number serialization; its suite grows 7 → 8 fixtures. Existing `tools/tests/test_*.py` discovery therefore
+runs 56 tooling tests. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+**Last Updated (prior):** August 31, 2026 — **A2 hostile-review hardening; tooling/CI/tracking only.**
+`tools/architecture-governance/reference_semantics.py` advances v1.1.0 → v1.2.0 after revalidating
+Claude's review of `2be53ff4`: deleted tuning selectors no longer crash KD-W1, exception scopes are
+closed schemas, component IDs normalize consistently, selector-v1 covers static constructors/indexers/events,
+non-finite numbers are rejected, duplicate component→symbol bindings fail, and selector-history rationale is
+required. The reference suite grows 28 → 42 fixtures and directly covers every selector kind plus the previously
+untested activation/value/operator branches. `.github/workflows/ci.yml` now discovers all
+`tools/tests/test_*.py` under the existing `Spec hygiene checks` job. The slice-1 Markdown table break was
+already repaired in slice 2. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+**Last Updated (prior):** August 31, 2026 — **A2 slice 2; applicability and proof-freshness semantics.**
+`tools/architecture-governance/reference_semantics.py` advances v1.0.0 → v1.1.0 with deterministic
+applicability precedence/conflict/N/A handling plus proof-class dependency closure, subject-scope freshness,
+and conservative changed-surface semantics. The companion suite grows 10 → 28 fixtures; the existing
+`Spec hygiene checks` step continues to run it with no new CI status. The tools-table formatting introduced
+in slice 1 is repaired so both A2 rows remain inside the existing Markdown table. A2 remains in progress:
+review-state transitions and canonical machine-readable schemas have not landed. No `src/`, `.cs`, `.asmdef`,
+gameplay, save, RNG, or tuning value changed.
+**Last Updated (prior):** August 31, 2026 — **A2 slice 1; architecture-governance tooling and CI only.**
+Added `tools/architecture-governance/reference_semantics.py` v1.0.0 and
+`tools/tests/test_architecture_governance_semantics.py`. The reference semantics consume typed compiler facts
+and freeze selector-v1 exact resolution, stable component identity/history, machine-verifiable disable anchors,
+and KD-W1 tuning-surface matching. `.github/workflows/ci.yml` now runs the ten-fixture suite inside the existing
+`Spec hygiene checks` job; no new required status. `CHANGELOG.md` synchronized. A2 remains in progress:
+applicability, proof closure/freshness, review-state semantics, and the canonical schemas have not landed yet.
+No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.
+**Last Updated (prior):** August 31, 2026 — **PR #344 CI/link-check and Codex-review corrections; tooling/tracking only.**
 `.github/markdown-link-check.json` now ignores exactly two Microsoft Learn URLs that are current but
 return transport status `0` to the GitHub markdown-link-check runner; no broader `learn.microsoft.com`
 exemption was added. `a0-governance-adoption-review.md` v1.7 → v1.8 adds the stable reviewer identity
@@ -2223,8 +2311,10 @@ Use this file to track the **current folder structure**, not legacy per-version 
 |------|---------|
 | `tools/run-perf-local.sh` | Stage 0 local pre-commit perf-gate runbook (Appendix E / FR-PO-070): runs budget-auditor.py schema + loop-tag passes, then invokes perf-harness/run.sh for anchor baselines; reviewer pastes output into PR description (FR-PO-071) |
 | `tools/budget-auditor.py` | §5.3 schema-conformance auditor + §5.5 loop-tag auditor (FR-PO-070): walks every approved spec §6 against Appendix B template; reports missing sections and untagged ms values as ERR-018-NNN candidates; `--mode schema\|loop-tag\|all` |
-| `tools/assembly-tier-check.py` | Mechanical guard and single authoritative parser for Spec #20 §3.5.2 / FR-CS-046/046a/046b. Human mode preserves the existing placement/direction/Infrastructure/unknown-reference/production-cycle verdict; v1.5 adds deterministic `--json` evidence for the complete `src/**/*.asmdef` graph, actual production/test/out-of-band/unresolved classifications, separate graph/classification/subject SHA-256 digests, external/ambiguous references, and report-only all-assembly cycle components. `python3 tools/assembly-tier-check.py --repo .` or `--json`; exit 0 pass / 1 policy failure / 2 unparseable. Created August 17, 2026; v1.5 August 29, 2026. |
-| `tools/tests/test_assembly_tier_check.py` | Stdlib `unittest` regression suite for assembly-tier-check v1.5 machine-report semantics: classification-aware digest movement, §3.5.2 title churn, FR-CS-046b Infrastructure binding, test-only cycle visibility, test-only external-reference filtering, stray root-level asmdef visibility, and JSON CLI parity. Wired into the `Spec hygiene checks` CI job. Created August 29, 2026. |
+| `tools/assembly-tier-check.py` | Mechanical guard and single authoritative parser for Spec #20 §3.5.2 / FR-CS-046/046a/046b. Human mode preserves the existing placement/direction/Infrastructure/unknown-reference/production-cycle verdict; v1.5 added deterministic `--json` complete-graph evidence and graph/classification/subject digests; v1.6 unifies machine-report/digest finite-JSON serialization and rejects NaN/Infinity. `python3 tools/assembly-tier-check.py --repo .` or `--json`; exit 0 pass / 1 policy failure / 2 unparseable. Created August 17, 2026; v1.6 August 31, 2026. |
+| `tools/tests/test_assembly_tier_check.py` | Stdlib `unittest` regression suite for assembly-tier-check v1.6 machine-report semantics; 8 fixtures cover classification-aware digest movement, §3.5.2 title churn, FR-CS-046b binding, test-only graph behavior, stray root-level asmdefs, JSON CLI parity, and non-finite digest rejection. Discovered by `tools/tests/test_*.py` in `Spec hygiene checks`. Created August 29, 2026. |
+| `tools/architecture-governance/reference_semantics.py` | A2 executable reference semantics v1.9.0 over typed compiler/repository facts. Selector type IDs are pinned to C# XML documentation ID type-signature spelling, including byref `@`, so legal overloads remain distinct without a parallel ref-kind field. Defines closed selector/identity/activation/KD-W1 semantics; shared typed enum validation for untrusted JSON; deterministic applicability with required strict-mode Governance §5.2 subject `change_type`, optional rule `change_types` filters ordered by set specificity without crossing surface precedence, explicit non-strict incomplete-context diagnostics, exactly four Governance proof classes, persistence/resource closure driven only by evaluated change context, closure/freshness and conservative changed-surface rerun semantics, and unchanged seven-state execution truth with `ExecutionError`. It does not parse C# source. Created August 31, 2026; v1.9.0 September 1, 2026. |
+| `tools/tests/test_architecture_governance_semantics.py` | Stdlib `unittest` suite for A2 reference semantics; 77 fixtures cover selector/identity/activation/KD-W1, XML-doc type-ID overload identity including value-vs-byref, unhashable enum validation across semantics domains, required applicability change context, rule change-type matching/set-specificity precedence, explicit non-strict incomplete-context diagnostics, exact four-proof authority, conditional persistence/resource closure, context-driven proof freshness, closure-aware changed-surface decisions, typed execution errors/bounded-substitute restrictions, and the pinned semantics version. Discovered by `tools/tests/test_*.py` in `Spec hygiene checks`. Created August 31, 2026. |
 | `tools/recurring-defect-lint.py` | Seven-class recurring-defect linter over the working tree (FR-CS-056/057 `src/**.cs` header + version-history hygiene; spec/design-supplement header-vs-version-table coherence; the ERR-041-012 phantom registered-stream residue; ERR-041-019 draw-key spellings; stale forward-design claims; plus two further classes — see its own header). Pure text analysis: never compiles, never runs the .NET gate, never writes. `python3 tools/recurring-defect-lint.py --repo .`; exit 0 = no ERROR finding. The gate line "recurring-defect-lint: 0 ERROR" quoted across this file's entries is this tool. Created August 8, 2026; inventoried August 18, 2026 (checker-tools pass — it had carried no inventory row anywhere for ten days). |
 | `tools/recurring-defect-lint.suppressions` | The lint's documented, deliberately-frozen residuals — a suppressed finding still prints as INFO with its reason, so nothing disappears silently. Format: `<path-glob>:<regex> # reason`, the reason required to cite an ERR id, a pass, or a governance rule; a suppression asserts the finding is CORRECT AS IT STANDS, never that it is unimportant. Entries as of August 18, 2026: the three frozen-supplement promotion-row inversions, the #16 §3.5 dual-v1.0.14 back-prop collision, and a PRE-ARMED block guarding CHANGELOG-src/`section-3.md`/design-supplement rows the current scan scope does not reach, so widening that scope later does not re-raise a collision already decided. Created August 8, 2026 alongside the lint itself; inventoried here August 18, 2026 (reviewed-findings pass — carried no inventory row of its own since creation). |
 | `tools/chat-review.py` | Claude Code session analyzer: reads local `~/.claude/projects/<slug>/*.jsonl` transcripts and emits an actionable-findings JSON document consumed by the chat-review artifact dashboard (`--out PATH`, `--repo .` for repo-side measures, `--since N` days). Quiet-by-default contract — a finding is emitted only when its threshold trips, so a clean run emits `"findings": []` rather than manufacturing something to say. No network, no API key, no model call; pure local measurement. Created July 31, 2026; inventoried August 18, 2026 (reviewed-findings pass — carried no inventory row anywhere since creation). |

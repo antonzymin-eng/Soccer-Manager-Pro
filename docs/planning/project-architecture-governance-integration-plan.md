@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.11\
+**Version:** 0.16\
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
@@ -322,6 +322,12 @@ Create `docs/tracking/architecture-governance/runtime-surface-classifications.js
 
 Allowed structural classifications remain: `production-runtime-root`; `contracted-child`; `test-only`; `tooling-only`; `generated-or-external`; `non-runtime-bearing`.
 
+Applicability fallback scopes are selectors over those six classifications; they are not additional classifications. Their mapping is frozen as:
+
+- `runtime-bearing` → `production-runtime-root`, `contracted-child`;
+- `non-runtime-bearing` → `test-only`, `tooling-only`, `generated-or-external`, `non-runtime-bearing`;
+- `repository` → all six classifications plus repository-level subjects that do not carry a structural classification.
+
 Activation state is **not** another classification value. Structural role answers what the surface is; activation state answers whether a production capability is currently expected to execute.
 
 ### 3.2.1 Subject identity versus provenance
@@ -351,7 +357,7 @@ Compiler-discovered source surfaces use deterministic mechanical `symbol_key` va
 
 Stable `component_id` values are allocated only for durable declared architectural concepts such as a supported host, composition root, runtime-bearing component, or testhost. A file/symbol rename updates that component's selector/history; it does not create a new architectural component solely because a path changed.
 
-The selector grammar MUST be frozen in A2 and MUST distinguish namespaces/types, constructors, overloaded method signatures, static members, and assembly identity. Contracts keep `selector_history` sufficient to migrate ordinary moves/renames while preserving logical identity. Ambiguous or multiply resolving selectors fail strict mode.
+The selector grammar MUST be frozen in A2 and MUST distinguish namespaces/types, constructors, overloaded method signatures, static members, and assembly identity. Every selector `type_id`, `containing_type_id`, and `parameter_type_ids` value MUST use the C# XML documentation ID type-signature spelling emitted from compiler symbols, not source/display-name text. The convention includes the by-reference `@` suffix, so legal overloads such as `M(System.Int32)` and `M(System.Int32@)` remain mechanically distinct; it also supplies the canonical spelling for generic parameters/types, arrays, pointers, and nested type structure. Producers MUST NOT erase those distinctions by emitting plain type names. Contracts keep `selector_history` sufficient to migrate ordinary moves/renames while preserving logical identity. Ambiguous or multiply resolving selectors fail strict mode.
 
 Each classification record therefore carries the current `symbol_key`, `kind`, source path, symbol/signature, assembly, classification, and stable `component_id`/`contract_id` only when the surface has durable architectural identity.
 
@@ -386,9 +392,15 @@ Narrative fields may explain intent but cannot satisfy blocking ownership, activ
 
 Create `docs/tracking/architecture-governance/applicability-rules.json`.
 
-Each rule contains `rule_id`, selectors, trigger ref, requirement refs, proof classes, gate classes, allowed N/A reasons, precedence, and fallback scope.
+Each applicability evaluation has a **current change context**. In strict mode the subject MUST carry exactly one typed `change_type` from the canonical Governance §5.2 rows: `pure-local-calculation`, `new-public-cross-assembly-api`, `new-runtime-service`, `new-composition-root-registration`, `host-bootstrap-change`, `static-initialization-change`, `persistence-boundary`, `external-resource-dependency`, `testhost-runtime-divergence-fix`, `dependency-graph-only-refactor`, or `pure-data-schema-no-runtime-behavior`. An omitted change context cannot certify proof closure completeness.
 
-All matches are evaluated. Schema-defined specificity controls precedence; equal-precedence conflicts fail. N/A is valid only for an enumerated reason and required approval reference. `--changed` optimizes only after applicability is resolved and falls back to the full relevant universe whenever non-impact cannot be proven. Unresolved applicability fails strict mode.
+Each rule contains `rule_id`, selectors, trigger ref, optional `change_types` match set, requirement refs, proof classes, gate classes, allowed N/A reasons, precedence, and fallback scope. `trigger_ref` identifies the owning FR/AP/failure-mode authority; `change_types` is only an applicability filter over the current subject change context. A rule with no `change_types` applies across all change contexts allowed by its other selectors.
+
+All matches are evaluated. Schema-defined specificity controls precedence; equal-precedence conflicts fail. Precedence is not author-chosen: every explicit selector/identity/classification/activation rule outranks every fallback rule; among fallback rules, `runtime-bearing` and `non-runtime-bearing` outrank `repository`; the two category fallbacks are disjoint under §3.2's mapping. Change context is orthogonal to that surface ordering. Among otherwise-identical rules, a smaller matching non-empty `change_types` set is more specific than a broader matching set, every restricted set outranks a generic rule, and equal-sized overlapping context sets with different obligation payloads still fail as an ambiguity. Context specificity MUST NOT outrank one step of surface specificity. N/A is valid only for an enumerated reason and required approval reference.
+
+All enum-valued JSON inputs are fail-closed typed validation surfaces. Wrong JSON shapes such as arrays/objects where a scalar enum is required MUST raise the owning semantics error type rather than leaking host-language `TypeError`. Non-strict applicability may be used for discovery, but if current `change_type` is absent its result MUST explicitly report incomplete change context (currently `context_complete: false` with `missing-change-type`) and MUST remain ineligible for proof certification under §3.7.1.
+
+`--changed` optimizes only after applicability and the full proof-class closure are resolved. It MUST fall back to the full relevant proof universe when any changed surface is unmapped, when the current proof is stale, or when a changed surface is a member of the derived closure. It MAY skip only when every changed surface is mapped, none belongs to the closure, and the current applicability/closure fingerprints remain fresh. Unresolved applicability fails strict mode.
 
 Applicability answers **which obligations apply**. It does not itself define the complete freshness dependency surface of a proof. The proof-class closure resolver in §3.7 derives that surface from the matched obligations, integration contracts, compiler/asmdef facts, tests/fixtures, configuration, and tooling required by the proof class.
 
@@ -408,20 +420,26 @@ Reusable proof records require: `schema_version`; `proof_id`; `proof_class`; req
 
 ### 3.7.1 Proof-class closure resolution
 
-The audit MUST derive and validate closure using the proof class rather than trusting an author-supplied file list:
+The audit MUST derive and validate closure using the proof class rather than trusting an author-supplied file list. The proof-class enum is exactly the four classes owned by Governance §5 and FR-AG-027–030: `structural-reachability`, `lifecycle-order`, `failure-injection`, and `mutation`. Persistence boundaries and external resources are applicability/change triggers from Governance §5.2, not additional proof classes.
 
 - structural reachability: matched contract + owning roots + construction/registration edges + applicable public/bypass surfaces + relevant asmdef nodes/edges;
 - lifecycle/order: structural closure + lifecycle members, owners, ordering edges, relevant synchronization/thread-affinity members, and testhost equivalents;
-- persistence/external-resource proof: applicable structural/lifecycle closure + serializer/schema/resource/configuration surfaces;
-- executable failure/mutation proof: applicable closure + exact target symbol, test/fixture, runner configuration/environment, and tool semantics.
+- failure-injection: applicable structural/lifecycle closure + exact failure target, test/fixture, runner configuration/environment, and tool semantics;
+- mutation: applicable structural/lifecycle closure + exact mutation target, test/fixture, runner configuration/environment, and tool semantics.
 
-Proof records MAY include additional declared dependencies, but the resolver verifies they are not narrower than the mechanically required closure. If the resolver cannot prove closure completeness, strict mode fails or the proof must use a #19-approved bounded substitute.
+For any of those four proof classes, serializer/schema/resource edges are added to the closure only when the **current applicability subject** has `change_type: persistence-boundary` or `change_type: external-resource-dependency`. The closure engine does not infer that context from `trigger_ref` or from rule payloads. Generic tool/runtime configuration dependencies remain governed by their ordinary relation semantics; a persistence change context does not make every repository configuration file relevant. The current `change_type` is part of the applicability subject digest and is stamped into proof closure output.
+
+Proof records MAY include additional declared dependencies, but the resolver verifies they are not narrower than the mechanically required closure. A proof closure cannot be certified from an applicability result that omits the current `change_type`; strict applicability already rejects that omission, and closure validation also fails closed if fed a non-strict/incomplete applicability result. If the resolver otherwise cannot prove closure completeness, strict mode fails or the proof must use a #19-approved bounded substitute.
 
 Freshness must detect material additions, deletions, renames, generated/config changes, new applicable roots, asmdef changes, and checker/extractor-semantic changes inside that resolved closure. A rename that preserves stable component identity updates selector binding and fingerprints without pretending the architectural component was deleted/recreated.
 
 ### 3.7.2 Execution truth
 
-Every required executable record carries `execution_state` from: `passed`, `failed`, `skipped`, `excluded`, `unavailable`, `not-run`, `runner-failed`. Only `passed` satisfies an unqualified required execution obligation. Any other state is unsatisfied unless #19 explicitly permits a bounded substitute and that substitute is recorded/approved.
+Every required executable record carries `execution_state` from: `passed`, `failed`, `skipped`, `excluded`, `unavailable`, `not-run`, `runner-failed`. Only `passed` satisfies an unqualified required execution obligation.
+
+A bounded substitute is a proportionality mechanism for omitted or unavailable proof, not a waiver of contrary execution evidence. Therefore `failed`, `skipped`, and `runner-failed` are unsatisfied and cannot be converted to satisfied by a bounded substitute. `excluded`, `unavailable`, and `not-run` may satisfy only when #19 explicitly permits a bounded substitute for that obligation and the approved substitute record carries the exact authority reference, approval reference, justification, and omitted proof surface or remaining uncertainty. `passed` and bounded-substitute claims are mutually exclusive.
+
+A2 freezes this executable state machine before A3 consumes it.
 
 Execution records bind the exact test/command/runner, environment/configuration, subject digest, start/end result, and machine-readable result artifact when the runner provides one.
 
@@ -658,9 +676,9 @@ Append after FR-TS-085 using ID | Statement | Level | Activation.
 | FR-TS-091 | Triggered mutation MUST demonstrate evidence sensitivity for the named critical invariant using an exact target and reproducible mutant/patch identity, baseline result, mutant result, and expected detector; no project-wide mutation-score target is created. | MUST | Stage 0+1 |
 | FR-TS-092 | Reusable proof MUST have its complete relevant dependency universe mechanically derived/validated by proof class and stale only on material changes inside that resolved closure or its tool/config semantics. | MUST | Stage 0+1 |
 | FR-TS-093 | #19 merge/review mechanics MUST consume Governance disposition/convergence state and MUST NOT rederive convergence from severity. | MUST | Stage 0 |
-| FR-TS-094 | Missing, failed, stale, schema-invalid, applicability-incomplete, skipped, excluded, unavailable, not-run, or runner-failed required architectural proof MUST block merge once the gate is active unless an approved bounded substitute explicitly satisfies the obligation. | MUST | Stage 0+1 |
+| FR-TS-094 | Missing, failed, stale, schema-invalid, applicability-incomplete, skipped, excluded, unavailable, not-run, or runner-failed required architectural proof MUST block merge once the gate is active. A bounded substitute MAY replace only an `excluded`, `unavailable`, or `not-run` execution when FR-TS-096 permits it; it MUST NOT convert `failed`, `skipped`, or `runner-failed` execution into satisfaction. | MUST | Stage 0+1 |
 | FR-TS-095 | Merge-critical governance tooling MUST have known-good, known-bad, and blind-spot verification proportionate to false-positive/negative consequence. | MUST | Stage 0+1 |
-| FR-TS-096 | Bounded substitutes for computationally disproportionate exhaustive proof MUST record scope, rationale, omitted uncertainty, and approval. | MUST | Stage 0+1 |
+| FR-TS-096 | Bounded substitutes are permitted only for computationally disproportionate, intentionally omitted, or unavailable proof and MUST record authority, scope/rationale, omitted surface or remaining uncertainty, and approval. They MUST NOT waive an executed proof failure, runner failure, or ordinary skipped execution. | MUST | Stage 0+1 |
 | FR-TS-097 | A `[GT]` or owner-declared calibration/tuning change MUST NOT land for a component whose activation state is intentionally-disabled, pending-integration, or unresolved unless an approved exception explicitly authorizes that tuning scope. | MUST | Stage 0+1 |
 
 §2.2 gains FR-TS-086–097 as Architecture proof/evidence integration, mechanics in new §3.11, verification through §5.6/architecture gate. Total becomes 97.
@@ -706,7 +724,7 @@ Acceptance requires repo-wide sweeps for FR-TS-001…085/85-count claims, gate l
 
 Runtime architecture tests remain with owning behavior unless genuinely cross-host composition has no clean existing owner. The governance tool validates metadata/results; it does not become a mega test assembly.
 
-Owning placement does not imply execution. Every required executable proof resolves to a runner capable of compiling/executing that assembly and a machine-readable execution record. A required test excluded by `known-failures.txt`, flake quarantine, `[Ignore]`, `Assert.Ignore`, unsupported-assembly filtering, conditional Unity-job skipping, or equivalent exclusion is unsatisfied unless #19 explicitly approves a bounded substitute.
+Owning placement does not imply execution. Every required executable proof resolves to a runner capable of compiling/executing that assembly and a machine-readable execution record. A required test excluded by `known-failures.txt`, flake quarantine, `[Ignore]`, `Assert.Ignore`, unsupported-assembly filtering, conditional Unity-job skipping, or equivalent exclusion is unsatisfied. Only a deliberate `excluded`, `unavailable`, or `not-run` state may be replaced by a #19-approved bounded substitute under FR-TS-096; an actual `skipped`, `failed`, or `runner-failed` result remains unsatisfied.
 
 The architecture gate MUST mechanically reject intersection between its required-test set and active quarantine/exclusion sets. Where possible it also executes the resolved required test set directly; otherwise it consumes mandatory upstream runner results with exact test identity/result binding.
 
@@ -788,7 +806,7 @@ Report-only until prerequisites: source-level Class-A absence before compiler-ba
 
 Block after A4–A8 as applicable: new unclassified root; `active` component with prohibited Class-A dormancy; invalid/drifted intentional-disable anchor; KD-W1 tuning violation; changed governed lifecycle without proof; prohibited bypass; missing required proof; open Blocker; stale final review; invalid active baseline.
 
-`--changed` never weakens applicability and falls back when non-impact cannot be proven.
+`--changed` never weakens applicability. After full closure resolution it falls back when a changed surface is unmapped, the proof is stale, or the changed surface belongs to the derived closure; it skips only on proven non-impact.
 
 ---
 
@@ -852,7 +870,7 @@ Non-negotiable 12 is **not** relaxed by this amendment and continues to govern e
 
 ## A2 — Freeze schemas and executable semantics
 
-Freeze identity/selectors, activation-state/disable-anchor semantics, applicability, contracts, proof/closure, property/exception, review, and baseline schemas. The reference semantics include activation-anchor evaluation and KD-W1 tuning-surface matching. Any compiler reference implementation is source-built with the pinned .NET SDK/toolchain.
+Freeze identity/selectors, activation-state/disable-anchor semantics, applicability with required strict-mode Governance §5.2 subject change context plus optional rule `change_types` filters, contracts, the exact four Governance proof classes and their conditional closure/freshness behavior, execution-truth/bounded-substitute semantics, property/exception, review, and baseline schemas. The selector contract pins C# XML documentation ID type-signature spelling for every selector type ID, including byref `@`, so the future compiler fact producer cannot collapse legal overloads by using display/plain type names. The reference semantics include activation-anchor evaluation, KD-W1 tuning-surface matching, typed enum validation for untrusted JSON, schema-derived fallback/context precedence with narrower matching context sets outranking broader ones without crossing surface precedence, explicit non-strict incomplete-context diagnostics, persistence/resource closure activation from the evaluated subject change type rather than rule payload, fail-closed proof closure when change context is absent, and conservative changed-surface rerun decisions. Any compiler reference implementation is source-built with the pinned .NET SDK/toolchain.
 
 ## A3 — Amend and reapprove #19/#20 governance integration
 
@@ -1199,6 +1217,11 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.16 | September 1, 2026 | — | A2 selector type-ID canonicalization after Codex review: pins every selector type ID to the C# XML documentation ID type-signature convention emitted from compiler symbols, including byref `@`; adds a value-vs-ref overload regression proving `M(System.Int32)` and `M(System.Int32@)` resolve distinctly without introducing a redundant `parameter_ref_kinds` field. Selector-v1 shape, execution truth, applicability, proof closure, Governance v0.10/A0, and #19/#20 normative files remain unchanged. |
+| 0.15 | September 1, 2026 | — | A2 residual hardening after verification of v0.14: normalizes every enum-valued untrusted JSON boundary through typed semantics errors instead of host-language `TypeError`; makes narrower matching `change_types` sets outrank broader matching sets while preserving the surface-specificity ordering; and makes non-strict missing change context explicitly diagnostic rather than silently indistinguishable from no applicable context-gated rule. Execution truth and the v0.14 subject-side change-context model are otherwise unchanged. Governance v0.10/A0 and #19/#20 normative files remain unchanged. |
+| 0.14 | August 31, 2026 | — | A2 change-context model correction after verification of v0.13: moves Governance §5.2 `change_type` from obligation/rule payload into the evaluated applicability subject; strict resolution and proof closure now require explicit current change context; rules may optionally filter with `change_types`; matching context-specific rules mechanically outrank otherwise-identical generic rules; persistence/resource closure reads only the current subject context. This removes both v1.5 over-inclusion and v1.6 omission-driven false freshness. Execution truth is unchanged. Governance v0.10/A0 and #19/#20 normative files remain unchanged. |
+| 0.13 | August 31, 2026 | — | A2 closure/execution hardening after verification of v0.12: adds typed Governance §5.2 `change_type` to applicability so serializer/schema/resource closure edges are activated only for persistence-boundary or external-resource triggers; applies that condition across all four proof classes; restricts bounded substitutes to `excluded`/`unavailable`/`not-run` and forbids them from converting `failed`/`skipped`/`runner-failed`; and aligns proposed FR-TS-094/096 to that frozen behavior. Governance v0.10/A0 and #19/#20 normative files remain unchanged. |
+| 0.12 | August 31, 2026 | — | A2 cross-surface authority correction after hostile sweep: removes the invented persistence/external-resource fifth proof class and freezes Governance's exact four proof classes; maps all six structural classifications into the three applicability fallback scopes and defines fallback precedence; makes `--changed` rerun whenever changed material is inside the derived closure; and requires A2 executable execution-truth/bounded-substitute semantics before A3. Governance v0.10 and A0 approval are unchanged. |
 | 0.11 | August 31, 2026 | — | Post-A0 evidence correction only: review-record pointer advances v1.7 → v1.8 after Codex correctly identified that §11 A0 condition 2 required a stable reviewer identity rather than the relative phrase `same assistant`. Governance v0.10, its Approved status, canonical adoption digest, and A0 CLOSED state are unchanged. |
 | 0.10 | August 31, 2026 | — | **A0 CLOSED.** Records project-owner human sign-off, Governance v0.10 `Draft → Approved`, and the post-status-edit canonical adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` (Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`). Removes the stale pre-A0 claim that SPEC_INDEX alignment is an A0 prerequisite; §9.7/downstream registration remains owned by later stages. A2 is now the next stage. No #19/#20 normative file, code, workflow, or runtime behavior changed. |
 | 0.9 | August 31, 2026 | — | Synchronizes with Governance v0.10 after hostile review: rejects invalid Disposition/Status pairings, requires every finding to reach its mapped terminal Status before convergence, and updates A0's findings gate accordingly. Governing authority reference advances to v0.10. No #19/#20 normative file, code, workflow, or runtime behavior changed. |

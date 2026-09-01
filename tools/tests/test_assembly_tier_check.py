@@ -203,6 +203,11 @@ class AssemblyTierReportTests(unittest.TestCase):
         self.assertEqual(
             direct["digests"]["subject_sha256"],
             parsed["digests"]["subject_sha256"])
+    def test_digest_rejects_non_finite_numbers(self):
+        with self.assertRaises(ValueError):
+            checker._digest({"value": float("nan")})
+
+
 
 
 if __name__ == "__main__":

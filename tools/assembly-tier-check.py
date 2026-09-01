@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # File: tools/assembly-tier-check.py
 # Created: August 17, 2026
-# Modified: August 29, 2026
+# Modified: August 31, 2026
 # Purpose: Mechanical guard for the Spec #20 §3.5.2 ten-tier assembly order
 #          (FR-CS-046 / FR-CS-046a / FR-CS-046b). Parses the tier table OUT OF
 #          the spec — docs/specs/code-standards/section-3.md §3.5.2 — rather
@@ -380,9 +380,19 @@ def find_cycle_components(graph):
     return components
 
 
+def _json_dumps(value, indent=None):
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":") if indent is None else None,
+        indent=indent,
+        allow_nan=False,
+    )
+
+
 def _digest(value):
-    payload = json.dumps(
-        value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    payload = _json_dumps(value)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -776,16 +786,14 @@ def main(argv=None):
         report = analyze(repo)
     except (OSError, UnicodeError, RuntimeError) as exc:
         if args.json:
-            print(json.dumps(
-                {"report_version": 1, "status": "error", "error": str(exc)},
-                ensure_ascii=False, sort_keys=True))
+            print(_json_dumps(
+                {"report_version": 1, "status": "error", "error": str(exc)}))
         else:
             print("FATAL: %s" % exc)
         return 2
 
     if args.json:
-        print(json.dumps(
-            report, ensure_ascii=False, sort_keys=True, indent=2))
+        print(_json_dumps(report, indent=2))
     else:
         print_human_report(report)
     return 1 if report["policy_failures"] else 0
@@ -861,3 +869,8 @@ if __name__ == "__main__":
 # |         |            |             | by v1.4; v1.5 reports it unresolved    |
 # |         |            |             | and fails because §3.5.2 is folder-    |
 # |         |            |             | keyed. Current tree is unaffected.     |
+# | 1.6     | 2026-08-31 | ChatGPT     | A2 consistency hardening: machine-report |
+# |         |            |             | serialization and evidence digests now   |
+# |         |            |             | share one finite-JSON helper and reject   |
+# |         |            |             | NaN/Infinity instead of emitting non-JSON |
+# |         |            |             | numeric tokens. Verdict semantics unchanged.|
