@@ -12,7 +12,20 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 1, 2026 — **A2 second independent review; condition 4 still open. Planning/tooling only.**
+> **Last Updated:** September 1, 2026 — **A2 third independent review; condition 4 still open. Planning/tooling only.**
+> A third independent pass over `7d4e949` found one substantive defect, again inside the previous round's remediation. The integration plan advances v0.22 → v0.23 and `docs/tracking/a2-schema-semantics-closure.md` v0.5 → v0.6. Conditions 1, 2, 3 and 5 stand; row 4 stays **PENDING**. **A2 stays OPEN and A3 stays BLOCKED.**
+>
+> **A2-R6-001 (Medium).** Round 5's timestamp remediation replaced fictional *future* timestamps with fictional *earlier* ones. A finding's `Open` event was stamped at the commit time of the artifact reviewed — `11547d4` at `19:24:32Z` for round 4 — but an independent review necessarily happens **after** the artifact it reviews is pushed, so the record placed each discovery at or before the thing discovered. The resolution stamps were not commit times at all: `20:11:08Z` against `7d4e949`'s `20:13:03Z`, while the record described them as "the commit time that carried the fix". `test_status_history_is_neither_future_dated_nor_out_of_order` checked only `<=` wall clock and monotonicity, so it could see neither error — the document and its test again claimed more than they verified.
+>
+> **The exact review times are not recoverable, and the ledger no longer pretends otherwise.** `at` is now defined as the time a transition was **recorded** into this ledger, derived from the commit that first published the finding; the reviewed and resolving revisions are carried in `evidence`. The review happened somewhere between the artifact it reviewed and the record of it, and that interval is not invented away. The regression brackets every timestamp inside it:
+>
+> > commit time of the artifact reviewed **<** `at` **≤** the commit that published the record.
+>
+> The **strict** lower bound was not free. A first cut used `>=`, and a probe showed it did not catch the very defect it replaced, because the bad value was exactly the reviewed commit's timestamp — a green test over a known-bad ledger. All three shapes are now proven to fail: dated at the reviewed artifact, dated before it, and dated after publication.
+>
+> Every independent round so far has found a defect inside the preceding non-independent remediation — rounds 4, 5 and 6 in turn. Round 6's corrections are again non-independent, so a **round-7** pass over the pushed result is owed before condition 4 is claimed. Discovery runs 156 tests across three suites (139 governance + 9 phantom-stream context + 8 assembly-tier). `recurring-defect-lint: 0 ERROR`. Approved Governance v0.10/A0 and #19/#20 normative files are unchanged. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+>
+> **Last Updated (prior):** September 1, 2026 — **A2 second independent review; condition 4 still open. Planning/tooling only.**
 > A second independent pass over `5ebc3f7` found three further issues, **two of them inside the round-4 remediation itself**. The integration plan advances v0.21 → v0.22 and `docs/tracking/a2-schema-semantics-closure.md` v0.4 → v0.5. Conditions 1, 2, 3 and 5 stand; row 4 stays **PENDING**. **A2 stays OPEN and A3 stays BLOCKED.**
 >
 > **A2-R5-001 (Medium).** The historical-digest verification could report PASS having checked only part of what its name claimed. It skipped unavailable revisions one at a time and skipped the test only when *none* resolved, so a partial-history checkout could verify one digest of five, ignore the rest, and still show green under `test_every_round_digest_recomputes_from_the_tree_it_names`. The default CI checkout is shallow, so that was the expected path rather than an edge case. Verification is now **all-or-nothing**: one missing revision skips the whole check and names what is absent. Proven both ways — it skips wholesale on partial history, and still fails loudly on a wrong digest.

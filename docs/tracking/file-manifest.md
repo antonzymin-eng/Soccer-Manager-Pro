@@ -1,6 +1,18 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 1, 2026 — **A2 second independent review; condition 4 still open. Planning/tooling only.**
+**Last Updated:** September 1, 2026 — **A2 third independent review; condition 4 still open. Planning/tooling only.**
+A third independent pass over `7d4e949` found that round 5's timestamp fix had replaced fictional future
+times with fictional earlier ones: Open events were stamped at the commit time of the artifact reviewed,
+placing each discovery at or before the thing discovered, while resolutions were build times described as
+commit times. The exact review times are **not recoverable** and the ledger no longer pretends otherwise —
+`at` is now when a transition was RECORDED, derived from the commit that first published the finding, with
+reviewed and resolving revisions in `evidence`. The regression brackets every timestamp between the reviewed
+artifact and the publishing commit with a **strict** lower bound; a first cut used `>=` and a probe showed it
+missed the very defect it replaced. The integration plan advances v0.22 → v0.23 and
+`docs/tracking/a2-schema-semantics-closure.md` v0.5 → v0.6. Discovery runs 156 tests across three suites
+(139 governance + 9 lint + 8 assembly-tier). **Row 4 remains PENDING; A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 second independent review; condition 4 still open. Planning/tooling only.**
 A second independent pass over `5ebc3f7` found three issues, two of them in the round-4 remediation itself.
 Historical-digest verification could report PASS having checked only part of what its name claimed — it is now
 all-or-nothing and names the missing revisions. Round-4 status events were dated after the commit asserting
@@ -2965,7 +2977,7 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 | `docs/tracking/architecture-governance/applicability-rules.json` | Schema-v1 deterministic applicability-rule registry; seeded empty pending the coordinated A3 authority bundle. |
 | `docs/tracking/architecture-governance/property-registry.json` | Schema-v1 architectural-property registry with append-only decision and revalidation history; seeded empty. |
 | `docs/tracking/architecture-governance/exceptions.json` | Schema-v1 Governance §7 property-exception registry; seeded empty. FR-CS/FR-TS waivers remain owner-specific. |
-| `docs/tracking/architecture-governance/review-ledger.json` | Schema-v1 durable run/finding review ledger with read-only/no-inference legacy policy. **No longer an empty seed:** carries the A2 review series `A2-SCHEMA-FREEZE` — five runs, each bound to the material subject digest of the tree it actually reviewed, and fifteen findings all `Blocker`/`Resolved`. `DurableReviewLedgerTests` recomputes the latest round's digest, so the closure record's digest bundle is verifiable rather than asserted. Append-only; A6 migrates the historical prose records into it. |
+| `docs/tracking/architecture-governance/review-ledger.json` | Schema-v1 durable run/finding review ledger with read-only/no-inference legacy policy. **No longer an empty seed:** carries the A2 review series `A2-SCHEMA-FREEZE` — six runs, each bound to the material subject digest of the tree it actually reviewed, and sixteen findings all `Blocker`/`Resolved`. `DurableReviewLedgerTests` recomputes the latest round's digest, so the closure record's digest bundle is verifiable rather than asserted. Append-only; A6 migrates the historical prose records into it. |
 | `docs/tracking/architecture-governance/temporary-activation-baseline.json` | Schema-v1 finite activation baseline; seeded inactive and empty. Strict activation requires strict/sealed/empty state. |
 | `docs/tracking/architecture-governance/schemas/common.schema.json` | Draft 2020-12 schema-v1 definitions plus the single machine source for shared enums, transition maps, fallback maps, and dependency-relation groups consumed directly by `reference_semantics.py`. |
 | `docs/tracking/architecture-governance/schemas/runtime-surface-classifications.schema.json` | Canonical runtime-surface classification-intent schema. |

@@ -123,6 +123,27 @@
       "convergence_state": "NON-CONVERGED",
       "final_review": false,
       "round_budget_exhausted": false
+    },
+    {
+      "review_run_id": "A2-RUN-006",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate at 7d4e949 as pushed"
+      ],
+      "subject_scope_digest": "deb9bf31d14d4f89615a6f8d85b78a3ba2e55506f80857371e2f2249ed40d59c",
+      "review_round": 6,
+      "reviewer_identity": "OpenAI ChatGPT, independent reviewer of the pushed 7d4e949 candidate",
+      "coverage": [
+        "ledger provenance semantics",
+        "status-timestamp regression strength"
+      ],
+      "unverified_surfaces": [
+        "the corrections this round produced, which post-date its subject"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "NON-CONVERGED",
+      "final_review": false,
+      "round_budget_exhausted": false
     }
   ],
   "findings": [
@@ -154,9 +175,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T17:15:15Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "git cat-file, the GitHub commit API, ls-remote over all 353 refs, and the PR list all failed to resolve b5e80832 or codex/a2-complete-schema-freeze; main carried no JSON schema of any kind."
+            "git cat-file, the GitHub commit API, ls-remote over all 353 refs, and the PR list all failed to resolve b5e80832 or codex/a2-complete-schema-freeze; main carried no JSON schema of any kind.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-1 review of the reported candidate and resolved by dae398a6; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -164,9 +186,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T18:25:35Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "The branch was published; review round 2 was performed over dae398a6."
+            "The branch was published; review round 2 was performed over dae398a6.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-1 review of the reported candidate and resolved by dae398a6; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -198,9 +221,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T17:15:15Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "reference_semantics.py restated _ACTIVATION_STATES, _PROOF_CLASSES, _EXECUTION_STATES and others that the schemas also declared, giving two places that had to agree."
+            "reference_semantics.py restated _ACTIVATION_STATES, _PROOF_CLASSES, _EXECUTION_STATES and others that the schemas also declared, giving two places that had to agree.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-1 review of the reported candidate and resolved by dae398a6; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -208,9 +232,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T18:25:35Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "common.schema.json is now the single machine source; a regression asserts no other schema declares an enum and that the runtime bindings match."
+            "common.schema.json is now the single machine source; a regression asserts no other schema declares an enum and that the runtime bindings match.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-1 review of the reported candidate and resolved by dae398a6; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -244,9 +269,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T17:15:15Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "v0.17 recorded A2 COMPLETE while \u00a70.5 item 11 and \u00a76/\u00a77 required A0-A2 to PASS before A3 -- a self-contradiction inside one document."
+            "v0.17 recorded A2 COMPLETE while \u00a70.5 item 11 and \u00a76/\u00a77 required A0-A2 to PASS before A3 -- a self-contradiction inside one document.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-1 review of the reported candidate and resolved by dae398a6; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -254,9 +280,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T18:25:35Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "v0.18 adds the explicit seven-condition A2 closure gate; a2-schema-semantics-closure.md owns it."
+            "v0.18 adds the explicit seven-condition A2 closure gate; a2-schema-semantics-closure.md owns it.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-1 review of the reported candidate and resolved by dae398a6; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -289,9 +316,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T18:25:35Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "validate_review_ledger(prior_ledger=None, strict_freshness=False) and validate_temporary_activation_baseline(prior_baseline=None, current_violation_ids=None) skipped append-only detection, final-review staleness, and the new-violation check, while validate_property_registry deliberately raised uncertainty for the same omission."
+            "validate_review_ledger(prior_ledger=None, strict_freshness=False) and validate_temporary_activation_baseline(prior_baseline=None, current_violation_ids=None) skipped append-only detection, final-review staleness, and the new-violation check, while validate_property_registry deliberately raised uncertainty for the same omission.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-2 review of dae398a6 and resolved by 678f0f2; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -299,9 +327,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:02:59Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "Both now use the _NOT_PROVIDED sentinel and raise typed uncertainty in strict mode; strict_activation is deliberately excluded because it adds a requirement rather than relaxing one."
+            "Both now use the _NOT_PROVIDED sentinel and raise typed uncertainty in strict mode; strict_activation is deliberately excluded because it adds a requirement rather than relaxing one.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-2 review of dae398a6 and resolved by 678f0f2; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -333,9 +362,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T18:25:35Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "Every other category schema had a validate_* function; hasattr(sem, 'validate_proof_artifact') was False, and the category has no seed registry, so nothing exercised the record shape at all."
+            "Every other category schema had a validate_* function; hasattr(sem, 'validate_proof_artifact') was False, and the category has no seed registry, so nothing exercised the record shape at all.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-2 review of dae398a6 and resolved by 678f0f2; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -343,9 +373,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:02:59Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "validate_proof_artifact mirrors the frozen shape and binds it to A2 execution truth, with fixtures for na/bounded exclusivity, proof-class evidence binding, mutation restoration, and selector resolution."
+            "validate_proof_artifact mirrors the frozen shape and binds it to A2 execution truth, with fixtures for na/bounded exclusivity, proof-class evidence binding, mutation restoration, and selector resolution.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-2 review of dae398a6 and resolved by 678f0f2; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -378,9 +409,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T18:25:35Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "All ten schemas declared $schema but omitted $id while carrying 111+ relative cross-file refs; resolution worked only under a filename-keyed loader, and the candidate's own reference test resolved by filename lookup so it could not detect this."
+            "All ten schemas declared $schema but omitted $id while carrying 111+ relative cross-file refs; resolution worked only under a filename-keyed loader, and the candidate's own reference test resolved by filename lookup so it could not detect this.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-2 review of dae398a6 and resolved by 678f0f2; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -388,9 +420,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:02:59Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "Every schema pins a canonical non-dereferenceable $id; the bounded validator resolves refs by RFC 3986 against it and refuses a schema set in which any document omits one."
+            "Every schema pins a canonical non-dereferenceable $id; the bounded validator resolves refs by RFC 3986 against it and refuses a schema set in which any document omits one.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-2 review of dae398a6 and resolved by 678f0f2; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -423,9 +456,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T18:25:35Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "required, additionalProperties and nesting were described twice. Probing uniqueItems, minimum, and the conditional not/required prohibitions found the two descriptions AGREED everywhere reachable, so no live divergence was demonstrated; what was absent was any guard against future drift."
+            "required, additionalProperties and nesting were described twice. Probing uniqueItems, minimum, and the conditional not/required prohibitions found the two descriptions AGREED everywhere reachable, so no live divergence was demonstrated; what was absent was any guard against future drift.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-2 review of dae398a6 and resolved by 678f0f2; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -433,9 +467,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:02:59Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "schema_validator.py plus a one-directional differential over shared fixtures, proven live by injecting a schema-only required field and observing the new test fail."
+            "schema_validator.py plus a one-directional differential over shared fixtures, proven live by injecting a schema-only required field and observing the new test fail.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-2 review of dae398a6 and resolved by 678f0f2; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -468,9 +503,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T18:25:35Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "The branch published 1.9.0 -> 2.0.0 (1f7d401) -> 1.10.0 (dae398a) in a value capture_proof_snapshot stamps into every proof record; plan row v0.17 still advertised v2.0.0 while v0.18 silently reverted it."
+            "The branch published 1.9.0 -> 2.0.0 (1f7d401) -> 1.10.0 (dae398a) in a value capture_proof_snapshot stamps into every proof record; plan row v0.17 still advertised v2.0.0 while v0.18 silently reverted it.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-2 review of dae398a6 and resolved by 678f0f2; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -478,9 +514,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:02:59Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "2.0.0 restored by project-owner decision -- the module now raises at import without common.schema.json, a breaking contract change. Plan v0.19 carries the rationale and annotates v0.18 in place."
+            "2.0.0 restored by project-owner decision -- the module now raises at import without common.schema.json, a breaking contract change. Plan v0.19 carries the rationale and annotates v0.18 in place.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-2 review of dae398a6 and resolved by 678f0f2; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -513,9 +550,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:02:59Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "exception_route evaluates its property branch first and unconditionally. With a property registered as FR-CS-046, exception_route('FR-CS-046') returned route 'governance-property' with governance_exception_allowed True, routing a Code Standards waiver into exceptions.json. property_id carried no namespace constraint in schema or code."
+            "exception_route evaluates its property branch first and unconditionally. With a property registered as FR-CS-046, exception_route('FR-CS-046') returned route 'governance-property' with governance_exception_allowed True, routing a Code Standards waiver into exceptions.json. property_id carried no namespace constraint in schema or code.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-3 review of 678f0f2 and resolved by 11547d4; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -525,7 +563,8 @@
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
           "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; \u00a73.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id."
+            "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; \u00a73.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id.",
+            "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-3 review of 678f0f2 and resolved by 11547d4; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -558,9 +597,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:24:32Z",
+          "at": "2026-09-01T19:51:29Z",
           "evidence": [
-            "Round 3 reviewed 678f0f2, but the material subject then changed by 150 lines -- the A2-R3-001 fix, its schema change and its tests -- before 11547d4 was pushed carrying the claim that condition 4 was complete. The round-3 record bound the POST-fix digest to a review performed on the PRE-fix tree, and no review of the pushed candidate existed. The gate's pushed-candidate wording is stronger than FR-AG-018 and cannot be weakened by the party satisfying it."
+            "Round 3 reviewed 678f0f2, but the material subject then changed by 150 lines -- the A2-R3-001 fix, its schema change and its tests -- before 11547d4 was pushed carrying the claim that condition 4 was complete. The round-3 record bound the POST-fix digest to a review performed on the PRE-fix tree, and no review of the pushed candidate existed. The gate's pushed-candidate wording is stronger than FR-AG-018 and cannot be weakened by the party satisfying it.",
+            "Recorded into this ledger at 2026-09-01T19:51:29Z. Raised during the round-4 review of 11547d4 and resolved by 5ebc3f7; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -570,7 +610,8 @@
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
           "at": "2026-09-01T19:51:29Z",
           "evidence": [
-            "Row 4 returned to PENDING. Round 3 now binds 678f0f2, the tree it actually reviewed. Round 4 is this independent review of the pushed 11547d4; the corrected artifact awaits a round-5 fresh review before row 4 may be claimed again."
+            "Row 4 returned to PENDING. Round 3 now binds 678f0f2, the tree it actually reviewed. Round 4 is this independent review of the pushed 11547d4; the corrected artifact awaits a round-5 fresh review before row 4 may be claimed again.",
+            "Recorded into this ledger at 2026-09-01T19:51:29Z. Raised during the round-4 review of 11547d4 and resolved by 5ebc3f7; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -603,9 +644,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:24:32Z",
+          "at": "2026-09-01T19:51:29Z",
           "evidence": [
-            "DurableReviewLedgerTests recomputed only the latest round's digest and merely asserted the three were distinct, which does not establish that b422.. represents e7a3ba13 or 5e1d.. represents dae398a6. The closure record nonetheless claimed the digests were mechanically reproducible and that no trust in the document was required."
+            "DurableReviewLedgerTests recomputed only the latest round's digest and merely asserted the three were distinct, which does not establish that b422.. represents e7a3ba13 or 5e1d.. represents dae398a6. The closure record nonetheless claimed the digests were mechanically reproducible and that no trust in the document was required.",
+            "Recorded into this ledger at 2026-09-01T19:51:29Z. Raised during the round-4 review of 11547d4 and resolved by 5ebc3f7; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -615,7 +657,8 @@
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
           "at": "2026-09-01T19:51:29Z",
           "evidence": [
-            "The historical digests are now recomputed from the commits the record names, rather than the claim being narrowed. CI checks out shallow, so an absent history skips explicitly instead of passing as though it had run. The overstated wording is corrected."
+            "The historical digests are now recomputed from the commits the record names, rather than the claim being narrowed. CI checks out shallow, so an absent history skips explicitly instead of passing as though it had run. The overstated wording is corrected.",
+            "Recorded into this ledger at 2026-09-01T19:51:29Z. Raised during the round-4 review of 11547d4 and resolved by 5ebc3f7; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -648,9 +691,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:24:32Z",
+          "at": "2026-09-01T19:51:29Z",
           "evidence": [
-            "The negation probe was re-run with the cases separated after they were seen to interfere, which demonstrated a context-bleed mode rather than testing it. No committed fixture covered mixed positive/negative context."
+            "The negation probe was re-run with the cases separated after they were seen to interfere, which demonstrated a context-bleed mode rather than testing it. No committed fixture covered mixed positive/negative context.",
+            "Recorded into this ledger at 2026-09-01T19:51:29Z. Raised during the round-4 review of 11547d4 and resolved by 5ebc3f7; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -660,7 +704,8 @@
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
           "at": "2026-09-01T19:51:29Z",
           "evidence": [
-            "tools/tests/test_recurring_defect_lint.py adds nine mixed-context fixtures. The reviewer's concern is confirmed for an adjacent unrelated negation and that bound is now pinned by an explicit test: it pre-dates this work and narrowing the window to zero re-raises three genuinely wrapped negations, so the trade is deliberate. The suggested bullet-in-a-negative-list mode was checked and is correct suppression, not a false negative -- a non-goals bullet is elliptical."
+            "tools/tests/test_recurring_defect_lint.py adds nine mixed-context fixtures. The reviewer's concern is confirmed for an adjacent unrelated negation and that bound is now pinned by an explicit test: it pre-dates this work and narrowing the window to zero re-raises three genuinely wrapped negations, so the trade is deliberate. The suggested bullet-in-a-negative-list mode was checked and is correct suppression, not a false negative -- a non-goals bullet is elliptical.",
+            "Recorded into this ledger at 2026-09-01T19:51:29Z. Raised during the round-4 review of 11547d4 and resolved by 5ebc3f7; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -693,9 +738,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:51:29Z",
+          "at": "2026-09-01T20:13:03Z",
           "evidence": [
-            "test_every_round_digest_recomputes_from_the_tree_it_names skipped each unavailable revision individually and skipped the test only when NO revision resolved. On a partial-history checkout it could verify one digest of four, ignore the rest, and report a green tick under a name asserting all of them. The default CI checkout is shallow, so this is the expected environment, not an edge case."
+            "test_every_round_digest_recomputes_from_the_tree_it_names skipped each unavailable revision individually and skipped the test only when NO revision resolved. On a partial-history checkout it could verify one digest of four, ignore the rest, and report a green tick under a name asserting all of them. The default CI checkout is shallow, so this is the expected environment, not an edge case.",
+            "Recorded into this ledger at 2026-09-01T20:13:03Z. Raised during the round-5 review of 5ebc3f7 and resolved by 7d4e949; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -703,9 +749,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T20:11:08Z",
+          "at": "2026-09-01T20:13:03Z",
           "evidence": [
-            "The verification is now all-or-nothing: any unresolvable revision skips the WHOLE check and names the missing revisions, so a partial result can never present as a complete one."
+            "The verification is now all-or-nothing: any unresolvable revision skips the WHOLE check and names the missing revisions, so a partial result can never present as a complete one.",
+            "Recorded into this ledger at 2026-09-01T20:13:03Z. Raised during the round-5 review of 5ebc3f7 and resolved by 7d4e949; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -738,9 +785,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:51:29Z",
+          "at": "2026-09-01T20:13:03Z",
           "evidence": [
-            "Every A2-R4-* status event carried 2026-09-01T21:00:00Z, an invented time, while 5ebc3f7 -- the commit asserting those events had already happened -- was created at 19:51:29Z. The record therefore claimed completed events that had not yet occurred."
+            "Every A2-R4-* status event carried 2026-09-01T21:00:00Z, an invented time, while 5ebc3f7 -- the commit asserting those events had already happened -- was created at 19:51:29Z. The record therefore claimed completed events that had not yet occurred.",
+            "Recorded into this ledger at 2026-09-01T20:13:03Z. Raised during the round-5 review of 5ebc3f7 and resolved by 7d4e949; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -748,9 +796,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T20:11:08Z",
+          "at": "2026-09-01T20:13:03Z",
           "evidence": [
-            "Every status timestamp is now derived from a real commit: a finding is raised at the commit time of the artifact reviewed and resolved at the commit time that carried the fix. A regression rejects a future or non-monotonic status history."
+            "Every status timestamp is now derived from a real commit: a finding is raised at the commit time of the artifact reviewed and resolved at the commit time that carried the fix. A regression rejects a future or non-monotonic status history.",
+            "Recorded into this ledger at 2026-09-01T20:13:03Z. Raised during the round-5 review of 5ebc3f7 and resolved by 7d4e949; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -783,9 +832,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T19:51:29Z",
+          "at": "2026-09-01T20:13:03Z",
           "evidence": [
-            "It attributed \"required proof MUST be independently reproducible\" to FR-AG-034. That sentence is FR-AG-032; FR-AG-034 is the rule against unsupported agent assertions. The Blocker basis was sound but the durable citation was factually wrong."
+            "It attributed \"required proof MUST be independently reproducible\" to FR-AG-034. That sentence is FR-AG-032; FR-AG-034 is the rule against unsupported agent assertions. The Blocker basis was sound but the durable citation was factually wrong.",
+            "Recorded into this ledger at 2026-09-01T20:13:03Z. Raised during the round-5 review of 5ebc3f7 and resolved by 7d4e949; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -793,9 +843,58 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T20:11:08Z",
+          "at": "2026-09-01T20:13:03Z",
           "evidence": [
-            "A2-R4-002 now cites FR-AG-032 with its own text, and FR-AG-034 alongside it, which independently applies to an unbacked reproducibility claim."
+            "A2-R4-002 now cites FR-AG-032 with its own text, and FR-AG-034 alongside it, which independently applies to an unbacked reproducibility claim.",
+            "Recorded into this ledger at 2026-09-01T20:13:03Z. Raised during the round-5 review of 5ebc3f7 and resolved by 7d4e949; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R6-001",
+      "stable_key": "a2/r6-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-006",
+      "summary": "The timestamp remediation still recorded false provenance, and the regression did not test what the record claimed.",
+      "evidence": [
+        "Round 5 replaced fictional FUTURE timestamps with fictional EARLIER ones. A finding's Open event was stamped at the commit time of the artifact reviewed -- 11547d4 at 19:24:32Z for round 4 -- but an independent review necessarily happens AFTER the artifact it reviews is pushed, so the record placed the discovery at or before the thing discovered. The resolution stamps were not commit times at all: 20:11:08Z against 7d4e949's 20:13:03Z, while the record described them as the commit time that carried the fix. test_status_history_is_neither_future_dated_nor_out_of_order checked only <= wall clock and monotonicity, so it could not see either error."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Governance \u00a74.2 finding-record schema (status history is the evidence of what occurred and when)",
+        "FR-AG-034 (an agent claim MUST be backed by an executable check)",
+        "concrete independently established defect"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 6,
+      "resolution_evidence": [
+        "The exact review times are NOT recoverable and the record no longer pretends otherwise. `at` is now defined as the time the transition was RECORDED into this ledger, derived from the commit that first published the finding, with the reviewed and resolving revisions carried in evidence. The regression now brackets every timestamp between the commit time of the artifact reviewed and the commit that published the record, which is the invariant the model actually asserts."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R6-001-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T20:29:43Z",
+          "evidence": [
+            "Round 5 replaced fictional FUTURE timestamps with fictional EARLIER ones. A finding's Open event was stamped at the commit time of the artifact reviewed -- 11547d4 at 19:24:32Z for round 4 -- but an independent review necessarily happens AFTER the artifact it reviews is pushed, so the record placed the discovery at or before the thing discovered. The resolution stamps were not commit times at all: 20:11:08Z against 7d4e949's 20:13:03Z, while the record described them as the commit time that carried the fix. test_status_history_is_neither_future_dated_nor_out_of_order checked only <= wall clock and monotonicity, so it could not see either error.",
+            "Recorded into this ledger at 2026-09-01T20:29:43Z. Raised during the round-6 review of 7d4e949 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        },
+        {
+          "event_id": "A2-R6-001-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T20:29:43Z",
+          "evidence": [
+            "The exact review times are NOT recoverable and the record no longer pretends otherwise. `at` is now defined as the time the transition was RECORDED into this ledger, derived from the commit that first published the finding, with the reviewed and resolving revisions carried in evidence. The regression now brackets every timestamp between the commit time of the artifact reviewed and the commit that published the record, which is the invariant the model actually asserts.",
+            "Recorded into this ledger at 2026-09-01T20:29:43Z. Raised during the round-6 review of 7d4e949 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]

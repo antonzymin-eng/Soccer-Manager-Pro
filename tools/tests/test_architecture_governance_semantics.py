@@ -2300,30 +2300,104 @@ class DurableReviewLedgerTests(unittest.TestCase):
         match = re.search(r"\bat ([0-9a-f]{7,40})\b", " ".join(run["review_scope"]))
         return match.group(1) if match else None
 
-    def test_status_history_is_neither_future_dated_nor_out_of_order(self):
-        """A durable record cannot contain events that have not happened.
+    def test_status_timestamps_are_bracketed_by_their_real_provenance(self):
+        """Verify the provenance model the ledger actually claims.
 
-        Round 4's events were once stamped 69 minutes after the commit that
-        asserted they were complete. Timestamps now derive from real commits: a
-        finding is raised at the commit time of the artifact reviewed and
-        resolved at the commit time that carried the fix.
+        `at` is the time a transition was RECORDED into this ledger -- the only
+        time that is known. The review itself happened somewhere between the
+        artifact it reviewed and the record of it, and that interval is not
+        recoverable, so the record does not pretend to a point in it.
+
+        An earlier version claimed `at` was "the commit time of the artifact
+        reviewed", which placed each discovery at or before the thing
+        discovered, and checked only `<= wall clock` plus monotonicity -- which
+        could not see that error, nor that the resolution stamps were not commit
+        times at all. This brackets every timestamp in its real interval:
+
+            commit time of the artifact reviewed  <  at  <=  the commit that
+            published the record (or now, if it is not yet published).
+
+        The lower bound is STRICT. A first cut used `>=` and did not catch the
+        very defect it replaced, because the bad value was exactly the reviewed
+        commit's timestamp.
+
+        All-or-nothing on missing history, for the same reason the digest check
+        is: a partial result must not present itself as a complete one.
         """
         import datetime
+        import subprocess
+
+        def parse(stamp):
+            return datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+
+        def commit_time(revision):
+            result = subprocess.run(
+                ["git", "-C", str(self.ROOT), "show", "-s", "--format=%cI", revision],
+                capture_output=True, text=True)
+            return parse(result.stdout.strip()) if result.returncode == 0 else None
+
+        ledger = self.ledger()
+        runs = {run["review_run_id"]: run for run in ledger["review_runs"]}
+        needed = {self.named_revision(run) for run in ledger["review_runs"]}
+        missing = sorted(rev for rev in needed if commit_time(rev) is None)
+        if missing:
+            self.skipTest(
+                "history absent for %s -- verification is all-or-nothing"
+                % ", ".join(missing))
+
+        published = self.publication_times()
         now = datetime.datetime.now(datetime.timezone.utc)
-        for item in self.ledger()["findings"]:
+        for item in ledger["findings"]:
+            reviewed = commit_time(
+                self.named_revision(runs[item["parent_review_run_id"]]))
+            upper = published.get(item["finding_id"], now)
             previous = None
             for event in item["status_history"]:
-                stamp = datetime.datetime.fromisoformat(
-                    event["at"].replace("Z", "+00:00"))
+                stamp = parse(event["at"])
+                # STRICTLY after: an independent review of a pushed artifact
+                # happens after that artifact exists, so a record dated AT the
+                # reviewed commit places the discovery at the thing discovered.
+                # That is the exact shape of the defect this replaced, and `>=`
+                # let it through.
+                self.assertGreater(
+                    stamp, reviewed,
+                    "%s is dated at or before the artifact it reviewed"
+                    % item["finding_id"])
                 self.assertLessEqual(
-                    stamp, now,
-                    "%s records a future event at %s"
-                    % (item["finding_id"], event["at"]))
+                    stamp, upper,
+                    "%s is dated after the commit that published it"
+                    % item["finding_id"])
                 if previous is not None:
                     self.assertGreaterEqual(
                         stamp, previous,
                         "%s status history runs backwards" % item["finding_id"])
                 previous = stamp
+
+    @classmethod
+    def publication_times(cls):
+        """When each finding first appeared in a committed ledger."""
+        import datetime
+        import subprocess
+        relative = cls.LEDGER.relative_to(cls.ROOT).as_posix()
+        shas = subprocess.run(
+            ["git", "-C", str(cls.ROOT), "log", "--format=%H", "--reverse",
+             "--", relative],
+            capture_output=True, text=True).stdout.split()
+        seen = {}
+        for sha in shas:
+            blob = subprocess.run(
+                ["git", "-C", str(cls.ROOT), "show", "%s:%s" % (sha, relative)],
+                capture_output=True, text=True)
+            if blob.returncode != 0:
+                continue
+            when = subprocess.run(
+                ["git", "-C", str(cls.ROOT), "show", "-s", "--format=%cI", sha],
+                capture_output=True, text=True).stdout.strip()
+            for item in json.loads(blob.stdout).get("findings", []):
+                seen.setdefault(
+                    item["finding_id"],
+                    datetime.datetime.fromisoformat(when))
+        return seen
 
     def test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree(self):
         """Mechanise the gate condition instead of guessing at its shape.
