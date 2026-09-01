@@ -10,7 +10,7 @@ import hashlib
 import json
 import math
 
-REFERENCE_SEMANTICS_VERSION = "1.7.0"
+REFERENCE_SEMANTICS_VERSION = "1.8.0"
 
 _SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property", "event"}
 _ACTIVATION_STATES = {"active", "intentionally-disabled", "pending-integration", "unresolved"}
@@ -86,9 +86,8 @@ def normalize_selector(selector):
     """
     if not isinstance(selector, dict):
         raise SelectorError("selector must be an object")
-    kind = selector.get("kind")
-    if kind not in _SELECTOR_KINDS:
-        raise SelectorError("selector.kind is invalid: %r" % kind)
+    kind = _enum(
+        selector.get("kind"), _SELECTOR_KINDS, "selector.kind", SelectorError)
     out = {"assembly": _nonempty(selector, "assembly"), "kind": kind}
 
     if kind == "namespace":
@@ -270,9 +269,8 @@ def normalize_typed_value(value):
     unknown = sorted(set(value) - {"value_type", "value", "enum_type_id"})
     if unknown:
         raise ActivationError("typed value contains unknown field(s): %s" % ", ".join(unknown))
-    kind = value.get("value_type")
-    if kind not in _VALUE_TYPES:
-        raise ActivationError("invalid value_type: %r" % kind)
+    kind = _enum(
+        value.get("value_type"), _VALUE_TYPES, "value_type", ActivationError)
     if "value" not in value:
         raise ActivationError("typed value requires value")
     raw = value["value"]
@@ -305,9 +303,12 @@ def normalize_typed_value(value):
 def validate_activation_contract(contract):
     if not isinstance(contract, dict):
         raise ActivationError("integration contract must be an object")
-    state = contract.get("activation_state")
-    if state not in _ACTIVATION_STATES:
-        raise ActivationError("invalid activation_state: %r" % state)
+    state = _enum(
+        contract.get("activation_state"),
+        _ACTIVATION_STATES,
+        "activation_state",
+        ActivationError,
+    )
     if state == "intentionally-disabled":
         for field in ("activation_owner", "decision_ref", "reactivation_condition"):
             value = contract.get(field)
@@ -333,9 +334,12 @@ def evaluate_disable_anchor(contract, semantic_facts):
         raise ActivationError("disable_anchor contains unknown field(s): %s" % ", ".join(unknown))
     if "selector" not in anchor or "expected" not in anchor:
         raise ActivationError("disable_anchor requires selector and expected")
-    operator = anchor.get("operator")
-    if operator not in _ANCHOR_OPERATORS:
-        raise ActivationError("invalid disable-anchor operator: %r" % operator)
+    operator = _enum(
+        anchor.get("operator"),
+        _ANCHOR_OPERATORS,
+        "disable_anchor.operator",
+        ActivationError,
+    )
     expected = normalize_typed_value(anchor["expected"])
     try:
         fact = resolve_selector(anchor["selector"], semantic_facts)
@@ -610,6 +614,13 @@ class ExecutionError(SemanticsError):
     pass
 
 
+def _enum(value, allowed, field, error_type):
+    """Validate an untrusted scalar enum without leaking TypeError."""
+    if not isinstance(value, str) or value not in allowed:
+        raise error_type("%s is invalid: %r" % (field, value))
+    return value
+
+
 def _text(value, field, error_type):
     item = value.get(field)
     if not isinstance(item, str) or not item.strip():
@@ -659,9 +670,10 @@ def _normalize_na_reasons(rule):
 
 def _specificity(rule):
     # Surface specificity preserves the existing ordering. Change context is
-    # orthogonal and contributes the least-significant bit so an otherwise
-    # identical change-type-specific rule outranks its generic counterpart
-    # without changing surface precedence.
+    # orthogonal: among otherwise-identical rules, a smaller non-empty matching
+    # change_types set is more specific than a broader set, and every restricted
+    # set is more specific than a generic rule. The multiplier prevents context
+    # rank from ever overtaking one surface-specificity step.
     fallback_scope = rule.get("fallback_scope")
     if fallback_scope is not None:
         surface_score = _FALLBACK_PRECEDENCE[fallback_scope]
@@ -677,7 +689,13 @@ def _specificity(rule):
             surface_score |= 2
         if rule["activation_states"]:
             surface_score |= 1
-    return (surface_score * 2) + (1 if rule["change_types"] else 0)
+
+    context_width = len(_CHANGE_TYPES) + 1
+    context_rank = (
+        len(_CHANGE_TYPES) - len(rule["change_types"]) + 1
+        if rule["change_types"] else 0
+    )
+    return (surface_score * context_width) + context_rank
 
 
 def normalize_applicability_rule(rule):
@@ -718,14 +736,15 @@ def normalize_applicability_rule(rule):
         rule, "classifications", ApplicabilityError, required=False)
     activation_states = _text_list(
         rule, "activation_states", ApplicabilityError, required=False)
-    if any(item not in _STRUCTURAL_CLASSIFICATIONS for item in classifications):
-        raise ApplicabilityError("classifications contains an invalid value")
-    if any(item not in _ACTIVATION_STATES for item in activation_states):
-        raise ApplicabilityError("activation_states contains an invalid value")
+    for item in classifications:
+        _enum(item, _STRUCTURAL_CLASSIFICATIONS, "classifications[]", ApplicabilityError)
+    for item in activation_states:
+        _enum(item, _ACTIVATION_STATES, "activation_states[]", ApplicabilityError)
 
     fallback_scope = rule.get("fallback_scope")
-    if fallback_scope is not None and fallback_scope not in _FALLBACK_SCOPES:
-        raise ApplicabilityError("invalid fallback_scope: %r" % fallback_scope)
+    if fallback_scope is not None:
+        fallback_scope = _enum(
+            fallback_scope, _FALLBACK_SCOPES, "fallback_scope", ApplicabilityError)
     explicit = bool(
         normalized_selectors
         or component_ids
@@ -742,12 +761,12 @@ def normalize_applicability_rule(rule):
 
     change_types = _text_list(
         rule, "change_types", ApplicabilityError, required=False)
-    if any(item not in _CHANGE_TYPES for item in change_types):
-        raise ApplicabilityError("change_types contains an invalid value")
+    for item in change_types:
+        _enum(item, _CHANGE_TYPES, "change_types[]", ApplicabilityError)
 
     proof_classes = _text_list(rule, "proof_classes", ApplicabilityError)
-    if any(item not in _PROOF_CLASSES for item in proof_classes):
-        raise ApplicabilityError("proof_classes contains an invalid value")
+    for item in proof_classes:
+        _enum(item, _PROOF_CLASSES, "proof_classes[]", ApplicabilityError)
 
     out = {
         "rule_id": _text(rule, "rule_id", ApplicabilityError),
@@ -798,20 +817,26 @@ def normalize_applicability_subject(subject):
         if field in subject:
             out[field] = _text(subject, field, ApplicabilityError)
     if "classification" in subject:
-        classification = subject["classification"]
-        if classification not in _STRUCTURAL_CLASSIFICATIONS:
-            raise ApplicabilityError("invalid subject classification: %r" % classification)
-        out["classification"] = classification
+        out["classification"] = _enum(
+            subject["classification"],
+            _STRUCTURAL_CLASSIFICATIONS,
+            "subject.classification",
+            ApplicabilityError,
+        )
     if "activation_state" in subject:
-        state = subject["activation_state"]
-        if state not in _ACTIVATION_STATES:
-            raise ApplicabilityError("invalid subject activation_state: %r" % state)
-        out["activation_state"] = state
+        out["activation_state"] = _enum(
+            subject["activation_state"],
+            _ACTIVATION_STATES,
+            "subject.activation_state",
+            ApplicabilityError,
+        )
     if "change_type" in subject:
-        change_type = subject["change_type"]
-        if change_type not in _CHANGE_TYPES:
-            raise ApplicabilityError("invalid subject change_type: %r" % change_type)
-        out["change_type"] = change_type
+        out["change_type"] = _enum(
+            subject["change_type"],
+            _CHANGE_TYPES,
+            "subject.change_type",
+            ApplicabilityError,
+        )
     return out
 
 
@@ -891,7 +916,8 @@ def resolve_applicability(subject, rules, na_requests=None, strict=True):
     identical obligation payloads or strict resolution fails.
     """
     normalized_subject = normalize_applicability_subject(subject)
-    if strict and "change_type" not in normalized_subject:
+    context_complete = "change_type" in normalized_subject
+    if strict and not context_complete:
         raise ApplicabilityError(
             "strict applicability resolution requires subject.change_type")
     if not isinstance(rules, list) or not rules:
@@ -959,6 +985,8 @@ def resolve_applicability(subject, rules, na_requests=None, strict=True):
     active = [item for item in obligations if item["na"] is None]
     result = {
         "subject": normalized_subject,
+        "context_complete": context_complete,
+        "diagnostics": [] if context_complete else ["missing-change-type"],
         "selected_rule_ids": sorted(selected_rule_ids),
         "obligations": obligations,
         "requirement_refs": sorted({
@@ -990,8 +1018,8 @@ def evaluate_execution_truth(
       * excluded, unavailable, and not-run may satisfy only through an explicitly
         permitted and complete bounded-substitute record.
     """
-    if execution_state not in _EXECUTION_STATES:
-        raise ExecutionError("invalid execution_state: %r" % execution_state)
+    execution_state = _enum(
+        execution_state, _EXECUTION_STATES, "execution_state", ExecutionError)
     if not isinstance(bounded_substitute_permitted, bool):
         raise ExecutionError("bounded_substitute_permitted must be boolean")
 
@@ -1085,9 +1113,8 @@ def normalize_dependency_graph(graph):
         dependency_id = _text(node, "dependency_id", ClosureError)
         if dependency_id in nodes:
             raise ClosureError("duplicate dependency_id: %s" % dependency_id)
-        kind = node.get("kind")
-        if kind not in _DEPENDENCY_KINDS:
-            raise ClosureError("invalid dependency kind: %r" % kind)
+        kind = _enum(
+            node.get("kind"), _DEPENDENCY_KINDS, "dependency.kind", ClosureError)
         normalized = {
             "dependency_id": dependency_id,
             "kind": kind,
@@ -1118,8 +1145,12 @@ def normalize_dependency_graph(graph):
         relation = _text(edge, "relation", ClosureError)
         if source not in nodes or target not in nodes:
             raise ClosureError("dependency edge references an unknown node")
-        if relation not in _ALL_DEPENDENCY_RELATIONS:
-            raise ClosureError("invalid dependency relation: %s" % relation)
+        relation = _enum(
+            relation,
+            _ALL_DEPENDENCY_RELATIONS,
+            "dependency.relation",
+            ClosureError,
+        )
         key = (source, target, relation)
         if key in seen_edges:
             raise ClosureError("duplicate dependency edge: %s" % (key,))
@@ -1130,8 +1161,8 @@ def normalize_dependency_graph(graph):
 
 
 def _proof_obligations(proof_class, resolution):
-    if proof_class not in _PROOF_CLASSES:
-        raise ClosureError("invalid proof_class: %r" % proof_class)
+    proof_class = _enum(
+        proof_class, _PROOF_CLASSES, "proof_class", ClosureError)
     if not isinstance(resolution, dict) or not isinstance(
             resolution.get("obligations"), list):
         raise ClosureError("resolution must be an applicability result")
@@ -1280,8 +1311,8 @@ def assess_proof_freshness(recorded, current_resolution, current_graph):
     if not isinstance(recorded, dict):
         raise FreshnessError("recorded proof snapshot must be an object")
     proof_class = recorded.get("proof_class")
-    if proof_class not in _PROOF_CLASSES:
-        raise FreshnessError("recorded proof_class is invalid")
+    proof_class = _enum(
+        proof_class, _PROOF_CLASSES, "recorded proof_class", FreshnessError)
     recorded_digest = recorded.get("subject_scope_digest")
     try:
         _validate_fingerprint(recorded_digest, "subject_scope_digest")

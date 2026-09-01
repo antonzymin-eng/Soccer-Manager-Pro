@@ -105,8 +105,15 @@ def event_fact(name, symbol_key, is_static=False):
 
 
 class SelectorTests(unittest.TestCase):
+    def test_unhashable_selector_kind_is_selector_error(self):
+        with self.assertRaises(sem.SelectorError):
+            sem.normalize_selector({
+                "assembly": "Example.Runtime",
+                "kind": ["method"],
+            })
+
     def test_reference_semantics_version_is_pinned(self):
-        self.assertEqual("1.7.0", sem.REFERENCE_SEMANTICS_VERSION)
+        self.assertEqual("1.8.0", sem.REFERENCE_SEMANTICS_VERSION)
 
     def test_reusable_fact_index_avoids_reindexing_contract(self):
         fact = method("Start", [], "M:Start()")
@@ -472,6 +479,24 @@ class ActivationTests(unittest.TestCase):
             sem.evaluate_disable_anchor(
                 contract, [self.disabled, self.other])["passed"])
 
+    def test_unhashable_activation_enums_are_typed_errors(self):
+        with self.assertRaises(sem.ActivationError):
+            sem.normalize_typed_value({
+                "value_type": ["number"],
+                "value": 1,
+            })
+        with self.assertRaises(sem.ActivationError):
+            sem.validate_activation_contract({
+                "activation_state": ["active"],
+            })
+
+        contract = self.contract()
+        contract["disable_anchor"] = dict(contract["disable_anchor"])
+        contract["disable_anchor"]["operator"] = ["equals"]
+        with self.assertRaises(sem.ActivationError):
+            sem.evaluate_disable_anchor(
+                contract, [self.disabled, self.other])
+
     def test_non_finite_numbers_are_rejected(self):
         with self.assertRaises(sem.ActivationError):
             sem.normalize_typed_value({"value_type": "number", "value": float("nan")})
@@ -501,7 +526,12 @@ def applicability_rule(
             | (2 if classifications else 0)
             | (1 if activation_states else 0)
         )
-    precedence = (surface_precedence * 2) + (1 if change_types else 0)
+    context_width = len(sem._CHANGE_TYPES) + 1
+    context_rank = (
+        len(sem._CHANGE_TYPES) - len(change_types) + 1
+        if change_types else 0
+    )
+    precedence = (surface_precedence * context_width) + context_rank
     return {
         "rule_id": rule_id,
         "selectors": selectors,
@@ -683,6 +713,28 @@ class ApplicabilityTests(unittest.TestCase):
         self.assertEqual(["FR-ACTIVE"], result["requirement_refs"])
         self.assertEqual(["activation"], result["selected_rule_ids"])
 
+    def test_unhashable_applicability_enums_are_typed_errors(self):
+        for field, value in (
+                ("classification", ["production-runtime-root"]),
+                ("activation_state", {"value": "active"}),
+                ("change_type", ["persistence-boundary"])):
+            subject = self.subject()
+            subject[field] = value
+            with self.subTest(field=field):
+                with self.assertRaises(sem.ApplicabilityError):
+                    sem.resolve_applicability(
+                        subject,
+                        [applicability_rule(
+                            "a", "T", "FR-X",
+                            component_ids=["component:host"])],
+                    )
+
+        rule = applicability_rule(
+            "a", "T", "FR-X", component_ids=["component:host"])
+        rule["fallback_scope"] = ["repository"]
+        with self.assertRaises(sem.ApplicabilityError):
+            sem.resolve_applicability(self.subject(), [rule])
+
     def test_invalid_subject_change_type_fails_closed(self):
         subject = self.subject()
         subject["change_type"] = "persistence-ish"
@@ -736,6 +788,36 @@ class ApplicabilityTests(unittest.TestCase):
         self.assertEqual(["FR-PERSIST"], result["requirement_refs"])
         self.assertEqual(["persistence"], result["selected_rule_ids"])
 
+    def test_narrower_change_type_set_outranks_broader_matching_set(self):
+        rules = [
+            applicability_rule(
+                "broad", "T", "FR-BROAD", component_ids=["component:host"],
+                change_types=[
+                    "persistence-boundary",
+                    "external-resource-dependency",
+                ]),
+            applicability_rule(
+                "narrow", "T", "FR-NARROW", component_ids=["component:host"],
+                change_types=["persistence-boundary"]),
+        ]
+        subject = self.subject()
+        subject["change_type"] = "persistence-boundary"
+        result = sem.resolve_applicability(subject, rules)
+        self.assertEqual(["FR-NARROW"], result["requirement_refs"])
+        self.assertEqual(["narrow"], result["selected_rule_ids"])
+
+    def test_non_strict_missing_context_is_explicitly_diagnostic(self):
+        subject = self.subject()
+        del subject["change_type"]
+        rule = applicability_rule(
+            "persistence", "T", "FR-X", component_ids=["component:host"],
+            change_types=["persistence-boundary"])
+        result = sem.resolve_applicability(
+            subject, [rule], strict=False)
+        self.assertFalse(result["context_complete"])
+        self.assertEqual(["missing-change-type"], result["diagnostics"])
+        self.assertEqual([], result["obligations"])
+
     def test_na_requires_enumerated_reason_and_approval_when_declared(self):
         rule = applicability_rule(
             "a",
@@ -770,6 +852,19 @@ class ApplicabilityTests(unittest.TestCase):
 
 
 class ProofClosureTests(unittest.TestCase):
+    def test_unhashable_dependency_kind_and_proof_class_are_closure_errors(self):
+        graph = proof_graph()
+        graph["nodes"][0]["kind"] = ["requirement"]
+        with self.assertRaises(sem.ClosureError):
+            sem.normalize_dependency_graph(graph)
+
+        with self.assertRaises(sem.ClosureError):
+            sem.derive_proof_closure(
+                ["structural-reachability"],
+                proof_resolution(),
+                proof_graph(),
+            )
+
     def test_structural_closure_excludes_persistence_without_matching_change_type(self):
         closure = sem.derive_proof_closure(
             "structural-reachability",
@@ -977,6 +1072,10 @@ class FreshnessTests(unittest.TestCase):
 
 
 class ExecutionTruthTests(unittest.TestCase):
+    def test_unhashable_execution_state_is_execution_error(self):
+        with self.assertRaises(sem.ExecutionError):
+            sem.evaluate_execution_truth(["passed"])
+
     def substitute(self):
         return {
             "authority_ref": "FR-TS-BOUND-001",
