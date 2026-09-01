@@ -1,6 +1,487 @@
 {
   "schema_version": "1.0.0",
   "legacy_policy": "read-only-no-inference",
-  "review_runs": [],
-  "findings": []
+  "review_runs": [
+    {
+      "review_run_id": "A2-RUN-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate as reported: commit b5e80832 / codex/a2-complete-schema-freeze"
+      ],
+      "subject_scope_digest": "b422ac967703dcd59c70c8e18adb0d5ed9ab8c37276863e4e5e9821f269bcbd2",
+      "review_round": 1,
+      "reviewer_identity": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+      "coverage": [
+        "reported commit resolution",
+        "branch and PR existence",
+        "main content"
+      ],
+      "unverified_surfaces": [
+        "candidate content -- unreachable, nothing to review"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "NON-CONVERGED",
+      "final_review": false,
+      "round_budget_exhausted": false
+    },
+    {
+      "review_run_id": "A2-RUN-002",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate at dae398a6"
+      ],
+      "subject_scope_digest": "5e1dd7fc8811a1b2eba91aa576c5c5222403c0e9fe2042524b17a917e65f439b",
+      "review_round": 2,
+      "reviewer_identity": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+      "coverage": [
+        "ten canonical schemas",
+        "seven seed registries",
+        "reference semantics",
+        "IP-5 single control source",
+        "stdlib constraint",
+        "recorded test counts",
+        "tracking-document chain"
+      ],
+      "unverified_surfaces": [
+        "line-by-line reading of every validator branch"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "NON-CONVERGED",
+      "final_review": false,
+      "round_budget_exhausted": false
+    },
+    {
+      "review_run_id": "A2-RUN-003",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate at 678f0f2 plus the second-review remediation"
+      ],
+      "subject_scope_digest": "5d4daacd091c2afae57ff00d9c3f99ddff8a3a179654fb21f1f6b06e7fcc0bba",
+      "review_round": 3,
+      "reviewer_identity": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+      "coverage": [
+        "exception routing and authority boundary",
+        "property transition and history",
+        "review-ledger convergence and append-only",
+        "baseline transitions",
+        "proof artifact contract",
+        "schema/semantics differential",
+        "bounded validator keyword coverage"
+      ],
+      "unverified_surfaces": [
+        "reviewer independence -- see the limitation recorded in the closure record",
+        "field-by-field re-derivation of each schema against Governance \u00a73.3/\u00a77.1"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "IN_PROGRESS",
+      "final_review": false,
+      "round_budget_exhausted": false
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "A2-R1-001",
+      "stable_key": "a2/r1-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-001",
+      "summary": "The reported A2 candidate did not exist in the repository.",
+      "evidence": [
+        "git cat-file, the GitHub commit API, ls-remote over all 353 refs, and the PR list all failed to resolve b5e80832 or codex/a2-complete-schema-freeze; main carried no JSON schema of any kind."
+      ],
+      "severity": "Critical",
+      "requirement_property": [
+        "Governance FR-AG-018 (a fresh review is over the CURRENT artifact)",
+        "integration-plan \u00a711 A2"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 1,
+      "resolution_evidence": [
+        "The branch was published; review round 2 was performed over dae398a6."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R1-001-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T12:00:00Z",
+          "evidence": [
+            "git cat-file, the GitHub commit API, ls-remote over all 353 refs, and the PR list all failed to resolve b5e80832 or codex/a2-complete-schema-freeze; main carried no JSON schema of any kind."
+          ]
+        },
+        {
+          "event_id": "A2-R1-001-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T12:00:00Z",
+          "evidence": [
+            "The branch was published; review round 2 was performed over dae398a6."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R1-002",
+      "stable_key": "a2/r1-002",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-001",
+      "summary": "Shared enum control values were duplicated between Python and the JSON schemas.",
+      "evidence": [
+        "reference_semantics.py restated _ACTIVATION_STATES, _PROOF_CLASSES, _EXECUTION_STATES and others that the schemas also declared, giving two places that had to agree."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Integration-plan \u00a70.4 IP-5 -- one source for each control datum"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 1,
+      "resolution_evidence": [
+        "common.schema.json is now the single machine source; a regression asserts no other schema declares an enum and that the runtime bindings match."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R1-002-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T12:00:00Z",
+          "evidence": [
+            "reference_semantics.py restated _ACTIVATION_STATES, _PROOF_CLASSES, _EXECUTION_STATES and others that the schemas also declared, giving two places that had to agree."
+          ]
+        },
+        {
+          "event_id": "A2-R1-002-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T12:00:00Z",
+          "evidence": [
+            "common.schema.json is now the single machine source; a regression asserts no other schema declares an enum and that the runtime bindings match."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R1-003",
+      "stable_key": "a2/r1-003",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-001",
+      "summary": "The plan equated landing on main with A2 closure.",
+      "evidence": [
+        "v0.17 recorded A2 COMPLETE while \u00a70.5 item 11 and \u00a76/\u00a77 required A0-A2 to PASS before A3 -- a self-contradiction inside one document."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Integration-plan \u00a70.5 item 11",
+        "\u00a76 and \u00a77 (A3 may edit #19/#20 only after A0-A2 pass)",
+        "concrete independently established defect"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 1,
+      "resolution_evidence": [
+        "v0.18 adds the explicit seven-condition A2 closure gate; a2-schema-semantics-closure.md owns it."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R1-003-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T12:00:00Z",
+          "evidence": [
+            "v0.17 recorded A2 COMPLETE while \u00a70.5 item 11 and \u00a76/\u00a77 required A0-A2 to PASS before A3 -- a self-contradiction inside one document."
+          ]
+        },
+        {
+          "event_id": "A2-R1-003-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T12:00:00Z",
+          "evidence": [
+            "v0.18 adds the explicit seven-condition A2 closure gate; a2-schema-semantics-closure.md owns it."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R2-001",
+      "stable_key": "a2/r2-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-002",
+      "summary": "The review-ledger and activation-baseline validators defaulted to their permissive branch, so an omitted cross-document input passed silently.",
+      "evidence": [
+        "validate_review_ledger(prior_ledger=None, strict_freshness=False) and validate_temporary_activation_baseline(prior_baseline=None, current_violation_ids=None) skipped append-only detection, final-review staleness, and the new-violation check, while validate_property_registry deliberately raised uncertainty for the same omission."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Integration-plan \u00a73.3 (an unretrievable prior registry reports uncertainty rather than silently accepting rewritten history)",
+        "\u00a70.4 IP-4"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 2,
+      "resolution_evidence": [
+        "Both now use the _NOT_PROVIDED sentinel and raise typed uncertainty in strict mode; strict_activation is deliberately excluded because it adds a requirement rather than relaxing one."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R2-001-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T15:00:00Z",
+          "evidence": [
+            "validate_review_ledger(prior_ledger=None, strict_freshness=False) and validate_temporary_activation_baseline(prior_baseline=None, current_violation_ids=None) skipped append-only detection, final-review staleness, and the new-violation check, while validate_property_registry deliberately raised uncertainty for the same omission."
+          ]
+        },
+        {
+          "event_id": "A2-R2-001-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T15:00:00Z",
+          "evidence": [
+            "Both now use the _NOT_PROVIDED sentinel and raise typed uncertainty in strict mode; strict_activation is deliberately excluded because it adds a requirement rather than relaxing one."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R2-002",
+      "stable_key": "a2/r2-002",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-002",
+      "summary": "proof-artifact.schema.json was frozen with no executable counterpart.",
+      "evidence": [
+        "Every other category schema had a validate_* function; hasattr(sem, 'validate_proof_artifact') was False, and the category has no seed registry, so nothing exercised the record shape at all."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Integration-plan \u00a73.1 -- before a machine contract is frozen, an executable reference implementation MUST demonstrate the semantics"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 2,
+      "resolution_evidence": [
+        "validate_proof_artifact mirrors the frozen shape and binds it to A2 execution truth, with fixtures for na/bounded exclusivity, proof-class evidence binding, mutation restoration, and selector resolution."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R2-002-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T15:00:00Z",
+          "evidence": [
+            "Every other category schema had a validate_* function; hasattr(sem, 'validate_proof_artifact') was False, and the category has no seed registry, so nothing exercised the record shape at all."
+          ]
+        },
+        {
+          "event_id": "A2-R2-002-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T15:00:00Z",
+          "evidence": [
+            "validate_proof_artifact mirrors the frozen shape and binds it to A2 execution truth, with fixtures for na/bounded exclusivity, proof-class evidence binding, mutation restoration, and selector resolution."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R2-003",
+      "stable_key": "a2/r2-003",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-002",
+      "summary": "No schema declared $id, so every relative $ref lacked a base URI.",
+      "evidence": [
+        "All ten schemas declared $schema but omitted $id while carrying 111+ relative cross-file refs; resolution worked only under a filename-keyed loader, and the candidate's own reference test resolved by filename lookup so it could not detect this."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Integration-plan \u00a73.1 (A2 freezes versioned schemas as machine contracts a different producer can consume)",
+        "concrete independently established defect"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 2,
+      "resolution_evidence": [
+        "Every schema pins a canonical non-dereferenceable $id; the bounded validator resolves refs by RFC 3986 against it and refuses a schema set in which any document omits one."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R2-003-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T15:00:00Z",
+          "evidence": [
+            "All ten schemas declared $schema but omitted $id while carrying 111+ relative cross-file refs; resolution worked only under a filename-keyed loader, and the candidate's own reference test resolved by filename lookup so it could not detect this."
+          ]
+        },
+        {
+          "event_id": "A2-R2-003-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T15:00:00Z",
+          "evidence": [
+            "Every schema pins a canonical non-dereferenceable $id; the bounded validator resolves refs by RFC 3986 against it and refuses a schema set in which any document omits one."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R2-004",
+      "stable_key": "a2/r2-004",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-002",
+      "summary": "Nothing enforced agreement between the frozen schemas and the executable semantics beyond the shared enums.",
+      "evidence": [
+        "required, additionalProperties and nesting were described twice. Probing uniqueItems, minimum, and the conditional not/required prohibitions found the two descriptions AGREED everywhere reachable, so no live divergence was demonstrated; what was absent was any guard against future drift."
+      ],
+      "severity": "Low",
+      "requirement_property": [
+        "Project-owner designation of this as an A2 closure blocker for this review",
+        "integration-plan \u00a70.4 IP-5 as the underlying principle"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 2,
+      "resolution_evidence": [
+        "schema_validator.py plus a one-directional differential over shared fixtures, proven live by injecting a schema-only required field and observing the new test fail."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R2-004-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T15:00:00Z",
+          "evidence": [
+            "required, additionalProperties and nesting were described twice. Probing uniqueItems, minimum, and the conditional not/required prohibitions found the two descriptions AGREED everywhere reachable, so no live divergence was demonstrated; what was absent was any guard against future drift."
+          ]
+        },
+        {
+          "event_id": "A2-R2-004-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T15:00:00Z",
+          "evidence": [
+            "schema_validator.py plus a one-directional differential over shared fixtures, proven live by injecting a schema-only required field and observing the new test fail."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R2-005",
+      "stable_key": "a2/r2-005",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-002",
+      "summary": "REFERENCE_SEMANTICS_VERSION regressed within the branch and the reversion was undocumented.",
+      "evidence": [
+        "The branch published 1.9.0 -> 2.0.0 (1f7d401) -> 1.10.0 (dae398a) in a value capture_proof_snapshot stamps into every proof record; plan row v0.17 still advertised v2.0.0 while v0.18 silently reverted it."
+      ],
+      "severity": "Low",
+      "requirement_property": [
+        "Integration-plan \u00a73.7 (tool identities are part of the proof record)",
+        "concrete independently established defect"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 2,
+      "resolution_evidence": [
+        "2.0.0 restored by project-owner decision -- the module now raises at import without common.schema.json, a breaking contract change. Plan v0.19 carries the rationale and annotates v0.18 in place."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R2-005-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T15:00:00Z",
+          "evidence": [
+            "The branch published 1.9.0 -> 2.0.0 (1f7d401) -> 1.10.0 (dae398a) in a value capture_proof_snapshot stamps into every proof record; plan row v0.17 still advertised v2.0.0 while v0.18 silently reverted it."
+          ]
+        },
+        {
+          "event_id": "A2-R2-005-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T15:00:00Z",
+          "evidence": [
+            "2.0.0 restored by project-owner decision -- the module now raises at import without common.schema.json, a breaking contract change. Plan v0.19 carries the rationale and annotates v0.18 in place."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R3-001",
+      "stable_key": "a2/r3-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-003",
+      "summary": "A property registered under an FR-CS-/FR-TS- id silently captured that requirement's waiver authority.",
+      "evidence": [
+        "exception_route evaluates its property branch first and unconditionally. With a property registered as FR-CS-046, exception_route('FR-CS-046') returned route 'governance-property' with governance_exception_allowed True, routing a Code Standards waiver into exceptions.json. property_id carried no namespace constraint in schema or code."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Integration-plan \u00a73.6 -- this integration MUST NOT route FR-CS or FR-TS waivers directly into exceptions.json",
+        "#19/#20 exception mechanisms remain owner-specific"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 3,
+      "resolution_evidence": [
+        "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; \u00a73.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R3-001-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T18:00:00Z",
+          "evidence": [
+            "exception_route evaluates its property branch first and unconditionally. With a property registered as FR-CS-046, exception_route('FR-CS-046') returned route 'governance-property' with governance_exception_allowed True, routing a Code Standards waiver into exceptions.json. property_id carried no namespace constraint in schema or code."
+          ]
+        },
+        {
+          "event_id": "A2-R3-001-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T18:00:00Z",
+          "evidence": [
+            "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; \u00a73.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id."
+          ]
+        }
+      ]
+    }
+  ]
 }

@@ -22,7 +22,12 @@
         "decision_history", "revalidation_history"
       ],
       "properties": {
-        "property_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "property_id": {
+          "allOf": [
+            { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+            { "not": { "pattern": "^FR-(CS|TS)-" } }
+          ]
+        },
         "title": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
         "state": { "$ref": "common.schema.json#/$defs/propertyState" },
         "statement": { "$ref": "common.schema.json#/$defs/nonEmptyString" },

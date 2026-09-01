@@ -60,6 +60,12 @@ _PROPERTY_RESULTS = _schema_enum("propertyResult")
 _PROOF_RESULTS = _schema_enum("proofResult")
 _REVALIDATION_OUTCOMES = _schema_enum("revalidationOutcome")
 _SEVERITIES = _schema_enum("severity")
+_FOREIGN_REQUIREMENT_PREFIXES = tuple(
+    _CONTROL_DATA["foreign_requirement_prefixes"])
+if not _FOREIGN_REQUIREMENT_PREFIXES or any(
+        not isinstance(item, str) or not item.strip()
+        for item in _FOREIGN_REQUIREMENT_PREFIXES):
+    raise RuntimeError("canonical foreign requirement prefixes are invalid")
 _APPROVED_LIMITATION_FIELDS = frozenset({
     "authority_ref",
     "approval_ref",
@@ -1686,6 +1692,16 @@ def _normalize_property_record(record, index):
     }
     _exact_record(record, required, {"exception_mechanism"}, "properties[%d]" % index, PropertyRegistryError)
     property_id = _text(record, "property_id", PropertyRegistryError)
+    # The FR-CS-/FR-TS- namespaces belong to #20 and #19. A property registered
+    # under one of their ids captures `exception_route`'s property branch, which
+    # is evaluated first, and silently moves that requirement's waiver authority
+    # into exceptions.json — the exact crossing §3.6 forbids. §3.6's carve-out for
+    # an obligation that is ALSO an admitted AP is preserved: the AP cites the FR
+    # requirement, it does not take its identifier.
+    if property_id.startswith(_FOREIGN_REQUIREMENT_PREFIXES):
+        raise PropertyRegistryError(
+            "%s claims an id in a #19/#20 requirement namespace; an admitted "
+            "property cites an FR requirement, it does not take its id" % property_id)
     normalized = {
         "property_id": property_id,
         "title": _text(record, "title", PropertyRegistryError),

@@ -2134,3 +2134,129 @@ class BoundedSchemaValidatorTests(unittest.TestCase):
             elif isinstance(node, ast.ImportFrom):
                 roots.add(node.module.split(".")[0])
         self.assertEqual({"json", "re", "pathlib", "urllib"}, roots)
+
+
+class ExceptionAuthorityBoundaryTests(unittest.TestCase):
+    """A2-FR-001: a property may not squat a #19/#20 requirement namespace.
+
+    `exception_route` evaluates its property branch first, so a property
+    registered as `FR-CS-046` captured that requirement's routing and reported
+    `governance_exception_allowed` — silently moving a Code Standards waiver into
+    `exceptions.json`, the crossing integration-plan §3.6 forbids.
+    """
+
+    def test_property_cannot_claim_a_foreign_requirement_id(self):
+        for foreign in ("FR-CS-046", "FR-TS-094"):
+            record = property_record("Admitted", True)
+            record["property_id"] = foreign
+            with self.assertRaises(sem.PropertyRegistryError):
+                sem.validate_property_registry(property_registry(record), None)
+
+    def test_foreign_requirements_still_route_to_their_owners(self):
+        properties = property_registry(property_record("Admitted", True))
+        self.assertEqual(
+            {"route": "code-standards-owner", "governance_exception_allowed": False},
+            sem.exception_route("FR-CS-046", properties))
+        self.assertEqual(
+            {"route": "testing-strategy-owner", "governance_exception_allowed": False},
+            sem.exception_route("FR-TS-094", properties))
+
+    def test_an_admitted_property_cites_a_requirement_without_taking_its_id(self):
+        """§3.6's carve-out survives: the AP keeps its own id and cites the FR."""
+        record = property_record("Admitted", True)
+        record["property_id"] = "AP-046"
+        record["authority"] = "FR-CS-046"
+        properties = property_registry(record)
+        sem.validate_property_registry(properties, None)
+        self.assertTrue(
+            sem.exception_route("AP-046", properties)["governance_exception_allowed"])
+
+    def test_schema_and_semantics_agree_on_the_foreign_namespaces(self):
+        schemas = jsv.default_schema_set()
+        for prefix in sem._FOREIGN_REQUIREMENT_PREFIXES:
+            record = property_record("Admitted", True)
+            record["property_id"] = prefix + "001"
+            self.assertTrue(
+                schemas.validate(
+                    property_registry(record), "property-registry.schema.json"),
+                "%s must be rejected by the schema as well" % prefix)
+
+
+class DurableReviewLedgerTests(unittest.TestCase):
+    """The committed A2 review ledger is real evidence, not a seed.
+
+    Integration-plan §3.8 requires new governance-aware reviews to use the durable
+    ledger prospectively, and a final-review marker to bind the MATERIAL review
+    subject. These lock that the committed record actually validates and that its
+    recorded digest recomputes -- otherwise the closure record's digest bundle is
+    prose rather than something a later reviewer can check.
+    """
+
+    ROOT = Path(__file__).resolve().parents[2]
+    LEDGER = ROOT / "docs" / "tracking" / "architecture-governance" / "review-ledger.json"
+
+    @classmethod
+    def material_subject_digest(cls):
+        """Digest of the A2 material review subject.
+
+        review-ledger.json is excluded deliberately: §3.8 says recording the
+        review run itself must not recursively invalidate the subject it records.
+        Tracking prose is excluded for the same reason -- it is not the contract.
+        """
+        import hashlib
+        governance = cls.ROOT / "docs" / "tracking" / "architecture-governance"
+        files = {}
+        paths = sorted(governance.glob("schemas/*.json")) \
+            + sorted(governance.glob("*.json")) \
+            + sorted((cls.ROOT / "tools" / "architecture-governance").glob("*.py")) \
+            + [cls.ROOT / "tools" / "tests" / "test_architecture_governance_semantics.py"]
+        for path in paths:
+            rel = path.relative_to(cls.ROOT).as_posix()
+            if rel.endswith("architecture-governance/review-ledger.json"):
+                continue
+            files[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+        return sem.digest(files)
+
+    def ledger(self):
+        return json.loads(self.LEDGER.read_text(encoding="utf-8"))
+
+    def test_committed_ledger_validates_against_the_frozen_contract(self):
+        ledger = self.ledger()
+        digests = {
+            run["review_run_id"]: run["subject_scope_digest"]
+            for run in ledger["review_runs"]
+        }
+        sem.validate_review_ledger(
+            ledger, current_subject_digests=digests, prior_ledger=None)
+        self.assertEqual(
+            [], jsv.default_schema_set().validate(ledger, "review-ledger.schema.json"))
+
+    def test_latest_round_subject_digest_recomputes_from_the_material_subject(self):
+        runs = sorted(self.ledger()["review_runs"], key=lambda item: item["review_round"])
+        self.assertEqual(
+            self.material_subject_digest(), runs[-1]["subject_scope_digest"])
+
+    def test_each_round_binds_the_artifact_it_actually_reviewed(self):
+        """A per-round digest is the point: rounds reviewed different trees.
+
+        Stamping one digest across every round would misreport rounds 1 and 2 as
+        having reviewed the artifact only round 3 saw.
+        """
+        digests = [run["subject_scope_digest"] for run in self.ledger()["review_runs"]]
+        self.assertEqual(len(digests), len(set(digests)))
+
+    def test_every_recorded_finding_is_terminal(self):
+        """Closure condition 5: no open or invalid finding remains."""
+        ledger = self.ledger()
+        self.assertTrue(ledger["findings"], "the ledger must carry the A2 findings")
+        for item in ledger["findings"]:
+            self.assertNotEqual("Open", item["status"], item["finding_id"])
+            self.assertEqual(
+                sem._DISPOSITION_TERMINAL_STATUS[item["disposition"]],
+                item["status"], item["finding_id"])
+
+    def test_no_run_claims_convergence_while_the_owner_gate_is_open(self):
+        """A2 closure conditions 6 and 7 are the owner's; an agent cannot self-close."""
+        for run in self.ledger()["review_runs"]:
+            self.assertFalse(run["final_review"], run["review_run_id"])
+            self.assertNotEqual("CONVERGED", run["convergence_state"], run["review_run_id"])

@@ -4,6 +4,8 @@
   "title": "Architecture Governance Common Types v1",
   "x-governance-control-data": {
     "schema_version": "1.0.0",
+    "foreign_requirement_prefixes": ["FR-CS-", "FR-TS-"],
+    "foreign_requirement_id_pattern": "^FR-(CS|TS)-",
     "property_transitions": [
       ["Candidate", "Admitted"],
       ["Candidate", "Rejected"],
