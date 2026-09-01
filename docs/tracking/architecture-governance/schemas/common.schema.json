@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Architecture Governance Common Types v1",
+  "$defs": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "stringList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" },
+      "uniqueItems": true
+    },
+    "selector": {
+      "description": "selector-v1; every type ID uses C# XML documentation ID type-signature spelling, including @ for by-reference parameters",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "namespace"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "const": "namespace" },
+            "namespace": { "$ref": "#/$defs/nonEmptyString" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "type_id"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "const": "type" },
+            "type_id": { "$ref": "#/$defs/nonEmptyString" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "containing_type_id", "parameter_type_ids", "is_static"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "const": "constructor" },
+            "containing_type_id": { "$ref": "#/$defs/nonEmptyString" },
+            "parameter_type_ids": { "$ref": "#/$defs/stringList" },
+            "is_static": { "type": "boolean" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "is_static": { "const": true } } },
+              "then": { "properties": { "parameter_type_ids": { "maxItems": 0 } } }
+            }
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "containing_type_id", "member_name", "parameter_type_ids", "generic_arity", "is_static"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "const": "method" },
+            "containing_type_id": { "$ref": "#/$defs/nonEmptyString" },
+            "member_name": { "$ref": "#/$defs/nonEmptyString" },
+            "parameter_type_ids": { "$ref": "#/$defs/stringList" },
+            "generic_arity": { "type": "integer", "minimum": 0 },
+            "is_static": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "containing_type_id", "member_name", "parameter_type_ids", "is_static"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "const": "property" },
+            "containing_type_id": { "$ref": "#/$defs/nonEmptyString" },
+            "member_name": { "$ref": "#/$defs/nonEmptyString" },
+            "parameter_type_ids": { "$ref": "#/$defs/stringList" },
+            "is_static": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "containing_type_id", "member_name", "is_static"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "enum": ["field", "event"] },
+            "containing_type_id": { "$ref": "#/$defs/nonEmptyString" },
+            "member_name": { "$ref": "#/$defs/nonEmptyString" },
+            "is_static": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "typedValue": {
+      "type": "object",
+      "required": ["value_type", "value"],
+      "properties": {
+        "value_type": { "enum": ["boolean", "integer", "number", "string", "enum", "null"] },
+        "value": {},
+        "enum_type_id": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "scopeBinding": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["component_id"],
+          "properties": { "component_id": { "$ref": "#/$defs/nonEmptyString" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["selector"],
+          "properties": { "selector": { "$ref": "#/$defs/selector" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["source_path"],
+          "properties": { "source_path": { "$ref": "#/$defs/nonEmptyString" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["host_id"],
+          "properties": { "host_id": { "$ref": "#/$defs/nonEmptyString" } },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "expiryTrigger": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "enum": ["date", "milestone", "condition"] },
+        "value": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "decision": {
+      "type": "object",
+      "required": ["decision_id", "decision_actor", "decided_at"],
+      "properties": {
+        "decision_id": { "$ref": "#/$defs/nonEmptyString" },
+        "decision_actor": { "$ref": "#/$defs/nonEmptyString" },
+        "decided_at": { "$ref": "#/$defs/nonEmptyString" },
+        "decision_provenance_revision": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

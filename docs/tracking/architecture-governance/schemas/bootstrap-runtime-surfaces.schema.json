@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Finite Non-Inferable Runtime Bootstrap Intent v1",
+  "type": "object",
+  "required": ["schema_version", "surfaces"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["bootstrap_id", "component_id", "selector", "reason", "owner"],
+        "properties": {
+          "bootstrap_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "component_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "selector": { "$ref": "common.schema.json#/$defs/selector" },
+          "reason": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "owner": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

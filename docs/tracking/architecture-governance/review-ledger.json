@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.0.0",
+  "legacy_policy": "read-only-no-inference",
+  "review_runs": [],
+  "findings": []
+}

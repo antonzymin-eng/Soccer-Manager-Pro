@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reusable Architecture Proof Artifact v1",
+  "type": "object",
+  "required": [
+    "schema_version", "proof_id", "proof_class", "requirement_property_refs",
+    "applicability_rule_ids", "result", "subject_scope_digest", "dependency_closure",
+    "content_fingerprints", "configuration_fingerprints", "tool_identities",
+    "execution_records", "created", "revalidation_history"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "proof_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "proof_class": {
+      "enum": ["structural-reachability", "lifecycle-order", "failure-injection", "mutation"]
+    },
+    "requirement_property_refs": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
+    "applicability_rule_ids": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
+    "result": { "enum": ["pass", "fail", "na", "bounded"] },
+    "na": { "$ref": "#/$defs/approvedLimitation" },
+    "bounded_substitute": { "$ref": "#/$defs/approvedLimitation" },
+    "subject_scope_digest": { "$ref": "common.schema.json#/$defs/sha256" },
+    "provenance_revision": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "provenance_tree": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "dependency_closure": {
+      "type": "object",
+      "required": ["dependency_ids", "edges", "relation_policy_digest", "change_type"],
+      "properties": {
+        "dependency_ids": { "$ref": "common.schema.json#/$defs/stringList" },
+        "edges": { "type": "array", "items": { "type": "object" } },
+        "relation_policy_digest": { "$ref": "common.schema.json#/$defs/sha256" },
+        "change_type": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "content_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/sha256" }
+    },
+    "inventory_digest": { "$ref": "common.schema.json#/$defs/sha256" },
+    "asmdef_digest": { "$ref": "common.schema.json#/$defs/sha256" },
+    "configuration_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/sha256" }
+    },
+    "tool_identities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["tool_id", "semantic_version", "content_digest"],
+        "properties": {
+          "tool_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "semantic_version": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "content_digest": { "$ref": "common.schema.json#/$defs/sha256" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "execution_records": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/execution" }
+    },
+    "failure_injection": { "$ref": "#/$defs/perturbation" },
+    "mutation": { "$ref": "#/$defs/mutation" },
+    "created": {
+      "type": "object",
+      "required": ["actor", "at"],
+      "properties": {
+        "actor": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "at": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "revalidation_history": { "type": "array", "items": { "type": "object" } }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "result": { "const": "na" } } },
+      "then": { "required": ["na"] },
+      "else": { "not": { "required": ["na"] } }
+    },
+    {
+      "if": { "properties": { "result": { "const": "bounded" } } },
+      "then": { "required": ["bounded_substitute"] },
+      "else": { "not": { "required": ["bounded_substitute"] } }
+    },
+    {
+      "if": { "properties": { "proof_class": { "const": "failure-injection" } } },
+      "then": { "required": ["failure_injection"] }
+    },
+    {
+      "if": { "properties": { "proof_class": { "const": "mutation" } } },
+      "then": { "required": ["mutation"] }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "approvedLimitation": {
+      "type": "object",
+      "required": ["authority_ref", "approval_ref", "justification", "omitted_surface_or_uncertainty"],
+      "properties": {
+        "authority_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "approval_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "justification": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "omitted_surface_or_uncertainty": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "execution": {
+      "type": "object",
+      "required": ["execution_id", "command_or_test", "runner", "environment", "subject_scope_digest", "execution_state", "started_at", "ended_at"],
+      "properties": {
+        "execution_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "command_or_test": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "runner": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "environment": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "subject_scope_digest": { "$ref": "common.schema.json#/$defs/sha256" },
+        "execution_state": { "enum": ["passed", "failed", "skipped", "excluded", "unavailable", "not-run", "runner-failed"] },
+        "started_at": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "ended_at": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "result_artifact": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "perturbation": {
+      "type": "object",
+      "required": ["condition_or_input", "target_selector", "expected_path", "executed_command_or_test", "observed_result", "tool_environment_identity"],
+      "properties": {
+        "condition_or_input": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "target_selector": { "$ref": "common.schema.json#/$defs/selector" },
+        "expected_path": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "executed_command_or_test": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "observed_result": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "tool_environment_identity": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "mutation": {
+      "type": "object",
+      "required": ["base_subject_digest", "target_selector", "operator_or_mutant_digest", "baseline_execution", "mutant_execution", "expected_detector", "observed_detector_failure", "tool_identity", "restoration_clean_state"],
+      "properties": {
+        "base_subject_digest": { "$ref": "common.schema.json#/$defs/sha256" },
+        "target_selector": { "$ref": "common.schema.json#/$defs/selector" },
+        "operator_or_mutant_digest": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "baseline_execution": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "mutant_execution": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "expected_detector": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "observed_detector_failure": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "tool_identity": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "restoration_clean_state": { "type": "boolean", "const": true }
+      },
+      "additionalProperties": false
+    }
+  }
+}

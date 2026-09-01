@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Architecture Integration and Activation Contracts v1",
+  "type": "object",
+  "required": ["schema_version", "contracts"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "contracts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/contract" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "contract": {
+      "type": "object",
+      "required": [
+        "contract_id", "component_id", "current_selector", "selector_history",
+        "owning_host", "owning_assembly", "composition_root", "construction_path",
+        "activation_phase", "update_use_owner", "teardown_owner", "relevant_testhost_path",
+        "alternate_supported_paths", "prohibited_bypass_paths",
+        "static_initialization_involved", "lifecycle_ordering_requirements", "na_fields",
+        "activation_state", "tuning_surface_selectors"
+      ],
+      "properties": {
+        "contract_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "component_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "current_selector": { "$ref": "common.schema.json#/$defs/selector" },
+        "selector_history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["selector", "superseded_reason"],
+            "properties": {
+              "selector": { "$ref": "common.schema.json#/$defs/selector" },
+              "superseded_reason": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "owning_host": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "owning_assembly": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "composition_root": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "construction_path": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "activation_phase": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "update_use_owner": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "teardown_owner": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "relevant_testhost_path": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "alternate_supported_paths": { "$ref": "common.schema.json#/$defs/stringList" },
+        "prohibited_bypass_paths": { "$ref": "common.schema.json#/$defs/stringList" },
+        "static_initialization_involved": { "type": "boolean" },
+        "lifecycle_ordering_requirements": { "$ref": "common.schema.json#/$defs/stringList" },
+        "na_fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["field", "justification"],
+            "properties": {
+              "field": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+              "justification": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "activation_state": {
+          "enum": ["active", "intentionally-disabled", "pending-integration", "unresolved"]
+        },
+        "activation_owner": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "decision_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "disable_anchor": {
+          "type": "object",
+          "required": ["selector", "operator", "expected"],
+          "properties": {
+            "selector": { "$ref": "common.schema.json#/$defs/selector" },
+            "operator": { "enum": ["equals", "not-equals"] },
+            "expected": { "$ref": "common.schema.json#/$defs/typedValue" }
+          },
+          "additionalProperties": false
+        },
+        "reactivation_condition": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "integration_gap": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "activation_condition": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "tuning_surface_selectors": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/selector" },
+          "uniqueItems": true
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "activation_state": { "const": "intentionally-disabled" } } },
+          "then": { "required": ["activation_owner", "decision_ref", "disable_anchor", "reactivation_condition"] }
+        },
+        {
+          "if": { "properties": { "activation_state": { "const": "pending-integration" } } },
+          "then": { "required": ["activation_owner", "integration_gap", "activation_condition"] }
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

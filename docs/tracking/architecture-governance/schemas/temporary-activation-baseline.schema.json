@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Temporary Architecture Activation Baseline v1",
+  "type": "object",
+  "required": ["schema_version", "baseline_id", "mode", "sealed", "items"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "baseline_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "mode": { "enum": ["inactive", "migration", "strict"] },
+    "sealed": { "type": "boolean" },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/baselineItem" }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "inactive" } } },
+      "then": { "properties": { "items": { "maxItems": 0 } } }
+    },
+    {
+      "if": { "properties": { "mode": { "const": "strict" } } },
+      "then": {
+        "properties": {
+          "sealed": { "const": true },
+          "items": { "maxItems": 0 }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "baselineItem": {
+      "type": "object",
+      "required": [
+        "violation_id", "binding", "baseline_subject_scope_digest",
+        "creation_provenance_revision", "owner", "disposition",
+        "required_action", "expiry_trigger"
+      ],
+      "properties": {
+        "violation_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "binding": {
+          "type": "object",
+          "required": ["component_id", "selector"],
+          "properties": {
+            "component_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+            "selector": { "$ref": "common.schema.json#/$defs/selector" }
+          },
+          "additionalProperties": false
+        },
+        "baseline_subject_scope_digest": { "$ref": "common.schema.json#/$defs/sha256" },
+        "creation_provenance_revision": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "owner": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "disposition": {
+          "enum": ["Blocker", "Accepted Tradeoff", "Residual Risk", "Candidate Property"]
+        },
+        "required_action": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "expiry_trigger": { "$ref": "common.schema.json#/$defs/expiryTrigger" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

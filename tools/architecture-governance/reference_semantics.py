@@ -10,12 +10,40 @@ import hashlib
 import json
 import math
 
-REFERENCE_SEMANTICS_VERSION = "1.9.0"
+REFERENCE_SEMANTICS_VERSION = "2.0.0"
+SCHEMA_VERSION = "1.0.0"
 
 _SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property", "event"}
 _ACTIVATION_STATES = {"active", "intentionally-disabled", "pending-integration", "unresolved"}
 _VALUE_TYPES = {"boolean", "integer", "number", "string", "enum", "null"}
 _ANCHOR_OPERATORS = {"equals", "not-equals"}
+_PROPERTY_STATES = {"Candidate", "Admitted", "Superseded", "Retired", "Rejected"}
+_PROPERTY_TRANSITIONS = {
+    ("Candidate", "Admitted"),
+    ("Candidate", "Rejected"),
+    ("Admitted", "Superseded"),
+    ("Admitted", "Retired"),
+    ("Rejected", "Candidate"),
+    ("Superseded", "Retired"),
+}
+_ENFORCEMENT_CLASSES = {"Machine", "Hybrid", "Judgment"}
+_PROPERTY_ACTIVATIONS = {"Immediate", "Staged"}
+_DISPOSITION_TERMINAL_STATUS = {
+    "Blocker": "Resolved",
+    "Accepted Tradeoff": "Accepted",
+    "Residual Risk": "Recorded",
+    "Candidate Property": "In property process",
+}
+_FINDING_STATUSES = {"Open"} | set(_DISPOSITION_TERMINAL_STATUS.values())
+_REVIEW_STATES = {"IN_PROGRESS", "CONVERGED", "NON-CONVERGED"}
+_BASELINE_MODES = {"inactive", "migration", "strict"}
+_BASELINE_MODE_TRANSITIONS = {
+    ("inactive", "migration"),
+    ("inactive", "strict"),
+    ("migration", "strict"),
+}
+
+_TRUSTED_PRIOR_NOT_PROVIDED = object()
 
 
 class SemanticsError(ValueError):
@@ -31,6 +59,34 @@ class IdentityError(SemanticsError):
 
 
 class ActivationError(SemanticsError):
+    pass
+
+
+class SchemaError(SemanticsError):
+    pass
+
+
+class PropertyRegistryError(SchemaError):
+    pass
+
+
+class PropertyRegistryUncertainty(PropertyRegistryError):
+    pass
+
+
+class ExceptionRegistryError(SchemaError):
+    pass
+
+
+class ReviewLedgerError(SchemaError):
+    pass
+
+
+class ReviewStateUncertainty(ReviewLedgerError):
+    pass
+
+
+class ActivationBaselineError(SchemaError):
     pass
 
 
@@ -1398,3 +1454,808 @@ def changed_proof_decision(
         "run_required": False,
         "reason": "proven-non-impact",
     }
+
+
+def _schema_version(document, error_type):
+    if not isinstance(document, dict):
+        raise error_type("artifact must be an object")
+    version = document.get("schema_version")
+    if not isinstance(version, str):
+        raise error_type("schema_version must be a semantic-version string")
+    parts = version.split(".")
+    if len(parts) != 3 or any(not part.isdigit() for part in parts):
+        raise error_type("schema_version must use MAJOR.MINOR.PATCH")
+    if int(parts[0]) != int(SCHEMA_VERSION.split(".")[0]):
+        raise error_type("unsupported schema_version major: %s" % parts[0])
+    return version
+
+
+def _exact_record(value, required, optional, label, error_type):
+    if not isinstance(value, dict):
+        raise error_type("%s must be an object" % label)
+    missing = sorted(set(required) - set(value))
+    if missing:
+        raise error_type("%s missing field(s): %s" % (label, ", ".join(missing)))
+    unknown = sorted(set(value) - set(required) - set(optional))
+    if unknown:
+        raise error_type("%s contains unknown field(s): %s" % (label, ", ".join(unknown)))
+
+
+def _optional_text(value, field, error_type):
+    if field not in value:
+        return None
+    item = value[field]
+    if not isinstance(item, str) or not item.strip():
+        raise error_type("%s must be non-empty when provided" % field)
+    return item.strip()
+
+
+def _sha256(value, field, error_type):
+    if not isinstance(value, str) or len(value) != 64:
+        raise error_type("%s must be a lowercase SHA-256 hex digest" % field)
+    if value != value.lower() or any(ch not in "0123456789abcdef" for ch in value):
+        raise error_type("%s must be a lowercase SHA-256 hex digest" % field)
+    return value
+
+
+def _normalize_scope(scope, error_type):
+    if not isinstance(scope, list) or not scope:
+        raise error_type("scope must be a non-empty list")
+    normalized = []
+    for index, item in enumerate(scope):
+        if not isinstance(item, dict):
+            raise error_type("scope[%d] must be an object" % index)
+        keys = set(item)
+        if len(keys) != 1 or not keys <= {"component_id", "selector", "source_path", "host_id"}:
+            raise error_type(
+                "scope[%d] must contain exactly one component_id, selector, source_path, or host_id"
+                % index)
+        key = next(iter(keys))
+        if key == "selector":
+            try:
+                normalized.append({"selector": normalize_selector(item[key])})
+            except SelectorError as exc:
+                raise error_type("scope[%d] has invalid selector: %s" % (index, exc)) from exc
+        else:
+            text_value = item[key]
+            if not isinstance(text_value, str) or not text_value.strip():
+                raise error_type("scope[%d].%s must be non-empty" % (index, key))
+            normalized.append({key: text_value.strip()})
+    keys = [canonical_json(item) for item in normalized]
+    if len(keys) != len(set(keys)):
+        raise error_type("scope contains duplicate bindings")
+    return normalized
+
+
+def validate_runtime_surface_classifications_document(document):
+    """Validate the committed classification-intent registry envelope."""
+    _schema_version(document, SchemaError)
+    _exact_record(document, {"schema_version", "surfaces"}, set(), "classification registry", SchemaError)
+    records = document["surfaces"]
+    if not isinstance(records, list):
+        raise SchemaError("surfaces must be a list")
+    ids = set()
+    symbols = set()
+    for index, record in enumerate(records):
+        required = {
+            "surface_id", "symbol_key", "kind", "source_path", "signature",
+            "assembly", "classification",
+        }
+        _exact_record(
+            record, required, {"component_id", "contract_id"},
+            "surfaces[%d]" % index, SchemaError)
+        surface_id = _text(record, "surface_id", SchemaError)
+        symbol_key = _text(record, "symbol_key", SchemaError)
+        if surface_id in ids:
+            raise SchemaError("duplicate surface_id: %s" % surface_id)
+        if symbol_key in symbols:
+            raise SchemaError("duplicate classification symbol_key: %s" % symbol_key)
+        ids.add(surface_id)
+        symbols.add(symbol_key)
+        _enum(record.get("kind"), _SELECTOR_KINDS, "surface.kind", SchemaError)
+        _enum(
+            record.get("classification"), _STRUCTURAL_CLASSIFICATIONS,
+            "surface.classification", SchemaError)
+        for field in ("source_path", "signature", "assembly"):
+            _text(record, field, SchemaError)
+        _optional_text(record, "component_id", SchemaError)
+        _optional_text(record, "contract_id", SchemaError)
+    return document
+
+
+def validate_integration_contracts_document(document):
+    """Validate the versioned contract envelope and activation invariants."""
+    _schema_version(document, SchemaError)
+    _exact_record(document, {"schema_version", "contracts"}, set(), "contract registry", SchemaError)
+    contracts = document["contracts"]
+    if not isinstance(contracts, list):
+        raise SchemaError("contracts must be a list")
+    ids = set()
+    components = set()
+    for index, contract in enumerate(contracts):
+        if not isinstance(contract, dict):
+            raise SchemaError("contracts[%d] must be an object" % index)
+        contract_id = _text(contract, "contract_id", SchemaError)
+        component_id = _text(contract, "component_id", SchemaError)
+        if contract_id in ids or component_id in components:
+            raise SchemaError("duplicate contract_id or component_id")
+        ids.add(contract_id)
+        components.add(component_id)
+        for field in (
+                "owning_host", "owning_assembly", "composition_root",
+                "construction_path", "activation_phase", "update_use_owner",
+                "teardown_owner", "relevant_testhost_path"):
+            _text(contract, field, SchemaError)
+        for field in (
+                "alternate_supported_paths", "prohibited_bypass_paths",
+                "lifecycle_ordering_requirements"):
+            _text_list(contract, field, SchemaError, required=False)
+        if not isinstance(contract.get("static_initialization_involved"), bool):
+            raise SchemaError("static_initialization_involved must be boolean")
+        if not isinstance(contract.get("na_fields", []), list):
+            raise SchemaError("na_fields must be a list")
+        try:
+            validate_activation_contract(contract)
+            normalize_selector(contract.get("current_selector"))
+            _selector_key_set(contract.get("tuning_surface_selectors", []))
+        except (ActivationError, SelectorError) as exc:
+            raise SchemaError("contracts[%d] is invalid: %s" % (index, exc)) from exc
+    return document
+
+
+def validate_applicability_rules_document(document):
+    _schema_version(document, SchemaError)
+    _exact_record(document, {"schema_version", "rules"}, set(), "applicability registry", SchemaError)
+    rules = document["rules"]
+    if not isinstance(rules, list):
+        raise SchemaError("rules must be a list")
+    normalized = [normalize_applicability_rule(item) for item in rules]
+    ids = [item["rule_id"] for item in normalized]
+    if len(ids) != len(set(ids)):
+        raise SchemaError("applicability rules contain duplicate rule_id")
+    return document
+
+
+def _normalize_property_decisions(record, property_id):
+    decisions = record.get("decision_history")
+    if not isinstance(decisions, list) or not decisions:
+        raise PropertyRegistryError("%s requires non-empty decision_history" % property_id)
+    normalized = []
+    ids = set()
+    previous = None
+    for index, item in enumerate(decisions):
+        required = {
+            "decision_id", "decision_actor", "transition_from", "transition_to",
+            "decision_rationale", "decided_at",
+        }
+        _exact_record(
+            item, required, {"decision_provenance_revision"},
+            "%s.decision_history[%d]" % (property_id, index), PropertyRegistryError)
+        decision_id = _text(item, "decision_id", PropertyRegistryError)
+        if decision_id in ids:
+            raise PropertyRegistryError("%s repeats decision_id %s" % (property_id, decision_id))
+        ids.add(decision_id)
+        actor = _text(item, "decision_actor", PropertyRegistryError)
+        rationale = _text(item, "decision_rationale", PropertyRegistryError)
+        decided_at = _text(item, "decided_at", PropertyRegistryError)
+        transition_to = _enum(
+            item.get("transition_to"), _PROPERTY_STATES,
+            "transition_to", PropertyRegistryError)
+        transition_from = item.get("transition_from")
+        if index == 0:
+            if transition_from is not None or transition_to != "Candidate":
+                raise PropertyRegistryError(
+                    "%s initial decision must establish Candidate from null" % property_id)
+        else:
+            transition_from = _enum(
+                transition_from, _PROPERTY_STATES,
+                "transition_from", PropertyRegistryError)
+            if transition_from != previous:
+                raise PropertyRegistryError(
+                    "%s decision history is not contiguous" % property_id)
+            if (transition_from, transition_to) not in _PROPERTY_TRANSITIONS:
+                raise PropertyRegistryError(
+                    "%s has illegal Governance §3.1 transition %s -> %s"
+                    % (property_id, transition_from, transition_to))
+        normalized_item = {
+            "decision_id": decision_id,
+            "decision_actor": actor,
+            "transition_from": transition_from,
+            "transition_to": transition_to,
+            "decision_rationale": rationale,
+            "decided_at": decided_at,
+        }
+        provenance = _optional_text(
+            item, "decision_provenance_revision", PropertyRegistryError)
+        if provenance is not None:
+            normalized_item["decision_provenance_revision"] = provenance
+        normalized.append(normalized_item)
+        previous = transition_to
+    return normalized
+
+
+def _normalize_revalidation_history(record, property_id):
+    history = record.get("revalidation_history")
+    if not isinstance(history, list):
+        raise PropertyRegistryError("%s.revalidation_history must be a list" % property_id)
+    normalized = []
+    ids = set()
+    for index, item in enumerate(history):
+        required = {
+            "revalidation_id", "decision_actor", "reviewed_at",
+            "subject_scope_digest", "outcome", "decision_rationale",
+        }
+        _exact_record(
+            item, required, {"decision_provenance_revision"},
+            "%s.revalidation_history[%d]" % (property_id, index), PropertyRegistryError)
+        revalidation_id = _text(item, "revalidation_id", PropertyRegistryError)
+        if revalidation_id in ids:
+            raise PropertyRegistryError(
+                "%s repeats revalidation_id %s" % (property_id, revalidation_id))
+        ids.add(revalidation_id)
+        normalized_item = {
+            "revalidation_id": revalidation_id,
+            "decision_actor": _text(item, "decision_actor", PropertyRegistryError),
+            "reviewed_at": _text(item, "reviewed_at", PropertyRegistryError),
+            "subject_scope_digest": _sha256(
+                item.get("subject_scope_digest"), "subject_scope_digest",
+                PropertyRegistryError),
+            "outcome": _enum(
+                item.get("outcome"), {"confirmed", "amended", "reopened"},
+                "revalidation outcome", PropertyRegistryError),
+            "decision_rationale": _text(
+                item, "decision_rationale", PropertyRegistryError),
+        }
+        provenance = _optional_text(
+            item, "decision_provenance_revision", PropertyRegistryError)
+        if provenance is not None:
+            normalized_item["decision_provenance_revision"] = provenance
+        normalized.append(normalized_item)
+    return normalized
+
+
+def _normalize_property_record(record, index):
+    required = {
+        "property_id", "title", "state", "statement", "failure_mode", "scope",
+        "non_scope", "authority", "evidence", "enforcement_class", "activation",
+        "exceptions_allowed", "supersedes", "decision_rationale", "last_reviewed",
+        "decision_history", "revalidation_history",
+    }
+    _exact_record(record, required, {"exception_mechanism"}, "properties[%d]" % index, PropertyRegistryError)
+    property_id = _text(record, "property_id", PropertyRegistryError)
+    normalized = {
+        "property_id": property_id,
+        "title": _text(record, "title", PropertyRegistryError),
+        "state": _enum(record.get("state"), _PROPERTY_STATES, "state", PropertyRegistryError),
+        "statement": _text(record, "statement", PropertyRegistryError),
+        "failure_mode": _text(record, "failure_mode", PropertyRegistryError),
+        "scope": _text_list(record, "scope", PropertyRegistryError),
+        "non_scope": _text_list(record, "non_scope", PropertyRegistryError, required=False),
+        "authority": _text(record, "authority", PropertyRegistryError),
+        "evidence": _text_list(record, "evidence", PropertyRegistryError),
+        "enforcement_class": _enum(
+            record.get("enforcement_class"), _ENFORCEMENT_CLASSES,
+            "enforcement_class", PropertyRegistryError),
+        "activation": _enum(
+            record.get("activation"), _PROPERTY_ACTIVATIONS,
+            "activation", PropertyRegistryError),
+        "exceptions_allowed": record.get("exceptions_allowed"),
+        "supersedes": record.get("supersedes"),
+        "decision_rationale": _text(record, "decision_rationale", PropertyRegistryError),
+        "last_reviewed": _text(record, "last_reviewed", PropertyRegistryError),
+    }
+    if not isinstance(normalized["exceptions_allowed"], bool):
+        raise PropertyRegistryError("exceptions_allowed must be boolean")
+    if normalized["supersedes"] is not None and (
+            not isinstance(normalized["supersedes"], str) or not normalized["supersedes"].strip()):
+        raise PropertyRegistryError("supersedes must be null or a non-empty property_id")
+    if normalized["exceptions_allowed"]:
+        normalized["exception_mechanism"] = _text(
+            record, "exception_mechanism", PropertyRegistryError)
+        if normalized["exception_mechanism"] != "governance-exception":
+            raise PropertyRegistryError(
+                "exception_mechanism must be governance-exception")
+    elif "exception_mechanism" in record:
+        raise PropertyRegistryError(
+            "exception_mechanism is invalid when exceptions_allowed is false")
+    normalized["decision_history"] = _normalize_property_decisions(record, property_id)
+    normalized["revalidation_history"] = _normalize_revalidation_history(record, property_id)
+    if normalized["state"] != normalized["decision_history"][-1]["transition_to"]:
+        raise PropertyRegistryError(
+            "%s state does not match its final decision transition" % property_id)
+    return normalized
+
+
+def _property_map(document):
+    _schema_version(document, PropertyRegistryError)
+    _exact_record(
+        document, {"schema_version", "properties"}, set(),
+        "property registry", PropertyRegistryError)
+    raw = document["properties"]
+    if not isinstance(raw, list):
+        raise PropertyRegistryError("properties must be a list")
+    records = [_normalize_property_record(item, index) for index, item in enumerate(raw)]
+    ids = [item["property_id"] for item in records]
+    if len(ids) != len(set(ids)):
+        raise PropertyRegistryError("property registry contains duplicate property_id")
+    return records, {item["property_id"]: item for item in records}
+
+
+def validate_property_registry(
+        registry, merge_base_registry=_TRUSTED_PRIOR_NOT_PROVIDED, strict=True):
+    """Validate property state/history and trusted-merge-base immutability.
+
+    Pass ``None`` when the trusted merge base proves that no registry existed.
+    Omitting the merge-base value in strict mode is uncertainty, not approval.
+    """
+    current_records, current = _property_map(registry)
+    if merge_base_registry is _TRUSTED_PRIOR_NOT_PROVIDED:
+        if strict:
+            raise PropertyRegistryUncertainty(
+                "trusted merge-base property registry was not provided")
+        return registry
+    if merge_base_registry is None:
+        return registry
+    prior_records, prior = _property_map(merge_base_registry)
+    prior_ids = [item["property_id"] for item in prior_records]
+    current_ids = [item["property_id"] for item in current_records]
+    if current_ids[:len(prior_ids)] != prior_ids:
+        raise PropertyRegistryError(
+            "properties are append-only and existing order/records cannot be removed")
+    for property_id in prior_ids:
+        old = prior[property_id]
+        new = current[property_id]
+        old_decisions = old["decision_history"]
+        new_decisions = new["decision_history"]
+        if new_decisions[:len(old_decisions)] != old_decisions:
+            raise PropertyRegistryError(
+                "%s decision history was rewritten" % property_id)
+        old_revalidation = old["revalidation_history"]
+        new_revalidation = new["revalidation_history"]
+        if new_revalidation[:len(old_revalidation)] != old_revalidation:
+            raise PropertyRegistryError(
+                "%s revalidation history was rewritten" % property_id)
+        state_changed = old["state"] != new["state"]
+        decisions_appended = len(new_decisions) > len(old_decisions)
+        if state_changed and not decisions_appended:
+            raise PropertyRegistryError(
+                "%s state changes require an appended legal decision transition"
+                % property_id)
+        material_keys = (set(old) | set(new)) - {
+            "state", "decision_history", "revalidation_history",
+        }
+        material_changed = any(old.get(key) != new.get(key) for key in material_keys)
+        history_appended = (
+            decisions_appended or len(new_revalidation) > len(old_revalidation))
+        if material_changed and not history_appended:
+            raise PropertyRegistryError(
+                "%s material amendment requires appended decision or revalidation history"
+                % property_id)
+    return registry
+
+
+def _normalize_exception_record(record, index):
+    required = {
+        "exception_id", "property_id", "scope", "reason", "risk", "mitigation",
+        "owner", "expiry_trigger", "approval", "status",
+    }
+    _exact_record(record, required, set(), "exceptions[%d]" % index, ExceptionRegistryError)
+    expiry = record["expiry_trigger"]
+    _exact_record(expiry, {"type", "value"}, set(), "expiry_trigger", ExceptionRegistryError)
+    approval = record["approval"]
+    _exact_record(
+        approval, {"decision_id", "decision_actor", "decided_at"},
+        {"decision_provenance_revision"}, "approval", ExceptionRegistryError)
+    return {
+        "exception_id": _text(record, "exception_id", ExceptionRegistryError),
+        "property_id": _text(record, "property_id", ExceptionRegistryError),
+        "scope": _normalize_scope(record["scope"], ExceptionRegistryError),
+        "reason": _text(record, "reason", ExceptionRegistryError),
+        "risk": _text(record, "risk", ExceptionRegistryError),
+        "mitigation": _text(record, "mitigation", ExceptionRegistryError),
+        "owner": _text(record, "owner", ExceptionRegistryError),
+        "expiry_trigger": {
+            "type": _enum(
+                expiry.get("type"), {"date", "milestone", "condition"},
+                "expiry_trigger.type", ExceptionRegistryError),
+            "value": _text(expiry, "value", ExceptionRegistryError),
+        },
+        "approval": {
+            "decision_id": _text(approval, "decision_id", ExceptionRegistryError),
+            "decision_actor": _text(approval, "decision_actor", ExceptionRegistryError),
+            "decided_at": _text(approval, "decided_at", ExceptionRegistryError),
+            **({"decision_provenance_revision": approval["decision_provenance_revision"].strip()}
+               if _optional_text(approval, "decision_provenance_revision", ExceptionRegistryError)
+               is not None else {}),
+        },
+        "status": _enum(
+            record.get("status"), {"active", "expired", "revoked"},
+            "exception.status", ExceptionRegistryError),
+    }
+
+
+def validate_exception_registry(registry, property_registry):
+    _schema_version(registry, ExceptionRegistryError)
+    _exact_record(
+        registry, {"schema_version", "exceptions"}, set(),
+        "exception registry", ExceptionRegistryError)
+    raw = registry["exceptions"]
+    if not isinstance(raw, list):
+        raise ExceptionRegistryError("exceptions must be a list")
+    records = [_normalize_exception_record(item, index) for index, item in enumerate(raw)]
+    ids = [item["exception_id"] for item in records]
+    if len(ids) != len(set(ids)):
+        raise ExceptionRegistryError("exception registry contains duplicate exception_id")
+    _, properties = _property_map(property_registry)
+    for item in records:
+        property_record = properties.get(item["property_id"])
+        if property_record is None:
+            raise ExceptionRegistryError(
+                "%s does not route to an admitted property" % item["exception_id"])
+        if property_record["state"] != "Admitted":
+            raise ExceptionRegistryError(
+                "%s targets a property that is not Admitted" % item["exception_id"])
+        if not property_record["exceptions_allowed"]:
+            raise ExceptionRegistryError(
+                "%s targets a property that forbids exceptions" % item["exception_id"])
+    return registry
+
+
+def exception_route(requirement_ref, property_registry):
+    """Return the exclusive exception owner; routes never cross authority.
+
+    ``governance_exception_allowed`` says only whether ``exceptions.json`` may
+    carry the waiver. It deliberately does not judge an owning #19/#20
+    exception mechanism.
+    """
+    if not isinstance(requirement_ref, str) or not requirement_ref.strip():
+        raise ExceptionRegistryError("requirement_ref must be non-empty")
+    requirement_ref = requirement_ref.strip()
+    _, properties = _property_map(property_registry)
+    if requirement_ref in properties:
+        record = properties[requirement_ref]
+        return {
+            "route": "governance-property",
+            "governance_exception_allowed": (
+                record["state"] == "Admitted" and record["exceptions_allowed"]),
+        }
+    if requirement_ref.startswith("FR-CS-"):
+        return {
+            "route": "code-standards-owner",
+            "governance_exception_allowed": False,
+        }
+    if requirement_ref.startswith("FR-TS-"):
+        return {
+            "route": "testing-strategy-owner",
+            "governance_exception_allowed": False,
+        }
+    return {"route": "not-waivable", "governance_exception_allowed": False}
+
+
+def _normalize_status_history(record, finding_id):
+    history = record.get("status_history")
+    if not isinstance(history, list) or not history:
+        raise ReviewLedgerError("%s requires non-empty status_history" % finding_id)
+    normalized = []
+    previous = None
+    ids = set()
+    disposition = record["disposition"]
+    terminal = _DISPOSITION_TERMINAL_STATUS[disposition]
+    for index, item in enumerate(history):
+        required = {"event_id", "transition_from", "transition_to", "actor", "at", "evidence"}
+        _exact_record(
+            item, required, {"approval_ref"},
+            "%s.status_history[%d]" % (finding_id, index), ReviewLedgerError)
+        event_id = _text(item, "event_id", ReviewLedgerError)
+        if event_id in ids:
+            raise ReviewLedgerError("%s repeats status event %s" % (finding_id, event_id))
+        ids.add(event_id)
+        transition_to = _enum(
+            item.get("transition_to"), _FINDING_STATUSES,
+            "transition_to", ReviewLedgerError)
+        transition_from = item.get("transition_from")
+        if index == 0:
+            if transition_from is not None or transition_to != "Open":
+                raise ReviewLedgerError(
+                    "%s must begin with null -> Open" % finding_id)
+        else:
+            transition_from = _enum(
+                transition_from, _FINDING_STATUSES,
+                "transition_from", ReviewLedgerError)
+            if transition_from != previous:
+                raise ReviewLedgerError("%s status history is not contiguous" % finding_id)
+            if transition_from != "Open" or transition_to != terminal:
+                raise ReviewLedgerError(
+                    "%s has illegal %s transition %s -> %s"
+                    % (finding_id, disposition, transition_from, transition_to))
+        evidence = item.get("evidence")
+        if not isinstance(evidence, list):
+            raise ReviewLedgerError("status history evidence must be a list")
+        _text_list(item, "evidence", ReviewLedgerError, required=False)
+        normalized.append(item)
+        previous = transition_to
+    return normalized
+
+
+def _normalize_review_run(record, index):
+    required = {
+        "review_run_id", "review_series_id", "review_scope", "subject_scope_digest",
+        "review_round", "reviewer_identity", "coverage", "unverified_surfaces",
+        "applicable_properties", "convergence_state", "final_review",
+        "round_budget_exhausted",
+    }
+    _exact_record(
+        record, required, {"provenance_revision", "provenance_tree"},
+        "review_runs[%d]" % index, ReviewLedgerError)
+    review_round = record["review_round"]
+    if not isinstance(review_round, int) or isinstance(review_round, bool) or review_round < 1:
+        raise ReviewLedgerError("review_round must be an integer >= 1")
+    if not isinstance(record["final_review"], bool) or not isinstance(
+            record["round_budget_exhausted"], bool):
+        raise ReviewLedgerError("final_review and round_budget_exhausted must be boolean")
+    for field in ("review_run_id", "review_series_id", "reviewer_identity"):
+        _text(record, field, ReviewLedgerError)
+    _optional_text(record, "provenance_revision", ReviewLedgerError)
+    _optional_text(record, "provenance_tree", ReviewLedgerError)
+    _enum(
+        record.get("convergence_state"), _REVIEW_STATES,
+        "convergence_state", ReviewLedgerError)
+    _text_list(record, "review_scope", ReviewLedgerError)
+    _text_list(record, "coverage", ReviewLedgerError)
+    _text_list(record, "unverified_surfaces", ReviewLedgerError, required=False)
+    properties = record["applicable_properties"]
+    if not isinstance(properties, list):
+        raise ReviewLedgerError("applicable_properties must be a list")
+    seen = set()
+    for item in properties:
+        _exact_record(
+            item, {"property_id", "result", "evidence_refs"}, {"approval_ref"},
+            "applicable property", ReviewLedgerError)
+        property_id = _text(item, "property_id", ReviewLedgerError)
+        if property_id in seen:
+            raise ReviewLedgerError("duplicate applicable property: %s" % property_id)
+        seen.add(property_id)
+        result = _enum(item.get("result"), {"pass", "fail", "na"}, "property result", ReviewLedgerError)
+        _text_list(item, "evidence_refs", ReviewLedgerError, required=result == "pass")
+        if result == "na":
+            _text(item, "approval_ref", ReviewLedgerError)
+        elif "approval_ref" in item:
+            raise ReviewLedgerError("approval_ref is valid only for an na property result")
+    return record
+
+
+def _normalize_finding(record, index):
+    required = {
+        "finding_id", "stable_key", "review_series_id", "parent_review_run_id",
+        "summary", "evidence", "severity", "requirement_property", "disposition",
+        "required_action", "owner", "status", "round_introduced",
+        "resolution_evidence", "status_history",
+    }
+    optional = {"disposition_approval", "resolution_property_id"}
+    _exact_record(record, required, optional, "findings[%d]" % index, ReviewLedgerError)
+    disposition = _enum(
+        record.get("disposition"), set(_DISPOSITION_TERMINAL_STATUS),
+        "disposition", ReviewLedgerError)
+    status = _enum(record.get("status"), _FINDING_STATUSES, "status", ReviewLedgerError)
+    if status not in {"Open", _DISPOSITION_TERMINAL_STATUS[disposition]}:
+        raise ReviewLedgerError(
+            "invalid Disposition/Status pairing: %s / %s" % (disposition, status))
+    round_introduced = record["round_introduced"]
+    if not isinstance(round_introduced, int) or isinstance(round_introduced, bool) or round_introduced < 1:
+        raise ReviewLedgerError("round_introduced must be an integer >= 1")
+    finding_id = _text(record, "finding_id", ReviewLedgerError)
+    for field in (
+            "stable_key", "review_series_id", "parent_review_run_id", "summary",
+            "required_action", "owner"):
+        _text(record, field, ReviewLedgerError)
+    _text_list(record, "evidence", ReviewLedgerError)
+    requirements = _text_list(
+        record, "requirement_property", ReviewLedgerError,
+        required=disposition == "Blocker")
+    _enum(record.get("severity"), {"Critical", "High", "Medium", "Low"}, "severity", ReviewLedgerError)
+    resolution = _text_list(
+        record, "resolution_evidence", ReviewLedgerError,
+        required=status != "Open")
+    history = _normalize_status_history(record, finding_id)
+    if history[-1]["transition_to"] != status:
+        raise ReviewLedgerError("%s status does not match status_history" % finding_id)
+    if disposition in {"Accepted Tradeoff", "Residual Risk"} and status != "Open":
+        _text(record, "disposition_approval", ReviewLedgerError)
+    if disposition == "Candidate Property" and status == "In property process":
+        _text(record, "resolution_property_id", ReviewLedgerError)
+    return {
+        **record,
+        "finding_id": finding_id,
+        "requirement_property": requirements,
+        "resolution_evidence": resolution,
+        "status_history": history,
+    }
+
+
+def validate_review_ledger(
+        ledger, current_subject_digests=None, prior_ledger=None, strict_freshness=False):
+    _schema_version(ledger, ReviewLedgerError)
+    _exact_record(
+        ledger, {"schema_version", "legacy_policy", "review_runs", "findings"},
+        set(), "review ledger", ReviewLedgerError)
+    if ledger["legacy_policy"] != "read-only-no-inference":
+        raise ReviewLedgerError("legacy_policy must be read-only-no-inference")
+    runs_raw = ledger["review_runs"]
+    findings_raw = ledger["findings"]
+    if not isinstance(runs_raw, list) or not isinstance(findings_raw, list):
+        raise ReviewLedgerError("review_runs and findings must be lists")
+    runs = [_normalize_review_run(item, index) for index, item in enumerate(runs_raw)]
+    findings = [_normalize_finding(item, index) for index, item in enumerate(findings_raw)]
+    run_ids = [item["review_run_id"] for item in runs]
+    finding_ids = [item["finding_id"] for item in findings]
+    stable_keys = [(item["review_series_id"], item["stable_key"]) for item in findings]
+    if len(run_ids) != len(set(run_ids)):
+        raise ReviewLedgerError("duplicate review_run_id")
+    if len(finding_ids) != len(set(finding_ids)):
+        raise ReviewLedgerError("duplicate finding_id")
+    if len(stable_keys) != len(set(stable_keys)):
+        raise ReviewLedgerError("duplicate (review_series_id, stable_key)")
+    runs_by_id = {item["review_run_id"]: item for item in runs}
+    for finding in findings:
+        parent = runs_by_id.get(finding["parent_review_run_id"])
+        if parent is None or parent["review_series_id"] != finding["review_series_id"]:
+            raise ReviewLedgerError(
+                "%s has missing or cross-series parent review" % finding["finding_id"])
+        if finding["round_introduced"] != parent["review_round"]:
+            raise ReviewLedgerError(
+                "finding round_introduced must equal its parent review round")
+    for run in runs:
+        series_findings = [
+            item for item in findings
+            if item["review_series_id"] == run["review_series_id"]
+            and item["round_introduced"] <= run["review_round"]
+        ]
+        open_findings = [item for item in series_findings if item["status"] == "Open"]
+        failed_properties = [
+            item for item in run["applicable_properties"] if item["result"] == "fail"]
+        if run["convergence_state"] == "CONVERGED":
+            if not run["final_review"]:
+                raise ReviewLedgerError("CONVERGED requires final_review")
+            if open_findings or failed_properties or run["unverified_surfaces"]:
+                raise ReviewLedgerError(
+                    "CONVERGED requires terminal findings, satisfied properties, and full coverage")
+        if run["final_review"] and run["convergence_state"] == "IN_PROGRESS":
+            raise ReviewLedgerError("a final review cannot remain IN_PROGRESS")
+        if run["round_budget_exhausted"] and open_findings and (
+                run["convergence_state"] != "NON-CONVERGED"):
+            raise ReviewLedgerError(
+                "round budget with open findings must record NON-CONVERGED")
+        if run["final_review"]:
+            expected = None if current_subject_digests is None else current_subject_digests.get(
+                run["review_run_id"])
+            if expected is None and strict_freshness:
+                raise ReviewStateUncertainty(
+                    "current subject digest missing for final review %s" % run["review_run_id"])
+            if expected is not None:
+                _sha256(expected, "current subject digest", ReviewLedgerError)
+                if expected != run["subject_scope_digest"]:
+                    raise ReviewLedgerError("final review subject is stale")
+        _sha256(run["subject_scope_digest"], "subject_scope_digest", ReviewLedgerError)
+    if prior_ledger is not None:
+        validate_review_ledger(prior_ledger)
+        if runs_raw[:len(prior_ledger["review_runs"])] != prior_ledger["review_runs"]:
+            raise ReviewLedgerError("review runs are append-only")
+        old_findings = {item["finding_id"]: item for item in prior_ledger["findings"]}
+        new_findings = {item["finding_id"]: item for item in findings_raw}
+        if not set(old_findings) <= set(new_findings):
+            raise ReviewLedgerError("findings cannot be removed")
+        for finding_id, old in old_findings.items():
+            new = new_findings[finding_id]
+            immutable = set(old) - {
+                "status", "resolution_evidence", "status_history",
+                "disposition_approval", "resolution_property_id",
+            }
+            if any(old[key] != new.get(key) for key in immutable):
+                raise ReviewLedgerError("%s immutable finding fields changed" % finding_id)
+            if new["status_history"][:len(old["status_history"])] != old["status_history"]:
+                raise ReviewLedgerError("%s status history was rewritten" % finding_id)
+    return ledger
+
+
+def _normalize_baseline_item(item, index):
+    required = {
+        "violation_id", "binding", "baseline_subject_scope_digest",
+        "creation_provenance_revision", "owner", "disposition",
+        "required_action", "expiry_trigger",
+    }
+    _exact_record(item, required, set(), "items[%d]" % index, ActivationBaselineError)
+    binding = item["binding"]
+    _exact_record(
+        binding, {"component_id", "selector"}, set(),
+        "baseline binding", ActivationBaselineError)
+    expiry = item["expiry_trigger"]
+    _exact_record(
+        expiry, {"type", "value"}, set(),
+        "baseline expiry_trigger", ActivationBaselineError)
+    try:
+        normalized_selector = normalize_selector(binding["selector"])
+    except SelectorError as exc:
+        raise ActivationBaselineError("invalid baseline selector: %s" % exc) from exc
+    return {
+        **item,
+        "violation_id": _text(item, "violation_id", ActivationBaselineError),
+        "binding": {
+            "component_id": _text(binding, "component_id", ActivationBaselineError),
+            "selector": normalized_selector,
+        },
+        "baseline_subject_scope_digest": _sha256(
+            item.get("baseline_subject_scope_digest"),
+            "baseline_subject_scope_digest", ActivationBaselineError),
+        "creation_provenance_revision": _text(
+            item, "creation_provenance_revision", ActivationBaselineError),
+        "owner": _text(item, "owner", ActivationBaselineError),
+        "disposition": _enum(
+            item.get("disposition"), set(_DISPOSITION_TERMINAL_STATUS),
+            "baseline disposition", ActivationBaselineError),
+        "required_action": _text(item, "required_action", ActivationBaselineError),
+        "expiry_trigger": {
+            "type": _enum(
+                expiry.get("type"), {"date", "milestone", "condition"},
+                "expiry_trigger.type", ActivationBaselineError),
+            "value": _text(expiry, "value", ActivationBaselineError),
+        },
+    }
+
+
+def validate_temporary_activation_baseline(
+        baseline, strict_activation=False, prior_baseline=None,
+        current_violation_ids=None):
+    _schema_version(baseline, ActivationBaselineError)
+    _exact_record(
+        baseline, {"schema_version", "baseline_id", "mode", "sealed", "items"},
+        set(), "activation baseline", ActivationBaselineError)
+    _text(baseline, "baseline_id", ActivationBaselineError)
+    mode = _enum(baseline.get("mode"), _BASELINE_MODES, "baseline.mode", ActivationBaselineError)
+    if not isinstance(baseline["sealed"], bool):
+        raise ActivationBaselineError("baseline.sealed must be boolean")
+    raw_items = baseline["items"]
+    if not isinstance(raw_items, list):
+        raise ActivationBaselineError("baseline.items must be a list")
+    items = [_normalize_baseline_item(item, index) for index, item in enumerate(raw_items)]
+    ids = [item["violation_id"] for item in items]
+    if len(ids) != len(set(ids)):
+        raise ActivationBaselineError("baseline contains duplicate violation_id")
+    if mode == "inactive" and items:
+        raise ActivationBaselineError("inactive baseline must be empty")
+    if mode == "strict" and (items or not baseline["sealed"]):
+        raise ActivationBaselineError("strict baseline must be sealed and mechanically empty")
+    if strict_activation and (mode != "strict" or items):
+        raise ActivationBaselineError(
+            "strict activation requires mode strict and zero baseline items")
+    if current_violation_ids is not None:
+        if not isinstance(current_violation_ids, list) or any(
+                not isinstance(item, str) or not item.strip()
+                for item in current_violation_ids):
+            raise ActivationBaselineError("current_violation_ids must be a list of non-empty strings")
+        current = {item.strip() for item in current_violation_ids}
+        baseline_ids = set(ids)
+        new = sorted(current - baseline_ids)
+        stale = sorted(baseline_ids - current)
+        if new:
+            raise ActivationBaselineError(
+                "new violations are not baseline-covered: %s" % ", ".join(new))
+        if stale:
+            raise ActivationBaselineError(
+                "resolved violations must be removed from the baseline: %s" % ", ".join(stale))
+    if prior_baseline is not None:
+        validate_temporary_activation_baseline(prior_baseline)
+        prior_mode = prior_baseline["mode"]
+        if mode != prior_mode and (prior_mode, mode) not in _BASELINE_MODE_TRANSITIONS:
+            raise ActivationBaselineError(
+                "illegal baseline mode transition %s -> %s" % (prior_mode, mode))
+        if prior_baseline["sealed"] and not baseline["sealed"]:
+            raise ActivationBaselineError("a sealed baseline cannot be unsealed")
+        old_items = {item["violation_id"]: item for item in prior_baseline["items"]}
+        new_items = {item["violation_id"]: item for item in raw_items}
+        for violation_id in set(old_items) & set(new_items):
+            if old_items[violation_id] != new_items[violation_id]:
+                raise ActivationBaselineError(
+                    "%s baseline record is immutable" % violation_id)
+        if prior_baseline["sealed"] and not set(new_items) <= set(old_items):
+            raise ActivationBaselineError("sealed baseline cannot admit new violations")
+    return baseline

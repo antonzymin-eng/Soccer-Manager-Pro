@@ -12,7 +12,14 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 1, 2026 — **A2 selector type-ID canonicalization.**
+> **Last Updated:** September 1, 2026 — **A2 canonical schema and governance-state freeze completed.**
+> The final A2 slice creates `docs/tracking/architecture-governance/` with seven schema-v1.0.0 seed artifacts and canonical Draft 2020-12 schemas for classification, bootstrap intent, integration contracts, applicability, properties, Governance exceptions, reusable proof, review state, and the temporary activation baseline. The integration plan advances v0.16 → v0.17 and records A2 COMPLETE; A3 remains blocked only until this slice lands.
+>
+> `reference_semantics.py` advances v1.9.0 → v2.0.0. Property transitions are checked against Governance §3.1 and a trusted merge-base with append-only decision/revalidation history; an unavailable prior is explicit uncertainty. `exceptions.json` accepts only admitted APs that permit exceptions and cannot absorb FR-CS/FR-TS owner-specific waivers. Review runs and finding histories enforce the four Disposition×Status mappings, severity-independent convergence, current-subject final-review freshness, zero-finding final reviews, and round-budget NON-CONVERGED behavior. The finite activation baseline rejects new violations, cannot grow after sealing, and must be strict/sealed/mechanically empty at strict activation.
+>
+> Governance fixtures grow 77 → 102; with 8 assembly-tier fixtures, existing `tools/tests/test_*.py` discovery runs 110 tooling tests. Approved Governance v0.10/A0 and #19/#20 normative files are unchanged. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+>
+> **Last Updated (prior):** September 1, 2026 — **A2 selector type-ID canonicalization.**
 > Codex's remaining live P2 exposed an under-specified selector producer contract: `parameter_type_ids` carried arbitrary non-empty strings, so a producer using plain `System.Int32` for both `M(int)` and legal `M(ref int)` would collapse the overloads. The integration plan advances v0.15 → v0.16 and `reference_semantics.py` v1.8.0 → v1.9.0. Selector type IDs are now normatively pinned to the C# XML documentation ID type-signature convention emitted from compiler symbols; by-reference parameters therefore use the `@` suffix.
 >
 > A regression proves `M(System.Int32)` and `M(System.Int32@)` have distinct selector keys and each resolves to its own symbol. No `parameter_ref_kinds` field was added: the canonical type-ID convention already carries byref identity and also fixes the previously unstated spelling contract for generic parameters/types, arrays, pointers, and nested type structure. Selector-v1 shape, execution truth, applicability/proof semantics, approved Governance v0.10/A0, and #19/#20 normative files are unchanged. Governance fixtures grow 76 → 77; with 8 assembly-tier fixtures, `tools/tests/test_*.py` discovers 85 tooling tests. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning value changed.

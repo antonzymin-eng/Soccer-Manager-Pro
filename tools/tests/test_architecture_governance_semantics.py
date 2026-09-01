@@ -4,6 +4,7 @@
 
 import copy
 import importlib.util
+import json
 import unittest
 from pathlib import Path
 
@@ -113,7 +114,8 @@ class SelectorTests(unittest.TestCase):
             })
 
     def test_reference_semantics_version_is_pinned(self):
-        self.assertEqual("1.9.0", sem.REFERENCE_SEMANTICS_VERSION)
+        self.assertEqual("2.0.0", sem.REFERENCE_SEMANTICS_VERSION)
+        self.assertEqual("1.0.0", sem.SCHEMA_VERSION)
 
     def test_reusable_fact_index_avoids_reindexing_contract(self):
         fact = method("Start", [], "M:Start()")
@@ -1155,6 +1157,456 @@ class ExecutionTruthTests(unittest.TestCase):
             )
             self.assertTrue(result["satisfied"])
             self.assertEqual("bounded-substitute", result["basis"])
+
+
+def property_record(state="Candidate", exceptions_allowed=True):
+    decisions = [{
+        "decision_id": "DEC-AP-001",
+        "decision_actor": "architecture-owner",
+        "transition_from": None,
+        "transition_to": "Candidate",
+        "decision_rationale": "establish the candidate",
+        "decided_at": "2026-09-01",
+    }]
+    if state != "Candidate":
+        decisions.append({
+            "decision_id": "DEC-AP-002",
+            "decision_actor": "architecture-owner",
+            "transition_from": "Candidate",
+            "transition_to": state,
+            "decision_rationale": "complete the admission decision",
+            "decided_at": "2026-09-01",
+        })
+    record = {
+        "property_id": "AP-001",
+        "title": "Runtime ownership is explicit",
+        "state": state,
+        "statement": "Every runtime service has one construction owner.",
+        "failure_mode": "A service can exist without production activation.",
+        "scope": ["runtime-bearing"],
+        "non_scope": [],
+        "authority": "Project Architecture Governance",
+        "evidence": ["structural-reachability"],
+        "enforcement_class": "Hybrid",
+        "activation": "Staged",
+        "exceptions_allowed": exceptions_allowed,
+        "supersedes": None,
+        "decision_rationale": "Prevents structurally dormant services.",
+        "last_reviewed": "2026-09-01",
+        "decision_history": decisions,
+        "revalidation_history": [],
+    }
+    if exceptions_allowed:
+        record["exception_mechanism"] = "governance-exception"
+    return record
+
+
+def property_registry(record=None):
+    return {
+        "schema_version": "1.0.0",
+        "properties": [] if record is None else [record],
+    }
+
+
+class CanonicalArtifactSchemaTests(unittest.TestCase):
+    ROOT = Path(__file__).resolve().parents[2] / "docs" / "tracking" / "architecture-governance"
+
+    def load(self, name):
+        return json.loads((self.ROOT / name).read_text(encoding="utf-8"))
+
+    def test_all_canonical_schema_documents_are_machine_readable_and_versioned(self):
+        expected = {
+            "applicability-rules.schema.json",
+            "bootstrap-runtime-surfaces.schema.json",
+            "common.schema.json",
+            "exceptions.schema.json",
+            "integration-contracts.schema.json",
+            "proof-artifact.schema.json",
+            "property-registry.schema.json",
+            "review-ledger.schema.json",
+            "runtime-surface-classifications.schema.json",
+            "temporary-activation-baseline.schema.json",
+        }
+        actual = {path.name for path in (self.ROOT / "schemas").glob("*.json")}
+        self.assertEqual(expected, actual)
+        for name in expected:
+            schema = self.load("schemas/" + name)
+            self.assertEqual(
+                "https://json-schema.org/draft/2020-12/schema",
+                schema["$schema"],
+            )
+
+    def test_all_schema_references_resolve_inside_the_canonical_schema_set(self):
+        schemas = {
+            path.name: json.loads(path.read_text(encoding="utf-8"))
+            for path in (self.ROOT / "schemas").glob("*.json")
+        }
+
+        def resolve_pointer(document, fragment):
+            current = document
+            if not fragment:
+                return current
+            self.assertTrue(fragment.startswith("/"))
+            for part in fragment[1:].split("/"):
+                part = part.replace("~1", "/").replace("~0", "~")
+                current = current[part]
+            return current
+
+        def walk(value, owner):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    if key == "$ref":
+                        file_name, _, fragment = item.partition("#")
+                        target = schemas[owner] if not file_name else schemas[file_name]
+                        resolve_pointer(target, fragment)
+                    walk(item, owner)
+            elif isinstance(value, list):
+                for item in value:
+                    walk(item, owner)
+
+        for name, schema in schemas.items():
+            walk(schema, name)
+
+    def test_seven_seed_artifacts_validate(self):
+        sem.validate_runtime_surface_classifications_document(
+            self.load("runtime-surface-classifications.json"))
+        sem.validate_integration_contracts_document(
+            self.load("integration-contracts.json"))
+        sem.validate_applicability_rules_document(
+            self.load("applicability-rules.json"))
+        properties = self.load("property-registry.json")
+        sem.validate_property_registry(properties, None)
+        sem.validate_exception_registry(self.load("exceptions.json"), properties)
+        sem.validate_review_ledger(self.load("review-ledger.json"))
+        sem.validate_temporary_activation_baseline(
+            self.load("temporary-activation-baseline.json"))
+
+    def test_unknown_schema_major_fails_closed(self):
+        document = self.load("property-registry.json")
+        document["schema_version"] = "2.0.0"
+        with self.assertRaises(sem.PropertyRegistryError):
+            sem.validate_property_registry(document, None)
+
+
+class PropertyRegistryTests(unittest.TestCase):
+    def test_known_absent_merge_base_allows_initial_candidate(self):
+        sem.validate_property_registry(property_registry(property_record()), None)
+
+    def test_strict_validation_without_trusted_merge_base_reports_uncertainty(self):
+        with self.assertRaises(sem.PropertyRegistryUncertainty):
+            sem.validate_property_registry(property_registry(property_record()))
+
+    def test_legal_candidate_to_admitted_transition_is_append_only(self):
+        prior = property_registry(property_record())
+        current = property_registry(property_record("Admitted"))
+        sem.validate_property_registry(current, prior)
+
+    def test_illegal_governance_transition_is_rejected(self):
+        record = property_record()
+        record["state"] = "Retired"
+        record["decision_history"].append({
+            "decision_id": "DEC-AP-ILLEGAL",
+            "decision_actor": "architecture-owner",
+            "transition_from": "Candidate",
+            "transition_to": "Retired",
+            "decision_rationale": "skip admission",
+            "decided_at": "2026-09-01",
+        })
+        with self.assertRaises(sem.PropertyRegistryError):
+            sem.validate_property_registry(property_registry(record), None)
+
+    def test_merge_base_history_rewrite_is_rejected(self):
+        prior = property_registry(property_record())
+        current = copy.deepcopy(prior)
+        current["properties"][0]["decision_history"][0]["decision_rationale"] = "rewritten"
+        with self.assertRaises(sem.PropertyRegistryError):
+            sem.validate_property_registry(current, prior)
+
+    def test_material_amendment_requires_appended_revalidation(self):
+        prior = property_registry(property_record())
+        current = copy.deepcopy(prior)
+        current["properties"][0]["statement"] = "Every runtime service has exactly one owner."
+        with self.assertRaises(sem.PropertyRegistryError):
+            sem.validate_property_registry(current, prior)
+        current["properties"][0]["revalidation_history"].append({
+            "revalidation_id": "REVAL-001",
+            "decision_actor": "architecture-owner",
+            "reviewed_at": "2026-09-01",
+            "subject_scope_digest": sem.digest({"property": "AP-001-v2"}),
+            "outcome": "amended",
+            "decision_rationale": "clarify cardinality",
+        })
+        sem.validate_property_registry(current, prior)
+
+    def test_top_level_decision_metadata_cannot_change_without_history(self):
+        prior = property_registry(property_record())
+        current = copy.deepcopy(prior)
+        current["properties"][0]["decision_rationale"] = "silently rewritten"
+        current["properties"][0]["last_reviewed"] = "2026-09-02"
+        with self.assertRaises(sem.PropertyRegistryError):
+            sem.validate_property_registry(current, prior)
+
+
+def exception_record(property_id="AP-001"):
+    return {
+        "exception_id": "EX-AP-001",
+        "property_id": property_id,
+        "scope": [{"component_id": "component:match-host"}],
+        "reason": "Migration cannot complete in one change.",
+        "risk": "The component may remain structurally dormant.",
+        "mitigation": "A focused activation test runs on every change.",
+        "owner": "match-engine",
+        "expiry_trigger": {"type": "milestone", "value": "A8 strict activation"},
+        "approval": {
+            "decision_id": "DEC-EX-001",
+            "decision_actor": "architecture-owner",
+            "decided_at": "2026-09-01",
+        },
+        "status": "active",
+    }
+
+
+class ExceptionRegistryTests(unittest.TestCase):
+    def test_exception_requires_admitted_property_that_allows_it(self):
+        properties = property_registry(property_record("Admitted"))
+        registry = {"schema_version": "1.0.0", "exceptions": [exception_record()]}
+        sem.validate_exception_registry(registry, properties)
+
+        denied = property_registry(property_record("Admitted", exceptions_allowed=False))
+        with self.assertRaises(sem.ExceptionRegistryError):
+            sem.validate_exception_registry(registry, denied)
+
+    def test_fr_waiver_cannot_be_routed_into_governance_exceptions(self):
+        properties = property_registry(property_record("Admitted"))
+        registry = {
+            "schema_version": "1.0.0",
+            "exceptions": [exception_record("FR-TS-097")],
+        }
+        with self.assertRaises(sem.ExceptionRegistryError):
+            sem.validate_exception_registry(registry, properties)
+
+    def test_exception_routes_are_exclusive(self):
+        properties = property_registry(property_record("Admitted"))
+        self.assertEqual(
+            {"route": "governance-property", "governance_exception_allowed": True},
+            sem.exception_route("AP-001", properties),
+        )
+        self.assertEqual(
+            {"route": "testing-strategy-owner", "governance_exception_allowed": False},
+            sem.exception_route("FR-TS-097", properties),
+        )
+        self.assertEqual(
+            {"route": "code-standards-owner", "governance_exception_allowed": False},
+            sem.exception_route("FR-CS-076", properties),
+        )
+
+
+def review_run(
+        run_id="RUN-001", round_number=1, convergence="CONVERGED",
+        final=True, budget_exhausted=False):
+    return {
+        "review_run_id": run_id,
+        "review_series_id": "SERIES-001",
+        "review_scope": ["A2 schema freeze"],
+        "subject_scope_digest": sem.digest({"subject": "A2"}),
+        "review_round": round_number,
+        "reviewer_identity": "reviewer-1",
+        "coverage": ["schemas", "reference semantics"],
+        "unverified_surfaces": [],
+        "applicable_properties": [],
+        "convergence_state": convergence,
+        "final_review": final,
+        "round_budget_exhausted": budget_exhausted,
+    }
+
+
+def finding(disposition="Blocker", status="Open", severity="Low"):
+    terminal = {
+        "Blocker": "Resolved",
+        "Accepted Tradeoff": "Accepted",
+        "Residual Risk": "Recorded",
+        "Candidate Property": "In property process",
+    }[disposition]
+    history = [{
+        "event_id": "STATUS-001",
+        "transition_from": None,
+        "transition_to": "Open",
+        "actor": "reviewer-1",
+        "at": "2026-09-01",
+        "evidence": [],
+    }]
+    resolution = []
+    if status != "Open":
+        history.append({
+            "event_id": "STATUS-002",
+            "transition_from": "Open",
+            "transition_to": status,
+            "actor": "architecture-owner",
+            "at": "2026-09-01",
+            "evidence": ["resolution accepted"],
+        })
+        resolution = ["resolution accepted"]
+    record = {
+        "finding_id": "FINDING-001",
+        "stable_key": "schema-transition-gap",
+        "review_series_id": "SERIES-001",
+        "parent_review_run_id": "RUN-001",
+        "summary": "A schema transition is not enforced.",
+        "evidence": ["bad fixture passes"],
+        "severity": severity,
+        "requirement_property": ["FR-AG-017"] if disposition == "Blocker" else [],
+        "disposition": disposition,
+        "required_action": "Implement the missing transition check.",
+        "owner": "architecture-governance",
+        "status": status,
+        "round_introduced": 1,
+        "resolution_evidence": resolution,
+        "status_history": history,
+    }
+    if disposition in {"Accepted Tradeoff", "Residual Risk"} and status == terminal:
+        record["disposition_approval"] = "DEC-REVIEW-001"
+    if disposition == "Candidate Property" and status == terminal:
+        record["resolution_property_id"] = "AP-002"
+    return record
+
+
+def review_ledger(runs=None, findings=None):
+    return {
+        "schema_version": "1.0.0",
+        "legacy_policy": "read-only-no-inference",
+        "review_runs": [] if runs is None else runs,
+        "findings": [] if findings is None else findings,
+    }
+
+
+class ReviewLedgerTests(unittest.TestCase):
+    def test_clean_zero_finding_final_review_can_converge(self):
+        run = review_run()
+        sem.validate_review_ledger(
+            review_ledger([run]),
+            current_subject_digests={run["review_run_id"]: run["subject_scope_digest"]},
+            strict_freshness=True,
+        )
+
+    def test_open_low_blocker_prevents_convergence(self):
+        with self.assertRaises(sem.ReviewLedgerError):
+            sem.validate_review_ledger(review_ledger([review_run()], [finding()]))
+
+    def test_terminal_high_tradeoff_does_not_gate_by_severity(self):
+        accepted = finding("Accepted Tradeoff", "Accepted", severity="High")
+        sem.validate_review_ledger(review_ledger([review_run()], [accepted]))
+
+    def test_invalid_disposition_status_pairing_is_rejected(self):
+        invalid = finding("Blocker", "Resolved")
+        invalid["status"] = "Accepted"
+        invalid["status_history"][-1]["transition_to"] = "Accepted"
+        with self.assertRaises(sem.ReviewLedgerError):
+            sem.validate_review_ledger(
+                review_ledger([review_run(convergence="NON-CONVERGED")], [invalid]))
+
+    def test_round_budget_with_open_finding_records_non_converged(self):
+        run = review_run(
+            convergence="NON-CONVERGED", final=True, budget_exhausted=True)
+        sem.validate_review_ledger(review_ledger([run], [finding()]))
+        run["convergence_state"] = "CONVERGED"
+        with self.assertRaises(sem.ReviewLedgerError):
+            sem.validate_review_ledger(review_ledger([run], [finding()]))
+
+    def test_stale_final_review_digest_and_missing_strict_context_fail_closed(self):
+        run = review_run()
+        ledger = review_ledger([run])
+        with self.assertRaises(sem.ReviewStateUncertainty):
+            sem.validate_review_ledger(ledger, strict_freshness=True)
+        with self.assertRaises(sem.ReviewLedgerError):
+            sem.validate_review_ledger(
+                ledger,
+                current_subject_digests={run["review_run_id"]: sem.digest({"subject": "changed"})},
+                strict_freshness=True,
+            )
+
+    def test_review_runs_and_finding_status_history_are_append_only(self):
+        initial_run = review_run(convergence="IN_PROGRESS", final=False)
+        open_finding = finding()
+        prior = review_ledger([initial_run], [open_finding])
+        resolved = finding("Blocker", "Resolved")
+        final_run = review_run("RUN-002", 2)
+        current = review_ledger([initial_run, final_run], [resolved])
+        sem.validate_review_ledger(current, prior_ledger=prior)
+        rewritten = copy.deepcopy(current)
+        rewritten["findings"][0]["status_history"][0]["actor"] = "rewriter"
+        with self.assertRaises(sem.ReviewLedgerError):
+            sem.validate_review_ledger(rewritten, prior_ledger=prior)
+
+    def test_finding_cannot_be_retroactively_attached_to_a_later_round(self):
+        first = review_run(convergence="IN_PROGRESS", final=False)
+        second = review_run("RUN-002", 2, convergence="NON-CONVERGED")
+        retroactive = finding()
+        retroactive["parent_review_run_id"] = "RUN-002"
+        with self.assertRaises(sem.ReviewLedgerError):
+            sem.validate_review_ledger(
+                review_ledger([first, second], [retroactive]))
+
+
+def baseline_item(violation_id="VIOLATION-001"):
+    return {
+        "violation_id": violation_id,
+        "binding": {
+            "component_id": "component:match-host",
+            "selector": method("Start", [], "unused")["selector"],
+        },
+        "baseline_subject_scope_digest": sem.digest({"violation": violation_id}),
+        "creation_provenance_revision": "commit-1",
+        "owner": "match-engine",
+        "disposition": "Blocker",
+        "required_action": "Wire the host.",
+        "expiry_trigger": {"type": "milestone", "value": "A8 strict activation"},
+    }
+
+
+def baseline(mode="inactive", sealed=False, items=None):
+    return {
+        "schema_version": "1.0.0",
+        "baseline_id": "architecture-governance-activation",
+        "mode": mode,
+        "sealed": sealed,
+        "items": [] if items is None else items,
+    }
+
+
+class TemporaryActivationBaselineTests(unittest.TestCase):
+    def test_strict_activation_requires_mechanically_empty_strict_baseline(self):
+        sem.validate_temporary_activation_baseline(
+            baseline("strict", True), strict_activation=True)
+        with self.assertRaises(sem.ActivationBaselineError):
+            sem.validate_temporary_activation_baseline(
+                baseline("migration", True, [baseline_item()]),
+                strict_activation=True,
+            )
+
+    def test_new_violation_is_not_silently_baselined(self):
+        current = baseline("migration", True, [baseline_item()])
+        with self.assertRaises(sem.ActivationBaselineError):
+            sem.validate_temporary_activation_baseline(
+                current,
+                current_violation_ids=["VIOLATION-001", "VIOLATION-NEW"],
+            )
+
+    def test_sealed_baseline_can_shrink_but_cannot_grow_or_rewrite(self):
+        prior = baseline("migration", True, [baseline_item()])
+        strict = baseline("strict", True)
+        sem.validate_temporary_activation_baseline(strict, prior_baseline=prior)
+
+        grown = baseline(
+            "migration", True,
+            [baseline_item(), baseline_item("VIOLATION-002")],
+        )
+        with self.assertRaises(sem.ActivationBaselineError):
+            sem.validate_temporary_activation_baseline(grown, prior_baseline=prior)
+
+        rewritten = copy.deepcopy(prior)
+        rewritten["items"][0]["owner"] = "different-owner"
+        with self.assertRaises(sem.ActivationBaselineError):
+            sem.validate_temporary_activation_baseline(rewritten, prior_baseline=prior)
 
 
 if __name__ == "__main__":

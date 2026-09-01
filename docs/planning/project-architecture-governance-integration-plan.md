@@ -2,9 +2,9 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.16\
+**Version:** 0.17\
 **Created:** August 27, 2026  
-**Last Updated:** August 31, 2026  
+**Last Updated:** September 1, 2026\
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
 **Primary downstream specifications:** Testing Strategy & Framework #19; Code Standards & Style Guide #20  
 **Related project authorities:** Master Development Plan; adversarial-review process; root and src agent guides  
@@ -310,6 +310,8 @@ Before any merge-blocking architecture tool is implemented, A2 freezes versioned
 
 Every schema carries schema_version and rejects unknown major versions. Schema evolution that changes discovery, applicability, gating, or proof semantics invalidates affected downstream evidence and reopens the corresponding approval step.
 
+Canonical Draft 2020-12 schemas live under `docs/tracking/architecture-governance/schemas/`. The directory contains shared selector/value definitions plus domain schemas for classification, bootstrap intent, integration contracts, applicability, properties, exceptions, reusable proof, review state, and the temporary activation baseline. The seven committed state artifacts are seeded separately under `docs/tracking/architecture-governance/`; proof records are per-proof artifacts rather than an empty registry, and the finite bootstrap file is created only if A4 needs non-inferable runtime intent.
+
 Free-text narrative MAY supplement a record, but blocking checks MUST depend only on typed fields whose semantics are defined and tested.
 
 A2 is not a schema-shape review. Before a machine contract is frozen, an executable reference implementation MUST demonstrate canonical selector parsing/resolution, stable-identity handling, applicability precedence/conflict behavior, proof dependency-closure calculation, subject-scope fingerprinting/freshness, review-state transitions, and N/A/bounded-result handling. A5 may productionize and optimize those semantics, but MUST NOT silently redefine them.
@@ -367,6 +369,8 @@ Strict mode fails when a newly discovered surface is unclassified after initial 
 
 `property-registry.json` adds `schema_version`, `decision_id`, `decision_actor`, optional `decision_provenance_revision`, `transition_from`, `transition_to`, `decision_rationale`, and `revalidation_history`.
 
+Decision fields live in each record's append-only `decision_history`. A new property is established only as `null → Candidate`; every later edge must be one of Governance §3.1's six transitions, the current `state` must equal the final `transition_to`, and existing property order/history is immutable against the trusted merge-base. A material property amendment that does not change state appends `revalidation_history` rather than rewriting the admission record.
+
 `decision_provenance_revision` is provenance only and MUST NOT require the registry landing to contain its own future commit SHA. Transition immutability is enforced by comparing the proposed registry/history against the trusted merge-base/parent version and permitting only schema-valid append/transition operations. If the prior authoritative registry cannot be retrieved, strict transition validation reports uncertainty rather than silently accepting rewritten history.
 
 The validator enforces legal transitions and append-only decision history; it does not judge admission quality.
@@ -409,6 +413,8 @@ A2 MUST execute the resolver against representative good/bad/conflict/N/A fixtur
 ## 3.6 Exception routing and precedence
 
 Governance exceptions remain property-oriented exactly as Governance §7 defines them. This integration MUST NOT route FR-CS or FR-TS waivers directly into exceptions.json unless the affected obligation is an admitted AP that explicitly allows an exception.
+
+The canonical `exceptions.json` record binds each exception to an admitted property, exact typed scope, risk/mitigation/owner, finite expiry trigger, architectural approval, and current status. Routing is exclusive: AP waivers use Governance `exceptions.json`; FR-CS and FR-TS requests remain with their owning mechanisms, which cannot be used as a back door to waive an AP.
 
 Existing #19/#20 exception mechanisms remain owner-specific. They cannot waive an admitted AP, missing required evidence, concrete correctness/integrity failure, or Governance Blocker.
 
@@ -466,13 +472,17 @@ Finding IDs remain stable across rounds within their review namespace. `stable_k
 
 Disposition and status are distinct. New governance-aware reviews use the versioned durable ledger prospectively. Historical prose/ERR review records remain read-only unless a deterministic source record actually contains the required fields; the migration MUST NOT infer tradeoff/risk/disposition approvals from narrative history.
 
+Each finding carries append-only `status_history`: creation is exactly `null → Open`, and the only terminal edge is the Governance §4.1 mapping for its selected Disposition. Review runs are immutable snapshots; later rounds append runs instead of rewriting coverage or final-review claims. Strict convergence recomputes the final run's material `subject_scope_digest` and fails on any open finding, invalid pairing, unsatisfied applicable property, or unverified surface.
+
 A fresh final-review marker is valid when the current material review subject recomputes to the recorded `subject_scope_digest`. Recording the review run itself or unrelated landing/tracking metadata does not recursively invalidate that subject.
 
 ## 3.9 Temporary activation baseline
 
-If required, the baseline is finite and versioned. Each item records violation ID, exact stable component/selector binding, baseline `subject_scope_digest`, creation provenance revision, owner, disposition, required action, and expiry trigger.
+If required, `temporary-activation-baseline.json` is finite and versioned. Each item records violation ID, exact stable component/selector binding, baseline `subject_scope_digest`, creation provenance revision, owner, disposition, required action, and expiry trigger.
 
 Creation provenance is not the freshness key. New violations fail; a baseline item's governed selector/content changing outside the recorded subject scope requires explicit review. Final strict activation requires zero active items and retirement of activation-only baseline machinery.
+
+The baseline modes are `inactive → migration → strict` (with direct `inactive → strict` allowed). Sealing is irreversible; a sealed baseline may shrink but cannot add or rewrite items. Strict activation requires `mode: strict`, `sealed: true`, and a mechanically empty `items` array.
 
 ---
 
@@ -872,6 +882,8 @@ Non-negotiable 12 is **not** relaxed by this amendment and continues to govern e
 
 Freeze identity/selectors, activation-state/disable-anchor semantics, applicability with required strict-mode Governance §5.2 subject change context plus optional rule `change_types` filters, contracts, the exact four Governance proof classes and their conditional closure/freshness behavior, execution-truth/bounded-substitute semantics, property/exception, review, and baseline schemas. The selector contract pins C# XML documentation ID type-signature spelling for every selector type ID, including byref `@`, so the future compiler fact producer cannot collapse legal overloads by using display/plain type names. The reference semantics include activation-anchor evaluation, KD-W1 tuning-surface matching, typed enum validation for untrusted JSON, schema-derived fallback/context precedence with narrower matching context sets outranking broader ones without crossing surface precedence, explicit non-strict incomplete-context diagnostics, persistence/resource closure activation from the evaluated subject change type rather than rule payload, fail-closed proof closure when change context is absent, and conservative changed-surface rerun decisions. Any compiler reference implementation is source-built with the pinned .NET SDK/toolchain.
 
+**COMPLETE September 1, 2026.** Canonical schemas and seven versioned seed artifacts now exist; reference semantics v2.0.0 validates property history against a trusted merge-base, exclusive exception routing, Governance Disposition×Status/final-review convergence, and finite/empty strict baselines. Representative good/bad/uncertainty fixtures are CI-discovered. A3 remains blocked only until this A2 completion slice lands on its base.
+
 ## A3 — Amend and reapprove #19/#20 governance integration
 
 The coordinated bundle consumes the already-repaired #20 dependency model. Add activation-state mechanics to #20 and FR-TS-097/KD-W1 to #19 alongside the existing governance amendments.
@@ -1217,6 +1229,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.17 | September 1, 2026 | — | **A2 schema freeze completed.** Adds canonical Draft 2020-12 schemas for classification, bootstrap intent, integration contracts, applicability, properties, exceptions, reusable proof, review state, and temporary activation baseline; seeds the seven durable state artifacts at schema v1.0.0. Reference semantics v2.0.0 now enforces trusted-merge-base property-history immutability and Governance §3.1 transitions, property-only exception routing with #19/#20 owner separation, Governance §4.1 Disposition×Status and §4.7 convergence/freshness, and finite baseline transitions with a mechanically empty strict state. A3 remains blocked only until this slice lands. |
 | 0.16 | September 1, 2026 | — | A2 selector type-ID canonicalization after Codex review: pins every selector type ID to the C# XML documentation ID type-signature convention emitted from compiler symbols, including byref `@`; adds a value-vs-ref overload regression proving `M(System.Int32)` and `M(System.Int32@)` resolve distinctly without introducing a redundant `parameter_ref_kinds` field. Selector-v1 shape, execution truth, applicability, proof closure, Governance v0.10/A0, and #19/#20 normative files remain unchanged. |
 | 0.15 | September 1, 2026 | — | A2 residual hardening after verification of v0.14: normalizes every enum-valued untrusted JSON boundary through typed semantics errors instead of host-language `TypeError`; makes narrower matching `change_types` sets outrank broader matching sets while preserving the surface-specificity ordering; and makes non-strict missing change context explicitly diagnostic rather than silently indistinguishable from no applicable context-gated rule. Execution truth and the v0.14 subject-side change-context model are otherwise unchanged. Governance v0.10/A0 and #19/#20 normative files remain unchanged. |
 | 0.14 | August 31, 2026 | — | A2 change-context model correction after verification of v0.13: moves Governance §5.2 `change_type` from obligation/rule payload into the evaluated applicability subject; strict resolution and proof closure now require explicit current change context; rules may optionally filter with `change_types`; matching context-specific rules mechanically outrank otherwise-identical generic rules; persistence/resource closure reads only the current subject context. This removes both v1.5 over-inclusion and v1.6 omission-driven false freshness. Execution truth is unchanged. Governance v0.10/A0 and #19/#20 normative files remain unchanged. |

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Architecture Governance Applicability Rules v1",
+  "type": "object",
+  "required": ["schema_version", "rules"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "rule_id", "selectors", "component_ids", "assemblies", "classifications",
+          "activation_states", "trigger_ref", "change_types", "requirement_refs",
+          "proof_classes", "gate_classes", "allowed_na_reasons", "precedence",
+          "fallback_scope"
+        ],
+        "properties": {
+          "rule_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "selectors": {
+            "type": "array",
+            "items": { "$ref": "common.schema.json#/$defs/selector" },
+            "uniqueItems": true
+          },
+          "component_ids": { "$ref": "common.schema.json#/$defs/stringList" },
+          "assemblies": { "$ref": "common.schema.json#/$defs/stringList" },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "production-runtime-root", "contracted-child", "test-only", "tooling-only",
+                "generated-or-external", "non-runtime-bearing"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "activation_states": {
+            "type": "array",
+            "items": { "enum": ["active", "intentionally-disabled", "pending-integration", "unresolved"] },
+            "uniqueItems": true
+          },
+          "trigger_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "change_types": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "pure-local-calculation", "new-public-cross-assembly-api", "new-runtime-service",
+                "new-composition-root-registration", "host-bootstrap-change",
+                "static-initialization-change", "persistence-boundary",
+                "external-resource-dependency", "testhost-runtime-divergence-fix",
+                "dependency-graph-only-refactor", "pure-data-schema-no-runtime-behavior"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "requirement_refs": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
+          "proof_classes": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "enum": ["structural-reachability", "lifecycle-order", "failure-injection", "mutation"] },
+            "uniqueItems": true
+          },
+          "gate_classes": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
+          "allowed_na_reasons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["reason_code", "approval_required"],
+              "properties": {
+                "reason_code": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+                "approval_required": { "type": "boolean" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "precedence": { "type": "integer" },
+          "fallback_scope": {
+            "enum": [null, "repository", "runtime-bearing", "non-runtime-bearing"]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
