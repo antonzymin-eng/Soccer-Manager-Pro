@@ -10,7 +10,7 @@ import hashlib
 import json
 import math
 
-REFERENCE_SEMANTICS_VERSION = "1.6.0"
+REFERENCE_SEMANTICS_VERSION = "1.7.0"
 
 _SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property", "event"}
 _ACTIVATION_STATES = {"active", "intentionally-disabled", "pending-integration", "unresolved"}
@@ -658,25 +658,26 @@ def _normalize_na_reasons(rule):
 
 
 def _specificity(rule):
-    # Fallback precedence is schema-defined: a category fallback outranks the
-    # repository default, while every explicit selector/identity rule outranks
-    # every fallback. Authors store this value but cannot choose it.
+    # Surface specificity preserves the existing ordering. Change context is
+    # orthogonal and contributes the least-significant bit so an otherwise
+    # identical change-type-specific rule outranks its generic counterpart
+    # without changing surface precedence.
     fallback_scope = rule.get("fallback_scope")
     if fallback_scope is not None:
-        return _FALLBACK_PRECEDENCE[fallback_scope]
-
-    score = 32
-    if rule["selectors"]:
-        score |= 16
-    if rule["component_ids"]:
-        score |= 8
-    if rule["assemblies"]:
-        score |= 4
-    if rule["classifications"]:
-        score |= 2
-    if rule["activation_states"]:
-        score |= 1
-    return score
+        surface_score = _FALLBACK_PRECEDENCE[fallback_scope]
+    else:
+        surface_score = 32
+        if rule["selectors"]:
+            surface_score |= 16
+        if rule["component_ids"]:
+            surface_score |= 8
+        if rule["assemblies"]:
+            surface_score |= 4
+        if rule["classifications"]:
+            surface_score |= 2
+        if rule["activation_states"]:
+            surface_score |= 1
+    return (surface_score * 2) + (1 if rule["change_types"] else 0)
 
 
 def normalize_applicability_rule(rule):
@@ -690,7 +691,7 @@ def normalize_applicability_rule(rule):
         "classifications",
         "activation_states",
         "trigger_ref",
-        "change_type",
+        "change_types",
         "requirement_refs",
         "proof_classes",
         "gate_classes",
@@ -739,6 +740,11 @@ def normalize_applicability_rule(rule):
         raise ApplicabilityError(
             "rule requires at least one explicit applicability selector or fallback_scope")
 
+    change_types = _text_list(
+        rule, "change_types", ApplicabilityError, required=False)
+    if any(item not in _CHANGE_TYPES for item in change_types):
+        raise ApplicabilityError("change_types contains an invalid value")
+
     proof_classes = _text_list(rule, "proof_classes", ApplicabilityError)
     if any(item not in _PROOF_CLASSES for item in proof_classes):
         raise ApplicabilityError("proof_classes contains an invalid value")
@@ -751,17 +757,13 @@ def normalize_applicability_rule(rule):
         "classifications": classifications,
         "activation_states": activation_states,
         "trigger_ref": _text(rule, "trigger_ref", ApplicabilityError),
-        "change_type": rule.get("change_type"),
+        "change_types": change_types,
         "requirement_refs": _text_list(rule, "requirement_refs", ApplicabilityError),
         "proof_classes": proof_classes,
         "gate_classes": _text_list(rule, "gate_classes", ApplicabilityError),
         "allowed_na_reasons": _normalize_na_reasons(rule),
         "fallback_scope": fallback_scope,
     }
-    change_type = out["change_type"]
-    if change_type is not None and change_type not in _CHANGE_TYPES:
-        raise ApplicabilityError("invalid change_type: %r" % change_type)
-
     expected_precedence = _specificity(out)
     precedence = rule.get("precedence")
     if not isinstance(precedence, int) or isinstance(precedence, bool):
@@ -783,6 +785,7 @@ def normalize_applicability_subject(subject):
         "assembly",
         "classification",
         "activation_state",
+        "change_type",
     }
     unknown = sorted(set(subject) - allowed)
     if unknown:
@@ -804,6 +807,11 @@ def normalize_applicability_subject(subject):
         if state not in _ACTIVATION_STATES:
             raise ApplicabilityError("invalid subject activation_state: %r" % state)
         out["activation_state"] = state
+    if "change_type" in subject:
+        change_type = subject["change_type"]
+        if change_type not in _CHANGE_TYPES:
+            raise ApplicabilityError("invalid subject change_type: %r" % change_type)
+        out["change_type"] = change_type
     return out
 
 
@@ -817,6 +825,8 @@ def _fallback_matches(scope, subject):
 
 
 def _rule_matches(rule, subject):
+    if rule["change_types"] and subject.get("change_type") not in rule["change_types"]:
+        return False
     if rule["fallback_scope"] is not None:
         return _fallback_matches(rule["fallback_scope"], subject)
     if rule["selectors"]:
@@ -843,7 +853,6 @@ def _rule_payload(rule):
         "proof_classes": rule["proof_classes"],
         "gate_classes": rule["gate_classes"],
         "allowed_na_reasons": rule["allowed_na_reasons"],
-        "change_type": rule["change_type"],
     }
 
 
@@ -882,6 +891,9 @@ def resolve_applicability(subject, rules, na_requests=None, strict=True):
     identical obligation payloads or strict resolution fails.
     """
     normalized_subject = normalize_applicability_subject(subject)
+    if strict and "change_type" not in normalized_subject:
+        raise ApplicabilityError(
+            "strict applicability resolution requires subject.change_type")
     if not isinstance(rules, list) or not rules:
         raise ApplicabilityError("rules must be a non-empty list")
     normalized_rules = [normalize_applicability_rule(item) for item in rules]
@@ -937,7 +949,6 @@ def resolve_applicability(subject, rules, na_requests=None, strict=True):
             "requirement_refs": payload["requirement_refs"],
             "proof_classes": payload["proof_classes"],
             "gate_classes": payload["gate_classes"],
-            "change_type": payload["change_type"],
             "na": na,
         })
 
@@ -1130,6 +1141,9 @@ def _proof_obligations(proof_class, resolution):
         normalized_subject = normalize_applicability_subject(resolution["subject"])
     except ApplicabilityError as exc:
         raise ClosureError("applicability result has invalid subject: %s" % exc) from exc
+    if "change_type" not in normalized_subject:
+        raise ClosureError(
+            "proof closure requires applicability subject.change_type")
     recorded_digest = resolution.get("applicability_digest")
     _validate_fingerprint(recorded_digest, "applicability_digest")
     expected_digest = digest({
@@ -1152,7 +1166,6 @@ def _proof_obligations(proof_class, resolution):
             "requirement_refs",
             "proof_classes",
             "gate_classes",
-            "change_type",
             "na",
         }
         if set(item) != required:
@@ -1190,10 +1203,8 @@ def derive_proof_closure(proof_class, resolution, graph):
         root_ids.append(dependency_id)
 
     allowed_relations = set(_PROOF_RELATIONS[proof_class])
-    persistence_triggered = any(
-        item.get("change_type") in _PERSISTENCE_CHANGE_TYPES
-        for item in obligations
-    )
+    change_type = resolution["subject"]["change_type"]
+    persistence_triggered = change_type in _PERSISTENCE_CHANGE_TYPES
     if persistence_triggered:
         allowed_relations.update(_PERSISTENCE_RELATIONS)
 
@@ -1222,6 +1233,7 @@ def derive_proof_closure(proof_class, resolution, graph):
         "proof_class": proof_class,
         "applicability_digest": resolution.get("applicability_digest"),
         "relation_policy": sorted(allowed_relations),
+        "change_type": change_type,
         "persistence_triggered": persistence_triggered,
         "requirement_refs": requirement_refs,
         "applicability_rule_ids": rule_ids,
@@ -1242,6 +1254,7 @@ def derive_proof_closure(proof_class, resolution, graph):
             "relations": sorted(allowed_relations),
             "persistence_triggered": persistence_triggered,
         }),
+        "change_type": change_type,
         "persistence_triggered": persistence_triggered,
         "applicability_digest": resolution.get("applicability_digest"),
         "subject_scope_digest": digest(subject),

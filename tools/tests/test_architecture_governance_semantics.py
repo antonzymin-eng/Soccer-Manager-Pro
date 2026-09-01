@@ -106,7 +106,7 @@ def event_fact(name, symbol_key, is_static=False):
 
 class SelectorTests(unittest.TestCase):
     def test_reference_semantics_version_is_pinned(self):
-        self.assertEqual("1.6.0", sem.REFERENCE_SEMANTICS_VERSION)
+        self.assertEqual("1.7.0", sem.REFERENCE_SEMANTICS_VERSION)
 
     def test_reusable_fact_index_avoids_reindexing_contract(self):
         fact = method("Start", [], "M:Start()")
@@ -483,16 +483,17 @@ def applicability_rule(
         rule_id, trigger_ref, requirement_ref, proof_class="structural-reachability",
         selectors=None, component_ids=None, assemblies=None, classifications=None,
         activation_states=None, fallback_scope=None, allowed_na_reasons=None,
-        change_type=None):
+        change_types=None):
     selectors = selectors or []
     component_ids = component_ids or []
     assemblies = assemblies or []
     classifications = classifications or []
     activation_states = activation_states or []
+    change_types = change_types or []
     if fallback_scope is not None:
-        precedence = 0 if fallback_scope == "repository" else 1
+        surface_precedence = 0 if fallback_scope == "repository" else 1
     else:
-        precedence = (
+        surface_precedence = (
             32
             | (16 if selectors else 0)
             | (8 if component_ids else 0)
@@ -500,6 +501,7 @@ def applicability_rule(
             | (2 if classifications else 0)
             | (1 if activation_states else 0)
         )
+    precedence = (surface_precedence * 2) + (1 if change_types else 0)
     return {
         "rule_id": rule_id,
         "selectors": selectors,
@@ -508,7 +510,7 @@ def applicability_rule(
         "classifications": classifications,
         "activation_states": activation_states,
         "trigger_ref": trigger_ref,
-        "change_type": change_type,
+        "change_types": change_types,
         "requirement_refs": [requirement_ref],
         "proof_classes": [proof_class],
         "gate_classes": ["merge"],
@@ -560,18 +562,24 @@ def proof_graph():
 
 
 def proof_resolution(
-        subject=None, proof_class="structural-reachability", change_type=None):
+        subject=None, proof_class="structural-reachability",
+        change_type="pure-local-calculation", rule_change_types=None):
+    resolved_subject = dict(
+        subject or {"classification": "production-runtime-root"})
+    if change_type is not None:
+        resolved_subject.setdefault("change_type", change_type)
     rule = applicability_rule(
         "AR-X",
         "TRIGGER-X",
         "FR-X",
         proof_class=proof_class,
         fallback_scope="repository",
-        change_type=change_type,
+        change_types=rule_change_types,
     )
     return sem.resolve_applicability(
-        subject or {"classification": "production-runtime-root"},
+        resolved_subject,
         [rule],
+        strict=(change_type is not None),
     )
 
 
@@ -584,6 +592,7 @@ class ApplicabilityTests(unittest.TestCase):
             "assembly": "Example.Runtime",
             "classification": "production-runtime-root",
             "activation_state": "active",
+            "change_type": "pure-local-calculation",
         }
 
     def test_schema_derived_specificity_beats_fallback_and_broader_matches(self):
@@ -656,7 +665,11 @@ class ApplicabilityTests(unittest.TestCase):
                 "test-only", "tooling-only", "generated-or-external",
                 "non-runtime-bearing"):
             result = sem.resolve_applicability(
-                {"classification": classification}, [rule])
+                {
+                    "classification": classification,
+                    "change_type": "pure-local-calculation",
+                },
+                [rule])
             self.assertEqual(["FR-NONRUNTIME"], result["requirement_refs"])
 
     def test_explicit_rule_outranks_category_fallback(self):
@@ -670,24 +683,58 @@ class ApplicabilityTests(unittest.TestCase):
         self.assertEqual(["FR-ACTIVE"], result["requirement_refs"])
         self.assertEqual(["activation"], result["selected_rule_ids"])
 
-    def test_invalid_change_type_fails_closed(self):
+    def test_invalid_subject_change_type_fails_closed(self):
+        subject = self.subject()
+        subject["change_type"] = "persistence-ish"
+        with self.assertRaises(sem.ApplicabilityError):
+            sem.resolve_applicability(
+                subject,
+                [applicability_rule(
+                    "a", "T", "FR-X", component_ids=["component:host"])],
+            )
+
+    def test_invalid_rule_change_type_fails_closed(self):
         rule = applicability_rule(
             "a", "T", "FR-X", component_ids=["component:host"],
-            change_type="persistence-ish")
+            change_types=["persistence-ish"])
         with self.assertRaises(sem.ApplicabilityError):
             sem.resolve_applicability(self.subject(), [rule])
 
-    def test_change_type_participates_in_equal_precedence_conflict(self):
+    def test_strict_resolution_requires_current_change_type(self):
+        subject = self.subject()
+        del subject["change_type"]
+        with self.assertRaises(sem.ApplicabilityError):
+            sem.resolve_applicability(
+                subject,
+                [applicability_rule(
+                    "a", "T", "FR-X", component_ids=["component:host"])],
+            )
+
+    def test_change_type_specific_rule_matches_only_current_change_context(self):
+        rule = applicability_rule(
+            "persistence", "T", "FR-X", component_ids=["component:host"],
+            change_types=["persistence-boundary"])
+        with self.assertRaises(sem.ApplicabilityError):
+            sem.resolve_applicability(self.subject(), [rule])
+
+        persistence_subject = self.subject()
+        persistence_subject["change_type"] = "persistence-boundary"
+        result = sem.resolve_applicability(persistence_subject, [rule])
+        self.assertEqual(["persistence"], result["selected_rule_ids"])
+
+    def test_change_specific_rule_outranks_equivalent_generic_rule(self):
         rules = [
             applicability_rule(
-                "a", "T", "FR-X", component_ids=["component:host"],
-                change_type="persistence-boundary"),
+                "generic", "T", "FR-GENERIC", component_ids=["component:host"]),
             applicability_rule(
-                "b", "T", "FR-X", component_ids=["component:host"],
-                change_type="new-runtime-service"),
+                "persistence", "T", "FR-PERSIST", component_ids=["component:host"],
+                change_types=["persistence-boundary"]),
         ]
-        with self.assertRaises(sem.ApplicabilityError):
-            sem.resolve_applicability(self.subject(), rules)
+        subject = self.subject()
+        subject["change_type"] = "persistence-boundary"
+        result = sem.resolve_applicability(subject, rules)
+        self.assertEqual(["FR-PERSIST"], result["requirement_refs"])
+        self.assertEqual(["persistence"], result["selected_rule_ids"])
 
     def test_na_requires_enumerated_reason_and_approval_when_declared(self):
         rule = applicability_rule(
@@ -758,6 +805,15 @@ class ProofClosureTests(unittest.TestCase):
         self.assertIn("life:start", lifecycle["dependency_ids"])
         self.assertIn("serializer:save", lifecycle["dependency_ids"])
         self.assertTrue(lifecycle["persistence_triggered"])
+
+    def test_proof_closure_rejects_resolution_without_change_context(self):
+        resolution = proof_resolution(change_type=None)
+        with self.assertRaises(sem.ClosureError):
+            sem.derive_proof_closure(
+                "structural-reachability",
+                resolution,
+                proof_graph(),
+            )
 
     def test_persistence_is_not_a_fifth_proof_class(self):
         with self.assertRaises(sem.ApplicabilityError):
@@ -870,11 +926,22 @@ class FreshnessTests(unittest.TestCase):
         current = proof_resolution(subject={
             "classification": "production-runtime-root",
             "component_id": "component:renamed-host",
+            "change_type": "pure-local-calculation",
         })
         result = sem.assess_proof_freshness(
             self.snapshot(), current, proof_graph())
         self.assertFalse(result["fresh"])
         self.assertIn("applicability-subject-changed", result["reasons"])
+
+    def test_change_context_change_stales_and_expands_proof_scope(self):
+        result = sem.assess_proof_freshness(
+            self.snapshot(),
+            proof_resolution(change_type="persistence-boundary"),
+            proof_graph(),
+        )
+        self.assertFalse(result["fresh"])
+        self.assertIn("applicability-subject-changed", result["reasons"])
+        self.assertIn("serializer:save", result["current"]["dependency_ids"])
 
     def test_changed_optimization_falls_back_for_unmapped_surface(self):
         decision = sem.changed_proof_decision(
