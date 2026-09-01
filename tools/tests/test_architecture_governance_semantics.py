@@ -2240,60 +2240,112 @@ class DurableReviewLedgerTests(unittest.TestCase):
         return json.loads(self.LEDGER.read_text(encoding="utf-8"))
 
     def test_committed_ledger_validates_against_the_frozen_contract(self):
+        """Structural validation only -- freshness is proved elsewhere.
+
+        An earlier version fed the ledger digests taken FROM the ledger, which
+        could only ever agree with itself. It was doubly empty: the freshness
+        branch fires only for a `final_review` run and no run carries one. The
+        real binding is test_every_round_digest_recomputes_from_the_tree_it_names.
+        """
         ledger = self.ledger()
-        digests = {
-            run["review_run_id"]: run["subject_scope_digest"]
-            for run in ledger["review_runs"]
-        }
-        sem.validate_review_ledger(
-            ledger, current_subject_digests=digests, prior_ledger=None)
+        sem.validate_review_ledger(ledger, prior_ledger=None)
         self.assertEqual(
             [], jsv.default_schema_set().validate(ledger, "review-ledger.schema.json"))
 
     def test_every_round_digest_recomputes_from_the_tree_it_names(self):
-        """Distinctness is not identity: prove each digest IS its named tree.
+        """Prove each digest IS its named tree -- all of them, or none.
 
-        Each run's scope names its revision as "at <rev>", so the ledger is
-        self-describing and this needs no second table to drift against. CI
-        checks out shallow, so an unavailable revision skips explicitly rather
-        than passing as though the check had run.
+        Verification is deliberately ALL-OR-NOTHING. An earlier version skipped
+        unavailable revisions one at a time and skipped the test only when none
+        resolved, so a partial-history checkout could verify one digest of five,
+        ignore the rest, and report a green tick under a name asserting all of
+        them. The default CI checkout is shallow, so that is the expected
+        environment rather than an edge case: a partial result must never be
+        able to present itself as a complete one.
         """
-        import re
         import subprocess
-        checked = 0
-        for run in self.ledger()["review_runs"]:
-            match = re.search(r"\bat ([0-9a-f]{7,40})\b", " ".join(run["review_scope"]))
-            self.assertIsNotNone(
-                match, "run %s does not name its revision" % run["review_run_id"])
-            revision = match.group(1)
-            probe = subprocess.run(
+        runs = self.ledger()["review_runs"]
+        revisions = {run["review_run_id"]: self.named_revision(run) for run in runs}
+        missing = sorted({
+            revision for revision in revisions.values()
+            if subprocess.run(
                 ["git", "-C", str(self.ROOT), "cat-file", "-e", revision + "^{commit}"],
-                capture_output=True)
-            if probe.returncode != 0:
-                continue
+                capture_output=True).returncode != 0})
+        if missing:
+            self.skipTest(
+                "history absent for %s -- verification is all-or-nothing"
+                % ", ".join(missing))
+        for run in runs:
+            revision = revisions[run["review_run_id"]]
             self.assertEqual(
                 self.subject_digest_at(revision), run["subject_scope_digest"],
                 "%s digest does not match %s" % (run["review_run_id"], revision))
-            checked += 1
-        if not checked:
-            self.skipTest("no reviewed revision is present (shallow clone)")
 
-    def test_each_round_binds_a_distinct_artifact(self):
-        digests = [run["subject_scope_digest"] for run in self.ledger()["review_runs"]]
-        self.assertEqual(len(digests), len(set(digests)))
+    def test_every_round_names_the_revision_it_reviewed(self):
+        """Git-independent: the ledger must stay self-describing.
 
-    def test_the_current_artifact_has_not_yet_been_reviewed(self):
-        """Honest state, not a green tick: the working tree post-dates round 4.
-
-        Condition 4 requires a fresh review of the PUSHED candidate. This fails
-        the moment a round claims the current tree without that review having
-        happened, and is inverted by the round that legitimately reviews it.
+        Deliberately NOT a distinctness check. Two rounds may legitimately
+        review an unchanged material subject and correctly carry the same
+        digest; governance requires each digest to match its named subject, not
+        to differ from its neighbours.
         """
+        for run in self.ledger()["review_runs"]:
+            self.assertIsNotNone(
+                self.named_revision(run),
+                "%s does not name the revision it reviewed" % run["review_run_id"])
+
+    @classmethod
+    def named_revision(cls, run):
+        import re
+        match = re.search(r"\bat ([0-9a-f]{7,40})\b", " ".join(run["review_scope"]))
+        return match.group(1) if match else None
+
+    def test_status_history_is_neither_future_dated_nor_out_of_order(self):
+        """A durable record cannot contain events that have not happened.
+
+        Round 4's events were once stamped 69 minutes after the commit that
+        asserted they were complete. Timestamps now derive from real commits: a
+        finding is raised at the commit time of the artifact reviewed and
+        resolved at the commit time that carried the fix.
+        """
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc)
+        for item in self.ledger()["findings"]:
+            previous = None
+            for event in item["status_history"]:
+                stamp = datetime.datetime.fromisoformat(
+                    event["at"].replace("Z", "+00:00"))
+                self.assertLessEqual(
+                    stamp, now,
+                    "%s records a future event at %s"
+                    % (item["finding_id"], event["at"]))
+                if previous is not None:
+                    self.assertGreaterEqual(
+                        stamp, previous,
+                        "%s status history runs backwards" % item["finding_id"])
+                previous = stamp
+
+    def test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree(self):
+        """Mechanise the gate condition instead of guessing at its shape.
+
+        Condition 4 requires a fresh review of the candidate as pushed. So the
+        rule is not "the current tree must be unreviewed" -- a round may
+        legitimately review it -- but "row 4 may say Complete only if some
+        recorded round's digest IS the current material subject".
+        """
+        record = (self.ROOT / "docs" / "tracking"
+                  / "a2-schema-semantics-closure.md").read_text(encoding="utf-8")
+        row = next(
+            line for line in record.splitlines()
+            if line.startswith("| 4 | Fresh review over pushed current candidate"))
         recorded = {run["subject_scope_digest"] for run in self.ledger()["review_runs"]}
-        self.assertNotIn(
-            self.material_subject_digest(), recorded,
-            "a recorded round already claims this tree; if a genuine fresh "
-            "review of it happened, invert this test with that round")
+        reviewed = self.material_subject_digest() in recorded
+        if "**Complete**" in row:
+            self.assertTrue(
+                reviewed,
+                "row 4 claims Complete but no recorded round reviewed this tree")
+        else:
+            self.assertIn("**PENDING**", row, "row 4 must be Complete or PENDING")
 
     @classmethod
     def subject_digest_at(cls, revision):

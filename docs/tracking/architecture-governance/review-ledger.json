@@ -100,6 +100,29 @@
       "convergence_state": "NON-CONVERGED",
       "final_review": false,
       "round_budget_exhausted": false
+    },
+    {
+      "review_run_id": "A2-RUN-005",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate at 5ebc3f7 as pushed"
+      ],
+      "subject_scope_digest": "906ce9559f961f3d4a91cce89ea03cd45c1bc03945093611e8d4ace9f9dd1ad6",
+      "review_round": 5,
+      "reviewer_identity": "OpenAI ChatGPT, independent reviewer of the pushed 5ebc3f7 candidate",
+      "coverage": [
+        "historical-digest verification completeness",
+        "ledger provenance timestamps",
+        "governance citation accuracy",
+        "review-round digest invariants"
+      ],
+      "unverified_surfaces": [
+        "the corrections this round produced, which post-date its subject"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "NON-CONVERGED",
+      "final_review": false,
+      "round_budget_exhausted": false
     }
   ],
   "findings": [
@@ -131,7 +154,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T12:00:00Z",
+          "at": "2026-09-01T17:15:15Z",
           "evidence": [
             "git cat-file, the GitHub commit API, ls-remote over all 353 refs, and the PR list all failed to resolve b5e80832 or codex/a2-complete-schema-freeze; main carried no JSON schema of any kind."
           ]
@@ -141,7 +164,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T12:00:00Z",
+          "at": "2026-09-01T18:25:35Z",
           "evidence": [
             "The branch was published; review round 2 was performed over dae398a6."
           ]
@@ -175,7 +198,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T12:00:00Z",
+          "at": "2026-09-01T17:15:15Z",
           "evidence": [
             "reference_semantics.py restated _ACTIVATION_STATES, _PROOF_CLASSES, _EXECUTION_STATES and others that the schemas also declared, giving two places that had to agree."
           ]
@@ -185,7 +208,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T12:00:00Z",
+          "at": "2026-09-01T18:25:35Z",
           "evidence": [
             "common.schema.json is now the single machine source; a regression asserts no other schema declares an enum and that the runtime bindings match."
           ]
@@ -221,7 +244,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T12:00:00Z",
+          "at": "2026-09-01T17:15:15Z",
           "evidence": [
             "v0.17 recorded A2 COMPLETE while \u00a70.5 item 11 and \u00a76/\u00a77 required A0-A2 to PASS before A3 -- a self-contradiction inside one document."
           ]
@@ -231,7 +254,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T12:00:00Z",
+          "at": "2026-09-01T18:25:35Z",
           "evidence": [
             "v0.18 adds the explicit seven-condition A2 closure gate; a2-schema-semantics-closure.md owns it."
           ]
@@ -266,7 +289,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T15:00:00Z",
+          "at": "2026-09-01T18:25:35Z",
           "evidence": [
             "validate_review_ledger(prior_ledger=None, strict_freshness=False) and validate_temporary_activation_baseline(prior_baseline=None, current_violation_ids=None) skipped append-only detection, final-review staleness, and the new-violation check, while validate_property_registry deliberately raised uncertainty for the same omission."
           ]
@@ -276,7 +299,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T15:00:00Z",
+          "at": "2026-09-01T19:02:59Z",
           "evidence": [
             "Both now use the _NOT_PROVIDED sentinel and raise typed uncertainty in strict mode; strict_activation is deliberately excluded because it adds a requirement rather than relaxing one."
           ]
@@ -310,7 +333,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T15:00:00Z",
+          "at": "2026-09-01T18:25:35Z",
           "evidence": [
             "Every other category schema had a validate_* function; hasattr(sem, 'validate_proof_artifact') was False, and the category has no seed registry, so nothing exercised the record shape at all."
           ]
@@ -320,7 +343,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T15:00:00Z",
+          "at": "2026-09-01T19:02:59Z",
           "evidence": [
             "validate_proof_artifact mirrors the frozen shape and binds it to A2 execution truth, with fixtures for na/bounded exclusivity, proof-class evidence binding, mutation restoration, and selector resolution."
           ]
@@ -355,7 +378,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T15:00:00Z",
+          "at": "2026-09-01T18:25:35Z",
           "evidence": [
             "All ten schemas declared $schema but omitted $id while carrying 111+ relative cross-file refs; resolution worked only under a filename-keyed loader, and the candidate's own reference test resolved by filename lookup so it could not detect this."
           ]
@@ -365,7 +388,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T15:00:00Z",
+          "at": "2026-09-01T19:02:59Z",
           "evidence": [
             "Every schema pins a canonical non-dereferenceable $id; the bounded validator resolves refs by RFC 3986 against it and refuses a schema set in which any document omits one."
           ]
@@ -400,7 +423,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T15:00:00Z",
+          "at": "2026-09-01T18:25:35Z",
           "evidence": [
             "required, additionalProperties and nesting were described twice. Probing uniqueItems, minimum, and the conditional not/required prohibitions found the two descriptions AGREED everywhere reachable, so no live divergence was demonstrated; what was absent was any guard against future drift."
           ]
@@ -410,7 +433,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T15:00:00Z",
+          "at": "2026-09-01T19:02:59Z",
           "evidence": [
             "schema_validator.py plus a one-directional differential over shared fixtures, proven live by injecting a schema-only required field and observing the new test fail."
           ]
@@ -445,7 +468,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T15:00:00Z",
+          "at": "2026-09-01T18:25:35Z",
           "evidence": [
             "The branch published 1.9.0 -> 2.0.0 (1f7d401) -> 1.10.0 (dae398a) in a value capture_proof_snapshot stamps into every proof record; plan row v0.17 still advertised v2.0.0 while v0.18 silently reverted it."
           ]
@@ -455,7 +478,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T15:00:00Z",
+          "at": "2026-09-01T19:02:59Z",
           "evidence": [
             "2.0.0 restored by project-owner decision -- the module now raises at import without common.schema.json, a breaking contract change. Plan v0.19 carries the rationale and annotates v0.18 in place."
           ]
@@ -490,7 +513,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T18:00:00Z",
+          "at": "2026-09-01T19:02:59Z",
           "evidence": [
             "exception_route evaluates its property branch first and unconditionally. With a property registered as FR-CS-046, exception_route('FR-CS-046') returned route 'governance-property' with governance_exception_allowed True, routing a Code Standards waiver into exceptions.json. property_id carried no namespace constraint in schema or code."
           ]
@@ -500,7 +523,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T18:00:00Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
             "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; \u00a73.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id."
           ]
@@ -535,7 +558,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T21:00:00Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
             "Round 3 reviewed 678f0f2, but the material subject then changed by 150 lines -- the A2-R3-001 fix, its schema change and its tests -- before 11547d4 was pushed carrying the claim that condition 4 was complete. The round-3 record bound the POST-fix digest to a review performed on the PRE-fix tree, and no review of the pushed candidate existed. The gate's pushed-candidate wording is stronger than FR-AG-018 and cannot be weakened by the party satisfying it."
           ]
@@ -545,7 +568,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T21:00:00Z",
+          "at": "2026-09-01T19:51:29Z",
           "evidence": [
             "Row 4 returned to PENDING. Round 3 now binds 678f0f2, the tree it actually reviewed. Round 4 is this independent review of the pushed 11547d4; the corrected artifact awaits a round-5 fresh review before row 4 may be claimed again."
           ]
@@ -563,8 +586,8 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Governance FR-AG-034 (required proof MUST be independently reproducible)",
-        "concrete independently established defect"
+        "Governance FR-AG-032 (required proof MUST be independently reproducible by another reviewer or agent)",
+        "FR-AG-034 (an agent claim MUST be backed by an executable check where the set is mechanically discoverable)"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -580,7 +603,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T21:00:00Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
             "DurableReviewLedgerTests recomputed only the latest round's digest and merely asserted the three were distinct, which does not establish that b422.. represents e7a3ba13 or 5e1d.. represents dae398a6. The closure record nonetheless claimed the digests were mechanically reproducible and that no trust in the document was required."
           ]
@@ -590,7 +613,7 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T21:00:00Z",
+          "at": "2026-09-01T19:51:29Z",
           "evidence": [
             "The historical digests are now recomputed from the commits the record names, rather than the claim being narrowed. CI checks out shallow, so an absent history skips explicitly instead of passing as though it had run. The overstated wording is corrected."
           ]
@@ -625,7 +648,7 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T21:00:00Z",
+          "at": "2026-09-01T19:24:32Z",
           "evidence": [
             "The negation probe was re-run with the cases separated after they were seen to interfere, which demonstrated a context-bleed mode rather than testing it. No committed fixture covered mixed positive/negative context."
           ]
@@ -635,9 +658,144 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-01T21:00:00Z",
+          "at": "2026-09-01T19:51:29Z",
           "evidence": [
             "tools/tests/test_recurring_defect_lint.py adds nine mixed-context fixtures. The reviewer's concern is confirmed for an adjacent unrelated negation and that bound is now pinned by an explicit test: it pre-dates this work and narrowing the window to zero re-raises three genuinely wrapped negations, so the trade is deliberate. The suggested bullet-in-a-negative-list mode was checked and is correct suppression, not a false negative -- a non-goals bullet is elliptical."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R5-001",
+      "stable_key": "a2/r5-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-005",
+      "summary": "Historical-digest verification could report PASS having checked only part of what its name claims.",
+      "evidence": [
+        "test_every_round_digest_recomputes_from_the_tree_it_names skipped each unavailable revision individually and skipped the test only when NO revision resolved. On a partial-history checkout it could verify one digest of four, ignore the rest, and report a green tick under a name asserting all of them. The default CI checkout is shallow, so this is the expected environment, not an edge case."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Governance FR-AG-032 (proof MUST be independently reproducible)",
+        "FR-AG-034 (an agent claim MUST be backed by an executable check)"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 5,
+      "resolution_evidence": [
+        "The verification is now all-or-nothing: any unresolvable revision skips the WHOLE check and names the missing revisions, so a partial result can never present as a complete one."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R5-001-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T19:51:29Z",
+          "evidence": [
+            "test_every_round_digest_recomputes_from_the_tree_it_names skipped each unavailable revision individually and skipped the test only when NO revision resolved. On a partial-history checkout it could verify one digest of four, ignore the rest, and report a green tick under a name asserting all of them. The default CI checkout is shallow, so this is the expected environment, not an edge case."
+          ]
+        },
+        {
+          "event_id": "A2-R5-001-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T20:11:08Z",
+          "evidence": [
+            "The verification is now all-or-nothing: any unresolvable revision skips the WHOLE check and names the missing revisions, so a partial result can never present as a complete one."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R5-002",
+      "stable_key": "a2/r5-002",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-005",
+      "summary": "The durable ledger recorded round-4 events in the future.",
+      "evidence": [
+        "Every A2-R4-* status event carried 2026-09-01T21:00:00Z, an invented time, while 5ebc3f7 -- the commit asserting those events had already happened -- was created at 19:51:29Z. The record therefore claimed completed events that had not yet occurred."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Governance \u00a74.2 finding-record schema (status history is the evidence of what occurred and when)",
+        "concrete independently established defect"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 5,
+      "resolution_evidence": [
+        "Every status timestamp is now derived from a real commit: a finding is raised at the commit time of the artifact reviewed and resolved at the commit time that carried the fix. A regression rejects a future or non-monotonic status history."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R5-002-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T19:51:29Z",
+          "evidence": [
+            "Every A2-R4-* status event carried 2026-09-01T21:00:00Z, an invented time, while 5ebc3f7 -- the commit asserting those events had already happened -- was created at 19:51:29Z. The record therefore claimed completed events that had not yet occurred."
+          ]
+        },
+        {
+          "event_id": "A2-R5-002-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T20:11:08Z",
+          "evidence": [
+            "Every status timestamp is now derived from a real commit: a finding is raised at the commit time of the artifact reviewed and resolved at the commit time that carried the fix. A regression rejects a future or non-monotonic status history."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R5-003",
+      "stable_key": "a2/r5-003",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-005",
+      "summary": "A2-R4-002 cited the wrong governance requirement.",
+      "evidence": [
+        "It attributed \"required proof MUST be independently reproducible\" to FR-AG-034. That sentence is FR-AG-032; FR-AG-034 is the rule against unsupported agent assertions. The Blocker basis was sound but the durable citation was factually wrong."
+      ],
+      "severity": "Low",
+      "requirement_property": [
+        "Governance FR-AG-011 (every Blocker MUST cite its authority)",
+        "concrete independently established defect"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 5,
+      "resolution_evidence": [
+        "A2-R4-002 now cites FR-AG-032 with its own text, and FR-AG-034 alongside it, which independently applies to an unbacked reproducibility claim."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R5-003-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T19:51:29Z",
+          "evidence": [
+            "It attributed \"required proof MUST be independently reproducible\" to FR-AG-034. That sentence is FR-AG-032; FR-AG-034 is the rule against unsupported agent assertions. The Blocker basis was sound but the durable citation was factually wrong."
+          ]
+        },
+        {
+          "event_id": "A2-R5-003-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-01T20:11:08Z",
+          "evidence": [
+            "A2-R4-002 now cites FR-AG-032 with its own text, and FR-AG-034 alongside it, which independently applies to an unbacked reproducibility claim."
           ]
         }
       ]
