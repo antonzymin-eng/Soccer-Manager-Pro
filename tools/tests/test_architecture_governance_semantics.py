@@ -106,7 +106,7 @@ def event_fact(name, symbol_key, is_static=False):
 
 class SelectorTests(unittest.TestCase):
     def test_reference_semantics_version_is_pinned(self):
-        self.assertEqual("1.5.0", sem.REFERENCE_SEMANTICS_VERSION)
+        self.assertEqual("1.6.0", sem.REFERENCE_SEMANTICS_VERSION)
 
     def test_reusable_fact_index_avoids_reindexing_contract(self):
         fact = method("Start", [], "M:Start()")
@@ -482,7 +482,8 @@ class ActivationTests(unittest.TestCase):
 def applicability_rule(
         rule_id, trigger_ref, requirement_ref, proof_class="structural-reachability",
         selectors=None, component_ids=None, assemblies=None, classifications=None,
-        activation_states=None, fallback_scope=None, allowed_na_reasons=None):
+        activation_states=None, fallback_scope=None, allowed_na_reasons=None,
+        change_type=None):
     selectors = selectors or []
     component_ids = component_ids or []
     assemblies = assemblies or []
@@ -507,6 +508,7 @@ def applicability_rule(
         "classifications": classifications,
         "activation_states": activation_states,
         "trigger_ref": trigger_ref,
+        "change_type": change_type,
         "requirement_refs": [requirement_ref],
         "proof_classes": [proof_class],
         "gate_classes": ["merge"],
@@ -557,13 +559,15 @@ def proof_graph():
     }
 
 
-def proof_resolution(subject=None, proof_class="structural-reachability"):
+def proof_resolution(
+        subject=None, proof_class="structural-reachability", change_type=None):
     rule = applicability_rule(
         "AR-X",
         "TRIGGER-X",
         "FR-X",
         proof_class=proof_class,
         fallback_scope="repository",
+        change_type=change_type,
     )
     return sem.resolve_applicability(
         subject or {"classification": "production-runtime-root"},
@@ -666,6 +670,25 @@ class ApplicabilityTests(unittest.TestCase):
         self.assertEqual(["FR-ACTIVE"], result["requirement_refs"])
         self.assertEqual(["activation"], result["selected_rule_ids"])
 
+    def test_invalid_change_type_fails_closed(self):
+        rule = applicability_rule(
+            "a", "T", "FR-X", component_ids=["component:host"],
+            change_type="persistence-ish")
+        with self.assertRaises(sem.ApplicabilityError):
+            sem.resolve_applicability(self.subject(), [rule])
+
+    def test_change_type_participates_in_equal_precedence_conflict(self):
+        rules = [
+            applicability_rule(
+                "a", "T", "FR-X", component_ids=["component:host"],
+                change_type="persistence-boundary"),
+            applicability_rule(
+                "b", "T", "FR-X", component_ids=["component:host"],
+                change_type="new-runtime-service"),
+        ]
+        with self.assertRaises(sem.ApplicabilityError):
+            sem.resolve_applicability(self.subject(), rules)
+
     def test_na_requires_enumerated_reason_and_approval_when_declared(self):
         rule = applicability_rule(
             "a",
@@ -700,7 +723,7 @@ class ApplicabilityTests(unittest.TestCase):
 
 
 class ProofClosureTests(unittest.TestCase):
-    def test_structural_closure_includes_persistence_trigger_surfaces(self):
+    def test_structural_closure_excludes_persistence_without_matching_change_type(self):
         closure = sem.derive_proof_closure(
             "structural-reachability",
             proof_resolution(),
@@ -709,24 +732,38 @@ class ProofClosureTests(unittest.TestCase):
         self.assertIn("symbol:child", closure["dependency_ids"])
         self.assertIn("asmdef:runtime", closure["dependency_ids"])
         self.assertIn("tool:extractor", closure["dependency_ids"])
-        self.assertIn("serializer:save", closure["dependency_ids"])
+        self.assertNotIn("serializer:save", closure["dependency_ids"])
         self.assertNotIn("life:start", closure["dependency_ids"])
         self.assertNotIn("test:proof", closure["dependency_ids"])
+        self.assertFalse(closure["persistence_triggered"])
 
-    def test_lifecycle_closure_extends_structural_and_keeps_persistence_surfaces(self):
+    def test_persistence_change_type_adds_persistence_edges_to_structural_closure(self):
+        closure = sem.derive_proof_closure(
+            "structural-reachability",
+            proof_resolution(change_type="persistence-boundary"),
+            proof_graph(),
+        )
+        self.assertIn("serializer:save", closure["dependency_ids"])
+        self.assertTrue(closure["persistence_triggered"])
+
+    def test_external_resource_change_type_adds_persistence_edges_to_lifecycle_closure(self):
         lifecycle = sem.derive_proof_closure(
             "lifecycle-order",
-            proof_resolution(proof_class="lifecycle-order"),
+            proof_resolution(
+                proof_class="lifecycle-order",
+                change_type="external-resource-dependency",
+            ),
             proof_graph(),
         )
         self.assertIn("life:start", lifecycle["dependency_ids"])
         self.assertIn("serializer:save", lifecycle["dependency_ids"])
+        self.assertTrue(lifecycle["persistence_triggered"])
 
     def test_persistence_is_not_a_fifth_proof_class(self):
         with self.assertRaises(sem.ApplicabilityError):
             proof_resolution(proof_class="persistence-external-resource")
 
-    def test_executable_closure_adds_test_runner_and_environment_path(self):
+    def test_executable_closure_adds_test_runner_without_untriggered_persistence(self):
         closure = sem.derive_proof_closure(
             "failure-injection",
             proof_resolution(proof_class="failure-injection"),
@@ -734,6 +771,19 @@ class ProofClosureTests(unittest.TestCase):
         )
         self.assertIn("test:proof", closure["dependency_ids"])
         self.assertIn("runner:dotnet", closure["dependency_ids"])
+        self.assertNotIn("serializer:save", closure["dependency_ids"])
+
+    def test_executable_persistence_trigger_adds_persistence_edges(self):
+        closure = sem.derive_proof_closure(
+            "failure-injection",
+            proof_resolution(
+                proof_class="failure-injection",
+                change_type="persistence-boundary",
+            ),
+            proof_graph(),
+        )
+        self.assertIn("serializer:save", closure["dependency_ids"])
+        self.assertTrue(closure["persistence_triggered"])
 
     def test_tampered_applicability_result_cannot_seed_proof_closure(self):
         resolution = proof_resolution()
@@ -890,16 +940,35 @@ class ExecutionTruthTests(unittest.TestCase):
 
         incomplete = self.substitute()
         del incomplete["approval_ref"]
-        with self.assertRaises(sem.SemanticsError):
+        with self.assertRaises(sem.ExecutionError):
             sem.evaluate_execution_truth(
                 "unavailable", incomplete, bounded_substitute_permitted=True)
 
     def test_unknown_execution_state_and_passed_plus_bounded_fail_closed(self):
-        with self.assertRaises(sem.SemanticsError):
+        with self.assertRaises(sem.ExecutionError):
             sem.evaluate_execution_truth("green")
-        with self.assertRaises(sem.SemanticsError):
+        with self.assertRaises(sem.ExecutionError):
             sem.evaluate_execution_truth(
                 "passed", self.substitute(), bounded_substitute_permitted=True)
+
+    def test_failed_skipped_and_runner_failed_cannot_be_waived(self):
+        for state in ("failed", "skipped", "runner-failed"):
+            with self.assertRaises(sem.ExecutionError):
+                sem.evaluate_execution_truth(
+                    state,
+                    self.substitute(),
+                    bounded_substitute_permitted=True,
+                )
+
+    def test_excluded_unavailable_and_not_run_may_use_approved_bounded_substitute(self):
+        for state in ("excluded", "unavailable", "not-run"):
+            result = sem.evaluate_execution_truth(
+                state,
+                self.substitute(),
+                bounded_substitute_permitted=True,
+            )
+            self.assertTrue(result["satisfied"])
+            self.assertEqual("bounded-substitute", result["basis"])
 
 
 if __name__ == "__main__":

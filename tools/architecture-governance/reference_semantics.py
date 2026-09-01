@@ -10,7 +10,7 @@ import hashlib
 import json
 import math
 
-REFERENCE_SEMANTICS_VERSION = "1.5.0"
+REFERENCE_SEMANTICS_VERSION = "1.6.0"
 
 _SELECTOR_KINDS = {"namespace", "type", "constructor", "method", "field", "property", "event"}
 _ACTIVATION_STATES = {"active", "intentionally-disabled", "pending-integration", "unresolved"}
@@ -500,6 +500,23 @@ _PROOF_CLASSES = {
     "failure-injection",
     "mutation",
 }
+_CHANGE_TYPES = {
+    "pure-local-calculation",
+    "new-public-cross-assembly-api",
+    "new-runtime-service",
+    "new-composition-root-registration",
+    "host-bootstrap-change",
+    "static-initialization-change",
+    "persistence-boundary",
+    "external-resource-dependency",
+    "testhost-runtime-divergence-fix",
+    "dependency-graph-only-refactor",
+    "pure-data-schema-no-runtime-behavior",
+}
+_PERSISTENCE_CHANGE_TYPES = {
+    "persistence-boundary",
+    "external-resource-dependency",
+}
 _EXECUTION_STATES = {
     "passed",
     "failed",
@@ -563,21 +580,17 @@ _ALL_DEPENDENCY_RELATIONS = (
     | _PERSISTENCE_RELATIONS
     | _EXECUTABLE_RELATIONS
 )
+_EXECUTABLE_PROOF_RELATIONS = (
+    _COMMON_RELATIONS
+    | _STRUCTURAL_RELATIONS
+    | _LIFECYCLE_RELATIONS
+    | _EXECUTABLE_RELATIONS
+)
 _PROOF_RELATIONS = {
-    # Persistence/resource boundaries are trigger surfaces, not a fifth proof
-    # class. Their graph edges therefore remain in the applicable structural
-    # and lifecycle closures owned by Governance's four proof classes.
-    "structural-reachability": (
-        _COMMON_RELATIONS | _STRUCTURAL_RELATIONS | _PERSISTENCE_RELATIONS
-    ),
-    "lifecycle-order": (
-        _COMMON_RELATIONS
-        | _STRUCTURAL_RELATIONS
-        | _PERSISTENCE_RELATIONS
-        | _LIFECYCLE_RELATIONS
-    ),
-    "failure-injection": _ALL_DEPENDENCY_RELATIONS,
-    "mutation": _ALL_DEPENDENCY_RELATIONS,
+    "structural-reachability": _COMMON_RELATIONS | _STRUCTURAL_RELATIONS,
+    "lifecycle-order": _COMMON_RELATIONS | _STRUCTURAL_RELATIONS | _LIFECYCLE_RELATIONS,
+    "failure-injection": _EXECUTABLE_PROOF_RELATIONS,
+    "mutation": _EXECUTABLE_PROOF_RELATIONS,
 }
 
 
@@ -590,6 +603,10 @@ class ClosureError(SemanticsError):
 
 
 class FreshnessError(SemanticsError):
+    pass
+
+
+class ExecutionError(SemanticsError):
     pass
 
 
@@ -673,6 +690,7 @@ def normalize_applicability_rule(rule):
         "classifications",
         "activation_states",
         "trigger_ref",
+        "change_type",
         "requirement_refs",
         "proof_classes",
         "gate_classes",
@@ -733,12 +751,17 @@ def normalize_applicability_rule(rule):
         "classifications": classifications,
         "activation_states": activation_states,
         "trigger_ref": _text(rule, "trigger_ref", ApplicabilityError),
+        "change_type": rule.get("change_type"),
         "requirement_refs": _text_list(rule, "requirement_refs", ApplicabilityError),
         "proof_classes": proof_classes,
         "gate_classes": _text_list(rule, "gate_classes", ApplicabilityError),
         "allowed_na_reasons": _normalize_na_reasons(rule),
         "fallback_scope": fallback_scope,
     }
+    change_type = out["change_type"]
+    if change_type is not None and change_type not in _CHANGE_TYPES:
+        raise ApplicabilityError("invalid change_type: %r" % change_type)
+
     expected_precedence = _specificity(out)
     precedence = rule.get("precedence")
     if not isinstance(precedence, int) or isinstance(precedence, bool):
@@ -820,6 +843,7 @@ def _rule_payload(rule):
         "proof_classes": rule["proof_classes"],
         "gate_classes": rule["gate_classes"],
         "allowed_na_reasons": rule["allowed_na_reasons"],
+        "change_type": rule["change_type"],
     }
 
 
@@ -913,6 +937,7 @@ def resolve_applicability(subject, rules, na_requests=None, strict=True):
             "requirement_refs": payload["requirement_refs"],
             "proof_classes": payload["proof_classes"],
             "gate_classes": payload["gate_classes"],
+            "change_type": payload["change_type"],
             "na": na,
         })
 
@@ -947,18 +972,21 @@ def evaluate_execution_truth(
         execution_state, bounded_substitute=None, bounded_substitute_permitted=False):
     """Evaluate the A2 execution-truth state machine.
 
-    Only passed satisfies an ordinary required execution. A non-passed state
-    can satisfy only when the owning #19 rule explicitly permits a bounded
-    substitute and the approved substitute record is complete.
+    A bounded substitute is an approved replacement for omitted/uneconomic
+    proof, never a waiver of a proof that executed and failed. Accordingly:
+      * passed satisfies directly;
+      * failed, skipped, and runner-failed can never be converted to satisfied;
+      * excluded, unavailable, and not-run may satisfy only through an explicitly
+        permitted and complete bounded-substitute record.
     """
     if execution_state not in _EXECUTION_STATES:
-        raise SemanticsError("invalid execution_state: %r" % execution_state)
+        raise ExecutionError("invalid execution_state: %r" % execution_state)
     if not isinstance(bounded_substitute_permitted, bool):
-        raise SemanticsError("bounded_substitute_permitted must be boolean")
+        raise ExecutionError("bounded_substitute_permitted must be boolean")
 
     if execution_state == "passed":
         if bounded_substitute is not None:
-            raise SemanticsError(
+            raise ExecutionError(
                 "passed execution cannot also claim a bounded substitute")
         return {
             "execution_state": execution_state,
@@ -973,8 +1001,12 @@ def evaluate_execution_truth(
             "basis": "unsatisfied",
         }
 
+    if execution_state in {"failed", "skipped", "runner-failed"}:
+        raise ExecutionError(
+            "%s cannot be satisfied by a bounded substitute" % execution_state)
+
     if not isinstance(bounded_substitute, dict):
-        raise SemanticsError("bounded_substitute must be an object")
+        raise ExecutionError("bounded_substitute must be an object")
     allowed = {
         "authority_ref",
         "approval_ref",
@@ -983,13 +1015,13 @@ def evaluate_execution_truth(
     }
     unknown = sorted(set(bounded_substitute) - allowed)
     if unknown:
-        raise SemanticsError(
+        raise ExecutionError(
             "bounded_substitute contains unknown field(s): %s" % ", ".join(unknown))
     normalized = {}
     for field in sorted(allowed):
         value = bounded_substitute.get(field)
         if not isinstance(value, str) or not value.strip():
-            raise SemanticsError("bounded_substitute requires %s" % field)
+            raise ExecutionError("bounded_substitute requires %s" % field)
         normalized[field] = value.strip()
 
     if not bounded_substitute_permitted:
@@ -1120,6 +1152,7 @@ def _proof_obligations(proof_class, resolution):
             "requirement_refs",
             "proof_classes",
             "gate_classes",
+            "change_type",
             "na",
         }
         if set(item) != required:
@@ -1156,7 +1189,14 @@ def derive_proof_closure(proof_class, resolution, graph):
             raise ClosureError("no dependency node binds requirement_ref %s" % ref)
         root_ids.append(dependency_id)
 
-    allowed_relations = _PROOF_RELATIONS[proof_class]
+    allowed_relations = set(_PROOF_RELATIONS[proof_class])
+    persistence_triggered = any(
+        item.get("change_type") in _PERSISTENCE_CHANGE_TYPES
+        for item in obligations
+    )
+    if persistence_triggered:
+        allowed_relations.update(_PERSISTENCE_RELATIONS)
+
     outgoing = {}
     for edge in normalized["edges"]:
         outgoing.setdefault(edge["source"], []).append(edge)
@@ -1182,6 +1222,7 @@ def derive_proof_closure(proof_class, resolution, graph):
         "proof_class": proof_class,
         "applicability_digest": resolution.get("applicability_digest"),
         "relation_policy": sorted(allowed_relations),
+        "persistence_triggered": persistence_triggered,
         "requirement_refs": requirement_refs,
         "applicability_rule_ids": rule_ids,
         "nodes": nodes,
@@ -1197,7 +1238,11 @@ def derive_proof_closure(proof_class, resolution, graph):
             item["dependency_id"]: item["fingerprint"] for item in nodes
         },
         "edges": included_edges,
-        "relation_policy_digest": digest(sorted(allowed_relations)),
+        "relation_policy_digest": digest({
+            "relations": sorted(allowed_relations),
+            "persistence_triggered": persistence_triggered,
+        }),
+        "persistence_triggered": persistence_triggered,
         "applicability_digest": resolution.get("applicability_digest"),
         "subject_scope_digest": digest(subject),
     }

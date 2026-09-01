@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.12\
+**Version:** 0.13\
 **Created:** August 27, 2026  
 **Last Updated:** August 31, 2026  
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
@@ -392,7 +392,9 @@ Narrative fields may explain intent but cannot satisfy blocking ownership, activ
 
 Create `docs/tracking/architecture-governance/applicability-rules.json`.
 
-Each rule contains `rule_id`, selectors, trigger ref, requirement refs, proof classes, gate classes, allowed N/A reasons, precedence, and fallback scope.
+Each rule contains `rule_id`, selectors, trigger ref, optional typed `change_type`, requirement refs, proof classes, gate classes, allowed N/A reasons, precedence, and fallback scope.
+
+When present, `change_type` is one of the canonical Governance §5.2 rows, using these machine values: `pure-local-calculation`, `new-public-cross-assembly-api`, `new-runtime-service`, `new-composition-root-registration`, `host-bootstrap-change`, `static-initialization-change`, `persistence-boundary`, `external-resource-dependency`, `testhost-runtime-divergence-fix`, `dependency-graph-only-refactor`, or `pure-data-schema-no-runtime-behavior`. It classifies the current change trigger; it does not replace `trigger_ref`, which still identifies the owning FR/AP/failure-mode authority. Property/failure-mode triggers outside the §5.2 matrix may omit `change_type`.
 
 All matches are evaluated. Schema-defined specificity controls precedence; equal-precedence conflicts fail. Precedence is not author-chosen: every explicit selector/identity/classification/activation rule outranks every fallback rule; among fallback rules, `runtime-bearing` and `non-runtime-bearing` outrank `repository`; the two category fallbacks are disjoint under §3.2's mapping; conflicting rules at the same derived precedence fail. N/A is valid only for an enumerated reason and required approval reference.
 
@@ -418,10 +420,12 @@ Reusable proof records require: `schema_version`; `proof_id`; `proof_class`; req
 
 The audit MUST derive and validate closure using the proof class rather than trusting an author-supplied file list. The proof-class enum is exactly the four classes owned by Governance §5 and FR-AG-027–030: `structural-reachability`, `lifecycle-order`, `failure-injection`, and `mutation`. Persistence boundaries and external resources are applicability/change triggers from Governance §5.2, not additional proof classes.
 
-- structural reachability: matched contract + owning roots + construction/registration edges + applicable public/bypass surfaces + relevant asmdef nodes/edges; serializer/schema/resource/configuration edges are included when they are reachable members of a persistence/external-resource boundary;
+- structural reachability: matched contract + owning roots + construction/registration edges + applicable public/bypass surfaces + relevant asmdef nodes/edges;
 - lifecycle/order: structural closure + lifecycle members, owners, ordering edges, relevant synchronization/thread-affinity members, and testhost equivalents;
 - failure-injection: applicable structural/lifecycle closure + exact failure target, test/fixture, runner configuration/environment, and tool semantics;
 - mutation: applicable structural/lifecycle closure + exact mutation target, test/fixture, runner configuration/environment, and tool semantics.
+
+For any of those four proof classes, serializer/schema/resource edges are added to the closure only when at least one active matched obligation for that proof carries `change_type: persistence-boundary` or `change_type: external-resource-dependency`. Generic tool/runtime configuration dependencies remain governed by their ordinary relation semantics; the persistence trigger does not make every repository configuration file relevant. This typed trigger binding is part of the applicability digest and therefore of proof freshness.
 
 Proof records MAY include additional declared dependencies, but the resolver verifies they are not narrower than the mechanically required closure. If the resolver cannot prove closure completeness, strict mode fails or the proof must use a #19-approved bounded substitute.
 
@@ -429,9 +433,11 @@ Freshness must detect material additions, deletions, renames, generated/config c
 
 ### 3.7.2 Execution truth
 
-Every required executable record carries `execution_state` from: `passed`, `failed`, `skipped`, `excluded`, `unavailable`, `not-run`, `runner-failed`. Only `passed` satisfies an unqualified required execution obligation. Any other state is unsatisfied unless #19 explicitly permits a bounded substitute and that substitute is recorded/approved.
+Every required executable record carries `execution_state` from: `passed`, `failed`, `skipped`, `excluded`, `unavailable`, `not-run`, `runner-failed`. Only `passed` satisfies an unqualified required execution obligation.
 
-A2 freezes the executable state machine before A3 consumes it. A bounded substitute cannot satisfy execution merely because a justification string exists: the caller must establish that the owning #19 rule permits substitution, and the record must carry the exact authority reference, approval reference, justification, and omitted proof surface or remaining uncertainty. `passed` and bounded-substitute claims are mutually exclusive.
+A bounded substitute is a proportionality mechanism for omitted or unavailable proof, not a waiver of contrary execution evidence. Therefore `failed`, `skipped`, and `runner-failed` are unsatisfied and cannot be converted to satisfied by a bounded substitute. `excluded`, `unavailable`, and `not-run` may satisfy only when #19 explicitly permits a bounded substitute for that obligation and the approved substitute record carries the exact authority reference, approval reference, justification, and omitted proof surface or remaining uncertainty. `passed` and bounded-substitute claims are mutually exclusive.
+
+A2 freezes this executable state machine before A3 consumes it.
 
 Execution records bind the exact test/command/runner, environment/configuration, subject digest, start/end result, and machine-readable result artifact when the runner provides one.
 
@@ -668,9 +674,9 @@ Append after FR-TS-085 using ID | Statement | Level | Activation.
 | FR-TS-091 | Triggered mutation MUST demonstrate evidence sensitivity for the named critical invariant using an exact target and reproducible mutant/patch identity, baseline result, mutant result, and expected detector; no project-wide mutation-score target is created. | MUST | Stage 0+1 |
 | FR-TS-092 | Reusable proof MUST have its complete relevant dependency universe mechanically derived/validated by proof class and stale only on material changes inside that resolved closure or its tool/config semantics. | MUST | Stage 0+1 |
 | FR-TS-093 | #19 merge/review mechanics MUST consume Governance disposition/convergence state and MUST NOT rederive convergence from severity. | MUST | Stage 0 |
-| FR-TS-094 | Missing, failed, stale, schema-invalid, applicability-incomplete, skipped, excluded, unavailable, not-run, or runner-failed required architectural proof MUST block merge once the gate is active unless an approved bounded substitute explicitly satisfies the obligation. | MUST | Stage 0+1 |
+| FR-TS-094 | Missing, failed, stale, schema-invalid, applicability-incomplete, skipped, excluded, unavailable, not-run, or runner-failed required architectural proof MUST block merge once the gate is active. A bounded substitute MAY replace only an `excluded`, `unavailable`, or `not-run` execution when FR-TS-096 permits it; it MUST NOT convert `failed`, `skipped`, or `runner-failed` execution into satisfaction. | MUST | Stage 0+1 |
 | FR-TS-095 | Merge-critical governance tooling MUST have known-good, known-bad, and blind-spot verification proportionate to false-positive/negative consequence. | MUST | Stage 0+1 |
-| FR-TS-096 | Bounded substitutes for computationally disproportionate exhaustive proof MUST record scope, rationale, omitted uncertainty, and approval. | MUST | Stage 0+1 |
+| FR-TS-096 | Bounded substitutes are permitted only for computationally disproportionate, intentionally omitted, or unavailable proof and MUST record authority, scope/rationale, omitted surface or remaining uncertainty, and approval. They MUST NOT waive an executed proof failure, runner failure, or ordinary skipped execution. | MUST | Stage 0+1 |
 | FR-TS-097 | A `[GT]` or owner-declared calibration/tuning change MUST NOT land for a component whose activation state is intentionally-disabled, pending-integration, or unresolved unless an approved exception explicitly authorizes that tuning scope. | MUST | Stage 0+1 |
 
 §2.2 gains FR-TS-086–097 as Architecture proof/evidence integration, mechanics in new §3.11, verification through §5.6/architecture gate. Total becomes 97.
@@ -716,7 +722,7 @@ Acceptance requires repo-wide sweeps for FR-TS-001…085/85-count claims, gate l
 
 Runtime architecture tests remain with owning behavior unless genuinely cross-host composition has no clean existing owner. The governance tool validates metadata/results; it does not become a mega test assembly.
 
-Owning placement does not imply execution. Every required executable proof resolves to a runner capable of compiling/executing that assembly and a machine-readable execution record. A required test excluded by `known-failures.txt`, flake quarantine, `[Ignore]`, `Assert.Ignore`, unsupported-assembly filtering, conditional Unity-job skipping, or equivalent exclusion is unsatisfied unless #19 explicitly approves a bounded substitute.
+Owning placement does not imply execution. Every required executable proof resolves to a runner capable of compiling/executing that assembly and a machine-readable execution record. A required test excluded by `known-failures.txt`, flake quarantine, `[Ignore]`, `Assert.Ignore`, unsupported-assembly filtering, conditional Unity-job skipping, or equivalent exclusion is unsatisfied. Only a deliberate `excluded`, `unavailable`, or `not-run` state may be replaced by a #19-approved bounded substitute under FR-TS-096; an actual `skipped`, `failed`, or `runner-failed` result remains unsatisfied.
 
 The architecture gate MUST mechanically reject intersection between its required-test set and active quarantine/exclusion sets. Where possible it also executes the resolved required test set directly; otherwise it consumes mandatory upstream runner results with exact test identity/result binding.
 
@@ -862,7 +868,7 @@ Non-negotiable 12 is **not** relaxed by this amendment and continues to govern e
 
 ## A2 — Freeze schemas and executable semantics
 
-Freeze identity/selectors, activation-state/disable-anchor semantics, applicability, contracts, the exact four Governance proof classes and their closure/freshness behavior, execution-truth/bounded-substitute semantics, property/exception, review, and baseline schemas. The reference semantics include activation-anchor evaluation, KD-W1 tuning-surface matching, schema-derived fallback precedence/classification mapping, and conservative changed-surface rerun decisions. Any compiler reference implementation is source-built with the pinned .NET SDK/toolchain.
+Freeze identity/selectors, activation-state/disable-anchor semantics, applicability including the typed Governance §5.2 change context, contracts, the exact four Governance proof classes and their conditional closure/freshness behavior, execution-truth/bounded-substitute semantics, property/exception, review, and baseline schemas. The reference semantics include activation-anchor evaluation, KD-W1 tuning-surface matching, schema-derived fallback precedence/classification mapping, persistence/resource closure activation only for matching persistence/external-resource change types, and conservative changed-surface rerun decisions. Any compiler reference implementation is source-built with the pinned .NET SDK/toolchain.
 
 ## A3 — Amend and reapprove #19/#20 governance integration
 
@@ -1209,6 +1215,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.13 | August 31, 2026 | — | A2 closure/execution hardening after verification of v0.12: adds typed Governance §5.2 `change_type` to applicability so serializer/schema/resource closure edges are activated only for persistence-boundary or external-resource triggers; applies that condition across all four proof classes; restricts bounded substitutes to `excluded`/`unavailable`/`not-run` and forbids them from converting `failed`/`skipped`/`runner-failed`; and aligns proposed FR-TS-094/096 to that frozen behavior. Governance v0.10/A0 and #19/#20 normative files remain unchanged. |
 | 0.12 | August 31, 2026 | — | A2 cross-surface authority correction after hostile sweep: removes the invented persistence/external-resource fifth proof class and freezes Governance's exact four proof classes; maps all six structural classifications into the three applicability fallback scopes and defines fallback precedence; makes `--changed` rerun whenever changed material is inside the derived closure; and requires A2 executable execution-truth/bounded-substitute semantics before A3. Governance v0.10 and A0 approval are unchanged. |
 | 0.11 | August 31, 2026 | — | Post-A0 evidence correction only: review-record pointer advances v1.7 → v1.8 after Codex correctly identified that §11 A0 condition 2 required a stable reviewer identity rather than the relative phrase `same assistant`. Governance v0.10, its Approved status, canonical adoption digest, and A0 CLOSED state are unchanged. |
 | 0.10 | August 31, 2026 | — | **A0 CLOSED.** Records project-owner human sign-off, Governance v0.10 `Draft → Approved`, and the post-status-edit canonical adoption SHA-256 `aa1792bf143fb3bc1066176dedb33abc4097045e7d089844edf05ccf9961d8f6` (Git blob `76502282f205f5c4fd77c79c3309766c4dbd4498`). Removes the stale pre-A0 claim that SPEC_INDEX alignment is an A0 prerequisite; §9.7/downstream registration remains owned by later stages. A2 is now the next stage. No #19/#20 normative file, code, workflow, or runtime behavior changed. |
