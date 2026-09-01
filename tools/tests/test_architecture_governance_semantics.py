@@ -115,7 +115,7 @@ class SelectorTests(unittest.TestCase):
             })
 
     def test_reference_semantics_version_is_pinned(self):
-        self.assertEqual("1.10.0", sem.REFERENCE_SEMANTICS_VERSION)
+        self.assertEqual("2.0.0", sem.REFERENCE_SEMANTICS_VERSION)
         self.assertEqual("1.0.0", sem.SCHEMA_VERSION)
 
     def test_reusable_fact_index_avoids_reindexing_contract(self):
@@ -1318,6 +1318,12 @@ class CanonicalArtifactSchemaTests(unittest.TestCase):
             {"hashlib", "json", "math", "pathlib"}, imported_roots)
 
     def test_seven_seed_artifacts_validate(self):
+        """The seeds satisfy the SEMANTIC validators, strictly.
+
+        Every cross-document input is supplied explicitly: the seeds are the
+        first landing, so the trusted prior is genuinely absent rather than
+        merely unsupplied.
+        """
         sem.validate_runtime_surface_classifications_document(
             self.load("runtime-surface-classifications.json"))
         sem.validate_integration_contracts_document(
@@ -1327,9 +1333,10 @@ class CanonicalArtifactSchemaTests(unittest.TestCase):
         properties = self.load("property-registry.json")
         sem.validate_property_registry(properties, None)
         sem.validate_exception_registry(self.load("exceptions.json"), properties)
-        sem.validate_review_ledger(self.load("review-ledger.json"))
+        sem.validate_review_ledger(self.load("review-ledger.json"), prior_ledger=None)
         sem.validate_temporary_activation_baseline(
-            self.load("temporary-activation-baseline.json"))
+            self.load("temporary-activation-baseline.json"),
+            prior_baseline=None, current_violation_ids=[])
 
     def test_unknown_schema_major_fails_closed(self):
         document = self.load("property-registry.json")
@@ -1529,49 +1536,61 @@ def review_ledger(runs=None, findings=None):
     }
 
 
+def check_ledger(ledger, **kwargs):
+    """Validate a ledger while exercising a rule other than the strict gates.
+
+    The strict gates have their own tests; call sites that are probing
+    convergence or append-only behaviour state the relaxation explicitly so a
+    strict-mode uncertainty can never masquerade as the rule under test.
+    """
+    kwargs.setdefault("prior_ledger", None)
+    kwargs.setdefault("strict", False)
+    return sem.validate_review_ledger(ledger, **kwargs)
+
+
 class ReviewLedgerTests(unittest.TestCase):
     def test_clean_zero_finding_final_review_can_converge(self):
         run = review_run()
         sem.validate_review_ledger(
             review_ledger([run]),
             current_subject_digests={run["review_run_id"]: run["subject_scope_digest"]},
-            strict_freshness=True,
+            prior_ledger=None,
         )
 
     def test_open_low_blocker_prevents_convergence(self):
         with self.assertRaises(sem.ReviewLedgerError):
-            sem.validate_review_ledger(review_ledger([review_run()], [finding()]))
+            check_ledger(review_ledger([review_run()], [finding()]))
 
     def test_terminal_high_tradeoff_does_not_gate_by_severity(self):
         accepted = finding("Accepted Tradeoff", "Accepted", severity="High")
-        sem.validate_review_ledger(review_ledger([review_run()], [accepted]))
+        check_ledger(review_ledger([review_run()], [accepted]))
 
     def test_invalid_disposition_status_pairing_is_rejected(self):
         invalid = finding("Blocker", "Resolved")
         invalid["status"] = "Accepted"
         invalid["status_history"][-1]["transition_to"] = "Accepted"
         with self.assertRaises(sem.ReviewLedgerError):
-            sem.validate_review_ledger(
+            check_ledger(
                 review_ledger([review_run(convergence="NON-CONVERGED")], [invalid]))
 
     def test_round_budget_with_open_finding_records_non_converged(self):
         run = review_run(
             convergence="NON-CONVERGED", final=True, budget_exhausted=True)
-        sem.validate_review_ledger(review_ledger([run], [finding()]))
+        check_ledger(review_ledger([run], [finding()]))
         run["convergence_state"] = "CONVERGED"
         with self.assertRaises(sem.ReviewLedgerError):
-            sem.validate_review_ledger(review_ledger([run], [finding()]))
+            check_ledger(review_ledger([run], [finding()]))
 
     def test_stale_final_review_digest_and_missing_strict_context_fail_closed(self):
         run = review_run()
         ledger = review_ledger([run])
         with self.assertRaises(sem.ReviewStateUncertainty):
-            sem.validate_review_ledger(ledger, strict_freshness=True)
+            sem.validate_review_ledger(ledger, prior_ledger=None)
         with self.assertRaises(sem.ReviewLedgerError):
             sem.validate_review_ledger(
                 ledger,
                 current_subject_digests={run["review_run_id"]: sem.digest({"subject": "changed"})},
-                strict_freshness=True,
+                prior_ledger=None,
             )
 
     def test_review_runs_and_finding_status_history_are_append_only(self):
@@ -1581,11 +1600,11 @@ class ReviewLedgerTests(unittest.TestCase):
         resolved = finding("Blocker", "Resolved")
         final_run = review_run("RUN-002", 2)
         current = review_ledger([initial_run, final_run], [resolved])
-        sem.validate_review_ledger(current, prior_ledger=prior)
+        sem.validate_review_ledger(current, prior_ledger=prior, strict=False)
         rewritten = copy.deepcopy(current)
         rewritten["findings"][0]["status_history"][0]["actor"] = "rewriter"
         with self.assertRaises(sem.ReviewLedgerError):
-            sem.validate_review_ledger(rewritten, prior_ledger=prior)
+            sem.validate_review_ledger(rewritten, prior_ledger=prior, strict=False)
 
     def test_finding_cannot_be_retroactively_attached_to_a_later_round(self):
         first = review_run(convergence="IN_PROGRESS", final=False)
@@ -1593,7 +1612,7 @@ class ReviewLedgerTests(unittest.TestCase):
         retroactive = finding()
         retroactive["parent_review_run_id"] = "RUN-002"
         with self.assertRaises(sem.ReviewLedgerError):
-            sem.validate_review_ledger(
+            check_ledger(
                 review_ledger([first, second], [retroactive]))
 
 
@@ -1623,12 +1642,19 @@ def baseline(mode="inactive", sealed=False, items=None):
     }
 
 
+def check_baseline(document, **kwargs):
+    """Validate a baseline while exercising a rule other than the strict gates."""
+    kwargs.setdefault("prior_baseline", None)
+    kwargs.setdefault("current_violation_ids", None)
+    kwargs.setdefault("strict", False)
+    return sem.validate_temporary_activation_baseline(document, **kwargs)
+
+
 class TemporaryActivationBaselineTests(unittest.TestCase):
     def test_strict_activation_requires_mechanically_empty_strict_baseline(self):
-        sem.validate_temporary_activation_baseline(
-            baseline("strict", True), strict_activation=True)
+        check_baseline(baseline("strict", True), strict_activation=True)
         with self.assertRaises(sem.ActivationBaselineError):
-            sem.validate_temporary_activation_baseline(
+            check_baseline(
                 baseline("migration", True, [baseline_item()]),
                 strict_activation=True,
             )
@@ -1638,26 +1664,473 @@ class TemporaryActivationBaselineTests(unittest.TestCase):
         with self.assertRaises(sem.ActivationBaselineError):
             sem.validate_temporary_activation_baseline(
                 current,
+                prior_baseline=None,
                 current_violation_ids=["VIOLATION-001", "VIOLATION-NEW"],
             )
 
     def test_sealed_baseline_can_shrink_but_cannot_grow_or_rewrite(self):
         prior = baseline("migration", True, [baseline_item()])
         strict = baseline("strict", True)
-        sem.validate_temporary_activation_baseline(strict, prior_baseline=prior)
+        check_baseline(strict, prior_baseline=prior)
 
         grown = baseline(
             "migration", True,
             [baseline_item(), baseline_item("VIOLATION-002")],
         )
         with self.assertRaises(sem.ActivationBaselineError):
-            sem.validate_temporary_activation_baseline(grown, prior_baseline=prior)
+            check_baseline(grown, prior_baseline=prior)
 
         rewritten = copy.deepcopy(prior)
         rewritten["items"][0]["owner"] = "different-owner"
         with self.assertRaises(sem.ActivationBaselineError):
-            sem.validate_temporary_activation_baseline(rewritten, prior_baseline=prior)
+            check_baseline(rewritten, prior_baseline=prior)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def approved_limitation():
+    return {
+        "authority_ref": "#19 FR-TS-094",
+        "approval_ref": "owner-approval-2026-09-01",
+        "justification": "The surface cannot execute until A8 provisions the SDK.",
+        "omitted_surface_or_uncertainty": "GkHeadingWorldAdapter.ApplyKick",
+    }
+
+
+def proof_execution(execution_id="EXEC-001", state="passed"):
+    return {
+        "execution_id": execution_id,
+        "command_or_test": "dotnet test MatchEngine.Tests",
+        "runner": "linux-shim-gate",
+        "environment": "ubuntu-24.04/dotnet-8.0",
+        "subject_scope_digest": sem.digest({"subject": "proof"}),
+        "execution_state": state,
+        "started_at": "2026-09-01T00:00:00Z",
+        "ended_at": "2026-09-01T00:01:00Z",
+    }
+
+
+def proof_artifact(
+        result="pass", proof_class="structural-reachability", executions=None, **extra):
+    artifact = {
+        "schema_version": "1.0.0",
+        "proof_id": "PROOF-001",
+        "proof_class": proof_class,
+        "requirement_property_refs": ["AP-001"],
+        "applicability_rule_ids": ["RULE-001"],
+        "result": result,
+        "subject_scope_digest": sem.digest({"subject": "proof"}),
+        "dependency_closure": {
+            "dependency_ids": ["component:match-host"],
+            "edges": [{"from": "component:match-host", "to": "component:match-engine"}],
+            "relation_policy_digest": sem.digest({"relations": "v1"}),
+            "change_type": "pure-local-calculation",
+        },
+        "content_fingerprints": {"src/match-engine/MatchEngine.cs": sem.digest({"file": 1})},
+        "configuration_fingerprints": {"tools/dotnet-ci/pins.json": sem.digest({"pins": 1})},
+        "tool_identities": [{
+            "tool_id": "architecture-governance-reference-semantics",
+            "semantic_version": sem.REFERENCE_SEMANTICS_VERSION,
+            "content_digest": sem.digest({"tool": 1}),
+        }],
+        "execution_records": [proof_execution()] if executions is None else executions,
+        "created": {"actor": "governance-tooling", "at": "2026-09-01T00:02:00Z"},
+        "revalidation_history": [],
+    }
+    artifact.update(extra)
+    return artifact
+
+
+class FailClosedDefaultTests(unittest.TestCase):
+    """Omitting a cross-document input is uncertainty, never approval.
+
+    `validate_property_registry` already established this posture; these lock the
+    review-ledger and baseline validators to the same contract so a caller that
+    forgets an argument cannot receive a silent pass.
+    """
+
+    def test_review_ledger_without_trusted_prior_reports_uncertainty(self):
+        ledger = review_ledger([review_run(convergence="IN_PROGRESS", final=False)])
+        with self.assertRaises(sem.ReviewStateUncertainty):
+            sem.validate_review_ledger(ledger)
+        # A trusted merge base proving no prior ledger existed is a real answer.
+        sem.validate_review_ledger(ledger, prior_ledger=None)
+
+    def test_final_review_without_current_digest_reports_uncertainty(self):
+        run = review_run()
+        with self.assertRaises(sem.ReviewStateUncertainty):
+            sem.validate_review_ledger(review_ledger([run]), prior_ledger=None)
+
+    def test_baseline_without_trusted_prior_reports_uncertainty(self):
+        with self.assertRaises(sem.ActivationBaselineUncertainty):
+            sem.validate_temporary_activation_baseline(
+                baseline(), current_violation_ids=[])
+
+    def test_baseline_without_current_violations_reports_uncertainty(self):
+        with self.assertRaises(sem.ActivationBaselineUncertainty):
+            sem.validate_temporary_activation_baseline(
+                baseline(), prior_baseline=None)
+
+    def test_absent_violation_discovery_is_not_the_empty_violation_set(self):
+        """IP-4's core rule cannot be satisfied by supplying nothing."""
+        current = baseline("migration", True, [baseline_item()])
+        sem.validate_temporary_activation_baseline(
+            current, prior_baseline=None, current_violation_ids=["VIOLATION-001"])
+        with self.assertRaises(sem.ActivationBaselineUncertainty):
+            sem.validate_temporary_activation_baseline(
+                current, prior_baseline=None, current_violation_ids=None)
+
+    def test_strict_activation_is_not_folded_into_strict(self):
+        """`strict_activation` adds a requirement; it never relaxes one."""
+        sem.validate_temporary_activation_baseline(
+            baseline(), prior_baseline=None, current_violation_ids=[])
+        with self.assertRaises(sem.ActivationBaselineError):
+            sem.validate_temporary_activation_baseline(
+                baseline(), prior_baseline=None, current_violation_ids=[],
+                strict_activation=True)
+
+
+class ProofArtifactTests(unittest.TestCase):
+    def test_representative_pass_artifact_validates(self):
+        sem.validate_proof_artifact(proof_artifact())
+
+    def test_unknown_field_and_bad_digest_fail_closed(self):
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(proof_artifact(stowaway="x"))
+        artifact = proof_artifact()
+        artifact["subject_scope_digest"] = "not-a-digest"
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(artifact)
+
+    def test_na_and_bounded_records_are_exclusive_to_their_result(self):
+        sem.validate_proof_artifact(proof_artifact("na", na=approved_limitation()))
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(proof_artifact("na"))
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(
+                proof_artifact("pass", na=approved_limitation()))
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(
+                proof_artifact("pass", bounded_substitute=approved_limitation()))
+
+    def test_pass_result_cannot_outrun_a_non_passing_execution(self):
+        for state in ("failed", "skipped", "not-run", "runner-failed"):
+            with self.assertRaises(sem.ProofArtifactError):
+                sem.validate_proof_artifact(
+                    proof_artifact(executions=[proof_execution(state=state)]))
+
+    def test_bounded_result_converts_only_the_permitted_states(self):
+        artifact = proof_artifact(
+            "bounded",
+            executions=[proof_execution(state="unavailable")],
+            bounded_substitute=approved_limitation(),
+        )
+        sem.validate_proof_artifact(artifact, bounded_substitute_permitted=True)
+        # #19 permission is not implied by the record's own presence.
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(artifact)
+        # An execution that ran and failed is never convertible.
+        failed = proof_artifact(
+            "bounded",
+            executions=[proof_execution(state="failed")],
+            bounded_substitute=approved_limitation(),
+        )
+        with self.assertRaises(sem.ExecutionError):
+            sem.validate_proof_artifact(failed, bounded_substitute_permitted=True)
+
+    def test_bounded_result_admits_a_mixed_execution_set(self):
+        """The substitute covers the omitted record, not the ones that ran."""
+        mixed = proof_artifact(
+            "bounded",
+            executions=[
+                proof_execution("EXEC-001", "passed"),
+                proof_execution("EXEC-002", "excluded"),
+            ],
+            bounded_substitute=approved_limitation(),
+        )
+        sem.validate_proof_artifact(mixed, bounded_substitute_permitted=True)
+
+    def test_empty_execution_set_is_not_rejected_by_the_record_contract(self):
+        """Whether a proof class requires an execution is an applicability
+        question; the frozen record contract does not invent that rule."""
+        sem.validate_proof_artifact(proof_artifact(executions=[]))
+
+    def test_proof_class_binds_its_evidence_record(self):
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(proof_artifact(proof_class="failure-injection"))
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(proof_artifact(proof_class="mutation"))
+        injection = proof_artifact(
+            proof_class="failure-injection",
+            failure_injection={
+                "condition_or_input": "force the composition root to throw",
+                "target_selector": method("Start", [], "unused")["selector"],
+                "expected_path": "MatchHost bootstrap aborts",
+                "executed_command_or_test": "dotnet test --filter Bootstrap",
+                "observed_result": "aborted as expected",
+                "tool_environment_identity": "linux-shim-gate",
+            },
+        )
+        sem.validate_proof_artifact(injection)
+        # The evidence record cannot ride along on an unrelated proof class.
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(
+                proof_artifact(failure_injection=injection["failure_injection"]))
+
+    def test_mutation_requires_a_restored_clean_state(self):
+        def mutation_artifact(restored):
+            return proof_artifact(
+                proof_class="mutation",
+                mutation={
+                    "base_subject_digest": sem.digest({"subject": "proof"}),
+                    "target_selector": method("Start", [], "unused")["selector"],
+                    "operator_or_mutant_digest": "negate-conditional",
+                    "baseline_execution": "EXEC-001",
+                    "mutant_execution": "EXEC-002",
+                    "expected_detector": "BootstrapTests.Start_registers_host",
+                    "observed_detector_failure": "failed as expected",
+                    "tool_identity": "mutation-harness-1.0",
+                    "restoration_clean_state": restored,
+                },
+            )
+        sem.validate_proof_artifact(mutation_artifact(True))
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(mutation_artifact(False))
+
+    def test_target_selector_must_resolve_when_facts_are_supplied(self):
+        fact = method("Start", [], "M:Start()")
+        injection = proof_artifact(
+            proof_class="failure-injection",
+            failure_injection={
+                "condition_or_input": "force a throw",
+                "target_selector": fact["selector"],
+                "expected_path": "aborts",
+                "executed_command_or_test": "dotnet test",
+                "observed_result": "aborted",
+                "tool_environment_identity": "linux-shim-gate",
+            },
+        )
+        sem.validate_proof_artifact(injection, semantic_facts=[fact])
+        with self.assertRaises(sem.ProofArtifactError):
+            sem.validate_proof_artifact(
+                injection, semantic_facts=[method("Other", [], "M:Other()")])
+
+    def test_validated_artifact_survives_revalidation(self):
+        normalized = sem.validate_proof_artifact(proof_artifact())
+        sem.validate_proof_artifact(normalized)
+
+
+VALIDATOR_PATH = (
+    Path(__file__).resolve().parents[1] / "architecture-governance" / "schema_validator.py")
+_VALIDATOR_SPEC = importlib.util.spec_from_file_location(
+    "architecture_governance_schema_validator", VALIDATOR_PATH)
+jsv = importlib.util.module_from_spec(_VALIDATOR_SPEC)
+_VALIDATOR_SPEC.loader.exec_module(jsv)
+
+
+def surface_document():
+    return {
+        "schema_version": "1.0.0",
+        "surfaces": [{
+            "surface_id": "SURFACE-001",
+            "symbol_key": "M:Example.Component.Start()",
+            "kind": "method",
+            "source_path": "src/match-engine/MatchEngine.cs",
+            "signature": "public void Start()",
+            "assembly": "Example.Runtime",
+            "classification": "production-runtime-root",
+            "component_id": "component:match-engine",
+        }],
+    }
+
+
+def contract_document():
+    disabled = field(
+        "TackleContactRadiusM", "F:TackleContactRadiusM",
+        {"value_type": "number", "value": 0})
+    return {
+        "schema_version": "1.0.0",
+        "contracts": [{
+            "contract_id": "CONTRACT-001",
+            "component_id": "component:tackling",
+            "current_selector": disabled["selector"],
+            "selector_history": [],
+            "owning_host": "MatchHost",
+            "owning_assembly": "Example.Runtime",
+            "composition_root": "MatchHost.Compose",
+            "construction_path": "MatchHost.Compose -> Tackling",
+            "activation_phase": "startup",
+            "update_use_owner": "MatchEngine.Tick",
+            "teardown_owner": "MatchHost.Dispose",
+            "relevant_testhost_path": "MatchEngine.Tests",
+            "alternate_supported_paths": [],
+            "prohibited_bypass_paths": [],
+            "static_initialization_involved": False,
+            "lifecycle_ordering_requirements": [],
+            "na_fields": [],
+            "activation_state": "intentionally-disabled",
+            "activation_owner": "match-engine",
+            "decision_ref": "KD-TACKLE-001",
+            "disable_anchor": {
+                "selector": disabled["selector"],
+                "operator": "equals",
+                "expected": {"value_type": "number", "value": 0},
+            },
+            "reactivation_condition": "integration contract is completed",
+            "tuning_surface_selectors": [disabled["selector"]],
+        }],
+    }
+
+
+class BoundedSchemaValidatorTests(unittest.TestCase):
+    ROOT = Path(__file__).resolve().parents[2] / "docs" / "tracking" / "architecture-governance"
+
+    def setUp(self):
+        self.schemas = jsv.default_schema_set()
+
+    def test_every_schema_declares_an_id_so_relative_refs_resolve(self):
+        """Without `$id` a relative `$ref` has no base URI outside file loading."""
+        for name, document in sorted(self.schemas.by_name.items()):
+            self.assertEqual(
+                "https://schemas.tactical-director.internal/architecture-governance/" + name,
+                document["$id"],
+                "%s must declare its canonical $id" % name,
+            )
+        # Cross-file refs resolve through real URI resolution, not filename lookup.
+        target, _ = self.schemas.resolve(
+            "common.schema.json#/$defs/sha256",
+            self.schemas.by_name["proof-artifact.schema.json"]["$id"])
+        self.assertEqual("^[0-9a-f]{64}$", target["pattern"])
+
+    def test_validator_implements_every_keyword_the_schemas_use(self):
+        """A silently unimplemented keyword would make every differential vacuous."""
+        used = set()
+        for document in self.schemas.by_name.values():
+            used |= jsv.SchemaSet.used_keywords(document)
+        unimplemented = used - jsv.SUPPORTED_KEYWORDS - jsv.ANNOTATION_KEYWORDS
+        self.assertEqual(set(), unimplemented)
+
+    def test_unimplemented_keyword_and_missing_id_are_rejected_loudly(self):
+        import shutil
+        import tempfile
+        directory = tempfile.mkdtemp()
+        try:
+            for path in (self.ROOT / "schemas").glob("*.json"):
+                shutil.copy(path, directory)
+            target = Path(directory) / "exceptions.schema.json"
+            document = json.loads(target.read_text(encoding="utf-8"))
+            document["properties"]["exceptions"]["contains"] = {"type": "object"}
+            target.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaises(jsv.UnsupportedKeyword):
+                jsv.SchemaSet(directory)
+
+            target.write_text(json.dumps(
+                json.loads((self.ROOT / "schemas" / "exceptions.schema.json").read_text(
+                    encoding="utf-8"))), encoding="utf-8")
+            common = Path(directory) / "common.schema.json"
+            document = json.loads(common.read_text(encoding="utf-8"))
+            del document["$id"]
+            common.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaises(jsv.SchemaValidatorError):
+                jsv.SchemaSet(directory)
+        finally:
+            shutil.rmtree(directory)
+
+    def test_validator_is_not_vacuous(self):
+        """Each implemented keyword class actually rejects a violating document."""
+        cases = [
+            ({"schema_version": "1.0.0"}, "property-registry.schema.json"),
+            ({"schema_version": "9.0.0", "properties": []},
+             "property-registry.schema.json"),
+            ({"schema_version": "1.0.0", "properties": [], "stowaway": 1},
+             "property-registry.schema.json"),
+            ({"schema_version": "1.0.0", "baseline_id": "b", "mode": "strict",
+              "sealed": False, "items": []},
+             "temporary-activation-baseline.schema.json"),
+        ]
+        for document, schema in cases:
+            self.assertTrue(
+                self.schemas.validate(document, schema),
+                "%s should have been rejected" % schema)
+
+    def test_seed_artifacts_satisfy_their_schemas(self):
+        for name, schema in (
+                ("runtime-surface-classifications.json",
+                 "runtime-surface-classifications.schema.json"),
+                ("integration-contracts.json", "integration-contracts.schema.json"),
+                ("applicability-rules.json", "applicability-rules.schema.json"),
+                ("property-registry.json", "property-registry.schema.json"),
+                ("exceptions.json", "exceptions.schema.json"),
+                ("review-ledger.json", "review-ledger.schema.json"),
+                ("temporary-activation-baseline.json",
+                 "temporary-activation-baseline.schema.json"),
+        ):
+            document = json.loads((self.ROOT / name).read_text(encoding="utf-8"))
+            self.assertEqual([], self.schemas.validate(document, schema), name)
+
+    def test_semantically_valid_fixtures_also_satisfy_their_schemas(self):
+        """The frozen shape and the executable semantics must not drift apart.
+
+        The implication is deliberately ONE-directional. The semantic validators
+        enforce cross-record rules — append-only history, legal transitions,
+        dependency closure, Disposition x Status — that JSON Schema cannot
+        express, so a schema-valid document the semantics reject is correct
+        behaviour, not drift. What must never happen is the reverse: a document
+        the semantics bless that violates the contract producers code against.
+        """
+        cases = []
+
+        def case(label, schema, document, semantic):
+            cases.append((label, schema, document, semantic))
+
+        properties = property_registry(property_record("Admitted", True))
+        case("property registry", "property-registry.schema.json", properties,
+             lambda doc: sem.validate_property_registry(doc, None))
+        case("exception registry", "exceptions.schema.json",
+             {"schema_version": "1.0.0", "exceptions": [exception_record()]},
+             lambda doc: sem.validate_exception_registry(doc, properties))
+        case("applicability rules", "applicability-rules.schema.json",
+             {"schema_version": "1.0.0",
+              "rules": [applicability_rule(
+                  "RULE-001", "trigger:a", "AP-001",
+                  classifications=["production-runtime-root"])]},
+             sem.validate_applicability_rules_document)
+        case("runtime surfaces", "runtime-surface-classifications.schema.json",
+             surface_document(), sem.validate_runtime_surface_classifications_document)
+        case("integration contracts", "integration-contracts.schema.json",
+             contract_document(), sem.validate_integration_contracts_document)
+
+        run = review_run()
+        case("review ledger", "review-ledger.schema.json",
+             review_ledger([run], [finding("Accepted Tradeoff", "Accepted")]),
+             lambda doc: sem.validate_review_ledger(
+                 doc,
+                 current_subject_digests={
+                     run["review_run_id"]: run["subject_scope_digest"]},
+                 prior_ledger=None))
+        case("activation baseline", "temporary-activation-baseline.schema.json",
+             baseline("migration", True, [baseline_item()]),
+             lambda doc: sem.validate_temporary_activation_baseline(
+                 doc, prior_baseline=None, current_violation_ids=["VIOLATION-001"]))
+        case("proof artifact", "proof-artifact.schema.json",
+             proof_artifact(), sem.validate_proof_artifact)
+        case("proof artifact (na)", "proof-artifact.schema.json",
+             proof_artifact("na", na=approved_limitation()), sem.validate_proof_artifact)
+
+        for label, schema, document, semantic in cases:
+            semantic(copy.deepcopy(document))
+            self.assertEqual(
+                [], self.schemas.validate(document, schema),
+                "%s: accepted by the semantics but violates %s" % (label, schema))
+
+    def test_schema_validator_keeps_the_ci_pure_stdlib(self):
+        tree = ast.parse(VALIDATOR_PATH.read_text(encoding="utf-8"))
+        roots = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                roots.update(alias.name.split(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                roots.add(node.module.split(".")[0])
+        self.assertEqual({"json", "re", "pathlib", "urllib"}, roots)

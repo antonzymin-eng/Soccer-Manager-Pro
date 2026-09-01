@@ -11,7 +11,7 @@ import json
 import math
 from pathlib import Path
 
-REFERENCE_SEMANTICS_VERSION = "1.10.0"
+REFERENCE_SEMANTICS_VERSION = "2.0.0"
 
 _CONTROL_SCHEMA_PATH = (
     Path(__file__).resolve().parents[2]
@@ -57,8 +57,15 @@ _BASELINE_MODES = _schema_enum("baselineMode")
 _EXPIRY_TRIGGER_TYPES = _schema_enum("expiryTriggerType")
 _EXCEPTION_STATUSES = _schema_enum("exceptionStatus")
 _PROPERTY_RESULTS = _schema_enum("propertyResult")
+_PROOF_RESULTS = _schema_enum("proofResult")
 _REVALIDATION_OUTCOMES = _schema_enum("revalidationOutcome")
 _SEVERITIES = _schema_enum("severity")
+_APPROVED_LIMITATION_FIELDS = frozenset({
+    "authority_ref",
+    "approval_ref",
+    "justification",
+    "omitted_surface_or_uncertainty",
+})
 _BASELINE_MODE_TRANSITIONS = frozenset(
     tuple(item) for item in _CONTROL_DATA["baseline_mode_transitions"])
 if any(
@@ -75,7 +82,7 @@ if any(
         for item in _BASELINE_MODE_TRANSITIONS):
     raise RuntimeError("canonical baseline transition control data is invalid")
 
-_TRUSTED_PRIOR_NOT_PROVIDED = object()
+_NOT_PROVIDED = object()
 
 
 class SemanticsError(ValueError):
@@ -119,6 +126,14 @@ class ReviewStateUncertainty(ReviewLedgerError):
 
 
 class ActivationBaselineError(SchemaError):
+    pass
+
+
+class ActivationBaselineUncertainty(ActivationBaselineError):
+    pass
+
+
+class ProofArtifactError(SchemaError):
     pass
 
 
@@ -1062,12 +1077,7 @@ def evaluate_execution_truth(
 
     if not isinstance(bounded_substitute, dict):
         raise ExecutionError("bounded_substitute must be an object")
-    allowed = {
-        "authority_ref",
-        "approval_ref",
-        "justification",
-        "omitted_surface_or_uncertainty",
-    }
+    allowed = _APPROVED_LIMITATION_FIELDS
     unknown = sorted(set(bounded_substitute) - allowed)
     if unknown:
         raise ExecutionError(
@@ -1735,14 +1745,14 @@ def _property_map(document):
 
 
 def validate_property_registry(
-        registry, merge_base_registry=_TRUSTED_PRIOR_NOT_PROVIDED, strict=True):
+        registry, merge_base_registry=_NOT_PROVIDED, strict=True):
     """Validate property state/history and trusted-merge-base immutability.
 
     Pass ``None`` when the trusted merge base proves that no registry existed.
     Omitting the merge-base value in strict mode is uncertainty, not approval.
     """
     current_records, current = _property_map(registry)
-    if merge_base_registry is _TRUSTED_PRIOR_NOT_PROVIDED:
+    if merge_base_registry is _NOT_PROVIDED:
         if strict:
             raise PropertyRegistryUncertainty(
                 "trusted merge-base property registry was not provided")
@@ -2028,7 +2038,13 @@ def _normalize_finding(record, index):
 
 
 def validate_review_ledger(
-        ledger, current_subject_digests=None, prior_ledger=None, strict_freshness=False):
+        ledger, current_subject_digests=None, prior_ledger=_NOT_PROVIDED, strict=True):
+    """Validate review-run/finding state, convergence, and append-only history.
+
+    Pass ``prior_ledger=None`` when the trusted merge base proves that no ledger
+    existed. Omitting it in strict mode is uncertainty, not approval, and a final
+    review whose current subject digest is not supplied is likewise uncertainty.
+    """
     _schema_version(ledger, ReviewLedgerError)
     _exact_record(
         ledger, {"schema_version", "legacy_policy", "review_runs", "findings"},
@@ -2083,7 +2099,7 @@ def validate_review_ledger(
         if run["final_review"]:
             expected = None if current_subject_digests is None else current_subject_digests.get(
                 run["review_run_id"])
-            if expected is None and strict_freshness:
+            if expected is None and strict:
                 raise ReviewStateUncertainty(
                     "current subject digest missing for final review %s" % run["review_run_id"])
             if expected is not None:
@@ -2091,8 +2107,12 @@ def validate_review_ledger(
                 if expected != run["subject_scope_digest"]:
                     raise ReviewLedgerError("final review subject is stale")
         _sha256(run["subject_scope_digest"], "subject_scope_digest", ReviewLedgerError)
-    if prior_ledger is not None:
-        validate_review_ledger(prior_ledger)
+    if prior_ledger is _NOT_PROVIDED:
+        if strict:
+            raise ReviewStateUncertainty(
+                "trusted prior review ledger was not provided")
+    elif prior_ledger is not None:
+        validate_review_ledger(prior_ledger, None, None, strict=False)
         if runs_raw[:len(prior_ledger["review_runs"])] != prior_ledger["review_runs"]:
             raise ReviewLedgerError("review runs are append-only")
         old_findings = {item["finding_id"]: item for item in prior_ledger["findings"]}
@@ -2158,8 +2178,20 @@ def _normalize_baseline_item(item, index):
 
 
 def validate_temporary_activation_baseline(
-        baseline, strict_activation=False, prior_baseline=None,
-        current_violation_ids=None):
+        baseline, strict_activation=False, prior_baseline=_NOT_PROVIDED,
+        current_violation_ids=None, strict=True):
+    """Validate finite baseline shape, transitions, and IP-4 coverage.
+
+    Pass ``prior_baseline=None`` when the trusted merge base proves that no
+    baseline existed. Omitting it in strict mode is uncertainty, not approval.
+    ``current_violation_ids`` carries the live violation set; omitting it in
+    strict mode is uncertainty, because absent discovery evidence is not the
+    same claim as the empty list.
+
+    ``strict_activation`` is deliberately not part of ``strict``: it asserts
+    that this call is the final activation check and adds a requirement rather
+    than relaxing one.
+    """
     _schema_version(baseline, ActivationBaselineError)
     _exact_record(
         baseline, {"schema_version", "baseline_id", "mode", "sealed", "items"},
@@ -2182,7 +2214,11 @@ def validate_temporary_activation_baseline(
     if strict_activation and (mode != "strict" or items):
         raise ActivationBaselineError(
             "strict activation requires mode strict and zero baseline items")
-    if current_violation_ids is not None:
+    if current_violation_ids is None:
+        if strict:
+            raise ActivationBaselineUncertainty(
+                "current violation identifiers were not provided")
+    else:
         if not isinstance(current_violation_ids, list) or any(
                 not isinstance(item, str) or not item.strip()
                 for item in current_violation_ids):
@@ -2197,8 +2233,13 @@ def validate_temporary_activation_baseline(
         if stale:
             raise ActivationBaselineError(
                 "resolved violations must be removed from the baseline: %s" % ", ".join(stale))
-    if prior_baseline is not None:
-        validate_temporary_activation_baseline(prior_baseline)
+    if prior_baseline is _NOT_PROVIDED:
+        if strict:
+            raise ActivationBaselineUncertainty(
+                "trusted prior activation baseline was not provided")
+    elif prior_baseline is not None:
+        validate_temporary_activation_baseline(
+            prior_baseline, False, None, None, strict=False)
         prior_mode = prior_baseline["mode"]
         if mode != prior_mode and (prior_mode, mode) not in _BASELINE_MODE_TRANSITIONS:
             raise ActivationBaselineError(
@@ -2214,3 +2255,262 @@ def validate_temporary_activation_baseline(
         if prior_baseline["sealed"] and not set(new_items) <= set(old_items):
             raise ActivationBaselineError("sealed baseline cannot admit new violations")
     return baseline
+
+
+_PROOF_EXECUTION_REQUIRED = frozenset({
+    "execution_id", "command_or_test", "runner", "environment",
+    "subject_scope_digest", "execution_state", "started_at", "ended_at",
+})
+_PROOF_REQUIRED = frozenset({
+    "schema_version", "proof_id", "proof_class", "requirement_property_refs",
+    "applicability_rule_ids", "result", "subject_scope_digest", "dependency_closure",
+    "content_fingerprints", "configuration_fingerprints", "tool_identities",
+    "execution_records", "created", "revalidation_history",
+})
+_PROOF_OPTIONAL = frozenset({
+    "na", "bounded_substitute", "provenance_revision", "provenance_tree",
+    "inventory_digest", "asmdef_digest", "failure_injection", "mutation",
+})
+_PERTURBATION_REQUIRED = frozenset({
+    "condition_or_input", "target_selector", "expected_path",
+    "executed_command_or_test", "observed_result", "tool_environment_identity",
+})
+_MUTATION_TEXT_FIELDS = frozenset({
+    "operator_or_mutant_digest", "baseline_execution", "mutant_execution",
+    "expected_detector", "observed_detector_failure", "tool_identity",
+})
+
+
+def _approved_limitation(value, label):
+    """Validate an `na` / bounded-substitute record against the frozen shape."""
+    _exact_record(
+        value, _APPROVED_LIMITATION_FIELDS, set(), label, ProofArtifactError)
+    return {
+        field: _text(value, field, ProofArtifactError)
+        for field in sorted(_APPROVED_LIMITATION_FIELDS)
+    }
+
+
+def _digest_map(value, field):
+    if not isinstance(value, dict):
+        raise ProofArtifactError("%s must be an object" % field)
+    out = {}
+    for key in sorted(value):
+        if not isinstance(key, str) or not key.strip():
+            raise ProofArtifactError("%s keys must be non-empty strings" % field)
+        out[key.strip()] = _sha256(
+            value[key], "%s[%s]" % (field, key), ProofArtifactError)
+    return out
+
+
+def _proof_execution(record, index):
+    label = "execution_records[%d]" % index
+    _exact_record(
+        record, _PROOF_EXECUTION_REQUIRED, {"result_artifact"},
+        label, ProofArtifactError)
+    out = {
+        field: _text(record, field, ProofArtifactError)
+        for field in sorted(_PROOF_EXECUTION_REQUIRED - {
+            "subject_scope_digest", "execution_state"})
+    }
+    out["subject_scope_digest"] = _sha256(
+        record.get("subject_scope_digest"),
+        label + ".subject_scope_digest", ProofArtifactError)
+    out["execution_state"] = _enum(
+        record.get("execution_state"), _EXECUTION_STATES,
+        label + ".execution_state", ProofArtifactError)
+    if "result_artifact" in record:
+        out["result_artifact"] = _text(record, "result_artifact", ProofArtifactError)
+    return out
+
+
+def _proof_failure_injection(record, semantic_facts):
+    _exact_record(
+        record, _PERTURBATION_REQUIRED, set(), "failure_injection", ProofArtifactError)
+    for field in sorted(_PERTURBATION_REQUIRED - {"target_selector"}):
+        _text(record, field, ProofArtifactError)
+    return _proof_selector(record["target_selector"], "failure_injection", semantic_facts)
+
+
+def _proof_mutation(record, semantic_facts):
+    required = _MUTATION_TEXT_FIELDS | {
+        "base_subject_digest", "target_selector", "restoration_clean_state"}
+    _exact_record(record, required, set(), "mutation", ProofArtifactError)
+    for field in sorted(_MUTATION_TEXT_FIELDS):
+        _text(record, field, ProofArtifactError)
+    _sha256(
+        record.get("base_subject_digest"),
+        "mutation.base_subject_digest", ProofArtifactError)
+    if record.get("restoration_clean_state") is not True:
+        raise ProofArtifactError(
+            "mutation.restoration_clean_state must record a restored clean state")
+    return _proof_selector(record["target_selector"], "mutation", semantic_facts)
+
+
+def _proof_selector(selector, label, semantic_facts):
+    try:
+        normalized = normalize_selector(selector)
+    except SelectorError as exc:
+        raise ProofArtifactError("%s.target_selector is invalid: %s" % (label, exc))
+    if semantic_facts is not None:
+        try:
+            resolve_selector(normalized, semantic_facts)
+        except SemanticsError as exc:
+            raise ProofArtifactError(
+                "%s.target_selector does not resolve: %s" % (label, exc))
+    return normalized
+
+
+def validate_proof_artifact(
+        artifact, semantic_facts=None, bounded_substitute_permitted=False):
+    """Validate one reusable proof record against the frozen §3.7 contract.
+
+    Shape mirrors `schemas/proof-artifact.schema.json`. Beyond the shape this
+    binds the record to A2 execution truth: a `pass` result requires every
+    execution record to have passed, and a `bounded` result may only convert the
+    states `evaluate_execution_truth` permits, through an approved substitute
+    that #19 explicitly allows (`bounded_substitute_permitted`).
+
+    `semantic_facts` is optional; when supplied, failure-injection and mutation
+    target selectors must resolve against it rather than merely parse.
+    """
+    _schema_version(artifact, ProofArtifactError)
+    _exact_record(
+        artifact, _PROOF_REQUIRED, _PROOF_OPTIONAL,
+        "proof artifact", ProofArtifactError)
+    _text(artifact, "proof_id", ProofArtifactError)
+    proof_class = _enum(
+        artifact.get("proof_class"), _PROOF_CLASSES,
+        "proof_class", ProofArtifactError)
+    result = _enum(
+        artifact.get("result"), _PROOF_RESULTS, "result", ProofArtifactError)
+    _text_list(artifact, "requirement_property_refs", ProofArtifactError)
+    _text_list(artifact, "applicability_rule_ids", ProofArtifactError)
+    _sha256(
+        artifact.get("subject_scope_digest"),
+        "subject_scope_digest", ProofArtifactError)
+    for field in ("provenance_revision", "provenance_tree"):
+        if field in artifact:
+            _text(artifact, field, ProofArtifactError)
+    for field in ("inventory_digest", "asmdef_digest"):
+        if field in artifact:
+            _sha256(artifact[field], field, ProofArtifactError)
+    _digest_map(artifact["content_fingerprints"], "content_fingerprints")
+    _digest_map(artifact["configuration_fingerprints"], "configuration_fingerprints")
+
+    closure = artifact["dependency_closure"]
+    _exact_record(
+        closure,
+        {"dependency_ids", "edges", "relation_policy_digest", "change_type"},
+        set(), "dependency_closure", ProofArtifactError)
+    _text_list(closure, "dependency_ids", ProofArtifactError, required=False)
+    if not isinstance(closure["edges"], list) or any(
+            not isinstance(item, dict) for item in closure["edges"]):
+        raise ProofArtifactError("dependency_closure.edges must be a list of objects")
+    _sha256(
+        closure.get("relation_policy_digest"),
+        "dependency_closure.relation_policy_digest", ProofArtifactError)
+    _enum(
+        closure.get("change_type"), _CHANGE_TYPES,
+        "dependency_closure.change_type", ProofArtifactError)
+
+    tools_raw = artifact["tool_identities"]
+    if not isinstance(tools_raw, list) or not tools_raw:
+        raise ProofArtifactError("tool_identities must be a non-empty list")
+    for index, tool in enumerate(tools_raw):
+        label = "tool_identities[%d]" % index
+        _exact_record(
+            tool, {"tool_id", "semantic_version", "content_digest"},
+            set(), label, ProofArtifactError)
+        _text(tool, "tool_id", ProofArtifactError)
+        _text(tool, "semantic_version", ProofArtifactError)
+        _sha256(tool.get("content_digest"), label + ".content_digest", ProofArtifactError)
+
+    created = artifact["created"]
+    _exact_record(created, {"actor", "at"}, set(), "created", ProofArtifactError)
+    _text(created, "actor", ProofArtifactError)
+    _text(created, "at", ProofArtifactError)
+    if not isinstance(artifact["revalidation_history"], list) or any(
+            not isinstance(item, dict) for item in artifact["revalidation_history"]):
+        raise ProofArtifactError("revalidation_history must be a list of objects")
+
+    executions_raw = artifact["execution_records"]
+    if not isinstance(executions_raw, list):
+        raise ProofArtifactError("execution_records must be a list")
+    executions = [
+        _proof_execution(item, index) for index, item in enumerate(executions_raw)]
+    execution_ids = [item["execution_id"] for item in executions]
+    if len(execution_ids) != len(set(execution_ids)):
+        raise ProofArtifactError("duplicate execution_id")
+
+    # Result/limitation exclusivity, mirroring the schema's allOf branches.
+    na = None
+    if result == "na":
+        if "na" not in artifact:
+            raise ProofArtifactError("an na result requires an approved na record")
+        na = _approved_limitation(artifact["na"], "na")
+    elif "na" in artifact:
+        raise ProofArtifactError("na is only valid for an na result")
+
+    substitute = None
+    if result == "bounded":
+        if "bounded_substitute" not in artifact:
+            raise ProofArtifactError(
+                "a bounded result requires an approved bounded_substitute record")
+        substitute = _approved_limitation(
+            artifact["bounded_substitute"], "bounded_substitute")
+    elif "bounded_substitute" in artifact:
+        raise ProofArtifactError(
+            "bounded_substitute is only valid for a bounded result")
+
+    if proof_class == "failure-injection":
+        if "failure_injection" not in artifact:
+            raise ProofArtifactError(
+                "a failure-injection proof requires a failure_injection record")
+        _proof_failure_injection(artifact["failure_injection"], semantic_facts)
+    elif "failure_injection" in artifact:
+        raise ProofArtifactError(
+            "failure_injection belongs to a failure-injection proof")
+
+    if proof_class == "mutation":
+        if "mutation" not in artifact:
+            raise ProofArtifactError("a mutation proof requires a mutation record")
+        _proof_mutation(artifact["mutation"], semantic_facts)
+    elif "mutation" in artifact:
+        raise ProofArtifactError("mutation belongs to a mutation proof")
+
+    # Execution truth: the proof result may never outrun what actually executed.
+    #
+    # Whether a given proof class REQUIRES an execution at all is an applicability
+    # question, not a property of this record, so an empty execution list is not
+    # rejected here — that rule would be invented, and A2 is freezing the contract.
+    # What is checked is that every execution actually recorded is consistent with
+    # the claimed result.
+    if result in {"pass", "bounded"}:
+        for record in executions:
+            passed = record["execution_state"] == "passed"
+            # A substitute covers only the record it stands in for; offering one
+            # alongside a passed execution is itself an error.
+            truth = evaluate_execution_truth(
+                record["execution_state"],
+                None if result == "pass" or passed else substitute,
+                False if result == "pass" or passed
+                else bool(bounded_substitute_permitted))
+            if not truth["satisfied"]:
+                raise ProofArtifactError(
+                    "%s is not satisfied by execution %s (%s)" % (
+                        result, record["execution_id"], truth["basis"]))
+
+    normalized = {
+        **artifact,
+        "proof_class": proof_class,
+        "result": result,
+        "execution_records": executions,
+    }
+    # Absent limitation records stay absent: re-validating the returned document
+    # must not trip the result/limitation exclusivity rule above.
+    if na is not None:
+        normalized["na"] = na
+    if substitute is not None:
+        normalized["bounded_substitute"] = substitute
+    return normalized

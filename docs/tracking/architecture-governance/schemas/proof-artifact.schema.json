@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.tactical-director.internal/architecture-governance/proof-artifact.schema.json",
   "title": "Reusable Architecture Proof Artifact v1",
   "type": "object",
   "required": [

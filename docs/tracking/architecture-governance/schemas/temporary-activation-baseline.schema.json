@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.tactical-director.internal/architecture-governance/temporary-activation-baseline.schema.json",
   "title": "Temporary Architecture Activation Baseline v1",
   "type": "object",
   "required": ["schema_version", "baseline_id", "mode", "sealed", "items"],

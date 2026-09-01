@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.tactical-director.internal/architecture-governance/review-ledger.schema.json",
   "title": "Architecture Governance Review Ledger v1",
   "type": "object",
   "required": ["schema_version", "legacy_policy", "review_runs", "findings"],

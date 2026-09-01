@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.tactical-director.internal/architecture-governance/runtime-surface-classifications.schema.json",
   "title": "Runtime Surface Classification Intent v1",
   "type": "object",
   "required": ["schema_version", "surfaces"],

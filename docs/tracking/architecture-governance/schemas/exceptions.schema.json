@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.tactical-director.internal/architecture-governance/exceptions.schema.json",
   "title": "Architecture Governance Exception Registry v1",
   "type": "object",
   "required": ["schema_version", "exceptions"],

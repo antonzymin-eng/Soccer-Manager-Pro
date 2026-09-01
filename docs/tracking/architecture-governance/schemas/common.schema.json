@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.tactical-director.internal/architecture-governance/common.schema.json",
   "title": "Architecture Governance Common Types v1",
   "x-governance-control-data": {
     "schema_version": "1.0.0",
