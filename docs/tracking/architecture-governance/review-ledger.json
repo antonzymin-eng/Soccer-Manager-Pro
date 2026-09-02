@@ -1186,10 +1186,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), reviewer for the A2 candidate",
-          "at": "2026-09-02T01:06:40Z",
+          "at": "2026-09-02T01:12:02Z",
           "evidence": [
             "The A2-R8-001 remediation rejected every addition measured against a trusted prior. Section 3.9 declares inactive -> migration legal and an inactive baseline is required to be mechanically empty, so entering migration necessarily adds items and was left unreachable. Reproduced against the repository's own committed temporary-activation-baseline.json, which is inactive and empty: inactive -> migration([V-001]) raised ActivationBaselineError at c927a95 and was accepted at a034fc3, so the regression was introduced by the round-8 fix itself. No fixture caught it because every prior_baseline test in the suite passed a migration prior -- round 8's own lesson about fixture-bounded differentials, recurring in the commit that recorded it.",
-            "Recorded into this ledger at 2026-09-02T01:06:40Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T01:12:02Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -1197,10 +1197,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), reviewer for the A2 candidate",
-          "at": "2026-09-02T01:06:40Z",
+          "at": "2026-09-02T01:12:02Z",
           "evidence": [
             "Additions are now permitted only on the inactive -> migration edge, the single act 3.9 requires to exist: cataloguing the pre-existing set. The exemption cannot be re-entered because no transition returns to inactive, so the catalogue is populated exactly once and never grows again; growth from a migration prior stays rejected and is locked. Three fixtures are added, two of which fail at c927a95, and one asserts the committed baseline document rather than a constructed one.",
-            "Recorded into this ledger at 2026-09-02T01:06:40Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T01:12:02Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -1233,10 +1233,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), reviewer for the A2 candidate",
-          "at": "2026-09-02T01:06:40Z",
+          "at": "2026-09-02T01:12:02Z",
           "evidence": [
             "The integration plan's header stated Version: 0.18 while its own version history had advanced to 0.25. The header last moved at dae398a; seven subsequent revisions appended history rows without bumping it, so every citation of integration-plan v0.19 through v0.25 resolved against a document self-describing as v0.18. doc-consistency-check does not compare a header against its own history, so nothing caught it. The A2 closure record and the governing Governance document were checked and are not drifted.",
-            "Recorded into this ledger at 2026-09-02T01:06:40Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T01:12:02Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -1244,10 +1244,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), reviewer for the A2 candidate",
-          "at": "2026-09-02T01:06:40Z",
+          "at": "2026-09-02T01:12:02Z",
           "evidence": [
             "The header is corrected to v0.26 in the same commit that appends the v0.26 row, and the drift is recorded here rather than silently repaired, because the citations made while it held are what a later reader has to interpret.",
-            "Recorded into this ledger at 2026-09-02T01:06:40Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T01:12:02Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
