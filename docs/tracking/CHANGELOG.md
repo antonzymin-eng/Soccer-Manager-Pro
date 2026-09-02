@@ -12,7 +12,19 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A3.1a review corrections complete; draft remains unapproved.**
+> **Last Updated:** September 2, 2026 — **A3.1a renumbering sweep completed; draft remains unapproved.**
+> The §2.2.9 → §2.2.10 footer move was repaired at `section-2.md` but not swept: `section-9-approval-checklist.md`
+> C-04's live proxy comment still excluded "the §2.2.9 partition-footer rows" — in a file edited in that same pass —
+> and `section-5.md` §5.5 still cited "§2.2.9's partition Count column". C-04 re-pointed to §2.2.10; §5.5 annotated
+> rather than re-pointed, since that file is APPROVED and describes the baseline where the Count column IS §2.2.9.
+> C-03's `[x] Verified May 8, 2026 — returns 73` line annotated in place as approved-baseline evidence, so the
+> checkbox no longer reads as current against the draft-invalidation note above it; the May 8 record is preserved,
+> not unchecked. C-04's dated May 11, 2026 record keeps its `§2.2.9` citation — the footer was §2.2.9 then.
+> §5 → v1.4, §9 → v1.1.5. Verified: 166/166 tooling tests, document consistency, assembly-tier check, recurring-defect
+> lint (0 ERROR), and executable Appendix F validation all pass. A3.1b still owns the stale-73 synchronization;
+> A3.4 reapproval remains required. No production code, schema, executable semantics, workflow, or enforcement changed.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1a review corrections complete; draft remains unapproved.**
 > Resolved the two blocking review findings and the normative-core omissions before A3.1b: restored a
 > schema-valid F.4 dependency graph, repaired the CI-breaking maintained version pointers and shifted
 > §2.2.10 reference, expanded §3.5's declared FR range, restored strict classification and closed-world
