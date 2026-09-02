@@ -12,7 +12,14 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A3.1a automated-review findings resolved; draft remains unapproved.**
+> **Last Updated:** September 2, 2026 — **A3.1a lifecycle binding clarified; draft remains unapproved.**
+> Code Standards §3.5.6 no longer calls a runtime-surface field “lifecycle” without naming where that
+> qualifier lives. Non-N/A activation/update/teardown values now resolve as exact runtime-surface
+> `surface_id` values and as the same dependency-graph identifiers with `kind: lifecycle`. §3 → v1.12.
+> No schema, executable semantics, workflow, production code, or enforcement changed. Verified: 166/166
+> tooling tests, document consistency, assembly-tier checking, and recurring-defect lint at 0 ERROR.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1a automated-review findings resolved; draft remains unapproved.**
 > Two P1 findings exposed overclaims in the new ownership/lifecycle mechanics: schema `1.0.0` and reference
 > semantics `2.1.0` validate string shape but do not resolve ownership/path bindings, and `na_fields` had no
 > defined field-value representation. Code Standards §3.5.6 now defines exact registry/inventory/path targets,

@@ -9,7 +9,7 @@ API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.11
+**Version:** 1.12
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.8 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
@@ -862,8 +862,8 @@ binding grammar is:
 | `owning_assembly` | Exact case-sensitive assembly identity emitted by the assembly/compiler inventory. |
 | `composition_root` | Exact `surface_id` classified as `production-runtime-root`. |
 | `construction_path` | Two or more `component_id`/`surface_id` tokens joined by the literal delimiter ` -> `; every token resolves in its owning registry and every adjacent step is present in the dependency graph. |
-| `activation_phase` | Exact lifecycle `surface_id` in the runtime-surface registry, or the N/A sentinel defined below. |
-| `update_use_owner`, `teardown_owner` | Exact lifecycle-owner `surface_id` in the runtime-surface registry, or the N/A sentinel defined below. |
+| `activation_phase` | Exact `surface_id` in the runtime-surface registry; the same identifier **MUST** resolve to a dependency-graph node whose `kind` is `lifecycle`. The N/A sentinel defined below is the only alternative. |
+| `update_use_owner`, `teardown_owner` | Exact `surface_id` in the runtime-surface registry; the same identifier **MUST** resolve to a dependency-graph node whose `kind` is `lifecycle`. The N/A sentinel defined below is the only alternative. |
 | `relevant_testhost_path` | Normalized repository-relative path using `/`; the path exists, its relevant discovered surfaces are classified `test-only`, and it resolves to a dependency node of kind `testhost`; or the N/A sentinel defined below. |
 | `alternate_supported_paths`, `prohibited_bypass_paths` | Exact `surface_id` values in the runtime-surface registry; absence is an empty list, not N/A. |
 
@@ -1325,6 +1325,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.9 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Adds §3.5.6–3.5.7 for stable component identity, overload-safe canonical selectors, typed ownership/activation contracts, lifecycle-edge evidence, closed runtime-surface accounting, alternate and bypass paths, and explicit plus compiler-generated static initialization. The approved §3.5.2 dependency taxonomy and arrow semantics are unchanged. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
 | 1.10 | September 2, 2026 | Codex | **A3.1a review correction.** Expands §3.5's declared FR range and target length to include FR-CS-074–081 and removes the asymmetric TOC sub-bullets. Restores plan v0.34's strict post-baseline classification failure, positive test-classification inputs, and closed-world/absence-proof guards, including the blind-spot-fixture precondition and known-path limit. Aligns bypass mechanics with Governance FR-AG-025's "prohibited or explicitly classified" wording. The draft remains unapproved pending A3.4. | PENDING — A3.4 |
 | 1.11 | September 2, 2026 | Codex | **A3.1a automated-review correction.** Defines the exact binding vocabulary and resolution targets for every ownership/path string, and states the frozen schema-v1/reference-semantics-v2.1 boundary honestly: shape acceptance is not cross-registry resolution and cannot support a Machine blocker before A4. Defines `not-applicable` plus the exact `na_fields` pairing rules so absent lifecycle/testhost phases are representable without using prose placeholders. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
+| 1.12 | September 2, 2026 | Codex | **A3.1a lifecycle-binding clarification.** Removes the undefined “lifecycle `surface_id`” and “lifecycle-owner `surface_id`” qualifiers. A non-N/A activation/update/teardown value now resolves first as an exact runtime-surface `surface_id`, then as the same dependency-graph identifier with `kind: lifecycle`; the two registries' roles are explicit and mechanically testable. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
 
 ---
 
