@@ -1,6 +1,17 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 1, 2026 — **A2 closure condition 6 recorded: project-owner approval. Row 7 (landing) is all that remains.**
+**Last Updated:** September 2, 2026 — **A2 IS CLOSED. All seven conditions satisfied; A3 is unblocked.**
+The approved candidate merged to `main` at `693db56`, and the landed material subject was recomputed — not
+assumed — to `4160b164…`, identical at `1f0e68a` (reviewed), `9954e90` (approved), `0221491` (branch head),
+`693db56` (merge) and `origin/main`. Nothing changed on the way in. Integration plan → v0.32; A2 closure
+record → **v1.0, `CLOSED`**. Deliberately not done: no review run is marked `CONVERGED` or carries
+`final_review` — FR-AG-019/020 convergence is separate from FR-AG-018's fresh review, the gate never
+required it, and runs are immutable snapshots; the test enforcing that was left in place rather than
+relaxed. Closure binds one artifact by digest and does not put the contract beyond revision: later changes
+inside the material subject take the A5/A6 route. **A3 is unblocked, which is not the same as started.**
+Records only — no schema, executable semantics, fixture, finding, #19/#20 normative file, `src/`, `.cs`,
+`.asmdef`, gameplay, save, RNG, or tuning behavior changed; discovery holds at 166 tests.
+**Last Updated (prior):** September 1, 2026 — **A2 closure condition 6 recorded: project-owner approval. Row 7 (landing) is all that remains.**
 The owner approved the candidate at `9954e90`, material subject digest `4160b164…` — the same subject
 `A2-RUN-011` reviewed at `1f0e68a`, unchanged since. The approval is bound to that digest and does not
 transfer: a change inside the material subject returns row 6 to PENDING, while excluded files (tracking

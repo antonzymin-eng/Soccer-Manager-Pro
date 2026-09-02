@@ -1,8 +1,8 @@
 # A2 Schema and Executable-Semantics Closure Record
 
 **Document Class:** Stage-gate evidence record\
-**Status:** OPEN — approved by the project owner; **landing (row 7) is the only condition outstanding**\
-**Version:** 0.14\
+**Status:** **CLOSED** — all seven conditions satisfied; approved candidate landed on `main` at `693db56` with the digest verified\
+**Version:** 1.0\
 **Created:** September 1, 2026\
 **Owning plan:** `docs/planning/project-architecture-governance-integration-plan.md` §11 A2\
 **Candidate branch:** `codex/a2-complete-schema-freeze`\
@@ -14,8 +14,9 @@
 
 This record implements the seven-condition A2 closure gate added by integration-plan v0.18 and
 strengthened by v0.19.
-Implementation, merge, review, approval, and closure are distinct. A2 remains **OPEN** and A3 remains
-**BLOCKED** until every row below is complete against the same subject-digest bundle.
+Implementation, merge, review, approval, and closure are distinct: A2 stayed **OPEN** and A3 **BLOCKED**
+until every row below was complete against the same subject-digest bundle. As of September 2, 2026 they
+are, and this record is closed.
 
 | # | Condition | State | Evidence |
 |---|---|---|---|
@@ -25,7 +26,7 @@ Implementation, merge, review, approval, and closure are distinct. A2 remains **
 | 4 | Fresh review over pushed current candidate | **Complete** | §8. Retracted at v0.4 (`A2-R4-001`), claimable at v0.13: `A2-RUN-011` is an independent review of `1f0e68a` as pushed that returned **no findings**, so for the first time in this series no remediation followed a round and the reviewed subject is still the current one. Digest `4160b164…` recomputes identically from `1f0e68a` and from this tree. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link and would fail this cell otherwise |
 | 5 | Every finding terminal | **Complete** | §8; twenty-three findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
 | 6 | Project-owner approval | **Complete** | §6. Recorded September 1, 2026: the project owner approved the candidate at `9954e90`, material subject digest `4160b164…`. Still non-delegable — this cell records a human decision, it does not substitute for one |
-| 7 | Approved candidate landed on A3 base | **PENDING** | **Unblocked and outstanding.** Merge `codex/a2-complete-schema-freeze` into the base A3 builds on, verify the landed material subject still recomputes to `4160b164…`, then mark this record `CLOSED` |
+| 7 | Approved candidate landed on A3 base | **Complete** | §6. Merged to `main` at `693db56` on September 2, 2026. The landed material subject recomputes to `4160b164…` — identical at `1f0e68a` (reviewed), `9954e90` (approved), `0221491` (branch head), `693db56` (merge) and `origin/main`. Nothing changed on the way in |
 
 **Row 4 was claimed at v0.3 and is retracted.** The claim was wrong in a way worth stating
 plainly rather than quietly correcting: round 3 reviewed `678f0f2`, the material subject then moved
@@ -37,7 +38,11 @@ only after a fresh review of the artifact as pushed, and
 Complete without one. **That is the test which permits the claim below**, and it is mechanical:
 row 4 may read Complete only while some recorded round's digest IS the current material subject.
 
-Rows 1–6 are satisfied. Row 7 is not. **A2 is OPEN until the approved candidate lands. A3 stays BLOCKED.**
+**All seven conditions are satisfied. A2 is CLOSED. A3 is unblocked.**
+
+Closure does not mean the contract is beyond revision — it means this stage-gate's seven conditions are
+met against one specific artifact, named by digest. Any later change inside the material subject is a
+change to an approved contract and takes the A5/A6 schema-evolution route, not a silent edit.
 
 **What moved at v0.13, stated against the standard that retracted it.** Row 4 required a fresh review
 of the artifact *as pushed*. Eleven rounds are recorded and ten of them could not satisfy it, for one
@@ -49,8 +54,8 @@ The only changes made after it are in files the material subject **excludes by c
 review-ledger entry recording the round (§3.8: recording a run must not recursively invalidate the
 subject it records), tracking prose, and a stale test name in a CI comment. That is not an argument,
 it is arithmetic: `4160b164…` recomputes identically from `1f0e68a` and from this tree, and the row-4
-fixture refuses the claim if it ever stops doing so. Rows 6 and 7 remain the owner's and are untouched
-by this.
+fixture refuses the claim if it ever stops doing so. *(Written at v0.13, when rows 6 and 7 were still
+open; both were satisfied the following day — see §6.)*
 
 ## 2. Eight-category scope map
 
@@ -164,19 +169,28 @@ the fresh review rather than relying on this record's assertion.
 
 ## 6. Approval and closure
 
-**Project-owner approval is recorded, September 1, 2026.** The owner approved the candidate at
-`9954e90`, whose material subject digest is
-`4160b1644ebe75f771f01d7f1db67278126c827849c6e0da35657eb37d454254` — the same subject `A2-RUN-011`
-reviewed at `1f0e68a`, unchanged since.
+**All seven conditions are satisfied. This record is CLOSED, September 2, 2026.**
 
-**The approval is bound to that digest and does not transfer.** If any file inside the material subject
-changes before the landing, this row returns to PENDING and a fresh approval is required against the new
-digest. Files the subject excludes — tracking prose, the review ledger, CI configuration — may change
-without disturbing it; that boundary is `in_material_subject`, not a judgement call.
+| Step | Evidence |
+|---|---|
+| Reviewed | `A2-RUN-011`, independent, over `1f0e68a` as pushed — **no findings** |
+| Approved | Project owner, September 1, 2026, against material subject digest `4160b164…` |
+| Landed | `main` at `693db56`, merged September 2, 2026 |
+| Verified | The landed digest recomputes to `4160b164…` — identical at `1f0e68a`, `9954e90`, `0221491`, `693db56` and `origin/main` |
 
-An agent still MUST NOT mark this record `CLOSED`. Closure additionally requires row 7: the approved
-candidate landed on the base A3 builds on, with the landed digest verified to match. A3 MUST NOT begin
-before that.
+**The approval was bound to a digest, and the landing was checked against it rather than assumed.**
+That is the whole point of the bundle: a merge can reorder, drop or transform content, and "the PR merged"
+is not evidence that what landed is what was approved. Recomputed from `main` after the merge, it is.
+
+**What closure does not mean.** It does not mark the review series converged: no run carries
+`final_review` and none is `CONVERGED`, and that is deliberate — FR-AG-019/020 convergence is a separate
+question from FR-AG-018's fresh review, the seven-condition gate never required it, and review runs are
+immutable snapshots that must not be retro-labelled. It does not put the contract beyond revision either:
+any later change inside the material subject is a change to an **approved** contract and takes the A5/A6
+schema-evolution route. The approval does not transfer to a different digest.
+
+**A3 is unblocked** — approval, terminal finding state, matching landing and this closure update all
+hold. Unblocked is not started; beginning A3 remains a separate decision.
 
 ## 7. Second-review remediation (v0.2)
 
@@ -397,6 +411,7 @@ validator branch. Both are recorded in the ledger's `unverified_surfaces`.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.0 | September 2, 2026 | — | **A2 CLOSED.** Row 7 satisfied: the approved candidate merged to `main` at `693db56`, and the landed material subject was **recomputed** — not assumed — to `4160b164…`, identical at `1f0e68a` (reviewed by `A2-RUN-011`), `9954e90` (approved), `0221491` (branch head), `693db56` (merge commit) and `origin/main`. Nothing changed on the way in, which is the check the digest-bound approval exists to make possible: "the PR merged" is not evidence that what landed is what was approved. §6 rewritten as the closure record with all four steps and their evidence. All seven conditions now hold; **A3 is unblocked**, which is not the same as started. Deliberately NOT done: no review run is marked `CONVERGED` or `final_review` — FR-AG-019/020 convergence is a separate question from FR-AG-018's fresh review, the seven-condition gate never required it, and runs are immutable snapshots that must not be retro-labelled; the test enforcing this was left in place rather than relaxed to match the new state. Records only — no schema, executable semantics, fixture or finding changed; discovery holds at 149/9/8 = 166. |
 | 0.14 | September 1, 2026 | — | **Closure condition 6 recorded: the project owner approved the candidate at `9954e90`**, material subject digest `4160b164…` — the same subject `A2-RUN-011` reviewed at `1f0e68a`, unchanged since. §6 rewritten from "no approval is recorded" to the recorded approval, and states the binding explicitly: the approval attaches to that digest and does not transfer, so any change inside the material subject returns row 6 to PENDING and requires a fresh approval, while excluded files (tracking prose, the review ledger, CI configuration) may change without disturbing it. Row 7 is now the only outstanding condition — merge the candidate onto the base A3 builds on, verify the landed digest still recomputes to `4160b164…`, then mark this record `CLOSED`. No run is marked `CONVERGED` and none carries `final_review`: that remains locked while row 7 is open, and is not what owner approval releases. **A2 stays OPEN until the approved candidate lands; A3 stays BLOCKED.** Records only — no schema, semantics, fixture, or finding changed, and the test count holds at 149/9/8 = 166. |
 | 0.13 | September 1, 2026 | — | **Row 4 moves to Complete.** `A2-RUN-011` is an independent review of `1f0e68a` as pushed that returned **no findings** — the first round in this series after which nothing followed into the contract, which is exactly the condition row 4 has been waiting for since its v0.4 retraction. Digest `4160b164…` recomputes identically from `1f0e68a` and from this tree, and `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` would refuse the cell otherwise. The round also verified Governance §3.3 property fields and §7.1 exception fields — carried as explicitly unverified since v0.3 — and independently confirmed `Spec hygiene checks` at 166/166, 0 skipped. Corrections made after the round are confined to files the material subject excludes by construction: the ledger entry recording the run, tracking prose, and stale fixture names in a CI comment and in §1 (including `test_the_current_artifact_has_not_yet_been_reviewed`, which the round did not catch). A fixture pinning cited test names is deliberately **not** landed — it would sit inside the material subject and re-open row 4 for a twelfth round; that trade is the owner's to make with the next material change. **Rows 6 and 7 remain PENDING and are not agent-satisfiable.** Test count unchanged at 149/9/8 = 166. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.12 | September 1, 2026 | — | Hardens the v0.11 fix against its own removal, at the round-10 reviewer's recommendation, before round 11. `fetch-depth: 0` is one line and dropping it would silently un-verify both history-dependent fixtures with the job still green. A missing-history condition is now a **failure** whenever `GITHUB_ACTIONS=true`, and additionally under `GOVERNANCE_REQUIRE_HISTORY=1` for other CI systems; `GITHUB_ACTIONS` is the trigger rather than an opt-in flag, because a guard you must remember to enable is the class of guard this replaces. Local skips are preserved. All three skip paths route through one `unverifiable` helper — missing revisions in either fixture, and incomplete ledger publication history. `test_the_ci_history_guard_is_not_inert` pins both directions and both triggers, `A2-R10-001`'s lesson applied to the guard itself. Also records a consequence measured at `1635aa3`: the publish→bind two-step must be pushed as a pair, since the equality regression now fails rather than skips at a publishing commit. No frozen executable semantics changed, so **no `REFERENCE_SEMANTICS_VERSION` bump is owed**. Test split 148/9/8 = 165 → 149/9/8 = 166. Row 4 stays PENDING. A2 remains OPEN; A3 remains BLOCKED. |

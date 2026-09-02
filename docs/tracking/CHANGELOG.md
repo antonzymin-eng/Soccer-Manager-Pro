@@ -12,7 +12,18 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 1, 2026 — **A2 closure condition 6 recorded: the project owner approved the candidate. Row 7 (landing) is all that remains.**
+> **Last Updated:** September 2, 2026 — **A2 IS CLOSED. All seven conditions satisfied; A3 is unblocked.**
+> Row 7 is satisfied: the approved candidate merged to `main` at `693db56`, and the landed material subject was **recomputed** — not assumed — to `4160b164…`. It is identical at `1f0e68a` (reviewed by `A2-RUN-011`), `9954e90` (approved), `0221491` (branch head), `693db56` (merge commit) and `origin/main`. **Nothing changed on the way in**, which is the check a digest-bound approval exists to make possible: a merge can reorder, drop or transform content, and "the PR merged" is not evidence that what landed is what was approved. Integration plan v0.31 → v0.32; A2 closure record v0.14 → **v1.0, `CLOSED`**.
+>
+> The seven conditions, and what each rests on: scope map (§2); canonical schemas with a single control source (§3); executable fixtures (§4); a fresh independent review over the pushed candidate — `A2-RUN-011` over `1f0e68a`, **no findings**, the first round in eleven after which nothing followed into the contract; every finding terminal — twenty-three, all `Blocker`/`Resolved`; project-owner approval bound to the digest; and the verified landing.
+>
+> **Deliberately NOT done.** No review run is marked `CONVERGED` and none carries `final_review`. FR-AG-019/020 convergence is a separate question from FR-AG-018's fresh review, the seven-condition gate never required it, and review runs are immutable snapshots that must not be retro-labelled. The test enforcing this was left in place rather than relaxed to fit the new state — relaxing a check to match a result you want is the failure mode this record spent eleven rounds documenting.
+>
+> **What closure does and does not mean.** It binds one artifact, named by digest. It does not put the contract beyond revision: any later change inside the material subject is a change to an **approved** contract and takes the A5/A6 schema-evolution route, and the approval does not transfer to a different digest. **A3 is unblocked** — approval, terminal finding state, matching landing and this closure update all hold — but unblocked is not started; beginning A3 remains a separate decision.
+>
+> Records only. No schema, executable semantics, `REFERENCE_SEMANTICS_VERSION`, fixture, finding, #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI job-definition behavior changed; discovery holds at 166 tests, 0 skipped.
+>
+> **Last Updated (prior):** September 1, 2026 — **A2 closure condition 6 recorded: the project owner approved the candidate. Row 7 (landing) is all that remains.**
 > The owner approved the candidate at `9954e90`, material subject digest `4160b164…` — the same subject `A2-RUN-011` reviewed at `1f0e68a`, unchanged since. Integration plan v0.30 → v0.31; A2 closure record v0.13 → v0.14, whose §6 is rewritten from "no approval is recorded" to the recorded approval.
 >
 > **The approval is bound to that digest and does not transfer.** Any change inside the material subject returns row 6 to PENDING and requires a fresh approval against the new digest; files the subject excludes — tracking prose, the review ledger, CI configuration — may change without disturbing it. That boundary is `in_material_subject`, not a judgement call.
