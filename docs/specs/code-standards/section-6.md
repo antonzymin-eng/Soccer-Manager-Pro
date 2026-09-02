@@ -5,12 +5,10 @@
 complexity targets that code written under Spec #20 must satisfy. §3.3 defines *how* to
 write zero-allocation code; §6 defines *what rate* the resulting code is measured against.
 **Created:** May 8, 2026
-**Modified:** September 2, 2026
-**Version:** 1.3
-**Status:** AMENDMENT DRAFT (A3.1b; approved v1.2 baseline remains in force)
+**Version:** 1.2
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 6; `outline-mid.md` v1.2, §6.1–§6.5
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.35, §6; A3.1b
 
 > **Slot-reconciliation note (KD-3):** The nine-section CLAUDE.md spec template names slot 6
 > "Performance Analysis." For Spec #20 — a governance meta-spec that produces no runtime
@@ -281,7 +279,6 @@ and supply the implementation detail that the FR row itself cannot fit.
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding L-A): §6.4 "N = 22 bound source" prose corrected — original read "22 outfield players + 2 goalkeepers" (24 total), but association football is 11 per side × 2 sides = 22 with the keepers included. Wording rewritten to make this explicit; substitutes off-pitch noted as excluded from N. No change to the N = 22 numeric bound. | — |
 | 1.0.2 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
 | 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H4.** §6.1 was the one section still scoping FR-CS-067 to the retired "UI layer (menus, HUD, overlays)" after section-2.md v1.2 rescoped the FR to the Presentation and Client tiers (§3.5.2 tiers 8–9) plus Unity host code outside the gate — the FR's Mechanics-§ column routes readers HERE, so the stale wording read `match-viewer`, `match-analytics`, `match-client-core`, `ui-framework`, `client-app`, `match-client-unity` and `match-client-web` out of the budget. Fixed: the §6.1 budget-table row and its "Layer" column header (→ "Tier", per the v1.3 vocabulary standardisation), the budget rationale paragraph (now enumerating the tier-8/9 assemblies from §3.5.2's table), the §6.5 summary row, the §6.1 *Implements* line, and §6.2's scope sentence ("do not apply to … UI code" → Presentation/Client-tier code, which carries the FR-CS-067 budget instead). No budget value changed — 0 bytes/frame and < 1 MB/frame stand as approved. | — |
-| 1.3 | September 2, 2026 | Codex | **A3.1b supporting-surface audit.** No FR-CS-074–081 mechanics belong in §6: performance budgets remain owned here and architecture ownership/proof activation remains in §3.5/§5/§7. The surface is versioned as part of the amendment draft without duplicating Governance or Spec #19 authority. | PENDING — A3.4 |
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings L1 + L2.** L1: the v1.1 header rename "Layer" → "Tier" was itself wrong — row 1 of the budget table ("Game loop (60 Hz physics path)") is not a §3.5.2 tier, only row 2 is; header restated as "Scope", which covers both a tier and a non-tier row without asserting either is a tier. L2: §6.2's scope sentence still read "game-loop and physics-layer assemblies" — retired three-layer vocabulary the v1.1 pass was supposed to have cleared; restated as "tier-1 Physics assemblies" per §3.5.2. No budget value changed. | — |
 
 ---

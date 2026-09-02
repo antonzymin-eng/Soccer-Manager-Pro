@@ -496,13 +496,14 @@ code blocks, or rationale prose — those land in the detailed outline.
 
 ### 8.3 Cross-Spec Citation Audit
 - Spec #20 is **cited by** every Stage 1+ source file (downstream).
-- Spec #20 cites no other spec for substantive rules; pointer-only
-  references to Spec #9 (Fixed64) and Spec #19 (Testing).
+- Spec #20 imports no physics/AI domain rules from Specs #1–#18. Project Architecture
+  Governance is substantive upstream authority for FR-CS-074–081, and Spec #19 owns
+  executable proof/bounded-substitute/gate mechanics; Spec #9 remains a future pointer.
 - No `[CROSS]` constants are imported by this spec (it declares none).
 
 ### 8.4 Constant Provenance Summary
 - Spec #20 declares no physical constants. Tag vocabulary
-  (`[GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]`) is governance metadata owned
+  (`[GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]/[CROSS-PENDING]`) is governance metadata owned
   by root `CLAUDE.md`. Statement repeated here for auditor clarity.
 
 ### 8.5 Version History

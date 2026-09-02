@@ -12,7 +12,10 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A3.1b Code Standards supporting surfaces synchronized; A3.4 still pending.**
+> **Last Updated:** September 2, 2026 — **A3.1b review corrections; CI consistency blocker removed.**
+> Follow-up to `d196324e`: repairs the stale maintained `section-5.md` pointer, C-03 arithmetic, C-06 Appendix-F expectation, duplicate §2.2.9 footer, six-tag outline residues, §8 source cadence/evidence wording, and all misplaced A3.1b version rows. `section-6.md` is restored to the approved v1.2 state because it had no A3 content change. The Roslyn `?view=visualstudio` target is retained after direct retrieval confirmed it is Microsoft's canonical target; unlike the old queryless URL, it is not matched by the repository's anchored ignore. `SPEC_INDEX.md` stays untouched pending A3.4. No runtime/code/schema/CI-enforcement change.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1b Code Standards supporting surfaces synchronized; A3.4 still pending.**
 > The #20 amendment's supporting surfaces now match A3.1a: all 16 live stale `73` claims move to 81 while dated May/August baseline evidence remains untouched; §5.4 gains an eighth Architecture Integration & Activation category and §5.5 grows to 83 traceability rows (81 numbered FRs + 046a/046b). §1/§4/§7/§8 and all three outlines now carry the Governance/#19 authority split, tooling-record-vs-runtime boundary, A4 report-only resolver/discovery boundary, labelled ten-tier dependency source, and separate reapproval-versus-enforcement activation sequence. `coding-reference.md` no longer reproduces the retired three-layer taxonomy/ERR-020-002/003 state. §8 re-verifies and repins its external source URLs. `SPEC_INDEX.md` is deliberately unchanged until A3.4 re-runs §9 and atomically reapproves the combined amendment. No `src/`, `.cs`, `.asmdef`, schema, executable semantics, workflow, CI job definition, or enforcement behavior changed.
 >
 > **Last Updated (prior):** September 2, 2026 — **A3.1a lifecycle binding clarified; draft remains unapproved.**

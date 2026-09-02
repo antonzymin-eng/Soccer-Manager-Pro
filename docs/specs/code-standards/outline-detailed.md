@@ -304,7 +304,7 @@ Standard table (5 columns: Version | Date | Author | Notes | Reviewer).
 - FR-CS-080: explicit/implicit static initialization participating in lifecycle is declared and cannot bypass ownership. *MUST*. Source: §3.5.6–§3.5.7.
 - FR-CS-081: blocking architecture claims require resolvable typed facts/current proof; unsupported semantic assertions remain report-only. *MUST*. Source: §3.5.6–§3.5.7.
 
-#### 2.2.9 FR Table Footer
+#### 2.2.10 FR Table Footer
 - One-paragraph note: 81 FRs total. Existing IDs were not renumbered; A3.1a appended
   FR-CS-074–081. Future FRs append at FR-CS-082+. Mirrors CLAUDE.md
   "Renumbering Cascades" hazard.
@@ -765,7 +765,7 @@ programmatically verifiable.
 - 81 FR-CS-### rows in §2.2 (15 style + 10 constants + 10 alloc + 10 det + 10 deps + 10 docs + 5 perf + 3 numeric type + 8 architecture integration/activation).
 - Every FR has level + source + mechanics §.
 - Template-slot reconciliation note in §1.3.
-- Appendices A–E present.
+- Appendices A–F present.
 - Exemplar pair in Appendix C compiles (manual review at Stage 0).
 - File header on every section file.
 - Version history on every section file.
@@ -839,7 +839,7 @@ date | author | change. Includes one example row.
   §3.5 (deps), §3.6 (docs), §6.2–§6.3 (perf). Inline comments
   reference §3.x and §6.x rules.
 - `ExemplarConstants.cs`: ~70 lines. One constant per tag
-  (`[FIXED]`, `[GT]`, `[EST]`, `[DERIVED]`, `[CROSS]`). Demonstrates
+  (`[FIXED]`, `[GT]`, `[EST]`, `[DERIVED]`, `[CROSS]`, `[CROSS-PENDING]`). Demonstrates
   §3.2, §4.2.
 
 ### Appendix D — Banned & Required APIs (single source of truth, KD-6)
@@ -858,10 +858,6 @@ Categories (verbatim from `outline-mid.md` v1.2 Appendix D):
 Footer note: this list is the *seed* for Stage 1 `BannedSymbols.txt`;
 no other document may add entries without updating this Appendix first.
 
-### Appendix F — Architecture-Governance Record Examples
-
-Selectors, durable identity/rename history, integration contracts, N/A representation, runtime-surface classifications, activation states, and dependency/proof examples. These examples demonstrate schema/record shape; they do not claim A4 resolver coverage or A8 enforcement activation.
-
 ### Appendix E — Glossary
 
 **Target length:** ~40 lines.
@@ -870,6 +866,13 @@ Spec #20-specific terms only (game-loop method, hot path, per-frame
 path, game-state assembly, det-banned/det-required-apis/etc.,
 constants catalogue file, exception with sign-off). Physics terms
 cited from owning specs (no redefinition).
+
+### Appendix F — Architecture Integration Records
+
+Selectors, durable identity/rename history, integration contracts, N/A representation,
+runtime-surface classifications, activation states, and dependency/proof examples. These
+examples demonstrate schema/record shape; they do not claim A4 resolver coverage or A8
+enforcement activation.
 
 ---
 

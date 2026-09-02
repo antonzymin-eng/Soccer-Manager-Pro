@@ -48,7 +48,7 @@ root `CLAUDE.md`. This is a hard rule (see Authority Matrix in §1).
 | Rule class                              | Authoritative source       | Spec #20 role          |
 |-----------------------------------------|----------------------------|------------------------|
 | Coordinate system, fatigue convention   | Ball Physics #1, CLAUDE.md | Cite, do not restate   |
-| Constant tags (`[GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]`) | Root `CLAUDE.md`           | Cite + give code-level binding rules |
+| Constant tags (`[GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]/[CROSS-PENDING]`) | Root `CLAUDE.md`           | Cite + give code-level binding rules |
 | Interface principle (both sides specified) | Root `CLAUDE.md`           | Cite + give file-level binding rules |
 | Architecture property/review/evidence model | Project Architecture Governance | Cite; bind to code/integration surfaces without duplicating it |
 | Executable proof + gate mechanics | Spec #19 | Delegate; consume evidence, do not redefine |
