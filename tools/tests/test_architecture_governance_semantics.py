@@ -115,7 +115,17 @@ class SelectorTests(unittest.TestCase):
             })
 
     def test_reference_semantics_version_is_pinned(self):
-        self.assertEqual("2.0.0", sem.REFERENCE_SEMANTICS_VERSION)
+        """A2-R10-001 note: this pin was NOT the guard it looked like.
+
+        It forces a bump to be a deliberate edit, which is why the value could
+        not drift by accident -- but it asserts only that the version is what it
+        is, never that it MOVED when the semantics did. Rounds 8 and 9 changed
+        three admission rules and left this line untouched, and the suite stayed
+        green because nothing here relates the version to the behaviour. What a
+        mechanism can still catch is the code and its citations disagreeing;
+        that is `test_the_semantics_version_matches_every_document_that_cites_it`.
+        """
+        self.assertEqual("2.1.0", sem.REFERENCE_SEMANTICS_VERSION)
         self.assertEqual("1.0.0", sem.SCHEMA_VERSION)
 
     def test_reusable_fact_index_avoids_reindexing_contract(self):
@@ -2571,6 +2581,28 @@ class RoundNineReviewFindingTests(unittest.TestCase):
         sem.validate_temporary_activation_baseline(
             {**live, "mode": "migration", "items": [baseline_item("V-001")]},
             prior_baseline=live, current_violation_ids=["V-001"])
+
+    def test_the_semantics_version_matches_every_document_that_cites_it(self):
+        """A2-R10-001: the version froze at 2.0.0 across three semantic changes.
+
+        It is an INPUT to `subject_scope_digest` and is compared by equality in
+        `assess_proof_freshness`, so two different policies under one value
+        defeat the freshness contract. No mechanism can prove a bump was owed --
+        that is a judgement -- but the citations drifting apart is mechanical,
+        and that is the half worth locking: the code and the documents that
+        state its version must agree.
+        """
+        cited = "v%s" % sem.REFERENCE_SEMANTICS_VERSION
+        for rel, prefix in (
+                ("docs/tracking/file-manifest.md",
+                 "| `tools/architecture-governance/reference_semantics.py` | "
+                 "A2 executable reference semantics "),
+                ("docs/planning/project-architecture-governance-integration-plan.md",
+                 "seven versioned state registries, reference semantics ")):
+            text = (self.REPO / rel).read_text(encoding="utf-8")
+            self.assertIn(
+                prefix + cited, text,
+                "%s does not cite reference semantics %s" % (rel, cited))
 
     def test_a_governance_plan_header_matches_its_own_version_history(self):
         """A2-R9-002: the header drifted seven revisions behind the history.

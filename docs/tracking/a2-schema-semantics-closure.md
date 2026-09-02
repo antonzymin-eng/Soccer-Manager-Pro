@@ -2,7 +2,7 @@
 
 **Document Class:** Stage-gate evidence record\
 **Status:** OPEN — implemented candidate; review and owner approval pending\
-**Version:** 0.9\
+**Version:** 0.10\
 **Created:** September 1, 2026\
 **Owning plan:** `docs/planning/project-architecture-governance-integration-plan.md` §11 A2\
 **Candidate branch:** `codex/a2-complete-schema-freeze`\
@@ -22,8 +22,8 @@ Implementation, merge, review, approval, and closure are distinct. A2 remains **
 | 1 | Eight-category scope map | **Complete** | §2 |
 | 2 | Canonical schemas / single control source | **Complete** | §3, §7 |
 | 3 | Executable representative fixtures | **Complete** | §4, §7 |
-| 4 | Fresh review over pushed current candidate | **PENDING** | §8. Retracted at v0.4 (`A2-R4-001`) and still open at v0.9: nine rounds are recorded, but the current artifact carries round-9 corrections and no round has reviewed that corrected artifact. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link between this cell and the ledger |
-| 5 | Every finding terminal | **Complete** | §8; twenty-two findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
+| 4 | Fresh review over pushed current candidate | **PENDING** | §8. Retracted at v0.4 (`A2-R4-001`) and still open at v0.10: ten rounds are recorded, and round 10 was the independent pass round 9 owed — but the current artifact carries round-10 corrections and no round has reviewed that corrected artifact. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link between this cell and the ledger |
+| 5 | Every finding terminal | **Complete** | §8; twenty-three findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
 | 6 | Project-owner approval | **PENDING** | Non-delegable. No agent may satisfy this row |
 | 7 | Approved candidate landed on A3 base | **PENDING** | Blocked by rows 4 and 6; must match the approved digest bundle |
 
@@ -84,16 +84,27 @@ The expected split is explicit so an aggregate cannot hide missing discovery:
 
 | Command | Expected result |
 |---|---|
-| `python3 -m unittest tools.tests.test_architecture_governance_semantics` | 147 governance fixtures, PASS |
+| `python3 -m unittest tools.tests.test_architecture_governance_semantics` | 148 governance fixtures, PASS |
 | `python3 -m unittest tools.tests.test_recurring_defect_lint` | 9 phantom-stream context fixtures, PASS |
 | `python3 -m unittest tools.tests.test_assembly_tier_check` | 8 assembly-tier fixtures, PASS |
-| `python3 -m unittest discover -s tools/tests -p 'test_*.py'` | 164 total fixtures, PASS |
+| `python3 -m unittest discover -s tools/tests -p 'test_*.py'` | 165 total fixtures, PASS — **0 skipped on full history, 2 skipped under a shallow checkout** |
 | `python3 tools/recurring-defect-lint.py --repo .` | 0 ERROR |
 | `python3 tools/assembly-tier-check.py --repo .` | PASS |
 | `python3 tools/doc-consistency-check.py --repo .` | PASS |
 | JSON parse + `$ref` resolution over all canonical schemas/seeds | PASS |
 | `python3 -m py_compile` over the reference module and suite | PASS |
 | `git diff --check` | PASS |
+
+**Full history and CI are different runs, and a gate line must say which.** `Spec hygiene checks`
+uses `actions/checkout@v4` with no `fetch-depth`, so CI runs at depth 1. Exactly two fixtures are
+history-dependent — `test_every_recorded_digest_matches_the_revision_it_names` and
+`test_status_timestamps_equal_first_publication_commit_time` — and both skip there, naming every
+revision they could not reach. That is `A2-R5-001`'s all-or-nothing rule working, not a failure: partial
+verification is never presented as complete. But it means **a 0-skipped result is a claim about a
+full-history run only.** Reproduce the CI condition with
+`git clone --depth 1 file://$PWD <dir> -b <branch>` and expect `165 tests, OK (skipped=2)`; a local
+full-history run of the same commit gives `165 tests, OK` with none skipped. Both were run for the
+round-10 landing. Neither number is the other's evidence.
 
 ## 5. Pre-review corrections
 
@@ -155,6 +166,7 @@ contract.
 | 7 | `c349fb6` as pushed — fourth independent review, landed by the owner as PR #346 | see the ledger |
 | 8 | `a034fc3` as pushed — automated review on PR #347 | see the ledger |
 | 9 | `c927a95` as pushed — verification pass over the round-8 corrections | see the ledger |
+| 10 | `6bce84f` as pushed — independent review of the round-9 remediation | see the ledger |
 
 The current working tree is **not** in this table. That is the point of row 4 being open.
 
@@ -187,7 +199,7 @@ not at document validation). One was a real defect, recorded below as `A2-R3-001
 
 ### 8.3 Findings
 
-Twenty-two findings across nine rounds, all `Disposition: Blocker` / `Status: Resolved`, recorded in
+Twenty-three findings across ten rounds, all `Disposition: Blocker` / `Status: Resolved`, recorded in
 `docs/tracking/architecture-governance/review-ledger.json` under series `A2-SCHEMA-FREEZE`.
 
 Following the A0 record's rule, the A2 gate is **not a blanket Blocker citation**: each finding's
@@ -221,6 +233,7 @@ way because no live divergence was demonstrated; it is a regression guard.
 | A2-R8-003 | 8 | Medium | An `intentionally-disabled` contract with an unusable disable anchor passed the validator |
 | A2-R9-001 | 9 | Medium | The round-8 anti-ratchet fix made the plan's own `inactive → migration` transition unreachable |
 | A2-R9-002 | 9 | Low | The integration plan's header version drifted seven revisions behind its own history |
+| A2-R10-001 | 10 | Medium | `REFERENCE_SEMANTICS_VERSION` stayed at `2.0.0` across three changes to what the semantics accept |
 
 ### 8.4 Outcome and limitations
 
@@ -252,6 +265,22 @@ different reviewer** and is the first independent pass over this candidate. It f
 sequencing defect that the non-independent rounds had missed — which is the argument for independence
 made concretely rather than in principle. The corrections it produced are again non-independent, so a
 round-5 pass over the pushed result is owed before row 4 is claimed.
+
+**Round 10 was independent** — the pass round 9 owed — and found one defect. `A2-R10-001`: rounds 8
+and 9 changed three admission rules while `REFERENCE_SEMANTICS_VERSION` stayed at `2.0.0`, though that
+value is an input to `subject_scope_digest` and is compared by equality to raise
+`proof-semantics-changed`. What makes it worth more than a version bump is that a guard was already
+there and did not help: `test_reference_semantics_version_is_pinned` forces a bump to be a deliberate
+edit, so the value could never drift by accident — but it asserts only that the version *is what it is*,
+never that it *moved when the semantics did*. Two rounds passed green with the line untouched. A pin
+that cannot fail for the reason you care about reads as coverage and is not. The replacement is honest
+about its own limit: whether a bump was owed is a judgement no fixture can settle, so the new mechanism
+locks only what is mechanical — the constant against every document citing it — and the judgement is
+stated in the pin's docstring rather than implied away.
+
+Round 10 also corrected a recording habit rather than a defect. Discovery results had been reported as
+`0 skipped` without saying which run that describes; CI checks out at depth 1 and two history-dependent
+fixtures skip there. §4 now separates the two runs and gives the command to reproduce the CI condition.
 
 **Round 9** was a verification pass over the round-8 corrections, and found that one of them was a
 regression. `A2-R9-001`: the `A2-R8-001` anti-ratchet fix rejected *every* baseline addition measured
@@ -293,6 +322,7 @@ validator branch. Both are recorded in the ledger's `unverified_surfaces`.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.10 | September 1, 2026 | — | Records round 10, the independent pass round 9 owed. `A2-R10-001` (Medium): rounds 8 and 9 changed three admission rules while `REFERENCE_SEMANTICS_VERSION` stayed at `2.0.0`, though that value is an input to `subject_scope_digest` and is compared by equality in `assess_proof_freshness`. Advanced to `2.1.0` (MINOR, per the module's `1.0.0 → 1.9.0` precedent; v0.19 reserved MAJOR for the import-contract break), covering both rounds together and restored rather than back-dated, with the versioning policy now stated at the constant. No proof artifact exists, so nothing recorded is invalidated. `test_reference_semantics_version_is_pinned` existed throughout and did not help — it asserts the value is what it is, never that it moved when the semantics did — and that limit is now written into the pin; a new fixture locks the constant to every document citing it. §4 additionally separates local full-history discovery (0 skipped) from shallow-CI discovery (2 history-dependent fixtures skip by design), a recording correction rather than a defect. Row 4 stays PENDING: round 10's corrections are again non-independent, so a round-11 pass is owed. Test split 147/9/8 = 164 → 148/9/8 = 165. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.9 | September 1, 2026 | — | Records round 9, a verification pass over the round-8 corrections which found that one of them was a regression. `A2-R9-001` (Medium): the `A2-R8-001` anti-ratchet fix rejected every baseline addition against a trusted prior, closing the `inactive → migration` edge §3.9 declares legal and leaving this repository's own `inactive`, empty baseline with no forward path. Reproduced against that committed document — rejected at `c927a95`, accepted at `a034fc3`. Additions are now permitted only on that entry edge, which cannot be re-entered because no transition returns to `inactive`. It survived because round 8 pinned the illegitimate path failing and never the legitimate path still working, and because every `prior_baseline` fixture in the suite passed a *migration* prior — `A2-R8-003`'s own lesson about fixture-bounded differentials, recurring in the commit that recorded it. `A2-R9-002` (Low): the owning integration plan's header read v0.18 while its history stood at v0.25, so seven revisions of citations resolved against a stale self-description; corrected and recorded. Round 9 is explicitly **not independent** — same assistant as the round-8 remediation, separate session — so a round-10 independent pass is owed before row 4 is claimed. Test split 143/9/8 = 160 → 147/9/8 = 164. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.8 | September 1, 2026 | — | Records rounds 7 and 8. Round 8 (automated review on PR #347) found three defects in the frozen contract itself, the first since round 3 to do so rather than in the record-keeping. `A2-R8-001`: additions to an activation baseline were rejected only after sealing, so an unsealed migration baseline could absorb a new violation and its own live-set entry in one revision and never engage the ratchet — §3.9 states "New violations fail" without qualification, and additions are now measured against the trusted prior whatever its seal state. `A2-R8-002`: a proof's executions were never bound to its subject digest, so a passing record from an unrelated subject certified it; equality is now required, recorded as a deliberate narrowing because the plan defines no subsumption relation. `A2-R8-003`: an `intentionally-disabled` contract with `{}` as its disable anchor passed the validator while the schema required three fields — a live schema/semantics divergence the differential could not see because no fixture carried a malformed anchor. The anchor shape now has one owner used by both the validator and the evaluator. Round 7 (`A2-R7-001`) is recorded for completeness. Test split 139/9/8 = 156 → 143/9/8 = 160. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.7 | September 1, 2026 | — | Follow-up provenance correction after independent review: v0.6 said `at` was derived from the commit that first published a finding but its regression accepted any timestamp inside the review→publication interval, and `A2-R6-001` itself carried such an unsupported intermediate value. `at` is now unambiguously first-publication commit time; the regression requires exact equality and separately proves publication is after the reviewed artifact. `A2-R6-001` is corrected to `c349fb6`'s `2026-09-01T23:13:27Z`. Row 4 remains PENDING; no frozen schema/semantics mechanism changed. |

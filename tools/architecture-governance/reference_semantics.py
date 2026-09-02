@@ -11,7 +11,26 @@ import json
 import math
 from pathlib import Path
 
-REFERENCE_SEMANTICS_VERSION = "2.0.0"
+# Versioning policy, stated here because leaving it implicit is what let it lapse.
+# This value is a field of the proof-closure `subject` (see derive_proof_closure), so
+# it is an INPUT to subject_scope_digest, and assess_proof_freshness compares it by
+# equality to raise `proof-semantics-changed`. It is a semantics identity, not a
+# release label.
+#
+#   MAJOR -- the module's import/API contract changes. 2.0.0 was taken because the
+#            module began raising at import without common.schema.json.
+#   MINOR -- ANY change to what the executable semantics accept or reject. The
+#            1.1.0 -> 1.9.0 sequence bumped once per such commit; that is the rule.
+#   Every semantic change bumps. Two materially different policies must never share
+#   a value, because equality is the whole mechanism.
+#
+# 2.1.0 covers rounds 8 and 9, which changed three: activation-baseline admission,
+# proof execution/subject binding, and disable-anchor validation. The bump lapsed for
+# three commits (A2-R10-001) and is restored here rather than back-dated. No proof
+# artifact exists in the repository yet, so nothing recorded is invalidated -- the
+# bump is mechanically inert today and is made for honest signalling, the same
+# reasoning plan v0.19 applied when it restored 2.0.0.
+REFERENCE_SEMANTICS_VERSION = "2.1.0"
 
 _CONTROL_SCHEMA_PATH = (
     Path(__file__).resolve().parents[2]

@@ -213,6 +213,33 @@
       "convergence_state": "NON-CONVERGED",
       "final_review": false,
       "round_budget_exhausted": false
+    },
+    {
+      "review_run_id": "A2-RUN-010",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate at 6bce84f as pushed on pull request #347",
+        "Independent review of the round-9 remediation"
+      ],
+      "subject_scope_digest": "2758ba7710c28ea0e91222721bdd8c3a0cde1f478f0e1d7c3fa730311db9cf53",
+      "review_round": 10,
+      "reviewer_identity": "Independent reviewer, separate from the party that produced the round-8 and round-9 remediation",
+      "coverage": [
+        "the round-9 baseline population edge and its fixtures",
+        "the reconciled proof-artifact rationale",
+        "the normalized disable-anchor selector",
+        "the plan header/version-history correction and its pin",
+        "REFERENCE_SEMANTICS_VERSION against the semantics it identifies",
+        "local full-history versus shallow-CI discovery results"
+      ],
+      "unverified_surfaces": [
+        "the corrections this round produced, which post-date its subject",
+        "a field-by-field re-derivation of each schema against Governance 3.3 and 7.1"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "NON-CONVERGED",
+      "final_review": false,
+      "round_budget_exhausted": false
     }
   ],
   "findings": [
@@ -1248,6 +1275,54 @@
           "evidence": [
             "The header is corrected to v0.26 in the same commit that appends the v0.26 row, and the drift is recorded here rather than silently repaired, because the citations made while it held are what a later reader has to interpret.",
             "Recorded into this ledger at 2026-09-02T01:12:02Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R10-001",
+      "stable_key": "a2/r10-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-010",
+      "summary": "REFERENCE_SEMANTICS_VERSION stayed at 2.0.0 across three changes to what the executable semantics accept or reject.",
+      "evidence": [
+        "Rounds 8 and 9 changed three admission rules -- activation-baseline admission, proof execution/subject binding, and disable-anchor validation -- while REFERENCE_SEMANTICS_VERSION stayed at 2.0.0. That value is a field of the proof-closure subject, so it is an INPUT to subject_scope_digest, and assess_proof_freshness compares it by equality to raise proof-semantics-changed. Two materially different semantic policies sharing one value defeats that identity contract. The module's own history sets the rule it departed from: 1.0.0 -> 1.9.0 bumped once per semantic-change commit, and plan v0.19 reserved MAJOR for the import-contract break. test_reference_semantics_version_is_pinned existed throughout and did not help: it asserts the value is what it is, never that it moved when the semantics did, so both rounds passed green with the line untouched."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "integration-plan v0.19 (the semantics version is stamped into every proof snapshot)",
+        "assess_proof_freshness proof-semantics-changed equality comparison",
+        "concrete independently established defect"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 10,
+      "resolution_evidence": [
+        "Advanced to 2.1.0 -- MINOR, per the module's own precedent -- covering the round-8 and round-9 changes together, restored rather than back-dated. The policy is now stated at the constant itself, since leaving it implicit is what let it lapse. No proof artifact exists in the repository, so nothing recorded is invalidated: the bump is mechanically inert today and is made for honest signalling, the same reasoning plan v0.19 applied when it restored 2.0.0. A fixture now locks the constant to every document that cites it; whether a bump was OWED remains a judgement no mechanism can settle, and that limit is recorded in the pin's own docstring rather than implied away."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R10-001-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Independent reviewer of the A2 candidate",
+          "at": "2026-09-02T01:51:50Z",
+          "evidence": [
+            "Rounds 8 and 9 changed three admission rules -- activation-baseline admission, proof execution/subject binding, and disable-anchor validation -- while REFERENCE_SEMANTICS_VERSION stayed at 2.0.0. That value is a field of the proof-closure subject, so it is an INPUT to subject_scope_digest, and assess_proof_freshness compares it by equality to raise proof-semantics-changed. Two materially different semantic policies sharing one value defeats that identity contract. The module's own history sets the rule it departed from: 1.0.0 -> 1.9.0 bumped once per semantic-change commit, and plan v0.19 reserved MAJOR for the import-contract break. test_reference_semantics_version_is_pinned existed throughout and did not help: it asserts the value is what it is, never that it moved when the semantics did, so both rounds passed green with the line untouched.",
+            "Recorded into this ledger at 2026-09-02T01:51:50Z. Raised during the round-10 independent review of 6bce84f and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        },
+        {
+          "event_id": "A2-R10-001-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), remediating the round-10 finding",
+          "at": "2026-09-02T01:51:50Z",
+          "evidence": [
+            "Advanced to 2.1.0 -- MINOR, per the module's own precedent -- covering the round-8 and round-9 changes together, restored rather than back-dated. The policy is now stated at the constant itself, since leaving it implicit is what let it lapse. No proof artifact exists in the repository, so nothing recorded is invalidated: the bump is mechanically inert today and is made for honest signalling, the same reasoning plan v0.19 applied when it restored 2.0.0. A fixture now locks the constant to every document that cites it; whether a bump was OWED remains a judgement no mechanism can settle, and that limit is recorded in the pin's own docstring rather than implied away.",
+            "Recorded into this ledger at 2026-09-02T01:51:50Z. Raised during the round-10 independent review of 6bce84f and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
