@@ -2,7 +2,7 @@
 
 **Document Class:** Stage-gate evidence record\
 **Status:** OPEN — implemented candidate; review and owner approval pending\
-**Version:** 0.11\
+**Version:** 0.12\
 **Created:** September 1, 2026\
 **Owning plan:** `docs/planning/project-architecture-governance-integration-plan.md` §11 A2\
 **Candidate branch:** `codex/a2-complete-schema-freeze`\
@@ -22,7 +22,7 @@ Implementation, merge, review, approval, and closure are distinct. A2 remains **
 | 1 | Eight-category scope map | **Complete** | §2 |
 | 2 | Canonical schemas / single control source | **Complete** | §3, §7 |
 | 3 | Executable representative fixtures | **Complete** | §4, §7 |
-| 4 | Fresh review over pushed current candidate | **PENDING** | §8. Retracted at v0.4 (`A2-R4-001`) and still open at v0.11: ten rounds are recorded, and round 10 was the independent pass round 9 owed — but the current artifact carries round-10 corrections and no round has reviewed that corrected artifact. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link between this cell and the ledger |
+| 4 | Fresh review over pushed current candidate | **PENDING** | §8. Retracted at v0.4 (`A2-R4-001`) and still open at v0.12: ten rounds are recorded, and round 10 was the independent pass round 9 owed — but the current artifact carries round-10 corrections and no round has reviewed that corrected artifact. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link between this cell and the ledger |
 | 5 | Every finding terminal | **Complete** | §8; twenty-three findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
 | 6 | Project-owner approval | **PENDING** | Non-delegable. No agent may satisfy this row |
 | 7 | Approved candidate landed on A3 base | **PENDING** | Blocked by rows 4 and 6; must match the approved digest bundle |
@@ -84,10 +84,10 @@ The expected split is explicit so an aggregate cannot hide missing discovery:
 
 | Command | Expected result |
 |---|---|
-| `python3 -m unittest tools.tests.test_architecture_governance_semantics` | 148 governance fixtures, PASS |
+| `python3 -m unittest tools.tests.test_architecture_governance_semantics` | 149 governance fixtures, PASS |
 | `python3 -m unittest tools.tests.test_recurring_defect_lint` | 9 phantom-stream context fixtures, PASS |
 | `python3 -m unittest tools.tests.test_assembly_tier_check` | 8 assembly-tier fixtures, PASS |
-| `python3 -m unittest discover -s tools/tests -p 'test_*.py'` | 165 total fixtures, PASS, **0 skipped** — in CI and on full history alike |
+| `python3 -m unittest discover -s tools/tests -p 'test_*.py'` | 166 total fixtures, PASS, **0 skipped** — in CI and on full history alike |
 | `python3 tools/recurring-defect-lint.py --repo .` | 0 ERROR |
 | `python3 tools/assembly-tier-check.py --repo .` | PASS |
 | `python3 tools/doc-consistency-check.py --repo .` | PASS |
@@ -110,8 +110,30 @@ both fixtures execute in CI. **A `0 skipped` result is now a claim about CI as w
 
 The skip path remains reachable and remains correct: a shallow clone still cannot verify these, and
 still says so rather than passing quietly. Reproduce it with
-`git clone --depth 1 file://$PWD <dir> -b <branch>` — expect `165 tests, OK (skipped=2)`. It is no
+`git clone --depth 1 file://$PWD <dir> -b <branch>` — expect `166 tests, OK (skipped=2)`. It is no
 longer the CI path.
+
+**The guard is guarded.** `fetch-depth: 0` is one line, and removing it would silently un-verify both
+fixtures again with the job still green — the same blind spot, reachable by a one-line edit. So a
+missing-history condition is now a **failure** whenever `GITHUB_ACTIONS=true`, and additionally under
+`GOVERNANCE_REQUIRE_HISTORY=1` for CI systems that do not set it. `GITHUB_ACTIONS` is the trigger rather
+than an opt-in flag, because a guard you must remember to enable is the class of guard this replaces.
+Locally the skip is preserved: a contributor with a shallow clone gets an honest skip, not a red suite.
+All three skip paths route through one `unverifiable` helper — missing named revisions in either
+fixture, and incomplete ledger publication history.
+
+`test_the_ci_history_guard_is_not_inert` pins both directions and both triggers, because `A2-R10-001`
+was not really about a version constant: it was that a fixture read as coverage while being unable to
+fail for the reason anyone cared about. Measured, on a depth-1 clone: unarmed `166 tests, OK
+(skipped=2)`; `GITHUB_ACTIONS=true` `FAILED (failures=2)`; `GOVERNANCE_REQUIRE_HISTORY=1` `FAILED
+(failures=2)`; and on full history with `GITHUB_ACTIONS=true`, `166 tests, OK`.
+
+**Consequence for the publish→bind two-step — push the pair, never the publishing commit alone.** At a
+commit that publishes a finding but before the commit that binds its `at`, the ledger is genuinely
+inconsistent, and the equality regression now *fails* rather than skipping. Verified at `1635aa3`:
+`A2-R10-001-E1 does not equal its first publication commit time` (`01:51:50Z` recorded against
+`01:53:27Z` published). That is the rule working, not a defect — but it was previously masked in CI by
+the shallow checkout, so it is stated here rather than left to be rediscovered as a mystery red.
 
 ## 5. Pre-review corrections
 
@@ -330,6 +352,7 @@ validator branch. Both are recorded in the ledger's `unverified_surfaces`.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.12 | September 1, 2026 | — | Hardens the v0.11 fix against its own removal, at the round-10 reviewer's recommendation, before round 11. `fetch-depth: 0` is one line and dropping it would silently un-verify both history-dependent fixtures with the job still green. A missing-history condition is now a **failure** whenever `GITHUB_ACTIONS=true`, and additionally under `GOVERNANCE_REQUIRE_HISTORY=1` for other CI systems; `GITHUB_ACTIONS` is the trigger rather than an opt-in flag, because a guard you must remember to enable is the class of guard this replaces. Local skips are preserved. All three skip paths route through one `unverifiable` helper — missing revisions in either fixture, and incomplete ledger publication history. `test_the_ci_history_guard_is_not_inert` pins both directions and both triggers, `A2-R10-001`'s lesson applied to the guard itself. Also records a consequence measured at `1635aa3`: the publish→bind two-step must be pushed as a pair, since the equality regression now fails rather than skips at a publishing commit. No frozen executable semantics changed, so **no `REFERENCE_SEMANTICS_VERSION` bump is owed**. Test split 148/9/8 = 165 → 149/9/8 = 166. Row 4 stays PENDING. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.11 | September 1, 2026 | — | Acts on round 10's evidence note instead of only recording it. The two history-dependent fixtures — `test_every_recorded_digest_matches_the_revision_it_names` and `test_status_timestamps_equal_first_publication_commit_time` — had skipped in **every** CI run of this candidate, because `Spec hygiene checks` checked out at the `actions/checkout` default depth of 1. The digest chain and the timestamp equality rule this record rests on were therefore only ever verified on a contributor's local clone, never by the gate. `spec-hygiene` now sets `fetch-depth: 0` — that job only; every other job stays shallow — and all ten ledger-named revisions were confirmed ancestors of the candidate head, so the fetch reaches each. §4 and §8.1 are corrected accordingly: a `0 skipped` result is now a claim about CI as well as local. The shallow skip path stays reachable and stays correct; it is simply no longer the CI path. Workflow only — no fixture, schema, semantics, or finding changed, and the count holds at 148/9/8 = 165. Row 4 stays PENDING. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.10 | September 1, 2026 | — | Records round 10, the independent pass round 9 owed. `A2-R10-001` (Medium): rounds 8 and 9 changed three admission rules while `REFERENCE_SEMANTICS_VERSION` stayed at `2.0.0`, though that value is an input to `subject_scope_digest` and is compared by equality in `assess_proof_freshness`. Advanced to `2.1.0` (MINOR, per the module's `1.0.0 → 1.9.0` precedent; v0.19 reserved MAJOR for the import-contract break), covering both rounds together and restored rather than back-dated, with the versioning policy now stated at the constant. No proof artifact exists, so nothing recorded is invalidated. `test_reference_semantics_version_is_pinned` existed throughout and did not help — it asserts the value is what it is, never that it moved when the semantics did — and that limit is now written into the pin; a new fixture locks the constant to every document citing it. §4 additionally separates local full-history discovery (0 skipped) from shallow-CI discovery (2 history-dependent fixtures skip by design), a recording correction rather than a defect. Row 4 stays PENDING: round 10's corrections are again non-independent, so a round-11 pass is owed. Test split 147/9/8 = 164 → 148/9/8 = 165. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.9 | September 1, 2026 | — | Records round 9, a verification pass over the round-8 corrections which found that one of them was a regression. `A2-R9-001` (Medium): the `A2-R8-001` anti-ratchet fix rejected every baseline addition against a trusted prior, closing the `inactive → migration` edge §3.9 declares legal and leaving this repository's own `inactive`, empty baseline with no forward path. Reproduced against that committed document — rejected at `c927a95`, accepted at `a034fc3`. Additions are now permitted only on that entry edge, which cannot be re-entered because no transition returns to `inactive`. It survived because round 8 pinned the illegitimate path failing and never the legitimate path still working, and because every `prior_baseline` fixture in the suite passed a *migration* prior — `A2-R8-003`'s own lesson about fixture-bounded differentials, recurring in the commit that recorded it. `A2-R9-002` (Low): the owning integration plan's header read v0.18 while its history stood at v0.25, so seven revisions of citations resolved against a stale self-description; corrected and recorded. Round 9 is explicitly **not independent** — same assistant as the round-8 remediation, separate session — so a round-10 independent pass is owed before row 4 is claimed. Test split 143/9/8 = 160 → 147/9/8 = 164. A2 remains OPEN; A3 remains BLOCKED. |

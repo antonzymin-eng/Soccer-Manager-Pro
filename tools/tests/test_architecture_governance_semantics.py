@@ -6,8 +6,33 @@ import ast
 import copy
 import importlib.util
 import json
+import os
 import unittest
 from pathlib import Path
+
+
+def history_verification_is_mandatory():
+    """Is a missing-history skip acceptable here, or a failure?
+
+    The two history-dependent fixtures below verify the ledger's digest chain
+    and its `at`-equals-first-publication rule. Both SKIP when the revisions
+    they name are unreachable -- correct, and all-or-nothing per `A2-R5-001`,
+    because partial verification must never be presented as complete.
+
+    But a skip is indistinguishable from a pass in a CI summary, and that is
+    exactly how these two went unverified in every CI run of this candidate
+    until `spec-hygiene` gained `fetch-depth: 0`. Restoring the default depth
+    would silently un-verify them again with the job still green. So in CI the
+    skip becomes a FAILURE: the checkout config cannot quietly regress.
+
+    `GITHUB_ACTIONS` is the trigger rather than an opt-in flag, because a guard
+    you must remember to enable is the class of guard this exists to replace.
+    `GOVERNANCE_REQUIRE_HISTORY=1` additionally arms it for CI systems that do
+    not set `GITHUB_ACTIONS`. Locally the skip is preserved -- a contributor
+    with a shallow clone should get an honest skip, not a red suite.
+    """
+    return (os.environ.get("GITHUB_ACTIONS") == "true"
+            or os.environ.get("GOVERNANCE_REQUIRE_HISTORY") == "1")
 
 TOOL_PATH = Path(__file__).resolve().parents[1] / "architecture-governance" / "reference_semantics.py"
 SPEC = importlib.util.spec_from_file_location("architecture_governance_reference_semantics", TOOL_PATH)
@@ -2262,6 +2287,54 @@ class DurableReviewLedgerTests(unittest.TestCase):
         self.assertEqual(
             [], jsv.default_schema_set().validate(ledger, "review-ledger.schema.json"))
 
+    def unverifiable(self, reason):
+        """Skip locally, fail in CI. See `history_verification_is_mandatory`."""
+        if history_verification_is_mandatory():
+            self.fail(
+                "history-dependent verification could not run in CI: %s. "
+                "spec-hygiene must check out with fetch-depth: 0." % reason)
+        self.skipTest(reason)
+
+    def test_the_ci_history_guard_is_not_inert(self):
+        """`A2-R10-001`'s lesson, applied to this guard itself.
+
+        That finding was not really about a version constant: it was that
+        `test_reference_semantics_version_is_pinned` read as coverage while
+        being unable to fail for the reason anyone cared about. A guard whose
+        arming is never exercised is the same shape. So both directions are
+        pinned here -- armed, a missing-history condition FAILS; unarmed, it
+        still SKIPS -- and both triggers are covered, because a guard that
+        silently stopped arming would restore the exact blind spot that let two
+        fixtures go unverified in every CI run of this candidate.
+        """
+        import contextlib
+
+        @contextlib.contextmanager
+        def environment(pairs):
+            saved = {key: os.environ.get(key) for key in pairs}
+            try:
+                for key, value in pairs.items():
+                    os.environ.pop(key, None) if value is None else os.environ.update({key: value})
+                yield
+            finally:
+                for key, value in saved.items():
+                    os.environ.pop(key, None) if value is None else os.environ.update({key: value})
+
+        unarmed = {"GITHUB_ACTIONS": None, "GOVERNANCE_REQUIRE_HISTORY": None}
+        with environment(unarmed):
+            self.assertFalse(history_verification_is_mandatory())
+            with self.assertRaises(unittest.SkipTest):
+                self.unverifiable("no history")
+
+        for key, value in (("GITHUB_ACTIONS", "true"), ("GOVERNANCE_REQUIRE_HISTORY", "1")):
+            pairs = dict(unarmed, **{key: value})
+            with environment(pairs):
+                self.assertTrue(
+                    history_verification_is_mandatory(),
+                    "%s=%s must arm the guard" % (key, value))
+                with self.assertRaises(self.failureException):
+                    self.unverifiable("no history")
+
     def test_every_round_digest_recomputes_from_the_tree_it_names(self):
         """Prove each digest IS its named tree -- all of them, or none.
 
@@ -2271,7 +2344,8 @@ class DurableReviewLedgerTests(unittest.TestCase):
         ignore the rest, and report a green tick under a name asserting all of
         them. The default CI checkout is shallow, so that is the expected
         environment rather than an edge case: a partial result must never be
-        able to present itself as a complete one.
+        able to present itself as a complete one. In CI the skip is escalated to
+        a failure -- see `unverifiable`.
         """
         import subprocess
         runs = self.ledger()["review_runs"]
@@ -2282,7 +2356,7 @@ class DurableReviewLedgerTests(unittest.TestCase):
                 ["git", "-C", str(self.ROOT), "cat-file", "-e", revision + "^{commit}"],
                 capture_output=True).returncode != 0})
         if missing:
-            self.skipTest(
+            self.unverifiable(
                 "history absent for %s -- verification is all-or-nothing"
                 % ", ".join(missing))
         for run in runs:
@@ -2340,13 +2414,13 @@ class DurableReviewLedgerTests(unittest.TestCase):
         needed = {self.named_revision(run) for run in ledger["review_runs"]}
         missing = sorted(rev for rev in needed if commit_time(rev) is None)
         if missing:
-            self.skipTest(
+            self.unverifiable(
                 "history absent for %s -- verification is all-or-nothing"
                 % ", ".join(missing))
 
         published = self.publication_times()
         if len(published) != len(ledger["findings"]):
-            self.skipTest(
+            self.unverifiable(
                 "ledger publication history is incomplete -- verification is all-or-nothing")
 
         for item in ledger["findings"]:
