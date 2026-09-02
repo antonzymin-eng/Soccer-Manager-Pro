@@ -6,8 +6,8 @@ threshold policy, paste-ready review-time checklist (§5.4), 75-row FR-to-verifi
 traceability table (§5.5), and the determinism verification handoff note.
 
 **Created:** May 7, 2026
-**Modified:** August 18, 2026
-**Version:** 1.3
+**Modified:** September 2, 2026
+**Version:** 1.4
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 5
@@ -455,7 +455,8 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-072 | Determinism — §5.4.4 item 8 | `CS20-DET-006` | E |
 | FR-CS-073 | Determinism — §5.4.4 item 8 | `BannedSymbols.txt` (`decimal`) | E |
 
-**Traceability coverage:** All 73 numbered FRs have a Stage 0 verification path, as do the two sub-numbered clauses FR-CS-046a and FR-CS-046b — 75 rows in total. The sub-clauses are listed for traceability and are **outside the 73-FR count** (§2.2.9's partition Count column reports FR IDs, not rows). FR-CS-008 is
+**Traceability coverage:** All 73 numbered FRs have a Stage 0 verification path, as do the two sub-numbered clauses FR-CS-046a and FR-CS-046b — 75 rows in total. The sub-clauses are listed for traceability and are **outside the 73-FR count** (§2.2.9's partition Count column reports FR IDs, not rows — the A3.1a amendment draft
+renumbers that footer to §2.2.10; A3.1b synchronizes this section). FR-CS-008 is
 marked INACTIVE with a defined activation condition. FR-CS-009, FR-CS-024, and
 FR-CS-035 are MAY-level; no enforcement row is needed. FR-CS-045 and FR-CS-063 are
 verified by manual review because their correctness depends on cross-document matching
@@ -500,6 +501,7 @@ belongs to Spec #16 and Spec #19.
 | 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H5.** §5.1's opening ("At Stage 0 no source code exists; all static analysis tools are therefore untriggered") and its "No tooling required at Stage 0" paragraph both asserted a state fifteen months stale — and the opening contradicted the §5.1 process list two lines below it, which legislates for PRs "that introduce or modify `.cs` files under `src/`". Restated against the live tree, every figure re-derived August 18, 2026: 35 production assemblies (`ls -d src/*/ | wc -l`), 947 `.cs` files (`find src -name '*.cs' | wc -l`), `dotnet format whitespace --verify-no-changes` advisory on every push and `tools/dotnet-ci/run-gate.sh` blocking on every push (both in `.github/workflows/ci.yml`). What genuinely remains missing is stated without overreach: the custom Spec #20 Roslyn analyzer set, `.editorconfig`, and `BannedSymbols.txt` exist nowhere in the repository, so those FRs remain manually reviewed and the KD-4/D1 threshold deferral stands (no profiled baseline yet). Consequential to round-6 H6 (see section-3.md v1.6): §5.4.2's checklist items 2, 6 and 8 extended to the six-tag vocabulary and the six-slot region order. | — |
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H3.** §5.1's "runs on every push" overstated `ci.yml`'s triggers (`branches: [main]` on both `push` and `pull_request`); a push to a topic branch — including every review branch this series has run on — triggers nothing. Corrected to "every push to `main` and every PR targeting `main`", matching §3.5.2's same-phrase correction. The v1.1 row above is left as written per the do-not-rewrite-history convention and carries the same overstatement as a record of what was written. | — |
 | 1.3 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings M4 + M5.** M4: §5.1 counted `tools/dotnet-ci/run-gate.sh` as one of "two of §5.2's tools live in CI" — `run-gate.sh` is the whole-tree compile/test gate, not a row in §5.2's six-tool table; restated as one §5.2 tool (`dotnet format`) live in CI, alongside the separately-named compile/test gate. M5: three sites cited `FR-CS-025` as the authority for per-tag `#region` ordering; verified against §2.2.2 that FR-CS-025 governs catalogue file naming only. §5.4.2 checklist item 8 re-cited (naming → FR-CS-025, region order → §4.2/§3.2.3); the §5.5 traceability row for FR-CS-025 annotated to scope its `CS20-CONST-009` mapping to the naming half of item 8 only. | — |
+| 1.4 | September 2, 2026 | Claude Code | **A3.1a review correction — renumbering sweep completed here.** §5.5's coverage note cited "§2.2.9's partition Count column"; the A3.1a amendment draft gave §2.2.9 to the new Architecture Integration & Activation partition and moved the FR Table Footer, with its Count column, to §2.2.10 — the same defect `section-2.md` v1.6.1 repaired at its own site and did not sweep. Annotated rather than re-pointed: this file is APPROVED and describes the approved v1.5 baseline of `section-2.md`, where the Count column genuinely is §2.2.9, so the citation stands and the note now names the draft's renumbering and the slice that syncs it (A3.1b, which owns this file's FR-CS-074–081 rows and its stale 73/75 counts). Status stays APPROVED; no traceability row, count, severity, or checklist item changed. | PENDING — A3.4 |
 
 ---
 

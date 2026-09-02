@@ -8,13 +8,15 @@ does not restate them. Appendix D is the single source of truth for banned/requi
 API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
-**Modified:** August 18, 2026
-**Version:** 1.8
-**Status:** APPROVED (May 11, 2026)
+**Modified:** September 2, 2026
+**Version:** 1.12
+**Status:** AMENDMENT DRAFT (A3.1a; approved v1.8 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md`
+v0.35, §6; A3.1a
 **Subsection target lengths:** §3.1 ~150 lines · §3.2 ~120 lines · §3.3 ~100 lines ·
-§3.4 ~120 lines · §3.5 ~110 lines · §3.6 ~90 lines · §3.7 ~30 lines ·
+§3.4 ~120 lines · §3.5 ~420 lines after A3.1a · §3.6 ~90 lines · §3.7 ~30 lines ·
 §3.8 ~10 lines · §3.9 ~60 lines · §3.10 ~10 lines
 
 ---
@@ -25,7 +27,7 @@ API symbol lists; §3.3 and §3.4 cite it by category name only.
 - [3.2 Constant Declaration & Tagging (FR-CS-016 … FR-CS-025)](#32-constant-declaration--tagging-fr-cs-016--fr-cs-025)
 - [3.3 Allocation Discipline (FR-CS-026 … FR-CS-035)](#33-allocation-discipline-fr-cs-026--fr-cs-035)
 - [3.4 Determinism in Code (FR-CS-036 … FR-CS-045)](#34-determinism-in-code-fr-cs-036--fr-cs-045)
-- [3.5 Dependency Direction & Interface Design (FR-CS-046 … FR-CS-055)](#35-dependency-direction--interface-design-fr-cs-046--fr-cs-055)
+- [3.5 Dependency Direction & Interface Design (FR-CS-046 … FR-CS-055; FR-CS-074 … FR-CS-081)](#35-dependency-direction--interface-design-fr-cs-046--fr-cs-055-fr-cs-074--fr-cs-081)
 - [3.6 Documentation Conventions (FR-CS-056 … FR-CS-065)](#36-documentation-conventions-fr-cs-056--fr-cs-065)
 - [3.7 Numeric Type Discipline (FR-CS-071 … FR-CS-073)](#37-numeric-type-discipline-fr-cs-071--fr-cs-073)
 - [3.8 Worked Examples Index](#38-worked-examples-index)
@@ -580,9 +582,10 @@ in Python — is incorrect and confuses the semantics of each rule.
 
 ---
 
-## 3.5 Dependency Direction & Interface Design (FR-CS-046 … FR-CS-055)
+## 3.5 Dependency Direction & Interface Design (FR-CS-046 … FR-CS-055; FR-CS-074 … FR-CS-081)
 
-*Implements:* FR-CS-046–055. See §2.2.5 for rule statements and conformance levels.
+*Implements:* FR-CS-046–055 and FR-CS-074–081. See §2.2.5 and §2.2.9 for rule
+statements and conformance levels.
 
 ---
 
@@ -812,6 +815,185 @@ resolution* machinery in the game loop, not on the dependency-injection principl
 
 ---
 
+### 3.5.6 Integration Identity, Ownership & Activation
+
+*Implements:* FR-CS-074–076, FR-CS-080–081. Governance FR-AG-021–025 remains
+the upstream authority. The canonical machine contracts are schema version `1.0.0`
+under `docs/tracking/architecture-governance/schemas/`; executable interpretation is
+`tools/architecture-governance/reference_semantics.py` semantics version `2.1.0`.
+
+#### Stable identity and canonical selectors
+
+A durable architectural concept receives a stable `component_id`. Compiler discovery
+also emits a deterministic `symbol_key`, but that key identifies the current source
+symbol and is not a replacement for the architectural identity. A file move or symbol
+rename **MUST** preserve `component_id`, update `current_selector`, and append the old
+selector plus `superseded_reason` to `selector_history`.
+
+Every blocking selector **MUST** use the `selector-v1` object from
+`common.schema.json`. It includes `assembly` and a typed kind. Type identifiers use C#
+XML-documentation-ID type-signature spelling. Method selectors also include the
+containing type, member name, parameter type identifiers, generic arity, and static
+flag; constructor, property, field, and event selectors use their schema-defined fields.
+This preserves overload distinctions, including `System.Int32` versus the by-reference
+form `System.Int32@`. An ambiguous or multiply resolving selector is non-conformant in
+strict mode.
+
+#### Integration contract
+
+Each applicable durable runtime-bearing component **MUST** have one record in
+`integration-contracts.json`. Required ownership and lifecycle fields are:
+
+| Concern | Canonical field(s) |
+|---|---|
+| Identity and binding | `contract_id`, `component_id`, `current_selector`, `selector_history` |
+| Integration owner and point | `owning_host`, `owning_assembly`, `composition_root` |
+| Lifecycle ownership | `construction_path`, `activation_phase`, `update_use_owner`, `teardown_owner` |
+| Alternate and bypass paths | `relevant_testhost_path`, `alternate_supported_paths`, `prohibited_bypass_paths` |
+| Ordering and static initialization | `static_initialization_involved`, `lifecycle_ordering_requirements` |
+| Applicability and activation | `na_fields`, `activation_state`, `tuning_surface_selectors` |
+
+The schema-v1 fields above are strings, but their values are not free-form prose. The
+binding grammar is:
+
+| Field | Required value and resolution target |
+|---|---|
+| `owning_host` | Exact `component_id` of one contract in the integration-contract registry. |
+| `owning_assembly` | Exact case-sensitive assembly identity emitted by the assembly/compiler inventory. |
+| `composition_root` | Exact `surface_id` classified as `production-runtime-root`. |
+| `construction_path` | Two or more `component_id`/`surface_id` tokens joined by the literal delimiter ` -> `; every token resolves in its owning registry and every adjacent step is present in the dependency graph. |
+| `activation_phase` | Exact `surface_id` in the runtime-surface registry; the same identifier **MUST** resolve to a dependency-graph node whose `kind` is `lifecycle`. The N/A sentinel defined below is the only alternative. |
+| `update_use_owner`, `teardown_owner` | Exact `surface_id` in the runtime-surface registry; the same identifier **MUST** resolve to a dependency-graph node whose `kind` is `lifecycle`. The N/A sentinel defined below is the only alternative. |
+| `relevant_testhost_path` | Normalized repository-relative path using `/`; the path exists, its relevant discovered surfaces are classified `test-only`, and it resolves to a dependency node of kind `testhost`; or the N/A sentinel defined below. |
+| `alternate_supported_paths`, `prohibited_bypass_paths` | Exact `surface_id` values in the runtime-surface registry; absence is an empty list, not N/A. |
+
+Resolution is ordinal and case-sensitive after repository separators are normalized to
+`/`. Missing or multiply resolving identities, a nonexistent path, a wrong structural
+classification, or a construction step absent from the dependency graph is
+non-conformant.
+
+Schema `1.0.0` and reference semantics `2.1.0` validate the contract envelope,
+selector shapes, and activation-state invariants; they do **not** yet perform the
+cross-registry/repository resolution in this table. Until the A4 resolver implements
+that resolution with closed-inventory and blind-spot fixtures, these string fields are
+declarations only and **MUST NOT** support a Machine blocking claim. Schema acceptance
+alone is not evidence that a binding exists.
+
+The four lifecycle phases are separate declarations. A required field **MUST NOT** be
+omitted or set to null merely because the phase does not exist. For
+`activation_phase`, `update_use_owner`, `teardown_owner`, or
+`relevant_testhost_path`, and only those fields, N/A is represented by the exact string
+`not-applicable`. `na_fields` **MUST** contain exactly one matching entry whose `field`
+names that field and whose `justification` is non-empty. A listed field whose value is
+not `not-applicable`, a sentinel without a matching entry, a duplicate entry, or an
+entry naming any other field is non-conformant. List-valued path fields use an empty
+list when no path exists and never use the sentinel.
+
+N/A is valid only when the phase or relevant testhost genuinely does not exist. It is
+not a substitute for an unknown owner, an undiscovered path, or unfinished
+integration. The schema-v1 shape accepts this representation, but reference semantics
+`2.1.0` does not yet enforce the field/sentinel pairing; therefore an N/A declaration
+also remains non-blocking until the A4 resolver enforces these rules.
+
+`activation_state` is independent of structural classification and has exactly four
+values:
+
+| State | Required interpretation |
+|---|---|
+| `active` | Production execution is intended; required reachability evidence may not contradict it. |
+| `intentionally-disabled` | Deliberate owner decision; also requires `activation_owner`, `decision_ref`, a resolvable typed `disable_anchor`, and `reactivation_condition`. |
+| `pending-integration` | Known incomplete wiring; also requires `activation_owner`, `integration_gap`, and `activation_condition`; it does not satisfy an active requirement. |
+| `unresolved` | Activation intent is unknown and cannot satisfy strict conformance. |
+
+A disable anchor consists of a canonical `selector`, an `equals` or `not-equals`
+operator, and an `expected` object with a declared `value_type` and value. Missing,
+ambiguous, or drifted anchors fail. Free text may explain a record, but it cannot satisfy
+a blocking ownership, activation, or disabled-state assertion.
+
+Lifecycle proof is distinct from this declaration. Its dependency graph edges **MUST**
+use typed `source`, `target`, and `relation` fields. Lifecycle relations are
+`lifecycle-member`, `ordering`, `synchronization`, `thread-affinity`, and
+`testhost-equivalent`. A blocking order claim requires mechanically verifiable edge
+evidence, an execution record, or a Spec #19-approved bounded substitute; the contract's
+`lifecycle_ordering_requirements` prose alone is not proof.
+
+Examples of the contract, selectors, and identity-preserving rename flow are in
+Appendix F.
+
+---
+
+### 3.5.7 Closed Runtime Surfaces, Bypasses & Static Initialization
+
+*Implements:* FR-CS-075, FR-CS-077–081.
+
+The runtime discovery universe is closed, not sampled. It **MUST** include all assembly
+definitions; Unity lifecycle and initialization entry surfaces; conventional `Main`
+entry points; supported serialized and factory activation surfaces; testhosts and
+tooling assemblies; explicit static constructors; and compiler-generated type
+initialization caused by static field initializers. Finite non-inferable intent may be
+declared only through the canonical bootstrap schema until it is promoted into final
+classification and contract records.
+
+Every discovered surface is recorded with `surface_id`, current `symbol_key`, `kind`,
+`source_path`, `signature`, `assembly`, and one structural classification:
+
+- `production-runtime-root`
+- `contracted-child`
+- `test-only`
+- `tooling-only`
+- `generated-or-external`
+- `non-runtime-bearing`
+
+After initial baseline acceptance, strict mode **MUST** fail when a newly discovered
+surface lacks one of these classifications.
+
+Durable architectural surfaces also carry their stable `component_id` and `contract_id`.
+Structural role and activation state **MUST NOT** be collapsed into one field. Every
+production host and composition root emitted by the approved discovery universe must
+therefore resolve to a classification and, where runtime-bearing, its contract.
+
+Applicable alternate hosts, testhosts, tools, and development bootstraps **MUST** be
+included. Each must preserve the applicable invariant or have an approved divergence
+whose evidence is current for that exact surface. Test classification **MUST** consider
+assembly metadata, source path, platform and define constraints, references, compiler
+facts, and explicit classification. A `.Tests` name suffix alone is not enough to
+establish test-only classification.
+
+Closed-world absence is demonstrated, not declared. Regex or public-member inventory
+alone is not an absence proof. A no-bypass or no-unclassified-public-entry claim may
+block only after compiler-backed discovery has demonstrated the finite search universe
+and blind-spot fixtures cover alternate factories and callers. Until then, inventory is
+diagnostic and unsupported semantic absence claims remain non-blocking evidence.
+
+Known prohibited bypass selectors are enforceable only inside their defined closed
+search universe. A known-path list does not prove that no other bypass exists.
+
+Within the mechanically closed governed surface:
+
+- every known alternate or bypass activation path is prohibited or explicitly classified;
+- a supported activation path is listed by the applicable contract;
+- an unsupported bypass is listed in `prohibited_bypass_paths` and must be absent;
+- an alternate supported path is listed in `alternate_supported_paths` and receives the
+  same applicable proof;
+- an activation-capable public surface is contract-supported, classified `test-only`,
+  mechanically demonstrated non-activating (with durable disablement recorded as
+  `intentionally-disabled`), or made non-public.
+
+Static initialization participates in these same rules. Discovery **MUST** inspect both
+an explicit `static TypeName()` constructor and the implicit type initializer generated
+for static field initializers. When either participates in construction, activation, or
+ordering, the contract sets `static_initialization_involved` to true and the dependency
+closure records the relevant lifecycle/order edges. Static initialization **MUST NOT**
+create an undeclared alternate root or bypass the composition root, lifecycle owner, or
+teardown requirements.
+
+Mechanical checks may block only on compiler-supported facts and the typed records
+above. Unsupported semantic assertions remain report-only until their coverage and
+false-positive/false-negative behavior are verified as required by Governance
+FR-AG-034/035/036A.
+
+---
+
 ## 3.6 Documentation Conventions (FR-CS-056 … FR-CS-065)
 
 *Implements:* FR-CS-056–065. See §2.2.6 for rule statements and conformance levels.
@@ -1013,6 +1195,8 @@ specific lines in those files where each rule is demonstrated.
 | `unchecked` 64-bit multiplication | FR-CS-044 | §3.4.4 code block | Inline in §3.4.4 |
 | Python masking rule | FR-CS-045 | §3.4.4 code block | Inline in §3.4.4 |
 | Struct event (no phantom interface) | FR-CS-047–049 | Appendix C §C.2 | `PublishBounceEvent` method |
+| Integration contract and stable identity | FR-CS-074–076 | Appendix F | Contract and rename examples |
+| Closed runtime surfaces, bypasses, static initialization | FR-CS-077–081 | Appendix F | Classification and typed-edge examples |
 | File header template | FR-CS-056–057 | Both exemplars | Top of each file |
 | Version-history `#region` | FR-CS-058–059 | Both exemplars | End of each file |
 | XML doc comments | FR-CS-060–061 | Both exemplars | All public members and constants |
@@ -1138,6 +1322,10 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.6 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H6 + H7.** H6: §3.2.1 — introduced as reproducing root `CLAUDE.md`'s tag table "verbatim as a citation" — had five rows against the root table's six: `[CROSS-PENDING]` (root `CLAUDE.md` line 128, verified August 18, 2026) was missing, and with it the tag was unknown to #20 anywhere, making all 218 `docs/specs/` occurrences formal FR-CS-017 violations of an APPROVED spec. The row is now reproduced verbatim; the source note records the re-retrieval and the un-honoured §9.4 re-approval trigger 1; §3.2.3 gains the storage-class row (transitional pre-state of `[CROSS]` — normally a spec-side tag; a code declaration follows `[CROSS]`'s storage class); the §3.2.3 region-ordering line and §3.10's own vacuous-tag enumeration extended to six. H7: §3.2.3 gains the **const-mirror carve-out** (extends ERR-020-004) — the base `[CROSS]` → `public static readonly` rule forbade the compiler-enforced `public const` mirror shape that §4.2's ERR-020-004 carve-out cites as compliant (`DisciplineConstants.CardKindYellow` et al., 19 declarations tree-wide, re-derived August 18, 2026 from the `[CROSS]`-tagged `public const` declarations whose initializers reference the owning catalogue's symbol), so #20 certified as compliant a declaration its own MUST forbade. Resolved in the spec: symbol-referencing compile-time-constant mirrors MAY be `public const` (value identity is compiler-enforced; no divergence risk), literal-initialized mirrors never qualify (the five TODO-tick-rate declarations and `DisciplineConstants.LeagueCompetitionKey` remain non-conformant), and naming MAY keep either PascalCase or the source's ALL_CAPS identifier (both live in the tree: 10 PascalCase / 9 ALL_CAPS among the 19). FR-CS-022's row in section-2.md v1.4 carries the same carve-out. | — |
 | 1.7 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H1.** §3.2.3's `[CROSS]` const-mirror carve-out (landed at v1.6) stated its naming arm as "keep PascalCase **or** reuse the source's `ALL_CAPS` identifier unchanged", and cited "10 PascalCase / 9 ALL_CAPS among the 19" as evidence that all 19 conform. Only **three** of the nine reuse the source name (`TEAM_COUNT`, `ATTRIBUTE_MIN`, `ATTRIBUTE_MAX`); the other six RENAME — `MatchAnalyticsConstants.PITCH_LENGTH_M`/`PITCH_WIDTH_M`/`GOAL_WIDTH_M` add the unit suffix their `BallPhysicsConstants.Pitch` sources lack, and `RESTART_KIND_THROW_IN`/`_GOAL_KICK`/`_CORNER` mirror `RestartType` enum members, whose identifiers are not `ALL_CAPS` at all and so could not be reused unchanged even in principle. Under the rule as written those six remained FR-CS-022 violations while the carve-out's own count called them conforming — the overclaim shape v1.6 filed H7 against, reproduced one revision later. Naming arm restated as "PascalCase, **or** an `ALL_CAPS` identifier consistent with the owning catalogue's `[FIXED]` convention", with the three/six split written out so the rule and its evidence agree. | — |
 | 1.8 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings M1 + M5 + M6, and L4.** M1: `ERR-020-006` and `ERR-020-007` were cited nowhere in the spec they patch — every prior #20 ERR is cited at its fix site, but round-6's text said only "round-6 finding H6/H7". Both ids now cited in place: §3.2.1's source note (`ERR-020-006`) and the §3.2.3 const-mirror carve-out heading (`ERR-020-007`). M5: §3.2.3's per-tag region-ordering line cited `FR-CS-025` as its authority; verified against §2.2.2 (`grep -n 'FR-CS-025 |' section-2.md`) that FR-CS-025 governs catalogue file NAMING only (`<SpecName>Constants.cs`) and says nothing about region ordering — re-cited to §4.2 directly. M6: the §3.2.1 source note offered "the tag stood at 218 occurrences (`grep -rn 'CROSS-PENDING' docs/specs/ \| wc -l`, August 18, 2026)" as proof of a figure that command no longer reproduces (245 today; every subsequent citation of the tag, including this row, keeps raising it) — re-derived against the pre-fix commit instead (`git grep -c 'CROSS-PENDING' 9b841d1^ -- docs/specs \| awk -F: '{s+=$NF} END {print s}'` → 218) and labelled explicitly as the pre-fix figure; the note's "honoured now" claim about §9.4 trigger 1 is corrected to name when the trigger's full re-verification mandate was actually run (round-7 M2, `section-9-approval-checklist.md`). L4: the `[CROSS]` row's Naming cell read a bare "PascalCase" while the carve-out qualifying it was signalled only in the Notes cell — Naming cell now reads "PascalCase (see const-mirror carve-out)". | — |
+| 1.9 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Adds §3.5.6–3.5.7 for stable component identity, overload-safe canonical selectors, typed ownership/activation contracts, lifecycle-edge evidence, closed runtime-surface accounting, alternate and bypass paths, and explicit plus compiler-generated static initialization. The approved §3.5.2 dependency taxonomy and arrow semantics are unchanged. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
+| 1.10 | September 2, 2026 | Codex | **A3.1a review correction.** Expands §3.5's declared FR range and target length to include FR-CS-074–081 and removes the asymmetric TOC sub-bullets. Restores plan v0.34's strict post-baseline classification failure, positive test-classification inputs, and closed-world/absence-proof guards, including the blind-spot-fixture precondition and known-path limit. Aligns bypass mechanics with Governance FR-AG-025's "prohibited or explicitly classified" wording. The draft remains unapproved pending A3.4. | PENDING — A3.4 |
+| 1.11 | September 2, 2026 | Codex | **A3.1a automated-review correction.** Defines the exact binding vocabulary and resolution targets for every ownership/path string, and states the frozen schema-v1/reference-semantics-v2.1 boundary honestly: shape acceptance is not cross-registry resolution and cannot support a Machine blocker before A4. Defines `not-applicable` plus the exact `na_fields` pairing rules so absent lifecycle/testhost phases are representable without using prose placeholders. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
+| 1.12 | September 2, 2026 | Codex | **A3.1a lifecycle-binding clarification.** Removes the undefined “lifecycle `surface_id`” and “lifecycle-owner `surface_id`” qualifiers. A non-N/A activation/update/teardown value now resolves first as an exact runtime-surface `surface_id`, then as the same dependency-graph identifier with `kind: lifecycle`; the two registries' roles are explicit and mechanically testable. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
 
 ---
 

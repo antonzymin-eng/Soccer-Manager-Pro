@@ -12,7 +12,54 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A2 IS CLOSED. All seven conditions satisfied; A3 is unblocked.**
+> **Last Updated:** September 2, 2026 — **A3.1a lifecycle binding clarified; draft remains unapproved.**
+> Code Standards §3.5.6 no longer calls a runtime-surface field “lifecycle” without naming where that
+> qualifier lives. Non-N/A activation/update/teardown values now resolve as exact runtime-surface
+> `surface_id` values and as the same dependency-graph identifiers with `kind: lifecycle`. §3 → v1.12.
+> No schema, executable semantics, workflow, production code, or enforcement changed. Verified: 166/166
+> tooling tests, document consistency, assembly-tier checking, and recurring-defect lint at 0 ERROR.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1a automated-review findings resolved; draft remains unapproved.**
+> Two P1 findings exposed overclaims in the new ownership/lifecycle mechanics: schema `1.0.0` and reference
+> semantics `2.1.0` validate string shape but do not resolve ownership/path bindings, and `na_fields` had no
+> defined field-value representation. Code Standards §3.5.6 now defines exact registry/inventory/path targets,
+> construction-path grammar, the `not-applicable` sentinel and one-to-one justification pairing, while explicitly
+> keeping both surfaces non-blocking until A4 implements cross-registry resolution and discriminating fixtures.
+> Appendix F.2 demonstrates the sentinel; F.4 uses the same component/surface/path identities. Plan → v0.35;
+> Code Standards §2 → v1.8, §3 → v1.11, appendices → v1.6.3. No schema, executable semantics, workflow,
+> production code, or enforcement changed. Verified: 166/166 tooling tests, document consistency,
+> assembly-tier checking, recurring-defect lint at 0 ERROR, and all five Appendix F JSON examples with
+> F.4 accepted at five nodes/four edges. A3.1b and A3.4 remain pending.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1a renumbering sweep completed; draft remains unapproved.**
+> The §2.2.9 → §2.2.10 footer move was repaired at `section-2.md` but not swept: `section-9-approval-checklist.md`
+> C-04's live proxy comment still excluded "the §2.2.9 partition-footer rows" — in a file edited in that same pass —
+> and `section-5.md` §5.5 still cited "§2.2.9's partition Count column". C-04 re-pointed to §2.2.10; §5.5 annotated
+> rather than re-pointed, since that file is APPROVED and describes the baseline where the Count column IS §2.2.9.
+> C-03's `[x] Verified May 8, 2026 — returns 73` line annotated in place as approved-baseline evidence, so the
+> checkbox no longer reads as current against the draft-invalidation note above it; the May 8 record is preserved,
+> not unchecked. C-04's dated May 11, 2026 record keeps its `§2.2.9` citation — the footer was §2.2.9 then.
+> §5 → v1.4, §9 → v1.1.5. Verified: 166/166 tooling tests, document consistency, assembly-tier check, recurring-defect
+> lint (0 ERROR), and executable Appendix F validation all pass. A3.1b still owns the stale-73 synchronization;
+> A3.4 reapproval remains required. No production code, schema, executable semantics, workflow, or enforcement changed.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1a review corrections complete; draft remains unapproved.**
+> Resolved the two blocking review findings and the normative-core omissions before A3.1b: restored a
+> schema-valid F.4 dependency graph, repaired the CI-breaking maintained version pointers and shifted
+> §2.2.10 reference, expanded §3.5's declared FR range, restored strict classification and closed-world
+> absence-proof safeguards, aligned FR-CS-078 with Governance FR-AG-025, and marked C-03 open for the
+> 81-FR draft. Plan → v0.34; Code Standards §2 → v1.7, §3 → v1.10, appendices → v1.6.2, §9 → v1.1.4.
+> Verified: 166/166 tooling tests, document consistency, assembly-tier check, and executable F.4
+> normalization all pass. No production code, schema, executable semantics, workflow, or enforcement changed.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3 preflight complete; implementation plan v0.33.**
+> Removed a contradictory live paragraph that said A2 remained open and A3 blocked immediately after
+> the same section correctly recorded A2 closed. Each specification now has a normative-core slice and
+> a supporting-surface slice, followed by combined reconciliation and atomic reapproval/landing. Intermediate commits remain
+> unapproved drafts and do not claim A8 enforcement. No #19/#20 normative file, schema, executable
+> semantics, code, workflow, or enforcement changed.
+>
+> **Last Updated (prior):** September 2, 2026 — **A2 IS CLOSED. All seven conditions satisfied; A3 is unblocked.**
 > Row 7 is satisfied: the approved candidate merged to `main` at `693db56`, and the landed material subject was **recomputed** — not assumed — to `4160b164…`. It is identical at `1f0e68a` (reviewed by `A2-RUN-011`), `9954e90` (approved), `0221491` (branch head), `693db56` (merge commit) and `origin/main`. **Nothing changed on the way in**, which is the check a digest-bound approval exists to make possible: a merge can reorder, drop or transform content, and "the PR merged" is not evidence that what landed is what was approved. Integration plan v0.31 → v0.32; A2 closure record v0.14 → **v1.0, `CLOSED`**.
 >
 > The seven conditions, and what each rests on: scope map (§2); canonical schemas with a single control source (§3); executable fixtures (§4); a fresh independent review over the pushed candidate — `A2-RUN-011` over `1f0e68a`, **no findings**, the first round in eleven after which nothing followed into the contract; every finding terminal — twenty-three, all `Blocker`/`Resolved`; project-owner approval bound to the digest; and the verified landing.
