@@ -1,6 +1,17 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 1, 2026 — **A2 round 10: the semantics version froze while the semantics changed. Planning/tooling only.**
+**Last Updated:** September 1, 2026 — **CI now runs the two provenance checks it had always skipped. Workflow/tracking only.**
+Both history-dependent fixtures — `test_every_recorded_digest_matches_the_revision_it_names` and
+`test_status_timestamps_equal_first_publication_commit_time` — skipped in every CI run of this candidate,
+because `Spec hygiene checks` used the `actions/checkout` default depth of 1. The digest chain and the
+timestamp equality rule the A2 record rests on had therefore been verified only on local full-history
+clones, never by the gate. `spec-hygiene` now sets `fetch-depth: 0`, that job alone; all ten
+ledger-named revisions were confirmed ancestors of the candidate head first. The shallow skip path stays
+correct and stays reachable — it is no longer the CI path. Integration plan → v0.28, closure record →
+v0.11. No fixture, schema, executable semantics, or finding changed; discovery holds at 165 tests across
+three suites. **Row 4 remains PENDING; A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 round 10: the semantics version froze while the semantics changed. Planning/tooling only.**
 An independent review of `6bce84f` found that rounds 8 and 9 changed three admission rules while
 `REFERENCE_SEMANTICS_VERSION` stayed at `2.0.0` — a value that is an input to `subject_scope_digest` and
 is compared by equality in `assess_proof_freshness`. Advanced to `2.1.0` (MINOR, per the module's own
