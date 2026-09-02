@@ -9,7 +9,7 @@ by category name and must not reproduce its symbol lists.
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.6
+**Version:** 1.6.1
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.5 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §APPENDICES
@@ -575,11 +575,34 @@ component and contract:
 ### F.4 — Typed Lifecycle Edges
 
 Lifecycle/order proof uses canonical dependency nodes and `source` / `target` /
-`relation` edges. The relation value, not surrounding prose, gives the edge its
-machine meaning:
+`relation` edges. Every edge endpoint is declared in `nodes`; the relation value,
+not surrounding prose, gives the edge its machine meaning. The fingerprints below
+are illustrative valid SHA-256 values, not reusable proof evidence:
 
 ```json
 {
+  "nodes": [
+    {
+      "dependency_id": "symbol:MatchHost.Compose",
+      "kind": "runtime-root",
+      "fingerprint": "09c509bd92878883b9090ae7f05049821fdce67664f39957fba26fe2a00a238f"
+    },
+    {
+      "dependency_id": "component:match-bootstrap",
+      "kind": "contract",
+      "fingerprint": "64509290862a16c1de105df37b8576d256ece06f671e107064c36d805eebef62"
+    },
+    {
+      "dependency_id": "symbol:MatchLoop.Tick",
+      "kind": "lifecycle",
+      "fingerprint": "5ecf264377fcb363b8b01145a2edaff12fd5c6be7d3d1594710d5c9435406a8c"
+    },
+    {
+      "dependency_id": "testhost:match",
+      "kind": "testhost",
+      "fingerprint": "81cf7c6f69ff15a23a4d35131ec1ab69f61a0b50e1fa0039ee54922321ff4561"
+    }
+  ],
   "edges": [
     {
       "source": "symbol:MatchHost.Compose",
@@ -637,6 +660,7 @@ shape:
 | 1.4 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding L3.** The "Game-state assembly" glossary entry's definitional clause ("participates in the deterministic simulation") contradicted its own scope clause ("every production assembly under `src/`") — `ui-framework`, `client-app`, `match-client-web`, `match-viewer`, and the two Infrastructure assemblies do not participate in the simulation, so the definition was false of the scope it names two sentences later. The scope (a rule EXTENSION) is correct and unchanged; the definition restated as "subject to the det-banned API ban … whether or not it participates in the simulation." | — |
 | 1.5 | August 18, 2026 | Claude Code | **Adversarial-review round-8 finding H1, found mechanically by the new `tools/doc-claim-check.py`.** *(Renumbered 1.4 → 1.5 at adversarial-review round 9: this row landed in `f23f480` as a SECOND `1.4`, above the round-7 L3 row that had already taken that number in `20760cf`. `recurring-defect-lint.py` reported it as the tree's only ERROR — while root `CLAUDE.md` still claimed 0 ERROR tree-wide — so the round that added a mechanical checker for dangling identifiers introduced a defect a mechanical checker the repo already had was reporting. Rows reordered ascending with it; no content changed.)* §C.2 still called `BallPhysicsConstants.MAX_SUBSTEPS` after v1.3 renamed the declaration to `MaxSubsteps` in §C.1 one section above — a dangling reference inside the pair #20 offers as its COMPLIANT exemplar, annotated `// §3.2.3 — named constant`, i.e. claiming conformance to the rule that forced the rename. **This is `ERR-020-001` for the third time**: that entry renamed `PHYSICS_TICK_HZ → PhysicsTickHz` in §4.2 in May 2026 and its file list never included this appendix; v1.3's own history row named that failure while repeating it one section away. In `src/` the compiler would have rejected it; in a spec fence nothing binds, which is exactly why the identifier check now exists and why it is wired into CI rather than left to review. | — |
 | 1.6 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Adds Appendix F with illustrative schema-aligned examples for overload-safe selectors, stable component identity across a rename, active integration ownership, runtime-surface classification, typed lifecycle edges, and a verifiable disabled-state anchor. Canonical A2 schemas and reference semantics remain authoritative. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
+| 1.6.1 | September 2, 2026 | Codex | **A3.1a review correction.** F.4 now supplies the `nodes` list required by reference semantics v2.1.0 and declares every typed edge endpoint with a schema-valid kind and fingerprint. The complete example is accepted by `normalize_dependency_graph`; the fingerprints remain illustrative rather than reusable proof evidence. | PENDING — A3.4 |
 
 ---
 
