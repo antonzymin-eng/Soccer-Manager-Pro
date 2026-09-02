@@ -2,7 +2,7 @@
 # ============================================================================
 # File:     tools/recurring-defect-lint.py
 # Created:  2026-08-08
-# Modified: 2026-08-17
+# Modified: 2026-09-01
 # Author:   Claude Code
 # Purpose:  Mechanically detects the recurring defect classes that thirteen
 #           consecutive adversarial-review passes over the #29/#41 balance-pass
@@ -527,8 +527,48 @@ PHANTOM_NEGATIONS = re.compile(
     r"|is\s+cursor-positioned"
     r"|superseded"
     r"|retired\s+the\s+registered"
-    r"|ERR-041-012",
-    re.I)
+    r"|ERR-041-012"
+    # A "does not <verb> ... registered ..." clause is a negation whichever verb
+    # sits between; the sweep produced several of this shape.
+    r"|does\s+not\b[^.\n]{0,80}registered"
+    # A colon-terminated "does not ..." clause introduces a list of non-goals,
+    # every item of which is negated by it (see _phantom_list_lead_in).
+    r"|does\s+not\b[^.\n]{0,40}:\s*$",
+    re.I | re.M)
+
+# Markdown emphasis is formatting, not meaning: `**no** registered stream` is the
+# same negation as `no registered stream`, but the patterns above are written in
+# prose. The window is tested BOTH raw and de-emphasised, so every pattern that
+# matched before still matches and the emphasised forms newly match too.
+PHANTOM_EMPHASIS_RE = re.compile(r"[*`_]")
+
+
+def _phantom_negated(window):
+    if PHANTOM_NEGATIONS.search(window):
+        return True
+    return bool(PHANTOM_NEGATIONS.search(PHANTOM_EMPHASIS_RE.sub("", window)))
+
+
+PHANTOM_LIST_ITEM_RE = re.compile(r"^\s*(?:[-*+]|\d+\.)\s")
+
+
+def _phantom_list_lead_in(lines, index):
+    """The paragraph introducing the list `lines[index]` belongs to, if any.
+
+    A bullet inherits its list's lead-in — "This pass does **not** itself:" negates
+    every item under it — but the lead-in sits further away than the wrap window,
+    so a long non-goals list re-raises on its own contents without this.
+    """
+    if not PHANTOM_LIST_ITEM_RE.match(lines[index]):
+        return ""
+    cursor = index - 1
+    while cursor >= 0:
+        line = lines[cursor]
+        if PHANTOM_LIST_ITEM_RE.match(line) or not line.strip():
+            cursor -= 1
+            continue
+        return line
+    return ""
 # The negation may sit one or two wrapped lines away from the positive-looking
 # phrase; markdown prose here wraps at ~100 columns mid-sentence.
 PHANTOM_NEGATION_WINDOW = 2
@@ -624,7 +664,8 @@ def lint_phantom_stream(root, findings):
                 continue
             window = "\n".join(lines[max(0, i - 1 - PHANTOM_NEGATION_WINDOW):
                                      i + PHANTOM_NEGATION_WINDOW])
-            if PHANTOM_NEGATIONS.search(window):
+            window = "\n".join([_phantom_list_lead_in(lines, i - 1), window])
+            if _phantom_negated(window):
                 continue
             if any(s in line for s in OWNED_STREAMS):
                 continue

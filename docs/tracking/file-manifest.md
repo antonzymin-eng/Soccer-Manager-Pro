@@ -1,6 +1,173 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 1, 2026 — **A2 selector type-ID canonicalization; planning/tooling only.**
+**Last Updated:** September 1, 2026 — **A2 closure condition 6 recorded: project-owner approval. Row 7 (landing) is all that remains.**
+The owner approved the candidate at `9954e90`, material subject digest `4160b164…` — the same subject
+`A2-RUN-011` reviewed at `1f0e68a`, unchanged since. The approval is bound to that digest and does not
+transfer: a change inside the material subject returns row 6 to PENDING, while excluded files (tracking
+prose, review ledger, CI configuration) may change without disturbing it. Row 7 remains: merge onto the
+base A3 builds on, verify the landed digest recomputes to `4160b164…`, then mark the record `CLOSED`.
+No run is `CONVERGED` and none carries `final_review`; that lock is tied to row 7. Plan → v0.31, closure
+record → v0.14. **A2 stays OPEN until the candidate lands; A3 stays BLOCKED.**
+Records only — no schema, executable semantics, fixture, finding, #19/#20 normative file, `src/`, `.cs`,
+`.asmdef`, gameplay, save, RNG, or tuning behavior changed; discovery holds at 166 tests.
+**Last Updated (prior):** September 1, 2026 — **A2 closure condition 4 is SATISFIED; rows 6 and 7 remain the owner's.**
+`A2-RUN-011`, an independent review of `1f0e68a` as pushed, returned **no findings** — the first round in
+this series after which nothing followed into the contract, which is what row 4 has required since its
+v0.4 retraction. The claim is machine-checked: material subject digest `4160b164…` recomputes identically
+from `1f0e68a` and from this tree, and `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree`
+refuses the cell otherwise. Post-review corrections are confined to files the material subject excludes by
+construction — the ledger run entry, tracking prose, and stale fixture names in a CI comment and closure
+record §1. A fixture pinning cited test names is deliberately not landed: it belongs to the material
+subject and would re-open row 4. Round 11 also verified Governance §3.3/§7.1 field alignment, unverified
+since v0.3, and independently confirmed `Spec hygiene checks` 166/166, 0 skipped. Plan → v0.30, closure
+record → v0.13; eleven runs and twenty-three findings in the ledger. Discovery unchanged at 166 tests.
+**Rows 6 and 7 remain PENDING and are not agent-satisfiable; A2 remains OPEN and A3 remains BLOCKED.**
+No frozen schema, executable semantics, #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save,
+RNG, or tuning behavior changed.
+**Last Updated (prior):** September 1, 2026 — **The CI provenance guard is now itself guarded. Test/workflow-adjacent; frozen semantics untouched.**
+`fetch-depth: 0` is one line whose deletion would silently return both history-dependent fixtures to
+skipping with the job still green. A missing-history condition is now a failure whenever
+`GITHUB_ACTIONS=true` (the CI marker as trigger, not an opt-in flag), with `GOVERNANCE_REQUIRE_HISTORY=1`
+arming it elsewhere; local skips preserved. All three skip paths route through one `unverifiable` helper.
+`test_the_ci_history_guard_is_not_inert` pins both directions and both triggers — `A2-R10-001`'s finding
+applied to the guard itself. Recorded consequence, measured at `1635aa3`: the publish→bind two-step must
+be pushed as a pair, since the equality regression now fails rather than skips at a publishing commit.
+No frozen executable semantics changed and no `REFERENCE_SEMANTICS_VERSION` bump is owed. Plan → v0.29,
+closure record → v0.12. Discovery runs 166 tests (149 governance + 9 lint + 8 assembly-tier).
+Shim gate: `MatchEngine.Tests` 472/1/11, the single failure being the owner-held-RED
+`sim_match_engine_close_chance` at its recorded values; this branch changes no `src/` file.
+**Row 4 remains PENDING; A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning behavior changed.
+**Last Updated (prior):** September 1, 2026 — **CI now runs the two provenance checks it had always skipped. Workflow/tracking only.**
+Both history-dependent fixtures — `test_every_recorded_digest_matches_the_revision_it_names` and
+`test_status_timestamps_equal_first_publication_commit_time` — skipped in every CI run of this candidate,
+because `Spec hygiene checks` used the `actions/checkout` default depth of 1. The digest chain and the
+timestamp equality rule the A2 record rests on had therefore been verified only on local full-history
+clones, never by the gate. `spec-hygiene` now sets `fetch-depth: 0`, that job alone; all ten
+ledger-named revisions were confirmed ancestors of the candidate head first. The shallow skip path stays
+correct and stays reachable — it is no longer the CI path. Integration plan → v0.28, closure record →
+v0.11. No fixture, schema, executable semantics, or finding changed; discovery holds at 165 tests across
+three suites. **Row 4 remains PENDING; A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, or tuning behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 round 10: the semantics version froze while the semantics changed. Planning/tooling only.**
+An independent review of `6bce84f` found that rounds 8 and 9 changed three admission rules while
+`REFERENCE_SEMANTICS_VERSION` stayed at `2.0.0` — a value that is an input to `subject_scope_digest` and
+is compared by equality in `assess_proof_freshness`. Advanced to `2.1.0` (MINOR, per the module's own
+`1.0.0 → 1.9.0` precedent), covering both rounds, with the versioning policy now stated at the constant.
+The existing pin did not help: it asserts the value is what it is, never that it moved when the semantics
+did. A new fixture locks the constant to every document citing it. §4 of the closure record now separates
+local full-history discovery (0 skipped) from shallow-CI discovery (2 history-dependent fixtures skip by
+design under `fetch-depth: 1`). The plan advances to v0.27 and the closure record to v0.10; the ledger
+carries ten runs and twenty-three findings. Discovery runs 165 tests across three suites (148 governance +
+9 lint + 8 assembly-tier) on full history. A round-11 independent pass is owed. **Row 4 remains PENDING;
+A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 round 9: the round-8 anti-ratchet fix was itself a regression. Planning/tooling only.**
+A verification pass over the round-8 corrections found that `A2-R8-001`'s fix rejected *every* baseline
+addition against a trusted prior, which also closed the `inactive → migration` edge §3.9 declares legal —
+leaving this repository's own `inactive`, empty baseline with no forward path. Reproduced against that
+committed document. Additions are now permitted only on that entry edge, which cannot be re-entered
+because no transition returns to `inactive`. It survived because round 8 pinned the illegitimate path
+failing and never the legitimate path still working, and because every `prior_baseline` fixture passed a
+*migration* prior. `A2-R9-002` (Low): the integration plan's header read v0.18 while its history stood at
+v0.25. The plan advances to v0.26 and `docs/tracking/a2-schema-semantics-closure.md` to v0.9; the ledger
+carries nine runs and twenty-two findings. Discovery runs 164 tests across three suites (147 governance +
+9 lint + 8 assembly-tier). Round 9 is **not independent** — same assistant as the round-8 remediation — so a
+round-10 independent pass is owed. **Row 4 remains PENDING; A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 round 8: three contract defects from the PR #347 automated review. Planning/tooling only.**
+The automated review on pull request #347 found three defects in the frozen contract itself — the first round
+since round 3 to do so rather than in the record-keeping. Activation-baseline additions were rejected only
+after sealing, so an unsealed migration baseline could ratchet indefinitely; a proof's executions were never
+bound to its subject digest, so unrelated evidence could certify it; and an `intentionally-disabled` contract
+with an empty `disable_anchor` passed the validator while the schema required three fields. All three are
+fixed and pinned. The integration plan advances to v0.25 and
+`docs/tracking/a2-schema-semantics-closure.md` to v0.8; rounds 7 and 8 are recorded in the ledger, which now
+carries eight rounds and twenty findings. Discovery runs 160 tests across three suites (143 governance + 9
+lint + 8 assembly-tier). **Row 4 remains PENDING; A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 review-record publication provenance corrected; planning/tooling only.**
+Integration plan v0.23 → v0.24 and A2 closure record v0.6 → v0.7. Durable review status `at` now means
+exactly the commit time where a finding first appears in the committed ledger; the regression requires equality
+to that publication time and separately proves publication is after the reviewed artifact. `A2-R6-001` is
+corrected from unsupported `20:29:43Z` to `c349fb6`'s `23:13:27Z`. Test count remains 156
+(139 governance + 9 lint + 8 assembly-tier). Row 4 remains PENDING. No frozen schema/semantics mechanism,
+#19/#20 normative file, `src/`, gameplay, save, RNG, or tuning behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 third independent review; condition 4 still open. Planning/tooling only.**
+A third independent pass over `7d4e949` found that round 5's timestamp fix had replaced fictional future
+times with fictional earlier ones: Open events were stamped at the commit time of the artifact reviewed,
+placing each discovery at or before the thing discovered, while resolutions were build times described as
+commit times. The exact review times are **not recoverable** and the ledger no longer pretends otherwise —
+`at` is now when a transition was RECORDED, derived from the commit that first published the finding, with
+reviewed and resolving revisions in `evidence`. The regression brackets every timestamp between the reviewed
+artifact and the publishing commit with a **strict** lower bound; a first cut used `>=` and a probe showed it
+missed the very defect it replaced. The integration plan advances v0.22 → v0.23 and
+`docs/tracking/a2-schema-semantics-closure.md` v0.5 → v0.6. Discovery runs 156 tests across three suites
+(139 governance + 9 lint + 8 assembly-tier). **Row 4 remains PENDING; A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 second independent review; condition 4 still open. Planning/tooling only.**
+A second independent pass over `5ebc3f7` found three issues, two of them in the round-4 remediation itself.
+Historical-digest verification could report PASS having checked only part of what its name claimed — it is now
+all-or-nothing and names the missing revisions. Round-4 status events were dated after the commit asserting
+them complete; every timestamp now derives from a real commit, with a regression rejecting future-dated
+history. `A2-R4-002`'s FR-AG citation is corrected. The round-digest distinctness assertion is dropped as an
+invariant governance does not require, and a self-referential test parameter removed. The integration plan
+advances v0.21 → v0.22 and `docs/tracking/a2-schema-semantics-closure.md` v0.4 → v0.5. Discovery runs 156
+tests across three suites (139 governance + 9 lint + 8 assembly-tier). **Row 4 remains PENDING and is now
+mechanically tied to the ledger; A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 condition 4 retracted after independent review; planning/tooling only.**
+The first independent review of this candidate found that condition 4 had been claimed before the artifact
+naming it was reviewed: round 3 reviewed `678f0f2`, the material subject then moved 150 lines, and `11547d4`
+itself was never reviewed. **Row 4 returns to PENDING**; a regression now fails if any round claims the current
+tree without a review of it, and round 3's digest is corrected to the tree it actually reviewed. Every recorded
+digest is now recomputed from the commit its scope names rather than only the latest. New
+`tools/tests/test_recurring_defect_lint.py` adds nine mixed positive/negative phantom-stream fixtures and pins
+the adjacent-negation bound. The integration plan advances v0.20 → v0.21 and
+`docs/tracking/a2-schema-semantics-closure.md` v0.3 → v0.4. Discovery runs 155 tests across three suites
+(138 governance + 9 lint + 8 assembly-tier). Conditions 1, 2, 3 and 5 stand; 4, 6 and 7 are open.
+**A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 closure conditions 1–5 satisfied; review recorded. Planning/tooling only.**
+Three review rounds now live in the durable `review-ledger.json` under series `A2-SCHEMA-FREEZE`, each bound
+to the material subject digest of the tree it reviewed, with nine findings all `Blocker`/`Resolved`. Round 3
+found and fixed `A2-R3-001`: a property registered under an `FR-CS-`/`FR-TS-` id captured that requirement's
+waiver routing, the crossing §3.6 forbids. `recurring-defect-lint.py` learns three legitimate ERR-041-012
+negation forms it was re-raising, verified against four constructed positives. The integration plan advances
+v0.19 → v0.20 and `docs/tracking/a2-schema-semantics-closure.md` v0.2 → v0.3 (new §8). Governance fixtures
+grow 128 → 137; with 8 assembly-tier fixtures, discovery runs 145 tests. Conditions 6 (owner approval) and 7
+(landing) are **not agent-satisfiable and remain PENDING**; **A2 remains OPEN and A3 remains BLOCKED.**
+No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 second-review remediation; planning/tooling only.**
+The second review confirmed the pushed candidate and the IP-5/stdlib claims, then raised five findings;
+three were closure blockers. New `tools/architecture-governance/schema_validator.py` is a bounded stdlib
+Draft 2020-12 validator behind a one-directional schema/semantics differential; `reference_semantics.py`
+gains `validate_proof_artifact` and fail-closed sentinel defaults on the review-ledger and baseline
+validators, and is restored to v2.0.0 by owner decision. All ten schemas pin a canonical `$id`. The
+integration plan advances v0.18 → v0.19 and `docs/tracking/a2-schema-semantics-closure.md` v0.1 → v0.2.
+Governance fixtures grow 104 → 128; with 8 assembly-tier fixtures, discovery runs 136 tests. **A2 remains
+OPEN and A3 remains BLOCKED.** No #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG,
+tuning, or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 review corrections and explicit OPEN closure gate; planning/tooling only.**
+The first review correctly found the candidate branch absent from GitHub and identified shared enum/control
+duplication plus an undefined A2 pass condition. The integration plan advances v0.17 → v0.18; new
+`docs/tracking/a2-schema-semantics-closure.md` v0.1 maps all eight categories to ten schemas and seven
+state registries, and records A2 OPEN / A3 BLOCKED pending fresh review, terminal findings, project-owner
+approval, matching digest, and landing. `reference_semantics.py` uses v1.10.0 (not the unpublished v2.0.0
+label) and consumes `common.schema.json` as the single machine source using stdlib only. Governance fixtures
+grow 102 → 104; with 8 assembly-tier fixtures, discovery runs 112 tests. No #19/#20 normative file, `src/`,
+`.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 canonical schemas and governance state; planning/tooling only.**
+Created `docs/tracking/architecture-governance/` with seven schema-v1.0.0 state artifacts and ten
+Draft 2020-12 schema documents (one shared definitions file plus classification, bootstrap, contracts,
+applicability, property, exception, proof, review, and baseline schemas). The integration plan advances
+v0.16 → v0.17 and records A2 COMPLETE. `reference_semantics.py` advances v1.9.0 → v2.0.0 with
+trusted-merge-base property transitions/history, exclusive exception routing, Disposition×Status and
+final-review convergence/freshness, and finite/empty-strict baseline semantics. Its suite grows 77 → 102
+fixtures; with 8 assembly-tier fixtures, `tools/tests/test_*.py` discovers 110 tests. Governance v0.10/A0
+and #19/#20 normative files are unchanged. No `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning,
+or CI-status behavior changed.
+**Last Updated (prior):** September 1, 2026 — **A2 selector type-ID canonicalization; planning/tooling only.**
 `docs/planning/project-architecture-governance-integration-plan.md` advances v0.15 → v0.16 and
 `tools/architecture-governance/reference_semantics.py` v1.8.0 → v1.9.0. Selector type IDs are now
 normatively pinned to the C# XML documentation ID type-signature convention emitted from compiler symbols,
@@ -2312,9 +2479,11 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `tools/run-perf-local.sh` | Stage 0 local pre-commit perf-gate runbook (Appendix E / FR-PO-070): runs budget-auditor.py schema + loop-tag passes, then invokes perf-harness/run.sh for anchor baselines; reviewer pastes output into PR description (FR-PO-071) |
 | `tools/budget-auditor.py` | §5.3 schema-conformance auditor + §5.5 loop-tag auditor (FR-PO-070): walks every approved spec §6 against Appendix B template; reports missing sections and untagged ms values as ERR-018-NNN candidates; `--mode schema\|loop-tag\|all` |
 | `tools/assembly-tier-check.py` | Mechanical guard and single authoritative parser for Spec #20 §3.5.2 / FR-CS-046/046a/046b. Human mode preserves the existing placement/direction/Infrastructure/unknown-reference/production-cycle verdict; v1.5 added deterministic `--json` complete-graph evidence and graph/classification/subject digests; v1.6 unifies machine-report/digest finite-JSON serialization and rejects NaN/Infinity. `python3 tools/assembly-tier-check.py --repo .` or `--json`; exit 0 pass / 1 policy failure / 2 unparseable. Created August 17, 2026; v1.6 August 31, 2026. |
+| `tools/tests/test_recurring_defect_lint.py` | Stdlib `unittest` fixtures for `recurring-defect-lint.py`'s ERR-041-012 phantom-stream class, using **mixed** positive/negative context rather than isolated cases — isolated positives cannot show where a line-window negation heuristic over-suppresses. Nine fixtures cover the four positive shapes, the three negation forms the September 2026 pass taught it (markdown-emphasised, `does not … registered`, an inherited non-goals list lead-in), and the adjacent-negation suppression bound, pinned explicitly: it pre-dates that pass and narrowing the window to zero re-raises three genuinely wrapped negations, so the trade is deliberate. Created September 1, 2026. |
 | `tools/tests/test_assembly_tier_check.py` | Stdlib `unittest` regression suite for assembly-tier-check v1.6 machine-report semantics; 8 fixtures cover classification-aware digest movement, §3.5.2 title churn, FR-CS-046b binding, test-only graph behavior, stray root-level asmdefs, JSON CLI parity, and non-finite digest rejection. Discovered by `tools/tests/test_*.py` in `Spec hygiene checks`. Created August 29, 2026. |
-| `tools/architecture-governance/reference_semantics.py` | A2 executable reference semantics v1.9.0 over typed compiler/repository facts. Selector type IDs are pinned to C# XML documentation ID type-signature spelling, including byref `@`, so legal overloads remain distinct without a parallel ref-kind field. Defines closed selector/identity/activation/KD-W1 semantics; shared typed enum validation for untrusted JSON; deterministic applicability with required strict-mode Governance §5.2 subject `change_type`, optional rule `change_types` filters ordered by set specificity without crossing surface precedence, explicit non-strict incomplete-context diagnostics, exactly four Governance proof classes, persistence/resource closure driven only by evaluated change context, closure/freshness and conservative changed-surface rerun semantics, and unchanged seven-state execution truth with `ExecutionError`. It does not parse C# source. Created August 31, 2026; v1.9.0 September 1, 2026. |
-| `tools/tests/test_architecture_governance_semantics.py` | Stdlib `unittest` suite for A2 reference semantics; 77 fixtures cover selector/identity/activation/KD-W1, XML-doc type-ID overload identity including value-vs-byref, unhashable enum validation across semantics domains, required applicability change context, rule change-type matching/set-specificity precedence, explicit non-strict incomplete-context diagnostics, exact four-proof authority, conditional persistence/resource closure, context-driven proof freshness, closure-aware changed-surface decisions, typed execution errors/bounded-substitute restrictions, and the pinned semantics version. Discovered by `tools/tests/test_*.py` in `Spec hygiene checks`. Created August 31, 2026. |
+| `tools/architecture-governance/reference_semantics.py` | A2 executable reference semantics v2.1.0 over typed compiler/repository facts. Retains selector/identity/activation/KD-W1, applicability, four-class proof closure/freshness, changed-surface, and execution-truth semantics; adds schema-v1 validation, trusted-merge-base property transitions/history, exclusive property-vs-#19/#20 exception routing, Governance Disposition×Status/review convergence and freshness, and finite activation-baseline transitions. Shared enums/transitions/fallback/relation groups are consumed from canonical `common.schema.json` using stdlib only, not restated in Python. Adds `validate_proof_artifact`, so every frozen §3.1 machine contract has an executable counterpart, binding the per-proof record to execution truth. The review-ledger and activation-baseline validators fail closed on an omitted trusted prior, live violation set, or current final-review digest; `None` remains the positive "no prior existed" claim and `strict_activation` still defaults off because it adds a requirement rather than relaxing one. v2.0.0 was a major bump because the module now raises at import without `common.schema.json`; MINOR covers any change to what the semantics accept or reject, and v2.1.0 carries the round-8/9 changes to baseline admission, proof execution/subject binding, and disable-anchor validation. That value is an input to `subject_scope_digest` and is compared by equality in `assess_proof_freshness`, so the policy is stated at the constant itself. It does not parse C# source. Created August 31, 2026; v2.0.0 September 1, 2026; v2.1.0 September 1, 2026. |
+| `tools/architecture-governance/schema_validator.py` | Bounded JSON Schema Draft 2020-12 validator covering exactly the keyword subset the ten canonical governance schemas use, so the frozen shapes and the executable semantics can be differentially tested without adding a third-party dependency to the pure-stdlib `Spec hygiene checks` job. Deliberately NOT general purpose: any keyword outside `SUPPORTED_KEYWORDS` raises `UnsupportedKeyword` rather than being ignored, because a silently skipped keyword would make every differential pass vacuously — the exact failure mode it exists to prevent. Resolves `$ref` by RFC 3986 resolution against each schema's `$id`, and refuses to load a schema set in which any document omits one. Created September 1, 2026. |
+| `tools/tests/test_architecture_governance_semantics.py` | Stdlib `unittest` suite for A2 reference semantics; 149 fixtures cover the prior selector/identity/activation/applicability/proof/execution surface plus canonical schema/seed parsing, cross-schema references, single-source control data, stdlib-only imports, unknown schema majors, property history/metadata, exception routing, review state/freshness, and finite/empty-strict baselines, plus the per-proof artifact contract, the fail-closed sentinel defaults, schema `$id`/URI reference resolution, the bounded validator's keyword-coverage and non-vacuity guards, the one-directional schema/semantics differential, and a header/version-history coherence pin on the two governance planning documents that `recurring-defect-lint` does not scan. Discovered by `tools/tests/test_*.py` in `Spec hygiene checks`. Created August 31, 2026. |
 | `tools/recurring-defect-lint.py` | Seven-class recurring-defect linter over the working tree (FR-CS-056/057 `src/**.cs` header + version-history hygiene; spec/design-supplement header-vs-version-table coherence; the ERR-041-012 phantom registered-stream residue; ERR-041-019 draw-key spellings; stale forward-design claims; plus two further classes — see its own header). Pure text analysis: never compiles, never runs the .NET gate, never writes. `python3 tools/recurring-defect-lint.py --repo .`; exit 0 = no ERROR finding. The gate line "recurring-defect-lint: 0 ERROR" quoted across this file's entries is this tool. Created August 8, 2026; inventoried August 18, 2026 (checker-tools pass — it had carried no inventory row anywhere for ten days). |
 | `tools/recurring-defect-lint.suppressions` | The lint's documented, deliberately-frozen residuals — a suppressed finding still prints as INFO with its reason, so nothing disappears silently. Format: `<path-glob>:<regex> # reason`, the reason required to cite an ERR id, a pass, or a governance rule; a suppression asserts the finding is CORRECT AS IT STANDS, never that it is unimportant. Entries as of August 18, 2026: the three frozen-supplement promotion-row inversions, the #16 §3.5 dual-v1.0.14 back-prop collision, and a PRE-ARMED block guarding CHANGELOG-src/`section-3.md`/design-supplement rows the current scan scope does not reach, so widening that scope later does not re-raise a collision already decided. Created August 8, 2026 alongside the lint itself; inventoried here August 18, 2026 (reviewed-findings pass — carried no inventory row of its own since creation). |
 | `tools/chat-review.py` | Claude Code session analyzer: reads local `~/.claude/projects/<slug>/*.jsonl` transcripts and emits an actionable-findings JSON document consumed by the chat-review artifact dashboard (`--out PATH`, `--repo .` for repo-side measures, `--since N` days). Quiet-by-default contract — a finding is emitted only when its threshold trips, so a clean run emits `"findings": []` rather than manufacturing something to say. No network, no API key, no model call; pure local measurement. Created July 31, 2026; inventoried August 18, 2026 (reviewed-findings pass — carried no inventory row anywhere since creation). |
@@ -2895,6 +3064,24 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 | `docs/tracking/file-manifest.md` | This manifest |
 | `docs/tracking/a0-governance-adoption-review.md` | A0 review-level evidence for Project Architecture Governance: reviewed subject digests, reviewer identity, scope/method, finding ledger, §9.1–§9.6 discharge, owner approval, and A0 CLOSED state |
 | `docs/tracking/a0-governance-consistency-audit.md` | Systematic A0 governance consistency audit: exhaustive 47-FR modality matrix plus schema/enum/transition/terminology comparison and hostile-review closure corrections |
+| `docs/tracking/a2-schema-semantics-closure.md` | A2 seven-condition closure record: eight-category/ten-schema/seven-registry scope map, exact test split, IP-5/stdlib evidence, fresh-review and finding gates, non-delegable owner approval, approved subject digest, and landing state. v0.1 OPEN; A3 BLOCKED. |
+| `docs/tracking/architecture-governance/runtime-surface-classifications.json` | Schema-v1 durable classification-intent registry; seeded empty for A4 compiler-backed population. |
+| `docs/tracking/architecture-governance/integration-contracts.json` | Schema-v1 typed lifecycle/activation contract registry; seeded empty for A4 state seeding. |
+| `docs/tracking/architecture-governance/applicability-rules.json` | Schema-v1 deterministic applicability-rule registry; seeded empty pending the coordinated A3 authority bundle. |
+| `docs/tracking/architecture-governance/property-registry.json` | Schema-v1 architectural-property registry with append-only decision and revalidation history; seeded empty. |
+| `docs/tracking/architecture-governance/exceptions.json` | Schema-v1 Governance §7 property-exception registry; seeded empty. FR-CS/FR-TS waivers remain owner-specific. |
+| `docs/tracking/architecture-governance/review-ledger.json` | Schema-v1 durable run/finding review ledger with read-only/no-inference legacy policy. **No longer an empty seed:** carries the A2 review series `A2-SCHEMA-FREEZE` — eleven runs, each bound to the material subject digest of the tree it actually reviewed, and twenty-three findings all `Blocker`/`Resolved`. `DurableReviewLedgerTests` recomputes the latest round's digest, so the closure record's digest bundle is verifiable rather than asserted. Append-only; A6 migrates the historical prose records into it. |
+| `docs/tracking/architecture-governance/temporary-activation-baseline.json` | Schema-v1 finite activation baseline; seeded inactive and empty. Strict activation requires strict/sealed/empty state. |
+| `docs/tracking/architecture-governance/schemas/common.schema.json` | Draft 2020-12 schema-v1 definitions plus the single machine source for shared enums, transition maps, fallback maps, and dependency-relation groups consumed directly by `reference_semantics.py`. |
+| `docs/tracking/architecture-governance/schemas/runtime-surface-classifications.schema.json` | Canonical runtime-surface classification-intent schema. |
+| `docs/tracking/architecture-governance/schemas/bootstrap-runtime-surfaces.schema.json` | Canonical finite A4 bootstrap-intent schema; no live bootstrap artifact is created by A2. |
+| `docs/tracking/architecture-governance/schemas/integration-contracts.schema.json` | Canonical typed lifecycle, activation-state, disable-anchor, and tuning-selector contract schema. |
+| `docs/tracking/architecture-governance/schemas/applicability-rules.schema.json` | Canonical applicability-rule schema over selector/surface/change-context specificity and four Governance proof classes. |
+| `docs/tracking/architecture-governance/schemas/property-registry.schema.json` | Canonical Governance §3.3 property and decision/revalidation-history schema. |
+| `docs/tracking/architecture-governance/schemas/exceptions.schema.json` | Canonical Governance §7 property-exception schema. |
+| `docs/tracking/architecture-governance/schemas/proof-artifact.schema.json` | Canonical reusable four-class proof artifact schema with execution truth, closure, freshness, and conditional perturbation records. |
+| `docs/tracking/architecture-governance/schemas/review-ledger.schema.json` | Canonical durable review-run/finding/status-history schema. |
+| `docs/tracking/architecture-governance/schemas/temporary-activation-baseline.schema.json` | Canonical finite activation-baseline schema; strict state is sealed and mechanically empty. |
 | `docs/tracking/football-judgment-proxy-review.md` | **FINDINGS LOG + REMEDIATION DOCTRINE** (Aug 4, 2026) — the football-judgment proxy review: all 53 APPROVED specs read for the ERR-008-019 defect shape (a continuous football judgment collapsed into bare geometry, a hard threshold, or a small raw-attribute set); 34 findings across **19** specs (2 since fixed: `ERR-008-020`, `ERR-008-019`), **34** specs clean — spec counts corrected Aug 21, 2026 from 24/29 and the fixed count from 1; see the review's §5 note. §6 (added same day, owner-converged) is the remediation doctrine every fix must cite: P1 continuous-never-cliff, P2 skill-as-discrimination-fidelity, P3 the attribute ownership ledger (Vision = on-ball recognition; no new attribute), P4 intent-as-first-class-object (pass-to-space, run signaling, routine targets), P5 chain calibration pivoted on today's baseline (KD-W1); finding classes (formula-patch / mechanism / governance), the §3.1.3.3 pass-lane template fix (chosen, not yet implemented), and the pairwise-familiarity gap ; **§6.3.1 (Aug 22, 2026)** adds the LANDING ORDER for the workable 24 — six batches derived from wiring state (W2 built but disabled, `TackleContactRadiusM` = 0), design-supplement serialization, and calibration batching, explicitly not from guessed football impact |
 | `docs/tracking/advanced-positional-behaviors-design.md` | Design supplement (v0.4, Jul 8, 2026 — PROMOTED) — dismarking, scripted build-up structures, positional rotations; promoted to specs #23–#25 (`dismarking-ai/`, `build-up-structures/`, `positional-rotations/`, all APPROVED Jul 10, 2026); superseded by the specs on deviation |
 | `docs/tracking/game-model-ai-manager-design.md` | Design supplement (v0.5, Jul 8, 2026 — PROMOTED) — tactical preset library + AI-manager selection/adaptation; promoted to spec #26 (`tactical-presets/`, APPROVED Jul 10, 2026); superseded by the spec on deviation |

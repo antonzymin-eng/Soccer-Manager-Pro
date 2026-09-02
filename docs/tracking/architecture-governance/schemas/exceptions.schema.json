@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.tactical-director.internal/architecture-governance/exceptions.schema.json",
+  "title": "Architecture Governance Exception Registry v1",
+  "type": "object",
+  "required": ["schema_version", "exceptions"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "exception_id", "property_id", "scope", "reason", "risk", "mitigation",
+          "owner", "expiry_trigger", "approval", "status"
+        ],
+        "properties": {
+          "exception_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "property_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "scope": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "common.schema.json#/$defs/scopeBinding" },
+            "uniqueItems": true
+          },
+          "reason": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "risk": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "mitigation": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "owner": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "expiry_trigger": { "$ref": "common.schema.json#/$defs/expiryTrigger" },
+          "approval": { "$ref": "common.schema.json#/$defs/decision" },
+          "status": { "$ref": "common.schema.json#/$defs/exceptionStatus" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

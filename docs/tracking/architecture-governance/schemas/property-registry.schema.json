@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.tactical-director.internal/architecture-governance/property-registry.schema.json",
+  "title": "Architecture Property Registry v1",
+  "type": "object",
+  "required": ["schema_version", "properties"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "properties": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/property" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "property": {
+      "type": "object",
+      "required": [
+        "property_id", "title", "state", "statement", "failure_mode", "scope",
+        "non_scope", "authority", "evidence", "enforcement_class", "activation",
+        "exceptions_allowed", "supersedes", "decision_rationale", "last_reviewed",
+        "decision_history", "revalidation_history"
+      ],
+      "properties": {
+        "property_id": {
+          "allOf": [
+            { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+            { "not": { "pattern": "^FR-(CS|TS)-" } }
+          ]
+        },
+        "title": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "state": { "$ref": "common.schema.json#/$defs/propertyState" },
+        "statement": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "failure_mode": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "scope": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
+        "non_scope": { "$ref": "common.schema.json#/$defs/stringList" },
+        "authority": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "evidence": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
+        "enforcement_class": { "$ref": "common.schema.json#/$defs/enforcementClass" },
+        "activation": { "$ref": "common.schema.json#/$defs/propertyActivation" },
+        "exceptions_allowed": { "type": "boolean" },
+        "exception_mechanism": { "const": "governance-exception" },
+        "supersedes": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+          ]
+        },
+        "decision_rationale": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "last_reviewed": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "decision_history": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/propertyDecision" }
+        },
+        "revalidation_history": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/revalidation" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "exceptions_allowed": { "const": true } } },
+          "then": { "required": ["exception_mechanism"] },
+          "else": { "not": { "required": ["exception_mechanism"] } }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "propertyDecision": {
+      "type": "object",
+      "required": [
+        "decision_id", "decision_actor", "transition_from", "transition_to",
+        "decision_rationale", "decided_at"
+      ],
+      "properties": {
+        "decision_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "decision_actor": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "transition_from": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "common.schema.json#/$defs/propertyState" }
+          ]
+        },
+        "transition_to": { "$ref": "common.schema.json#/$defs/propertyState" },
+        "decision_rationale": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "decided_at": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "decision_provenance_revision": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "revalidation": {
+      "type": "object",
+      "required": [
+        "revalidation_id", "decision_actor", "reviewed_at", "subject_scope_digest",
+        "outcome", "decision_rationale"
+      ],
+      "properties": {
+        "revalidation_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "decision_actor": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "reviewed_at": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "subject_scope_digest": { "$ref": "common.schema.json#/$defs/sha256" },
+        "outcome": { "$ref": "common.schema.json#/$defs/revalidationOutcome" },
+        "decision_rationale": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "decision_provenance_revision": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -55,6 +55,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history, for this job only. Two governance fixtures resolve
+          # revisions named in review-ledger.json --
+          # test_every_round_digest_recomputes_from_the_tree_it_names and
+          # test_status_timestamps_equal_first_publication_commit_time. At the
+          # default depth 1 they SKIP, correctly and loudly (A2-R5-001 made that
+          # all-or-nothing), which meant the provenance chain the A2 record rests
+          # on was only ever verified on someone's local clone and never in CI.
+          # A green badge is not evidence of a check that never ran.
+          fetch-depth: 0
       - name: Stale spec numbers (Decision Tree must be #8, not #7)
         run: |
           set -e

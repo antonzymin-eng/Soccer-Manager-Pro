@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.tactical-director.internal/architecture-governance/applicability-rules.schema.json",
+  "title": "Architecture Governance Applicability Rules v1",
+  "type": "object",
+  "required": ["schema_version", "rules"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "rule_id", "selectors", "component_ids", "assemblies", "classifications",
+          "activation_states", "trigger_ref", "change_types", "requirement_refs",
+          "proof_classes", "gate_classes", "allowed_na_reasons", "precedence",
+          "fallback_scope"
+        ],
+        "properties": {
+          "rule_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "selectors": {
+            "type": "array",
+            "items": { "$ref": "common.schema.json#/$defs/selector" },
+            "uniqueItems": true
+          },
+          "component_ids": { "$ref": "common.schema.json#/$defs/stringList" },
+          "assemblies": { "$ref": "common.schema.json#/$defs/stringList" },
+          "classifications": {
+            "type": "array",
+            "items": { "$ref": "common.schema.json#/$defs/structuralClassification" },
+            "uniqueItems": true
+          },
+          "activation_states": {
+            "type": "array",
+            "items": { "$ref": "common.schema.json#/$defs/activationState" },
+            "uniqueItems": true
+          },
+          "trigger_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+          "change_types": {
+            "type": "array",
+            "items": { "$ref": "common.schema.json#/$defs/changeType" },
+            "uniqueItems": true
+          },
+          "requirement_refs": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
+          "proof_classes": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "common.schema.json#/$defs/proofClass" },
+            "uniqueItems": true
+          },
+          "gate_classes": { "$ref": "common.schema.json#/$defs/stringList", "minItems": 1 },
+          "allowed_na_reasons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["reason_code", "approval_required"],
+              "properties": {
+                "reason_code": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+                "approval_required": { "type": "boolean" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "precedence": { "type": "integer" },
+          "fallback_scope": {
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "common.schema.json#/$defs/fallbackScope" }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

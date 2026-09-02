@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.tactical-director.internal/architecture-governance/common.schema.json",
+  "title": "Architecture Governance Common Types v1",
+  "x-governance-control-data": {
+    "schema_version": "1.0.0",
+    "foreign_requirement_prefixes": ["FR-CS-", "FR-TS-"],
+    "foreign_requirement_id_pattern": "^FR-(CS|TS)-",
+    "property_transitions": [
+      ["Candidate", "Admitted"],
+      ["Candidate", "Rejected"],
+      ["Admitted", "Superseded"],
+      ["Admitted", "Retired"],
+      ["Rejected", "Candidate"],
+      ["Superseded", "Retired"]
+    ],
+    "disposition_terminal_status": {
+      "Blocker": "Resolved",
+      "Accepted Tradeoff": "Accepted",
+      "Residual Risk": "Recorded",
+      "Candidate Property": "In property process"
+    },
+    "baseline_mode_transitions": [
+      ["inactive", "migration"],
+      ["inactive", "strict"],
+      ["migration", "strict"]
+    ],
+    "fallback_classifications": {
+      "repository": [
+        "production-runtime-root", "contracted-child", "test-only", "tooling-only",
+        "generated-or-external", "non-runtime-bearing"
+      ],
+      "runtime-bearing": ["production-runtime-root", "contracted-child"],
+      "non-runtime-bearing": [
+        "test-only", "tooling-only", "generated-or-external", "non-runtime-bearing"
+      ]
+    },
+    "fallback_precedence": {
+      "repository": 0,
+      "runtime-bearing": 1,
+      "non-runtime-bearing": 1
+    },
+    "persistence_change_types": [
+      "persistence-boundary", "external-resource-dependency"
+    ],
+    "dependency_relation_groups": {
+      "common": [
+        "requires", "contract", "root", "tool-semantic", "extractor-semantic",
+        "configuration"
+      ],
+      "structural": [
+        "construction", "registration", "public-surface", "bypass-surface",
+        "assembly-reference"
+      ],
+      "lifecycle": [
+        "lifecycle-member", "ordering", "synchronization", "thread-affinity",
+        "testhost-equivalent"
+      ],
+      "persistence": ["serializer", "schema", "resource"],
+      "executable": ["target", "test", "fixture", "runner", "environment"]
+    }
+  },
+  "$defs": {
+    "currentSchemaVersion": { "const": "1.0.0" },
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "selectorKind": {
+      "enum": ["namespace", "type", "constructor", "method", "field", "property", "event"]
+    },
+    "structuralClassification": {
+      "enum": [
+        "production-runtime-root", "contracted-child", "test-only", "tooling-only",
+        "generated-or-external", "non-runtime-bearing"
+      ]
+    },
+    "fallbackScope": {
+      "enum": ["repository", "runtime-bearing", "non-runtime-bearing"]
+    },
+    "activationState": {
+      "enum": ["active", "intentionally-disabled", "pending-integration", "unresolved"]
+    },
+    "valueType": {
+      "enum": ["boolean", "integer", "number", "string", "enum", "null"]
+    },
+    "anchorOperator": { "enum": ["equals", "not-equals"] },
+    "propertyState": {
+      "enum": ["Candidate", "Admitted", "Superseded", "Retired", "Rejected"]
+    },
+    "enforcementClass": { "enum": ["Machine", "Hybrid", "Judgment"] },
+    "propertyActivation": { "enum": ["Immediate", "Staged"] },
+    "disposition": {
+      "enum": ["Blocker", "Accepted Tradeoff", "Residual Risk", "Candidate Property"]
+    },
+    "findingStatus": {
+      "enum": ["Open", "Resolved", "Accepted", "Recorded", "In property process"]
+    },
+    "reviewState": { "enum": ["IN_PROGRESS", "CONVERGED", "NON-CONVERGED"] },
+    "baselineMode": { "enum": ["inactive", "migration", "strict"] },
+    "expiryTriggerType": { "enum": ["date", "milestone", "condition"] },
+    "exceptionStatus": { "enum": ["active", "expired", "revoked"] },
+    "propertyResult": { "enum": ["pass", "fail", "na"] },
+    "proofResult": { "enum": ["pass", "fail", "na", "bounded"] },
+    "severity": { "enum": ["Critical", "High", "Medium", "Low"] },
+    "revalidationOutcome": { "enum": ["confirmed", "amended", "reopened"] },
+    "proofClass": {
+      "enum": ["structural-reachability", "lifecycle-order", "failure-injection", "mutation"]
+    },
+    "changeType": {
+      "enum": [
+        "pure-local-calculation", "new-public-cross-assembly-api", "new-runtime-service",
+        "new-composition-root-registration", "host-bootstrap-change",
+        "static-initialization-change", "persistence-boundary",
+        "external-resource-dependency", "testhost-runtime-divergence-fix",
+        "dependency-graph-only-refactor", "pure-data-schema-no-runtime-behavior"
+      ]
+    },
+    "executionState": {
+      "enum": [
+        "passed", "failed", "skipped", "excluded", "unavailable", "not-run",
+        "runner-failed"
+      ]
+    },
+    "dependencyKind": {
+      "enum": [
+        "requirement", "property", "contract", "runtime-root", "symbol",
+        "public-surface", "bypass-surface", "asmdef", "lifecycle",
+        "synchronization", "testhost", "serializer", "schema", "resource",
+        "configuration", "test", "fixture", "runner", "environment", "tool",
+        "extractor"
+      ]
+    },
+    "dependencyRelation": {
+      "enum": [
+        "requires", "contract", "root", "tool-semantic", "extractor-semantic",
+        "configuration", "construction", "registration", "public-surface",
+        "bypass-surface", "assembly-reference", "lifecycle-member", "ordering",
+        "synchronization", "thread-affinity", "testhost-equivalent", "serializer",
+        "schema", "resource", "target", "test", "fixture", "runner", "environment"
+      ]
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "stringList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" },
+      "uniqueItems": true
+    },
+    "selector": {
+      "description": "selector-v1; every type ID uses C# XML documentation ID type-signature spelling, including @ for by-reference parameters",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "namespace"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "const": "namespace" },
+            "namespace": { "$ref": "#/$defs/nonEmptyString" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "type_id"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "const": "type" },
+            "type_id": { "$ref": "#/$defs/nonEmptyString" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "containing_type_id", "parameter_type_ids", "is_static"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "const": "constructor" },
+            "containing_type_id": { "$ref": "#/$defs/nonEmptyString" },
+            "parameter_type_ids": { "$ref": "#/$defs/stringList" },
+            "is_static": { "type": "boolean" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "is_static": { "const": true } } },
+              "then": { "properties": { "parameter_type_ids": { "maxItems": 0 } } }
+            }
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "containing_type_id", "member_name", "parameter_type_ids", "generic_arity", "is_static"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "const": "method" },
+            "containing_type_id": { "$ref": "#/$defs/nonEmptyString" },
+            "member_name": { "$ref": "#/$defs/nonEmptyString" },
+            "parameter_type_ids": { "$ref": "#/$defs/stringList" },
+            "generic_arity": { "type": "integer", "minimum": 0 },
+            "is_static": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "containing_type_id", "member_name", "parameter_type_ids", "is_static"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "const": "property" },
+            "containing_type_id": { "$ref": "#/$defs/nonEmptyString" },
+            "member_name": { "$ref": "#/$defs/nonEmptyString" },
+            "parameter_type_ids": { "$ref": "#/$defs/stringList" },
+            "is_static": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["assembly", "kind", "containing_type_id", "member_name", "is_static"],
+          "properties": {
+            "assembly": { "$ref": "#/$defs/nonEmptyString" },
+            "kind": { "enum": ["field", "event"] },
+            "containing_type_id": { "$ref": "#/$defs/nonEmptyString" },
+            "member_name": { "$ref": "#/$defs/nonEmptyString" },
+            "is_static": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "typedValue": {
+      "type": "object",
+      "required": ["value_type", "value"],
+      "properties": {
+        "value_type": { "$ref": "#/$defs/valueType" },
+        "value": {},
+        "enum_type_id": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "scopeBinding": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["component_id"],
+          "properties": { "component_id": { "$ref": "#/$defs/nonEmptyString" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["selector"],
+          "properties": { "selector": { "$ref": "#/$defs/selector" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["source_path"],
+          "properties": { "source_path": { "$ref": "#/$defs/nonEmptyString" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["host_id"],
+          "properties": { "host_id": { "$ref": "#/$defs/nonEmptyString" } },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "expiryTrigger": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "$ref": "#/$defs/expiryTriggerType" },
+        "value": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "decision": {
+      "type": "object",
+      "required": ["decision_id", "decision_actor", "decided_at"],
+      "properties": {
+        "decision_id": { "$ref": "#/$defs/nonEmptyString" },
+        "decision_actor": { "$ref": "#/$defs/nonEmptyString" },
+        "decided_at": { "$ref": "#/$defs/nonEmptyString" },
+        "decision_provenance_revision": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
