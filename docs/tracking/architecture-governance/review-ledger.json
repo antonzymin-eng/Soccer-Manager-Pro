@@ -240,6 +240,32 @@
       "convergence_state": "NON-CONVERGED",
       "final_review": false,
       "round_budget_exhausted": false
+    },
+    {
+      "review_run_id": "A2-RUN-011",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate at 1f0e68a as pushed on pull request #347",
+        "Independent review of the round-10 remediation and the CI-history hardening"
+      ],
+      "subject_scope_digest": "4160b1644ebe75f771f01d7f1db67278126c827849c6e0da35657eb37d454254",
+      "review_round": 11,
+      "reviewer_identity": "Independent reviewer, separate from the party that produced the round-9, round-10 and CI-hardening remediation",
+      "coverage": [
+        "Governance 3.3 property fields against the frozen schemas and semantics",
+        "Governance 7.1 exception fields against the frozen schemas and semantics",
+        "the round-10 REFERENCE_SEMANTICS_VERSION remediation",
+        "the CI-history hardening and its arming fixture",
+        "Spec hygiene checks discovery, independently confirmed 166/166 with 0 skipped"
+      ],
+      "unverified_surfaces": [
+        "line-by-line reading of every validator branch",
+        "stale test-name commentary in tracking prose and the CI workflow, judged non-blocking by this round and corrected after it in excluded files only"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "NON-CONVERGED",
+      "final_review": false,
+      "round_budget_exhausted": false
     }
   ],
   "findings": [

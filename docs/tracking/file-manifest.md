@@ -1,6 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 1, 2026 — **The CI provenance guard is now itself guarded. Test/workflow-adjacent; frozen semantics untouched.**
+**Last Updated:** September 1, 2026 — **A2 closure condition 4 is SATISFIED; rows 6 and 7 remain the owner's.**
+`A2-RUN-011`, an independent review of `1f0e68a` as pushed, returned **no findings** — the first round in
+this series after which nothing followed into the contract, which is what row 4 has required since its
+v0.4 retraction. The claim is machine-checked: material subject digest `4160b164…` recomputes identically
+from `1f0e68a` and from this tree, and `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree`
+refuses the cell otherwise. Post-review corrections are confined to files the material subject excludes by
+construction — the ledger run entry, tracking prose, and stale fixture names in a CI comment and closure
+record §1. A fixture pinning cited test names is deliberately not landed: it belongs to the material
+subject and would re-open row 4. Round 11 also verified Governance §3.3/§7.1 field alignment, unverified
+since v0.3, and independently confirmed `Spec hygiene checks` 166/166, 0 skipped. Plan → v0.30, closure
+record → v0.13; eleven runs and twenty-three findings in the ledger. Discovery unchanged at 166 tests.
+**Rows 6 and 7 remain PENDING and are not agent-satisfiable; A2 remains OPEN and A3 remains BLOCKED.**
+No frozen schema, executable semantics, #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save,
+RNG, or tuning behavior changed.
+**Last Updated (prior):** September 1, 2026 — **The CI provenance guard is now itself guarded. Test/workflow-adjacent; frozen semantics untouched.**
 `fetch-depth: 0` is one line whose deletion would silently return both history-dependent fixtures to
 skipping with the job still green. A missing-history condition is now a failure whenever
 `GITHUB_ACTIONS=true` (the CI marker as trigger, not an opt-in flag), with `GOVERNANCE_REQUIRE_HISTORY=1`
@@ -3046,7 +3060,7 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 | `docs/tracking/architecture-governance/applicability-rules.json` | Schema-v1 deterministic applicability-rule registry; seeded empty pending the coordinated A3 authority bundle. |
 | `docs/tracking/architecture-governance/property-registry.json` | Schema-v1 architectural-property registry with append-only decision and revalidation history; seeded empty. |
 | `docs/tracking/architecture-governance/exceptions.json` | Schema-v1 Governance §7 property-exception registry; seeded empty. FR-CS/FR-TS waivers remain owner-specific. |
-| `docs/tracking/architecture-governance/review-ledger.json` | Schema-v1 durable run/finding review ledger with read-only/no-inference legacy policy. **No longer an empty seed:** carries the A2 review series `A2-SCHEMA-FREEZE` — ten runs, each bound to the material subject digest of the tree it actually reviewed, and twenty-three findings all `Blocker`/`Resolved`. `DurableReviewLedgerTests` recomputes the latest round's digest, so the closure record's digest bundle is verifiable rather than asserted. Append-only; A6 migrates the historical prose records into it. |
+| `docs/tracking/architecture-governance/review-ledger.json` | Schema-v1 durable run/finding review ledger with read-only/no-inference legacy policy. **No longer an empty seed:** carries the A2 review series `A2-SCHEMA-FREEZE` — eleven runs, each bound to the material subject digest of the tree it actually reviewed, and twenty-three findings all `Blocker`/`Resolved`. `DurableReviewLedgerTests` recomputes the latest round's digest, so the closure record's digest bundle is verifiable rather than asserted. Append-only; A6 migrates the historical prose records into it. |
 | `docs/tracking/architecture-governance/temporary-activation-baseline.json` | Schema-v1 finite activation baseline; seeded inactive and empty. Strict activation requires strict/sealed/empty state. |
 | `docs/tracking/architecture-governance/schemas/common.schema.json` | Draft 2020-12 schema-v1 definitions plus the single machine source for shared enums, transition maps, fallback maps, and dependency-relation groups consumed directly by `reference_semantics.py`. |
 | `docs/tracking/architecture-governance/schemas/runtime-surface-classifications.schema.json` | Canonical runtime-surface classification-intent schema. |

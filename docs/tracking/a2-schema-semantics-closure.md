@@ -1,8 +1,8 @@
 # A2 Schema and Executable-Semantics Closure Record
 
 **Document Class:** Stage-gate evidence record\
-**Status:** OPEN — implemented candidate; review and owner approval pending\
-**Version:** 0.12\
+**Status:** OPEN — implemented candidate, independently reviewed clean; owner approval and landing pending\
+**Version:** 0.13\
 **Created:** September 1, 2026\
 **Owning plan:** `docs/planning/project-architecture-governance-integration-plan.md` §11 A2\
 **Candidate branch:** `codex/a2-complete-schema-freeze`\
@@ -22,20 +22,35 @@ Implementation, merge, review, approval, and closure are distinct. A2 remains **
 | 1 | Eight-category scope map | **Complete** | §2 |
 | 2 | Canonical schemas / single control source | **Complete** | §3, §7 |
 | 3 | Executable representative fixtures | **Complete** | §4, §7 |
-| 4 | Fresh review over pushed current candidate | **PENDING** | §8. Retracted at v0.4 (`A2-R4-001`) and still open at v0.12: ten rounds are recorded, and round 10 was the independent pass round 9 owed — but the current artifact carries round-10 corrections and no round has reviewed that corrected artifact. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link between this cell and the ledger |
+| 4 | Fresh review over pushed current candidate | **Complete** | §8. Retracted at v0.4 (`A2-R4-001`), claimable at v0.13: `A2-RUN-011` is an independent review of `1f0e68a` as pushed that returned **no findings**, so for the first time in this series no remediation followed a round and the reviewed subject is still the current one. Digest `4160b164…` recomputes identically from `1f0e68a` and from this tree. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link and would fail this cell otherwise |
 | 5 | Every finding terminal | **Complete** | §8; twenty-three findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
 | 6 | Project-owner approval | **PENDING** | Non-delegable. No agent may satisfy this row |
-| 7 | Approved candidate landed on A3 base | **PENDING** | Blocked by rows 4 and 6; must match the approved digest bundle |
+| 7 | Approved candidate landed on A3 base | **PENDING** | Blocked by row 6 alone now; must match the approved digest bundle |
 
 **Row 4 was claimed at v0.3 and is retracted.** The claim was wrong in a way worth stating
 plainly rather than quietly correcting: round 3 reviewed `678f0f2`, the material subject then moved
 by 150 lines — the `A2-R3-001` fix, its schema change, its tests — and the commit carrying the
 completion claim was itself never reviewed. The gate's pushed-candidate wording is stronger than
 FR-AG-018's, and the party satisfying a condition does not get to relax it. Row 4 becomes claimable
-only after a fresh review of the artifact as pushed, and `test_the_current_artifact_has_not_yet_been_reviewed`
-now fails if a round claims the current tree without one.
+only after a fresh review of the artifact as pushed, and
+`test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` fails if this cell claims
+Complete without one. **That is the test which permits the claim below**, and it is mechanical:
+row 4 may read Complete only while some recorded round's digest IS the current material subject.
 
-Rows 1, 2, 3 and 5 are satisfied. Rows 4, 6 and 7 are not. **A2 is OPEN. A3 is BLOCKED.**
+Rows 1–5 are satisfied. Rows 6 and 7 are not. **A2 is OPEN. A3 is BLOCKED.**
+
+**What moved at v0.13, stated against the standard that retracted it.** Row 4 required a fresh review
+of the artifact *as pushed*. Eleven rounds are recorded and ten of them could not satisfy it, for one
+recurring reason: each round found something, the fix moved the material subject, and the round that
+reviewed the pre-fix tree no longer described the artifact. Round 11 is the first to return no
+findings, so nothing followed it into the contract.
+
+The only changes made after it are in files the material subject **excludes by construction** — the
+review-ledger entry recording the round (§3.8: recording a run must not recursively invalidate the
+subject it records), tracking prose, and a stale test name in a CI comment. That is not an argument,
+it is arithmetic: `4160b164…` recomputes identically from `1f0e68a` and from this tree, and the row-4
+fixture refuses the claim if it ever stops doing so. Rows 6 and 7 remain the owner's and are untouched
+by this.
 
 ## 2. Eight-category scope map
 
@@ -96,7 +111,7 @@ The expected split is explicit so an aggregate cannot hide missing discovery:
 | `git diff --check` | PASS |
 
 **CI now verifies the provenance chain; until v0.11 it never had.** Exactly two fixtures are
-history-dependent — `test_every_recorded_digest_matches_the_revision_it_names` and
+history-dependent — `test_every_round_digest_recomputes_from_the_tree_it_names` and
 `test_status_timestamps_equal_first_publication_commit_time`. `Spec hygiene checks` used
 `actions/checkout@v4` at its default depth 1, so both **skipped in every CI run of this candidate**,
 naming the revisions they could not reach. That is `A2-R5-001`'s all-or-nothing rule working — partial
@@ -196,6 +211,7 @@ contract.
 | 8 | `a034fc3` as pushed — automated review on PR #347 | see the ledger |
 | 9 | `c927a95` as pushed — verification pass over the round-8 corrections | see the ledger |
 | 10 | `6bce84f` as pushed — independent review of the round-9 remediation | see the ledger |
+| 11 | `1f0e68a` as pushed — independent review, **no findings**; the subject row 4 is claimed against | `4160b1644ebe75f771f01d7f1db67278126c827849c6e0da35657eb37d454254` |
 
 The current working tree is **not** in this table. That is the point of row 4 being open.
 
@@ -229,7 +245,7 @@ not at document validation). One was a real defect, recorded below as `A2-R3-001
 
 ### 8.3 Findings
 
-Twenty-three findings across ten rounds, all `Disposition: Blocker` / `Status: Resolved`, recorded in
+Twenty-three findings across eleven rounds, all `Disposition: Blocker` / `Status: Resolved`, recorded in
 `docs/tracking/architecture-governance/review-ledger.json` under series `A2-SCHEMA-FREEZE`.
 
 Following the A0 record's rule, the A2 gate is **not a blanket Blocker citation**: each finding's
@@ -312,6 +328,25 @@ Round 10 also corrected a recording habit rather than a defect. Discovery result
 `0 skipped` without saying which run that describes; CI checks out at depth 1 and two history-dependent
 fixtures skip there. §4 now separates the two runs and gives the command to reproduce the CI condition.
 
+**Round 11 is the round that ends the loop, and it is worth being precise about why.** It was
+independent, it reviewed `1f0e68a` as pushed, and it returned **no findings** — the first time in this
+series that a round did not move the contract. Every earlier round failed row 4 the same way: it found
+something real, the fix changed the material subject, and the round that had reviewed the pre-fix tree
+no longer described the artifact. That is not a flaw in the rounds; it is what row 4 is for. It also
+verified two surfaces this record had carried as explicitly unverified since v0.3 — Governance §3.3
+property fields and §7.1 exception fields against the frozen schemas and semantics — and independently
+confirmed `Spec hygiene checks` at 166/166 with 0 skipped, which is the CI-history hardening checked by
+someone other than its author.
+
+Round 11 did note stale test-name commentary — a CI comment and this record's own §1 naming fixtures
+that had been renamed — and judged it non-blocking. It is corrected here, in excluded files only, and a
+second stale citation the round did not catch (`test_the_current_artifact_has_not_yet_been_reviewed` in
+§1, the row-4 retraction paragraph itself) is corrected with it. **A mechanism for this class is not
+landed and is deliberately deferred:** a fixture asserting every cited `test_*` name resolves would live
+in the fixture suite, which is inside the material subject, so landing it would move the digest and
+re-open row 4 for a twelfth round. That trade belongs to the owner, batched with the next material
+change, not taken unilaterally to tidy a comment.
+
 **Round 9** was a verification pass over the round-8 corrections, and found that one of them was a
 regression. `A2-R9-001`: the `A2-R8-001` anti-ratchet fix rejected *every* baseline addition measured
 against a trusted prior, which also closed the `inactive → migration` edge that §3.9 declares legal —
@@ -352,6 +387,7 @@ validator branch. Both are recorded in the ledger's `unverified_surfaces`.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.13 | September 1, 2026 | — | **Row 4 moves to Complete.** `A2-RUN-011` is an independent review of `1f0e68a` as pushed that returned **no findings** — the first round in this series after which nothing followed into the contract, which is exactly the condition row 4 has been waiting for since its v0.4 retraction. Digest `4160b164…` recomputes identically from `1f0e68a` and from this tree, and `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` would refuse the cell otherwise. The round also verified Governance §3.3 property fields and §7.1 exception fields — carried as explicitly unverified since v0.3 — and independently confirmed `Spec hygiene checks` at 166/166, 0 skipped. Corrections made after the round are confined to files the material subject excludes by construction: the ledger entry recording the run, tracking prose, and stale fixture names in a CI comment and in §1 (including `test_the_current_artifact_has_not_yet_been_reviewed`, which the round did not catch). A fixture pinning cited test names is deliberately **not** landed — it would sit inside the material subject and re-open row 4 for a twelfth round; that trade is the owner's to make with the next material change. **Rows 6 and 7 remain PENDING and are not agent-satisfiable.** Test count unchanged at 149/9/8 = 166. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.12 | September 1, 2026 | — | Hardens the v0.11 fix against its own removal, at the round-10 reviewer's recommendation, before round 11. `fetch-depth: 0` is one line and dropping it would silently un-verify both history-dependent fixtures with the job still green. A missing-history condition is now a **failure** whenever `GITHUB_ACTIONS=true`, and additionally under `GOVERNANCE_REQUIRE_HISTORY=1` for other CI systems; `GITHUB_ACTIONS` is the trigger rather than an opt-in flag, because a guard you must remember to enable is the class of guard this replaces. Local skips are preserved. All three skip paths route through one `unverifiable` helper — missing revisions in either fixture, and incomplete ledger publication history. `test_the_ci_history_guard_is_not_inert` pins both directions and both triggers, `A2-R10-001`'s lesson applied to the guard itself. Also records a consequence measured at `1635aa3`: the publish→bind two-step must be pushed as a pair, since the equality regression now fails rather than skips at a publishing commit. No frozen executable semantics changed, so **no `REFERENCE_SEMANTICS_VERSION` bump is owed**. Test split 148/9/8 = 165 → 149/9/8 = 166. Row 4 stays PENDING. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.11 | September 1, 2026 | — | Acts on round 10's evidence note instead of only recording it. The two history-dependent fixtures — `test_every_recorded_digest_matches_the_revision_it_names` and `test_status_timestamps_equal_first_publication_commit_time` — had skipped in **every** CI run of this candidate, because `Spec hygiene checks` checked out at the `actions/checkout` default depth of 1. The digest chain and the timestamp equality rule this record rests on were therefore only ever verified on a contributor's local clone, never by the gate. `spec-hygiene` now sets `fetch-depth: 0` — that job only; every other job stays shallow — and all ten ledger-named revisions were confirmed ancestors of the candidate head, so the fetch reaches each. §4 and §8.1 are corrected accordingly: a `0 skipped` result is now a claim about CI as well as local. The shallow skip path stays reachable and stays correct; it is simply no longer the CI path. Workflow only — no fixture, schema, semantics, or finding changed, and the count holds at 148/9/8 = 165. Row 4 stays PENDING. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.10 | September 1, 2026 | — | Records round 10, the independent pass round 9 owed. `A2-R10-001` (Medium): rounds 8 and 9 changed three admission rules while `REFERENCE_SEMANTICS_VERSION` stayed at `2.0.0`, though that value is an input to `subject_scope_digest` and is compared by equality in `assess_proof_freshness`. Advanced to `2.1.0` (MINOR, per the module's `1.0.0 → 1.9.0` precedent; v0.19 reserved MAJOR for the import-contract break), covering both rounds together and restored rather than back-dated, with the versioning policy now stated at the constant. No proof artifact exists, so nothing recorded is invalidated. `test_reference_semantics_version_is_pinned` existed throughout and did not help — it asserts the value is what it is, never that it moved when the semantics did — and that limit is now written into the pin; a new fixture locks the constant to every document citing it. §4 additionally separates local full-history discovery (0 skipped) from shallow-CI discovery (2 history-dependent fixtures skip by design), a recording correction rather than a defect. Row 4 stays PENDING: round 10's corrections are again non-independent, so a round-11 pass is owed. Test split 147/9/8 = 164 → 148/9/8 = 165. A2 remains OPEN; A3 remains BLOCKED. |

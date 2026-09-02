@@ -58,7 +58,7 @@ jobs:
         with:
           # Full history, for this job only. Two governance fixtures resolve
           # revisions named in review-ledger.json --
-          # test_every_recorded_digest_matches_the_revision_it_names and
+          # test_every_round_digest_recomputes_from_the_tree_it_names and
           # test_status_timestamps_equal_first_publication_commit_time. At the
           # default depth 1 they SKIP, correctly and loudly (A2-R5-001 made that
           # all-or-nothing), which meant the provenance chain the A2 record rests
