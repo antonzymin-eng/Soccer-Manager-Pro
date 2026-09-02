@@ -2,7 +2,7 @@
 
 **Document Class:** Stage-gate evidence record\
 **Status:** OPEN — implemented candidate; review and owner approval pending\
-**Version:** 0.7\
+**Version:** 0.8\
 **Created:** September 1, 2026\
 **Owning plan:** `docs/planning/project-architecture-governance-integration-plan.md` §11 A2\
 **Candidate branch:** `codex/a2-complete-schema-freeze`\
@@ -22,8 +22,8 @@ Implementation, merge, review, approval, and closure are distinct. A2 remains **
 | 1 | Eight-category scope map | **Complete** | §2 |
 | 2 | Canonical schemas / single control source | **Complete** | §3, §7 |
 | 3 | Executable representative fixtures | **Complete** | §4, §7 |
-| 4 | Fresh review over pushed current candidate | **PENDING** | §8. Retracted at v0.4 (`A2-R4-001`) and still open at v0.7: six rounds are recorded, but the current artifact carries round-6 corrections and no round has reviewed that corrected artifact. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link between this cell and the ledger |
-| 5 | Every finding terminal | **Complete** | §8; sixteen findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
+| 4 | Fresh review over pushed current candidate | **PENDING** | §8. Retracted at v0.4 (`A2-R4-001`) and still open at v0.8: eight rounds are recorded, but the current artifact carries round-8 corrections and no round has reviewed that corrected artifact. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link between this cell and the ledger |
+| 5 | Every finding terminal | **Complete** | §8; twenty findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
 | 6 | Project-owner approval | **PENDING** | Non-delegable. No agent may satisfy this row |
 | 7 | Approved candidate landed on A3 base | **PENDING** | Blocked by rows 4 and 6; must match the approved digest bundle |
 
@@ -84,10 +84,10 @@ The expected split is explicit so an aggregate cannot hide missing discovery:
 
 | Command | Expected result |
 |---|---|
-| `python3 -m unittest tools.tests.test_architecture_governance_semantics` | 139 governance fixtures, PASS |
+| `python3 -m unittest tools.tests.test_architecture_governance_semantics` | 143 governance fixtures, PASS |
 | `python3 -m unittest tools.tests.test_recurring_defect_lint` | 9 phantom-stream context fixtures, PASS |
 | `python3 -m unittest tools.tests.test_assembly_tier_check` | 8 assembly-tier fixtures, PASS |
-| `python3 -m unittest discover -s tools/tests -p 'test_*.py'` | 156 total fixtures, PASS |
+| `python3 -m unittest discover -s tools/tests -p 'test_*.py'` | 160 total fixtures, PASS |
 | `python3 tools/recurring-defect-lint.py --repo .` | 0 ERROR |
 | `python3 tools/assembly-tier-check.py --repo .` | PASS |
 | `python3 tools/doc-consistency-check.py --repo .` | PASS |
@@ -152,6 +152,8 @@ contract.
 | 4 | `11547d4` as pushed — independent review | `5d4daacd091c2afae57ff00d9c3f99ddff8a3a179654fb21f1f6b06e7fcc0bba` |
 | 5 | `5ebc3f7` as pushed — second independent review | `906ce9559f961f3d4a91cce89ea03cd45c1bc03945093611e8d4ace9f9dd1ad6` |
 | 6 | `7d4e949` as pushed — third independent review | `deb9bf31d14d4f89615a6f8d85b78a3ba2e55506f80857371e2f2249ed40d59c` |
+| 7 | `c349fb6` as pushed — fourth independent review, landed by the owner as PR #346 | see the ledger |
+| 8 | `a034fc3` as pushed — automated review on PR #347 | see the ledger |
 
 The current working tree is **not** in this table. That is the point of row 4 being open.
 
@@ -184,7 +186,7 @@ not at document validation). One was a real defect, recorded below as `A2-R3-001
 
 ### 8.3 Findings
 
-Sixteen findings across six rounds, all `Disposition: Blocker` / `Status: Resolved`, recorded in
+Twenty findings across eight rounds, all `Disposition: Blocker` / `Status: Resolved`, recorded in
 `docs/tracking/architecture-governance/review-ledger.json` under series `A2-SCHEMA-FREEZE`.
 
 Following the A0 record's rule, the A2 gate is **not a blanket Blocker citation**: each finding's
@@ -212,6 +214,10 @@ way because no live divergence was demonstrated; it is a regression guard.
 | A2-R5-002 | 5 | Medium | The ledger recorded round-4 events dated after the commit asserting them complete |
 | A2-R5-003 | 5 | Low | `A2-R4-002` cited FR-AG-034 for text that is FR-AG-032's |
 | A2-R6-001 | 6 | Medium | The timestamp remediation still recorded false provenance, and its regression did not test the claim |
+| A2-R7-001 | 7 | Low | The status-timestamp regression bounded an interval while the record claimed a specific value |
+| A2-R8-001 | 8 | Medium | An unsealed migration baseline could absorb new violations indefinitely |
+| A2-R8-002 | 8 | Medium | A proof could be certified by an execution that ran against a different subject |
+| A2-R8-003 | 8 | Medium | An `intentionally-disabled` contract with an unusable disable anchor passed the validator |
 
 ### 8.4 Outcome and limitations
 
@@ -244,7 +250,11 @@ sequencing defect that the non-independent rounds had missed — which is the ar
 made concretely rather than in principle. The corrections it produced are again non-independent, so a
 round-5 pass over the pushed result is owed before row 4 is claimed.
 
-**Round 6** was a third independent pass, over `7d4e949`, and found that round 5's timestamp fix had
+**Round 8** was an automated review on pull request #347 and found three defects in the frozen contract
+itself — the first round since round 3 to do so, rather than in the record-keeping. That matters for how
+much weight the preceding clean-looking rounds should carry: the contract had not been re-probed while
+attention was on provenance. **Round 7** was a fourth independent pass, landed by the project owner as
+PR #346. **Round 6** was a third independent pass, over `7d4e949`, and found that round 5's timestamp fix had
 replaced fictional future times with fictional earlier ones. **Round 5** was a second independent pass,
 over `5ebc3f7`. It found three further issues, two of them
 in the round-4 remediation itself. Its corrections are again non-independent, so a **round-6** pass
@@ -262,6 +272,7 @@ validator branch. Both are recorded in the ledger's `unverified_surfaces`.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.8 | September 1, 2026 | — | Records rounds 7 and 8. Round 8 (automated review on PR #347) found three defects in the frozen contract itself, the first since round 3 to do so rather than in the record-keeping. `A2-R8-001`: additions to an activation baseline were rejected only after sealing, so an unsealed migration baseline could absorb a new violation and its own live-set entry in one revision and never engage the ratchet — §3.9 states "New violations fail" without qualification, and additions are now measured against the trusted prior whatever its seal state. `A2-R8-002`: a proof's executions were never bound to its subject digest, so a passing record from an unrelated subject certified it; equality is now required, recorded as a deliberate narrowing because the plan defines no subsumption relation. `A2-R8-003`: an `intentionally-disabled` contract with `{}` as its disable anchor passed the validator while the schema required three fields — a live schema/semantics divergence the differential could not see because no fixture carried a malformed anchor. The anchor shape now has one owner used by both the validator and the evaluator. Round 7 (`A2-R7-001`) is recorded for completeness. Test split 139/9/8 = 156 → 143/9/8 = 160. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.7 | September 1, 2026 | — | Follow-up provenance correction after independent review: v0.6 said `at` was derived from the commit that first published a finding but its regression accepted any timestamp inside the review→publication interval, and `A2-R6-001` itself carried such an unsupported intermediate value. `at` is now unambiguously first-publication commit time; the regression requires exact equality and separately proves publication is after the reviewed artifact. `A2-R6-001` is corrected to `c349fb6`'s `2026-09-01T23:13:27Z`. Row 4 remains PENDING; no frozen schema/semantics mechanism changed. |
 | 0.6 | September 1, 2026 | — | Third independent review; row 4 stays PENDING. `A2-R6-001`: round 5's timestamp fix replaced fictional future times with fictional earlier ones — a finding's Open event was stamped at the commit time of the artifact reviewed, placing each discovery at or before the thing discovered, while resolutions were build times described as commit times. The record now states plainly that exact review times are **not recoverable**: `at` is when a transition was RECORDED into this ledger, derived from the commit that first published the finding, with reviewed and resolving revisions in `evidence`. The regression brackets every timestamp between the reviewed artifact and the publishing commit, with a **strict** lower bound — a first cut used `≥` and a probe showed it missed the very defect it replaced. All three shapes are proven to fail. Test split 138/9/8 = 155 → 139/9/8 = 156. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.5 | September 1, 2026 | — | Second independent review; row 4 stays PENDING. `A2-R5-001`: historical-digest verification skipped unavailable revisions one at a time and skipped the test only when none resolved, so a shallow checkout could verify one digest of five and still report PASS under a name asserting all — it is now all-or-nothing and names what is missing. `A2-R5-002`: round-4 status events were stamped 69 minutes after the commit asserting them complete; every timestamp now derives from a real commit and a regression rejects future-dated or out-of-order history. `A2-R5-003`: `A2-R4-002` cited FR-AG-034 for FR-AG-032's text; both are now cited correctly. Also drops the round-digest distinctness assertion, an invariant governance does not require, and removes a self-referential parameter that fed the ledger its own digests. Row 4's cell is now mechanically tied to the ledger. Test split 138/9/8 = 155 → 139/9/8 = 156. A2 remains OPEN; A3 remains BLOCKED. |

@@ -2435,3 +2435,67 @@ class DurableReviewLedgerTests(unittest.TestCase):
         for run in self.ledger()["review_runs"]:
             self.assertFalse(run["final_review"], run["review_run_id"])
             self.assertNotEqual("CONVERGED", run["convergence_state"], run["review_run_id"])
+
+
+class CodexReviewFindingTests(unittest.TestCase):
+    """Round-8 findings from the PR #347 automated review.
+
+    All three were reproduced before being accepted, and each is pinned here
+    against the exact shape that was reported.
+    """
+
+    def test_baseline_cannot_absorb_a_new_violation_before_sealing(self):
+        """A2-R8-001: §3.9 says "New violations fail", unqualified.
+
+        The addition and its own live-set entry can arrive in one revision, so
+        the coverage check sees nothing new; only comparison against the trusted
+        prior catches it. Guarding this after sealing let an unsealed migration
+        baseline ratchet indefinitely.
+        """
+        prior = baseline("migration", False, [baseline_item("V-001")])
+        grown = baseline(
+            "migration", False, [baseline_item("V-001"), baseline_item("V-002")])
+        with self.assertRaises(sem.ActivationBaselineError):
+            sem.validate_temporary_activation_baseline(
+                grown, prior_baseline=prior,
+                current_violation_ids=["V-001", "V-002"])
+        # Shrinking and holding steady stay legal.
+        sem.validate_temporary_activation_baseline(
+            baseline("migration", False, [baseline_item("V-001")]),
+            prior_baseline=prior, current_violation_ids=["V-001"])
+
+    def test_execution_must_have_run_against_the_proof_subject(self):
+        """A2-R8-002: otherwise the execution's own digest certifies nothing."""
+        for result, extra in (("pass", {}),
+                              ("bounded", {"bounded_substitute": approved_limitation()})):
+            artifact = proof_artifact(result, **extra)
+            artifact["execution_records"][0]["subject_scope_digest"] = sem.digest(
+                {"subject": "an unrelated component"})
+            with self.assertRaises(sem.ProofArtifactError):
+                sem.validate_proof_artifact(
+                    artifact, bounded_substitute_permitted=True)
+
+    def test_intentionally_disabled_anchor_must_be_fully_formed(self):
+        """A2-R8-003: `{}` is not a verifiable anchor (FR-CS-081).
+
+        This was a live schema/semantics divergence -- the schema required
+        selector, operator and expected while the validator checked only that
+        the anchor was a dict. The differential could not see it because no
+        fixture carried a malformed anchor; that gap is closed here.
+        """
+        schemas = jsv.default_schema_set()
+        for broken in ({}, {"operator": "equals"}, {"selector": {}, "operator": "nope"}):
+            document = contract_document()
+            document["contracts"][0]["disable_anchor"] = broken
+            with self.assertRaises(sem.SchemaError):
+                sem.validate_integration_contracts_document(document)
+            self.assertTrue(
+                schemas.validate(document, "integration-contracts.schema.json"),
+                "the schema must reject %r too" % (broken,))
+
+    def test_a_well_formed_contract_still_validates_both_ways(self):
+        document = contract_document()
+        sem.validate_integration_contracts_document(document)
+        self.assertEqual(
+            [], jsv.default_schema_set().validate(
+                document, "integration-contracts.schema.json"))

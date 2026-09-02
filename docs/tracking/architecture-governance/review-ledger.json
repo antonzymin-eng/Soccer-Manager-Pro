@@ -70,7 +70,7 @@
       ],
       "unverified_surfaces": [
         "reviewer independence -- see the limitation recorded in the closure record",
-        "field-by-field re-derivation of each schema against Governance §3.3/§7.1",
+        "field-by-field re-derivation of each schema against Governance \u00a73.3/\u00a77.1",
         "the A2-R3-001 fix itself, which post-dates this round's subject"
       ],
       "applicable_properties": [],
@@ -144,6 +144,48 @@
       "convergence_state": "NON-CONVERGED",
       "final_review": false,
       "round_budget_exhausted": false
+    },
+    {
+      "review_run_id": "A2-RUN-007",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate at c349fb6 as pushed"
+      ],
+      "subject_scope_digest": "93f97569ad987a5d8c9f68453ea7d973485f32e560128a8323fcafa17d1b1559",
+      "review_round": 7,
+      "reviewer_identity": "OpenAI ChatGPT, independent reviewer of the pushed c349fb6 candidate",
+      "coverage": [
+        "status-timestamp provenance model and its regression"
+      ],
+      "unverified_surfaces": [
+        "the correction this round produced, which post-dates its subject"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "NON-CONVERGED",
+      "final_review": false,
+      "round_budget_exhausted": false
+    },
+    {
+      "review_run_id": "A2-RUN-008",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate at a034fc3 as pushed on pull request #347"
+      ],
+      "subject_scope_digest": "a39f24d29a7057d1ea03ff68738b3eec15186d176de0924d6a58d3cd34c6994a",
+      "review_round": 8,
+      "reviewer_identity": "chatgpt-codex-connector, automated review on pull request #347",
+      "coverage": [
+        "activation-baseline anti-ratchet",
+        "proof execution subject binding",
+        "intentionally-disabled anchor validation"
+      ],
+      "unverified_surfaces": [
+        "the corrections this round produced, which post-date its subject"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "NON-CONVERGED",
+      "final_review": false,
+      "round_budget_exhausted": false
     }
   ],
   "findings": [
@@ -159,7 +201,7 @@
       "severity": "Critical",
       "requirement_property": [
         "Governance FR-AG-018 (a fresh review is over the CURRENT artifact)",
-        "integration-plan §11 A2"
+        "integration-plan \u00a711 A2"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -205,7 +247,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan §0.4 IP-5 -- one source for each control datum"
+        "Integration-plan \u00a70.4 IP-5 -- one source for each control datum"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -247,12 +289,12 @@
       "parent_review_run_id": "A2-RUN-001",
       "summary": "The plan equated landing on main with A2 closure.",
       "evidence": [
-        "v0.17 recorded A2 COMPLETE while §0.5 item 11 and §6/§7 required A0-A2 to PASS before A3 -- a self-contradiction inside one document."
+        "v0.17 recorded A2 COMPLETE while \u00a70.5 item 11 and \u00a76/\u00a77 required A0-A2 to PASS before A3 -- a self-contradiction inside one document."
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan §0.5 item 11",
-        "§6 and §7 (A3 may edit #19/#20 only after A0-A2 pass)",
+        "Integration-plan \u00a70.5 item 11",
+        "\u00a76 and \u00a77 (A3 may edit #19/#20 only after A0-A2 pass)",
         "concrete independently established defect"
       ],
       "disposition": "Blocker",
@@ -271,7 +313,7 @@
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
           "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "v0.17 recorded A2 COMPLETE while §0.5 item 11 and §6/§7 required A0-A2 to PASS before A3 -- a self-contradiction inside one document.",
+            "v0.17 recorded A2 COMPLETE while \u00a70.5 item 11 and \u00a76/\u00a77 required A0-A2 to PASS before A3 -- a self-contradiction inside one document.",
             "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-1 review of the reported candidate and resolved by dae398a6; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
@@ -299,8 +341,8 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan §3.3 (an unretrievable prior registry reports uncertainty rather than silently accepting rewritten history)",
-        "§0.4 IP-4"
+        "Integration-plan \u00a73.3 (an unretrievable prior registry reports uncertainty rather than silently accepting rewritten history)",
+        "\u00a70.4 IP-4"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -346,7 +388,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan §3.1 -- before a machine contract is frozen, an executable reference implementation MUST demonstrate the semantics"
+        "Integration-plan \u00a73.1 -- before a machine contract is frozen, an executable reference implementation MUST demonstrate the semantics"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -392,7 +434,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan §3.1 (A2 freezes versioned schemas as machine contracts a different producer can consume)",
+        "Integration-plan \u00a73.1 (A2 freezes versioned schemas as machine contracts a different producer can consume)",
         "concrete independently established defect"
       ],
       "disposition": "Blocker",
@@ -440,7 +482,7 @@
       "severity": "Low",
       "requirement_property": [
         "Project-owner designation of this as an A2 closure blocker for this review",
-        "integration-plan §0.4 IP-5 as the underlying principle"
+        "integration-plan \u00a70.4 IP-5 as the underlying principle"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -486,7 +528,7 @@
       ],
       "severity": "Low",
       "requirement_property": [
-        "Integration-plan §3.7 (tool identities are part of the proof record)",
+        "Integration-plan \u00a73.7 (tool identities are part of the proof record)",
         "concrete independently established defect"
       ],
       "disposition": "Blocker",
@@ -533,7 +575,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan §3.6 -- this integration MUST NOT route FR-CS or FR-TS waivers directly into exceptions.json",
+        "Integration-plan \u00a73.6 -- this integration MUST NOT route FR-CS or FR-TS waivers directly into exceptions.json",
         "#19/#20 exception mechanisms remain owner-specific"
       ],
       "disposition": "Blocker",
@@ -542,7 +584,7 @@
       "status": "Resolved",
       "round_introduced": 3,
       "resolution_evidence": [
-        "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; §3.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id."
+        "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; \u00a73.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id."
       ],
       "status_history": [
         {
@@ -563,7 +605,7 @@
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
           "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; §3.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id.",
+            "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; \u00a73.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id.",
             "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-3 review of 678f0f2 and resolved by 11547d4; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
@@ -768,7 +810,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Governance §4.2 finding-record schema (status history is the evidence of what occurred and when)",
+        "Governance \u00a74.2 finding-record schema (status history is the evidence of what occurred and when)",
         "concrete independently established defect"
       ],
       "disposition": "Blocker",
@@ -862,7 +904,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Governance §4.2 finding-record schema (status history is the evidence of what occurred and when)",
+        "Governance \u00a74.2 finding-record schema (status history is the evidence of what occurred and when)",
         "FR-AG-034 (an agent claim MUST be backed by an executable check)",
         "concrete independently established defect"
       ],
@@ -872,7 +914,7 @@
       "status": "Resolved",
       "round_introduced": 6,
       "resolution_evidence": [
-        "The exact review times are NOT recoverable and the record no longer pretends otherwise. `at` is publication/recording provenance: the commit time at which the finding first appeared in the committed ledger. For A2-R6-001 that is c349fb6 at 2026-09-01T23:13:27Z. The reviewed and resolving revisions remain separate evidence; `at` is not represented as the time the review or resolution occurred."
+        "The exact review times are NOT recoverable and the record no longer pretends otherwise. `at` is now defined as the time the transition was RECORDED into this ledger, derived from the commit that first published the finding, with the reviewed and resolving revisions carried in evidence. The regression now brackets every timestamp between the commit time of the artifact reviewed and the commit that published the record, which is the invariant the model actually asserts."
       ],
       "status_history": [
         {
@@ -883,7 +925,7 @@
           "at": "2026-09-01T23:13:27Z",
           "evidence": [
             "Round 5 replaced fictional FUTURE timestamps with fictional EARLIER ones. A finding's Open event was stamped at the commit time of the artifact reviewed -- 11547d4 at 19:24:32Z for round 4 -- but an independent review necessarily happens AFTER the artifact it reviews is pushed, so the record placed the discovery at or before the thing discovered. The resolution stamps were not commit times at all: 20:11:08Z against 7d4e949's 20:13:03Z, while the record described them as the commit time that carried the fix. test_status_history_is_neither_future_dated_nor_out_of_order checked only <= wall clock and monotonicity, so it could not see either error.",
-            "First published in the committed ledger by c349fb6 at 2026-09-01T23:13:27Z. The exact review/resolution event time is not recoverable; `at` records this publication time, not when the underlying event occurred."
+            "Recorded into this ledger at 2026-09-01T23:13:27Z. Raised during the round-6 review of 7d4e949 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -894,7 +936,196 @@
           "at": "2026-09-01T23:13:27Z",
           "evidence": [
             "The exact review times are NOT recoverable and the record no longer pretends otherwise. `at` is now defined as the time the transition was RECORDED into this ledger, derived from the commit that first published the finding, with the reviewed and resolving revisions carried in evidence. The regression now brackets every timestamp between the commit time of the artifact reviewed and the commit that published the record, which is the invariant the model actually asserts.",
-            "First published in the committed ledger by c349fb6 at 2026-09-01T23:13:27Z. The exact review/resolution event time is not recoverable; `at` records this publication time, not when the underlying event occurred."
+            "Recorded into this ledger at 2026-09-01T23:13:27Z. Raised during the round-6 review of 7d4e949 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R7-001",
+      "stable_key": "a2/r7-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-007",
+      "summary": "The status-timestamp regression bounded an interval while the record claimed a specific value.",
+      "evidence": [
+        "Round 6 replaced the timestamp model but verified it with an interval check -- reviewed artifact < at <= publication -- while the documentation stated `at` IS the first-publication commit time. Any invented value inside that interval would still have passed, so the test again admitted more than the record claimed."
+      ],
+      "severity": "Low",
+      "requirement_property": [
+        "Governance FR-AG-032 (proof MUST be independently reproducible)",
+        "FR-AG-034 (an agent claim MUST be backed by an executable check)"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 7,
+      "resolution_evidence": [
+        "The regression now requires EQUALITY with the first-publication commit time, and skips wholesale when publication history is incomplete rather than falling back to a looser bound. Landed by the project owner as pull request #346."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R7-001-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-02T00:27:17Z",
+          "evidence": [
+            "Round 6 replaced the timestamp model but verified it with an interval check -- reviewed artifact < at <= publication -- while the documentation stated `at` IS the first-publication commit time. Any invented value inside that interval would still have passed, so the test again admitted more than the record claimed.",
+            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-7 review of c349fb6 and resolved by 0245382; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        },
+        {
+          "event_id": "A2-R7-001-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-02T00:27:17Z",
+          "evidence": [
+            "The regression now requires EQUALITY with the first-publication commit time, and skips wholesale when publication history is incomplete rather than falling back to a looser bound. Landed by the project owner as pull request #346.",
+            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-7 review of c349fb6 and resolved by 0245382; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R8-001",
+      "stable_key": "a2/r8-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-008",
+      "summary": "An unsealed migration baseline could absorb new violations indefinitely, defeating the anti-ratchet.",
+      "evidence": [
+        "Additions were rejected only once the baseline was sealed. A newly discovered violation could be written into items AND into current_violation_ids in the same revision, so the live-set comparison saw nothing new and the ratchet never engaged. Reproduced: a migration baseline with sealed=false accepted V-002 on top of a prior holding only V-001."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Integration-plan \u00a73.9 -- New violations fail, stated without qualification",
+        "\u00a70.4 IP-4"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 8,
+      "resolution_evidence": [
+        "Additions are now measured against the trusted prior baseline whatever its seal state. Shrinking and holding steady stay legal, and both are locked."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R8-001-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-02T00:27:17Z",
+          "evidence": [
+            "Additions were rejected only once the baseline was sealed. A newly discovered violation could be written into items AND into current_violation_ids in the same revision, so the live-set comparison saw nothing new and the ratchet never engaged. Reproduced: a migration baseline with sealed=false accepted V-002 on top of a prior holding only V-001.",
+            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        },
+        {
+          "event_id": "A2-R8-001-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-02T00:27:17Z",
+          "evidence": [
+            "Additions are now measured against the trusted prior baseline whatever its seal state. Shrinking and holding steady stay legal, and both are locked.",
+            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R8-002",
+      "stable_key": "a2/r8-002",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-008",
+      "summary": "A proof could be certified by an execution that ran against a different subject.",
+      "evidence": [
+        "validate_proof_artifact checked each execution's state but never compared its subject_scope_digest with the artifact's, so the field was decorative and any syntactically valid digest passed. A passing record copied from an older or unrelated subject certified the current proof."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Integration-plan \u00a73.7 (the proof record binds subject scope) and \u00a73.7.2 execution truth",
+        "concrete independently established defect"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 8,
+      "resolution_evidence": [
+        "An execution must now carry the artifact's own subject scope digest. Recorded narrowing: the plan defines no subsumption relation between scopes, so equality is the only mechanically defined binding available at freeze time; widening it for a broader execution is a schema-evolution decision for A5/A6 to take explicitly."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R8-002-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-02T00:27:17Z",
+          "evidence": [
+            "validate_proof_artifact checked each execution's state but never compared its subject_scope_digest with the artifact's, so the field was decorative and any syntactically valid digest passed. A passing record copied from an older or unrelated subject certified the current proof.",
+            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        },
+        {
+          "event_id": "A2-R8-002-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-02T00:27:17Z",
+          "evidence": [
+            "An execution must now carry the artifact's own subject scope digest. Recorded narrowing: the plan defines no subsumption relation between scopes, so equality is the only mechanically defined binding available at freeze time; widening it for a broader execution is a schema-evolution decision for A5/A6 to take explicitly.",
+            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R8-003",
+      "stable_key": "a2/r8-003",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-008",
+      "summary": "An intentionally-disabled contract with an unusable disable anchor passed the document validator.",
+      "evidence": [
+        "validate_activation_contract checked only that disable_anchor was a dict, so {} was accepted while the canonical schema requires selector, operator and expected. A live schema/semantics divergence -- and one the differential could not see, because no fixture carried a malformed anchor."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "Proposed FR-CS-081 (intentionally-disabled requires a verifiable disable anchor)",
+        "integration-plan \u00a711 A4 (anchors must resolve/evaluate)",
+        "concrete independently established defect"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 8,
+      "resolution_evidence": [
+        "The anchor's complete typed shape now has one owner, _normalize_disable_anchor, called from both the contract validator and the evaluator so the two cannot disagree. The differential gains malformed-anchor fixtures, closing the coverage gap that hid it."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R8-003-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-02T00:27:17Z",
+          "evidence": [
+            "validate_activation_contract checked only that disable_anchor was a dict, so {} was accepted while the canonical schema requires selector, operator and expected. A live schema/semantics divergence -- and one the differential could not see, because no fixture carried a malformed anchor.",
+            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        },
+        {
+          "event_id": "A2-R8-003-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
+          "at": "2026-09-02T00:27:17Z",
+          "evidence": [
+            "The anchor's complete typed shape now has one owner, _normalize_disable_anchor, called from both the contract validator and the evaluator so the two cannot disagree. The differential gains malformed-anchor fixtures, closing the coverage gap that hid it.",
+            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]

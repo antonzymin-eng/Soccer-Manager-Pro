@@ -416,6 +416,34 @@ def normalize_typed_value(value):
     return out
 
 
+def _normalize_disable_anchor(anchor):
+    """Validate a disable anchor's complete typed shape.
+
+    Single owner for the rule, called from both the contract validator and the
+    evaluator, so the two cannot disagree about what a usable anchor is.
+    """
+    if not isinstance(anchor, dict):
+        raise ActivationError("intentionally-disabled requires disable_anchor")
+    unknown = sorted(set(anchor) - {"selector", "operator", "expected"})
+    if unknown:
+        raise ActivationError(
+            "disable_anchor contains unknown field(s): %s" % ", ".join(unknown))
+    if "selector" not in anchor or "expected" not in anchor:
+        raise ActivationError("disable_anchor requires selector and expected")
+    operator = _enum(
+        anchor.get("operator"), _ANCHOR_OPERATORS,
+        "disable_anchor.operator", ActivationError)
+    try:
+        selector = normalize_selector(anchor["selector"])
+    except SelectorError as exc:
+        raise ActivationError("disable_anchor selector is invalid: %s" % exc) from exc
+    return {
+        "selector": selector,
+        "operator": operator,
+        "expected": normalize_typed_value(anchor["expected"]),
+    }
+
+
 def validate_activation_contract(contract):
     if not isinstance(contract, dict):
         raise ActivationError("integration contract must be an object")
@@ -430,8 +458,12 @@ def validate_activation_contract(contract):
             value = contract.get(field)
             if not isinstance(value, str) or not value.strip():
                 raise ActivationError("intentionally-disabled requires %s" % field)
-        if not isinstance(contract.get("disable_anchor"), dict):
-            raise ActivationError("intentionally-disabled requires disable_anchor")
+        # The anchor's SHAPE is validated here, not only where it is evaluated:
+        # a document validator that accepts {} approves a disabled contract whose
+        # asserted anchor can never be evaluated, which FR-CS-081 requires to be
+        # verifiable. The canonical schema requires all three fields; this is the
+        # executable half of that contract.
+        _normalize_disable_anchor(contract.get("disable_anchor"))
     elif state == "pending-integration":
         for field in ("activation_owner", "integration_gap", "activation_condition"):
             value = contract.get(field)
@@ -445,18 +477,9 @@ def evaluate_disable_anchor(contract, semantic_facts):
     if state != "intentionally-disabled":
         raise ActivationError("disable-anchor evaluation requires intentionally-disabled state")
     anchor = contract["disable_anchor"]
-    unknown = sorted(set(anchor) - {"selector", "operator", "expected"})
-    if unknown:
-        raise ActivationError("disable_anchor contains unknown field(s): %s" % ", ".join(unknown))
-    if "selector" not in anchor or "expected" not in anchor:
-        raise ActivationError("disable_anchor requires selector and expected")
-    operator = _enum(
-        anchor.get("operator"),
-        _ANCHOR_OPERATORS,
-        "disable_anchor.operator",
-        ActivationError,
-    )
-    expected = normalize_typed_value(anchor["expected"])
+    normalized = _normalize_disable_anchor(anchor)
+    operator = normalized["operator"]
+    expected = normalized["expected"]
     try:
         fact = resolve_selector(anchor["selector"], semantic_facts)
     except SelectorError as exc:
@@ -2268,8 +2291,15 @@ def validate_temporary_activation_baseline(
             if old_items[violation_id] != new_items[violation_id]:
                 raise ActivationBaselineError(
                     "%s baseline record is immutable" % violation_id)
-        if prior_baseline["sealed"] and not set(new_items) <= set(old_items):
-            raise ActivationBaselineError("sealed baseline cannot admit new violations")
+        # §3.9 states "New violations fail" WITHOUT qualification. Guarding this
+        # only after sealing let an unsealed migration baseline absorb a new
+        # violation and its own live-set entry in one revision -- the coverage
+        # check then sees nothing new and the ratchet never engages. Additions
+        # are measured against the TRUSTED PRIOR, whatever its seal state.
+        added = sorted(set(new_items) - set(old_items))
+        if added:
+            raise ActivationBaselineError(
+                "baseline cannot admit new violations: %s" % ", ".join(added))
     return baseline
 
 
@@ -2504,6 +2534,19 @@ def validate_proof_artifact(
     # the claimed result.
     if result in {"pass", "bounded"}:
         for record in executions:
+            # Bind the evidence to the subject. Without this the execution's own
+            # subject_scope_digest is decorative and a passing record copied from
+            # an unrelated or older subject certifies this proof.
+            #
+            # NARROWING, recorded deliberately: the plan defines no subsumption
+            # relation between scopes, so equality is the only mechanically
+            # defined binding available at freeze time. If a broader execution
+            # must certify a narrower subject, that is a schema-evolution
+            # decision for A5/A6 to take explicitly -- not a gap to leave open.
+            if record["subject_scope_digest"] != artifact["subject_scope_digest"]:
+                raise ProofArtifactError(
+                    "execution %s ran against a different subject scope"
+                    % record["execution_id"])
             passed = record["execution_state"] == "passed"
             # A substitute covers only the record it stands in for; offering one
             # alongside a passed execution is itself an error.
