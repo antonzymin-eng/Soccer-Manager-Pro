@@ -969,10 +969,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-02T00:27:17Z",
+          "at": "2026-09-02T00:29:16Z",
           "evidence": [
             "Round 6 replaced the timestamp model but verified it with an interval check -- reviewed artifact < at <= publication -- while the documentation stated `at` IS the first-publication commit time. Any invented value inside that interval would still have passed, so the test again admitted more than the record claimed.",
-            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-7 review of c349fb6 and resolved by 0245382; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T00:29:16Z. Raised during the round-7 review of c349fb6 and resolved by 0245382; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -980,10 +980,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-02T00:27:17Z",
+          "at": "2026-09-02T00:29:16Z",
           "evidence": [
             "The regression now requires EQUALITY with the first-publication commit time, and skips wholesale when publication history is incomplete rather than falling back to a looser bound. Landed by the project owner as pull request #346.",
-            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-7 review of c349fb6 and resolved by 0245382; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T00:29:16Z. Raised during the round-7 review of c349fb6 and resolved by 0245382; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -1016,10 +1016,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-02T00:27:17Z",
+          "at": "2026-09-02T00:29:16Z",
           "evidence": [
             "Additions were rejected only once the baseline was sealed. A newly discovered violation could be written into items AND into current_violation_ids in the same revision, so the live-set comparison saw nothing new and the ratchet never engaged. Reproduced: a migration baseline with sealed=false accepted V-002 on top of a prior holding only V-001.",
-            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T00:29:16Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -1027,10 +1027,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-02T00:27:17Z",
+          "at": "2026-09-02T00:29:16Z",
           "evidence": [
             "Additions are now measured against the trusted prior baseline whatever its seal state. Shrinking and holding steady stay legal, and both are locked.",
-            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T00:29:16Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -1063,10 +1063,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-02T00:27:17Z",
+          "at": "2026-09-02T00:29:16Z",
           "evidence": [
             "validate_proof_artifact checked each execution's state but never compared its subject_scope_digest with the artifact's, so the field was decorative and any syntactically valid digest passed. A passing record copied from an older or unrelated subject certified the current proof.",
-            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T00:29:16Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -1074,10 +1074,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-02T00:27:17Z",
+          "at": "2026-09-02T00:29:16Z",
           "evidence": [
             "An execution must now carry the artifact's own subject scope digest. Recorded narrowing: the plan defines no subsumption relation between scopes, so equality is the only mechanically defined binding available at freeze time; widening it for a broader execution is a schema-evolution decision for A5/A6 to take explicitly.",
-            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T00:29:16Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
@@ -1111,10 +1111,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-02T00:27:17Z",
+          "at": "2026-09-02T00:29:16Z",
           "evidence": [
             "validate_activation_contract checked only that disable_anchor was a dict, so {} was accepted while the canonical schema requires selector, operator and expected. A live schema/semantics divergence -- and one the differential could not see, because no fixture carried a malformed anchor.",
-            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T00:29:16Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -1122,10 +1122,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
-          "at": "2026-09-02T00:27:17Z",
+          "at": "2026-09-02T00:29:16Z",
           "evidence": [
             "The anchor's complete typed shape now has one owner, _normalize_disable_anchor, called from both the contract validator and the evaluator so the two cannot disagree. The differential gains malformed-anchor fixtures, closing the coverage gap that hid it.",
-            "Recorded into this ledger at 2026-09-02T00:27:17Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T00:29:16Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
