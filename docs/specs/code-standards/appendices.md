@@ -9,12 +9,12 @@ by category name and must not reproduce its symbol lists.
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.6.1
+**Version:** 1.6.2
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.5 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §APPENDICES
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md`
-v0.33, §6; A3.1a
+v0.34, §6; A3.1a
 **Appendix target lengths:** A ~50 lines · B ~30 lines · C ~150 lines ·
 D ~80 lines · E ~40 lines · F ~160 lines
 
@@ -661,6 +661,7 @@ shape:
 | 1.5 | August 18, 2026 | Claude Code | **Adversarial-review round-8 finding H1, found mechanically by the new `tools/doc-claim-check.py`.** *(Renumbered 1.4 → 1.5 at adversarial-review round 9: this row landed in `f23f480` as a SECOND `1.4`, above the round-7 L3 row that had already taken that number in `20760cf`. `recurring-defect-lint.py` reported it as the tree's only ERROR — while root `CLAUDE.md` still claimed 0 ERROR tree-wide — so the round that added a mechanical checker for dangling identifiers introduced a defect a mechanical checker the repo already had was reporting. Rows reordered ascending with it; no content changed.)* §C.2 still called `BallPhysicsConstants.MAX_SUBSTEPS` after v1.3 renamed the declaration to `MaxSubsteps` in §C.1 one section above — a dangling reference inside the pair #20 offers as its COMPLIANT exemplar, annotated `// §3.2.3 — named constant`, i.e. claiming conformance to the rule that forced the rename. **This is `ERR-020-001` for the third time**: that entry renamed `PHYSICS_TICK_HZ → PhysicsTickHz` in §4.2 in May 2026 and its file list never included this appendix; v1.3's own history row named that failure while repeating it one section away. In `src/` the compiler would have rejected it; in a spec fence nothing binds, which is exactly why the identifier check now exists and why it is wired into CI rather than left to review. | — |
 | 1.6 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Adds Appendix F with illustrative schema-aligned examples for overload-safe selectors, stable component identity across a rename, active integration ownership, runtime-surface classification, typed lifecycle edges, and a verifiable disabled-state anchor. Canonical A2 schemas and reference semantics remain authoritative. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
 | 1.6.1 | September 2, 2026 | Codex | **A3.1a review correction.** F.4 now supplies the `nodes` list required by reference semantics v2.1.0 and declares every typed edge endpoint with a schema-valid kind and fingerprint. The complete example is accepted by `normalize_dependency_graph`; the fingerprints remain illustrative rather than reusable proof evidence. | PENDING — A3.4 |
+| 1.6.2 | September 2, 2026 | Codex | **A3.1a metadata synchronization.** Advances the amendment-plan pointer from v0.33 to v0.34 after FR-CS-078 was aligned with Governance FR-AG-025. Appendix F content is unchanged from v1.6.1. | PENDING — A3.4 |
 
 ---
 

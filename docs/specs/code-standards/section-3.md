@@ -9,14 +9,14 @@ API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.9
+**Version:** 1.10
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.8 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md`
-v0.33, §6; A3.1a
+v0.34, §6; A3.1a
 **Subsection target lengths:** §3.1 ~150 lines · §3.2 ~120 lines · §3.3 ~100 lines ·
-§3.4 ~120 lines · §3.5 ~110 lines · §3.6 ~90 lines · §3.7 ~30 lines ·
+§3.4 ~120 lines · §3.5 ~380 lines after A3.1a · §3.6 ~90 lines · §3.7 ~30 lines ·
 §3.8 ~10 lines · §3.9 ~60 lines · §3.10 ~10 lines
 
 ---
@@ -27,9 +27,7 @@ v0.33, §6; A3.1a
 - [3.2 Constant Declaration & Tagging (FR-CS-016 … FR-CS-025)](#32-constant-declaration--tagging-fr-cs-016--fr-cs-025)
 - [3.3 Allocation Discipline (FR-CS-026 … FR-CS-035)](#33-allocation-discipline-fr-cs-026--fr-cs-035)
 - [3.4 Determinism in Code (FR-CS-036 … FR-CS-045)](#34-determinism-in-code-fr-cs-036--fr-cs-045)
-- [3.5 Dependency Direction & Interface Design (FR-CS-046 … FR-CS-055)](#35-dependency-direction--interface-design-fr-cs-046--fr-cs-055)
-  - [3.5.6 Integration Identity, Ownership & Activation](#356-integration-identity-ownership--activation)
-  - [3.5.7 Closed Runtime Surfaces, Bypasses & Static Initialization](#357-closed-runtime-surfaces-bypasses--static-initialization)
+- [3.5 Dependency Direction & Interface Design (FR-CS-046 … FR-CS-055; FR-CS-074 … FR-CS-081)](#35-dependency-direction--interface-design-fr-cs-046--fr-cs-055-fr-cs-074--fr-cs-081)
 - [3.6 Documentation Conventions (FR-CS-056 … FR-CS-065)](#36-documentation-conventions-fr-cs-056--fr-cs-065)
 - [3.7 Numeric Type Discipline (FR-CS-071 … FR-CS-073)](#37-numeric-type-discipline-fr-cs-071--fr-cs-073)
 - [3.8 Worked Examples Index](#38-worked-examples-index)
@@ -584,9 +582,10 @@ in Python — is incorrect and confuses the semantics of each rule.
 
 ---
 
-## 3.5 Dependency Direction & Interface Design (FR-CS-046 … FR-CS-055)
+## 3.5 Dependency Direction & Interface Design (FR-CS-046 … FR-CS-055; FR-CS-074 … FR-CS-081)
 
-*Implements:* FR-CS-046–055. See §2.2.5 for rule statements and conformance levels.
+*Implements:* FR-CS-046–055 and FR-CS-074–081. See §2.2.5 and §2.2.9 for rule
+statements and conformance levels.
 
 ---
 
@@ -913,6 +912,9 @@ Every discovered surface is recorded with `surface_id`, current `symbol_key`, `k
 - `generated-or-external`
 - `non-runtime-bearing`
 
+After initial baseline acceptance, strict mode **MUST** fail when a newly discovered
+surface lacks one of these classifications.
+
 Durable architectural surfaces also carry their stable `component_id` and `contract_id`.
 Structural role and activation state **MUST NOT** be collapsed into one field. Every
 production host and composition root emitted by the approved discovery universe must
@@ -920,11 +922,23 @@ therefore resolve to a classification and, where runtime-bearing, its contract.
 
 Applicable alternate hosts, testhosts, tools, and development bootstraps **MUST** be
 included. Each must preserve the applicable invariant or have an approved divergence
-whose evidence is current for that exact surface. A `.Tests` name suffix is not enough
-to establish test-only classification.
+whose evidence is current for that exact surface. Test classification **MUST** consider
+assembly metadata, source path, platform and define constraints, references, compiler
+facts, and explicit classification. A `.Tests` name suffix alone is not enough to
+establish test-only classification.
+
+Closed-world absence is demonstrated, not declared. Regex or public-member inventory
+alone is not an absence proof. A no-bypass or no-unclassified-public-entry claim may
+block only after compiler-backed discovery has demonstrated the finite search universe
+and blind-spot fixtures cover alternate factories and callers. Until then, inventory is
+diagnostic and unsupported semantic absence claims remain non-blocking evidence.
+
+Known prohibited bypass selectors are enforceable only inside their defined closed
+search universe. A known-path list does not prove that no other bypass exists.
 
 Within the mechanically closed governed surface:
 
+- every known alternate or bypass activation path is prohibited or explicitly classified;
 - a supported activation path is listed by the applicable contract;
 - an unsupported bypass is listed in `prohibited_bypass_paths` and must be absent;
 - an alternate supported path is listed in `alternate_supported_paths` and receives the
@@ -1277,6 +1291,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.7 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H1.** §3.2.3's `[CROSS]` const-mirror carve-out (landed at v1.6) stated its naming arm as "keep PascalCase **or** reuse the source's `ALL_CAPS` identifier unchanged", and cited "10 PascalCase / 9 ALL_CAPS among the 19" as evidence that all 19 conform. Only **three** of the nine reuse the source name (`TEAM_COUNT`, `ATTRIBUTE_MIN`, `ATTRIBUTE_MAX`); the other six RENAME — `MatchAnalyticsConstants.PITCH_LENGTH_M`/`PITCH_WIDTH_M`/`GOAL_WIDTH_M` add the unit suffix their `BallPhysicsConstants.Pitch` sources lack, and `RESTART_KIND_THROW_IN`/`_GOAL_KICK`/`_CORNER` mirror `RestartType` enum members, whose identifiers are not `ALL_CAPS` at all and so could not be reused unchanged even in principle. Under the rule as written those six remained FR-CS-022 violations while the carve-out's own count called them conforming — the overclaim shape v1.6 filed H7 against, reproduced one revision later. Naming arm restated as "PascalCase, **or** an `ALL_CAPS` identifier consistent with the owning catalogue's `[FIXED]` convention", with the three/six split written out so the rule and its evidence agree. | — |
 | 1.8 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings M1 + M5 + M6, and L4.** M1: `ERR-020-006` and `ERR-020-007` were cited nowhere in the spec they patch — every prior #20 ERR is cited at its fix site, but round-6's text said only "round-6 finding H6/H7". Both ids now cited in place: §3.2.1's source note (`ERR-020-006`) and the §3.2.3 const-mirror carve-out heading (`ERR-020-007`). M5: §3.2.3's per-tag region-ordering line cited `FR-CS-025` as its authority; verified against §2.2.2 (`grep -n 'FR-CS-025 |' section-2.md`) that FR-CS-025 governs catalogue file NAMING only (`<SpecName>Constants.cs`) and says nothing about region ordering — re-cited to §4.2 directly. M6: the §3.2.1 source note offered "the tag stood at 218 occurrences (`grep -rn 'CROSS-PENDING' docs/specs/ \| wc -l`, August 18, 2026)" as proof of a figure that command no longer reproduces (245 today; every subsequent citation of the tag, including this row, keeps raising it) — re-derived against the pre-fix commit instead (`git grep -c 'CROSS-PENDING' 9b841d1^ -- docs/specs \| awk -F: '{s+=$NF} END {print s}'` → 218) and labelled explicitly as the pre-fix figure; the note's "honoured now" claim about §9.4 trigger 1 is corrected to name when the trigger's full re-verification mandate was actually run (round-7 M2, `section-9-approval-checklist.md`). L4: the `[CROSS]` row's Naming cell read a bare "PascalCase" while the carve-out qualifying it was signalled only in the Notes cell — Naming cell now reads "PascalCase (see const-mirror carve-out)". | — |
 | 1.9 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Adds §3.5.6–3.5.7 for stable component identity, overload-safe canonical selectors, typed ownership/activation contracts, lifecycle-edge evidence, closed runtime-surface accounting, alternate and bypass paths, and explicit plus compiler-generated static initialization. The approved §3.5.2 dependency taxonomy and arrow semantics are unchanged. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
+| 1.10 | September 2, 2026 | Codex | **A3.1a review correction.** Expands §3.5's declared FR range and target length to include FR-CS-074–081 and removes the asymmetric TOC sub-bullets. Restores plan v0.34's strict post-baseline classification failure, positive test-classification inputs, and closed-world/absence-proof guards, including the blind-spot-fixture precondition and known-path limit. Aligns bypass mechanics with Governance FR-AG-025's "prohibited or explicitly classified" wording. The draft remains unapproved pending A3.4. | PENDING — A3.4 |
 
 ---
 

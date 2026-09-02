@@ -7,12 +7,12 @@ This section is the authoritative FR catalogue; §3 and §6 provide rule mechani
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.6.1
+**Version:** 1.7
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.5 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 2
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md`
-v0.33, §6; A3.1a
+v0.34, §6; A3.1a
 **Subsection target lengths:** §2.1 ~20 lines · §2.2 ~250 lines · §2.3 ~30 lines ·
 §2.4 ~10 lines
 
@@ -217,7 +217,7 @@ deviation from a MUST or MUST NOT requirement. Format and lifecycle are defined 
 | FR-CS-075 | Every production host or composition root in the approved runtime discovery universe **MUST** be classified and mechanically accounted for. | MUST | Governance FR-AG-024/026 | §3.5.6–3.5.7 |
 | FR-CS-076 | Applicable runtime-bearing components **MUST** declare construction, activation, update/use, and teardown ownership through typed lifecycle records, with schema-valid N/A only where a phase does not exist. | MUST | Governance FR-AG-023 | §3.5.6 |
 | FR-CS-077 | Applicable alternate hosts and testhosts **MUST** preserve the invariant or declare an approved divergence linked to current evidence. | MUST | Governance FR-AG-024 | §3.5.7 |
-| FR-CS-078 | Activation bypasses inside a mechanically closed governed surface **MUST** be prohibited or explicitly supported. | MUST | Governance FR-AG-025/026 | §3.5.7 |
+| FR-CS-078 | Activation bypasses inside a mechanically closed governed surface **MUST** be prohibited or explicitly classified. | MUST | Governance FR-AG-025/026 | §3.5.7 |
 | FR-CS-079 | Activation-capable public runtime surfaces inside an activated closed-world category **MUST** be classified as supported, test-only, or non-activating, or **MUST** be made non-public. | MUST | Governance FR-AG-026/027; Governance §5.3 | §3.5.7 |
 | FR-CS-080 | Static initialization that participates in runtime ownership or order **MUST** be declared and **MUST NOT** bypass applicable composition or lifecycle requirements. | MUST | Governance FR-AG-023/025; Governance §5.4 | §3.5.6–3.5.7 |
 | FR-CS-081 | Blocking integration or activation declarations **MUST** resolve mechanically to repository selectors and independently verifiable facts. An `intentionally-disabled` state **MUST** carry a verifiable disable anchor. Unsupported semantic assertions **MUST** remain non-blocking evidence. | MUST | Governance FR-AG-034/035/036A | §3.5.6–3.5.7; §5 |
@@ -358,6 +358,7 @@ declarations, constant catalogue layout, namespace assignments — see §4.
 | 1.5 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings M1 + M6.** M1: `ERR-020-006` and `ERR-020-007` were cited nowhere in the spec they patch (only in `spec-error-log.md`) — the v1.4 row's "round-6 H6/H7" text is now also cross-cited by ERR id at its fix sites: FR-CS-017's row (§2.2.2) and FR-CS-022's row (§2.2.2), plus §3.2.1/§3.2.3/§4.2 in the sibling section files. M6: the v1.4 row's "218 … `grep -rn 'CROSS-PENDING' docs/specs/ \| wc -l`" clause offered a command as live proof of a figure it no longer returns (245 today, since every citation of the tag — including the v1.4 row's own text — keeps raising the count); annotated in place per the annotate-don't-rewrite convention rather than rewritten, with 218 re-derived against the pre-fix commit (`git grep -c 'CROSS-PENDING' 9b841d1^ -- docs/specs`) instead. No FR text, count, or conformance level changed by this row. | — |
 | 1.6 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Appends FR-CS-074–081 without renumbering existing requirements; adds the Architecture Integration & Activation partition; updates the total from 73 to 81; and closes the Mode 1/Mode 3 boundary so a #20 exception cannot waive an independently applicable architectural property, proof obligation, correctness/integrity failure, or Governance Blocker. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
 | 1.6.1 | September 2, 2026 | Codex | **A3.1a review correction.** Repairs the catalogue introduction's renumbering pointer after the architecture partition moved the FR Table Footer from §2.2.9 to §2.2.10. No FR text, count, conformance level, or exception behavior changed. | PENDING — A3.4 |
+| 1.7 | September 2, 2026 | Codex | **A3.1a review correction.** FR-CS-078 now reproduces Governance FR-AG-025's "prohibited or explicitly classified" rule instead of narrowing the permitted terminal without rationale to "supported." Plan v0.34 and §3.5.7 are synchronized. The draft remains unapproved pending A3.4. | PENDING — A3.4 |
 
 ---
 

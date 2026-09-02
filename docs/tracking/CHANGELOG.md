@@ -12,7 +12,16 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A3 preflight complete; implementation plan v0.33.**
+> **Last Updated:** September 2, 2026 — **A3.1a review corrections complete; draft remains unapproved.**
+> Resolved the two blocking review findings and the normative-core omissions before A3.1b: restored a
+> schema-valid F.4 dependency graph, repaired the CI-breaking maintained version pointers and shifted
+> §2.2.10 reference, expanded §3.5's declared FR range, restored strict classification and closed-world
+> absence-proof safeguards, aligned FR-CS-078 with Governance FR-AG-025, and marked C-03 open for the
+> 81-FR draft. Plan → v0.34; Code Standards §2 → v1.7, §3 → v1.10, appendices → v1.6.2, §9 → v1.1.4.
+> Verified: 166/166 tooling tests, document consistency, assembly-tier check, and executable F.4
+> normalization all pass. No production code, schema, executable semantics, workflow, or enforcement changed.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3 preflight complete; implementation plan v0.33.**
 > Removed a contradictory live paragraph that said A2 remained open and A3 blocked immediately after
 > the same section correctly recorded A2 closed. Each specification now has a normative-core slice and
 > a supporting-surface slice, followed by combined reconciliation and atomic reapproval/landing. Intermediate commits remain
