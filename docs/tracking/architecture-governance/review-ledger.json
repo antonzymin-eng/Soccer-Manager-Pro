@@ -1308,10 +1308,10 @@
           "transition_from": null,
           "transition_to": "Open",
           "actor": "Independent reviewer of the A2 candidate",
-          "at": "2026-09-02T01:51:50Z",
+          "at": "2026-09-02T01:53:27Z",
           "evidence": [
             "Rounds 8 and 9 changed three admission rules -- activation-baseline admission, proof execution/subject binding, and disable-anchor validation -- while REFERENCE_SEMANTICS_VERSION stayed at 2.0.0. That value is a field of the proof-closure subject, so it is an INPUT to subject_scope_digest, and assess_proof_freshness compares it by equality to raise proof-semantics-changed. Two materially different semantic policies sharing one value defeats that identity contract. The module's own history sets the rule it departed from: 1.0.0 -> 1.9.0 bumped once per semantic-change commit, and plan v0.19 reserved MAJOR for the import-contract break. test_reference_semantics_version_is_pinned existed throughout and did not help: it asserts the value is what it is, never that it moved when the semantics did, so both rounds passed green with the line untouched.",
-            "Recorded into this ledger at 2026-09-02T01:51:50Z. Raised during the round-10 independent review of 6bce84f and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T01:53:27Z. Raised during the round-10 independent review of 6bce84f and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
         {
@@ -1319,10 +1319,10 @@
           "transition_from": "Open",
           "transition_to": "Resolved",
           "actor": "Anthropic Claude (Claude Code), remediating the round-10 finding",
-          "at": "2026-09-02T01:51:50Z",
+          "at": "2026-09-02T01:53:27Z",
           "evidence": [
             "Advanced to 2.1.0 -- MINOR, per the module's own precedent -- covering the round-8 and round-9 changes together, restored rather than back-dated. The policy is now stated at the constant itself, since leaving it implicit is what let it lapse. No proof artifact exists in the repository, so nothing recorded is invalidated: the bump is mechanically inert today and is made for honest signalling, the same reasoning plan v0.19 applied when it restored 2.0.0. A fixture now locks the constant to every document that cites it; whether a bump was OWED remains a judgement no mechanism can settle, and that limit is recorded in the pin's own docstring rather than implied away.",
-            "Recorded into this ledger at 2026-09-02T01:51:50Z. Raised during the round-10 independent review of 6bce84f and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+            "Recorded into this ledger at 2026-09-02T01:53:27Z. Raised during the round-10 independent review of 6bce84f and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]
