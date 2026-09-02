@@ -70,7 +70,7 @@
       ],
       "unverified_surfaces": [
         "reviewer independence -- see the limitation recorded in the closure record",
-        "field-by-field re-derivation of each schema against Governance \u00a73.3/\u00a77.1",
+        "field-by-field re-derivation of each schema against Governance §3.3/§7.1",
         "the A2-R3-001 fix itself, which post-dates this round's subject"
       ],
       "applicable_properties": [],
@@ -186,6 +186,33 @@
       "convergence_state": "NON-CONVERGED",
       "final_review": false,
       "round_budget_exhausted": false
+    },
+    {
+      "review_run_id": "A2-RUN-009",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "review_scope": [
+        "A2 candidate at c927a95 as pushed on pull request #347",
+        "Verification pass over the round-8 corrections and their recorded evidence"
+      ],
+      "subject_scope_digest": "34d1d26a9dfab78001b52886a1345dad4e37f9fcf76d89f7b617148eb5d6fa6e",
+      "review_round": 9,
+      "reviewer_identity": "Anthropic Claude (Claude Code), separate session; NOT independent of the round-8 remediation, which the same assistant produced",
+      "coverage": [
+        "activation-baseline mode transitions against the declared transition table",
+        "proof execution subject binding, re-derived from the plan's field definition",
+        "disable-anchor single-owner validation and its differential fixtures",
+        "round-7/8 timestamp binding recomputed against git commit times",
+        "the four repository gates re-run against the pushed head",
+        "document header/version-history agreement across the governance set"
+      ],
+      "unverified_surfaces": [
+        "the corrections this round produced, which post-date its subject",
+        "a field-by-field re-derivation of each schema against Governance 3.3 and 7.1"
+      ],
+      "applicable_properties": [],
+      "convergence_state": "NON-CONVERGED",
+      "final_review": false,
+      "round_budget_exhausted": false
     }
   ],
   "findings": [
@@ -201,7 +228,7 @@
       "severity": "Critical",
       "requirement_property": [
         "Governance FR-AG-018 (a fresh review is over the CURRENT artifact)",
-        "integration-plan \u00a711 A2"
+        "integration-plan §11 A2"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -247,7 +274,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan \u00a70.4 IP-5 -- one source for each control datum"
+        "Integration-plan §0.4 IP-5 -- one source for each control datum"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -289,12 +316,12 @@
       "parent_review_run_id": "A2-RUN-001",
       "summary": "The plan equated landing on main with A2 closure.",
       "evidence": [
-        "v0.17 recorded A2 COMPLETE while \u00a70.5 item 11 and \u00a76/\u00a77 required A0-A2 to PASS before A3 -- a self-contradiction inside one document."
+        "v0.17 recorded A2 COMPLETE while §0.5 item 11 and §6/§7 required A0-A2 to PASS before A3 -- a self-contradiction inside one document."
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan \u00a70.5 item 11",
-        "\u00a76 and \u00a77 (A3 may edit #19/#20 only after A0-A2 pass)",
+        "Integration-plan §0.5 item 11",
+        "§6 and §7 (A3 may edit #19/#20 only after A0-A2 pass)",
         "concrete independently established defect"
       ],
       "disposition": "Blocker",
@@ -313,7 +340,7 @@
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
           "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "v0.17 recorded A2 COMPLETE while \u00a70.5 item 11 and \u00a76/\u00a77 required A0-A2 to PASS before A3 -- a self-contradiction inside one document.",
+            "v0.17 recorded A2 COMPLETE while §0.5 item 11 and §6/§7 required A0-A2 to PASS before A3 -- a self-contradiction inside one document.",
             "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-1 review of the reported candidate and resolved by dae398a6; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         },
@@ -341,8 +368,8 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan \u00a73.3 (an unretrievable prior registry reports uncertainty rather than silently accepting rewritten history)",
-        "\u00a70.4 IP-4"
+        "Integration-plan §3.3 (an unretrievable prior registry reports uncertainty rather than silently accepting rewritten history)",
+        "§0.4 IP-4"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -388,7 +415,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan \u00a73.1 -- before a machine contract is frozen, an executable reference implementation MUST demonstrate the semantics"
+        "Integration-plan §3.1 -- before a machine contract is frozen, an executable reference implementation MUST demonstrate the semantics"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -434,7 +461,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan \u00a73.1 (A2 freezes versioned schemas as machine contracts a different producer can consume)",
+        "Integration-plan §3.1 (A2 freezes versioned schemas as machine contracts a different producer can consume)",
         "concrete independently established defect"
       ],
       "disposition": "Blocker",
@@ -482,7 +509,7 @@
       "severity": "Low",
       "requirement_property": [
         "Project-owner designation of this as an A2 closure blocker for this review",
-        "integration-plan \u00a70.4 IP-5 as the underlying principle"
+        "integration-plan §0.4 IP-5 as the underlying principle"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -528,7 +555,7 @@
       ],
       "severity": "Low",
       "requirement_property": [
-        "Integration-plan \u00a73.7 (tool identities are part of the proof record)",
+        "Integration-plan §3.7 (tool identities are part of the proof record)",
         "concrete independently established defect"
       ],
       "disposition": "Blocker",
@@ -575,7 +602,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan \u00a73.6 -- this integration MUST NOT route FR-CS or FR-TS waivers directly into exceptions.json",
+        "Integration-plan §3.6 -- this integration MUST NOT route FR-CS or FR-TS waivers directly into exceptions.json",
         "#19/#20 exception mechanisms remain owner-specific"
       ],
       "disposition": "Blocker",
@@ -584,7 +611,7 @@
       "status": "Resolved",
       "round_introduced": 3,
       "resolution_evidence": [
-        "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; \u00a73.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id."
+        "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; §3.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id."
       ],
       "status_history": [
         {
@@ -605,7 +632,7 @@
           "actor": "Anthropic Claude (Claude Code), orchestrating reviewer for the A2 candidate",
           "at": "2026-09-01T19:24:32Z",
           "evidence": [
-            "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; \u00a73.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id.",
+            "property_id in a #19/#20 namespace is now rejected in both the schema and the semantics from one control-data source; §3.6's carve-out survives because an admitted property cites the FR requirement instead of taking its id.",
             "Recorded into this ledger at 2026-09-01T19:24:32Z. Raised during the round-3 review of 678f0f2 and resolved by 11547d4; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
@@ -810,7 +837,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Governance \u00a74.2 finding-record schema (status history is the evidence of what occurred and when)",
+        "Governance §4.2 finding-record schema (status history is the evidence of what occurred and when)",
         "concrete independently established defect"
       ],
       "disposition": "Blocker",
@@ -904,7 +931,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Governance \u00a74.2 finding-record schema (status history is the evidence of what occurred and when)",
+        "Governance §4.2 finding-record schema (status history is the evidence of what occurred and when)",
         "FR-AG-034 (an agent claim MUST be backed by an executable check)",
         "concrete independently established defect"
       ],
@@ -999,8 +1026,8 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan \u00a73.9 -- New violations fail, stated without qualification",
-        "\u00a70.4 IP-4"
+        "Integration-plan §3.9 -- New violations fail, stated without qualification",
+        "§0.4 IP-4"
       ],
       "disposition": "Blocker",
       "required_action": "Fix",
@@ -1046,7 +1073,7 @@
       ],
       "severity": "Medium",
       "requirement_property": [
-        "Integration-plan \u00a73.7 (the proof record binds subject scope) and \u00a73.7.2 execution truth",
+        "Integration-plan §3.7 (the proof record binds subject scope) and §3.7.2 execution truth",
         "concrete independently established defect"
       ],
       "disposition": "Blocker",
@@ -1094,7 +1121,7 @@
       "severity": "Medium",
       "requirement_property": [
         "Proposed FR-CS-081 (intentionally-disabled requires a verifiable disable anchor)",
-        "integration-plan \u00a711 A4 (anchors must resolve/evaluate)",
+        "integration-plan §11 A4 (anchors must resolve/evaluate)",
         "concrete independently established defect"
       ],
       "disposition": "Blocker",
@@ -1126,6 +1153,101 @@
           "evidence": [
             "The anchor's complete typed shape now has one owner, _normalize_disable_anchor, called from both the contract validator and the evaluator so the two cannot disagree. The differential gains malformed-anchor fixtures, closing the coverage gap that hid it.",
             "Recorded into this ledger at 2026-09-02T00:29:16Z. Raised during the round-8 review of a034fc3 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R9-001",
+      "stable_key": "a2/r9-001",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-009",
+      "summary": "The round-8 anti-ratchet fix made the plan's own inactive -> migration baseline transition unreachable.",
+      "evidence": [
+        "The A2-R8-001 remediation rejected every addition measured against a trusted prior. Section 3.9 declares inactive -> migration legal and an inactive baseline is required to be mechanically empty, so entering migration necessarily adds items and was left unreachable. Reproduced against the repository's own committed temporary-activation-baseline.json, which is inactive and empty: inactive -> migration([V-001]) raised ActivationBaselineError at c927a95 and was accepted at a034fc3, so the regression was introduced by the round-8 fix itself. No fixture caught it because every prior_baseline test in the suite passed a migration prior -- round 8's own lesson about fixture-bounded differentials, recurring in the commit that recorded it."
+      ],
+      "severity": "Medium",
+      "requirement_property": [
+        "integration-plan 3.9 (the baseline modes are inactive -> migration -> strict)",
+        "common.schema.json baseline_mode_transitions (inactive -> migration is declared legal)",
+        "concrete independently established defect, reproduced against the committed baseline"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 9,
+      "resolution_evidence": [
+        "Additions are now permitted only on the inactive -> migration edge, the single act 3.9 requires to exist: cataloguing the pre-existing set. The exemption cannot be re-entered because no transition returns to inactive, so the catalogue is populated exactly once and never grows again; growth from a migration prior stays rejected and is locked. Three fixtures are added, two of which fail at c927a95, and one asserts the committed baseline document rather than a constructed one."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R9-001-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), reviewer for the A2 candidate",
+          "at": "2026-09-02T01:06:40Z",
+          "evidence": [
+            "The A2-R8-001 remediation rejected every addition measured against a trusted prior. Section 3.9 declares inactive -> migration legal and an inactive baseline is required to be mechanically empty, so entering migration necessarily adds items and was left unreachable. Reproduced against the repository's own committed temporary-activation-baseline.json, which is inactive and empty: inactive -> migration([V-001]) raised ActivationBaselineError at c927a95 and was accepted at a034fc3, so the regression was introduced by the round-8 fix itself. No fixture caught it because every prior_baseline test in the suite passed a migration prior -- round 8's own lesson about fixture-bounded differentials, recurring in the commit that recorded it.",
+            "Recorded into this ledger at 2026-09-02T01:06:40Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        },
+        {
+          "event_id": "A2-R9-001-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), reviewer for the A2 candidate",
+          "at": "2026-09-02T01:06:40Z",
+          "evidence": [
+            "Additions are now permitted only on the inactive -> migration edge, the single act 3.9 requires to exist: cataloguing the pre-existing set. The exemption cannot be re-entered because no transition returns to inactive, so the catalogue is populated exactly once and never grows again; growth from a migration prior stays rejected and is locked. Three fixtures are added, two of which fail at c927a95, and one asserts the committed baseline document rather than a constructed one.",
+            "Recorded into this ledger at 2026-09-02T01:06:40Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        }
+      ]
+    },
+    {
+      "finding_id": "A2-R9-002",
+      "stable_key": "a2/r9-002",
+      "review_series_id": "A2-SCHEMA-FREEZE",
+      "parent_review_run_id": "A2-RUN-009",
+      "summary": "The integration plan's header version drifted seven revisions behind its own version history.",
+      "evidence": [
+        "The integration plan's header stated Version: 0.18 while its own version history had advanced to 0.25. The header last moved at dae398a; seven subsequent revisions appended history rows without bumping it, so every citation of integration-plan v0.19 through v0.25 resolved against a document self-describing as v0.18. doc-consistency-check does not compare a header against its own history, so nothing caught it. The A2 closure record and the governing Governance document were checked and are not drifted."
+      ],
+      "severity": "Low",
+      "requirement_property": [
+        "root CLAUDE.md (append a version-history row to every modified spec file)",
+        "concrete independently established defect, reproduced from git history"
+      ],
+      "disposition": "Blocker",
+      "required_action": "Fix",
+      "owner": "A2 review",
+      "status": "Resolved",
+      "round_introduced": 9,
+      "resolution_evidence": [
+        "The header is corrected to v0.26 in the same commit that appends the v0.26 row, and the drift is recorded here rather than silently repaired, because the citations made while it held are what a later reader has to interpret."
+      ],
+      "status_history": [
+        {
+          "event_id": "A2-R9-002-E1",
+          "transition_from": null,
+          "transition_to": "Open",
+          "actor": "Anthropic Claude (Claude Code), reviewer for the A2 candidate",
+          "at": "2026-09-02T01:06:40Z",
+          "evidence": [
+            "The integration plan's header stated Version: 0.18 while its own version history had advanced to 0.25. The header last moved at dae398a; seven subsequent revisions appended history rows without bumping it, so every citation of integration-plan v0.19 through v0.25 resolved against a document self-describing as v0.18. doc-consistency-check does not compare a header against its own history, so nothing caught it. The A2 closure record and the governing Governance document were checked and are not drifted.",
+            "Recorded into this ledger at 2026-09-02T01:06:40Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
+          ]
+        },
+        {
+          "event_id": "A2-R9-002-E2",
+          "transition_from": "Open",
+          "transition_to": "Resolved",
+          "actor": "Anthropic Claude (Claude Code), reviewer for the A2 candidate",
+          "at": "2026-09-02T01:06:40Z",
+          "evidence": [
+            "The header is corrected to v0.26 in the same commit that appends the v0.26 row, and the drift is recorded here rather than silently repaired, because the citations made while it held are what a later reader has to interpret.",
+            "Recorded into this ledger at 2026-09-02T01:06:40Z. Raised during the round-9 review of c927a95 and resolved by this commit; the exact review time is not recoverable, so this timestamp is when the transition was RECORDED, not when it occurred."
           ]
         }
       ]

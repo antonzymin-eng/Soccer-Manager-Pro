@@ -2499,3 +2499,98 @@ class CodexReviewFindingTests(unittest.TestCase):
         self.assertEqual(
             [], jsv.default_schema_set().validate(
                 document, "integration-contracts.schema.json"))
+
+
+class RoundNineReviewFindingTests(unittest.TestCase):
+    """Round-9 findings from the review of the round-8 corrections.
+
+    Round 8's own lesson was that a differential proves agreement only on the
+    fixtures chosen for it. `A2-R9-001` is that lesson recurring inside the
+    commit that recorded it: every `prior_baseline` fixture in this file passed
+    a MIGRATION prior, so no test exercised an inactive one and the round-8 fix
+    closed the plan's own migration on-ramp unnoticed.
+    """
+
+    REPO = Path(__file__).resolve().parents[2]
+    ROOT = REPO / "docs" / "tracking" / "architecture-governance"
+
+    def test_entering_migration_may_catalogue_the_pre_existing_set(self):
+        """A2-R9-001: `inactive -> migration` is the population edge.
+
+        §3.9 declares the transition legal and an inactive baseline is
+        mechanically empty, so rejecting every addition against a trusted prior
+        left migration mode unreachable -- including for the repository's own
+        committed baseline, which is inactive and empty today.
+        """
+        prior = baseline("inactive", False, [])
+        populated = baseline(
+            "migration", False, [baseline_item("V-001"), baseline_item("V-002")])
+        sem.validate_temporary_activation_baseline(
+            populated, prior_baseline=prior,
+            current_violation_ids=["V-001", "V-002"])
+
+    def test_the_population_exemption_is_only_the_entry_edge(self):
+        """The exemption must not become a general licence to grow.
+
+        It cannot be re-entered: no transition returns to `inactive`, so a
+        baseline passes this edge at most once in its life. What is pinned here
+        is that the edge itself is the only carrier -- growth from a migration
+        prior stays rejected, and the remaining edges cannot carry items at all
+        because their target modes are required to be empty.
+        """
+        populated = baseline("migration", False, [baseline_item("V-001")])
+        grown = baseline(
+            "migration", False, [baseline_item("V-001"), baseline_item("V-002")])
+        with self.assertRaises(sem.ActivationBaselineError):
+            sem.validate_temporary_activation_baseline(
+                grown, prior_baseline=populated,
+                current_violation_ids=["V-001", "V-002"])
+
+        for mode in ("inactive", "strict"):
+            with self.assertRaises(sem.ActivationBaselineError):
+                sem.validate_temporary_activation_baseline(
+                    baseline(mode, mode == "strict", [baseline_item("V-001")]),
+                    prior_baseline=baseline("inactive", False, []),
+                    current_violation_ids=["V-001"])
+
+    def test_the_repository_baseline_can_still_reach_migration(self):
+        """Pin the committed document, not only a constructed fixture.
+
+        The regression was invisible against fixtures and immediate against the
+        real artifact, so the real artifact is what this asserts.
+        """
+        live = json.loads(
+            (self.ROOT / "temporary-activation-baseline.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            "inactive", live["mode"],
+            "the committed baseline has left inactive; this test asserts the "
+            "on-ramp from where that document actually is, so update it with the "
+            "document rather than deleting it")
+        sem.validate_temporary_activation_baseline(
+            live, prior_baseline=live, current_violation_ids=[])
+        sem.validate_temporary_activation_baseline(
+            {**live, "mode": "migration", "items": [baseline_item("V-001")]},
+            prior_baseline=live, current_violation_ids=["V-001"])
+
+    def test_a_governance_plan_header_matches_its_own_version_history(self):
+        """A2-R9-002: the header drifted seven revisions behind the history.
+
+        `recurring-defect-lint` owns this rule but scans `docs/specs/**.md` and
+        `docs/tracking/*-design.md` only, so the governance program's own owning
+        plan sits outside it. Widening that scan is not free -- the other seven
+        `docs/planning` documents carry a `**Version:**` with no history table at
+        all and would each raise -- so the two documents this program owns are
+        pinned here instead, where the rule is cheap and exact.
+        """
+        import re
+        for name in ("project-architecture-governance-integration-plan.md",
+                     "project-architecture-governance.md"):
+            text = (self.REPO / "docs" / "planning" / name).read_text(encoding="utf-8")
+            header = re.search(r"^\*\*Version:\*\* ([0-9]+\.[0-9]+)", text, re.M)
+            rows = re.findall(r"^\| ([0-9]+\.[0-9]+) \| ", text, re.M)
+            self.assertIsNotNone(header, "%s carries no header version" % name)
+            self.assertTrue(rows, "%s carries no version history to check against" % name)
+            self.assertEqual(
+                rows[0], header.group(1),
+                "%s header says v%s but its newest history row is v%s"
+                % (name, header.group(1), rows[0]))

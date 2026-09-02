@@ -476,12 +476,15 @@ def evaluate_disable_anchor(contract, semantic_facts):
     state = validate_activation_contract(contract)
     if state != "intentionally-disabled":
         raise ActivationError("disable-anchor evaluation requires intentionally-disabled state")
-    anchor = contract["disable_anchor"]
-    normalized = _normalize_disable_anchor(anchor)
+    normalized = _normalize_disable_anchor(contract["disable_anchor"])
     operator = normalized["operator"]
     expected = normalized["expected"]
     try:
-        fact = resolve_selector(anchor["selector"], semantic_facts)
+        # Resolve the NORMALIZED selector. resolve_selector normalizes again and
+        # normalization is idempotent, so this is behaviour-preserving today --
+        # but computing a canonical form and then resolving the raw one is the
+        # shape a future divergence hides in.
+        fact = resolve_selector(normalized["selector"], semantic_facts)
     except SelectorError as exc:
         raise ActivationError(
             "disable_anchor selector does not resolve uniquely: %s" % exc) from exc
@@ -2296,8 +2299,18 @@ def validate_temporary_activation_baseline(
         # violation and its own live-set entry in one revision -- the coverage
         # check then sees nothing new and the ratchet never engages. Additions
         # are measured against the TRUSTED PRIOR, whatever its seal state.
+        #
+        # The single exception is the act §3.9 requires to exist at all:
+        # `inactive -> migration` is the one edge on which the PRE-EXISTING set
+        # is catalogued. An inactive baseline is mechanically empty, so a first
+        # unqualified rule made migration mode unreachable and left the
+        # repository's own inactive baseline with no forward path. The exemption
+        # cannot be reused: nothing returns to `inactive` (the transition table
+        # admits only inactive->migration, inactive->strict, migration->strict),
+        # so the catalogue is populated exactly once and never grows again.
         added = sorted(set(new_items) - set(old_items))
-        if added:
+        entering_migration = prior_mode == "inactive" and mode == "migration"
+        if added and not entering_migration:
             raise ActivationBaselineError(
                 "baseline cannot admit new violations: %s" % ", ".join(added))
     return baseline
@@ -2527,16 +2540,23 @@ def validate_proof_artifact(
 
     # Execution truth: the proof result may never outrun what actually executed.
     #
-    # Whether a given proof class REQUIRES an execution at all is an applicability
-    # question, not a property of this record, so an empty execution list is not
-    # rejected here — that rule would be invented, and A2 is freezing the contract.
-    # What is checked is that every execution actually recorded is consistent with
-    # the claimed result.
+    # Two rules below look opposed and are not; the line between them is the one
+    # A2 is freezing, so it is drawn here explicitly.
+    #
+    # NOT enforced -- that an execution exists. Whether a given proof class
+    # REQUIRES one is an applicability question, not a property of this record.
+    # Rejecting an empty list would ADD an obligation the contract does not state.
+    #
+    # Enforced -- that every execution actually recorded is consistent with the
+    # claimed result, and ran against this proof's subject. That ADDS nothing:
+    # subject_scope_digest is already a required field on every execution record,
+    # and reading a required field as meaning what it names is not a new rule.
+    # The difference is obligation versus interpretation.
     if result in {"pass", "bounded"}:
         for record in executions:
-            # Bind the evidence to the subject. Without this the execution's own
-            # subject_scope_digest is decorative and a passing record copied from
-            # an unrelated or older subject certifies this proof.
+            # Without this the execution's own subject_scope_digest is decorative
+            # and a passing record copied from an unrelated or older subject
+            # certifies this proof.
             #
             # NARROWING, recorded deliberately: the plan defines no subsumption
             # relation between scopes, so equality is the only mechanically
