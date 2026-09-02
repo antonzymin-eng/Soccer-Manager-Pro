@@ -12,7 +12,16 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 1, 2026 — **A2 closure condition 4 is SATISFIED. Round 11 found nothing, and nothing followed it into the contract.**
+> **Last Updated:** September 1, 2026 — **A2 closure condition 6 recorded: the project owner approved the candidate. Row 7 (landing) is all that remains.**
+> The owner approved the candidate at `9954e90`, material subject digest `4160b164…` — the same subject `A2-RUN-011` reviewed at `1f0e68a`, unchanged since. Integration plan v0.30 → v0.31; A2 closure record v0.13 → v0.14, whose §6 is rewritten from "no approval is recorded" to the recorded approval.
+>
+> **The approval is bound to that digest and does not transfer.** Any change inside the material subject returns row 6 to PENDING and requires a fresh approval against the new digest; files the subject excludes — tracking prose, the review ledger, CI configuration — may change without disturbing it. That boundary is `in_material_subject`, not a judgement call.
+>
+> **Row 7 is now the only outstanding condition:** merge the candidate onto the base A3 builds on, verify the landed material subject still recomputes to `4160b164…`, then mark the closure record `CLOSED`. No run is marked `CONVERGED` and none carries `final_review` — that lock is tied to row 7 and is not what owner approval releases; a test enforces it. **A2 stays OPEN until the approved candidate lands, and A3 stays BLOCKED.**
+>
+> Records only. No schema, executable semantics, `REFERENCE_SEMANTICS_VERSION`, fixture, finding, #19/#20 normative file, `src/`, `.cs`, `.asmdef`, gameplay, save, RNG, tuning, or CI job-definition behavior changed; discovery holds at 166 tests, 0 skipped.
+>
+> **Last Updated (prior):** September 1, 2026 — **A2 closure condition 4 is SATISFIED. Round 11 found nothing, and nothing followed it into the contract.**
 > `A2-RUN-011` is an independent review of `1f0e68a` as pushed that returned **no findings**. That is the first time in this series a round did not move the contract, and it is exactly what row 4 has required since its v0.4 retraction: every earlier round found something real, the fix changed the material subject, and the round that reviewed the pre-fix tree no longer described the artifact. Integration plan v0.29 → v0.30; A2 closure record v0.12 → v0.13.
 >
 > **The claim is machine-checked, not argued.** The material subject digest `4160b164…` recomputes identically from `1f0e68a` and from the current tree, and `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` fails the cell if that ever stops holding. Corrections made *after* the round are confined to files the material subject excludes by construction — the ledger entry recording the run (§3.8: recording a run must not recursively invalidate the subject it records), tracking prose, and stale fixture names in a CI comment and in the closure record's §1.

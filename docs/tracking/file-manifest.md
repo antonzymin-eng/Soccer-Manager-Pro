@@ -1,6 +1,16 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 1, 2026 — **A2 closure condition 4 is SATISFIED; rows 6 and 7 remain the owner's.**
+**Last Updated:** September 1, 2026 — **A2 closure condition 6 recorded: project-owner approval. Row 7 (landing) is all that remains.**
+The owner approved the candidate at `9954e90`, material subject digest `4160b164…` — the same subject
+`A2-RUN-011` reviewed at `1f0e68a`, unchanged since. The approval is bound to that digest and does not
+transfer: a change inside the material subject returns row 6 to PENDING, while excluded files (tracking
+prose, review ledger, CI configuration) may change without disturbing it. Row 7 remains: merge onto the
+base A3 builds on, verify the landed digest recomputes to `4160b164…`, then mark the record `CLOSED`.
+No run is `CONVERGED` and none carries `final_review`; that lock is tied to row 7. Plan → v0.31, closure
+record → v0.14. **A2 stays OPEN until the candidate lands; A3 stays BLOCKED.**
+Records only — no schema, executable semantics, fixture, finding, #19/#20 normative file, `src/`, `.cs`,
+`.asmdef`, gameplay, save, RNG, or tuning behavior changed; discovery holds at 166 tests.
+**Last Updated (prior):** September 1, 2026 — **A2 closure condition 4 is SATISFIED; rows 6 and 7 remain the owner's.**
 `A2-RUN-011`, an independent review of `1f0e68a` as pushed, returned **no findings** — the first round in
 this series after which nothing followed into the contract, which is what row 4 has required since its
 v0.4 retraction. The claim is machine-checked: material subject digest `4160b164…` recomputes identically

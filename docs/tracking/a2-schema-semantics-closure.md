@@ -1,8 +1,8 @@
 # A2 Schema and Executable-Semantics Closure Record
 
 **Document Class:** Stage-gate evidence record\
-**Status:** OPEN — implemented candidate, independently reviewed clean; owner approval and landing pending\
-**Version:** 0.13\
+**Status:** OPEN — approved by the project owner; **landing (row 7) is the only condition outstanding**\
+**Version:** 0.14\
 **Created:** September 1, 2026\
 **Owning plan:** `docs/planning/project-architecture-governance-integration-plan.md` §11 A2\
 **Candidate branch:** `codex/a2-complete-schema-freeze`\
@@ -24,8 +24,8 @@ Implementation, merge, review, approval, and closure are distinct. A2 remains **
 | 3 | Executable representative fixtures | **Complete** | §4, §7 |
 | 4 | Fresh review over pushed current candidate | **Complete** | §8. Retracted at v0.4 (`A2-R4-001`), claimable at v0.13: `A2-RUN-011` is an independent review of `1f0e68a` as pushed that returned **no findings**, so for the first time in this series no remediation followed a round and the reviewed subject is still the current one. Digest `4160b164…` recomputes identically from `1f0e68a` and from this tree. `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` enforces the link and would fail this cell otherwise |
 | 5 | Every finding terminal | **Complete** | §8; twenty-three findings, all `Blocker` / `Resolved`, in `architecture-governance/review-ledger.json` |
-| 6 | Project-owner approval | **PENDING** | Non-delegable. No agent may satisfy this row |
-| 7 | Approved candidate landed on A3 base | **PENDING** | Blocked by row 6 alone now; must match the approved digest bundle |
+| 6 | Project-owner approval | **Complete** | §6. Recorded September 1, 2026: the project owner approved the candidate at `9954e90`, material subject digest `4160b164…`. Still non-delegable — this cell records a human decision, it does not substitute for one |
+| 7 | Approved candidate landed on A3 base | **PENDING** | **Unblocked and outstanding.** Merge `codex/a2-complete-schema-freeze` into the base A3 builds on, verify the landed material subject still recomputes to `4160b164…`, then mark this record `CLOSED` |
 
 **Row 4 was claimed at v0.3 and is retracted.** The claim was wrong in a way worth stating
 plainly rather than quietly correcting: round 3 reviewed `678f0f2`, the material subject then moved
@@ -37,7 +37,7 @@ only after a fresh review of the artifact as pushed, and
 Complete without one. **That is the test which permits the claim below**, and it is mechanical:
 row 4 may read Complete only while some recorded round's digest IS the current material subject.
 
-Rows 1–5 are satisfied. Rows 6 and 7 are not. **A2 is OPEN. A3 is BLOCKED.**
+Rows 1–6 are satisfied. Row 7 is not. **A2 is OPEN until the approved candidate lands. A3 stays BLOCKED.**
 
 **What moved at v0.13, stated against the standard that retracted it.** Row 4 required a fresh review
 of the artifact *as pushed*. Eleven rounds are recorded and ten of them could not satisfy it, for one
@@ -164,9 +164,19 @@ the fresh review rather than relying on this record's assertion.
 
 ## 6. Approval and closure
 
-No approval is recorded. An agent MUST NOT change this record to `CLOSED` without explicit project-owner
-approval of the exact reviewed subject-digest bundle. A3 MUST NOT begin before that approval, terminal
-finding state, matching landing, and closure update.
+**Project-owner approval is recorded, September 1, 2026.** The owner approved the candidate at
+`9954e90`, whose material subject digest is
+`4160b1644ebe75f771f01d7f1db67278126c827849c6e0da35657eb37d454254` — the same subject `A2-RUN-011`
+reviewed at `1f0e68a`, unchanged since.
+
+**The approval is bound to that digest and does not transfer.** If any file inside the material subject
+changes before the landing, this row returns to PENDING and a fresh approval is required against the new
+digest. Files the subject excludes — tracking prose, the review ledger, CI configuration — may change
+without disturbing it; that boundary is `in_material_subject`, not a judgement call.
+
+An agent still MUST NOT mark this record `CLOSED`. Closure additionally requires row 7: the approved
+candidate landed on the base A3 builds on, with the landed digest verified to match. A3 MUST NOT begin
+before that.
 
 ## 7. Second-review remediation (v0.2)
 
@@ -387,6 +397,7 @@ validator branch. Both are recorded in the ledger's `unverified_surfaces`.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.14 | September 1, 2026 | — | **Closure condition 6 recorded: the project owner approved the candidate at `9954e90`**, material subject digest `4160b164…` — the same subject `A2-RUN-011` reviewed at `1f0e68a`, unchanged since. §6 rewritten from "no approval is recorded" to the recorded approval, and states the binding explicitly: the approval attaches to that digest and does not transfer, so any change inside the material subject returns row 6 to PENDING and requires a fresh approval, while excluded files (tracking prose, the review ledger, CI configuration) may change without disturbing it. Row 7 is now the only outstanding condition — merge the candidate onto the base A3 builds on, verify the landed digest still recomputes to `4160b164…`, then mark this record `CLOSED`. No run is marked `CONVERGED` and none carries `final_review`: that remains locked while row 7 is open, and is not what owner approval releases. **A2 stays OPEN until the approved candidate lands; A3 stays BLOCKED.** Records only — no schema, semantics, fixture, or finding changed, and the test count holds at 149/9/8 = 166. |
 | 0.13 | September 1, 2026 | — | **Row 4 moves to Complete.** `A2-RUN-011` is an independent review of `1f0e68a` as pushed that returned **no findings** — the first round in this series after which nothing followed into the contract, which is exactly the condition row 4 has been waiting for since its v0.4 retraction. Digest `4160b164…` recomputes identically from `1f0e68a` and from this tree, and `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` would refuse the cell otherwise. The round also verified Governance §3.3 property fields and §7.1 exception fields — carried as explicitly unverified since v0.3 — and independently confirmed `Spec hygiene checks` at 166/166, 0 skipped. Corrections made after the round are confined to files the material subject excludes by construction: the ledger entry recording the run, tracking prose, and stale fixture names in a CI comment and in §1 (including `test_the_current_artifact_has_not_yet_been_reviewed`, which the round did not catch). A fixture pinning cited test names is deliberately **not** landed — it would sit inside the material subject and re-open row 4 for a twelfth round; that trade is the owner's to make with the next material change. **Rows 6 and 7 remain PENDING and are not agent-satisfiable.** Test count unchanged at 149/9/8 = 166. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.12 | September 1, 2026 | — | Hardens the v0.11 fix against its own removal, at the round-10 reviewer's recommendation, before round 11. `fetch-depth: 0` is one line and dropping it would silently un-verify both history-dependent fixtures with the job still green. A missing-history condition is now a **failure** whenever `GITHUB_ACTIONS=true`, and additionally under `GOVERNANCE_REQUIRE_HISTORY=1` for other CI systems; `GITHUB_ACTIONS` is the trigger rather than an opt-in flag, because a guard you must remember to enable is the class of guard this replaces. Local skips are preserved. All three skip paths route through one `unverifiable` helper — missing revisions in either fixture, and incomplete ledger publication history. `test_the_ci_history_guard_is_not_inert` pins both directions and both triggers, `A2-R10-001`'s lesson applied to the guard itself. Also records a consequence measured at `1635aa3`: the publish→bind two-step must be pushed as a pair, since the equality regression now fails rather than skips at a publishing commit. No frozen executable semantics changed, so **no `REFERENCE_SEMANTICS_VERSION` bump is owed**. Test split 148/9/8 = 165 → 149/9/8 = 166. Row 4 stays PENDING. A2 remains OPEN; A3 remains BLOCKED. |
 | 0.11 | September 1, 2026 | — | Acts on round 10's evidence note instead of only recording it. The two history-dependent fixtures — `test_every_recorded_digest_matches_the_revision_it_names` and `test_status_timestamps_equal_first_publication_commit_time` — had skipped in **every** CI run of this candidate, because `Spec hygiene checks` checked out at the `actions/checkout` default depth of 1. The digest chain and the timestamp equality rule this record rests on were therefore only ever verified on a contributor's local clone, never by the gate. `spec-hygiene` now sets `fetch-depth: 0` — that job only; every other job stays shallow — and all ten ledger-named revisions were confirmed ancestors of the candidate head, so the fetch reaches each. §4 and §8.1 are corrected accordingly: a `0 skipped` result is now a claim about CI as well as local. The shallow skip path stays reachable and stays correct; it is simply no longer the CI path. Workflow only — no fixture, schema, semantics, or finding changed, and the count holds at 148/9/8 = 165. Row 4 stays PENDING. A2 remains OPEN; A3 remains BLOCKED. |
