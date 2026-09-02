@@ -12,7 +12,19 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A3.1a renumbering sweep completed; draft remains unapproved.**
+> **Last Updated:** September 2, 2026 — **A3.1a automated-review findings resolved; draft remains unapproved.**
+> Two P1 findings exposed overclaims in the new ownership/lifecycle mechanics: schema `1.0.0` and reference
+> semantics `2.1.0` validate string shape but do not resolve ownership/path bindings, and `na_fields` had no
+> defined field-value representation. Code Standards §3.5.6 now defines exact registry/inventory/path targets,
+> construction-path grammar, the `not-applicable` sentinel and one-to-one justification pairing, while explicitly
+> keeping both surfaces non-blocking until A4 implements cross-registry resolution and discriminating fixtures.
+> Appendix F.2 demonstrates the sentinel; F.4 uses the same component/surface/path identities. Plan → v0.35;
+> Code Standards §2 → v1.8, §3 → v1.11, appendices → v1.6.3. No schema, executable semantics, workflow,
+> production code, or enforcement changed. Verified: 166/166 tooling tests, document consistency,
+> assembly-tier checking, recurring-defect lint at 0 ERROR, and all five Appendix F JSON examples with
+> F.4 accepted at five nodes/four edges. A3.1b and A3.4 remain pending.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1a renumbering sweep completed; draft remains unapproved.**
 > The §2.2.9 → §2.2.10 footer move was repaired at `section-2.md` but not swept: `section-9-approval-checklist.md`
 > C-04's live proxy comment still excluded "the §2.2.9 partition-footer rows" — in a file edited in that same pass —
 > and `section-5.md` §5.5 still cited "§2.2.9's partition Count column". C-04 re-pointed to §2.2.10; §5.5 annotated

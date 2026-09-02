@@ -9,14 +9,14 @@ by category name and must not reproduce its symbol lists.
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.6.2
+**Version:** 1.6.3
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.5 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §APPENDICES
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md`
-v0.34, §6; A3.1a
+v0.35, §6; A3.1a
 **Appendix target lengths:** A ~50 lines · B ~30 lines · C ~150 lines ·
-D ~80 lines · E ~40 lines · F ~160 lines
+D ~80 lines · E ~40 lines · F ~190 lines
 
 ---
 
@@ -472,7 +472,8 @@ redefined.
 These examples illustrate §3.5.6–3.5.7 and FR-CS-074–081. They are not a second
 schema. The canonical Draft 2020-12 files under
 `docs/tracking/architecture-governance/schemas/` and reference semantics version
-`2.1.0` control field names, allowed values, validation, and blocking behavior.
+`2.1.0` control field names and shape validation. §3.5.6 controls the binding
+vocabulary and makes clear that cross-registry resolution is non-blocking until A4.
 
 ### F.1 — Overload-Safe Selectors
 
@@ -539,15 +540,20 @@ changes its current source selector and `symbol_key`, not its `component_id`:
   "owning_assembly": "Example.Runtime",
   "composition_root": "SURFACE-MATCH-HOST-COMPOSE",
   "construction_path": "SURFACE-MATCH-HOST-COMPOSE -> component:match-bootstrap",
-  "activation_phase": "host-startup",
+  "activation_phase": "SURFACE-MATCH-BOOTSTRAP-ACTIVATE",
   "update_use_owner": "SURFACE-MATCH-LOOP-TICK",
-  "teardown_owner": "SURFACE-MATCH-HOST-DISPOSE",
+  "teardown_owner": "not-applicable",
   "relevant_testhost_path": "src/example-tests/MatchTestHost.cs",
   "alternate_supported_paths": ["SURFACE-REPLAY-HOST-COMPOSE"],
   "prohibited_bypass_paths": ["SURFACE-MATCH-BOOTSTRAP-CONSTRUCTOR"],
   "static_initialization_involved": false,
   "lifecycle_ordering_requirements": ["Compose before Activate before Tick"],
-  "na_fields": [],
+  "na_fields": [
+    {
+      "field": "teardown_owner",
+      "justification": "Bootstrap owns no independent resource and has no teardown phase"
+    }
+  ],
   "activation_state": "active",
   "tuning_surface_selectors": []
 }
@@ -583,7 +589,7 @@ are illustrative valid SHA-256 values, not reusable proof evidence:
 {
   "nodes": [
     {
-      "dependency_id": "symbol:MatchHost.Compose",
+      "dependency_id": "SURFACE-MATCH-HOST-COMPOSE",
       "kind": "runtime-root",
       "fingerprint": "09c509bd92878883b9090ae7f05049821fdce67664f39957fba26fe2a00a238f"
     },
@@ -593,30 +599,40 @@ are illustrative valid SHA-256 values, not reusable proof evidence:
       "fingerprint": "64509290862a16c1de105df37b8576d256ece06f671e107064c36d805eebef62"
     },
     {
-      "dependency_id": "symbol:MatchLoop.Tick",
+      "dependency_id": "SURFACE-MATCH-BOOTSTRAP-ACTIVATE",
+      "kind": "lifecycle",
+      "fingerprint": "3ee3a9be784852e0beab19a2e8ac512294ad152c1cb6b09f6f36f909e1fac327"
+    },
+    {
+      "dependency_id": "SURFACE-MATCH-LOOP-TICK",
       "kind": "lifecycle",
       "fingerprint": "5ecf264377fcb363b8b01145a2edaff12fd5c6be7d3d1594710d5c9435406a8c"
     },
     {
-      "dependency_id": "testhost:match",
+      "dependency_id": "src/example-tests/MatchTestHost.cs",
       "kind": "testhost",
       "fingerprint": "81cf7c6f69ff15a23a4d35131ec1ab69f61a0b50e1fa0039ee54922321ff4561"
     }
   ],
   "edges": [
     {
-      "source": "symbol:MatchHost.Compose",
+      "source": "SURFACE-MATCH-HOST-COMPOSE",
       "target": "component:match-bootstrap",
       "relation": "lifecycle-member"
     },
     {
       "source": "component:match-bootstrap",
-      "target": "symbol:MatchLoop.Tick",
+      "target": "SURFACE-MATCH-BOOTSTRAP-ACTIVATE",
+      "relation": "lifecycle-member"
+    },
+    {
+      "source": "SURFACE-MATCH-BOOTSTRAP-ACTIVATE",
+      "target": "SURFACE-MATCH-LOOP-TICK",
       "relation": "ordering"
     },
     {
       "source": "component:match-bootstrap",
-      "target": "testhost:match",
+      "target": "src/example-tests/MatchTestHost.cs",
       "relation": "testhost-equivalent"
     }
   ]
@@ -662,6 +678,7 @@ shape:
 | 1.6 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Adds Appendix F with illustrative schema-aligned examples for overload-safe selectors, stable component identity across a rename, active integration ownership, runtime-surface classification, typed lifecycle edges, and a verifiable disabled-state anchor. Canonical A2 schemas and reference semantics remain authoritative. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
 | 1.6.1 | September 2, 2026 | Codex | **A3.1a review correction.** F.4 now supplies the `nodes` list required by reference semantics v2.1.0 and declares every typed edge endpoint with a schema-valid kind and fingerprint. The complete example is accepted by `normalize_dependency_graph`; the fingerprints remain illustrative rather than reusable proof evidence. | PENDING — A3.4 |
 | 1.6.2 | September 2, 2026 | Codex | **A3.1a metadata synchronization.** Advances the amendment-plan pointer from v0.33 to v0.34 after FR-CS-078 was aligned with Governance FR-AG-025. Appendix F content is unchanged from v1.6.1. | PENDING — A3.4 |
+| 1.6.3 | September 2, 2026 | Codex | **A3.1a automated-review correction.** Stops claiming that reference semantics v2.1 already controls cross-registry blocking behavior. F.2 now uses an exact lifecycle `surface_id` and demonstrates the §3.5.6 `not-applicable`/`na_fields` pairing for a genuinely absent teardown phase; F.4's five nodes and four edges use the same component, surface, and repository-path identities as F.2. Examples remain illustrative rather than reusable proof evidence. | PENDING — A3.4 |
 
 ---
 

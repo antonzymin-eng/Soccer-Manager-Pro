@@ -7,12 +7,12 @@ This section is the authoritative FR catalogue; §3 and §6 provide rule mechani
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.7
+**Version:** 1.8
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.5 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 2
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md`
-v0.34, §6; A3.1a
+v0.35, §6; A3.1a
 **Subsection target lengths:** §2.1 ~20 lines · §2.2 ~250 lines · §2.3 ~30 lines ·
 §2.4 ~10 lines
 
@@ -215,7 +215,7 @@ deviation from a MUST or MUST NOT requirement. Format and lifecycle are defined 
 |---|---|---|---|---|
 | FR-CS-074 | Every runtime-bearing component whose correctness depends on activation **MUST** have an explicit integration owner, exact integration point, and orthogonal activation state. | MUST | Governance FR-AG-021/022 | §3.5.6 |
 | FR-CS-075 | Every production host or composition root in the approved runtime discovery universe **MUST** be classified and mechanically accounted for. | MUST | Governance FR-AG-024/026 | §3.5.6–3.5.7 |
-| FR-CS-076 | Applicable runtime-bearing components **MUST** declare construction, activation, update/use, and teardown ownership through typed lifecycle records, with schema-valid N/A only where a phase does not exist. | MUST | Governance FR-AG-023 | §3.5.6 |
+| FR-CS-076 | Applicable runtime-bearing components **MUST** declare construction, activation, update/use, and teardown ownership through typed lifecycle records, with the §3.5.6 `not-applicable`/`na_fields` representation only where a phase does not exist. | MUST | Governance FR-AG-023 | §3.5.6 |
 | FR-CS-077 | Applicable alternate hosts and testhosts **MUST** preserve the invariant or declare an approved divergence linked to current evidence. | MUST | Governance FR-AG-024 | §3.5.7 |
 | FR-CS-078 | Activation bypasses inside a mechanically closed governed surface **MUST** be prohibited or explicitly classified. | MUST | Governance FR-AG-025/026 | §3.5.7 |
 | FR-CS-079 | Activation-capable public runtime surfaces inside an activated closed-world category **MUST** be classified as supported, test-only, or non-activating, or **MUST** be made non-public. | MUST | Governance FR-AG-026/027; Governance §5.3 | §3.5.7 |
@@ -359,6 +359,7 @@ declarations, constant catalogue layout, namespace assignments — see §4.
 | 1.6 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Appends FR-CS-074–081 without renumbering existing requirements; adds the Architecture Integration & Activation partition; updates the total from 73 to 81; and closes the Mode 1/Mode 3 boundary so a #20 exception cannot waive an independently applicable architectural property, proof obligation, correctness/integrity failure, or Governance Blocker. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
 | 1.6.1 | September 2, 2026 | Codex | **A3.1a review correction.** Repairs the catalogue introduction's renumbering pointer after the architecture partition moved the FR Table Footer from §2.2.9 to §2.2.10. No FR text, count, conformance level, or exception behavior changed. | PENDING — A3.4 |
 | 1.7 | September 2, 2026 | Codex | **A3.1a review correction.** FR-CS-078 now reproduces Governance FR-AG-025's "prohibited or explicitly classified" rule instead of narrowing the permitted terminal without rationale to "supported." Plan v0.34 and §3.5.7 are synchronized. The draft remains unapproved pending A3.4. | PENDING — A3.4 |
+| 1.8 | September 2, 2026 | Codex | **A3.1a automated-review correction.** FR-CS-076 now names §3.5.6's exact `not-applicable`/`na_fields` representation instead of advertising an undefined generic N/A or claiming the frozen schema enforces the pairing. The amendment-plan pointer advances to v0.35. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
 
 ---
 

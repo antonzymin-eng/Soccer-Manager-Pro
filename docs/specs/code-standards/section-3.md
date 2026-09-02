@@ -9,14 +9,14 @@ API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.10
+**Version:** 1.11
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.8 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md`
-v0.34, §6; A3.1a
+v0.35, §6; A3.1a
 **Subsection target lengths:** §3.1 ~150 lines · §3.2 ~120 lines · §3.3 ~100 lines ·
-§3.4 ~120 lines · §3.5 ~380 lines after A3.1a · §3.6 ~90 lines · §3.7 ~30 lines ·
+§3.4 ~120 lines · §3.5 ~420 lines after A3.1a · §3.6 ~90 lines · §3.7 ~30 lines ·
 §3.8 ~10 lines · §3.9 ~60 lines · §3.10 ~10 lines
 
 ---
@@ -853,15 +853,47 @@ Each applicable durable runtime-bearing component **MUST** have one record in
 | Ordering and static initialization | `static_initialization_involved`, `lifecycle_ordering_requirements` |
 | Applicability and activation | `na_fields`, `activation_state`, `tuning_surface_selectors` |
 
-Owner and path strings are machine bindings, not placeholders for prose. Each one
-**MUST** resolve to an inventory identity or exact repository path under the checker
-semantics before it supports a blocking claim.
+The schema-v1 fields above are strings, but their values are not free-form prose. The
+binding grammar is:
+
+| Field | Required value and resolution target |
+|---|---|
+| `owning_host` | Exact `component_id` of one contract in the integration-contract registry. |
+| `owning_assembly` | Exact case-sensitive assembly identity emitted by the assembly/compiler inventory. |
+| `composition_root` | Exact `surface_id` classified as `production-runtime-root`. |
+| `construction_path` | Two or more `component_id`/`surface_id` tokens joined by the literal delimiter ` -> `; every token resolves in its owning registry and every adjacent step is present in the dependency graph. |
+| `activation_phase` | Exact lifecycle `surface_id` in the runtime-surface registry, or the N/A sentinel defined below. |
+| `update_use_owner`, `teardown_owner` | Exact lifecycle-owner `surface_id` in the runtime-surface registry, or the N/A sentinel defined below. |
+| `relevant_testhost_path` | Normalized repository-relative path using `/`; the path exists, its relevant discovered surfaces are classified `test-only`, and it resolves to a dependency node of kind `testhost`; or the N/A sentinel defined below. |
+| `alternate_supported_paths`, `prohibited_bypass_paths` | Exact `surface_id` values in the runtime-surface registry; absence is an empty list, not N/A. |
+
+Resolution is ordinal and case-sensitive after repository separators are normalized to
+`/`. Missing or multiply resolving identities, a nonexistent path, a wrong structural
+classification, or a construction step absent from the dependency graph is
+non-conformant.
+
+Schema `1.0.0` and reference semantics `2.1.0` validate the contract envelope,
+selector shapes, and activation-state invariants; they do **not** yet perform the
+cross-registry/repository resolution in this table. Until the A4 resolver implements
+that resolution with closed-inventory and blind-spot fixtures, these string fields are
+declarations only and **MUST NOT** support a Machine blocking claim. Schema acceptance
+alone is not evidence that a binding exists.
 
 The four lifecycle phases are separate declarations. A required field **MUST NOT** be
-omitted or set to null merely because the phase does not exist. It remains present and
-`na_fields` names that field with a non-empty justification. N/A is valid only for a
-phase that genuinely does not exist; it is not a substitute for an unknown owner or
-unfinished integration.
+omitted or set to null merely because the phase does not exist. For
+`activation_phase`, `update_use_owner`, `teardown_owner`, or
+`relevant_testhost_path`, and only those fields, N/A is represented by the exact string
+`not-applicable`. `na_fields` **MUST** contain exactly one matching entry whose `field`
+names that field and whose `justification` is non-empty. A listed field whose value is
+not `not-applicable`, a sentinel without a matching entry, a duplicate entry, or an
+entry naming any other field is non-conformant. List-valued path fields use an empty
+list when no path exists and never use the sentinel.
+
+N/A is valid only when the phase or relevant testhost genuinely does not exist. It is
+not a substitute for an unknown owner, an undiscovered path, or unfinished
+integration. The schema-v1 shape accepts this representation, but reference semantics
+`2.1.0` does not yet enforce the field/sentinel pairing; therefore an N/A declaration
+also remains non-blocking until the A4 resolver enforces these rules.
 
 `activation_state` is independent of structural classification and has exactly four
 values:
@@ -1292,6 +1324,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.8 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings M1 + M5 + M6, and L4.** M1: `ERR-020-006` and `ERR-020-007` were cited nowhere in the spec they patch — every prior #20 ERR is cited at its fix site, but round-6's text said only "round-6 finding H6/H7". Both ids now cited in place: §3.2.1's source note (`ERR-020-006`) and the §3.2.3 const-mirror carve-out heading (`ERR-020-007`). M5: §3.2.3's per-tag region-ordering line cited `FR-CS-025` as its authority; verified against §2.2.2 (`grep -n 'FR-CS-025 |' section-2.md`) that FR-CS-025 governs catalogue file NAMING only (`<SpecName>Constants.cs`) and says nothing about region ordering — re-cited to §4.2 directly. M6: the §3.2.1 source note offered "the tag stood at 218 occurrences (`grep -rn 'CROSS-PENDING' docs/specs/ \| wc -l`, August 18, 2026)" as proof of a figure that command no longer reproduces (245 today; every subsequent citation of the tag, including this row, keeps raising it) — re-derived against the pre-fix commit instead (`git grep -c 'CROSS-PENDING' 9b841d1^ -- docs/specs \| awk -F: '{s+=$NF} END {print s}'` → 218) and labelled explicitly as the pre-fix figure; the note's "honoured now" claim about §9.4 trigger 1 is corrected to name when the trigger's full re-verification mandate was actually run (round-7 M2, `section-9-approval-checklist.md`). L4: the `[CROSS]` row's Naming cell read a bare "PascalCase" while the carve-out qualifying it was signalled only in the Notes cell — Naming cell now reads "PascalCase (see const-mirror carve-out)". | — |
 | 1.9 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Adds §3.5.6–3.5.7 for stable component identity, overload-safe canonical selectors, typed ownership/activation contracts, lifecycle-edge evidence, closed runtime-surface accounting, alternate and bypass paths, and explicit plus compiler-generated static initialization. The approved §3.5.2 dependency taxonomy and arrow semantics are unchanged. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
 | 1.10 | September 2, 2026 | Codex | **A3.1a review correction.** Expands §3.5's declared FR range and target length to include FR-CS-074–081 and removes the asymmetric TOC sub-bullets. Restores plan v0.34's strict post-baseline classification failure, positive test-classification inputs, and closed-world/absence-proof guards, including the blind-spot-fixture precondition and known-path limit. Aligns bypass mechanics with Governance FR-AG-025's "prohibited or explicitly classified" wording. The draft remains unapproved pending A3.4. | PENDING — A3.4 |
+| 1.11 | September 2, 2026 | Codex | **A3.1a automated-review correction.** Defines the exact binding vocabulary and resolution targets for every ownership/path string, and states the frozen schema-v1/reference-semantics-v2.1 boundary honestly: shape acceptance is not cross-registry resolution and cannot support a Machine blocker before A4. Defines `not-applicable` plus the exact `na_fields` pairing rules so absent lifecycle/testhost phases are representable without using prose placeholders. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
 
 ---
 
