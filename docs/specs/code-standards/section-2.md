@@ -1,16 +1,18 @@
 # Code Standards & Style Guide Specification #20 — Section 2: Functional Requirements & Conformance Model
 
 **File:** `docs/specs/code-standards/section-2.md`
-**Purpose:** Defines all 73 numbered functional requirements (FR-CS-001 … FR-CS-073),
+**Purpose:** Defines all 81 numbered functional requirements (FR-CS-001 … FR-CS-081),
 conformance levels, failure-to-comply modes, and the data-structures note for Spec #20.
 This section is the authoritative FR catalogue; §3 and §6 provide rule mechanics.
 
 **Created:** May 7, 2026
-**Modified:** August 18, 2026
-**Version:** 1.5
-**Status:** APPROVED (May 11, 2026)
+**Modified:** September 2, 2026
+**Version:** 1.6
+**Status:** AMENDMENT DRAFT (A3.1a; approved v1.5 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 2
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md`
+v0.33, §6; A3.1a
 **Subsection target lengths:** §2.1 ~20 lines · §2.2 ~250 lines · §2.3 ~30 lines ·
 §2.4 ~10 lines
 
@@ -28,7 +30,8 @@ This section is the authoritative FR catalogue; §3 and §6 provide rule mechani
   - [2.2.6 Documentation — FR-CS-056 … FR-CS-065](#226-documentation--fr-cs-056--fr-cs-065)
   - [2.2.7 Code Performance Rules — FR-CS-066 … FR-CS-070](#227-code-performance-rules--fr-cs-066--fr-cs-070)
   - [2.2.8 Numeric Type Discipline — FR-CS-071 … FR-CS-073](#228-numeric-type-discipline--fr-cs-071--fr-cs-073)
-  - [2.2.9 FR Table Footer](#229-fr-table-footer)
+  - [2.2.9 Architecture Integration & Activation — FR-CS-074 … FR-CS-081](#229-architecture-integration--activation--fr-cs-074--fr-cs-081)
+  - [2.2.10 FR Table Footer](#2210-fr-table-footer)
 - [2.3 Failure-to-Comply Modes](#23-failure-to-comply-modes)
 - [2.4 Data Structures](#24-data-structures)
 - [2.5 Version History](#25-version-history)
@@ -206,9 +209,24 @@ deviation from a MUST or MUST NOT requirement. Format and lifecycle are defined 
 
 ---
 
-### 2.2.9 FR Table Footer
+### 2.2.9 Architecture Integration & Activation — FR-CS-074 … FR-CS-081
 
-This catalogue contains **73 functional requirements** (FR-CS-001 … FR-CS-073) in eight
+| ID | Statement | Level | Source | Mechanics § |
+|---|---|---|---|---|
+| FR-CS-074 | Every runtime-bearing component whose correctness depends on activation **MUST** have an explicit integration owner, exact integration point, and orthogonal activation state. | MUST | Governance FR-AG-021/022 | §3.5.6 |
+| FR-CS-075 | Every production host or composition root in the approved runtime discovery universe **MUST** be classified and mechanically accounted for. | MUST | Governance FR-AG-024/026 | §3.5.6–3.5.7 |
+| FR-CS-076 | Applicable runtime-bearing components **MUST** declare construction, activation, update/use, and teardown ownership through typed lifecycle records, with schema-valid N/A only where a phase does not exist. | MUST | Governance FR-AG-023 | §3.5.6 |
+| FR-CS-077 | Applicable alternate hosts and testhosts **MUST** preserve the invariant or declare an approved divergence linked to current evidence. | MUST | Governance FR-AG-024 | §3.5.7 |
+| FR-CS-078 | Activation bypasses inside a mechanically closed governed surface **MUST** be prohibited or explicitly supported. | MUST | Governance FR-AG-025/026 | §3.5.7 |
+| FR-CS-079 | Activation-capable public runtime surfaces inside an activated closed-world category **MUST** be classified as supported, test-only, or non-activating, or **MUST** be made non-public. | MUST | Governance FR-AG-026/027; Governance §5.3 | §3.5.7 |
+| FR-CS-080 | Static initialization that participates in runtime ownership or order **MUST** be declared and **MUST NOT** bypass applicable composition or lifecycle requirements. | MUST | Governance FR-AG-023/025; Governance §5.4 | §3.5.6–3.5.7 |
+| FR-CS-081 | Blocking integration or activation declarations **MUST** resolve mechanically to repository selectors and independently verifiable facts. An `intentionally-disabled` state **MUST** carry a verifiable disable anchor. Unsupported semantic assertions **MUST** remain non-blocking evidence. | MUST | Governance FR-AG-034/035/036A | §3.5.6–3.5.7; §5 |
+
+---
+
+### 2.2.10 FR Table Footer
+
+This catalogue contains **81 functional requirements** (FR-CS-001 … FR-CS-081) in nine
 partitions:
 
 | Partition | FR range | Count |
@@ -221,13 +239,14 @@ partitions:
 | Documentation | FR-CS-056 … FR-CS-065 | 10 |
 | Code Performance Rules | FR-CS-066 … FR-CS-070 | 5 |
 | Numeric Type Discipline | FR-CS-071 … FR-CS-073 | 3 |
-| **Total** | | **73** |
+| Architecture Integration & Activation | FR-CS-074 … FR-CS-081 | 8 |
+| **Total** | | **81** |
 
 **Renumbering is forbidden after publication.** FR IDs are referenced in code review
 comments, `spec-error-log.md` entries, Stage 1 analyzer rule IDs, and future
 `src/CLAUDE.md` entries. Renumbering produces the same cascade-failure class as stale
 spec numbers (root `CLAUDE.md` — "KNOWN HAZARD — Spec Renumbering Cascades"). New
-requirements append as FR-CS-074, FR-CS-075, … and require a version bump to this
+requirements append as FR-CS-082, FR-CS-083, … and require a version bump to this
 section and to §9.1.
 
 ---
@@ -249,6 +268,10 @@ The reviewer cites the FR-CS-### ID in the review comment. The author corrects t
 code and re-requests review.
 
 *Record-keeping:* No additional tracking required beyond the standard PR review trail.
+
+When the same condition also violates an admitted architectural property, required
+proof obligation, concrete correctness or integrity requirement, or creates a Governance
+Blocker, the owning governance process remains blocking independently of this mode.
 
 ---
 
@@ -284,6 +307,10 @@ EXPIRES: at next refactor of <file path>
 *Scope:* The exception applies to the specific use site only; it does not create a
 general exemption for that FR. The exception expires — and the violation must be
 corrected — at the next scheduled refactor of the affected file.
+
+A Mode 3 exception waives only the named Spec #20 conformance requirement. It **MUST
+NOT** waive an admitted architectural property, required proof, concrete correctness or
+integrity failure, or Governance Blocker.
 
 *Record-keeping:* If the override affects a determinism rule (§3.4) or an allocation
 rule (§3.3 / §6.1), a corresponding entry **MUST** be added to
@@ -329,6 +356,7 @@ declarations, constant catalogue layout, namespace assignments — see §4.
 | 1.3 | August 18, 2026 | Claude Code | **Adversarial-review findings H9 + H10 (reviewed round).** H10: the 1.2 row's version history is completed — the v1.2 commit made **four normative changes it never recorded**: (1) **FR-CS-046b added** (Infrastructure assemblies bound: ordered tiers may not reference them at runtime, and they may not reference above Foundation); (2) **FR-CS-046 restated** to exclude the two out-of-band Infrastructure assemblies from the tier order and delegate them to FR-CS-046b; (3) **FR-CS-067 rescoped** from "UI-layer code" to the Presentation and Client tiers (§3.5.2 tiers 8 and 9) plus Unity host code; (4) **§2.2.9's Count row changed** ("10" → "10 (+2 sub-clauses: FR-CS-046a, FR-CS-046b)"). The 1.2 row's "No rule change" is annotated in place as false. H9: **FR-CS-046b clause 2 reworded** — "MUST NOT reference any assembly above tier 0" was ambiguous against the live tree (`testing-strategy` → `performance-optimization` exists, and Infrastructure assemblies acquire no tier, so "above tier 0" had two readings); now states exactly what is permitted — only tier-0 (Foundation) assemblies and the other Infrastructure assembly, acyclic per FR-CS-046a — resolving the ambiguity in favour of what the tree does, and `tools/assembly-tier-check.py` now enforces both clauses (it previously skipped every Infrastructure-sourced reference unchecked). Also: FR-CS-047 "layer order" → "tier order", standardising on the §3.5.2 vocabulary (the term "layer order" is no longer defined there). | — |
 | 1.4 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H6 + H7.** H6: FR-CS-017's tag enumeration was a CLOSED five-tag list against root `CLAUDE.md`'s six — `[CROSS-PENDING]` (root table row verified August 18, 2026: `grep -n 'CROSS-PENDING' CLAUDE.md` → line 128) was missing, so every one of the 218 `[CROSS-PENDING]` occurrences under `docs/specs/` (`grep -rn 'CROSS-PENDING' docs/specs/ | wc -l`, August 18, 2026) was formally a MUST-level violation of this APPROVED spec, while `.github/workflows/ci.yml`'s tag lint accepted the tag throughout; the enumeration now lists all six. FR count deliberately unchanged at 73 — no new FR row, an existing row's enumeration corrected. H7: FR-CS-022 gains the const-mirror carve-out (extends ERR-020-004): the §4.2 carve-out cited `DisciplineConstants.CardKindYellow` — a `public const byte` — as a compliant mirror while this row's MUST required `public static readonly`, i.e. the spec certified as compliant a declaration its own MUST forbade; the compile-time-constant symbol-referencing mirror shape is tree-wide (19 such declarations across `discipline`, `match-engine`, `match-analytics`, `player-progression`) and compiler-enforced, so the rule is extended rather than the tree condemned — with the literal-initialized bound stated so the six literal-initialized `[CROSS]` `const` declarations (five carrying a `TODO: mirror from ProjectConstants` note — `goalkeeper-mechanics` ×2, `heading-mechanics` ×2, `perception-system` ×1 — plus `DisciplineConstants.LeagueCompetitionKey`, whose doc justifies its literal VALUE but not its storage class) remain non-conformant, reported for a code-owning pass. Full statement in §3.2.3. **⚠️ ANNOTATED (v1.5, August 18, 2026, round-7 finding M6): the "218 … `grep -rn 'CROSS-PENDING' docs/specs/ \| wc -l`" clause is a command offered as live proof of a figure it no longer reproduces** — every citation of the tag added since (including this annotation) keeps raising the count; that command returns 245 as of the v1.5 fix, not 218. 218 is the count immediately BEFORE this row's own commit (`git grep -c 'CROSS-PENDING' 9b841d1^ -- docs/specs \| awk -F: '{s+=$NF} END {print s}'` → 218) and is left standing as landing-time history. The H6/H7 finding IDs this row fixed are `ERR-020-006`/`ERR-020-007`; they are now cited at their fix sites (§3.2.1, §3.2.3, §4.2) by the v1.5 pass. Left in place per the annotate-don't-rewrite convention. | — |
 | 1.5 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings M1 + M6.** M1: `ERR-020-006` and `ERR-020-007` were cited nowhere in the spec they patch (only in `spec-error-log.md`) — the v1.4 row's "round-6 H6/H7" text is now also cross-cited by ERR id at its fix sites: FR-CS-017's row (§2.2.2) and FR-CS-022's row (§2.2.2), plus §3.2.1/§3.2.3/§4.2 in the sibling section files. M6: the v1.4 row's "218 … `grep -rn 'CROSS-PENDING' docs/specs/ \| wc -l`" clause offered a command as live proof of a figure it no longer returns (245 today, since every citation of the tag — including the v1.4 row's own text — keeps raising the count); annotated in place per the annotate-don't-rewrite convention rather than rewritten, with 218 re-derived against the pre-fix commit (`git grep -c 'CROSS-PENDING' 9b841d1^ -- docs/specs`) instead. No FR text, count, or conformance level changed by this row. | — |
+| 1.6 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Appends FR-CS-074–081 without renumbering existing requirements; adds the Architecture Integration & Activation partition; updates the total from 73 to 81; and closes the Mode 1/Mode 3 boundary so a #20 exception cannot waive an independently applicable architectural property, proof obligation, correctness/integrity failure, or Governance Blocker. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
 
 ---
 

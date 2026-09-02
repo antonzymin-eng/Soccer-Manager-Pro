@@ -2,17 +2,21 @@
 
 **File:** `docs/specs/code-standards/appendices.md`
 **Purpose:** Paste-ready templates (A–B), exemplar source files (C), the single
-source-of-truth banned/required API list (D), and glossary (E) for Spec #20.
+source-of-truth banned/required API list (D), glossary (E), and architecture
+integration record examples (F) for Spec #20.
 Appendix D is the KD-6 single source of truth; §3.3, §3.4, §5.2, and §7.1 cite it
 by category name and must not reproduce its symbol lists.
 
 **Created:** May 7, 2026
-**Version:** 1.5
-**Status:** APPROVED (May 11, 2026)
+**Modified:** September 2, 2026
+**Version:** 1.6
+**Status:** AMENDMENT DRAFT (A3.1a; approved v1.5 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §APPENDICES
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md`
+v0.33, §6; A3.1a
 **Appendix target lengths:** A ~50 lines · B ~30 lines · C ~150 lines ·
-D ~80 lines · E ~40 lines
+D ~80 lines · E ~40 lines · F ~160 lines
 
 ---
 
@@ -23,6 +27,7 @@ D ~80 lines · E ~40 lines
 - [Appendix C — Exemplar Pair](#appendix-c--exemplar-pair)
 - [Appendix D — Banned & Required APIs (Single Source of Truth)](#appendix-d--banned--required-apis-single-source-of-truth)
 - [Appendix E — Glossary](#appendix-e--glossary)
+- [Appendix F — Architecture Integration Records](#appendix-f--architecture-integration-records)
 - [Appendix Version History](#appendix-version-history)
 
 ---
@@ -462,6 +467,164 @@ redefined.
 
 ---
 
+## Appendix F — Architecture Integration Records
+
+These examples illustrate §3.5.6–3.5.7 and FR-CS-074–081. They are not a second
+schema. The canonical Draft 2020-12 files under
+`docs/tracking/architecture-governance/schemas/` and reference semantics version
+`2.1.0` control field names, allowed values, validation, and blocking behavior.
+
+### F.1 — Overload-Safe Selectors
+
+Selectors use assembly identity and C# XML-documentation-ID type-signature spelling.
+These two legal overloads remain distinct because `@` identifies the by-reference
+parameter:
+
+```json
+[
+  {
+    "assembly": "Example.Runtime",
+    "kind": "method",
+    "containing_type_id": "Example.MatchHost",
+    "member_name": "Activate",
+    "parameter_type_ids": ["System.Int32"],
+    "generic_arity": 0,
+    "is_static": false
+  },
+  {
+    "assembly": "Example.Runtime",
+    "kind": "method",
+    "containing_type_id": "Example.MatchHost",
+    "member_name": "Activate",
+    "parameter_type_ids": ["System.Int32@"],
+    "generic_arity": 0,
+    "is_static": false
+  }
+]
+```
+
+### F.2 — Active Integration Contract with Rename History
+
+`component:match-bootstrap` is the durable concept. Renaming `Start` to `Activate`
+changes its current source selector and `symbol_key`, not its `component_id`:
+
+```json
+{
+  "contract_id": "CONTRACT-MATCH-BOOTSTRAP",
+  "component_id": "component:match-bootstrap",
+  "current_selector": {
+    "assembly": "Example.Runtime",
+    "kind": "method",
+    "containing_type_id": "Example.MatchHost",
+    "member_name": "Activate",
+    "parameter_type_ids": [],
+    "generic_arity": 0,
+    "is_static": false
+  },
+  "selector_history": [
+    {
+      "selector": {
+        "assembly": "Example.Runtime",
+        "kind": "method",
+        "containing_type_id": "Example.MatchHost",
+        "member_name": "Start",
+        "parameter_type_ids": [],
+        "generic_arity": 0,
+        "is_static": false
+      },
+      "superseded_reason": "Method renamed; architectural component unchanged"
+    }
+  ],
+  "owning_host": "component:match-host",
+  "owning_assembly": "Example.Runtime",
+  "composition_root": "SURFACE-MATCH-HOST-COMPOSE",
+  "construction_path": "SURFACE-MATCH-HOST-COMPOSE -> component:match-bootstrap",
+  "activation_phase": "host-startup",
+  "update_use_owner": "SURFACE-MATCH-LOOP-TICK",
+  "teardown_owner": "SURFACE-MATCH-HOST-DISPOSE",
+  "relevant_testhost_path": "src/example-tests/MatchTestHost.cs",
+  "alternate_supported_paths": ["SURFACE-REPLAY-HOST-COMPOSE"],
+  "prohibited_bypass_paths": ["SURFACE-MATCH-BOOTSTRAP-CONSTRUCTOR"],
+  "static_initialization_involved": false,
+  "lifecycle_ordering_requirements": ["Compose before Activate before Tick"],
+  "na_fields": [],
+  "activation_state": "active",
+  "tuning_surface_selectors": []
+}
+```
+
+### F.3 — Runtime-Surface Classification
+
+The classification record binds the current compiler symbol to the same durable
+component and contract:
+
+```json
+{
+  "surface_id": "SURFACE-MATCH-BOOTSTRAP-ACTIVATE",
+  "symbol_key": "M:Example.MatchHost.Activate",
+  "kind": "method",
+  "source_path": "src/example/MatchHost.cs",
+  "signature": "System.Void Example.MatchHost.Activate()",
+  "assembly": "Example.Runtime",
+  "classification": "production-runtime-root",
+  "component_id": "component:match-bootstrap",
+  "contract_id": "CONTRACT-MATCH-BOOTSTRAP"
+}
+```
+
+### F.4 — Typed Lifecycle Edges
+
+Lifecycle/order proof uses canonical dependency nodes and `source` / `target` /
+`relation` edges. The relation value, not surrounding prose, gives the edge its
+machine meaning:
+
+```json
+{
+  "edges": [
+    {
+      "source": "symbol:MatchHost.Compose",
+      "target": "component:match-bootstrap",
+      "relation": "lifecycle-member"
+    },
+    {
+      "source": "component:match-bootstrap",
+      "target": "symbol:MatchLoop.Tick",
+      "relation": "ordering"
+    },
+    {
+      "source": "component:match-bootstrap",
+      "target": "testhost:match",
+      "relation": "testhost-equivalent"
+    }
+  ]
+}
+```
+
+For `intentionally-disabled`, the full contract additionally carries
+`activation_owner`, `decision_ref`, `reactivation_condition`, and this typed anchor
+shape:
+
+```json
+{
+  "disable_anchor": {
+    "selector": {
+      "assembly": "Example.Runtime",
+      "kind": "field",
+      "containing_type_id": "Example.MatchConfig",
+      "member_name": "EnableBootstrap",
+      "is_static": true
+    },
+    "operator": "equals",
+    "expected": {
+      "value_type": "boolean",
+      "value": false
+    }
+  }
+}
+```
+
+---
+
 ## Appendix Version History
 
 | Version | Date | Author | Notes | Reviewer |
@@ -473,6 +636,7 @@ redefined.
 | 1.3 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H5.** Appendix C §C.1 — #20's own "compliant exemplar", the file §3.9's coverage map and Appendix C's rule-coverage table point readers at for FR-CS-016–025 — violated §3.2.3 for four of its five tags: `BALL_GROUND_HEIGHT`, `PHYSICS_TICK_HZ`, `MAX_SUBSTEPS` and `TERMINAL_VELOCITY` were `public static readonly` in ALL_CAPS where `[DERIVED]`/`[CROSS]`/`[GT]`/`[EST]` all require PascalCase. This is `ERR-020-001` itself: that entry renamed `PHYSICS_TICK_HZ → PhysicsTickHz` in §4.2 in May 2026 and its file list never included this appendix, so the defect survived in the exemplar. Two further violations in the same block: the `[CROSS]` mirror was LITERAL-initialized (`= 60.0f`) — the shape §3.2.3's own carve-out names as never qualifying — and cited "root CLAUDE.md" where FR-CS-022 requires spec and section; and `[GT] MAX_SUBSTEPS = 4` was a compile-time literal against FR-CS-019's explicit MUST NOT while its own doc comment claimed it was config-loaded. All four renamed; the `[CROSS]` mirror now BINDS `DeterministicSimConstants.TACTICAL_TICK_HZ` (verified to exist) and names the authority that owns the value; `MaxSubsteps` shows the config read its comment promised. | — |
 | 1.4 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding L3.** The "Game-state assembly" glossary entry's definitional clause ("participates in the deterministic simulation") contradicted its own scope clause ("every production assembly under `src/`") — `ui-framework`, `client-app`, `match-client-web`, `match-viewer`, and the two Infrastructure assemblies do not participate in the simulation, so the definition was false of the scope it names two sentences later. The scope (a rule EXTENSION) is correct and unchanged; the definition restated as "subject to the det-banned API ban … whether or not it participates in the simulation." | — |
 | 1.5 | August 18, 2026 | Claude Code | **Adversarial-review round-8 finding H1, found mechanically by the new `tools/doc-claim-check.py`.** *(Renumbered 1.4 → 1.5 at adversarial-review round 9: this row landed in `f23f480` as a SECOND `1.4`, above the round-7 L3 row that had already taken that number in `20760cf`. `recurring-defect-lint.py` reported it as the tree's only ERROR — while root `CLAUDE.md` still claimed 0 ERROR tree-wide — so the round that added a mechanical checker for dangling identifiers introduced a defect a mechanical checker the repo already had was reporting. Rows reordered ascending with it; no content changed.)* §C.2 still called `BallPhysicsConstants.MAX_SUBSTEPS` after v1.3 renamed the declaration to `MaxSubsteps` in §C.1 one section above — a dangling reference inside the pair #20 offers as its COMPLIANT exemplar, annotated `// §3.2.3 — named constant`, i.e. claiming conformance to the rule that forced the rename. **This is `ERR-020-001` for the third time**: that entry renamed `PHYSICS_TICK_HZ → PhysicsTickHz` in §4.2 in May 2026 and its file list never included this appendix; v1.3's own history row named that failure while repeating it one section away. In `src/` the compiler would have rejected it; in a spec fence nothing binds, which is exactly why the identifier check now exists and why it is wired into CI rather than left to review. | — |
+| 1.6 | September 2, 2026 | Codex | **A3.1a governance amendment draft.** Adds Appendix F with illustrative schema-aligned examples for overload-safe selectors, stable component identity across a rename, active integration ownership, runtime-surface classification, typed lifecycle edges, and a verifiable disabled-state anchor. Canonical A2 schemas and reference semantics remain authoritative. This draft is not approved; A3.4 reapproval remains required. | PENDING — A3.4 |
 
 ---
 
