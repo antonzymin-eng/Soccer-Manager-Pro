@@ -7,9 +7,9 @@ and the cross-references they will cite. Does *not* yet contain rule text,
 code blocks, or rationale prose — those land in the detailed outline.
 
 **Created:** May 6, 2026, 7:15 PM PST
-**Updated:** May 6, 2026, 9:35 PM PST
-**Version:** 1.3
-**Status:** DRAFT — back-aligned with detailed outline v1.2 FR partition
+**Updated:** September 2, 2026
+**Version:** 1.4
+**Status:** DRAFT — A3.1b synchronized; normative section files control
 **Companion documents:** `outline.md` (high-level), `outline-detailed.md`
 (to be drafted after this outline is validated).
 
@@ -20,7 +20,7 @@ code blocks, or rationale prose — those land in the detailed outline.
 ### 1.1 What This Specification Covers
 - Bullet list scope (C# style, naming, constant tagging at code level,
   allocation discipline, determinism in code, dependency direction,
-  documentation conventions, conformance verification model).
+  architecture integration/activation, documentation conventions, conformance verification model).
 - Applicability:
   - **Primary:** every `.cs` file under `src/`, with edge-case carve-outs
     enumerated in §3.9.
@@ -57,19 +57,16 @@ code blocks, or rationale prose — those land in the detailed outline.
   symbol name. (Drift-prevention rule.)
 
 ### 1.4 Dependencies and Integration Contracts
-- Upstream (substantive): root `CLAUDE.md`, `development-best-practices.md`.
+- Upstream (substantive): root `CLAUDE.md`, `development-best-practices.md`, and Project Architecture Governance for FR-CS-074–081; Spec #19 owns executable proof/bounded-substitute/gate mechanics consumed by those rules.
 - Upstream (consulted at coding-start; placeholder during spec drafting):
   `certification-platform.md` for Unity LTS revision and C# language
   version pins. Drafting Spec #20 does not require these values to be
   pinned (§3.1.3 references the file by path); first real-code
   implementation does require them and is gated on the open issue
   tracking the platform pin.
-- Downstream: every Stage 1+ source file; future `src/CLAUDE.md`.
-- No spec-level dependency on Specs #1–#19 for substantive rules. (This
-  spec is content-independent of physics/AI specs; it governs *how*
-  their implementations are coded, not *what* they compute.)
-- Pointer-only references to Spec #9 (Fixed64; Stage 5+) and Spec #19
-  (Testing Strategy; framework choice).
+- Downstream: every implementation source file, the existing `src/CLAUDE.md`, and architecture-governance registries/tooling.
+- No physics/AI domain dependency on Specs #1–#18. Spec #19 is substantive only for proof/gate mechanics; Project Architecture Governance is the upstream decision model.
+- Pointer-only future reference to Spec #9 (Fixed64; Stage 5+).
 
 ### 1.5 Version History
 
@@ -102,7 +99,8 @@ code blocks, or rationale prose — those land in the detailed outline.
     mechanics in §6 (allocation budgets, hot-path rules, profiler markers).
   - **FR-CS-071 … 073 — Numeric Type Discipline.** Indexed in §2.2; rule
     mechanics in §3.7. Added in v1.3 after detailed-outline review
-    flagged §3.7 had no FR coverage. Total FR count 73.
+    flagged §3.7 had no FR coverage.
+  - **FR-CS-074 … 081 — Architecture Integration & Activation.** Indexed in §2.2; rule mechanics in §3.5.6–§3.5.7; verification in §5.4.8/§5.5. Added by A3.1a without renumbering existing FRs. Total FR count 81.
 - Each FR row: `ID | Statement | Level | Source citation | Verification (§5.x)`.
 
 ### 2.3 Failure-to-Comply Modes
@@ -237,6 +235,15 @@ code blocks, or rationale prose — those land in the detailed outline.
   static mutable singletons in game logic, generic dependency-injection
   containers in the game loop.
 
+### 3.5.6 Integration Identity, Ownership & Activation (FR-CS-074–076, 080–081)
+- Stable component identity + selector history; canonical selector-v1 bindings.
+- Integration-contract ownership/lifecycle/activation declarations.
+- Cross-registry string bindings remain non-blocking until A4 resolves them.
+
+### 3.5.7 Closed Runtime Surfaces, Bypasses & Static Initialization (FR-CS-075, 077–081)
+- Compiler-backed closed discovery universe, alternate hosts/testhosts, public activation surfaces.
+- Bypass/static-initializer coverage; unsupported absence claims remain report-only until A4 fixtures close the universe.
+
 ### 3.6 Documentation Conventions (FR-CS-056 … 065)
 - 3.6.1 Citation: "creation date and purpose header" + "version history
   entry on every modified file" rules owned by root `CLAUDE.md`.
@@ -306,7 +313,7 @@ code blocks, or rationale prose — those land in the detailed outline.
 - Within each folder: one assembly (`<spec-name>.csproj` or Unity asmdef),
   one constants catalogue file, struct files, system files; tests in a
   sibling `tests/` folder.
-- Diagram: dependency arrows physics → mechanics → AI → UI.
+- Canonical ten-tier provider→consumer order is defined in §3.5.2; this outline does not carry a second arrow diagram.
 
 ### 4.2 Constant Catalogue File Convention
 - File name: `<SpecName>Constants.cs` (e.g., `BallPhysicsConstants.cs`).
@@ -330,13 +337,11 @@ code blocks, or rationale prose — those land in the detailed outline.
   namespace-driven discoverability; addressed by §4.1's one-folder-per-spec
   convention.
 
-### 4.4 Interface Contracts (this spec exposes none)
-- Spec #20 publishes no runtime interface. Section retained per template.
+### 4.4 Interface Contracts (no runtime API)
+- Spec #20 publishes no runtime interface. Architecture-governance JSON records are tooling contracts, not gameplay dependencies.
 
 ### 4.5 Pointer to `src/CLAUDE.md`
-- Concrete paths, exact assembly definitions, and Unity project layout
-  land in `src/CLAUDE.md` when coding begins. Spec #20 declares the
-  *shape*; `src/CLAUDE.md` declares the *paths*.
+- The existing `src/CLAUDE.md` owns concrete paths/build guidance; Spec #20 owns the convention shape.
 
 ### 4.6 Version History
 
@@ -348,7 +353,7 @@ code blocks, or rationale prose — those land in the detailed outline.
 - Manual review against this spec's FRs.
 - Reviewer checklist (full text in Appendix; categories named in §5.4)
   attached to every PR.
-- No tooling required at Stage 0 (no code yet).
+- The live tree has code and CI tooling; architecture assertions not closed by A4 remain report-only.
 
 ### 5.2 Stage 0+1 Transition: Tool Selection
 - Roslyn analyzers (`Microsoft.CodeAnalysis.NetAnalyzers` + a custom
@@ -371,8 +376,7 @@ code blocks, or rationale prose — those land in the detailed outline.
 
 ### 5.4 Review-Time Checklist (categories)
 - Style, constants, allocation, determinism, deps & interfaces, docs,
-  performance. Full paste-ready text drafted in detailed outline and
-  Appendix.
+  performance, architecture integration & activation. Full paste-ready text lives in §5.
 
 ### 5.5 FR-to-Verification Traceability
 - Table mapping each FR-CS-### to its verification mechanism.
@@ -563,6 +567,8 @@ code blocks, or rationale prose — those land in the detailed outline.
   - Each entry maps to its FR-CS-### and CLAUDE.md citation.
 - **Appendix E** — Glossary (only Spec #20-specific terms; physics
   terms cited from owning specs).
+- **Appendix F** — Architecture-governance examples for selectors, contracts,
+  activation states, closed surfaces and dependency/proof records.
 
 ---
 
@@ -574,3 +580,4 @@ code blocks, or rationale prose — those land in the detailed outline.
 | 1.1     | May 6, 2026 | Claude Code | Self-critique pass 1: FR catalogue moved to §2.2 (template alignment); §3.7 re-housed as Numeric Type; §3.4.4 split into C#/Python rules; Appendix D made single source of truth for banned/required APIs (KD-6); §1.2 excludes PR-process rules; §3.1.3 pins C# language version (gated on certification-platform.md); §4.3 rationale stated; §5.5 transition value note added; §3.10 Spec-#16 comparison corrected; §3.9.5 benchmark carve-out added; §7.5 D5 added. |
 | 1.2     | May 6, 2026 | Claude Code | Self-critique pass 2: §1.1 applicability extended to determinism-only Python tooling subset; §1.4 reconciled with §3.1.3 on `certification-platform.md` gating; §3.3-vs-§6.1 disambiguated (discipline-vs-budget); §3.4.3 split into APIs vs patterns; §3.4.5 / §3.7.5 placeholder strikethroughs removed; §3.9.4 split by test type (determinism-harness vs general vs property-based); Appendix D reflection re-categorized to alloc-hot-path; Appendix D split det-required into APIs and patterns; Appendix D `Stopwatch.GetTimestamp` scoped to game-state assemblies. No outstanding self-critique findings. |
 | 1.3     | May 6, 2026 | Claude Code | Back-alignment with detailed outline v1.2: §2.2 FR partition extended with FR-CS-071..073 (Numeric Type Discipline) — §3.7 had been substantive but FR-less. Total FR count 70 → 73. No other content changes; mid-level outline remains the section-by-section subsection list. |
+| 1.4     | September 2, 2026 | Codex | A3.1b synchronization: current 81-FR partition, §3.5.6–§3.5.7 architecture mechanics, eight §5.4 categories, Governance/#19 authority boundary, existing `src/CLAUDE.md`, and Appendix F. Historical 70→73 record preserved. |

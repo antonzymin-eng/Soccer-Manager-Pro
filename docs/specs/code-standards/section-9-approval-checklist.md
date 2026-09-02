@@ -5,10 +5,11 @@
 from `IN REVIEW` to `APPROVED` in `SPEC_INDEX.md`. Items are programmatically verifiable
 against source files unless marked `[manual]`.
 **Created:** May 8, 2026
-**Version:** 1.1.5
-**Status:** AMENDMENT DRAFT (A3.1a marker; approved v1.1.3 baseline remains in force)
+**Version:** 1.2
+**Status:** AMENDMENT DRAFT (A3.1a+A3.1b synchronized; approved v1.1.3 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 9; `outline-mid.md` v1.2, §9.1–§9.4
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.35, §6; A3.1b
 
 > **Fabrication prohibition (root CLAUDE.md):** All values below must be verified against
 > actual file content. No expected values may be stated before running the verification
@@ -56,7 +57,7 @@ grep -c "Authority Matrix" docs/specs/code-standards/section-1.md
 
 ---
 
-**C-03** — §2.2 contains exactly 73 FR rows (15 style + 10 constants + 10 alloc +
+**C-03** — §2.2 contains exactly 81 numbered FR rows (15 style + 10 constants + 10 alloc +
 10 det + 10 deps + 10 docs + 5 perf + 3 numeric type).
 
 > **A3.1a draft invalidation:** The checked 73-row result below applies only to the
@@ -66,9 +67,10 @@ grep -c "Authority Matrix" docs/specs/code-standards/section-1.md
 ```bash
 grep -oP "\| FR-CS-\d+ \|" docs/specs/code-standards/section-2.md \
   | grep -oP "FR-CS-\d+" | sort -u | wc -l
-# Expected: 73
+# Expected: 81
 ```
 
+- [x] Verified September 2, 2026 — current A3 amendment draft returns 81 numbered FR rows; synchronization evidence only, not A3.4 reapproval.
 - [x] Verified May 8, 2026 — returns 73. **⚠️ Historical evidence only (A3.1a):**
   this result certifies the approved v1.5 baseline of `section-2.md`, not the current
   81-FR amendment draft. The check itself is open per the draft-invalidation note above.
@@ -333,7 +335,7 @@ ls docs/planning/development-best-practices.md \
 
 ---
 
-**Q-07** — The §5.4 reviewer-checklist categories collectively cover all 73 FRs with no
+**Q-07** — The §5.4 reviewer-checklist categories collectively cover all 81 FRs with no
 gaps and no double-counting.
 
 Coverage mapping (one row per actual §5.4 subsection; verified against §5.4 and §2.2):
@@ -347,13 +349,16 @@ Coverage mapping (one row per actual §5.4 subsection; verified against §5.4 an
 | §5.4.5 Dependencies & Interfaces | FR-CS-046..055 | 10 |
 | §5.4.6 Documentation | FR-CS-056..065 | 10 |
 | §5.4.7 Performance | FR-CS-066..070 | 5 |
-| **Total** | | **73** |
+| §5.4.8 Architecture Integration & Activation | FR-CS-074..081 | 8 |
+| **Total** | | **81** |
 
 ```bash
-# Verify partition arithmetic: 15 + 10 + 10 + 13 + 10 + 10 + 5 = 73
-echo $((15 + 10 + 10 + 13 + 10 + 10 + 5))
-# Expected: 73
+# Verify partition arithmetic: 15 + 10 + 10 + 13 + 10 + 10 + 5 + 8 = 81
+echo $((15 + 10 + 10 + 13 + 10 + 10 + 5 + 8))
+# Expected: 81
 ```
+
+- [x] Verified September 2, 2026 — arithmetic returns 81; the eight-row table matches the A3 amendment draft. FR-CS-046a/046b remain traceability sub-clauses outside this partition arithmetic.
 
 - [x] Re-verified May 11, 2026 — arithmetic returns 73; the seven-row table now matches
   §5.4's actual subsection structure (§5.4.1–§5.4.7). FR-CS-071..073 are covered under
@@ -457,10 +462,11 @@ grep "code-standards\|Code Standards" docs/specs/SPEC_INDEX.md
 
 ## 9.4 Decision
 
-**Current status:** `APPROVED` (May 11, 2026)
+**Current status:** `AMENDMENT DRAFT` (A3.1a + A3.1b synchronized; A3.4 pending).
 
-All §9.1 content items, §9.2 quality items, and §9.3 review items are checked. Spec #20
-moves to APPROVED in `SPEC_INDEX.md` line 40. Stage 0 Priority 1–2 + governance spec set
+The May 11, 2026 approval below remains the operative baseline. The A3 amendment has 81 numbered FRs and 83 §5.5 traceability rows, but it is **not approved by this slice**. A3.4 must re-run the complete §9 gate over the combined amendment and update the §9 Decision and `SPEC_INDEX.md` atomically. Historical May 11 evidence is preserved unchanged below.
+
+At the May 11 baseline, all §9.1 content items, §9.2 quality items, and §9.3 review items were checked and Spec #20 moved to APPROVED in `SPEC_INDEX.md` line 40. Stage 0 Priority 1–2 + governance spec set
 is now complete pending the remaining draft-tier specs (#9 Fixed64, #10 Heading, #11
 Goalkeeper, #16 Deterministic Simulation Tier 2, #17–#19) reaching their own approval
 gates.
@@ -530,6 +536,7 @@ re-verification of all §9.1 and §9.2 checklist items:
 | 1.1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H3.** C-07's justification said the `tools/dotnet-ci` gate compiles the whole tree "on every push"; corrected to `ci.yml`'s real triggers (`branches: [main]`, `push` and `pull_request`). Wording only — no checklist outcome, count, or §9.4 decision changed. | — |
 | 1.1.3 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding M2.** Q-04's "three distinct IDs" expected value was false and untouched since May 11, 2026: re-running its command today returns **six** (`ERR-001 ERR-002 ERR-003 ERR-004 ERR-016 ERR-020`), not three — stale since `ERR-020-001` was first cited May 22, 2026. §9.4 trigger 1's mandated re-verification of every §9.1/§9.2 item had never actually been run despite the round-6 `[CROSS-PENDING]` tag addition firing it (only Q-01's note was touched at that landing). Fixed by re-running EVERY §9.1 (C-01…C-09) and §9.2 (Q-01…Q-08) command against the current tree: eight of nine §9.1 items and seven of eight §9.2 items reproduced their recorded values unchanged; only Q-04 did not (corrected in place, with the six-ID citation list and sources). §9.4 trigger 1 gains a re-verification record documenting this sweep. No §9.4 Decision change — Spec #20 remains APPROVED; the correction is evidentiary only. | — |
 | 1.1.4 | September 2, 2026 | Codex | **A3.1a draft-state marker.** Marks C-03's checked 73-row result as approved-baseline evidence that does not certify the current 81-FR amendment draft. The full count, traceability, checklist, decision, and status synchronization remains A3.1b/A3.4 work; no stale check is represented as current approval. | PENDING — A3.4 |
+| 1.2 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Updates live C-03/Q-07 expectations from 73 to 81, adds §5.4.8 architecture coverage, records current-draft count evidence without rewriting dated May evidence, and marks the §9 Decision as amendment-draft pending A3.4. The approved v1.1.3 baseline and its historical evidence remain intact; `SPEC_INDEX.md` is deliberately unchanged until atomic reapproval. | PENDING — A3.4 |
 | 1.1.5 | September 2, 2026 | Claude Code | **A3.1a review correction — renumbering sweep completed here.** C-04's automated-proxy comment still excluded "the §2.2.9 partition-footer rows"; the A3.1a architecture partition took §2.2.9 and moved the FR Table Footer to §2.2.10, so the live comment named the wrong subsection — the same defect `section-2.md` v1.6.1 repaired at its own site, missed in this file while this file was being edited in the same pass. Re-pointed to §2.2.10. C-03's `[x] Verified May 8, 2026 — returns 73` line is additionally annotated in place as approved-baseline evidence, so the machine-readable checkbox no longer reads as current against the draft-invalidation note directly above it; the May 8 record is preserved rather than unchecked, per the annotate-don't-rewrite convention. The dated May 11, 2026 record under C-04 keeps its `§2.2.9` citation: the footer WAS §2.2.9 then, and re-pointing a historical record would misstate it. No check outcome, expected value, count, or §9.4 decision changed. | PENDING — A3.4 |
 
 ---

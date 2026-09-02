@@ -13,10 +13,9 @@ intended rule, conformance level, and source so the FR table can be
 authored mechanically.
 
 **Created:** May 6, 2026, 8:50 PM PST
-**Updated:** May 6, 2026, 9:50 PM PST
-**Version:** 1.3
-**Status:** DRAFT — self-critique passes 1–3 applied; clean; ready for
-section-file authoring
+**Updated:** September 2, 2026
+**Version:** 1.4
+**Status:** DRAFT — A3.1b synchronized; normative section files control
 **Companion documents:** `outline.md` (high-level v1.0),
 `outline-mid.md` (mid-level v1.2).
 
@@ -134,7 +133,7 @@ Standard table (5 columns: Version | Date | Author | Notes | Reviewer).
 **Format:** master FR table with columns:
 `ID | Statement | Level | Source | Mechanics §`
 
-**Partition (final numbering pinned here — 73 FRs total):**
+**Partition (numbering synchronized to A3.1a — 81 FRs total):**
 
 #### 2.2.1 C# Style — FR-CS-001 … FR-CS-015 (15 FRs)
 - FR-CS-001: PascalCase for types and methods. *MUST*. Source: §3.1.1.
@@ -294,9 +293,20 @@ Standard table (5 columns: Version | Date | Author | Notes | Reviewer).
   rationale is present at the use site. Source: §3.7.2.
 - FR-CS-073: `decimal` in game logic. *MUST NOT*. Source: §3.7.3.
 
+#### 2.2.9 Architecture Integration & Activation — FR-CS-074 … FR-CS-081 (8 FRs)
+
+- FR-CS-074: durable component identity and canonical selector binding. *MUST*. Source: §3.5.6.
+- FR-CS-075: applicable runtime-bearing surfaces/components are classified and integration-owned. *MUST*. Source: §3.5.6–§3.5.7.
+- FR-CS-076: integration contract records construction/activation/update/teardown ownership. *MUST*. Source: §3.5.6.
+- FR-CS-077: alternate hosts/testhosts preserve applicable invariants or approved surface-specific divergence. *MUST*. Source: §3.5.7.
+- FR-CS-078: bypass claims may block only inside a mechanically closed discovery universe. *MUST*. Source: §3.5.7.
+- FR-CS-079: activation-capable public surfaces are supported, test-only, mechanically non-activating, or non-public. *MUST*. Source: §3.5.7.
+- FR-CS-080: explicit/implicit static initialization participating in lifecycle is declared and cannot bypass ownership. *MUST*. Source: §3.5.6–§3.5.7.
+- FR-CS-081: blocking architecture claims require resolvable typed facts/current proof; unsupported semantic assertions remain report-only. *MUST*. Source: §3.5.6–§3.5.7.
+
 #### 2.2.9 FR Table Footer
-- One-paragraph note: 73 FRs total. Renumbering after publication
-  is forbidden; new FRs append (FR-CS-074+). Mirrors CLAUDE.md
+- One-paragraph note: 81 FRs total. Existing IDs were not renumbered; A3.1a appended
+  FR-CS-074–081. Future FRs append at FR-CS-082+. Mirrors CLAUDE.md
   "Renumbering Cascades" hazard.
 
 ### 2.3 Failure-to-Comply Modes
@@ -403,6 +413,16 @@ Standard table.
   static mutable singletons, generic DI container in game loop.
   Each: 1-sentence rule + 1-sentence rationale.
 
+### 3.5.6 Integration Identity, Ownership & Activation
+- Stable `component_id` plus selector-v1/current selector history.
+- Canonical integration-contract owner/lifecycle/activation fields and typed N/A sentinel.
+- Cross-registry bindings are declarations only until A4's resolver and fixtures make them mechanically resolvable.
+
+### 3.5.7 Closed Runtime Surfaces, Bypasses & Static Initialization
+- Compiler-backed closed discovery of production roots/children/testhosts/tooling/static initialization.
+- Alternate/bypass/public-activation rules and static-init lifecycle edges.
+- Regex/public-member inventory is not an absence proof; unsupported claims remain report-only until A4 closes blind spots.
+
 ### 3.6 Documentation Conventions (FR-CS-056 … FR-CS-065)
 
 **Subsection target length:** ~90 lines, ~3 code blocks (templates
@@ -499,13 +519,13 @@ Standard table.
 - Flat-namespace rule (one namespace per assembly; no nested folders
   introducing sub-namespaces). Rationale block (~6 lines) verbatim
   from `outline-mid.md` v1.2 §4.3.
-- Cross-assembly references explicit at asmdef level.
+- Cross-assembly references explicit at asmdef level; the labelled ten-tier provider→consumer order lives only in §3.5.2, not in a duplicate outline diagram.
 
-### 4.4 Interface Contracts (this spec exposes none)
+### 4.4 Interface Contracts (no runtime API)
 
-**Subsection target length:** ~5 lines.
+**Subsection target length:** ~10 lines.
 
-One-paragraph "Spec #20 publishes no runtime interface" justification.
+Spec #20 publishes no runtime interface. Architecture-governance JSON contracts/registries are tooling records only and create no gameplay dependency; compiler/discovery facts flow into those records, and Spec #19 proof/gate machinery consumes applicable evidence.
 
 ### 4.5 Pointer to `src/CLAUDE.md`
 
@@ -522,13 +542,13 @@ Standard table.
 
 ## SECTION 5 — CONFORMANCE VERIFICATION (`section-5.md`)
 
-### 5.1 Stage 0 Verification Model
+### 5.1 Verification Model
 
 **Subsection target length:** ~30 lines.
 
-- Manual review against §2.2 FRs.
-- Reviewer-checklist pointer to §5.4 / Appendix.
-- "No tooling at Stage 0" justification (no source code).
+- Review against §2.2 FRs plus the current repository's mechanical checks.
+- Reviewer-checklist pointer to §5.4.
+- Architecture facts not closed by A4 remain report-only; existing code/tooling means the historical "no source code" premise is no longer current.
 
 ### 5.2 Stage 0+1 Transition: Tool Selection
 
@@ -556,10 +576,9 @@ Stage 1 *deliverable* = concrete config files (§7.1).
 
 ### 5.4 Review-Time Checklist
 
-**Subsection target length:** ~80 lines.
+**Subsection target length:** ~100 lines.
 
-Seven checklist categories — paste-ready (under each: 5–8 yes/no
-questions). Pointer to Appendix for printable version.
+Eight checklist categories — paste-ready (under each: focused yes/no questions).
 
 - Style.
 - Constants & tagging.
@@ -568,12 +587,13 @@ questions). Pointer to Appendix for printable version.
 - Dependencies & interfaces.
 - Documentation.
 - Performance.
+- Architecture Integration & Activation (FR-CS-074–081): durable identity/contracts, closed runtime surfaces, alternate hosts, bypass/public activation, static initialization, and report-only-vs-blocking evidence boundary.
 
 ### 5.5 FR-to-Verification Traceability
 
 **Subsection target length:** ~45 lines.
 
-Table with one row per FR-CS-### (73 rows). Columns:
+Table with one row per numbered FR-CS-### plus FR-CS-046a/046b (83 rows: 81 numbered + 2 sub-clauses). Columns:
 `FR ID | Stage 0 verification | Stage 1 analyzer ID (placeholder) | Stage 1 severity (placeholder)`.
 
 Stage 0 column resolves to a §5.4 category. Stage 1 columns are
@@ -742,7 +762,7 @@ programmatically verifiable.
 
 - All required sections present.
 - Authority Matrix in §1.3.
-- 73 FR-CS-### rows in §2.2 (15 style + 10 constants + 10 alloc + 10 det + 10 deps + 10 docs + 5 perf + 3 numeric type).
+- 81 FR-CS-### rows in §2.2 (15 style + 10 constants + 10 alloc + 10 det + 10 deps + 10 docs + 5 perf + 3 numeric type + 8 architecture integration/activation).
 - Every FR has level + source + mechanics §.
 - Template-slot reconciliation note in §1.3.
 - Appendices A–E present.
@@ -763,7 +783,7 @@ programmatically verifiable.
 - All RFC 2119 keywords used correctly.
 - All "informational" / "out of scope" pointers resolve to a real
   document.
-- Reviewer-checklist categories in §5.4 cover all 73 FRs (style →
+- Reviewer-checklist categories in §5.4 cover all 81 FRs (style →
   Style category; constants → Constants & Tagging; alloc + perf →
   Allocation + Performance categories; det + numeric-type →
   Determinism category; deps → Dependencies & Interfaces; docs →
@@ -838,6 +858,10 @@ Categories (verbatim from `outline-mid.md` v1.2 Appendix D):
 Footer note: this list is the *seed* for Stage 1 `BannedSymbols.txt`;
 no other document may add entries without updating this Appendix first.
 
+### Appendix F — Architecture-Governance Record Examples
+
+Selectors, durable identity/rename history, integration contracts, N/A representation, runtime-surface classifications, activation states, and dependency/proof examples. These examples demonstrate schema/record shape; they do not claim A4 resolver coverage or A8 enforcement activation.
+
 ### Appendix E — Glossary
 
 **Target length:** ~40 lines.
@@ -859,7 +883,7 @@ cited from owning specs (no redefinition).
   source of truth (KD-6); §3.3 / §3.4 / §5.2 / §7.1 cite it. Draft
   Appendix D *before* §3.3 / §3.4 to avoid forward-reference churn.
 - After §2.2 is drafted, count FR-CS-### identifiers in `section-2.md`
-  and confirm 73 unique IDs (one occurrence each as the row identifier;
+  and confirm 81 unique numbered IDs (one occurrence each as the row identifier;
   references elsewhere don't count as duplicates).
 - After §3 is drafted, run a cite-not-redefine audit: search for
   any text that paraphrases a CLAUDE.md rule rather than citing it.
@@ -878,3 +902,4 @@ cited from owning specs (no redefinition).
 | 1.1     | May 6, 2026 | Claude Code | Self-critique pass 1: FR-CS-008 reworded with deferred-activation language (gated on `certification-platform.md` resolution); FR-CS-040 (FMA) reworded to make sign-off + platform-pin override explicit; FR-CS-044 / FR-CS-045 scoped with "where applicable" qualifier; §3.6.4 doc-comment table given concrete columns and explicit FR-CS-060 / FR-CS-061 overlap note; added overlap clarification on FR-CS-061. |
 | 1.2     | May 6, 2026 | Claude Code | Self-critique pass 2: §3.7 (Numeric Type Discipline) had no FR rows; added FR-CS-071 / FR-CS-072 / FR-CS-073 as new partition §2.2.8; total FR count 70 → 73; FR Table Footer renumbered to §2.2.9; FR-CS-070 (`ProfilerMarker`) FR text expanded to match §6.3 wording; §3.7 subsection annotated with FR coverage; §5.5 row count and §9.1 / §9.2 totals updated to 73; §5.4 coverage mapping made explicit. |
 | 1.3     | May 6, 2026 | Claude Code | Self-critique pass 3: FR-CS-072 phrasing aligned with FR-CS-040 RFC 2119 pattern (MUST NOT with overrideable conditions, not invented "MUST (override-with-justification)" level). No outstanding self-critique findings. Detailed outline ready for section-file authoring. |
+| 1.4     | September 2, 2026 | Codex | A3.1b synchronization: 81-FR partition with FR-CS-074–081, §3.5.6–§3.5.7 architecture mechanics, single ten-tier arrow authority, eight §5.4 categories / 83 traceability rows, Appendix F, and report-only A4 boundary. Historical 70→73 record preserved. |

@@ -50,95 +50,42 @@ not infer the spec mapping from a folder name.
 > via platform filtering. Only the expanded spec folders in the tree above show the
 > `.asmdef` entry; all `tests/` subfolders follow the same pattern.
 
-### Assembly Layer Taxonomy
+### Assembly Tier Taxonomy and Reference Direction
 
-The authoritative layer taxonomy is Spec #20 §3.5.2. The three layers and their
-members are reproduced here verbatim — do not infer layer membership from folder
-order or spec number.
+The authoritative production-assembly order is **Spec #20 §3.5.2**. It is a ten-tier
+order (Foundation through Client) plus the two named out-of-band Infrastructure
+assemblies. This load-on-demand reference deliberately does **not** reproduce the table:
+duplicating it here was the source of the retired three-layer/arrow drift recorded as
+ERR-020-002/003.
 
-| Layer | Assemblies |
-|---|---|
-| **Physics** | ball-physics, agent-movement, collision-system, first-touch, pass-mechanics, shot-mechanics, heading-mechanics, goalkeeper-mechanics |
-| **Mechanics** | positioning-ai, pressing-ai, defensive-ai, attacking-ai |
-| **AI** | decision-tree, perception-system |
-| **UI** | (Stage 1+ — not yet specified) |
+Use the rule directly:
 
-The `deterministic-sim` and `event-system` assemblies are cross-cutting foundations
-referenced by all layers (not members of any single layer).
+- An ordered production assembly may reference assemblies below it in the §3.5.2 order,
+  never above it (FR-CS-046).
+- Intra-tier references are permitted; the complete production graph remains acyclic
+  (FR-CS-046a).
+- Ordered tiers do not reference the out-of-band Infrastructure assemblies;
+  Infrastructure is bound separately by FR-CS-046b.
+- `tools/assembly-tier-check.py` parses the authoritative table and live `.asmdef`
+  graph. Acyclic upward references can compile, so compiler success alone is not evidence
+  of tier conformance.
+- Test assemblies are outside the production tier order and are evaluated under their
+  testhost/applicability rules.
 
-The following assemblies are **infrastructure-only** and are NOT members of any
-gameplay layer. Game-layer code (Physics / Mechanics / AI) MUST NOT import them
-at runtime:
+For a code change that adds or changes an integration surface, also read Spec #20
+§3.5.6–§3.5.7 (FR-CS-074–081). Durable runtime-bearing components use canonical
+architecture-governance identities/contracts; production roots, alternate hosts,
+testhosts, bypass-capable public surfaces, and relevant static initialization must be
+accounted for. Those governance records are tooling data, not runtime dependencies.
 
-| Assembly | Role |
-|---|---|
-| `project-constants` | Constants shared across ≥ 2 spec assemblies; read-only by all |
-| `performance-optimization` | Trace pipeline only (Spec #18 KD-3); no game-loop types |
-| `testing-strategy` | CI orchestration tooling only (Spec #19); no game-loop types |
-| `code-standards` | Governance only (Spec #20); no runtime types |
+**Enforcement boundary:** cross-registry bindings and closed-world absence claims that
+A4 has not yet made compiler-resolvable remain report-only. Spec #19 owns executable
+proof/gate evidence, and the later activation stage may enable only verified blocking
+checks. Do not infer a Machine-blocking result merely because a JSON record is
+schema-valid.
 
-> ⚠️ **This table is out of date and is not the current assembly index.**
-> It accounts for 19 of the 34 assembly folders now in `src/` — the 17 named in the
-> layer tables plus `deterministic-sim` and `event-system`, covered as cross-cutting
-> foundations in the paragraph above.
->
-> **Unlisted (15):** `client-app`, `injuries-medical`, `living-world`, `match-analytics`,
-> `match-client-core`, `match-client-unity`, `match-client-web`, `match-engine`,
-> `match-viewer`, `player-database`, `player-progression`, `season-save`,
-> `tactical-instructions`, `training-system`, `ui-framework`.
->
-> **Listed but absent from `src/`:** `code-standards` (Spec #20 is a style guide, not a
-> coded assembly).
->
-> The layer table is reproduced verbatim from Spec #20 §3.5.2, which is the authority on
-> layer membership — so the fix is a back-prop to that spec, not an edit here. (The
-> infrastructure table below it is a `src/CLAUDE.md` extension, not #20 text; its
-> `code-standards` row is the phantom.) Assigning these 12 to layers is a design decision
-> requiring owner sign-off, not something to infer from folder names.
->
-> **Filed as `ERR-020-002`** (August 2, 2026, 🟡 Open) with a proposed ten-tier order
-> covering all 31 folders as of that date (the two August 5, 2026 additions are not in the
-> proposal and need placing with it), derived from the `.asmdef` reference graph and verified against
-> it — zero upward references, so adopting it changes nothing that exists. See
-> `docs/tracking/spec-error-log.md`. Until it is signed off, use the **assembly map in the
-> root `CLAUDE.md`** as the current index.
->
-> The Reference Direction rule below is unaffected and still binding — but note
-> `ERR-020-003`: #20 §3.5.2 draws its arrows `Physics ──► Mechanics ──► AI` while the root
-> `CLAUDE.md` states `AI → Mechanics → Physics, never the reverse`. Same rule, opposite
-> notation, neither labelled. **The code follows the `CLAUDE.md` reading** — an assembly
-> may reference assemblies below it, never above.
-
-### Reference Direction
-
-**AI depends on Mechanics. Mechanics depends on Physics. Never the reverse.**
-
-```
-project-constants  (read-only by all assemblies)
-
-Physics  ←  Mechanics  ←  AI  ←  UI
-```
-
-`←` means "is referenced by" — `A ← B` means B depends on A (B imports from A).
-The AI assembly imports types from Mechanics, which imports types from Physics.
-A Physics assembly MUST NOT import from Mechanics or AI; a Mechanics assembly MUST NOT
-import from AI. These prohibited import directions are enforced as build errors via
-`.asmdef` reference declarations (FR-CS-046).
-
-**Intra-layer references are permitted; intra-layer cycles are not.** An assembly MAY
-reference another in the same layer — `pressing-ai → positioning-ai` is the standing
-example — but the reference graph as a whole MUST remain acyclic. That is not merely
-convention: Unity rejects circular `.asmdef` references, and `tools/dotnet-ci` emits one
-`<ProjectReference>` per `.asmdef` reference, so a cycle fails the Linux compile gate too.
-The rule is written down because the enforcement is a build error whose message explains
-what broke but not why the constraint exists. It is stated here as a *layer* rule; the
-tier-order proposal in `ERR-020-002` restates it as a tier rule, unchanged in substance.
-
-For upward event notification (e.g., a physics event consumed by AI), use a struct
-event on the event bus — no direct assembly reference (FR-CS-047).
-
-For the specific `.asmdef` references each assembly declares, read that spec's `§4`
-(Architecture) file. Do not infer the intra-layer dependency chain from this document.
+For exact `.asmdef` references, read the owning spec's §4 Architecture section and the
+live `src/CLAUDE.md`; do not reconstruct a second dependency table here.
 
 ---
 
@@ -203,7 +150,7 @@ per-tick `p50`/`p99` via `TestContext` for the operator to transcribe into the
 Linux `dotnet-ci` gate (non-certifying) as the harness's compile+execute proof.
 This command requires a Unity host — it is **not** runnable from the Linux gate.
 
-**Stage 0 verification:** Manual code review against Spec #20 §5.4 checklist (7 categories, 73 FRs). Static analysis tooling (Roslyn analyzers, BannedSymbols.txt, `.editorconfig`) activates at Stage 1.
+**Spec #20 verification:** Review against §5.4's 8 categories covering 81 numbered FRs; §5.5 has 83 traceability rows including FR-CS-046a/046b. Existing style/build tooling remains as documented, while FR-CS-074–081 facts that depend on pending A4 resolver/discovery closure remain report-only until the later verified activation stage.
 
 ---
 

@@ -12,7 +12,10 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A3.1a lifecycle binding clarified; draft remains unapproved.**
+> **Last Updated:** September 2, 2026 — **A3.1b Code Standards supporting surfaces synchronized; A3.4 still pending.**
+> The #20 amendment's supporting surfaces now match A3.1a: all 16 live stale `73` claims move to 81 while dated May/August baseline evidence remains untouched; §5.4 gains an eighth Architecture Integration & Activation category and §5.5 grows to 83 traceability rows (81 numbered FRs + 046a/046b). §1/§4/§7/§8 and all three outlines now carry the Governance/#19 authority split, tooling-record-vs-runtime boundary, A4 report-only resolver/discovery boundary, labelled ten-tier dependency source, and separate reapproval-versus-enforcement activation sequence. `coding-reference.md` no longer reproduces the retired three-layer taxonomy/ERR-020-002/003 state. §8 re-verifies and repins its external source URLs. `SPEC_INDEX.md` is deliberately unchanged until A3.4 re-runs §9 and atomically reapproves the combined amendment. No `src/`, `.cs`, `.asmdef`, schema, executable semantics, workflow, CI job definition, or enforcement behavior changed.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1a lifecycle binding clarified; draft remains unapproved.**
 > Code Standards §3.5.6 no longer calls a runtime-surface field “lifecycle” without naming where that
 > qualifier lives. Non-N/A activation/update/teardown values now resolve as exact runtime-surface
 > `surface_id` values and as the same dependency-graph identifiers with `kind: lifecycle`. §3 → v1.12.

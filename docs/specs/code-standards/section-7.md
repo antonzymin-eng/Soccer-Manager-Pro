@@ -5,10 +5,12 @@
 begins, Stage 5+ rule extensions, permanent exclusions (style debates this spec refuses to
 relitigate), and the deferred-decisions tracker (D1–D5).
 **Created:** May 8, 2026
-**Version:** 1.2
-**Status:** APPROVED (May 11, 2026)
+**Modified:** September 2, 2026
+**Version:** 1.3
+**Status:** AMENDMENT DRAFT (A3.1b; approved v1.2 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 7; `outline-mid.md` v1.2, §7.1–§7.5
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.35, §6; A3.1b
 
 ---
 
@@ -64,7 +66,7 @@ assemblies and 947 `.cs` files, and `.github/workflows/ci.yml` activates the fir
 gates in substance, with variations from the table above. The format check runs
 `dotnet format whitespace --verify-no-changes` on every push to `main` and every PR targeting `main`, over a synthetic project
 (not as a pre-commit hook, and advisory — a failure emits a warning and exits 0,
-"non-blocking until repo opts in"). Every push also runs `tools/dotnet-ci/run-gate.sh`,
+"non-blocking until repo opts in"). Each such push/PR also runs `tools/dotnet-ci/run-gate.sh`,
 which compiles the entire tree and runs every NUnit suite (blocking; a non-certifying
 Linux shim, not the pinned Unity host, and `/p:TreatWarningsAsErrors` is not the gate's
 posture). Still missing: the **Roslyn analyzer ruleset half of the PR gate** — no
@@ -82,6 +84,10 @@ being pinned in `docs/tracking/certification-platform.md`. Until that document i
 populated (see CLAUDE.md Open Issues — "Stage 0 host platform pin"), the merge gate cannot
 produce a reproducible baseline. The gate MUST NOT be marked active until the platform pin
 resolves (see also FR-CS-008 — INACTIVE status in §2.2.1).
+
+### Architecture-governance activation boundary (A3 → A4 → later enforcement)
+
+FR-CS-074–081 are amendment-draft rules until A3.4 reapproves the combined A3.1a/A3.1b package. Reapproval still does **not** make every architecture assertion blocking. A4 must first implement and verify the compiler-backed discovery/identity resolver, cross-registry contract binding, closed runtime-surface inventory, static-initializer coverage, and blind-spot fixtures required by §3.5.6–§3.5.7. Until that evidence exists, those unresolved bindings and semantic absence claims remain report-only. Spec #19 owns executable proof classes, bounded-substitute rules and gate evidence. The later activation stage may wire only checks whose coverage and failure behavior have been verified; A3.1b changes no workflow or CI enforcement.
 
 ---
 
@@ -196,6 +202,7 @@ statement, the trigger that allows (or requires) the decision to be made, and th
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fixes (audit finding H-02): corrected three stale FR-CS-### identifiers — §7.3 `double` cite FR-CS-039 → FR-CS-072; §7.3 `unsafe` cite FR-CS-042 → FR-CS-010; §7.3 FMA paragraph clarified that FR-CS-040 is active at Stage 0 and only its override pathway is gated on the platform pin. §7.1 D1-artifact and §7.5 D1 rewordings: D1 deferral is governed by KD-5 (no Stage 0 code to baseline against), with FR-CS-008 activation as a precondition, not the source of the threshold values themselves. | — |
 | 1.0.2 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
 | 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H5.** Two sites asserted `src/` is empty / no source code exists, fifteen months after coding began (May 19, 2026). §7.2's "Stage 0 status" paragraph rewritten against the live tree and CI, every figure re-derived August 18, 2026 (35 assemblies via `ls -d src/*/ | wc -l`, 947 `.cs` files via `find src -name '*.cs' | wc -l`; `.github/workflows/ci.yml` runs the advisory `dotnet format whitespace` check and the blocking `tools/dotnet-ci/run-gate.sh` on every push) — and precise about what remains missing: the Roslyn analyzer ruleset, `BannedSymbols.txt`, `.editorconfig`, and the zero-allocation profiler merge gate. §7.5's D1 row premise ("no source code exists at Stage 0") corrected to the surviving half of its own argument: code exists, a profiled baseline does not, so D1 stays deferred on grounds that are still true. | — |
+| 1.3 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Adds the explicit A3→A4→activation boundary for FR-CS-074–081: reapproval, compiler-backed resolver/discovery proof, and enforcement activation are separate gates; Spec #19 retains proof/gate ownership. Also fixes the live §7.2 "Every push" residue to the already-stated main-push/PR trigger scope. | PENDING — A3.4 |
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H3.** §7.2's "on every push" corrected to `ci.yml`'s real triggers (`branches: [main]`, `push` and `pull_request`). Same correction as `section-4.md` v1.2 and `section-5.md` v1.2; the v1.1 row above is left as written per the history convention. | — |
 
 ---
