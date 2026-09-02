@@ -1,6 +1,11 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 2, 2026 — **A2 IS CLOSED. All seven conditions satisfied; A3 is unblocked.**
+**Last Updated:** September 2, 2026 — **A3 preflight complete; implementation plan v0.33.**
+The live A2 contradiction in the plan is removed. Each specification now has a normative-core slice and
+a supporting-surface slice, followed by combined reconciliation and atomic reapproval/landing. Intermediate commits remain unapproved
+drafts and make no A8 enforcement claim. No #19/#20 normative file, schema, executable semantics, code,
+workflow, or enforcement changed.
+**Last Updated (prior):** September 2, 2026 — **A2 IS CLOSED. All seven conditions satisfied; A3 is unblocked.**
 The approved candidate merged to `main` at `693db56`, and the landed material subject was recomputed — not
 assumed — to `4160b164…`, identical at `1f0e68a` (reviewed), `9954e90` (approved), `0221491` (branch head),
 `693db56` (merge) and `origin/main`. Nothing changed on the way in. Integration plan → v0.32; A2 closure

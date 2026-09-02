@@ -2,9 +2,9 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.32\
+**Version:** 0.33\
 **Created:** August 27, 2026  
-**Last Updated:** September 1, 2026\
+**Last Updated:** September 2, 2026\
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
 **Primary downstream specifications:** Testing Strategy & Framework #19; Code Standards & Style Guide #20  
 **Related project authorities:** Master Development Plan; adversarial-review process; root and src agent guides  
@@ -900,11 +900,29 @@ Freeze identity/selectors, activation-state/disable-anchor semantics, applicabil
 
 **Condition 4 was claimed at plan v0.20, retracted at v0.21, and is satisfied at v0.30 — by a different round, against a subject that did not move.** Independent review found that round 3 reviewed `678f0f2`, the material subject then moved by 150 lines — including the `A2-R3-001` fix — and the commit asserting completion had itself never been reviewed. The gate's pushed-candidate wording is deliberately stronger than FR-AG-018's, and the party satisfying a condition does not get to relax it. Row 4 becomes claimable only after a fresh review of the artifact as pushed.
 
-**Conditions 6 and 7 remain open and are not agent-satisfiable.** No review run is marked `CONVERGED` or `final_review`. `docs/tracking/a2-schema-semantics-closure.md` §8 owns this evidence. **A2 remains OPEN. A3 remains BLOCKED.**
-
 ## A3 — Amend and reapprove #19/#20 governance integration
 
 The coordinated bundle consumes the already-repaired #20 dependency model. Add activation-state mechanics to #20 and FR-TS-097/KD-W1 to #19 alongside the existing governance amendments.
+
+Drafting is divided into bounded reviewable commits, but approval and landing remain one coordinated
+bundle:
+
+1. **A3.1a — Code Standards normative core:** amend §2, §3, and the typed examples in the appendices.
+2. **A3.1b — Code Standards supporting surfaces:** amend §1, §§4–9, outlines, and tracking to complete
+   the §6 matrix without changing enforcement.
+3. **A3.2a — Testing Strategy normative core:** amend §2, §3, and the proof examples in the appendices
+   against the same Governance and A2 semantic baseline.
+4. **A3.2b — Testing Strategy supporting surfaces:** amend §1, §§4–9, outlines, exception references,
+   and tracking to complete the §7 matrix without changing enforcement.
+5. **A3.3 — Reconciliation:** run the required count, range, traceability, exception-route, stale-reference,
+   documentation, and repository gates over the combined candidate; correct only findings within A3 scope.
+6. **A3.4 — Reapproval and landing:** perform a fresh review of the combined current candidate, resolve
+   every substantive finding, obtain non-delegable project-owner approval, then update both approval
+   records, versions, status/index entries, manifest, and changelog atomically before landing.
+
+No intermediate drafting commit is an approved amendment or may claim that the A8 enforcement is active.
+A3 closes only when both specifications are reapproved and landed together against the same Governance
+v0.10 and A2 reference-semantics v2.1.0 baseline.
 
 ## A4 — Compiler-backed Class-A discovery and state seeding
 
@@ -1247,6 +1265,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.33 | September 2, 2026 | — | **A3 preflight correction and bounded execution sequence.** Removes the live contradiction immediately below the A2 `CLOSED` declaration that still said conditions 6/7 were open and A3 blocked. Each specification is divided into a normative-core slice and a supporting-surface slice, followed by combined reconciliation and atomic reapproval/landing. Intermediate commits remain unapproved drafts and make no A8 enforcement claim. A3 must close against one Governance v0.10 / A2 semantics v2.1.0 baseline. No #19/#20 normative file, schema, executable semantics, code, workflow, or enforcement changed. |
 | 0.32 | September 2, 2026 | — | **A2 IS CLOSED. A3 is unblocked.** Row 7 satisfied: the approved candidate merged to `main` at `693db56`, and the landed material subject was **recomputed** — not assumed — to `4160b164…`, identical at `1f0e68a` (reviewed by `A2-RUN-011`), `9954e90` (approved), `0221491` (branch head), `693db56` (merge commit) and `origin/main`. Nothing changed on the way in, which is the check a digest-bound approval exists to make possible: "the PR merged" is not evidence that what landed is what was approved. All seven conditions now hold; closure record → v1.0 and `CLOSED`. Deliberately **not** done: no review run is marked `CONVERGED` or carries `final_review` — FR-AG-019/020 convergence is a separate question from FR-AG-018's fresh review, the seven-condition gate never required it, and runs are immutable snapshots that must not be retro-labelled; the test enforcing that was left in place rather than relaxed to fit the new state. Closure binds one artifact by digest and does not put the contract beyond revision: any later change inside the material subject is a change to an **approved** contract and takes the A5/A6 schema-evolution route. Unblocked is not started — beginning A3 remains a separate decision. Records only; discovery holds at 149/9/8 = 166. Governance v0.10/A0 and #19/#20 normative files are unchanged. |
 | 0.31 | September 1, 2026 | — | **A2 closure condition 6 recorded: project-owner approval of the candidate at `9954e90`**, material subject digest `4160b164…` — the same subject `A2-RUN-011` reviewed at `1f0e68a`, unchanged since. The approval is bound to that digest and does not transfer: any change inside the material subject returns row 6 to PENDING and requires a fresh approval, while excluded files (tracking prose, review ledger, CI configuration) may change without disturbing it. **Row 7 — landing the approved candidate on the base A3 builds on, with the landed digest verified — is now the only outstanding condition.** No run is marked `CONVERGED` and none carries `final_review`; that lock is tied to row 7 and is not what approval releases. A2 stays OPEN until the candidate lands; A3 stays BLOCKED. Closure record → v0.14. Records only: no schema, executable semantics, fixture, or finding changed; discovery holds at 149/9/8 = 166. Governance v0.10/A0 and #19/#20 normative files are unchanged. |
 | 0.30 | September 1, 2026 | — | **A2 closure condition 4 is satisfied.** `A2-RUN-011`, an independent review of `1f0e68a` as pushed, returned **no findings** — the first round in this series after which nothing followed into the contract, which is precisely what row 4 has required since its v0.21 retraction. The material subject digest `4160b164…` recomputes identically from `1f0e68a` and from the current tree, and `test_closure_condition_4_is_only_claimed_with_a_review_of_this_tree` refuses the cell otherwise; the claim is machine-checked rather than argued. Round 11 additionally verified Governance §3.3 property fields and §7.1 exception fields, carried as explicitly unverified since v0.20, and independently confirmed `Spec hygiene checks` at 166/166 with 0 skipped. Post-review corrections are confined to files the material subject excludes by construction — the ledger entry recording the run, tracking prose, and stale fixture names in a CI comment and in the closure record's §1, one of which (`test_the_current_artifact_has_not_yet_been_reviewed`) the round did not catch. A fixture pinning cited test names is deliberately not landed: it belongs to the material subject and would re-open row 4 for a twelfth round, so that trade is the owner's to make alongside the next material change. Closure record → v0.13. **Rows 6 (owner approval) and 7 (landing) remain PENDING and are not agent-satisfiable; A2 stays OPEN and A3 stays BLOCKED.** Discovery unchanged at 149/9/8 = 166. Governance v0.10/A0 and #19/#20 normative files are unchanged. |

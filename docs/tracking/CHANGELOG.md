@@ -12,7 +12,14 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A2 IS CLOSED. All seven conditions satisfied; A3 is unblocked.**
+> **Last Updated:** September 2, 2026 — **A3 preflight complete; implementation plan v0.33.**
+> Removed a contradictory live paragraph that said A2 remained open and A3 blocked immediately after
+> the same section correctly recorded A2 closed. Each specification now has a normative-core slice and
+> a supporting-surface slice, followed by combined reconciliation and atomic reapproval/landing. Intermediate commits remain
+> unapproved drafts and do not claim A8 enforcement. No #19/#20 normative file, schema, executable
+> semantics, code, workflow, or enforcement changed.
+>
+> **Last Updated (prior):** September 2, 2026 — **A2 IS CLOSED. All seven conditions satisfied; A3 is unblocked.**
 > Row 7 is satisfied: the approved candidate merged to `main` at `693db56`, and the landed material subject was **recomputed** — not assumed — to `4160b164…`. It is identical at `1f0e68a` (reviewed by `A2-RUN-011`), `9954e90` (approved), `0221491` (branch head), `693db56` (merge commit) and `origin/main`. **Nothing changed on the way in**, which is the check a digest-bound approval exists to make possible: a merge can reorder, drop or transform content, and "the PR merged" is not evidence that what landed is what was approved. Integration plan v0.31 → v0.32; A2 closure record v0.14 → **v1.0, `CLOSED`**.
 >
 > The seven conditions, and what each rests on: scope map (§2); canonical schemas with a single control source (§3); executable fixtures (§4); a fresh independent review over the pushed candidate — `A2-RUN-011` over `1f0e68a`, **no findings**, the first round in eleven after which nothing followed into the contract; every finding terminal — twenty-three, all `Blocker`/`Resolved`; project-owner approval bound to the digest; and the verified landing.
