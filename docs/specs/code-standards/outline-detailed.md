@@ -17,7 +17,7 @@ authored mechanically.
 **Version:** 1.6
 **Status:** DRAFT — A3.1b post-merge corrections synchronized; normative section files control
 **Companion documents:** `outline.md` (high-level v1.2),
-`outline-mid.md` (mid-level v1.5).
+`outline-mid.md` (mid-level v1.4).
 
 ---
 
@@ -81,9 +81,9 @@ Six numbered decisions, each with: statement (1 sentence), rationale
   *code* performance rules in lieu of complexity analysis. Rationale:
   preserves cross-spec section-number conventions while accommodating
   meta-spec content.
-- **KD-4 — Verification evolves with repository state.** Manual review is the
-  Stage 0 baseline; existing repository tooling is used where live, while custom
-  Spec #20 analyzers/baselines remain Stage 0+1 deliverables.
+- **KD-4 — Stage 0 verification = manual review.** Tooling deferred to
+  Stage 0+1 transition. Rationale: no source code exists at Stage 0;
+  empirical baselines impossible.
 - **KD-5 — No numeric lint thresholds at Stage 0.** All thresholds
   (cyclomatic complexity, file length, method length, allocation count)
   deferred to first real code (D1). Rationale: pre-code thresholds are
@@ -904,4 +904,4 @@ enforcement activation.
 | 1.3     | May 6, 2026 | Claude Code | Self-critique pass 3: FR-CS-072 phrasing aligned with FR-CS-040 RFC 2119 pattern (MUST NOT with overrideable conditions, not invented "MUST (override-with-justification)" level). No outstanding self-critique findings. Detailed outline ready for section-file authoring. |
 | 1.4     | September 2, 2026 | Codex | A3.1b synchronization: 81-FR partition with FR-CS-074–081, §3.5.6–§3.5.7 architecture mechanics, single ten-tier arrow authority, eight §5.4 categories / 83 traceability rows, Appendix F, and report-only A4 boundary. Historical 70→73 record preserved. |
 | 1.5     | September 2, 2026 | Codex | Post-merge Codex-review correction: synchronizes live authority/dependency text to existing `src/CLAUDE.md`, Governance and substantive Spec #19 ownership; corrects FR-CS-074/075 mapping; updates §8 to ten sources with only Spec #9 pointer-only. |
-| 1.6     | September 3, 2026 | Claude Code | Review-finding follow-up: v1.5 restated KD-4 here without touching the authoritative rule, so `section-1.md` v1.2 now carries the normative restatement and `outline-mid.md` v1.5 matches. Companion-version pins refreshed. No instruction, FR or section-structure change of its own. |
+| 1.6     | September 3, 2026 | Claude Code | Scope correction to v1.5: that revision rewrote **KD-4** here ("Verification evolves with repository state") while the authoritative `section-1.md` §1.3 kept the original decision — a KD change no A3.1b finding asked for, and one that would have made this slice carry a governance-semantic change rather than a synchronization. KD-4 restored verbatim to its pre-A3.1b text, so all three outline tiers and the section file agree again. Modernizing KD-4 against the live tree is tracked separately for A3.4. Companion-version pins refreshed. |
