@@ -23,9 +23,9 @@ APPROVED specs have no `src/` assembly at all** — the 10 listed below plus the
 (It was 22 until August 5, 2026, when **#29 Training and #41 Injuries & Medical** landed T0 assemblies together.)
 The specification frontier runs a long way ahead of the implementation, which is a deliberate posture
 (specify before coding), and it makes one habit dangerous: **"the spec is APPROVED" now says nothing
-whatsoever about whether code exists.** It is true of ~42% of the registry.
+whatsoever about whether code exists.** It is true of ~36% of the registry.
 
-**The 20 with no assembly:** #31 Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #42 Youth, #43 Competition Structure, #44 Discipline, #45 Board, #49 Localization — plus the ten approved on July 27: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54.
+**The 19 with no assembly:** #31 Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #42 Youth, #43 Competition Structure, #45 Board, #49 Localization — plus the ten approved on July 27: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54. (#44 Discipline was on this list until `src/discipline/` landed on August 13, 2026; the figure and the list are corrected here on September 3, 2026. The authoritative pair is `docs/specs/SPEC_INDEX.md` and `docs/tracking/path-to-playable-roadmap.md`.)
 
 Sequencing for closing the gap is in `docs/tracking/path-to-playable-roadmap.md`, which is now the
 project's live critical path. **Check `src/` before assuming a consumer is available** — the assembly map
@@ -44,7 +44,8 @@ defined and whether it is implemented*, `docs/tracking/data-contract-index.md` i
 Soccer-Manager-Pro/
 ├── CLAUDE.md                       ← Compact always-read agent guide
 ├── .claude/                        ← Agent config: advisor council, orchestrator, project skills (see its README)
-├── README.md                       ← Project overview, status, documentation hierarchy
+├── README.md                       ← Project orientation: vision, repo map, documentation authority
+│                                     (NOT a status authority — no spec-status table, assembly map or history)
 ├── Assets/ Packages/ ProjectSettings/   ← Unity project shell (target editor 6000.4.9f1, DX11)
 ├── docs/
 │   ├── planning/                   ← Master volumes I–IV, master development plan, best practices

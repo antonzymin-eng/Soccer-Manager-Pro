@@ -3,8 +3,10 @@ name: landing-close-out
 description: >-
   Close out a landing by syncing every tracking document the change touches — the
   docs/tracking/CHANGELOG.md header chain, root CLAUDE.md's OPEN ISSUES entry, src/CLAUDE.md's version
-  bump (and its own CHANGELOG-src.md chain), file-manifest.md, README.md, the owning design
-  supplement's version history, and the gate-result line — in the same commit as the code. Use this
+  bump (and its own CHANGELOG-src.md chain), file-manifest.md, the owning design
+  supplement's version history, and the gate-result line — in the same commit as the code. README.md is
+  deliberately NOT a landing ledger: it carries no header chain, and only its single dated status
+  snapshot is touched, and only when this landing falsified one of its stated facts. Use this
   skill at the end of any pass that lands code, a spec change, or a new assembly:
   when the work is done and about to be committed, when the user says "wrap this up", "record this",
   "update the docs", or "commit and push", and whenever an ERR was filed or a schema version bumped.
@@ -32,9 +34,10 @@ It flags a duplicate bare `**Last Updated:**` label in the changelog chain (foun
 three times — see the rule under item 1 below), reports each tracking doc's declared date next to
 when it was actually last touched, and checks the OPEN ISSUES active/resolved counts against a direct
 recount — the same comparison this repo's own changelog has had to make by hand, repeatedly, and got
-wrong at least once (the August 10, 2026 correction in root `CLAUDE.md`). If `README.md` or
-`docs/tracking/file-manifest.md` trails the last few landings, say so rather than adding a seventh
-layer on top of a stale base.
+wrong at least once (the August 10, 2026 correction in root `CLAUDE.md`). It also FAILs if a
+`Last Updated` chain has reappeared in root `CLAUDE.md` or `README.md`, both of which had theirs split
+out. If `docs/tracking/file-manifest.md` trails the last few landings, say so rather than adding a
+seventh layer on top of a stale base.
 
 ## What to update
 
@@ -74,8 +77,21 @@ modified ones with their new versions, and record any new assembly. If the chang
 the assembly map in the root `CLAUDE.md` needs a row too — that table was missing a `match-analytics`
 row for a full landing cycle.
 
-**5. `README.md`.** Update the status summary and `Last Updated`. This is the most frequently skipped
-document and the one most often found stale, because nothing in the build depends on it.
+**5. `README.md`.** **Usually nothing.** Since the September 3, 2026 redesign the README is an
+orientation document, not a landing ledger: it carries no `Last Updated` chain, no version history, no
+assembly map and no spec-status table, and `check_drift.sh` FAILs if a chain reappears. Do **not** add a
+per-landing entry to it.
+
+It carries exactly one dated status snapshot. Touch that snapshot only when this landing falsified a
+fact stated in it — the production-assembly count, the `N of M` assembly-less figure, the Unity target,
+or the named governance stage — and then **replace** the snapshot and its date rather than appending a
+new one. Everything else in the file points at an owning document and should not move.
+
+Deciding whether a snapshot fact changed is a judgment call, not a transcription, so this item is not
+delegable (see the delegation list below). Verify the result with
+`python3 tools/doc-consistency-check.py`: the snapshot's two machine-checkable claims — `N production
+assemblies` and `N of M ... no `src/` assembly` — are oracle-checked against the live tree, so a stale
+edit here fails the run rather than sitting unnoticed.
 
 **6. The owning design supplement** (`docs/tracking/<topic>-design.md`). Append to its version
 history: the AR rounds and their findings counts (`AR-1 1H+3M+2L → AR-2 CONVERGENCE`), the calibration
@@ -147,7 +163,6 @@ Delegate, once the text exists and you are handing over exact strings:
 
 - Item 3's `src/CLAUDE.md` version bump and its `CHANGELOG-src.md` file-and-symbol rows.
 - Item 4's `file-manifest.md` rows, and the assembly-map row if one is needed.
-- Item 5's `README.md` status summary and `Last Updated` line.
 - The `**Last Updated:**` → `**Last Updated (prior):**` relabel, per item 1.
 - Appending a version-history block you have already written.
 
