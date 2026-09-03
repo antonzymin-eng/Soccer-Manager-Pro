@@ -1,7 +1,10 @@
 # Testing Strategy & Framework Specification #19 — Section 4: Architecture & Integration
 
 **Created:** May 12, 2026
-**Last Updated:** May 12, 2026
+**Last Updated:** September 3, 2026
+**Version:** 0.4
+**Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** The *shape* of the test-harness architecture: folder
 layout, fixture / golden-trace layout, harness API surface, the two
 interfaces this spec exposes, and the CI pipeline topology. Concrete
@@ -26,7 +29,7 @@ tests/<spec>/
 tests/scenarios/
 ├── <owning-spec>/    ← per-spec scenarios (KD-8)
 ├── cross-spec/       ← Spec #19-owned cross-spec scenarios
-└── index.<ext>       ← root manifest (§3.3.6); <ext> pinned Stage 0+1
+└── index.<ext>       ← root manifest (§3.3.6); <ext> pinned Stage 0+1 (D9)
 
 tests/data/           ← §3.8.2 storage layout
 tests/shared/         ← read-only harness utilities (NOT game-state assemblies)
@@ -39,6 +42,13 @@ tests/test-defect-log.md      ← §6.4.1 test-defect log
 **Rule.** Game-state assemblies under `src/` MUST NOT reference
 `tests/shared/`. The harness lives below the test surface; the
 dependency direction is one-way (test → src), never reversed.
+
+Architecture proof artifacts are governance/tooling evidence, not a new
+runtime or mega-test assembly. Required executable proof remains in the
+owning test surface where practical; reusable proof records use the A2
+artifact contract described by §3.11 / Appendix G and are consumed by
+the architecture/evidence gate through §6.2. This file does not create
+an additional test ownership layer.
 
 ## 4.2 Fixture & Golden-Trace Layout
 
@@ -167,7 +177,10 @@ subsection declares the *shape* (FR-TS-075).
 - "Per-spec-changed" = the diff touches `src/<spec>/`; the PR
   pipeline runs `tests/scenarios/<spec>/` plus any cross-spec
   scenario whose `owning_spec_ids` includes that spec.
-- Exit criteria: all gates pass per §6.2 composition rule.
+- Exit criteria: all currently active gates pass per §6.2 composition
+  rule. The architecture/evidence gate joins this topology only after
+  A8 activation; this A3.2b amendment is documentation-only and does
+  not make it a required status.
 
 ### 4.5.3 Nightly Pipeline
 
@@ -187,18 +200,21 @@ trigger → load fixtures → tier → exit criteria
   └── nightly:     simulation → soak → #16 §5 tiers → pass/fail
 ```
 
-Concrete CI provider selection is deferred to Stage 0+1 (§6.1, D4 in
-§7.5).
+The repository CI provider is GitHub Actions at
+`.github/workflows/ci.yml` (D4 resolved). The architecture/evidence
+gate described here remains inactive until A8.
 
 ## 4.6 Pointer to `src/CLAUDE.md`
 
-Concrete paths, runner invocations, and CI provider configuration land
-in `src/CLAUDE.md` when coding begins. Spec #19 declares the *shape*;
-`src/CLAUDE.md` declares the *paths*. The deferred items are:
+The repository now has concrete runner and CI paths. The non-certifying
+Linux test gate is `tools/dotnet-ci/run-gate.sh`, which generates NUnit
+projects and executes `dotnet test`; GitHub Actions orchestration lives
+at `.github/workflows/ci.yml`. Those facts resolve D1/D4 without
+changing the ownership of runtime test commands documented elsewhere.
 
-- Exact runner invocation (e.g., `dotnet test`, `nunit-console`).
-- CI provider configuration file location and syntax.
-- Coverage tool invocation and report path.
+Still deferred:
+
+- Coverage tool invocation and report path (D3).
 - Pre-commit hook installation procedure.
 - `IFlakeReporter` declaration (§4.4.3 deferral).
 
@@ -208,3 +224,5 @@ in `src/CLAUDE.md` when coding begins. Spec #19 declares the *shape*;
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. `ITestHarness`, `IScenario`, `IFixtureValidator` declared; `IFlakeReporter` explicitly deferred. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout; #16 §5 → §3.2.4.1 (canonical schema, §4.2); tolerance-matrix citation pinned to #16 §3.4.2 (§4.3.2). M2 `index.<ext>` notation. M3 `IFixtureValidator` phantom-interface judgment made explicit (§4.4.2). L3 §3.10 cross-reference added to pre-commit budget (§4.5.1). |
+| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. |
+| 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Separates owning test placement from reusable architecture-proof records and records the A8-only architecture/evidence gate topology without creating a mega test assembly or activating enforcement. The live-repo pass also replaces obsolete D1/D4 deferrals with the existing NUnit/`dotnet test` gate and GitHub Actions paths. |

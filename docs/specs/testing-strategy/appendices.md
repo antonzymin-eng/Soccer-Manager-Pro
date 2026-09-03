@@ -2,9 +2,9 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 3, 2026
-**Version:** 0.3
-**Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
+**Version:** 0.5
+**Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Paste-ready schemas, exemplar property catalogue, per-spec
 §5 schema template, approved-spec §5 survey, local runbook, glossary,
 and canonical architecture-proof contract/examples.
@@ -16,6 +16,8 @@ and canonical architecture-proof contract/examples.
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Appendices A–F populated. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §5 → §3.2.4.1 (canonical schema, A.1 / A.3 / glossary); #16 §1.3 → §1.1.1 (tier classification, A.1 / C template); #16 §4 → §4.8 (env fingerprint, A.3); #16 §7 → §5 (regression-suite glossary). L4 boundary-saturation / fatigue properties tightened to cite CLAUDE.md instead of restating values. L7 Appendix D `(reserved)` → `(to be assigned at survey time)`. |
 | 0.3     | September 2, 2026 | Codex | **A3.2a governance amendment draft.** Adds Appendix G: the A2 proof-artifact/closure/execution contract, material-subject versus provenance examples, precise freshness cases, bounded/N/A limits, and schema-shaped failure-injection/mutation records. These examples are illustrative; canonical schemas and reference semantics v2.1.0 remain authoritative. A3.4 reapproval remains required. |
+| 0.5     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. |
+| 0.4     | September 3, 2026 | — | **A3.2b example-identity cleanup.** Replaces the live-looking FR-CS-075 identifier in Appendix G.4 with reserved `EXAMPLE-REQ-001` while preserving the schema-valid illustrative artifact shape. No proof semantics or executable authority changed. |
 
 ---
 
@@ -57,7 +59,8 @@ extension and on-disk encoding pinned at Stage 0+1.
 
 ### A.2 Root Manifest (`tests/scenarios/index.<ext>`)
 
-The `<ext>` final pin is deferred to Stage 0+1 (D1 in §7.5); the
+The `<ext>` final pin is deferred to Stage 0+1 (D9 in §7.5; D1 until
+A3.2b closed D1 on the test runner alone); the
 illustrative example below uses `.json` syntax.
 
 ```jsonc
@@ -392,7 +395,7 @@ subject_scope_digest as the proof.
   "schema_version": "1.0.0",
   "proof_id": "PROOF-EXAMPLE-STRUCTURAL-001",
   "proof_class": "structural-reachability",
-  "requirement_property_refs": ["FR-CS-075", "AP-EXAMPLE-001"],
+  "requirement_property_refs": ["EXAMPLE-REQ-001", "AP-EXAMPLE-001"],
   "applicability_rule_ids": ["AR-EXAMPLE-RUNTIME-SERVICE"],
   "result": "pass",
   "subject_scope_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -400,14 +403,14 @@ subject_scope_digest as the proof.
   "provenance_tree": "tree-that-contains-this-proof-record",
   "dependency_closure": {
     "dependency_ids": [
-      "requirement:FR-CS-075",
+      "requirement:EXAMPLE-REQ-001",
       "contract:example-service",
       "root:example-host",
       "symbol:example-registration"
     ],
     "edges": [
       {
-        "source": "requirement:FR-CS-075",
+        "source": "requirement:EXAMPLE-REQ-001",
         "target": "contract:example-service",
         "relation": "contract"
       },
@@ -426,7 +429,7 @@ subject_scope_digest as the proof.
     "change_type": "new-runtime-service"
   },
   "content_fingerprints": {
-    "requirement:FR-CS-075": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "requirement:EXAMPLE-REQ-001": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     "contract:example-service": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     "root:example-host": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
     "symbol:example-registration": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"

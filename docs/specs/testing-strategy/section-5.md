@@ -1,7 +1,10 @@
 # Testing Strategy & Framework Specification #19 — Section 5: Test Plan (Conformance Verification of This Spec Itself)
 
 **Created:** May 12, 2026
-**Last Updated:** May 12, 2026
+**Last Updated:** September 3, 2026
+**Version:** 0.5
+**Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Reflexive test plan: this section verifies Spec #19
 against itself. Per-spec §5 conformance verification (which Spec #19
 mandates for *other* specs) is mechanics-defined in §3.5; the auditor
@@ -50,8 +53,11 @@ per-spec §5 schema FRs (FR-TS-046 … 052).
 | FR-TS-053 … 060 | Inactive | Stage 0+1 | Coverage tool pinned (D3) |
 | FR-TS-061 … 067 | Inactive | Stage 0+1 | CI integration layer specified (§7.2) |
 | FR-TS-068 … 074 | Schema only | Stage 0+1 | First fixture committed |
-| FR-TS-075 … 080 | Inactive | Stage 0+1 | CI provider pinned (D4) |
+| FR-TS-075 … 078, 080 | **ACTIVE (Stage 0+1) — partially non-conformant** | Stage 0+1 | First `src/` code commit (KD-5; §7.1). **Reached** — `src/` has carried production assemblies since long before A3.2b. The criterion read "CI provider pinned (D4)" until A3.2b; that is not the normative Stage 0+1 trigger, and D4's resolution did not create the activation it appeared to. Open conformance gap recorded at `ERR-019-001` |
+| FR-TS-079 | **ACTIVE (Stage 0) — non-conformant** | Stage 0 | Applies to the current repository. §2.2 assigns FR-TS-079 Stage 0; it was buried in the Stage 0+1 band above until A3.2b. The Appendix E artifact it names, `tools/run-tests-local.sh`, does not exist; `tools/dotnet-ci/run-gate.sh` stands in its place under a different name. Recorded at `ERR-019-001` |
 | FR-TS-081 … 085 | **ACTIVE (Stage 0, partial)** | Stage 0+1 | Spec-defect class active now; implementation / test / determinism classes activate with code |
+| FR-TS-086 … 092, 094 … 097 | **AMENDMENT DRAFT; non-blocking** | Stage 0+1 | A3.4 reapproval plus applicable A4 resolver/proof prerequisites and A8 architecture/evidence-gate activation |
+| FR-TS-093 | **AMENDMENT DRAFT; non-blocking** | **Stage 0** | A3.4 reapproval only. §2.2 assigns FR-TS-093 Stage 0: it is a review-mechanics requirement with no implementation prerequisite, so it acquires no A4 resolver/proof or A8 gate-activation condition. It remains non-blocking solely because the May 15, 2026 baseline stays operative until A3.4 |
 
 ## 5.3 Approval-Checklist Auditor (KD-6 Mechanics)
 
@@ -165,8 +171,49 @@ acknowledged degenerate (parallel to Spec #20 §5.5).
 | FR-TS-053 … 060 | Coverage auditor | D3 coverage tool + per-tier mapper | Stage 0+1 | Per-PR coverage delta |
 | FR-TS-061 … 067 | Flake ledger + eviction-log review | CI double-run + `tests/flake-eviction-log.md` | Stage 0+1 | Flake ledger |
 | FR-TS-068 … 074 | Fixture validator | `IFixtureValidator` at scenario load | Stage 0+1 | Runner exit status |
-| FR-TS-075 … 080 | CI gate composition | CI provider (D4) + §6.2 policy | Stage 0+1 | CI gate report |
+| FR-TS-075 … 078, 080 | CI gate composition | GitHub Actions (D4, resolved) + §6.2 policy | Stage 0+1 | CI gate report |
+| FR-TS-079 | Local gate composition until CI activates | Appendix E local runner | **Stage 0** | Local gate output |
 | FR-TS-081 … 085 | Defect log review | `tests/test-defect-log.md` + manual triage | Stage 0+1 (partial Stage 0) | Defect log + cycle review |
+| FR-TS-086 | Strict applicability resolution | A2 applicability schema/reference semantics; A4 resolver when implemented | Stage 0+1 | Matched-rule / obligation record or fail-closed diagnostic |
+| FR-TS-087 | Proof-artifact shape, subject digest and provenance separation | `proof-artifact.schema.json` + reference semantics v2.1.0 | Stage 0+1 | Schema-valid reusable proof artifact |
+| FR-TS-088 | Structural closed-world / bounded-surface verification | A4 closed-world inventory + structural proof resolver | Stage 0+1 | Structural proof or approved bounded result with uncertainty |
+| FR-TS-089 | Lifecycle/order proof | Owning lifecycle tests + proof resolver | Stage 0+1 | Lifecycle-order proof artifact + execution record |
+| FR-TS-090 | Deliberate failure-injection proof | Owning executable test + exact perturbation identity | Stage 0+1 | Failure-injection proof artifact |
+| FR-TS-091 | Targeted mutation sensitivity | Targeted governance mutation protocol (§3.11.9), independent of project-wide D6 tooling | Stage 0+1 | Mutation proof with exact target/mutant/detector/restoration record |
+| FR-TS-092 | Closure/freshness revalidation | A2 mechanically derived closure + freshness / changed-proof decision | Stage 0+1 | Fresh/stale/proven-non-impact decision |
+| FR-TS-093 | Governance convergence consumption | Governance finding/run state; no severity-derived convergence | **Stage 0** (on A3.4 reapproval) | Valid disposition/status + fresh-run convergence result |
+| FR-TS-094 | Required execution truth / exclusion intersection | Execution-state evaluator + required-test/exclusion-set check | Stage 0+1 | Blocking unsatisfied-state diagnostic or satisfied proof |
+| FR-TS-095 | Merge-critical governance-tool verification | Focused tool self-tests / negative fixtures per Governance FR-AG-036A/040C | Stage 0+1 | Tool-verification result bound to tool identity |
+| FR-TS-096 | Bounded-substitute validation | A2 execution truth + approved-limitation schema | Stage 0+1 | Valid bounded result only for eligible `excluded` / `unavailable` / `not-run` states |
+| FR-TS-097 | Activation/KD-W1 tuning precondition | #20 activation state + machine disable anchor + exact approved exception scope | Stage 0+1 | Active-owner satisfaction or exact-scope exception diagnostic |
+
+### 5.6.1 Architecture-Proof Negative Fixture Set
+
+Before any FR-TS-086 … 097 machine check may block, its owning tool
+suite MUST contain discriminating positive/negative fixtures for the
+failure class it claims to detect. At minimum the architecture-proof
+surface covers:
+
+- missing or stale proof;
+- zero-match, ambiguous, or otherwise unresolved applicability;
+- dependency-closure drift, including a transitive dependency change;
+- missing/invalid activation disable anchor;
+- KD-W1 tuning against an `intentionally-disabled`,
+  `pending-integration`, or `unresolved` owner without an exact approved
+  exception;
+- required execution reported as `skipped`, or intersecting an active
+  exclusion/quarantine source;
+- bounded substitution attempted for `failed`, `skipped`, or
+  `runner-failed`;
+- wrong-target, no-op/equivalent, surviving-detector, or unrestored
+  mutation;
+- wrong-target or ineffective failure injection; and
+- governance-tool failure paths where the checker itself must fail
+  closed.
+
+These are proof-tool fixtures, not a new project-wide mutation score or
+mega test assembly. A3.2b records the verification contract only; A4/A8
+own implementation/activation.
 
 ## 5.7 Determinism-Suite Consumption Verification
 
@@ -196,3 +243,6 @@ acknowledged degenerate (parallel to Spec #20 §5.5).
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Stage-gated activation table + traceability table populated. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5; #16 §1.3 → §1.1.1. L5 §5.6 / §5.7 cross-reference added. L6 column-semantics disambiguation added to §5.2 lead. |
+| 0.5     | September 3, 2026 | — | **A3.2b review correction (`ERR-019-001`).** Reconciles the FR-TS-075 … 080 band in §5.2 and §5.6 with the normative core: FR-TS-079 gets its own **Stage 0** row per §2.2, and FR-TS-075 … 078, 080 carry the actual Stage 0+1 criterion (first `src/` code commit, KD-5 / §7.1) — **reached** — in place of "CI provider pinned (D4)", which the normative core never defined. The band was therefore mis-reported as `Inactive` from the day it was written, not by D4's closure. Activation is deliberately not deferred behind a new prerequisite: gating FR-TS-075 on the three-pipeline topology it itself mandates would be circular and fail-open. The real gap this concealed — two absent mandatory pipelines and an absent Appendix E script — is recorded at `ERR-019-001` and open at `docs/tracking/open-issues.md`. |
+| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 1).** Splits FR-TS-093 out of the FR-TS-086 … 097 band in §5.2 and corrects its §5.6 activation cell: §2.2 assigns FR-TS-093 **Stage 0**, so the band's Stage 0+1 value contradicted the normative core and attached A4/A8 prerequisites the requirement does not have. Its Stage 0 *status* is unchanged — still AMENDMENT DRAFT and non-blocking until A3.4 reapproval, because the May 15, 2026 baseline remains operative; no requirement is activated here. |
+| 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Extends §5.2 and §5.6 through FR-TS-097, adds the architecture-proof negative-fixture matrix, preserves non-blocking draft state until A3.4/A4/A8 prerequisites, and does not activate a CI gate. |

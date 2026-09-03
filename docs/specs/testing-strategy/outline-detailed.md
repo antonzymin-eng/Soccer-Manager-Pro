@@ -1,19 +1,22 @@
 # Testing Strategy & Framework Specification #19 — Detailed Outline
 
 **Created:** May 12, 2026
-**Last Updated:** May 12, 2026
-**Version:** 1.1
-**Status:** DRAFT — v1.0 addressed all 13 findings from `outline.md`
-adversarial review (May 6, 2026). v1.1 addresses all 12 findings
-(3H / 4M / 5L) from the second adversarial review (May 12, 2026); see
-the resolution map at the bottom of this file. Ready for section-file
-authoring.
+**Last Updated:** September 3, 2026
+**Version:** 1.3
+**Status:** HISTORICAL DRAFTING ARTIFACT — A3.2b synchronized; authoritative rules are the section files, whose May 15 approved baseline remains operative pending A3.4 reapproval
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Companion documents:** `outline.md` (high-level v1.0 + adversarial
 review).
 
 ---
 
 ## PURPOSE OF THIS DOCUMENT
+
+> **A3.2b synchronization boundary (September 3, 2026).** Dated May
+> 2026 status-caveat/TBD instructions below are retained as drafting
+> history where explicitly date-labelled. Current authority/status is
+> the section-file amendment set; this outline does not reintroduce a
+> retired `TBD-NORMATIVE` gate or supersede the approved section files.
 
 Expansion of `outline.md` v1.0 into a section-by-section subsection plan
 that resolves every finding from the May 6, 2026 adversarial review.
@@ -37,7 +40,7 @@ once here and cited below by KD-number, never restated.
 - **KD-1 — Cite-not-redefine.** Spec #19 never restates a CLAUDE.md
   invariant or a rule already published by another approved spec. It
   cites and binds.
-- **KD-2 — Boundary with Deterministic Simulation #16.** Spec #16 §7
+- **KD-2 — Boundary with Deterministic Simulation #16.** Spec #16 §5
   ("Determinism Regression Suite") is the **authoritative** owner of
   the determinism test tiers (unit / integration / scenario / soak),
   golden-trace governance, and `EnvironmentFingerprint` gates. Spec #19
@@ -47,14 +50,14 @@ once here and cited below by KD-number, never restated.
   validation, coverage governance) on top.
   - **Status caveat (May 12, 2026).** Per `SPEC_INDEX.md`, Spec #16 is
     `IN PROGRESS`, not `APPROVED`. All §3.2, §5.7, §6.2, §3.4.3, §3.6,
-    §3.8 citations of "#16 §1.3.1", "#16 §5", "#16 §7", "#16 §8" are
+    §3.8 citations of "#16 §1.1.1", "#16 §5", "#16 §5", "#16 §8" are
     tagged `TBD-NORMATIVE` (pattern adopted from #16 §8.3.1 per
     CLAUDE.md OPEN ISSUES) until #16 reaches `APPROVED`. Section files
     MUST carry the tag verbatim on every #16 citation; tag removal is a
     §9.2 quality-checklist row and is gated on #16 approval.
   - **Sequencing constraint (H2).** Per CLAUDE.md OPEN ISSUES, #16's
     Tier 2 final approval is gated on `#9 / #17 / #18 / #19 reaching
-    IN REVIEW`. Spec #19 in turn binds substantively to #16 §7. The
+    IN REVIEW`. Spec #19 in turn binds substantively to #16 §5. The
     resolution path is: (1) #19 reaches `IN REVIEW` with `TBD-NORMATIVE`
     citations to #16; (2) #16 reaches Tier 2 `APPROVED`; (3) #19's
     `TBD-NORMATIVE` tags are resolved and #19 advances to `APPROVED`.
@@ -106,7 +109,7 @@ once here and cited below by KD-number, never restated.
   Cross-spec scenarios (e.g., a full-match smoke test exercising #1–#8
   jointly) are owned by Spec #19 §3 and stored in the scenario library.
 - **KD-9 — Per-tier coverage policy.** Coverage targets are bound to
-  the determinism tier classification in #16 §1.3.1: Tier A
+  the determinism tier classification in #16 §1.1.1: Tier A
   authoritative code targets near-100% line + branch coverage; Tier B
   targets ≥90% line, ≥80% branch; Tier C is opportunistic (no
   numeric target, lint-only).
@@ -146,7 +149,7 @@ once here and cited below by KD-number, never restated.
 One-line entries with the owning document:
 
 - Determinism regression suite mechanics (tiers, golden traces,
-  `EnvironmentFingerprint` gates) → Spec #16 §7. Spec #19 *consumes*
+  `EnvironmentFingerprint` gates) → Spec #16 §5. Spec #19 *consumes*
   this suite as a required layer; it does not duplicate or override it
   (KD-2).
 - Performance regression gates and budget enforcement → Spec #18 §4 /
@@ -168,7 +171,7 @@ section that codifies each:
 | KD | Topic | Codified in |
 |----|-------|-------------|
 | KD-1 | Cite-not-redefine | All sections |
-| KD-2 | Boundary with #16 §7 | §3.2, §5.1 |
+| KD-2 | Boundary with #16 §5 | §3.2, §5.1 |
 | KD-3 | Boundary with #18 §4 / §7 | §6.2 |
 | KD-4 | Per-spec §5 ownership | §3.5, §5.4 |
 | KD-5 | Stage-gated activation | §5.2, §7 |
@@ -243,6 +246,7 @@ partition; section file fills in every numbered FR.
 | FR-TS-068 … 074 | Test-data governance | §3.8, Appendix A |
 | FR-TS-075 … 080 | CI orchestration (Stage-gated, KD-5) | §6 |
 | FR-TS-081 … 085 | Defect lifecycle and triage | §6.4 |
+| FR-TS-086 … 097 | Architecture proof/evidence integration | §3.11, §5.6, §6.2, Appendix G |
 
 Each FR row: `ID | Statement | Level | Source citation | Verification (§5.x) | Activation stage`.
 
@@ -290,7 +294,7 @@ Spec #19's own failure modes (in addition to §2.3):
      scene.
   3. **Simulation** — full subsystem stack invoked under a scripted
      scenario; no rendering.
-  4. **Determinism** — owned by #16 §7; consumed by Spec #19 as a
+  4. **Determinism** — owned by #16 §5; consumed by Spec #19 as a
      required layer (KD-2). Listed here for completeness; mechanics not
      restated.
   5. **End-to-end / soak** — long-horizon runs (≥ one full match);
@@ -322,26 +326,26 @@ Spec #19's own failure modes (in addition to §2.3):
 - 3.1.4 Naming convention:
   - `unit_<system>_<behaviour>` / `int_<systemA>_<systemB>_<behaviour>`
     / `sim_<scenario>` / `e2e_<scenario>`.
-  - Determinism tests use the #16 §7 naming (cited, not restated).
+  - Determinism tests use the #16 §5 naming (cited, not restated).
 
 ### 3.2 Determinism-Suite Consumption (FR-TS-011 … 020)
 
-- 3.2.1 Citation: #16 §7 is the authoritative owner of the determinism
+- 3.2.1 Citation: #16 §5 is the authoritative owner of the determinism
   regression suite. KD-2 binding.
-- 3.2.2 Spec #19's obligations toward #16 §7:
-  - Every CI pipeline declared in §6 MUST include #16 §7's regression
+- 3.2.2 Spec #19's obligations toward #16 §5:
+  - Every CI pipeline declared in §6 MUST include #16 §5's regression
     tiers in their canonical order (unit / integration / scenario /
     soak).
   - Failures in any #16 tier block merges; Spec #19 does not soften or
     override #16's exit criteria.
   - Spec #19's own test taxonomy MUST NOT collide with #16 tier names
     (§3.1.4 already disambiguates).
-- 3.2.3 Spec #19's additions on top of #16 §7:
+- 3.2.3 Spec #19's additions on top of #16 §5:
   - Functional / behavioural regression assertions that don't depend on
     bitwise determinism (e.g., "shot-on-target rate stays within
     designer-tuned envelope across N seeds").
   - Cross-spec scenario assertions (KD-8).
-- 3.2.4 Boundary review obligation: any change to #16 §7 that affects
+- 3.2.4 Boundary review obligation: any change to #16 §5 that affects
   tier names or exit criteria triggers a Spec #19 §3.2 review (recorded
   in §1.4 dependency list).
 
@@ -362,16 +366,16 @@ Spec #19's own failure modes (in addition to §2.3):
     machine-readable diagnostics.
   - No global state; every run is hermetic.
 - 3.3.4 Fixture validator (KD-10):
-  - Every fixture file is checked against #16 §5 canonical binary
-    layout at load time. Drift fails the test (does not silently
+  - Every fixture file is checked against #16 §3.2.4.1 canonical
+    byte-level schema at load time. Drift fails the test (does not silently
     accept).
 - 3.3.5 Scenario library directory layout:
   - `tests/scenarios/<owning-spec>/` for per-spec scenarios.
   - `tests/scenarios/cross-spec/` for KD-8 cross-spec scenarios owned
     by Spec #19.
 - 3.3.6 Scenario index / manifest:
-  - Single root manifest (`tests/scenarios/index.json` — final
-    extension chosen at Stage 0+1) lists every scenario with its
+  - Single root manifest (`tests/scenarios/index.<ext>` — final
+    extension chosen at Stage 0+1 under D9) lists every scenario with its
     metadata. Stage 0 deliverable: schema only (Appendix A); Stage 1
     deliverable: populated index.
 
@@ -390,23 +394,23 @@ Spec #19's own failure modes (in addition to §2.3):
   - The executed test body MUST route through #16
     `DeterministicRngService` (`SplitMix64`) with the selected seed.
   - Selected seed is logged at start of each run.
-- 3.4.3 Failed-seed capture (M1 — read-only boundary with #16 §7):
-  - Spec #19 does **not** write directly into the Spec #16 §7
-    regression suite. Per KD-2, #19 consumes #16 §7 read-only; #16 §7
+- 3.4.3 Failed-seed capture (M1 — read-only boundary with #16 §5):
+  - Spec #19 does **not** write directly into the Spec #16 §5
+    regression suite. Per KD-2, #19 consumes #16 §5 read-only; #16 §5
     is the sole authority for what enters its regression corpus.
   - Mechanics: every failing fuzz / property seed is captured into a
     Spec #19-owned holding area at
     `tests/data/captured-seeds/<spec>/<YYYY-MM-DD>-<seed>.fixture`
     (final path pinned at Stage 0+1). Capture format conforms to
-    KD-10 (canonical save format binding from #16 §5).
-  - Promotion path: #16 §7 SHOULD publish an "external capture hook"
+    KD-10 (canonical byte-level schema binding from #16 §3.2.4.1).
+  - Promotion path: #16 §5 SHOULD publish an "external capture hook"
     contract that periodically (cadence TBD by #16) pulls from #19's
-    holding area into the #16 §7 regression corpus. Until that hook is
-    published in #16 §7, captured seeds remain in the #19 holding area
+    holding area into the #16 §5 regression corpus. Until that hook is
+    published in #16 §5, captured seeds remain in the #19 holding area
     and are re-run by #19's own property/fuzz suite on every CI run —
     a one-time fuzz hit still becomes a permanent #19-side guardrail.
   - Cross-spec dependency: this subsection's "promotion path" is
-    `TBD-NORMATIVE` per KD-2 status caveat; resolved when #16 §7
+    `TBD-NORMATIVE` per KD-2 status caveat; resolved when #16 §5
     publishes its external-capture-hook contract.
 - 3.4.4 Property catalogue (categorical only — full list in Appendix B):
   - Physics invariants (energy non-increase under collision, conservation
@@ -467,7 +471,7 @@ Spec #19's own failure modes (in addition to §2.3):
 
 ### 3.6 Coverage Targets — Per-Tier Policy (FR-TS-053 … 060)
 
-- 3.6.1 Citation: tier vocabulary owned by #16 §1.3.1; not restated.
+- 3.6.1 Citation: tier vocabulary owned by #16 §1.1.1; not restated.
   - **Cite-precision guard (L2).** The subsection number "§1.3.1" is
     tagged `TBD-NORMATIVE` per KD-2 because #16 has been through three
     adversarial passes and subsection numbering may have shifted.
@@ -525,7 +529,7 @@ Spec #19's own failure modes (in addition to §2.3):
 
 ### 3.8 Test-Data Governance (FR-TS-068 … 074)
 
-- 3.8.1 Citation: KD-10 (binding to #16 §5 canonical save format).
+- 3.8.1 Citation: KD-10 (binding to #16 §3.2.4.1 canonical byte-level schema).
 - 3.8.2 Storage layout:
   - `tests/data/fixtures/` — small, in-repo fixtures.
   - `tests/data/golden/` — golden outputs for replay assertions.
@@ -574,7 +578,33 @@ Spec #19's own failure modes (in addition to §2.3):
   themselves a spec revision tracked in the relevant section's
   version-history table.
 
-### 3.11 Version History
+### 3.11 Architecture Proof & Evidence Integration (FR-TS-086 … 097)
+
+- Governance owns property admission, applicability authority,
+  property exceptions, finding disposition/status, and convergence.
+- Spec #20 owns runtime-surface identity, integration/lifecycle/host
+  declarations, activation state, and disable anchors.
+- Spec #19 owns proof artifacts, mechanically derived closure,
+  execution truth, bounded substitutes, failure-injection/mutation
+  evidence, freshness/revalidation, and architecture/evidence-gate
+  consumption.
+- Proof classes are structural-reachability, lifecycle-order,
+  failure-injection, and mutation. Persistence relations join the
+  mechanically derived closure only for a current
+  `persistence-boundary` or `external-resource-dependency`
+  change type.
+- `passed` satisfies directly. `failed`, `skipped`, and
+  `runner-failed` cannot be converted by bounded substitution.
+  Deliberate `excluded`, `unavailable`, or `not-run` states are
+  bounded-eligible only where the exact obligation permits FR-TS-096.
+- Subject identity is material proof scope; Git revision/tree is
+  provenance only. Relevant closure changes stale proof; unrelated
+  out-of-closure changes do not.
+- Targeted governance mutation is independent of deferred project-wide
+  mutation tooling.
+- A3.2b does not activate enforcement; A3.4/A4/A8 prerequisites remain.
+
+### 3.12 Version History
 
 ---
 
@@ -594,7 +624,7 @@ Spec #19's own failure modes (in addition to §2.3):
 
 - `tests/data/` root with `fixtures/`, `golden/`, `corpora/`
   subfolders (per §3.8.2).
-- Format conforms to #16 §5 (KD-10).
+- Format conforms to #16 §3.2.4.1 (KD-10).
 - Index / manifest schema in Appendix A.
 
 ### 4.3 Harness API Surface
@@ -631,16 +661,21 @@ Spec #19's own failure modes (in addition to §2.3):
 - Pre-commit pipeline: unit + property (fast).
 - PR pipeline: unit + integration + property + per-spec-changed
   scenarios.
-- Nightly pipeline: full simulation tier + soak + #16 §7 determinism
+- Nightly pipeline: full simulation tier + soak + #16 §5 determinism
   full suite.
-- Diagram: trigger → tier → exit criteria. Concrete CI provider
-  selection deferred to Stage 0+1 (§6.1).
+- Diagram: trigger → tier → exit criteria. GitHub Actions is the
+  repository CI provider at `.github/workflows/ci.yml`; the proposed
+  architecture/evidence gate remains inactive until A8.
 
-### 4.6 Pointer to `src/CLAUDE.md`
+### 4.6 Concrete Runner / CI Paths
 
-- Concrete paths, runner invocations, and CI provider configuration
-  land in `src/CLAUDE.md` when coding begins. Spec #19 declares the
-  *shape*; `src/CLAUDE.md` declares the *paths*.
+- D1 is resolved on NUnit: `tools/dotnet-ci/generate_projects.py`
+  pins NUnit 3.14.0 + NUnit3TestAdapter 4.6.0 and the blocking Linux
+  shim gate executes `dotnet test` through
+  `tools/dotnet-ci/run-gate.sh`.
+- D4 is resolved on GitHub Actions at `.github/workflows/ci.yml`.
+- Coverage tooling, pre-commit installation, and `IFlakeReporter`
+  remain deferred where their prerequisites are still absent.
 
 ### 4.7 Version History
 
@@ -695,13 +730,23 @@ Spec #19's own failure modes (in addition to §2.3):
 - Mechanics for FR-TS-053 … 060.
 - Stage 0: not applicable (no code).
 - Stage 0+1: coverage tool produces per-file report; auditor maps each
-  file to its #16 §1.3 tier and applies KD-9 thresholds.
+  file to its #16 §1.1.1 tier and applies KD-9 thresholds.
 - Exemption handling per §3.6.5.
 
 ### 5.6 FR-to-Verification Traceability
 
 - Single table indexed by FR-TS-###; columns: `Verification Mechanism |
   Tooling | Activation Stage | Output Artifact`.
+- Coverage is FR-TS-001 … 097.
+- FR-TS-086 … 097 map to strict applicability, proof-artifact/schema
+  validation, structural/lifecycle/failure-injection/mutation proof,
+  closure freshness, Governance convergence, execution truth,
+  governance-tool self-verification, bounded substitution, and KD-W1
+  activation/tuning checks.
+- The architecture-proof fixture set includes stale/missing proof,
+  applicability ambiguity, closure drift, activation-anchor/KD-W1
+  violations, skip/exclusion conflicts, and wrong-target/no-op mutation
+  or failure injection.
 - Stage 0 most rows resolve to "manual review against §3 mechanics" —
   acknowledged degenerate (parallel to Spec #20 §5.5 acknowledgement).
 
@@ -709,8 +754,8 @@ Spec #19's own failure modes (in addition to §2.3):
 
 - Spec #19 declares no numerical determinism tests of its own.
 - This subsection records the *consumption* contract: every CI pipeline
-  runs #16 §7's full tier set; failures block per KD-2.
-- Boundary review check: any change to #16 §7 that touches tier names
+  runs #16 §5's full tier set; failures block per KD-2.
+- Boundary review check: any change to #16 §5 that touches tier names
   or exit criteria triggers a Spec #19 §3.2 review.
 
 ### 5.8 Version History
@@ -729,34 +774,34 @@ Spec #19's own failure modes (in addition to §2.3):
 - Stage 0: no tooling activates. This subsection enumerates *selection
   criteria*, not chosen tools.
 - Stage 0+1 tool slate (selection finalized at transition):
-  - Test runner: NUnit or xUnit (final pin parallel to Spec #20 §5.2
-    Roslyn analyzer pin).
-  - Property framework: FsCheck or equivalent.
-  - Coverage: Coverlet (selection criterion: must emit per-tier
-    breakdown consumable by §5.5 auditor).
-  - Mutation testing: Stryker.NET (selection criterion: parallels
-    coverage tool; deferred to Stage 1 for first activation).
-  - CI provider: deferred to `src/CLAUDE.md`. **Selection criteria
-    (L4):** (a) must support the three pipeline shapes in §4.5
-    (pre-commit, PR, nightly), (b) must support functional gate
-    composition with the #18 performance gate and the #16 §7
-    determinism gate (KD-2 / KD-3), (c) must expose pass/fail at the
-    granularity required by §6.2 gate-composition rules. No assumption
-    is made that #18 "owns" CI-provider selection; selection happens in
-    `src/CLAUDE.md` against these neutral criteria once the producer
-    specs (#16 §7, #18 §4) are concretely citable.
+  - Test runner — **D1 resolved:** NUnit; generated projects pin
+    NUnit 3.14.0 + NUnit3TestAdapter 4.6.0 and the Linux shim gate runs
+    `dotnet test`.
+  - Property framework: FsCheck or equivalent — D2 still deferred.
+  - Coverage: Coverlet or equivalent — D3 still deferred.
+  - Project-wide mutation testing: Stryker.NET or equivalent — D6
+    still deferred; FR-TS-091 targeted governance mutation is separate.
+  - CI provider — **D4 resolved:** GitHub Actions at
+    `.github/workflows/ci.yml`. This fact does not activate the
+    architecture/evidence required status; A8 owns that transition.
 
-### 6.2 CI Pipeline Policy (boundary with #18)
+### 6.2 CI Pipeline Policy (boundary with #18 / Governance / #20)
 
-- Spec #19 declares functional regression gates (test pass/fail).
-- Spec #18 §4 declares performance regression gates (budget threshold).
-- Both feed a single CI orchestrator; gate composition rule:
-  - Functional gate failure → block merge (Spec #19 authority).
-  - Performance gate failure → block merge (Spec #18 authority).
-  - Determinism gate failure → block merge (#16 §7 authority).
-  - No gate is "soft"; flake quarantine (§3.7) is the only escape
-    valve and applies only to functional gates.
-- KD-3 binding: Spec #19 cites #18 §4 thresholds by reference; never
+- Four gate classes feed the orchestrator: functional (#19),
+  performance (#18), determinism (#16 §5), and architecture/evidence
+  (#19 mechanics consuming Governance + #20 authorities).
+- The architecture/evidence gate is topology only in A3.2b and does
+  not block until A8 activation after A3.4/A4 prerequisites.
+- Flake quarantine suppresses only an eligible functional-gate effect;
+  it cannot satisfy required architecture proof.
+- Required architecture execution reported `failed`, `skipped`, or
+  `runner-failed` remains unsatisfied. Only deliberate
+  `excluded`/`unavailable`/`not-run` may use an exact approved
+  FR-TS-096 bounded substitute.
+- Required-test/exclusion intersections are rejected. Owning test
+  placement does not imply execution; the gate must execute or consume
+  an exact machine-readable owning-runner result.
+- KD-3 binding: Spec #19 cites #18 thresholds by reference; never
   republishes them.
 
 ### 6.3 Stage-0 Local-Only Runbook
@@ -776,7 +821,7 @@ Spec #19's own failure modes (in addition to §2.3):
     code; tracked in issue tracker.
   - **Test defect** (test wrong) → fix test; recorded in
     `tests/test-defect-log.md`.
-  - **Determinism defect** → routed to #16 §7 process (KD-2).
+  - **Determinism defect** → routed to #16 §5 process (KD-2).
 - 6.4.2 Triage cadence:
   - PR-blocking failures: investigated within 24 hours.
   - Quarantined tests: reviewed weekly.
@@ -786,10 +831,13 @@ Spec #19's own failure modes (in addition to §2.3):
   - **High** — blocks current sprint.
   - **Medium** — backlogged with date target.
   - **Low** — backlog, no date.
-- 6.4.4 Defect-to-FR traceability:
-  - Every defect cites the FR it violated (Spec #19 FR or owning-spec
-    FR). Defects without FR citation are themselves a procedural
-    violation (parallel to KD-6 mandate).
+  - Severity schedules Spec #19 defect handling only; Governance
+    convergence is disposition/status-based under FR-TS-093.
+- 6.4.4 Defect-authority traceability:
+  - Authority may be an FR, admitted architectural property, approved
+    invariant/equivalent authority, or concrete independently
+    established correctness/integrity failure. Novel generalized
+    preference routes to Candidate Property.
 
 ### 6.5 Reporting Cadence
 
@@ -828,7 +876,7 @@ Spec #19's own failure modes (in addition to §2.3):
   or a Stage 1 CI spec once the CI integration layer is concretely
   specified; both producer and consumer must be specified before this
   interface is written).
-- Mutation-testing first activation (§6.1).
+- Project-wide mutation-testing first activation (§6.1); FR-TS-091 targeted governance mutation is separate and does not wait for this deferral.
 - Scenario library populated index (§3.3.6).
 - Per-spec §5 schema-conformance auto-check (§5.4).
 - Appendix D approved-spec §5 survey populated (deferred from §9.2 per
@@ -852,12 +900,12 @@ Spec #19's own failure modes (in addition to §2.3):
 
 ### 7.5 Deferred Decisions Tracker
 
-- D1 — Test runner pin (NUnit vs xUnit) — Stage 0+1.
-- D2 — Property framework pin — Stage 0+1.
-- D3 — Coverage tool pin — Stage 0+1.
-- D4 — CI provider — `src/CLAUDE.md` (KD-3).
+- D1 — **RESOLVED: NUnit**, generated-project + `dotnet test` gate.
+- D2 — Property framework pin — still deferred.
+- D3 — Coverage tool pin — still deferred.
+- D4 — **RESOLVED: GitHub Actions**, `.github/workflows/ci.yml`.
 - D5 — LFS storage decision for fixtures (§3.8.2) — Stage 0+1.
-- D6 — Mutation-testing activation date — Stage 1.
+- D6 — Project-wide mutation-testing activation date — Stage 1; excludes FR-TS-091 targeted governance mutation.
 - D7 — Visual-regression framework selection — Stage 1+ (§3.9.3).
 - D8 — Coverage-guided (AFL-style) fuzzing adoption — Stage 1+
   (§3.4.1).
@@ -871,10 +919,12 @@ Spec #19's own failure modes (in addition to §2.3):
 ### 8.1 Source Register
 
 - Root `CLAUDE.md` (project invariants; "When Writing Code" rules).
+- Project Architecture Governance v0.10 (property/applicability/
+  exceptions/proof triggers/disposition/convergence authority).
 - Spec #16 (Deterministic Simulation) — §1.3 tier classification, §5
   canonical save format, §7 regression suite, §8 trace channels.
 - Spec #18 (Performance Optimization) — §4 / §7 regression gates.
-- Spec #20 (Code Standards) — §3.9.4 test-fixture carve-outs.
+- Spec #20 (Code Standards) — test-fixture carve-outs plus A3 FR-CS-074 … 081 / §3.5 integration and activation declarations consumed by §3.11.
 - `docs/planning/development-best-practices.md`.
 - `docs/planning/master-development-plan.md`.
 - `docs/tracking/certification-platform.md` (placeholder at draft time;
@@ -897,7 +947,7 @@ Spec #19's own failure modes (in addition to §2.3):
   fingerprint, save format), #18 (boundary: perf gates), #20 (boundary:
   test-fixture carve-outs).
 - No `[CROSS]` constants are imported (Spec #19 declares none).
-- Tier vocabulary cited from #16 §1.3.1 by reference only (KD-1).
+- Tier vocabulary cited from #16 §1.1.1 by reference only (KD-1).
 
 ### 8.4 Constant Provenance Summary
 
@@ -922,12 +972,14 @@ Spec #19's own failure modes (in addition to §2.3):
 - All FR-TS-### present in §2.2 with conformance level and activation
   stage.
 - KD-1 … KD-10 each codified in at least one §3 / §5 / §6 subsection.
-- Boundary statements with #16 §7 (KD-2) and #18 §4 / §7 (KD-3) explicit.
+- Boundary statements with #16 §5 (KD-2), #18 §4 / §7 (KD-3), Governance v0.10, and #20 A3 integration/activation authority explicit.
+- FR catalogue and §5.6 traceability cover FR-TS-001 … 097.
 
 ### 9.2 Quality Checklist
 
 - Cite-not-redefine rule audited (no #16 / #18 / #20 restatements).
-- Every FR row resolves to a §5.x verification mechanism.
+- Every FR row through FR-TS-097 resolves to a §5.x verification mechanism.
+- Architecture proof examples/fixtures and execution truth match the frozen A2 contract; the architecture/evidence gate carries no A3.2b enforcement claim.
 - Every approval-checklist row in *this* checklist cites either a file
   path or a check name (KD-6 self-application).
 - All cross-references (XC-/FM-/EC-/ERR-) resolve.
@@ -948,7 +1000,7 @@ Spec #19's own failure modes (in addition to §2.3):
 - Lead-developer sign-off captured.
 - `spec-error-log.md` updated with any cross-spec drift discovered
   during drafting.
-- `SPEC_INDEX.md` status updated atomically with sign-off.
+- `SPEC_INDEX.md` status updated atomically with sign-off at A3.4; A3.2b leaves the approved-baseline row untouched.
 
 ### 9.4 Decision
 
@@ -999,6 +1051,13 @@ Spec #19's own failure modes (in addition to §2.3):
   commit checks against `docs/specs/` only (no `src/` yet); invocation
   of §5.3 checklist auditor and §5.4 schema-conformance auditor.
 
+- **Appendix G — Architecture Proof Artifact & Closure Contract.**
+  Canonical schema-shaped examples and explanatory contract for
+  FR-TS-086 … 097: proof fields, class closure, execution truth,
+  freshness, N/A/bounded semantics, failure injection, mutation, and
+  gate-consumption boundary. Example identifiers use reserved/example
+  namespaces rather than live requirement IDs.
+
 - **Appendix F — Glossary.**
   Spec #19-specific terms only (taxonomy layer names, flake, quarantine,
   eviction, scenario, fixture, golden trace). Determinism / performance
@@ -1012,6 +1071,8 @@ Spec #19's own failure modes (in addition to §2.3):
 |---------|--------------|-------------|---------------------------------------------------------------------------------------------------------------|
 | 1.0     | May 12, 2026 | Claude Code | Initial detailed outline drafted from `outline.md` v1.0. Addresses all 13 findings from May 6 adversarial review. |
 | 1.1     | May 12, 2026 | Claude Code | Addresses all 12 findings (3H / 4M / 5L) from second adversarial review (May 12). Changes: KD-2 / KD-3 status caveats + `TBD-NORMATIVE` tagging (H1); §1.4 + KD-2 disclose #16↔#19 sequencing (H2); §4.4 removes `IFlakeReporter`, deferred to §7.2 (H3); §3.4.3 restructured to capture seeds into #19-owned holding area (M1); §3.5.4 acknowledges KD-6 retroactive dilution (M2); §9.2 + Appendix D down-scope survey out of #19 approval gate (M3); §3.7 explicitly Stage-gated (M4); §3.1.2 clarifies ceiling-only bound semantics (L1); §3.6.1 cite-precision guard on #16 §1.3.1 (L2); §3.4.1 drops vacuous Stage-0 disclaimer (L3); §6.1 neutral CI-provider selection criteria (L4); §3.10 + §9.4 specify `[GT]` evidence artifact (L5). No FR text changes; no new FR IDs introduced. |
+| 1.3     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. Also drops the outline's pre-empting `index.json` for the spec's `index.<ext>` notation. |
+| 1.2     | September 3, 2026 | — | **A3.2b synchronization overlay.** Updates the active drafting map to FR-TS-001 … 097, §3.11 architecture proof mechanics / §3.12 history, four-gate topology, Governance/#20 authority split, targeted-mutation exception, Appendix G, and A3.4/A8 activation boundaries. Historical May adversarial-review tables below remain historical evidence. Live-repo audit records D1=NUnit and D4=GitHub Actions while leaving D2/D3/D5–D8 deferred. |
 
 ---
 

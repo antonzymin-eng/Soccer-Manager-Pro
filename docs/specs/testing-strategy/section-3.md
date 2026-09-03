@@ -2,7 +2,7 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 3, 2026
-**Version:** 0.4
+**Version:** 0.6
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
 **Purpose:** Mechanics of every rule named in §2.2. Each subsection
@@ -232,10 +232,15 @@ at load time:
 > **Provisional file extension.** The root-manifest filename is
 > written as `index.<ext>` throughout this spec because the final
 > extension (and therefore on-disk encoding — JSON vs. JSON5 vs.
-> binary) is pinned at Stage 0+1 (D1 in §7.5). Normative occurrences
-> are at: §3.3.5 (here), §3.3.6, §4.1, §4.5, §7.2, FR-TS-028, and
+> binary) is pinned at Stage 0+1 (**D9** in §7.5). This pointer read
+> "D1" until A3.2b: D1 covered the test-runner pin and this encoding
+> pin jointly, and closing D1 on NUnit alone left the encoding
+> decision without an owner. D9 carries it. Normative occurrences
+> are at: §3.3.5 (here), §3.3.6, §4.1, §7.1, FR-TS-028, and
 > Appendix A.2. The illustrative example in Appendix A.2 uses `.json`
-> syntax for readability.
+> syntax for readability, which pre-empts nothing. (The occurrence
+> list read "§4.5, §7.2" until A3.2b; neither section carries an
+> occurrence — the real sites are §4.1 and §7.1.)
 
 ```
 tests/scenarios/
@@ -249,7 +254,9 @@ tests/scenarios/
 ### 3.3.6 Scenario Index / Manifest (FR-TS-028)
 
 - Single root manifest at `tests/scenarios/index.<ext>` (extension
-  pinned at Stage 0+1 alongside the test-runner pin in §6.1).
+  pinned at Stage 0+1 under D9 in §7.5; it was formerly pinned
+  "alongside the test-runner pin in §6.1", which no longer holds
+  because D1 closed on NUnit without settling the encoding).
 - Stage 0 deliverable: schema only (Appendix A).
 - Stage 1 deliverable: populated index covering every scenario in the
   scenario folders.
@@ -929,7 +936,9 @@ correctness/integrity failure, or a Governance Blocker.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.6     | September 3, 2026 | — | **A3.2a review-record repair.** Records the already-landed §3.11.6 structural-proof correction from PR #352 / integration-plan v0.37: the failure-class detector obligation is **MUST**, matching Governance §5.3 / FR-AG-027, rather than the weaker SHOULD previously published. This commit does not introduce a new normative change; it restores the missing version/history record for the normative text already present on `main`. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Rule mechanics for FR-TS-001 … 074; §3.10 governance constants table. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 (regression suite); #16 §1.3.1 → §1.1.1 (tier vocabulary, §3.6.1); #16 §5 → §3.2.4.1 (canonical schema, §3.3.4 / §3.8.1); #16 §1.3 → §4.8 (`EnvironmentFingerprint`, §3.7.1). ERR-005 misnomer corrected (§3.5.4, §3.5.5). M1 coordinate restatement tightened. M2 `index.<ext>` provisional disclosure added (§3.3.5). M4 `migrations/` row added to §3.8.2. L1 / L2 inline `[GT]` / `[FIXED]` pointers (§3.1.1). L3 / L2 §3.10 expanded with `90 min [FIXED]` and `≤ 60 s [GT]`. L4 property naming reconciled (§3.1.4). |
 | 0.3     | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | OI-010 back-prop: §3.1.4 spec-local `T-<category>-NNN` identifier table added; `T-C-` (anti-chaos) and `T-X-` (exploit-resistance) bound to Simulation layer per Pressing AI #13 §5 / KD-16 / KD-17. Resolves §9.3 (h) in #13. |
+| 0.5     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. Also repairs §3.3.5's stale normative-occurrence map: it listed §4.5 and §7.2, neither of which carries an occurrence; the real sites are §4.1 and §7.1. |
 | 0.4     | September 2, 2026 | Codex | **A3.2a governance amendment draft.** Adds §3.11 mechanics for strict applicability resolution, the four canonical proof classes, mechanically derived proof closure, material-subject/provenance separation, precise freshness, execution truth and bounded substitutes, structural/lifecycle/failure/mutation evidence, Governance convergence consumption, merge-critical tool verification, and KD-W1 activation-gated tuning. The A2 schema family and reference semantics v2.1.0 remain canonical; no gate is activated by this draft. |

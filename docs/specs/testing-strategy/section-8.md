@@ -1,7 +1,10 @@
 # Testing Strategy & Framework Specification #19 — Section 8: References & Citation Audit
 
 **Created:** May 12, 2026
-**Last Updated:** May 15, 2026 (v1.0.1 patch: `[TBD-NORMATIVE]` sweep — #16 status flipped to `APPROVED (Tier 2)`; #18 status flipped to `IN REVIEW (v0.3)`; all citation tags resolved)
+**Last Updated:** September 3, 2026
+**Version:** 0.3
+**Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Source register, verification notes, cross-spec citation
 audit, and constant-provenance summary.
 
@@ -16,6 +19,10 @@ audit, and constant-provenance summary.
   taxonomy, Interface Design Principle. Authoritative for KD-7
   (SplitMix64), banned-API list (`System.Random`, `DateTime.Now`),
   Stage 0 `float` posture.
+- **Project Architecture Governance v0.10** — architectural-property
+  admission, applicability/exclusion authority, proof triggers,
+  disposition/status semantics, evidence freshness requirements, and
+  convergence. Consumed by FR-TS-086 … 096, §3.11, §5.6, and §6.2.
 - **Spec #16 (Deterministic Simulation)** —.
   - **§1.1.1** — tier classification ("Equivalence policy by
     artifact"). Consumed by KD-9 (§3.6.2) and FR-TS-029, FR-TS-050,
@@ -80,9 +87,14 @@ audit, and constant-provenance summary.
 ### 8.1.2 External Sources
 
 - **RFC 2119** — MUST / SHOULD / MAY keywords. Consumed by §2.1.
-- **NUnit / xUnit / FsCheck / Coverlet / Stryker.NET** — framework
-  candidates pinned at Stage 0+1. URLs + retrieval dates are a Stage
-  0+1 deliverable (§7.1); current text uses framework names only.
+- **NUnit 3.14.0 / NUnit3TestAdapter 4.6.0** — current test-runner pin
+  established by `tools/dotnet-ci/generate_projects.py` (D1).
+- **FsCheck / Coverlet / Stryker.NET** — remaining property/coverage/
+  project-wide-mutation candidates; D2/D3/D6 remain deferred. Targeted
+  FR-TS-091 governance mutation does not depend on the D6 choice.
+- **GitHub Actions** — current CI provider at
+  `.github/workflows/ci.yml` (D4). This source registration does not
+  activate the architecture/evidence gate.
 
 ## 8.2 Verification Notes
 
@@ -102,7 +114,14 @@ audit, and constant-provenance summary.
   re-introduction per §2.3 self-applied failure mode and flip #19
   status to `SUSPENDED`.
 - Every Spec #20 citation was verified against
-  `code-standards/section-N.md` at draft time.
+  `code-standards/section-N.md` at draft time. The A3 amendment also
+  consumes FR-CS-074 … 081 / §3.5 / Appendix F for runtime-surface,
+  integration, lifecycle, activation, and disable-anchor declarations;
+  #19 does not own those declarations.
+- A3.2b rechecked the new #19 proof/evidence references against
+  Governance v0.10, the frozen A2 schema family, reference semantics
+  v2.1.0, and the coordinated #20 A3 draft. This is citation/ownership
+  synchronization only; it is not evidence that the A8 gate is active.
 
 ## 8.3 Cross-Spec Citation Audit
 
@@ -116,7 +135,12 @@ audit, and constant-provenance summary.
     (§3.7.1, §3.8.4), regression suite §5 (§3.2)..
   - #18 (boundary): performance gates (§6.2, §6.6)..
   - #20 (boundary): test-fixture carve-outs (§3.9.4), IoC anti-pattern
-    (§4.3.1), `System.Random` ban (§3.4.5).
+    (§4.3.1), `System.Random` ban (§3.4.5), and A3 integration/
+    activation declarations consumed by §3.11 / §6.2.
+  - Project Architecture Governance v0.10 (substantive governance
+    authority): applicability, proof triggers, bounded exclusions,
+    evidence freshness, disposition/status, and convergence consumed
+    by FR-TS-086 … 096.
 - **No `[CROSS]` constants imported.** Spec #19 declares no physical
   constants. Tier vocabulary cited from #16 §1.1.1 by reference only
   (KD-1).
@@ -146,3 +170,4 @@ checklist row).
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Source register populated; constant-provenance summary references §3.10. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 source register rebuilt against actual #16 layout: §1.1.1 (tier), §3.2.4.1 (canonical schema), §3.4.2 (Tier B comparator), §4.8 (`EnvironmentFingerprint`), §5 (regression suite). Outline-vs-actual divergences enumerated. §8.3 cite mapping updated. |
+| 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Registers Governance v0.10 and the #20 A3 integration/activation contract as explicit authorities for FR-TS-086 … 097 and records the A2 v2.1.0 proof-semantics verification boundary. No enforcement activation or `SPEC_INDEX.md` change. Live-repo audit also records D1=NUnit and D4=GitHub Actions; D2/D3/D5–D8 remain deferred. |
