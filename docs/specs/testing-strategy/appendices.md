@@ -4,7 +4,7 @@
 **Last Updated:** September 2, 2026
 **Version:** 0.3
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** docs/planning/project-architecture-governance-integration-plan.md v0.35, §7; A3.2a
+**Amendment plan:** docs/planning/project-architecture-governance-integration-plan.md v0.36, §7; A3.2a
 **Purpose:** Paste-ready schemas, exemplar property catalogue, per-spec
 §5 schema template, approved-spec §5 survey, local runbook, glossary,
 and canonical architecture-proof contract/examples.
@@ -319,8 +319,8 @@ cited from #16 / #18.
 Appendix G explains §3.11 and FR-TS-086–097. It is **not** a second
 schema and does not supersede A2. Machine validation uses the canonical
 Draft 2020-12 schemas under
-docs/tracking/architecture-governance/schemas/ and
-tools/architecture-governance/reference_semantics.py version 2.1.0.
+`docs/tracking/architecture-governance/schemas/` and
+`tools/architecture-governance/reference_semantics.py` version 2.1.0.
 
 ### G.1 Canonical Authorities
 
@@ -328,10 +328,10 @@ The relevant frozen A2 authorities are:
 
 | Concern | Canonical authority |
 |---|---|
-| Shared enums, selector-v1, execution states, proof classes, change types | docs/tracking/architecture-governance/schemas/common.schema.json |
-| Applicability-rule shape | docs/tracking/architecture-governance/schemas/applicability-rules.schema.json |
-| Reusable proof-artifact shape | docs/tracking/architecture-governance/schemas/proof-artifact.schema.json |
-| Applicability, closure, freshness and execution truth | tools/architecture-governance/reference_semantics.py v2.1.0 |
+| Shared enums, selector-v1, execution states, proof classes, change types | `docs/tracking/architecture-governance/schemas/common.schema.json` |
+| Applicability-rule shape | `docs/tracking/architecture-governance/schemas/applicability-rules.schema.json` |
+| Reusable proof-artifact shape | `docs/tracking/architecture-governance/schemas/proof-artifact.schema.json` |
+| Applicability, closure, freshness and execution truth | `tools/architecture-governance/reference_semantics.py v2.1.0` |
 
 If an example below ever disagrees with those authorities, the example is
 wrong and MUST be corrected; it does not amend the machine contract.

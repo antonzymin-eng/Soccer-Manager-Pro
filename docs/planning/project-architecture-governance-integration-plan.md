@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.35\
+**Version:** 0.36\
 **Created:** August 27, 2026  
 **Last Updated:** September 2, 2026\
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
@@ -703,6 +703,8 @@ FR-TS-076: add architecture/evidence gate while preserving #16/#18 ownership.
 
 FR-TS-077: flake quarantine cannot waive missing architecture proof or structural governance gates.
 
+FR-TS-063: qualify the existing quarantine rule so quarantine suppresses only an eligible functional-gate blocking effect; it does not satisfy or waive a separately required architecture-proof obligation. This is a consistency amendment required by FR-TS-077/094, not a new quarantine mechanism.
+
 FR-TS-093 remains pointer-style; Governance owns convergence, #19 consumes it.
 
 ## 7.3 Canonical proof appendix
@@ -716,7 +718,7 @@ Examples MUST include a committed reusable artifact whose freshness does not dep
 | File | Required work |
 |---|---|
 | section-1.md | Governance boundary references; revision status/history. |
-| section-2.md | FR-TS-086–097; 85→97 partition/count; FR-TS-084/076/077; KD-W1 activation/tuning precondition; exception boundary; failure modes/history. |
+| section-2.md | FR-TS-086–097; 85→97 partition/count; FR-TS-063/076/077/084; KD-W1 activation/tuning precondition; exception boundary; failure modes/history. |
 | section-3.md | New §3.11 applicability/proof mechanics: subject/provenance split, proof-class closure, execution-state and revalidation semantics; no #20 ownership duplication. |
 | section-4.md | Proof/test structures/interfaces only where §4 owns them. |
 | section-5.md | FR-to-verification through 097; stale/missing/applicability/closure/activation-anchor/KD-W1/skip-exclusion/wrong-mutant blind-spot fixtures; history. |
@@ -1269,6 +1271,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.36 | September 2, 2026 | — | **A3.2a review correction.** Records FR-TS-063 as an authorized consistency amendment in §7.2/§7.4: quarantine suppresses only an eligible functional-gate blocking effect and cannot satisfy or waive a separately required architecture-proof obligation. No new quarantine mechanism, proof semantics, schema, workflow, or enforcement is introduced. |
 | 0.35 | September 2, 2026 | — | **A3.1a automated-review correction.** Records that frozen schema `1.0.0` / reference semantics `2.1.0` validate integration-contract shape but do not resolve ownership/path strings or enforce `na_fields` pairing. Code Standards §3.5.6 now defines the exact binding vocabulary and `not-applicable` representation; A4 owns executable cross-registry/path resolution, sentinel pairing, and discriminating failure fixtures before either surface may support a Machine blocker. No schema, executable semantics, workflow, or enforcement changed. |
 | 0.34 | September 2, 2026 | — | **A3.1a review correction.** Aligns proposed FR-CS-078 with Governance FR-AG-025: known activation bypasses are prohibited or explicitly **classified**, not narrowed without rationale to only "supported." The downstream draft carries the same correction. No enforcement, schema, executable semantics, or runtime behavior changed. |
 | 0.33 | September 2, 2026 | — | **A3 preflight correction and bounded execution sequence.** Removes the live contradiction immediately below the A2 `CLOSED` declaration that still said conditions 6/7 were open and A3 blocked. Each specification is divided into a normative-core slice and a supporting-surface slice, followed by combined reconciliation and atomic reapproval/landing. Intermediate commits remain unapproved drafts and make no A8 enforcement claim. A3 must close against one Governance v0.10 / A2 semantics v2.1.0 baseline. No #19/#20 normative file, schema, executable semantics, code, workflow, or enforcement changed. |

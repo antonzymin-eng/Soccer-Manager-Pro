@@ -4,7 +4,7 @@
 **Last Updated:** September 2, 2026
 **Version:** 0.3
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** docs/planning/project-architecture-governance-integration-plan.md v0.35, §7; A3.2a
+**Amendment plan:** docs/planning/project-architecture-governance-integration-plan.md v0.36, §7; A3.2a
 **Purpose:** Conformance vocabulary, the full FR-TS-### catalogue with
 verification pointers, and the failure-to-comply modes. Rule mechanics
 for every FR live in §3; §2 publishes the rule statement.
@@ -28,7 +28,7 @@ identically to Spec #20 §2.1.
   rule for `System.Random`).
 
 **Exception with sign-off** remains a Spec #19-local mechanism. The
-exception is recorded in tests/exceptions.md (Stage 0+1 deliverable)
+exception is recorded in `tests/exceptions.md` (Stage 0+1 deliverable)
 with rationale, the exact FR cited, bounded scope, approval, and expiry
 trigger.
 
@@ -188,7 +188,7 @@ one mode can weaken an independently applicable blocker:
   against the spec or test; severity per §6.4.3. This mode is unavailable
   when FR-TS-094 or another independently blocking authority requires the
   current change to remain blocked.
-- **Exception with sign-off.** Recorded in tests/exceptions.md with
+- **Exception with sign-off.** Recorded in `tests/exceptions.md` with
   rationale, exact FR, bounded scope, approval, and expiry trigger; expires
   at the owning rule's trigger. It cannot waive an admitted property,
   required proof, concrete correctness/integrity failure, or Governance
@@ -225,10 +225,10 @@ The test-harness data structures it declares are:
   `tests/data/`; schema in Appendix A.
 - **Flake ledger** — append-only record of every quarantine event,
   expiry, and eviction; schema in §3.7 and Appendix A.
-- **Captured-seed corpus** — tests/data/captured-seeds/ holding area
+- **Captured-seed corpus** — `tests/data/captured-seeds/` holding area
   for fuzz / property failures; format conforms to KD-10 (§3.4.3).
 - **Architecture proof artifact** — versioned governance evidence conforming
-  to docs/tracking/architecture-governance/schemas/proof-artifact.schema.json
+  to `docs/tracking/architecture-governance/schemas/proof-artifact.schema.json`
   and the frozen A2 executable semantics. It is tooling evidence only and is
   never game-state data.
 

@@ -4,7 +4,7 @@
 **Last Updated:** September 2, 2026
 **Version:** 0.4
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** docs/planning/project-architecture-governance-integration-plan.md v0.35, §7; A3.2a
+**Amendment plan:** docs/planning/project-architecture-governance-integration-plan.md v0.36, §7; A3.2a
 **Purpose:** Mechanics of every rule named in §2.2. Each subsection
 cites the FR-TS-### IDs it implements and provides the *mechanics*; it
 does not redefine the rule statement. Section ordering mirrors the
@@ -640,8 +640,8 @@ The authority split is strict:
 - Spec #19 owns executable proof records, proof-result semantics, bounded
   substitutes, runner/result binding, and architecture/evidence gate behavior.
 - The canonical machine contract is the A2 schema family under
-  docs/tracking/architecture-governance/schemas/ plus
-  tools/architecture-governance/reference_semantics.py version 2.1.0.
+  `docs/tracking/architecture-governance/schemas/` plus
+  `tools/architecture-governance/reference_semantics.py` version 2.1.0.
   Appendix G is explanatory and MUST NOT become a second schema.
 
 A3.2a defines normative behavior but does not by itself activate a new merge
