@@ -1,10 +1,10 @@
 # Testing Strategy & Framework Specification #19 — Appendices
 
 **Created:** May 12, 2026
-**Last Updated:** September 2, 2026
+**Last Updated:** September 3, 2026
 **Version:** 0.3
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.36, §7; A3.2a
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
 **Purpose:** Paste-ready schemas, exemplar property catalogue, per-spec
 §5 schema template, approved-spec §5 survey, local runbook, glossary,
 and canonical architecture-proof contract/examples.

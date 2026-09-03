@@ -2,9 +2,9 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.36\
+**Version:** 0.37\
 **Created:** August 27, 2026  
-**Last Updated:** September 2, 2026\
+**Last Updated:** September 3, 2026\
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
 **Primary downstream specifications:** Testing Strategy & Framework #19; Code Standards & Style Guide #20  
 **Related project authorities:** Master Development Plan; adversarial-review process; root and src agent guides  
@@ -705,6 +705,8 @@ FR-TS-077: flake quarantine cannot waive missing architecture proof or structura
 
 FR-TS-063: qualify the existing quarantine rule so quarantine suppresses only an eligible functional-gate blocking effect; it does not satisfy or waive a separately required architecture-proof obligation. This is a consistency amendment required by FR-TS-077/094, not a new quarantine mechanism.
 
+FR-TS-088: §3.11.6 states the structural failure-class obligation as MUST and defers to Governance §5.3 (FR-AG-027) as the authority for the class list, reproducing it verbatim rather than restating it in spec-local vocabulary. FR-TS-088 itself continues to govern universe completeness, not detector coverage.
+
 FR-TS-093 remains pointer-style; Governance owns convergence, #19 consumes it.
 
 ## 7.3 Canonical proof appendix
@@ -1271,6 +1273,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.37 | September 3, 2026 | — | **A3.2a review correction.** Corrects §3.11.6 of Spec #19: the structural failure-class obligation was stated as SHOULD, which under §2.1 permits omitting a detector with rationale, while Governance §5.3 states it as MUST detect. The subsection now carries the MUST, defers to Governance §5.3 (FR-AG-027) as the authority for the class list, and reproduces that list verbatim. The prior spec-local paraphrase had dropped `unreachable implementations` and `duplicate construction`, conflated `orphan registrations` into "orphan implementations", and substituted "unsupported activation-capable public surfaces" for `public types that imply unsupported integration paths`. Mirrors the Governance v0.6 / AG-A0-002 resolution of the same defect class in §5.5. No new failure class, proof semantics, schema, workflow, or enforcement is introduced. |
 | 0.36 | September 2, 2026 | — | **A3.2a review correction.** Records FR-TS-063 as an authorized consistency amendment in §7.2/§7.4: quarantine suppresses only an eligible functional-gate blocking effect and cannot satisfy or waive a separately required architecture-proof obligation. No new quarantine mechanism, proof semantics, schema, workflow, or enforcement is introduced. |
 | 0.35 | September 2, 2026 | — | **A3.1a automated-review correction.** Records that frozen schema `1.0.0` / reference semantics `2.1.0` validate integration-contract shape but do not resolve ownership/path strings or enforce `na_fields` pairing. Code Standards §3.5.6 now defines the exact binding vocabulary and `not-applicable` representation; A4 owns executable cross-registry/path resolution, sentinel pairing, and discriminating failure fixtures before either surface may support a Machine blocker. No schema, executable semantics, workflow, or enforcement changed. |
 | 0.34 | September 2, 2026 | — | **A3.1a review correction.** Aligns proposed FR-CS-078 with Governance FR-AG-025: known activation bypasses are prohibited or explicitly **classified**, not narrowed without rationale to only "supported." The downstream draft carries the same correction. No enforcement, schema, executable semantics, or runtime behavior changed. |
