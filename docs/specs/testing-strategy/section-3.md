@@ -2,7 +2,7 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 3, 2026
-**Version:** 0.5
+**Version:** 0.6
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
 **Purpose:** Mechanics of every rule named in §2.2. Each subsection
@@ -936,6 +936,7 @@ correctness/integrity failure, or a Governance Blocker.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.6     | September 3, 2026 | — | **A3.2a review-record repair.** Records the already-landed §3.11.6 structural-proof correction from PR #352 / integration-plan v0.37: the failure-class detector obligation is **MUST**, matching Governance §5.3 / FR-AG-027, rather than the weaker SHOULD previously published. This commit does not introduce a new normative change; it restores the missing version/history record for the normative text already present on `main`. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Rule mechanics for FR-TS-001 … 074; §3.10 governance constants table. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 (regression suite); #16 §1.3.1 → §1.1.1 (tier vocabulary, §3.6.1); #16 §5 → §3.2.4.1 (canonical schema, §3.3.4 / §3.8.1); #16 §1.3 → §4.8 (`EnvironmentFingerprint`, §3.7.1). ERR-005 misnomer corrected (§3.5.4, §3.5.5). M1 coordinate restatement tightened. M2 `index.<ext>` provisional disclosure added (§3.3.5). M4 `migrations/` row added to §3.8.2. L1 / L2 inline `[GT]` / `[FIXED]` pointers (§3.1.1). L3 / L2 §3.10 expanded with `90 min [FIXED]` and `≤ 60 s [GT]`. L4 property naming reconciled (§3.1.4). |
 | 0.3     | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | OI-010 back-prop: §3.1.4 spec-local `T-<category>-NNN` identifier table added; `T-C-` (anti-chaos) and `T-X-` (exploit-resistance) bound to Simulation layer per Pressing AI #13 §5 / KD-16 / KD-17. Resolves §9.3 (h) in #13. |
