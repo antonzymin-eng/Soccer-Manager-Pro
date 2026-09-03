@@ -1,10 +1,13 @@
 # Testing Strategy & Framework Specification #19 — Appendices
 
 **Created:** May 12, 2026
-**Last Updated:** May 12, 2026
+**Last Updated:** September 2, 2026
+**Version:** 0.3
+**Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** docs/planning/project-architecture-governance-integration-plan.md v0.35, §7; A3.2a
 **Purpose:** Paste-ready schemas, exemplar property catalogue, per-spec
-§5 schema template, approved-spec §5 survey (schema only at #19
-approval), local runbook, and glossary.
+§5 schema template, approved-spec §5 survey, local runbook, glossary,
+and canonical architecture-proof contract/examples.
 
 **Version History:**
 
@@ -12,6 +15,7 @@ approval), local runbook, and glossary.
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Appendices A–F populated. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §5 → §3.2.4.1 (canonical schema, A.1 / A.3 / glossary); #16 §1.3 → §1.1.1 (tier classification, A.1 / C template); #16 §4 → §4.8 (env fingerprint, A.3); #16 §7 → §5 (regression-suite glossary). L4 boundary-saturation / fatigue properties tightened to cite CLAUDE.md instead of restating values. L7 Appendix D `(reserved)` → `(to be assigned at survey time)`. |
+| 0.3     | September 2, 2026 | Codex | **A3.2a governance amendment draft.** Adds Appendix G: the A2 proof-artifact/closure/execution contract, material-subject versus provenance examples, precise freshness cases, bounded/N/A limits, and schema-shaped failure-injection/mutation records. These examples are illustrative; canonical schemas and reference semantics v2.1.0 remain authoritative. A3.4 reapproval remains required. |
 
 ---
 
@@ -306,3 +310,337 @@ cited from #16 / #18.
 - **Tooling test.** Stage 0 test that exercises tools under `tools/`
   (e.g., the checklist auditor). Conforms to KD-6 but not to §3.1
   pyramid contract (§3.9.4).
+
+
+---
+
+## Appendix G — Architecture Proof Artifact & Closure Contract
+
+Appendix G explains §3.11 and FR-TS-086–097. It is **not** a second
+schema and does not supersede A2. Machine validation uses the canonical
+Draft 2020-12 schemas under
+docs/tracking/architecture-governance/schemas/ and
+tools/architecture-governance/reference_semantics.py version 2.1.0.
+
+### G.1 Canonical Authorities
+
+The relevant frozen A2 authorities are:
+
+| Concern | Canonical authority |
+|---|---|
+| Shared enums, selector-v1, execution states, proof classes, change types | docs/tracking/architecture-governance/schemas/common.schema.json |
+| Applicability-rule shape | docs/tracking/architecture-governance/schemas/applicability-rules.schema.json |
+| Reusable proof-artifact shape | docs/tracking/architecture-governance/schemas/proof-artifact.schema.json |
+| Applicability, closure, freshness and execution truth | tools/architecture-governance/reference_semantics.py v2.1.0 |
+
+If an example below ever disagrees with those authorities, the example is
+wrong and MUST be corrected; it does not amend the machine contract.
+
+### G.2 Proof Artifact Field Contract
+
+A reusable proof artifact requires:
+
+- schema_version;
+- proof_id and one canonical proof_class;
+- requirement_property_refs and applicability_rule_ids;
+- result: pass, fail, na, or bounded;
+- subject_scope_digest;
+- dependency_closure with dependency_ids, typed edges,
+  relation_policy_digest, and current change_type;
+- content_fingerprints and configuration_fingerprints;
+- one or more tool_identities;
+- execution_records (which may be empty only when applicability does not
+  itself require execution);
+- created metadata and revalidation_history.
+
+Optional provenance_revision and provenance_tree identify where the record
+was created/stored. They are **not** material freshness keys.
+
+A result of na requires exactly one approved N/A limitation record. A result
+of bounded requires exactly one approved bounded-substitute record. Neither
+record may accompany a different result.
+
+### G.3 Proof-Class Closure
+
+| Proof class | Required relation groups |
+|---|---|
+| structural-reachability | common + structural |
+| lifecycle-order | common + structural + lifecycle |
+| failure-injection | common + structural + lifecycle + executable |
+| mutation | common + structural + lifecycle + executable |
+
+For any class, persistence relations (serializer, schema, resource) join the
+closure only when the current applicability subject's change_type is
+persistence-boundary or external-resource-dependency.
+
+The closure starts from the applicability-resolved requirement/property
+nodes and follows the allowed relations. This makes transitive dependencies
+part of the proof even when an artifact author did not list them manually.
+An author MAY widen a dependency declaration; the author cannot narrow the
+mechanically derived closure.
+
+### G.4 Schema-Shaped Reusable Pass Artifact
+
+This record is illustrative only. The hexadecimal fingerprints are synthetic,
+so it is **not reusable project evidence**. The important identity property is
+that provenance_tree is merely provenance while subject_scope_digest binds
+the material proof subject. The execution record carries the **same**
+subject_scope_digest as the proof.
+
+~~~json
+{
+  "schema_version": "1.0.0",
+  "proof_id": "PROOF-EXAMPLE-STRUCTURAL-001",
+  "proof_class": "structural-reachability",
+  "requirement_property_refs": ["FR-CS-075", "AP-EXAMPLE-001"],
+  "applicability_rule_ids": ["AR-EXAMPLE-RUNTIME-SERVICE"],
+  "result": "pass",
+  "subject_scope_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "provenance_revision": "example-producing-revision",
+  "provenance_tree": "tree-that-contains-this-proof-record",
+  "dependency_closure": {
+    "dependency_ids": [
+      "requirement:FR-CS-075",
+      "contract:example-service",
+      "root:example-host",
+      "symbol:example-registration"
+    ],
+    "edges": [
+      {
+        "source": "requirement:FR-CS-075",
+        "target": "contract:example-service",
+        "relation": "contract"
+      },
+      {
+        "source": "contract:example-service",
+        "target": "root:example-host",
+        "relation": "root"
+      },
+      {
+        "source": "root:example-host",
+        "target": "symbol:example-registration",
+        "relation": "registration"
+      }
+    ],
+    "relation_policy_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "change_type": "new-runtime-service"
+  },
+  "content_fingerprints": {
+    "requirement:FR-CS-075": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "contract:example-service": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "root:example-host": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "symbol:example-registration": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "inventory_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+  "asmdef_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+  "configuration_fingerprints": {
+    "config:example-host": "3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "tool_identities": [
+    {
+      "tool_id": "architecture-governance-reference",
+      "semantic_version": "2.1.0",
+      "content_digest": "4444444444444444444444444444444444444444444444444444444444444444"
+    }
+  ],
+  "execution_records": [
+    {
+      "execution_id": "EXEC-EXAMPLE-001",
+      "command_or_test": "example structural proof command",
+      "runner": "example-runner",
+      "environment": "example-environment",
+      "subject_scope_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "execution_state": "passed",
+      "started_at": "2026-09-02T18:00:00-07:00",
+      "ended_at": "2026-09-02T18:00:01-07:00",
+      "result_artifact": "example-result.json"
+    }
+  ],
+  "created": {
+    "actor": "example-agent",
+    "at": "2026-09-02T18:00:02-07:00"
+  },
+  "revalidation_history": []
+}
+~~~
+
+The example intentionally does not claim that the displayed synthetic
+subject digest can be recomputed from the prose/example nodes. Production
+evidence obtains that digest from the canonical resolver.
+
+### G.5 Freshness Examples
+
+**Case A — committed record does not invalidate itself.** The proof above is
+committed in tree T2 after being produced from material subject S. If the
+containing tree changes from T1 to T2 solely because the proof record was
+added, the material closure for S is unchanged. Recomputed
+subject_scope_digest remains equal, so the proof remains fresh. Provenance
+may be updated or retained as history; it is not recursively part of S.
+
+**Case B — unrelated change remains current.** A mapped documentation or
+code dependency changes, but that dependency is outside the proof's derived
+dependency_ids and the current applicability/closure fingerprint is otherwise
+unchanged. The changed-files decision is proven-non-impact and the proof MAY
+remain current.
+
+**Case C — transitive dependency change stales proof.** The example host's
+registration symbol depends on a configuration/extractor/structural node in
+the derived closure, and that node's fingerprint or topology changes. Even
+if the proof file itself is untouched, the current subject digest changes.
+The proof is stale and the applicable proof MUST be regenerated or
+revalidated.
+
+**Case D — new applicable root stales proof.** Compiler/discovery facts add a
+new runtime root that falls within the same resolved obligation. The derived
+dependency set changes, so the old structural proof no longer establishes
+complete coverage.
+
+### G.6 Execution-State Truth Table
+
+| State | Required execution satisfied? | Bounded substitute |
+|---|---:|---|
+| passed | Yes | Forbidden alongside pass |
+| failed | No | Cannot satisfy |
+| skipped | No | Cannot satisfy |
+| excluded | No by itself | MAY satisfy only when the exact obligation explicitly permits FR-TS-096 |
+| unavailable | No by itself | MAY satisfy only when the exact obligation explicitly permits FR-TS-096 |
+| not-run | No by itself | MAY satisfy only when the exact obligation explicitly permits FR-TS-096 |
+| runner-failed | No | Cannot satisfy |
+
+A runner reporting **skipped** is not the same as a deliberate **excluded**
+state. A normal framework skip, ignore attribute, quarantine skip, unsupported
+assembly skip, conditional job skip, or equivalent observed skip remains
+unsatisfied and cannot be relabelled after the fact to obtain bounded
+satisfaction.
+
+Example: a required proof execution reports skipped:
+
+~~~json
+{
+  "execution_id": "EXEC-EXAMPLE-SKIPPED",
+  "command_or_test": "Example.Tests.RequiredArchitectureProof",
+  "runner": "example-runner",
+  "environment": "example-environment",
+  "subject_scope_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "execution_state": "skipped",
+  "started_at": "2026-09-02T18:10:00-07:00",
+  "ended_at": "2026-09-02T18:10:00-07:00"
+}
+~~~
+
+That execution **does not satisfy** a required obligation, with or without a
+bounded substitute.
+
+A deliberately excluded execution is also unsatisfied by default:
+
+~~~json
+{
+  "execution_id": "EXEC-EXAMPLE-EXCLUDED",
+  "command_or_test": "Example.Tests.RequiredArchitectureProof",
+  "runner": "example-runner",
+  "environment": "example-environment",
+  "subject_scope_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "execution_state": "excluded",
+  "started_at": "2026-09-02T18:11:00-07:00",
+  "ended_at": "2026-09-02T18:11:00-07:00"
+}
+~~~
+
+It can become satisfied only if the exact obligation explicitly permits a
+bounded substitute and the artifact result is bounded with a complete
+approved record such as:
+
+~~~json
+{
+  "authority_ref": "FR-TS-096",
+  "approval_ref": "APPROVAL-EXAMPLE-001",
+  "justification": "Exact proof is unavailable in the certified runner for this bounded surface.",
+  "omitted_surface_or_uncertainty": "Alternate-host execution remains unobserved; structural equivalence only is established."
+}
+~~~
+
+This record bounds uncertainty; it does not erase the omitted surface and
+does not constitute a Governance FR-AG-026 surface exclusion.
+
+### G.7 N/A Is Applicability, Not Execution Success
+
+A proof result of na uses the same four-field approved-limitation shape, but
+only after the matched applicability rule permits the exact N/A reason and
+any required approval exists. It means the proof obligation is not applicable
+for that resolved trigger/surface; it does not mean a required execution ran
+successfully.
+
+A lifecycle phase that genuinely does not exist may be represented by the
+Spec #20 declaration/N/A contract. A lifecycle phase that exists but was
+skipped by the runner cannot be converted to N/A.
+
+### G.8 Failure-Injection Record
+
+A failure-injection proof additionally carries the exact perturbation identity:
+
+~~~json
+{
+  "failure_injection": {
+    "condition_or_input": "registration dependency unavailable",
+    "target_selector": {
+      "assembly": "Example.Runtime",
+      "kind": "method",
+      "containing_type_id": "Example.MatchHost",
+      "member_name": "Activate",
+      "parameter_type_ids": [],
+      "generic_arity": 0,
+      "is_static": false
+    },
+    "expected_path": "activation rejects startup and emits the owned failure signal",
+    "executed_command_or_test": "Example.Tests.ActivationDependencyUnavailable",
+    "observed_result": "expected rejection and failure signal observed",
+    "tool_environment_identity": "example-runner / example-environment"
+  }
+}
+~~~
+
+The selector must resolve when semantic facts are supplied. Recording a
+condition against the wrong overload or unresolved target is not valid proof.
+
+### G.9 Mutation Record
+
+A mutation proof additionally carries the exact mutant and restoration record:
+
+~~~json
+{
+  "mutation": {
+    "base_subject_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "target_selector": {
+      "assembly": "Example.Runtime",
+      "kind": "method",
+      "containing_type_id": "Example.MatchHost",
+      "member_name": "Activate",
+      "parameter_type_ids": [],
+      "generic_arity": 0,
+      "is_static": false
+    },
+    "operator_or_mutant_digest": "remove-required-registration / mutant-example-001",
+    "baseline_execution": "EXEC-BASELINE-001 passed",
+    "mutant_execution": "EXEC-MUTANT-001 failed",
+    "expected_detector": "Example.Tests.RequiredRegistrationIsReachable",
+    "observed_detector_failure": "required-registration assertion failed",
+    "tool_identity": "targeted-governance-mutation-example",
+    "restoration_clean_state": true
+  }
+}
+~~~
+
+A no-op/equivalent mutant, wrong target, surviving expected detector, or
+unrestored working state cannot satisfy FR-TS-091.
+
+### G.10 Gate Consumption Boundary
+
+The architecture/evidence gate consumes the applicability result, current
+derived closure, proof artifact, exact execution results, and Governance
+convergence state. It does not create new architectural properties and does
+not infer convergence from severity.
+
+A proof example in this appendix is never evidence merely because it is
+schema-shaped. Real merge-blocking evidence must be produced from the current
+repository, validated by the canonical A2 semantics, and meet the activation
+conditions defined by the approved A3/A4/A8 integration stages.
