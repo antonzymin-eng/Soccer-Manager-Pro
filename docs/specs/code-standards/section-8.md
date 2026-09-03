@@ -5,8 +5,8 @@
 every citation, audits cross-spec references, and summarises constant provenance.
 **Created:** May 8, 2026
 **Modified:** September 2, 2026
-**Version:** 1.3
-**Status:** AMENDMENT DRAFT (A3.1b; approved v1.2 baseline remains in force)
+**Version:** 1.4
+**Status:** AMENDMENT DRAFT (A3.1b post-merge correction; approved v1.2 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 8; `outline-mid.md` v1.2, §8.1–§8.4
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.35, §6; A3.1b
@@ -25,7 +25,7 @@ every citation, audits cross-spec references, and summarises constant provenance
 
 ## 8.1 Source Register
 
-Eight sources are cited by Spec #20. Each row lists the source, its canonical path or
+Ten sources are cited by Spec #20. Each row lists the source, its canonical path or
 URL, the retrieval/verification date, and the section(s) in which it is used.
 
 | # | Source | Path or URL | Retrieved / verified | Used by § |
@@ -115,13 +115,12 @@ Spec #20 imports no physics/AI domain mechanics, constants, interfaces, or data 
 
 ### Pointer-Only Citations
 
-Two numbered specs are referenced in Spec #20 as informational pointers only — no
-normative rule depends on their content:
+One numbered spec is referenced in Spec #20 as an informational pointer only — no
+normative rule depends on its content:
 
 | Spec | Pointer location | Nature of reference |
 |---|---|---|
 | Spec #9 — Fixed64 Library | §3.7.3, §7.3, §7.5 (D4) | Future trigger: when Spec #9 ships, §3.7 gains a cross-reference and Appendix D `det-banned` expands. No current rule depends on Spec #9. |
-| Spec #19 — Testing Strategy | §1.2–§1.4, §3.5.6–§3.5.7, §3.9.4, §5.4.8–§5.5, §7.2/§7.5 | Owner of executable proof classes, bounded substitutes and gate evidence used by the architecture amendment; framework selection remains #19-owned. Spec #20 does not reproduce that machinery. |
 
 ### `[CROSS]` Constants
 
@@ -133,8 +132,9 @@ this spec.
 
 Spec #20 contains **no `TBD-NORMATIVE` placeholders**. This tag (introduced in Spec #16
 §9.5) marks cross-spec citation rows whose normative sources have not yet reached `IN
-REVIEW` status. Spec #20 has no cross-spec normative dependencies that would warrant this
-tag — its only upstream authority is root `CLAUDE.md` (S-01), which is always current.
+REVIEW` status. A3.1b adds substantive upstream governance relationships to Project
+Architecture Governance (S-09) and Spec #19 (S-10); both are registered, current sources
+rather than unresolved placeholders, so those relationships do not require this tag.
 
 ### Cross-Reference ID Inventory
 
@@ -185,6 +185,7 @@ vacuously satisfied:
 | 1.1.1 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H6 + H2/H5-adjacent.** H6: §8.4's tag-vocabulary enumeration extended from five tags to six (`[CROSS-PENDING]` — the root `CLAUDE.md` table this section attributes ownership to has held six tags while the reproduction chain in #20 held five; see section-3.md v1.6), and the vacuously-satisfied audit list gains the matching sixth N/A row. Consistency fix (the round-6 report cited this file's line 173 under H2 as "restates the retired framing" — the line holds no three-layer wording; what it held was the same stale "§4.1 tree diagram marks this folder empty at Stage 0" claim H5 catalogues): the §4.1 citation now states what §4.1 says post-v1.1 — the spec produces no source files and no `src/code-standards/` folder exists (verified August 18, 2026: `ls -d src/code-standards` fails). | — |
 | 1.3 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Registers Project Architecture Governance and Spec #19 as the architecture amendment's upstream authorities and replaces the obsolete "no substantive cross-spec citations" claim. **S-05 through S-10 re-verified; S-01 through S-04 were not re-confirmed in A3.1b because this slice did not re-run the approved-baseline internal-source checks, so A3.4 owes that full-source revalidation.** S-06/S-07/S-08 were repinned after live URL verification. | PENDING — A3.4 |
+| 1.4 | September 2, 2026 | Codex | **A3.1b post-merge Codex-review correction.** Corrects the live source-register cardinality to ten, removes Spec #19 from the mutually exclusive pointer-only classification, and updates the `TBD-NORMATIVE` explanation to acknowledge S-09/S-10 as substantive upstream governance sources. | PENDING — A3.4 |
 
 ---
 
