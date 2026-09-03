@@ -2,7 +2,7 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 3, 2026
-**Version:** 1.2
+**Version:** 1.3
 **Status:** HISTORICAL DRAFTING ARTIFACT — A3.2b synchronized; authoritative rules are the section files, whose May 15 approved baseline remains operative pending A3.4 reapproval
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
 **Companion documents:** `outline.md` (high-level v1.0 + adversarial
@@ -374,8 +374,8 @@ Spec #19's own failure modes (in addition to §2.3):
   - `tests/scenarios/cross-spec/` for KD-8 cross-spec scenarios owned
     by Spec #19.
 - 3.3.6 Scenario index / manifest:
-  - Single root manifest (`tests/scenarios/index.json` — final
-    extension chosen at Stage 0+1) lists every scenario with its
+  - Single root manifest (`tests/scenarios/index.<ext>` — final
+    extension chosen at Stage 0+1 under D9) lists every scenario with its
     metadata. Stage 0 deliverable: schema only (Appendix A); Stage 1
     deliverable: populated index.
 
@@ -1071,6 +1071,7 @@ Spec #19's own failure modes (in addition to §2.3):
 |---------|--------------|-------------|---------------------------------------------------------------------------------------------------------------|
 | 1.0     | May 12, 2026 | Claude Code | Initial detailed outline drafted from `outline.md` v1.0. Addresses all 13 findings from May 6 adversarial review. |
 | 1.1     | May 12, 2026 | Claude Code | Addresses all 12 findings (3H / 4M / 5L) from second adversarial review (May 12). Changes: KD-2 / KD-3 status caveats + `TBD-NORMATIVE` tagging (H1); §1.4 + KD-2 disclose #16↔#19 sequencing (H2); §4.4 removes `IFlakeReporter`, deferred to §7.2 (H3); §3.4.3 restructured to capture seeds into #19-owned holding area (M1); §3.5.4 acknowledges KD-6 retroactive dilution (M2); §9.2 + Appendix D down-scope survey out of #19 approval gate (M3); §3.7 explicitly Stage-gated (M4); §3.1.2 clarifies ceiling-only bound semantics (L1); §3.6.1 cite-precision guard on #16 §1.3.1 (L2); §3.4.1 drops vacuous Stage-0 disclaimer (L3); §6.1 neutral CI-provider selection criteria (L4); §3.10 + §9.4 specify `[GT]` evidence artifact (L5). No FR text changes; no new FR IDs introduced. |
+| 1.3     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. Also drops the outline's pre-empting `index.json` for the spec's `index.<ext>` notation. |
 | 1.2     | September 3, 2026 | — | **A3.2b synchronization overlay.** Updates the active drafting map to FR-TS-001 … 097, §3.11 architecture proof mechanics / §3.12 history, four-gate topology, Governance/#20 authority split, targeted-mutation exception, Appendix G, and A3.4/A8 activation boundaries. Historical May adversarial-review tables below remain historical evidence. Live-repo audit records D1=NUnit and D4=GitHub Actions while leaving D2/D3/D5–D8 deferred. |
 
 ---

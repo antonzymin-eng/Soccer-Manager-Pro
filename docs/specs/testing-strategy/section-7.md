@@ -2,7 +2,7 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 3, 2026
-**Version:** 0.3
+**Version:** 0.4
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
 **Purpose:** Stage 0+1 transition deliverables, Stage 1 deliverables,
@@ -30,7 +30,7 @@ code commit). KD-5 governs.
   invoke `src/`-side tests (§6.3, Appendix E).
 - Pyramid-ratio thresholds (§3.1.2) re-evaluated against actual code.
 - Scenario library populated index (`tests/scenarios/index.<ext>`,
-  §3.3.6; `<ext>` pinned at Stage 0+1 per D1).
+  §3.3.6; `<ext>` pinned at Stage 0+1 per **D9**, not D1 — see §7.5).
 - Test-defect log (`tests/test-defect-log.md`) instantiated.
 - Targeted governance mutation needed by FR-TS-091 is part of the
   architecture-proof path and does **not** wait for D6's project-wide
@@ -92,6 +92,7 @@ code commit). KD-5 governs.
 | D6 | Project-wide mutation-testing program activation date (for example Stryker.NET); excludes FR-TS-091 targeted governance mutation | Stage 1 | Lead developer |
 | D7 | Visual-regression framework selection (§3.9.3) | Stage 1+ | Lead developer |
 | D8 | Coverage-guided (AFL-style) fuzzing adoption (§3.4.1) | Stage 1+ | Lead developer |
+| D9 | Scenario-manifest encoding/extension pin for `tests/scenarios/index.<ext>` — JSON vs. JSON5 vs. binary (§3.3.5, §3.3.6, §4.1, §7.1, FR-TS-028, Appendix A.2). Split out of D1 by A3.2b: D1 owned the test-runner pin and this encoding pin jointly, and resolving D1 as NUnit settled only the runner. **Overdue, not deferred** — FR-TS-028 pins the extension at Stage 0+1 and that transition has passed, but no `tests/scenarios/` manifest exists yet, so nothing is blocked until the FR-TS-028 populated index | Stage 0+1 (already reached) | Lead developer |
 
 ## 7.6 Version History
 
@@ -99,4 +100,5 @@ code commit). KD-5 governs.
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. D1 … D8 deferred-decision tracker populated. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique pass 2. `index.json` → `index.<ext>` with D1 cross-reference. |
+| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. D9 is filed **overdue rather than deferred**: FR-TS-028 pins the extension at Stage 0+1, a transition the repository passed at its first `src/` code commit. |
 | 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Separates targeted FR-TS-091 governance mutation from deferred project-wide mutation tooling; constrains Spec #19 exception/coverage-exemption records so they cannot waive Governance properties, blockers, or required architecture proof; D1 (NUnit) and D4 (GitHub Actions) are recorded as already-resolved repository facts; D2/D3/D5–D8 remain deferred. No A4/A8 prerequisite is claimed complete. |

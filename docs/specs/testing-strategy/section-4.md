@@ -2,7 +2,7 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 3, 2026
-**Version:** 0.3
+**Version:** 0.4
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
 **Purpose:** The *shape* of the test-harness architecture: folder
@@ -29,7 +29,7 @@ tests/<spec>/
 tests/scenarios/
 ├── <owning-spec>/    ← per-spec scenarios (KD-8)
 ├── cross-spec/       ← Spec #19-owned cross-spec scenarios
-└── index.<ext>       ← root manifest (§3.3.6); <ext> pinned Stage 0+1
+└── index.<ext>       ← root manifest (§3.3.6); <ext> pinned Stage 0+1 (D9)
 
 tests/data/           ← §3.8.2 storage layout
 tests/shared/         ← read-only harness utilities (NOT game-state assemblies)
@@ -224,4 +224,5 @@ Still deferred:
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. `ITestHarness`, `IScenario`, `IFixtureValidator` declared; `IFlakeReporter` explicitly deferred. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout; #16 §5 → §3.2.4.1 (canonical schema, §4.2); tolerance-matrix citation pinned to #16 §3.4.2 (§4.3.2). M2 `index.<ext>` notation. M3 `IFixtureValidator` phantom-interface judgment made explicit (§4.4.2). L3 §3.10 cross-reference added to pre-commit budget (§4.5.1). |
+| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. |
 | 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Separates owning test placement from reusable architecture-proof records and records the A8-only architecture/evidence gate topology without creating a mega test assembly or activating enforcement. The live-repo pass also replaces obsolete D1/D4 deferrals with the existing NUnit/`dotnet test` gate and GitHub Actions paths. |
