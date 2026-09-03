@@ -1,7 +1,10 @@
 # Testing Strategy & Framework Specification #19 — Section 2: Functional Requirements & Test Governance Model
 
 **Created:** May 12, 2026
-**Last Updated:** May 12, 2026
+**Last Updated:** September 3, 2026
+**Version:** 0.3
+**Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
 **Purpose:** Conformance vocabulary, the full FR-TS-### catalogue with
 verification pointers, and the failure-to-comply modes. Rule mechanics
 for every FR live in §3; §2 publishes the rule statement.
@@ -24,9 +27,18 @@ identically to Spec #20 §2.1.
 - **MUST NOT** — banned. Use parallels Spec #20 §2.1 (e.g., banned-API
   rule for `System.Random`).
 
-**Exception with sign-off** semantics are identical to Spec #20 §2.1:
-the exception is recorded in `tests/exceptions.md` (Stage 0+1
-deliverable) with rationale, FR cited, and expiry trigger.
+**Exception with sign-off** remains a Spec #19-local mechanism. The
+exception is recorded in `tests/exceptions.md` (Stage 0+1 deliverable)
+with rationale, the exact FR cited, bounded scope, approval, and expiry
+trigger.
+
+A Spec #19 exception or coverage exemption can waive only the exact
+Spec #19 obligation its owning rule permits. It **MUST NOT** waive an
+admitted architectural property, required architectural proof,
+concrete correctness/integrity failure, or Governance Blocker. Where
+both a Spec #19 exception and a Governance property exception are
+required, both records are independently necessary; neither mechanism
+substitutes for the other.
 
 ## 2.2 Functional Requirement Catalogue
 
@@ -50,6 +62,7 @@ in the §5.6 traceability table.
 | FR-TS-068 … 074 | Test-data governance | §3.8 | §5.6 |
 | FR-TS-075 … 080 | CI orchestration (Stage-gated) | §6.1, §6.2 | §5.6 |
 | FR-TS-081 … 085 | Defect lifecycle and triage | §6.4 | §5.6 |
+| FR-TS-086 … 097 | Architecture proof / evidence integration | §3.11 | §5.6 / architecture-evidence gate |
 
 **FR catalogue.**
 
@@ -123,7 +136,7 @@ in the §5.6 traceability table.
 | FR-TS-060 | Tier classification of every file under coverage measurement MUST be sourced from #16 §1.1.1; #19 does not redefine it. | MUST | Stage 0+1 |
 | FR-TS-061 | A test is "flaky" if two runs of the same revision under the same `EnvironmentFingerprint` produce different pass/fail outcomes (cited from #16 §4.8). | MUST | Stage 0+1 |
 | FR-TS-062 | CI MUST run every test twice on the same revision; disagreement triggers automatic quarantine. | MUST | Stage 0+1 |
-| FR-TS-063 | Quarantined tests continue to execute but do not block merges. | MUST | Stage 0+1 |
+| FR-TS-063 | Quarantined tests continue to execute; quarantine removes only their eligible functional-gate blocking effect and remains subject to FR-TS-077. | MUST | Stage 0+1 |
 | FR-TS-064 | Quarantine auto-expires after 14 days; expired tests MUST be either fixed or deleted. Permanent quarantine is forbidden. | MUST | Stage 0+1 |
 | FR-TS-065 | A test quarantined ≥ 3 times in 90 days MUST be deleted and the rationale recorded in `tests/flake-eviction-log.md`. | MUST | Stage 0+1 |
 | FR-TS-066 | Re-introduction of an evicted test requires a new test ID and a written root-cause analysis. | MUST | Stage 0+1 |
@@ -136,31 +149,60 @@ in the §5.6 traceability table.
 | FR-TS-073 | LFS / no-LFS storage decision for fixtures is deferred to D5 (§7.5). | MAY | Stage 0+1 |
 | FR-TS-074 | Cross-fixture provenance edges (e.g., scenario A reuses fixture B) MUST be declared in the manifest (Appendix A). | MUST | Stage 0+1 |
 | FR-TS-075 | Three pipelines are mandatory: pre-commit (unit + property), PR (unit + integration + property + per-spec-changed scenarios), nightly (full simulation + soak + #16 §5 full suite). See §4.5. | MUST | Stage 0+1 |
-| FR-TS-076 | Functional-gate failure blocks merge (Spec #19 authority); performance-gate failure blocks merge (Spec #18 authority); determinism-gate failure blocks merge (#16 §5 authority). | MUST | Stage 0+1 |
-| FR-TS-077 | No gate is "soft"; flake quarantine (§3.7) is the only escape valve and applies only to functional gates. | MUST | Stage 0+1 |
+| FR-TS-076 | Functional-gate failure blocks merge (Spec #19 authority); performance-gate failure blocks merge (Spec #18 authority); determinism-gate failure blocks merge (#16 §5 authority); once activated, architecture/evidence-gate failure blocks merge under Spec #19 evidence mechanics while Governance and Spec #20 retain ownership of the underlying architectural obligations. | MUST | Stage 0+1 |
+| FR-TS-077 | No gate is "soft." Flake quarantine (§3.7) may relax only an eligible functional-test failure; it **MUST NOT** waive missing or stale required architectural proof, a structural governance gate, determinism/performance gates, or any other independently blocking obligation. | MUST | Stage 0+1 |
 | FR-TS-078 | CI provider selection criteria are declared in §6.1 (L4); the final pin lands in `src/CLAUDE.md`. | MUST | Stage 0+1 |
 | FR-TS-079 | Until CI activates, the same gate composition runs locally via `tools/run-tests-local.sh` (Appendix E). | MUST | Stage 0 |
 | FR-TS-080 | Spec #19 cites #18 §4 thresholds by reference; #19 MUST NOT republish performance numbers. (KD-3) | MUST NOT | Stage 0+1 |
 | FR-TS-081 | Defects are classified per §6.4.1 (spec / implementation / test / determinism). Misclassified defects are themselves a procedural violation. | MUST | Stage 0+1 |
 | FR-TS-082 | PR-blocking failures are investigated within 24 hours; quarantined tests are reviewed weekly; spec defects are reviewed at next spec-revision cycle. | MUST | Stage 0+1 |
 | FR-TS-083 | Defect severity uses the four-level scale in §6.4.3 (Critical / High / Medium / Low). | MUST | Stage 0+1 |
-| FR-TS-084 | Every defect MUST cite the FR it violated; uncited defects are themselves a procedural violation. | MUST | Stage 0+1 |
+| FR-TS-084 | Every defect MUST cite its governing authority: an FR, admitted architectural property, approved invariant/equivalent authority, or concrete independently established correctness/integrity failure. A novel generalized preference with no existing authority MUST be routed as a Governance Candidate Property rather than treated as a defect solely by reviewer preference. | MUST | Stage 0+1 |
 | FR-TS-085 | Determinism defects are routed to #16 §5's process; Spec #19's triage is bypassed for that class. (KD-2) | MUST | Stage 0+1 |
+| FR-TS-086 | Architectural changes MUST resolve the versioned applicability manifest and record every matched trigger, requirement, and proof class. | MUST | Stage 0+1 |
+| FR-TS-087 | Required architectural proof MUST use the canonical versioned artifact, separate material subject identity from provenance, and bind the applicability-resolved dependency/configuration/tool surface by reproducible digest. | MUST | Stage 0+1 |
+| FR-TS-088 | Structural proof MUST cover the complete applicability-resolved host/root/alternate/test/public universe or, only where FR-TS-096 applies, record an approved bounded substitute and the omitted uncertainty. A bounded substitute is not a Governance FR-AG-026 surface exclusion: every mechanically finite surface remains accounted for through scope, recorded Non-scope, or Governance exception. | MUST | Stage 0+1 |
+| FR-TS-089 | Lifecycle/order proof MUST independently demonstrate required construction, activation, use, teardown, and restore ordering rather than rely on declaration text. | MUST | Stage 0+1 |
+| FR-TS-090 | Meaningful triggered failure paths MUST be deliberately executed where reasonably inducible and record the exact injected condition, target, expected path, executed test/command, and observed result. | MUST | Stage 0+1 |
+| FR-TS-091 | Triggered mutation MUST demonstrate evidence sensitivity for the named critical invariant using an exact target and reproducible mutant/patch identity, baseline result, mutant result, and expected detector; no project-wide mutation-score target is created. | MUST | Stage 0+1 |
+| FR-TS-092 | Reusable proof MUST have its complete relevant dependency universe mechanically derived and validated by proof class, and MUST become stale only on material changes inside that resolved closure or its applicable tool/configuration semantics. | MUST | Stage 0+1 |
+| FR-TS-093 | Spec #19 merge/review mechanics MUST consume Governance disposition/status/convergence state and MUST NOT rederive convergence from severity. Governance remains the normative owner of finding disposition and convergence semantics. | MUST | Stage 0 |
+| FR-TS-094 | Missing, failed, stale, schema-invalid, applicability-incomplete, skipped, excluded, unavailable, not-run, or runner-failed required architectural proof MUST block merge once the gate is active. A bounded substitute MAY replace only an excluded, unavailable, or not-run execution when FR-TS-096 permits it; it MUST NOT convert failed, skipped, or runner-failed execution into satisfaction. | MUST | Stage 0+1 |
+| FR-TS-095 | Merge-critical governance tooling MUST have known-good, known-bad, and blind-spot verification proportionate to the consequence of false positives and false negatives. | MUST | Stage 0+1 |
+| FR-TS-096 | Bounded substitutes are permitted only for computationally disproportionate, intentionally omitted, or unavailable proof and MUST record authority, approval, scope/rationale, and the omitted surface or remaining uncertainty. They MUST NOT waive an executed proof failure, runner failure, ordinary skipped execution, or an independently applicable Governance exclusion requirement. | MUST | Stage 0+1 |
+| FR-TS-097 | A [GT] or owner-declared calibration/tuning change MUST NOT land for a component whose activation state is intentionally-disabled, pending-integration, or unresolved unless an approved exception explicitly authorizes that exact tuning scope. | MUST | Stage 0+1 |
 
 ## 2.3 Failure-to-Comply Modes
 
-Five modes apply, in increasing order of severity:
+The following compliance modes apply. They are not a severity ladder where
+one mode can weaken an independently applicable blocker:
 
 - **Review block.** The PR cannot merge. Applies once the relevant CI
   gate activates.
-- **Quarantine.** The test moves to the flake-quarantine pool with
-  14-day auto-expiry; merges are not blocked while the test is in the
-  pool (§3.7).
+- **Quarantine.** An eligible flaky functional test moves to the
+  flake-quarantine pool with 14-day auto-expiry. Quarantine removes only
+  that functional-gate blocking effect; if the same test/result is required
+  architectural proof, the architecture obligation remains unsatisfied under
+  FR-TS-077/094 (§3.7, §3.11.5).
 - **Refactor required.** The PR merges with a follow-up issue filed
-  against the spec or test; severity per §6.4.3.
+  against the spec or test; severity per §6.4.3. This mode is unavailable
+  when FR-TS-094 or another independently blocking authority requires the
+  current change to remain blocked.
 - **Exception with sign-off.** Recorded in `tests/exceptions.md` with
-  rationale, FR cited, and expiry trigger; expires at next test-suite
-  refactor.
+  rationale, exact FR, bounded scope, approval, and expiry trigger; expires
+  at the owning rule's trigger. It cannot waive an admitted property,
+  required proof, concrete correctness/integrity failure, or Governance
+  Blocker.
+- **Architecture-evidence block.** Once the architecture/evidence gate
+  is active, any FR-TS-094 unsatisfied state blocks merge unless the exact
+  obligation is validly satisfied by FR-TS-096. A stale or incomplete proof
+  cannot be downgraded to a follow-up.
+- **Governance-convergence block.** Review convergence consumes Governance
+  disposition/status state. An open or invalidly dispositioned finding
+  remains open regardless of severity.
+- **Activation/tuning block.** FR-TS-097 prevents calibration/tuning changes
+  for inactive, pending, or unresolved owning components unless the exact
+  permitted exception path is satisfied.
 - **Spec-§5 nonconformance.** A per-spec §5 fails Spec #19's schema
   check at draft-review time; the spec cannot reach APPROVED status
   until conformance is restored (§5.4). For approved specs #1–#8 the
@@ -185,6 +227,10 @@ The test-harness data structures it declares are:
   expiry, and eviction; schema in §3.7 and Appendix A.
 - **Captured-seed corpus** — `tests/data/captured-seeds/` holding area
   for fuzz / property failures; format conforms to KD-10 (§3.4.3).
+- **Architecture proof artifact** — versioned governance evidence conforming
+  to `docs/tracking/architecture-governance/schemas/proof-artifact.schema.json`
+  and the frozen A2 executable semantics. It is tooling evidence only and is
+  never game-state data.
 
 None of these structures appears in the game-state assemblies; they
 live under `tests/shared/` per §4.1.
@@ -205,6 +251,20 @@ Spec #19's own failure modes (additional to §2.3):
   obligation any time #16 §5 changes.
 - **Boundary drift with #18 §4 / §7** — caught at §6.2 gate-composition
   review when #18 publishes a draft that changes section numbering.
+- **Applicability ambiguity or incomplete change context** — strict proof
+  certification fails rather than guessing which proof classes apply.
+- **Proof-closure or freshness drift** — a changed applicable root,
+  transitive dependency, topology edge, configuration, extractor, or
+  proof-semantic dependency invalidates only the affected proof closure.
+- **Execution-truth mismatch** — a required proof records skipped, failed,
+  runner-failed, or another unsatisfied execution state while claiming
+  satisfaction; the artifact is invalid.
+- **Wrong-target / ineffective perturbation** — failure injection or mutation
+  does not exercise the named target or detector; the claimed proof is
+  rejected.
+- **Activation/tuning mismatch** — a [GT] or owner-declared tuning surface
+  changes while an applicable owning component is not active and no exact
+  permitted exception authorizes that scope.
 
 ## 2.6 Version History
 
@@ -212,3 +272,4 @@ Spec #19's own failure modes (additional to §2.3):
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. FR-TS-001 … 085 enumerated; partition table aligns to §3 mechanics. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 citations corrected (§5 / §3.2.4.1 / §1.1.1 / §4.8); FR-TS-002 / FR-TS-006 carry inline value-tag pointers (L1 / L2); SUSPENDED-on-tag-reintroduction added to §2.3 (L8). |
+| 0.3     | September 2, 2026 | Codex | **A3.2a governance amendment draft.** Appends FR-TS-086–097, qualifies FR-TS-063 quarantine, amends FR-TS-076/077/084, adds the architecture proof/evidence partition and failure modes, separates bounded substitutes from Governance-approved surface exclusions, and closes the Spec #19 exception boundary. The May 15 approved baseline remains operative until A3.4 atomic reapproval. |
