@@ -4,10 +4,12 @@
 **Purpose:** Registers all sources cited by Spec #20, records verification status for
 every citation, audits cross-spec references, and summarises constant provenance.
 **Created:** May 8, 2026
-**Version:** 1.2
-**Status:** APPROVED (May 11, 2026)
+**Modified:** September 2, 2026
+**Version:** 1.3
+**Status:** AMENDMENT DRAFT (A3.1b; approved v1.2 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 8; `outline-mid.md` v1.2, §8.1–§8.4
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.35, §6; A3.1b
 
 ---
 
@@ -33,16 +35,17 @@ URL, the retrieval/verification date, and the section(s) in which it is used.
 | S-03 | `docs/planning/master-development-plan.md` — Stage 0–Stage 6 definitions, Fixed64 scope decision | `docs/planning/master-development-plan.md` | May 8, 2026 — Stage 5+ scope for Fixed64 confirmed in current text | §1.1, §7.3 |
 | S-04 | `docs/tracking/certification-platform.md` — Unity LTS version pin, C# version pin, compiler flags | `docs/tracking/certification-platform.md` | May 8, 2026 — file present; all Stage 0 rows confirmed `_TBD_` / `⏳ Not pinned` as of this date | §2.2.1 (FR-CS-008 INACTIVE condition), §3.7, §7.1 (D1-artifact, D5-artifact), §7.2 (merge gate note), §7.5 (D1, D5) |
 | S-05 | Microsoft C# Coding Conventions | https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions | May 8, 2026 | §3.1.1 (naming), §3.1.4 (Allman brace style), §7.4 |
-| S-06 | Unity Scripting API — Performance Best Practices | https://docs.unity3d.com/2022.3/Documentation/Manual/BestPracticeUnderstandingPerformanceInUnity.html | June 15, 2026 | §3.3 (zero-alloc patterns), §6.2 (virtual dispatch), §6.3 (ProfilerMarker) |
-| S-07 | RFC 2119 — Key words for use in RFCs to Indicate Requirement Levels (MUST / SHOULD / MAY) | https://www.ietf.org/rfc/rfc2119.txt | May 8, 2026 | §1.1 (RFC 2119 conformance statement), §2.2 (every FR conformance level) |
-| S-08 | Microsoft Roslyn Analyzer documentation — `BannedApiAnalyzers`, `.editorconfig` severity levels | https://learn.microsoft.com/en-us/visualstudio/code-quality/roslyn-analyzers-overview | May 8, 2026 | §5.2 (analyzer gate), §7.1 (D2-artifact, D3-artifact), §7.2 (PR gate command), Appendix D (Stage 1 analyzer ID column) |
+| S-06 | Unity Manual — Optimization | https://docs.unity3d.com/6000.0/Documentation/Manual/analysis.html | September 2, 2026 | §3.3 (allocation/performance context), §6.2 (performance context), §6.3 (Profiler context) |
+| S-07 | RFC 2119 — Key words for use in RFCs to Indicate Requirement Levels (MUST / SHOULD / MAY) | https://www.rfc-editor.org/rfc/rfc2119.txt | September 2, 2026 | §1.1 (RFC 2119 conformance statement), §2.2 (every FR conformance level) |
+| S-08 | Microsoft Roslyn Analyzer documentation — `BannedApiAnalyzers`, `.editorconfig` severity levels | https://learn.microsoft.com/en-us/visualstudio/code-quality/roslyn-analyzers-overview?view=visualstudio | September 2, 2026 | §5.2 (analyzer gate), §7.1 (D2-artifact, D3-artifact), §7.2 (PR gate command), Appendix D (Stage 1 analyzer ID column) |
+| S-09 | Project Architecture Governance v0.10 — property/applicability/review/evidence authority | `docs/planning/project-architecture-governance.md` | September 2, 2026 — approved v0.10 re-verified | §1.2–§1.4, §2.2.9, §3.5.6–§3.5.7, §4.4, §5.4.8–§5.5, §7.2, Appendix F |
+| S-10 | Spec #19 Testing Strategy & Framework — proof classes, bounded substitutes and gate evidence owner | `docs/specs/testing-strategy/` | September 2, 2026 — approved owner re-verified | §1.2–§1.4, §3.5.6–§3.5.7, §5.4.8–§5.5, §7.2 |
 
 **Note on external URL retrieval:** The four external URLs (S-05 through S-08) are
 well-established, stable documentation pages from Microsoft, Unity Technologies, and the
 IETF. They were identified as accurate targets on May 8, 2026. At every Spec #20
 amendment, the re-verifier MUST re-confirm each URL is live and that the cited content has
-not materially changed. If a URL redirects or is retired, this table MUST be updated in
-the same commit that amends the citing section.
+not materially changed. The A3.1b correction pass directly retrieved S-05 through S-08 on September 2, 2026; all four returned their intended content. S-06's live page title is **Optimization**, so its register label now matches the target. This is partly manual evidence: `.github/markdown-link-check.json` blanket-ignores `docs.unity3d.com`, so CI does not mechanically recheck S-06. Conversely, its anchored S-08 ignore matches only the queryless Roslyn URL; Microsoft's canonical `?view=visualstudio` target is not ignored and is therefore exercised by the Markdown link-check job.
 
 ---
 
@@ -85,8 +88,8 @@ All direct CLAUDE.md citations in Spec #20 were re-verified against the current
 ### Re-Verification Cadence
 
 Every Spec #20 amendment — regardless of scope — MUST include a re-verification pass for
-all eight sources. The version history entry for the amendment MUST record "S-01 through
-S-08 re-verified" or list any source that could not be re-confirmed (with reason).
+all ten registered sources. The version history entry for the amendment MUST record "S-01 through
+S-10 re-verified" or list any source that could not be re-confirmed (with reason).
 
 ---
 
@@ -108,15 +111,7 @@ informational; it establishes auditability.
 
 ### Spec #20 Cites To (Substantive — Upstream)
 
-Spec #20 makes **no substantive cross-spec citations**. It does not import constants,
-interfaces, data structures, or normative rules from any other spec. All normative content
-in Spec #20 is either:
-
-(a) Self-contained (code-shape rules, FR table, appendices), or
-(b) Cited from root `CLAUDE.md` (project invariants, constant tags, determinism rules).
-
-Root `CLAUDE.md` is a project governance document, not a numbered spec, so citations to
-it are classified under S-01 rather than as cross-spec references.
+Spec #20 imports no physics/AI domain mechanics, constants, interfaces, or data structures. The A3 amendment does add two substantive governance relationships: (a) Project Architecture Governance (S-09) is the upstream authority for property admission, applicability, review/disposition and evidence boundaries used by FR-CS-074–081; and (b) Spec #19 (S-10) owns executable proof classes, bounded substitutes and gate evidence. Spec #20 remains authoritative for the code/integration rules themselves and binds these upstream governance decisions without copying their review/proof state machines.
 
 ### Pointer-Only Citations
 
@@ -126,7 +121,7 @@ normative rule depends on their content:
 | Spec | Pointer location | Nature of reference |
 |---|---|---|
 | Spec #9 — Fixed64 Library | §3.7.3, §7.3, §7.5 (D4) | Future trigger: when Spec #9 ships, §3.7 gains a cross-reference and Appendix D `det-banned` expands. No current rule depends on Spec #9. |
-| Spec #19 — Testing Strategy | §3.9.4, §7.5 (D2) | The test-fixture carve-out (§3.9.4) is framework-agnostic precisely to avoid depending on Spec #19's framework choice. D2 defers to Spec #19 as owner. No current rule depends on Spec #19. |
+| Spec #19 — Testing Strategy | §1.2–§1.4, §3.5.6–§3.5.7, §3.9.4, §5.4.8–§5.5, §7.2/§7.5 | Owner of executable proof classes, bounded substitutes and gate evidence used by the architecture amendment; framework selection remains #19-owned. Spec #20 does not reproduce that machinery. |
 
 ### `[CROSS]` Constants
 
@@ -189,6 +184,7 @@ vacuously satisfied:
 | 1.1 | June 15, 2026 | — | S-06 (Unity Performance Best Practices) URL re-pinned per the §8.4 retire-or-redirect rule: the unversioned `docs.unity3d.com/Manual/…` path drifts to Unity's latest manual and began returning HTTP 503 (CI Markdown link check, PR #169). Replaced with the 2022.3 versioned path matching the certified engine (`certification-platform.md` v1.2). Same page/content; retrieved-date refreshed. No normative spec text changed. | — |
 | 1.1.1 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H6 + H2/H5-adjacent.** H6: §8.4's tag-vocabulary enumeration extended from five tags to six (`[CROSS-PENDING]` — the root `CLAUDE.md` table this section attributes ownership to has held six tags while the reproduction chain in #20 held five; see section-3.md v1.6), and the vacuously-satisfied audit list gains the matching sixth N/A row. Consistency fix (the round-6 report cited this file's line 173 under H2 as "restates the retired framing" — the line holds no three-layer wording; what it held was the same stale "§4.1 tree diagram marks this folder empty at Stage 0" claim H5 catalogues): the §4.1 citation now states what §4.1 says post-v1.1 — the spec produces no source files and no `src/code-standards/` folder exists (verified August 18, 2026: `ls -d src/code-standards` fails). | — |
+| 1.3 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Registers Project Architecture Governance and Spec #19 as the architecture amendment's upstream authorities and replaces the obsolete "no substantive cross-spec citations" claim. **S-05 through S-10 re-verified; S-01 through S-04 were not re-confirmed in A3.1b because this slice did not re-run the approved-baseline internal-source checks, so A3.4 owes that full-source revalidation.** S-06/S-07/S-08 were repinned after live URL verification. | PENDING — A3.4 |
 
 ---
 

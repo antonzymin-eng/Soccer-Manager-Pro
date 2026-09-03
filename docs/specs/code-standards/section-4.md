@@ -7,11 +7,12 @@ and `src/CLAUDE.md` (concrete paths). Spec #20 does not publish a runtime interf
 §4.4 records the N/A justification.
 
 **Created:** May 7, 2026
-**Last Updated:** August 18, 2026
-**Version:** 1.3
-**Status:** APPROVED (May 11, 2026)
+**Last Updated:** September 2, 2026
+**Version:** 1.4
+**Status:** AMENDMENT DRAFT (A3.1b; approved v1.3 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 4
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.35, §6; A3.1b
 **Subsection target lengths:** §4.1 ~50 lines · §4.2 ~40 lines · §4.3 ~70 lines ·
 §4.4 ~5 lines · §4.5 ~15 lines
 
@@ -294,21 +295,30 @@ assembly's `.asmdef` file (FR-CS-055). Relying on the C# compiler to resolve a
 reference because both assemblies happen to be in the same Unity project — without an
 explicit `.asmdef` reference — is prohibited.
 
-The `.asmdef` reference graph is the machine-readable equivalent of the §3.5.2 layer
-diagram. If the `.asmdef` references do not match the intended dependency direction,
-the build fails with a CS0246 / Unity assembly resolution error. This turns an invisible
-dependency violation into an auditable compile error.
+The `.asmdef` reference graph is the machine-readable fact source for §3.5.2's tier
+order. An acyclic upward reference can compile successfully, so compiler success is not
+proof of FR-CS-046 conformance. `tools/assembly-tier-check.py` parses the authoritative
+§3.5.2 table and the production `.asmdef` graph and blocks upward references,
+out-of-band Infrastructure violations, unseated folders and cycles at the CI merge
+boundary. Unity/compiler cycle rejection is an additional check for cycles only.
 
 ---
 
 ## 4.4 Interface Contracts
 
-Spec #20 is a governance meta-specification. It publishes **no runtime interface** —
-no `interface` type, no `abstract class`, no event bus entry, no public struct that
-crosses an assembly boundary at runtime.
+Spec #20 publishes **no runtime interface** — no `interface` type, `abstract class`,
+event-bus entry, or public gameplay struct. The architecture records introduced by
+FR-CS-074–081 (`integration-contracts.json`, runtime-surface classifications,
+dependency/proof records) are governance/tooling data, not runtime dependencies and are
+never referenced by gameplay assemblies.
 
-This section is retained per the CLAUDE.md 9-section template (KD-3 in §1.3). For the
-runtime interface design rules that all other specs must follow when they do publish
+Their relationship is one-way: compiler/assembly discovery emits facts; the canonical
+Governance registries bind durable identity, ownership, lifecycle and activation intent;
+Spec #19 proof/gate machinery evaluates applicable obligations. Until A4 closes the
+cross-registry resolver and discovery blind spots, declarations that require that
+resolution remain report-only as §3.5.6–§3.5.7 require.
+
+For runtime interface design rules that all other specs follow when they publish
 interfaces, see §3.5.
 
 ---
@@ -321,7 +331,7 @@ configuration, or assembly GUIDs — those are implementation details that depen
 Unity LTS version pinned in `docs/tracking/certification-platform.md` and on the
 directory structure chosen at Stage 1 project setup.
 
-`src/CLAUDE.md` is the document that will hold concrete information:
+`src/CLAUDE.md` is the live document that holds concrete information:
 
 | What | Owner |
 |---|---|
@@ -331,10 +341,10 @@ directory structure chosen at Stage 1 project setup.
 | IDE/editor configuration (`.editorconfig` path, VS solution setup) | `src/CLAUDE.md` |
 | Constant catalogue concrete file paths | `src/CLAUDE.md` (names follow Spec #20 convention; paths depend on project structure) |
 
-`src/CLAUDE.md` **MUST NOT** be created until all 20 Stage 0 specs are approved and
-Stage 1 coding begins (root `CLAUDE.md` — "Deferred: `src/CLAUDE.md`"). At that point,
-the author of `src/CLAUDE.md` cites Spec #20 as the source for every convention it
-concretises, establishing the Spec #20 ↔ `src/CLAUDE.md` cite-chain.
+The original creation gate for `src/CLAUDE.md` is historical and has been satisfied;
+the file now exists. It remains the concrete-path/build-command guide and cites Spec #20
+for conventions. Architecture-governance registries stay under
+`docs/tracking/architecture-governance/` and do not move into `src/CLAUDE.md`.
 
 ---
 
@@ -350,6 +360,7 @@ concretises, establishing the Spec #20 ↔ `src/CLAUDE.md` cite-chain.
 | 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H3 + H5 + H6 + H7.** H3: §4.1's "Dependency graph shape" ASCII block DELETED — a retired rendering with three edges the `.asmdef` graph contains in neither direction (`agent-movement`↔`ball-physics`, `pass-mechanics`↔`shot-mechanics`, `shot-mechanics`↔`first-touch`; re-verified August 18, 2026 by reading `src/*/[a-z]*.asmdef` references), a "(Mechanics layer)" label on three assemblies §3.5.2 seats in tier 1 Physics, unlabelled mixed `◄──`/`──►` arrows (the `ERR-020-003` ambiguity), and prose that under-scoped the ban to "Mechanics-, AI-, or UI-layer" — six tiers short. §3.5.2 is named the single rendering; the prose restated as the FR-CS-046 upward-reference ban + FR-CS-046a intra-tier permission, with `tools/assembly-tier-check.py` (CI-wired) named as the mechanical check. H5: the tree's `code-standards/` leaf no longer claims "empty at Stage 0" — no `src/code-standards/` folder exists at all (verified: `ls -d src/code-standards` fails), and the leaf now says so. H6: the §4.2 per-tag `#region` ordering gains the `[CROSS-PENDING]` slot (position 4, directly after the `Cross` region it promotes into — a promotion is a one-region move), extending the list 5 → 6. H7: the ERR-020-004 carve-out gains the Storage-class note — it had cited `DisciplineConstants.CardKindYellow` (a `public const byte`) as "a compliant mirror" while FR-CS-022/§3.2.3 required `public static readonly`; the §3.2.3 const-mirror carve-out resolves the contradiction in the spec and the paragraph now cites it. | — |
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings H2 + H3.** H2: §4.1 asserted "an illegal dependency is a build error, not just a review finding" — false, and contradicting §3.5.2's "adopting the order changed nothing that compiles", written the same day. Unity rejects a reference CYCLE, but a non-cyclic UPWARD reference compiles cleanly — which is exactly why `ERR-020-002` drifted for fourteen months and why `tools/assembly-tier-check.py` had to be written and CI-wired. The clause is deleted, the real enforcement stated (the tool, plus Unity's cycle rejection), and §3.5.2 cross-referenced so the two now agree. H3: "on every push" corrected to `ci.yml`'s real triggers — `branches: [main]` on both `push` and `pull_request`, so a push to a topic branch runs nothing. §3.5.2 had corrected the identical phrase about the identical tool the previous day. | — |
 | 1.3 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding M1.** `ERR-020-007` was cited nowhere in the spec it patches — the Storage-class note said only "round-6 finding H7". Now cites the id directly. | — |
+| 1.4 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Corrects the live `.asmdef` claim: acyclic upward references can compile and are blocked by `tools/assembly-tier-check.py`, not by ordinary assembly resolution. §4.4 distinguishes Governance records from runtime interfaces and preserves the no-runtime-dependency boundary; §4.5 is synchronized to the existing `src/CLAUDE.md`. | PENDING — A3.4 |
 
 ---
 

@@ -6,20 +6,15 @@ before mid-level and detailed outlines are drafted. Defines *what* will be
 written, not yet *how*.
 
 **Created:** May 6, 2026, 6:30 PM PST
-**Updated:** May 6, 2026, 6:30 PM PST
-**Version:** 1.0
-**Status:** DRAFT — Awaiting mid-level expansion
+**Updated:** September 2, 2026
+**Version:** 1.1
+**Status:** DRAFT — A3.1b synchronized; normative section files control
 **Specification Number:** 20 of 20 (Stage 0)
 **Estimated Effort:** ~14 hours (lighter than physics specs; no formula
 derivations or numerical verification)
-**Dependencies (informational, not gating):** Root `CLAUDE.md` (authoritative
-for project invariants), `docs/planning/development-best-practices.md`
-(allocation budgets and code quality patterns).
-**Downstream:** `src/CLAUDE.md` (deferred; created when coding begins),
-all Stage 1+ implementation code.
-**Adjacency note:** Has zero spec dependencies on Specs #1–#19. Codifies C#
-conventions, constant-tag rules, file naming, and dependency-direction
-principles that apply to all subsequent implementation.
+**Dependencies:** Root `CLAUDE.md` (project invariants), `docs/planning/development-best-practices.md` (performance guidance), Project Architecture Governance (architecture property/review/evidence authority), and Spec #19 for executable proof/gate mechanics used by the A3 amendment.
+**Downstream:** existing `src/CLAUDE.md`, architecture-governance registries/tooling, and implementation code.
+**Adjacency note:** No physics/AI domain rule is imported from Specs #1–#18. The A3 architecture amendment deliberately depends on Governance and delegates proof/gate mechanics to Spec #19.
 
 ---
 
@@ -33,9 +28,9 @@ points at.
 
 The spec governs:
 - C# style (naming, layout, language features in/out)
-- Constant declaration and tagging (`[GT] / [EST] / [FIXED] / [DERIVED] / [CROSS]`)
+- Constant declaration and tagging (`[GT] / [EST] / [FIXED] / [DERIVED] / [CROSS] / [CROSS-PENDING]`)
 - File and folder naming inside `src/`
-- Module dependency direction and interface design
+- Module dependency direction, integration ownership/lifecycle, activation surfaces, bypasses and interface design
 - Determinism rules in code (no `System.Random`, no `DateTime.Now`,
   SplitMix64 RNG, masked intermediate multiplication)
 - Allocation discipline in the game loop (zero-alloc, struct-based)
@@ -53,8 +48,10 @@ root `CLAUDE.md`. This is a hard rule (see Authority Matrix in §1).
 | Rule class                              | Authoritative source       | Spec #20 role          |
 |-----------------------------------------|----------------------------|------------------------|
 | Coordinate system, fatigue convention   | Ball Physics #1, CLAUDE.md | Cite, do not restate   |
-| Constant tags (`[GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]`) | Root `CLAUDE.md`           | Cite + give code-level binding rules |
+| Constant tags (`[GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]/[CROSS-PENDING]`) | Root `CLAUDE.md`           | Cite + give code-level binding rules |
 | Interface principle (both sides specified) | Root `CLAUDE.md`           | Cite + give file-level binding rules |
+| Architecture property/review/evidence model | Project Architecture Governance | Cite; bind to code/integration surfaces without duplicating it |
+| Executable proof + gate mechanics | Spec #19 | Delegate; consume evidence, do not redefine |
 | Determinism rules (no `Random`, etc.)   | Root `CLAUDE.md`           | Cite + give lint-equivalent rules |
 | Stage 0 numeric type (`float`)          | Root `CLAUDE.md`, Spec #9  | Cite, do not restate   |
 | C# style, naming, layout                | **Spec #20**               | Authoritative          |
@@ -81,7 +78,8 @@ root `CLAUDE.md`. This is a hard rule (see Authority Matrix in §1).
   3.3 Allocation discipline (zero-alloc game loop, ref-passed structs,
       LINQ exclusions, boxing avoidance)
   3.4 Determinism in code (RNG, time sources, math intrinsics)
-  3.5 Dependency direction and interface design
+  3.5 Dependency direction, interface design, integration ownership/lifecycle,
+      closed runtime surfaces, bypasses, activation and static initialization
   3.6 Documentation: file header template, version-history block,
       cross-reference comment style
   3.7 Stage 0 numeric type (`float`) — pointer to Spec #9 for Fixed64
@@ -89,14 +87,16 @@ root `CLAUDE.md`. This is a hard rule (see Authority Matrix in §1).
   4.1 `src/` folder layout shape (one assembly per concern, dependency arrows)
   4.2 Constant catalogue convention (one per spec + project-wide root)
   4.3 File/module boundary rules
-  4.4 Pointer to `src/CLAUDE.md` for concrete paths once coding begins
+  4.4 Governance integration records are tooling contracts, not runtime interfaces
+  4.5 Pointer to the existing `src/CLAUDE.md` for concrete paths/build guidance
 - **Section 5 — Conformance Verification.**
   5.1 Stage 0 verification: manual review against this spec
   5.2 Stage 0+1 transition: tool selection (Roslyn analyzers, .editorconfig,
       `dotnet format`, `BannedSymbols.txt`)
   5.3 Threshold policy (no values pinned at Stage 0; deferred to first real
       code in Stage 1)
-  5.4 Review-time checklist
+  5.4 Review-time checklist (including Architecture Integration & Activation)
+  5.5 FR-to-verification traceability; pending A4 facts remain report-only
 - **Section 6 — Code Performance Rules.** *(Re-purposed from "Performance
   Analysis" template slot.)* Allocation budgets code must obey, hot-path
   rules, profiling hooks required in game-loop code. **Not** a performance
@@ -106,10 +106,7 @@ root `CLAUDE.md`. This is a hard rule (see Authority Matrix in §1).
   scope; multiplayer-era additions (Fixed64 enforcement when Spec #9
   activates in Stage 5+); permanent exclusions (style debates the spec
   refuses to relitigate).
-- **Section 8 — References.** Source register: root `CLAUDE.md`,
-  `development-best-practices.md`, Microsoft C# coding conventions, Unity
-  scripting guidelines, MSDN Roslyn analyzer reference. Cross-spec
-  citation audit (this spec is cited *by*, not citing *to*, physics specs).
+- **Section 8 — References.** Source register includes root `CLAUDE.md`, `development-best-practices.md`, Project Architecture Governance, Spec #19, Microsoft C# conventions, Unity performance guidance, RFC 2119 and Roslyn docs. Cross-spec audit distinguishes architecture-governance dependencies from physics/AI domain rules.
   Constant provenance summary (Spec #20 declares no physical constants;
   tags listed are governance metadata, not values).
 - **Section 9 — Approval Checklist.** Standard 4-block checklist with
@@ -123,6 +120,8 @@ root `CLAUDE.md`. This is a hard rule (see Authority Matrix in §1).
     becomes `BannedSymbols.txt` source at Stage 1).
   - Appendix E — Glossary (only terms specific to Spec #20; physics terms
     cited from their owning spec).
+  - Appendix F — Architecture-governance record examples (selectors, contracts,
+    closed runtime surfaces and proof/dependency examples).
 
 > **Template-slot reconciliation note (§3 / §5 / §6).** The CLAUDE.md
 > 9-section template was authored for physics/AI specs. For a meta-spec,
@@ -185,3 +184,4 @@ root `CLAUDE.md`. This is a hard rule (see Authority Matrix in §1).
 | 0.1     | (pre-May 2026) | Claude Code | Initial 9-line section list (no metadata, no review).                 |
 | 0.2     | May 6, 2026    | Claude Code | Adversarial review appended (6H / 5M / 2L findings).                  |
 | 1.0     | May 6, 2026    | Claude Code | Metadata header, Authority Matrix, re-mapped sections, all H findings resolved, M/L findings carried forward as drafting commitments. Mid-level outline begins next. |
+| 1.1     | September 2, 2026 | Codex | A3.1b synchronization: Governance/#19 authority boundary, FR-CS-074–081 architecture scope, existing `src/CLAUDE.md`, §5 architecture verification, and Appendix F reflected. Historical May planning decisions remain intact. |
