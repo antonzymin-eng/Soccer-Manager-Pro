@@ -14,10 +14,10 @@ authored mechanically.
 
 **Created:** May 6, 2026, 8:50 PM PST
 **Updated:** September 2, 2026
-**Version:** 1.4
-**Status:** DRAFT — A3.1b synchronized; normative section files control
-**Companion documents:** `outline.md` (high-level v1.0),
-`outline-mid.md` (mid-level v1.2).
+**Version:** 1.5
+**Status:** DRAFT — A3.1b post-merge corrections synchronized; normative section files control
+**Companion documents:** `outline.md` (high-level v1.1),
+`outline-mid.md` (mid-level v1.4).
 
 ---
 
@@ -73,7 +73,7 @@ Six numbered decisions, each with: statement (1 sentence), rationale
   on (e.g.) constant tag definitions; bug class previously seen in
   Pass Mechanics ERR-class fixes.
 - **KD-2 — Authority Matrix.** Three-way partition (root `CLAUDE.md`,
-  Spec #20, future `src/CLAUDE.md`) over the rule space. Rationale:
+  Spec #20, existing `src/CLAUDE.md`) over the rule space. Rationale:
   every rule must have exactly one owner; the matrix names the owner.
   Full table reproduced here (~12 rows from `outline.md`).
 - **KD-3 — Template-slot reconciliation.** §3 holds rules in lieu of
@@ -81,9 +81,9 @@ Six numbered decisions, each with: statement (1 sentence), rationale
   *code* performance rules in lieu of complexity analysis. Rationale:
   preserves cross-spec section-number conventions while accommodating
   meta-spec content.
-- **KD-4 — Stage 0 verification = manual review.** Tooling deferred to
-  Stage 0+1 transition. Rationale: no source code exists at Stage 0;
-  empirical baselines impossible.
+- **KD-4 — Verification evolves with repository state.** Manual review is the
+  Stage 0 baseline; existing repository tooling is used where live, while custom
+  Spec #20 analyzers/baselines remain Stage 0+1 deliverables.
 - **KD-5 — No numeric lint thresholds at Stage 0.** All thresholds
   (cyclomatic complexity, file length, method length, allocation count)
   deferred to first real code (D1). Rationale: pre-code thresholds are
@@ -98,14 +98,12 @@ Six numbered decisions, each with: statement (1 sentence), rationale
 **Subsection target length:** ~25 lines.
 
 **Content:**
-- Upstream (substantive): `CLAUDE.md`, `development-best-practices.md`.
+- Upstream (substantive): root `CLAUDE.md`, `development-best-practices.md`, Project Architecture Governance for FR-CS-074–081, and Spec #19 for executable proof/bounded-substitute/gate mechanics consumed by those rules.
 - Upstream (consulted at coding-start): `certification-platform.md`
-  (placeholder during spec drafting).
-- Downstream: every Stage 1+ source file; future `src/CLAUDE.md`.
-- Pointer-only references: Spec #9 (Fixed64), Spec #19 (Testing).
-- No spec-level dependency on Specs #1–#19 for substantive rules.
-- One-paragraph note: this spec can be approved before Stage 0
-  implementation begins; activation of CI gates is gated on Stage 1.
+  (placeholder during original spec drafting; current pins are consumed where applicable).
+- Downstream: every Stage 1+ source file and existing `src/CLAUDE.md`.
+- Pointer-only reference: Spec #9 (Fixed64).
+- One-paragraph note: A3 reapproval and later A4/A8 evidence/enforcement activation are separate gates; Spec #20 owns the code/integration rules while Governance and Spec #19 retain their upstream decision/proof authority.
 
 ### 1.5 Version History
 
@@ -295,8 +293,8 @@ Standard table (5 columns: Version | Date | Author | Notes | Reviewer).
 
 #### 2.2.9 Architecture Integration & Activation — FR-CS-074 … FR-CS-081 (8 FRs)
 
-- FR-CS-074: durable component identity and canonical selector binding. *MUST*. Source: §3.5.6.
-- FR-CS-075: applicable runtime-bearing surfaces/components are classified and integration-owned. *MUST*. Source: §3.5.6–§3.5.7.
+- FR-CS-074: runtime-bearing components whose correctness depends on activation have an explicit integration owner, exact integration point and orthogonal activation state; durable identity/canonical selector binding supports that record. *MUST*. Source: §3.5.6.
+- FR-CS-075: every production host/composition root in the approved runtime discovery universe is classified and mechanically accounted for. *MUST*. Source: §3.5.6–§3.5.7.
 - FR-CS-076: integration contract records construction/activation/update/teardown ownership. *MUST*. Source: §3.5.6.
 - FR-CS-077: alternate hosts/testhosts preserve applicable invariants or approved surface-specific divergence. *MUST*. Source: §3.5.7.
 - FR-CS-078: bypass claims may block only inside a mechanically closed discovery universe. *MUST*. Source: §3.5.7.
@@ -717,7 +715,7 @@ Standard table.
 
 **Subsection target length:** ~50 lines.
 
-Eight sources (full list from `outline-mid.md` v1.2 §8.1). Each row:
+Ten sources (S-01–S-10; current register in `section-8.md`). Each row:
 Source | URL or path | Retrieved date | Used by §.
 
 ### 8.2 Verification Notes
@@ -734,11 +732,10 @@ Source | URL or path | Retrieved date | Used by §.
 **Subsection target length:** ~25 lines.
 
 - Spec #20 cited *by*: every Stage 1+ source file (downstream).
-- Spec #20 cites *to* (substantive): none.
-- Pointer-only citations: Spec #9, Spec #19.
+- Spec #20 cites *to* (substantive): Project Architecture Governance (property/applicability/review/evidence authority) and Spec #19 (proof classes, bounded substitutes and gate evidence).
+- Pointer-only citation: Spec #9.
 - No `[CROSS]` constants imported.
-- `TBD-NORMATIVE` placeholders: none (this spec has no cross-spec
-  dependencies that would warrant the tag).
+- `TBD-NORMATIVE` placeholders: none; S-09/S-10 are registered substantive upstream sources, not unresolved placeholders.
 
 ### 8.4 Constant Provenance Summary
 
@@ -906,3 +903,4 @@ enforcement activation.
 | 1.2     | May 6, 2026 | Claude Code | Self-critique pass 2: §3.7 (Numeric Type Discipline) had no FR rows; added FR-CS-071 / FR-CS-072 / FR-CS-073 as new partition §2.2.8; total FR count 70 → 73; FR Table Footer renumbered to §2.2.9; FR-CS-070 (`ProfilerMarker`) FR text expanded to match §6.3 wording; §3.7 subsection annotated with FR coverage; §5.5 row count and §9.1 / §9.2 totals updated to 73; §5.4 coverage mapping made explicit. |
 | 1.3     | May 6, 2026 | Claude Code | Self-critique pass 3: FR-CS-072 phrasing aligned with FR-CS-040 RFC 2119 pattern (MUST NOT with overrideable conditions, not invented "MUST (override-with-justification)" level). No outstanding self-critique findings. Detailed outline ready for section-file authoring. |
 | 1.4     | September 2, 2026 | Codex | A3.1b synchronization: 81-FR partition with FR-CS-074–081, §3.5.6–§3.5.7 architecture mechanics, single ten-tier arrow authority, eight §5.4 categories / 83 traceability rows, Appendix F, and report-only A4 boundary. Historical 70→73 record preserved. |
+| 1.5     | September 2, 2026 | Codex | Post-merge Codex-review correction: synchronizes live authority/dependency text to existing `src/CLAUDE.md`, Governance and substantive Spec #19 ownership; corrects FR-CS-074/075 mapping; updates §8 to ten sources with only Spec #9 pointer-only. |
