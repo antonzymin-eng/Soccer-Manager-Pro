@@ -1,7 +1,10 @@
 # Testing Strategy & Framework Specification #19 — Section 1: Purpose & Scope
 
 **Created:** May 12, 2026
-**Last Updated:** May 15, 2026 (v1.0.1 patch: §1.4 upstream-block updated — #16 APPROVED Tier 2 May 14; #18 IN REVIEW v0.3 May 14; #19 `TBD-NORMATIVE` sweep landed)
+**Last Updated:** September 3, 2026
+**Version:** 0.3
+**Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
 **Purpose:** Establishes what Spec #19 governs, what it excludes, the
 ten cross-cutting key decisions (KD-1 … KD-10) that bind the rest of
 the document, the upstream / downstream contracts, and the version
@@ -45,6 +48,13 @@ each subsystem spec's §5. Its scope is:
 - **Coverage and flake reporting.** Per-tier coverage targets bound to
   #16 §1.1.1 tier classification (KD-9), and the flake-detection /
   quarantine / eviction rules (§3.7). All Stage-gated per KD-5.
+- **Architecture proof and evidence integration.** Spec #19 owns the
+  reusable proof-artifact contract, execution truth, bounded-substitute
+  mechanics, freshness/revalidation, and architecture/evidence gate
+  consumption defined by FR-TS-086 … 097, §3.11, Appendix G, §5.6,
+  and §6.2. Governance owns the architectural property/applicability/
+  convergence decision layer; Spec #20 owns integration and activation
+  declarations. This amendment does not activate the new gate.
 
 **Applicability.**
 
@@ -71,6 +81,13 @@ Each line below cites the owning document.
 - **Numeric correctness of physics / AI formulas** → owning specs
   (#1–#8) §3.
 - **C# code style and banned-API rules** → Spec #20 (Code Standards).
+- **Architectural-property admission, applicability authority, property
+  exceptions, finding disposition, and convergence semantics** →
+  `docs/planning/project-architecture-governance.md` v0.10.
+- **Runtime-surface identity, integration ownership, lifecycle/host
+  declarations, activation state, and disable anchors** → Spec #20
+  FR-CS-074 … 081 and §3.5. Spec #19 consumes those declarations for
+  proof; it does not redefine them.
 - **Fixed64 numeric-library tests** → Spec #9 §5.
 - **CI server choice, build commands, IDE configuration** →
   `src/CLAUDE.md` (deferred until coding begins).
@@ -178,8 +195,13 @@ status changes.
   `TBD-NORMATIVE` citation tags swept in #19 v1.0.1 (May 15, 2026)
   against #18's now-stable v0.3 surface; the cited §4 / §7 / §3.5
   perf-gate authorities are firm.
-- Spec #20 (Code Standards) §3.9.4 — test-fixture rule carve-outs.
-  **Status: `APPROVED` (May 11, 2026).**
+- Project Architecture Governance v0.10 — architectural-property,
+  applicability, exception, evidence-trigger, disposition, and
+  convergence authority. **Status: approved under A0.**
+- Spec #20 (Code Standards) — test-fixture carve-outs plus the A3
+  integration/activation ownership contract (FR-CS-074 … 081; §3.5;
+  Appendix F). The May 11 approved baseline remains operative while
+  its coordinated A3 amendment awaits A3.4 reapproval.
 
 **Bidirectional sequencing with #16 (resolved May 15, 2026).**
 
@@ -197,18 +219,19 @@ status changes.
 **Downstream.**
 
 - Every per-spec §5 (consumes Spec #19 taxonomy and Appendix C schema).
-- `src/CLAUDE.md` (consumes test-runner / harness invocation, Stage 1).
-- CI configuration files (Stage 1+).
+- `src/CLAUDE.md` (consumes test-runner / harness invocation).
+- `.github/workflows/ci.yml` and `tools/dotnet-ci/` (current CI /
+  NUnit runner integration; D1/D4 are resolved repository facts).
 
 **Cross-spec constants imported.** None. Spec #19 imports tier
 *vocabulary* from #16 §1.1.1 by reference (KD-1); no `[CROSS]`
 constant declarations.
 
-**Stage 0 host platform pin.** Test execution requires the pins named
-in `docs/tracking/certification-platform.md`. Drafting Spec #19 does
-not require those pins to be filled in; first CI activation (Stage 0+1
-transition) does. Per CLAUDE.md OPEN ISSUES, that file is currently a
-placeholder.
+**Certification platform pin.** Determinism certification uses
+`docs/tracking/certification-platform.md`, currently **PINNED** after
+the July 19, 2026 certification against Windows 11 / Unity 6000.4.9f1
+(DX11) / Mono. The Linux `tools/dotnet-ci` gate is a separate
+non-certifying compile/test execution surface.
 
 ## 1.5 Version History
 
@@ -216,3 +239,4 @@ placeholder.
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. SPEC_INDEX flip to `IN REVIEW` is **author-driven**, not review-driven: it reflects "draft complete, awaiting lead-developer sign-off" per CLAUDE.md status definition. The §9 approval-checklist rows have not been walked. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique fixes (16 H/M/L findings). #16 section-number sweep: §1.3.1 → §1.1.1 (tier classification), §7 → §5 (regression suite), §5 → §3.2.4.1 (canonical schema), §8 → deleted (no trace channels in current #16). KD-1 / KD-2 / KD-3 narratives tightened; status / sequencing text moved out of §1.3 into §1.4. ERR-005-class fabrication terminology corrected (no ERR-005 binding; ERR-019 namespace used). M3 IFixtureValidator deferral judgment made explicit. M4 storage-layout reconciliation. M5 §6.4.2 Stage-gating. L1–L3 [GT] tags. L4 property-naming reconciliation. L5–L8 cross-reference and policy-placement fixes. |
+| 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Adds the Governance / Spec #20 ownership boundary for FR-TS-086 … 097, points scope to §3.11 / Appendix G / §5.6 / §6.2, and records that the architecture/evidence gate remains unactivated pending A3.4/A4/A8. Approved May 15 baseline remains in force; `SPEC_INDEX.md` unchanged. The live-repo pass also records D1=NUnit, D4=GitHub Actions, and the July 19 certified platform pin without changing enforcement. |

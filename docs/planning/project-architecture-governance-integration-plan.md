@@ -2,9 +2,9 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.36\
+**Version:** 0.37\
 **Created:** August 27, 2026  
-**Last Updated:** September 2, 2026\
+**Last Updated:** September 3, 2026\
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
 **Primary downstream specifications:** Testing Strategy & Framework #19; Code Standards & Style Guide #20  
 **Related project authorities:** Master Development Plan; adversarial-review process; root and src agent guides  
@@ -709,9 +709,9 @@ FR-TS-093 remains pointer-style; Governance owns convergence, #19 consumes it.
 
 ## 7.3 Canonical proof appendix
 
-`appendices.md` publishes §3.7's schema and proof-class closure semantics before proof implementation. It defines pass/fail/N/A/bounded results; subject-versus-provenance identity; stable selector binding; execution states; N/A approval; exact failure-injection/mutation identity; scoped inventory/asmdef/config/tool binding; mechanically derived dependency closure; revalidation; and bounded uncertainty.
+`appendices.md` publishes §3.11's schema-shaped proof contract and proof-class closure semantics before proof implementation. It defines pass/fail/N/A/bounded results; subject-versus-provenance identity; stable selector binding; execution states; N/A approval; exact failure-injection/mutation identity; scoped inventory/asmdef/config/tool binding; mechanically derived dependency closure; revalidation; and bounded uncertainty.
 
-Examples MUST include a committed reusable artifact whose freshness does not depend on its own containing Git tree, an unrelated-change case that remains current, a relevant transitive dependency change that stales proof, and a required execution whose runner is skipped/excluded and therefore does not satisfy the obligation.
+Examples MUST include a committed reusable artifact whose freshness does not depend on its own containing Git tree, an unrelated-change case that remains current, a relevant transitive dependency change that stales proof, and a required execution whose runner is skipped/excluded and therefore does not satisfy the obligation. Example-only requirement/property identifiers SHOULD use an explicit reserved/example namespace rather than a live project FR identifier to reduce copy-paste ambiguity.
 
 ## 7.4 Exhaustive #19 amendment matrix
 
@@ -742,7 +742,7 @@ Owning placement does not imply execution. Every required executable proof resol
 
 The architecture gate MUST mechanically reject intersection between its required-test set and active quarantine/exclusion sets. Where possible it also executes the resolved required test set directly; otherwise it consumes mandatory upstream runner results with exact test identity/result binding.
 
-Targeted governance mutation at Stage 0+1 does not depend on project-wide Stryker activation. FR-TS-091 is satisfied by the exact reproducible mutant protocol in §3.7.3; the broader Stryker.NET program may remain deferred under #19's existing Stage-1 tooling decision.
+Targeted governance mutation at Stage 0+1 does not depend on project-wide Stryker activation. FR-TS-091 is satisfied by the exact reproducible mutant protocol in §3.11.9; the broader Stryker.NET program may remain deferred under #19's existing Stage-1 tooling decision.
 
 ---
 
@@ -1271,6 +1271,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.37 | September 3, 2026 | — | **A3.2b Testing Strategy supporting-surface synchronization.** Corrects §7.3/§7.5 proof pointers and reserves example-only IDs; synchronizes §1/§4–§9, both outlines, FR-to-verification through 097, architecture-proof negative fixtures, four-gate topology, owning-runner/result binding, Governance convergence, exception boundaries, and tracking. Live-repository audit closes only D1 (NUnit 3.14.0 / NUnit3TestAdapter 4.6.0 / `dotnet test`) and D4 (GitHub Actions); D2/D3/D5–D8 remain deferred. The May 15 #19 baseline remains operative; A3.4 reapproval and A8 enforcement remain pending. No schema, executable semantics, runtime code, workflow, required-status, or `SPEC_INDEX.md` state changed. |
 | 0.36 | September 2, 2026 | — | **A3.2a review correction.** Records FR-TS-063 as an authorized consistency amendment in §7.2/§7.4: quarantine suppresses only an eligible functional-gate blocking effect and cannot satisfy or waive a separately required architecture-proof obligation. No new quarantine mechanism, proof semantics, schema, workflow, or enforcement is introduced. |
 | 0.35 | September 2, 2026 | — | **A3.1a automated-review correction.** Records that frozen schema `1.0.0` / reference semantics `2.1.0` validate integration-contract shape but do not resolve ownership/path strings or enforce `na_fields` pairing. Code Standards §3.5.6 now defines the exact binding vocabulary and `not-applicable` representation; A4 owns executable cross-registry/path resolution, sentinel pairing, and discriminating failure fixtures before either surface may support a Machine blocker. No schema, executable semantics, workflow, or enforcement changed. |
 | 0.34 | September 2, 2026 | — | **A3.1a review correction.** Aligns proposed FR-CS-078 with Governance FR-AG-025: known activation bypasses are prohibited or explicitly **classified**, not narrowed without rationale to only "supported." The downstream draft carries the same correction. No enforcement, schema, executable semantics, or runtime behavior changed. |

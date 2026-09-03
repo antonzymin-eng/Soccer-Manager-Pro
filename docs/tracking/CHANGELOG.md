@@ -12,7 +12,10 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A3.1b review corrections; CI consistency blocker removed.**
+> **Last Updated:** September 3, 2026 — **A3.2a/A3.2b Testing Strategy governance amendment draft synchronized; reapproval/enforcement still pending.**
+> A3.2a added FR-TS-086…097, §3.11 architecture proof/evidence mechanics, and Appendix G against the frozen A2 schema/reference semantics. A3.2b now synchronizes §1/§4–§9, both outlines, exception/coverage-exemption boundaries, FR-to-verification coverage through 097, the four-gate CI topology, owning-runner/result binding, Governance convergence consumption, targeted mutation, and approval-checklist draft evidence. A live-repository deferral audit closes only D1 (NUnit 3.14.0 + NUnit3TestAdapter 4.6.0, executed through `tools/dotnet-ci/run-gate.sh`) and D4 (GitHub Actions at `.github/workflows/ci.yml`); D2/D3/D5–D8 remain deferred. The integration plan is v0.37; its stale §7 proof/mutation pointers are corrected and Appendix-G example IDs are reserved/example-scoped. **No architecture/evidence required status is activated, no schema/executable semantics/runtime code/workflow is changed, and `SPEC_INDEX.md` remains untouched.** A3.4 still owns coordinated #19/#20 reapproval/status synchronization; A8 owns enforcement activation.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1b review corrections; CI consistency blocker removed.**
 > Follow-up to `d196324e`: repairs the stale maintained `section-5.md` pointer, C-03 arithmetic, C-06 Appendix-F expectation, duplicate §2.2.9 footer, six-tag outline residues, §8 source cadence/evidence wording, and all misplaced A3.1b version rows. `section-6.md` is restored to the approved v1.2 state because it had no A3 content change. The Roslyn `?view=visualstudio` target is retained after direct retrieval confirmed it is Microsoft's canonical target; unlike the old queryless URL, it is not matched by the repository's anchored ignore. `SPEC_INDEX.md` stays untouched pending A3.4. No runtime/code/schema/CI-enforcement change.
 >
 > **Last Updated (prior):** September 2, 2026 — **A3.1b Code Standards supporting surfaces synchronized; A3.4 still pending.**

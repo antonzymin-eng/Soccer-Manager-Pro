@@ -1,21 +1,38 @@
 # Testing Strategy & Framework Specification #19 — Outline
 
+**Last Updated:** September 3, 2026
+**Version:** 1.1
+**Status:** HISTORICAL OUTLINE — synchronized to A3.2b amendment draft; authoritative rules remain in the section files
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
+
 ## Purpose
-Define a comprehensive test framework that enforces correctness, determinism, and gameplay quality.
+Define the project-wide testing, verification, proof/evidence, CI-orchestration, and defect-governance framework without duplicating the authorities owned by Deterministic Simulation #16, Performance Optimization #18, Code Standards #20, or Project Architecture Governance.
 
 ## Scope
-Test pyramid ratios, deterministic replay workflows, scenario architecture, fuzz/property testing, and triage.
+Test taxonomy and pyramid ratios; deterministic-suite consumption; scenario and property/fuzz architecture; coverage and flake policy; architecture proof/evidence integration; CI gate composition; and defect triage.
 
 ## Section Plan
-- Section 1 — Testing pyramid targets (unit/integration/simulation/regression proportions).
-- Section 2 — Deterministic replay tests and golden-output workflow.
-- Section 3 — Scenario-library architecture for tactical and physics validations.
-- Section 4 — Property and fuzz testing for edge-case discovery.
-- Section 5 — Quality gates for spec-complete and implementation-ready states.
-- Section 6 — Tooling standards and CI orchestration.
-- Section 7 — Failure triage and defect-lifecycle process.
-- Section 8 — Coverage and stability reporting expectations.
-- Section 9 — Approval checklist.
+- Section 1 — Purpose, scope, key decisions, and authority boundaries.
+- Section 2 — Functional requirement catalogue FR-TS-001 … 097 and conformance/failure modes.
+- Section 3 — Rule mechanics, including §3.11 architecture proof/evidence integration and §3.12 version history.
+- Section 4 — Test-harness architecture, owning-test placement, and proof-record integration boundary.
+- Section 5 — Self-conformance verification, FR-to-verification coverage through 097, and architecture-proof negative fixtures.
+- Section 6 — CI orchestration and triage, including the four-gate topology; architecture/evidence enforcement remains inactive until A8.
+- Section 7 — Future extensions, deferred decisions, and exception/coverage-exemption boundaries.
+- Section 8 — References, Governance/#20 traceability, and citation audit.
+- Section 9 — Approval checklist; May 15 approved baseline remains operative until coordinated A3.4 reapproval.
+- Appendix G — Canonical architecture proof-artifact/closure contract and examples.
+
+## A3.2b Synchronization Note
+
+The adversarial review below is the historical May 6, 2026 review of the original outline. Its then-current repository/status premises are retained as historical evidence and MUST NOT be read as current project state. A3.2b synchronizes the active outline above to the current section-file structure; it does not rewrite the historical review record or activate enforcement.
+
+## Version History
+
+| Version | Date | Author | Notes |
+|---|---|---|---|
+| 1.0 | May 6, 2026 | — | Original high-level outline and embedded adversarial review; later expanded by `outline-detailed.md` v1.0/v1.1. |
+| 1.1 | September 3, 2026 | — | **A3.2b synchronization.** Replaces the obsolete section map with the current 97-FR / §3.11 proof / four-gate / A3.4+A8 activation structure while preserving the May 6 adversarial review below as historical evidence. |
 - Appendices — Test-data governance and flaky-test policy.
 
 ---
