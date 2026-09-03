@@ -8,8 +8,8 @@ code blocks, or rationale prose — those land in the detailed outline.
 
 **Created:** May 6, 2026, 7:15 PM PST
 **Updated:** September 2, 2026
-**Version:** 1.4
-**Status:** DRAFT — A3.1b synchronized; normative section files control
+**Version:** 1.5
+**Status:** DRAFT — A3.1b post-merge corrections synchronized; normative section files control
 **Companion documents:** `outline.md` (high-level), `outline-detailed.md`
 (to be drafted after this outline is validated).
 
@@ -49,8 +49,9 @@ code blocks, or rationale prose — those land in the detailed outline.
 - **KD-3** — Template-slot reconciliation (§3 holds rules in lieu of
   formulas; §5 holds conformance in lieu of numerical tests; §6 holds
   *code* performance rules in lieu of complexity analysis).
-- **KD-4** — Stage 0 verification is manual review; tooling is a
-  Stage 0+1 transition deliverable.
+- **KD-4** — Verification evolves with repository state: manual review is
+  the baseline, live repository tooling is not optional, and the custom
+  Spec #20 analyzer set plus its baselines stay Stage 0+1 deliverables.
 - **KD-5** — No numeric lint thresholds at Stage 0 (deferral D1).
 - **KD-6** — Single-source-of-truth lists. The banned/required API list
   lives only in Appendix D; §3 sections cite Appendix D entries by
@@ -582,3 +583,4 @@ code blocks, or rationale prose — those land in the detailed outline.
 | 1.2     | May 6, 2026 | Claude Code | Self-critique pass 2: §1.1 applicability extended to determinism-only Python tooling subset; §1.4 reconciled with §3.1.3 on `certification-platform.md` gating; §3.3-vs-§6.1 disambiguated (discipline-vs-budget); §3.4.3 split into APIs vs patterns; §3.4.5 / §3.7.5 placeholder strikethroughs removed; §3.9.4 split by test type (determinism-harness vs general vs property-based); Appendix D reflection re-categorized to alloc-hot-path; Appendix D split det-required into APIs and patterns; Appendix D `Stopwatch.GetTimestamp` scoped to game-state assemblies. No outstanding self-critique findings. |
 | 1.3     | May 6, 2026 | Claude Code | Back-alignment with detailed outline v1.2: §2.2 FR partition extended with FR-CS-071..073 (Numeric Type Discipline) — §3.7 had been substantive but FR-less. Total FR count 70 → 73. No other content changes; mid-level outline remains the section-by-section subsection list. |
 | 1.4     | September 2, 2026 | Codex | A3.1b synchronization: current 81-FR partition, §3.5.6–§3.5.7 architecture mechanics, eight §5.4 categories, Governance/#19 authority boundary, existing `src/CLAUDE.md`, and Appendix F. Historical 70→73 record preserved. |
+| 1.5     | September 3, 2026 | Claude Code | Post-merge review correction: KD-4 synchronized with the restated normative rule in `section-1.md` v1.2 so all three outline tiers and the section file agree that live repository tooling is not optional. No FR, partition or subsection-list change. |

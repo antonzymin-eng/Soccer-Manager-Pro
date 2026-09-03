@@ -14,10 +14,10 @@ authored mechanically.
 
 **Created:** May 6, 2026, 8:50 PM PST
 **Updated:** September 2, 2026
-**Version:** 1.5
+**Version:** 1.6
 **Status:** DRAFT — A3.1b post-merge corrections synchronized; normative section files control
-**Companion documents:** `outline.md` (high-level v1.1),
-`outline-mid.md` (mid-level v1.4).
+**Companion documents:** `outline.md` (high-level v1.2),
+`outline-mid.md` (mid-level v1.5).
 
 ---
 
@@ -904,3 +904,4 @@ enforcement activation.
 | 1.3     | May 6, 2026 | Claude Code | Self-critique pass 3: FR-CS-072 phrasing aligned with FR-CS-040 RFC 2119 pattern (MUST NOT with overrideable conditions, not invented "MUST (override-with-justification)" level). No outstanding self-critique findings. Detailed outline ready for section-file authoring. |
 | 1.4     | September 2, 2026 | Codex | A3.1b synchronization: 81-FR partition with FR-CS-074–081, §3.5.6–§3.5.7 architecture mechanics, single ten-tier arrow authority, eight §5.4 categories / 83 traceability rows, Appendix F, and report-only A4 boundary. Historical 70→73 record preserved. |
 | 1.5     | September 2, 2026 | Codex | Post-merge Codex-review correction: synchronizes live authority/dependency text to existing `src/CLAUDE.md`, Governance and substantive Spec #19 ownership; corrects FR-CS-074/075 mapping; updates §8 to ten sources with only Spec #9 pointer-only. |
+| 1.6     | September 3, 2026 | Claude Code | Review-finding follow-up: v1.5 restated KD-4 here without touching the authoritative rule, so `section-1.md` v1.2 now carries the normative restatement and `outline-mid.md` v1.5 matches. Companion-version pins refreshed. No instruction, FR or section-structure change of its own. |

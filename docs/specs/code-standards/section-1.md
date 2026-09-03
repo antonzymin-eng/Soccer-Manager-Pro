@@ -7,8 +7,8 @@ owns, what it cites, and what is out of scope.
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.1
-**Status:** AMENDMENT DRAFT (A3.1b; approved v1.0.4 baseline remains in force)
+**Version:** 1.2
+**Status:** AMENDMENT DRAFT (A3.1b post-merge correction; approved v1.0.4 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 1
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.35, §6; A3.1b
@@ -190,19 +190,27 @@ whether the spec is complete.
 
 ---
 
-**KD-4 — Stage 0 verification is manual review.**
+**KD-4 — Verification evolves with repository state.**
 
-*Statement:* At Stage 0, conformance verification is performed by manual review against
-§2.2 FRs. No static-analysis tooling is required.
+*Statement:* Manual review against §2.2 FRs is the baseline conformance mechanism and
+remains mandatory. Repository tooling that is already live is *not* optional: where a
+check exists and runs, conformance is verified by that check. The custom Spec #20
+analyzer set, `.editorconfig` and `BannedSymbols.txt` do not yet exist and remain
+Stage 0+1 deliverables (§5.2), as do the numeric thresholds KD-5/D1 defer.
 
-*Rationale:* No source code exists at Stage 0. Empirical lint baselines (cyclomatic
-complexity, file length) cannot be established against non-existent code. Mandating CI
-gates before any code exists produces infrastructure with no calibration signal and
-arbitrary thresholds that will be violated or ignored on day one. The Stage 0+1
-transition is the correct moment to activate tooling (§5.2).
+*Rationale:* The original decision was written when no source code existed. It does now:
+§5.1 records 35 production assemblies and 947 `.cs` files, with `dotnet format
+whitespace --verify-no-changes` advisory and `tools/dotnet-ci/run-gate.sh` blocking on
+every push. Framing all tooling as deferred would license reviewers to treat live,
+blocking checks as optional. What genuinely remains absent is the custom analyzer set
+and the profiled baselines the thresholds need — mandating *those* before real
+calibration signal exists still produces arbitrary thresholds violated or ignored on
+day one, which is why KD-5/D1 stand unchanged.
 
-*Consequence-if-violated:* Arbitrary threshold values that immediately block legitimate
-code, degrading reviewer trust in the tooling from first use.
+*Consequence-if-violated:* Either arbitrary threshold values that immediately block
+legitimate code and degrade reviewer trust from first use, or — in the other direction —
+a reviewer reading "no tooling is required" and waving through a change that a live,
+blocking check would have caught.
 
 ---
 
@@ -261,8 +269,8 @@ rule and the enforced rule.
 
 **Downstream (every Stage 1+ source file depends on this spec):**
 - Every `.cs` file under `src/` cites Spec #20 in its file header (FR-CS-057).
-- The future `src/CLAUDE.md` will contain concrete paths and assembly definitions
-  derived from the shape conventions established in §4 of this spec.
+- The existing `src/CLAUDE.md` carries concrete paths and assembly definitions derived
+  from the shape conventions established in §4 of this spec.
 
 **Architecture-governance dependencies:**
 - `docs/planning/project-architecture-governance.md` is a substantive upstream authority
@@ -294,6 +302,7 @@ checks. Unsupported semantic claims remain report-only.
 | 1.0.3 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H6 (consequential).** §1's scope list said "the five tag types defined in root `CLAUDE.md`"; the root table holds six (`[CROSS-PENDING]` — see section-3.md v1.6 for the primary fix). Enumeration corrected to six; no other content change. | — |
 | 1.0.4 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding M3.** The 1.0.3 row above fixed §1's prose scope list but missed the §1.3 Authority Matrix row two sections later, which still enumerated five tags (`[GT]`/`[EST]`/`[FIXED]`/`[DERIVED]`/`[CROSS]`) — the same six-vs-five gap the 1.0.3 row exists to close, left standing in a second table. `[CROSS-PENDING]` added to the Authority Matrix row; no other content change. | — |
 | 1.1 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Extends scope/authority/dependency text to FR-CS-074–081, Project Architecture Governance, and Spec #19's proof/gate ownership; states that A3 approval is distinct from A4/A8 mechanical activation. No new runtime dependency or enforcement is introduced. | PENDING — A3.4 |
+| 1.2 | September 3, 2026 | Claude Code | **A3.1b post-merge review finding — normative KD-4 synchronized.** The post-merge correction restated KD-4 in `outline-detailed.md` only, leaving this file — the authoritative one — saying no source code exists, no static-analysis tooling is required, and tooling waits for the Stage 0+1 transition. Against §5.1's own recorded tree (35 production assemblies, 947 `.cs` files, `dotnet format` advisory and `tools/dotnet-ci/run-gate.sh` blocking on every push) that licensed a reviewer to treat a live blocking check as optional. KD-4 restated as "Verification evolves with repository state": manual review stays the baseline, live tooling is not optional, and the custom analyzer set / `.editorconfig` / `BannedSymbols.txt` plus KD-5/D1's numeric thresholds remain Stage 0+1 deliverables. §1.4's downstream bullet also corrected — `src/CLAUDE.md` exists and is no longer described as future work. No FR, count, authority-matrix row or scope boundary changed. | PENDING — A3.4 |
 
 ---
 

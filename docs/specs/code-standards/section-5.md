@@ -7,7 +7,7 @@ traceability table (§5.5), and the determinism/architecture verification handof
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.6
+**Version:** 1.7
 **Status:** AMENDMENT DRAFT (A3.1b post-merge correction; approved v1.4 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 5
@@ -469,7 +469,7 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-071 | Determinism — §5.4.4 item 8 | `CS20-DET-005` | E |
 | FR-CS-072 | Determinism — §5.4.4 item 8 | `CS20-DET-006` | E |
 | FR-CS-073 | Determinism — §5.4.4 item 8 | `BannedSymbols.txt` (`decimal`) | E |
-| FR-CS-074 | Architecture — §5.4.8 item 1 | A4 integration-owner / exact-point / activation-state resolver | – (report-only until A4/A8 activation) |
+| FR-CS-074 | Architecture — §5.4.8 item 1 | A4 canonical-selector / identity resolver + integration-owner / exact-point / activation-state resolver | – (report-only until A4/A8 activation) |
 | FR-CS-075 | Architecture — §5.4.8 item 2 | A4 production-root discovery + runtime-surface classification | – (report-only until A4/A8 activation) |
 | FR-CS-076 | Architecture — §5.4.8 item 2 | A4 integration-contract resolver | – (report-only until A4/A8 activation) |
 | FR-CS-077 | Architecture — §5.4.8 item 3 | A4 alternate-host discovery + Spec #19 proof | – (report-only until A4/A8 activation) |
@@ -526,6 +526,7 @@ belongs to Spec #16 and Spec #19.
 | 1.4 | September 2, 2026 | Claude Code | **A3.1a review correction — renumbering sweep completed here.** §5.5's coverage note cited "§2.2.9's partition Count column"; the A3.1a amendment draft gave §2.2.9 to the new Architecture Integration & Activation partition and moved the FR Table Footer, with its Count column, to §2.2.10 — the same defect `section-2.md` v1.6.1 repaired at its own site and did not sweep. Annotated rather than re-pointed: this file is APPROVED and describes the approved v1.5 baseline of `section-2.md`, where the Count column genuinely is §2.2.9, so the citation stands and the note now names the draft's renumbering and the slice that syncs it (A3.1b, which owns this file's FR-CS-074–081 rows and its stale 73/75 counts). Status stays APPROVED; no traceability row, count, severity, or checklist item changed. | PENDING — A3.4 |
 | 1.5 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** §5.4 gains the eighth Architecture Integration & Activation checklist category; §5.5 gains FR-CS-074–081, making 81 numbered FRs / 83 traceability rows including 046a/046b. Pending A4 cross-registry/discovery facts are explicitly report-only and Spec #19 retains proof/gate ownership. | PENDING — A3.4 |
 | 1.6 | September 2, 2026 | Codex | **A3.1b post-merge Codex-review correction.** Corrects the live §5.4 category count to eight and aligns FR-CS-074/075 review coverage with §2.2.9: FR-CS-074 now checks explicit integration owner, exact integration point and orthogonal activation state (while retaining durable identity/selector checks); FR-CS-075 now requires every production host/composition root in the approved discovery universe to be classified and mechanically accounted for. §5.5 routes those FRs to the corrected checklist items/A4 evidence. | PENDING — A3.4 |
+| 1.7 | September 3, 2026 | Claude Code | **Post-merge review finding — FR-CS-074 verification mechanism restored.** v1.6 replaced that row's "A4 canonical-selector / identity resolver" with the owner/point/state resolver rather than adding to it, while §5.4.8 item 1 still requires stable `component_id`, canonical selector, rename preservation and selector history, and §3.5.6 makes those identity mechanics mandatory with cross-registry selector resolution itself deferred to A4. Following the row as written would have left ambiguous selectors and identity-breaking renames with no planned verification path. Both resolvers are now named. Severity stays report-only until A4/A8 activation; no checklist item, FR text or count changed. | PENDING — A3.4 |
 
 ---
 
