@@ -73,7 +73,7 @@ grep -oP "\| FR-CS-\d+ \|" docs/specs/code-standards/section-2.md \
 - [x] Verified September 2, 2026 — current A3 amendment draft returns 81 numbered FR rows; synchronization evidence only, not A3.4 reapproval.
 - [x] Verified May 8, 2026 — returns 73. **⚠️ Historical evidence only (A3.1a):**
   this result certifies the approved v1.5 baseline of `section-2.md`, not the current
-  81-FR amendment draft. The check itself is open per the draft-invalidation note above.
+  81-FR amendment draft. The current amendment-status note above supersedes that former draft-invalidation state: the September 2 draft count check is now closed, while A3.4 reapproval remains pending.
 
 Partition spot-checks:
 
