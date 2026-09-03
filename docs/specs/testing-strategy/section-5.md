@@ -2,7 +2,7 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 3, 2026
-**Version:** 0.3
+**Version:** 0.4
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
 **Purpose:** Reflexive test plan: this section verifies Spec #19
@@ -55,7 +55,8 @@ per-spec §5 schema FRs (FR-TS-046 … 052).
 | FR-TS-068 … 074 | Schema only | Stage 0+1 | First fixture committed |
 | FR-TS-075 … 080 | Inactive | Stage 0+1 | CI provider pinned (D4) |
 | FR-TS-081 … 085 | **ACTIVE (Stage 0, partial)** | Stage 0+1 | Spec-defect class active now; implementation / test / determinism classes activate with code |
-| FR-TS-086 … 097 | **AMENDMENT DRAFT; non-blocking** | Stage 0+1 | A3.4 reapproval plus applicable A4 resolver/proof prerequisites and A8 architecture/evidence-gate activation |
+| FR-TS-086 … 092, 094 … 097 | **AMENDMENT DRAFT; non-blocking** | Stage 0+1 | A3.4 reapproval plus applicable A4 resolver/proof prerequisites and A8 architecture/evidence-gate activation |
+| FR-TS-093 | **AMENDMENT DRAFT; non-blocking** | **Stage 0** | A3.4 reapproval only. §2.2 assigns FR-TS-093 Stage 0: it is a review-mechanics requirement with no implementation prerequisite, so it acquires no A4 resolver/proof or A8 gate-activation condition. It remains non-blocking solely because the May 15, 2026 baseline stays operative until A3.4 |
 
 ## 5.3 Approval-Checklist Auditor (KD-6 Mechanics)
 
@@ -178,7 +179,7 @@ acknowledged degenerate (parallel to Spec #20 §5.5).
 | FR-TS-090 | Deliberate failure-injection proof | Owning executable test + exact perturbation identity | Stage 0+1 | Failure-injection proof artifact |
 | FR-TS-091 | Targeted mutation sensitivity | Targeted governance mutation protocol (§3.11.9), independent of project-wide D6 tooling | Stage 0+1 | Mutation proof with exact target/mutant/detector/restoration record |
 | FR-TS-092 | Closure/freshness revalidation | A2 mechanically derived closure + freshness / changed-proof decision | Stage 0+1 | Fresh/stale/proven-non-impact decision |
-| FR-TS-093 | Governance convergence consumption | Governance finding/run state; no severity-derived convergence | Stage 0+1 | Valid disposition/status + fresh-run convergence result |
+| FR-TS-093 | Governance convergence consumption | Governance finding/run state; no severity-derived convergence | **Stage 0** (on A3.4 reapproval) | Valid disposition/status + fresh-run convergence result |
 | FR-TS-094 | Required execution truth / exclusion intersection | Execution-state evaluator + required-test/exclusion-set check | Stage 0+1 | Blocking unsatisfied-state diagnostic or satisfied proof |
 | FR-TS-095 | Merge-critical governance-tool verification | Focused tool self-tests / negative fixtures per Governance FR-AG-036A/040C | Stage 0+1 | Tool-verification result bound to tool identity |
 | FR-TS-096 | Bounded-substitute validation | A2 execution truth + approved-limitation schema | Stage 0+1 | Valid bounded result only for eligible `excluded` / `unavailable` / `not-run` states |
@@ -240,4 +241,5 @@ own implementation/activation.
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Stage-gated activation table + traceability table populated. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5; #16 §1.3 → §1.1.1. L5 §5.6 / §5.7 cross-reference added. L6 column-semantics disambiguation added to §5.2 lead. |
+| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 1).** Splits FR-TS-093 out of the FR-TS-086 … 097 band in §5.2 and corrects its §5.6 activation cell: §2.2 assigns FR-TS-093 **Stage 0**, so the band's Stage 0+1 value contradicted the normative core and attached A4/A8 prerequisites the requirement does not have. Its Stage 0 *status* is unchanged — still AMENDMENT DRAFT and non-blocking until A3.4 reapproval, because the May 15, 2026 baseline remains operative; no requirement is activated here. |
 | 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Extends §5.2 and §5.6 through FR-TS-097, adds the architecture-proof negative-fixture matrix, preserves non-blocking draft state until A3.4/A4/A8 prerequisites, and does not activate a CI gate. |
