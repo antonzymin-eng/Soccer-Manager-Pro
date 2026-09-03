@@ -2,7 +2,7 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 3, 2026
-**Version:** 0.3
+**Version:** 0.4
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
 **Purpose:** CI orchestration policy, gate composition rule, Stage-0
@@ -43,9 +43,12 @@ remaining unresolved items stay in §7.5 as deferred decisions.
   parallels coverage tool. Activation deferred to Stage 1 (D6).
 - **CI provider — D4 RESOLVED.** GitHub Actions is the repository CI
   provider at `.github/workflows/ci.yml`. It supplies named jobs and
-  pass/fail conclusions used by repository merge protection. This pin
-  does not activate the proposed architecture/evidence gate; A8 still
-  owns that required-status transition.
+  pass/fail conclusions used by repository merge protection. The pin is
+  declared in `src/CLAUDE.md` as FR-TS-078 requires; that declaration is
+  a pointer to the workflow and does not restate its contents, so CI
+  authority is not duplicated. This pin does not activate the proposed
+  architecture/evidence gate; A8 still owns that required-status
+  transition.
 
 ## 6.2 CI Pipeline Policy (Boundary with #18)
 
@@ -217,4 +220,5 @@ mode and flip #19 status to `SUSPENDED`.
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Slot reconciliation replaces performance-analysis template. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout. M5 §6.4.2 explicit Stage-gating header. |
+| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 3).** Records where the D4 CI-provider pin lands. FR-TS-078 requires the final provider pin in `src/CLAUDE.md`, which carried no provider declaration, so closing D4 at `.github/workflows/ci.yml` alone left the resolution and the normative FR mutually unsatisfiable. `src/CLAUDE.md` now declares the provider as a pointer to the workflow. FR-TS-078 itself is deliberately unchanged: it lives in §2.2, which A3.2a owns and this slice does not touch. |
 | 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Adds the fourth architecture/evidence gate topology, owning-runner/result bridge, strict execution/quarantine/bounded-substitute behavior, Governance convergence boundary, and FR-TS-084 authority model. Gate remains inactive until A8; no required status is created here. Live-repo audit also closes D1 on NUnit/`dotnet test` and D4 on GitHub Actions; D2/D3/D5–D8 remain deferred. |
