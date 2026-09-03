@@ -12,7 +12,10 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A3.1b review corrections; CI consistency blocker removed.**
+> **Last Updated:** September 3, 2026 — **A3.1b post-merge Codex-review corrections; documentation only.**
+> Follow-up to the five automated review findings recorded on merged PR #350: `section-5.md` §5.4 now states eight categories, §5.4.8 items 1–2 and the §5.5 rows for FR-CS-074/075 are aligned with the authoritative §2.2.9 requirement text (explicit integration owner / exact integration point / orthogonal activation state; every production host or composition root classified and mechanically accounted for), `section-8.md` §8.1 states ten sources, Spec #19 is removed from the mutually exclusive pointer-only table, and the adjacent `TBD-NORMATIVE` paragraph no longer claims root `CLAUDE.md` is the only upstream authority. `outline-detailed.md` §1.4, §2.2.9 and §8 are synchronized so authoring from the outline cannot recreate the pre-amendment authority model. The maintained `section-5.md` pointer in `file-manifest.md` moves v1.5 → v1.6 with that bump. `SPEC_INDEX.md` stays untouched pending A3.4. No runtime/code/schema/CI-enforcement change.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1b review corrections; CI consistency blocker removed.**
 > Follow-up to `d196324e`: repairs the stale maintained `section-5.md` pointer, C-03 arithmetic, C-06 Appendix-F expectation, duplicate §2.2.9 footer, six-tag outline residues, §8 source cadence/evidence wording, and all misplaced A3.1b version rows. `section-6.md` is restored to the approved v1.2 state because it had no A3 content change. The Roslyn `?view=visualstudio` target is retained after direct retrieval confirmed it is Microsoft's canonical target; unlike the old queryless URL, it is not matched by the repository's anchored ignore. `SPEC_INDEX.md` stays untouched pending A3.4. No runtime/code/schema/CI-enforcement change.
 >
 > **Last Updated (prior):** September 2, 2026 — **A3.1b Code Standards supporting surfaces synchronized; A3.4 still pending.**
