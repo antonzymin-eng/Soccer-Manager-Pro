@@ -4,7 +4,7 @@
 **Last Updated:** September 3, 2026
 **Version:** 0.5
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Reflexive test plan: this section verifies Spec #19
 against itself. Per-spec §5 conformance verification (which Spec #19
 mandates for *other* specs) is mechanics-defined in §3.5; the auditor

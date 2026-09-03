@@ -4,7 +4,7 @@
 **Last Updated:** September 3, 2026
 **Version:** 0.4
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** CI orchestration policy, gate composition rule, Stage-0
 local runbook, defect lifecycle and triage, reporting cadence, and the
 boundary with Spec #18 §4 / §7.

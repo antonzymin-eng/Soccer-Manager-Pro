@@ -3,7 +3,7 @@
 **Last Updated:** September 3, 2026
 **Version:** 1.1
 **Status:** HISTORICAL OUTLINE — synchronized to A3.2b amendment draft; authoritative rules remain in the section files
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 
 ## Purpose
 Define the project-wide testing, verification, proof/evidence, CI-orchestration, and defect-governance framework without duplicating the authorities owned by Deterministic Simulation #16, Performance Optimization #18, Code Standards #20, or Project Architecture Governance.

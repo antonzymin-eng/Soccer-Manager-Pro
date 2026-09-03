@@ -1,10 +1,10 @@
 # Testing Strategy & Framework Specification #19 — Section 3: Technical Specification (Rule Mechanics)
 
 **Created:** May 12, 2026
-**Last Updated:** September 2, 2026
+**Last Updated:** September 3, 2026
 **Version:** 0.5
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.36, §7; A3.2a
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
 **Purpose:** Mechanics of every rule named in §2.2. Each subsection
 cites the FR-TS-### IDs it implements and provides the *mechanics*; it
 does not redefine the rule statement. Section ordering mirrors the
@@ -824,10 +824,20 @@ by itself. A public-member inventory or known-path list may be diagnostic but
 does not prove absence of an undiscovered root/bypass until the search universe
 and blind spots are mechanically closed.
 
-Structural proof SHOULD expose failures such as orphan implementations,
-missing or duplicate registration, alternate roots that omit the component,
-unauthorized bypasses, and unsupported activation-capable public surfaces
-when those surfaces are within the applicable closed universe.
+Structural proof MUST detect, where applicable, every structural failure
+class required by Project Architecture Governance §5.3 (FR-AG-027); this
+subsection does not weaken that obligation. Governance §5.3 remains the
+authority for the class list. The following reproduces that list and neither
+extends nor restricts it:
+
+- unreachable implementations;
+- orphan registrations;
+- duplicate construction;
+- alternate roots omitting the component;
+- unauthorized bypasses;
+- public types that imply unsupported integration paths.
+
+Detection is required only for surfaces within the applicable closed universe.
 
 ### 3.11.7 Lifecycle / Ordering Proof (FR-TS-089)
 

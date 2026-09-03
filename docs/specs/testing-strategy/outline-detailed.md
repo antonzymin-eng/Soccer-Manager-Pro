@@ -4,7 +4,7 @@
 **Last Updated:** September 3, 2026
 **Version:** 1.3
 **Status:** HISTORICAL DRAFTING ARTIFACT — A3.2b synchronized; authoritative rules are the section files, whose May 15 approved baseline remains operative pending A3.4 reapproval
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Companion documents:** `outline.md` (high-level v1.0 + adversarial
 review).
 

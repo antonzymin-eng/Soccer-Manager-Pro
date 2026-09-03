@@ -2,7 +2,7 @@
 
 **Document Class:** Integration design and implementation plan  
 **Status:** Draft — implementation planning; no production code implemented by this document  
-**Version:** 0.37\
+**Version:** 0.38\
 **Created:** August 27, 2026  
 **Last Updated:** September 3, 2026\
 **Governing authority:** docs/planning/project-architecture-governance.md v0.10 (v0.4 when this plan was created)\
@@ -622,6 +622,7 @@ Append after FR-CS-073 using #20's existing columns ID | Statement | Level | Sou
 
 | ID | Statement | Level | Source | Mechanics § |
 |---|---|---|---|---|
+| 0.38 | September 3, 2026 | — | **A3.2b Testing Strategy supporting-surface synchronization.** Corrects §7.3/§7.5 proof pointers and reserves example-only IDs; synchronizes §1/§4–§9, both outlines, FR-to-verification through 097, architecture-proof negative fixtures, four-gate topology, owning-runner/result binding, Governance convergence, exception boundaries, and tracking. Live-repository audit closes only D1 (NUnit 3.14.0 / NUnit3TestAdapter 4.6.0 / `dotnet test`) and D4 (GitHub Actions); D2/D3/D5–D8 remain deferred. The May 15 #19 baseline remains operative; A3.4 reapproval and A8 enforcement remain pending. No schema, executable semantics, runtime code, workflow, required-status, or `SPEC_INDEX.md` state changed. |
 | FR-CS-074 | Every runtime-bearing component whose correctness depends on activation MUST have an explicit integration owner, exact integration point, and orthogonal activation state. | MUST | Governance FR-AG-021/022 | §3.5.6 |
 | FR-CS-075 | Every production host/composition root in the approved runtime discovery universe MUST be classified and mechanically accounted for. | MUST | Governance FR-AG-024/026 | §3.5.6–3.5.7 |
 | FR-CS-076 | Applicable runtime-bearing components MUST declare construction, activation, update/use, and teardown ownership through typed lifecycle records, with the §3.5.6 `not-applicable`/`na_fields` representation only where a phase does not exist. | MUST | Governance FR-AG-023 | §3.5.6 |
@@ -704,6 +705,8 @@ FR-TS-076: add architecture/evidence gate while preserving #16/#18 ownership.
 FR-TS-077: flake quarantine cannot waive missing architecture proof or structural governance gates.
 
 FR-TS-063: qualify the existing quarantine rule so quarantine suppresses only an eligible functional-gate blocking effect; it does not satisfy or waive a separately required architecture-proof obligation. This is a consistency amendment required by FR-TS-077/094, not a new quarantine mechanism.
+
+FR-TS-088: §3.11.6 states the structural failure-class obligation as MUST and defers to Governance §5.3 (FR-AG-027) as the authority for the class list, reproducing it verbatim rather than restating it in spec-local vocabulary. FR-TS-088 itself continues to govern universe completeness, not detector coverage.
 
 FR-TS-093 remains pointer-style; Governance owns convergence, #19 consumes it.
 
@@ -1271,7 +1274,7 @@ That is the intended remediation: **architectural decisions remain judgment-driv
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 0.37 | September 3, 2026 | — | **A3.2b Testing Strategy supporting-surface synchronization.** Corrects §7.3/§7.5 proof pointers and reserves example-only IDs; synchronizes §1/§4–§9, both outlines, FR-to-verification through 097, architecture-proof negative fixtures, four-gate topology, owning-runner/result binding, Governance convergence, exception boundaries, and tracking. Live-repository audit closes only D1 (NUnit 3.14.0 / NUnit3TestAdapter 4.6.0 / `dotnet test`) and D4 (GitHub Actions); D2/D3/D5–D8 remain deferred. The May 15 #19 baseline remains operative; A3.4 reapproval and A8 enforcement remain pending. No schema, executable semantics, runtime code, workflow, required-status, or `SPEC_INDEX.md` state changed. |
+| 0.37 | September 3, 2026 | — | **A3.2a review correction.** Corrects §3.11.6 of Spec #19: the structural failure-class obligation was stated as SHOULD, which under §2.1 permits omitting a detector with rationale, while Governance §5.3 states it as MUST detect. The subsection now carries the MUST, defers to Governance §5.3 (FR-AG-027) as the authority for the class list, and reproduces that list verbatim. The prior spec-local paraphrase had dropped `unreachable implementations` and `duplicate construction`, conflated `orphan registrations` into "orphan implementations", and substituted "unsupported activation-capable public surfaces" for `public types that imply unsupported integration paths`. Mirrors the Governance v0.6 / AG-A0-002 resolution of the same defect class in §5.5. No new failure class, proof semantics, schema, workflow, or enforcement is introduced. |
 | 0.36 | September 2, 2026 | — | **A3.2a review correction.** Records FR-TS-063 as an authorized consistency amendment in §7.2/§7.4: quarantine suppresses only an eligible functional-gate blocking effect and cannot satisfy or waive a separately required architecture-proof obligation. No new quarantine mechanism, proof semantics, schema, workflow, or enforcement is introduced. |
 | 0.35 | September 2, 2026 | — | **A3.1a automated-review correction.** Records that frozen schema `1.0.0` / reference semantics `2.1.0` validate integration-contract shape but do not resolve ownership/path strings or enforce `na_fields` pairing. Code Standards §3.5.6 now defines the exact binding vocabulary and `not-applicable` representation; A4 owns executable cross-registry/path resolution, sentinel pairing, and discriminating failure fixtures before either surface may support a Machine blocker. No schema, executable semantics, workflow, or enforcement changed. |
 | 0.34 | September 2, 2026 | — | **A3.1a review correction.** Aligns proposed FR-CS-078 with Governance FR-AG-025: known activation bypasses are prohibited or explicitly **classified**, not narrowed without rationale to only "supported." The downstream draft carries the same correction. No enforcement, schema, executable semantics, or runtime behavior changed. |

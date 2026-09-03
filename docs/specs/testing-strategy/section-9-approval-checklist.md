@@ -4,7 +4,7 @@
 **Last Updated:** September 3, 2026 (A3.2b supporting-surface re-walk; v1.0 APPROVED May 15, 2026 — lead-developer sign-off granted)
 **Version:** 1.0.3
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Self-applied KD-6 checklist. Every row resolves to either
 a named, version-controlled file path containing the claimed value, or
 a programmatic check whose output is captured. Rows without that

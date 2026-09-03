@@ -4,7 +4,7 @@
 **Last Updated:** September 3, 2026
 **Version:** 0.5
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Stage 0+1 transition deliverables, Stage 1 deliverables,
 Stage 5+ extensions, permanent exclusions, and the deferred decisions
 tracker (D1 … D8).

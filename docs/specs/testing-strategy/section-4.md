@@ -4,7 +4,7 @@
 **Last Updated:** September 3, 2026
 **Version:** 0.4
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** The *shape* of the test-harness architecture: folder
 layout, fixture / golden-trace layout, harness API surface, the two
 interfaces this spec exposes, and the CI pipeline topology. Concrete

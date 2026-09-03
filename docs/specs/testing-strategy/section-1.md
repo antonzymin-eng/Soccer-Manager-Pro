@@ -4,7 +4,7 @@
 **Last Updated:** September 3, 2026
 **Version:** 0.3
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2b
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Establishes what Spec #19 governs, what it excludes, the
 ten cross-cutting key decisions (KD-1 … KD-10) that bind the rest of
 the document, the upstream / downstream contracts, and the version
