@@ -79,7 +79,7 @@ row for a full landing cycle.
 
 **5. `README.md`.** **Usually nothing.** Since the September 3, 2026 redesign the README is an
 orientation document, not a landing ledger: it carries no `Last Updated` chain, no version history, no
-assembly map and no spec-status table, and `check_drift.sh` FAILs if a chain reappears. Do **not** add a
+assembly map and no spec-status table, and `check_drift.sh` reports and exits non-zero if a chain reappears. Do **not** add a
 per-landing entry to it.
 
 It carries exactly one dated status snapshot. Touch that snapshot only when this landing falsified a

@@ -59,7 +59,9 @@ that session's record; summary of what changed:
   `docs/tracking/CHANGELOG.md`/`CHANGELOG-src.md`, where that convention actually lives now, not root
   `CLAUDE.md` — per-doc declared-vs-git-touched dates, and an actual pass/fail comparison of the OPEN
   ISSUES active/resolved counts against root `CLAUDE.md`'s stated figure, not just a side-by-side
-  printout); and `snapshot-schema-bump/scripts/version_table.sh` (every live `*_FORMAT_VERSION`/
+  printout; plus the no-chain guard over root `CLAUDE.md`/`README.md`, which since September 3, 2026
+  is the script's one **status-affecting** check — a reintroduced chain is a contract violation, so it
+  exits 1 after printing the whole report, while every other section stays advisory); and `snapshot-schema-bump/scripts/version_table.sh` (every live `*_FORMAT_VERSION`/
   `SNAPSHOT_SCHEMA_VERSION` constant in `src/`, so the skill's own version table can't go stale the way
   its "1 → 19" claim already had — the real number is 21, across 12 constants, 6 of which the prose
   table didn't list).

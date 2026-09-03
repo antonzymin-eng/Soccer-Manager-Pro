@@ -214,7 +214,7 @@ another authoritative copy of:
 - per-landing development narratives.
 
 There is intentionally **no `Last Updated` history chain** in this file, and
-`.claude/skills/landing-close-out/scripts/check_drift.sh` fails if one reappears.
+`.claude/skills/landing-close-out/scripts/check_drift.sh` reports it and exits non-zero if one reappears.
 
 When a volatile fact matters for orientation, keep at most one clearly dated snapshot and point directly
 to its authoritative source. Replace that snapshot when necessary; do not append historical snapshots.
