@@ -12,7 +12,10 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 2, 2026 — **A3.1b review corrections; CI consistency blocker removed.**
+> **Last Updated:** September 3, 2026 — **Spec #20 KD-4 staleness filed as an open issue; tracking only.**
+> `section-1.md` §1.3 KD-4 still states normatively that at Stage 0 conformance verification is manual review and "no static-analysis tooling is required", on the rationale that no source code exists — both false at `019def1`, where 35 production assemblies and 956 `.cs` files sit behind an advisory `dotnet format` check and a blocking `tools/dotnet-ci/run-gate.sh`. An automated review of PR #351 asked for the normative text to be rewritten; that was declined there, because restating a Key Design Decision is a governance-semantic change and the amendment set is under a pending A3.4 reapproval. Filed here instead so the deferral is indexed rather than living only in version-history rows. Not urgent: `section-5.md` §5.1's "Tooling status" paragraph already cites KD-4 in the past tense and records that the Stage 0+1 transition has since arrived, so the operative guidance is correct — the stale text is the KD's own statement and rationale. A3.4 discharges it, and should re-derive §5.1's own file counts rather than copy them (§5.1 publishes 947 from August 18, 2026; today it is 956). Active open issues 19 → 20. No spec, code, schema, workflow, or enforcement change.
+>
+> **Last Updated (prior):** September 2, 2026 — **A3.1b review corrections; CI consistency blocker removed.**
 > Follow-up to `d196324e`: repairs the stale maintained `section-5.md` pointer, C-03 arithmetic, C-06 Appendix-F expectation, duplicate §2.2.9 footer, six-tag outline residues, §8 source cadence/evidence wording, and all misplaced A3.1b version rows. `section-6.md` is restored to the approved v1.2 state because it had no A3 content change. The Roslyn `?view=visualstudio` target is retained after direct retrieval confirmed it is Microsoft's canonical target; unlike the old queryless URL, it is not matched by the repository's anchored ignore. `SPEC_INDEX.md` stays untouched pending A3.4. No runtime/code/schema/CI-enforcement change.
 >
 > **Last Updated (prior):** September 2, 2026 — **A3.1b Code Standards supporting surfaces synchronized; A3.4 still pending.**
