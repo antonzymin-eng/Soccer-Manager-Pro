@@ -7,8 +7,8 @@ owns, what it cites, and what is out of scope.
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.1
-**Status:** AMENDMENT DRAFT (A3.1b; approved v1.0.4 baseline remains in force)
+**Version:** 1.2
+**Status:** AMENDMENT DRAFT (A3.1b post-merge correction; approved v1.0.4 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 1
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.35, §6; A3.1b
@@ -261,8 +261,8 @@ rule and the enforced rule.
 
 **Downstream (every Stage 1+ source file depends on this spec):**
 - Every `.cs` file under `src/` cites Spec #20 in its file header (FR-CS-057).
-- The future `src/CLAUDE.md` will contain concrete paths and assembly definitions
-  derived from the shape conventions established in §4 of this spec.
+- The existing `src/CLAUDE.md` carries concrete paths and assembly definitions derived
+  from the shape conventions established in §4 of this spec.
 
 **Architecture-governance dependencies:**
 - `docs/planning/project-architecture-governance.md` is a substantive upstream authority
@@ -294,6 +294,7 @@ checks. Unsupported semantic claims remain report-only.
 | 1.0.3 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H6 (consequential).** §1's scope list said "the five tag types defined in root `CLAUDE.md`"; the root table holds six (`[CROSS-PENDING]` — see section-3.md v1.6 for the primary fix). Enumeration corrected to six; no other content change. | — |
 | 1.0.4 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding M3.** The 1.0.3 row above fixed §1's prose scope list but missed the §1.3 Authority Matrix row two sections later, which still enumerated five tags (`[GT]`/`[EST]`/`[FIXED]`/`[DERIVED]`/`[CROSS]`) — the same six-vs-five gap the 1.0.3 row exists to close, left standing in a second table. `[CROSS-PENDING]` added to the Authority Matrix row; no other content change. | — |
 | 1.1 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Extends scope/authority/dependency text to FR-CS-074–081, Project Architecture Governance, and Spec #19's proof/gate ownership; states that A3 approval is distinct from A4/A8 mechanical activation. No new runtime dependency or enforcement is introduced. | PENDING — A3.4 |
+| 1.2 | September 3, 2026 | Claude Code | **A3.1b stale-claim sweep completed here.** §1.4's downstream bullet still described `src/CLAUDE.md` as future work ("The future `src/CLAUDE.md` will contain concrete paths and assembly definitions"); the file exists, and §1.4's own architecture-governance bullets and both other outline tiers had already been corrected in A3.1b. Restated as existing. **KD-4 deliberately NOT modernized here.** An automated review of PR #351 asked for the normative KD-4 text to be updated to match live tooling; the owner declined that scope for this slice — A3.1b is a synchronization and finding-closure pass, and rewriting a Key Design Decision's statement is a governance-semantic change, not a stale-wording fix. §5.1's "Tooling status" paragraph already frames KD-4 as the historical Stage 0 decision and records that the Stage 0+1 transition has since arrived, which is where reviewers meet the question. Tracked separately for A3.4. No FR, count, KD, authority-matrix row or scope boundary changed. | PENDING — A3.4 |
 
 ---
 

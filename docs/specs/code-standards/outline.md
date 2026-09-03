@@ -7,8 +7,8 @@ written, not yet *how*.
 
 **Created:** May 6, 2026, 6:30 PM PST
 **Updated:** September 2, 2026
-**Version:** 1.1
-**Status:** DRAFT — A3.1b synchronized; normative section files control
+**Version:** 1.2
+**Status:** DRAFT — A3.1b post-merge corrections synchronized; normative section files control
 **Specification Number:** 20 of 20 (Stage 0)
 **Estimated Effort:** ~14 hours (lighter than physics specs; no formula
 derivations or numerical verification)
@@ -23,7 +23,7 @@ derivations or numerical verification)
 Spec #20 is the lone meta-spec in the Stage 0 set. It does not model a
 physical or AI subsystem; it codifies the **rules every Stage 1+ source file
 must obey**. Its job is to be the single, citable reference that every code
-review, every static-analysis rule, and every future `src/CLAUDE.md` entry
+review, every static-analysis rule, and every `src/CLAUDE.md` entry
 points at.
 
 The spec governs:
@@ -185,3 +185,4 @@ root `CLAUDE.md`. This is a hard rule (see Authority Matrix in §1).
 | 0.2     | May 6, 2026    | Claude Code | Adversarial review appended (6H / 5M / 2L findings).                  |
 | 1.0     | May 6, 2026    | Claude Code | Metadata header, Authority Matrix, re-mapped sections, all H findings resolved, M/L findings carried forward as drafting commitments. Mid-level outline begins next. |
 | 1.1     | September 2, 2026 | Codex | A3.1b synchronization: Governance/#19 authority boundary, FR-CS-074–081 architecture scope, existing `src/CLAUDE.md`, §5 architecture verification, and Appendix F reflected. Historical May planning decisions remain intact. |
+| 1.2     | September 3, 2026 | Claude Code | Post-merge review correction: the executive summary's last `future \`src/CLAUDE.md\`` residue removed — the file exists, and this document's own **Downstream:** line had already been corrected to say so. Text only; no scope, authority-matrix or section-structure change. |

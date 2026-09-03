@@ -7,8 +7,8 @@ traceability table (§5.5), and the determinism/architecture verification handof
 
 **Created:** May 7, 2026
 **Modified:** September 2, 2026
-**Version:** 1.5
-**Status:** AMENDMENT DRAFT (A3.1b; approved v1.4 baseline remains in force)
+**Version:** 1.7
+**Status:** AMENDMENT DRAFT (A3.1b post-merge correction; approved v1.4 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 5
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.35, §6; A3.1b
@@ -150,7 +150,7 @@ enforce an arbitrary line count.
 
 ## 5.4 Review-Time Checklist
 
-Seven categories. Each item is a yes/no question; answer YES (pass), NO (fail), or
+Eight categories. Each item is a yes/no question; answer YES (pass), NO (fail), or
 N/A (with justification). Any NO triggers Mode 1 (Review Block, §2.3) unless the
 reviewer and lead developer agree to Mode 3 (Exception with sign-off).
 
@@ -370,8 +370,8 @@ resolves. FR-CS-009 is MAY-level; no pass/fail check required.
 ### 5.4.8 Architecture Integration & Activation (FR-CS-074–081)
 
 ```
-[ ] 1. Durable identity — Applicable runtime-bearing components have a stable component_id and an unambiguous canonical selector; renames/moves preserve identity and selector history? (FR-CS-074)
-[ ] 2. Ownership & lifecycle — Applicable components have integration-contract records for host, assembly, composition root, construction, activation, update/use and teardown ownership; N/A is used only for genuinely absent phases/testhosts? (FR-CS-075–076)
+[ ] 1. Integration identity & owner — Each runtime-bearing component whose correctness depends on activation has a stable component_id/canonical selector plus an explicit integration owner, exact integration point, and orthogonal activation state; renames/moves preserve identity and selector history? (FR-CS-074)
+[ ] 2. Production roots & lifecycle — Every production host/composition root in the approved runtime discovery universe is classified and mechanically accounted for; applicable components have integration-contract records for construction, activation, update/use and teardown ownership, with N/A only for genuinely absent phases? (FR-CS-075–076)
 [ ] 3. Alternate hosts — Production alternates, testhosts and tooling activation surfaces are classified and preserve the applicable invariant or carry an approved, surface-specific divergence? (FR-CS-077)
 [ ] 4. Bypasses — Within a mechanically closed discovery universe, known bypass paths are absent/prohibited or explicitly supported and proved; a known-path list is not treated as proof that no other bypass exists? (FR-CS-078)
 [ ] 5. Public activation surface — Every activation-capable public surface is contract-supported, test-only, mechanically non-activating, or non-public? (FR-CS-079)
@@ -469,8 +469,8 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-071 | Determinism — §5.4.4 item 8 | `CS20-DET-005` | E |
 | FR-CS-072 | Determinism — §5.4.4 item 8 | `CS20-DET-006` | E |
 | FR-CS-073 | Determinism — §5.4.4 item 8 | `BannedSymbols.txt` (`decimal`) | E |
-| FR-CS-074 | Architecture — §5.4.8 item 1 | A4 canonical-selector / identity resolver | – (report-only until A4/A8 activation) |
-| FR-CS-075 | Architecture — §5.4.8 items 2–3 | A4 contract + closed-surface resolver | – (report-only until A4/A8 activation) |
+| FR-CS-074 | Architecture — §5.4.8 item 1 | A4 canonical-selector / identity resolver + integration-owner / exact-point / activation-state resolver | – (report-only until A4/A8 activation) |
+| FR-CS-075 | Architecture — §5.4.8 item 2 | A4 production-root discovery + runtime-surface classification | – (report-only until A4/A8 activation) |
 | FR-CS-076 | Architecture — §5.4.8 item 2 | A4 integration-contract resolver | – (report-only until A4/A8 activation) |
 | FR-CS-077 | Architecture — §5.4.8 item 3 | A4 alternate-host discovery + Spec #19 proof | – (report-only until A4/A8 activation) |
 | FR-CS-078 | Architecture — §5.4.8 item 4 | A4 compiler-backed bypass closure + Spec #19 proof | – (report-only until A4/A8 activation) |
@@ -525,6 +525,8 @@ belongs to Spec #16 and Spec #19.
 | 1.3 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings M4 + M5.** M4: §5.1 counted `tools/dotnet-ci/run-gate.sh` as one of "two of §5.2's tools live in CI" — `run-gate.sh` is the whole-tree compile/test gate, not a row in §5.2's six-tool table; restated as one §5.2 tool (`dotnet format`) live in CI, alongside the separately-named compile/test gate. M5: three sites cited `FR-CS-025` as the authority for per-tag `#region` ordering; verified against §2.2.2 that FR-CS-025 governs catalogue file naming only. §5.4.2 checklist item 8 re-cited (naming → FR-CS-025, region order → §4.2/§3.2.3); the §5.5 traceability row for FR-CS-025 annotated to scope its `CS20-CONST-009` mapping to the naming half of item 8 only. | — |
 | 1.4 | September 2, 2026 | Claude Code | **A3.1a review correction — renumbering sweep completed here.** §5.5's coverage note cited "§2.2.9's partition Count column"; the A3.1a amendment draft gave §2.2.9 to the new Architecture Integration & Activation partition and moved the FR Table Footer, with its Count column, to §2.2.10 — the same defect `section-2.md` v1.6.1 repaired at its own site and did not sweep. Annotated rather than re-pointed: this file is APPROVED and describes the approved v1.5 baseline of `section-2.md`, where the Count column genuinely is §2.2.9, so the citation stands and the note now names the draft's renumbering and the slice that syncs it (A3.1b, which owns this file's FR-CS-074–081 rows and its stale 73/75 counts). Status stays APPROVED; no traceability row, count, severity, or checklist item changed. | PENDING — A3.4 |
 | 1.5 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** §5.4 gains the eighth Architecture Integration & Activation checklist category; §5.5 gains FR-CS-074–081, making 81 numbered FRs / 83 traceability rows including 046a/046b. Pending A4 cross-registry/discovery facts are explicitly report-only and Spec #19 retains proof/gate ownership. | PENDING — A3.4 |
+| 1.6 | September 2, 2026 | Codex | **A3.1b post-merge Codex-review correction.** Corrects the live §5.4 category count to eight and aligns FR-CS-074/075 review coverage with §2.2.9: FR-CS-074 now checks explicit integration owner, exact integration point and orthogonal activation state (while retaining durable identity/selector checks); FR-CS-075 now requires every production host/composition root in the approved discovery universe to be classified and mechanically accounted for. §5.5 routes those FRs to the corrected checklist items/A4 evidence. | PENDING — A3.4 |
+| 1.7 | September 3, 2026 | Claude Code | **Post-merge review finding — FR-CS-074 verification mechanism restored.** v1.6 replaced that row's "A4 canonical-selector / identity resolver" with the owner/point/state resolver rather than adding to it, while §5.4.8 item 1 still requires stable `component_id`, canonical selector, rename preservation and selector history, and §3.5.6 makes those identity mechanics mandatory with cross-registry selector resolution itself deferred to A4. Following the row as written would have left ambiguous selectors and identity-breaking renames with no planned verification path. Both resolvers are now named. Severity stays report-only until A4/A8 activation; no checklist item, FR text or count changed. | PENDING — A3.4 |
 
 ---
 
