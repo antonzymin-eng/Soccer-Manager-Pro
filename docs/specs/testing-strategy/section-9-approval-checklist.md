@@ -1,7 +1,8 @@
 # Testing Strategy & Framework Specification #19 — Section 9: Approval Checklist
 
 **Created:** May 12, 2026
-**Last Updated:** May 15, 2026 (v1.0 APPROVED — `[TBD-NORMATIVE]` sweep complete; lead-developer sign-off granted)
+**Last Updated:** September 2, 2026
+**Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
 **Purpose:** Self-applied KD-6 checklist. Every row resolves to either
 a named, version-controlled file path containing the claimed value, or
 a programmatic check whose output is captured. Rows without that
@@ -17,7 +18,7 @@ resolution are themselves a §2.3 nonconformance.
 | # | Claim | Evidence (file path or programmatic check) | Status |
 |---|-------|--------------------------------------------|--------|
 | 9.1.1 | All required sections present (§1 … §9, appendices, slot reconciliations in §5 / §6) | `docs/specs/testing-strategy/section-1.md` … `section-9-approval-checklist.md`, `appendices.md` | [x] |
-| 9.1.2 | All FR-TS-### present in §2.2 with conformance level and activation stage | `docs/specs/testing-strategy/section-2.md` §2.2 (FR-TS-001 … 085) | [x] |
+| 9.1.2 | All FR-TS-### present in §2.2 with conformance level and activation stage | **Approved-baseline evidence (May 15, 2026):** `docs/specs/testing-strategy/section-2.md` §2.2 covered FR-TS-001 … 085. **Invalidated for the A3 amendment draft:** A3.2a now carries FR-TS-001 … 097; A3.2b/A3.4 must rerun and replace this evidence before reapproval. | [x] |
 | 9.1.3 | KD-1 codified | `docs/specs/testing-strategy/section-1.md` §1.3 KD-1 row + cross-section adoption | [x] |
 | 9.1.4 | KD-2 codified | §3.2 §5.7 §6.2 §1.4 status caveat | [x] |
 | 9.1.5 | KD-3 codified | §6.2 §6.6 §1.4 status caveat | [x] |
@@ -36,7 +37,7 @@ resolution are themselves a §2.3 nonconformance.
 | # | Claim | Evidence | Status |
 |---|-------|----------|--------|
 | 9.2.1 | Cite-not-redefine rule audited (no #16 / #18 / #20 restatements) | Manual review of `section-3.md` and `section-6.md`; grep for restated tier definitions or performance numbers | [x] |
-| 9.2.2 | Every FR row resolves to a §5.x verification mechanism | §5.6 FR-to-verification table covers FR-TS-001 … 085 | [x] |
+| 9.2.2 | Every FR row resolves to a §5.x verification mechanism | **Approved-baseline evidence (May 15, 2026):** §5.6 covered FR-TS-001 … 085. **Invalidated for the A3 amendment draft:** FR-TS-086 … 097 are not yet synchronized into §5; A3.2b/A3.4 must rerun and replace this evidence before reapproval. | [x] |
 | 9.2.3 | Every approval-checklist row in *this* checklist cites either a file path or a check name (KD-6 self-application) | This table; manual auditor walk per §5.3 | [x] |
 | 9.2.4 | All cross-references (XC-/FM-/EC-/ERR-) resolve | `grep -rn "XC-\|FM-\|EC-\|ERR-" docs/specs/testing-strategy/`; manual resolution | [x] |
 | 9.2.5 | Per-spec §5 schema (Appendix C) present and complete | `docs/specs/testing-strategy/appendices.md` Appendix C | [x] |
@@ -83,6 +84,7 @@ resolution are themselves a §2.3 nonconformance.
 
 ## 9.5 Version History
 
+- v1.0.2 (2026-09-02): A3.2a annotation only. Rows 9.1.2 / 9.2.2 evidence marked invalid for the A3 amendment draft; no row re-walked, approved status unchanged.
 - v1.0 (2026-05-15): **APPROVED.** §9.1 / §9.2 / §9.3 rows all ticked; §9.3.6 / §9.3.7 cleared by #18 IN REVIEW v0.3 + #16 Tier 2 APPROVED (May 14, 2026); §9.3.8 cleared by v1.0.1 `[TBD-NORMATIVE]` sweep across §1 / §3 / §4 / §5 / §6 / §8 / appendices. Lead-developer sign-off granted. SPEC_INDEX.md row 19 IN REVIEW → APPROVED.
 - v0.2 (2026-05-12): Initial self-applied KD-6 checklist with #16 / #18 / #20 boundary preconditions enumerated.
 - v0.1 (2026-05-12): Stub from outline.
