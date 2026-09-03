@@ -4,7 +4,7 @@
 **Last Updated:** September 2, 2026
 **Version:** 0.4
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** docs/planning/project-architecture-governance-integration-plan.md v0.36, §7; A3.2a
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.36, §7; A3.2a
 **Purpose:** Mechanics of every rule named in §2.2. Each subsection
 cites the FR-TS-### IDs it implements and provides the *mechanics*; it
 does not redefine the rule statement. Section ordering mirrors the

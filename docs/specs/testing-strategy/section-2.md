@@ -4,7 +4,7 @@
 **Last Updated:** September 2, 2026
 **Version:** 0.3
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** docs/planning/project-architecture-governance-integration-plan.md v0.36, §7; A3.2a
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.36, §7; A3.2a
 **Purpose:** Conformance vocabulary, the full FR-TS-### catalogue with
 verification pointers, and the failure-to-comply modes. Rule mechanics
 for every FR live in §3; §2 publishes the rule statement.

@@ -1,7 +1,8 @@
 # Testing Strategy & Framework Specification #19 — Section 9: Approval Checklist
 
 **Created:** May 12, 2026
-**Last Updated:** May 15, 2026 (v1.0 APPROVED — `[TBD-NORMATIVE]` sweep complete; lead-developer sign-off granted)
+**Last Updated:** September 2, 2026
+**Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
 **Purpose:** Self-applied KD-6 checklist. Every row resolves to either
 a named, version-controlled file path containing the claimed value, or
 a programmatic check whose output is captured. Rows without that
@@ -83,6 +84,7 @@ resolution are themselves a §2.3 nonconformance.
 
 ## 9.5 Version History
 
+- v1.0.2 (2026-09-02): A3.2a annotation only. Rows 9.1.2 / 9.2.2 evidence marked invalid for the A3 amendment draft; no row re-walked, approved status unchanged.
 - v1.0 (2026-05-15): **APPROVED.** §9.1 / §9.2 / §9.3 rows all ticked; §9.3.6 / §9.3.7 cleared by #18 IN REVIEW v0.3 + #16 Tier 2 APPROVED (May 14, 2026); §9.3.8 cleared by v1.0.1 `[TBD-NORMATIVE]` sweep across §1 / §3 / §4 / §5 / §6 / §8 / appendices. Lead-developer sign-off granted. SPEC_INDEX.md row 19 IN REVIEW → APPROVED.
 - v0.2 (2026-05-12): Initial self-applied KD-6 checklist with #16 / #18 / #20 boundary preconditions enumerated.
 - v0.1 (2026-05-12): Stub from outline.
