@@ -65,7 +65,7 @@ Every byte/SHA-256 pair below was produced by the reproducer Python script in Ap
 |---|---|---|---|
 | S-01 | `string ""` (empty; length prefix only) | `00000000` | `df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119` |
 | S-02 | `string "abc"` (ASCII; 3 bytes payload) | `03000000616263` | `3da9865b43fa2ec490f78da9db16acd5638704dbce5cc7b3df2e3c7a23addf19` |
-| S-03 | `string "System XI"` (ASCII; 17 bytes payload) | `11000000546163746963616c204469726563746f72` | `5cf517dc212e6764ef025056c198fc3b30d4ea3b8388851324ecead15818be3c` |
+| S-03 | `string "Tactical Director"` (ASCII; 17 bytes payload) | `11000000546163746963616c204469726563746f72` | `5cf517dc212e6764ef025056c198fc3b30d4ea3b8388851324ecead15818be3c` |
 
 ---
 
@@ -263,7 +263,7 @@ add("F-09 f64=NaN normalized to NAN_CANONICAL_F64", struct.pack("<Q", 0x7FF80000
 # Strings
 add("S-01 string ''",            struct.pack("<I", 0))
 add("S-02 string 'abc'",         struct.pack("<I", 3) + b"abc")
-add("S-03 string 'System XI'", struct.pack("<I", 17) + b"System XI")
+add("S-03 string 'Tactical Director'", struct.pack("<I", 17) + b"Tactical Director")
 
 # Bytes
 add("B-01 bytes empty",          struct.pack("<I", 0))
