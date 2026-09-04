@@ -1,0 +1,30 @@
+name: Nightly test pipeline
+
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-test-pipeline
+  cancel-in-progress: false
+
+jobs:
+  nightly-full-suite:
+    name: Nightly full simulation + soak + determinism regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run nightly test pipeline
+        run: bash tools/run-tests-local.sh --nightly
