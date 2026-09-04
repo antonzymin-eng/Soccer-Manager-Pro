@@ -1,0 +1,53 @@
+name: Correct naming migration fixture
+
+on:
+  push:
+    branches:
+      - codex/system-xi-naming-migration
+
+permissions:
+  contents: write
+
+jobs:
+  correct:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore canonical serializer fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          test = Path('src/deterministic-sim/tests/SerializeCanonicalCorpusTests.cs')
+          text = test.read_text(encoding='utf-8')
+          old = 'CanonicalSerializer.WriteString(buf, ref o, "System XI");'
+          new = 'CanonicalSerializer.WriteString(buf, ref o, "Tactical Director");'
+          if old not in text:
+              raise SystemExit('Expected migrated serializer fixture not found')
+          test.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          corpus = Path('docs/specs/deterministic-sim/golden-vectors/serialize-canonical-corpus.md')
+          text = corpus.read_text(encoding='utf-8')
+          replacements = {
+              '`string "System XI"` (ASCII; 17 bytes payload)': '`string "Tactical Director"` (ASCII; 17 bytes payload)',
+              'add("S-03 string \'System XI\'", struct.pack("<I", 17) + b"System XI")': 'add("S-03 string \'Tactical Director\'", struct.pack("<I", 17) + b"Tactical Director")',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Expected migrated corpus fixture not found: {old}')
+              text = text.replace(old, new, 1)
+          corpus.write_text(text, encoding='utf-8')
+          PY
+
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/revert-golden-vector-title.yml
+          git add -A
+          git diff --cached --check
+          git commit -m "Preserve deterministic golden-vector fixture"
+          git push origin HEAD:codex/system-xi-naming-migration
