@@ -28,6 +28,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")
     parser.add_argument(
+        "--survey-only",
+        action="store_true",
+        help="Report findings but never return a blocking verdict. Routine pre-commit/PR/nightly pipelines use this mode; approval transitions do not.",
+    )
+    parser.add_argument(
         "--changed-scope",
         action="store_true",
         help="Survey the whole root but consider blocking only spec directories named by --enforce-dir.",
@@ -36,7 +41,7 @@ def parse_args() -> argparse.Namespace:
         "--enforce-dir",
         action="append",
         default=[],
-        help="Spec directory, absolute or repo-relative, that is currently under review. Repeatable.",
+        help="Spec directory, absolute or repo-relative, that is currently at an approval transition. Repeatable.",
     )
     parser.add_argument(
         "--quiet-survey",
@@ -56,7 +61,15 @@ def normalize_dirs(values: list[str], repo_root: Path) -> set[Path]:
     return out
 
 
-def is_enforced(path: Path, *, changed_scope: bool, enforce_dirs: set[Path]) -> bool:
+def is_enforced(
+    path: Path,
+    *,
+    survey_only: bool,
+    changed_scope: bool,
+    enforce_dirs: set[Path],
+) -> bool:
+    if survey_only:
+        return False
     if not changed_scope:
         return True
     resolved = path.resolve()
@@ -67,6 +80,7 @@ def audit_file(
     path: Path,
     repo_root: Path,
     *,
+    survey_only: bool,
     changed_scope: bool,
     enforce_dirs: set[Path],
 ) -> tuple[int | None, int, list[Finding]]:
@@ -76,12 +90,18 @@ def audit_file(
     lines = text.splitlines()
     findings: list[Finding] = []
     checked = 0
-    blocking_scope = is_enforced(path, changed_scope=changed_scope, enforce_dirs=enforce_dirs)
+    blocking_scope = is_enforced(
+        path,
+        survey_only=survey_only,
+        changed_scope=changed_scope,
+        enforce_dirs=enforce_dirs,
+    )
 
-    # FR-TS-042 blocks APPROVED status. Amendment drafts and in-review specs are
-    # audited and reported, but their unresolved rows do not masquerade as a
-    # repository merge gate before the approval transition itself. Legacy #1-#8
-    # retain the explicit KD-4 survey-only treatment.
+    # FR-TS-042 blocks an approval transition, not an unrelated repository PR.
+    # Routine pipelines therefore use --survey-only. A deliberate approval walk
+    # omits that flag and may optionally narrow enforcement with --changed-scope
+    # plus one or more --enforce-dir values. Legacy #1-#8 retain KD-4 survey-only
+    # treatment even during such a walk.
     def blocks() -> bool:
         return (
             blocking_scope
@@ -176,6 +196,7 @@ def main() -> int:
         _, checked, file_findings = audit_file(
             path,
             repo_root,
+            survey_only=args.survey_only,
             changed_scope=args.changed_scope,
             enforce_dirs=enforce_dirs,
         )
@@ -190,6 +211,7 @@ def main() -> int:
         "rows": total_rows,
         "blocking": sum(f.blocking for f in findings),
         "notes": sum(not f.blocking for f in findings),
+        "survey_only": args.survey_only,
         "changed_scope": args.changed_scope,
         "enforced_dirs": sorted(str(path) for path in enforce_dirs),
         "findings": [f.__dict__ for f in findings],
@@ -197,7 +219,12 @@ def main() -> int:
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
-        scope = "changed-spec enforcement" if args.changed_scope else "approval-state enforcement"
+        if args.survey_only:
+            scope = "survey-only routine pipeline"
+        elif args.changed_scope:
+            scope = "approval enforcement (explicit scope)"
+        else:
+            scope = "approval-state enforcement"
         print(
             f"checklist-auditor: {audited_files} file(s), {total_rows} evidence row(s), "
             f"{describe(findings)} [{scope}]"
