@@ -1,8 +1,8 @@
 # Testing Strategy & Framework Specification #19 — Appendices
 
 **Created:** May 12, 2026
-**Last Updated:** September 4, 2026
-**Version:** 0.6
+**Last Updated:** September 3, 2026
+**Version:** 0.5
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Paste-ready schemas, exemplar property catalogue, per-spec
@@ -13,7 +13,6 @@ and canonical architecture-proof contract/examples.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.6     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization.** Replaces Appendix E's obsolete Stage-0/manual-only shell outline with the versioned executable local/CI runbook, staged-snapshot pre-commit bootstrap, 60-second budget, PR/nightly coverage collection, owner-held-RED verification, and the separate certified Windows/Unity determinism boundary. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Appendices A–F populated. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §5 → §3.2.4.1 (canonical schema, A.1 / A.3 / glossary); #16 §1.3 → §1.1.1 (tier classification, A.1 / C template); #16 §4 → §4.8 (env fingerprint, A.3); #16 §7 → §5 (regression-suite glossary). L4 boundary-saturation / fatigue properties tightened to cite CLAUDE.md instead of restating values. L7 Appendix D `(reserved)` → `(to be assigned at survey time)`. |
 | 0.3     | September 2, 2026 | Codex | **A3.2a governance amendment draft.** Adds Appendix G: the A2 proof-artifact/closure/execution contract, material-subject versus provenance examples, precise freshness cases, bounded/N/A limits, and schema-shaped failure-injection/mutation records. These examples are illustrative; canonical schemas and reference semantics v2.1.0 remain authoritative. A3.4 reapproval remains required. |
@@ -246,69 +245,40 @@ per-spec revision cycles per §3.5.4 (KD-4 no-forced-re-open rule).
 
 ---
 
-## Appendix E — Versioned Local / CI Runbook
+## Appendix E — Stage-0 Local Runbook
 
-`tools/run-tests-local.sh` is the stable FR-TS-079 entry point. It is
-not a Stage-0 placeholder: the same composition is versioned for local
-use and scheduled CI.
-
-Developer bootstrap:
+Concrete shell-script outline for `tools/run-tests-local.sh`. Stage 0:
+no `src/` exists, so the runbook walks `docs/specs/` only.
 
 ```bash
-bash tools/bootstrap-dev.sh
-bash tools/run-tests-local.sh --verify-hook
+#!/usr/bin/env bash
+# tools/run-tests-local.sh
+# Stage 0: spec-only checks. Extend at Stage 0+1 to invoke src/-side tests.
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo "[1/3] Walking SPEC_INDEX.md for spec-folder list..."
+# (Stage 0 manual: reviewer cross-checks SPEC_INDEX rows vs docs/specs/<folder>/)
+
+echo "[2/3] Running approval-checklist auditor (§5.3 manual at Stage 0)..."
+# Manual walk. At Stage 0+1 replace with:
+#   python tools/checklist-auditor.py --root docs/specs/
+
+echo "[3/3] Running per-spec §5 schema-conformance auditor (§5.4 manual at Stage 0)..."
+# Manual walk. At Stage 0+1 replace with:
+#   python tools/spec5-schema-auditor.py --root docs/specs/
+
+echo "Done. Paste output above into the PR description."
 ```
 
-The bootstrap configures `core.hooksPath=.githooks` only when doing so
-will not overwrite an unrelated existing hooks path. The versioned
-`.githooks/pre-commit` hook tests the **staged Git index** in an
-isolated snapshot, so unstaged working-tree edits cannot influence the
-commit verdict.
+The Stage 0+1 extension adds:
 
-Executable modes:
-
-```bash
-# Fast staged-snapshot unit/property compatibility gate.
-# The entire composition (auditors + restore/build + tests) is bounded to 60 s.
-bash tools/run-tests-local.sh --pre-commit
-
-# PR-equivalent local composition: both auditors + whole-tree functional
-# scenario superset + Coverlet collection. The owner-held RED is executed
-# separately and value-verified, not quarantined.
-bash tools/run-tests-local.sh --pr
-
-# Non-certifying Linux functional/simulation/soak composition. Enables the
-# full-match ShotOutcomeDiagnosticTests driver and Coverlet collection.
-bash tools/run-tests-local.sh --nightly
-```
-
-Every executable mode invokes:
-
-- `python3 tools/checklist-auditor.py --root docs/specs --repo-root .`;
-- `python3 tools/spec5-schema-auditor.py --root docs/specs --repo-root .`;
-- `tools/dotnet-ci/run-gate.sh` for the generated .NET test surface.
-
-D2 is pinned to FsCheck.NUnit 2.16.6. D3 is pinned to
-coverlet.collector 6.0.4 with
-`tools/dotnet-ci/coverage.runsettings`; PR/nightly modes collect
-Cobertura-formatted `XPlat Code Coverage`. The §5.5 per-tier threshold
-mapper/auditor is separate and remains owed.
-
-Nightly platform boundary:
-
-- `.github/workflows/nightly.yml` uses GitHub-hosted Linux only for
-  non-certifying functional/simulation/soak evidence.
-- The full #16 §5 determinism suite runs in a **separate self-hosted
-  Windows job** on the pinned Windows 11 / Unity 6000.4.9f1 / DX11 /
-  Mono / x64 / SSE4.2 / one-worker deterministic tuple. The workflow
-  verifies the platform pin and invokes Unity through `TD_UNITY_EXE`.
-- Linux regression execution MUST NOT be reported as determinism
-  certification.
-
-The current owner-held `sim_match_engine_close_chance` RED is not a
-flake quarantine. It is run separately under a value-pinned ledger;
-changed diagnostics, an unexpected pass, or any additional failure is
-a blocking change in state.
+- `dotnet test` invocation for `src/<spec>/tests/`.
+- `coverlet` invocation for per-tier coverage.
+- `python tools/checklist-auditor.py` automated walk.
+- `python tools/spec5-schema-auditor.py` automated walk.
 
 ---
 

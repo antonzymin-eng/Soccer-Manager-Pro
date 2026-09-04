@@ -1,8 +1,8 @@
 # Testing Strategy & Framework Specification #19 — Outline
 
-**Last Updated:** September 4, 2026
-**Version:** 1.2
-**Status:** HISTORICAL OUTLINE — synchronized to the FR-TS-075/079 implementation candidate; authoritative rules remain in the section files
+**Last Updated:** September 3, 2026
+**Version:** 1.1
+**Status:** HISTORICAL OUTLINE — synchronized to A3.2b amendment draft; authoritative rules remain in the section files
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 
 ## Purpose
@@ -12,29 +12,25 @@ Define the project-wide testing, verification, proof/evidence, CI-orchestration,
 Test taxonomy and pyramid ratios; deterministic-suite consumption; scenario and property/fuzz architecture; coverage and flake policy; architecture proof/evidence integration; CI gate composition; and defect triage.
 
 ## Section Plan
-- Section 1 — Purpose, scope, key decisions, implementation surfaces, and authority boundaries.
-- Section 2 — Functional requirement catalogue FR-TS-001 … 097 and conformance/failure modes, including pipeline-scoped determinism consumption and durable local/CI parity.
-- Section 3 — Rule mechanics, including D2/D3 pins, §3.11 architecture proof/evidence integration, and §3.12 version history.
-- Section 4 — Test-harness architecture, staged-snapshot pre-commit, PR topology, non-certifying Linux nightly simulation/soak, and separate certified Windows/Unity determinism execution.
-- Section 5 — Self-conformance verification, implemented checklist/schema auditors, FR-to-verification coverage through 097, and architecture-proof negative fixtures.
+- Section 1 — Purpose, scope, key decisions, and authority boundaries.
+- Section 2 — Functional requirement catalogue FR-TS-001 … 097 and conformance/failure modes.
+- Section 3 — Rule mechanics, including §3.11 architecture proof/evidence integration and §3.12 version history.
+- Section 4 — Test-harness architecture, owning-test placement, and proof-record integration boundary.
+- Section 5 — Self-conformance verification, FR-to-verification coverage through 097, and architecture-proof negative fixtures.
 - Section 6 — CI orchestration and triage, including the four-gate topology; architecture/evidence enforcement remains inactive until A8.
-- Section 7 — Future extensions, resolved D1–D4 tool/provider pins, remaining D5–D9 decisions, and exception/coverage-exemption boundaries.
-- Section 8 — References, current tool pins, Governance/#20 traceability, and citation audit.
+- Section 7 — Future extensions, deferred decisions, and exception/coverage-exemption boundaries.
+- Section 8 — References, Governance/#20 traceability, and citation audit.
 - Section 9 — Approval checklist; May 15 approved baseline remains operative until coordinated A3.4 reapproval.
-- Appendix E — Versioned local/CI runbook and developer bootstrap.
 - Appendix G — Canonical architecture proof-artifact/closure contract and examples.
 
-## Current Synchronization Note
+## A3.2b Synchronization Note
 
-The executable candidate now carries the stable `tools/run-tests-local.sh` composition, automated checklist/schema auditors, staged-index pre-commit hook and bootstrap, FsCheck.NUnit 2.16.6, coverlet.collector 6.0.4, PR whole-tree scenario superset, value-pinned owner-held-RED handling, and scheduled nightly orchestration split between GitHub-hosted Linux regression/soak and the certified self-hosted Windows/Unity determinism host. D9's scenario-manifest encoding/index and the §5.5 per-tier coverage threshold mapper remain separate unresolved work; A8 architecture/evidence enforcement remains inactive.
-
-The adversarial review below is the historical May 6, 2026 review of the original outline. Its then-current repository/status premises are retained as historical evidence and MUST NOT be read as current project state.
+The adversarial review below is the historical May 6, 2026 review of the original outline. Its then-current repository/status premises are retained as historical evidence and MUST NOT be read as current project state. A3.2b synchronizes the active outline above to the current section-file structure; it does not rewrite the historical review record or activate enforcement.
 
 ## Version History
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.2 | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization.** Records the versioned pre-commit/PR/nightly topology, D2/D3 pins, automated auditors, Linux non-certifying versus Windows-certified determinism boundary, and the remaining D9/per-tier-coverage/A8 boundaries. Historical May 6 review text below remains unchanged. |
 | 1.0 | May 6, 2026 | — | Original high-level outline and embedded adversarial review; later expanded by `outline-detailed.md` v1.0/v1.1. |
 | 1.1 | September 3, 2026 | — | **A3.2b synchronization.** Replaces the obsolete section map with the current 97-FR / §3.11 proof / four-gate / A3.4+A8 activation structure while preserving the May 6 adversarial review below as historical evidence. |
 - Appendices — Test-data governance and flaky-test policy.

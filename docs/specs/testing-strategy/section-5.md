@@ -3,8 +3,8 @@
 **Created:** May 12, 2026
 **Last Updated:** September 4, 2026
 **Version:** 0.8
-**Status:** AMENDMENT DRAFT (A3.3/A3.4; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; `docs/planning/testing-strategy-a3.3-conformance-correction.md`; A3.4 owns reapproval
+**Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Reflexive test plan: this section verifies Spec #19
 against itself. Per-spec §5 conformance verification (which Spec #19
 mandates for *other* specs) is mechanics-defined in §3.5; the auditor
@@ -25,49 +25,54 @@ mechanics for that conformance check live here in §5.4.
 - **Stage 0:** manual review (no code yet, parallel to Spec #20 §5.1).
 - **Stage 0+1:** tooling activates per the "Activation stage" column
   in §2.2; the §5.6 traceability table records the tooling per FR.
-- **Evidence rule for this amendment:** structural existence of a
-  script, timeout, cache, workflow, runner label, repository variable,
-  or environment-variable check proves topology/configuration only. It
-  does not prove a successful timing or certified-host execution
-  obligation. Those operational facts require an actual successful run.
 
 ## 5.2 Stage-Gated Activation Table (KD-5)
 
 Per-FR table. Most FRs read "Stage 0+1" with criterion "first `src/`
 code committed". A subset reads "Stage 0" with criterion "applies to
-spec drafts now" — notably the KD-6 mandate FRs (FR-TS-040 … 045) and
-per-spec §5 schema FRs (FR-TS-046 … 052).
+spec drafts now" — notably the KD-6 mandate FRs (FR-TS-040 … 042, 044,
+045) and per-spec §5 schema FRs (FR-TS-046 … 052). **The ranges named
+in this paragraph are the activation ranges, which are not the §2.2
+partition ranges:** §2.2 partitions FR-TS-040 … 045 to KD-6 mechanics
+in §3.5, but assigns FR-TS-043 Stage 0+1, so it is listed separately in
+the table below (`ERR-019-002`).
 
-> **Column semantics.** The "Current Status" column below describes
-> current enforcement/implementation state. The "Activation Stage"
-> column matches the same-name column in §2.2. A resolved tool pin or
-> workflow definition does not by itself prove that every downstream
-> obligation has executed successfully; partial or operationally
-> unproven conformance is stated explicitly.
+> **Column semantics.** The "Stage 0 Status" column below describes
+> *current enforcement state* (`ACTIVE (Stage 0)` = enforced today;
+> `Inactive` = waiting for activation criterion). The "Activation
+> Stage" column matches the same-name column in §2.2 (the stage at
+> which the FR begins to gate merges). For most procedural FRs
+> (FR-TS-040 … 042, 044 … 052), both columns read "Stage 0" because the
+> activation criterion is "applies to spec drafts now" — there is
+> nothing further to wait for. **FR-TS-043 is the one row where the two
+> columns deliberately differ**, and it shows why there are two: §2.2
+> assigns it Stage 0+1, a stage §7.1 defines as the first `src/` commit and
+> which is therefore already REACHED, while `tools/checklist-auditor.py`
+> does not exist — so the row is active and non-conformant rather than
+> half-satisfied (`ERR-019-003`). Split out at `ERR-019-002`; before that split the band
+> published a single Stage 0 for both columns, contradicting §2.2.
 
-| FR Range | Current Status | Activation Stage | Activation Criterion |
+| FR Range | Stage 0 Status | Activation Stage | Activation Criterion |
 |----------|----------------|------------------|----------------------|
-| FR-TS-001 … 010 | ACTIVE (Stage 0+1); legacy taxonomy migration remains incomplete | Stage 0+1 | First `src/` code commit |
-| FR-TS-011 … 020 | **ACTIVE requirement; substantive amendment candidate partly implemented.** The candidate pipeline assigns authoritative full certification to nightly on the pinned Windows/Unity host, but no successful scheduled certified-host execution is yet recorded. FR-TS-011's changed MUST wording remains an A3.4 owner decision on the merits | Stage 0+1 | #16 §5 CI integration available |
-| FR-TS-021 … 030 | ACTIVE in executable scenario-runner surfaces; D9 root manifest/index remains overdue | Stage 0+1 | Scenario runner implemented |
-| FR-TS-031 … 039 | **ACTIVE (Stage 0+1)** — D2 resolved on FsCheck.NUnit 2.16.6; D8 coverage-guided fuzzing remains a later-stage decision | Stage 0+1 | Property framework pinned (D2) — **reached** |
-| FR-TS-040 … 045 | **ACTIVE** — `tools/checklist-auditor.py` is implemented. Routine pre-commit/PR/nightly composition runs it survey-only so pre-existing corpus debt cannot block unrelated edits; an explicit spec-approval walk omits `--survey-only` and fails closed on unresolved evidence for the candidate being approved | Stage 0 | Applies to current spec drafts |
-| FR-TS-046 … 052 | **ACTIVE** — `tools/spec5-schema-auditor.py` uses the same routine-survey / explicit-approval boundary; approved #1–#8 remain survey-only per KD-4 | Stage 0 | Applies to current spec drafts |
-| FR-TS-053 … 060 | **ACTIVE (Stage 0+1) — partially conformant**. D3 is resolved on coverlet.collector 6.0.4 and PR/nightly collection is wired; the §5.5 per-tier threshold mapper/auditor remains unimplemented | Stage 0+1 | Coverage tool pinned (D3) — **reached** |
-| FR-TS-061 … 067 | Inactive pending the specified flake integration layer. FR-TS-062's candidate activation wording is a substantive amendment pending A3.4 owner decision on the merits | Stage 0+1 | CI integration layer specified (§7.2) |
-| FR-TS-068 … 074 | Schema/implementation mixed; fixture-population obligations activate as fixtures are committed | Stage 0+1 | First fixture committed |
-| FR-TS-075 … 078, 080 | **ACTIVE (Stage 0+1) — candidate topology present, full conformance not yet proven.** Versioned pre-commit, PR, and nightly surfaces exist; PR CI reuses the stable composition. PR runs a conservative whole-tree scenario superset rather than claiming exact D9 manifest selection. The pre-commit path now uses anchored NUnit method selection and a persistent staged-index build cache with a 60-second normal-attempt bound, but still needs a successful measured ≤60-second certified-developer-host run. Linux nightly evidence is non-certifying; the self-hosted Windows/Unity #16 job is deliberately disabled until a certified runner is registered/configured and still needs a successful actual run | Stage 0+1 | First `src/` code commit (KD-5; §7.1) — **reached** |
-| FR-TS-079 | **ACTIVE (Stage 0) — candidate implementation present.** `tools/run-tests-local.sh` is the stable local/CI policy entry point, PR CI invokes `--pr`, and inherited filter/coverage controls are not accepted as hidden policy inputs | Stage 0 | Applies to the current repository |
+| FR-TS-001 … 010 | Inactive (no code) | Stage 0+1 | First `src/` code commit |
+| FR-TS-011, 012, 014, 016, 017, 019 | Inactive | Stage 0+1 | #16 §5 CI integration available |
+| FR-TS-013, 015, 018, 020 | **ACTIVE (Stage 0)** | **Stage 0** | Applies to the current spec set. §2.2 assigns all four Stage 0 — they are spec-drafting obligations (taxonomy collision, boundary review, no new tier categories, the §1.4 recording duty) with no code prerequisite. They were buried in the Stage 0+1 band above until `ERR-019-002` |
+| FR-TS-021, 023 … 030 | Schema only (Stage 0) | Stage 0+1 | Scenario runner implemented |
+| FR-TS-022 | **ACTIVE (Stage 0)** | **Stage 0** | Applies to the current spec set. §2.2 assigns FR-TS-022 Stage 0: it places per-spec scenarios in the owning spec's §5 and cross-spec scenarios in #19 §3 (KD-8), which is a drafting rule that binds before any runner exists. Buried in the Stage 0+1 band above until `ERR-019-002` |
+| FR-TS-031 … 037 | Inactive | Stage 0+1 | Property framework pinned (D2) |
+| FR-TS-038 | **ACTIVE (Stage 0)** | **Stage 0** | Applies to the current spec set. §2.2 assigns FR-TS-038 Stage 0: it requires Appendix B to carry an exemplar for every category named in §3.4.4, which is checkable against the committed appendix today and does not wait on D2. Buried in the Stage 0+1 band above until `ERR-019-002` |
+| FR-TS-039 | Inactive | **Stage 1+** | Coverage-guided (AFL-style) fuzzing, deferred to **D8** in §7.5. §2.2 assigns FR-TS-039 Stage 1+ and it is the catalogue's only MAY in this partition; the band above published both the wrong stage and the wrong deferral (D2, which pins the property framework, not the fuzzer). Corrected at `ERR-019-002` |
+| FR-TS-040 … 042, 044, 045 | **ACTIVE (Stage 0)** | Stage 0 | Applies to current spec drafts |
+| FR-TS-043 | **ACTIVE (Stage 0+1) — non-conformant** | **Stage 0+1** | §2.2 assigns FR-TS-043 Stage 0+1, and **Stage 0+1 is REACHED** — §7.1 defines it as the first `src/` code commit (KD-5), which this repository passed long ago. Its Stage 0 manual mechanics are enforced; its Stage 0+1 automated mechanics are **not**, because `tools/checklist-auditor.py` — the script FR-TS-043 names, and a §7.1 transition deliverable — **does not exist**. The row is therefore active and unmet, not half-satisfied. `ERR-019-002` split it out of the KD-6 band but described the automation as something that would "arrive at Stage 0+1", framing a reached stage as future and concealing the gap; corrected at `ERR-019-003`, gap open at `open-issues.md` |
+| FR-TS-046 … 052 | **ACTIVE (Stage 0)** | Stage 0 | Applies to current spec drafts |
+| FR-TS-053 … 060 | Inactive | Stage 0+1 | Coverage tool pinned (D3) |
+| FR-TS-061 … 067 | Inactive | Stage 0+1 | CI integration layer specified (§7.2) |
+| FR-TS-068 … 074 | Schema only | Stage 0+1 | First fixture committed |
+| FR-TS-075 … 078, 080 | **ACTIVE (Stage 0+1) — partially non-conformant** | Stage 0+1 | First `src/` code commit (KD-5; §7.1). **Reached** — `src/` has carried production assemblies since long before A3.2b. The criterion read "CI provider pinned (D4)" until A3.2b; that is not the normative Stage 0+1 trigger, and D4's resolution did not create the activation it appeared to. Open conformance gap recorded at `ERR-019-001` |
+| FR-TS-079 | **ACTIVE (Stage 0) — non-conformant** | Stage 0 | Applies to the current repository. §2.2 assigns FR-TS-079 Stage 0; it was buried in the Stage 0+1 band above until A3.2b. The Appendix E artifact it names, `tools/run-tests-local.sh`, does not exist; `tools/dotnet-ci/run-gate.sh` stands in its place under a different name. Recorded at `ERR-019-001` |
 | FR-TS-081 … 085 | **ACTIVE (Stage 0, partial)** | Stage 0+1 | Spec-defect class active now; implementation / test / determinism classes activate with code |
 | FR-TS-086 … 092, 094 … 097 | **AMENDMENT DRAFT; non-blocking** | Stage 0+1 | A3.4 reapproval plus applicable A4 resolver/proof prerequisites and A8 architecture/evidence-gate activation |
 | FR-TS-093 | **AMENDMENT DRAFT; non-blocking** | **Stage 0** | A3.4 reapproval only. §2.2 assigns FR-TS-093 Stage 0: it is a review-mechanics requirement with no implementation prerequisite, so it acquires no A4 resolver/proof or A8 gate-activation condition. It remains non-blocking solely because the May 15, 2026 baseline stays operative until A3.4 |
-
-`ERR-019-001` remains open. Its September 3 diagnosis in
-`docs/tracking/open-issues.md` is historical evidence of the repository
-state when filed; `docs/tracking/ERR-019-001-status.md` is the current
-candidate-status companion. The issue closes only after the operational
-acceptance and A3.4 conditions recorded there are satisfied in the
-landed baseline.
 
 ## 5.3 Approval-Checklist Auditor (KD-6 Mechanics)
 
@@ -79,49 +84,32 @@ Mechanics for FR-TS-040 … 045.
   row in every spec under review and resolves each citation against
   the current repo state.
 - Resolution outcomes:
-  - **Resolved (file/section path).** The cited version-controlled path
-    exists, or an explicit local `§N.x` citation resolves to the
-    corresponding version-controlled `section-N*.md` file.
-  - **Resolved (programmatic check).** The evidence names an explicit
-    runnable command/check rather than merely using words such as
-    "test" or "check" in prose.
-  - **Unresolved.** Neither (a) nor (b) holds; placeholders and
-    prose-only evidence remain findings.
-- Output is captured for review in the format declared in Appendix C.
-- Any blocking unresolved row prevents the affected candidate spec from
-  reaching APPROVED status (FR-TS-042).
+  - **Resolved (file path).** The cited path exists; the cited value
+    appears verbatim in the cited file. Recorded as `RESOLVED`.
+  - **Resolved (programmatic check).** The named check is runnable
+    and produces the cited output. Recorded as `RESOLVED`.
+  - **Unresolved.** Neither (a) nor (b) holds. Recorded as `BLOCK`.
+- Output is appended to the PR description in the format declared in
+  Appendix C.
+- Any `BLOCK` row prevents the spec from reaching APPROVED status
+  (FR-TS-042).
 
 ### 5.3.2 Stage 0+1 (Automated)
 
-`tools/checklist-auditor.py` is implemented and used in two explicit
-postures rather than turning legacy corpus debt into a universal PR gate.
+`tools/checklist-auditor.py` (final language pin parallels CLAUDE.md
+"When Writing Code" Python tooling rules):
 
-- Parses approval-checklist tables under `docs/specs/`.
-- Resolves explicit version-controlled paths and explicit local section
-  citations against the repository.
-- Recognizes only explicit programmatic commands/checks; generic prose
-  containing words such as "test" or "check" does not satisfy KD-6.
-- Rejects placeholder evidence tokens such as `<file-path>`.
-- **Routine composition:** `tools/run-tests-local.sh` invokes the auditor
-  with `--survey-only --quiet-survey`. Findings remain measured and
-  visible but cannot fail an unrelated pre-commit/PR/nightly solely
-  because the approved corpus predates the automated schema.
-- **Approval transition:** the reviewer invokes the auditor without
-  `--survey-only`; `--changed-scope --enforce-dir <spec-dir>` MAY be
-  used to bind enforcement to the exact candidate under approval. An
-  unresolved blocking row then prevents that spec from reaching
-  APPROVED (FR-TS-042).
-- #1–#8 remain survey-only under KD-4 even in an explicit approval walk.
-- Emits a machine-readable/console report suitable for CI/review use.
-- Behavior-level tooling tests cover routine survey, explicit approval
-  blocking, resolved paths/local § citations, prose-only evidence,
-  placeholders, amendment-draft handling, and legacy survey behavior.
+- Parses §9 approval-checklist tables in every spec under
+  `docs/specs/`.
+- For each row, resolves the citation:
+  - File-path citations: confirms the file exists and contains the
+    literal value.
+  - Programmatic-check citations: invokes the named check and
+    captures stdout / exit status.
+- Emits a structured report consumed by the CI gate.
+- Exit non-zero on any unresolved row.
 
-The implementation deliberately remains conservative about arbitrary
-command execution from documentation: untrusted prose is not turned
-into a shell command merely because it appears in a checklist.
-
-Output schema remains Appendix C authority.
+Output schema in Appendix C.
 
 ## 5.4 Per-Spec §5 Schema-Conformance Auditor
 
@@ -129,38 +117,31 @@ Mechanics for FR-TS-046 … 052.
 
 ### 5.4.1 Schema Check
 
-The auditor walks every spec's §5 against the Appendix C template and
-requires **structured markdown surfaces** (headings, list items, or
-explicit table rows). A prose paragraph that happens to contain all
-required keywords is not a schema.
+The auditor walks every spec's §5 against the Appendix C template:
 
-Required surfaces:
-
-- Test-count-by-layer surface present (unit / integration / simulation).
-- Property-test surface present with tier classification where declared.
-- Scenario surface present with manifest linkage where declared.
+- Required headings present (FR-TS-046 … 051).
+- Test-count-by-layer table parses.
+- Property-test list parses; every property has a tier classification.
+- Scenario list parses; every scenario has a manifest path that
+  resolves under `tests/scenarios/`.
 - Coverage targets per tier present.
 - Authoritative-field determinism-tier classifications present.
 - Approval-checklist linkages present.
 
 ### 5.4.2 Stage 0 Application
 
-- **Non-legacy specs (#9 onward):** unresolved schema findings prevent
-  an affected candidate spec from reaching APPROVED status
-  (FR-TS-052). Amendment-draft / in-review state is reported rather
-  than falsely treated as already approved.
+- **New specs from this point forward (#9 … #20):** schema-conforming
+  on first draft or §9 approval is blocked (FR-TS-052).
 - **Approved specs (#1 … #8):** survey-only at Stage 0 per §3.5.4 (KD-4
-  no-forced-re-open rule). Gaps are survey findings rather than a
-  forced retroactive approval failure.
+  no-forced-re-open rule). Gaps are logged as `ERR-019-NNN` rows in
+  `docs/tracking/spec-error-log.md`. Population of those rows is a
+  Stage 0+1 deliverable (§7.2); Appendix D ships at #19 approval with
+  schema and headers only.
 
 ### 5.4.3 Stage 0+1 Automation
 
-`tools/spec5-schema-auditor.py` is implemented with the same two
-postures as §5.3.2. The stable routine runner invokes it with
-`--survey-only`; an approval-transition walk omits that flag and MAY
-scope enforcement with `--changed-scope --enforce-dir <spec-dir>`.
-Tooling tests lock the structured-surface requirement and the routine
-survey / explicit approval / legacy boundaries.
+`tools/spec5-schema-auditor.py` (Stage 0+1 deliverable). Same approach
+as §5.3.2; emits a structured report.
 
 ## 5.5 Coverage-Report Auditor (KD-9)
 
@@ -172,21 +153,15 @@ Not applicable (no code).
 
 ### 5.5.2 Stage 0+1
 
-- D3 is resolved on coverlet.collector 6.0.4.
-- PR/nightly runner modes collect Cobertura-formatted `XPlat Code
-  Coverage` through `tools/dotnet-ci/coverage.runsettings`.
-- The still-owed auditor maps each production file to its #16 §1.1.1
-  tier and applies KD-9 thresholds:
+- Coverage tool (D3) produces per-file report.
+- Auditor maps each file to its #16 §1.1.1 tier and
+  applies KD-9 thresholds:
   - Tier A: ≥ 98% line, ≥ 95% branch (FR-TS-053).
   - Tier B: ≥ 90% line, ≥ 80% branch (FR-TS-054).
   - Tier C: lint-only (FR-TS-055).
 - Test code excluded from coverage measurement (FR-TS-056).
 - Exemption handling per §3.6.5: lead-developer sign-off recorded in
   `tests/coverage-exemptions.md`.
-
-**Current boundary:** collector selection/invocation is implemented;
-the per-tier threshold mapper/auditor is not. This subsection does not
-convert the collector pin into a false threshold-enforcement claim.
 
 ### 5.5.3 Reporting
 
@@ -196,21 +171,28 @@ Per-PR delta at Stage 0+1; absolute per-tier dashboard at Stage 1
 ## 5.6 FR-to-Verification Traceability
 
 Single table indexed by FR-TS-###; columns: `FR | Verification
-Mechanism | Tooling | Activation Stage | Output Artifact`.
+Mechanism | Tooling | Activation Stage | Output Artifact`. At Stage 0
+most rows resolve to "manual review against §3 mechanics" —
+acknowledged degenerate (parallel to Spec #20 §5.5).
 
 | FR | Mechanism | Tooling | Activation | Output Artifact |
 |----|-----------|---------|------------|-----------------|
-| FR-TS-001 … 010 | Pyramid-ratio check at PR-merge | Coverage/tooling surfaces; taxonomy migration still incomplete | Stage 0+1 | CI report |
-| FR-TS-011 … 020 | Boundary review at #16 §5 change; successful nightly full certified execution required | Linux regression evidence + gated certified Windows/Unity nightly job; actual certified execution still required | Stage 0+1 | Review note + certified test result |
-| FR-TS-021 … 030 | Scenario runner schema check | `ScenarioRunner` load step + §5.4 auditor; D9 index overdue | Stage 0+1 | Runner exit status |
-| FR-TS-031 … 039 | Property / fuzz seed-log inspection | FsCheck.NUnit 2.16.6 + seed-governance review | Stage 0+1 | Test/run log |
-| FR-TS-040 … 045 | Checklist auditor: routine survey plus explicit approval gate | `tools/checklist-auditor.py` | **Stage 0** | Auditor output |
-| FR-TS-046 … 052 | §5.4 schema auditor: routine survey plus explicit approval gate | `tools/spec5-schema-auditor.py` | **Stage 0** | Auditor output |
-| FR-TS-053 … 060 | Coverage collection + tier audit | coverlet.collector 6.0.4 implemented; per-tier mapper still owed | Stage 0+1 | Cobertura report; future tier verdict |
-| FR-TS-061 … 067 | Flake ledger + eviction-log review | CI double-run + `tests/flake-eviction-log.md` when activated | Stage 0+1 | Flake ledger |
+| FR-TS-001 … 010 | Pyramid-ratio check at PR-merge | Coverage tool + custom analyzer | Stage 0+1 | CI report |
+| FR-TS-011, 012, 014, 016, 017, 019 | Boundary review at #16 §5 change | Manual at Stage 0; CI sentinel at Stage 0+1 | Stage 0+1 | Review note in PR |
+| FR-TS-013, 015, 018, 020 | Boundary review at #16 §5 change | Manual review against §3.2 mechanics | **Stage 0** | Review note in PR |
+| FR-TS-021, 023 … 030 | Scenario runner schema check | `ScenarioRunner` load step + §5.4 auditor | Stage 0+1 | Runner exit status |
+| FR-TS-022 | Scenario-placement review at spec §5 authoring (KD-8) | Manual review against §3.3 mechanics | **Stage 0** | Review note in PR |
+| FR-TS-031 … 037 | Property / fuzz seed-log inspection | Property framework log + manual review | Stage 0+1 | Run log under `tests/data/run-logs/` |
+| FR-TS-038 | Appendix B category-coverage check against §3.4.4 | Manual review of the committed appendix | **Stage 0** | Review note in PR |
+| FR-TS-039 | Coverage-guided fuzzing — not adopted by default | Deferred to **D8** (§7.5); no mechanism until adopted | **Stage 1+** | None until D8 resolves |
+| FR-TS-040 … 042, 044, 045 | Checklist auditor | Manual (Stage 0) → `tools/checklist-auditor.py` (Stage 0+1) | **Stage 0** | Auditor report appended to PR description |
+| FR-TS-043 | Auditor-mechanics stage pin | Manual reviewer only; the `tools/checklist-auditor.py` half is **unimplemented at a reached Stage 0+1** (`ERR-019-003`) | **Stage 0+1** | Manual auditor report appended to PR description; no automated report exists |
+| FR-TS-046 … 052 | §5.4 schema-conformance auditor | Manual (Stage 0) → `tools/spec5-schema-auditor.py` (Stage 0+1) | **Stage 0** | Auditor report |
+| FR-TS-053 … 060 | Coverage auditor | D3 coverage tool + per-tier mapper | Stage 0+1 | Per-PR coverage delta |
+| FR-TS-061 … 067 | Flake ledger + eviction-log review | CI double-run + `tests/flake-eviction-log.md` | Stage 0+1 | Flake ledger |
 | FR-TS-068 … 074 | Fixture validator | `IFixtureValidator` at scenario load | Stage 0+1 | Runner exit status |
-| FR-TS-075 … 078, 080 | CI gate composition plus operational acceptance evidence | `.githooks/pre-commit`, `tools/run-tests-local.sh`, `.github/workflows/ci.yml`, `.github/workflows/nightly.yml`; successful certified-host timing/nightly results still required | Stage 0+1 | Local/PR/nightly gate results |
-| FR-TS-079 | Stable local gate composition | `tools/run-tests-local.sh` + Appendix E | **Stage 0** | Local gate output |
+| FR-TS-075 … 078, 080 | CI gate composition | GitHub Actions (D4, resolved) + §6.2 policy | Stage 0+1 | CI gate report |
+| FR-TS-079 | Local gate composition until CI activates | Appendix E local runner | **Stage 0** | Local gate output |
 | FR-TS-081 … 085 | Defect log review | `tests/test-defect-log.md` + manual triage | Stage 0+1 (partial Stage 0) | Defect log + cycle review |
 | FR-TS-086 | Strict applicability resolution | A2 applicability schema/reference semantics; A4 resolver when implemented | Stage 0+1 | Matched-rule / obligation record or fail-closed diagnostic |
 | FR-TS-087 | Proof-artifact shape, subject digest and provenance separation | `proof-artifact.schema.json` + reference semantics v2.1.0 | Stage 0+1 | Schema-valid reusable proof artifact |
@@ -256,27 +238,19 @@ own implementation/activation.
 ## 5.7 Determinism-Suite Consumption Verification
 
 > **Cross-reference.** §2.2 partition-table "Verification in" column
-> points to §5.7 for FR-TS-011 … 020; §6.2.4 is the pipeline-level
-> composition authority.
+> points to §5.7 for FR-TS-011 … 020; §5.6 now carries that partition
+> as **two** rows, split at `ERR-019-002` because §2.2 assigns
+> FR-TS-013, 015, 018 and 020 Stage 0 while the rest of the partition
+> is Stage 0+1. The Stage 0+1 row names "Manual at Stage 0; CI
+> sentinel at Stage 0+1" with output artifact "Review note in PR"; the
+> Stage 0 row names manual review against §3.2 mechanics with the same
+> artifact. The two views remain complementary, not contradictory:
+> §5.7 publishes the *contract*; §5.6 publishes the *artifact*.
 
 - Spec #19 declares **no numerical determinism tests of its own**.
-- The A3 candidate consumes #16 according to pipeline scope, not by
-  pretending every host is a certification host: pre-commit carries no
-  determinism certification; PR may carry partial/non-certifying
-  regression evidence; nightly is **defined to execute**, once the
-  certified runner is operationally activated, the full authoritative
-  #16 suite on the pinned certified Windows/Unity host.
-- **Operational acceptance is still open:** the self-hosted job is
-  gated by `DETERMINISM_CERTIFIED_RUNNER_ENABLED=true` specifically so
-  an unregistered runner is not silently treated as available. The
-  workflow/variable/labels/platform-pin checks do not prove the runner
-  is registered/configured or that the suite passed there. A successful
-  certified-host run is required before this leg may be recorded
-  conformant.
-- Linux `dotnet`/shim results remain useful regression evidence but do
-  not certify the platform tuple.
-- Failures in the authoritative #16 nightly suite are determinism-gate
-  failures under KD-2; Spec #19 does not soften #16 exit criteria.
+- This subsection records the *consumption* contract: every CI
+  pipeline runs #16 §5's full tier set; failures
+  block merge per KD-2 (FR-TS-011, FR-TS-012).
 - **Boundary review check (FR-TS-015).** Any change to #16 §5 that
   touches tier names or exit criteria triggers a Spec #19 §3.2 review
   before the change can land. The reviewer:
@@ -290,11 +264,11 @@ own implementation/activation.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.8     | September 4, 2026 | — | **Claude review correction.** Removes the repo-wide auditor landmine by making routine composed runs survey-only and reserving fail-closed enforcement for an explicit approval transition; records anchored NUnit method-prefix pre-commit selection, persistent staged-index cache semantics, the gated-not-assumed certified runner, and the merit-based FR-TS-011/062 approval boundary. |
-| 0.7     | September 4, 2026 | — | **A3.3 conformance/evidence correction.** Stops treating topology as execution proof: FR-TS-075 remains only partially conformant until a successful complete ≤60-second pre-commit run is measured on the certified developer host and the pinned Windows/Unity #16 nightly job actually executes successfully. Aligns the automated auditor descriptions with fail-closed evidence parsing plus approval-state blocking, records `ERR-019-001-status.md` as the current candidate companion, and flags FR-TS-011/062 owner reapproval as an A3.4 obligation. |
-| 0.6     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization candidate.** Updates activation state after D2/D3 pins and pipeline implementation; records automated checklist/schema auditors, staged-snapshot pre-commit, PR whole-tree scenario superset, Linux non-certifying nightly evidence, and the separate pinned Windows/Unity full #16 suite. D3 collector closure is not overclaimed: §5.5's per-tier threshold mapper remains owed. The v0.7 correction clarifies which execution facts were not proven by this topology alone. |
-| 0.5     | September 3, 2026 | — | **A3.2b review correction (`ERR-019-001`).** Reconciles the FR-TS-075 … 080 band in §5.2 and §5.6 with the normative core: FR-TS-079 gets its own **Stage 0** row per §2.2, and FR-TS-075 … 078, 080 carry the actual Stage 0+1 criterion (first `src/` code commit, KD-5 / §7.1) — **reached** — in place of "CI provider pinned (D4)", which the normative core never defined. The band was therefore mis-reported as `Inactive` from the day it was written, not by D4's closure. Activation is deliberately not deferred behind a new prerequisite: gating FR-TS-075 on the three-pipeline topology it itself mandates would be circular and fail-open. The real gap this concealed — two absent mandatory pipelines and an absent Appendix E script — is recorded at `ERR-019-001` and open at `docs/tracking/open-issues.md`. |
-| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 1).** Splits FR-TS-093 out of the FR-TS-086 … 097 band in §5.2 and corrects its §5.6 activation cell: §2.2 assigns FR-TS-093 **Stage 0**, so the band's Stage 0+1 value contradicted the normative core and attached A4/A8 prerequisites the requirement does not have. Its Stage 0 *status* is unchanged — still AMENDMENT DRAFT and non-blocking until A3.4 reapproval, because the May 15, 2026 baseline remains operative; no requirement is activated here. |
-| 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Extends §5.2 and §5.6 through FR-TS-097, adds the architecture-proof negative-fixture matrix, preserves non-blocking draft state until A3.4/A4/A8 prerequisites, and does not activate a CI gate. |
-| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5; #16 §1.3 → §1.1.1. L5 §5.6 / §5.7 cross-reference added. L6 column-semantics disambiguation added to §5.2 lead. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Stage-gated activation table + traceability table populated. |
+| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5; #16 §1.3 → §1.1.1. L5 §5.6 / §5.7 cross-reference added. L6 column-semantics disambiguation added to §5.2 lead. |
+| 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Extends §5.2 and §5.6 through FR-TS-097, adds the architecture-proof negative-fixture matrix, preserves non-blocking draft state until A3.4/A4/A8 prerequisites, and does not activate a CI gate. |
+| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 1).** Splits FR-TS-093 out of the FR-TS-086 … 097 band in §5.2 and corrects its §5.6 activation cell: §2.2 assigns FR-TS-093 **Stage 0**, so the band's Stage 0+1 value contradicted the normative core and attached A4/A8 prerequisites the requirement does not have. Its Stage 0 *status* is unchanged — still AMENDMENT DRAFT and non-blocking until A3.4 reapproval, because the May 15, 2026 baseline remains operative; no requirement is activated here. |
+| 0.5     | September 3, 2026 | — | **A3.2b review correction (`ERR-019-001`).** Reconciles the FR-TS-075 … 080 band in §5.2 and §5.6 with the normative core: FR-TS-079 gets its own **Stage 0** row per §2.2, and FR-TS-075 … 078, 080 carry the actual Stage 0+1 criterion (first `src/` code commit, KD-5 / §7.1) — **reached** — in place of "CI provider pinned (D4)", which the normative core never defined. The band was therefore mis-reported as `Inactive` from the day it was written, not by D4's closure. Activation is deliberately not deferred behind a new prerequisite: gating FR-TS-075 on the three-pipeline topology it itself mandates would be circular and fail-open. The real gap this concealed — two absent mandatory pipelines and an absent Appendix E script — is recorded at `ERR-019-001` and open at `docs/tracking/open-issues.md`. |
+| 0.6     | September 4, 2026 | — | **A3.3 reconciliation correction (`ERR-019-002`).** §5.2 and §5.6 published an Activation Stage for **eight** FR rows that contradicted §2.2 — the same defect class as `ERR-019-001`, found by the A3.3 traceability gate comparing the two columns mechanically rather than by eye. §5.2's own column-semantics note states that its Activation Stage column *matches the same-name column in §2.2*, so any disagreement is a defect by the table's own contract. Six Stage 0 MUSTs (FR-TS-013, 015, 018, 020, 022, 038) were buried in Stage 0+1 bands and published as `Inactive`/`Schema only` behind criteria they do not wait on; FR-TS-039, the partition's only MAY, was published as Stage 0+1 behind D2 when §2.2 assigns it Stage 1+ and its own statement defers it to **D8**; and FR-TS-043 was published as Stage 0 inside an **ACTIVE** band when §2.2 assigns it Stage 0+1. Each is split to its own row in **both** tables and the Activation Stage column now reproduces §2.2 for all 97 rows, verified mechanically. FR-TS-043 is split rather than forced to one value: it spans both stages by construction, so its Stage 0 Status records the enforced manual half while its Activation Stage carries §2.2's Stage 0+1. §5.7's cross-reference note is updated for the FR-TS-011 … 020 split. **No FR statement, level, or §2.2 activation value changed** — §2.2 is the authority both tables were already required to reproduce, and this pass moved the tables to it, not the reverse. |
+| 0.7     | September 4, 2026, later | — | **Self-review correction to v0.6 — the same defect class, created by the fix for it.** v0.6 corrected the §5.2/§5.6 tables and left §5.2's own preamble and column-semantics note asserting the pre-split state: the preamble named the Stage 0 subset as "FR-TS-040 … 045" and the note said that for FR-TS-040 … 052 "both columns read Stage 0". Both are falsified by v0.6's own FR-TS-043 split, so the section shipped prose contradicting the table directly beneath it — which is what `ERR-019-002` is about. Both are corrected, and the note now states FR-TS-043 as the deliberate two-column divergence it is, with the reason. No table row, FR statement, level, or §2.2 value changed. |
+| 0.8     | September 4, 2026, later still | — | **`ERR-019-003` — the `ERR-019-002` fix concealed an unmet MUST; found by the Codex review bot on PR #358 (P1).** v0.6 split FR-TS-043 out of the KD-6 band and described its automated half as mechanics that "arrive at Stage 0+1", reporting only the manual half as active. But **§7.1 defines Stage 0+1 as the first `src/` code commit (KD-5) and this repository passed it long ago**, so the stage is reached, not pending — and `tools/checklist-auditor.py`, the script FR-TS-043 names and a §7.1 transition deliverable, **does not exist** (verified: every reference to it is documentation). The row therefore published a reached, unmet Stage 0+1 MUST as half-satisfied. That is `ERR-019-001`'s defect class exactly — a table state concealing an absent deliverable — reproduced by the fix for `ERR-019-002`. Both rows and the §5.2 preamble now state the stage as REACHED and the row as **ACTIVE — non-conformant**. The gap itself is **recorded, not fixed**, and open at `open-issues.md`: writing the auditor is an implementation pass, not a table edit. No FR statement, level, or §2.2 activation value changed. |

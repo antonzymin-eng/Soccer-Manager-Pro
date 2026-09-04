@@ -3,8 +3,8 @@
 **Created:** May 12, 2026
 **Last Updated:** September 4, 2026
 **Version:** 0.5
-**Status:** AMENDMENT DRAFT (A3.3/A3.4; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.4 owns reapproval
+**Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
 **Purpose:** Conformance vocabulary, the full FR-TS-### catalogue with
 verification pointers, and the failure-to-comply modes. Rule mechanics
 for every FR live in §3; §2 publishes the rule statement.
@@ -47,18 +47,6 @@ detailed mechanics are in the §3 subsection named in the partition
 table below; source citations and verification pointers are reproduced
 in the §5.6 traceability table.
 
-> **A3 amendment authority note (September 4, 2026).** The candidate
-> wording of **FR-TS-011** and **FR-TS-062** is a substantive normative
-> amendment to the May 15 approved baseline, not a documentation-only
-> synchronization. FR-TS-011 changes the scope at which the full #16
-> determinism suite MUST execute; FR-TS-062 changes when the every-test
-> double-run MUST becomes operative. The executable candidate does not
-> self-approve either change. Both require explicit A3.4 owner
-> reapproval before this amendment can become the operative baseline.
-> D2/D3 tool pins and the FR-TS-078/079 executable-pointer updates are
-> implementation/state synchronization and do not erase that approval
-> boundary.
-
 **Partition.**
 
 | FR Range | Topic | Rule mechanics in | Verification in |
@@ -96,8 +84,8 @@ in the §5.6 traceability table.
 | FR-TS-008 | Tests MUST be named per §3.1.4 (`unit_<system>_<behaviour>`, `int_<A>_<B>_<behaviour>`, `sim_<scenario>`, `e2e_<scenario>`). | MUST | Stage 0+1 |
 | FR-TS-009 | A per-spec §5 MAY declare tighter lower bounds on its own layer mix; it MUST NOT declare upper bounds that exceed the pyramid contract. | MUST | Stage 0+1 |
 | FR-TS-010 | Anti-patterns enumerated in §3.1.3 MUST be flagged at code review and MUST NOT merge. | MUST | Stage 0+1 |
-| FR-TS-011 | Determinism-suite consumption MUST follow the pipeline map in §6.2.4: pre-commit carries no determinism certification, PR may carry partial/non-certifying regression evidence, and nightly MUST execute Spec #16 §5's full authoritative suite on the pinned certified host. (KD-2) | MUST | Stage 0+1 |
-| FR-TS-012 | A failure in any required #16 §5 tier blocks the applicable gate; Spec #19 does not soften #16 exit criteria. (KD-2) | MUST | Stage 0+1 |
+| FR-TS-011 | Every CI pipeline declared in §6 MUST include Spec #16 §5's regression tiers in their canonical order (unit / integration / scenario / soak). (KD-2) | MUST | Stage 0+1 |
+| FR-TS-012 | A failure in any #16 §5 tier blocks merge; Spec #19 does not soften the exit criteria. (KD-2) | MUST | Stage 0+1 |
 | FR-TS-013 | Spec #19's taxonomy MUST NOT collide with #16 §5 tier names. | MUST | Stage 0 |
 | FR-TS-014 | Cross-spec scenario assertions that do not depend on bitwise determinism are owned by Spec #19 §3.3, not by #16 §5. (KD-8) | MUST | Stage 0+1 |
 | FR-TS-015 | Any change to #16 §5 tier names or exit criteria triggers a §3.2 review of Spec #19. | MUST | Stage 0 |
@@ -116,7 +104,7 @@ in the §5.6 traceability table.
 | FR-TS-028 | A root manifest (`tests/scenarios/index.<ext>`; `<ext>` pinned at Stage 0+1) enumerates every scenario. Stage 0 deliverable: schema (Appendix A). Stage 1 deliverable: populated index. | MUST | Stage 0+1 |
 | FR-TS-029 | Scenario tier classification (Tier A / B / C) MUST be assigned per #16 §1.1.1 at scenario creation time. (KD-9) | MUST | Stage 0+1 |
 | FR-TS-030 | Scenarios MUST declare an expected-outcome envelope; "implicit pass" is forbidden. | MUST | Stage 0+1 |
-| FR-TS-031 | Property tests MUST use the framework pinned in §6.1; the current pin is FsCheck.NUnit 2.16.6. | MUST | Stage 0+1 |
+| FR-TS-031 | Property tests use the framework pinned in §6.1 (Stage 0+1 selection); during Stage 0 the framework is unpinned. | MUST | Stage 0+1 |
 | FR-TS-032 | Property and fuzz seed *selection* MAY be non-deterministic; the executed test body MUST route through `DeterministicRngService` (`SplitMix64`) with the selected seed. (KD-7) | MUST | Stage 0+1 |
 | FR-TS-033 | The selected seed MUST be logged at start of every property / fuzz run. | MUST | Stage 0+1 |
 | FR-TS-034 | A failing property / fuzz seed MUST be captured to `tests/data/captured-seeds/<spec>/<YYYY-MM-DD>-<seed>.fixture` in #16 §3.2.4.1 canonical format. (KD-10) | MUST | Stage 0+1 |
@@ -142,12 +130,12 @@ in the §5.6 traceability table.
 | FR-TS-054 | Tier B bounded-authoritative code MUST achieve ≥ 90% line and ≥ 80% branch coverage. (KD-9) | MUST | Stage 0+1 |
 | FR-TS-055 | Tier C non-authoritative code is lint-only; no numeric coverage target. (KD-9) | MAY | Stage 0+1 |
 | FR-TS-056 | Test code itself is NOT counted toward coverage. | MUST | Stage 0+1 |
-| FR-TS-057 | The coverage tool (§6.1) MUST emit output consumable by the §5.5 per-tier auditor; the current collector pin is coverlet.collector 6.0.4, while the per-tier mapper/auditor remains a separate implementation obligation. | MUST | Stage 0+1 |
+| FR-TS-057 | The coverage tool (§6.1, deferred) MUST emit a per-tier breakdown consumable by the §5.5 auditor. | MUST | Stage 0+1 |
 | FR-TS-058 | Reporting cadence: per-PR delta at Stage 0+1; absolute per-tier dashboard at Stage 1 (§3.6.4). | MUST | Stage 0+1 |
 | FR-TS-059 | Coverage exemptions require lead-developer sign-off and are recorded in `tests/coverage-exemptions.md`; exemptions expire at the next refactor of the affected file. | MUST | Stage 0+1 |
 | FR-TS-060 | Tier classification of every file under coverage measurement MUST be sourced from #16 §1.1.1; #19 does not redefine it. | MUST | Stage 0+1 |
 | FR-TS-061 | A test is "flaky" if two runs of the same revision under the same `EnvironmentFingerprint` produce different pass/fail outcomes (cited from #16 §4.8). | MUST | Stage 0+1 |
-| FR-TS-062 | CI MUST run every test twice on the same revision once the dedicated flake integration layer activates; disagreement triggers automatic quarantine. | MUST | Stage 0+1 |
+| FR-TS-062 | CI MUST run every test twice on the same revision; disagreement triggers automatic quarantine. | MUST | Stage 0+1 |
 | FR-TS-063 | Quarantined tests continue to execute; quarantine removes only their eligible functional-gate blocking effect and remains subject to FR-TS-077. | MUST | Stage 0+1 |
 | FR-TS-064 | Quarantine auto-expires after 14 days; expired tests MUST be either fixed or deleted. Permanent quarantine is forbidden. | MUST | Stage 0+1 |
 | FR-TS-065 | A test quarantined ≥ 3 times in 90 days MUST be deleted and the rationale recorded in `tests/flake-eviction-log.md`. | MUST | Stage 0+1 |
@@ -163,8 +151,8 @@ in the §5.6 traceability table.
 | FR-TS-075 | Three pipelines are mandatory: pre-commit (unit + property), PR (unit + integration + property + per-spec-changed scenarios), nightly (full simulation + soak + #16 §5 full suite). See §4.5. | MUST | Stage 0+1 |
 | FR-TS-076 | Functional-gate failure blocks merge (Spec #19 authority); performance-gate failure blocks merge (Spec #18 authority); determinism-gate failure blocks merge (#16 §5 authority); once activated, architecture/evidence-gate failure blocks merge under Spec #19 evidence mechanics while Governance and Spec #20 retain ownership of the underlying architectural obligations. | MUST | Stage 0+1 |
 | FR-TS-077 | No gate is "soft." Flake quarantine (§3.7) may relax only an eligible functional-test failure; it **MUST NOT** waive missing or stale required architectural proof, a structural governance gate, determinism/performance gates, or any other independently blocking obligation. | MUST | Stage 0+1 |
-| FR-TS-078 | CI provider selection criteria are declared in §6.1; the provider pin is GitHub Actions as recorded in `src/CLAUDE.md` and the versioned workflows. | MUST | Stage 0+1 |
-| FR-TS-079 | The same gate composition MUST remain available locally via `tools/run-tests-local.sh` (Appendix E), including after CI activation; CI orchestration MUST reuse or remain behaviorally aligned with that versioned composition rather than creating an undocumented second gate. | MUST | Stage 0 |
+| FR-TS-078 | CI provider selection criteria are declared in §6.1 (L4); the final pin lands in `src/CLAUDE.md`. | MUST | Stage 0+1 |
+| FR-TS-079 | Until CI activates, the same gate composition runs locally via `tools/run-tests-local.sh` (Appendix E). | MUST | Stage 0 |
 | FR-TS-080 | Spec #19 cites #18 §4 thresholds by reference; #19 MUST NOT republish performance numbers. (KD-3) | MUST NOT | Stage 0+1 |
 | FR-TS-081 | Defects are classified per §6.4.1 (spec / implementation / test / determinism). Misclassified defects are themselves a procedural violation. | MUST | Stage 0+1 |
 | FR-TS-082 | PR-blocking failures are investigated within 24 hours; quarantined tests are reviewed weekly; spec defects are reviewed at next spec-revision cycle. | MUST | Stage 0+1 |
@@ -183,6 +171,25 @@ in the §5.6 traceability table.
 | FR-TS-095 | Merge-critical governance tooling MUST have known-good, known-bad, and blind-spot verification proportionate to the consequence of false positives and false negatives. | MUST | Stage 0+1 |
 | FR-TS-096 | Bounded substitutes are permitted only for computationally disproportionate, intentionally omitted, or unavailable proof and MUST record authority, approval, scope/rationale, and the omitted surface or remaining uncertainty. They MUST NOT waive an executed proof failure, runner failure, ordinary skipped execution, or an independently applicable Governance exclusion requirement. | MUST | Stage 0+1 |
 | FR-TS-097 | A [GT] or owner-declared calibration/tuning change MUST NOT land for a component whose activation state is intentionally-disabled, pending-integration, or unresolved unless an approved exception explicitly authorizes that exact tuning scope. | MUST | Stage 0+1 |
+
+**FR table footer.**
+
+This catalogue contains **97 functional requirements** (FR-TS-001 …
+FR-TS-097) in the twelve partitions listed above. Those partition
+ranges are contiguous and non-overlapping and span FR-TS-001 … 097
+exactly; the table states ranges only, not per-partition counts, so
+the total is stated here rather than left to be summed.
+
+**Renumbering is forbidden after publication.** FR-TS IDs are cited in
+`spec-error-log.md` entries, in the §5.2 / §5.6 tables, in other specs'
+§5 conformance sections, and in `src/CLAUDE.md`. Renumbering produces
+the same cascade-failure class as stale spec numbers (root `CLAUDE.md`
+— "KNOWN HAZARD — Spec Renumbering Cascades"). New requirements append
+as FR-TS-098, FR-TS-099, … and require a version bump to this section
+and to §9.1. This mirrors the rule Spec #20 §2.2.10 has carried since
+publication; it is stated here because the two specs are amended and
+reapproved as one bundle and the prohibition should not depend on which
+of them a reader opens.
 
 ## 2.3 Failure-to-Comply Modes
 
@@ -282,8 +289,8 @@ Spec #19's own failure modes (additional to §2.3):
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.5     | September 4, 2026 | — | **A3.3 authority correction.** Explicitly classifies the FR-TS-011 and FR-TS-062 text changes as substantive normative amendment candidates that require A3.4 owner reapproval; the executable branch and implementation synchronization do not self-approve them. No requirement text is changed by this history correction. |
-| 0.4     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization candidate.** Introduced the current FR-TS-011/012 pipeline-scoped determinism wording; recorded D2/D3 pins in FR-TS-031/057; made FR-TS-079 a durable local/CI parity obligation; and introduced the current FR-TS-062 dedicated-flake-layer scope. The v0.5 review correction clarifies that the FR-TS-011 and FR-TS-062 parts of this row were substantive normative changes, not mere synchronization. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. FR-TS-001 … 085 enumerated; partition table aligns to §3 mechanics. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 citations corrected (§5 / §3.2.4.1 / §1.1.1 / §4.8); FR-TS-002 / FR-TS-006 carry inline value-tag pointers (L1 / L2); SUSPENDED-on-tag-reintroduction added to §2.3 (L8). |
 | 0.3     | September 2, 2026 | Codex | **A3.2a governance amendment draft.** Appends FR-TS-086–097, qualifies FR-TS-063 quarantine, amends FR-TS-076/077/084, adds the architecture proof/evidence partition and failure modes, separates bounded substitutes from Governance-approved surface exclusions, and closes the Spec #19 exception boundary. The May 15 approved baseline remains operative until A3.4 atomic reapproval. |
+| 0.4     | September 4, 2026 | — | **A3.3 reconciliation correction.** Adds the FR table footer §2.2 has never carried: the explicit **97** total and the renumbering prohibition, mirroring Spec #20 §2.2.10. The A3.3 count/range gate found the asymmetry — #20 states its total and forbids renumbering at the catalogue itself, while #19 left the total derivable only from the partition table and stated in §9.1.2, and carried no renumbering rule anywhere. The gap predates A3; it is closed here because the two specs are reapproved as one bundle. **No FR is added, removed, renumbered, or restated, and no count changes** — 97 is the figure the partition table already sums to and §9.1.2 already records. |
+| 0.5     | September 4, 2026, later | — | **Self-review correction to v0.4.** The footer v0.4 added claimed the partition table "carries the ranges and their per-partition counts" — it does not: its columns are `FR Range | Topic | Rule mechanics in | Verification in`, with no count column. The phrasing was carried over from Spec #20 §2.2.10, whose table does have one, without checking this one. Corrected to state what is true of the table as it stands — the twelve ranges are contiguous, non-overlapping, and span 001 … 097 exactly — and to say explicitly that the total is stated in the footer *because* the table does not carry counts. No FR, count, range, or renumbering rule changed. |

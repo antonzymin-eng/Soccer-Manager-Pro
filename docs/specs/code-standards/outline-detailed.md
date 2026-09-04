@@ -14,7 +14,7 @@ authored mechanically.
 
 **Created:** May 6, 2026, 8:50 PM PST
 **Updated:** September 2, 2026
-**Version:** 1.6
+**Version:** 1.7
 **Status:** DRAFT — A3.1b post-merge corrections synchronized; normative section files control
 **Companion documents:** `outline.md` (high-level v1.2),
 `outline-mid.md` (mid-level v1.4).
@@ -229,8 +229,10 @@ Standard table (5 columns: Version | Date | Author | Notes | Reviewer).
   be omitted. *MUST* (where applicable). Source: §3.4.4 (Python rule).
 
 #### 2.2.5 Dependency Direction & Interfaces — FR-CS-046 … FR-CS-055 (10 FRs)
-- FR-CS-046: Layer order Physics → Mechanics → AI → UI; no upward
-  references. *MUST*. Source: §3.5.2.
+- FR-CS-046: References flow one direction only along the §3.5.2
+  ten-tier order (Foundation → Physics → Configuration → Mechanics →
+  AI → Data → Composition → Management → Presentation → Client); no
+  upward references. *MUST*. Source: §3.5.2.
 - FR-CS-047: Cross-spec events flow upward via struct dispatch.
   *MUST*. Source: §3.5.2.
 - FR-CS-048: An `interface` file MUST live in the same assembly as at
@@ -402,8 +404,12 @@ Standard table.
 **Subsection target length:** ~110 lines, ~2 diagrams (ASCII).
 
 - 3.5.1 CLAUDE.md citation: "interfaces only when both sides specified".
-- 3.5.2 Layer-order diagram (ASCII): Physics → Mechanics → AI → UI.
-  Upward references = compile error rule. Struct-event flow direction.
+- 3.5.2 Tier-order diagram (ASCII): the ten-tier order, with the `──►`
+  arrow labelled ("is available to"). Upward references are blocked by
+  `tools/assembly-tier-check.py`, NOT by compilation — a non-cyclic
+  upward reference compiles cleanly, which is why the drift survived
+  fourteen months (§3.5.2, `section-4.md` v1.2). Struct-event flow
+  direction.
 - 3.5.3 Interface placement rule. Phantom-interface anti-example
   (cite ERR-001, ERR-004).
 - 3.5.4 Event-vs-interface decision tree (ASCII flowchart, ~15 lines).
@@ -905,3 +911,4 @@ enforcement activation.
 | 1.4     | September 2, 2026 | Codex | A3.1b synchronization: 81-FR partition with FR-CS-074–081, §3.5.6–§3.5.7 architecture mechanics, single ten-tier arrow authority, eight §5.4 categories / 83 traceability rows, Appendix F, and report-only A4 boundary. Historical 70→73 record preserved. |
 | 1.5     | September 2, 2026 | Codex | Post-merge Codex-review correction: synchronizes live authority/dependency text to existing `src/CLAUDE.md`, Governance and substantive Spec #19 ownership; corrects FR-CS-074/075 mapping; updates §8 to ten sources with only Spec #9 pointer-only. |
 | 1.6     | September 3, 2026 | Claude Code | Scope correction to v1.5: that revision rewrote **KD-4** here ("Verification evolves with repository state") while the authoritative `section-1.md` §1.3 kept the original decision — a KD change no A3.1b finding asked for, and one that would have made this slice carry a governance-semantic change rather than a synchronization. KD-4 restored verbatim to its pre-A3.1b text, so all three outline tiers and the section file agree again. Modernizing KD-4 against the live tree is tracked separately for A3.4. Companion-version pins refreshed. |
+| 1.7     | September 4, 2026 | — | **A3.3 reconciliation correction — reverses a recorded disposition, by owner direction.** The two sites that still described FR-CS-046 and §3.5.2 in the retired three-layer `Physics → Mechanics → AI → UI` terms are restated against the adopted ten-tier order. `ERR-020-002`'s log entry had explicitly listed these lines under "Deliberately not changed", on the ground that the outlines are pre-authoring artifacts and the section files carry the contract; that paragraph is annotated at its own site to record this reversal rather than left to contradict the tree. The §3.5.2 line additionally drops "Upward references = compile error rule", which `section-4.md` v1.2 established is false — an acyclic upward reference compiles, and `tools/assembly-tier-check.py` is what blocks it. No normative rule changed here; §3.5.2 and FR-CS-046 in the section files are untouched and remain the authority. |

@@ -1,13 +1,13 @@
 # Testing Strategy & Framework Specification #19 — Section 6: CI Orchestration & Triage
 
 **Created:** May 12, 2026
-**Last Updated:** September 4, 2026
-**Version:** 0.7
-**Status:** AMENDMENT DRAFT (A3.3/A3.4; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; `docs/planning/testing-strategy-a3.3-conformance-correction.md`; A3.4 owns reapproval
-**Purpose:** CI orchestration policy, gate composition rule, local runbook,
-defect lifecycle and triage, reporting cadence, and the boundary with
-Spec #18 §4 / §7.
+**Last Updated:** September 3, 2026
+**Version:** 0.4
+**Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
+**Purpose:** CI orchestration policy, gate composition rule, Stage-0
+local runbook, defect lifecycle and triage, reporting cadence, and the
+boundary with Spec #18 §4 / §7.
 
 > **Slot reconciliation.** Replaces the template's "Performance
 > Analysis" slot. A meta-spec has no algorithm to analyse; it codifies
@@ -20,39 +20,35 @@ Spec #18 §4 / §7.
 
 ### 6.1.1 Stage 0
 
-No runtime tooling activates. This subsection preserves the original
-selection-criteria boundary for the pre-code stage.
+No tooling activates. This subsection enumerates *selection criteria*,
+not chosen tools.
 
 ### 6.1.2 Stage 0+1 Tool Slate
 
-The Stage 0+1 slate is reconciled against the live repository.
+The Stage 0+1 slate is reconciled against the live repository here.
+D1 (NUnit) and D4 (GitHub Actions) are already resolved facts; only the
+remaining unresolved items stay in §7.5 as deferred decisions.
 
 - **Test runner — D1 RESOLVED.** NUnit is the repository runner.
   `tools/dotnet-ci/generate_projects.py` pins NUnit 3.14.0,
-  NUnit3TestAdapter 4.6.0, and Microsoft.NET.Test.Sdk 17.11.1. The
-  lower-level non-certifying executor is `tools/dotnet-ci/run-gate.sh`;
-  policy composition is owned by `tools/run-tests-local.sh`.
-- **Property framework — D2 RESOLVED.** FsCheck.NUnit 2.16.6 is pinned
-  through `Directory.Build.targets`, preserving compatibility with the
-  NUnit 3.14 runner. Property tests therefore enter the normal test
-  surface when present and retain FsCheck's 100-case default unless an
-  owning property declares a stronger setting. Seed governance remains
-  §3.4/KD-7 authority.
-- **Coverage tool — D3 RESOLVED AS COLLECTOR PIN.**
-  coverlet.collector 6.0.4 is pinned through `Directory.Build.targets`
-  and configured by `tools/dotnet-ci/coverage.runsettings`; PR and
-  nightly local-runner modes collect `XPlat Code Coverage`. The
-  separate §5.5 per-tier threshold mapper/auditor remains an
-  implementation obligation and is not implied complete by choosing
-  the collector.
+  NUnit3TestAdapter 4.6.0, and Microsoft.NET.Test.Sdk 17.11.1; the
+  blocking Linux shim gate executes the generated solution with
+  `dotnet test` via `tools/dotnet-ci/run-gate.sh`.
+- **Property framework.** FsCheck or equivalent C# property-based
+  framework. Selection criterion: must allow seed injection (KD-7
+  routing through `DeterministicRngService`). (D2)
+- **Coverage tool.** Coverlet (provisional). Selection criterion: must
+  emit per-tier breakdown consumable by §5.5 auditor (FR-TS-057). (D3)
 - **Mutation testing.** Stryker.NET (provisional). Selection criterion:
   parallels coverage tool. Activation deferred to Stage 1 (D6).
 - **CI provider — D4 RESOLVED.** GitHub Actions is the repository CI
-  provider at `.github/workflows/ci.yml`; scheduled Testing Strategy
-  orchestration is at `.github/workflows/nightly.yml`. The provider
-  pin is declared in `src/CLAUDE.md` as FR-TS-078 requires. This pin
-  does not activate the proposed architecture/evidence gate; A8 still
-  owns that required-status transition.
+  provider at `.github/workflows/ci.yml`. It supplies named jobs and
+  pass/fail conclusions used by repository merge protection. The pin is
+  declared in `src/CLAUDE.md` as FR-TS-078 requires; that declaration is
+  a pointer to the workflow and does not restate its contents, so CI
+  authority is not duplicated. This pin does not activate the proposed
+  architecture/evidence gate; A8 still owns that required-status
+  transition.
 
 ## 6.2 CI Pipeline Policy (Boundary with #18)
 
@@ -60,19 +56,19 @@ The Stage 0+1 slate is reconciled against the live repository.
 
 - **Functional regression gates** — Spec #19 authority. Test pass /
   fail.
-- **Performance regression gates** — Spec #18 §4 authority. Budget
-  threshold.
-- **Determinism gates** — Spec #16 §5 authority. Bitwise equality
-  across `EnvironmentFingerprint`.
+- **Performance regression gates** — Spec #18 §4
+  authority. Budget threshold.
+- **Determinism gates** — Spec #16 §5 authority.
+  Bitwise equality across `EnvironmentFingerprint`.
 - **Architecture/evidence gate** — Spec #19 owns proof/evidence and
   execution-truth mechanics; Governance owns applicability/property/
   convergence authority; Spec #20 owns integration/activation
   declarations consumed by the proof.
 
-All four feed a single CI orchestration model. The fourth gate remains
-**topology only in A3**: it is not a required status and does not block
-until A3.4 reapproval, applicable A4 resolver/proof prerequisites, and
-A8 activation are complete.
+All four feed a single CI orchestrator. The fourth gate is **topology
+only in A3.2b**: it is not a required status and does not block until
+A3.4 reapproval, applicable A4 resolver/proof prerequisites, and A8
+activation are complete.
 
 ### 6.2.2 Gate Composition Rule
 
@@ -89,15 +85,6 @@ A8 activation are complete.
 - Flake quarantine suppresses only an otherwise-eligible **functional**
   gate blocking effect. It does not satisfy or waive a required
   architecture proof (FR-TS-063/077/094).
-- An explicitly owner-held failing acceptance predicate is **not flake
-  quarantine**. The current `sim_match_engine_close_chance` owner-held
-  RED is excluded by exact test `Name` from the ordinary blocking pass,
-  then that exact `Name` is executed separately. The verifier requires
-  one unambiguous failed result, the recorded diagnostics, no extra
-  results and the expected test-failure runner exit. A changed value,
-  unexpected pass, missing/ambiguous identity, extra result, abnormal
-  runner exit, or any additional ordinary blocking failure fails the
-  composed gate.
 - A bounded substitute is not a generic escape valve: it may satisfy
   only an exact obligation that permits FR-TS-096 and only for
   deliberate `excluded`, `unavailable`, or `not-run` execution
@@ -113,13 +100,9 @@ NOT republish them. Cross-listing for FR-TS-075 … FR-TS-080 in §6.6.
 
 | Pipeline | Functional Gate | Performance Gate | Determinism Gate | Architecture / Evidence Gate |
 |----------|-----------------|------------------|------------------|------------------------------|
-| Pre-commit | Yes (unit + property selected by anchored NUnit method-prefix rules from a persistent staged-index cache; normal entire attempt fails at 60 s, with successful ≤60 s certified-developer-host acceptance still to be measured) | No | No | Report-only/local validation where available; never a new required status from A3 |
-| PR | Yes (whole-tree unit + integration + property + scenario superset through `tools/run-tests-local.sh --pr`; Spec #19 documentation audits are survey-only in routine composition) | Yes (#18 §4) | Partial/non-certifying regression evidence only; not platform certification | After A8: resolve applicable obligations, execute or consume exact owning-runner results, validate proof/freshness/convergence |
-| Nightly | Yes (Linux full simulation + soak, non-certifying) | Yes (#18 §7) | Certified Windows/Unity #16 §5 job is defined but disabled until `DETERMINISM_CERTIFIED_RUNNER_ENABLED=true`; successful execution on the registered/configured pinned host is still required for operational acceptance | After A8: revalidate applicable reusable proof and any scheduled/full-run obligations |
-
-The Linux jobs are regression/functional hosts supplied by GitHub
-Actions. They are never evidence that the Windows/Unity determinism
-platform was certified.
+| Pre-commit | Yes (unit + property) | No | No | Report-only/local validation where available; never a new required status from A3.2b |
+| PR | Yes (unit + integration + property + scenarios) | Yes (#18 §4) | Partial (#16 unit tier) | After A8: resolve applicable obligations, execute or consume exact owning-runner results, validate proof/freshness/convergence |
+| Nightly | Yes (simulation + soak) | Yes (#18 §7) | Yes (#16 §5 full suite) | After A8: revalidate applicable reusable proof and any scheduled/full-run obligations |
 
 ### 6.2.5 Owning-Runner / Result Bridge
 
@@ -137,64 +120,17 @@ mandatory upstream runner result with exact identity/result binding.
 An observed framework skip is `skipped`, not a deliberate
 `excluded` state and cannot be relabelled after the fact.
 
-## 6.3 Versioned Local / CI Runbook
+## 6.3 Stage-0 Local-Only Runbook
 
-`tools/run-tests-local.sh` is the stable FR-TS-079 policy composition
-entry point. PR CI invokes its `--pr` mode; the scheduled Testing
-Strategy workflow invokes `--nightly`. The lower-level
-`tools/dotnet-ci/run-gate.sh` is an implementation primitive, not a
-second policy surface.
+Until CI activates, the same gate composition runs locally
+(FR-TS-079).
 
-Every executable mode invokes, before the .NET gate:
-
-- `tools/checklist-auditor.py` against `docs/specs/`;
-- `tools/spec5-schema-auditor.py` against `docs/specs/`.
-
-**Routine pipeline posture:** both auditors receive
-`--survey-only --quiet-survey`. Findings remain measured/available but
-do not convert pre-existing approved-spec debt into a failure on an
-unrelated commit or PR.
-
-**Approval-transition posture:** when a reviewer is evaluating a spec
-for APPROVED status, invoke the auditors explicitly **without**
-`--survey-only`; `--changed-scope --enforce-dir <spec-dir>` MAY bind
-blocking to the exact candidate under approval. This is the fail-closed
-FR-TS-042/052 boundary. #1–#8 retain KD-4 survey-only treatment.
-
-Modes:
-
-- `--pre-commit` — staged-index unit/property compatibility subset.
-  `tools/dotnet-ci/precommit.runsettings` expresses canonical
-  `^int_`/`^sim_`/`^e2e_` exclusions against the NUnit **method** field
-  rather than a FullyQualifiedName substring. The hook's persistent
-  `.git/testing-strategy/precommit-snapshot` refreshes tracked files
-  from the index while preserving generated/bin/obj outputs. Bootstrap
-  performs the one-time cold cache preparation outside the acceptance
-  measurement. Routine auditors + project generation/restore + one
-  incremental solution test remain inside the normal **entire**
-  60-second hard failure bound. A successful measured ≤60-second run on
-  the certified developer host is still an A3.4 acceptance fact.
-- `--pr` — whole-tree functional test superset plus Coverlet collection;
-  the owner-held RED is executed separately and exact-identity/value
-  verified rather than quarantined.
-- `--nightly` — whole-tree non-certifying simulation/functional run,
-  Coverlet collection, and `ShotOutcomeDiagnosticTests` full-match
-  soak activation. Platform determinism is deliberately not performed
-  by this Linux entry point; `.github/workflows/nightly.yml` defines
-  the separate certified Windows/Unity #16 job. That job runs only
-  after the certified runner is registered/configured and repository
-  variable `DETERMINISM_CERTIFIED_RUNNER_ENABLED=true` is set; its
-  successful execution remains independently required.
-- `--install-hook` / `--verify-hook` — configure or verify
-  `.githooks/pre-commit`. `tools/bootstrap-dev.sh` is the normal
-  developer bootstrap and refuses to overwrite an unrelated existing
-  `core.hooksPath`.
-
-The stable runner sanitizes legacy ambient filter/coverage/owner-mode
-variables before calling the lower-level gate; `run-gate.sh` itself
-rejects those variables and accepts explicit CLI arguments. This keeps
-CI composition auditable and prevents inherited environment state from
-silently narrowing the test surface.
+- **`tools/run-tests-local.sh`** (Stage 0 deliverable; Appendix E).
+  Invokes:
+  - §5.3 checklist auditor (manual at Stage 0) against `docs/specs/`.
+  - §5.4 schema-conformance auditor against `docs/specs/`.
+- No `src/` is touched (none exists yet).
+- Output of local runbook → reviewer pastes into PR description.
 
 ## 6.4 Defect Lifecycle & Triage (FR-TS-081 … 085)
 
@@ -216,16 +152,16 @@ Misclassified defects are themselves a procedural violation
 
 ### 6.4.2 Triage Cadence (FR-TS-082)
 
-> **Stage-gated per KD-5.** The repository has passed the Stage 0+1 CI
-> activation point, so the historical "until CI exists" condition no
-> longer applies. The 24-hour PR-blocking SLA, weekly quarantine review,
-> and next-spec-revision-cycle review are the current FR-TS-082 cadence
-> where their underlying failure class exists. The dedicated flake
-> integration layer itself remains separately inactive per §5.2.
+> **Stage-gated per KD-5.** "PR-blocking failures" presumes CI exists;
+> the 24-hour SLA, weekly quarantined-test review, and "next
+> spec-revision cycle" review all activate at Stage 0+1 with
+> FR-TS-082. Until CI exists, only the **spec-defect** class is in
+> scope (the others have no instances), and spec defects are reviewed
+> at the next spec-revision cycle as below. This Stage-gating is
+> recorded in §5.2 (FR-TS-082 row).
 
 - **PR-blocking failures:** investigated within 24 hours.
-- **Quarantined tests:** reviewed weekly once quarantine/flake
-  integration is active.
+- **Quarantined tests:** reviewed weekly.
 - **Spec defects:** reviewed at next spec-revision cycle.
 - **Critical-severity defects (§6.4.3):** investigated immediately,
   regardless of class.
@@ -282,10 +218,7 @@ mode and flip #19 status to `SUSPENDED`.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.7     | September 4, 2026 | — | **Claude review correction.** Routine documentation auditors are survey-only and explicit approval walks carry fail-closed blocking; pre-commit uses anchored NUnit method-prefix selection plus a persistent staged-index cache and one incremental solution test; owner-held RED identity is exact; the certified nightly job is disabled until runner registration/configuration is explicitly enabled. |
-| 0.6     | September 4, 2026 | — | **A3.3 conformance/runbook correction.** Distinguishes the 60-second pre-commit failure bound from a successful timing measurement, marks the certified Windows nightly leg operationally unproven until it actually runs, documents PR-base fail-closed audit scoping and explicit lower-level gate arguments, and removes the obsolete "until CI exists" triage text. No fresh approval is claimed. |
-| 0.5     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization candidate.** Records D2 FsCheck.NUnit and D3 Coverlet pins, the permanent local/CI runner composition, staged-snapshot 60-second pre-commit behavior, explicit owner-held-RED verification, PR whole-tree scenario superset, Linux non-certifying nightly simulation/soak, and the separate pinned Windows/Unity determinism certification job. The v0.6 correction clarifies which execution facts remain unproven. |
-| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 3).** Records where the D4 CI-provider pin lands. FR-TS-078 requires the final provider pin in `src/CLAUDE.md`, which carried no provider declaration, so closing D4 at `.github/workflows/ci.yml` alone left the resolution and the normative FR mutually unsatisfiable. `src/CLAUDE.md` now declares the provider as a pointer to the workflow. FR-TS-078 itself is deliberately unchanged: it lives in §2.2, which A3.2a owns and this slice does not touch. |
-| 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Adds the fourth architecture/evidence gate topology, owning-runner/result bridge, strict execution/quarantine/bounded-substitute behavior, Governance convergence boundary, and FR-TS-084 authority model. Gate remains inactive until A8; no required status is created here. Live-repo audit also closes D1 on NUnit/`dotnet test` and D4 on GitHub Actions; D2/D3/D5–D8 remain deferred. No A4/A8 prerequisite is claimed complete. |
-| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout. M5 §6.4.2 explicit Stage-gating header. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Slot reconciliation replaces performance-analysis template. |
+| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout. M5 §6.4.2 explicit Stage-gating header. |
+| 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Adds the fourth architecture/evidence gate topology, owning-runner/result bridge, strict execution/quarantine/bounded-substitute behavior, Governance convergence boundary, and FR-TS-084 authority model. Gate remains inactive until A8; no required status is created here. Live-repo audit also closes D1 on NUnit/`dotnet test` and D4 on GitHub Actions; D2/D3/D5–D8 remain deferred. |
+| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 3).** Records where the D4 CI-provider pin lands. FR-TS-078 requires the final provider pin in `src/CLAUDE.md`, which carried no provider declaration, so closing D4 at `.github/workflows/ci.yml` alone left the resolution and the normative FR mutually unsatisfiable. `src/CLAUDE.md` now declares the provider as a pointer to the workflow. FR-TS-078 itself is deliberately unchanged: it lives in §2.2, which A3.2a owns and this slice does not touch. |

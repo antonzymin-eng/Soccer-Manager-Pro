@@ -1,13 +1,13 @@
 # Testing Strategy & Framework Specification #19 — Section 7: Future Extensions
 
 **Created:** May 12, 2026
-**Last Updated:** September 4, 2026
-**Version:** 0.6
+**Last Updated:** September 3, 2026
+**Version:** 0.5
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Stage 0+1 transition deliverables, Stage 1 deliverables,
 Stage 5+ extensions, permanent exclusions, and the deferred decisions
-tracker.
+tracker (D1 … D8).
 
 ---
 
@@ -18,44 +18,20 @@ code commit). KD-5 governs.
 
 - **D1 resolved:** NUnit is pinned by the generated .NET test projects;
   `tools/dotnet-ci/run-gate.sh` executes them with `dotnet test`.
-- **D2 resolved:** FsCheck.NUnit 2.16.6 is pinned through
-  `Directory.Build.targets`; property tests participate in the normal
-  NUnit surface when present.
-- **D3 resolved as the coverage-collector choice:**
-  coverlet.collector 6.0.4 is pinned through
-  `Directory.Build.targets`, with `XPlat Code Coverage` configuration
-  at `tools/dotnet-ci/coverage.runsettings`. The §5.5 per-tier
-  threshold mapper/auditor remains a separate implementation
-  deliverable; resolving D3 does not claim that auditor exists.
+- Property framework pin (§6.1, D2) remains deferred.
+- Coverage tool pin (§6.1, D3) remains deferred.
 - Test-runner invocation/runner paths are established by
-  `tools/dotnet-ci/generate_projects.py`,
-  `tools/dotnet-ci/run-gate.sh`, and the stable composition entry point
-  `tools/run-tests-local.sh`.
-- `tools/checklist-auditor.py` initial implementation is present and is
-  invoked by every executable local-runner mode (§5.3).
-- `tools/spec5-schema-auditor.py` initial implementation is present and
-  is invoked by every executable local-runner mode (§5.4).
-- The versioned pre-commit path is present at `.githooks/pre-commit`;
-  `tools/bootstrap-dev.sh` installs/verifies the hook without
-  overwriting an unrelated existing `core.hooksPath`. The hook tests
-  the staged Git index and routes to `tools/run-tests-local.sh
-  --pre-commit`.
-- The pre-commit whole composition is hard-bounded to 60 seconds.
-- The PR runner invokes whole-tree functional tests as a conservative
-  superset of the per-spec-changed scenario requirement and collects
-  Coverlet output.
-- Scheduled nightly orchestration exists at
-  `.github/workflows/nightly.yml`: GitHub-hosted Linux supplies
-  non-certifying full simulation/soak evidence; a distinct self-hosted
-  Windows runner supplies the certified #16 §5 Unity determinism run.
-- Pyramid-ratio thresholds (§3.1.2) remain subject to re-evaluation
-  against actual code.
+  `tools/dotnet-ci/generate_projects.py` and
+  `tools/dotnet-ci/run-gate.sh`; no additional pin is required for
+  the existing Linux shim gate.
+- `tools/checklist-auditor.py` initial implementation (§5.3).
+- `tools/spec5-schema-auditor.py` initial implementation (§5.4).
+- Pre-commit hook script (`tools/run-tests-local.sh`) extended to
+  invoke `src/`-side tests (§6.3, Appendix E).
+- Pyramid-ratio thresholds (§3.1.2) re-evaluated against actual code.
 - Scenario library populated index (`tests/scenarios/index.<ext>`,
-  §3.3.6; `<ext>` pinned at Stage 0+1 per **D9**) remains overdue.
-  The current PR whole-tree scenario superset does not silently resolve
-  D9's manifest/index requirement.
-- Test-defect log (`tests/test-defect-log.md`) remains an artifact
-  obligation where defects of that class exist.
+  §3.3.6; `<ext>` pinned at Stage 0+1 per **D9**, not D1 — see §7.5).
+- Test-defect log (`tests/test-defect-log.md`) instantiated.
 - Targeted governance mutation needed by FR-TS-091 is part of the
   architecture-proof path and does **not** wait for D6's project-wide
   mutation program. Its proof semantics are §3.11.9; implementation and
@@ -63,8 +39,7 @@ code commit). KD-5 governs.
 
 ## 7.2 Stage 1 Deliverables
 
-- Coverage dashboard (§3.6.4 absolute per-tier) and the §5.5 per-tier
-  threshold mapper/auditor consuming Coverlet output.
+- Coverage dashboard (§3.6.4 absolute per-tier).
 - Flake quarantine + eviction tooling (§3.7).
 - `IFlakeReporter` interface declaration — deferred from §4.4 per
   CLAUDE.md "Interface Design Principle". Declared in `src/CLAUDE.md`
@@ -72,6 +47,7 @@ code commit). KD-5 governs.
   specified; both producer and consumer MUST be specified before this
   interface is written.
 - Mutation-testing first activation (§6.1, D6).
+- Per-spec §5 schema-conformance auto-check (§5.4.3).
 - **Appendix D approved-spec §5 survey populated.** Deferred from §9.2
   per §3.5.4 dilution policy; row contents are a Stage 0+1 deliverable
   (FR-TS-045).
@@ -109,22 +85,21 @@ code commit). KD-5 governs.
 | ID | Decision | Target | Owner |
 |----|----------|--------|-------|
 | D1 | **RESOLVED — NUnit**; generated test projects pin NUnit 3.14.0 + NUnit3TestAdapter 4.6.0 and run through `tools/dotnet-ci/run-gate.sh` | Resolved in live repository; verified September 3, 2026 | Repository tooling |
-| D2 | **RESOLVED — FsCheck.NUnit 2.16.6** through `Directory.Build.targets`; compatible with the NUnit 3.14 generated test runner | Resolved by FR-TS-075/079 pipeline-conformance implementation, September 4, 2026 | Repository tooling |
-| D3 | **RESOLVED — coverlet.collector 6.0.4** through `Directory.Build.targets`, configured by `tools/dotnet-ci/coverage.runsettings`; this resolves the collector choice only, not the §5.5 tier-threshold auditor | Resolved by FR-TS-075/079 pipeline-conformance implementation, September 4, 2026 | Repository tooling |
-| D4 | **RESOLVED — GitHub Actions** at `.github/workflows/ci.yml`; scheduled Testing Strategy orchestration at `.github/workflows/nightly.yml`; architecture/evidence required-status activation remains A8-owned | Pinned in `src/CLAUDE.md` per FR-TS-078, September 3, 2026; nightly topology added September 4, 2026 | Repository CI configuration |
+| D2 | Property framework pin (FsCheck vs alternative) | Stage 0+1 | Lead developer |
+| D3 | Coverage tool pin (Coverlet vs alternative) | Stage 0+1 | Lead developer |
+| D4 | **RESOLVED — GitHub Actions** at `.github/workflows/ci.yml`; architecture/evidence required-status activation remains A8-owned | Pinned in `src/CLAUDE.md` per FR-TS-078, September 3, 2026; workflow resolved before A3.2b | Repository CI configuration |
 | D5 | LFS storage decision for fixtures (§3.8.2) | Stage 0+1 | Lead developer |
 | D6 | Project-wide mutation-testing program activation date (for example Stryker.NET); excludes FR-TS-091 targeted governance mutation | Stage 1 | Lead developer |
 | D7 | Visual-regression framework selection (§3.9.3) | Stage 1+ | Lead developer |
 | D8 | Coverage-guided (AFL-style) fuzzing adoption (§3.4.1) | Stage 1+ | Lead developer |
-| D9 | Scenario-manifest encoding/extension pin for `tests/scenarios/index.<ext>` — JSON vs. JSON5 vs. binary (§3.3.5, §3.3.6, §4.1, §7.1, FR-TS-028, Appendix A.2). Split out of D1 by A3.2b: D1 owned the test-runner pin and this encoding pin jointly, and resolving D1 as NUnit settled only the runner. **Overdue, not deferred** — FR-TS-028 pins the extension at Stage 0+1 and that transition has passed, but no `tests/scenarios/` manifest exists yet. The PR pipeline's whole-tree scenario superset satisfies FR-TS-075 execution conservatively; it does not satisfy D9's manifest/index artifact. | Stage 0+1 (already reached) | Lead developer |
+| D9 | Scenario-manifest encoding/extension pin for `tests/scenarios/index.<ext>` — JSON vs. JSON5 vs. binary (§3.3.5, §3.3.6, §4.1, §7.1, FR-TS-028, Appendix A.2). Split out of D1 by A3.2b: D1 owned the test-runner pin and this encoding pin jointly, and resolving D1 as NUnit settled only the runner. **Overdue, not deferred** — FR-TS-028 pins the extension at Stage 0+1 and that transition has passed, but no `tests/scenarios/` manifest exists yet, so nothing is blocked until the FR-TS-028 populated index | Stage 0+1 (already reached) | Lead developer |
 
 ## 7.6 Version History
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.6     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization.** Resolves D2 on FsCheck.NUnit 2.16.6 and D3 on coverlet.collector 6.0.4, records the automated auditors, staged-snapshot hook/bootstrap, 60-second pre-commit budget, PR scenario superset, and split Linux non-certifying / Windows-certified nightly topology. Keeps D9 explicitly overdue and keeps §5.5's coverage-threshold auditor as separate unfinished tooling rather than overclaiming D3 closure. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. D1 … D8 deferred-decision tracker populated. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique pass 2. `index.json` → `index.<ext>` with D1 cross-reference. |
-| 0.5     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 3).** Records where the D4 CI-provider pin lands. FR-TS-078 requires the final provider pin in `src/CLAUDE.md`, which carried no provider declaration, so closing D4 at `.github/workflows/ci.yml` alone left the resolution and the normative FR mutually unsatisfiable. `src/CLAUDE.md` now declares the provider as a pointer to the workflow. FR-TS-078 itself is deliberately unchanged: it lives in §2.2, which A3.2a owns and this slice does not touch. |
-| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. D9 is filed **overdue rather than deferred**: FR-TS-028 pins the extension at Stage 0+1, a transition the repository passed at its first `src/` code commit. |
 | 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Separates targeted FR-TS-091 governance mutation from deferred project-wide mutation tooling; constrains Spec #19 exception/coverage-exemption records so they cannot waive Governance properties, blockers, or required architecture proof; D1 (NUnit) and D4 (GitHub Actions) are recorded as already-resolved repository facts; D2/D3/D5–D8 remain deferred. No A4/A8 prerequisite is claimed complete. |
+| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. D9 is filed **overdue rather than deferred**: FR-TS-028 pins the extension at Stage 0+1, a transition the repository passed at its first `src/` code commit. |
+| 0.5     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 3).** Records where the D4 CI-provider pin lands. FR-TS-078 requires the final provider pin in `src/CLAUDE.md`, which carried no provider declaration, so closing D4 at `.github/workflows/ci.yml` alone left the resolution and the normative FR mutually unsatisfiable. `src/CLAUDE.md` now declares the provider as a pointer to the workflow. FR-TS-078 itself is deliberately unchanged: it lives in §2.2, which A3.2a owns and this slice does not touch. |
