@@ -34,6 +34,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")
     parser.add_argument(
+        "--survey-only",
+        action="store_true",
+        help="Report findings but never return a blocking verdict. Routine pre-commit/PR/nightly pipelines use this mode; approval transitions do not.",
+    )
+    parser.add_argument(
         "--changed-scope",
         action="store_true",
         help="Survey the whole root but consider blocking only spec directories named by --enforce-dir.",
@@ -42,7 +47,7 @@ def parse_args() -> argparse.Namespace:
         "--enforce-dir",
         action="append",
         default=[],
-        help="Spec directory, absolute or repo-relative, currently under review. Repeatable.",
+        help="Spec directory, absolute or repo-relative, currently at an approval transition. Repeatable.",
     )
     parser.add_argument(
         "--quiet-survey",
@@ -91,7 +96,15 @@ def has_surface(lines: list[str], needles: tuple[str, ...]) -> bool:
     return any(all(needle in line for needle in needles) for line in lines)
 
 
-def spec_dir_enforced(spec_dir: Path, *, changed_scope: bool, enforce_dirs: set[Path]) -> bool:
+def spec_dir_enforced(
+    spec_dir: Path,
+    *,
+    survey_only: bool,
+    changed_scope: bool,
+    enforce_dirs: set[Path],
+) -> bool:
+    if survey_only:
+        return False
     if not changed_scope:
         return True
     resolved = spec_dir.resolve()
@@ -115,6 +128,7 @@ def main() -> int:
         status = infer_status(text)
         enforced = spec_dir_enforced(
             spec_dir,
+            survey_only=args.survey_only,
             changed_scope=args.changed_scope,
             enforce_dirs=enforce_dirs,
         )
@@ -169,6 +183,7 @@ def main() -> int:
         "specs": checked_specs,
         "blocking": sum(f.blocking for f in findings),
         "notes": sum(not f.blocking for f in findings),
+        "survey_only": args.survey_only,
         "changed_scope": args.changed_scope,
         "enforced_dirs": sorted(str(path) for path in enforce_dirs),
         "findings": [f.__dict__ for f in findings],
@@ -176,7 +191,12 @@ def main() -> int:
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
-        scope = "changed-spec enforcement" if args.changed_scope else "approval-state enforcement"
+        if args.survey_only:
+            scope = "survey-only routine pipeline"
+        elif args.changed_scope:
+            scope = "approval enforcement (explicit scope)"
+        else:
+            scope = "approval-state enforcement"
         print(
             f"spec5-schema-auditor: {checked_specs} spec(s), {describe(findings)} [{scope}]"
         )
