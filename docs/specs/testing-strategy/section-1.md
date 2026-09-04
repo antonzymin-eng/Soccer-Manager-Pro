@@ -1,8 +1,8 @@
 # Testing Strategy & Framework Specification #19 — Section 1: Purpose & Scope
 
 **Created:** May 12, 2026
-**Last Updated:** September 3, 2026
-**Version:** 0.3
+**Last Updated:** September 4, 2026
+**Version:** 0.4
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Establishes what Spec #19 governs, what it excludes, the
@@ -30,24 +30,26 @@ each subsystem spec's §5. Its scope is:
   schema, fixture validator, and directory layout for both per-spec
   scenarios (owned by each spec's §5) and cross-spec scenarios (owned
   by Spec #19). See §3.3, Appendix A.
-- **Property / fuzz testing with seed governance.** The framework
-  selection criteria, seed-routing-through-`DeterministicRngService`
-  rule (KD-7), failed-seed capture, and property catalogue. See §3.4,
-  Appendix B.
+- **Property / fuzz testing with seed governance.** FsCheck.NUnit is
+  the current property-framework pin (D2); KD-7 still governs seed
+  routing through `DeterministicRngService`, failed-seed capture, and
+  the property catalogue. See §3.4, Appendix B.
 - **Programmatic-verification mandate (KD-6).** Every
   approval-checklist row in every spec MUST resolve to either a named,
   version-controlled file path or a programmatic check whose output is
-  captured. Auditor mechanics are in §3.5 and §5.3.
+  captured. Auditor mechanics are in §3.5 and §5.3; the automated
+  checklist and §5 schema auditors are now versioned repository tools.
 - **Per-spec §5 conformance schema (KD-4).** Spec #19 publishes the
   taxonomy, naming, coverage targets, and quality-gate criteria every
   per-spec §5 must conform to; it does not rewrite those §5 sections.
   See §3.5.3 and Appendix C.
-- **CI orchestration policy (Stage-gated).** The pipeline topology,
-  gate composition rule, defect lifecycle, and reporting cadence. See
-  §6.
-- **Coverage and flake reporting.** Per-tier coverage targets bound to
-  #16 §1.1.1 tier classification (KD-9), and the flake-detection /
-  quarantine / eviction rules (§3.7). All Stage-gated per KD-5.
+- **CI orchestration policy (Stage-gated).** The versioned pre-commit,
+  PR, and scheduled nightly topology, gate composition rule, defect
+  lifecycle, and reporting cadence. See §4.5, §6, and Appendix E.
+- **Coverage and flake reporting.** D3 is resolved on
+  coverlet.collector for collection; per-tier threshold enforcement and
+  the dedicated flake integration layer remain separately staged. See
+  §3.6, §3.7, and §5.5.
 - **Architecture proof and evidence integration.** Spec #19 owns the
   reusable proof-artifact contract, execution truth, bounded-substitute
   mechanics, freshness/revalidation, and architecture/evidence gate
@@ -89,8 +91,9 @@ Each line below cites the owning document.
   FR-CS-074 … 081 and §3.5. Spec #19 consumes those declarations for
   proof; it does not redefine them.
 - **Fixed64 numeric-library tests** → Spec #9 §5.
-- **CI server choice, build commands, IDE configuration** →
-  `src/CLAUDE.md` (deferred until coding begins).
+- **IDE configuration and developer-machine setup outside the test
+  bootstrap** → `src/CLAUDE.md` / project developer tooling. Spec #19
+  owns only the testing bootstrap/hook composition it explicitly names.
 - **Asset-pipeline / content QA** → Stage 1+ specs.
 - **PR-process rules** (review approval count, branch-protection,
   required-reviewers) → repository settings.
@@ -216,27 +219,39 @@ status changes.
   `APPROVED` May 14, 2026; (3) #19's `TBD-NORMATIVE` tags swept May 15,
   2026 (v1.0.1 patch); #19 advancement to `APPROVED` granted same day.
 
-**Downstream.**
+**Downstream / implementation surfaces.**
 
 - Every per-spec §5 (consumes Spec #19 taxonomy and Appendix C schema).
-- `src/CLAUDE.md` (consumes test-runner / harness invocation).
-- `.github/workflows/ci.yml` and `tools/dotnet-ci/` (current CI /
-  NUnit runner integration; D1/D4 are resolved repository facts).
+- `src/CLAUDE.md` (test-runner/provider routing).
+- `tools/run-tests-local.sh`, `.githooks/pre-commit`, and
+  `tools/bootstrap-dev.sh` (local/pre-commit composition).
+- `tools/dotnet-ci/` and `Directory.Build.targets` (NUnit, FsCheck,
+  Coverlet, generated non-certifying .NET gate).
+- `.github/workflows/ci.yml` (PR CI) and
+  `.github/workflows/nightly.yml` (scheduled simulation/soak plus the
+  separate certified Windows/Unity determinism job).
+
+**Resolved repository pins.** D1=NUnit 3.14.0 / NUnit3TestAdapter 4.6.0;
+D2=FsCheck.NUnit 2.16.6; D3=coverlet.collector 6.0.4; D4=GitHub Actions.
+D3 resolves collector selection/invocation only; §5.5's per-tier
+threshold mapper remains a separate tooling obligation. D9's scenario
+manifest/index encoding remains overdue.
 
 **Cross-spec constants imported.** None. Spec #19 imports tier
 *vocabulary* from #16 §1.1.1 by reference (KD-1); no `[CROSS]`
 constant declarations.
 
-**Certification platform pin.** Determinism certification uses
-`docs/tracking/certification-platform.md`, currently **PINNED** after
-the July 19, 2026 certification against Windows 11 / Unity 6000.4.9f1
-(DX11) / Mono. The Linux `tools/dotnet-ci` gate is a separate
-non-certifying compile/test execution surface.
+**Certification platform pin.** Determinism certification uses the
+current certification runbook/platform record, pinned after the July
+19, 2026 certification against Windows 11 / Unity 6000.4.9f1 (DX11) /
+Mono / x64 / SSE4.2 / one worker. The GitHub-hosted Linux
+`tools/dotnet-ci` execution surface is explicitly non-certifying.
 
 ## 1.5 Version History
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.4     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization.** Records the live local/CI pipeline surfaces, D2/D3 pins, automated auditors, scheduled nightly workflow, and the explicit GitHub-hosted-Linux versus certified-Windows determinism boundary. Removes the stale claim that CI choice/build commands are still deferred while preserving D9 and the per-tier coverage auditor as unresolved work. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. SPEC_INDEX flip to `IN REVIEW` is **author-driven**, not review-driven: it reflects "draft complete, awaiting lead-developer sign-off" per CLAUDE.md status definition. The §9 approval-checklist rows have not been walked. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique fixes (16 H/M/L findings). #16 section-number sweep: §1.3.1 → §1.1.1 (tier classification), §7 → §5 (regression suite), §5 → §3.2.4.1 (canonical schema), §8 → deleted (no trace channels in current #16). KD-1 / KD-2 / KD-3 narratives tightened; status / sequencing text moved out of §1.3 into §1.4. ERR-005-class fabrication terminology corrected (no ERR-005 binding; ERR-019 namespace used). M3 IFixtureValidator deferral judgment made explicit. M4 storage-layout reconciliation. M5 §6.4.2 Stage-gating. L1–L3 [GT] tags. L4 property-naming reconciliation. L5–L8 cross-reference and policy-placement fixes. |
 | 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Adds the Governance / Spec #20 ownership boundary for FR-TS-086 … 097, points scope to §3.11 / Appendix G / §5.6 / §6.2, and records that the architecture/evidence gate remains unactivated pending A3.4/A4/A8. Approved May 15 baseline remains in force; `SPEC_INDEX.md` unchanged. The live-repo pass also records D1=NUnit, D4=GitHub Actions, and the July 19 certified platform pin without changing enforcement. |
