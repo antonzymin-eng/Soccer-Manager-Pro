@@ -1,0 +1,30 @@
+name: System XI conflict probe
+
+on:
+  push:
+    branches:
+      - codex/system-xi-naming-migration
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Identify conflicts with current main
+        shell: bash
+        run: |
+          set +e
+          git fetch origin main
+          git merge --no-commit --no-ff origin/main
+          rc=$?
+          echo "merge_rc=$rc"
+          echo '--- conflicts ---'
+          git diff --name-only --diff-filter=U
+          echo '--- conflict markers/context ---'
+          for f in $(git diff --name-only --diff-filter=U); do
+            echo "### $f"
+            grep -n -B3 -A12 '^<<<<<<<\|^=======\|^>>>>>>>' "$f" || true
+          done
+          exit $rc
