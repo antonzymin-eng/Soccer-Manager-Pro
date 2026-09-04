@@ -21,6 +21,17 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+checkout_index_no_lfs_smudge() {
+  # The test snapshot needs the staged POINTER bytes for LFS-managed assets, not
+  # their binary payloads. Disable smudging for this checkout so an offline clone
+  # or intentionally un-fetched LFS object cannot reject an otherwise valid
+  # commit before the tests even start.
+  git -C "$ROOT" \
+    -c filter.lfs.smudge= \
+    -c filter.lfs.required=false \
+    checkout-index "$@"
+}
+
 # Keep ONE persistent staged-index snapshot under .git. The first run materializes
 # the whole index. Later runs preserve mtimes for unchanged tracked files and
 # refresh only paths whose index blobs changed, so MSBuild can reuse bin/obj
@@ -50,7 +61,7 @@ if [ -n "$PREVIOUS_TREE" ] \
     # be refreshed safely. NUL delimiters preserve spaces in tracked paths.
     while IFS= read -r -d '' changed_path; do
       [ -n "$changed_path" ] || continue
-      git -C "$ROOT" checkout-index --force --prefix="$SNAPSHOT/" -- "$changed_path"
+      checkout_index_no_lfs_smudge --force --prefix="$SNAPSHOT/" -- "$changed_path"
     done < <(
       git -C "$ROOT" diff --name-only -z --no-renames \
         --diff-filter=ACMRTUXB "$PREVIOUS_TREE" "$CURRENT_TREE" --
@@ -59,7 +70,7 @@ if [ -n "$PREVIOUS_TREE" ] \
 else
   # No trustworthy prior tree: one cold materialization. Bootstrap is designed
   # to pay this cost outside the normal 60-second acceptance measurement.
-  git -C "$ROOT" checkout-index --all --force --prefix="$SNAPSHOT/"
+  checkout_index_no_lfs_smudge --all --force --prefix="$SNAPSHOT/"
 fi
 
 mv "$CURRENT_MANIFEST" "$TRACKED_MANIFEST"
