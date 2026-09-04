@@ -49,10 +49,8 @@ jobs:
 
           probe = subprocess.run(
               [
-                  "git", "grep", "-Ilz",
-                  "-e", "Tactical Director",
+                  "git", "grep", "-Ilzi",
                   "-e", "tactical director",
-                  "-e", "Soccer Manager Pro",
                   "-e", "soccer manager pro",
                   "--", ".",
                   ":!.github/workflows/system-xi-naming-migration.yml",
