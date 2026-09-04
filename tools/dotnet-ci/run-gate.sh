@@ -68,9 +68,11 @@ fi
 
 INCLUDE="$(grep -v '^\s*#' "$QUARANTINE" | grep -v '^\s*$' \
            | sed 's/^/FullyQualifiedName~/' | paste -sd'|' - || true)"
-if [ -n "$INCLUDE" ]; then
+if [ -n "$INCLUDE" ] && [ -z "$REQUESTED_FILTER" ]; then
     echo "── Quarantined tests (report-only; failure expected, not blocking) ─"
     dotnet test "$SLN" --no-build --filter "$INCLUDE" || true
+elif [ -n "$INCLUDE" ]; then
+    echo "── Quarantined report-only run skipped for filtered caller ─────────"
 else
     echo "── Quarantine empty — no report-only run ──────────────────────────"
 fi
