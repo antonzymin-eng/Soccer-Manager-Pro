@@ -1,7 +1,10 @@
 # Testing Strategy & Framework Specification #19 — Section 3: Technical Specification (Rule Mechanics)
 
 **Created:** May 12, 2026
-**Last Updated:** May 17, 2026 (v0.3 patch: §3.1.4 spec-local test-requirement identifier table added; T-C- and T-X- from Pressing AI #13 §5 bound to Simulation layer per OI-010 / §9.3 (h))
+**Last Updated:** September 3, 2026
+**Version:** 0.6
+**Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
 **Purpose:** Mechanics of every rule named in §2.2. Each subsection
 cites the FR-TS-### IDs it implements and provides the *mechanics*; it
 does not redefine the rule statement. Section ordering mirrors the
@@ -229,10 +232,15 @@ at load time:
 > **Provisional file extension.** The root-manifest filename is
 > written as `index.<ext>` throughout this spec because the final
 > extension (and therefore on-disk encoding — JSON vs. JSON5 vs.
-> binary) is pinned at Stage 0+1 (D1 in §7.5). Normative occurrences
-> are at: §3.3.5 (here), §3.3.6, §4.1, §4.5, §7.2, FR-TS-028, and
+> binary) is pinned at Stage 0+1 (**D9** in §7.5). This pointer read
+> "D1" until A3.2b: D1 covered the test-runner pin and this encoding
+> pin jointly, and closing D1 on NUnit alone left the encoding
+> decision without an owner. D9 carries it. Normative occurrences
+> are at: §3.3.5 (here), §3.3.6, §4.1, §7.1, FR-TS-028, and
 > Appendix A.2. The illustrative example in Appendix A.2 uses `.json`
-> syntax for readability.
+> syntax for readability, which pre-empts nothing. (The occurrence
+> list read "§4.5, §7.2" until A3.2b; neither section carries an
+> occurrence — the real sites are §4.1 and §7.1.)
 
 ```
 tests/scenarios/
@@ -246,7 +254,9 @@ tests/scenarios/
 ### 3.3.6 Scenario Index / Manifest (FR-TS-028)
 
 - Single root manifest at `tests/scenarios/index.<ext>` (extension
-  pinned at Stage 0+1 alongside the test-runner pin in §6.1).
+  pinned at Stage 0+1 under D9 in §7.5; it was formerly pinned
+  "alongside the test-runner pin in §6.1", which no longer holds
+  because D1 closed on NUnit without settling the encoding).
 - Stage 0 deliverable: schema only (Appendix A).
 - Stage 1 deliverable: populated index covering every scenario in the
   scenario folders.
@@ -476,7 +486,9 @@ is a determinism-adjacent definition cited from #16 §4.8
 
 ### 3.7.3 Quarantine Pool (FR-TS-063, FR-TS-064)
 
-- Quarantined tests continue to execute but do not block merges.
+- Quarantined tests continue to execute. Quarantine suppresses only the
+  eligible functional-gate blocking effect defined by FR-TS-063/077; it does
+  not satisfy or waive a required architecture proof obligation (§3.11.5).
 - Auto-expiry: 14 days. `[GT]`
 - After expiry, the test MUST be either fixed or deleted; "permanent
   quarantine" is forbidden.
@@ -615,10 +627,318 @@ body IS the evidence, and changes to a governance number are
 themselves a spec revision tracked in the relevant section's
 version-history table (FR-TS-044).
 
-## 3.11 Version History
+## 3.11 Architecture Proof & Evidence Integration (FR-TS-086 … 097)
+
+This subsection owns the Testing Strategy mechanics for architecture-proof
+artifacts, execution truth, bounded substitutes, and merge-evidence handling.
+It does **not** redefine architectural properties, integration ownership, or
+code-surface declarations.
+
+### 3.11.1 Authority and Activation Boundary
+
+The authority split is strict:
+
+- Project Architecture Governance owns property admission, applicability
+  triggers, approved property exceptions, finding disposition, and review
+  convergence.
+- Spec #20 owns code/integration declarations: component identity, canonical
+  selectors, runtime-surface classification, integration ownership, lifecycle
+  declarations, activation state, and disable anchors.
+- Spec #19 owns executable proof records, proof-result semantics, bounded
+  substitutes, runner/result binding, and architecture/evidence gate behavior.
+- The canonical machine contract is the A2 schema family under
+  `docs/tracking/architecture-governance/schemas/` plus
+  `tools/architecture-governance/reference_semantics.py` version 2.1.0.
+  Appendix G is explanatory and MUST NOT become a second schema.
+
+A3.2a defines normative behavior but does not by itself activate a new merge
+gate. The amendment remains draft until A3.4 reapproval, and checks whose
+closed-world/compiler resolution depends on later implementation remain
+non-blocking until their activation prerequisites are satisfied.
+
+### 3.11.2 Applicability Resolution (FR-TS-086)
+
+Before reusable architectural proof can certify a change, the current subject
+MUST be resolved through the versioned applicability manifest in strict mode.
+
+The subject carries exactly one current Governance §5.2 change type. The
+canonical values are:
+
+- pure-local-calculation;
+- new-public-cross-assembly-api;
+- new-runtime-service;
+- new-composition-root-registration;
+- host-bootstrap-change;
+- static-initialization-change;
+- persistence-boundary;
+- external-resource-dependency;
+- testhost-runtime-divergence-fix;
+- dependency-graph-only-refactor;
+- pure-data-schema-no-runtime-behavior.
+
+All matching rules are evaluated. The A2 resolver's specificity/precedence
+semantics control selection; equal-precedence conflicting obligations fail
+closed. A rule-restricted change-type set is only an applicability filter and
+does not create a fifth proof class.
+
+The resolution record MUST preserve every selected rule ID and, for every
+active obligation, its trigger reference, requirement/property references,
+proof classes, and gate classes. An N/A request is valid only for a reason
+enumerated by the matched rule and carries the approval required by that rule.
+
+Non-strict resolution MAY diagnose incomplete context, but a result missing
+the current change type is ineligible for proof certification. An unresolved
+or ambiguous applicability set is an unsatisfied required-proof state under
+FR-TS-094; tools MUST NOT guess a narrower proof set.
+
+### 3.11.3 Proof Classes and Derived Dependency Closure (FR-TS-087, FR-TS-088, FR-TS-092)
+
+The proof-class enum is exactly the four classes owned by Governance §5:
+
+1. structural-reachability;
+2. lifecycle-order;
+3. failure-injection;
+4. mutation.
+
+For a required proof class, the dependency closure is derived from the
+applicability-resolved requirement/property roots. An author-supplied file list
+MAY add dependencies but MUST NOT narrow the mechanically required closure.
+
+The frozen A2 relation policy is:
+
+| Proof class | Relations admitted into the derived closure |
+|---|---|
+| structural-reachability | common + structural |
+| lifecycle-order | common + structural + lifecycle |
+| failure-injection | common + structural + lifecycle + executable |
+| mutation | common + structural + lifecycle + executable |
+
+Common relations cover requirement/contract/root/tool/extractor/configuration
+dependencies. Structural relations cover construction, registration,
+public/bypass surfaces and assembly references. Lifecycle relations add
+lifecycle members, ordering, synchronization, thread affinity and testhost
+equivalence. Executable relations add target, test, fixture, runner and
+environment dependencies.
+
+Serializer/schema/resource relations are added only when the **current
+applicability subject** has change type persistence-boundary or
+external-resource-dependency. Their presence is not inferred from trigger text
+or from a rule payload.
+
+A mechanically finite governed surface follows Governance FR-AG-026: the
+complete applicable universe MUST be enumerated unless the surface is excluded
+by the admitted property's recorded Non-scope or a Governance §7 exception.
+A bounded substitute under FR-TS-096 is **not** a third exclusion route. It may
+bound computationally disproportionate or unavailable proof, but the omitted
+surface or uncertainty remains explicit.
+
+If closure completeness cannot be established, strict certification fails
+unless the exact obligation permits a bounded substitute. A known-path list,
+regex/public-member scan, or author assertion that "all callers were checked"
+is not closed-world evidence by itself.
+
+### 3.11.4 Subject Identity, Provenance, Freshness and Revalidation (FR-TS-087, FR-TS-092)
+
+A reusable proof separates the **material subject** from the Git object that
+stores the record.
+
+The material subject digest is computed from the current proof semantics,
+proof class, applicability digest/change context, required
+requirement/property roots, derived dependency nodes and fingerprints,
+relation policy, and relevant topology. Provenance revision/tree fields MAY
+record where evidence was produced or stored, but they are metadata and MUST
+NOT be inputs that make a committed artifact depend on its own containing
+commit/tree.
+
+Freshness is determined by recomputing the material closure:
+
+- a material dependency addition, deletion, rename/rebinding, fingerprint
+  change, topology change, new applicable root, relevant configuration change,
+  extractor/checker-semantic change, or applicability change makes the
+  affected proof stale;
+- a repository change outside the resolved closure does not automatically
+  stale that proof;
+- a containing commit/tree change that changes only provenance metadata does
+  not recursively invalidate the artifact.
+
+A retained proof MAY be explicitly revalidated rather than regenerated when
+the current closure demonstrates compatibility. The revalidation record MUST
+identify the intervening change and the basis for continued validity.
+
+A changed-files optimization is permitted only **after** current
+applicability and full proof closure are resolved. It MUST run the relevant
+proof for an unmapped changed surface, stale proof, or changed dependency
+inside the closure. It MAY skip only when every changed surface is mapped,
+the current proof is otherwise fresh, and every changed surface is outside
+that closure.
+
+### 3.11.5 Execution Truth, N/A and Bounded Results (FR-TS-087, FR-TS-094, FR-TS-096)
+
+Every recorded execution binds the exact command/test, runner, environment,
+material subject digest, start/end state, and machine-readable result artifact
+when the runner emits one. An execution record whose subject digest differs
+from the proof artifact's subject digest cannot satisfy that proof.
+
+The execution-state contract is:
+
+| Execution state | Satisfies an unqualified required execution? | Bounded substitute allowed? |
+|---|---:|---:|
+| passed | Yes | No; passed and bounded are mutually exclusive |
+| failed | No | No |
+| skipped | No | No |
+| excluded | No | Only when the exact obligation explicitly permits FR-TS-096 |
+| unavailable | No | Only when the exact obligation explicitly permits FR-TS-096 |
+| not-run | No | Only when the exact obligation explicitly permits FR-TS-096 |
+| runner-failed | No | No |
+
+A bounded substitute is therefore a proportionality mechanism for
+intentionally omitted, computationally disproportionate, or unavailable proof.
+It is never a waiver of contrary execution evidence. Its canonical record
+contains authority reference, approval reference, justification, and the
+omitted surface or remaining uncertainty.
+
+A proof result of N/A is not a passed proof. It is valid only when the
+applicability result authorizes the named N/A reason and supplies any required
+approval. An active required obligation cannot be converted to N/A ad hoc.
+
+Required tests remain required regardless of placement. A required-test set
+MUST NOT silently intersect an active quarantine, ignore/exclusion list,
+unsupported-runner filter, conditional job skip, or equivalent mechanism.
+Where the architecture gate cannot execute the test directly, it MUST consume
+an upstream result bound to the exact test identity, runner, subject and state.
+
+### 3.11.6 Structural Reachability Proof (FR-TS-088)
+
+Structural proof answers whether applicable runtime behavior is actually
+reachable through every governed supported path.
+
+Its closure includes the applicability-resolved requirement/property,
+integration contract, owning hosts/roots, construction/registration paths,
+relevant public and bypass surfaces, assembly references, and other
+mechanically required structural dependencies.
+
+For a closed finite category, the evidence MUST account for every applicable
+host/root/alternate/test/public surface under Governance FR-AG-026. A declared
+contract describes the intended architecture; it does not prove reachability
+by itself. A public-member inventory or known-path list may be diagnostic but
+does not prove absence of an undiscovered root/bypass until the search universe
+and blind spots are mechanically closed.
+
+Structural proof MUST detect, where applicable, every structural failure
+class required by Project Architecture Governance §5.3 (FR-AG-027); this
+subsection does not weaken that obligation. Governance §5.3 remains the
+authority for the class list. The following reproduces that list and neither
+extends nor restricts it:
+
+- unreachable implementations;
+- orphan registrations;
+- duplicate construction;
+- alternate roots omitting the component;
+- unauthorized bypasses;
+- public types that imply unsupported integration paths.
+
+Detection is required only for surfaces within the applicable closed universe.
+
+### 3.11.7 Lifecycle / Ordering Proof (FR-TS-089)
+
+Lifecycle proof independently demonstrates that applicable construction,
+activation, update/use, teardown and restore actions occur in the required
+ownership and order.
+
+The closure extends structural evidence with applicable lifecycle members,
+ordering relationships, synchronization/thread-affinity dependencies and
+testhost equivalents. Spec #20 lifecycle declarations identify the required
+owners and edges; their prose does not satisfy the proof.
+
+Evidence MAY be mechanical ordering evidence, an executable record, or a
+bounded substitute only where FR-TS-096 is explicitly permitted. Missing
+teardown/restore phases are represented through the approved declaration/N/A
+mechanism; a phase that exists but was not exercised is not made N/A by prose.
+
+### 3.11.8 Failure-Injection Proof (FR-TS-090)
+
+When Governance applicability triggers a meaningful and reasonably inducible
+failure path, that path MUST be deliberately executed.
+
+The proof record identifies:
+
+- exact injected condition or input;
+- canonical target selector;
+- expected failure/recovery path;
+- executed command or test;
+- observed result;
+- tool/environment identity.
+
+Static inspection alone is insufficient when the required failure can
+reasonably be executed. A failed or runner-failed attempt remains unsatisfied;
+it is not converted into proof by documenting the attempt.
+
+### 3.11.9 Mutation Proof (FR-TS-091)
+
+Mutation proof demonstrates that evidence is sensitive to the named critical
+invariant, not that the repository has a high global mutation score.
+
+The record identifies the base material-subject digest, canonical target
+selector, exact mutation operator or reproducible mutant/patch identity,
+baseline execution, mutant execution, expected detector, observed detector
+failure, tool identity, and restored-clean-state confirmation.
+
+A no-op, equivalent, wrong-target, or unrestored mutant cannot satisfy the
+named invariant merely because a mutation command ran. Project-wide Stryker
+activation is not a prerequisite for a targeted governance mutation.
+
+A targeted mutation obligation MAY be retired when Governance FR-AG-040B is
+satisfied: the protected failure mode no longer applies or an equivalent or
+stronger verification mechanism replaces it.
+
+### 3.11.10 Governance Convergence and Merge-Critical Tooling (FR-TS-093, FR-TS-094, FR-TS-095)
+
+Spec #19 consumes Governance's finding state; it does not recreate it.
+
+Severity remains diagnostic/triage metadata. Convergence uses the Governance
+Disposition × Status model and the current fresh-review state. An open finding
+or invalid disposition/status pairing remains unconverged regardless of
+severity, and a novel generalized preference follows the Candidate Property
+path instead of acquiring blocker force from reviewer preference.
+
+Once the architecture/evidence gate is activated, missing, stale,
+schema-invalid, applicability-incomplete, or otherwise unsatisfied required
+proof blocks merge. Flake quarantine cannot waive that gate.
+
+Any checker, resolver or extractor whose output supplies required evidence or
+can block merge MUST have verification proportionate to false-positive and
+false-negative consequence, including representative known-good and known-bad
+fixtures and blind-spot/regression coverage for material discovery limits.
+This obligation terminates at ordinary software verification; it does not
+create an infinite checker-of-checker chain.
+
+### 3.11.11 Activation-Gated Tuning / KD-W1 (FR-TS-097)
+
+A [GT] or owner-declared calibration/tuning change first resolves every
+applicable owning component and its activation state.
+
+Normal tuning is permitted only when every applicable owning component is
+active. An intentionally-disabled component is still structurally a production
+runtime-bearing component and must carry the independently machine-verifiable
+disable anchor required by Spec #20. pending-integration and unresolved states
+do not satisfy the tuning precondition.
+
+A Spec #19 exception MAY authorize a non-active tuning change only when the
+owning rule permits exceptions and the record names the exact tuning scope,
+component, rationale, approval and expiry/exit condition. If an admitted
+architectural property independently applies, its Governance §7 exception is
+also required. Neither exception route may waive required proof, a concrete
+correctness/integrity failure, or a Governance Blocker.
+
+---
+
+## 3.12 Version History
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.6     | September 3, 2026 | — | **A3.2a review-record repair.** Records the already-landed §3.11.6 structural-proof correction from PR #352 / integration-plan v0.37: the failure-class detector obligation is **MUST**, matching Governance §5.3 / FR-AG-027, rather than the weaker SHOULD previously published. This commit does not introduce a new normative change; it restores the missing version/history record for the normative text already present on `main`. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Rule mechanics for FR-TS-001 … 074; §3.10 governance constants table. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 (regression suite); #16 §1.3.1 → §1.1.1 (tier vocabulary, §3.6.1); #16 §5 → §3.2.4.1 (canonical schema, §3.3.4 / §3.8.1); #16 §1.3 → §4.8 (`EnvironmentFingerprint`, §3.7.1). ERR-005 misnomer corrected (§3.5.4, §3.5.5). M1 coordinate restatement tightened. M2 `index.<ext>` provisional disclosure added (§3.3.5). M4 `migrations/` row added to §3.8.2. L1 / L2 inline `[GT]` / `[FIXED]` pointers (§3.1.1). L3 / L2 §3.10 expanded with `90 min [FIXED]` and `≤ 60 s [GT]`. L4 property naming reconciled (§3.1.4). |
 | 0.3     | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | OI-010 back-prop: §3.1.4 spec-local `T-<category>-NNN` identifier table added; `T-C-` (anti-chaos) and `T-X-` (exploit-resistance) bound to Simulation layer per Pressing AI #13 §5 / KD-16 / KD-17. Resolves §9.3 (h) in #13. |
+| 0.5     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. Also repairs §3.3.5's stale normative-occurrence map: it listed §4.5 and §7.2, neither of which carries an occurrence; the real sites are §4.1 and §7.1. |
+| 0.4     | September 2, 2026 | Codex | **A3.2a governance amendment draft.** Adds §3.11 mechanics for strict applicability resolution, the four canonical proof classes, mechanically derived proof closure, material-subject/provenance separation, precise freshness, execution truth and bounded substitutes, structural/lifecycle/failure/mutation evidence, Governance convergence consumption, merge-critical tool verification, and KD-W1 activation-gated tuning. The A2 schema family and reference semantics v2.1.0 remain canonical; no gate is activated by this draft. |

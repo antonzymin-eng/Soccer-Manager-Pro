@@ -80,5 +80,11 @@ Run the narrowest relevant tests first, then the repository gate described under
 COMMANDS** in the expanded reference. Do not claim certification from the Linux shim gate: certified
 performance capture requires the pinned Unity host and `docs/tracking/cert-run-runbook.md`.
 
+**CI provider — GitHub Actions, at `.github/workflows/ci.yml`.** Recorded here because Testing
+Strategy #19 FR-TS-078 requires the final provider pin to land in this file. This line records the
+provider choice and nothing else: the workflow is the authoritative definition of jobs, triggers and
+pass/fail conclusions, and is never restated here. Spec #19 §7.5 D4 tracks the decision; required-status
+activation for the proposed architecture/evidence gate is A8-owned and not in force.
+
 Before finishing, verify layering, allocation behavior, deterministic replay implications, file
 headers/version history, constant tags, and mirrored home/away behavior where geometry is team-relative.
