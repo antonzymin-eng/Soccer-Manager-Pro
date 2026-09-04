@@ -215,6 +215,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Approval-transition detection compares the PR base tree to HEAD.
+          # Full history keeps that check fail-closed without a network fetch in
+          # the policy runner and mirrors the provenance job's no-silent-skip rule.
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
@@ -225,6 +230,10 @@ jobs:
       # diagnostic baseline. Authoritative determinism certification is the
       # pinned Windows 11 / Unity 6000.4.9f1 / Mono job in nightly.yml.
       - name: Run PR testing-strategy gate
+        env:
+          # Empty on push; populated on pull_request. The policy runner uses it
+          # only to make actual non-approved -> APPROVED transitions blocking.
+          TD_APPROVAL_BASE_REF: ${{ github.event.pull_request.base.sha }}
         run: bash tools/run-tests-local.sh --pr
 
   unity-meta-integrity:
