@@ -33,6 +33,20 @@ jobs:
               (b"soccer manager pro", b"System XI"),
           )
 
+          def clean_renamed_lines(data: bytes) -> bytes:
+              cleaned = []
+              for line in data.splitlines(keepends=True):
+                  if line.endswith(b"\r\n"):
+                      body, ending = line[:-2], b"\r\n"
+                  elif line.endswith(b"\n"):
+                      body, ending = line[:-1], b"\n"
+                  else:
+                      body, ending = line, b""
+                  if b"System XI" in body or b"SYSTEM XI" in body:
+                      body = body.rstrip(b" \t")
+                  cleaned.append(body + ending)
+              return b"".join(cleaned)
+
           probe = subprocess.run(
               [
                   "git", "grep", "-Ilz",
@@ -56,6 +70,7 @@ jobs:
               updated = data
               for old, new in replacements:
                   updated = updated.replace(old, new)
+              updated = clean_renamed_lines(updated)
               if updated != data:
                   path.write_bytes(updated)
                   changed.append(str(path))
@@ -85,7 +100,7 @@ jobs:
           git diff --check
 
           # Repository slugs, namespaces, assemblies, and historical GitHub URLs are intentionally unchanged.
-          if git grep -In -e 'Tactical Director' -e 'Soccer Manager Pro' -- . ':!.github/workflows/system-xi-naming-migration.yml'; then
+          if git grep -Ini -e 'tactical director' -e 'soccer manager pro' -- . ':!.github/workflows/system-xi-naming-migration.yml'; then
             echo 'Legacy human-readable product name remains after migration.' >&2
             exit 1
           fi
