@@ -37,8 +37,18 @@ jobs:
           path: artifacts/coverage/
           if-no-files-found: warn
 
+  determinism-certification-not-configured:
+    name: Certified determinism runner not activated
+    if: ${{ vars.DETERMINISM_CERTIFIED_RUNNER_ENABLED != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record operational gap
+        run: |
+          echo "::warning::Certified determinism nightly is intentionally disabled until a pinned self-hosted Windows/Unity runner is registered and repository variable DETERMINISM_CERTIFIED_RUNNER_ENABLED=true is set. FR-TS-075 certified-host acceptance remains open."
+
   nightly-determinism-certified:
     name: Nightly #16 determinism suite (certified Windows/Unity host)
+    if: ${{ vars.DETERMINISM_CERTIFIED_RUNNER_ENABLED == 'true' }}
     runs-on: [self-hosted, windows, x64, determinism-certified]
     timeout-minutes: 120
     steps:
