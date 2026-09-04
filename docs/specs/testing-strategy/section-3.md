@@ -1,8 +1,8 @@
 # Testing Strategy & Framework Specification #19 — Section 3: Technical Specification (Rule Mechanics)
 
 **Created:** May 12, 2026
-**Last Updated:** September 3, 2026
-**Version:** 0.6
+**Last Updated:** September 4, 2026
+**Version:** 0.7
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
 **Purpose:** Mechanics of every rule named in §2.2. Each subsection
@@ -456,6 +456,15 @@ consumable by the §5.5 auditor (FR-TS-057).
 - Recorded in `tests/coverage-exemptions.md` (Stage-1 artifact) with
   rationale, FR cited, and expiry trigger.
 - Exemption expires at the next refactor of the affected file.
+- **Boundary (§2.1).** A coverage exemption waives only the exact Spec
+  #19 coverage obligation FR-TS-059 permits. It **MUST NOT** waive an
+  admitted architectural property, a required architectural proof, a
+  concrete correctness/integrity failure, or a Governance Blocker, and
+  it does not substitute for a Governance property exception. Where
+  both are required, both records are independently necessary. §2.1
+  owns this rule; §7.2 states it again at the artifact's
+  instantiation. This bullet adds no new obligation — it stops the
+  owning procedure from being the one place the boundary is unstated.
 
 ## 3.7 Flake Handling (FR-TS-061 … 067)
 
@@ -942,3 +951,4 @@ correctness/integrity failure, or a Governance Blocker.
 | 0.4     | September 2, 2026 | Codex | **A3.2a governance amendment draft.** Adds §3.11 mechanics for strict applicability resolution, the four canonical proof classes, mechanically derived proof closure, material-subject/provenance separation, precise freshness, execution truth and bounded substitutes, structural/lifecycle/failure/mutation evidence, Governance convergence consumption, merge-critical tool verification, and KD-W1 activation-gated tuning. The A2 schema family and reference semantics v2.1.0 remain canonical; no gate is activated by this draft. |
 | 0.5     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. Also repairs §3.3.5's stale normative-occurrence map: it listed §4.5 and §7.2, neither of which carries an occurrence; the real sites are §4.1 and §7.1. |
 | 0.6     | September 3, 2026 | — | **A3.2a review-record repair.** Records the already-landed §3.11.6 structural-proof correction from PR #352 / integration-plan v0.37: the failure-class detector obligation is **MUST**, matching Governance §5.3 / FR-AG-027, rather than the weaker SHOULD previously published. This commit does not introduce a new normative change; it restores the missing version/history record for the normative text already present on `main`. |
+| 0.7     | September 4, 2026 | — | **A3.3 reconciliation correction.** §3.6.5, the owning procedure for coverage exemptions, was the one coverage-exemption site that did not carry or point at the §2.1 exception boundary — §2.1 states it, §2.3 states it for the sign-off mode, and §7.2 states it at the artifact's instantiation, but the procedure a reviewer actually follows was silent. The A3.3 exception-route gate found the gap. A boundary bullet is added that cites §2.1 as the owner and reproduces the four things an exemption cannot waive. **No new obligation is created:** §2.1 already governs coverage exemptions in the same words, and the bullet says so explicitly. No FR statement, level, activation, or enforcement changed. |
