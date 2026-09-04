@@ -2,9 +2,9 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 4, 2026
-**Version:** 0.4
-**Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
+**Version:** 0.5
+**Status:** AMENDMENT DRAFT (A3.3/A3.4; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.4 owns reapproval
 **Purpose:** Conformance vocabulary, the full FR-TS-### catalogue with
 verification pointers, and the failure-to-comply modes. Rule mechanics
 for every FR live in §3; §2 publishes the rule statement.
@@ -46,6 +46,18 @@ Each FR row carries: `ID | Statement | Level | Activation stage`. The
 detailed mechanics are in the §3 subsection named in the partition
 table below; source citations and verification pointers are reproduced
 in the §5.6 traceability table.
+
+> **A3 amendment authority note (September 4, 2026).** The candidate
+> wording of **FR-TS-011** and **FR-TS-062** is a substantive normative
+> amendment to the May 15 approved baseline, not a documentation-only
+> synchronization. FR-TS-011 changes the scope at which the full #16
+> determinism suite MUST execute; FR-TS-062 changes when the every-test
+> double-run MUST becomes operative. The executable candidate does not
+> self-approve either change. Both require explicit A3.4 owner
+> reapproval before this amendment can become the operative baseline.
+> D2/D3 tool pins and the FR-TS-078/079 executable-pointer updates are
+> implementation/state synchronization and do not erase that approval
+> boundary.
 
 **Partition.**
 
@@ -270,7 +282,8 @@ Spec #19's own failure modes (additional to §2.3):
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.4     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization.** Corrects FR-TS-011/012 so determinism consumption is pipeline-scoped rather than falsely requiring the full #16 suite in every CI job; records D2/D3 pins in FR-TS-031/057; makes FR-TS-079 a durable local/CI parity obligation now that CI exists; and scopes FR-TS-062 to activation of the dedicated flake layer. |
+| 0.5     | September 4, 2026 | — | **A3.3 authority correction.** Explicitly classifies the FR-TS-011 and FR-TS-062 text changes as substantive normative amendment candidates that require A3.4 owner reapproval; the executable branch and implementation synchronization do not self-approve them. No requirement text is changed by this history correction. |
+| 0.4     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization candidate.** Introduced the current FR-TS-011/012 pipeline-scoped determinism wording; recorded D2/D3 pins in FR-TS-031/057; made FR-TS-079 a durable local/CI parity obligation; and introduced the current FR-TS-062 dedicated-flake-layer scope. The v0.5 review correction clarifies that the FR-TS-011 and FR-TS-062 parts of this row were substantive normative changes, not mere synchronization. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. FR-TS-001 … 085 enumerated; partition table aligns to §3 mechanics. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 citations corrected (§5 / §3.2.4.1 / §1.1.1 / §4.8); FR-TS-002 / FR-TS-006 carry inline value-tag pointers (L1 / L2); SUSPENDED-on-tag-reintroduction added to §2.3 (L8). |
 | 0.3     | September 2, 2026 | Codex | **A3.2a governance amendment draft.** Appends FR-TS-086–097, qualifies FR-TS-063 quarantine, amends FR-TS-076/077/084, adds the architecture proof/evidence partition and failure modes, separates bounded substitutes from Governance-approved surface exclusions, and closes the Spec #19 exception boundary. The May 15 approved baseline remains operative until A3.4 atomic reapproval. |
