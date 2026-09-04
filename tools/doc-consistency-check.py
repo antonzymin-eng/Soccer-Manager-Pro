@@ -1120,7 +1120,14 @@ def scan_cardinalities(repo, sources, findings, stats, regions):
         measured["active open issues"] = len(
             re.findall(r"^- \*\*", oi.read_text(encoding="utf-8"), re.M))
     if oir.exists():
-        measured["resolved open issues"] = len(
+        # NOTE (September 4, 2026): this counts ARCHIVE MEMBERSHIP, not resolved
+        # issues. open-issues-resolved.md also holds superseded parallel records,
+        # which its own entries annotate as "not a resolved issue" — so the key was
+        # renamed from "resolved open issues" to "archived open issues" and the
+        # pattern below now matches `**N archived**`. The old `**N resolved**`
+        # pattern had been matching NO surface at all (the only claim in the tree
+        # wrote the number unbolded), so this group was silently checking nothing.
+        measured["archived open issues"] = len(
             re.findall(r"^- \*\*", oir.read_text(encoding="utf-8"), re.M))
     sel = repo / "docs/tracking/spec-error-log.md"
     if sel.exists():
@@ -1134,7 +1141,7 @@ def scan_cardinalities(repo, sources, findings, stats, regions):
         (re.compile(r"(\d+)\s+spec\s+folders"), "spec folders"),
         (re.compile(r"(\d+)\s+production\s+assembl"), "production assemblies"),
         (re.compile(r"\*\*(\d+) active\*\*"), "active open issues"),
-        (re.compile(r"\*\*(\d+) resolved\*\*"), "resolved open issues"),
+        (re.compile(r"\*\*(\d+) archived\*\*"), "archived open issues"),
         (re.compile(r"(\d+)\s+`?ERR-`?\s+entries"), "ERR- index rows"),
     )
 

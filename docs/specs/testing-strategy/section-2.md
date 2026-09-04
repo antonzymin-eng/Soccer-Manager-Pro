@@ -1,8 +1,8 @@
 # Testing Strategy & Framework Specification #19 — Section 2: Functional Requirements & Test Governance Model
 
 **Created:** May 12, 2026
-**Last Updated:** September 3, 2026
-**Version:** 0.3
+**Last Updated:** September 4, 2026
+**Version:** 0.5
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
 **Purpose:** Conformance vocabulary, the full FR-TS-### catalogue with
@@ -172,6 +172,25 @@ in the §5.6 traceability table.
 | FR-TS-096 | Bounded substitutes are permitted only for computationally disproportionate, intentionally omitted, or unavailable proof and MUST record authority, approval, scope/rationale, and the omitted surface or remaining uncertainty. They MUST NOT waive an executed proof failure, runner failure, ordinary skipped execution, or an independently applicable Governance exclusion requirement. | MUST | Stage 0+1 |
 | FR-TS-097 | A [GT] or owner-declared calibration/tuning change MUST NOT land for a component whose activation state is intentionally-disabled, pending-integration, or unresolved unless an approved exception explicitly authorizes that exact tuning scope. | MUST | Stage 0+1 |
 
+**FR table footer.**
+
+This catalogue contains **97 functional requirements** (FR-TS-001 …
+FR-TS-097) in the twelve partitions listed above. Those partition
+ranges are contiguous and non-overlapping and span FR-TS-001 … 097
+exactly; the table states ranges only, not per-partition counts, so
+the total is stated here rather than left to be summed.
+
+**Renumbering is forbidden after publication.** FR-TS IDs are cited in
+`spec-error-log.md` entries, in the §5.2 / §5.6 tables, in other specs'
+§5 conformance sections, and in `src/CLAUDE.md`. Renumbering produces
+the same cascade-failure class as stale spec numbers (root `CLAUDE.md`
+— "KNOWN HAZARD — Spec Renumbering Cascades"). New requirements append
+as FR-TS-098, FR-TS-099, … and require a version bump to this section
+and to §9.1. This mirrors the rule Spec #20 §2.2.10 has carried since
+publication; it is stated here because the two specs are amended and
+reapproved as one bundle and the prohibition should not depend on which
+of them a reader opens.
+
 ## 2.3 Failure-to-Comply Modes
 
 The following compliance modes apply. They are not a severity ladder where
@@ -273,3 +292,5 @@ Spec #19's own failure modes (additional to §2.3):
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. FR-TS-001 … 085 enumerated; partition table aligns to §3 mechanics. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 citations corrected (§5 / §3.2.4.1 / §1.1.1 / §4.8); FR-TS-002 / FR-TS-006 carry inline value-tag pointers (L1 / L2); SUSPENDED-on-tag-reintroduction added to §2.3 (L8). |
 | 0.3     | September 2, 2026 | Codex | **A3.2a governance amendment draft.** Appends FR-TS-086–097, qualifies FR-TS-063 quarantine, amends FR-TS-076/077/084, adds the architecture proof/evidence partition and failure modes, separates bounded substitutes from Governance-approved surface exclusions, and closes the Spec #19 exception boundary. The May 15 approved baseline remains operative until A3.4 atomic reapproval. |
+| 0.4     | September 4, 2026 | — | **A3.3 reconciliation correction.** Adds the FR table footer §2.2 has never carried: the explicit **97** total and the renumbering prohibition, mirroring Spec #20 §2.2.10. The A3.3 count/range gate found the asymmetry — #20 states its total and forbids renumbering at the catalogue itself, while #19 left the total derivable only from the partition table and stated in §9.1.2, and carried no renumbering rule anywhere. The gap predates A3; it is closed here because the two specs are reapproved as one bundle. **No FR is added, removed, renumbered, or restated, and no count changes** — 97 is the figure the partition table already sums to and §9.1.2 already records. |
+| 0.5     | September 4, 2026, later | — | **Self-review correction to v0.4.** The footer v0.4 added claimed the partition table "carries the ranges and their per-partition counts" — it does not: its columns are `FR Range | Topic | Rule mechanics in | Verification in`, with no count column. The phrasing was carried over from Spec #20 §2.2.10, whose table does have one, without checking this one. Corrected to state what is true of the table as it stands — the twelve ranges are contiguous, non-overlapping, and span 001 … 097 exactly — and to say explicitly that the total is stated in the footer *because* the table does not carry counts. No FR, count, range, or renumbering rule changed. |

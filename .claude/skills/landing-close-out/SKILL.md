@@ -2,7 +2,7 @@
 name: landing-close-out
 description: >-
   Close out a landing by syncing every tracking document the change touches — the
-  docs/tracking/CHANGELOG.md header chain, root CLAUDE.md's OPEN ISSUES entry, src/CLAUDE.md's version
+  docs/tracking/CHANGELOG.md header chain, the docs/tracking/open-issues.md entry, src/CLAUDE.md's version
   bump (and its own CHANGELOG-src.md chain), file-manifest.md, the owning design
   supplement's version history, and the gate-result line — in the same commit as the code. README.md is
   deliberately NOT a landing ledger: it carries no header chain, and only its single dated status
@@ -32,11 +32,21 @@ scripted:
 
 It flags a duplicate bare `**Last Updated:**` label in the changelog chain (found and fixed at least
 three times — see the rule under item 1 below), reports each tracking doc's declared date next to
-when it was actually last touched, and checks the OPEN ISSUES active/resolved counts against a direct
+when it was actually last touched, and checks the open-issues active/archived counts against a direct
 recount — the same comparison this repo's own changelog has had to make by hand, repeatedly, and got
 wrong at least once (the August 10, 2026 correction in root `CLAUDE.md`). It also FAILs if a
 `Last Updated` chain has reappeared in root `CLAUDE.md` or `README.md`, both of which had theirs split
-out. If `docs/tracking/file-manifest.md` trails the last few landings, say so rather than adding a
+out.
+
+**Read the output; do not just read the exit status.** Two conditions are status-affecting and exit
+non-zero — a reappeared header chain, and `BROKEN` from the count check, which means the check could
+not find the surface carrying the claim and therefore verified *nothing*. Both are contract
+violations rather than judgment calls. Everything else is advisory and exits 0, including `FAIL` on a
+count disagreement: whether stale counts are acceptable to land on is your call, not the script's. So
+a green exit still requires you to scan the report for `FAIL`. This distinction exists because the
+count check silently read a file with no OPEN ISSUES section from the compact restructure until
+September 4, 2026, printing `UNPARSED` on every run while the real claim drifted — a check reporting
+nothing, read as a check finding nothing. If `docs/tracking/file-manifest.md` trails the last few landings, say so rather than adding a
 seventh layer on top of a stale base.
 
 ## What to update
@@ -45,8 +55,11 @@ Work through these; skip one only when the change genuinely does not touch it, a
 skipped.
 
 **1. `docs/tracking/CHANGELOG.md` — the header chain.** Root `CLAUDE.md` itself carries no header
-chain any more; the chain was split out on July 31, 2026 and root `CLAUDE.md` only holds OPEN ISSUES
-now. Add a new `**Last Updated:**` entry summarising the landing: what changed, the ERR ids, the
+chain any more; the chain was split out on July 31, 2026. **Root `CLAUDE.md` no longer holds OPEN
+ISSUES either** — the compact restructure moved that section out, and this file said otherwise until
+September 4, 2026. The live blockers are `docs/tracking/open-issues.md`, indexed (titles only) in
+`docs/agent-guides/project-reference.md`, which also carries the `**N active** / **M archived**`
+count. Add a new `**Last Updated:**` entry summarising the landing: what changed, the ERR ids, the
 measured before → after numbers, the determinism declaration, what locks it, and the gate result. Two
 conventions the file enforces on itself:
 
@@ -57,7 +70,17 @@ conventions the file enforces on itself:
 - Historical entries are preserved verbatim. Never rewrite an old entry to match what you now know;
   supersede it in the new entry instead.
 
-**2. Root `CLAUDE.md` — OPEN ISSUES.** Add or update the entry for this area *in the same commit*.
+**2. `docs/tracking/open-issues.md` — the live blocker entries.** Add or update the entry for this
+area *in the same commit*. **This used to live in root `CLAUDE.md` and this item used to say so; it
+does not, and has not since the compact restructure.** Pointing agents at the wrong file is how the
+count in `docs/agent-guides/project-reference.md` drifted to 15/46 against a true 21/51 while
+`check_drift.sh` — reading that same wrong file — printed `UNPARSED` on every run and compared
+nothing. Two surfaces move with the entry, both in the same commit: the index bullet in
+`docs/agent-guides/project-reference.md` (titles only — that section's own contract is "an index, not
+the record"), and, when you add or archive an entry, its `**N active** / **M archived**` count, which
+`check_drift.sh` verifies by direct recount. An entry that is resolved moves to
+`docs/tracking/open-issues-resolved.md`; note that the archive also holds superseded parallel records,
+so its bullet count is **archive membership**, not a count of resolved issues.
 Each entry keeps its "since" / opened date so staleness is visible, and a resolved entry is updated in
 place rather than deleted — the original diagnosis is kept, marked RESOLVED, with what the measurement
 actually showed. Several entries here are valuable specifically because the fix refuted the entry's
@@ -153,7 +176,7 @@ Keep, always — these are the steps that go wrong invisibly:
 
 - **Which documents this landing touches**, and which are genuinely skippable (the sync list above is
   a checklist, not a script — item 8 in particular is a judgment about whether a roadmap item moved).
-- **The narrative content**: item 1's changelog entry, item 2's OPEN ISSUES entry, item 6's supplement
+- **The narrative content**: item 1's changelog entry, item 2's open-issues entry, item 6's supplement
   history. The register these are written in — measured, specific, willing to record a null result —
   is the whole value of the chain.
 - **The determinism declaration** and the **blast-radius** check.
