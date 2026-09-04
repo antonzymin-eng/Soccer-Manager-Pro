@@ -3,7 +3,9 @@
 
 The authority is Testing Strategy Appendix C. A heading or a bullet containing
 words such as "property" or "coverage tier" is not a schema. The approval gate
-requires the table shapes and payloads Appendix C actually publishes.
+requires the table shapes and payloads Appendix C actually publishes. An
+explicitly enforced approval directory with no section-5 file is itself a
+blocking schema finding rather than an empty successful audit.
 """
 
 from __future__ import annotations
@@ -65,6 +67,19 @@ def normalize_dirs(values: list[str], repo_root: Path) -> set[Path]:
 
 def section5_files(spec_dir: Path) -> list[Path]:
     return sorted(p for p in spec_dir.glob("section-5*.md") if p.is_file())
+
+
+def fallback_spec_text(spec_dir: Path) -> str:
+    """Read enough local spec text to infer ID/status when section 5 is absent."""
+    chunks: list[str] = []
+    for path in sorted(spec_dir.glob("section-*.md")):
+        try:
+            chunks.append(path.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            continue
+        if infer_spec_id("\n".join(chunks)) is not None:
+            break
+    return "\n".join(chunks)
 
 
 def spec_dir_enforced(
@@ -306,9 +321,8 @@ def main() -> int:
 
     for spec_dir in sorted(p for p in root.iterdir() if p.is_dir()):
         files = section5_files(spec_dir)
-        if not files:
-            continue
-        text = "\n".join(p.read_text(encoding="utf-8") for p in files)
+        fallback_text = "" if files else fallback_spec_text(spec_dir)
+        text = "\n".join(p.read_text(encoding="utf-8") for p in files) if files else fallback_text
         spec_id = infer_spec_id(text)
         status = canonical_spec_status(repo_root, spec_dir, fallback_text=text)
         enforced = spec_dir_enforced(
@@ -317,6 +331,24 @@ def main() -> int:
             changed_scope=args.changed_scope,
             enforce_dirs=enforce_dirs,
         )
+
+        if not files:
+            if not fallback_text and not enforced:
+                continue
+            if spec_id is not None:
+                checked_specs += 1
+            blocking = enforced and not is_legacy_survey(spec_id) and is_approved_status(status)
+            findings.append(
+                Finding(
+                    spec_id,
+                    str(spec_dir),
+                    "§5",
+                    "missing required section-5 test-plan file",
+                    blocking,
+                )
+            )
+            continue
+
         if spec_id is None:
             findings.append(
                 Finding(
@@ -339,6 +371,21 @@ def main() -> int:
                     "§5",
                     message,
                     blocking,
+                )
+            )
+
+    # Fail closed if --enforce-dir points to a registry-approved directory that
+    # does not exist beneath the audited root at all.
+    if not args.survey_only:
+        existing_dirs = {p.resolve() for p in root.iterdir() if p.is_dir()}
+        for enforced_dir in sorted(enforce_dirs - existing_dirs):
+            findings.append(
+                Finding(
+                    None,
+                    str(enforced_dir),
+                    "§5",
+                    "enforced approval spec directory does not exist",
+                    True,
                 )
             )
 
