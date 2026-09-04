@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="${1:---pr}"
 PRECOMMIT_BUDGET_SECONDS=60
-PRECOMMIT_FILTER='FullyQualifiedName!~sim_&FullyQualifiedName!~e2e_&FullyQualifiedName!~Integration&FullyQualifiedName!~Scenario&FullyQualifiedName!~TacticalDirector.DeterministicSim.Tests&TestCategory!=Calibration'
+PRECOMMIT_FILTER='FullyQualifiedName!~int_&FullyQualifiedName!~sim_&FullyQualifiedName!~e2e_&FullyQualifiedName!~Integration&FullyQualifiedName!~Scenario&FullyQualifiedName!~TacticalDirector.DeterministicSim.Tests&TestCategory!=Calibration'
 
 # Legacy ambient controls are deliberately not policy inputs. The stable runner
 # owns composition and sanitizes them before invoking the lower-level gate.
