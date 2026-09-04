@@ -26,7 +26,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--changed-scope",
+        action="store_true",
+        help="Survey the whole root but block only non-legacy spec directories named by --enforce-dir.",
+    )
+    parser.add_argument(
+        "--enforce-dir",
+        action="append",
+        default=[],
+        help="Spec directory, absolute or repo-relative, currently under review. Repeatable.",
+    )
     return parser.parse_args()
+
+
+def normalize_dirs(values: list[str], repo_root: Path) -> set[Path]:
+    out: set[Path] = set()
+    for value in values:
+        path = Path(value)
+        if not path.is_absolute():
+            path = repo_root / path
+        out.add(path.resolve())
+    return out
 
 
 def section5_files(spec_dir: Path) -> list[Path]:
@@ -58,9 +79,18 @@ def has_surface(lines: list[str], needles: tuple[str, ...]) -> bool:
     return any(all(needle in line for needle in needles) for line in lines)
 
 
+def spec_dir_enforced(spec_dir: Path, *, changed_scope: bool, enforce_dirs: set[Path]) -> bool:
+    if not changed_scope:
+        return True
+    resolved = spec_dir.resolve()
+    return any(resolved == root or root in resolved.parents for root in enforce_dirs)
+
+
 def main() -> int:
     args = parse_args()
     root = args.root.resolve()
+    repo_root = args.repo_root.resolve()
+    enforce_dirs = normalize_dirs(args.enforce_dir, repo_root)
     findings: list[Finding] = []
     checked_specs = 0
 
@@ -70,6 +100,11 @@ def main() -> int:
             continue
         text = "\n".join(p.read_text(encoding="utf-8") for p in files)
         spec_id = infer_spec_id(text)
+        enforced = spec_dir_enforced(
+            spec_dir,
+            changed_scope=args.changed_scope,
+            enforce_dirs=enforce_dirs,
+        )
         if spec_id is None:
             findings.append(
                 Finding(
@@ -77,12 +112,12 @@ def main() -> int:
                     ",".join(str(p) for p in files),
                     "§5",
                     "cannot infer spec ID from section-5 header",
-                    True,
+                    enforced,
                 )
             )
             continue
         checked_specs += 1
-        legacy = is_legacy_survey(spec_id)
+        blocking = enforced and not is_legacy_survey(spec_id)
         surfaces = structured_lines(text)
 
         for label, needles in REQUIREMENTS:
@@ -93,7 +128,7 @@ def main() -> int:
                         ",".join(str(p) for p in files),
                         "§5",
                         f"missing structured {label} surface ({', '.join(needles)})",
-                        not legacy,
+                        blocking,
                     )
                 )
 
@@ -101,14 +136,14 @@ def main() -> int:
         for token in manifest_tokens:
             if any(marker in token for marker in ("<", ">", "*")):
                 continue
-            if not (args.repo_root.resolve() / token).exists():
+            if not (repo_root / token).exists():
                 findings.append(
                     Finding(
                         spec_id,
                         str(spec_dir),
                         "§5 scenario",
                         f"scenario manifest path does not resolve: {token}",
-                        not legacy,
+                        blocking,
                     )
                 )
 
@@ -117,12 +152,17 @@ def main() -> int:
         "specs": checked_specs,
         "blocking": sum(f.blocking for f in findings),
         "notes": sum(not f.blocking for f in findings),
+        "changed_scope": args.changed_scope,
+        "enforced_dirs": sorted(str(path) for path in enforce_dirs),
         "findings": [f.__dict__ for f in findings],
     }
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
-        print(f"spec5-schema-auditor: {checked_specs} spec(s), {describe(findings)}")
+        scope = "changed-spec enforcement" if args.changed_scope else "full enforcement"
+        print(
+            f"spec5-schema-auditor: {checked_specs} spec(s), {describe(findings)} [{scope}]"
+        )
         for finding in findings:
             level = "BLOCK" if finding.blocking else "SURVEY"
             print(f"{level}: spec #{finding.spec_id}: {finding.message}")
