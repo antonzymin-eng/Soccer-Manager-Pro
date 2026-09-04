@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Iterable
 
 SPEC_ID_RE = re.compile(r"(?:Spec(?:ification)?\s*#|#)(\d{1,3})", re.IGNORECASE)
+STATUS_RE = re.compile(r"^\*\*Status:\*\*\s*([^\n]+)$", re.IGNORECASE | re.MULTILINE)
+SECTION_REF_RE = re.compile(r"§\s*(\d+)(?:\.\d+)*")
 BACKTICK_RE = re.compile(r"`([^`]+)`")
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 PATH_TOKEN_RE = re.compile(
@@ -43,6 +45,19 @@ def infer_spec_id(text: str) -> int | None:
     head = "\n".join(text.splitlines()[:40])
     match = SPEC_ID_RE.search(head)
     return int(match.group(1)) if match else None
+
+
+def infer_status(text: str) -> str | None:
+    head = "\n".join(text.splitlines()[:40])
+    match = STATUS_RE.search(head)
+    return match.group(1).strip() if match else None
+
+
+def is_approved_status(status: str | None) -> bool:
+    if status is None:
+        return False
+    normalized = status.upper()
+    return normalized.startswith("APPROVED") and "AMENDMENT DRAFT" not in normalized
 
 
 def is_legacy_survey(spec_id: int | None) -> bool:
@@ -105,6 +120,23 @@ def resolve_candidate(token: str, *, repo_root: Path, spec_dir: Path) -> bool:
     else:
         options.extend((repo_root / p, spec_dir / p))
     return any(candidate.exists() for candidate in options)
+
+
+def has_resolved_local_section_reference(evidence: str, *, spec_dir: Path) -> bool:
+    """Resolve canonical `§N.x` citations to the versioned section-N file.
+
+    This is a path-resolution convenience, not a prose escape hatch: at least one
+    explicit section symbol must be present and its owning section file must exist.
+    """
+    refs = SECTION_REF_RE.findall(evidence)
+    if not refs:
+        return False
+    for section in refs:
+        if any(spec_dir.glob(f"section-{section}*.md")):
+            return True
+    if "appendix" in evidence.lower() and (spec_dir / "appendices.md").exists():
+        return True
+    return False
 
 
 def _inline_programmatic_command(
