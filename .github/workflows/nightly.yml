@@ -29,8 +29,16 @@ jobs:
       - name: Run full functional/simulation pipeline
         run: bash tools/run-tests-local.sh --nightly
 
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-linux-coverage
+          path: artifacts/coverage/
+          if-no-files-found: warn
+
   nightly-determinism-certified:
-    name: Nightly #16 determinism suite (certified host)
+    name: Nightly #16 determinism suite (certified Windows/Unity host)
     runs-on: [self-hosted, windows, x64, determinism-certified]
     timeout-minutes: 120
     steps:
@@ -44,17 +52,36 @@ jobs:
           if ($env:TD_CERTIFIED_PLATFORM_PIN -ne $expected) {
             throw "TD_CERTIFIED_PLATFORM_PIN must equal $expected on this runner."
           }
+          if ([string]::IsNullOrWhiteSpace($env:TD_UNITY_EXE)) {
+            throw 'TD_UNITY_EXE must point to the certified Unity 6000.4.9f1 executable.'
+          }
+          if (-not (Test-Path -LiteralPath $env:TD_UNITY_EXE -PathType Leaf)) {
+            throw "TD_UNITY_EXE does not exist: $env:TD_UNITY_EXE"
+          }
 
       - name: Create Unity source junction
         shell: cmd
         run: |
-          if not exist Assets\Scripts mklink /J Assets\Scripts src
+          if exist Assets\Scripts rmdir Assets\Scripts
+          mklink /J Assets\Scripts src
 
       - name: Run #16 full determinism suite in Unity
         shell: pwsh
         run: |
-          Unity -batchmode -runTests -projectPath . `
+          $results = Join-Path $env:RUNNER_TEMP 'determinism-results.xml'
+          & $env:TD_UNITY_EXE -batchmode -runTests -projectPath . `
             -testPlatform EditMode `
             -testFilter "TacticalDirector.DeterministicSim.Tests" `
-            -testResults "$env:RUNNER_TEMP\determinism-results.xml" `
+            -testResults $results `
             -logFile -
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Upload determinism result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-determinism-certified
+          path: ${{ runner.temp }}/determinism-results.xml
+          if-no-files-found: error

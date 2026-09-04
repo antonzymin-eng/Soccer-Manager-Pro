@@ -2,4 +2,21 @@
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
-exec bash "$ROOT/tools/run-tests-local.sh" --pre-commit
+GIT_DIR_ABS="$(git -C "$ROOT" rev-parse --absolute-git-dir)"
+SNAPSHOT="$(mktemp -d "${TMPDIR:-/tmp}/soccer-manager-precommit.XXXXXX")"
+
+cleanup() {
+  rm -rf "$SNAPSHOT"
+}
+trap cleanup EXIT INT TERM
+
+# Export exactly the index (the staged snapshot). This prevents unstaged fixes
+# or untracked files from making a broken staged commit appear green.
+git -C "$ROOT" checkout-index --all --force --prefix="$SNAPSHOT/"
+
+(
+  cd "$SNAPSHOT"
+  GIT_DIR="$GIT_DIR_ABS" \
+  GIT_WORK_TREE="$SNAPSHOT" \
+  bash "$SNAPSHOT/tools/run-tests-local.sh" --pre-commit
+)

@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""Automated approval-checklist evidence auditor (FR-TS-040..045)."""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+from testing_strategy_audit import (
+    Finding,
+    candidate_paths,
+    describe,
+    has_named_programmatic_check,
+    infer_spec_id,
+    is_legacy_survey,
+    iter_tables,
+    resolve_candidate,
+)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--root", type=Path, required=True)
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd())
+    parser.add_argument("--json", action="store_true")
+    return parser.parse_args()
+
+
+def audit_file(path: Path, repo_root: Path) -> tuple[int | None, int, list[Finding]]:
+    text = path.read_text(encoding="utf-8")
+    spec_id = infer_spec_id(text)
+    lines = text.splitlines()
+    findings: list[Finding] = []
+    checked = 0
+
+    for headers, rows in iter_tables(lines):
+        evidence_indexes = [
+            i for i, header in enumerate(headers)
+            if "evidence" in header.lower() or "verification" in header.lower()
+        ]
+        if not evidence_indexes:
+            continue
+        idx = next(
+            (i for i in evidence_indexes if "evidence" in headers[i].lower()),
+            evidence_indexes[0],
+        )
+        for line_no, cells in rows:
+            evidence = cells[idx].strip()
+            row_id = cells[0].strip() if cells else f"line {line_no}"
+            if any(marker in evidence for marker in ("<file", "<check", "<path", "<test")):
+                continue
+            checked += 1
+            legacy = is_legacy_survey(spec_id)
+            if not evidence:
+                findings.append(Finding(spec_id, str(path), row_id, "empty evidence cell", not legacy))
+                continue
+
+            paths = candidate_paths(evidence)
+            resolved_paths = [
+                token for token in paths
+                if resolve_candidate(token, repo_root=repo_root, spec_dir=path.parent)
+            ]
+            broken_paths = [
+                token for token in paths
+                if not resolve_candidate(token, repo_root=repo_root, spec_dir=path.parent)
+                and not any(ch in token for ch in "<>*{}")
+            ]
+            named_check = has_named_programmatic_check(
+                evidence, repo_root=repo_root, spec_dir=path.parent
+            )
+
+            if broken_paths and not resolved_paths and not named_check:
+                findings.append(
+                    Finding(
+                        spec_id,
+                        str(path),
+                        row_id,
+                        "unresolved evidence path(s): " + ", ".join(broken_paths),
+                        not legacy,
+                    )
+                )
+            elif not resolved_paths and not named_check:
+                findings.append(
+                    Finding(
+                        spec_id,
+                        str(path),
+                        row_id,
+                        "evidence is prose only; no version-controlled path or named check",
+                        not legacy,
+                    )
+                )
+
+    return spec_id, checked, findings
+
+
+def main() -> int:
+    args = parse_args()
+    root = args.root.resolve()
+    repo_root = args.repo_root.resolve()
+    candidates = sorted({*root.rglob("section-9*.md"), *root.rglob("*approval-checklist*.md")})
+
+    total_rows = 0
+    findings: list[Finding] = []
+    audited_files = 0
+    for path in candidates:
+        _, checked, file_findings = audit_file(path, repo_root)
+        if checked:
+            audited_files += 1
+            total_rows += checked
+            findings.extend(file_findings)
+
+    payload = {
+        "auditor": "checklist-auditor",
+        "files": audited_files,
+        "rows": total_rows,
+        "blocking": sum(f.blocking for f in findings),
+        "notes": sum(not f.blocking for f in findings),
+        "findings": [f.__dict__ for f in findings],
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        print(
+            f"checklist-auditor: {audited_files} file(s), {total_rows} evidence row(s), "
+            f"{describe(findings)}"
+        )
+        for finding in findings:
+            level = "BLOCK" if finding.blocking else "SURVEY"
+            print(f"{level}: {finding.path}:{finding.row}: {finding.message}")
+
+    return 1 if payload["blocking"] else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

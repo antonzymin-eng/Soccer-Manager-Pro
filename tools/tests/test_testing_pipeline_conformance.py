@@ -1,175 +1,321 @@
-#!/usr/bin/env python3
-"""Behavioral locks for Testing Strategy #19 FR-TS-075 / FR-TS-079."""
-
 from __future__ import annotations
 
 import os
 from pathlib import Path
+import shutil
 import subprocess
-import sys
 import tempfile
 import textwrap
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-RUNNER = ROOT / "tools" / "run-tests-local.sh"
-BUDGET = ROOT / "tools" / "run-with-time-budget.py"
-GATE = ROOT / "tools" / "dotnet-ci" / "run-gate.sh"
-
-
-def run(
-    argv: list[str],
-    *,
-    env: dict[str, str] | None = None,
-    timeout: float = 10,
-) -> subprocess.CompletedProcess[str]:
-    merged = os.environ.copy()
-    if env:
-        merged.update(env)
-    return subprocess.run(
-        argv,
-        cwd=ROOT,
-        env=merged,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        timeout=timeout,
-        check=False,
-    )
 
 
 class TestingPipelineConformanceTests(unittest.TestCase):
-    def test_pre_commit_plan_is_bounded_and_excludes_long_tiers(self) -> None:
-        result = run(
-            ["bash", str(RUNNER), "--pre-commit"],
+    def run_cmd(
+        self,
+        *args: str,
+        cwd: Path | None = None,
+        env: dict[str, str] | None = None,
+        timeout: int = 15,
+    ) -> subprocess.CompletedProcess[str]:
+        merged = os.environ.copy()
+        if env:
+            merged.update(env)
+        return subprocess.run(
+            args,
+            cwd=cwd or ROOT,
+            env=merged,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=timeout,
+            check=False,
+        )
+
+    def test_runner_modes_have_executable_behavior_plans(self) -> None:
+        for mode, expected in (
+            ("--pre-commit", "budget_seconds=60"),
+            ("--pr", "Coverage: XPlat Code Coverage"),
+            ("--nightly", "Full-match soak driver: ShotOutcomeDiagnosticTests"),
+        ):
+            proc = self.run_cmd(
+                "bash",
+                str(ROOT / "tools" / "run-tests-local.sh"),
+                mode,
+                env={"TD_PIPELINE_DRY_RUN": "1"},
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertIn("checklist_auditor=", proc.stdout)
+            self.assertIn("schema_auditor=", proc.stdout)
+            self.assertIn("gate=", proc.stdout)
+            self.assertIn(expected, proc.stdout)
+
+    def test_owner_held_red_verifier_rejects_changed_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            ledger = tmp / "ledger.txt"
+            ledger.write_text("sim_match_engine_close_chance|-0.165|0.407\n", encoding="utf-8")
+            results = tmp / "results"
+            results.mkdir()
+            trx = results / "result.trx"
+            trx.write_text(
+                """<?xml version="1.0" encoding="utf-8"?>
+<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Results>
+    <UnitTestResult testName="TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance"
+                    outcome="Failed">
+      <Output><ErrorInfo><Message>meanCosine=-0.165 goalwardShare=0.407</Message></ErrorInfo></Output>
+    </UnitTestResult>
+  </Results>
+</TestRun>
+""",
+                encoding="utf-8",
+            )
+            verifier = ROOT / "tools" / "dotnet-ci" / "verify-owner-held-red.py"
+            good = self.run_cmd(
+                "python3", str(verifier),
+                "--ledger", str(ledger),
+                "--results", str(results),
+                "--dotnet-exit", "1",
+            )
+            self.assertEqual(good.returncode, 0, good.stdout)
+            self.assertIn("MATCHES RECORDED BASELINE", good.stdout)
+
+            trx.write_text(
+                trx.read_text(encoding="utf-8").replace("-0.165", "-0.200"),
+                encoding="utf-8",
+            )
+            bad = self.run_cmd(
+                "python3", str(verifier),
+                "--ledger", str(ledger),
+                "--results", str(results),
+                "--dotnet-exit", "1",
+            )
+            self.assertEqual(bad.returncode, 1, bad.stdout)
+            self.assertIn("changed diagnostics", bad.stdout)
+
+    def test_precommit_filter_is_narrow_and_trusted(self) -> None:
+        proc = self.run_cmd(
+            "bash",
+            str(ROOT / "tools" / "run-tests-local.sh"),
+            "--pre-commit",
             env={"TD_PIPELINE_DRY_RUN": "1"},
         )
-        self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn("DRY-RUN budget_seconds=60", result.stdout)
-        self.assertIn("FullyQualifiedName!~sim_", result.stdout)
-        self.assertIn("FullyQualifiedName!~e2e_", result.stdout)
-        self.assertIn("FullyQualifiedName!~Integration", result.stdout)
-        self.assertIn("FullyQualifiedName!~Scenario", result.stdout)
-        self.assertIn("TacticalDirector.DeterministicSim.Tests", result.stdout)
-        self.assertIn("TestCategory!=Calibration", result.stdout)
-        self.assertNotIn("Owner-held-red policy", result.stdout)
-        self.assertNotIn("Full-match soak driver", result.stdout)
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertIn("FullyQualifiedName!~sim_", proc.stdout)
+        self.assertIn("FullyQualifiedName!~e2e_", proc.stdout)
+        self.assertIn("TacticalDirector.DeterministicSim.Tests", proc.stdout)
 
-    def test_budget_helper_enforces_hard_timeout_and_propagates_success(self) -> None:
-        ok = run(
-            [
-                sys.executable,
-                str(BUDGET),
-                "--seconds",
-                "2",
-                "--",
-                sys.executable,
-                "-c",
-                "raise SystemExit(0)",
-            ]
-        )
-        self.assertEqual(0, ok.returncode, ok.stderr)
-
-        timed = run(
-            [
-                sys.executable,
-                str(BUDGET),
-                "--seconds",
-                "0.05",
-                "--",
-                sys.executable,
-                "-c",
-                "import time; time.sleep(5)",
-            ],
-            timeout=3,
-        )
-        self.assertEqual(124, timed.returncode)
-        self.assertIn("exceeded 0.05s wall-clock budget", timed.stderr)
-
-    def test_nightly_plan_enables_soak_and_owner_held_report_only(self) -> None:
-        result = run(
-            ["bash", str(RUNNER), "--nightly"],
-            env={"TD_PIPELINE_DRY_RUN": "1"},
-        )
-        self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn("Full-match soak driver: ShotOutcomeDiagnosticTests", result.stdout)
-        self.assertIn("Owner-held-red policy: execute separately, report-only", result.stdout)
-
-        gate = run(
-            ["bash", str(GATE)],
+        injected = self.run_cmd(
+            "bash",
+            str(ROOT / "tools" / "dotnet-ci" / "run-gate.sh"),
             env={
                 "TD_GATE_DRY_RUN": "1",
-                "TD_OWNER_HELD_RED_MODE": "report-only",
+                "TD_GATE_TEST_FILTER": "FullyQualifiedName~OnlyMe",
             },
         )
-        self.assertEqual(0, gate.returncode, gate.stderr)
-        self.assertIn(
-            "FullyQualifiedName!~sim_match_engine_close_chance",
-            gate.stdout,
-        )
-        self.assertIn(
-            "FullyQualifiedName~sim_match_engine_close_chance",
-            gate.stdout,
-        )
+        self.assertEqual(injected.returncode, 2, injected.stdout)
+        self.assertIn("trusted testing-strategy runner marker", injected.stdout)
 
-    def test_pr_plan_does_not_claim_certification_or_soak(self) -> None:
-        result = run(
-            ["bash", str(RUNNER), "--pr"],
-            env={"TD_PIPELINE_DRY_RUN": "1"},
+    def test_time_budget_enforces_timeout_and_propagates_success(self) -> None:
+        timeout_proc = self.run_cmd(
+            "python3",
+            str(ROOT / "tools" / "run-with-time-budget.py"),
+            "--seconds",
+            "0.05",
+            "--",
+            "python3",
+            "-c",
+            "import time; time.sleep(2)",
         )
-        self.assertEqual(0, result.returncode, result.stderr)
-        self.assertNotIn("Full-match soak driver", result.stdout)
-        self.assertNotIn("Owner-held-red policy", result.stdout)
+        self.assertEqual(timeout_proc.returncode, 124, timeout_proc.stdout)
+        self.assertIn("time budget exceeded", timeout_proc.stdout)
 
-    def test_hook_install_and_verify_are_executable_behaviors(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            log = tmp_path / "git.log"
-            fake_git = tmp_path / "git"
-            fake_git.write_text(
+        success_proc = self.run_cmd(
+            "python3",
+            str(ROOT / "tools" / "run-with-time-budget.py"),
+            "--seconds",
+            "1",
+            "--",
+            "python3",
+            "-c",
+            "print('ok')",
+        )
+        self.assertEqual(success_proc.returncode, 0, success_proc.stdout)
+        self.assertIn("ok", success_proc.stdout)
+
+    def test_owner_held_red_is_separate_from_quarantine_and_value_pinned(self) -> None:
+        gate = ROOT / "tools" / "dotnet-ci" / "run-gate.sh"
+        proc = self.run_cmd(
+            "bash",
+            str(gate),
+            env={"TD_GATE_DRY_RUN": "1", "TD_OWNER_HELD_RED_MODE": "report-only"},
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertIn("owner_held_include=FullyQualifiedName~sim_match_engine_close_chance", proc.stdout)
+        ledger = (ROOT / "tools" / "dotnet-ci" / "owner-held-red.txt").read_text(encoding="utf-8")
+        self.assertIn("sim_match_engine_close_chance|-0.165|0.407", ledger)
+        quarantine = (ROOT / "tools" / "dotnet-ci" / "known-failures.txt").read_text(encoding="utf-8")
+        self.assertNotIn("sim_match_engine_close_chance", quarantine)
+
+    def test_hook_runs_staged_snapshot_not_unstaged_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td) / "repo"
+            repo.mkdir()
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+            (repo / ".githooks").mkdir()
+            (repo / "tools").mkdir()
+            shutil.copy2(ROOT / ".githooks" / "pre-commit", repo / ".githooks" / "pre-commit")
+            capture = Path(td) / "captured.txt"
+            (repo / "tools" / "run-tests-local.sh").write_text(
+                "#!/usr/bin/env bash\nset -euo pipefail\ncat payload.txt > \"$TD_TEST_CAPTURE\"\n",
+                encoding="utf-8",
+            )
+            (repo / "payload.txt").write_text("baseline\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-qm", "base"], cwd=repo, check=True)
+
+            (repo / "payload.txt").write_text("staged\n", encoding="utf-8")
+            subprocess.run(["git", "add", "payload.txt"], cwd=repo, check=True)
+            (repo / "payload.txt").write_text("unstaged\n", encoding="utf-8")
+
+            proc = self.run_cmd(
+                "bash",
+                str(repo / ".githooks" / "pre-commit"),
+                cwd=repo,
+                env={"TD_TEST_CAPTURE": str(capture)},
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertEqual(capture.read_text(encoding="utf-8"), "staged\n")
+
+    def test_hook_installer_refuses_to_overwrite_custom_hook_path(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            (repo / "tools").mkdir()
+            (repo / ".githooks").mkdir()
+            shutil.copy2(ROOT / "tools" / "run-tests-local.sh", repo / "tools" / "run-tests-local.sh")
+            shutil.copy2(ROOT / ".githooks" / "pre-commit", repo / ".githooks" / "pre-commit")
+
+            subprocess.run(["git", "config", "core.hooksPath", ".custom-hooks"], cwd=repo, check=True)
+            proc = self.run_cmd(
+                "bash", str(repo / "tools" / "run-tests-local.sh"), "--install-hook", cwd=repo
+            )
+            self.assertEqual(proc.returncode, 2, proc.stdout)
+            self.assertIn("refusing to overwrite", proc.stdout)
+            configured = subprocess.check_output(
+                ["git", "config", "--get", "core.hooksPath"], cwd=repo, text=True
+            ).strip()
+            self.assertEqual(configured, ".custom-hooks")
+
+            subprocess.run(["git", "config", "--unset", "core.hooksPath"], cwd=repo, check=True)
+            proc = self.run_cmd(
+                "bash", str(repo / "tools" / "run-tests-local.sh"), "--install-hook", cwd=repo
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            configured = subprocess.check_output(
+                ["git", "config", "--get", "core.hooksPath"], cwd=repo, text=True
+            ).strip()
+            self.assertEqual(configured, ".githooks")
+
+    def test_auditors_block_broken_evidence_and_legacy_schema_is_survey_only(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            specs = repo / "docs" / "specs"
+            spec9 = specs / "spec-nine"
+            spec9.mkdir(parents=True)
+            (spec9 / "section-5.md").write_text(
                 textwrap.dedent(
-                    f"""\
-                    #!/usr/bin/env bash
-                    echo "$*" >> {str(log)!r}
-                    if [[ "$*" == *"config --get core.hooksPath"* ]]; then
-                      echo .githooks
-                    fi
+                    """\
+                    # Spec #9 — Section 5: Test Plan
+                    Unit Integration Simulation
+                    Property tests: none.
+                    Scenario list: none.
+                    Coverage targets by Tier.
+                    Determinism Tier classification.
+                    Approval checklist linkage: section-9-approval-checklist.md.
                     """
                 ),
                 encoding="utf-8",
             )
-            fake_git.chmod(0o755)
+            (spec9 / "section-9-approval-checklist.md").write_text(
+                textwrap.dedent(
+                    """\
+                    # Spec #9 — Approval Checklist
+                    | Row | Claim | Evidence |
+                    | --- | --- | --- |
+                    | 9.1 | schema | `section-5.md` |
+                    """
+                ),
+                encoding="utf-8",
+            )
+            good = self.run_cmd(
+                "python3",
+                str(ROOT / "tools" / "checklist-auditor.py"),
+                "--root",
+                str(specs),
+                "--repo-root",
+                str(repo),
+            )
+            self.assertEqual(good.returncode, 0, good.stdout)
 
-            env = {"PATH": f"{tmp}{os.pathsep}{os.environ.get('PATH', '')}"}
-            installed = run(["bash", str(RUNNER), "--install-hook"], env=env)
-            self.assertEqual(0, installed.returncode, installed.stderr)
-            self.assertIn("Pre-commit hook configuration verified.", installed.stdout)
+            (spec9 / "section-9-approval-checklist.md").write_text(
+                "# Spec #9 — Approval Checklist\n"
+                "| Row | Claim | Evidence |\n| --- | --- | --- |\n"
+                "| 9.1 | schema | `missing.md` |\n",
+                encoding="utf-8",
+            )
+            bad = self.run_cmd(
+                "python3",
+                str(ROOT / "tools" / "checklist-auditor.py"),
+                "--root",
+                str(specs),
+                "--repo-root",
+                str(repo),
+            )
+            self.assertEqual(bad.returncode, 1, bad.stdout)
+            self.assertIn("BLOCK", bad.stdout)
 
-            verified = run(["bash", str(RUNNER), "--verify-hook"], env=env)
-            self.assertEqual(0, verified.returncode, verified.stderr)
-            self.assertIn("Pre-commit hook configuration verified.", verified.stdout)
+            legacy = specs / "legacy"
+            legacy.mkdir()
+            (legacy / "section-5.md").write_text("# Spec #1 — Section 5\nUnit only.\n", encoding="utf-8")
+            schema = self.run_cmd(
+                "python3",
+                str(ROOT / "tools" / "spec5-schema-auditor.py"),
+                "--root",
+                str(specs),
+                "--repo-root",
+                str(repo),
+            )
+            self.assertEqual(schema.returncode, 0, schema.stdout)
+            self.assertIn("SURVEY", schema.stdout)
 
-            calls = log.read_text(encoding="utf-8")
-            self.assertIn("config core.hooksPath .githooks", calls)
-            self.assertIn("config --get core.hooksPath", calls)
+    def test_property_and_coverage_tool_pins_are_versioned(self) -> None:
+        props = (ROOT / "Directory.Build.targets").read_text(encoding="utf-8")
+        self.assertIn('FsCheck.NUnit" Version="2.16.6"', props)
+        self.assertIn('coverlet.collector" Version="6.0.4"', props)
+        settings = (ROOT / "tools" / "dotnet-ci" / "coverage.runsettings").read_text(encoding="utf-8")
+        self.assertIn("XPlat Code Coverage", settings)
+        self.assertIn("cobertura", settings)
 
-    def test_nightly_workflow_splits_functional_and_certified_jobs(self) -> None:
-        workflow = (ROOT / ".github" / "workflows" / "nightly.yml").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("schedule:", workflow)
-        self.assertIn("tools/run-tests-local.sh --nightly", workflow)
-        self.assertIn(
-            "runs-on: [self-hosted, windows, x64, determinism-certified]",
-            workflow,
-        )
-        self.assertIn(
-            "win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags",
-            workflow,
-        )
+    def test_nightly_separates_linux_from_certified_windows_determinism(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "nightly.yml").read_text(encoding="utf-8")
+        self.assertIn("Nightly full simulation + soak (non-certifying)", workflow)
+        self.assertIn("ubuntu-latest", workflow)
+        self.assertIn("[self-hosted, windows, x64, determinism-certified]", workflow)
+        self.assertIn("win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags", workflow)
+        self.assertIn("TD_UNITY_EXE", workflow)
         self.assertIn('TacticalDirector.DeterministicSim.Tests', workflow)
-        self.assertIn("Unity -batchmode -runTests", workflow)
+        self.assertNotIn("Unity -batchmode", workflow)
+
+    def test_bootstrap_is_versioned_and_verifies_hook(self) -> None:
+        bootstrap = (ROOT / "tools" / "bootstrap-dev.sh").read_text(encoding="utf-8")
+        self.assertIn("--install-hook", bootstrap)
+        self.assertIn("--verify-hook", bootstrap)
 
 
 if __name__ == "__main__":

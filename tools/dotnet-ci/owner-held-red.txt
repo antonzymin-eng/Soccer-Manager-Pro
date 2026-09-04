@@ -1,7 +1,6 @@
-# Owner-held red tests: executed report-only only when the caller explicitly
-# sets TD_OWNER_HELD_RED_MODE=report-only.
-#
-# This is NOT the flake quarantine. Entries must cite a recorded owner decision.
-# `sim_match_engine_close_chance` is held red by close-chance-creation-design.md
-# §10.9 item 6 until the KD-W1/C1 follow-up resolves ERR-012-011.
-sim_match_engine_close_chance
+# Owner-held RED tests. This is NOT flake quarantine.
+# Format: test_name|expected diagnostic token|expected diagnostic token|...
+# A failing test is report-only only while the exact recorded diagnostics match.
+# A changed failure, a missing result, or an unexpected execution outcome blocks.
+# Owner decision: close-chance-creation-design.md §10.9 item 6 / PR #316.
+sim_match_engine_close_chance|-0.165|0.407
