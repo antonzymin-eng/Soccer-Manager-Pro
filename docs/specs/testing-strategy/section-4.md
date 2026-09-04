@@ -2,9 +2,9 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 4, 2026
-**Version:** 0.5
-**Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
+**Version:** 0.6
+**Status:** AMENDMENT DRAFT (A3 candidate; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.3/A3.4 review correction
 **Purpose:** The *shape* of the test-harness architecture: folder
 layout, fixture / golden-trace layout, harness API surface, the two
 interfaces this spec exposes, and the CI pipeline topology. Concrete
@@ -158,9 +158,13 @@ the consumer is concretely specified.
 
 ## 4.5 CI Pipeline Topology
 
-The repository now carries the concrete FR-TS-075 topology. GitHub
-Actions is the provider; `tools/run-tests-local.sh` is the versioned
-local/CI composition entry point.
+The repository carries the concrete FR-TS-075 topology as an A3
+candidate. GitHub Actions is the provider; `tools/run-tests-local.sh`
+is the versioned local/CI composition entry point. **Topology existence
+is not by itself proof of operational conformance.** A3.4 must retain
+two explicit acceptance facts: a successful pre-commit measurement
+within the 60-second certified-host budget, and a successful scheduled
+#16 run on the registered certified Windows runner.
 
 ### 4.5.1 Pre-Commit Pipeline
 
@@ -173,14 +177,23 @@ local/CI composition entry point.
 - Tiers: unit + property (fast compatibility subset). FsCheck.NUnit is
   pinned in the repository tool slate; the default remains 100 cases
   per property unless a property declares a stronger local setting.
+- Execution path: `tools/run-tests-local.sh --pre-commit` invokes both
+  Spec #19 auditors and the generated test-project fast path; it does
+  not route through the whole-tree compile/meta pass.
 - Exit criteria: all selected tests and both Spec #19 auditors pass.
-- Wall-time budget: the entire composition is hard-bounded to ≤ 60
-  seconds on the certified host (`[GT]`, catalogued in §3.10), including
-  auditors, restore/build, and test execution.
+- Wall-time enforcement: the entire composition is terminated and
+  fails with exit 124 if it exceeds 60 seconds. **This proves a hard
+  upper bound on an attempted run; it does not prove the passing path
+  normally completes within 60 seconds.** A3.4 acceptance requires a
+  successful measured run on the certified developer host before this
+  pipeline may be recorded as fully conformant with the §4.5 budget.
 
 ### 4.5.2 PR Pipeline
 
 - Trigger: PR open / push through `.github/workflows/ci.yml`.
+- CI entry point: the workflow invokes `bash tools/run-tests-local.sh
+  --pr`; it does not bypass the versioned composition by calling the
+  lower-level dotnet gate directly.
 - Required shape: unit + integration + property + per-spec-changed
   scenarios.
 - Current implementation runs the whole non-certifying functional test
@@ -192,7 +205,8 @@ local/CI composition entry point.
   the blocking pass excludes that one owner-held predicate only under
   the explicit owner-held mode, then executes it separately and
   verifies its diagnostics against the value-pinned ledger. A changed
-  predicate or any additional failure remains blocking.
+  diagnostic, unexpected pass, missing result, abnormal runner exit,
+  or any additional blocking failure fails the gate.
 - Exit criteria: all currently active gates pass per §6.2 composition
   rule. The architecture/evidence gate joins this topology only after
   A8 activation.
@@ -203,11 +217,19 @@ local/CI composition entry point.
 - Non-certifying functional/simulation/soak job: GitHub-hosted Linux
   runs the full simulation surface and enables the existing
   `ShotOutcomeDiagnosticTests` full-match driver.
-- Certified determinism job: a distinct self-hosted Windows runner
-  labelled `determinism-certified` executes the #16 §5 Unity EditMode
-  suite on the pinned Windows 11 / Unity 6000.4.9f1 / DX11 / Mono /
-  x64 / SSE4.2 / one-worker deterministic tuple. The job verifies the
-  platform pin before invoking Unity through `TD_UNITY_EXE`.
+- Certified determinism job definition: a distinct self-hosted Windows
+  runner labelled `determinism-certified` is required to execute the
+  #16 §5 Unity EditMode suite on the pinned Windows 11 / Unity
+  6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / one-worker deterministic
+  tuple. The job verifies the platform pin before invoking Unity
+  through `TD_UNITY_EXE`.
+- **Operational boundary:** the workflow definition does not prove that
+  a runner with those labels is currently registered or that
+  `TD_UNITY_EXE`/`TD_CERTIFIED_PLATFORM_PIN` are configured. Until a
+  scheduled or manual workflow run successfully executes that job,
+  FR-TS-075's authoritative nightly determinism leg remains
+  operationally unproven/non-conformant rather than being inferred
+  green from YAML presence.
 - Linux evidence is explicitly **non-certifying**; it is never treated
   as the authoritative determinism host.
 - Exit criteria: functional/simulation/soak checks pass, the owner-held
@@ -217,15 +239,17 @@ local/CI composition entry point.
 ### 4.5.4 Pipeline Sequencing Diagram
 
 ```
-trigger → auditors → runner → exit criteria
+trigger
   │
-  ├── pre-commit:  staged snapshot → unit/property → ≤60 s pass/fail
+  ├── pre-commit:  staged snapshot → unit/property → pass within 60 s or fail
   ├── PR:          unit/integration/property + scenario superset + coverage → pass/fail
   └── nightly:     Linux simulation/soak + certified Windows #16 suite → pass/fail
 ```
 
 The architecture/evidence gate described here remains inactive until
-A8.
+A8. The pre-commit timing acceptance and certified-runner execution
+facts above remain A3.4 evidence obligations; neither is replaced by a
+structural test of the workflow text.
 
 ## 4.6 Concrete Runner / Tool Pointers
 
@@ -251,7 +275,8 @@ scenario-manifest encoding/index decision.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.5     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization.** Records the versioned staged-snapshot pre-commit hook/bootstrap, hard 60-second whole-composition budget, PR whole-tree scenario superset, value-pinned owner-held-RED handling, D2/D3 tool pins, Linux non-certifying nightly simulation/soak job, and separate pinned Windows/Unity #16 determinism certification job. Removes the stale claim that hook installation and D3 invocation are deferred. D9 and `IFlakeReporter` remain separate unresolved work. |
+| 0.6     | September 4, 2026 | — | **A3.3 review correction.** Stops treating timeout/workflow structure as execution proof: the pre-commit path now has a dedicated fast test-project mode and a hard 60-second failure bound, but full conformance still requires a successful measured certified-host run; the certified Windows nightly job remains operationally unproven until a registered runner actually executes it. Also records that PR CI reuses `tools/run-tests-local.sh --pr` and that unexpected owner-held-RED greens/abnormal exits are blocking. These are review/evidence corrections pending A3.4, not fresh approval. |
+| 0.5     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization candidate.** Records the versioned staged-snapshot pre-commit hook/bootstrap, hard 60-second whole-composition budget, PR whole-tree scenario superset, value-pinned owner-held-RED handling, D2/D3 tool pins, Linux non-certifying nightly simulation/soak job, and separate pinned Windows/Unity #16 determinism certification job. Removes the stale claim that hook installation and D3 invocation are deferred. D9 and `IFlakeReporter` remain separate unresolved work. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. `ITestHarness`, `IScenario`, `IFixtureValidator` declared; `IFlakeReporter` explicitly deferred. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout; #16 §5 → §3.2.4.1 (canonical schema, §4.2); tolerance-matrix citation pinned to #16 §3.4.2 (§4.3.2). M2 `index.<ext>` notation. M3 `IFixtureValidator` phantom-interface judgment made explicit (§4.4.2). L3 §3.10 cross-reference added to pre-commit budget (§4.5.1). |
 | 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 2).** Repoints the `tests/scenarios/index.<ext>` encoding/extension pin from D1 to the new **D9**. A3.2b closed D1 on the test runner (NUnit) alone, which stranded the manifest encoding decision that D1 had jointly owned; every live `index.<ext>` reference now names D9. No extension is pinned here — pinning one in A3.2b would be a normative content decision outside this slice. |
