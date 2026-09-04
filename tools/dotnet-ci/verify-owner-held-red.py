@@ -37,8 +37,8 @@ def load_ledger(path: Path) -> dict[str, tuple[str, ...]]:
     return entries
 
 
-def collect_results(results_dir: Path) -> dict[str, tuple[str, str]]:
-    found: dict[str, tuple[str, str]] = {}
+def collect_results(results_dir: Path) -> list[tuple[str, str, str]]:
+    found: list[tuple[str, str, str]] = []
     for trx in sorted(results_dir.rglob("*.trx")):
         root = ET.parse(trx).getroot()
         for elem in root.iter():
@@ -48,17 +48,24 @@ def collect_results(results_dir: Path) -> dict[str, tuple[str, str]]:
             outcome = elem.attrib.get("outcome", "")
             body = normalize(" ".join(elem.itertext()))
             if name:
-                found[name] = (outcome, body)
+                found.append((name, outcome, body))
     return found
 
 
-def find_result(expected_name: str, results: dict[str, tuple[str, str]]) -> tuple[str, str] | None:
-    exact = results.get(expected_name)
-    if exact is not None:
-        return exact
+def method_leaf(test_name: str) -> str:
+    """Return the exact method identity from a simple or fully-qualified TRX name."""
+    without_args = test_name.split("(", 1)[0]
+    return without_args.rsplit(".", 1)[-1]
+
+
+def find_result(
+    expected_name: str,
+    results: list[tuple[str, str, str]],
+) -> tuple[int, str, str] | None:
     matches = [
-        result for name, result in results.items()
-        if name.endswith("." + expected_name) or expected_name in name
+        (index, outcome, body)
+        for index, (actual_name, outcome, body) in enumerate(results)
+        if actual_name == expected_name or method_leaf(actual_name) == expected_name
     ]
     if len(matches) == 1:
         return matches[0]
@@ -78,13 +85,15 @@ def main() -> int:
         print("Owner-held RED ledger empty.")
         return 0
 
+    matched_indexes: set[int] = set()
     failed_expected = 0
     for name, tokens in ledger.items():
         result = find_result(name, results)
         if result is None:
             print(f"ERROR: owner-held RED result missing or ambiguous: {name}", file=sys.stderr)
             return 1
-        outcome, body = result
+        index, outcome, body = result
+        matched_indexes.add(index)
         if outcome == "Passed":
             print(
                 f"ERROR: owner-held RED unexpectedly passed: {name}; remove/review the exception before merge.",
@@ -107,6 +116,15 @@ def main() -> int:
             return 1
         failed_expected += 1
         print(f"OWNER-HELD RED MATCHES RECORDED BASELINE: {name}")
+
+    unexpected = [results[i][0] for i in range(len(results)) if i not in matched_indexes]
+    if unexpected:
+        print(
+            "ERROR: owner-held RED run returned unexpected additional test result(s): "
+            + ", ".join(unexpected),
+            file=sys.stderr,
+        )
+        return 1
 
     if failed_expected and args.dotnet_exit == 0:
         print(
