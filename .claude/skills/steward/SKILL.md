@@ -1,10 +1,12 @@
 ---
 name: steward
 description: >-
-  Drive a pull request on this repo to green and to merged — triaging the
-  non-certifying Linux functional gate, resolving mergeability notices,
-  answering review threads, and landing the tracking-document half that a
-  merge or CI fix drags with it. Use this skill on any PR or CI event here.
+  Drive a pull request on this repo to green and to merged — triaging CI,
+  resolving mergeability notices and conflicts, answering review threads, and
+  landing the tracking-document half that a merge or CI fix drags with it. Use
+  this skill for PR/CI events such as "CI is red on #N", "watch this PR",
+  "resolve the conflicts", "is the PR green", a mergeability/base-branch
+  notice, or review feedback arriving on a branch you pushed.
 ---
 
 # Steward
@@ -34,7 +36,9 @@ bash tools/bootstrap-dev.sh
 bash tools/run-tests-local.sh --pre-commit
 ```
 
-The hook evaluates the staged Git index through a persistent build snapshot under `.git/testing-strategy/`; bootstrap prepares its cold cache once. The normal attempted composition is hard-bounded to 60 seconds, but that limit is not acceptance evidence until a successful run is measured on the certified developer host.
+The hook evaluates the staged Git index through a persistent build snapshot under `.git/testing-strategy/`; bootstrap prepares its cold cache once. After that first materialization the hook refreshes only tracked paths whose index blobs changed, preserving unchanged source mtimes as well as untracked bin/obj outputs so MSBuild can actually reuse incremental state. The normal attempted composition is hard-bounded to 60 seconds, but that limit is not acceptance evidence until a successful run is measured on the certified developer host.
+
+Routine checklist/§5 audits are survey-only. On PR CI, the policy runner receives the PR base SHA and mechanically detects spec sections that transition from non-approved/missing to `APPROVED`; only those directories are rerun through the auditors as blocking approval checks. This prevents historical corpus debt from blocking an unrelated edit without leaving FR-TS-042/052 enforcement as a command somebody has to remember.
 
 Three CI-reading rules remain important:
 
@@ -81,9 +85,10 @@ GitHub-hosted Linux is non-certifying regression/functional evidence only. Autho
 
 - **Approved spec/code contradiction:** run `err-file-and-backprop`; re-check the ERR id against `main` at merge time.
 - **Anything that actually lands:** run `landing-close-out`.
-- **Pre-existing debt discovered by survey tooling:** do not turn it into an unrelated PR blocker by accident. File/update an issue if it will outlive the PR; Spec #19 checklist/schema auditors block at an explicit approval transition, while routine pre-commit/PR/nightly composition is survey-only.
+- **Pre-existing debt discovered by survey tooling:** do not turn it into an unrelated PR blocker by accident. File/update an issue if it will outlive the PR; Spec #19 checklist/schema auditors block only at a detected approval transition, while routine composition is survey-only.
 - **Football-plausibility symptom:** route through `match-realism-pass`, including KD-W1 wiring checks; never tune a `[GT]` from a CI symptom without proving the component is active.
 - **Design fork / new `[GT]` / layer-membership call:** owner/advisor decision, not an agent guess.
+- **Review comment asking for judgment over a surface rather than a direct patch:** hand off to `adversarial-review`.
 - **Force-push, discard another branch's work, rebaseline acceptance, or merge with a newly-red band:** owner call.
 
 ## Conflicts in tracking documents
