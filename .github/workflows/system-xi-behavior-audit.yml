@@ -20,20 +20,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin main
+          BASE=635f68c3ba1bd58686ae9300116b2cf195cc37b4
+          git cat-file -e "$BASE^{commit}"
 
           # Restore ambiguous mock-data acronym replacement; it is not product UI branding.
-          git checkout origin/main -- docs/design/ui-mockups/assets/squad.js
+          git checkout "$BASE" -- docs/design/ui-mockups/assets/squad.js
 
-          # Compatibility / canonical surfaces must be byte-identical to main.
-          git diff --quiet origin/main -- docs/design/ui-mockups/assets/app.js
-          git diff --quiet origin/main -- docs/design/ui-mockups/assets/squad.js
-          git diff --quiet origin/main -- docs/specs/deterministic-sim/golden-vectors/serialize-canonical-corpus.md
-          git diff --quiet origin/main -- src/deterministic-sim/tests/SerializeCanonicalCorpusTests.cs
+          # Compatibility / canonical surfaces must be byte-identical to the PR base.
+          git diff --quiet "$BASE" -- docs/design/ui-mockups/assets/app.js
+          git diff --quiet "$BASE" -- docs/design/ui-mockups/assets/squad.js
+          git diff --quiet "$BASE" -- docs/specs/deterministic-sim/golden-vectors/serialize-canonical-corpus.md
+          git diff --quiet "$BASE" -- src/deterministic-sim/tests/SerializeCanonicalCorpusTests.cs
 
           # No Unity assets, assembly descriptors, serialized data, project files, binaries,
           # or workflow/config surfaces may be changed by this branding migration.
-          changed="$(git diff --name-only origin/main -- . ':!.github/workflows/system-xi-behavior-audit.yml')"
+          changed="$(git diff --name-only "$BASE" -- . ':!.github/workflows/system-xi-behavior-audit.yml')"
           echo "$changed"
           if printf '%s\n' "$changed" | grep -E '\.(asmdef|meta|unity|prefab|asset|json|ya?ml|csproj|sln|dll|so|dylib|png|jpe?g|gif|webp|psd|wav|mp3|ogg|mp4|mov)$'; then
             echo 'Forbidden behavior/config/binary surface changed.' >&2
@@ -50,9 +51,11 @@ jobs:
           fi
 
           # C# changes must be display-only HTML title/heading replacements.
-          python - <<'PY'
+          python - "$BASE" <<'PY'
           import subprocess
+          import sys
 
+          base = sys.argv[1]
           expected = {
               'src/match-client-web/MatchClientPage.cs': {
                   '-<title>Tactical Director — Match</title>',
@@ -70,7 +73,7 @@ jobs:
               },
           }
           for path, allowed in expected.items():
-              out = subprocess.check_output(['git', 'diff', '--unified=0', 'origin/main', '--', path], text=True)
+              out = subprocess.check_output(['git', 'diff', '--unified=0', base, '--', path], text=True)
               changed = {
                   line for line in out.splitlines()
                   if (line.startswith('+') or line.startswith('-'))
@@ -82,7 +85,7 @@ jobs:
           PY
 
           # Operational Claude metadata may rename project wording only; invocation fields stay fixed.
-          if git diff origin/main -- .claude | grep -E '^[+-](name:|tools:|model:|disable-model-invocation:)' ; then
+          if git diff "$BASE" -- .claude | grep -E '^[+-](name:|tools:|model:|disable-model-invocation:)' ; then
             echo 'Claude routing/invocation metadata changed.' >&2
             exit 1
           fi
@@ -95,7 +98,7 @@ jobs:
             exit 1
           fi
 
-          git diff --check origin/main -- . ':!.github/workflows/system-xi-behavior-audit.yml'
+          git diff --check "$BASE" -- . ':!.github/workflows/system-xi-behavior-audit.yml'
 
           # Remove this one-shot audit and land the mock-data restoration.
           git config user.name 'github-actions[bot]'
