@@ -11,6 +11,7 @@ QUARANTINE="$ROOT/tools/dotnet-ci/known-failures.txt"
 OWNER_HELD_RED="$ROOT/tools/dotnet-ci/owner-held-red.txt"
 COVERAGE_SETTINGS="$ROOT/tools/dotnet-ci/coverage.runsettings"
 REQUESTED_FILTER=""
+SETTINGS_FILE=""
 OWNER_MODE=""
 COLLECT_COVERAGE=0
 FAST_MODE=0
@@ -20,13 +21,11 @@ usage() {
 Usage: bash tools/dotnet-ci/run-gate.sh [options]
 
 Options:
-  --test-filter <vstest-filter>    Restrict the blocking test set.
-  --owner-held-red report-only     Exclude the owner-held RED from the blocking
-                                   pass, then execute and value-verify it separately.
+  --test-filter <vstest-filter>    Restrict the blocking test set with an explicit VSTest filter.
+  --settings <runsettings>         Apply an explicit .runsettings file (used by pre-commit for anchored NUnit selection).
+  --owner-held-red report-only     Exclude the owner-held RED from the blocking pass, then execute and value-verify it separately.
   --coverage                       Collect XPlat Code Coverage.
-  --fast                           Skip the whole-tree meta/build pass and run
-                                   generated test projects directly. Intended only
-                                   for the bounded pre-commit unit/property gate.
+  --fast                           Skip the separate whole-tree meta/build pass. `dotnet test` still builds the generated solution once, incrementally.
   -h, --help                       Show this help.
 
 Call tools/run-tests-local.sh for repository policy modes. This lower-level gate
@@ -40,6 +39,11 @@ while [ "$#" -gt 0 ]; do
         --test-filter)
             [ "$#" -ge 2 ] || { echo "ERROR: --test-filter requires a value." >&2; exit 2; }
             REQUESTED_FILTER="$2"
+            shift 2
+            ;;
+        --settings)
+            [ "$#" -ge 2 ] || { echo "ERROR: --settings requires a value." >&2; exit 2; }
+            SETTINGS_FILE="$2"
             shift 2
             ;;
         --owner-held-red)
@@ -82,6 +86,15 @@ case "$OWNER_MODE" in
         ;;
 esac
 
+if [ "$COLLECT_COVERAGE" -eq 1 ] && [ -n "$SETTINGS_FILE" ]; then
+    echo "ERROR: --coverage and --settings cannot be combined; coverage owns its runsettings file." >&2
+    exit 2
+fi
+if [ -n "$SETTINGS_FILE" ] && [ ! -f "$SETTINGS_FILE" ]; then
+    echo "ERROR: runsettings file does not exist: $SETTINGS_FILE" >&2
+    exit 2
+fi
+
 ledger_names() {
     local ledger="$1"
     grep -v '^[[:space:]]*#' "$ledger" \
@@ -90,36 +103,49 @@ ledger_names() {
         | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || true
 }
 
-exclusion_filter() {
-    local ledger="$1"
-    ledger_names "$ledger" | sed 's/^/FullyQualifiedName!~/' | paste -sd'&' - || true
+quarantine_exclusion_filter() {
+    ledger_names "$1" | sed 's/^/FullyQualifiedName!~/' | paste -sd'&' - || true
 }
 
-include_filter() {
-    local ledger="$1"
-    ledger_names "$ledger" | sed 's/^/FullyQualifiedName~/' | paste -sd'|' - || true
+quarantine_include_filter() {
+    ledger_names "$1" | sed 's/^/FullyQualifiedName~/' | paste -sd'|' - || true
 }
 
-QUARANTINE_FILTER="$(exclusion_filter "$QUARANTINE")"
+owner_exclusion_filter() {
+    ledger_names "$1" | sed 's/^/Name!=/' | paste -sd'&' - || true
+}
+
+owner_include_filter() {
+    ledger_names "$1" | sed 's/^/Name=/' | paste -sd'|' - || true
+}
+
+append_filter() {
+    local part="$1"
+    [ -n "$part" ] || return 0
+    if [ -z "$FILTER" ]; then
+        FILTER="$part"
+    else
+        FILTER="$FILTER&$part"
+    fi
+}
+
+QUARANTINE_FILTER="$(quarantine_exclusion_filter "$QUARANTINE")"
 OWNER_EXCLUSION=""
 OWNER_INCLUDE=""
 if [ "$OWNER_MODE" = "report-only" ]; then
-    OWNER_EXCLUSION="$(exclusion_filter "$OWNER_HELD_RED")"
-    OWNER_INCLUDE="$(include_filter "$OWNER_HELD_RED")"
+    OWNER_EXCLUSION="$(owner_exclusion_filter "$OWNER_HELD_RED")"
+    OWNER_INCLUDE="$(owner_include_filter "$OWNER_HELD_RED")"
 fi
 
-FILTER_PARTS=()
-[ -n "$REQUESTED_FILTER" ] && FILTER_PARTS+=("$REQUESTED_FILTER")
-[ -n "$QUARANTINE_FILTER" ] && FILTER_PARTS+=("$QUARANTINE_FILTER")
-[ -n "$OWNER_EXCLUSION" ] && FILTER_PARTS+=("$OWNER_EXCLUSION")
 FILTER=""
-if [ "${#FILTER_PARTS[@]}" -gt 0 ]; then
-    FILTER="$(IFS='&'; echo "${FILTER_PARTS[*]}")"
-fi
+append_filter "$REQUESTED_FILTER"
+append_filter "$QUARANTINE_FILTER"
+append_filter "$OWNER_EXCLUSION"
 
 if [ "${TD_GATE_DRY_RUN:-}" = "1" ]; then
     printf 'DRY-RUN blocking_filter=%s\n' "${FILTER:-<none>}"
-    printf 'DRY-RUN quarantine_include=%s\n' "$(include_filter "$QUARANTINE")"
+    printf 'DRY-RUN settings=%s\n' "${SETTINGS_FILE:-<none>}"
+    printf 'DRY-RUN quarantine_include=%s\n' "$(quarantine_include_filter "$QUARANTINE")"
     printf 'DRY-RUN owner_held_include=%s\n' "${OWNER_INCLUDE:-<none>}"
     printf 'DRY-RUN coverage=%s\n' "$COLLECT_COVERAGE"
     printf 'DRY-RUN fast=%s\n' "$FAST_MODE"
@@ -142,43 +168,41 @@ if [ "$FAST_MODE" -eq 0 ]; then
     dotnet build "$SLN" --no-restore -clp:ErrorsOnly -m
 fi
 
-COMMON_TEST_ARGS=(--no-restore)
+TEST_ARGS=(--no-restore)
 if [ "$FAST_MODE" -eq 0 ]; then
-    COMMON_TEST_ARGS+=(--no-build)
+    TEST_ARGS+=(--no-build)
 fi
 if [ -n "$FILTER" ]; then
-    COMMON_TEST_ARGS+=(--filter "$FILTER")
+    TEST_ARGS+=(--filter "$FILTER")
+fi
+if [ -n "$SETTINGS_FILE" ]; then
+    TEST_ARGS+=(--settings "$SETTINGS_FILE")
 fi
 if [ "$COLLECT_COVERAGE" -eq 1 ]; then
     COVERAGE_DIR="$ROOT/artifacts/coverage"
     mkdir -p "$COVERAGE_DIR"
-    COMMON_TEST_ARGS+=(--collect "XPlat Code Coverage" --settings "$COVERAGE_SETTINGS" --results-directory "$COVERAGE_DIR")
+    TEST_ARGS+=(--collect "XPlat Code Coverage" --settings "$COVERAGE_SETTINGS" --results-directory "$COVERAGE_DIR")
 fi
 
-echo "── Test (blocking; explicit exclusions applied) ──────────────────────"
+echo "── Test (blocking; explicit policy selection applied) ────────────────"
 if [ -n "$FILTER" ]; then
     printf 'VSTest filter: %s\n' "$FILTER"
 fi
-
-if [ "$FAST_MODE" -eq 1 ]; then
-    mapfile -t TEST_PROJECTS < <(find "$ROOT/src" -name '*.Tests.gen.csproj' -type f -print | sort)
-    if [ "${#TEST_PROJECTS[@]}" -eq 0 ]; then
-        echo "ERROR: generated test-project set is empty." >&2
-        exit 1
-    fi
-    for project in "${TEST_PROJECTS[@]}"; do
-        dotnet test "$project" "${COMMON_TEST_ARGS[@]}"
-    done
-else
-    dotnet test "$SLN" "${COMMON_TEST_ARGS[@]}"
+if [ -n "$SETTINGS_FILE" ]; then
+    printf 'Runsettings: %s\n' "$SETTINGS_FILE"
 fi
 
-QUARANTINE_INCLUDE="$(include_filter "$QUARANTINE")"
-if [ -n "$QUARANTINE_INCLUDE" ] && [ -z "$REQUESTED_FILTER" ]; then
+# Fast mode intentionally avoids 34 sequential per-project `dotnet test` calls.
+# A single solution invocation lets MSBuild schedule the generated project graph
+# and reuse incremental outputs preserved by the persistent pre-commit snapshot.
+dotnet test "$SLN" "${TEST_ARGS[@]}"
+
+QUARANTINE_INCLUDE="$(quarantine_include_filter "$QUARANTINE")"
+if [ -n "$QUARANTINE_INCLUDE" ] && [ "$FAST_MODE" -eq 0 ] && [ -z "$REQUESTED_FILTER" ] && [ -z "$SETTINGS_FILE" ]; then
     echo "── Quarantined tests (report-only; flake ledger only) ────────────────"
     dotnet test "$SLN" --no-build --no-restore --filter "$QUARANTINE_INCLUDE" || true
 elif [ -n "$QUARANTINE_INCLUDE" ]; then
-    echo "── Quarantined report-only run skipped for bounded filtered caller ──"
+    echo "── Quarantined report-only run skipped for bounded/selected caller ──"
 else
     echo "── Quarantine empty ─────────────────────────────────────────────────"
 fi
