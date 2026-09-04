@@ -274,4 +274,4 @@ All 12 files require edits. Fixes are applied in the following order:
 ---
 
 *End of Comprehensive Audit Report — Shot Mechanics Specification #6*
-*Tactical Director — Specification #6 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #6 of 20 | Stage 0: Physics Foundation*

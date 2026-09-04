@@ -69,4 +69,4 @@
 **END OF OUTLINE**
 
 *Decision Tree Specification #8 — Outline v1.1*  
-*Tactical Director — Specification #8 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #8 of 20 | Stage 0: Physics Foundation*

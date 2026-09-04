@@ -456,7 +456,7 @@ namespace TacticalDirector.MatchViewer
         {
             var sb = new StringBuilder(1 << 14);
             sb.Append("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n");
-            sb.Append("<title>Tactical Director — Live Match</title>\n<style>\n");
+            sb.Append("<title>System XI — Live Match</title>\n<style>\n");
             sb.Append("body{background:#14181c;color:#e8e8e8;font:14px/1.4 system-ui,sans-serif;");
             sb.Append("display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px}\n");
             sb.Append("#hud{display:flex;gap:24px;font-variant-numeric:tabular-nums}\n");

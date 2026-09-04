@@ -268,6 +268,6 @@ When future extensions are implemented, the following invariants **must** be pre
 
 *End of Section 7 — Shot Mechanics Specification #6*
 
-*Tactical Director — Specification #6 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #6 of 20 | Stage 0: Physics Foundation*
 
 *Next: Section 8 — References*

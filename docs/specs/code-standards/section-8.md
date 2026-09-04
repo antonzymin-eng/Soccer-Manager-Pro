@@ -190,4 +190,4 @@ vacuously satisfied:
 ---
 
 *End of Section 8 — Code Standards & Style Guide Specification #20*
-*Tactical Director — Specification #20 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #20 of 20 | Stage 0: Physics Foundation*

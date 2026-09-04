@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Autonomously drive one item of the Tactical Director path-to-playable roadmap end to end — orient, council review, design, implement, adversarial review to convergence, full dotnet gate, tracking-doc update, commit and push to its own branch. Use when asked to take the next roadmap item, land a T-phase, run a §5.Z-shaped match-realism pass, or work the roadmap autonomously. Defaults to ONE item per invocation; longer runs are opt-in and bounded. Has write, commit and push authority; does not open pull requests unless asked.
+description: Autonomously drive one item of the System XI path-to-playable roadmap end to end — orient, council review, design, implement, adversarial review to convergence, full dotnet gate, tracking-doc update, commit and push to its own branch. Use when asked to take the next roadmap item, land a T-phase, run a §5.Z-shaped match-realism pass, or work the roadmap autonomously. Defaults to ONE item per invocation; longer runs are opt-in and bounded. Has write, commit and push authority; does not open pull requests unless asked.
 disable-model-invocation: true
 ---
 

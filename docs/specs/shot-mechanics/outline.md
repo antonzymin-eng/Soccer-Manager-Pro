@@ -678,6 +678,6 @@ All items resolved. No open blockers.
 **END OF OUTLINE**
 
 ---
-*Tactical Director — Specification #6 of 20*
+*System XI — Specification #6 of 20*
 *Stage 0: Physics Foundation*
 *v1.3 — Spec renumbering cascade applied. ShotType enum eliminated. Awaiting lead developer re-approval before Section 1 re-draft.*

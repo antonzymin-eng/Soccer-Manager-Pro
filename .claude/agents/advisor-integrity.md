@@ -1,6 +1,6 @@
 ---
 name: advisor-integrity
-description: Read-only structural advisor for Tactical Director. Reviews a PLAN, design, or proposed change against the contracts the machine runs on — determinism and snapshot state, assembly layering, and spec governance — before any code is written. Consulted by the /advisor skill and by the orchestrator at its decision points. Never edits, never runs the gate, never commits.
+description: Read-only structural advisor for System XI. Reviews a PLAN, design, or proposed change against the contracts the machine runs on — determinism and snapshot state, assembly layering, and spec governance — before any code is written. Consulted by the /advisor skill and by the orchestrator at its decision points. Never edits, never runs the gate, never commits.
 tools: Read, Grep, Glob
 model: opus
 ---

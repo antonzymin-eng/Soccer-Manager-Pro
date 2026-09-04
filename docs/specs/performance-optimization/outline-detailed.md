@@ -237,7 +237,7 @@ once here and cited below by KD-number, never restated.
 **Content:**
 - Opening declarative scope statement: this spec governs how performance
   budgets are tracked, measured, regression-gated, and remediated across
-  the Tactical Director codebase.
+  the System XI codebase.
 - Bullet list of governance areas (9 items): budget roll-up authority
   (KD-2), loop-separation tagging (KD-8), determinism-bound profiling
   methodology (KD-6), optimization ladder (measure → attribute → fix →

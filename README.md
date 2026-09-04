@@ -1,6 +1,8 @@
-# Football Management Simulation
+# System XI
 
-Tactical Director is a long-horizon football management simulation focused on deep match simulation,
+*Football Management Simulation*
+
+System XI is a long-horizon football management simulation focused on deep match simulation,
 transparent systems, deterministic behaviour, and meaningful managerial decisions.
 
 The project combines a detailed football simulation core with the broader systems required for a full
@@ -12,7 +14,7 @@ separately.
 
 ## Project vision
 
-Tactical Director is built around four principles:
+System XI is built around four principles:
 
 - **Observable systems** — tactical and managerial decisions should produce visible, measurable effects.
 - **Deep simulation** — football behaviour should emerge from interacting physical, tactical, technical,
@@ -192,7 +194,7 @@ evidence record.
 
 ## Project status and scope
 
-Tactical Director is under active development and is not a finished game.
+System XI is under active development and is not a finished game.
 
 The project is being developed as a long-term simulation platform rather than a short prototype.
 Subsystems may therefore have complete approved specifications well before their implementation reaches

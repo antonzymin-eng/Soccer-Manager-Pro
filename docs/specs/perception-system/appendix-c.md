@@ -471,4 +471,4 @@ behaviour. The 50% coverage target at elite level is the design anchor — keep 
 ---
 
 *End of Appendix C — Perception System Specification #7*  
-*Tactical Director — Specification #7 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #7 of 20 | Stage 0: Physics Foundation*

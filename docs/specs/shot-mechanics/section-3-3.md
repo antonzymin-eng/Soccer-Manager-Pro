@@ -377,4 +377,4 @@ in a future revision — but this adds complexity to §3.6 interaction.
 ---
 
 *End of Section 3 (Part 1) — Shot Mechanics Specification #6*
-*Tactical Director — Specification #6 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #6 of 20 | Stage 0: Physics Foundation*

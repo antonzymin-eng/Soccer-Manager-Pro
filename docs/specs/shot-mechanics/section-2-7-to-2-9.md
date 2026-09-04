@@ -62,4 +62,4 @@ interface will be drafted until Goalkeeper Mechanics Spec #11 is written.**
 *End of Section 2 — Shot Mechanics Specification #6*
 *Next: Section 3 — Technical Specifications (§3.1 Validation through §3.10 Event Publishing)*
 
-*Tactical Director — Specification #6 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #6 of 20 | Stage 0: Physics Foundation*

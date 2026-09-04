@@ -655,6 +655,6 @@ flagged for playtesting calibration.
 
 *End of Shot Mechanics Specification #6 — Appendices A, B, C*
 
-*Tactical Director — Specification #6 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #6 of 20 | Stage 0: Physics Foundation*
 
 *Next: Section 9 — Approval Checklist*
