@@ -1,32 +1,38 @@
-name: System XI conflict probe
+name: System XI main reconciliation
 
 on:
   push:
     branches:
       - codex/system-xi-naming-migration
 
+permissions:
+  contents: write
+
 jobs:
-  probe:
+  reconcile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Identify conflicts with current main
+      - name: Merge current main and preserve rename intent
         shell: bash
         run: |
-          set +e
+          set -euo pipefail
           git fetch origin main
-          git config user.name 'conflict-probe'
-          git config user.email 'conflict-probe@example.invalid'
-          git merge --no-commit --no-ff origin/main
-          rc=$?
-          echo "merge_rc=$rc"
-          echo '--- conflicts ---'
-          git diff --name-only --diff-filter=U
-          echo '--- conflict markers/context ---'
-          for f in $(git diff --name-only --diff-filter=U); do
-            echo "### $f"
-            grep -n -B3 -A12 '^<<<<<<<\|^=======\|^>>>>>>>' "$f" || true
-          done
-          exit $rc
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git merge --no-ff origin/main -m 'Merge current main into System XI naming migration'
+
+          # Live identity/path surfaces touched on both sides must retain the new name.
+          grep -Fq '**System XI** is a football (soccer) simulation game' docs/agent-guides/project-reference.md
+          grep -Fq 'existing System XI repository' docs/planning/project-architecture-governance-integration-plan.md
+          grep -Fq 'docs/design/ui-mockups/System XI - Design System.html' docs/tracking/file-manifest.md
+          test ! -e 'docs/design/ui-mockups/Soccer Manager Pro - Design System.html'
+
+          # Historical CHANGELOG evidence is intentionally not rewritten.
+          grep -Fq '**Tactical Director** is a football' docs/tracking/CHANGELOG.md
+
+          git rm .github/workflows/system-xi-conflict-probe.yml
+          git commit -m 'Complete System XI main reconciliation'
+          git push origin HEAD:codex/system-xi-naming-migration
