@@ -2,9 +2,9 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 4, 2026
-**Version:** 0.5
-**Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
+**Version:** 0.6
+**Status:** AMENDMENT DRAFT (A3.3/A3.4; May 15, 2026 approved baseline remains in force)
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; `docs/planning/testing-strategy-a3.3-conformance-correction.md`; A3.4 owns reapproval
 **Purpose:** CI orchestration policy, gate composition rule, local runbook,
 defect lifecycle and triage, reporting cadence, and the boundary with
 Spec #18 §4 / §7.
@@ -69,10 +69,10 @@ The Stage 0+1 slate is reconciled against the live repository.
   convergence authority; Spec #20 owns integration/activation
   declarations consumed by the proof.
 
-All four feed a single CI orchestration model. The fourth gate is
-**topology only in A3.2b**: it is not a required status and does not
-block until A3.4 reapproval, applicable A4 resolver/proof prerequisites,
-and A8 activation are complete.
+All four feed a single CI orchestration model. The fourth gate remains
+**topology only in A3**: it is not a required status and does not block
+until A3.4 reapproval, applicable A4 resolver/proof prerequisites, and
+A8 activation are complete.
 
 ### 6.2.2 Gate Composition Rule
 
@@ -92,9 +92,10 @@ and A8 activation are complete.
 - An explicitly owner-held failing acceptance predicate is **not flake
   quarantine**. The current `sim_match_engine_close_chance` owner-held
   RED is excluded only from the ordinary blocking pass under the
-  versioned owner-held mode, then executed separately and checked
-  against its recorded diagnostic values. A changed value, unexpected
-  pass, or additional failure is blocking.
+  explicit versioned owner-held mode, then executed separately and
+  checked against its recorded diagnostic values. A changed value,
+  unexpected pass, missing/ambiguous result, abnormal runner exit, or
+  any additional ordinary blocking failure fails the composed gate.
 - A bounded substitute is not a generic escape valve: it may satisfy
   only an exact obligation that permits FR-TS-096 and only for
   deliberate `excluded`, `unavailable`, or `not-run` execution
@@ -110,9 +111,9 @@ NOT republish them. Cross-listing for FR-TS-075 … FR-TS-080 in §6.6.
 
 | Pipeline | Functional Gate | Performance Gate | Determinism Gate | Architecture / Evidence Gate |
 |----------|-----------------|------------------|------------------|------------------------------|
-| Pre-commit | Yes (unit + property compatibility subset, staged snapshot, whole composition ≤60 s) | No | No | Report-only/local validation where available; never a new required status from A3.2b |
-| PR | Yes (whole-tree unit + integration + property + scenario superset) | Yes (#18 §4) | Partial/non-certifying regression evidence only; not platform certification | After A8: resolve applicable obligations, execute or consume exact owning-runner results, validate proof/freshness/convergence |
-| Nightly | Yes (Linux full simulation + soak, non-certifying) | Yes (#18 §7) | Yes: separate certified Windows/Unity #16 §5 job | After A8: revalidate applicable reusable proof and any scheduled/full-run obligations |
+| Pre-commit | Yes (unit + property compatibility subset, staged snapshot; entire attempt fails at 60 s, with successful ≤60 s certified-developer-host acceptance still to be measured) | No | No | Report-only/local validation where available; never a new required status from A3 |
+| PR | Yes (whole-tree unit + integration + property + scenario superset through `tools/run-tests-local.sh --pr`) | Yes (#18 §4) | Partial/non-certifying regression evidence only; not platform certification | After A8: resolve applicable obligations, execute or consume exact owning-runner results, validate proof/freshness/convergence |
+| Nightly | Yes (Linux full simulation + soak, non-certifying) | Yes (#18 §7) | Certified Windows/Unity #16 §5 job is defined; successful execution on the actually registered/configured pinned host is still required for operational acceptance | After A8: revalidate applicable reusable proof and any scheduled/full-run obligations |
 
 The Linux jobs are regression/functional hosts supplied by GitHub
 Actions. They are never evidence that the Windows/Unity determinism
@@ -137,26 +138,41 @@ An observed framework skip is `skipped`, not a deliberate
 ## 6.3 Versioned Local / CI Runbook
 
 `tools/run-tests-local.sh` is the stable FR-TS-079 composition entry
-point now that CI exists. It is used locally and by the scheduled
-Testing Strategy workflow rather than being a temporary pre-CI stub.
+point now that CI exists. PR CI invokes its `--pr` mode; the scheduled
+Testing Strategy workflow invokes `--nightly`. The lower-level
+`tools/dotnet-ci/run-gate.sh` is an implementation primitive, not a
+second policy surface.
 
 Every executable mode invokes, before the .NET gate:
 
 - `tools/checklist-auditor.py` against `docs/specs/`;
 - `tools/spec5-schema-auditor.py` against `docs/specs/`.
 
+The auditors survey the repository. Their changed-spec blocking scope
+is resolved from the staged index for pre-commit and the PR base for CI;
+on shallow GitHub checkouts the runner resolves the named base ref and
+fails rather than silently guessing scope. An unresolved finding blocks
+an affected changed non-legacy spec when that candidate is `APPROVED`;
+amendment-draft/in-review findings stay visible until approval, and
+#1–#8 remain KD-4 survey-only.
+
 Modes:
 
-- `--pre-commit` — staged-snapshot unit/property compatibility subset,
-  with the **entire** composition hard-bounded to 60 seconds.
+- `--pre-commit` — staged-snapshot unit/property compatibility subset
+  using the generated test-project **fast path**. It skips the ordinary
+  whole-tree meta/build pass; auditors + project generation/restore +
+  selected tests remain inside the **entire** 60-second hard failure
+  bound. A successful measured ≤60-second run on the certified
+  developer host is still an A3.4 acceptance fact.
 - `--pr` — whole-tree functional test superset plus Coverlet collection;
   the owner-held RED is executed separately and value-verified rather
   than quarantined.
 - `--nightly` — whole-tree non-certifying simulation/functional run,
   Coverlet collection, and `ShotOutcomeDiagnosticTests` full-match
   soak activation. Platform determinism is deliberately not performed
-  by this Linux entry point; `.github/workflows/nightly.yml` supplies
-  the separate certified Windows/Unity #16 job.
+  by this Linux entry point; `.github/workflows/nightly.yml` defines
+  the separate certified Windows/Unity #16 job, whose successful
+  execution remains independently required.
 - `--install-hook` / `--verify-hook` — configure or verify
   `.githooks/pre-commit`. `tools/bootstrap-dev.sh` is the normal
   developer bootstrap and refuses to overwrite an unrelated existing
@@ -165,6 +181,12 @@ Modes:
 The hook runs against the staged Git index, not unstaged working-tree
 content. This prevents a commit from passing because unrelated local
 edits happened to make the worktree green.
+
+The stable runner sanitizes legacy ambient filter/coverage/owner-mode
+variables before calling the lower-level gate; `run-gate.sh` itself
+rejects those variables and accepts explicit CLI arguments. This keeps
+CI composition auditable and prevents inherited environment state from
+silently narrowing the test surface.
 
 ## 6.4 Defect Lifecycle & Triage (FR-TS-081 … 085)
 
@@ -186,16 +208,16 @@ Misclassified defects are themselves a procedural violation
 
 ### 6.4.2 Triage Cadence (FR-TS-082)
 
-> **Stage-gated per KD-5.** "PR-blocking failures" presumes CI exists;
-> the 24-hour SLA, weekly quarantined-test review, and "next
-> spec-revision cycle" review all activate at Stage 0+1 with
-> FR-TS-082. Until CI exists, only the **spec-defect** class is in
-> scope (the others have no instances), and spec defects are reviewed
-> at the next spec-revision cycle as below. This Stage-gating is
-> recorded in §5.2 (FR-TS-082 row).
+> **Stage-gated per KD-5.** The repository has passed the Stage 0+1 CI
+> activation point, so the historical "until CI exists" condition no
+> longer applies. The 24-hour PR-blocking SLA, weekly quarantine review,
+> and next-spec-revision-cycle review are the current FR-TS-082 cadence
+> where their underlying failure class exists. The dedicated flake
+> integration layer itself remains separately inactive per §5.2.
 
 - **PR-blocking failures:** investigated within 24 hours.
-- **Quarantined tests:** reviewed weekly.
+- **Quarantined tests:** reviewed weekly once quarantine/flake
+  integration is active.
 - **Spec defects:** reviewed at next spec-revision cycle.
 - **Critical-severity defects (§6.4.3):** investigated immediately,
   regardless of class.
@@ -252,8 +274,9 @@ mode and flip #19 status to `SUSPENDED`.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.5     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization.** Records D2 FsCheck.NUnit and D3 Coverlet pins, the permanent local/CI runner composition, staged-snapshot 60-second pre-commit behavior, explicit owner-held-RED verification, PR whole-tree scenario superset, Linux non-certifying nightly simulation/soak, and the separate pinned Windows/Unity determinism certification job. |
-| 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Slot reconciliation replaces performance-analysis template. |
-| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout. M5 §6.4.2 explicit Stage-gating header. |
+| 0.6     | September 4, 2026 | — | **A3.3 conformance/runbook correction.** Distinguishes the 60-second pre-commit failure bound from a successful timing measurement, marks the certified Windows nightly leg operationally unproven until it actually runs, documents PR-base fail-closed audit scoping and explicit lower-level gate arguments, and removes the obsolete "until CI exists" triage text. No fresh approval is claimed. |
+| 0.5     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization candidate.** Records D2 FsCheck.NUnit and D3 Coverlet pins, the permanent local/CI runner composition, staged-snapshot 60-second pre-commit behavior, explicit owner-held-RED verification, PR whole-tree scenario superset, Linux non-certifying nightly simulation/soak, and the separate pinned Windows/Unity determinism certification job. The v0.6 correction clarifies which execution facts remain unproven. |
 | 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 3).** Records where the D4 CI-provider pin lands. FR-TS-078 requires the final provider pin in `src/CLAUDE.md`, which carried no provider declaration, so closing D4 at `.github/workflows/ci.yml` alone left the resolution and the normative FR mutually unsatisfiable. `src/CLAUDE.md` now declares the provider as a pointer to the workflow. FR-TS-078 itself is deliberately unchanged: it lives in §2.2, which A3.2a owns and this slice does not touch. |
 | 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Adds the fourth architecture/evidence gate topology, owning-runner/result bridge, strict execution/quarantine/bounded-substitute behavior, Governance convergence boundary, and FR-TS-084 authority model. Gate remains inactive until A8; no required status is created here. Live-repo audit also closes D1 on NUnit/`dotnet test` and D4 on GitHub Actions; D2/D3/D5–D8 remain deferred. No A4/A8 prerequisite is claimed complete. |
+| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout. M5 §6.4.2 explicit Stage-gating header. |
+| 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Slot reconciliation replaces performance-analysis template. |
