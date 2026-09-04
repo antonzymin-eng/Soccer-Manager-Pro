@@ -48,12 +48,23 @@ def audit_file(path: Path, repo_root: Path) -> tuple[int | None, int, list[Findi
         for line_no, cells in rows:
             evidence = cells[idx].strip()
             row_id = cells[0].strip() if cells else f"line {line_no}"
-            if any(marker in evidence for marker in ("<file", "<check", "<path", "<test")):
-                continue
             checked += 1
             legacy = is_legacy_survey(spec_id)
+
             if not evidence:
                 findings.append(Finding(spec_id, str(path), row_id, "empty evidence cell", not legacy))
+                continue
+
+            if any(marker in evidence.lower() for marker in ("<file", "<check", "<path", "<test")):
+                findings.append(
+                    Finding(
+                        spec_id,
+                        str(path),
+                        row_id,
+                        "placeholder evidence token is not executable/resolved evidence",
+                        not legacy,
+                    )
+                )
                 continue
 
             paths = candidate_paths(evidence)
@@ -86,7 +97,7 @@ def audit_file(path: Path, repo_root: Path) -> tuple[int | None, int, list[Findi
                         spec_id,
                         str(path),
                         row_id,
-                        "evidence is prose only; no version-controlled path or named check",
+                        "evidence is prose only; no resolved version-controlled path or explicit programmatic command",
                         not legacy,
                     )
                 )
