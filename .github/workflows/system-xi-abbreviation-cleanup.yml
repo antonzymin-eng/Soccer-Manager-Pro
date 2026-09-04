@@ -1,0 +1,63 @@
+name: System XI abbreviation cleanup
+
+on:
+  push:
+    branches:
+      - codex/system-xi-naming-migration
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Replace obsolete branding abbreviations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path('docs/design/ui-mockups/System XI - Design System.html'): [
+                  ('>SMP<', '>SXI<'),
+              ],
+              Path('docs/design/ui-mockups/assets/app.js'): [
+                  ('"smp-direction"', '"sxi-direction"'),
+              ],
+              Path('docs/design/chat-review.html'): [
+                  ('SMP-', 'SXI-'),
+              ],
+              Path('docs/design/ui-mockups/assets/squad.js'): [
+                  ('SMP Sports', 'SXI Sports'),
+              ],
+          }
+
+          for path, pairs in replacements.items():
+              text = path.read_text(encoding='utf-8')
+              changed = False
+              for old, new in pairs:
+                  if old in text:
+                      text = text.replace(old, new)
+                      changed = True
+              if not changed:
+                  raise SystemExit(f'Expected obsolete branding abbreviation not found in {path}')
+              path.write_text(text, encoding='utf-8')
+          PY
+
+          if git grep -Ini 'smp' -- docs/design; then
+            echo 'Obsolete SMP branding remains under docs/design.' >&2
+            exit 1
+          fi
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/system-xi-abbreviation-cleanup.yml
+          git add -A
+          git diff --cached --check
+          git commit -m "Replace obsolete SMP branding"
+          git push origin HEAD:codex/system-xi-naming-migration
