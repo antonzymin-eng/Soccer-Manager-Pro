@@ -88,15 +88,17 @@ class PrecommitIncrementalSnapshotTests(unittest.TestCase):
             self.assertFalse((snapshot / "remove-me.txt").exists())
             self.assertTrue(marker.exists(), "untracked bin/obj-style cache must survive refresh")
 
-    def test_snapshot_checkout_disables_lfs_smudge_even_when_required(self) -> None:
+    def test_snapshot_checkout_disables_lfs_process_and_smudge_even_when_required(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td) / "repo"
             repo.mkdir()
             self.init_minimal_repo(repo)
             (repo / ".gitattributes").write_text("*.bin filter=lfs\n", encoding="utf-8")
-            # Simulate a clone whose configured LFS smudge cannot provide the
-            # object. Without the hook's local override checkout-index fails.
+            # Simulate a clone whose modern process filter and legacy smudge
+            # filter both fail. Without the hook's local overrides checkout-index
+            # cannot materialize the staged file.
             subprocess.run(["git", "config", "filter.lfs.clean", "cat"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "filter.lfs.process", "false"], cwd=repo, check=True)
             subprocess.run(["git", "config", "filter.lfs.smudge", "false"], cwd=repo, check=True)
             subprocess.run(["git", "config", "filter.lfs.required", "true"], cwd=repo, check=True)
             (repo / "asset.bin").write_text("lfs-pointer-bytes\n", encoding="utf-8")
@@ -116,10 +118,12 @@ class PrecommitIncrementalSnapshotTests(unittest.TestCase):
 
     def test_prune_is_linear_manifest_diff_not_nested_grep(self) -> None:
         text = HOOK.read_text(encoding="utf-8")
-        self.assertIn('comm -23 "$TRACKED_MANIFEST" "$CURRENT_MANIFEST"', text)
+        self.assertIn('LC_ALL=C comm -23 "$TRACKED_MANIFEST" "$CURRENT_MANIFEST"', text)
         self.assertNotIn("grep -Fqx", text)
         self.assertIn("precommit-index-tree.txt", text)
         self.assertIn('diff --name-only -z --no-renames', text)
+        self.assertIn("GIT_LFS_SKIP_SMUDGE=1", text)
+        self.assertIn("filter.lfs.process=", text)
         self.assertIn("filter.lfs.smudge=", text)
         self.assertIn("filter.lfs.required=false", text)
 
