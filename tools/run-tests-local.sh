@@ -79,6 +79,24 @@ install_hook() {
   verify_hook
 }
 
+ensure_ci_base_ref() {
+  # actions/checkout defaults to a shallow checkout. Audit scope must not silently
+  # collapse to the last commit merely because origin/<base> is absent locally.
+  # Persisted checkout credentials allow this targeted fetch on PR jobs.
+  if [ -z "${GITHUB_BASE_REF:-}" ]; then
+    return 0
+  fi
+  if git -C "$ROOT" rev-parse --verify "origin/${GITHUB_BASE_REF}" >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! git -C "$ROOT" fetch --no-tags --depth=1 origin \
+      "${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}" >/dev/null 2>&1; then
+    printf 'ERROR: cannot resolve PR base origin/%s; refusing to guess changed-spec audit scope.\n' \
+      "$GITHUB_BASE_REF" >&2
+    return 1
+  fi
+}
+
 changed_spec_dirs() {
   local files=""
   if ! git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
@@ -87,13 +105,13 @@ changed_spec_dirs() {
 
   if [ "$MODE" = "--pre-commit" ]; then
     files="$(git -C "$ROOT" diff --cached --name-only -- docs/specs 2>/dev/null || true)"
-  elif [ -n "${GITHUB_BASE_REF:-}" ] \
-      && git -C "$ROOT" rev-parse --verify "origin/${GITHUB_BASE_REF}" >/dev/null 2>&1; then
-    files="$(git -C "$ROOT" diff --name-only "origin/${GITHUB_BASE_REF}...HEAD" -- docs/specs 2>/dev/null || true)"
+  elif [ -n "${GITHUB_BASE_REF:-}" ]; then
+    ensure_ci_base_ref
+    files="$(git -C "$ROOT" diff --name-only "origin/${GITHUB_BASE_REF}...HEAD" -- docs/specs)"
   elif git -C "$ROOT" rev-parse --verify origin/main >/dev/null 2>&1; then
-    files="$(git -C "$ROOT" diff --name-only origin/main...HEAD -- docs/specs 2>/dev/null || true)"
+    files="$(git -C "$ROOT" diff --name-only origin/main...HEAD -- docs/specs)"
   elif git -C "$ROOT" rev-parse --verify HEAD^ >/dev/null 2>&1; then
-    files="$(git -C "$ROOT" diff --name-only HEAD^..HEAD -- docs/specs 2>/dev/null || true)"
+    files="$(git -C "$ROOT" diff --name-only HEAD^..HEAD -- docs/specs)"
   fi
 
   printf '%s\n' "$files" \
