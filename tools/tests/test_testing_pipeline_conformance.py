@@ -131,7 +131,8 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             "import time; time.sleep(2)",
         )
         self.assertEqual(timeout_proc.returncode, 124, timeout_proc.stdout)
-        self.assertIn("time budget exceeded", timeout_proc.stdout)
+        self.assertIn("command exceeded", timeout_proc.stdout)
+        self.assertIn("wall-clock budget", timeout_proc.stdout)
 
         success_proc = self.run_cmd(
             "python3",
