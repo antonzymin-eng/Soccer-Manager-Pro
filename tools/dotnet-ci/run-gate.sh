@@ -17,12 +17,19 @@
 #          GUID on checkout, silently breaking every reference to the file — so
 #          this is cheap to check and expensive to miss. Run FIRST: it costs
 #          milliseconds and fails before an hour of tests.
+#
+#          Modified 2026-09-04 (FR-TS-075/079 conformance): callers MAY set
+#          TD_GATE_TEST_FILTER to a VSTest filter expression. The default remains
+#          the exact whole-tree gate above. The local pre-commit pipeline uses
+#          this seam to omit simulation/e2e/calibration tests while retaining the
+#          full-tree compile and all fast unit/property candidates.
 # Usage:   bash tools/dotnet-ci/run-gate.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SLN="$ROOT/tools/dotnet-ci/TacticalDirector.gen.sln"
 QUARANTINE="$ROOT/tools/dotnet-ci/known-failures.txt"
+REQUESTED_FILTER="${TD_GATE_TEST_FILTER:-}"
 
 echo "── Unity .meta integrity (blocking; mirrors the unity-meta-integrity CI job) ─"
 bash "$ROOT/tools/unity-ci/check-meta-integrity.sh"
@@ -40,11 +47,20 @@ dotnet build "$SLN" --no-restore -clp:ErrorsOnly -m
 # quarantined — the burn-down is complete and the whole suite is enforced).
 # `|| true`: grep exits 1 when the quarantine has no test lines (burn-down done);
 # under `set -euo pipefail` that would abort the gate, so tolerate empty output.
-FILTER="$(grep -v '^\s*#' "$QUARANTINE" | grep -v '^\s*$' \
+QUARANTINE_FILTER="$(grep -v '^\s*#' "$QUARANTINE" | grep -v '^\s*$' \
           | sed 's/^/FullyQualifiedName!~/' | paste -sd'&' - || true)"
 
-echo "── Test (blocking; quarantined tests excluded) ─────────────────────"
+if [ -n "$REQUESTED_FILTER" ] && [ -n "$QUARANTINE_FILTER" ]; then
+    FILTER="$REQUESTED_FILTER&$QUARANTINE_FILTER"
+elif [ -n "$REQUESTED_FILTER" ]; then
+    FILTER="$REQUESTED_FILTER"
+else
+    FILTER="$QUARANTINE_FILTER"
+fi
+
+echo "── Test (blocking; requested/quarantined exclusions applied) ───────"
 if [ -n "$FILTER" ]; then
+    printf 'VSTest filter: %s\n' "$FILTER"
     dotnet test "$SLN" --no-build --filter "$FILTER"
 else
     dotnet test "$SLN" --no-build
@@ -56,7 +72,7 @@ if [ -n "$INCLUDE" ]; then
     echo "── Quarantined tests (report-only; failure expected, not blocking) ─"
     dotnet test "$SLN" --no-build --filter "$INCLUDE" || true
 else
-    echo "── Quarantine empty — full suite enforced above; no report-only run ─"
+    echo "── Quarantine empty — no report-only run ──────────────────────────"
 fi
 
 echo "── Gate PASSED ─────────────────────────────────────────────────────"

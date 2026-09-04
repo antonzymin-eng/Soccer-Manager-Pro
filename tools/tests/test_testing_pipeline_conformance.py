@@ -17,6 +17,18 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         self.assertIn("--pre-commit", text)
         self.assertIn("--nightly", text)
 
+    def test_pre_commit_excludes_long_simulation_classes(self) -> None:
+        path = ROOT / "tools" / "run-tests-local.sh"
+        text = path.read_text(encoding="utf-8")
+        self.assertIn("TD_GATE_TEST_FILTER", text)
+        self.assertIn("FullyQualifiedName!~sim_", text)
+        self.assertIn("FullyQualifiedName!~e2e_", text)
+        self.assertIn("TestCategory!=Calibration", text)
+
+        gate = (ROOT / "tools" / "dotnet-ci" / "run-gate.sh").read_text(encoding="utf-8")
+        self.assertIn('REQUESTED_FILTER="${TD_GATE_TEST_FILTER:-}"', gate)
+        self.assertIn('FILTER="$REQUESTED_FILTER&$QUARANTINE_FILTER"', gate)
+
     def test_versioned_pre_commit_hook_uses_local_runner(self) -> None:
         path = ROOT / ".githooks" / "pre-commit"
         self.assertTrue(path.is_file(), "FR-TS-075 pre-commit hook is missing")
