@@ -1,8 +1,8 @@
 # Testing Strategy & Framework Specification #19 — Section 8: References & Citation Audit
 
 **Created:** May 12, 2026
-**Last Updated:** September 3, 2026
-**Version:** 0.3
+**Last Updated:** September 4, 2026
+**Version:** 0.4
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Source register, verification notes, cross-spec citation
@@ -81,6 +81,9 @@ audit, and constant-provenance summary.
 - **`docs/tracking/certification-platform.md`** — placeholder at
   draft time per CLAUDE.md OPEN ISSUES; cited in §1.4 for Stage 0+1
   activation precondition.
+- **`docs/tracking/cert-run-runbook.md`** — current certified
+  determinism execution record/runbook for the pinned Windows 11 /
+  Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / one-worker tuple.
 - **`docs/tracking/spec-error-log.md`** — destination for
   `ERR-019-NNN` rows logged by §3.5.4 acknowledged dilution policy.
 
@@ -89,12 +92,20 @@ audit, and constant-provenance summary.
 - **RFC 2119** — MUST / SHOULD / MAY keywords. Consumed by §2.1.
 - **NUnit 3.14.0 / NUnit3TestAdapter 4.6.0** — current test-runner pin
   established by `tools/dotnet-ci/generate_projects.py` (D1).
-- **FsCheck / Coverlet / Stryker.NET** — remaining property/coverage/
-  project-wide-mutation candidates; D2/D3/D6 remain deferred. Targeted
-  FR-TS-091 governance mutation does not depend on the D6 choice.
+- **FsCheck.NUnit 2.16.6** — current property-framework pin through
+  `Directory.Build.targets` (D2).
+- **coverlet.collector 6.0.4** — current coverage-collector pin through
+  `Directory.Build.targets`, configured by
+  `tools/dotnet-ci/coverage.runsettings` (D3). The §5.5 per-tier
+  threshold auditor is separate work.
+- **Stryker.NET** — project-wide mutation candidate; D6 remains
+  deferred. Targeted FR-TS-091 governance mutation does not depend on
+  the D6 choice.
 - **GitHub Actions** — current CI provider at
-  `.github/workflows/ci.yml` (D4). This source registration does not
-  activate the architecture/evidence gate.
+  `.github/workflows/ci.yml` with scheduled Testing Strategy
+  orchestration at `.github/workflows/nightly.yml` (D4). GitHub-hosted
+  Linux jobs are explicitly non-certifying; the #16 full certification
+  job targets the self-hosted pinned Windows/Unity runner.
 
 ## 8.2 Verification Notes
 
@@ -122,6 +133,10 @@ audit, and constant-provenance summary.
   Governance v0.10, the frozen A2 schema family, reference semantics
   v2.1.0, and the coordinated #20 A3 draft. This is citation/ownership
   synchronization only; it is not evidence that the A8 gate is active.
+- September 4 pipeline synchronization verified the repository pins and
+  runner paths cited in §4/§6/§7 and preserved the distinction between
+  GitHub-hosted Linux regression evidence and certified Windows/Unity
+  determinism execution.
 
 ## 8.3 Cross-Spec Citation Audit
 
@@ -168,6 +183,7 @@ checklist row).
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.4     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization.** Replaces stale D2/D3 deferred references with the pinned FsCheck.NUnit/coverlet versions, registers the current certified determinism runbook, and records the split GitHub-hosted Linux regression versus self-hosted Windows/Unity certification topology. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Source register populated; constant-provenance summary references §3.10. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 source register rebuilt against actual #16 layout: §1.1.1 (tier), §3.2.4.1 (canonical schema), §3.4.2 (Tier B comparator), §4.8 (`EnvironmentFingerprint`), §5 (regression suite). Outline-vs-actual divergences enumerated. §8.3 cite mapping updated. |
 | 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Registers Governance v0.10 and the #20 A3 integration/activation contract as explicit authorities for FR-TS-086 … 097 and records the A2 v2.1.0 proof-semantics verification boundary. No enforcement activation or `SPEC_INDEX.md` change. Live-repo audit also records D1=NUnit and D4=GitHub Actions; D2/D3/D5–D8 remain deferred. |
