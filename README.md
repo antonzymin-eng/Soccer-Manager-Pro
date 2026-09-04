@@ -1,4 +1,4 @@
-# Tactical Director — Football Management Simulation
+# Football Management Simulation
 
 Tactical Director is a long-horizon football management simulation focused on deep match simulation,
 transparent systems, deterministic behaviour, and meaningful managerial decisions.
