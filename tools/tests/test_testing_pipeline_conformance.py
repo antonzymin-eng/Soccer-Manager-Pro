@@ -233,7 +233,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 "--changed-scope", "--enforce-dir", str(spec9),
             )
             self.assertEqual(proc.returncode, 1, proc.stdout)
-            self.assertIn("not bound to the claim", proc.stdout)
+            self.assertIn("does not contain concrete text or values supporting the claim", proc.stdout)
 
     def test_checklist_concrete_section_and_captured_check_can_resolve(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -241,7 +241,10 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             specs = repo / "docs" / "specs"
             spec9 = specs / "spec-nine"
             spec9.mkdir(parents=True)
-            (spec9 / "section-3.md").write_text("# Spec #9 — Section 3\n## 3.2 Algorithm\nproof\n", encoding="utf-8")
+            (spec9 / "section-3.md").write_text(
+                "# Spec #9 — Section 3\n## 3.2 Algorithm\nAlgorithm reviewed with proof.\n",
+                encoding="utf-8",
+            )
             (repo / "tools").mkdir()
             (repo / "tools" / "verify.py").write_text("print('ok')\n", encoding="utf-8")
             checklist = spec9 / "section-9-approval-checklist.md"
@@ -307,6 +310,8 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 | Unit | 3 | |
                 | Integration | 1 | |
                 | Simulation | 1 | |
+                | Determinism (consumed from #16 §5) | — | Owned by #16 |
+                | End-to-end / soak | 1 | |
 
                 ## 5.2 Property Test List
                 | Property | Tier (A/B/C) | Owning Module |
