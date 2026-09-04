@@ -36,33 +36,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")
-    parser.add_argument(
-        "--survey-only",
-        action="store_true",
-        help="Report findings but never return a blocking verdict. Routine pre-commit/PR/nightly pipelines use this mode; approval transitions do not.",
-    )
-    parser.add_argument(
-        "--changed-scope",
-        action="store_true",
-        help="Survey the whole root but consider blocking only spec directories named by --enforce-dir.",
-    )
-    parser.add_argument(
-        "--enforce-dir",
-        action="append",
-        default=[],
-        help="Spec directory, absolute or repo-relative, that is currently at an approval transition. Repeatable.",
-    )
-    parser.add_argument(
-        "--captured-check",
-        action="append",
-        default=[],
-        help="Exact check/command token whose output was captured for this approval walk. Repeatable. A named check is not RESOLVED without this attestation.",
-    )
-    parser.add_argument(
-        "--quiet-survey",
-        action="store_true",
-        help="Print blocking findings plus counts, but omit individual survey findings.",
-    )
+    parser.add_argument("--survey-only", action="store_true", help="Report findings but never return a blocking verdict. Routine pre-commit/PR/nightly pipelines use this mode; approval transitions do not.")
+    parser.add_argument("--changed-scope", action="store_true", help="Survey the whole root but consider blocking only spec directories named by --enforce-dir.")
+    parser.add_argument("--enforce-dir", action="append", default=[], help="Spec directory, absolute or repo-relative, that is currently at an approval transition. Repeatable.")
+    parser.add_argument("--captured-check", action="append", default=[], help="Exact check/command token whose output was captured for this approval walk. Repeatable. A named check is not RESOLVED without this attestation.")
+    parser.add_argument("--quiet-survey", action="store_true", help="Print blocking findings plus counts, but omit individual survey findings.")
     return parser.parse_args()
 
 
@@ -99,20 +77,33 @@ def resolve_path(token: str, *, repo_root: Path, spec_dir: Path) -> Path | None:
 
 
 def section_is_present(text: str, section: str) -> bool:
-    # A cited §5.6 must bind to an actual markdown heading for 5.6, not merely a
-    # prose occurrence of the characters. Accept H1-H6 and an optional title.
     return bool(re.search(rf"^#{{1,6}}\s+{re.escape(section)}(?:\s|\b)", text, re.MULTILINE))
 
 
+def local_section_paths(evidence: str, spec_dir: Path) -> list[tuple[str, Path]]:
+    """Resolve section-only citations like `§3.2` to the owning local section file."""
+    out: list[tuple[str, Path]] = []
+    for section in SECTION_RE.findall(evidence):
+        major = section.split(".", 1)[0]
+        matches = sorted(spec_dir.glob(f"section-{major}*.md"))
+        for path in matches:
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if section_is_present(text, section):
+                out.append((f"§{section}", path.resolve()))
+                break
+    return out
+
+
 def concrete_literals(claim: str, evidence: str, path_tokens: set[str]) -> list[str]:
-    """Extract explicit values that can be checked verbatim in cited files."""
     literals: list[str] = []
     for source in (claim, evidence):
         for token in BACKTICK_RE.findall(source):
             stripped = token.strip()
             if stripped in path_tokens or not stripped or stripped.startswith(("http://", "https://")):
                 continue
-            # Commands are validated through captured-check, not as file literals.
             if stripped.split(maxsplit=1)[0] in {"bash", "python", "python3", "git", "grep", "rg", "dotnet", "sh"}:
                 continue
             literals.append(stripped)
@@ -120,14 +111,9 @@ def concrete_literals(claim: str, evidence: str, path_tokens: set[str]) -> list[
     return list(dict.fromkeys(literals))
 
 
-def path_evidence_supports_claim(
-    claim: str,
-    evidence: str,
-    resolved: list[tuple[str, Path]],
-) -> bool:
+def path_evidence_supports_claim(claim: str, evidence: str, resolved: list[tuple[str, Path]]) -> bool:
     if not resolved:
         return False
-
     texts: list[str] = []
     for _, path in resolved:
         try:
@@ -136,50 +122,29 @@ def path_evidence_supports_claim(
             return False
     combined = "\n".join(texts)
 
-    # Strong binding 1: the EVIDENCE cell cites a concrete §N.x and at least one
-    # referenced file actually contains that section heading.
     evidence_sections = SECTION_RE.findall(evidence)
     if evidence_sections and all(any(section_is_present(text, section) for text in texts) for section in evidence_sections):
         return True
 
-    # Strong binding 2: an explicit code/value literal in the claim/evidence is
-    # actually present in the cited file set. Require every extracted literal so
-    # an unrelated README containing one common word cannot satisfy the row.
     path_tokens = {token for token, _ in resolved}
     literals = concrete_literals(claim, evidence, path_tokens)
     if literals and all(literal in combined for literal in literals):
         return True
-
     return False
 
 
 def captured_programmatic_check(evidence: str, captured_checks: set[str]) -> bool:
-    if not captured_checks:
-        return False
-    return any(check in evidence for check in captured_checks)
+    return bool(captured_checks) and any(check in evidence for check in captured_checks)
 
 
-def audit_file(
-    path: Path,
-    repo_root: Path,
-    *,
-    survey_only: bool,
-    changed_scope: bool,
-    enforce_dirs: set[Path],
-    captured_checks: set[str],
-) -> tuple[int | None, int, list[Finding]]:
+def audit_file(path: Path, repo_root: Path, *, survey_only: bool, changed_scope: bool, enforce_dirs: set[Path], captured_checks: set[str]) -> tuple[int | None, int, list[Finding]]:
     text = path.read_text(encoding="utf-8")
     spec_id = infer_spec_id(text)
     status = infer_status(text)
     lines = text.splitlines()
     findings: list[Finding] = []
     checked = 0
-    blocking_scope = is_enforced(
-        path,
-        survey_only=survey_only,
-        changed_scope=changed_scope,
-        enforce_dirs=enforce_dirs,
-    )
+    blocking_scope = is_enforced(path, survey_only=survey_only, changed_scope=changed_scope, enforce_dirs=enforce_dirs)
 
     def blocks() -> bool:
         return blocking_scope and not is_legacy_survey(spec_id) and is_approved_status(status)
@@ -206,6 +171,9 @@ def audit_file(
 
             path_tokens = candidate_paths(evidence)
             resolved = [(token, resolved_path) for token in path_tokens if (resolved_path := resolve_path(token, repo_root=repo_root, spec_dir=path.parent)) is not None]
+            resolved.extend(local_section_paths(evidence, path.parent))
+            # De-duplicate by token+path while preserving order.
+            resolved = list(dict.fromkeys(resolved))
             broken = [token for token in path_tokens if resolve_path(token, repo_root=repo_root, spec_dir=path.parent) is None and not any(ch in token for ch in "<>*{}")]
             named_check = has_named_programmatic_check(evidence, repo_root=repo_root, spec_dir=path.parent)
 
@@ -241,14 +209,7 @@ def main() -> int:
     findings: list[Finding] = []
     audited_files = 0
     for path in candidates:
-        _, checked, file_findings = audit_file(
-            path,
-            repo_root,
-            survey_only=args.survey_only,
-            changed_scope=args.changed_scope,
-            enforce_dirs=enforce_dirs,
-            captured_checks=captured_checks,
-        )
+        _, checked, file_findings = audit_file(path, repo_root, survey_only=args.survey_only, changed_scope=args.changed_scope, enforce_dirs=enforce_dirs, captured_checks=captured_checks)
         if checked:
             audited_files += 1
             total_rows += checked
@@ -269,12 +230,7 @@ def main() -> int:
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
-        if args.survey_only:
-            scope = "survey-only routine pipeline"
-        elif args.changed_scope:
-            scope = "approval enforcement (explicit scope)"
-        else:
-            scope = "approval-state enforcement"
+        scope = "survey-only routine pipeline" if args.survey_only else ("approval enforcement (explicit scope)" if args.changed_scope else "approval-state enforcement")
         print(f"checklist-auditor: {audited_files} file(s), {total_rows} evidence row(s), {describe(findings)} [{scope}]")
         for finding in findings:
             if args.quiet_survey and not finding.blocking:
