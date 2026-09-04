@@ -12,7 +12,7 @@
 #      "**Last Updated (prior):**".
 #   2. A tracking doc's own "Last Updated" claim trails the commits that
 #      actually touched it, so a new entry gets layered on a stale base.
-#   3. The OPEN ISSUES active/resolved counts drift from the real count — this
+#   3. The open-issues active/archived counts drift from the real count — this
 #      has happened and been silently wrong before (the August 10, 2026
 #      correction in CLAUDE.md itself records a stale "14 active" claim). The
 #      claim now lives in docs/agent-guides/project-reference.md, not root
@@ -30,8 +30,12 @@
 # reintroduced into a file whose chain was split out is a contract violation,
 # not a judgment call, so a caller reading the status must not see a pass. The
 # second, added September 4, 2026: BROKEN from the count check, meaning the
-# check could not find the surface carrying the claim and therefore verified
-# NOTHING. That is also structural, not a judgment call — and it is exactly the
+# check could not read exactly one authoritative claim and therefore verified
+# NOTHING. That covers three sub-cases — the claim file is missing, it carries
+# no claim line, or it carries MORE THAN ONE, which is equally undecidable: the
+# check cannot know which is authoritative. (The multiple-match case printed
+# UNPARSED and exited 0 until it was caught in review on September 4, 2026;
+# it is the same structural class as the other two and now exits 1 with them.) That is also structural, not a judgment call — and it is exactly the
 # state this script sat in from the compact restructure until that date, printing
 # UNPARSED on every run and exiting 0 while the real claim drifted to 15/46
 # against a true 21/51. A count DISAGREEMENT (FAIL) stays advisory: whether stale
@@ -126,7 +130,8 @@ else
     check_broken=1
     echo "BROKEN: $claim_file carries no '**N active** / **M archived**' line — this check is currently checking NOTHING. Find where the claim moved and repoint it; do not read this as a pass."
   elif [[ "$n_claims" -ne 1 ]]; then
-    echo "UNPARSED: $claim_file matched '**N active** / **M archived**' $n_claims times, expected exactly once — compare by hand."
+    check_broken=1
+    echo "BROKEN: $claim_file matched '**N active** / **M archived**' $n_claims times, expected exactly once — the check cannot tell which claim is authoritative, so it verified NOTHING. Resolve the duplicate; do not read this as a pass."
   else
     read -r claimed_active claimed_archived <<< "$claim"
     if [[ "$claimed_active" == "$active" && "$claimed_archived" == "$archived" ]]; then
