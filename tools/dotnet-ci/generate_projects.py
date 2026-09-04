@@ -8,7 +8,7 @@ Purpose:  Generate plain .NET SDK projects (*.gen.csproj) from the Unity
           `dotnet test` on Linux CI — without Unity.
 
           NON-CERTIFYING GATE. The determinism certification platform remains
-          the pinned Windows 11 / Unity 2022.3.62f1 / Mono tuple
+          the pinned Windows 11 / Unity 6000.4.9f1 / Mono tuple
           (docs/tracking/certification-platform.md). This gate exists to catch
           the never-compiled / dead-test-suite defect class (PassMechanicsTests
           CS1022, First Touch ERR-004, Decision Tree AR-2 H-1) at commit time.
@@ -21,9 +21,10 @@ Purpose:  Generate plain .NET SDK projects (*.gen.csproj) from the Unity
             Nothing here is hand-maintained per assembly.
           - AssemblyName == asmdef "name" so InternalsVisibleTo attributes in
             the checked-in AssemblyInfo.cs files resolve unchanged.
-          - LangVersion is pinned to 9.0 (Unity 2022.3 C# level) so code that
-            passes this gate cannot silently adopt language features the Unity
-            compiler would reject.
+          - LangVersion remains pinned to 9.0 as this Linux shim gate's
+            conservative compatibility ceiling; changing that ceiling is a
+            separate toolchain decision, not something inferred from the
+            certification-host Unity version.
           - DEVELOPMENT_BUILD is defined so the FR-CS-031-gated diagnostic
             emits (#if UNITY_EDITOR || DEVELOPMENT_BUILD) compile and run,
             keeping the LogAssert.Expect() assertions meaningful.
@@ -123,11 +124,11 @@ def gen_csproj(name, info, asmdefs):
                  f"{info['stem']}.asmdef — do not edit, do not commit. -->")
     lines.append('<Project Sdk="Microsoft.NET.Sdk">')
     lines.append("  <PropertyGroup>")
-    # Production assemblies compile against netstandard2.1 — Unity 2022.3's actual
-    # BCL surface — so .NET-8-only API shape changes (e.g. MemoryMarshal.Write
-    # ref->in) cannot mask or manufacture compile errors relative to the engine.
-    # Test assemblies need net8.0 for the NUnit3 adapter / Microsoft.NET.Test.Sdk;
-    # netstandard2.1 references are binary-compatible at runtime.
+    # Production assemblies compile against the repo's conservative
+    # netstandard2.1 compatibility target so newer .NET API shapes cannot hide
+    # or manufacture shim-gate compile behavior. Test assemblies use net8.0 for
+    # the NUnit3 adapter / Microsoft.NET.Test.Sdk; netstandard2.1 references are
+    # binary-compatible at runtime.
     tfm = "net8.0" if is_test else "netstandard2.1"
     lines.append(f"    <TargetFramework>{tfm}</TargetFramework>")
     lines.append("    <LangVersion>9.0</LangVersion>")
@@ -162,8 +163,8 @@ def gen_csproj(name, info, asmdefs):
     depth = len(own_dir.relative_to(REPO_ROOT).parts)
     to_root = "../" * depth
     lines.append(f'    <ProjectReference Include="{to_root}tools/dotnet-ci/UnityShim/UnityShim.csproj" />')
-    # Unity 2022.3 bundles System.Runtime.CompilerServices.Unsafe.dll; outside the
-    # netstandard2.1 box it is a NuGet package. Mirrors the engine environment.
+    # The shim build needs Unsafe as a package outside the engine host; keep the
+    # package version explicit so the non-certifying Linux environment is stable.
     lines.append('    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />')
     for ref in data.get("references", []):
         if ref in UNITY_ONLY_REFS:
