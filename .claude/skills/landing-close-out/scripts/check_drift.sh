@@ -23,11 +23,20 @@
 # EXIT-CODE CONTRACT. This script reports; it does not decide whether drift is
 # acceptable to land on top of, or write anything. Classes 2 and 3 above are
 # therefore advisory and never affect the status — that judgment belongs to
-# whoever is about to write the entry.
+# whoever is about to write the entry. The one carve-out is structural failure of
+# check 3 itself (BROKEN), described below.
 #
-# The no-chain guard is the one exception, and it exits 1. A header chain
+# TWO structural conditions are the exceptions, and they exit 1. A header chain
 # reintroduced into a file whose chain was split out is a contract violation,
 # not a judgment call, so a caller reading the status must not see a pass. The
+# second, added September 4, 2026: BROKEN from the count check, meaning the
+# check could not find the surface carrying the claim and therefore verified
+# NOTHING. That is also structural, not a judgment call — and it is exactly the
+# state this script sat in from the compact restructure until that date, printing
+# UNPARSED on every run and exiting 0 while the real claim drifted to 15/46
+# against a true 21/51. A count DISAGREEMENT (FAIL) stays advisory: whether stale
+# counts are acceptable to land on is a judgment, but a check that cannot run is
+# never a pass. The
 # guard sets chain_violation and the script exits AFTER printing the whole
 # report, so a run still shows every section rather than stopping at the first
 # violation. (Added September 3, 2026: the guard previously printed FAIL and
@@ -35,6 +44,7 @@
 # forbidden chain as a successful check.)
 set -euo pipefail
 chain_violation=0
+check_broken=0
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$repo_root"
 
@@ -91,10 +101,14 @@ for f in docs/tracking/file-manifest.md docs/tracking/CHANGELOG.md docs/tracking
 done
 echo
 
-echo "== Open-issues active/resolved count check =="
+echo "== Open-issues active/archived count check =="
+# NOTE: the second number counts ARCHIVE MEMBERSHIP, not resolved issues.
+# open-issues-resolved.md also holds superseded parallel records, which its own
+# entries annotate as "'"'"not a resolved issue"'"'". Calling the count "resolved"
+# published a semantically false claim; it is "archived".
 active="$(grep -c '^- \*\*' docs/tracking/open-issues.md 2>/dev/null || true)"
-resolved="$(grep -c '^- \*\*' docs/tracking/open-issues-resolved.md 2>/dev/null || true)"
-echo "counted: $active active / $resolved resolved"
+archived="$(grep -c '^- \*\*' docs/tracking/open-issues-resolved.md 2>/dev/null || true)"
+echo "counted: $active active / $archived archived"
 # The claim lives in docs/agent-guides/project-reference.md's OPEN ISSUES section.
 # It used to live in root CLAUDE.md; the compact restructure moved it and this check
 # was not repointed, so from then until September 4, 2026 it read a file with no such
@@ -103,27 +117,30 @@ echo "counted: $active active / $resolved resolved"
 # broken check, not a clean result, so the two cases are now reported differently.
 claim_file="docs/agent-guides/project-reference.md"
 if [[ ! -f "$claim_file" ]]; then
+  check_broken=1
   echo "BROKEN: $claim_file does not exist — this check has no surface to read; repoint it."
 else
-  claim="$(sed -nE 's/^\*\*([0-9]+) active\*\* \/ ([0-9]+) resolved.*/\1 \2/p' "$claim_file")"
+  claim="$(sed -nE 's/^\*\*([0-9]+) active\*\* \/ \*\*([0-9]+) archived\*\*.*/\1 \2/p' "$claim_file")"
   n_claims="$(printf '%s\n' "$claim" | grep -c . || true)"
   if [[ "$n_claims" -eq 0 ]]; then
-    echo "BROKEN: $claim_file carries no '**N active** / M resolved' line — this check is currently checking NOTHING. Find where the claim moved and repoint it; do not read this as a pass."
+    check_broken=1
+    echo "BROKEN: $claim_file carries no '**N active** / **M archived**' line — this check is currently checking NOTHING. Find where the claim moved and repoint it; do not read this as a pass."
   elif [[ "$n_claims" -ne 1 ]]; then
-    echo "UNPARSED: $claim_file matched '**N active** / M resolved' $n_claims times, expected exactly once — compare by hand."
+    echo "UNPARSED: $claim_file matched '**N active** / **M archived**' $n_claims times, expected exactly once — compare by hand."
   else
-    read -r claimed_active claimed_resolved <<< "$claim"
-    if [[ "$claimed_active" == "$active" && "$claimed_resolved" == "$resolved" ]]; then
-      echo "OK: $claim_file claims $claimed_active active / $claimed_resolved resolved — matches."
+    read -r claimed_active claimed_archived <<< "$claim"
+    if [[ "$claimed_active" == "$active" && "$claimed_archived" == "$archived" ]]; then
+      echo "OK: $claim_file claims $claimed_active active / $claimed_archived archived — matches."
     else
-      echo "FAIL: $claim_file claims $claimed_active active / $claimed_resolved resolved — counted $active / $resolved."
+      echo "FAIL: $claim_file claims $claimed_active active / $claimed_archived archived — counted $active / $archived."
     fi
   fi
 fi
 
-# The one status-affecting condition — see the EXIT-CODE CONTRACT at the top.
-if [[ "$chain_violation" -ne 0 ]]; then
+# The status-affecting conditions — see the EXIT-CODE CONTRACT at the top.
+if [[ "$chain_violation" -ne 0 || "$check_broken" -ne 0 ]]; then
   echo
-  echo "check_drift.sh: FAILED — a forbidden 'Last Updated' header chain is present (see above)."
+  [[ "$chain_violation" -ne 0 ]] && echo "check_drift.sh: FAILED — a forbidden 'Last Updated' header chain is present (see above)."
+  [[ "$check_broken" -ne 0 ]] && echo "check_drift.sh: FAILED — the open-issues count check is BROKEN: it could not find the surface carrying the claim, so it verified nothing (see above)."
   exit 1
 fi
