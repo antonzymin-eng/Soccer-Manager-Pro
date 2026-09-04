@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tools/dotnet-ci/run-gate.sh
 # Non-certifying Linux compile/test gate. Generates plain .NET projects from
-# Unity asmdefs, builds the full host-free src/ tree, and executes NUnit suites.
+# Unity asmdefs, builds host-free code, and executes NUnit suites.
 # Platform determinism certification is a separate pinned Windows/Unity job.
 set -euo pipefail
 
@@ -10,10 +10,77 @@ SLN="$ROOT/tools/dotnet-ci/TacticalDirector.gen.sln"
 QUARANTINE="$ROOT/tools/dotnet-ci/known-failures.txt"
 OWNER_HELD_RED="$ROOT/tools/dotnet-ci/owner-held-red.txt"
 COVERAGE_SETTINGS="$ROOT/tools/dotnet-ci/coverage.runsettings"
-REQUESTED_FILTER="${TD_GATE_TEST_FILTER:-}"
-FILTER_SOURCE="${TD_GATE_FILTER_SOURCE:-}"
-OWNER_MODE="${TD_OWNER_HELD_RED_MODE:-}"
-COLLECT_COVERAGE="${TD_COLLECT_COVERAGE:-}"
+REQUESTED_FILTER=""
+OWNER_MODE=""
+COLLECT_COVERAGE=0
+FAST_MODE=0
+
+usage() {
+    cat <<'USAGE'
+Usage: bash tools/dotnet-ci/run-gate.sh [options]
+
+Options:
+  --test-filter <vstest-filter>    Restrict the blocking test set.
+  --owner-held-red report-only     Exclude the owner-held RED from the blocking
+                                   pass, then execute and value-verify it separately.
+  --coverage                       Collect XPlat Code Coverage.
+  --fast                           Skip the whole-tree meta/build pass and run
+                                   generated test projects directly. Intended only
+                                   for the bounded pre-commit unit/property gate.
+  -h, --help                       Show this help.
+
+Call tools/run-tests-local.sh for repository policy modes. This lower-level gate
+accepts explicit arguments only; ambient filter/owner/coverage environment
+variables are rejected so CI cannot be silently narrowed by inherited state.
+USAGE
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --test-filter)
+            [ "$#" -ge 2 ] || { echo "ERROR: --test-filter requires a value." >&2; exit 2; }
+            REQUESTED_FILTER="$2"
+            shift 2
+            ;;
+        --owner-held-red)
+            [ "$#" -ge 2 ] || { echo "ERROR: --owner-held-red requires a value." >&2; exit 2; }
+            OWNER_MODE="$2"
+            shift 2
+            ;;
+        --coverage)
+            COLLECT_COVERAGE=1
+            shift
+            ;;
+        --fast)
+            FAST_MODE=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "ERROR: unknown run-gate option: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+done
+
+for legacy_var in TD_GATE_TEST_FILTER TD_GATE_FILTER_SOURCE TD_OWNER_HELD_RED_MODE TD_COLLECT_COVERAGE; do
+    if [ -n "${!legacy_var:-}" ]; then
+        echo "ERROR: $legacy_var is no longer accepted; pass explicit run-gate.sh arguments through tools/run-tests-local.sh." >&2
+        exit 2
+    fi
+done
+
+case "$OWNER_MODE" in
+    ""|report-only) ;;
+    *)
+        echo "ERROR: unsupported owner-held RED mode: $OWNER_MODE" >&2
+        exit 2
+        ;;
+esac
 
 ledger_names() {
     local ledger="$1"
@@ -32,24 +99,6 @@ include_filter() {
     local ledger="$1"
     ledger_names "$ledger" | sed 's/^/FullyQualifiedName~/' | paste -sd'|' - || true
 }
-
-if [ -n "$REQUESTED_FILTER" ] && [ "$FILTER_SOURCE" != "testing-strategy-runner" ]; then
-    echo "ERROR: TD_GATE_TEST_FILTER is set without the trusted testing-strategy runner marker." >&2
-    echo "Call tools/run-tests-local.sh instead of injecting a filter into run-gate.sh." >&2
-    exit 2
-fi
-if [ -n "$FILTER_SOURCE" ] && [ -z "$REQUESTED_FILTER" ]; then
-    echo "ERROR: TD_GATE_FILTER_SOURCE is set without TD_GATE_TEST_FILTER." >&2
-    exit 2
-fi
-
-case "$OWNER_MODE" in
-  ""|report-only) ;;
-  *)
-    echo "ERROR: unsupported TD_OWNER_HELD_RED_MODE=$OWNER_MODE" >&2
-    exit 2
-    ;;
-esac
 
 QUARANTINE_FILTER="$(exclusion_filter "$QUARANTINE")"
 OWNER_EXCLUSION=""
@@ -72,12 +121,15 @@ if [ "${TD_GATE_DRY_RUN:-}" = "1" ]; then
     printf 'DRY-RUN blocking_filter=%s\n' "${FILTER:-<none>}"
     printf 'DRY-RUN quarantine_include=%s\n' "$(include_filter "$QUARANTINE")"
     printf 'DRY-RUN owner_held_include=%s\n' "${OWNER_INCLUDE:-<none>}"
-    printf 'DRY-RUN coverage=%s\n' "${COLLECT_COVERAGE:-0}"
+    printf 'DRY-RUN coverage=%s\n' "$COLLECT_COVERAGE"
+    printf 'DRY-RUN fast=%s\n' "$FAST_MODE"
     exit 0
 fi
 
-echo "── Unity .meta integrity (blocking; mirrors CI) ─────────────────────"
-bash "$ROOT/tools/unity-ci/check-meta-integrity.sh"
+if [ "$FAST_MODE" -eq 0 ]; then
+    echo "── Unity .meta integrity (blocking; mirrors CI) ─────────────────────"
+    bash "$ROOT/tools/unity-ci/check-meta-integrity.sh"
+fi
 
 echo "── Generate csproj/sln from asmdefs ──────────────────────────────────"
 python3 "$ROOT/tools/dotnet-ci/generate_projects.py"
@@ -85,29 +137,46 @@ python3 "$ROOT/tools/dotnet-ci/generate_projects.py"
 echo "── Restore ───────────────────────────────────────────────────────────"
 dotnet restore "$SLN"
 
-echo "── Build (full tree; any compile error fails) ────────────────────────"
-dotnet build "$SLN" --no-restore -clp:ErrorsOnly -m
-
-TEST_ARGS=(dotnet test "$SLN" --no-build)
-if [ -n "$FILTER" ]; then
-    TEST_ARGS+=(--filter "$FILTER")
+if [ "$FAST_MODE" -eq 0 ]; then
+    echo "── Build (full tree; any compile error fails) ────────────────────────"
+    dotnet build "$SLN" --no-restore -clp:ErrorsOnly -m
 fi
-if [ -n "$COLLECT_COVERAGE" ]; then
+
+COMMON_TEST_ARGS=(--no-restore)
+if [ "$FAST_MODE" -eq 0 ]; then
+    COMMON_TEST_ARGS+=(--no-build)
+fi
+if [ -n "$FILTER" ]; then
+    COMMON_TEST_ARGS+=(--filter "$FILTER")
+fi
+if [ "$COLLECT_COVERAGE" -eq 1 ]; then
     COVERAGE_DIR="$ROOT/artifacts/coverage"
     mkdir -p "$COVERAGE_DIR"
-    TEST_ARGS+=(--collect "XPlat Code Coverage" --settings "$COVERAGE_SETTINGS" --results-directory "$COVERAGE_DIR")
+    COMMON_TEST_ARGS+=(--collect "XPlat Code Coverage" --settings "$COVERAGE_SETTINGS" --results-directory "$COVERAGE_DIR")
 fi
 
 echo "── Test (blocking; explicit exclusions applied) ──────────────────────"
 if [ -n "$FILTER" ]; then
     printf 'VSTest filter: %s\n' "$FILTER"
 fi
-"${TEST_ARGS[@]}"
+
+if [ "$FAST_MODE" -eq 1 ]; then
+    mapfile -t TEST_PROJECTS < <(find "$ROOT/src" -name '*.Tests.gen.csproj' -type f -print | sort)
+    if [ "${#TEST_PROJECTS[@]}" -eq 0 ]; then
+        echo "ERROR: generated test-project set is empty." >&2
+        exit 1
+    fi
+    for project in "${TEST_PROJECTS[@]}"; do
+        dotnet test "$project" "${COMMON_TEST_ARGS[@]}"
+    done
+else
+    dotnet test "$SLN" "${COMMON_TEST_ARGS[@]}"
+fi
 
 QUARANTINE_INCLUDE="$(include_filter "$QUARANTINE")"
 if [ -n "$QUARANTINE_INCLUDE" ] && [ -z "$REQUESTED_FILTER" ]; then
     echo "── Quarantined tests (report-only; flake ledger only) ────────────────"
-    dotnet test "$SLN" --no-build --filter "$QUARANTINE_INCLUDE" || true
+    dotnet test "$SLN" --no-build --no-restore --filter "$QUARANTINE_INCLUDE" || true
 elif [ -n "$QUARANTINE_INCLUDE" ]; then
     echo "── Quarantined report-only run skipped for bounded filtered caller ──"
 else
@@ -120,7 +189,7 @@ if [ "$OWNER_MODE" = "report-only" ] && [ -n "$OWNER_INCLUDE" ]; then
     mkdir -p "$OWNER_RESULTS"
     echo "── Owner-held RED (execute separately; exact diagnostics verified) ──"
     set +e
-    dotnet test "$SLN" --no-build --filter "$OWNER_INCLUDE" \
+    dotnet test "$SLN" --no-build --no-restore --filter "$OWNER_INCLUDE" \
         --logger trx --results-directory "$OWNER_RESULTS"
     owner_dotnet_exit=$?
     set -e
