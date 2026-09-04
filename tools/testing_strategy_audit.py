@@ -10,7 +10,13 @@ from pathlib import Path
 from typing import Iterable
 
 SPEC_ID_RE = re.compile(r"(?:Spec(?:ification)?\s*#|#)(\d{1,3})", re.IGNORECASE)
-STATUS_RE = re.compile(r"^\*\*Status:\*\*\s*([^\n]+)$", re.IGNORECASE | re.MULTILINE)
+# Individual specs use several presentation forms, including blockquoted and
+# backticked values. SPEC_INDEX is canonical when available; this regex is the
+# fallback for isolated fixtures and incomplete candidate trees.
+STATUS_RE = re.compile(
+    r"^\s*>?\s*\*\*Status:\*\*\s*(?P<value>[^\n]+)$",
+    re.IGNORECASE | re.MULTILINE,
+)
 SECTION_REF_RE = re.compile(r"§\s*(\d+)(?:\.\d+)*")
 BACKTICK_RE = re.compile(r"`([^`]+)`")
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
@@ -47,17 +53,28 @@ def infer_spec_id(text: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def normalize_status(value: str | None) -> str | None:
+    if value is None:
+        return None
+    # Strip common Markdown presentation without changing semantic words such
+    # as AMENDMENT DRAFT. Parenthetical dates/notes remain harmless because
+    # is_approved_status tests the normalized prefix.
+    normalized = re.sub(r"[`*_]", "", value).strip()
+    return normalized or None
+
+
 def infer_status(text: str) -> str | None:
     head = "\n".join(text.splitlines()[:40])
     match = STATUS_RE.search(head)
-    return match.group(1).strip() if match else None
+    return normalize_status(match.group("value")) if match else None
 
 
 def is_approved_status(status: str | None) -> bool:
-    if status is None:
+    normalized = normalize_status(status)
+    if normalized is None:
         return False
-    normalized = status.upper()
-    return normalized.startswith("APPROVED") and "AMENDMENT DRAFT" not in normalized
+    upper = normalized.upper()
+    return upper.startswith("APPROVED") and "AMENDMENT DRAFT" not in upper
 
 
 def is_legacy_survey(spec_id: int | None) -> bool:
@@ -96,6 +113,59 @@ def iter_tables(lines: list[str]) -> Iterable[tuple[list[str], list[tuple[int, l
             i += 1
 
 
+def registry_statuses_from_text(text: str) -> dict[str, str]:
+    """Return canonical `folder -> status` values from SPEC_INDEX registry.
+
+    The parser keys by header names rather than fixed column numbers so the
+    historical prose above the registry and future added columns do not matter.
+    """
+    for headers, rows in iter_tables(text.splitlines()):
+        lowered = [header.strip().lower() for header in headers]
+        if "folder" not in lowered or "status" not in lowered:
+            continue
+        folder_i = lowered.index("folder")
+        status_i = lowered.index("status")
+        out: dict[str, str] = {}
+        for _, cells in rows:
+            if len(cells) <= max(folder_i, status_i):
+                continue
+            folder = cells[folder_i].strip().strip("`").strip().rstrip("/")
+            status = normalize_status(cells[status_i])
+            if folder and status:
+                out[folder] = status
+        if out:
+            return out
+    return {}
+
+
+def registry_statuses(repo_root: Path) -> dict[str, str]:
+    index = repo_root / "docs" / "specs" / "SPEC_INDEX.md"
+    if not index.is_file():
+        return {}
+    try:
+        return registry_statuses_from_text(index.read_text(encoding="utf-8", errors="replace"))
+    except OSError:
+        return {}
+
+
+def canonical_spec_status(
+    repo_root: Path,
+    spec_dir: Path,
+    *,
+    fallback_text: str | None = None,
+) -> str | None:
+    """Resolve status from canonical SPEC_INDEX, falling back to local metadata.
+
+    SPEC_INDEX explicitly states that its approval status overrides individual
+    spec files. Isolated auditor fixtures often omit the index, so fallback
+    parsing remains useful for unit tests and incomplete authoring trees.
+    """
+    status = registry_statuses(repo_root).get(spec_dir.name)
+    if status is not None:
+        return status
+    return infer_status(fallback_text or "")
+
+
 def candidate_paths(evidence: str) -> list[str]:
     found: list[str] = []
     for token in BACKTICK_RE.findall(evidence):
@@ -123,11 +193,7 @@ def resolve_candidate(token: str, *, repo_root: Path, spec_dir: Path) -> bool:
 
 
 def has_resolved_local_section_reference(evidence: str, *, spec_dir: Path) -> bool:
-    """Resolve canonical `§N.x` citations to the versioned section-N file.
-
-    This is a path-resolution convenience, not a prose escape hatch: at least one
-    explicit section symbol must be present and its owning section file must exist.
-    """
+    """Resolve canonical `§N.x` citations to the versioned section-N file."""
     refs = SECTION_REF_RE.findall(evidence)
     if not refs:
         return False
