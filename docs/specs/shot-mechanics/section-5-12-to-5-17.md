@@ -619,6 +619,6 @@ All 104 tests are executable upon implementation completion of §3.1–§3.10.
 
 *End of Section 5 — Shot Mechanics Specification #6*
 
-*Tactical Director — Specification #6 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #6 of 20 | Stage 0: Physics Foundation*
 
 *Next: Section 6 — Performance Analysis*

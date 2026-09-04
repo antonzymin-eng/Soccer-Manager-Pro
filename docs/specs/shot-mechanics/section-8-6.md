@@ -275,4 +275,4 @@ Zero [VER] items remain. All pre-approval actions resolved.
 
 *End of Section 8 — Shot Mechanics Specification #6*
 
-*Tactical Director — Specification #6 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #6 of 20 | Stage 0: Physics Foundation*

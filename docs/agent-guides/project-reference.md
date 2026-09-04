@@ -10,7 +10,7 @@
 
 ## PROJECT IDENTITY
 
-**Tactical Director** is a football (soccer) simulation game targeting "Football Manager killer" ambitions. It follows a 10-year, 6-stage development plan. The project is solo-developed with AI assistance.
+**System XI** is a football (soccer) simulation game targeting "Football Manager killer" ambitions. It follows a 10-year, 6-stage development plan. The project is solo-developed with AI assistance.
 
 **Current phase:** Stage 0+1 — Implementation, with the specification frontier now running ahead of the code.
 

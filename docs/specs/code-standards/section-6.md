@@ -284,4 +284,4 @@ and supply the implementation detail that the FR row itself cannot fit.
 ---
 
 *End of Section 6 — Code Standards & Style Guide Specification #20*
-*Tactical Director — Specification #20 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #20 of 20 | Stage 0: Physics Foundation*

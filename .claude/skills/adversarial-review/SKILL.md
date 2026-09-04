@@ -239,7 +239,7 @@ When the defect is structural — the top-weighted architecture / maintainabilit
 
 ## Repo obligation — a finding against approved text must be filed
 
-Everything above is general review practice. This section is specific to Tactical Director, and it
+Everything above is general review practice. This section is specific to System XI, and it
 is the step most easily missed: **in this repo a defect found in APPROVED spec text is not resolved
 by fixing the code.** The spec is the contract, `SPEC_INDEX.md` says so, and a code fix that leaves
 the approved text wrong has moved the contradiction rather than closed it. `docs/tracking/spec-error-log.md`

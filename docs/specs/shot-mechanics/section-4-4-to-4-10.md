@@ -401,5 +401,5 @@ Goalkeeper Mechanics Spec #11 and does not block Shot Mechanics approval.
 ---
 
 *End of Section 4 — Shot Mechanics Specification #6*
-*Tactical Director — Specification #6 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #6 of 20 | Stage 0: Physics Foundation*
 *Next: Section 5 — Testing*

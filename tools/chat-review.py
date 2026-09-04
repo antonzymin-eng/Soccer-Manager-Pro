@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-chat-review.py — Claude Code session analyzer for Soccer Manager Pro.
+chat-review.py — Claude Code session analyzer for System XI.
 
 Created: July 31, 2026
 Purpose: Read Claude Code transcript JSONL files and emit an actionable-findings

@@ -124,4 +124,4 @@ instruction), not an ambient lane lookup.
 ---
 
 *End of Section 7 — Decision Tree Specification #8*  
-*Tactical Director — Specification #8 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #8 of 20 | Stage 0: Physics Foundation*

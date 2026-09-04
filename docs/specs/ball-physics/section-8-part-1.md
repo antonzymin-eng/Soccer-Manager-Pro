@@ -305,7 +305,7 @@ Video footage, match statistics, and empirical measurements used to validate for
 
 ### 8.2.3 Empirical Measurements and Field Tests
 
-**[FIELD-TEST-PLANNED]** Tactical Director Development Team. "Field Validation Tests (PLANNED)."
+**[FIELD-TEST-PLANNED]** System XI Development Team. "Field Validation Tests (PLANNED)."
 
 - **Status:** Not yet conducted. Planned for Stage 0 implementation phase.
 - **Purpose:** Validate COR and Î¼_r values from literature against real-world measurements
@@ -324,7 +324,7 @@ Cross-references to internal design documents. These references connect this spe
 
 ### 8.3.1 Master Volume I: Physics & Simulation Core
 
-**[MASTER-VOL1]** Tactical Director Development Team (2025). "Master Volume I: Physics & Simulation Core." *Internal Project Documentation*, v2.0, Dec 29, 2025.
+**[MASTER-VOL1]** System XI Development Team (2025). "Master Volume I: Physics & Simulation Core." *Internal Project Documentation*, v2.0, Dec 29, 2025.
 
 - **Section 6.1: Ball Physics Requirements**
   - Items 1-5 specify the systems implemented in this specification
@@ -345,7 +345,7 @@ Cross-references to internal design documents. These references connect this spe
 
 ### 8.3.2 Master Volume IV: Technical Implementation & Systems Engineering
 
-**[MASTER-VOL4]** Tactical Director Development Team (2025). "Master Volume IV: Technical Implementation & Systems Engineering." *Internal Project Documentation*, v2.0, Dec 29, 2025.
+**[MASTER-VOL4]** System XI Development Team (2025). "Master Volume IV: Technical Implementation & Systems Engineering." *Internal Project Documentation*, v2.0, Dec 29, 2025.
 
 - **Section 3.2: Performance Budgets**
   - Physics system budget: <5ms per frame for all 22 agents + ball at 60Hz
@@ -362,7 +362,7 @@ Cross-references to internal design documents. These references connect this spe
 
 ### 8.3.3 Master Development Plan
 
-**[MASTER-DEV-PLAN]** Tactical Director Development Team (2025). "Master Development Plan." *Internal Project Documentation*, v1.0, Dec 30, 2025.
+**[MASTER-DEV-PLAN]** System XI Development Team (2025). "Master Development Plan." *Internal Project Documentation*, v1.0, Dec 30, 2025.
 
 - **Section 2: Stage 0 Deliverables**
   - Lists Ball Physics Specification as first priority (Weeks 1-2)
@@ -383,7 +383,7 @@ Cross-references to internal design documents. These references connect this spe
 
 ### 8.3.4 Development Best Practices Document
 
-**[DEV-PRACTICES]** Tactical Director Development Team (2025). "Development Best Practices." *Internal Project Documentation*, v1.0, Dec 30, 2025.
+**[DEV-PRACTICES]** System XI Development Team (2025). "Development Best Practices." *Internal Project Documentation*, v1.0, Dec 30, 2025.
 
 - **Source:** Internal project document
 - **Section 2: Specification Writing Standards**

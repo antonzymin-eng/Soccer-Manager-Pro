@@ -310,5 +310,5 @@ This option set is passed to `ScoreOptions()` (§3.2) for utility assignment.
 
 *End of Section 3.1 — Option Generation*
 
-*Decision Tree Specification #8 | Tactical Director — Specification #8 of 20 | Stage 0: Physics Foundation*
+*Decision Tree Specification #8 | System XI — Specification #8 of 20 | Stage 0: Physics Foundation*
 *Next: Section 3.2 — Option Scoring: Utility Model*

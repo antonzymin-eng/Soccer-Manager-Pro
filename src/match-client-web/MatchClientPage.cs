@@ -43,7 +43,7 @@ namespace TacticalDirector.MatchClientWeb
 
             var sb = new StringBuilder(16_384);
             sb.Append(@"<!DOCTYPE html><html lang=""en""><head><meta charset=""utf-8"">
-<title>Tactical Director — Match</title>
+<title>System XI — Match</title>
 <style>
  body{background:#14181c;color:#dfe6ec;font:13px/1.45 system-ui,sans-serif;margin:0;padding:16px}
  h1{font-size:15px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin:0 0 12px;color:#8fa3b0}
@@ -63,7 +63,7 @@ namespace TacticalDirector.MatchClientWeb
  th:first-child,td:first-child{text-align:left;color:#8fa3b0;font-weight:400}
  .warn{color:#e06c75}
 </style></head><body>
-<h1>Tactical Director — Live Match</h1>
+<h1>System XI — Live Match</h1>
 <div id=""wrap"">
  <div>");
             sb.Append("<canvas id=\"pitch\" width=\"").Append(width)

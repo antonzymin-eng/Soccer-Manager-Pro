@@ -167,7 +167,7 @@ namespace TacticalDirector.DeterministicSim
             AssertEntry("S-02", buf, o, "03000000616263",
                 "3da9865b43fa2ec490f78da9db16acd5638704dbce5cc7b3df2e3c7a23addf19");
 
-            o = 0; CanonicalSerializer.WriteString(buf, ref o, "Tactical Director");
+            o = 0; CanonicalSerializer.WriteString(buf, ref o, "System XI");
             AssertEntry("S-03", buf, o, "11000000546163746963616c204469726563746f72",
                 "5cf517dc212e6764ef025056c198fc3b30d4ea3b8388851324ecead15818be3c");
 

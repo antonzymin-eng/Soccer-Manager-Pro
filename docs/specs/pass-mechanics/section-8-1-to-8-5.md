@@ -444,7 +444,7 @@ https://www.impect.com/
 
 ### 8.3.1 Master Volumes
 
-**[MASTER-VOL1]** Tactical Director Master Development Plan — Volume 1: Physics Core.
+**[MASTER-VOL1]** System XI Master Development Plan — Volume 1: Physics Core.
 
 - **Relevant sections:**
   - §1.3: Determinism requirement. Binding authority for §3.5 error model design
@@ -454,7 +454,7 @@ https://www.impect.com/
   - §6.x: Pass type classification taxonomy. Design authority for the seven pass types
     (Ground, Driven, Lofted, ThroughBall, AerialThrough, Cross, Chip).
 
-**[MASTER-VOL2]** Tactical Director Master Development Plan — Volume 2: Human Systems.
+**[MASTER-VOL2]** System XI Master Development Plan — Volume 2: Human Systems.
 
 - **Relevant sections:**
   - §FormSystem: Form modifier interface (deferred). Pass Mechanics §3.5 reserves a
@@ -464,7 +464,7 @@ https://www.impect.com/
   - §PlayerAttributes: Design authority for the [1–20] attribute range applied to
     Passing, Technique, KickPower [ERR-007], WeakFootRating [ERR-007], Crossing [ERR-007].
 
-**[MASTER-VOL4]** Tactical Director Master Development Plan — Volume 4: Tech Implementation.
+**[MASTER-VOL4]** System XI Master Development Plan — Volume 4: Tech Implementation.
 
 - **Relevant sections:**
   - §Performance: Reference CPU performance budget. Authority for the 0.05ms

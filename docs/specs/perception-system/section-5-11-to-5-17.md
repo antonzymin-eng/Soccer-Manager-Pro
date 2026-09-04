@@ -367,4 +367,4 @@ Delivered: 73 unit (1.8× minimum) + 15 integration (exceeds target of 12) + 7 s
 ---
 
 *End of Section 5 — Perception System Specification #7*
-*Tactical Director — Specification #7 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #7 of 20 | Stage 0: Physics Foundation*

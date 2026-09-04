@@ -1,6 +1,6 @@
 ---
 name: advisor-evidence
-description: Read-only empirical advisor for Tactical Director. Reviews a PLAN, diagnosis, or proposed change against evidence — test adequacy, football realism of measured numbers, and roadmap sequencing — before any code is written. Asks whether the claim is proven and whether it is even the right claim. Consulted by the /advisor skill and by the orchestrator at its decision points. Never edits, never commits.
+description: Read-only empirical advisor for System XI. Reviews a PLAN, diagnosis, or proposed change against evidence — test adequacy, football realism of measured numbers, and roadmap sequencing — before any code is written. Asks whether the claim is proven and whether it is even the right claim. Consulted by the /advisor skill and by the orchestrator at its decision points. Never edits, never commits.
 tools: Read, Grep, Glob
 model: opus
 ---

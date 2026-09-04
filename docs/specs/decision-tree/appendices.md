@@ -123,4 +123,4 @@ This trace format supports deterministic replay diffing when two runs diverge.
 ---
 
 *End of Appendices — Decision Tree Specification #8*  
-*Tactical Director — Specification #8 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #8 of 20 | Stage 0: Physics Foundation*

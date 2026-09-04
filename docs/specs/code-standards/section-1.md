@@ -30,7 +30,7 @@ owns, what it cites, and what is out of scope.
 ## 1.1 What This Specification Covers
 
 Spec #20 (Code Standards & Style Guide) is the governance specification for every
-Stage 1+ C# source file in the **Tactical Director** project. It establishes the
+Stage 1+ C# source file in the **System XI** project. It establishes the
 enforceable rules that all implementation code must satisfy before merging — covering
 style, constant tagging at code level, allocation discipline, determinism in code,
 dependency direction, documentation conventions, and conformance verification.
@@ -103,7 +103,7 @@ KD requires a version bump to this section before downstream sections are revise
 ### Authority Matrix
 
 The following table is the authoritative answer to any rule-ownership question across
-the Tactical Director project. Consult it before adding a rule to any document.
+the System XI project. Consult it before adding a rule to any document.
 
 | Rule class | Authoritative source | Spec #20 role |
 |---|---|---|
@@ -158,7 +158,7 @@ class documented in the Pass Mechanics audit.
 
 **KD-2 — Authority Matrix.**
 
-*Statement:* Every rule in the Tactical Director governance space has exactly one owner;
+*Statement:* Every rule in the System XI governance space has exactly one owner;
 the Authority Matrix in §1.3 names that owner.
 
 *Rationale:* Without an explicit ownership boundary, Spec #20 risks either under-
@@ -211,7 +211,7 @@ code, degrading reviewer trust in the tooling from first use.
 *Statement:* All numeric conformance thresholds — cyclomatic complexity, file length,
 method length, allocation count — are deferred to first real code (Deferral D1 in §7.5).
 
-*Rationale:* Pre-code thresholds are guesses. Tactical Director's struct-based,
+*Rationale:* Pre-code thresholds are guesses. System XI's struct-based,
 zero-allocation game loop will produce a different distribution of method lengths and
 complexity scores than a typical object-oriented Unity project. The right time to choose
 thresholds is after the first meaningful body of real code has been profiled and reviewed.
@@ -299,4 +299,4 @@ checks. Unsupported semantic claims remain report-only.
 ---
 
 *End of Section 1 — Code Standards & Style Guide Specification #20*
-*Tactical Director — Specification #20 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #20 of 20 | Stage 0: Physics Foundation*

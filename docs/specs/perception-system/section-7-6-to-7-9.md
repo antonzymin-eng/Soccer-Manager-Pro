@@ -127,6 +127,6 @@ When future extensions are implemented, the following invariants **must** be pre
 
 *End of Section 7 — Perception System Specification #7 (v1.1)*
 
-*Tactical Director — Specification #7 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #7 of 20 | Stage 0: Physics Foundation*
 
 *Next: Section 8 — References*

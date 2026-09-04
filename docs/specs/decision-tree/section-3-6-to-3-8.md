@@ -451,5 +451,5 @@ constants (`URGENCY_PRESSURE_SCALE`, `SPIN_INTENT_BELOW_CENTRE`, `SPIN_INTENT_OF
 ---
 
 *End of Section 3.4 through 3.8 — Decision Tree Specification #8*  
-*Tactical Director — Specification #8 of 20 | Stage 0: Physics Foundation*  
+*System XI — Specification #8 of 20 | Stage 0: Physics Foundation*
 *v1.0 — March 05, 2026, 12:00 PM PST*

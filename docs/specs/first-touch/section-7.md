@@ -648,7 +648,7 @@ and create drama.
    The model already produces realistic-looking imperfect touches without randomness.
 
 4. **Industry analysis:** Football Manager uses stochastic elements in its outcome
-   resolution. Tactical Director's differentiator is deterministic, observable physics
+   resolution. System XI's differentiator is deterministic, observable physics
    that players can understand and reason about. Introducing randomness would undermine
    this core value proposition.
 
