@@ -2,9 +2,10 @@
 """Emit spec directories that transition into APPROVED between two Git trees.
 
 Routine Testing Strategy auditors remain survey-only. This detector gives PR CI
-a narrow, mechanical signal for the one event where FR-TS-042/052 require those
-auditors to become blocking: a spec section changing from non-approved/missing to
-an approved status.
+a narrow, mechanical signal for the event where FR-TS-042/052 require those
+auditors to become blocking. SPEC_INDEX.md is the repository's canonical status
+authority, so the transition is derived from its base/head registry rows rather
+than from presentation-specific status text inside individual section files.
 """
 
 from __future__ import annotations
@@ -13,7 +14,9 @@ import argparse
 from pathlib import Path
 import subprocess
 
-from testing_strategy_audit import infer_status, is_approved_status
+from testing_strategy_audit import is_approved_status, registry_statuses_from_text
+
+INDEX_PATH = "docs/specs/SPEC_INDEX.md"
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,6 +49,16 @@ def blob_text(repo: Path, rev: str, path: str) -> str | None:
     return proc.stdout
 
 
+def registry_at(repo: Path, rev: str) -> dict[str, str]:
+    text = blob_text(repo, rev, INDEX_PATH)
+    if text is None:
+        raise SystemExit(f"cannot read canonical approval registry {rev}:{INDEX_PATH}")
+    statuses = registry_statuses_from_text(text)
+    if not statuses:
+        raise SystemExit(f"cannot parse canonical approval registry {rev}:{INDEX_PATH}")
+    return statuses
+
+
 def main() -> int:
     args = parse_args()
     repo = args.repo_root.resolve()
@@ -53,34 +66,15 @@ def main() -> int:
     git(repo, "cat-file", "-e", f"{args.base}^{{commit}}")
     git(repo, "cat-file", "-e", f"{args.head}^{{commit}}")
 
-    changed = git(
-        repo,
-        "diff",
-        "--name-only",
-        "--diff-filter=AM",
-        "--no-renames",
-        args.base,
-        args.head,
-        "--",
-        "docs/specs",
-    ).stdout.splitlines()
+    base_statuses = registry_at(repo, args.base)
+    head_statuses = registry_at(repo, args.head)
 
-    approval_dirs: set[str] = set()
-    for path in changed:
-        parts = Path(path).parts
-        if len(parts) < 4 or parts[0:2] != ("docs", "specs"):
-            continue
-        if not parts[-1].startswith("section-") or not parts[-1].endswith(".md"):
-            continue
-
-        current = blob_text(repo, args.head, path)
-        if current is None or not is_approved_status(infer_status(current)):
-            continue
-        previous = blob_text(repo, args.base, path)
-        if previous is not None and is_approved_status(infer_status(previous)):
-            continue
-
-        approval_dirs.add(str(Path(*parts[:3])))
+    approval_dirs = {
+        str(Path("docs") / "specs" / folder)
+        for folder, head_status in head_statuses.items()
+        if is_approved_status(head_status)
+        and not is_approved_status(base_statuses.get(folder))
+    }
 
     for spec_dir in sorted(approval_dirs):
         print(spec_dir)
