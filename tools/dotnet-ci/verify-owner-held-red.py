@@ -86,11 +86,14 @@ def main() -> int:
             return 1
         outcome, body = result
         if outcome == "Passed":
-            print(f"OWNER-HELD RED NOW GREEN: {name}; remove the exception in a follow-up.")
-            continue
+            print(
+                f"ERROR: owner-held RED unexpectedly passed: {name}; remove/review the exception before merge.",
+                file=sys.stderr,
+            )
+            return 1
         if outcome != "Failed":
             print(
-                f"ERROR: owner-held RED {name} ended with outcome={outcome!r}, expected Failed/Passed.",
+                f"ERROR: owner-held RED {name} ended with outcome={outcome!r}, expected Failed.",
                 file=sys.stderr,
             )
             return 1
@@ -111,9 +114,9 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    if not failed_expected and args.dotnet_exit != 0:
+    if args.dotnet_exit != 1:
         print(
-            "ERROR: dotnet failed but every owner-held result is green; another failure occurred.",
+            f"ERROR: owner-held RED run exited {args.dotnet_exit}; expected test-failure exit code 1.",
             file=sys.stderr,
         )
         return 1
