@@ -14,7 +14,11 @@
 #      actually touched it, so a new entry gets layered on a stale base.
 #   3. The OPEN ISSUES active/resolved counts drift from the real count — this
 #      has happened and been silently wrong before (the August 10, 2026
-#      correction in CLAUDE.md itself records a stale "14 active" claim).
+#      correction in CLAUDE.md itself records a stale "14 active" claim). The
+#      claim now lives in docs/agent-guides/project-reference.md, not root
+#      CLAUDE.md; this check read the old location until September 4, 2026 and
+#      printed UNPARSED on every run while the claim drifted to 15/46 against a
+#      true 21/51. A missing surface is now reported as BROKEN, not shrugged at.
 #
 # EXIT-CODE CONTRACT. This script reports; it does not decide whether drift is
 # acceptable to land on top of, or write anything. Classes 2 and 3 above are
@@ -91,15 +95,29 @@ echo "== Open-issues active/resolved count check =="
 active="$(grep -c '^- \*\*' docs/tracking/open-issues.md 2>/dev/null || true)"
 resolved="$(grep -c '^- \*\*' docs/tracking/open-issues-resolved.md 2>/dev/null || true)"
 echo "counted: $active active / $resolved resolved"
-claim="$(sed -nE 's/^\*\*([0-9]+) active\*\* \/ ([0-9]+) resolved.*/\1 \2/p' CLAUDE.md)"
-if [[ "$(printf '%s\n' "$claim" | grep -c .)" -ne 1 ]]; then
-  echo "UNPARSED: root CLAUDE.md's OPEN ISSUES header did not match '**N active** / M resolved' exactly once — compare by hand."
+# The claim lives in docs/agent-guides/project-reference.md's OPEN ISSUES section.
+# It used to live in root CLAUDE.md; the compact restructure moved it and this check
+# was not repointed, so from then until September 4, 2026 it read a file with no such
+# section and printed UNPARSED on every run — checking nothing, while the real claim
+# drifted to 15/46 against a true 21/51. A check that cannot find its surface is a
+# broken check, not a clean result, so the two cases are now reported differently.
+claim_file="docs/agent-guides/project-reference.md"
+if [[ ! -f "$claim_file" ]]; then
+  echo "BROKEN: $claim_file does not exist — this check has no surface to read; repoint it."
 else
-  read -r claimed_active claimed_resolved <<< "$claim"
-  if [[ "$claimed_active" == "$active" && "$claimed_resolved" == "$resolved" ]]; then
-    echo "OK: root CLAUDE.md claims $claimed_active active / $claimed_resolved resolved — matches."
+  claim="$(sed -nE 's/^\*\*([0-9]+) active\*\* \/ ([0-9]+) resolved.*/\1 \2/p' "$claim_file")"
+  n_claims="$(printf '%s\n' "$claim" | grep -c . || true)"
+  if [[ "$n_claims" -eq 0 ]]; then
+    echo "BROKEN: $claim_file carries no '**N active** / M resolved' line — this check is currently checking NOTHING. Find where the claim moved and repoint it; do not read this as a pass."
+  elif [[ "$n_claims" -ne 1 ]]; then
+    echo "UNPARSED: $claim_file matched '**N active** / M resolved' $n_claims times, expected exactly once — compare by hand."
   else
-    echo "FAIL: root CLAUDE.md claims $claimed_active active / $claimed_resolved resolved — counted $active / $resolved."
+    read -r claimed_active claimed_resolved <<< "$claim"
+    if [[ "$claimed_active" == "$active" && "$claimed_resolved" == "$resolved" ]]; then
+      echo "OK: $claim_file claims $claimed_active active / $claimed_resolved resolved — matches."
+    else
+      echo "FAIL: $claim_file claims $claimed_active active / $claimed_resolved resolved — counted $active / $resolved."
+    fi
   fi
 fi
 
