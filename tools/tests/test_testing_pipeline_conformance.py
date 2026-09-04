@@ -49,6 +49,8 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stdout)
             self.assertIn("checklist_auditor=", proc.stdout)
             self.assertIn("schema_auditor=", proc.stdout)
+            self.assertIn("auditor_args=", proc.stdout)
+            self.assertIn("--changed-scope", proc.stdout)
             self.assertIn("gate=", proc.stdout)
             self.assertIn("gate_args=", proc.stdout)
             self.assertIn(expected, proc.stdout)
@@ -283,7 +285,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             ).strip()
             self.assertEqual(configured, ".githooks")
 
-    def test_auditors_block_broken_placeholder_and_prose_only_evidence(self) -> None:
+    def test_auditors_block_broken_placeholder_and_prose_only_evidence_for_approved_spec(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             specs = repo / "docs" / "specs"
@@ -292,6 +294,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             section5 = textwrap.dedent(
                 """\
                 # Spec #9 — Section 5: Test Plan
+                **Status:** APPROVED
                 | Layer | Unit | Integration | Simulation |
                 | --- | --- | --- | --- |
                 | Count | 1 | 1 | 1 |
@@ -308,6 +311,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 textwrap.dedent(
                     """\
                     # Spec #9 — Approval Checklist
+                    **Status:** APPROVED
                     | Row | Claim | Evidence |
                     | --- | --- | --- |
                     | 9.1 | schema | `section-5.md` |
@@ -326,7 +330,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertEqual(good.returncode, 0, good.stdout)
 
             checklist.write_text(
-                "# Spec #9 — Approval Checklist\n"
+                "# Spec #9 — Approval Checklist\n**Status:** APPROVED\n"
                 "| Row | Claim | Evidence |\n| --- | --- | --- |\n"
                 "| 9.1 | schema | this test check is fine |\n",
                 encoding="utf-8",
@@ -343,7 +347,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertIn("prose only", prose.stdout)
 
             checklist.write_text(
-                "# Spec #9 — Approval Checklist\n"
+                "# Spec #9 — Approval Checklist\n**Status:** APPROVED\n"
                 "| Row | Claim | Evidence |\n| --- | --- | --- |\n"
                 "| 9.1 | schema | `<file-path>` |\n",
                 encoding="utf-8",
@@ -359,6 +363,50 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertEqual(placeholder.returncode, 1, placeholder.stdout)
             self.assertIn("placeholder evidence", placeholder.stdout)
 
+    def test_amendment_draft_findings_are_reported_but_nonblocking(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            specs = repo / "docs" / "specs"
+            spec9 = specs / "spec-nine"
+            spec9.mkdir(parents=True)
+            (spec9 / "section-9-approval-checklist.md").write_text(
+                "# Spec #9 — Approval Checklist\n"
+                "**Status:** AMENDMENT DRAFT (approved baseline remains in force)\n"
+                "| Row | Claim | Evidence |\n| --- | --- | --- |\n"
+                "| 9.1 | pending | prose only |\n",
+                encoding="utf-8",
+            )
+            proc = self.run_cmd(
+                "python3",
+                str(ROOT / "tools" / "checklist-auditor.py"),
+                "--root", str(specs),
+                "--repo-root", str(repo),
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertIn("SURVEY", proc.stdout)
+            self.assertIn("prose only", proc.stdout)
+
+    def test_local_section_reference_is_resolved_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            specs = repo / "docs" / "specs"
+            spec9 = specs / "spec-nine"
+            spec9.mkdir(parents=True)
+            (spec9 / "section-3.md").write_text("# Spec #9 — Section 3\n", encoding="utf-8")
+            (spec9 / "section-9-approval-checklist.md").write_text(
+                "# Spec #9 — Approval Checklist\n**Status:** APPROVED\n"
+                "| Row | Claim | Evidence |\n| --- | --- | --- |\n"
+                "| 9.1 | algorithm | §3.2 §3.4 |\n",
+                encoding="utf-8",
+            )
+            proc = self.run_cmd(
+                "python3",
+                str(ROOT / "tools" / "checklist-auditor.py"),
+                "--root", str(specs),
+                "--repo-root", str(repo),
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+
     def test_spec5_auditor_rejects_keywords_hidden_in_unstructured_prose(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
@@ -367,6 +415,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             spec9.mkdir(parents=True)
             (spec9 / "section-5.md").write_text(
                 "# Spec #9 — Section 5\n"
+                "**Status:** APPROVED\n"
                 "This paragraph says unit integration simulation property scenario coverage tier "
                 "determinism approval but defines no schema surfaces.\n",
                 encoding="utf-8",
@@ -382,13 +431,16 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 1, proc.stdout)
             self.assertIn("missing structured taxonomy/test-count", proc.stdout)
 
-    def test_legacy_schema_is_survey_only(self) -> None:
+    def test_legacy_schema_is_survey_only_even_when_approved(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             specs = repo / "docs" / "specs"
             legacy = specs / "legacy"
             legacy.mkdir(parents=True)
-            (legacy / "section-5.md").write_text("# Spec #1 — Section 5\nUnit only.\n", encoding="utf-8")
+            (legacy / "section-5.md").write_text(
+                "# Spec #1 — Section 5\n**Status:** APPROVED\nUnit only.\n",
+                encoding="utf-8",
+            )
             schema = self.run_cmd(
                 "python3",
                 str(ROOT / "tools" / "spec5-schema-auditor.py"),
