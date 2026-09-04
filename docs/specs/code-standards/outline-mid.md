@@ -8,7 +8,7 @@ code blocks, or rationale prose — those land in the detailed outline.
 
 **Created:** May 6, 2026, 7:15 PM PST
 **Updated:** September 2, 2026
-**Version:** 1.4
+**Version:** 1.5
 **Status:** DRAFT — A3.1b synchronized; normative section files control
 **Companion documents:** `outline.md` (high-level), `outline-detailed.md`
 (to be drafted after this outline is validated).
@@ -223,8 +223,10 @@ code blocks, or rationale prose — those land in the detailed outline.
 ### 3.5 Dependency Direction & Interface Design (FR-CS-046 … 055)
 - 3.5.1 Citation: "interfaces only when both sides are specified" rule
   owned by root `CLAUDE.md`. Spec #20 binds it to file placement.
-- 3.5.2 Dependency arrow rules: layer order Physics → Mechanics → AI → UI;
-  no upward references; events flow upward via struct dispatch.
+- 3.5.2 Dependency arrow rules: the §3.5.2 ten-tier order (Foundation →
+  Physics → Configuration → Mechanics → AI → Data → Composition →
+  Management → Presentation → Client) with its arrow labelled; no upward
+  references; events flow upward via struct dispatch.
 - 3.5.3 Interface placement rule: an `interface` file MUST live in the
   same assembly as at least one specified consumer. No "phantom"
   interface folders.
@@ -582,3 +584,4 @@ code blocks, or rationale prose — those land in the detailed outline.
 | 1.2     | May 6, 2026 | Claude Code | Self-critique pass 2: §1.1 applicability extended to determinism-only Python tooling subset; §1.4 reconciled with §3.1.3 on `certification-platform.md` gating; §3.3-vs-§6.1 disambiguated (discipline-vs-budget); §3.4.3 split into APIs vs patterns; §3.4.5 / §3.7.5 placeholder strikethroughs removed; §3.9.4 split by test type (determinism-harness vs general vs property-based); Appendix D reflection re-categorized to alloc-hot-path; Appendix D split det-required into APIs and patterns; Appendix D `Stopwatch.GetTimestamp` scoped to game-state assemblies. No outstanding self-critique findings. |
 | 1.3     | May 6, 2026 | Claude Code | Back-alignment with detailed outline v1.2: §2.2 FR partition extended with FR-CS-071..073 (Numeric Type Discipline) — §3.7 had been substantive but FR-less. Total FR count 70 → 73. No other content changes; mid-level outline remains the section-by-section subsection list. |
 | 1.4     | September 2, 2026 | Codex | A3.1b synchronization: current 81-FR partition, §3.5.6–§3.5.7 architecture mechanics, eight §5.4 categories, Governance/#19 authority boundary, existing `src/CLAUDE.md`, and Appendix F. Historical 70→73 record preserved. |
+| 1.5     | September 4, 2026 | — | **A3.3 reconciliation correction — reverses a recorded disposition, by owner direction.** §3.5.2's dependency-arrow line still named the retired three-layer `Physics → Mechanics → AI → UI` chain; restated against the adopted ten-tier order. `ERR-020-002`'s "Deliberately not changed" list named this exact line; that paragraph is annotated at its own site to record the reversal. No normative rule changed; the section files remain the authority. |

@@ -1,8 +1,8 @@
 # Testing Strategy & Framework Specification #19 — Section 5: Test Plan (Conformance Verification of This Spec Itself)
 
 **Created:** May 12, 2026
-**Last Updated:** September 3, 2026
-**Version:** 0.5
+**Last Updated:** September 4, 2026
+**Version:** 0.8
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Reflexive test plan: this section verifies Spec #19
@@ -30,25 +30,40 @@ mechanics for that conformance check live here in §5.4.
 
 Per-FR table. Most FRs read "Stage 0+1" with criterion "first `src/`
 code committed". A subset reads "Stage 0" with criterion "applies to
-spec drafts now" — notably the KD-6 mandate FRs (FR-TS-040 … 045) and
-per-spec §5 schema FRs (FR-TS-046 … 052).
+spec drafts now" — notably the KD-6 mandate FRs (FR-TS-040 … 042, 044,
+045) and per-spec §5 schema FRs (FR-TS-046 … 052). **The ranges named
+in this paragraph are the activation ranges, which are not the §2.2
+partition ranges:** §2.2 partitions FR-TS-040 … 045 to KD-6 mechanics
+in §3.5, but assigns FR-TS-043 Stage 0+1, so it is listed separately in
+the table below (`ERR-019-002`).
 
 > **Column semantics.** The "Stage 0 Status" column below describes
 > *current enforcement state* (`ACTIVE (Stage 0)` = enforced today;
 > `Inactive` = waiting for activation criterion). The "Activation
 > Stage" column matches the same-name column in §2.2 (the stage at
-> which the FR begins to gate merges). For procedural FRs (FR-TS-040
-> … 052), both columns read "Stage 0" because the activation criterion
-> is "applies to spec drafts now" — there is nothing further to wait
-> for.
+> which the FR begins to gate merges). For most procedural FRs
+> (FR-TS-040 … 042, 044 … 052), both columns read "Stage 0" because the
+> activation criterion is "applies to spec drafts now" — there is
+> nothing further to wait for. **FR-TS-043 is the one row where the two
+> columns deliberately differ**, and it shows why there are two: §2.2
+> assigns it Stage 0+1, a stage §7.1 defines as the first `src/` commit and
+> which is therefore already REACHED, while `tools/checklist-auditor.py`
+> does not exist — so the row is active and non-conformant rather than
+> half-satisfied (`ERR-019-003`). Split out at `ERR-019-002`; before that split the band
+> published a single Stage 0 for both columns, contradicting §2.2.
 
 | FR Range | Stage 0 Status | Activation Stage | Activation Criterion |
 |----------|----------------|------------------|----------------------|
 | FR-TS-001 … 010 | Inactive (no code) | Stage 0+1 | First `src/` code commit |
-| FR-TS-011 … 020 | Inactive | Stage 0+1 | #16 §5 CI integration available |
-| FR-TS-021 … 030 | Schema only (Stage 0) | Stage 0+1 | Scenario runner implemented |
-| FR-TS-031 … 039 | Inactive | Stage 0+1 | Property framework pinned (D2) |
-| FR-TS-040 … 045 | **ACTIVE (Stage 0)** | Stage 0 | Applies to current spec drafts |
+| FR-TS-011, 012, 014, 016, 017, 019 | Inactive | Stage 0+1 | #16 §5 CI integration available |
+| FR-TS-013, 015, 018, 020 | **ACTIVE (Stage 0)** | **Stage 0** | Applies to the current spec set. §2.2 assigns all four Stage 0 — they are spec-drafting obligations (taxonomy collision, boundary review, no new tier categories, the §1.4 recording duty) with no code prerequisite. They were buried in the Stage 0+1 band above until `ERR-019-002` |
+| FR-TS-021, 023 … 030 | Schema only (Stage 0) | Stage 0+1 | Scenario runner implemented |
+| FR-TS-022 | **ACTIVE (Stage 0)** | **Stage 0** | Applies to the current spec set. §2.2 assigns FR-TS-022 Stage 0: it places per-spec scenarios in the owning spec's §5 and cross-spec scenarios in #19 §3 (KD-8), which is a drafting rule that binds before any runner exists. Buried in the Stage 0+1 band above until `ERR-019-002` |
+| FR-TS-031 … 037 | Inactive | Stage 0+1 | Property framework pinned (D2) |
+| FR-TS-038 | **ACTIVE (Stage 0)** | **Stage 0** | Applies to the current spec set. §2.2 assigns FR-TS-038 Stage 0: it requires Appendix B to carry an exemplar for every category named in §3.4.4, which is checkable against the committed appendix today and does not wait on D2. Buried in the Stage 0+1 band above until `ERR-019-002` |
+| FR-TS-039 | Inactive | **Stage 1+** | Coverage-guided (AFL-style) fuzzing, deferred to **D8** in §7.5. §2.2 assigns FR-TS-039 Stage 1+ and it is the catalogue's only MAY in this partition; the band above published both the wrong stage and the wrong deferral (D2, which pins the property framework, not the fuzzer). Corrected at `ERR-019-002` |
+| FR-TS-040 … 042, 044, 045 | **ACTIVE (Stage 0)** | Stage 0 | Applies to current spec drafts |
+| FR-TS-043 | **ACTIVE (Stage 0+1) — non-conformant** | **Stage 0+1** | §2.2 assigns FR-TS-043 Stage 0+1, and **Stage 0+1 is REACHED** — §7.1 defines it as the first `src/` code commit (KD-5), which this repository passed long ago. Its Stage 0 manual mechanics are enforced; its Stage 0+1 automated mechanics are **not**, because `tools/checklist-auditor.py` — the script FR-TS-043 names, and a §7.1 transition deliverable — **does not exist**. The row is therefore active and unmet, not half-satisfied. `ERR-019-002` split it out of the KD-6 band but described the automation as something that would "arrive at Stage 0+1", framing a reached stage as future and concealing the gap; corrected at `ERR-019-003`, gap open at `open-issues.md` |
 | FR-TS-046 … 052 | **ACTIVE (Stage 0)** | Stage 0 | Applies to current spec drafts |
 | FR-TS-053 … 060 | Inactive | Stage 0+1 | Coverage tool pinned (D3) |
 | FR-TS-061 … 067 | Inactive | Stage 0+1 | CI integration layer specified (§7.2) |
@@ -163,10 +178,15 @@ acknowledged degenerate (parallel to Spec #20 §5.5).
 | FR | Mechanism | Tooling | Activation | Output Artifact |
 |----|-----------|---------|------------|-----------------|
 | FR-TS-001 … 010 | Pyramid-ratio check at PR-merge | Coverage tool + custom analyzer | Stage 0+1 | CI report |
-| FR-TS-011 … 020 | Boundary review at #16 §5 change | Manual at Stage 0; CI sentinel at Stage 0+1 | Stage 0+1 | Review note in PR |
-| FR-TS-021 … 030 | Scenario runner schema check | `ScenarioRunner` load step + §5.4 auditor | Stage 0+1 | Runner exit status |
-| FR-TS-031 … 039 | Property / fuzz seed-log inspection | Property framework log + manual review | Stage 0+1 | Run log under `tests/data/run-logs/` |
-| FR-TS-040 … 045 | Checklist auditor | Manual (Stage 0) → `tools/checklist-auditor.py` (Stage 0+1) | **Stage 0** | Auditor report appended to PR description |
+| FR-TS-011, 012, 014, 016, 017, 019 | Boundary review at #16 §5 change | Manual at Stage 0; CI sentinel at Stage 0+1 | Stage 0+1 | Review note in PR |
+| FR-TS-013, 015, 018, 020 | Boundary review at #16 §5 change | Manual review against §3.2 mechanics | **Stage 0** | Review note in PR |
+| FR-TS-021, 023 … 030 | Scenario runner schema check | `ScenarioRunner` load step + §5.4 auditor | Stage 0+1 | Runner exit status |
+| FR-TS-022 | Scenario-placement review at spec §5 authoring (KD-8) | Manual review against §3.3 mechanics | **Stage 0** | Review note in PR |
+| FR-TS-031 … 037 | Property / fuzz seed-log inspection | Property framework log + manual review | Stage 0+1 | Run log under `tests/data/run-logs/` |
+| FR-TS-038 | Appendix B category-coverage check against §3.4.4 | Manual review of the committed appendix | **Stage 0** | Review note in PR |
+| FR-TS-039 | Coverage-guided fuzzing — not adopted by default | Deferred to **D8** (§7.5); no mechanism until adopted | **Stage 1+** | None until D8 resolves |
+| FR-TS-040 … 042, 044, 045 | Checklist auditor | Manual (Stage 0) → `tools/checklist-auditor.py` (Stage 0+1) | **Stage 0** | Auditor report appended to PR description |
+| FR-TS-043 | Auditor-mechanics stage pin | Manual reviewer only; the `tools/checklist-auditor.py` half is **unimplemented at a reached Stage 0+1** (`ERR-019-003`) | **Stage 0+1** | Manual auditor report appended to PR description; no automated report exists |
 | FR-TS-046 … 052 | §5.4 schema-conformance auditor | Manual (Stage 0) → `tools/spec5-schema-auditor.py` (Stage 0+1) | **Stage 0** | Auditor report |
 | FR-TS-053 … 060 | Coverage auditor | D3 coverage tool + per-tier mapper | Stage 0+1 | Per-PR coverage delta |
 | FR-TS-061 … 067 | Flake ledger + eviction-log review | CI double-run + `tests/flake-eviction-log.md` | Stage 0+1 | Flake ledger |
@@ -218,11 +238,14 @@ own implementation/activation.
 ## 5.7 Determinism-Suite Consumption Verification
 
 > **Cross-reference.** §2.2 partition-table "Verification in" column
-> points to §5.7 for FR-TS-011 … 020; §5.6 traceability row for that
-> range names "Manual at Stage 0; CI sentinel at Stage 0+1" with
-> output artifact "Review note in PR." The two views are
-> complementary, not contradictory: §5.7 publishes the *contract*;
-> §5.6 publishes the *artifact*.
+> points to §5.7 for FR-TS-011 … 020; §5.6 now carries that partition
+> as **two** rows, split at `ERR-019-002` because §2.2 assigns
+> FR-TS-013, 015, 018 and 020 Stage 0 while the rest of the partition
+> is Stage 0+1. The Stage 0+1 row names "Manual at Stage 0; CI
+> sentinel at Stage 0+1" with output artifact "Review note in PR"; the
+> Stage 0 row names manual review against §3.2 mechanics with the same
+> artifact. The two views remain complementary, not contradictory:
+> §5.7 publishes the *contract*; §5.6 publishes the *artifact*.
 
 - Spec #19 declares **no numerical determinism tests of its own**.
 - This subsection records the *consumption* contract: every CI
@@ -243,6 +266,9 @@ own implementation/activation.
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Stage-gated activation table + traceability table populated. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5; #16 §1.3 → §1.1.1. L5 §5.6 / §5.7 cross-reference added. L6 column-semantics disambiguation added to §5.2 lead. |
-| 0.5     | September 3, 2026 | — | **A3.2b review correction (`ERR-019-001`).** Reconciles the FR-TS-075 … 080 band in §5.2 and §5.6 with the normative core: FR-TS-079 gets its own **Stage 0** row per §2.2, and FR-TS-075 … 078, 080 carry the actual Stage 0+1 criterion (first `src/` code commit, KD-5 / §7.1) — **reached** — in place of "CI provider pinned (D4)", which the normative core never defined. The band was therefore mis-reported as `Inactive` from the day it was written, not by D4's closure. Activation is deliberately not deferred behind a new prerequisite: gating FR-TS-075 on the three-pipeline topology it itself mandates would be circular and fail-open. The real gap this concealed — two absent mandatory pipelines and an absent Appendix E script — is recorded at `ERR-019-001` and open at `docs/tracking/open-issues.md`. |
-| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 1).** Splits FR-TS-093 out of the FR-TS-086 … 097 band in §5.2 and corrects its §5.6 activation cell: §2.2 assigns FR-TS-093 **Stage 0**, so the band's Stage 0+1 value contradicted the normative core and attached A4/A8 prerequisites the requirement does not have. Its Stage 0 *status* is unchanged — still AMENDMENT DRAFT and non-blocking until A3.4 reapproval, because the May 15, 2026 baseline remains operative; no requirement is activated here. |
 | 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Extends §5.2 and §5.6 through FR-TS-097, adds the architecture-proof negative-fixture matrix, preserves non-blocking draft state until A3.4/A4/A8 prerequisites, and does not activate a CI gate. |
+| 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 1).** Splits FR-TS-093 out of the FR-TS-086 … 097 band in §5.2 and corrects its §5.6 activation cell: §2.2 assigns FR-TS-093 **Stage 0**, so the band's Stage 0+1 value contradicted the normative core and attached A4/A8 prerequisites the requirement does not have. Its Stage 0 *status* is unchanged — still AMENDMENT DRAFT and non-blocking until A3.4 reapproval, because the May 15, 2026 baseline remains operative; no requirement is activated here. |
+| 0.5     | September 3, 2026 | — | **A3.2b review correction (`ERR-019-001`).** Reconciles the FR-TS-075 … 080 band in §5.2 and §5.6 with the normative core: FR-TS-079 gets its own **Stage 0** row per §2.2, and FR-TS-075 … 078, 080 carry the actual Stage 0+1 criterion (first `src/` code commit, KD-5 / §7.1) — **reached** — in place of "CI provider pinned (D4)", which the normative core never defined. The band was therefore mis-reported as `Inactive` from the day it was written, not by D4's closure. Activation is deliberately not deferred behind a new prerequisite: gating FR-TS-075 on the three-pipeline topology it itself mandates would be circular and fail-open. The real gap this concealed — two absent mandatory pipelines and an absent Appendix E script — is recorded at `ERR-019-001` and open at `docs/tracking/open-issues.md`. |
+| 0.6     | September 4, 2026 | — | **A3.3 reconciliation correction (`ERR-019-002`).** §5.2 and §5.6 published an Activation Stage for **eight** FR rows that contradicted §2.2 — the same defect class as `ERR-019-001`, found by the A3.3 traceability gate comparing the two columns mechanically rather than by eye. §5.2's own column-semantics note states that its Activation Stage column *matches the same-name column in §2.2*, so any disagreement is a defect by the table's own contract. Six Stage 0 MUSTs (FR-TS-013, 015, 018, 020, 022, 038) were buried in Stage 0+1 bands and published as `Inactive`/`Schema only` behind criteria they do not wait on; FR-TS-039, the partition's only MAY, was published as Stage 0+1 behind D2 when §2.2 assigns it Stage 1+ and its own statement defers it to **D8**; and FR-TS-043 was published as Stage 0 inside an **ACTIVE** band when §2.2 assigns it Stage 0+1. Each is split to its own row in **both** tables and the Activation Stage column now reproduces §2.2 for all 97 rows, verified mechanically. FR-TS-043 is split rather than forced to one value: it spans both stages by construction, so its Stage 0 Status records the enforced manual half while its Activation Stage carries §2.2's Stage 0+1. §5.7's cross-reference note is updated for the FR-TS-011 … 020 split. **No FR statement, level, or §2.2 activation value changed** — §2.2 is the authority both tables were already required to reproduce, and this pass moved the tables to it, not the reverse. |
+| 0.7     | September 4, 2026, later | — | **Self-review correction to v0.6 — the same defect class, created by the fix for it.** v0.6 corrected the §5.2/§5.6 tables and left §5.2's own preamble and column-semantics note asserting the pre-split state: the preamble named the Stage 0 subset as "FR-TS-040 … 045" and the note said that for FR-TS-040 … 052 "both columns read Stage 0". Both are falsified by v0.6's own FR-TS-043 split, so the section shipped prose contradicting the table directly beneath it — which is what `ERR-019-002` is about. Both are corrected, and the note now states FR-TS-043 as the deliberate two-column divergence it is, with the reason. No table row, FR statement, level, or §2.2 value changed. |
+| 0.8     | September 4, 2026, later still | — | **`ERR-019-003` — the `ERR-019-002` fix concealed an unmet MUST; found by the Codex review bot on PR #358 (P1).** v0.6 split FR-TS-043 out of the KD-6 band and described its automated half as mechanics that "arrive at Stage 0+1", reporting only the manual half as active. But **§7.1 defines Stage 0+1 as the first `src/` code commit (KD-5) and this repository passed it long ago**, so the stage is reached, not pending — and `tools/checklist-auditor.py`, the script FR-TS-043 names and a §7.1 transition deliverable, **does not exist** (verified: every reference to it is documentation). The row therefore published a reached, unmet Stage 0+1 MUST as half-satisfied. That is `ERR-019-001`'s defect class exactly — a table state concealing an absent deliverable — reproduced by the fix for `ERR-019-002`. Both rows and the §5.2 preamble now state the stage as REACHED and the row as **ACTIVE — non-conformant**. The gap itself is **recorded, not fixed**, and open at `open-issues.md`: writing the auditor is an implementation pass, not a table edit. No FR statement, level, or §2.2 activation value changed. |
