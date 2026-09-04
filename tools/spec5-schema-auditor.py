@@ -15,9 +15,9 @@ from pathlib import Path
 
 from testing_strategy_audit import (
     Finding,
+    canonical_spec_status,
     describe,
     infer_spec_id,
-    infer_status,
     is_approved_status,
     is_legacy_survey,
     iter_tables,
@@ -126,6 +126,10 @@ def int_cell(cell: str) -> bool:
     return bool(re.fullmatch(r"\s*\d+\s*", clean(cell)))
 
 
+def int_or_dash_cell(cell: str) -> bool:
+    return int_cell(cell) or clean(cell) == "—"
+
+
 def tier_cell(cell: str) -> bool:
     return clean(cell).upper() in {"A", "B", "C"}
 
@@ -134,6 +138,14 @@ def percent_at_least(cell: str, expected: int) -> bool:
     value = clean(cell).replace(" ", "")
     match = re.search(r"(\d+(?:\.\d+)?)%", value)
     return bool(match and float(match.group(1)) >= expected)
+
+
+def taxonomy_row(rows: list[list[str]], layer_i: int, prefix: str) -> list[str] | None:
+    prefix = prefix.lower()
+    return next(
+        (row for row in rows if len(row) > layer_i and clean(row[layer_i]).lower().startswith(prefix)),
+        None,
+    )
 
 
 def validate_taxonomy(block: str | None) -> list[str]:
@@ -145,14 +157,23 @@ def validate_taxonomy(block: str | None) -> list[str]:
     headers, rows = table
     layer_i, count_i = column_index(headers, "layer"), column_index(headers, "count")
     assert layer_i is not None and count_i is not None
-    by_layer = {clean(r[layer_i]).lower(): r for r in rows if len(r) > max(layer_i, count_i)}
     errors: list[str] = []
-    for label in ("unit", "integration", "simulation"):
-        row = next((r for key, r in by_layer.items() if key == label), None)
+
+    # Appendix C has FIVE required taxonomy rows. The determinism count is the
+    # one row that permits an em dash because the suite is consumed from #16.
+    required = (
+        ("unit", "Unit", int_cell, "an integer"),
+        ("integration", "Integration", int_cell, "an integer"),
+        ("simulation", "Simulation", int_cell, "an integer"),
+        ("determinism", "Determinism (consumed from #16 §5)", int_or_dash_cell, "an integer or —"),
+        ("end-to-end / soak", "End-to-end / soak", int_cell, "an integer"),
+    )
+    for prefix, display, validator, payload in required:
+        row = taxonomy_row(rows, layer_i, prefix)
         if row is None:
-            errors.append(f"§5.1 missing {label.title()} row")
-        elif not int_cell(row[count_i]):
-            errors.append(f"§5.1 {label.title()} Count must be an integer")
+            errors.append(f"§5.1 missing {display} row")
+        elif len(row) <= count_i or not validator(row[count_i]):
+            errors.append(f"§5.1 {display} Count must be {payload}")
     return errors
 
 
@@ -289,7 +310,7 @@ def main() -> int:
             continue
         text = "\n".join(p.read_text(encoding="utf-8") for p in files)
         spec_id = infer_spec_id(text)
-        status = infer_status(text)
+        status = canonical_spec_status(repo_root, spec_dir, fallback_text=text)
         enforced = spec_dir_enforced(
             spec_dir,
             survey_only=args.survey_only,
