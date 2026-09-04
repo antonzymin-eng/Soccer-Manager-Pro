@@ -1,0 +1,99 @@
+name: System XI naming migration
+
+on:
+  push:
+    branches:
+      - codex/system-xi-naming-migration
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Replace legacy product names
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          replacements = (
+              (b"TACTICAL DIRECTOR", b"SYSTEM XI"),
+              (b"Tactical Director", b"System XI"),
+              (b"tactical director", b"System XI"),
+              (b"SOCCER MANAGER PRO", b"SYSTEM XI"),
+              (b"Soccer Manager Pro", b"System XI"),
+              (b"soccer manager pro", b"System XI"),
+          )
+
+          probe = subprocess.run(
+              [
+                  "git", "grep", "-Ilz",
+                  "-e", "Tactical Director",
+                  "-e", "tactical director",
+                  "-e", "Soccer Manager Pro",
+                  "-e", "soccer manager pro",
+                  "--", ".",
+                  ":!.github/workflows/system-xi-naming-migration.yml",
+              ],
+              stdout=subprocess.PIPE,
+              check=False,
+          )
+
+          changed = []
+          for raw_path in probe.stdout.split(b"\0"):
+              if not raw_path:
+                  continue
+              path = Path(raw_path.decode())
+              data = path.read_bytes()
+              updated = data
+              for old, new in replacements:
+                  updated = updated.replace(old, new)
+              if updated != data:
+                  path.write_bytes(updated)
+                  changed.append(str(path))
+
+          readme = Path("README.md")
+          text = readme.read_text(encoding="utf-8")
+          if text.startswith("# Football Management Simulation\n"):
+              text = text.replace(
+                  "# Football Management Simulation\n",
+                  "# System XI\n\n*Football Management Simulation*\n",
+                  1,
+              )
+              readme.write_text(text, encoding="utf-8")
+              if "README.md" not in changed:
+                  changed.append("README.md")
+
+          old_design = Path("docs/design/ui-mockups/Soccer Manager Pro - Design System.html")
+          new_design = Path("docs/design/ui-mockups/System XI - Design System.html")
+          if old_design.exists():
+              subprocess.run(["git", "mv", str(old_design), str(new_design)], check=True)
+
+          print(f"Updated {len(changed)} tracked text files.")
+          for path in changed:
+              print(path)
+          PY
+
+          git diff --check
+
+          # Repository slugs, namespaces, assemblies, and historical GitHub URLs are intentionally unchanged.
+          if git grep -In -e 'Tactical Director' -e 'Soccer Manager Pro' -- . ':!.github/workflows/system-xi-naming-migration.yml'; then
+            echo 'Legacy human-readable product name remains after migration.' >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/system-xi-naming-migration.yml
+          git add -A
+          git diff --cached --check
+          git commit -m "Rename project to System XI"
+          git push origin HEAD:codex/system-xi-naming-migration
