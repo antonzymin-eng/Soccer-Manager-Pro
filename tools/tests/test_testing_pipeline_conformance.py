@@ -18,8 +18,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         self.assertIn("--nightly", text)
 
     def test_pre_commit_excludes_long_simulation_classes(self) -> None:
-        path = ROOT / "tools" / "run-tests-local.sh"
-        text = path.read_text(encoding="utf-8")
+        text = (ROOT / "tools" / "run-tests-local.sh").read_text(encoding="utf-8")
         self.assertIn("TD_GATE_TEST_FILTER", text)
         self.assertIn("FullyQualifiedName!~sim_", text)
         self.assertIn("FullyQualifiedName!~e2e_", text)
@@ -36,14 +35,17 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         self.assertIn("tools/run-tests-local.sh", text)
         self.assertIn("--pre-commit", text)
 
-    def test_nightly_workflow_is_scheduled_and_uses_local_runner(self) -> None:
+    def test_nightly_workflow_is_scheduled_and_runner_owns_soak(self) -> None:
         path = ROOT / ".github" / "workflows" / "nightly.yml"
         self.assertTrue(path.is_file(), "FR-TS-075 nightly workflow is missing")
-        text = path.read_text(encoding="utf-8")
-        self.assertIn("schedule:", text)
-        self.assertIn("cron:", text)
-        self.assertIn("tools/run-tests-local.sh --nightly", text)
-        self.assertIn("TD_SHOT_DIAGNOSTIC: '1'", text)
+        workflow = path.read_text(encoding="utf-8")
+        self.assertIn("schedule:", workflow)
+        self.assertIn("cron:", workflow)
+        self.assertIn("tools/run-tests-local.sh --nightly", workflow)
+
+        runner = (ROOT / "tools" / "run-tests-local.sh").read_text(encoding="utf-8")
+        self.assertIn("export TD_SHOT_DIAGNOSTIC=1", runner)
+        self.assertIn("ShotOutcomeDiagnosticTests", runner)
 
 
 if __name__ == "__main__":
