@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="${1:---pr}"
 PRECOMMIT_BUDGET_SECONDS=60
-PRECOMMIT_FILTER='FullyQualifiedName!~int_&FullyQualifiedName!~sim_&FullyQualifiedName!~e2e_&FullyQualifiedName!~Integration&FullyQualifiedName!~Scenario&FullyQualifiedName!~TacticalDirector.DeterministicSim.Tests&TestCategory!=Calibration'
+PRECOMMIT_SETTINGS="$ROOT/tools/dotnet-ci/precommit.runsettings"
 
 # Legacy ambient controls are deliberately not policy inputs. The stable runner
 # owns composition and sanitizes them before invoking the lower-level gate.
@@ -17,24 +17,30 @@ Usage: bash tools/run-tests-local.sh [--pre-commit|--pr|--nightly|--install-hook
 Stable local/CI entry point for Testing Strategy #19 FR-TS-075/079.
 
   --pre-commit   Fast unit/property compatibility gate. Whole composition is hard-bounded to 60 seconds.
-  --pr           PR gate: auditors + whole-tree functional test superset + coverage.
-  --nightly      Auditors + full non-certifying simulation/soak gate + coverage.
+  --pr           PR gate: survey auditors + whole-tree functional test superset + coverage.
+  --nightly      Survey auditors + full non-certifying simulation/soak gate + coverage.
   --install-hook Configure this clone to use the versioned .githooks directory.
   --verify-hook  Fail unless this clone is configured to execute that hook.
 
-Documentation auditors always survey the repository but only treat findings as
-blocking for changed specs whose candidate status is APPROVED. Amendment drafts
-and IN REVIEW specs remain visible findings until their approval transition;
-legacy specs #1-#8 remain survey-only per KD-4. This matches FR-TS-042/052:
-nonconformance blocks approval rather than unrelated code changes.
+Routine pre-commit/PR/nightly runs SURVEY the documentation corpus. They do not
+turn pre-existing Spec #19 schema/checklist debt into an unrelated repository
+merge gate. FR-TS-042/052 attach blocking to a deliberate spec APPROVAL
+transition. For that transition, invoke each auditor explicitly without
+--survey-only (optionally with --changed-scope + --enforce-dir <spec-dir>).
 
 D2 is pinned to FsCheck.NUnit 2.16.6 and D3 is pinned to
 coverlet.collector 6.0.4 through Directory.Build.targets. Property tests
-participate automatically when present. The pre-commit path executes only the
-unit/property-compatible test subset and skips the whole-tree compile/meta pass;
-it remains subject to the 60-second hard limit. Meeting that limit on the
-certified developer host is an operational acceptance measurement, not inferred
-from the existence of the timeout.
+participate automatically when present. Pre-commit selection is expressed with
+NUnit's test-selection language in tools/dotnet-ci/precommit.runsettings, where
+canonical int_/sim_/e2e_ exclusions are anchored to METHOD-name prefixes rather
+than unsafe substrings of FullyQualifiedName.
+
+The pre-commit path skips the separate whole-tree meta/build pass and uses one
+incremental generated-solution test invocation; the versioned hook preserves a
+persistent staged-index snapshot/build cache. The entire attempted composition
+remains subject to the 60-second hard limit. Meeting that limit on the certified
+developer host is an operational acceptance measurement, not inferred from the
+timeout itself.
 
 PR/nightly use the Linux shim gate for non-certifying functional evidence. Nightly
 also enables the existing full-match ShotOutcomeDiagnosticTests soak. Platform
@@ -79,50 +85,6 @@ install_hook() {
   verify_hook
 }
 
-ensure_ci_base_ref() {
-  # actions/checkout defaults to a shallow checkout. Audit scope must not silently
-  # collapse to the last commit merely because origin/<base> is absent locally.
-  # Persisted checkout credentials allow this targeted fetch on PR jobs.
-  if [ -z "${GITHUB_BASE_REF:-}" ]; then
-    return 0
-  fi
-  if git -C "$ROOT" rev-parse --verify "origin/${GITHUB_BASE_REF}" >/dev/null 2>&1; then
-    return 0
-  fi
-  if ! git -C "$ROOT" fetch --no-tags --depth=1 origin \
-      "${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}" >/dev/null 2>&1; then
-    printf 'ERROR: cannot resolve PR base origin/%s; refusing to guess changed-spec audit scope.\n' \
-      "$GITHUB_BASE_REF" >&2
-    return 1
-  fi
-}
-
-changed_spec_dirs() {
-  local files=""
-  if ! git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
-    return 0
-  fi
-
-  if [ "$MODE" = "--pre-commit" ]; then
-    files="$(git -C "$ROOT" diff --cached --name-only -- docs/specs 2>/dev/null || true)"
-  elif [ -n "${GITHUB_BASE_REF:-}" ]; then
-    ensure_ci_base_ref || return 1
-    # Compare endpoint trees directly. On pull_request Actions checkout HEAD may
-    # be a shallow synthetic merge commit, so three-dot merge-base discovery is
-    # not reliable even after the base tip is fetched. Tree-to-tree diff is the
-    # exact net candidate change we need for approval-audit scoping.
-    files="$(git -C "$ROOT" diff --name-only "origin/${GITHUB_BASE_REF}" HEAD -- docs/specs)" || return 1
-  elif git -C "$ROOT" rev-parse --verify origin/main >/dev/null 2>&1; then
-    files="$(git -C "$ROOT" diff --name-only origin/main HEAD -- docs/specs)" || return 1
-  elif git -C "$ROOT" rev-parse --verify HEAD^ >/dev/null 2>&1; then
-    files="$(git -C "$ROOT" diff --name-only HEAD^ HEAD -- docs/specs)" || return 1
-  fi
-
-  printf '%s\n' "$files" \
-    | awk -F/ '$1=="docs" && $2=="specs" && NF>=4 {print $1"/"$2"/"$3}' \
-    | sort -u
-}
-
 case "$MODE" in
   --install-hook)
     install_hook
@@ -135,7 +97,7 @@ case "$MODE" in
   --pre-commit)
     PIPELINE_NAME="pre-commit"
     unset TD_SHOT_DIAGNOSTIC || true
-    GATE_ARGS=(--fast --test-filter "$PRECOMMIT_FILTER")
+    GATE_ARGS=(--fast --settings "$PRECOMMIT_SETTINGS")
     ;;
   --pr)
     PIPELINE_NAME="PR"
@@ -157,23 +119,12 @@ case "$MODE" in
     ;;
 esac
 
-CHANGED_SPEC_DIRS=()
-if ! changed_spec_output="$(changed_spec_dirs)"; then
-    echo "ERROR: unable to determine changed-spec audit scope." >&2
-    exit 1
-fi
-if [ -n "$changed_spec_output" ]; then
-    mapfile -t CHANGED_SPEC_DIRS <<< "$changed_spec_output"
-fi
-AUDITOR_SCOPE_ARGS=(--changed-scope --quiet-survey)
-for spec_dir in "${CHANGED_SPEC_DIRS[@]}"; do
-    [ -n "$spec_dir" ] || continue
-    AUDITOR_SCOPE_ARGS+=(--enforce-dir "$spec_dir")
-done
+AUDITOR_SCOPE_ARGS=(--survey-only --quiet-survey)
 
 printf '== Testing Strategy %s pipeline ==\n' "$PIPELINE_NAME"
+printf 'Documentation audit policy: survey-only; approval blocking is an explicit approval-transition command\n'
 if [ "$MODE" = "--pre-commit" ]; then
-    printf 'Compatibility filter: %s\n' "$PRECOMMIT_FILTER"
+    printf 'Pre-commit selection: anchored NUnit method/category rules in %s\n' "$PRECOMMIT_SETTINGS"
 fi
 if [ -n "${TD_SHOT_DIAGNOSTIC:-}" ]; then
     printf 'Full-match soak driver: ShotOutcomeDiagnosticTests\n'
@@ -181,13 +132,6 @@ fi
 if [ "$MODE" != "--pre-commit" ]; then
     printf 'Owner-held-red policy: execute separately and verify recorded diagnostics\n'
     printf 'Coverage: XPlat Code Coverage (coverlet.collector)\n'
-fi
-if [ "${#CHANGED_SPEC_DIRS[@]}" -gt 0 ]; then
-    printf 'Spec audit review scope:'
-    printf ' %s' "${CHANGED_SPEC_DIRS[@]}"
-    printf '\n'
-else
-    printf 'Spec audit review scope: no changed spec directories; whole-repo survey only\n'
 fi
 
 if [ "${TD_PIPELINE_DRY_RUN:-}" = "1" ]; then
@@ -207,8 +151,9 @@ if [ "${TD_PIPELINE_DRY_RUN:-}" = "1" ]; then
 fi
 
 # The 60-second pre-commit budget covers the ENTIRE composition (auditors + test
-# gate), not only dotnet test. Re-exec ourselves once under the process-group
-# budget so a slow restore/build/auditor cannot escape the requirement.
+# gate), not only dotnet test. During bootstrap cache preparation the hook sets
+# TD_PRECOMMIT_BUDGET_ACTIVE=1 deliberately so the one-time cold warmup is not
+# misrepresented as a normal commit-path measurement.
 if [ "$MODE" = "--pre-commit" ] && [ "${TD_PRECOMMIT_BUDGET_ACTIVE:-}" != "1" ]; then
     export TD_PRECOMMIT_BUDGET_ACTIVE=1
     exec python3 "$ROOT/tools/run-with-time-budget.py" \
@@ -216,11 +161,11 @@ if [ "$MODE" = "--pre-commit" ] && [ "${TD_PRECOMMIT_BUDGET_ACTIVE:-}" != "1" ];
         bash "$ROOT/tools/run-tests-local.sh" --pre-commit
 fi
 
-printf 'Auditor: approval-checklist evidence\n'
+printf 'Auditor: approval-checklist evidence (survey)\n'
 python3 "$ROOT/tools/checklist-auditor.py" \
     --root "$ROOT/docs/specs" --repo-root "$ROOT" "${AUDITOR_SCOPE_ARGS[@]}"
 
-printf 'Auditor: per-spec section-5 schema\n'
+printf 'Auditor: per-spec section-5 schema (survey)\n'
 python3 "$ROOT/tools/spec5-schema-auditor.py" \
     --root "$ROOT/docs/specs" --repo-root "$ROOT" "${AUDITOR_SCOPE_ARGS[@]}"
 
