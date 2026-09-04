@@ -50,9 +50,49 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertIn("checklist_auditor=", proc.stdout)
             self.assertIn("schema_auditor=", proc.stdout)
             self.assertIn("gate=", proc.stdout)
+            self.assertIn("gate_args=", proc.stdout)
             self.assertIn(expected, proc.stdout)
 
-    def test_owner_held_red_verifier_rejects_changed_diagnostics(self) -> None:
+    def test_runner_executes_auditors_then_explicit_gate_arguments(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "repo"
+            (root / "tools" / "dotnet-ci").mkdir(parents=True)
+            (root / "docs" / "specs").mkdir(parents=True)
+            shutil.copy2(ROOT / "tools" / "run-tests-local.sh", root / "tools" / "run-tests-local.sh")
+            shutil.copy2(ROOT / "tools" / "run-with-time-budget.py", root / "tools" / "run-with-time-budget.py")
+            capture = Path(td) / "capture.txt"
+            for name in ("checklist-auditor.py", "spec5-schema-auditor.py"):
+                (root / "tools" / name).write_text(
+                    "from pathlib import Path\n"
+                    "import os\n"
+                    f"Path(os.environ['TD_CAPTURE']).open('a').write('{name}\\n')\n",
+                    encoding="utf-8",
+                )
+            (root / "tools" / "dotnet-ci" / "run-gate.sh").write_text(
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n"
+                "printf 'gate:%s\\n' \"$*\" >> \"$TD_CAPTURE\"\n",
+                encoding="utf-8",
+            )
+
+            proc = self.run_cmd(
+                "bash",
+                str(root / "tools" / "run-tests-local.sh"),
+                "--pr",
+                cwd=root,
+                env={"TD_CAPTURE": str(capture)},
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertEqual(
+                capture.read_text(encoding="utf-8").splitlines(),
+                [
+                    "checklist-auditor.py",
+                    "spec5-schema-auditor.py",
+                    "gate:--owner-held-red report-only --coverage",
+                ],
+            )
+
+    def test_owner_held_red_verifier_rejects_changed_diagnostics_and_unexpected_green(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)
             ledger = tmp / "ledger.txt"
@@ -60,8 +100,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             results = tmp / "results"
             results.mkdir()
             trx = results / "result.trx"
-            trx.write_text(
-                """<?xml version="1.0" encoding="utf-8"?>
+            failed_xml = """<?xml version="1.0" encoding="utf-8"?>
 <TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
   <Results>
     <UnitTestResult testName="TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance"
@@ -70,9 +109,8 @@ class TestingPipelineConformanceTests(unittest.TestCase):
     </UnitTestResult>
   </Results>
 </TestRun>
-""",
-                encoding="utf-8",
-            )
+"""
+            trx.write_text(failed_xml, encoding="utf-8")
             verifier = ROOT / "tools" / "dotnet-ci" / "verify-owner-held-red.py"
             good = self.run_cmd(
                 "python3", str(verifier),
@@ -83,10 +121,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertEqual(good.returncode, 0, good.stdout)
             self.assertIn("MATCHES RECORDED BASELINE", good.stdout)
 
-            trx.write_text(
-                trx.read_text(encoding="utf-8").replace("-0.165", "-0.200"),
-                encoding="utf-8",
-            )
+            trx.write_text(failed_xml.replace("-0.165", "-0.200"), encoding="utf-8")
             bad = self.run_cmd(
                 "python3", str(verifier),
                 "--ledger", str(ledger),
@@ -96,7 +131,17 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertEqual(bad.returncode, 1, bad.stdout)
             self.assertIn("changed diagnostics", bad.stdout)
 
-    def test_precommit_filter_is_narrow_and_trusted(self) -> None:
+            trx.write_text(failed_xml.replace('outcome="Failed"', 'outcome="Passed"'), encoding="utf-8")
+            green = self.run_cmd(
+                "python3", str(verifier),
+                "--ledger", str(ledger),
+                "--results", str(results),
+                "--dotnet-exit", "0",
+            )
+            self.assertEqual(green.returncode, 1, green.stdout)
+            self.assertIn("unexpectedly passed", green.stdout)
+
+    def test_precommit_filter_is_narrow_and_gate_rejects_ambient_filter(self) -> None:
         proc = self.run_cmd(
             "bash",
             str(ROOT / "tools" / "run-tests-local.sh"),
@@ -107,6 +152,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         self.assertIn("FullyQualifiedName!~sim_", proc.stdout)
         self.assertIn("FullyQualifiedName!~e2e_", proc.stdout)
         self.assertIn("TacticalDirector.DeterministicSim.Tests", proc.stdout)
+        self.assertIn("--fast", proc.stdout)
 
         injected = self.run_cmd(
             "bash",
@@ -117,7 +163,19 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             },
         )
         self.assertEqual(injected.returncode, 2, injected.stdout)
-        self.assertIn("trusted testing-strategy runner marker", injected.stdout)
+        self.assertIn("no longer accepted", injected.stdout)
+
+        explicit = self.run_cmd(
+            "bash",
+            str(ROOT / "tools" / "dotnet-ci" / "run-gate.sh"),
+            "--fast",
+            "--test-filter",
+            "FullyQualifiedName~OnlyMe",
+            env={"TD_GATE_DRY_RUN": "1"},
+        )
+        self.assertEqual(explicit.returncode, 0, explicit.stdout)
+        self.assertIn("blocking_filter=FullyQualifiedName~OnlyMe", explicit.stdout)
+        self.assertIn("fast=1", explicit.stdout)
 
     def test_time_budget_enforces_timeout_and_propagates_success(self) -> None:
         timeout_proc = self.run_cmd(
@@ -152,7 +210,9 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         proc = self.run_cmd(
             "bash",
             str(gate),
-            env={"TD_GATE_DRY_RUN": "1", "TD_OWNER_HELD_RED_MODE": "report-only"},
+            "--owner-held-red",
+            "report-only",
+            env={"TD_GATE_DRY_RUN": "1"},
         )
         self.assertEqual(proc.returncode, 0, proc.stdout)
         self.assertIn("owner_held_include=FullyQualifiedName~sim_match_engine_close_chance", proc.stdout)
@@ -223,27 +283,28 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             ).strip()
             self.assertEqual(configured, ".githooks")
 
-    def test_auditors_block_broken_evidence_and_legacy_schema_is_survey_only(self) -> None:
+    def test_auditors_block_broken_placeholder_and_prose_only_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             specs = repo / "docs" / "specs"
             spec9 = specs / "spec-nine"
             spec9.mkdir(parents=True)
-            (spec9 / "section-5.md").write_text(
-                textwrap.dedent(
-                    """\
-                    # Spec #9 — Section 5: Test Plan
-                    Unit Integration Simulation
-                    Property tests: none.
-                    Scenario list: none.
-                    Coverage targets by Tier.
-                    Determinism Tier classification.
-                    Approval checklist linkage: section-9-approval-checklist.md.
-                    """
-                ),
-                encoding="utf-8",
+            section5 = textwrap.dedent(
+                """\
+                # Spec #9 — Section 5: Test Plan
+                | Layer | Unit | Integration | Simulation |
+                | --- | --- | --- | --- |
+                | Count | 1 | 1 | 1 |
+                - Property tests: none.
+                - Scenario list: none.
+                - Coverage targets by Tier: none.
+                - Determinism Tier classification: none.
+                - Approval checklist linkage: `section-9-approval-checklist.md`.
+                """
             )
-            (spec9 / "section-9-approval-checklist.md").write_text(
+            (spec9 / "section-5.md").write_text(section5, encoding="utf-8")
+            checklist = spec9 / "section-9-approval-checklist.md"
+            checklist.write_text(
                 textwrap.dedent(
                     """\
                     # Spec #9 — Approval Checklist
@@ -264,13 +325,13 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             )
             self.assertEqual(good.returncode, 0, good.stdout)
 
-            (spec9 / "section-9-approval-checklist.md").write_text(
+            checklist.write_text(
                 "# Spec #9 — Approval Checklist\n"
                 "| Row | Claim | Evidence |\n| --- | --- | --- |\n"
-                "| 9.1 | schema | `missing.md` |\n",
+                "| 9.1 | schema | this test check is fine |\n",
                 encoding="utf-8",
             )
-            bad = self.run_cmd(
+            prose = self.run_cmd(
                 "python3",
                 str(ROOT / "tools" / "checklist-auditor.py"),
                 "--root",
@@ -278,11 +339,55 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 "--repo-root",
                 str(repo),
             )
-            self.assertEqual(bad.returncode, 1, bad.stdout)
-            self.assertIn("BLOCK", bad.stdout)
+            self.assertEqual(prose.returncode, 1, prose.stdout)
+            self.assertIn("prose only", prose.stdout)
 
+            checklist.write_text(
+                "# Spec #9 — Approval Checklist\n"
+                "| Row | Claim | Evidence |\n| --- | --- | --- |\n"
+                "| 9.1 | schema | `<file-path>` |\n",
+                encoding="utf-8",
+            )
+            placeholder = self.run_cmd(
+                "python3",
+                str(ROOT / "tools" / "checklist-auditor.py"),
+                "--root",
+                str(specs),
+                "--repo-root",
+                str(repo),
+            )
+            self.assertEqual(placeholder.returncode, 1, placeholder.stdout)
+            self.assertIn("placeholder evidence", placeholder.stdout)
+
+    def test_spec5_auditor_rejects_keywords_hidden_in_unstructured_prose(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            specs = repo / "docs" / "specs"
+            spec9 = specs / "spec-nine"
+            spec9.mkdir(parents=True)
+            (spec9 / "section-5.md").write_text(
+                "# Spec #9 — Section 5\n"
+                "This paragraph says unit integration simulation property scenario coverage tier "
+                "determinism approval but defines no schema surfaces.\n",
+                encoding="utf-8",
+            )
+            proc = self.run_cmd(
+                "python3",
+                str(ROOT / "tools" / "spec5-schema-auditor.py"),
+                "--root",
+                str(specs),
+                "--repo-root",
+                str(repo),
+            )
+            self.assertEqual(proc.returncode, 1, proc.stdout)
+            self.assertIn("missing structured taxonomy/test-count", proc.stdout)
+
+    def test_legacy_schema_is_survey_only(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            specs = repo / "docs" / "specs"
             legacy = specs / "legacy"
-            legacy.mkdir()
+            legacy.mkdir(parents=True)
             (legacy / "section-5.md").write_text("# Spec #1 — Section 5\nUnit only.\n", encoding="utf-8")
             schema = self.run_cmd(
                 "python3",
@@ -303,6 +408,12 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         self.assertIn("XPlat Code Coverage", settings)
         self.assertIn("cobertura", settings)
 
+    def test_pr_ci_reuses_versioned_runner(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        self.assertIn("PR functional gate (Linux shim, non-certifying)", workflow)
+        self.assertIn("bash tools/run-tests-local.sh --pr", workflow)
+        self.assertNotIn("run: bash tools/dotnet-ci/run-gate.sh\n", workflow)
+
     def test_nightly_separates_linux_from_certified_windows_determinism(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "nightly.yml").read_text(encoding="utf-8")
         self.assertIn("Nightly full simulation + soak (non-certifying)", workflow)
@@ -310,7 +421,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         self.assertIn("[self-hosted, windows, x64, determinism-certified]", workflow)
         self.assertIn("win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags", workflow)
         self.assertIn("TD_UNITY_EXE", workflow)
-        self.assertIn('TacticalDirector.DeterministicSim.Tests', workflow)
+        self.assertIn("TacticalDirector.DeterministicSim.Tests", workflow)
         self.assertNotIn("Unity -batchmode", workflow)
 
     def test_bootstrap_is_versioned_and_verifies_hook(self) -> None:
