@@ -33,6 +33,31 @@ def section5_files(spec_dir: Path) -> list[Path]:
     return sorted(p for p in spec_dir.glob("section-5*.md") if p.is_file())
 
 
+def structured_lines(text: str) -> list[str]:
+    """Return headings/list/table lines that can carry an explicit schema surface.
+
+    A prose paragraph that happens to mention all required words is not a §5 schema.
+    """
+    out: list[str] = []
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if not stripped:
+            continue
+        if (
+            stripped.startswith("#")
+            or stripped.startswith("|")
+            or stripped.startswith("- ")
+            or stripped.startswith("* ")
+            or re.match(r"^\d+[.)]\s+", stripped)
+        ):
+            out.append(stripped.lower())
+    return out
+
+
+def has_surface(lines: list[str], needles: tuple[str, ...]) -> bool:
+    return any(all(needle in line for needle in needles) for line in lines)
+
+
 def main() -> int:
     args = parse_args()
     root = args.root.resolve()
@@ -46,19 +71,28 @@ def main() -> int:
         text = "\n".join(p.read_text(encoding="utf-8") for p in files)
         spec_id = infer_spec_id(text)
         if spec_id is None:
+            findings.append(
+                Finding(
+                    None,
+                    ",".join(str(p) for p in files),
+                    "§5",
+                    "cannot infer spec ID from section-5 header",
+                    True,
+                )
+            )
             continue
         checked_specs += 1
-        lower = text.lower()
         legacy = is_legacy_survey(spec_id)
+        surfaces = structured_lines(text)
 
         for label, needles in REQUIREMENTS:
-            if not all(needle in lower for needle in needles):
+            if not has_surface(surfaces, needles):
                 findings.append(
                     Finding(
                         spec_id,
                         ",".join(str(p) for p in files),
                         "§5",
-                        f"missing {label} surface ({', '.join(needles)})",
+                        f"missing structured {label} surface ({', '.join(needles)})",
                         not legacy,
                     )
                 )
