@@ -8,7 +8,14 @@ import json
 import re
 from pathlib import Path
 
-from testing_strategy_audit import Finding, describe, infer_spec_id, is_legacy_survey
+from testing_strategy_audit import (
+    Finding,
+    describe,
+    infer_spec_id,
+    infer_status,
+    is_approved_status,
+    is_legacy_survey,
+)
 
 
 REQUIREMENTS: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -29,13 +36,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--changed-scope",
         action="store_true",
-        help="Survey the whole root but block only non-legacy spec directories named by --enforce-dir.",
+        help="Survey the whole root but consider blocking only spec directories named by --enforce-dir.",
     )
     parser.add_argument(
         "--enforce-dir",
         action="append",
         default=[],
         help="Spec directory, absolute or repo-relative, currently under review. Repeatable.",
+    )
+    parser.add_argument(
+        "--quiet-survey",
+        action="store_true",
+        help="Print blocking findings plus counts, but omit individual survey findings.",
     )
     return parser.parse_args()
 
@@ -100,6 +112,7 @@ def main() -> int:
             continue
         text = "\n".join(p.read_text(encoding="utf-8") for p in files)
         spec_id = infer_spec_id(text)
+        status = infer_status(text)
         enforced = spec_dir_enforced(
             spec_dir,
             changed_scope=args.changed_scope,
@@ -112,12 +125,16 @@ def main() -> int:
                     ",".join(str(p) for p in files),
                     "§5",
                     "cannot infer spec ID from section-5 header",
-                    enforced,
+                    enforced and is_approved_status(status),
                 )
             )
             continue
         checked_specs += 1
-        blocking = enforced and not is_legacy_survey(spec_id)
+        blocking = (
+            enforced
+            and not is_legacy_survey(spec_id)
+            and is_approved_status(status)
+        )
         surfaces = structured_lines(text)
 
         for label, needles in REQUIREMENTS:
@@ -159,11 +176,13 @@ def main() -> int:
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
-        scope = "changed-spec enforcement" if args.changed_scope else "full enforcement"
+        scope = "changed-spec enforcement" if args.changed_scope else "approval-state enforcement"
         print(
             f"spec5-schema-auditor: {checked_specs} spec(s), {describe(findings)} [{scope}]"
         )
         for finding in findings:
+            if args.quiet_survey and not finding.blocking:
+                continue
             level = "BLOCK" if finding.blocking else "SURVEY"
             print(f"{level}: spec #{finding.spec_id}: {finding.message}")
 
