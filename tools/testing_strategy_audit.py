@@ -56,10 +56,11 @@ def infer_spec_id(text: str) -> int | None:
 def normalize_status(value: str | None) -> str | None:
     if value is None:
         return None
-    # Strip common Markdown presentation without changing semantic words such
-    # as AMENDMENT DRAFT. Parenthetical dates/notes remain harmless because
-    # is_approved_status tests the normalized prefix.
+    # Strip common Markdown and decorative presentation without changing
+    # semantic words such as AMENDMENT DRAFT. This accepts established local
+    # forms including `APPROVED`, ✅ APPROVED, and blockquoted status lines.
     normalized = re.sub(r"[`*_]", "", value).strip()
+    normalized = re.sub(r"^[^A-Za-z0-9]+", "", normalized).strip()
     return normalized or None
 
 
