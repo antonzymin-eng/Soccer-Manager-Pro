@@ -106,12 +106,16 @@ changed_spec_dirs() {
   if [ "$MODE" = "--pre-commit" ]; then
     files="$(git -C "$ROOT" diff --cached --name-only -- docs/specs 2>/dev/null || true)"
   elif [ -n "${GITHUB_BASE_REF:-}" ]; then
-    ensure_ci_base_ref
-    files="$(git -C "$ROOT" diff --name-only "origin/${GITHUB_BASE_REF}...HEAD" -- docs/specs)"
+    ensure_ci_base_ref || return 1
+    # Compare endpoint trees directly. On pull_request Actions checkout HEAD may
+    # be a shallow synthetic merge commit, so three-dot merge-base discovery is
+    # not reliable even after the base tip is fetched. Tree-to-tree diff is the
+    # exact net candidate change we need for approval-audit scoping.
+    files="$(git -C "$ROOT" diff --name-only "origin/${GITHUB_BASE_REF}" HEAD -- docs/specs)" || return 1
   elif git -C "$ROOT" rev-parse --verify origin/main >/dev/null 2>&1; then
-    files="$(git -C "$ROOT" diff --name-only origin/main...HEAD -- docs/specs)"
+    files="$(git -C "$ROOT" diff --name-only origin/main HEAD -- docs/specs)" || return 1
   elif git -C "$ROOT" rev-parse --verify HEAD^ >/dev/null 2>&1; then
-    files="$(git -C "$ROOT" diff --name-only HEAD^..HEAD -- docs/specs)"
+    files="$(git -C "$ROOT" diff --name-only HEAD^ HEAD -- docs/specs)" || return 1
   fi
 
   printf '%s\n' "$files" \
@@ -153,7 +157,14 @@ case "$MODE" in
     ;;
 esac
 
-mapfile -t CHANGED_SPEC_DIRS < <(changed_spec_dirs)
+CHANGED_SPEC_DIRS=()
+if ! changed_spec_output="$(changed_spec_dirs)"; then
+    echo "ERROR: unable to determine changed-spec audit scope." >&2
+    exit 1
+fi
+if [ -n "$changed_spec_output" ]; then
+    mapfile -t CHANGED_SPEC_DIRS <<< "$changed_spec_output"
+fi
 AUDITOR_SCOPE_ARGS=(--changed-scope --quiet-survey)
 for spec_dir in "${CHANGED_SPEC_DIRS[@]}"; do
     [ -n "$spec_dir" ] || continue
