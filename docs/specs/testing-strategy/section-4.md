@@ -2,7 +2,7 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 4, 2026
-**Version:** 0.6
+**Version:** 0.7
 **Status:** AMENDMENT DRAFT (A3 candidate; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.3/A3.4 review correction
 **Purpose:** The *shape* of the test-harness architecture: folder
@@ -135,14 +135,11 @@ only when both producer and consumer are specified.
   which was `TBD-NORMATIVE` at #19 IN REVIEW time but is now firm
   (#16 reached Tier 2 `APPROVED` May 14, 2026). #16 §3.2.4.1 has been
   through five adversarial passes and is structurally stable (only
-  subsection numbering may
-  shift), so the byte-level layout is treated as "sufficiently
-  specified" for interface-declaration purposes per the CLAUDE.md
-  Interface Design Principle. If #16 §3.2.4.1 reverts to an
-  outline-level state, this interface MUST be deferred to Stage 1
-  alongside `IFlakeReporter` (§4.4.3); that demotion is a §3.2 review
-  trigger (FR-TS-015). Compare with `IFlakeReporter`, where the
-  consumer is genuinely unspecified at Stage 0.
+  subsection numbering may shift), so the byte-level layout is treated
+  as sufficiently specified for interface-declaration purposes. If #16
+  §3.2.4.1 reverts to an outline-level state, this interface MUST be
+  deferred to Stage 1 alongside `IFlakeReporter` (§4.4.3); that
+  demotion is a §3.2 review trigger (FR-TS-015).
 
 Both interfaces live in `tests/shared/` per §4.1; no game-state code
 may reference them.
@@ -160,33 +157,45 @@ the consumer is concretely specified.
 
 The repository carries the concrete FR-TS-075 topology as an A3
 candidate. GitHub Actions is the provider; `tools/run-tests-local.sh`
-is the versioned local/CI composition entry point. **Topology existence
-is not by itself proof of operational conformance.** A3.4 must retain
-two explicit acceptance facts: a successful pre-commit measurement
-within the 60-second certified-host budget, and a successful scheduled
-#16 run on the registered certified Windows runner.
+is the versioned local/CI policy entry point. **Topology existence is
+not by itself proof of operational conformance.** A3.4 must retain two
+explicit acceptance facts: a successful incremental pre-commit
+measurement within the 60-second certified-host budget, and a
+successful #16 run on a registered/configured certified Windows runner.
 
 ### 4.5.1 Pre-Commit Pipeline
 
 - Trigger: versioned local `git commit` hook at `.githooks/pre-commit`.
 - Installation/bootstrap: `bash tools/bootstrap-dev.sh` configures
-  `core.hooksPath=.githooks` and verifies the hook. The installer
-  refuses to overwrite a different pre-existing `core.hooksPath`.
-- Snapshot semantics: the hook exports and tests the Git **index**
-  (staged snapshot), not unrelated unstaged working-tree edits.
-- Tiers: unit + property (fast compatibility subset). FsCheck.NUnit is
-  pinned in the repository tool slate; the default remains 100 cases
-  per property unless a property declares a stronger local setting.
+  `core.hooksPath=.githooks`, verifies the hook, and performs the
+  one-time **cold** staged-snapshot/build-cache preparation outside the
+  normal 60-second acceptance measurement. The installer refuses to
+  overwrite a different pre-existing `core.hooksPath`.
+- Snapshot semantics: the hook tests the Git **index** (staged
+  snapshot), not unrelated unstaged working-tree edits. The snapshot
+  persists under `.git/testing-strategy/precommit-snapshot`: tracked
+  content is refreshed from the current index while untracked
+  generated/bin/obj outputs survive for incremental reuse.
+- Tiers: unit + property. Selection is expressed by
+  `tools/dotnet-ci/precommit.runsettings` using NUnit METHOD-name
+  prefix rules (`^int_`, `^sim_`, `^e2e_`) plus the determinism
+  namespace/category exclusions. Bare FullyQualifiedName substring
+  exclusions are forbidden because they over-match ordinary names such
+  as `Point_`, `Fingerprint_`, `MalformedInt_`, and `QuickSim_`.
 - Execution path: `tools/run-tests-local.sh --pre-commit` invokes both
-  Spec #19 auditors and the generated test-project fast path; it does
-  not route through the whole-tree compile/meta pass.
-- Exit criteria: all selected tests and both Spec #19 auditors pass.
-- Wall-time enforcement: the entire composition is terminated and
-  fails with exit 124 if it exceeds 60 seconds. **This proves a hard
-  upper bound on an attempted run; it does not prove the passing path
-  normally completes within 60 seconds.** A3.4 acceptance requires a
-  successful measured run on the certified developer host before this
-  pipeline may be recorded as fully conformant with the §4.5 budget.
+  Spec #19 auditors in **survey-only** mode and then one incremental
+  generated-solution `dotnet test` invocation. It skips the separate
+  whole-tree meta/build pass; it does not run 34 sequential cold
+  project invocations.
+- Exit criteria: all selected tests pass. Survey findings remain visible
+  but do not become unrelated commit blockers; checklist/schema
+  blocking is attached to an explicit approval transition per §5.3/§5.4.
+- Wall-time enforcement: the normal entire composition is terminated
+  and fails with exit 124 if it exceeds 60 seconds. **This proves a
+  hard upper bound on an attempted normal run; it does not prove the
+  passing path normally completes within 60 seconds.** A3.4 acceptance
+  requires a successful measured incremental run on the certified
+  developer host.
 
 ### 4.5.2 PR Pipeline
 
@@ -198,15 +207,16 @@ within the 60-second certified-host budget, and a successful scheduled
   scenarios.
 - Current implementation runs the whole non-certifying functional test
   surface as a **strict superset** of the changed-spec scenario
-  requirement, plus both Spec #19 auditors and Coverlet collection.
-  This avoids a false claim of exact change-selection while D9's root
-  scenario-manifest encoding/index remains overdue.
+  requirement, plus survey-mode Spec #19 auditors and Coverlet
+  collection. This avoids a false claim of exact change-selection while
+  D9's root scenario-manifest encoding/index remains overdue.
 - The owner-held `sim_match_engine_close_chance` RED is not quarantine:
-  the blocking pass excludes that one owner-held predicate only under
-  the explicit owner-held mode, then executes it separately and
-  verifies its diagnostics against the value-pinned ledger. A changed
-  diagnostic, unexpected pass, missing result, abnormal runner exit,
-  or any additional blocking failure fails the gate.
+  the blocking pass excludes that exact test `Name`, then executes that
+  exact `Name` separately. The verifier requires one unambiguous result,
+  the value-pinned diagnostics, failed outcome, no extra results and the
+  expected test-failure runner exit. Changed diagnostics, unexpected
+  pass, missing/ambiguous identity, extra returned tests, abnormal runner
+  exit, or any ordinary blocking failure fails the gate.
 - Exit criteria: all currently active gates pass per §6.2 composition
   rule. The architecture/evidence gate joins this topology only after
   A8 activation.
@@ -223,27 +233,30 @@ within the 60-second certified-host budget, and a successful scheduled
   6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / one-worker deterministic
   tuple. The job verifies the platform pin before invoking Unity
   through `TD_UNITY_EXE`.
-- **Operational boundary:** the workflow definition does not prove that
-  a runner with those labels is currently registered or that
-  `TD_UNITY_EXE`/`TD_CERTIFIED_PLATFORM_PIN` are configured. Until a
-  scheduled or manual workflow run successfully executes that job,
-  FR-TS-075's authoritative nightly determinism leg remains
-  operationally unproven/non-conformant rather than being inferred
-  green from YAML presence.
+- **Availability gate:** the self-hosted job runs only when repository
+  variable `DETERMINISM_CERTIFIED_RUNNER_ENABLED=true`. Until a matching
+  runner is actually registered/configured, a GitHub-hosted notice job
+  records the open operational condition instead of leaving a scheduled
+  job queued for unavailable labels.
+- **Operational boundary:** workflow definition, labels, the enable
+  variable, and environment checks do not prove that the certified
+  suite executed successfully. FR-TS-075's authoritative nightly
+  determinism leg remains operationally unproven/non-conformant until
+  an actual certified-host run passes.
 - Linux evidence is explicitly **non-certifying**; it is never treated
   as the authoritative determinism host.
-- Exit criteria: functional/simulation/soak checks pass, the owner-held
-  RED remains exactly at its recorded diagnostic values, and the
-  certified #16 suite passes on the pinned Windows host.
+- Exit criteria once enabled: functional/simulation/soak checks pass,
+  the owner-held RED remains exactly at its recorded diagnostic state,
+  and the certified #16 suite passes on the pinned Windows host.
 
 ### 4.5.4 Pipeline Sequencing Diagram
 
 ```
 trigger
   │
-  ├── pre-commit:  staged snapshot → unit/property → pass within 60 s or fail
-  ├── PR:          unit/integration/property + scenario superset + coverage → pass/fail
-  └── nightly:     Linux simulation/soak + certified Windows #16 suite → pass/fail
+  ├── pre-commit:  persistent staged snapshot → anchored unit/property selection → pass within 60 s or fail
+  ├── PR:          unit/integration/property + scenario superset + survey auditors + coverage → pass/fail
+  └── nightly:     Linux simulation/soak + (when enabled) certified Windows #16 suite → pass/fail
 ```
 
 The architecture/evidence gate described here remains inactive until
@@ -253,10 +266,11 @@ structural test of the workflow text.
 
 ## 4.6 Concrete Runner / Tool Pointers
 
-- Local/CI composition: `tools/run-tests-local.sh`.
-- Developer bootstrap and hook verification: `tools/bootstrap-dev.sh`.
-- Versioned hook: `.githooks/pre-commit`.
-- Non-certifying generated .NET gate: `tools/dotnet-ci/run-gate.sh`.
+- Local/CI policy composition: `tools/run-tests-local.sh`.
+- Developer bootstrap and cold-cache preparation: `tools/bootstrap-dev.sh`.
+- Versioned staged-index hook: `.githooks/pre-commit`.
+- Anchored pre-commit selection: `tools/dotnet-ci/precommit.runsettings`.
+- Non-certifying generated .NET **lower-level executor**: `tools/dotnet-ci/run-gate.sh`.
 - Property framework pin: FsCheck.NUnit 2.16.6 through
   `Directory.Build.targets` (D2 resolved).
 - Coverage collector pin: coverlet.collector 6.0.4 through
@@ -265,7 +279,7 @@ structural test of the workflow text.
   choice; §5.5's per-tier threshold auditor remains its own tooling
   obligation).
 - PR CI: `.github/workflows/ci.yml`.
-- Scheduled simulation/soak plus certified determinism orchestration:
+- Scheduled simulation/soak plus gated certified determinism orchestration:
   `.github/workflows/nightly.yml`.
 
 Still deferred: `IFlakeReporter` declaration (§4.4.3) and D9's root
@@ -275,6 +289,7 @@ scenario-manifest encoding/index decision.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.7     | September 4, 2026 | — | **Claude review correction.** Replaces the zero-cache temporary pre-commit design with a persistent staged-index cache prepared by bootstrap; replaces unsafe FQN substring selection with anchored NUnit method-prefix rules; records routine auditor survey-only behavior, exact owner-held test identity, and certified-nightly enable gating. Operational timing/certified-host success remains unproven. |
 | 0.6     | September 4, 2026 | — | **A3.3 review correction.** Stops treating timeout/workflow structure as execution proof: the pre-commit path now has a dedicated fast test-project mode and a hard 60-second failure bound, but full conformance still requires a successful measured certified-host run; the certified Windows nightly job remains operationally unproven until a registered runner actually executes it. Also records that PR CI reuses `tools/run-tests-local.sh --pr` and that unexpected owner-held-RED greens/abnormal exits are blocking. These are review/evidence corrections pending A3.4, not fresh approval. |
 | 0.5     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization candidate.** Records the versioned staged-snapshot pre-commit hook/bootstrap, hard 60-second whole-composition budget, PR whole-tree scenario superset, value-pinned owner-held-RED handling, D2/D3 tool pins, Linux non-certifying nightly simulation/soak job, and separate pinned Windows/Unity #16 determinism certification job. Removes the stale claim that hook installation and D3 invocation are deferred. D9 and `IFlakeReporter` remain separate unresolved work. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. `ITestHarness`, `IScenario`, `IFixtureValidator` declared; `IFlakeReporter` explicitly deferred. |
