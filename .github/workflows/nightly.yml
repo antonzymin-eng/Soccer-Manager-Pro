@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  nightly-full-suite:
-    name: Nightly full simulation + soak + determinism regression
+  nightly-functional:
+    name: Nightly full simulation + soak (non-certifying)
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -26,5 +26,35 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Run nightly test pipeline
+      - name: Run full functional/simulation pipeline
         run: bash tools/run-tests-local.sh --nightly
+
+  nightly-determinism-certified:
+    name: Nightly #16 determinism suite (certified host)
+    runs-on: [self-hosted, windows, x64, determinism-certified]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify pinned certification host
+        shell: pwsh
+        run: |
+          $expected = 'win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags'
+          if ($env:TD_CERTIFIED_PLATFORM_PIN -ne $expected) {
+            throw "TD_CERTIFIED_PLATFORM_PIN must equal $expected on this runner."
+          }
+
+      - name: Create Unity source junction
+        shell: cmd
+        run: |
+          if not exist Assets\Scripts mklink /J Assets\Scripts src
+
+      - name: Run #16 full determinism suite in Unity
+        shell: pwsh
+        run: |
+          Unity -batchmode -runTests -projectPath . `
+            -testPlatform EditMode `
+            -testFilter "TacticalDirector.DeterministicSim.Tests" `
+            -testResults "$env:RUNNER_TEMP\determinism-results.xml" `
+            -logFile -
