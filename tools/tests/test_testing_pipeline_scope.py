@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
+import textwrap
 import unittest
 
 
@@ -13,65 +13,82 @@ RUNNER = ROOT / "tools" / "run-tests-local.sh"
 
 
 class TestingPipelineScopeTests(unittest.TestCase):
-    def run_runner(self, repo: Path, *, base_ref: str) -> subprocess.CompletedProcess[str]:
-        env = os.environ.copy()
-        env.update(
-            {
-                "GITHUB_BASE_REF": base_ref,
-                "TD_PIPELINE_DRY_RUN": "1",
-            }
-        )
+    def run_cmd(self, *args: str, cwd: Path | None = None, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+        merged = os.environ.copy()
+        if env:
+            merged.update(env)
         return subprocess.run(
-            ["bash", str(repo / "tools" / "run-tests-local.sh"), "--pr"],
-            cwd=repo,
-            env=env,
+            args,
+            cwd=cwd or ROOT,
+            env=merged,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             check=False,
-            timeout=10,
+            timeout=15,
         )
 
-    def init_repo(self, repo: Path) -> None:
-        repo.mkdir()
-        subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
-        subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=repo, check=True)
-        subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
-        (repo / "tools").mkdir()
-        shutil.copy2(RUNNER, repo / "tools" / "run-tests-local.sh")
-        (repo / "docs" / "specs" / "spec-nine").mkdir(parents=True)
-        (repo / "docs" / "specs" / "spec-nine" / "section-5.md").write_text(
-            "# Spec #9 — Section 5\n", encoding="utf-8"
+    def test_routine_pr_pipeline_is_survey_only_and_does_not_depend_on_base_diff(self) -> None:
+        # A deliberately unresolvable PR base must not matter: routine CI is a
+        # corpus survey, not an approval-transition gate for every changed spec.
+        proc = self.run_cmd(
+            "bash",
+            str(RUNNER),
+            "--pr",
+            env={
+                "GITHUB_BASE_REF": "definitely-does-not-exist",
+                "TD_PIPELINE_DRY_RUN": "1",
+            },
         )
-        subprocess.run(["git", "add", "."], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-qm", "base"], cwd=repo, check=True)
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertIn("--survey-only", proc.stdout)
+        self.assertNotIn("--enforce-dir", proc.stdout)
+        self.assertNotIn("changed-spec audit scope", proc.stdout)
 
-    def test_pr_scope_fails_closed_when_named_base_cannot_be_resolved(self) -> None:
+    def test_existing_approved_spec_debt_is_survey_in_routine_mode_but_blocks_explicit_approval_walk(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            repo = Path(td) / "repo"
-            self.init_repo(repo)
-            proc = self.run_runner(repo, base_ref="main")
-            self.assertNotEqual(proc.returncode, 0, proc.stdout)
-            self.assertIn("cannot resolve PR base origin/main", proc.stdout)
-            self.assertIn("unable to determine changed-spec audit scope", proc.stdout)
-
-    def test_pr_scope_uses_base_to_head_tree_diff(self) -> None:
-        with tempfile.TemporaryDirectory() as td:
-            repo = Path(td) / "repo"
-            self.init_repo(repo)
-            base_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
-            subprocess.run(
-                ["git", "update-ref", "refs/remotes/origin/main", base_sha], cwd=repo, check=True
+            repo = Path(td)
+            specs = repo / "docs" / "specs"
+            spec9 = specs / "spec-nine"
+            spec9.mkdir(parents=True)
+            (spec9 / "section-5.md").write_text(
+                "# Spec #9 — Section 5\n**Status:** APPROVED\nUnit only.\n",
+                encoding="utf-8",
             )
-            target = repo / "docs" / "specs" / "spec-nine" / "section-5.md"
-            target.write_text("# Spec #9 — Section 5\nchanged\n", encoding="utf-8")
-            subprocess.run(["git", "add", str(target.relative_to(repo))], cwd=repo, check=True)
-            subprocess.run(["git", "commit", "-qm", "change spec nine"], cwd=repo, check=True)
+            (spec9 / "section-9-approval-checklist.md").write_text(
+                textwrap.dedent(
+                    """\
+                    # Spec #9 — Approval Checklist
+                    **Status:** APPROVED
+                    | Row | Claim | Evidence |
+                    | --- | --- | --- |
+                    | 9.1 | unresolved | prose only |
+                    """
+                ),
+                encoding="utf-8",
+            )
 
-            proc = self.run_runner(repo, base_ref="main")
-            self.assertEqual(proc.returncode, 0, proc.stdout)
-            self.assertIn("Spec audit review scope: docs/specs/spec-nine", proc.stdout)
-            self.assertIn("--enforce-dir docs/specs/spec-nine", proc.stdout)
+            for auditor in ("checklist-auditor.py", "spec5-schema-auditor.py"):
+                survey = self.run_cmd(
+                    "python3",
+                    str(ROOT / "tools" / auditor),
+                    "--root", str(specs),
+                    "--repo-root", str(repo),
+                    "--survey-only",
+                )
+                self.assertEqual(survey.returncode, 0, survey.stdout)
+                self.assertIn("SURVEY", survey.stdout)
+
+                approval = self.run_cmd(
+                    "python3",
+                    str(ROOT / "tools" / auditor),
+                    "--root", str(specs),
+                    "--repo-root", str(repo),
+                    "--changed-scope",
+                    "--enforce-dir", str(spec9),
+                )
+                self.assertEqual(approval.returncode, 1, approval.stdout)
+                self.assertIn("BLOCK", approval.stdout)
 
 
 if __name__ == "__main__":
