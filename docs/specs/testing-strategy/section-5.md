@@ -2,7 +2,7 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 4, 2026
-**Version:** 0.7
+**Version:** 0.8
 **Status:** AMENDMENT DRAFT (A3.3/A3.4; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; `docs/planning/testing-strategy-a3.3-conformance-correction.md`; A3.4 owns reapproval
 **Purpose:** Reflexive test plan: this section verifies Spec #19
@@ -26,10 +26,10 @@ mechanics for that conformance check live here in §5.4.
 - **Stage 0+1:** tooling activates per the "Activation stage" column
   in §2.2; the §5.6 traceability table records the tooling per FR.
 - **Evidence rule for this amendment:** structural existence of a
-  script, timeout, workflow, runner label, or environment-variable
-  check proves topology/configuration only. It does not prove a
-  successful timing or certified-host execution obligation. Those
-  operational facts require an actual successful run.
+  script, timeout, cache, workflow, runner label, repository variable,
+  or environment-variable check proves topology/configuration only. It
+  does not prove a successful timing or certified-host execution
+  obligation. Those operational facts require an actual successful run.
 
 ## 5.2 Stage-Gated Activation Table (KD-5)
 
@@ -48,16 +48,16 @@ per-spec §5 schema FRs (FR-TS-046 … 052).
 | FR Range | Current Status | Activation Stage | Activation Criterion |
 |----------|----------------|------------------|----------------------|
 | FR-TS-001 … 010 | ACTIVE (Stage 0+1); legacy taxonomy migration remains incomplete | Stage 0+1 | First `src/` code commit |
-| FR-TS-011 … 020 | **ACTIVE requirement; amendment candidate partly implemented.** The candidate pipeline assigns authoritative full certification to nightly on the pinned Windows/Unity host, but no successful scheduled certified-host execution is yet recorded. FR-TS-011's changed MUST wording remains an A3.4 owner-approval item | Stage 0+1 | #16 §5 CI integration available |
+| FR-TS-011 … 020 | **ACTIVE requirement; substantive amendment candidate partly implemented.** The candidate pipeline assigns authoritative full certification to nightly on the pinned Windows/Unity host, but no successful scheduled certified-host execution is yet recorded. FR-TS-011's changed MUST wording remains an A3.4 owner decision on the merits | Stage 0+1 | #16 §5 CI integration available |
 | FR-TS-021 … 030 | ACTIVE in executable scenario-runner surfaces; D9 root manifest/index remains overdue | Stage 0+1 | Scenario runner implemented |
 | FR-TS-031 … 039 | **ACTIVE (Stage 0+1)** — D2 resolved on FsCheck.NUnit 2.16.6; D8 coverage-guided fuzzing remains a later-stage decision | Stage 0+1 | Property framework pinned (D2) — **reached** |
-| FR-TS-040 … 045 | **ACTIVE** — `tools/checklist-auditor.py` is implemented and invoked by the stable runner. It surveys the repository and blocks an affected changed non-legacy spec when that candidate is `APPROVED`; amendment drafts/in-review specs remain findings until approval | Stage 0 | Applies to current spec drafts |
-| FR-TS-046 … 052 | **ACTIVE** — `tools/spec5-schema-auditor.py` is implemented with the same approval-state blocking boundary; approved #1–#8 remain survey-only per KD-4 | Stage 0 | Applies to current spec drafts |
+| FR-TS-040 … 045 | **ACTIVE** — `tools/checklist-auditor.py` is implemented. Routine pre-commit/PR/nightly composition runs it survey-only so pre-existing corpus debt cannot block unrelated edits; an explicit spec-approval walk omits `--survey-only` and fails closed on unresolved evidence for the candidate being approved | Stage 0 | Applies to current spec drafts |
+| FR-TS-046 … 052 | **ACTIVE** — `tools/spec5-schema-auditor.py` uses the same routine-survey / explicit-approval boundary; approved #1–#8 remain survey-only per KD-4 | Stage 0 | Applies to current spec drafts |
 | FR-TS-053 … 060 | **ACTIVE (Stage 0+1) — partially conformant**. D3 is resolved on coverlet.collector 6.0.4 and PR/nightly collection is wired; the §5.5 per-tier threshold mapper/auditor remains unimplemented | Stage 0+1 | Coverage tool pinned (D3) — **reached** |
-| FR-TS-061 … 067 | Inactive pending the specified flake integration layer. FR-TS-062's candidate activation wording is a substantive amendment pending A3.4 owner reapproval | Stage 0+1 | CI integration layer specified (§7.2) |
+| FR-TS-061 … 067 | Inactive pending the specified flake integration layer. FR-TS-062's candidate activation wording is a substantive amendment pending A3.4 owner decision on the merits | Stage 0+1 | CI integration layer specified (§7.2) |
 | FR-TS-068 … 074 | Schema/implementation mixed; fixture-population obligations activate as fixtures are committed | Stage 0+1 | First fixture committed |
-| FR-TS-075 … 078, 080 | **ACTIVE (Stage 0+1) — candidate topology present, full conformance not yet proven.** Versioned pre-commit, PR, and nightly surfaces exist; PR CI reuses the stable composition. PR runs a conservative whole-tree scenario superset rather than claiming exact D9 manifest selection. The pre-commit path has a 60-second hard failure bound but still needs a successful measured ≤60-second certified-developer-host run. Linux nightly evidence is non-certifying; the separate pinned Windows/Unity #16 job still needs a successful run on an actually registered/configured certified runner | Stage 0+1 | First `src/` code commit (KD-5; §7.1) — **reached** |
-| FR-TS-079 | **ACTIVE (Stage 0) — candidate implementation present.** `tools/run-tests-local.sh` is the stable local/CI composition entry point, PR CI invokes `--pr`, and inherited filter/coverage controls are not accepted as hidden policy inputs | Stage 0 | Applies to the current repository |
+| FR-TS-075 … 078, 080 | **ACTIVE (Stage 0+1) — candidate topology present, full conformance not yet proven.** Versioned pre-commit, PR, and nightly surfaces exist; PR CI reuses the stable composition. PR runs a conservative whole-tree scenario superset rather than claiming exact D9 manifest selection. The pre-commit path now uses anchored NUnit method selection and a persistent staged-index build cache with a 60-second normal-attempt bound, but still needs a successful measured ≤60-second certified-developer-host run. Linux nightly evidence is non-certifying; the self-hosted Windows/Unity #16 job is deliberately disabled until a certified runner is registered/configured and still needs a successful actual run | Stage 0+1 | First `src/` code commit (KD-5; §7.1) — **reached** |
+| FR-TS-079 | **ACTIVE (Stage 0) — candidate implementation present.** `tools/run-tests-local.sh` is the stable local/CI policy entry point, PR CI invokes `--pr`, and inherited filter/coverage controls are not accepted as hidden policy inputs | Stage 0 | Applies to the current repository |
 | FR-TS-081 … 085 | **ACTIVE (Stage 0, partial)** | Stage 0+1 | Spec-defect class active now; implementation / test / determinism classes activate with code |
 | FR-TS-086 … 092, 094 … 097 | **AMENDMENT DRAFT; non-blocking** | Stage 0+1 | A3.4 reapproval plus applicable A4 resolver/proof prerequisites and A8 architecture/evidence-gate activation |
 | FR-TS-093 | **AMENDMENT DRAFT; non-blocking** | **Stage 0** | A3.4 reapproval only. §2.2 assigns FR-TS-093 Stage 0: it is a review-mechanics requirement with no implementation prerequisite, so it acquires no A4 resolver/proof or A8 gate-activation condition. It remains non-blocking solely because the May 15, 2026 baseline stays operative until A3.4 |
@@ -93,8 +93,8 @@ Mechanics for FR-TS-040 … 045.
 
 ### 5.3.2 Stage 0+1 (Automated)
 
-`tools/checklist-auditor.py` is implemented and invoked by every
-executable `tools/run-tests-local.sh` mode.
+`tools/checklist-auditor.py` is implemented and used in two explicit
+postures rather than turning legacy corpus debt into a universal PR gate.
 
 - Parses approval-checklist tables under `docs/specs/`.
 - Resolves explicit version-controlled paths and explicit local section
@@ -102,16 +102,20 @@ executable `tools/run-tests-local.sh` mode.
 - Recognizes only explicit programmatic commands/checks; generic prose
   containing words such as "test" or "check" does not satisfy KD-6.
 - Rejects placeholder evidence tokens such as `<file-path>`.
-- Surveys the whole repository on composed runs. In changed-spec mode,
-  unresolved findings block only an affected changed non-legacy spec
-  whose candidate status is `APPROVED`; amendment drafts and in-review
-  specs remain visible findings until their approval transition, and
-  #1–#8 remain survey-only under KD-4.
-- Emits a machine-readable/console report suitable for CI consumption.
-- Exits non-zero on unresolved blocking evidence.
-- Behavior-level tooling tests cover resolved paths, resolved local §
-  citations, prose-only evidence, placeholder evidence, amendment-draft
-  non-blocking behavior, and approved-spec blocking behavior.
+- **Routine composition:** `tools/run-tests-local.sh` invokes the auditor
+  with `--survey-only --quiet-survey`. Findings remain measured and
+  visible but cannot fail an unrelated pre-commit/PR/nightly solely
+  because the approved corpus predates the automated schema.
+- **Approval transition:** the reviewer invokes the auditor without
+  `--survey-only`; `--changed-scope --enforce-dir <spec-dir>` MAY be
+  used to bind enforcement to the exact candidate under approval. An
+  unresolved blocking row then prevents that spec from reaching
+  APPROVED (FR-TS-042).
+- #1–#8 remain survey-only under KD-4 even in an explicit approval walk.
+- Emits a machine-readable/console report suitable for CI/review use.
+- Behavior-level tooling tests cover routine survey, explicit approval
+  blocking, resolved paths/local § citations, prose-only evidence,
+  placeholders, amendment-draft handling, and legacy survey behavior.
 
 The implementation deliberately remains conservative about arbitrary
 command execution from documentation: untrusted prose is not turned
@@ -151,12 +155,12 @@ Required surfaces:
 
 ### 5.4.3 Stage 0+1 Automation
 
-`tools/spec5-schema-auditor.py` is implemented and invoked by the stable
-runner. It surveys all discovered §5 files. In changed-spec mode,
-blocking attaches to the affected changed non-legacy spec only when its
-candidate state is `APPROVED`; other findings remain survey output.
-Tooling tests lock the structured-surface requirement and the
-approval-state / legacy survey boundaries.
+`tools/spec5-schema-auditor.py` is implemented with the same two
+postures as §5.3.2. The stable routine runner invokes it with
+`--survey-only`; an approval-transition walk omits that flag and MAY
+scope enforcement with `--changed-scope --enforce-dir <spec-dir>`.
+Tooling tests lock the structured-surface requirement and the routine
+survey / explicit approval / legacy boundaries.
 
 ## 5.5 Coverage-Report Auditor (KD-9)
 
@@ -197,11 +201,11 @@ Mechanism | Tooling | Activation Stage | Output Artifact`.
 | FR | Mechanism | Tooling | Activation | Output Artifact |
 |----|-----------|---------|------------|-----------------|
 | FR-TS-001 … 010 | Pyramid-ratio check at PR-merge | Coverage/tooling surfaces; taxonomy migration still incomplete | Stage 0+1 | CI report |
-| FR-TS-011 … 020 | Boundary review at #16 §5 change; successful nightly full certified execution required | Linux regression evidence + defined certified Windows/Unity nightly job; actual certified execution still required | Stage 0+1 | Review note + certified test result |
+| FR-TS-011 … 020 | Boundary review at #16 §5 change; successful nightly full certified execution required | Linux regression evidence + gated certified Windows/Unity nightly job; actual certified execution still required | Stage 0+1 | Review note + certified test result |
 | FR-TS-021 … 030 | Scenario runner schema check | `ScenarioRunner` load step + §5.4 auditor; D9 index overdue | Stage 0+1 | Runner exit status |
 | FR-TS-031 … 039 | Property / fuzz seed-log inspection | FsCheck.NUnit 2.16.6 + seed-governance review | Stage 0+1 | Test/run log |
-| FR-TS-040 … 045 | Checklist auditor at spec-review/approval boundary | `tools/checklist-auditor.py` | **Stage 0** | Auditor output |
-| FR-TS-046 … 052 | §5.4 schema-conformance auditor at spec-review/approval boundary | `tools/spec5-schema-auditor.py` | **Stage 0** | Auditor output |
+| FR-TS-040 … 045 | Checklist auditor: routine survey plus explicit approval gate | `tools/checklist-auditor.py` | **Stage 0** | Auditor output |
+| FR-TS-046 … 052 | §5.4 schema auditor: routine survey plus explicit approval gate | `tools/spec5-schema-auditor.py` | **Stage 0** | Auditor output |
 | FR-TS-053 … 060 | Coverage collection + tier audit | coverlet.collector 6.0.4 implemented; per-tier mapper still owed | Stage 0+1 | Cobertura report; future tier verdict |
 | FR-TS-061 … 067 | Flake ledger + eviction-log review | CI double-run + `tests/flake-eviction-log.md` when activated | Stage 0+1 | Flake ledger |
 | FR-TS-068 … 074 | Fixture validator | `IFixtureValidator` at scenario load | Stage 0+1 | Runner exit status |
@@ -259,13 +263,16 @@ own implementation/activation.
 - The A3 candidate consumes #16 according to pipeline scope, not by
   pretending every host is a certification host: pre-commit carries no
   determinism certification; PR may carry partial/non-certifying
-  regression evidence; nightly is **defined to execute** the full
-  authoritative #16 suite on the pinned certified Windows/Unity host.
-- **Operational acceptance is still open:** the presence of the
-  self-hosted Windows job, labels, platform-pin check, and `TD_UNITY_EXE`
-  invocation does not prove a certified runner is registered/configured
-  or that the suite has passed there. A successful certified-host run is
-  required before this leg may be recorded conformant.
+  regression evidence; nightly is **defined to execute**, once the
+  certified runner is operationally activated, the full authoritative
+  #16 suite on the pinned certified Windows/Unity host.
+- **Operational acceptance is still open:** the self-hosted job is
+  gated by `DETERMINISM_CERTIFIED_RUNNER_ENABLED=true` specifically so
+  an unregistered runner is not silently treated as available. The
+  workflow/variable/labels/platform-pin checks do not prove the runner
+  is registered/configured or that the suite passed there. A successful
+  certified-host run is required before this leg may be recorded
+  conformant.
 - Linux `dotnet`/shim results remain useful regression evidence but do
   not certify the platform tuple.
 - Failures in the authoritative #16 nightly suite are determinism-gate
@@ -283,6 +290,7 @@ own implementation/activation.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.8     | September 4, 2026 | — | **Claude review correction.** Removes the repo-wide auditor landmine by making routine composed runs survey-only and reserving fail-closed enforcement for an explicit approval transition; records anchored NUnit method-prefix pre-commit selection, persistent staged-index cache semantics, the gated-not-assumed certified runner, and the merit-based FR-TS-011/062 approval boundary. |
 | 0.7     | September 4, 2026 | — | **A3.3 conformance/evidence correction.** Stops treating topology as execution proof: FR-TS-075 remains only partially conformant until a successful complete ≤60-second pre-commit run is measured on the certified developer host and the pinned Windows/Unity #16 nightly job actually executes successfully. Aligns the automated auditor descriptions with fail-closed evidence parsing plus approval-state blocking, records `ERR-019-001-status.md` as the current candidate companion, and flags FR-TS-011/062 owner reapproval as an A3.4 obligation. |
 | 0.6     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization candidate.** Updates activation state after D2/D3 pins and pipeline implementation; records automated checklist/schema auditors, staged-snapshot pre-commit, PR whole-tree scenario superset, Linux non-certifying nightly evidence, and the separate pinned Windows/Unity full #16 suite. D3 collector closure is not overclaimed: §5.5's per-tier threshold mapper remains owed. The v0.7 correction clarifies which execution facts were not proven by this topology alone. |
 | 0.5     | September 3, 2026 | — | **A3.2b review correction (`ERR-019-001`).** Reconciles the FR-TS-075 … 080 band in §5.2 and §5.6 with the normative core: FR-TS-079 gets its own **Stage 0** row per §2.2, and FR-TS-075 … 078, 080 carry the actual Stage 0+1 criterion (first `src/` code commit, KD-5 / §7.1) — **reached** — in place of "CI provider pinned (D4)", which the normative core never defined. The band was therefore mis-reported as `Inactive` from the day it was written, not by D4's closure. Activation is deliberately not deferred behind a new prerequisite: gating FR-TS-075 on the three-pipeline topology it itself mandates would be circular and fail-open. The real gap this concealed — two absent mandatory pipelines and an absent Appendix E script — is recorded at `ERR-019-001` and open at `docs/tracking/open-issues.md`. |
