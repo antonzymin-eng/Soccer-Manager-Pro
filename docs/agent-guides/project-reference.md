@@ -20,7 +20,8 @@
 
 **The live gap is now the project's dominant fact.** With the specification phase closed, **19 of the 53
 APPROVED specs have no `src/` assembly at all** — the 9 listed below plus the ten approved on July 27.
-(It was 22 until August 5, 2026, when **#29 Training and #41 Injuries & Medical** landed T0 assemblies together.)
+(It was 22 until August 5, 2026, when **#29 Training and #41 Injuries & Medical** landed T0 assemblies
+together, and 20 until August 13, 2026, when **#44 Discipline & Suspensions** landed `src/discipline/`.)
 The specification frontier runs a long way ahead of the implementation, which is a deliberate posture
 (specify before coding), and it makes one habit dangerous: **"the spec is APPROVED" now says nothing
 whatsoever about whether code exists.** It is true of ~36% of the registry.
