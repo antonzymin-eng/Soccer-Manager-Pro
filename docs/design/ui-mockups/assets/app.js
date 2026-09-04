@@ -1,7 +1,7 @@
 // app.js — direction switching + section nav highlight
 (function () {
   const root = document.documentElement;
-  const STORAGE_KEY = "smp-direction";
+  const STORAGE_KEY = "sxi-direction";
 
   function setDirection(dir) {
     root.setAttribute("data-direction", dir);
