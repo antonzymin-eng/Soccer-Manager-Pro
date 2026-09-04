@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -17,18 +18,16 @@ PATH_TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 
-CHECK_WORDS = (
-    "auditor",
-    "check",
-    "test",
-    "lint",
-    "validator",
-    "gate",
+PROGRAM_COMMANDS = {
+    "bash",
+    "dotnet",
+    "git",
     "grep",
     "python",
-    "dotnet",
-    "unity",
-)
+    "python3",
+    "rg",
+    "sh",
+}
 
 
 @dataclass(frozen=True)
@@ -108,14 +107,44 @@ def resolve_candidate(token: str, *, repo_root: Path, spec_dir: Path) -> bool:
     return any(candidate.exists() for candidate in options)
 
 
+def _inline_programmatic_command(
+    token: str, *, repo_root: Path, spec_dir: Path
+) -> bool:
+    """Accept only explicit inline commands, never prose that merely says 'test/check'."""
+    try:
+        argv = shlex.split(token)
+    except ValueError:
+        return False
+    if not argv or argv[0] not in PROGRAM_COMMANDS:
+        return False
+
+    # Commands that name a repository script/file must resolve that operand.
+    path_like = [
+        arg for arg in argv[1:]
+        if not arg.startswith("-") and ("/" in arg or Path(arg).suffix)
+    ]
+    if path_like:
+        return any(
+            resolve_candidate(arg, repo_root=repo_root, spec_dir=spec_dir)
+            for arg in path_like
+        )
+
+    # Repository-independent invocations such as `git diff` or `dotnet test`
+    # are still explicit programmatic checks if they have a concrete subcommand.
+    return len(argv) >= 2 and not argv[1].startswith("-")
+
+
 def has_named_programmatic_check(evidence: str, *, repo_root: Path, spec_dir: Path) -> bool:
-    lower = evidence.lower()
     for token in candidate_paths(evidence):
         if resolve_candidate(token, repo_root=repo_root, spec_dir=spec_dir):
             suffix = Path(token.split("#", 1)[0]).suffix.lower()
             if suffix in {".py", ".sh", ".cs"} or token.startswith("tools/"):
                 return True
-    return any(word in lower for word in CHECK_WORDS) and "manual review" not in lower
+
+    return any(
+        _inline_programmatic_command(token.strip(), repo_root=repo_root, spec_dir=spec_dir)
+        for token in BACKTICK_RE.findall(evidence)
+    )
 
 
 def describe(findings: list[Finding]) -> str:
