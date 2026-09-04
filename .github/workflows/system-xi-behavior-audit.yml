@@ -1,0 +1,106 @@
+name: System XI behavior audit
+
+on:
+  push:
+    branches:
+      - codex/system-xi-naming-migration
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Audit rename for behavioral changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+
+          # Restore ambiguous mock-data acronym replacement; it is not product UI branding.
+          git checkout origin/main -- docs/design/ui-mockups/assets/squad.js
+
+          # Compatibility / canonical surfaces must be byte-identical to main.
+          git diff --quiet origin/main -- docs/design/ui-mockups/assets/app.js
+          git diff --quiet origin/main -- docs/design/ui-mockups/assets/squad.js
+          git diff --quiet origin/main -- docs/specs/deterministic-sim/golden-vectors/serialize-canonical-corpus.md
+          git diff --quiet origin/main -- src/deterministic-sim/tests/SerializeCanonicalCorpusTests.cs
+
+          # No Unity assets, assembly descriptors, serialized data, project files, binaries,
+          # or workflow/config surfaces may be changed by this branding migration.
+          changed="$(git diff --name-only origin/main -- . ':!.github/workflows/system-xi-behavior-audit.yml')"
+          echo "$changed"
+          if printf '%s\n' "$changed" | grep -E '\.(asmdef|meta|unity|prefab|asset|json|ya?ml|csproj|sln|dll|so|dylib|png|jpe?g|gif|webp|psd|wav|mp3|ogg|mp4|mov)$'; then
+            echo 'Forbidden behavior/config/binary surface changed.' >&2
+            exit 1
+          fi
+
+          # The only remaining executable/source files are known and individually constrained.
+          non_docs="$(printf '%s\n' "$changed" | grep -Ev '\.(md|html)$' || true)"
+          expected_non_docs=$'.gitattributes\ndocs/design/ui-mockups/assets/tokens.css\nsrc/match-client-web/MatchClientPage.cs\nsrc/match-viewer/HtmlReplayExporter.cs\nsrc/match-viewer/LiveMatchServer.cs\ntools/chat-review.py'
+          if [ "$non_docs" != "$expected_non_docs" ]; then
+            echo 'Unexpected non-document source/config delta:' >&2
+            printf '%s\n' "$non_docs" >&2
+            exit 1
+          fi
+
+          # C# changes must be display-only HTML title/heading replacements.
+          python - <<'PY'
+          import subprocess
+
+          expected = {
+              'src/match-client-web/MatchClientPage.cs': {
+                  '-<title>Tactical Director — Match</title>',
+                  '+<title>System XI — Match</title>',
+                  '-<h1>Tactical Director — Live Match</h1>',
+                  '+<h1>System XI — Live Match</h1>',
+              },
+              'src/match-viewer/HtmlReplayExporter.cs': {
+                  '-            sb.Append("<title>Tactical Director — Match Replay</title>\\n<style>\\n");',
+                  '+            sb.Append("<title>System XI — Match Replay</title>\\n<style>\\n");',
+              },
+              'src/match-viewer/LiveMatchServer.cs': {
+                  '-            sb.Append("<title>Tactical Director — Live Match</title>\\n<style>\\n");',
+                  '+            sb.Append("<title>System XI — Live Match</title>\\n<style>\\n");',
+              },
+          }
+          for path, allowed in expected.items():
+              out = subprocess.check_output(['git', 'diff', '--unified=0', 'origin/main', '--', path], text=True)
+              changed = {
+                  line for line in out.splitlines()
+                  if (line.startswith('+') or line.startswith('-'))
+                  and not line.startswith('+++')
+                  and not line.startswith('---')
+              }
+              if changed != allowed:
+                  raise SystemExit(f'unexpected C# semantic delta in {path}: {changed!r}')
+          PY
+
+          # Operational Claude metadata may rename project wording only; invocation fields stay fixed.
+          if git diff origin/main -- .claude | grep -E '^[+-](name:|tools:|model:|disable-model-invocation:)' ; then
+            echo 'Claude routing/invocation metadata changed.' >&2
+            exit 1
+          fi
+
+          # Renamed design-system path must be fully repointed.
+          test -f 'docs/design/ui-mockups/System XI - Design System.html'
+          test ! -e 'docs/design/ui-mockups/Soccer Manager Pro - Design System.html'
+          if git grep -n -F 'Soccer Manager Pro - Design System.html' -- . ':!.github/workflows/system-xi-behavior-audit.yml'; then
+            echo 'Residual reference to old design-system path.' >&2
+            exit 1
+          fi
+
+          git diff --check origin/main -- . ':!.github/workflows/system-xi-behavior-audit.yml'
+
+          # Remove this one-shot audit and land the mock-data restoration.
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/system-xi-behavior-audit.yml
+          git add docs/design/ui-mockups/assets/squad.js
+          git commit -m 'Remove unintended behavioral rename deltas'
+          git push origin HEAD:codex/system-xi-naming-migration
