@@ -2,7 +2,7 @@
 
 **Created:** May 12, 2026
 **Last Updated:** September 4, 2026
-**Version:** 0.6
+**Version:** 0.7
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** Reflexive test plan: this section verifies Spec #19
@@ -30,17 +30,26 @@ mechanics for that conformance check live here in §5.4.
 
 Per-FR table. Most FRs read "Stage 0+1" with criterion "first `src/`
 code committed". A subset reads "Stage 0" with criterion "applies to
-spec drafts now" — notably the KD-6 mandate FRs (FR-TS-040 … 045) and
-per-spec §5 schema FRs (FR-TS-046 … 052).
+spec drafts now" — notably the KD-6 mandate FRs (FR-TS-040 … 042, 044,
+045) and per-spec §5 schema FRs (FR-TS-046 … 052). **The ranges named
+in this paragraph are the activation ranges, which are not the §2.2
+partition ranges:** §2.2 partitions FR-TS-040 … 045 to KD-6 mechanics
+in §3.5, but assigns FR-TS-043 Stage 0+1, so it is listed separately in
+the table below (`ERR-019-002`).
 
 > **Column semantics.** The "Stage 0 Status" column below describes
 > *current enforcement state* (`ACTIVE (Stage 0)` = enforced today;
 > `Inactive` = waiting for activation criterion). The "Activation
 > Stage" column matches the same-name column in §2.2 (the stage at
-> which the FR begins to gate merges). For procedural FRs (FR-TS-040
-> … 052), both columns read "Stage 0" because the activation criterion
-> is "applies to spec drafts now" — there is nothing further to wait
-> for.
+> which the FR begins to gate merges). For most procedural FRs
+> (FR-TS-040 … 042, 044 … 052), both columns read "Stage 0" because the
+> activation criterion is "applies to spec drafts now" — there is
+> nothing further to wait for. **FR-TS-043 is the one row where the two
+> columns deliberately differ**, and it shows why there are two: §2.2
+> assigns it Stage 0+1 because the automated `tools/checklist-auditor.py`
+> mechanics it gates arrive then, while its Stage 0 manual mechanics are
+> enforced today. Split out at `ERR-019-002`; before that split the band
+> published a single Stage 0 for both columns, contradicting §2.2.
 
 | FR Range | Stage 0 Status | Activation Stage | Activation Criterion |
 |----------|----------------|------------------|----------------------|
@@ -260,3 +269,4 @@ own implementation/activation.
 | 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 1).** Splits FR-TS-093 out of the FR-TS-086 … 097 band in §5.2 and corrects its §5.6 activation cell: §2.2 assigns FR-TS-093 **Stage 0**, so the band's Stage 0+1 value contradicted the normative core and attached A4/A8 prerequisites the requirement does not have. Its Stage 0 *status* is unchanged — still AMENDMENT DRAFT and non-blocking until A3.4 reapproval, because the May 15, 2026 baseline remains operative; no requirement is activated here. |
 | 0.5     | September 3, 2026 | — | **A3.2b review correction (`ERR-019-001`).** Reconciles the FR-TS-075 … 080 band in §5.2 and §5.6 with the normative core: FR-TS-079 gets its own **Stage 0** row per §2.2, and FR-TS-075 … 078, 080 carry the actual Stage 0+1 criterion (first `src/` code commit, KD-5 / §7.1) — **reached** — in place of "CI provider pinned (D4)", which the normative core never defined. The band was therefore mis-reported as `Inactive` from the day it was written, not by D4's closure. Activation is deliberately not deferred behind a new prerequisite: gating FR-TS-075 on the three-pipeline topology it itself mandates would be circular and fail-open. The real gap this concealed — two absent mandatory pipelines and an absent Appendix E script — is recorded at `ERR-019-001` and open at `docs/tracking/open-issues.md`. |
 | 0.6     | September 4, 2026 | — | **A3.3 reconciliation correction (`ERR-019-002`).** §5.2 and §5.6 published an Activation Stage for **eight** FR rows that contradicted §2.2 — the same defect class as `ERR-019-001`, found by the A3.3 traceability gate comparing the two columns mechanically rather than by eye. §5.2's own column-semantics note states that its Activation Stage column *matches the same-name column in §2.2*, so any disagreement is a defect by the table's own contract. Six Stage 0 MUSTs (FR-TS-013, 015, 018, 020, 022, 038) were buried in Stage 0+1 bands and published as `Inactive`/`Schema only` behind criteria they do not wait on; FR-TS-039, the partition's only MAY, was published as Stage 0+1 behind D2 when §2.2 assigns it Stage 1+ and its own statement defers it to **D8**; and FR-TS-043 was published as Stage 0 inside an **ACTIVE** band when §2.2 assigns it Stage 0+1. Each is split to its own row in **both** tables and the Activation Stage column now reproduces §2.2 for all 97 rows, verified mechanically. FR-TS-043 is split rather than forced to one value: it spans both stages by construction, so its Stage 0 Status records the enforced manual half while its Activation Stage carries §2.2's Stage 0+1. §5.7's cross-reference note is updated for the FR-TS-011 … 020 split. **No FR statement, level, or §2.2 activation value changed** — §2.2 is the authority both tables were already required to reproduce, and this pass moved the tables to it, not the reverse. |
+| 0.7     | September 4, 2026, later | — | **Self-review correction to v0.6 — the same defect class, created by the fix for it.** v0.6 corrected the §5.2/§5.6 tables and left §5.2's own preamble and column-semantics note asserting the pre-split state: the preamble named the Stage 0 subset as "FR-TS-040 … 045" and the note said that for FR-TS-040 … 052 "both columns read Stage 0". Both are falsified by v0.6's own FR-TS-043 split, so the section shipped prose contradicting the table directly beneath it — which is what `ERR-019-002` is about. Both are corrected, and the note now states FR-TS-043 as the deliberate two-column divergence it is, with the reason. No table row, FR statement, level, or §2.2 value changed. |
