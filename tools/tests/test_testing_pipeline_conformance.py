@@ -31,6 +31,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         self.assertIn("schedule:", text)
         self.assertIn("cron:", text)
         self.assertIn("tools/run-tests-local.sh --nightly", text)
+        self.assertIn("TD_SHOT_DIAGNOSTIC: '1'", text)
 
 
 if __name__ == "__main__":
