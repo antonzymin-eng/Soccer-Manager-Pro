@@ -12,7 +12,10 @@ from testing_strategy_audit import (
     candidate_paths,
     describe,
     has_named_programmatic_check,
+    has_resolved_local_section_reference,
     infer_spec_id,
+    infer_status,
+    is_approved_status,
     is_legacy_survey,
     iter_tables,
     resolve_candidate,
@@ -27,13 +30,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--changed-scope",
         action="store_true",
-        help="Survey the whole root but block only non-legacy spec directories named by --enforce-dir.",
+        help="Survey the whole root but consider blocking only spec directories named by --enforce-dir.",
     )
     parser.add_argument(
         "--enforce-dir",
         action="append",
         default=[],
         help="Spec directory, absolute or repo-relative, that is currently under review. Repeatable.",
+    )
+    parser.add_argument(
+        "--quiet-survey",
+        action="store_true",
+        help="Print blocking findings plus counts, but omit individual survey findings.",
     )
     return parser.parse_args()
 
@@ -64,13 +72,22 @@ def audit_file(
 ) -> tuple[int | None, int, list[Finding]]:
     text = path.read_text(encoding="utf-8")
     spec_id = infer_spec_id(text)
+    status = infer_status(text)
     lines = text.splitlines()
     findings: list[Finding] = []
     checked = 0
     blocking_scope = is_enforced(path, changed_scope=changed_scope, enforce_dirs=enforce_dirs)
 
+    # FR-TS-042 blocks APPROVED status. Amendment drafts and in-review specs are
+    # audited and reported, but their unresolved rows do not masquerade as a
+    # repository merge gate before the approval transition itself. Legacy #1-#8
+    # retain the explicit KD-4 survey-only treatment.
     def blocks() -> bool:
-        return blocking_scope and not is_legacy_survey(spec_id)
+        return (
+            blocking_scope
+            and not is_legacy_survey(spec_id)
+            and is_approved_status(status)
+        )
 
     for headers, rows in iter_tables(lines):
         evidence_indexes = [
@@ -117,8 +134,11 @@ def audit_file(
             named_check = has_named_programmatic_check(
                 evidence, repo_root=repo_root, spec_dir=path.parent
             )
+            local_section = has_resolved_local_section_reference(
+                evidence, spec_dir=path.parent
+            )
 
-            if broken_paths and not resolved_paths and not named_check:
+            if broken_paths and not resolved_paths and not named_check and not local_section:
                 findings.append(
                     Finding(
                         spec_id,
@@ -128,13 +148,13 @@ def audit_file(
                         blocks(),
                     )
                 )
-            elif not resolved_paths and not named_check:
+            elif not resolved_paths and not named_check and not local_section:
                 findings.append(
                     Finding(
                         spec_id,
                         str(path),
                         row_id,
-                        "evidence is prose only; no resolved version-controlled path or explicit programmatic command",
+                        "evidence is prose only; no resolved version-controlled path, section citation, or explicit programmatic command",
                         blocks(),
                     )
                 )
@@ -177,12 +197,14 @@ def main() -> int:
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
-        scope = "changed-spec enforcement" if args.changed_scope else "full enforcement"
+        scope = "changed-spec enforcement" if args.changed_scope else "approval-state enforcement"
         print(
             f"checklist-auditor: {audited_files} file(s), {total_rows} evidence row(s), "
             f"{describe(findings)} [{scope}]"
         )
         for finding in findings:
+            if args.quiet_survey and not finding.blocking:
+                continue
             level = "BLOCK" if finding.blocking else "SURVEY"
             print(f"{level}: {finding.path}:{finding.row}: {finding.message}")
 
