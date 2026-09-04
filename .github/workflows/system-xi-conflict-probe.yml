@@ -17,6 +17,8 @@ jobs:
         run: |
           set +e
           git fetch origin main
+          git config user.name 'conflict-probe'
+          git config user.email 'conflict-probe@example.invalid'
           git merge --no-commit --no-ff origin/main
           rc=$?
           echo "merge_rc=$rc"
