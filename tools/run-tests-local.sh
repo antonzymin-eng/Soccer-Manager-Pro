@@ -6,6 +6,10 @@ MODE="${1:---pr}"
 PRECOMMIT_BUDGET_SECONDS=60
 PRECOMMIT_FILTER='FullyQualifiedName!~sim_&FullyQualifiedName!~e2e_&FullyQualifiedName!~Integration&FullyQualifiedName!~Scenario&FullyQualifiedName!~TacticalDirector.DeterministicSim.Tests&TestCategory!=Calibration'
 
+# Legacy ambient controls are deliberately not policy inputs. The stable runner
+# owns composition and sanitizes them before invoking the lower-level gate.
+unset TD_GATE_TEST_FILTER TD_GATE_FILTER_SOURCE TD_OWNER_HELD_RED_MODE TD_COLLECT_COVERAGE || true
+
 usage() {
   cat <<'USAGE'
 Usage: bash tools/run-tests-local.sh [--pre-commit|--pr|--nightly|--install-hook|--verify-hook]
@@ -17,6 +21,12 @@ Stable local/CI entry point for Testing Strategy #19 FR-TS-075/079.
   --nightly      Auditors + full non-certifying simulation/soak gate + coverage.
   --install-hook Configure this clone to use the versioned .githooks directory.
   --verify-hook  Fail unless this clone is configured to execute that hook.
+
+Documentation auditors always survey the repository but only treat findings as
+blocking for changed specs whose candidate status is APPROVED. Amendment drafts
+and IN REVIEW specs remain visible findings until their approval transition;
+legacy specs #1-#8 remain survey-only per KD-4. This matches FR-TS-042/052:
+nonconformance blocks approval rather than unrelated code changes.
 
 D2 is pinned to FsCheck.NUnit 2.16.6 and D3 is pinned to
 coverlet.collector 6.0.4 through Directory.Build.targets. Property tests
@@ -69,6 +79,28 @@ install_hook() {
   verify_hook
 }
 
+changed_spec_dirs() {
+  local files=""
+  if ! git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [ "$MODE" = "--pre-commit" ]; then
+    files="$(git -C "$ROOT" diff --cached --name-only -- docs/specs 2>/dev/null || true)"
+  elif [ -n "${GITHUB_BASE_REF:-}" ] \
+      && git -C "$ROOT" rev-parse --verify "origin/${GITHUB_BASE_REF}" >/dev/null 2>&1; then
+    files="$(git -C "$ROOT" diff --name-only "origin/${GITHUB_BASE_REF}...HEAD" -- docs/specs 2>/dev/null || true)"
+  elif git -C "$ROOT" rev-parse --verify origin/main >/dev/null 2>&1; then
+    files="$(git -C "$ROOT" diff --name-only origin/main...HEAD -- docs/specs 2>/dev/null || true)"
+  elif git -C "$ROOT" rev-parse --verify HEAD^ >/dev/null 2>&1; then
+    files="$(git -C "$ROOT" diff --name-only HEAD^..HEAD -- docs/specs 2>/dev/null || true)"
+  fi
+
+  printf '%s\n' "$files" \
+    | awk -F/ '$1=="docs" && $2=="specs" && NF>=4 {print $1"/"$2"/"$3}' \
+    | sort -u
+}
+
 case "$MODE" in
   --install-hook)
     install_hook
@@ -103,6 +135,13 @@ case "$MODE" in
     ;;
 esac
 
+mapfile -t CHANGED_SPEC_DIRS < <(changed_spec_dirs)
+AUDITOR_SCOPE_ARGS=(--changed-scope --quiet-survey)
+for spec_dir in "${CHANGED_SPEC_DIRS[@]}"; do
+    [ -n "$spec_dir" ] || continue
+    AUDITOR_SCOPE_ARGS+=(--enforce-dir "$spec_dir")
+done
+
 printf '== Testing Strategy %s pipeline ==\n' "$PIPELINE_NAME"
 if [ "$MODE" = "--pre-commit" ]; then
     printf 'Compatibility filter: %s\n' "$PRECOMMIT_FILTER"
@@ -114,10 +153,20 @@ if [ "$MODE" != "--pre-commit" ]; then
     printf 'Owner-held-red policy: execute separately and verify recorded diagnostics\n'
     printf 'Coverage: XPlat Code Coverage (coverlet.collector)\n'
 fi
+if [ "${#CHANGED_SPEC_DIRS[@]}" -gt 0 ]; then
+    printf 'Spec audit review scope:'
+    printf ' %s' "${CHANGED_SPEC_DIRS[@]}"
+    printf '\n'
+else
+    printf 'Spec audit review scope: no changed spec directories; whole-repo survey only\n'
+fi
 
 if [ "${TD_PIPELINE_DRY_RUN:-}" = "1" ]; then
     printf 'DRY-RUN checklist_auditor=%s\n' "$ROOT/tools/checklist-auditor.py"
     printf 'DRY-RUN schema_auditor=%s\n' "$ROOT/tools/spec5-schema-auditor.py"
+    printf 'DRY-RUN auditor_args='
+    printf '%q ' "${AUDITOR_SCOPE_ARGS[@]}"
+    printf '\n'
     printf 'DRY-RUN gate=%s\n' "$ROOT/tools/dotnet-ci/run-gate.sh"
     printf 'DRY-RUN gate_args='
     printf '%q ' "${GATE_ARGS[@]}"
@@ -139,10 +188,12 @@ if [ "$MODE" = "--pre-commit" ] && [ "${TD_PRECOMMIT_BUDGET_ACTIVE:-}" != "1" ];
 fi
 
 printf 'Auditor: approval-checklist evidence\n'
-python3 "$ROOT/tools/checklist-auditor.py" --root "$ROOT/docs/specs" --repo-root "$ROOT"
+python3 "$ROOT/tools/checklist-auditor.py" \
+    --root "$ROOT/docs/specs" --repo-root "$ROOT" "${AUDITOR_SCOPE_ARGS[@]}"
 
 printf 'Auditor: per-spec section-5 schema\n'
-python3 "$ROOT/tools/spec5-schema-auditor.py" --root "$ROOT/docs/specs" --repo-root "$ROOT"
+python3 "$ROOT/tools/spec5-schema-auditor.py" \
+    --root "$ROOT/docs/specs" --repo-root "$ROOT" "${AUDITOR_SCOPE_ARGS[@]}"
 
 printf 'Runner: tools/dotnet-ci/run-gate.sh (Linux shim, non-certifying)\n'
 exec bash "$ROOT/tools/dotnet-ci/run-gate.sh" "${GATE_ARGS[@]}"
