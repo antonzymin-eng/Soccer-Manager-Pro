@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-import importlib.util
+import importlib
 from pathlib import Path
+import sys
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-MODULE = ROOT / "tools" / "testing_strategy_audit.py"
+TOOLS = ROOT / "tools"
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("testing_strategy_audit_under_test", MODULE)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    tools = str(TOOLS)
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    return importlib.import_module("testing_strategy_audit")
 
 
 class TestingStrategyStatusNormalizationTests(unittest.TestCase):
