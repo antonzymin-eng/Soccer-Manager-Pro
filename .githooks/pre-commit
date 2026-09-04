@@ -3,16 +3,46 @@ set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 GIT_DIR_ABS="$(git -C "$ROOT" rev-parse --absolute-git-dir)"
-SNAPSHOT="$(mktemp -d "${TMPDIR:-/tmp}/soccer-manager-precommit.XXXXXX")"
+STATE_DIR="$GIT_DIR_ABS/testing-strategy"
+SNAPSHOT="$STATE_DIR/precommit-snapshot"
+TRACKED_MANIFEST="$STATE_DIR/precommit-tracked-files.txt"
+CURRENT_MANIFEST="$STATE_DIR/precommit-tracked-files.next"
+LOCK_DIR="$STATE_DIR/precommit.lock"
 
+mkdir -p "$STATE_DIR" "$SNAPSHOT"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  echo "ERROR: another pre-commit preparation/test run is already active: $LOCK_DIR" >&2
+  exit 1
+fi
 cleanup() {
-  rm -rf "$SNAPSHOT"
+  rm -f "$CURRENT_MANIFEST"
+  rmdir "$LOCK_DIR" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
-# Export exactly the index (the staged snapshot). This prevents unstaged fixes
-# or untracked files from making a broken staged commit appear green.
+# Keep ONE persistent staged-index snapshot under .git. Reusing the directory is
+# deliberate: generated csproj/bin/obj outputs are untracked there and survive
+# between commits, so the 60-second hook does not cold-restore/rebuild the entire
+# solution from zero every time. The tracked source/document surface is still
+# made exactly equal to the current Git index before tests run.
+git -C "$ROOT" ls-files > "$CURRENT_MANIFEST"
+if [ -f "$TRACKED_MANIFEST" ]; then
+  while IFS= read -r old_path; do
+    [ -n "$old_path" ] || continue
+    if ! grep -Fqx -- "$old_path" "$CURRENT_MANIFEST"; then
+      rm -f -- "$SNAPSHOT/$old_path"
+    fi
+  done < "$TRACKED_MANIFEST"
+fi
+
 git -C "$ROOT" checkout-index --all --force --prefix="$SNAPSHOT/"
+mv "$CURRENT_MANIFEST" "$TRACKED_MANIFEST"
+git -C "$ROOT" write-tree > "$STATE_DIR/precommit-index-tree.txt"
+
+if [ "${TD_PRECOMMIT_PREPARE:-}" = "1" ]; then
+  echo "Preparing persistent pre-commit build cache (one-time cold run; 60s acceptance budget intentionally not applied)."
+  export TD_PRECOMMIT_BUDGET_ACTIVE=1
+fi
 
 (
   cd "$SNAPSHOT"
