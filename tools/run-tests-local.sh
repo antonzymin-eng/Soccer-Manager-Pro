@@ -24,9 +24,10 @@ Stable local/CI entry point for Testing Strategy #19 FR-TS-075/079.
 
 Routine pre-commit/PR/nightly runs SURVEY the documentation corpus. They do not
 turn pre-existing Spec #19 schema/checklist debt into an unrelated repository
-merge gate. On PR CI, TD_APPROVAL_BASE_REF names the PR base commit; any spec
-section that transitions from non-approved/missing to APPROVED is detected
-mechanically and both auditors are rerun as blocking for only those spec dirs.
+merge gate. On PR CI, TD_APPROVAL_BASE_REF names the PR base commit; the policy
+compares base/head SPEC_INDEX.md, the canonical approval registry. Any spec whose
+registry status transitions from non-approved/missing to APPROVED is rerun through
+both auditors as blocking. Missing/unparseable registry history fails closed.
 This wires FR-TS-042/052 to the approval event without retroactively blocking
 unrelated changes on pre-existing corpus debt.
 
@@ -40,10 +41,11 @@ than unsafe substrings of FullyQualifiedName.
 The pre-commit path skips the separate whole-tree meta/build pass and uses one
 incremental generated-solution test invocation; the versioned hook preserves a
 persistent staged-index snapshot/build cache and refreshes only changed index
-paths so unchanged source mtimes remain stable. The entire attempted composition
-remains subject to the 60-second hard limit. Meeting that limit on the certified
-developer host is an operational acceptance measurement, not inferred from the
-timeout itself.
+paths so unchanged source mtimes remain stable. Snapshot checkout disables LFS
+smudging because staged pointer bytes are sufficient for this test gate. The
+entire attempted composition remains subject to the 60-second hard limit. Meeting
+that limit on the certified developer host is an operational acceptance
+measurement, not inferred from the timeout itself.
 
 PR/nightly use the Linux shim gate for non-certifying functional evidence. Nightly
 also enables the existing full-match ShotOutcomeDiagnosticTests soak. Platform
@@ -125,7 +127,7 @@ esac
 AUDITOR_SCOPE_ARGS=(--survey-only --quiet-survey)
 
 printf '== Testing Strategy %s pipeline ==\n' "$PIPELINE_NAME"
-printf 'Documentation audit policy: routine survey; PR approval transitions are blocking\n'
+printf 'Documentation audit policy: routine survey; canonical registry approval transitions are blocking\n'
 if [ "$MODE" = "--pre-commit" ]; then
     printf 'Pre-commit selection: anchored NUnit method/category rules in %s\n' "$PRECOMMIT_SETTINGS"
 fi
@@ -179,9 +181,9 @@ printf 'Auditor: per-spec section-5 schema (survey)\n'
 python3 "$ROOT/tools/spec5-schema-auditor.py" \
     --root "$ROOT/docs/specs" --repo-root "$ROOT" "${AUDITOR_SCOPE_ARGS[@]}"
 
-# Approval blocking is automatically wired only where the PR itself changes a
-# spec section into APPROVED. Existing approved specs with historical debt stay
-# survey-only unless they undergo a new approval transition.
+# Approval blocking is automatically wired only where the canonical registry
+# itself advances a spec into APPROVED. Existing approved specs with historical
+# debt stay survey-only unless they undergo a new canonical approval transition.
 if [ "$MODE" = "--pr" ] && [ -n "${TD_APPROVAL_BASE_REF:-}" ]; then
     APPROVAL_SCOPE_FILE="$(mktemp)"
     trap 'rm -f "$APPROVAL_SCOPE_FILE"' EXIT INT TERM
