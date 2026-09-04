@@ -459,11 +459,15 @@ POST_RECORD_VERB = re.compile(
 #       scanned — a few hundred bytes of a multi-hundred-KB file, deliberate and
 #       stated per-surface in the coverage stats so a surface that contributes
 #       nothing is visible as such rather than silently counted as "checked".
-#   (b) the file's own VERSION HISTORY section(s) — README.md carries one; its
-#       rows and entries are dated records, not claims about now.
+#   (b) the file's own VERSION HISTORY section(s) — its rows and entries are
+#       dated records, not claims about now. (README.md carried one until the
+#       September 3, 2026 redesign; it now carries neither a VERSION HISTORY
+#       section nor a header chain, so neither exclusion applies to it and the
+#       whole file is in scope. record_regions() fails open for a surface with
+#       no recognised record structure, which is the safe direction.)
 #
 # A named surface that is MISSING from the tree is an ERROR, not a skip — with a
-# skip, moving all eleven files aside yields a green run that checked nothing.
+# skip, moving all thirteen files aside yields a green run that checked nothing.
 # ---------------------------------------------------------------------------
 CURRENT_STATE = (
     "CLAUDE.md",
@@ -534,7 +538,15 @@ def frozen_chain_span(text):
     other reports.
 
     ROUND 23 (H22) — THE SPAN USED TO RUN TO THE NEXT MARKDOWN HEADING, AND
-    THAT SWALLOWED PRESENT-TENSE TEXT ON EVERY SURFACE THAT HAS A CHAIN. The
+    THAT SWALLOWED PRESENT-TENSE TEXT ON EVERY SURFACE THAT HAS A CHAIN.
+    (Dated record, superseded in part: README.md was the worked example below
+    and no longer has a chain at all — its 38 entries moved verbatim to
+    docs/tracking/CHANGELOG-readme.md on September 3, 2026 and the whole file
+    is now in scope. The line numbers, entry counts and the "All 26 approved
+    specs" quote below are preserved as measured at the time of the round-23
+    fix; they describe a file state that no longer exists. The rule they
+    justify is unchanged and still load-bearing for the five other surfaces
+    listed, every one of which still carries a chain.) The
     chain is inserted INTO a file's header field block, between
     `**Last Updated:**` and the fields below it, so the bytes after the last
     chain entry and before the next heading are the file's own live status
