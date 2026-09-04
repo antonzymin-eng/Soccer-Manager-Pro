@@ -93,7 +93,7 @@ Where .NET 8 is already available, the policy runner can execute normally. Histo
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.3 | 2026-09-04 | — | **Testing Strategy pipeline correction.** Makes `tools/run-tests-local.sh` the canonical developer/CI policy entry point; records exact owner-held RED handling, anchored NUnit pre-commit selection, persistent staged-index build cache, coverage settings, and the gated certified-host nightly boundary. Direct `run-gate.sh` use is now explicitly lower-level/debug only. |
+| Policy addendum | 2026-09-04 | — | **Testing Strategy pipeline correction.** Makes `tools/run-tests-local.sh` the canonical developer/CI policy entry point; records exact owner-held RED handling, anchored NUnit pre-commit selection, persistent staged-index build cache, coverage settings, and the gated certified-host nightly boundary. This operational correction intentionally does not advance the historical gate-document version key, because live open-issue records cite the Aug-7 v1.2 revision as dated evidence. |
 | 1.2 | 2026-08-07 | — | Recorded that the full generated Linux gate can run in the Claude remote Ubuntu environment; still non-certifying. |
 | 1.1 | 2026-07-13 | — | Certification-pin citations updated to the Unity 6000.4.9f1 target tuple; gate remained non-certifying. |
 | 1.0 | 2026-06-12 | — | Initial gate: shim + generator + runner + quarantine; first full suite execution exposed multiple previously uncompiled defects. |
