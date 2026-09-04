@@ -162,6 +162,21 @@ class TestingStrategyAuditorHardeningTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 1, proc.stdout)
             self.assertIn("BLOCK", proc.stdout)
 
+    def test_enforced_approved_spec_without_section5_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            spec = repo / "docs" / "specs" / "spec-nine"
+            spec.mkdir(parents=True)
+            self.write_index(repo, folder="spec-nine", status="APPROVED")
+            (spec / "section-1.md").write_text(
+                "# Spec #9 — Section 1\nPurpose only.\n",
+                encoding="utf-8",
+            )
+            proc = self.run_auditor(SCHEMA, repo, spec)
+            self.assertEqual(proc.returncode, 1, proc.stdout)
+            self.assertIn("missing required section-5 test-plan file", proc.stdout)
+            self.assertIn("BLOCK", proc.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
