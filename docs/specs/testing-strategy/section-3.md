@@ -1,10 +1,10 @@
 # Testing Strategy & Framework Specification #19 — Section 3: Technical Specification (Rule Mechanics)
 
 **Created:** May 12, 2026
-**Last Updated:** September 3, 2026
-**Version:** 0.6
+**Last Updated:** September 4, 2026
+**Version:** 0.7
 **Status:** AMENDMENT DRAFT (A3.2a; May 15, 2026 approved baseline remains in force)
-**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.37, §7; A3.2a
+**Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7
 **Purpose:** Mechanics of every rule named in §2.2. Each subsection
 cites the FR-TS-### IDs it implements and provides the *mechanics*; it
 does not redefine the rule statement. Section ordering mirrors the
@@ -133,16 +133,22 @@ binding.
 
 ### 3.2.2 Spec #19's Obligations Toward #16 §5
 
-- Every CI pipeline declared in §6 MUST include #16 §5's regression
-  tiers in their canonical order (unit / integration / scenario /
-  soak) (FR-TS-011).
-- Failures in any #16 tier block merges; Spec #19 does not soften or
-  override #16's exit criteria (FR-TS-012).
+- Pipeline consumption follows §6.2.4 rather than treating every host
+  as a certification host. Pre-commit carries no determinism
+  certification; PR may carry partial/non-certifying regression
+  evidence; nightly MUST execute #16 §5's full authoritative suite on
+  the pinned certified Windows/Unity host (FR-TS-011).
+- Failures in the authoritative #16 tier run block merges/releases as
+  applicable; Spec #19 does not soften or override #16's exit criteria
+  (FR-TS-012).
+- GitHub-hosted Linux `dotnet`/shim execution MAY provide regression
+  evidence but MUST NOT be represented as platform determinism
+  certification.
 - Spec #19's own test taxonomy MUST NOT collide with #16 tier names
   (FR-TS-013); §3.1.4 already disambiguates by prefix.
 - The #16 §5 suite is invoked through a single integration point
-  (`ITestHarness`, §4.3); duplicate entry points are forbidden
-  (FR-TS-016).
+  (`ITestHarness`, §4.3); duplicate certification entry points are
+  forbidden (FR-TS-016).
 - Spec #19's functional-regression assertions layered on top of the
   determinism suite MUST be tagged so they can be disabled
   independently for bisection (FR-TS-017).
@@ -267,14 +273,15 @@ tests/scenarios/
 
 ### 3.4.1 Framework Selection
 
-- Property tests use FsCheck or an equivalent C# property-based
-  framework. Final pin deferred to Stage 0+1 (§6.1) — tracked as D2 in
-  §7.5.
+- **D2 resolved:** property tests use FsCheck.NUnit 2.16.6, pinned
+  through `Directory.Build.targets` and executed by the repository's
+  NUnit 3.14 generated test projects. The default remains 100 cases
+  per property unless an owning property declares a stronger setting.
 - Fuzz tests use a structured fuzzing harness. Coverage-guided
   (AFL-style) fuzzing is a Stage 1+ posture decision tracked as D8 in
   §7.5 (FR-TS-039).
-- The Stage 0 disclaimer is intentionally minimal: framework pinning
-  cannot precede the broader Stage 0+1 tool slate.
+- Framework selection does not weaken KD-7: executed property/fuzz
+  bodies still route seeds through `DeterministicRngService`.
 
 ### 3.4.2 Seed Governance (KD-7)
 
@@ -441,9 +448,12 @@ applies to every #16 citation of §3.2.4.1 (canonical schema), §4.8
 
 ### 3.6.3 Coverage Tool
 
-Selection deferred to Stage 0+1 (§6.1); tracked as D3 in §7.5. The
-selection criterion is that the tool MUST emit a per-tier breakdown
-consumable by the §5.5 auditor (FR-TS-057).
+**D3 resolved as the collector choice:** coverlet.collector 6.0.4 is
+pinned through `Directory.Build.targets` and configured by
+`tools/dotnet-ci/coverage.runsettings`. PR and nightly runner modes
+collect Cobertura-formatted `XPlat Code Coverage` output. The separate
+§5.5 per-tier mapper/auditor remains required by FR-TS-057 and is not
+made complete merely by selecting the collector.
 
 ### 3.6.4 Reporting Cadence (FR-TS-058)
 
@@ -459,15 +469,13 @@ consumable by the §5.5 auditor (FR-TS-057).
 
 ## 3.7 Flake Handling (FR-TS-061 … 067)
 
-> **Stage-gated per KD-5.** Every rule in §3.7 is a contract that
-> activates at the Stage 0 → Stage 1 transition. Until CI exists,
-> there is nothing to flake. The §3.7.3 "14-day auto-expiry", §3.7.4
-> "≥3 quarantines in 90 days = eviction", and §3.7.2 "CI runs every
-> test twice" rules all presume the CI integration layer enumerated in
-> §7.2. Per-FR activation status is recorded in §5.2 Stage-Gated
-> Activation Table; the corresponding FR-TS-061 … 067 rows read
-> "Activation stage: Stage 0+1, criterion: CI integration layer
-> specified per §7.2."
+> **Stage-gated per KD-5.** CI now exists, but the dedicated flake
+> integration layer enumerated in §7.2 is still not activated. The
+> §3.7.3 "14-day auto-expiry", §3.7.4 "≥3 quarantines in 90 days =
+> eviction", and §3.7.2 "CI runs every test twice" rules therefore
+> remain inactive until that integration layer exists. Per-FR
+> activation status is recorded in §5.2. The existence of GitHub
+> Actions alone must not be mistaken for flake-quarantine activation.
 
 ### 3.7.1 Definition (FR-TS-061)
 
@@ -478,7 +486,8 @@ is a determinism-adjacent definition cited from #16 §4.8
 
 ### 3.7.2 Detection (FR-TS-062)
 
-- CI runs every test twice on the same revision.
+- CI runs every test twice on the same revision once this flake layer
+  activates.
 - Disagreement between runs → automatic quarantine.
 - A test that passes both runs but produces non-bitwise-identical
   outputs in #16 §5 tiers is a determinism defect (§6.4.1), not a
@@ -936,6 +945,7 @@ correctness/integrity failure, or a Governance Blocker.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.7     | September 4, 2026 | — | **FR-TS-075/079 implementation synchronization.** Reconciles §3 mechanics with the implemented pipeline: determinism consumption is pipeline-scoped with full #16 certification only on the pinned Windows/Unity nightly host; D2 is resolved on FsCheck.NUnit 2.16.6; D3 is resolved on coverlet.collector 6.0.4 while the per-tier threshold auditor remains separate; and the flake rules no longer rely on the false premise that CI does not exist. |
 | 0.6     | September 3, 2026 | — | **A3.2a review-record repair.** Records the already-landed §3.11.6 structural-proof correction from PR #352 / integration-plan v0.37: the failure-class detector obligation is **MUST**, matching Governance §5.3 / FR-AG-027, rather than the weaker SHOULD previously published. This commit does not introduce a new normative change; it restores the missing version/history record for the normative text already present on `main`. |
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Rule mechanics for FR-TS-001 … 074; §3.10 governance constants table. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 (regression suite); #16 §1.3.1 → §1.1.1 (tier vocabulary, §3.6.1); #16 §5 → §3.2.4.1 (canonical schema, §3.3.4 / §3.8.1); #16 §1.3 → §4.8 (`EnvironmentFingerprint`, §3.7.1). ERR-005 misnomer corrected (§3.5.4, §3.5.5). M1 coordinate restatement tightened. M2 `index.<ext>` provisional disclosure added (§3.3.5). M4 `migrations/` row added to §3.8.2. L1 / L2 inline `[GT]` / `[FIXED]` pointers (§3.1.1). L3 / L2 §3.10 expanded with `90 min [FIXED]` and `≤ 60 s [GT]`. L4 property naming reconciled (§3.1.4). |
