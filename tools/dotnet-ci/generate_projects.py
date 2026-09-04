@@ -16,6 +16,8 @@ Purpose:  Generate plain .NET SDK projects (*.gen.csproj) from the Unity
           Design rules:
           - The .asmdef files are the single source of truth: csprojs are
             regenerated on every run (locally and in CI) and are gitignored.
+            Unchanged generated content is not rewritten, preserving mtimes so
+            incremental MSBuild outputs remain reusable on the pre-commit path.
             Nothing here is hand-maintained per assembly.
           - AssemblyName == asmdef "name" so InternalsVisibleTo attributes in
             the checked-in AssemblyInfo.cs files resolve unchanged.
@@ -66,6 +68,22 @@ GUID_NS = uuid.UUID("7d4cf0d4-2e3a-4f4b-9a64-0d6d54f7a2c1")
 
 def project_guid(name: str) -> str:
     return "{" + str(uuid.uuid5(GUID_NS, name)).upper() + "}"
+
+
+def write_text_if_changed(path: Path, content: str) -> bool:
+    """Write generated text only when bytes changed; return whether rewritten.
+
+    Preserving mtimes for byte-identical generated project/solution files is
+    load-bearing for the persistent pre-commit cache: touching a project file on
+    every invocation invalidates MSBuild's timestamp-based incremental checks.
+    """
+    try:
+        if path.read_text(encoding="utf-8") == content:
+            return False
+    except FileNotFoundError:
+        pass
+    path.write_text(content, encoding="utf-8")
+    return True
 
 
 def load_asmdefs():
@@ -164,7 +182,7 @@ def gen_csproj(name, info, asmdefs):
     lines.append("</Project>")
 
     out = own_dir / f"{info['stem']}.gen.csproj"
-    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    write_text_if_changed(out, "\n".join(lines) + "\n")
     return out
 
 
@@ -196,7 +214,7 @@ def gen_solution(projects):
         "\tEndGlobalSection",
         "EndGlobal",
     ]
-    SLN_PATH.write_text("\n".join(sln) + "\n", encoding="utf-8")
+    write_text_if_changed(SLN_PATH, "\n".join(sln) + "\n")
 
 
 def main():
