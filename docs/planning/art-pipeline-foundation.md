@@ -2,7 +2,7 @@
 
 **Status:** PLANNING — IMPLEMENTATION GATED  
 **Started:** September 4, 2026  
-**Plan revision:** v0.2  
+**Plan revision:** v0.3  
 **Implementation gate:** CLOSED until this plan is accepted.  
 **Purpose:** Define a production-grade art pipeline that can run in parallel with simulation, UI/UX, localization, audio, and management-layer development without creating asset debt, rights risk, or presentation-layer coupling.
 
@@ -84,6 +84,8 @@ The pipeline must let production-quality art arrive incrementally while preservi
 8. **Unity GUID stability matters.** Once an exported production asset is integrated, ordinary revisions replace the file in place rather than churn its path/GUID.
 9. **Fallback is not placeholder.** Dynamic content families must have deliberate, shippable default art; temporary developer placeholder art is never mistaken for release coverage.
 10. **Stage-1 visual quality is a release gate.** The roadmap requires a professional 2D match presentation and rejects placeholder-quality visuals.
+11. **Typography is a licensed runtime dependency, not only an art-direction choice.** Font selection must be commercially distributable and compatible with localization coverage/fallback requirements.
+12. **The current production contract is 2D-first.** Any later 3D character/stadium/environment pipeline is a separately activated family with its own source/import/performance recipe rather than an assumption baked into the current plan.
 
 ---
 
@@ -143,6 +145,7 @@ art-source/
   _templates/
   _quarantine/
   identity/
+  typography/
   ui/
     icons/
     panels/
@@ -171,6 +174,7 @@ A local-only scratch/work directory may be added and ignored once the chosen aut
 ```text
 Assets/GameArt/
   Identity/
+  Fonts/
   UI/
     Icons/
     Panels/
@@ -197,6 +201,21 @@ The repository already routes common texture/model/audio/font formats through Gi
 
 Runtime C# remains in `src/`; art work does not move game code into `Assets/GameArt/`.
 
+### 3.5 Future 3D activation boundary
+
+The repository's LFS rules already recognize common 3D formats, but this plan does not establish a 3D production workflow. If a future roadmap stage requires 3D character/stadium/environment assets, activation requires a new family recipe covering at least:
+
+- DCC/source format and retained masters;
+- coordinate/unit conventions;
+- topology/poly budgets and LODs;
+- materials/textures;
+- rigging/animation ownership where applicable;
+- Unity import settings;
+- runtime performance budgets;
+- platform validation.
+
+No 2D rule should be stretched implicitly to cover that work.
+
 ---
 
 ## 4. Asset taxonomy and ownership
@@ -204,12 +223,14 @@ Runtime C# remains in `src/`; art work does not move game code into `Assets/Game
 | Family | Priority | Near-term consumer | Production starts after |
 |---|---:|---|---|
 | Visual identity | P0 | UI, demos, public builds | H1A style lock |
+| Typography/fonts | P0 | UI + localization | art direction + rights + localization coverage review |
 | UI art | P0 | UI framework/screens | H1A + H1B |
 | 2D match view | P0 | Stage-1 tactical demo | H1A + H1B |
 | Club/competition identity | P1 | squad/season/competition screens | H2 accepted + family sample |
 | People | P1 | squad/staff screens | H2 accepted + portrait treatment lock |
 | Stadium/environment | P2 | club/home/match presentation | H2 accepted + background treatment lock |
 | Release/store | P2 | Steam/other storefronts, press | in-game identity stable + real capture pipeline |
+| Future 3D | deferred | later roadmap consumer | explicit 3D activation recipe |
 
 Each family gets a **family recipe** under `docs/design/art/` before batch production. A recipe contains only the rules specific to that family: master format, crop/composition, export sizes, import profile, fallbacks, quality checks, and approved style examples.
 
@@ -296,9 +317,10 @@ For AI-assisted production, additionally retain enough information to audit and 
 - prompt/workflow or a stable production recipe reference;
 - reference/input assets used and their rights status;
 - material manual edits;
-- generation date/batch identifier.
+- generation date/batch identifier;
+- commercial-use basis/terms applicable when the production candidate is adopted.
 
-Raw generation output is a candidate, never automatically production-ready.
+Raw generation output is a candidate, never automatically production-ready. Provider terms are rechecked when a generated workflow becomes a production dependency rather than assumed from an earlier experiment.
 
 ### 6.3 High-volume families
 
@@ -355,6 +377,7 @@ Develop 2–3 coherent direction boards covering the same representative surface
 - System XI working-title wordmark treatment;
 - core palette and neutrals;
 - typography hierarchy and numeric/data presentation;
+- candidate typeface/family strategy without assuming final font licensing/coverage approval;
 - panel geometry, separators, strokes, shadows, corner language;
 - icon geometry/stroke/fill language;
 - data visualization treatment;
@@ -377,6 +400,7 @@ Each direction is scored/reviewed for:
 - feasibility for a solo/AI-assisted production pipeline;
 - ability to scale across thousands of fictional people/clubs;
 - accessibility and contrast;
+- typography suitability for numeric/data-heavy UI;
 - suitability for marketing/key art;
 - consistency with the UI/UX direction.
 
@@ -405,6 +429,7 @@ H1B runs in parallel with H1A.
 - source/export mapping;
 - metadata/provenance format;
 - Unity import profiles by family;
+- font-binary ownership, licensing record, and localization handoff;
 - replacement/deprecation behavior;
 - binary/LFS workflow;
 - static and Unity-side validation split;
@@ -446,6 +471,13 @@ These are **vertical-slice defaults**, not permanent budgets.
 - 9-slice panels preferred to fixed-size duplicates;
 - no text baked into panels/icons.
 
+**Typography/fonts**
+- candidate fonts are evaluated visually in H1A but cannot become production dependencies until commercial redistribution rights are recorded;
+- localization owns required language/script coverage and fallback requirements;
+- art/UI own hierarchy, weight/style use and visual fit;
+- runtime font binaries live under `Assets/GameArt/Fonts/` only after rights and coverage are approved;
+- do not create a separate raster-text asset path to compensate for missing glyphs.
+
 **2D match art**
 - separate pitch texture/material character from gameplay geometry/markings where practical;
 - player, goalkeeper, ball, selection, event and tactical overlay layers remain independent;
@@ -465,7 +497,7 @@ These are **vertical-slice defaults**, not permanent budgets.
 
 ### Gate G2 — Technical contract lock
 
-G2 passes when one asset in each P0 family can be taken from source to Unity using documented steps without inventing settings ad hoc.
+G2 passes when one asset in each P0 family can be taken from source to Unity using documented steps without inventing settings ad hoc, and the typography/font handoff has a defined rights + localization-coverage decision path even if final fonts are not yet chosen.
 
 ---
 
@@ -476,6 +508,7 @@ The first production work is deliberately small and complete.
 ### 10.1 Asset kit
 
 - System XI working-title wordmark treatment;
+- approved provisional typography applied to the representative surfaces, with final font shipping contingent on rights/coverage approval;
 - 12–20 core navigation/status icons;
 - representative panel/background/separator set;
 - data-viz sample treatment;
@@ -518,12 +551,14 @@ If a specific UI surface does not yet exist, a temporary **presentation harness*
 
 **Rights**
 - 100% of production candidates have a known rights/provenance basis;
+- font candidates used in distributable builds have confirmed redistribution rights;
 - no accidental real crest, sponsor, logo, likeness, watermark, or generated text artifact.
 
 **Accessibility/localization**
 - state is not represented by color alone where shape/outline can provide a secondary cue;
 - icons do not depend on English letters where a language-neutral symbol is appropriate;
-- no user-facing text is rasterized into reusable art.
+- no user-facing text is rasterized into reusable art;
+- representative localized strings can use the planned font/fallback path without art-side workarounds.
 
 ### Gate G3 — Vertical slice accepted
 
@@ -628,6 +663,17 @@ Produce a representative batch before defining the final high-volume manifest/ge
 
 Begin only when a real screen/presentation surface consumes it. Establish composition safe zones, day/night/weather variants only where the game actually exposes those states, and avoid combinatorial variant generation ahead of demand.
 
+### 12.6 Typography family
+
+Typography scales with localization rather than independently:
+
+- select the minimum font family/weight set needed by the actual UI hierarchy;
+- avoid shipping unused font binaries/weights;
+- validate required script coverage and fallback behavior with localization;
+- record font redistribution/license terms;
+- test numeric/tabular readability for dense football data;
+- treat any later font replacement as a cross-screen regression requiring layout/coverage review.
+
 ### Per-family gate G5x
 
 Each family scales only after:
@@ -653,6 +699,8 @@ Art owns visual assets and visual-language rules. UI/UX owns layout, interaction
 - no baked user-facing copy by default;
 - icons must not rely on culturally narrow text abbreviations where a neutral symbol is available;
 - backgrounds leave flexible space for longer translated strings;
+- localization owns the supported language/script matrix and font fallback coverage requirements;
+- art/UI select visual typography only from candidates that can satisfy those requirements or provide an approved fallback chain;
 - RTL and font concerns are solved by UI/localization, but art must not prevent them.
 
 ### 13.3 Accessibility
@@ -784,7 +832,8 @@ An asset is `validated` only when applicable checks pass:
 8. appropriate runtime dimensions/memory for the measured budget;
 9. deliberate fallback exists where dynamic lookup can fail;
 10. Unity `.meta`/GUID is committed and valid;
-11. actual consumer renders it correctly.
+11. actual consumer renders it correctly;
+12. for fonts, redistribution rights and required localization coverage/fallback behavior are verified.
 
 `release-ready` adds release-specific rights, polish, and platform validation.
 
@@ -819,7 +868,8 @@ No substantive asset production begins before the planning gate is explicitly op
 - record actual importer behavior in Unity 6000.4.9f1;
 - lock initial import recipe;
 - verify `.meta`/GUID replacement behavior;
-- verify LFS routing.
+- verify LFS routing;
+- document the font rights/coverage handoff with localization.
 
 **Gate:** G2.
 
@@ -875,19 +925,25 @@ Use measured H4/H5 data to decide whether current direct references are sufficie
 
 Establish `release-art/`, current storefront export recipes, screenshot capture conventions and press-kit packaging when the release milestone approaches.
 
+### AP-14 — Future 3D activation, only if roadmap requires it
+
+Create and approve the separate 3D family recipe described in §3.5 before importing production 3D content. This slice is not part of the current near-term art stream.
+
 ---
 
 ## 19. Concurrency with other project streams
 
 | Art work | Can run concurrently with | Dependency/boundary |
 |---|---|---|
-| H1A art direction | backend, audio, localization, UI framework | coordinate visual tokens with UI/UX |
+| H1A art direction | backend, audio, localization, UI framework | coordinate visual tokens and typography with UI/UX/localization |
 | H1B technical contract | backend, UI, localization | no runtime art catalog before consumer need |
 | H2 UI asset kit | UI implementation | target surfaces must be stable enough to test real sizes |
 | H2 match art | match viewer/rendering | never change sim state or invent domain truth |
+| Typography | localization + UI | art selects visual candidates; localization validates script/fallback coverage; rights must permit distribution |
 | Club/portrait production | management data implementation | can generate samples early; full lookup integration waits on real IDs/content model |
 | Stadium art | management/UI | wait for consuming surfaces/state requirements |
 | Marketing art | all engineering | final exports wait for representative real build visuals |
+| Future 3D | later engineering/rendering work | separately activated; not implied by current 2D pipeline |
 
 The art stream can therefore progress continuously without becoming a dependency for simulation architecture.
 
@@ -900,6 +956,7 @@ The art stream can therefore progress continuously without becoming a dependency
 | Style drift across AI/manual production | style lock + family recipes + representative sample gates |
 | Hundreds of unusable assets generated early | no scale before G3/G5x |
 | Real-club/player/trademark contamination | fictional-first + provenance + quarantine + human review |
+| Font licensing or missing-language glyph failure | rights gate + localization coverage/fallback review before shipping font adoption |
 | Binary repo bloat | existing LFS routing + binary guard + small coherent batches |
 | Broken Unity references from file churn | stable export paths + committed `.meta` + extended GameArt GUID checks |
 | Overengineered asset system | no catalog/addressables/batch manifest until measured consumer need |
@@ -909,6 +966,7 @@ The art stream can therefore progress continuously without becoming a dependency
 | Memory/load blow-up when content scales | H2 measurement → family budgets before H4 volume |
 | Marketing diverges from product | release art derived from stable in-game identity and real build captures |
 | AI-generated inconsistency/likeness artifacts | controlled recipes, sample review, manual selection/correction, provenance |
+| Future 3D needs distort current 2D rules | explicit deferred 3D activation recipe |
 
 ---
 
@@ -926,6 +984,10 @@ The plan still treated all asset families too uniformly. Portraits, icons, stadi
 
 The remaining failure mode was process weight: too many records could slow a solo developer more than they protect the project. The final plan therefore tracks metadata only for production candidates, keeps subjective checks in review rather than CI, and limits hard automation to objective stable rules.
 
+### Detailed-plan critique pass 4
+
+A final cross-stream review found two omissions: typography had been treated as visual style without an explicit runtime licensing/localization path, and the repository's existing support for 3D binary formats could be mistaken for an active 3D pipeline. v0.3 adds a P0 typography/font family with rights + glyph/fallback gates, and explicitly defers 3D to a future separately approved family recipe.
+
 ### Final assessment
 
 The plan is implementation-ready once G0 is explicitly approved. It now specifies:
@@ -935,6 +997,7 @@ The plan is implementation-ready once G0 is explicitly approved. It now specifie
 - source and runtime ownership;
 - lifecycle and stable identity;
 - rights/provenance handling;
+- typography/font licensing and localization handoff;
 - technical export/import rules and when they become fixed;
 - real-game vertical-slice validation before scale;
 - objective CI versus subjective review boundaries;
@@ -942,7 +1005,8 @@ The plan is implementation-ready once G0 is explicitly approved. It now specifie
 - integration with UI/localization/accessibility;
 - performance-budget derivation;
 - release-art separation;
+- future-3D activation boundary;
 - maintenance/deprecation behavior;
-- concrete implementation slices AP-01 through AP-13.
+- concrete implementation slices AP-01 through AP-14.
 
 No substantial art-production work should proceed until the user accepts G0. After acceptance, **AP-01, AP-02 and AP-03 are the next work**, with AP-02 art-direction exploration and AP-03 technical recipe proof able to proceed substantially in parallel after the minimal AP-01 contract is established.
