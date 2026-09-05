@@ -3,8 +3,8 @@
 // Created:  2026-09-04
 // Modified: 2026-09-04
 // Author:   Codex / Anton
-// Specs:    Spec #20 §3.2.3, §3.6.2 (GT loading, style & docs governance)
-//           Spec #40 Appendix A, §3.1 (Club Finances constant catalogue)
+// Specs:    Spec #20 §3.2.3, §3.6.2 (constant catalogue, GT loading, style/docs)
+//           Spec #40 Appendix A, §3.1, §4.4 (Club Finances constants/save framing)
 // Purpose:  Declares the integer-only fixed and tunable constants used by the minimal finance model.
 //           The reserved RNG namespace remains code-free until #40 T3's first real draw.
 // ============================================================================
@@ -23,6 +23,18 @@ namespace TacticalDirector.ClubFinances
 
         /// <summary>[FIXED] Identity value for <see cref="BoardModifier.BudgetMultiplierMillPermille"/>. Spec #40 Appendix A.</summary>
         public const int BOARD_MODIFIER_IDENTITY_PERMILLE = 1000;
+
+        /// <summary>[FIXED] Self-identifying #40 save-block magic (<c>"FNCE"</c>). Spec #40 §4.4.</summary>
+        public const uint FINANCE_SAVE_MAGIC = 0x464E4345;
+
+        /// <summary>[FIXED] #40 finance sub-blob format version. Spec #40 FR-FN-020 / §4.4.</summary>
+        public const uint FINANCE_SAVE_FORMAT_VERSION = 1;
+
+        /// <summary>[FIXED] Finance block framing bytes: magic + version + record count. Spec #40 §4.4.</summary>
+        public const int FINANCE_SAVE_HEADER_BYTES = 12;
+
+        /// <summary>[FIXED] One persisted finance record: i32 ClubId + six i64 finance fields. Spec #40 §4.4.</summary>
+        public const int FINANCE_SAVE_RECORD_BYTES = 52;
 
         #endregion
 
@@ -60,4 +72,5 @@ namespace TacticalDirector.ClubFinances
 // Version | Date       | Author        | Change
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 constants catalogue.
+// 1.1     | 2026-09-04 | Codex / Anton | T1a: add save magic/version and framing widths.
 #endregion
