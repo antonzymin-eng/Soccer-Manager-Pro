@@ -36,7 +36,6 @@ HEADING_SECTION_RE = re.compile(r"^#{1,6}\s+(\d+(?:\.\d+)*)\b")
 EVIDENCE_MARKER_RE = re.compile(r"\bEvidence\s*:\s*", re.IGNORECASE)
 WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.+-]*|\d+(?:\.\d+)?%?")
 NUMERIC_TERM_RE = re.compile(r"\d+(?:\.\d+)?%?")
-TOKEN_BOUNDARY_CHARS = r"A-Za-z0-9_.+%-"
 STOP_WORDS = {
     "about", "after", "against", "also", "and", "are", "been", "before",
     "being", "between", "check", "checked", "claim", "confirmed", "defined",
@@ -149,6 +148,10 @@ def concrete_literals(claim: str, evidence: str, path_tokens: set[str]) -> list[
                 continue
             literals.append(stripped)
     literals.extend(IDENT_RE.findall(claim))
+    # Explicit numeric values are semantic claim literals. They are mandatory,
+    # not optional members of the fuzzy lexical threshold: `60` must never be
+    # satisfied by evidence containing only `600`.
+    literals.extend(NUMERIC_TERM_RE.findall(claim))
     return list(dict.fromkeys(literals))
 
 
@@ -169,20 +172,20 @@ def claim_terms(claim: str) -> list[str]:
 
 
 def text_contains_complete_term(text: str, term: str) -> bool:
-    """Match a claim token without accepting it as a substring of another value.
-
-    This makes `60` distinct from `600` and prevents lexical fragments from
-    satisfying a claim merely because they occur inside a larger identifier or
-    word. Multi-word literals still use the same boundary rule at their ends.
-    """
+    """Match a complete claim value/token rather than an arbitrary substring."""
     needle = term.strip()
     if not needle:
         return False
-    return re.search(
-        rf"(?<![{TOKEN_BOUNDARY_CHARS}]){re.escape(needle)}(?![{TOKEN_BOUNDARY_CHARS}])",
-        text,
-        re.IGNORECASE,
-    ) is not None
+    escaped = re.escape(needle)
+    if NUMERIC_TERM_RE.fullmatch(needle):
+        # Prevent 60 from matching 600 or 60.0. Percent is also part of a
+        # numeric value token and must not be silently discarded.
+        pattern = rf"(?<![0-9.]){escaped}(?![0-9.%])"
+    else:
+        # Dot and ordinary punctuation are allowed around a word/identifier;
+        # only alphanumeric/underscore adjacency makes it a larger token.
+        pattern = rf"(?<![A-Za-z0-9_]){escaped}(?![A-Za-z0-9_])"
+    return re.search(pattern, text, re.IGNORECASE) is not None
 
 
 def path_evidence_supports_claim(claim: str, evidence: str, resolved: list[tuple[str, Path]]) -> bool:
@@ -215,12 +218,12 @@ def path_evidence_supports_claim(claim: str, evidence: str, resolved: list[tuple
     combined = "\n".join(chunks)
     path_tokens = {token for token, _ in resolved}
     literals = concrete_literals(claim, evidence, path_tokens)
-    if literals:
-        return all(text_contains_complete_term(combined, literal) for literal in literals)
+    if literals and not all(text_contains_complete_term(combined, literal) for literal in literals):
+        return False
 
     terms = claim_terms(claim)
     if not terms:
-        return False
+        return bool(literals)
     matched = sum(text_contains_complete_term(combined, term) for term in terms)
     required = 1 if len(terms) == 1 else min(4, max(2, math.ceil(len(terms) * 0.4)))
     return matched >= required
