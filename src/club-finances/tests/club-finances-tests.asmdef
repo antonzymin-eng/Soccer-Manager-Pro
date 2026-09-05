@@ -1,0 +1,22 @@
+{
+    "name": "TacticalDirector.ClubFinances.Tests",
+    "rootNamespace": "TacticalDirector.ClubFinances.Tests",
+    "references": [
+        "TacticalDirector.ClubFinances",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

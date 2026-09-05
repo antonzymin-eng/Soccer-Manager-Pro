@@ -1,26 +1,33 @@
 # Club Finances & Economy #40 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.1
+**Last Updated:** September 4, 2026 (v0.2 — T0 back-prop: explicit ProjectConstants config dependency)
+**Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
 
 ## 4.1 Assembly & reference direction
 
-New assembly `TacticalDirector.ClubFinances` (`src/club-finances/`), references **only**
-`TacticalDirector.PlayerDatabase` (#27) and `TacticalDirector.DeterministicSim` (#16). It does **not**
-reference `MatchEngine`, `LivingWorld`, `SeasonSave`, #30, #31, #34, or #45; #30's season-save assembly and
-#31's (future) transfer-market assembly reference *it* (the one-way composition, FR-FN-027).
+New assembly `TacticalDirector.ClubFinances` (`src/club-finances/`), references
+`TacticalDirector.PlayerDatabase` (#27), `TacticalDirector.DeterministicSim` (#16), and the cross-cutting
+`TacticalDirector.ProjectConstants` foundation solely for the Code Standards #20-mandated
+`GameplayConfig.Get*` loading of #40's `[GT]` catalogue. It does **not** reference `MatchEngine`,
+`LivingWorld`, `SeasonSave`, #30, #31, #34, or #45; #30's season-save assembly and #31's (future)
+transfer-market assembly reference *it* (the one-way composition, FR-FN-027).
 
 ```
 #30 SeasonSave/RollToNextSeason ──▶ ClubFinances (#40) ──▶ PlayerDatabase (#27)   [reads Squad.ClubId enumeration]
 #31 Transfer Market (future)    ──▶ ClubFinances (#40) ──▶ DeterministicSim (#16)  [reserved namespace only;
                                                                                      no stream at minimal, KD-2]
-#34 Staff (future)               ──▶ ClubFinances (#40)
+#34 Staff (future)               ──▶ ClubFinances (#40) ──▶ ProjectConstants       [[GT] GameplayConfig loading only]
 #45 Board & Ownership (future)   ──▶ ClubFinances (#40)
 ```
+
+The `ProjectConstants` edge is architectural infrastructure, not a domain seam: it does not change #40's
+one-way ownership graph and exists only because active Code Standards #20 require `[GT]` values to use the
+established `GameplayConfig.Get*` loader. #40 does not introduce another config loader.
 
 #27's assembly is **schema-untouched**: `Squad.ClubId` is #27's own already-published identity field, so #40
 reads it without #27 gaining a reference to #40. #40 does not consume `PlayerAttributes`/`PlayerRecord`
@@ -50,6 +57,9 @@ src/club-finances/
 - **From #27 (F6/§1.3):** the `Squad.ClubId` enumeration is read to know which clubs require a
   `ClubFinances` entry; #40 declares **no** write path into `PlayerAttributes`/`PlayerRecord` and does not
   read either at Stage 2 — the dependency is club-identity only.
+- **From ProjectConstants (T0/code standards):** #40's `[GT]` catalogue uses the existing
+  `GameplayConfig.Get*` loader. This is a foundation/config-loading dependency only; it creates no
+  gameplay ownership or mutation seam and introduces no new loader.
 - **To #30 (KD-6/KD-7):** #30's `RollToNextSeason()` invokes `SettleFinances` per club at the new reserved
   step (b') (after (a')'s #43 promotion/relegation insertion point, before (c) regenerate), and calls
   `ClubFinances.CreateInitial` once per club at league/game bootstrap (never #40 itself — #40 does not
@@ -124,4 +134,5 @@ addition leaves every existing stream's cursor byte-identical trivially (FR-FN-0
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial architecture: assembly, file layout, seam contracts, save codec, reserved namespace slot. Status IN REVIEW. |
+| 0.2 | 2026-09-04 | — | **T0 implementation back-prop.** Adds the cross-cutting `TacticalDirector.ProjectConstants` reference required by active Code Standards #20 for #40's `[GT]` `GameplayConfig.Get*` loading. Domain ownership/reference direction is unchanged; no new loader or gameplay seam is introduced. |
 #endregion
