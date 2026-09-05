@@ -94,16 +94,20 @@ class PrecommitIncrementalSnapshotTests(unittest.TestCase):
             repo.mkdir()
             self.init_minimal_repo(repo)
             (repo / ".gitattributes").write_text("*.bin filter=lfs\n", encoding="utf-8")
-            # Simulate a clone whose modern process filter and legacy smudge
-            # filter both fail. Without the hook's local overrides checkout-index
-            # cannot materialize the staged file.
+            # Stage pointer bytes while the clean path is harmless. Only after
+            # the index is populated do we simulate an offline clone whose
+            # process/smudge filters fail. The hook must override those checkout
+            # filters without depending on them during fixture setup.
             subprocess.run(["git", "config", "filter.lfs.clean", "cat"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "filter.lfs.process", "false"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "filter.lfs.smudge", "false"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "filter.lfs.required", "true"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "filter.lfs.smudge", "cat"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "filter.lfs.required", "false"], cwd=repo, check=True)
             (repo / "asset.bin").write_text("lfs-pointer-bytes\n", encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=repo, check=True)
             subprocess.run(["git", "commit", "-qm", "base"], cwd=repo, check=True)
+
+            subprocess.run(["git", "config", "filter.lfs.process", "false"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "filter.lfs.smudge", "false"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "filter.lfs.required", "true"], cwd=repo, check=True)
 
             capture = Path(td) / "captured.txt"
             proc = self.run_hook(repo, capture)
