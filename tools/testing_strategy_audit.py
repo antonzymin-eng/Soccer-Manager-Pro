@@ -25,6 +25,7 @@ PATH_TOKEN_RE = re.compile(
     r"\.(?:md|py|sh|cs|json|jsonc|yaml|yml|txt|asmdef|meta)(?![\w.-])",
     re.IGNORECASE,
 )
+SHELL_CONTROL_RE = re.compile(r"^[;&|<>]+$")
 
 PROGRAM_COMMANDS = {
     "bash",
@@ -214,6 +215,16 @@ def has_resolved_local_section_reference(evidence: str, *, spec_dir: Path) -> bo
     return False
 
 
+def _shell_aware_argv(token: str) -> list[str] | None:
+    """Split one backticked invocation while exposing unquoted shell controls."""
+    try:
+        lexer = shlex.shlex(token, posix=True, punctuation_chars=";&|<>")
+        lexer.whitespace_split = True
+        return list(lexer)
+    except ValueError:
+        return None
+
+
 def _inline_programmatic_argv(
     token: str, *, repo_root: Path, spec_dir: Path
 ) -> tuple[str, ...] | None:
@@ -221,12 +232,12 @@ def _inline_programmatic_argv(
 
     Merely citing a source file is never an invocation. In particular, `.cs`
     citations remain file evidence. Commands are executed without a shell.
+    Compound commands and redirections are rejected rather than partially run.
     """
-    try:
-        argv = shlex.split(token)
-    except ValueError:
-        return None
+    argv = _shell_aware_argv(token)
     if not argv or argv[0] not in PROGRAM_COMMANDS:
+        return None
+    if any(SHELL_CONTROL_RE.fullmatch(arg) for arg in argv):
         return None
 
     command = argv[0]
@@ -282,6 +293,21 @@ def programmatic_check_commands(
         seen.add(label)
         checks.append((label, argv))
     return checks
+
+
+def invalid_programmatic_check_labels(
+    evidence: str, *, repo_root: Path, spec_dir: Path
+) -> list[str]:
+    """Return command-looking backtick spans that cannot be safely executed whole."""
+    invalid: list[str] = []
+    for raw in BACKTICK_RE.findall(evidence):
+        label = raw.strip()
+        argv = _shell_aware_argv(label)
+        if not argv or argv[0] not in PROGRAM_COMMANDS:
+            continue
+        if _inline_programmatic_argv(label, repo_root=repo_root, spec_dir=spec_dir) is None:
+            invalid.append(label)
+    return list(dict.fromkeys(invalid))
 
 
 def has_named_programmatic_check(evidence: str, *, repo_root: Path, spec_dir: Path) -> bool:
