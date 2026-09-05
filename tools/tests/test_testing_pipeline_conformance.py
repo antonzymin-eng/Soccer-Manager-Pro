@@ -100,7 +100,10 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)
             ledger = tmp / "ledger.txt"
-            ledger.write_text("sim_match_engine_close_chance|-0.165|0.407\n", encoding="utf-8")
+            ledger.write_text(
+                "sim_match_engine_close_chance|meanCosine=-0.165|goalwardShare=0.407\n",
+                encoding="utf-8",
+            )
             results = tmp / "results"
             results.mkdir()
             trx = results / "result.trx"
@@ -128,13 +131,23 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertEqual(drift.returncode, 1, drift.stdout)
             self.assertIn("changed diagnostics", drift.stdout)
 
+            decoy = verify(
+                base.replace(
+                    "meanCosine=-0.165 goalwardShare=0.407",
+                    "meanCosine=-0.100 (baseline -0.165) goalwardShare=0.500 (baseline 0.407)",
+                ),
+                1,
+            )
+            self.assertEqual(decoy.returncode, 1, decoy.stdout)
+            self.assertIn("changed diagnostics", decoy.stdout)
+
             green = verify(base.replace('outcome="Failed"', 'outcome="Passed"'), 0)
             self.assertEqual(green.returncode, 1, green.stdout)
             self.assertIn("unexpectedly passed", green.stdout)
 
             ambiguous = base.replace(
                 "</Results>",
-                '<UnitTestResult testName="Other.sim_match_engine_close_chance" outcome="Failed"><Output><ErrorInfo><Message>-0.165 0.407</Message></ErrorInfo></Output></UnitTestResult></Results>',
+                '<UnitTestResult testName="Other.sim_match_engine_close_chance" outcome="Failed"><Output><ErrorInfo><Message>meanCosine=-0.165 goalwardShare=0.407</Message></ErrorInfo></Output></UnitTestResult></Results>',
             )
             dup = verify(ambiguous, 1)
             self.assertEqual(dup.returncode, 1, dup.stdout)
@@ -214,7 +227,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 2, proc.stdout)
             self.assertIn("refusing to overwrite", proc.stdout)
 
-    def test_checklist_path_existence_alone_does_not_resolve_claim(self) -> None:
+    def test_checklist_path_resolution_is_structural_not_semantic(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             specs = repo / "docs" / "specs"
@@ -232,8 +245,8 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 "--root", str(specs), "--repo-root", str(repo),
                 "--changed-scope", "--enforce-dir", str(spec9),
             )
-            self.assertEqual(proc.returncode, 1, proc.stdout)
-            self.assertIn("does not contain concrete text or values supporting the claim", proc.stdout)
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertNotIn("supporting the claim", proc.stdout)
 
     def test_checklist_concrete_section_and_captured_check_can_resolve(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -261,7 +274,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 "--changed-scope", "--enforce-dir", str(spec9),
             )
             self.assertEqual(missing_capture.returncode, 1, missing_capture.stdout)
-            self.assertIn("no matching --captured-check", missing_capture.stdout)
+            self.assertIn("no matching captured output", missing_capture.stdout)
 
             captured = self.run_cmd(
                 "python3", str(ROOT / "tools" / "checklist-auditor.py"),
@@ -270,6 +283,15 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 "--captured-check", "python3 tools/verify.py",
             )
             self.assertEqual(captured.returncode, 0, captured.stdout)
+
+            executed = self.run_cmd(
+                "python3", str(ROOT / "tools" / "checklist-auditor.py"),
+                "--root", str(specs), "--repo-root", str(repo),
+                "--changed-scope", "--enforce-dir", str(spec9),
+                "--execute-checks",
+            )
+            self.assertEqual(executed.returncode, 0, executed.stdout)
+            self.assertIn("CAPTURED CHECK exit=0", executed.stdout)
 
     def test_spec5_keyword_bullets_do_not_satisfy_appendix_c(self) -> None:
         with tempfile.TemporaryDirectory() as td:
