@@ -73,6 +73,19 @@ def normalize_dirs(values: list[str], repo_root: Path) -> set[Path]:
     return out
 
 
+def owning_spec_dir(path: Path, repo_root: Path) -> Path:
+    """Return the direct docs/specs child that owns a nested checklist path."""
+    specs_root = (repo_root / "docs" / "specs").resolve()
+    resolved = path.resolve()
+    try:
+        rel = resolved.relative_to(specs_root)
+    except ValueError:
+        return path.parent.resolve()
+    if not rel.parts:
+        return path.parent.resolve()
+    return (specs_root / rel.parts[0]).resolve()
+
+
 def is_enforced(path: Path, *, survey_only: bool, changed_scope: bool, enforce_dirs: set[Path]) -> bool:
     if survey_only:
         return False
@@ -141,7 +154,13 @@ def local_section_paths(evidence: str, spec_dir: Path) -> list[tuple[str, Path]]
     return out
 
 
+def normalize_value_text(text: str) -> str:
+    return text.replace("−", "-")
+
+
 def concrete_literals(claim: str, evidence: str, path_tokens: set[str]) -> list[str]:
+    claim = normalize_value_text(claim)
+    evidence = normalize_value_text(evidence)
     literals: list[str] = []
     for source in (claim, evidence):
         for token in BACKTICK_RE.findall(source):
@@ -154,8 +173,8 @@ def concrete_literals(claim: str, evidence: str, path_tokens: set[str]) -> list[
     literals.extend(IDENT_RE.findall(claim))
     # Explicit numeric and polarity values are semantic claim literals. They
     # are mandatory rather than optional members of the lexical quorum: `60`
-    # cannot be satisfied by `600`, and `disabled` cannot be outvoted by
-    # surrounding words in evidence that actually says `enabled`.
+    # cannot be satisfied by `600`, signed values retain their sign, and
+    # `disabled` cannot be outvoted by surrounding words saying `enabled`.
     literals.extend(NUMERIC_TERM_RE.findall(claim))
     for token in WORD_RE.findall(claim):
         lowered = token.lower().strip("._+-")
@@ -165,6 +184,7 @@ def concrete_literals(claim: str, evidence: str, path_tokens: set[str]) -> list[
 
 
 def claim_terms(claim: str) -> list[str]:
+    claim = normalize_value_text(claim)
     # Remove Markdown links/paths and section citations before lexical binding;
     # those identify evidence location, not the value the claim says is there.
     text = re.sub(r"\[[^\]]+\]\([^)]+\)", " ", claim)
@@ -182,7 +202,8 @@ def claim_terms(claim: str) -> list[str]:
 
 def text_contains_complete_term(text: str, term: str) -> bool:
     """Match a complete claim value/token rather than an arbitrary substring."""
-    needle = term.strip()
+    text = normalize_value_text(text)
+    needle = normalize_value_text(term).strip()
     if not needle:
         return False
     escaped = re.escape(needle)
@@ -272,6 +293,7 @@ def audit_evidence_row(
     *,
     spec_id: int | None,
     path: Path,
+    spec_dir: Path,
     row_id: str,
     claim: str,
     evidence: str,
@@ -288,29 +310,40 @@ def audit_evidence_row(
     resolved = [
         (token, resolved_path)
         for token in path_tokens
-        if (resolved_path := resolve_path(token, repo_root=repo_root, spec_dir=path.parent)) is not None
+        if (resolved_path := resolve_path(token, repo_root=repo_root, spec_dir=spec_dir)) is not None
     ]
-    resolved.extend(local_section_paths(evidence, path.parent))
+    resolved.extend(local_section_paths(evidence, spec_dir))
     resolved = list(dict.fromkeys(resolved))
     broken = [
         token
         for token in path_tokens
-        if resolve_path(token, repo_root=repo_root, spec_dir=path.parent) is None
+        if resolve_path(token, repo_root=repo_root, spec_dir=spec_dir) is None
         and not any(ch in token for ch in "<>*{}")
     ]
-    named_check = has_named_programmatic_check(evidence, repo_root=repo_root, spec_dir=path.parent)
+    named_check = has_named_programmatic_check(evidence, repo_root=repo_root, spec_dir=spec_dir)
+    check_bound = named_check and captured_programmatic_check(evidence, captured_checks)
 
     if broken and not resolved and not named_check:
         return Finding(spec_id, str(path), row_id, "unresolved evidence path(s): " + ", ".join(broken), blocking)
 
-    file_bound = path_evidence_supports_claim(claim, evidence, resolved)
-    check_bound = named_check and captured_programmatic_check(evidence, captured_checks)
-    if file_bound or check_bound:
+    # Executable evidence is evidence of behavior only when this approval walk
+    # actually captured that check. Its source code cannot satisfy the claim by
+    # mentioning the same words in comments or implementation text.
+    if named_check:
+        if check_bound:
+            return None
+        return Finding(
+            spec_id,
+            str(path),
+            row_id,
+            "programmatic check is named but this approval walk supplied no matching --captured-check output attestation",
+            blocking,
+        )
+
+    if path_evidence_supports_claim(claim, evidence, resolved):
         return None
 
-    if named_check and not check_bound:
-        message = "programmatic check is named but this approval walk supplied no matching --captured-check output attestation"
-    elif resolved:
+    if resolved:
         message = "evidence path/section resolves but does not contain concrete text or values supporting the claim"
     else:
         message = "evidence is prose only; no claim-bound version-controlled evidence or captured programmatic check"
@@ -319,12 +352,23 @@ def audit_evidence_row(
 
 def audit_file(path: Path, repo_root: Path, *, survey_only: bool, changed_scope: bool, enforce_dirs: set[Path], captured_checks: set[str]) -> tuple[int | None, int, list[Finding]]:
     text = path.read_text(encoding="utf-8")
+    spec_dir = owning_spec_dir(path, repo_root)
     spec_id = infer_spec_id(text)
-    status = canonical_spec_status(repo_root, path.parent, fallback_text=text)
+    if spec_id is None:
+        # Nested checklist files may omit the spec number; use the owning spec's
+        # section-1/section-9 metadata before giving up on identity.
+        for sibling in sorted(spec_dir.glob("section-*.md")):
+            try:
+                spec_id = infer_spec_id(sibling.read_text(encoding="utf-8", errors="replace"))
+            except OSError:
+                continue
+            if spec_id is not None:
+                break
+    status = canonical_spec_status(repo_root, spec_dir, fallback_text=text)
     lines = text.splitlines()
     findings: list[Finding] = []
     checked = 0
-    blocking_scope = is_enforced(path, survey_only=survey_only, changed_scope=changed_scope, enforce_dirs=enforce_dirs)
+    blocking_scope = is_enforced(spec_dir, survey_only=survey_only, changed_scope=changed_scope, enforce_dirs=enforce_dirs)
     blocking = blocking_scope and not is_legacy_survey(spec_id) and is_approved_status(status)
 
     for headers, rows in iter_tables(lines):
@@ -342,6 +386,7 @@ def audit_file(path: Path, repo_root: Path, *, survey_only: bool, changed_scope:
             finding = audit_evidence_row(
                 spec_id=spec_id,
                 path=path,
+                spec_dir=spec_dir,
                 row_id=row_id,
                 claim=claim,
                 evidence=evidence,
@@ -357,6 +402,7 @@ def audit_file(path: Path, repo_root: Path, *, survey_only: bool, changed_scope:
         finding = audit_evidence_row(
             spec_id=spec_id,
             path=path,
+            spec_dir=spec_dir,
             row_id=row_id,
             claim=claim,
             evidence=evidence,
@@ -384,10 +430,10 @@ def main() -> int:
     candidate_dirs: set[Path] = set()
     rows_by_dir: dict[Path, int] = {}
     for path in candidates:
-        parent = path.parent.resolve()
-        candidate_dirs.add(parent)
+        spec_dir = owning_spec_dir(path, repo_root)
+        candidate_dirs.add(spec_dir)
         _, checked, file_findings = audit_file(path, repo_root, survey_only=args.survey_only, changed_scope=args.changed_scope, enforce_dirs=enforce_dirs, captured_checks=captured_checks)
-        rows_by_dir[parent] = rows_by_dir.get(parent, 0) + checked
+        rows_by_dir[spec_dir] = rows_by_dir.get(spec_dir, 0) + checked
         if checked:
             audited_files += 1
             total_rows += checked
