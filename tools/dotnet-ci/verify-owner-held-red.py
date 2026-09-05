@@ -10,6 +10,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 NUMERIC_TOKEN_RE = re.compile(r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
+FIELD_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.-]*")
 
 
 def parse_args() -> argparse.Namespace:
@@ -24,19 +25,40 @@ def normalize(text: str) -> str:
     return text.replace("−", "-").replace("\u2013", "-").replace("\u2014", "-")
 
 
-def load_ledger(path: Path) -> dict[str, tuple[str, ...]]:
-    entries: dict[str, tuple[str, ...]] = {}
+def load_ledger(path: Path) -> dict[str, tuple[tuple[str, str], ...]]:
+    """Load `test_name|field=value|field=value` owner-held expectations."""
+    entries: dict[str, tuple[tuple[str, str], ...]] = {}
     for raw in path.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
         parts = [part.strip() for part in line.split("|")]
-        name, tokens = parts[0], tuple(parts[1:])
+        name = parts[0]
         if not name or name in entries:
             raise ValueError(f"invalid/duplicate owner-held RED entry: {line!r}")
-        if not tokens:
-            raise ValueError(f"owner-held RED entry has no diagnostic tokens: {name}")
-        entries[name] = tokens
+        if len(parts) < 2:
+            raise ValueError(f"owner-held RED entry has no diagnostic fields: {name}")
+
+        expectations: list[tuple[str, str]] = []
+        seen_fields: set[str] = set()
+        for item in parts[1:]:
+            if "=" not in item:
+                raise ValueError(
+                    f"owner-held RED diagnostic must be field=value, got {item!r} for {name}"
+                )
+            field, expected = (piece.strip() for piece in item.split("=", 1))
+            expected = normalize(expected)
+            if not FIELD_NAME_RE.fullmatch(field) or field in seen_fields:
+                raise ValueError(
+                    f"invalid/duplicate owner-held RED diagnostic field {field!r} for {name}"
+                )
+            if not NUMERIC_TOKEN_RE.fullmatch(expected):
+                raise ValueError(
+                    f"owner-held RED diagnostic value must be numeric, got {expected!r} for {name}.{field}"
+                )
+            seen_fields.add(field)
+            expectations.append((field, expected))
+        entries[name] = tuple(expectations)
     return entries
 
 
@@ -75,19 +97,21 @@ def find_result(
     return None
 
 
-def diagnostic_token_present(body: str, token: str) -> bool:
-    """Require recorded numeric diagnostics as complete values, never prefixes."""
+def diagnostic_field_values(body: str, field: str) -> list[str]:
+    """Return complete numeric values assigned to an exact diagnostic field."""
     normalized_body = normalize(body)
-    normalized_token = normalize(token).strip()
-    if NUMERIC_TOKEN_RE.fullmatch(normalized_token):
-        escaped = re.escape(normalized_token)
-        # `-0.165` must not match `-0.1659`; `0.407` must not match
-        # `0.4078`. Assignment punctuation around the value remains allowed.
-        return re.search(
-            rf"(?<![0-9.+-]){escaped}(?![0-9.eE%])",
-            normalized_body,
-        ) is not None
-    return normalized_token in normalized_body
+    escaped_field = re.escape(field)
+    pattern = re.compile(
+        rf"(?<![A-Za-z0-9_.-]){escaped_field}\s*=\s*"
+        rf"({NUMERIC_TOKEN_RE.pattern})(?![0-9.eE%])"
+    )
+    return [normalize(match.group(1)) for match in pattern.finditer(normalized_body)]
+
+
+def diagnostic_field_matches(body: str, field: str, expected: str) -> bool:
+    """Require one unambiguous field assignment equal to the recorded value."""
+    values = diagnostic_field_values(body, field)
+    return len(values) == 1 and values[0] == normalize(expected)
 
 
 def main() -> int:
@@ -105,7 +129,7 @@ def main() -> int:
 
     matched_indexes: set[int] = set()
     failed_expected = 0
-    for name, tokens in ledger.items():
+    for name, expectations in ledger.items():
         result = find_result(name, results)
         if result is None:
             print(f"ERROR: owner-held RED result missing or ambiguous: {name}", file=sys.stderr)
@@ -124,11 +148,16 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        missing = [token for token in tokens if not diagnostic_token_present(body, token)]
-        if missing:
+
+        mismatched = [
+            f"{field}={expected}"
+            for field, expected in expectations
+            if not diagnostic_field_matches(body, field, expected)
+        ]
+        if mismatched:
             print(
-                f"ERROR: owner-held RED {name} changed diagnostics; missing token(s): "
-                + ", ".join(missing),
+                f"ERROR: owner-held RED {name} changed diagnostics; missing, changed, or ambiguous field assignment(s): "
+                + ", ".join(mismatched),
                 file=sys.stderr,
             )
             return 1
