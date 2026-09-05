@@ -1,231 +1,169 @@
-# System XI — Detailed UX Implementation Plan
+# System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Status:** PLAN — READY FOR IMPLEMENTATION AFTER OWNER REVIEW  
-**Parent:** `docs/design/ux-high-level-plan.md`  
-**Scope:** Planning, validation, design production, handoff, and implementation verification for the player-facing UX  
-**Release target:** Early Access centered on the PM-2 playable-season loop, with PM-1 as prerequisite and PM-3/deeper management gated behind it
+**Last Updated:** September 4, 2026  
+**Version:** 1.1  
+**Status:** PLAN — READY FOR F1 AFTER TRACKING CLOSE-OUT  
+**Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
+**Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
 ---
 
-# 0. Purpose and operating rule
+## 0. Purpose
 
-This document converts the converged high-level UX plan into concrete work packages, artifacts, gates, dependencies, acceptance criteria, and execution order.
+This is the single execution authority for UX work. It defines work packages, Gates A–J, dependencies, validation mechanics, handoffs, ownership, and the exact next sequence.
 
-It does **not** redefine domain behavior. The authoritative order remains:
+It does not redefine domain behavior. Authority remains:
 
 1. APPROVED specification;
-2. production code/current behavior;
-3. explicitly labeled future UX intent;
-4. visual reference/mockup.
+2. governing client implementation/design documents;
+3. verified production behavior;
+4. explicitly labelled future UX intent;
+5. visual reference.
 
-A mockup can expose a missing requirement. It cannot silently create one.
+The current client documents that must be read before PM-1 work are:
 
-**Implementation freeze:** no additional high-fidelity screen should be treated as implementation-ready until its journey slice reaches **Gate I — Implementation Handoff** below.
+- `docs/tracking/interactive-unity-client-design.md`;
+- `docs/tracking/ui-client-framework-design.md`;
+- `docs/tracking/ui-framework-t0-implementation-plan.md`;
+- `docs/tracking/path-to-playable-roadmap.md`;
+- `src/client-app/ClientScreens.cs`;
+- `src/client-app/ClientScreenFlow.cs`;
+- `src/match-client-unity/README.md`.
 
-The existing `docs/design/ui-mockups/Main Menu.html` remains provisional pre-plan work until the PM-1 journey passes the same gates.
-
----
-
-# 1. Detailed-plan convergence record
-
-## 1.1 Detailed draft v0.1
-
-The first detailed draft expanded each high-level stage into separate documents and then scheduled screen-by-screen work:
-
-- inventory document;
-- persona document;
-- task document;
-- navigation document;
-- component document;
-- a11y document;
-- validation document;
-- Main Menu slice;
-- Tactics slice;
-- Match slice;
-- Report slice;
-- PM-2 screens individually.
-
-### Critique v0.1
-
-Rejected as too bureaucratic and internally inconsistent with the task-first high-level plan.
-
-Problems:
-
-- The plan created too many documents whose synchronization would become work of its own.
-- PM-1 had again been decomposed into individual screens rather than the actual task: **play one match end-to-end**.
-- It did not define realistic test-data extremes.
-- It did not define severity/disposition rules for usability findings.
-- It lacked a lean validation method appropriate to a small project.
-- It did not define how existing mockups are reconciled against real contracts.
-- It did not expose which work can proceed in parallel with art/audio/localization/backend work.
-
-**Revision:** replace document proliferation with a few durable evidence packs; make a journey the unit of work.
+The current four-screen/five-edge PM-1 graph is **input**, not a design question.
 
 ---
 
-## 1.2 Detailed draft v0.2
+# 1. Plan convergence and external critique
 
-Revised structure:
+The detailed plan went through three internal critique/revision rounds before v1.0. A subsequent repository-grounded review found additional defects.
 
-- one UX baseline/evidence pack;
-- one shared-system pack;
-- one validation protocol;
-- one design packet per journey;
-- PM-1 journey = launch → prepare → match → report;
-- PM-2 journey = start/continue career → understand season → advance → play → return;
-- later management journeys gated by system readiness.
+## 1.1 Findings accepted
 
-### Critique v0.2
+- S0 incorrectly implied the shipping Unity client could currently be launched.
+- S0 did not name B8/P4b host verification, B9b/P5b or B10/P6 as implementation dependencies.
+- Gate G's 3–5-person aspiration plus a provisional escape hatch could become a permanent no-op.
+- The plan omitted the documents that already own screen identities, navigation, P4/P5 splits and the `MonoBehaviour` layering rule.
+- The package was not routed through normal tracking/discovery surfaces.
+- Gates were duplicated between high-level and detailed plans.
+- No effort bands or role ownership were stated.
+- The existing browser/replay surfaces were not used as the obvious host-free real-data reference vehicle.
 
-Structurally strong, but not yet implementation-ready.
+## 1.2 Status claims corrected rather than accepted
 
-Remaining gaps:
+Two review claims were stale against the current tree:
 
-- no explicit severity threshold for passing usability review;
-- no contract for test-data extremes;
-- no parallel-work matrix;
-- no design-change protocol after handoff;
-- no branch/versioning convention for UX references;
-- no explicit “blocked by backend vs design-only future” labels;
-- no definition of what QA receives from UX;
-- no exact first executable task after planning.
+- **P4b is landed as code.** `src/match-client-unity/README.md` records `MatchClientBehaviour.cs` as LANDED after five AR rounds. The real gap is that this assembly is excluded from the shim and the P4b binding has never compiled/run on the pinned Unity host; P5b and on-host P6 remain open.
+- **#30 is implemented.** Its implementation is in `src/season-save/`: `SeasonLoop`, season save state, league bootstrap and T2 round/day progression exist, including `AdvanceAndPlayNextRound`. The meaningful S1 question is which player-facing projection, dispatcher, screen and navigation surfaces exist.
 
-These are resolved in the final plan below.
+The revised plan below incorporates the structural concerns while using the verified current state.
 
 ---
 
-## 1.3 Detailed draft v0.3 — final critique
+# 2. Durable UX artifacts
 
-The revised final structure was checked against:
-
-- UI / Client Framework #38's one-way presentation contract and no-phantom-seam rule;
-- the current four-screen `client-app` graph;
-- the PM-1/PM-2/PM-3 roadmap;
-- the existing `touchline` design system and management mockups;
-- #49's pseudo-locale, text-scale, contrast, colorblind, font-fallback, and renderer-application requirements;
-- #48/#51 presentation/audio composition boundaries;
-- the requirement that Unity-host-only rendering not become the source of domain behavior.
-
-No structural blocker remains. The remaining unknowns—specific usability findings, exact final copy, final art, and later management-system readiness—are inputs the plan is designed to discover, not missing pieces of the plan itself.
-
----
-
-# 2. Deliverable model
-
-To avoid documentation sprawl, UX work uses **four durable artifact types**.
+Keep documentation lean. UX uses four artifact classes.
 
 ## UX-A — Baseline & Evidence Pack
 
-One evolving file/set covering:
+Contains:
 
+- current capability matrix;
+- current verification qualifiers;
+- existing mockup reconciliation;
 - player/task assumptions;
-- task hierarchy and priority;
-- existing implementation inventory;
-- existing mockup inventory;
+- PM-1/PM-2 task hierarchy;
 - current-vs-target navigation map;
-- reference/competitor observations;
-- constraints;
 - release-scope matrix;
 - open UX decisions.
 
 ## UX-B — Shared System Pack
 
-One evolving file/set covering:
+Contains only cross-journey rules actually required by S0/S1:
 
-- navigation rules;
-- interaction patterns;
-- component/state matrix;
-- typography/density/layout rules;
-- input/focus behavior;
-- accessibility rules;
-- localization/reflow rules;
-- icon rules;
-- art/audio/caption slot rules;
-- desktop resolution behavior.
+- component/state rules;
+- keyboard/focus behavior;
+- data-density/table behavior;
+- localization/reflow;
+- accessibility application expectations;
+- art/fallback slots;
+- audio/caption placement;
+- desktop layout/resolution behavior.
 
 ## UX-C — Validation Protocol
 
-One stable protocol covering:
+Contains:
 
-- heuristic review;
-- task-based prototype testing;
-- participant criteria;
-- finding severity;
-- pass/fail rules;
-- pseudo-locale/a11y checks;
+- scripted walkthroughs;
+- participant recruitment/test procedure;
+- severity/disposition rules;
 - test-data profiles;
-- design verification after Unity implementation.
+- retest rules;
+- Unity implementation-verification checklist.
 
-## UX-D — Journey Design Packet
+## UX-D — Journey Packet
 
-One packet per journey slice containing:
+One packet per journey:
 
-- contract/dependency audit;
-- current and target flow;
+- Gate A audit;
+- flow;
 - low-fidelity wireframes;
 - state matrix;
-- prototype;
-- usability findings/dispositions;
+- cross-stream findings;
+- interactive prototype;
+- usability evidence;
 - high-fidelity references;
-- component mapping;
-- localization/copy roles;
-- art/audio slots;
-- implementation acceptance criteria;
-- blocked/deferred items;
-- version/change history.
+- implementation mapping;
+- QA cases;
+- blockers/deferred items;
+- version/change record.
 
-These may be implemented as Markdown + HTML prototypes/mockups rather than forcing a new file for every subsection.
+No separate document is required for every subsection.
 
 ---
 
-# 3. Work package F0 — Planning freeze and repository cleanup
+# 3. Capability labels
 
-**Objective:** establish planning authority before more design production.
+Every relevant capability receives one label plus a verification qualifier when material.
 
-## F0.1 Mark the current relationship between documents
+- `LIVE` — production behavior exists.
+- `DESIGNABLE` — owning read/action behavior exists, but player-facing presentation does not.
+- `FUTURE-BLOCKED` — implementation needs an owning-system/client change that is absent.
+- `OUT-OF-EA` — deliberately outside the Early Access cut.
+- `UNKNOWN` — evidence insufficient; cannot be used as a design premise.
 
-- `ux-high-level-plan.md` = strategic UX authority.
-- `ux-detailed-plan.md` = execution authority.
-- `ux-foundation.md` = earlier direction memo; retain as historical/reference material or revise later to point to the plans.
-- `ui-mockups/` = visual references, not runtime contracts.
+Qualifiers include:
 
-## F0.2 Mark existing Main Menu mockup provisional
+- `HOST-UNVERIFIED`;
+- `HOST-VERIFIED`;
+- `GATE-COMPILED`;
+- `SPEC-ONLY`;
+- `UNWIRED`;
+- `REFERENCE-HARNESS`.
 
-Do not delete it. Record that it was created before the plan and must pass the PM-1 journey gates before implementation handoff.
-
-## F0.3 Stop new high-fidelity screen production
-
-Allowed during freeze:
-
-- audit;
-- inventory;
-- research;
-- flow diagrams;
-- low-fidelity wireframes;
-- test protocol work;
-- dependency analysis.
-
-Not allowed as “approved UX” during freeze:
-
-- new production-ready screen mockups;
-- final visual polish;
-- UI-side invention of missing backend actions.
-
-### F0 exit gate
-
-- high-level plan exists;
-- detailed plan exists;
-- first journey is named;
-- branch/PR states that substantial UX implementation is paused pending plan acceptance.
+Example: P4b is `LIVE / HOST-UNVERIFIED`, not "unimplemented" and not "verified".
 
 ---
 
-# 4. Work package F1 — Baseline & Evidence Pack
+# 4. Foundation work
 
-**Objective:** establish the factual starting point and task model.
+## F0 — Planning/tracking close-out
 
-## F1.1 Inventory current UX implementation
+Before F1 begins:
+
+- `ux-high-level-plan.md` is the strategy authority;
+- this file is the execution authority;
+- `ux-foundation.md` is bannered as superseded historical context;
+- existing `Main Menu.html` is marked provisional;
+- repository tracking routes agents to these plans;
+- PR #362 remains draft until the planning/tracking corrections are reviewed.
+
+No new high-fidelity UX production occurs during F0.
+
+## F1 — Baseline & Evidence Pack
+
+### F1.1 Current capability matrix
 
 Audit at minimum:
 
@@ -233,152 +171,104 @@ Audit at minimum:
 - `src/client-app/`;
 - `src/match-client-core/`;
 - `src/match-client-unity/`;
-- relevant web-client precedents;
-- #30/#37/#38/#48/#49/#51 public presentation seams;
-- save/load surfaces relevant to the release target.
+- `src/match-viewer/`;
+- `src/match-client-web/`;
+- `src/match-analytics/`;
+- `src/season-save/`;
+- current #38/#48/#49/#51 implementation surfaces;
+- later management assemblies relevant to S2.
 
-Record:
+For each capability record separately:
 
-- existing screen identities;
-- existing navigation edges;
-- existing read surfaces;
-- existing command seams;
-- currently missing but required seams;
-- Unity-host-gated behavior;
-- future-only intended surfaces.
+- domain/read seam;
+- command seam;
+- UI projection/adapter;
+- screen identity;
+- navigation edge;
+- rendering/binding;
+- test/compile state;
+- host-cert state;
+- capability label.
 
-### Output
-A **current capability matrix** with labels:
+**Do not infer absence from folder naming.** #30 is the precedent: its implementation is in `src/season-save/`, not `src/season-competition-loop/`.
 
-- `LIVE` — production behavior exists;
-- `DESIGNABLE` — read/action seam exists but screen does not;
-- `FUTURE-BLOCKED` — UX can be explored but implementation requires an owning-system change;
-- `OUT-OF-EA` — deliberately outside the Early Access cut;
-- `UNKNOWN` — requires decision/investigation.
+**Do not trust stale comments as current status.** A source comment saying a spec has no assembly is evidence to investigate, not authority when production code now exists.
 
-## F1.2 Audit existing UX references
+### F1.2 Existing reference audit
 
-Review every existing mockup for:
+Review every mockup for:
 
 - task served;
 - navigation assumptions;
-- controls shown;
-- data shown;
-- action seams implied;
-- stale branding;
-- desktop-layout assumptions;
-- localization hazards;
-- accessibility hazards;
-- duplicated component patterns;
-- visual-only controls with no current/future owner.
+- displayed data;
+- implied controls/actions;
+- owning seams;
+- localization/a11y risks;
+- duplicated primitives;
+- status against the capability matrix.
 
-Do **not** treat “looks good” as approval.
+Output columns:
 
-### Output
-Mockup reconciliation table:
+`Reference | Keep | Revise | Retire | Capability gaps | Gate implications`
 
-| Reference | Keep | Revise | Retire | Contract gaps | Notes |
-|---|---|---|---|---|---|
+### F1.3 Player/task assumptions
 
-## F1.3 Define target player assumptions
+Use three lightweight hypotheses:
 
-Use a small number of explicit assumptions rather than fictional detailed personas.
+- experienced management-sim player;
+- football-literate newcomer;
+- efficiency/power user.
 
-Recommended initial archetypes:
+No elaborate fictional personas.
 
-1. **Experienced football-management player** — expects dense information and fast navigation.
-2. **Football-literate newcomer to management sims** — understands football terms but not interface conventions.
-3. **Efficiency/power user** — heavy keyboard use, repeated high-frequency actions, values comparison speed.
+### F1.4 PM-1/PM-2 task hierarchy
 
-These are hypotheses to test, not immutable personas.
+For each task:
 
-## F1.4 Build task hierarchy
-
-For each task record:
-
-- player goal;
+- goal;
 - frequency;
 - consequence of failure;
 - required information;
 - required action;
-- owning backend system;
+- owning system;
 - milestone priority.
 
-### Priority formula
-Use qualitative ranking rather than fabricated numeric precision:
+Priority: `Critical`, `High`, `Medium`, `Low`.
 
-- **Critical:** cannot complete PM-1/PM-2 without it.
-- **High:** frequent or high-consequence Early Access task.
-- **Medium:** useful management depth but not loop-blocking.
-- **Low:** polish or rare workflow.
+### F1.5 Early Access success floor
 
-## F1.5 Reference/competitor benchmark
+A player must be able to:
 
-Benchmark comparable management/simulation interfaces for specific questions, not imitation:
+- enter/start/resume the supported mode;
+- know what needs attention next;
+- prepare and start a match;
+- read live match state;
+- use supported match interventions;
+- understand result/core statistics;
+- return to season context;
+- advance correctly;
+- save/quit/resume according to the actual product promise;
+- find release-critical settings/accessibility controls.
 
-- global navigation;
-- squad/table density;
-- match-preparation flow;
-- match-day information hierarchy;
-- post-match explanation;
-- save/continue/new-game clarity;
-- keyboard efficiency;
-- onboarding/help;
-- handling of unavailable systems.
+### F1 exit
 
-Capture principles and failure patterns; do not copy protected visual assets or distinctive trade dress.
-
-## F1.6 Early Access success criteria
-
-At minimum, a new player should be able to:
-
-- start or continue the available game mode;
-- understand the next required action;
-- prepare for a match;
-- begin the match without hidden mandatory steps;
-- read the live match state;
-- make supported tactical/substitution changes;
-- understand the result and core statistics;
-- return to the career/season context;
-- progress to the next fixture;
-- save/quit/resume according to the release's actual save promise;
-- discover settings/accessibility controls.
-
-### F1 exit gate
-
-No unresolved contradiction between the task hierarchy, Early Access cut, current code, and authoritative specs.
+No `UNKNOWN` capability may support an S0/S1 design premise. Contradictions become named findings, not assumptions.
 
 ---
 
-# 5. Work package F2 — Experience architecture
+## F2 — Current-vs-target architecture
 
-**Objective:** lock the shell before individual journey styling.
+### F2.1 Current PM-1 graph — record, do not redesign
 
-## F2.1 Launch architecture
+`ClientScreenFlow` already owns the legal graph. Record it exactly and cite its five named moves.
 
-Define behavior/placement for:
+The UX workstream may propose a future flow only by labelling the required new `ScreenId`/move/registration as future work. A mockup cannot add an edge.
 
-- Continue;
-- New Game;
-- Load Game;
-- Settings;
-- Credits;
-- Exit.
+### F2.2 Future career shell
 
-For each, define:
+Map target locations for:
 
-- enabled criteria;
-- empty/no-save state;
-- progress state;
-- failure state;
-- confirmation behavior;
-- return/back behavior.
-
-## F2.2 Career shell architecture
-
-Target information architecture:
-
-- Home / Season;
+- Home/Season;
 - Squad;
 - Tactics;
 - Training;
@@ -386,908 +276,699 @@ Target information architecture:
 - Transfers;
 - Club;
 - World;
-- later Inbox/News where appropriate.
+- settings/help;
+- later inbox/news where relevant.
 
-Each destination receives a milestone/dependency label. The existence of a nav label does not imply implementation readiness.
+Every destination carries its capability/milestone label.
 
-## F2.3 Navigation rules
+### F2.3 Interaction architecture
 
-Define once:
+Define only what is not already owned by current navigation code:
 
-- top-level navigation;
-- sub-navigation;
-- tab use;
-- breadcrumb use;
-- back behavior;
-- modal use;
-- drawer/side-panel use;
-- deep-link/command-palette behavior;
-- what state is preserved when moving between screens;
-- when navigation is blocked during save/load/live transitions.
+- page vs modal vs drawer use;
+- subnavigation/tabs;
+- attention/badge/banner/toast rules;
+- save/load transition blocking;
+- contextual help/why-disabled pattern;
+- current-vs-target mapping.
 
-## F2.4 Attention model
+### F2 exit
 
-Define how the player learns “something needs action” without turning the interface into notification noise.
-
-Classes:
-
-- blocking action required;
-- important but non-blocking;
-- informational change;
-- background completion;
-- error/failure.
-
-Define badge/banner/toast/modal use for each class.
-
-## F2.5 Onboarding/help architecture
-
-Early Access minimum should favor contextual explanation over a long forced tutorial.
-
-Define:
-
-- first-run orientation;
-- glossary/football-rule help where genuinely needed;
-- tooltip standard;
-- empty-state teaching;
-- “why disabled?” explanation;
-- optional contextual hints;
-- how hints can be dismissed/disabled.
-
-### F2 exit gate
-
-Every P0/P1 journey has an unambiguous place in the architecture and back-navigation can be described without referring to a mockup screenshot.
+Every S0/S1 task has a place in either the **current** graph or an explicitly **future** target graph. Nothing is ambiguously half-current.
 
 ---
 
-# 6. Work package F3 — Shared UX system audit
+## F3 — Shared S0/S1 interaction system
 
-**Objective:** turn the existing visual system into a complete interaction system.
+Audit/define only needed primitives:
 
-## F3.1 Design-token audit
+- primary/secondary/destructive actions;
+- nav/tab/focus states;
+- dense tables, sort/filter/selection;
+- inputs/selectors/toggles;
+- tooltips/help;
+- modals/confirmation;
+- toast/banner/inline feedback;
+- loading/empty/partial/stale/error states;
+- keyboard traversal and no-trap rules;
+- pseudo-locale expansion/reflow;
+- maximum supported text scale;
+- contrast/colorblind/color-independent semantics;
+- font/glyph fallback assumptions;
+- missing badge/portrait/stadium/key-art fallbacks;
+- caption/HUD coexistence and muted-audio behavior;
+- smallest/reference/high-resolution desktop behavior.
 
-Retain `touchline` unless evidence gives a reason to reopen it.
+### F3 exit
 
-Audit:
-
-- semantic color tokens;
-- text colors/contrast;
-- surface levels;
-- typography sizes/weights;
-- spacing scale;
-- radii;
-- data-viz palette;
-- status colors;
-- selected/focus states.
-
-## F3.2 Density tiers
-
-Define at least:
-
-- standard dense desktop;
-- compact dense desktop if supported;
-- enlarged-text/reflow mode.
-
-Avoid arbitrary per-screen density changes.
-
-## F3.3 Core component/state matrix
-
-For each component used by P0/P1, define relevant states.
-
-### Actions
-
-- primary button;
-- secondary button;
-- destructive button;
-- icon button;
-- menu item;
-- context action.
-
-### Navigation
-
-- global nav item;
-- subnav/tab;
-- breadcrumb;
-- command-palette result.
-
-### Data
-
-- table;
-- sortable header;
-- filter;
-- row selection;
-- stat tile;
-- badge/chip;
-- progress/form indicator;
-- chart/legend.
-
-### Input
-
-- text input;
-- numeric input where required;
-- select/dropdown;
-- segmented selector;
-- toggle;
-- slider only where semantically appropriate.
-
-### Feedback
-
-- tooltip;
-- modal;
-- confirmation;
-- toast;
-- banner;
-- inline validation;
-- loading indicator;
-- empty state;
-- partial/stale state;
-- blocking error.
-
-## F3.4 Keyboard and focus model
-
-Define:
-
-- visible focus indicator;
-- logical tab order;
-- arrow-key patterns for lists/tabs where expected;
-- Enter/Space activation;
-- Escape behavior;
-- command palette shortcut;
-- whether high-frequency actions get dedicated shortcuts;
-- prevention of keyboard traps.
-
-Mouse remains fully supported; shortcuts are accelerators.
-
-## F3.5 Localization/reflow rules
-
-Design for:
-
-- pseudo-locale expansion;
-- longer button labels;
-- variable date/currency formatting;
-- player/club names longer than English mock data;
-- font fallback/glyph coverage;
-- no concatenated sentence fragments where localization owns the string;
-- no meaning stored only in word order assumptions.
-
-## F3.6 Accessibility rules
-
-Embed #49's application boundary into rendering design:
-
-- text scale;
-- reflow;
-- contrast mode;
-- colorblind-safe palette;
-- input assist where applicable;
-- captions/subtitles where audio content is meaningful;
-- no color-only communication;
-- adequate focus visibility;
-- motion reduction for optional UI animation where relevant.
-
-## F3.7 Art-independent layout rules
-
-For each asset family, define:
-
-- aspect ratio;
-- crop/safe area;
-- min/max display size;
-- placeholder/fallback;
-- whether it is decorative or informational;
-- behavior when missing.
-
-Core comprehension must survive:
-
-- no portrait;
-- no badge;
-- no stadium image;
-- no competition art;
-- no key art.
-
-## F3.8 Audio/caption integration
-
-UX owns placement/behavior, not audio logic.
-
-Define:
-
-- UI feedback cue opportunities;
-- muted state behavior;
-- caption location and collision rules;
-- match commentary/caption coexistence with HUD;
-- volume/settings entry points;
-- no essential information available only through audio.
-
-### F3 exit gate
-
-All shared primitives required by the first journey have defined state, focus, localization, accessibility, and fallback behavior.
+Every shared primitive needed by S0 has defined state, focus, a11y/localization and fallback behavior. No speculative component library is required.
 
 ---
 
-# 7. Work package F4 — Validation protocol
+## F4 — Validation setup
 
-**Objective:** define what evidence is sufficient before visual lock and before Unity acceptance.
-
-## F4.1 Review methods
+### F4.1 Methods
 
 Use four layers:
 
-1. **Contract review** — no phantom data/action/navigation semantics.
-2. **Heuristic review** — hierarchy, consistency, error prevention, visibility, efficiency.
-3. **Task-based usability testing** — independent people attempt the actual journey.
-4. **Implementation verification** — Unity build matches the validated design under real constraints.
+1. contract review;
+2. scripted heuristic/self-walkthrough;
+3. independent task-based participant test;
+4. implementation verification.
 
-## F4.2 Participant strategy
+### F4.2 Binding participant mechanism
 
-For P0/P1 critical flows:
+For **S0 and S1 only**, Gate G requires:
 
-- target **3–5 independent representative participants per formative round**;
-- include at least one experienced management-sim player and one football-literate newcomer where possible;
-- do not count the designer/implementer as an independent participant;
-- if independent participants are temporarily unavailable, the slice may continue as **provisional**, but it does not receive full usability validation status.
+- **2 independent participants** in one formative round;
+- the designer/implementer does not count;
+- where practical, one experienced management-sim player and one football-literate newcomer;
+- participants may be recruited from the owner's/team's personal or community network; paid recruitment is optional, not assumed;
+- F4 records the intended participants/recruiting channel before the journey reaches Gate F;
+- the test round is scheduled for the first practical session after the prototype passes Gate F;
+- if either participant is unavailable, Gate G simply does not pass — there is **no provisional bypass to Gate H/I**.
 
-Testing is iterative; five people once is less useful than small rounds with fixes between them.
+One round is the default cap. A second round is required only if:
 
-## F4.3 Task-test format
+- a Blocker/Major causes a material flow redesign; or
+- the owner explicitly requests another validation pass.
 
-Give a goal, not step-by-step instructions.
+This is intentionally small enough to bind in a solo/small-team project while still providing evidence independent of the author.
 
-Example:
+### F4.3 Scripted self-walkthrough
 
-> “You are about to play your next league match. Set up the team the way you want, start the match, make one tactical change, and then tell me what you think caused the result.”
+Before independent testing, the author executes the same tasks using:
 
-Capture:
-
-- success/failure;
-- completion path;
-- wrong turns;
-- hesitation points;
-- questions asked;
-- misunderstood labels;
-- ignored information;
-- confidence at completion.
-
-## F4.4 Finding severity
-
-### Blocker
-
-- cannot complete critical task;
-- data/action meaning is dangerously wrong;
-- inaccessible critical path;
-- destructive behavior is ambiguous;
-- design requires a nonexistent backend capability but presents it as real.
-
-### Major
-
-- frequent navigation failure;
-- critical information repeatedly missed;
-- common action consistently misunderstood;
-- high-friction repeated workflow;
-- localization/a11y failure affecting normal use.
-
-### Moderate
-
-- noticeable inefficiency/confusion with workaround;
-- secondary information hierarchy problem;
-- lower-frequency state poorly explained.
-
-### Minor
-
-- polish, consistency, microcopy, cosmetic issue with low functional impact.
-
-## F4.5 Gate disposition rule
-
-A critical P0/P1 journey cannot pass usability Gate G with:
-
-- any unresolved **Blocker**;
-- any unresolved **Major** unless explicitly accepted by the owner with rationale and planned disposition.
-
-Moderate findings may be accepted if documented and non-compounding. Minor findings enter polish backlog.
-
-## F4.6 Test-data profiles
-
-Every critical journey should be checked with relevant profiles, not only the ideal mock data.
-
-### Baseline
-
-- ordinary names;
-- normal table size;
-- ordinary fixture/result;
-- complete data.
-
-### Content extremes
-
-- long player names;
-- long club/competition names;
-- zero/empty list;
-- very large list within supported domain range;
-- many status badges;
-- long localized copy/pseudo-locale;
-- dates/currencies with expanded formatting.
-
-### State extremes
-
-- no save exists;
-- save/load failure;
-- no published live match frame yet;
-- disabled action with domain reason;
+- baseline data;
+- long names/pseudo-locale;
+- max text scale;
+- keyboard only;
 - missing art;
-- partial/stale data if possible;
-- match with many events/cards/substitutions;
+- disabled/error states;
+- smallest supported desktop layout.
+
+This is a binding Gate E input, but **never substitutes for Gate G**.
+
+### F4.4 Severity
+
+**Blocker** — critical task cannot be completed; inaccessible critical path; destructive ambiguity; false capability presented as live.
+
+**Major** — repeated critical-info miss; frequent navigation failure; common action misunderstood; severe repeated friction; material localization/a11y failure.
+
+**Moderate** — meaningful confusion/inefficiency with workaround.
+
+**Minor** — polish/microcopy/low-impact consistency.
+
+### F4.5 Disposition
+
+S0/S1 Gate G cannot pass with:
+
+- any unresolved Blocker;
+- any unresolved Major unless the project owner explicitly accepts it with rationale and target disposition.
+
+Moderate may be accepted if documented/non-compounding. Minor enters backlog.
+
+### F4.6 Test-data profiles
+
+Minimum profiles:
+
+- ordinary case;
+- long player/club/competition names;
+- empty/large lists;
+- many status indicators;
+- pseudo-locale;
+- alternate date/currency formatting;
+- no save;
+- save/load failure where relevant;
+- no match frame yet;
+- disabled action with reason;
+- missing art;
+- event-heavy match;
 - unusual scoreline;
 - full-time/frozen state;
-- unavailable future feature.
+- smallest desktop;
+- 1920×1080;
+- high-resolution/ultrawide behavior;
+- max text scale;
+- keyboard-only and mouse-only.
 
-### Display/input extremes
+### F4 exit
 
-- smallest supported desktop resolution;
-- 1920×1080 reference;
-- higher-resolution/ultrawide behavior;
-- max supported text scale;
-- pseudo-locale;
-- keyboard-only;
-- mouse-only;
-- reduced motion if implemented.
-
-## F4.7 Acceptance evidence
-
-Each journey packet records:
-
-- test date/version;
-- prototype/build tested;
-- participants/test mode;
-- findings;
-- severity;
-- disposition;
-- retest result.
-
-### F4 exit gate
-
-Validation can be repeated by someone other than the original designer from the written protocol.
+The protocol is repeatable by someone other than its author, and two independent participants are identified/recruitable for S0.
 
 ---
 
-# 8. Journey Slice S0 — PM-1: Play one match end-to-end
+# 5. Gates A–J — single authoritative definition
 
-**Priority:** P0 / first executable UX slice  
-**Current code anchor:** `ClientScreens.MainMenu`, `TacticsSetup`, `MatchView`, `PostMatchReport` and `ClientScreenFlow`  
-**Goal:** a player can launch the current client, prepare a match, watch/influence it, understand the result, and exit the loop without confusion.
+These gates apply to every journey. High-level documents refer here rather than duplicating them.
 
-This is one journey containing four screen contexts, not four independent projects.
+## Gate A — Contract/dependency truth
 
-## S0-A — Contract/dependency audit
+Before controls are designed:
 
-Verify:
+- identify owning spec/system;
+- verify read/data seam;
+- verify action/command seam;
+- verify UI adapter/projection status;
+- verify screen/navigation status;
+- verify rendering/host status;
+- classify missing surfaces.
 
-- current `ClientScreenFlow` transitions;
-- tactics command seams actually available;
-- live match read/frame source;
-- live command marshaling behavior;
-- post-match #37 analytics available;
-- current limitations around team selection/new game/save state;
-- #48 presentation inputs currently available or absent;
-- #49 string/a11y rendering path status;
-- #51 audio/caption status.
+**Pass:** every proposed control/data element is backed by a verified owner or explicitly `FUTURE-BLOCKED`; no phantom action.
 
-### Output
-Journey capability table with each desired control marked:
+## Gate B — Task flow
 
-- current;
-- future-blocked;
-- visual-only/decorative;
-- removed from EA flow.
+Define:
 
-### Gate A
-No unlabeled phantom action.
+- entry trigger;
+- player goal;
+- required information;
+- actions/decisions;
+- alternate/blocked paths;
+- cancellation/back behavior;
+- completion state;
+- return destination.
 
-## S0-B — Task flow
+**Pass:** flow is coherent without visual styling.
 
-Define exact current and target flow:
+## Gate C — Low-fidelity information design
 
-`Launch → Main Menu → Tactics Setup → Start Match → Live Match → Full Time → Post-Match Report → Main Menu`
+Define hierarchy, density, primary action, navigation, comparison, progressive disclosure, focus sequence and reflow expectations.
 
-For each transition define:
+**Pass:** interaction can be evaluated without color, art or polish.
 
-- trigger;
-- confirmation;
-- loading/progress state;
-- failure path;
-- keyboard focus destination;
-- back/cancel behavior.
+## Gate D — Full state matrix
 
-### Gate B
-Flow works on paper without visual styling.
+Cover relevant default/focus/selected/disabled/loading/empty/partial/stale/error/progress/confirmation/success/failure states.
 
-## S0-C — Low-fidelity wireframes
+**Pass:** no happy-path-only design.
 
-Create low-fidelity references for the full journey.
+## Gate E — Cross-stream resilience
 
-### Main Menu
-
-Focus:
-
-- supported action hierarchy;
-- unavailable continue/load state;
-- settings access;
-- no reliance on final key art.
-
-### Tactics Setup
-
-Reconcile existing `Tactics.html` against actual PM-1 setup requirements.
-
-Audit every visible control for an owning seam.
-
-Focus:
-
-- selected XI/formation visibility;
-- team/player instruction editing actually supported;
-- readiness/start-match action;
-- cancel path;
-- validation if setup cannot start.
-
-### Match View
-
-Focus:
-
-- score/time/state;
-- pitch readability;
-- selected/focused player state if needed;
-- playback speed/pause semantics vs actual supported behavior;
-- supported tactical/substitution interaction;
-- event/state feedback;
-- transition to full time;
-- no data invented in UI.
-
-### Post-Match Report
-
-Focus:
-
-- score/result;
-- key statistics from #37;
-- enough explanation to understand the result without pretending the UI knows causality the analytics do not expose;
-- return action.
-
-### Gate C
-Hierarchy and interaction can be evaluated without colors/graphics.
-
-## S0-D — State matrix
-
-At minimum:
-
-- Main Menu: no save / save available if current build supports it / unavailable action reason.
-- Tactics: valid / invalid setup / selection changed / unsupported control hidden or disabled appropriately.
-- Match: no frame yet / live / paused if applicable / tactical change pending/applied feedback / full time.
-- Report: analytics available / analytics failure or unavailable handling defined.
-
-### Gate D
-No happy-path-only design.
-
-## S0-E — Cross-stream review
-
-Check entire journey with:
+Execute/review with:
 
 - pseudo-locale;
 - max text scale;
 - keyboard only;
-- missing art;
-- color-independent state;
-- no audio;
-- caption/HUD collision assumptions;
-- smallest supported desktop layout.
+- color-independent meaning;
+- missing/fallback art;
+- audio muted/caption path where relevant;
+- smallest/reference/high-resolution layouts;
+- representative data extremes.
 
-### Gate E
-Pass or record findings before prototype.
+**Pass:** Blocker/Major findings resolved or recorded before prototype validation.
 
-## S0-F — Interactive prototype
+## Gate F — Interactive prototype
 
-Prototype the entire flow, including:
+Prototype the complete task including back/cancel and critical failure/disabled states.
 
-- back/cancel;
-- transitions;
-- disabled/error states;
-- at least one tactical change;
-- post-match return.
+The prototype is not required to be Unity. It must accurately label real versus future behavior.
 
-The prototype may use representative data, but every action must be labeled according to real/future status.
+**Pass:** a participant can attempt the complete task without instructions about which control to click.
 
-### Gate F
-The complete task is testable without Unity implementation changes.
+## Gate G — Independent usability validation
 
-## S0-G — Usability round
+Run the F4 participant round.
 
-Primary task:
+Record:
 
-- prepare and start match;
-- identify live state;
-- make a supported intervention;
-- understand final result;
-- return successfully.
+- version tested;
+- participant profile;
+- task completion;
+- wrong turns/hesitation;
+- missed information;
+- misunderstood controls/states;
+- confidence about what happens next;
+- findings/severity/disposition/retest.
 
-Apply F4 severity/disposition rules.
+**Pass:** two independent participants completed the round; no unresolved Blocker; no unaccepted Major.
 
-### Gate G
-No unresolved Blocker; no unresolved Major without owner acceptance.
+## Gate H — High-fidelity reference
 
-## S0-H — High-fidelity reference
+Only after Gate G:
 
-Only now:
+- apply `touchline`;
+- finalize shared-component usage;
+- show full states;
+- apply art slots/fallbacks;
+- finalize copy roles/localization keys as appropriate;
+- clearly mark future behavior.
 
-- reconcile/update provisional Main Menu;
-- finalize Tactics reference;
-- create Match View reference;
-- create Post-Match reference;
-- show complete states, not only hero screenshots.
+**Pass:** design-ready.
 
-### Gate H
-Design-ready.
+## Gate I — Implementation handoff
 
-## S0-I — Implementation packet
+Provide:
 
-Provide Unity/UI implementer:
-
-- screen-state diagrams;
+- journey/screen-state map;
 - component mapping;
 - focus order;
-- transition behavior;
-- data source mapping;
-- action seam mapping;
-- art slots;
+- data/read mapping;
+- action/command mapping;
+- navigation mapping;
 - localization roles;
+- asset slots;
 - a11y behavior;
-- test-data cases;
-- acceptance scenarios.
+- QA Given/When/Then cases;
+- blockers/deferred items.
 
-### Gate I
-Implementation-ready.
+**Pass:** an implementer can build the supported scope without inventing product behavior.
 
-## S0-J — Unity verification
+## Gate J — Implementation verification
 
-After implementation:
+Against the real implementation:
 
-- verify visual hierarchy;
-- verify state behavior;
-- verify only existing public command seams are used;
-- verify no logic moved into `MonoBehaviour` to satisfy presentation behavior;
-- verify keyboard/focus;
-- verify pseudo-locale/max text scale;
-- verify missing-art fallback;
-- verify supported resolutions;
-- certify host-only binding behavior.
+- verify hierarchy/states/transitions;
+- verify public command paths only;
+- verify presentation logic remains outside gate-invisible `MonoBehaviour`s;
+- verify focus/keyboard;
+- pseudo-locale/max text scale;
+- fallback art;
+- supported resolutions;
+- real data extremes;
+- required Unity-host/cert behavior.
 
-### Gate J
-PM-1 UX slice accepted.
+**Pass:** implementation matches the validated UX and all named host/roadmap dependencies are closed for that journey.
 
 ---
 
-# 9. Journey Slice S1 — PM-2 / Early Access: Run a season loop
+# 6. S0 — PM-1 journey: play one match end-to-end
 
-**Priority:** P1 / Early Access core  
-**Goal:** start or resume a career, understand the season context, progress to the next match, play it, understand the result, and continue.
+**Priority:** P0  
+**Current graph owner:** `src/client-app/ClientScreenFlow.cs`  
+**Current screen identities:** Main Menu, Tactics Setup, Match View, Post-Match Report
+
+## 6.1 Current dependency state
+
+Known before F1:
+
+- P4b Unity render/camera/click binding code is landed but host-unverified;
+- P5b UGUI shell is open;
+- on-host P6 is open;
+- therefore the shipping Unity PM-1 client cannot currently be launched;
+- host-free command/session/render-decision logic exists;
+- #37 match analytics exists;
+- `match-viewer` and `match-client-web` provide real match presentation/reference behavior host-free.
+
+## 6.2 Roadmap coupling
+
+S0 does **not** wait for all Unity work before design, but the dependencies are explicit:
+
+- **S0 Gates A–E:** host-free; proceed from code/spec/reference evidence.
+- **S0 Gate F:** use a design prototype for the full flow; use `match-viewer`/`match-client-web` and captured real outputs to validate Match View data/behavior. Do not extend the browser client into a second shipping implementation.
+- **S0 Gate G:** validate the design prototype with two independent participants.
+- **S0 Gates H–I:** produce the approved visual reference and the implementation packet that directly feeds **B9b/P5b**.
+- **Roadmap B8/P4b:** its code is landed, but pinned-host compile/runtime/cert evidence is still required. Follow the roadmap/interactive-client ordering for the host landing.
+- **Roadmap B9b/P5b:** consumes the S0 Gate-I packet for the four-screen UGUI binding.
+- **Roadmap B10/on-host P6:** verifies scene boot, 60 FPS rendering, live tactical input and render-loop certification.
+- **S0 Gate J:** cannot pass until the relevant B8 host verification, B9b and B10 evidence exists.
+
+This lets UX unblock P5b without pretending the client already exists.
+
+## 6.3 S0 Gate-A audit specifics
+
+Verify:
+
+- five legal `ClientScreenFlow` moves;
+- tactics/substitution command seams;
+- live command marshaling path;
+- match frame/read surfaces;
+- P5a playback/control-state decisions;
+- #37 report inputs;
+- current save/new-game limitations for this PM-1-only flow;
+- #48/#49/#51 current availability;
+- P4b host verification status;
+- P5b implementation status.
+
+Output: desired-control table with `LIVE`, `DESIGNABLE`, `FUTURE-BLOCKED`, decorative, or removed.
+
+## 6.4 S0 Gate-B flow
+
+Current production target flow remains:
+
+`Main Menu → Tactics Setup → Match View → Post-Match Report → Main Menu`
+
+plus the existing Tactics Setup cancel/back edge.
+
+UX may not add an abandon-match/back edge unless the current owning design/spec is changed through its own process.
+
+## 6.5 S0 Gate-C/D priorities
+
+### Main Menu
+
+- action hierarchy based on actual supported state;
+- unavailable action reason;
+- settings access only if real/allocated;
+- no key-art dependency.
+
+### Tactics Setup
+
+- reconcile `Tactics.html` with actual command/setup capabilities;
+- eliminate or label controls with no seam;
+- make readiness/start/cancel state explicit.
+
+### Match View
+
+- score/clock/match state;
+- pitch/agent/ball readability;
+- real playback state semantics;
+- supported tactical/substitution intervention;
+- event/full-time feedback;
+- no UI-derived analytics or domain causality.
+
+### Post-Match Report
+
+- score/result;
+- #37-backed core stats;
+- explanatory hierarchy without claiming causal analysis not exposed by #37;
+- return action.
+
+## 6.6 S0 prototype vehicle
+
+Use two layers:
+
+1. **Design prototype** under `docs/design/` for the complete four-context journey and all test states.
+2. **Real-data/reference check** using existing `match-viewer` / `match-client-web` output or captured real run data.
+
+Do not modify those reference harnesses merely to make the prototype easier. Their role is to prevent a synthetic Match View from drifting away from actual match output.
+
+## 6.7 S0 usability task
+
+Participant goal:
+
+> Prepare the team, start the match, identify what is happening, make one supported intervention, understand the final result, and return successfully.
+
+No step-by-step instruction.
+
+## 6.8 S0 Gate-I handoff target
+
+The implementation packet explicitly targets P5b and names:
+
+- existing `ClientScreens`/`ClientScreenFlow` mapping;
+- view-model source per screen;
+- dispatcher per actionable screen;
+- P5a state decisions already owned outside the binding;
+- visual/component/focus/a11y/localization requirements;
+- host-only wiring that must decide nothing.
+
+## 6.9 S0 Gate-J host acceptance
+
+Gate J requires evidence that:
+
+- P4b binding compiles/runs on the pinned host and its existing cert obligations pass;
+- P5b four-screen UGUI binding is present and follows `ClientScreenFlow` rather than recreating navigation logic;
+- on-host P6 scene/live-input/performance checks pass;
+- the implemented UX passes pseudo-locale/text-scale/focus/fallback/resolution checks;
+- no domain or navigation decision was moved into `MonoBehaviour` to make the design work.
+
+---
+
+# 7. S1 — PM-2 / Early Access journey: run a season loop
+
+**Priority:** P1 / Early Access core
 
 Target journey:
 
-`Launch → New/Continue/Load → Career Home/Season → inspect fixture/table as needed → advance/prepare → match → report → Career Home/Season → save/continue`
+`Launch → New/Continue/Load → Career Home/Season → inspect/prepare/advance → Match → Report → Career Home/Season → Save/Continue`
 
-## S1-A — Contract/dependency audit
+## 7.1 Known starting state
 
-Audit:
+Do not begin with the false assumption that #30 is absent.
 
-- #30 season loop APIs/view models;
-- league table/calendar surface;
-- round advance seam;
-- `LeagueBootstrap`/current generated-league capability;
-- save/resume behavior actually promised for EA;
-- new-game capability available without #47 editor;
-- current screen registration/navigation gaps;
-- #37 season/statistics inputs relevant to Home/World;
-- localization/a11y/settings store status.
+F1 must verify the current state, starting from:
 
-Any new navigation identities or commands are **future target** until their owning implementation lands.
+- `src/season-save/SeasonLoop.cs`;
+- league/bootstrap types in `src/season-save/`;
+- season save manager/codecs;
+- `AdvanceAndPlayNextRound` and day/fixture progression;
+- any current #30/player-facing projection/adapters;
+- `ui-framework` intent catalogue/dispatchers;
+- `client-app` screen catalogue and graph.
 
-## S1-B — Product/task decisions
+The expected gap is **presentation composition**, not necessarily domain behavior.
 
-Settle before high fidelity:
+## 7.2 S1 entry conditions
 
-- what “New Game” config exists in EA;
-- what “Continue” chooses when multiple saves exist;
-- autosave/manual-save policy from the player's perspective;
-- whether advancing progresses one day, to next event, or next match in the EA UX, consistent with #30 behavior;
-- what requires acknowledgement before advance;
-- what the Career Home must show to prevent blind progression.
+### Design-ahead entry
 
-If a choice changes domain behavior, it is escalated outside UX rather than decided by the mockup.
+S1 Gates A–C may begin after:
 
-## S1-C — Low-fidelity journey
+- F1 has classified the required PM-2 capabilities;
+- F2 has separated current versus future career navigation;
+- S0 work remains the higher-priority blocker path.
 
-### Launch/save layer
+A `FUTURE-BLOCKED` capability may appear in a low-fidelity future-flow design only when labelled.
 
-Design:
+### Validation/high-fidelity priority entry
 
-- Continue;
-- New Game;
-- Load;
-- save selection metadata;
-- save failure and incompatible/broken state as supported by the actual save policy.
+S1 Gates D–I become priority work after S0 has passed Gate G or the project owner explicitly determines that parallel S1 work cannot delay an unresolved S0 Blocker/Major.
 
-### New Game minimum
+### Gate-I condition
 
-Design only the setup actually needed for generated Early Access play. Do not recreate the deferred #47 database editor.
+Full S1 implementation handoff requires every EA-critical control to have either:
 
-### Career Home / Season hub
+- a real owning seam plus a named UI implementation path; or
+- an explicit dependency item/owner that is part of the implementation plan.
 
-Primary questions:
+It may not silently treat a spec-only or missing screen surface as live.
 
-1. What happened?
-2. What needs my attention?
-3. Who/what is next?
+## 7.3 S1 Gate-A audit
+
+Classify separately:
+
+- league table read model;
+- fixture/calendar read model;
+- next-fixture/progression state;
+- advance command seam;
+- UI dispatcher/intent for advance;
+- generated new-game bootstrap;
+- new-game configuration actually required for EA;
+- save capture/load/resume domain support;
+- player-facing save browser/continue selection;
+- career Home/Season `ScreenId` and navigation;
+- post-match return target;
+- settings/a11y persistence;
+- #37 season/statistic inputs used by the surface.
+
+This prevents both errors: "#30 is missing" and "#30 exists, therefore the UI exists."
+
+## 7.4 Product decisions that UX cannot invent
+
+Escalate if unresolved:
+
+- exact EA new-game options;
+- autosave/manual-save promise;
+- incompatible-save promise;
+- whether Continue auto-selects or opens a picker;
+- exact semantic of advance-to-next-day/event/match;
+- mandatory blockers before advance.
+
+UX designs the interaction after the product/domain decision; it does not decide the domain rule via a button label.
+
+## 7.5 Career Home information hierarchy
+
+The Home/Season surface should answer:
+
+1. What changed?
+2. What needs attention?
+3. What is next?
 4. What can I do before then?
 5. How do I progress?
 
-Likely core modules:
+Candidate modules are admitted only when their data is `LIVE`/`DESIGNABLE` or explicitly future-labelled.
 
-- next fixture;
-- current league position;
-- latest result;
-- immediate blockers/actions;
-- advance/continue control;
-- compact recent/upcoming calendar;
-- relevant squad/tactical warning only if backed by real data.
+## 7.6 S1 usability tasks
 
-### Competition context
+Two participants attempt, at minimum:
 
-Design table/fixture drill-down without forcing the player into a separate “World” screen for every common question.
+- start or resume the supported career mode;
+- identify next match and league position;
+- reach preparation;
+- progress correctly;
+- complete a round through the match/report loop;
+- understand the changed table/result;
+- save/quit/resume according to the product promise;
+- find settings/accessibility.
 
-## S1-D through S1-J
+## 7.7 S1 acceptance
 
-Run the same state → cross-stream → prototype → usability → high-fidelity → handoff → Unity-validation cycle as S0.
-
-### S1 usability tasks
-
-At minimum:
-
-- start a generated career;
-- identify next match and current league position;
-- navigate to relevant preparation;
-- advance correctly;
-- play/resolve through the loop;
-- understand updated table/result;
-- save/quit/resume according to product promise;
-- locate settings/accessibility.
-
-### S1 acceptance
-
-A player can complete multiple league rounds without needing developer knowledge of #30's internal API or guessing which screen advances time.
+A player can complete repeated league rounds without developer knowledge of #30 internals and without guessing which action progresses time.
 
 ---
 
-# 10. Journey Slice S2 — PM-3: Manage and improve the squad
+# 8. S2 — PM-3/deeper management journeys
 
-**Priority:** P2  
-**Activation:** only after S1's core loop is validated and the owning systems' implementation seams are ready.
+S2 is never one mega-slice.
 
-This is not one simultaneous mega-slice. It is a family of capability-gated journeys.
+Each capability starts at Gate A and activates only when its owning system has a real implementation/read/action surface appropriate to the journey.
 
-## S2.1 Squad inspection and selection
+Candidate journeys:
 
-Inputs:
+- squad inspection/selection — #27 + real selection seam;
+- training/progression — #28/#29 wired behavior/action;
+- injuries/availability — #41 presentation surface;
+- transfers/contracts — #31 implementation plus finance constraints;
+- scouting — #32 implementation/read/action surface;
+- staff/finances/board/world — owning assemblies/surfaces as they land.
 
-- #27 roster/player data;
-- actual selection seam.
+A specification is enough for conceptual research but not an implementation handoff.
 
-Tasks:
-
-- understand available squad;
-- compare players;
-- understand role/position status;
-- select/adjust lineup as supported;
-- inspect player detail.
-
-## S2.2 Training/progression
-
-Activation gate:
-
-- #29/#28 behavior and action seam actually implemented/wired.
-
-Tasks:
-
-- understand development state;
-- choose supported focus;
-- understand expected vs actual outcome without false certainty.
-
-## S2.3 Injuries/availability
-
-Activation gate:
-
-- #41 presentation surface available.
-
-Tasks:
-
-- see unavailable/limited players;
-- understand reason/duration where exposed;
-- make lineup decisions accordingly.
-
-## S2.4 Transfers/contracts
-
-Activation gate:
-
-- #31 action seam and relevant finance constraints implemented.
-
-Tasks:
-
-- search/browse candidates as supported;
-- understand knowledge uncertainty from #32;
-- submit/adjust offers through real seams;
-- understand budget/contract consequence.
-
-## S2.5 Scouting
-
-Activation gate:
-
-- #32 read/action surface exists.
-
-Tasks:
-
-- distinguish known vs unknown information;
-- compare candidates without presenting fogged values as truth;
-- issue supported scouting action.
-
-## S2.6 Club / staff / finances / board / world
-
-Each becomes its own journey packet when the relevant owning systems are ready. Existing mockups are starting references only.
-
-### S2 rule
-
-No S2 high-fidelity work is allowed to delay unresolved S0/S1 usability or implementation work for Early Access.
+No S2 high-fidelity work may delay unresolved S0/S1 Early Access work.
 
 ---
 
-# 11. Cross-stream parallelization matrix
+# 9. Parallel-work matrix
 
-| Stream | Can proceed during UX planning | Handoff point from UX | What UX must not assume |
+| Stream | Can proceed before UX Gate I | UX handoff | UX must not assume |
 |---|---|---|---|
-| Backend/simulation | continue independently | Gate A dependency map identifies needed existing seams | UX cannot invent domain actions |
-| Unity UI implementation | framework/core work may continue | Gate I per journey | high-fidelity mockup is not a runtime contract before Gate I |
-| Art | style exploration, asset pipeline, fallback assets | Gate C/E defines slots; Gate H finalizes usage | final art availability |
-| Localization | infrastructure, pseudo-locale, catalogue rules | Gate C/D defines string roles; Gate E validates expansion | English dimensions are stable |
-| Accessibility | option/infrastructure work | F3 + Gate E/J define renderer behavior | per-screen ad hoc application |
-| Audio | bus/cue infrastructure, general UI audio language | Gate E/H defines presentation opportunities/caption placement | audio is required to understand state |
-| QA | general test infrastructure | Gate D/F/I provide state + journey acceptance cases | screenshots alone are sufficient tests |
-| Analytics/telemetry | event design may proceed if desired | pre-EA feedback plan defines justified UX events | telemetry replaces usability testing |
+| Backend/sim | yes | Gate A exposes missing/available seams | mockup creates domain behavior |
+| Unity client | P4b host work and host-free client work continue | S0 Gate I feeds P5b | design screenshot is runtime authority |
+| Art | pipeline/style/fallback work | Gates C/E slots; H final usage | final art exists |
+| Localization | infrastructure/pseudo-locale | C/D string roles; E validation | English widths are fixed |
+| Accessibility | settings/infrastructure | F3/E/J renderer expectations | ad-hoc per-screen application |
+| Audio | infrastructure/cue language | E/H caption/feedback placement | audio carries essential state |
+| QA | general infrastructure | D/F/I behavior cases | screenshot comparison is sufficient |
 
 ---
 
-# 12. Branching, versioning, and review convention
+# 10. Ownership and effort
 
-## 12.1 Planning branch
+## 10.1 Role owners
 
-Current planning work remains on `design/ux-foundation` until the plan itself is accepted.
+- UX workstream: artifacts, flows, prototypes, findings, handoffs.
+- Project owner: release cut, accepted Major findings, unresolved product decisions.
+- Owning domain/client subsystem: truth of read/action seams.
+- Unity client workstream: P5b implementation.
+- Certification/Unity-host workstream: B8/B10 on-host verification.
+- QA: implementation acceptance execution with UX cases.
 
-## 12.2 Journey branches
+## 10.2 Active UX effort bands
 
-Recommended convention after acceptance:
+Assuming one primary UX contributor; excludes external waiting:
 
-- `design/ux-s0-pm1-loop`
-- `design/ux-s1-pm2-season-loop`
-- capability-specific S2 branches later.
+- F1: 1–2 working days;
+- F2: 0.5–1 day;
+- F3: 1–2 days;
+- F4: 0.5–1 day;
+- S0 A–E: 2–4 days;
+- S0 F–G: 2–4 days;
+- S0 H–I: 2–3 days;
+- S0 J: external implementation/host dependency;
+- S1 A–E: 3–5 days;
+- S1 F–G: 2–4 days;
+- S1 H–I: 2–4 days;
+- S1 J: implementation-dependent.
 
-Avoid a long-lived branch containing every future screen.
-
-## 12.3 Reference versioning
-
-Each approved journey packet/reference records:
-
-- version;
-- date;
-- gate reached;
-- significant behavior/layout change;
-- blocked/future items.
-
-After Gate H/I, a significant navigation/action change increments the journey reference and re-enters the appropriate earlier validation gate.
+These are planning estimates, not release commitments.
 
 ---
 
-# 13. UX → QA handoff
+# 11. QA handoff
 
-For each journey, QA receives behavior-oriented cases, not just screenshot comparison.
+For every journey, QA receives behavior cases using:
 
-Minimum acceptance case template:
-
-- **Given:** starting state/data profile/resolution/input mode;
+- **Given:** starting state/data/resolution/input mode;
 - **When:** player attempts task/action;
-- **Then:** expected visible state, navigation result, focus result, feedback, and underlying command/read interaction class;
-- **And:** no forbidden/phantom behavior occurs.
+- **Then:** visible state, navigation, focus, feedback and command/read class;
+- **And:** forbidden/phantom behavior does not occur.
 
 Required classes:
 
 - happy path;
-- invalid/disabled path;
-- loading/empty/error path;
-- keyboard path;
+- invalid/disabled;
+- loading/empty/error;
+- keyboard;
 - pseudo-locale/max text scale;
 - missing-art fallback;
-- smallest supported desktop layout;
-- real-data extreme relevant to the screen.
+- smallest supported layout;
+- relevant real-data extreme.
 
-Visual regression can supplement these cases but does not replace behavior checks.
+Visual regression may supplement, never replace, behavior checks.
 
 ---
 
-# 14. UX debt and finding backlog
+# 12. UX finding ledger
 
-Use one UX finding ledger or issue label set with:
+Record:
 
 - journey;
+- gate;
 - severity;
-- evidence/source;
-- current gate;
-- disposition;
+- evidence;
 - owner;
-- target milestone.
+- disposition;
+- release condition;
+- retest result.
 
-Disposition values:
+Disposition:
 
-- FIX NOW;
-- ACCEPT FOR CURRENT GATE;
-- DEFER TO P2/P3;
-- BLOCKED BY DOMAIN/IMPLEMENTATION;
-- INVALID / NOT REPRODUCED.
+- `FIX NOW`;
+- `ACCEPT FOR CURRENT GATE`;
+- `DEFER TO P2/P3`;
+- `BLOCKED BY DOMAIN/CLIENT IMPLEMENTATION`;
+- `INVALID / NOT REPRODUCED`.
 
-A deferred finding must name the milestone/condition that releases it; “later polish” is not sufficient for a Major issue.
-
----
-
-# 15. First executable sequence after plan approval
-
-Substantial UX implementation should **not** resume with another high-fidelity screen.
-
-The next work is:
-
-1. **F1.1 — current capability matrix** for `ui-framework`, `client-app`, match client, #37, #38, #48, #49, #51, and the save/season surfaces needed by S0/S1.
-2. **F1.2 — existing mockup reconciliation**, especially `Tactics.html` and the provisional `Main Menu.html`.
-3. **F1.4 — PM-1/PM-2 task hierarchy** and release priority matrix.
-4. **F2 — global navigation/current-vs-target map**.
-5. **F3 — component/state + a11y/localization gap audit** for only the primitives needed by S0.
-6. **F4 — validation protocol fixture**: test scripts, severity ledger, test-data profiles.
-7. **S0-A — PM-1 contract/dependency audit**.
-8. **S0-B — complete PM-1 task flow**.
-9. Only then begin **S0-C low-fidelity wireframes**.
-
-The provisional Main Menu mockup is revisited only at S0-H unless low-fidelity work reveals a reason to retire it earlier.
+A deferred Major must name a concrete milestone/condition; "later polish" is invalid.
 
 ---
 
-# 16. Definition of implementation-ready
+# 13. Change control after handoff
 
-A journey is ready for substantial Unity implementation only if all are true:
+After Gate H/I:
 
-- Gate A: every control/data element has a real owner or is explicitly future-blocked;
-- Gate B: task flow is complete, including back/cancel/error paths;
-- Gate C: low-fidelity hierarchy is accepted;
-- Gate D: relevant states are defined;
-- Gate E: pseudo-locale, max text scale, keyboard, color independence, missing art, and layout constraints have been reviewed;
-- Gate F: the end-to-end journey is prototyped;
-- Gate G: no unresolved Blocker, and no unaccepted Major usability finding;
-- Gate H: high-fidelity reference uses the shared system and records all states;
-- Gate I: implementation packet maps components, data, commands, strings, assets, a11y, and QA acceptance criteria;
-- any future-only behavior is visibly separated from current implementation scope.
-
-A visually polished screenshot without these conditions is **not implementation-ready**.
+- usability/accessibility defect fixes reopen the relevant gate;
+- cosmetic preference changes normally defer;
+- navigation/action changes return to A/B;
+- new domain mutation needs return to Gate A and the owning system;
+- journey packet version records the change.
 
 ---
 
-# 17. Final readiness critique
+# 14. Exact first sequence after F0 closes
 
-This plan is ready to use because it now answers the questions the earlier drafts did not:
+No additional polished screen comes next.
 
-- **What is the unit of work?** A player journey.
-- **What happens before drawing?** Contract/dependency audit and task flow.
-- **When is high fidelity allowed?** After low-fidelity, state, cross-stream, prototype and usability gates.
-- **How are a11y/localization handled?** As design inputs and test configurations, not final audits.
-- **How is backend drift prevented?** Every action/data element is mapped at Gate A; missing seams stay outside UX.
-- **How is Early Access scope controlled?** S0 + S1 are the cut; S2 cannot delay them.
-- **How are existing mockups treated?** Reconciled references, not authority.
-- **How are findings handled?** Severity + disposition + retest rules.
-- **How is implementation protected from churn?** Gate H/I version lock and re-entry rules.
-- **What happens next?** F1 audit work, not more high-fidelity design.
+1. **F1.1 — current capability matrix.** First explicitly resolve the P4b/P5b/P6 host/client state and #30 `season-save` state that triggered this review.
+2. **F1.2 — mockup reconciliation.** Begin with `Tactics.html` and provisional `Main Menu.html`.
+3. **F1.4 — PM-1/PM-2 task hierarchy and EA priority.**
+4. **F2 — record the existing `ClientScreenFlow`; produce separate future career-shell map.**
+5. **F3 — audit only S0-required component/state/a11y/localization/fallback primitives.**
+6. **F4 — write scripts, severity ledger and participant mechanism; identify two S0 testers.**
+7. **S0 Gate A — full PM-1 dependency/control audit.**
+8. **S0 Gate B — complete task flow.**
+9. **S0 Gate C — low-fidelity wireframes.**
+10. Continue through D–G; no high fidelity before Gate G passes.
 
-No further plan-level structural revision is required before beginning F1. Findings discovered during F1 may change **content or priority**, but should not require redesigning the planning framework unless they invalidate the PM-2 release target or #38/#49 architecture.
+The existing Main Menu visual is revisited at Gate H unless earlier low-fidelity findings show it should be retired.
+
+---
+
+# 15. Definition of implementation-ready
+
+A journey is implementation-ready only at Gate I.
+
+For S0 specifically, Gate I means **ready for P5b implementation**, not "PM-1 shipped." Shipping/acceptance still requires Gate J and the named B8/B9b/B10 evidence.
+
+For S1, Gate I cannot contain an unlabeled future control. Every EA-critical dependency has a real surface or a named owner/implementation dependency.
+
+---
+
+# 16. Final readiness critique
+
+After the external dependency review, the plan now has no remaining structural escape hatch:
+
+- current client navigation is inherited, not re-designed;
+- landed-code versus host-verification state is explicit;
+- S0 has a named consumer and cert path;
+- #30 status is measured correctly rather than inferred from a folder name;
+- S1 can design ahead without pretending future UI surfaces are live;
+- Gate G requires two real independent participants and cannot be bypassed into H/I;
+- host-free prototype validation uses the existing real-match reference surfaces without turning them into a second shipping client;
+- ownership and effort are bounded;
+- gates are defined once;
+- F1 remains the correct first substantive action.
+
+The remaining prerequisite is repository tracking/discoverability close-out under F0. Once that is landed, F1 may begin.
 
 ---
 
@@ -1295,4 +976,5 @@ No further plan-level structural revision is required before beginning F1. Findi
 
 | Version | Date | Change |
 |---|---|---|
-| 1.0 | September 4, 2026 | Detailed implementation plan after three critique/revision rounds. Defines durable artifacts, foundation work packages F0–F4, journey slices S0–S2, gates A–J, validation/severity rules, extreme-data testing, cross-stream parallelization, version/change control, QA handoff, UX debt handling, and the exact first sequence after plan approval. |
+| 1.0 | September 4, 2026 | Detailed plan after three internal critique/revision rounds. |
+| 1.1 | September 4, 2026 | External dependency-review revision: corrected P4b/#30 state; inherited current client-plan authority; tied S0 Gate I to P5b and Gate J to B8/B9b/B10; made Gate G binding at two independent participants; added real-data prototype strategy, role ownership, effort bands, S1 design-ahead conditions, and tracking close-out as the only prerequisite to F1. |
