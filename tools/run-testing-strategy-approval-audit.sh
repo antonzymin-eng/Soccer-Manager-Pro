@@ -30,7 +30,11 @@ done < "$scope_file"
 printf 'Testing Strategy approval-transition blocking scope:\n'
 cat "$scope_file"
 
+# Stage 0+1 automation resolves structural evidence and actually executes any
+# explicit backticked programmatic invocation. Natural-language entailment
+# between a checklist claim and cited prose remains the Stage 0 reviewer duty.
 python3 "$ROOT/tools/checklist-auditor.py" \
-    --root "$ROOT/docs/specs" --repo-root "$ROOT" "${approval_args[@]}"
+    --root "$ROOT/docs/specs" --repo-root "$ROOT" \
+    --execute-checks "${approval_args[@]}"
 python3 "$ROOT/tools/spec5-schema-auditor.py" \
     --root "$ROOT/docs/specs" --repo-root "$ROOT" "${approval_args[@]}"
