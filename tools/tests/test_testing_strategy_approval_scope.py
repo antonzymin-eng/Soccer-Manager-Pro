@@ -26,14 +26,14 @@ class TestingStrategyApprovalScopeTests(unittest.TestCase):
         )
         return spec
 
-    def write_index(self, repo: Path, status: str) -> None:
+    def write_index(self, repo: Path, status: str, approved: str = "—") -> None:
         index = repo / "docs" / "specs" / "SPEC_INDEX.md"
         index.write_text(
             "# SPEC_INDEX.md — Canonical Specification Registry\n\n"
             "Approval status here overrides individual spec files.\n\n"
             "| # | Specification | Folder | Priority | Status | Approved |\n"
             "|---|---|---|---|---|---|\n"
-            f"| 9 | Spec Nine | `spec-nine/` | 1 | {status} | — |\n",
+            f"| 9 | Spec Nine | `spec-nine/` | 1 | {status} | {approved} |\n",
             encoding="utf-8",
         )
 
@@ -65,7 +65,7 @@ class TestingStrategyApprovalScopeTests(unittest.TestCase):
             subprocess.run(["git", "commit", "-qm", "base"], cwd=repo, check=True)
             base = self.git(repo, "rev-parse", "HEAD")
 
-            self.write_index(repo, "APPROVED")
+            self.write_index(repo, "APPROVED", "September 5, 2026")
             subprocess.run(["git", "add", "."], cwd=repo, check=True)
             subprocess.run(["git", "commit", "-qm", "approve"], cwd=repo, check=True)
 
@@ -77,7 +77,7 @@ class TestingStrategyApprovalScopeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             spec = self.init_repo(repo)
-            self.write_index(repo, "APPROVED")
+            self.write_index(repo, "APPROVED", "May 15, 2026")
             subprocess.run(["git", "add", "."], cwd=repo, check=True)
             subprocess.run(["git", "commit", "-qm", "approved base"], cwd=repo, check=True)
             base = self.git(repo, "rev-parse", "HEAD")
@@ -92,6 +92,25 @@ class TestingStrategyApprovalScopeTests(unittest.TestCase):
             proc = self.run_detector(repo, base)
             self.assertEqual(proc.returncode, 0, proc.stdout)
             self.assertEqual(proc.stdout.strip(), "")
+
+    def test_approved_metadata_change_is_reapproval_transition(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            self.init_repo(repo)
+            self.write_index(repo, "APPROVED", "May 15, 2026")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-qm", "approved base"], cwd=repo, check=True)
+            base = self.git(repo, "rev-parse", "HEAD")
+
+            # Amendment reapproval can keep canonical status APPROVED while its
+            # sign-off metadata advances. That must still trigger both auditors.
+            self.write_index(repo, "APPROVED", "September 5, 2026")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-qm", "reapprove amendment"], cwd=repo, check=True)
+
+            proc = self.run_detector(repo, base)
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertEqual(proc.stdout.strip(), "docs/specs/spec-nine")
 
     def test_local_approved_text_does_not_override_in_review_registry(self) -> None:
         with tempfile.TemporaryDirectory() as td:
