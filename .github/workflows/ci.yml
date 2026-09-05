@@ -125,6 +125,15 @@ jobs:
         # silently land outside CI as A2 expands.
         if: always()
         run: python3 -m unittest discover -s tools/tests -p 'test_*.py'
+      - name: Testing Strategy approval-transition enforcement
+        # This step is deliberately inside the required `Spec hygiene checks`
+        # context. The non-required Linux functional job also exercises the same
+        # approval policy through run-tests-local.sh, but merge safety must not
+        # depend on that optional context being required by branch rules.
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        env:
+          TD_APPROVAL_BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: bash tools/run-testing-strategy-approval-audit.sh "$TD_APPROVAL_BASE_REF"
       - name: Cross-document consistency (stale version citations and cardinalities)
         # Catches the defect class four adversarial-review rounds surfaced more than
         # any other and that no other gate sees: a value corrected in the document
