@@ -94,17 +94,22 @@ class PrecommitIncrementalSnapshotTests(unittest.TestCase):
             repo.mkdir()
             self.init_minimal_repo(repo)
             (repo / ".gitattributes").write_text("*.bin filter=lfs\n", encoding="utf-8")
-            # Stage pointer bytes while the clean path is harmless. Only after
-            # the index is populated do we simulate an offline clone whose
-            # process/smudge filters fail. The hook must override those checkout
-            # filters without depending on them during fixture setup.
+            # Populate the index first. Depending on the host's global LFS
+            # configuration this may store a real LFS pointer, which is exactly
+            # what the staged-index snapshot must preserve.
             subprocess.run(["git", "config", "filter.lfs.clean", "cat"], cwd=repo, check=True)
             subprocess.run(["git", "config", "filter.lfs.smudge", "cat"], cwd=repo, check=True)
             subprocess.run(["git", "config", "filter.lfs.required", "false"], cwd=repo, check=True)
             (repo / "asset.bin").write_text("lfs-pointer-bytes\n", encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=repo, check=True)
             subprocess.run(["git", "commit", "-qm", "base"], cwd=repo, check=True)
+            expected_index_bytes = subprocess.check_output(
+                ["git", "show", "HEAD:asset.bin"], cwd=repo
+            )
 
+            # Now simulate an offline clone whose process/smudge filters cannot
+            # supply the object. The hook must still materialize the staged
+            # index bytes without invoking those filters.
             subprocess.run(["git", "config", "filter.lfs.process", "false"], cwd=repo, check=True)
             subprocess.run(["git", "config", "filter.lfs.smudge", "false"], cwd=repo, check=True)
             subprocess.run(["git", "config", "filter.lfs.required", "true"], cwd=repo, check=True)
@@ -118,7 +123,7 @@ class PrecommitIncrementalSnapshotTests(unittest.TestCase):
                 ).strip()
             )
             snapshot_asset = git_dir / "testing-strategy" / "precommit-snapshot" / "asset.bin"
-            self.assertEqual(snapshot_asset.read_text(encoding="utf-8"), "lfs-pointer-bytes\n")
+            self.assertEqual(snapshot_asset.read_bytes(), expected_index_bytes)
 
     def test_prune_is_linear_manifest_diff_not_nested_grep(self) -> None:
         text = HOOK.read_text(encoding="utf-8")
