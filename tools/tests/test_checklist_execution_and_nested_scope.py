@@ -43,7 +43,27 @@ class ChecklistExecutionAndNestedScopeTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def test_script_source_text_cannot_replace_captured_execution(self) -> None:
+    def test_source_file_citation_is_not_treated_as_executable_check(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            spec = repo / "docs" / "specs" / "spec-nine"
+            spec.mkdir(parents=True)
+            self.write_index(repo)
+            source = repo / "src" / "Constants.cs"
+            source.parent.mkdir()
+            source.write_text("internal const int TimeoutSeconds = 60;\n", encoding="utf-8")
+            (spec / "section-9-approval-checklist.md").write_text(
+                "# Spec #9 — Approval Checklist\n"
+                "| Row | Claim | Evidence |\n|---|---|---|\n"
+                "| 9.1 | timeout constant is declared | `src/Constants.cs` |\n",
+                encoding="utf-8",
+            )
+
+            proc = self.run_auditor(repo, spec)
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertNotIn("captured output", proc.stdout)
+
+    def test_explicit_programmatic_check_must_be_captured_and_pass(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             spec = repo / "docs" / "specs" / "spec-nine"
@@ -51,28 +71,29 @@ class ChecklistExecutionAndNestedScopeTests(unittest.TestCase):
             self.write_index(repo)
             tools = repo / "tools"
             tools.mkdir()
-            (tools / "check.py").write_text(
-                "# stale references absent\nraise SystemExit(1)\n",
-                encoding="utf-8",
-            )
+            check = tools / "check.py"
+            check.write_text("print('bad')\nraise SystemExit(1)\n", encoding="utf-8")
             (spec / "section-9-approval-checklist.md").write_text(
                 "# Spec #9 — Approval Checklist\n"
                 "| Row | Claim | Evidence |\n|---|---|---|\n"
-                "| 9.1 | stale references absent | `tools/check.py` |\n",
+                "| 9.1 | stale references absent | `python3 tools/check.py` |\n",
                 encoding="utf-8",
             )
 
             missing_capture = self.run_auditor(repo, spec)
             self.assertEqual(missing_capture.returncode, 1, missing_capture.stdout)
-            self.assertIn("no matching --captured-check", missing_capture.stdout)
+            self.assertIn("no matching captured output", missing_capture.stdout)
 
-            captured = self.run_auditor(
-                repo,
-                spec,
-                "--captured-check",
-                "tools/check.py",
-            )
-            self.assertEqual(captured.returncode, 0, captured.stdout)
+            failed = self.run_auditor(repo, spec, "--execute-checks")
+            self.assertEqual(failed.returncode, 1, failed.stdout)
+            self.assertIn("programmatic check failed", failed.stdout)
+            self.assertIn("bad", failed.stdout)
+
+            check.write_text("print('ok')\n", encoding="utf-8")
+            passed = self.run_auditor(repo, spec, "--execute-checks")
+            self.assertEqual(passed.returncode, 0, passed.stdout)
+            self.assertIn("CAPTURED CHECK exit=0", passed.stdout)
+            self.assertIn("ok", passed.stdout)
 
     def test_nested_checklist_inherits_owning_spec_canonical_status(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -81,8 +102,6 @@ class ChecklistExecutionAndNestedScopeTests(unittest.TestCase):
             nested = spec / "checklists"
             nested.mkdir(parents=True)
             self.write_index(repo)
-            # No local Status line: canonical APPROVED status must come from the
-            # owning `spec-nine` row, not the nested `checklists` directory name.
             (nested / "section-9-approval-checklist.md").write_text(
                 "# Spec #9 — Approval Checklist\n"
                 "| Row | Claim | Evidence |\n|---|---|---|\n"
