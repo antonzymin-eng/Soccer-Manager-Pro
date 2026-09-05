@@ -1,114 +1,124 @@
 # Audio Implementation & Production Plan
 
 > **Created:** September 4, 2026
-> **Version:** 1.0
+> **Last Updated:** September 4, 2026 — v1.1 final readiness revision
+> **Version:** 1.1
 > **Status:** READY FOR IMPLEMENTATION
 > **Branch:** `audio/t0-contract-foundation`
 > **Governs:** Audio & Sound Design #51 implementation plus the production pipeline for shippable audio assets.
-> **Authority:** `docs/specs/audio-sound-design/` remains authoritative for #51 contracts. This plan sequences implementation and production; where it conflicts with the approved spec, the spec wins unless a defect is back-propagated in the same landing.
+> **Authority:** `docs/specs/audio-sound-design/` remains authoritative for #51 contracts. `docs/tracking/path-to-playable-roadmap.md` governs implementation sequencing. A recorded defect against an assembly-less spec is discharged with its T0 code + test, not as isolated pre-code hardening.
 
 ---
 
-## 0. Why this plan exists
+## 0. Purpose and verified starting point
 
-Audio can proceed in parallel with backend, UI, art, and localization, but only if we avoid two failure modes:
+Audio can proceed in parallel with backend, UI, art, and localization, but it needs two synchronized tracks:
 
-1. building a playback stack before the contract boundaries are stable; and
-2. producing large volumes of sound before the import/catalogue/mix path has been proven end to end.
+1. **framework/integration** — #51 T0→T3; and
+2. **production** — source creation, editing, mastering, export, rights/provenance, import, audition, mix, approval, replacement, and release validation.
 
-The approved #51 spec already defines the engineering sequence T0→T3. It deliberately does **not** define the production workflow for source recordings, edits, masters, runtime exports, rights, approvals, or replacement of provisional material. This plan joins those two halves.
+The approved #51 spec already defines the engineering architecture and deliberately leaves actual audio content to production.
 
-Current verified state:
+Verified starting point:
 
 - `src/` contains no audio implementation.
 - `Assets/` contains no audio content yet.
-- #51 is APPROVED and defines a leaf `TacticalDirector.Audio` assembly.
-- The repository already routes `.wav`, `.mp3`, `.ogg`, `.aif`, and `.aiff` through Git LFS.
-- The project is pinned to Unity `6000.4.9f1`.
-- #51's T-phase sequence is T0 pure contracts → T1 playback/mix contracts and settings fragment → T2 shell mapping + host binding and first audible output → T3 captions/deeper presentation.
+- #51 is APPROVED and requires a leaf `TacticalDirector.Audio` assembly.
+- Git LFS already covers `.wav`, `.mp3`, `.ogg`, `.aif`, and `.aiff`.
+- Unity is pinned to `6000.4.9f1`.
+- #51's engineering sequence is:
+  - **T0:** pure contracts/catalogue/ducking, silent;
+  - **T1:** playback API, pure mixer math, settings fragment, still silent;
+  - **T2:** shell `CueId → CueKey` mapping + completeness + Unity host binding, first audible output;
+  - **T3:** caption binding/deeper presentation and optional commentary-audio depth.
 
-### T0 specification defect discovered during planning
+### Recorded T0 defect
 
-`CueEntry` requires #51-owned `AssetRef` and #51-owned `CueParams`, and the approved text explicitly says #51 declares its own `CueParams`; however the architecture file list does not include either type and the data-structure section does not define their concrete shape. T0 must not invent these contracts silently. The first implementation landing must resolve this as a spec+code+test back-propagation before `CueEntry` / `CueCatalogue` are considered complete.
+Planning exposed a real spec-to-code gap: `CueEntry` requires #51-owned `AssetRef` and #51-owned `CueParams`, and the approved text states that #51 declares its own `CueParams`, but §4's file list omits both and §2 does not define their concrete shapes.
+
+**Sequencing rule:** record this now, decide the intended repair during T0 design, but **do not land a prose-only fix ahead of the assembly**. The spec correction, code, and regression tests land together in the T0 implementation PR, consistent with the roadmap's no-pre-T0-hardening rule.
 
 ---
 
-# Part I — High-level plan evolution
+# Part I — High-level plan critique loop
 
 ## HLP v0.1
 
 1. Reconcile #51 and create the audio assembly.
-2. Implement T0→T3 in spec order.
-3. Create audio folders and import settings.
+2. Implement T0→T3 in order.
+3. Create audio folders/import settings.
 4. Produce UI, match, crowd, music, and later commentary assets.
-5. Integrate settings and captions.
+5. Integrate settings/captions.
 6. Mix, optimize, and ship.
 
 ### Critique 1
 
-This is directionally correct but too linear and too vague.
+Correct direction, but too linear and too vague:
 
-- It treats audio production as something that starts only after engineering, wasting parallelism.
-- It does not protect against bulk asset creation before the runtime path is proven.
-- It does not define rights/provenance, source/master/runtime separation, naming, versioning, or provisional-asset replacement.
-- It assumes the audio technology choice is settled without an explicit middleware decision.
-- It has no measurable vertical-slice gate.
-- It does not expose dependencies on #38 settings, #48 cue emission, and #49 caption rendering.
-- It gives no Early Access content boundary, creating a risk that spoken commentary becomes a critical-path content project even though #51 places it in the deeper tier.
+- wastes parallel production work;
+- permits bulk content before the end-to-end path is proven;
+- ignores rights/provenance and provisional-content control;
+- has no source/master/runtime separation;
+- has no middleware decision rule;
+- hides dependencies on #38, #48, and #49;
+- has no measurable vertical-slice gate;
+- risks making deep-tier spoken commentary an Early Access blocker.
 
 ## HLP v0.2
 
-Run five parallel workstreams behind explicit gates:
+Use five parallel workstreams:
 
 - **A — Contracts & engineering:** #51 T0→T3.
-- **B — Asset pipeline & tooling:** folders, naming, manifests, import policy, validation, Git LFS.
-- **C — Audio production:** briefs, source, edit, master, export, registration, approval.
-- **D — Integration & mix:** shell mapping, Unity host binding, settings, captions, ducking, final mix.
-- **E — QA & release:** performance, build size, rights, accessibility, regression, Early Access freeze.
+- **B — Pipeline/tooling:** folders, naming, metadata, import policy, validation, Git LFS.
+- **C — Production:** brief → source → edit → master → export → register → approve.
+- **D — Integration/mix:** shell mapping, Unity binding, settings, captions, ducking, mix.
+- **E — QA/release:** performance, build size, rights, accessibility, regression, EA freeze.
 
-Require a small audible vertical slice before scaling production.
+Require an audible vertical slice before scaling production.
 
 ### Critique 2
 
-This fixes the structure but still leaves several implementation risks:
+Much better, but still incomplete:
 
-- The vertical slice needs exact content and exact pass/fail criteria.
-- Native Unity audio versus FMOD/Wwise still needs a decision rule.
-- T0 can proceed without #38/#48/#49, while later work cannot; that dependency boundary should be explicit.
-- The asset catalogue must not force the leaf #51 assembly to reference Unity types.
-- The plan needs a source-of-truth rule so filenames, `CueKey`s, Unity bindings, captions, and rights metadata cannot drift independently.
-- Provisional assets need an explicit non-shipping marker and replacement gate.
-- Asset approvals need a definition; otherwise "done" means only "a file exists."
+- vertical slice needs exact contents and pass/fail conditions;
+- native Unity vs FMOD/Wwise needs an evidence-based decision point;
+- the #51 leaf must not acquire Unity asset types;
+- `CueKey`, filenames, runtime paths, captions, and rights need a drift-resistant source-of-truth model;
+- provisional files need a release-blocking state;
+- "approved audio" needs a formal definition;
+- pre-T0 spec fixes must obey the roadmap's spec+code+test landing rule.
 
 ## HLP v1.0 — settled
 
-The project will use **seven gates**, with engineering and production running in parallel where safe:
+Seven gates govern the work:
 
-1. **G0 — Contract ready:** resolve T0 spec defects and freeze naming/identity rules. No bulk content.
-2. **G1 — Pipeline ready:** source/runtime folders, asset manifest, rights metadata, naming/versioning, provisional markers, import policy, validation path.
-3. **G2 — T0 green and silent:** pure #51 assembly + catalogue/ducking/caption invariants compile and test host-free. No playback.
-4. **G3 — Audible vertical slice:** native Unity host binding proves one complete path through UI/match/crowd/music categories, with #48→shell→#51 mapping where applicable. No bulk expansion before this passes.
-5. **G4 — Integration complete:** settings persistence through #38, captions through #49, mapping completeness, mute/volume/ducking, observer neutrality.
-6. **G5 — Early Access content complete:** approved production batches for UI, core match SFX, crowd, and music; commentary voice remains optional/deep-tier unless separately promoted.
-7. **G6 — Release ready:** final mix, performance, memory/build-size, rights/provenance, accessibility, platform-host checks, and no provisional assets.
+1. **G0 — Design ready:** all T0 ambiguities are recorded with an implementable intended resolution; stable identity rules and Early Access scope are frozen. No isolated spec hardening and no bulk content.
+2. **G1 — Pipeline ready:** source/runtime layout, naming, production/provenance metadata, provisional state, rights policy, and validation contract exist.
+3. **G2 — T0 green and silent:** T0 code + any required spec back-prop + tests land together. #51 is pure, leaf, host-free, and silent.
+4. **G3 — Audible vertical slice:** native Unity host binding proves a complete small path through UI/SFX/Crowd/Music and at least one real #48→shell→#51 match cue. Bulk production starts only after this passes.
+5. **G4 — Integration complete:** #38 settings persistence, #49 captions, mapping completeness, mute/volume/ducking, and observer-neutrality are live.
+6. **G5 — Early Access content complete:** approved UI, core match SFX, crowd, and music batches; no referenced provisional assets. Spoken commentary remains optional unless separately promoted.
+7. **G6 — Release ready:** final mix, performance/memory/build-size, rights, accessibility, host verification, and release validation pass.
 
 ### Technology decision
 
-Use **Unity's native audio stack for the Early Access path by default**. Do not add FMOD/Wwise before the vertical slice. Re-open the decision only if the slice demonstrates a concrete requirement native Unity cannot meet economically, such as unmanageable dynamic-music authoring, voice-management complexity, profiler/authoring needs, or localization/streaming requirements. Middleware adoption after large-scale content begins is expensive, so this decision is re-evaluated at G3 and then frozen through Early Access.
+Default to **Unity native audio through Early Access**. Do not add FMOD/Wwise speculatively.
 
-### Early Access scope
+Re-open the decision at G3 only if the vertical slice demonstrates a concrete cost/requirement that native Unity cannot satisfy economically: e.g. dynamic-music authoring, voice-management complexity, profiling/authoring limitations, or localization/streaming scale. If no evidence requires middleware at G3, freeze native Unity through the Early Access release so content is not migrated mid-production.
 
-Required:
+### Early Access audio scope
 
-- UI feedback and notifications.
-- Core on-pitch SFX.
-- Crowd ambience/reactions.
-- Menu/match music sufficient to avoid silence and repetition fatigue.
-- Master + per-bus volume/mute.
-- Caption decisions for information-bearing cues.
-- No clipping, broken loops, missing mappings, or unlicensed assets.
+**Required**
 
-Not required for the first Early Access audio milestone:
+- UI feedback/notifications;
+- core on-pitch SFX;
+- crowd ambience/reactions;
+- menu/management/match music sufficient to avoid silence/repetition fatigue;
+- master + per-bus volume/mute;
+- caption decisions for information-bearing cues;
+- no broken loops, clipping, missing mappings, provisional shipping files, or rights gaps.
+
+**Not required for the first EA audio milestone**
 
 - spoken play-by-play commentary;
 - advanced reverb/occlusion;
@@ -118,94 +128,86 @@ Not required for the first Early Access audio milestone:
 
 ---
 
-# Part II — Detailed plan evolution
+# Part II — Detailed plan critique loop
 
-## Detailed plan v0.1
+## Detailed v0.1
 
-Initial decomposition:
+P0 contract reconciliation → P1 pipeline → P2 T0 → P3 T1 → P4 T2 vertical slice → P5 settings/captions → P6 production → P7 mix/QA → P8 EA freeze.
 
-- P0 contract reconciliation
-- P1 asset pipeline
-- P2 T0
-- P3 T1
-- P4 T2 vertical slice
-- P5 settings/captions
-- P6 content production
-- P7 mix/QA
-- P8 Early Access freeze
+### Critique 1
 
-### Detailed critique 1
+Missing:
 
-The decomposition is usable but still underspecified.
+- exact phase deliverables/exits;
+- asset lifecycle;
+- folder/source rules;
+- catalogue/provenance fields;
+- batch order;
+- host-free vs host-gated evidence;
+- rollback/decision point for middleware.
 
-- It lacks exact deliverables and exit criteria for every phase.
-- It does not specify the lifecycle of one asset from brief to shipping file.
-- It does not define source/master/runtime folder separation.
-- It does not define the manifest fields needed to join catalogue, rights, captions, and Unity bindings.
-- It does not define batch order, so high-cost crowd/music work could start before cheap UI/SFX proves the pipeline.
-- It lacks a rollback rule for middleware and import-policy experiments.
-- It does not say which tests are host-free versus Unity-host-gated.
+## Detailed v0.2
 
-## Detailed plan v0.2
+Added formal gates, asset lifecycle, batch ordering, metadata split, native-Unity default, and test split.
 
-Add formal gates, a manifest-driven asset lifecycle, batch ordering, native-Unity default, and separate host-free/host-gated verification.
+### Critique 2
 
-### Detailed critique 2
+Remaining weaknesses:
 
-Remaining issues:
+- one giant manifest would become a conflict hotspot;
+- runtime paths must not become stable identity;
+- codec/loudness values should be measured tuning data, not premature spec constants;
+- provisional/approved states need release enforcement;
+- pre-T0 spec hardening conflicted with the roadmap;
+- PR/review boundaries were not explicit enough.
 
-- A single manifest can become a monolith and merge-conflict hotspot; split immutable identity/catalogue data from production/provenance metadata or generate one from the other.
-- Runtime paths must not become stable identities; filenames and Unity paths are implementation details, while `CueKey` is the stable identity.
-- Loudness and codec numbers should not be frozen before listening/profiling. Technical masters can be standardized, but runtime compression/mix targets should be measured tuning data.
-- The content process needs a formal definition of "approved" and a mechanism that prevents provisional assets from entering a release build.
-
-## Detailed plan v1.0 — implementation-ready
-
-### P0 — Planning freeze and contract reconciliation
-
-**Purpose:** remove ambiguity before any substantial code or content production.
-
-**Actions**
-
-1. Re-read all #51 section files plus appendices as the implementation authority.
-2. File and fix the T0 defect for missing #51 `AssetRef` / `CueParams` shape and ensure the §4 file list, §2 data structures, tests, and appendices agree.
-3. Confirm #48's ERR-048-001 back-prop remains landed: #51 never references #48; shell mapping joins `CueId`→`CueKey`.
-4. Confirm #38 owns the client-local settings store; #51 contributes only a fragment.
-5. Freeze the Early Access content boundary above.
-6. Freeze native Unity audio as the default until G3.
-7. Freeze stable identity rules:
-   - `CueKey` is the durable audio identity.
-   - asset path and filename are replaceable implementation details.
-   - bus ordinals are APPEND-only.
-   - every catalogue entry has an explicit caption decision.
-
-**Exit — G0**
-
-- No unresolved type/ownership ambiguity needed by T0.
-- No #51→#48/#49/sim dependency.
-- Early Access audio scope recorded.
-- Technology choice recorded as "Unity native until G3 evidence says otherwise."
+## Detailed v1.1 — implementation-ready
 
 ---
 
-### P1 — Audio production pipeline substrate
+## P0 — Planning/design freeze; record, do not pre-harden
 
-This phase may run in parallel with P2 after G0, but bulk production remains prohibited until G3.
+**Purpose:** eliminate implementation ambiguity without violating the roadmap rule for assembly-less specs.
 
-#### P1.1 Folder model
+### Actions
 
-Use two layers:
+1. Re-read all #51 sections + appendices as T0 authority.
+2. Record the `AssetRef` / #51 `CueParams` defect and decide the exact intended shape for the T0 landing.
+3. **Do not edit #51 in isolation.** The correction lands with P2 code and regression tests.
+4. Verify ERR-048-001 remains landed: #51 never references #48; the shell joins `CueId → CueKey`.
+5. Verify #38 owns the one client-local settings store; #51 owns only its fragment.
+6. Freeze stable identity rules:
+   - `CueKey` is the durable audio identity;
+   - filenames and Unity paths are replaceable implementation detail;
+   - `AudioBus` ordinals are APPEND-only;
+   - every cue has an explicit caption decision.
+7. Freeze Early Access scope and native-Unity-until-G3 technology posture.
+
+### Exit — G0
+
+- every type/ownership question required to implement T0 has a recorded intended resolution;
+- no pre-T0 prose-only hardening landed;
+- no #51→#48/#49/sim dependency is planned;
+- EA scope and middleware decision rule are fixed.
+
+---
+
+## P1 — Production pipeline substrate
+
+May run in parallel with P2 after G0. **Bulk content remains blocked until G3.**
+
+### P1.1 Repository layout
 
 ```text
 content/audio/
-├── source/                 # archival/source masters; Unity does not import these
+├── source/                 # source recordings/stems/finished masters; not Unity-imported
 │   ├── ui/
 │   ├── sfx/
 │   ├── crowd/
 │   ├── music/
 │   └── commentary/
-├── provenance/             # license/source/creator records
-└── briefs/                 # production briefs and acceptance notes
+├── provenance/             # creator/vendor/license/rights/approval records
+└── briefs/                 # purpose + acceptance notes
 
 Assets/Audio/
 ├── Runtime/
@@ -214,15 +216,22 @@ Assets/Audio/
 │   ├── Crowd/
 │   ├── Music/
 │   └── Commentary/
-├── Catalogue/              # host-side binding/config artifacts
-└── Test/                   # development-only audition assets where needed
+└── Catalogue/              # host-side binding/config artifacts only
 ```
 
-Do not place editable source sessions inside `Assets/`; Unity should import only runtime renditions and host binding artifacts.
+Avoid permanent audition/test audio under `Assets/`; test material belongs outside runtime content unless a Unity-host test specifically needs it, in which case release validation must exclude it.
 
-#### P1.2 File naming
+### P1.2 Recoverable source rule
 
-Runtime export convention:
+A shippable asset must be reproducible from a retained source package:
+
+- source recording/stems and edit notes; or
+- DAW/project file + dependencies; or
+- commissioned/vendor master plus contract/source record.
+
+If proprietary/huge project sessions are stored outside Git, provenance metadata records the immutable archive location and version. A runtime WAV with no recoverable source is not a complete production asset.
+
+### P1.3 Runtime naming
 
 `au_<bus>_<family>_<semantic-name>_<variant>_vNN.<ext>`
 
@@ -235,78 +244,81 @@ Examples:
 Rules:
 
 - lowercase snake-case;
-- semantic event names, not screen coordinates or temporary task numbers;
-- variant number separate from revision number;
-- filename is never the stable identity; `CueKey` is.
+- semantic event name, not screen location/task number;
+- variant number is separate from revision;
+- filename/path never substitutes for `CueKey`.
 
-#### P1.3 Source/master policy
+### P1.4 Master/runtime policy
 
-- Canonical finished masters: lossless WAV, 48 kHz, 24-bit unless a source cannot support it.
-- Keep the uncompressed master outside Unity runtime folders.
-- Runtime compression/load type is selected by category and measured on the Unity host rather than frozen by prose:
-  - short UI/SFX optimize for immediate latency;
-  - long music/crowd optimize for memory/streaming;
-  - final codec/quality values are tuning data established during G3/G6 profiling.
-- No normalization or loudness target is declared a universal constant before the reference mix exists. No digital clipping is ever acceptable.
+- Canonical finished masters: lossless WAV, normally 48 kHz / 24-bit.
+- Preserve higher-quality/raw source material when it is useful for future remastering.
+- Unity runtime rendition lives under `Assets/Audio/Runtime`.
+- Runtime codec/quality/load type is measured by category at G3/G6, not frozen now:
+  - short UI/SFX prioritize latency;
+  - long music/crowd prioritize memory/streaming.
+- No universal loudness target is frozen before a reference mix exists. No digital clipping is acceptable.
 
-#### P1.4 Metadata split
+### P1.5 Metadata: split identity from production
 
-Avoid one giant manifest.
+**Identity/catalogue data**
 
-**Identity/catalogue data** — stable, code-adjacent:
+- `CueKey`;
+- bus;
+- semantic category;
+- caption decision (`CaptionId` or justified `NoCaption`);
+- variant-set identity.
 
-- `CueKey`
-- bus
-- semantic category
-- caption decision / `CaptionId` or justified `NoCaption`
-- variant set identity
+**Production/provenance data**
 
-**Production/provenance data** — asset-adjacent:
+- runtime asset reference;
+- source package reference;
+- creator/vendor/source;
+- license/contract reference;
+- commercial/platform rights;
+- attribution requirement;
+- AI-generated/AI-assisted status if relevant;
+- revision;
+- approval status;
+- approver/date;
+- `provisional` flag.
 
-- runtime asset filename/path
-- source master reference
-- creator/vendor/source
-- license/contract reference
-- allowed commercial/platform use
-- attribution requirement
-- AI-generated / AI-assisted status if applicable
-- revision
-- approval state
-- approver/date
-- provisional flag
+Do not make one monolithic mutable file mandatory. Validation joins the identity catalogue and production records and asserts one complete shipping record per referenced runtime asset.
 
-A tooling step validates that every catalogue asset has exactly one production/provenance record and vice versa for shipping assets.
+### P1.6 Provisional and rights rules
 
-#### P1.5 Provisional asset rule
+- Every placeholder is explicitly `provisional=true`.
+- A release validator rejects referenced provisional content.
+- Unknown/incomplete rights = non-shipping regardless of quality.
+- Rights/provenance are recorded when the source enters the pipeline, not at release cleanup.
 
-Every placeholder/prototype audio file is explicitly `provisional=true` in production metadata.
+### P1.7 Validation contract
 
-Release builds fail validation if a referenced shipping cue is provisional. This prevents "temporary" sounds from becoming Early Access assets by inertia.
+A small host-free validator should eventually check at minimum:
 
-#### P1.6 Rights rule
+- duplicate identities/production records;
+- missing referenced files;
+- orphan shipping files;
+- missing provenance/rights fields;
+- referenced provisional assets in release mode;
+- invalid naming/revision state.
 
-No third-party, stock, commissioned, recorded, or generated asset becomes `approved` without provenance sufficient to demonstrate commercial game-distribution rights. Unknown provenance means non-shipping, regardless of quality.
+Do not make this validator own Unity import behavior; committed Unity metadata/host checks own that half.
 
-**Exit — G1**
+### Exit — G1
 
-- folder structure exists;
-- naming policy documented;
-- Git LFS confirmed for runtime/source audio formats;
-- production/provenance schema exists;
-- provisional/approved states exist;
-- validation design can detect missing, duplicate, or provisional shipping assets.
+Layout, naming, source recoverability, metadata schema, provisional policy, rights policy, and validator contract exist. Only vertical-slice assets may be created before G3.
 
 ---
 
-### P2 — #51 T0: pure contract foundation
+## P2 — #51 T0 pure contract foundation
 
-Follow #51 §7 T0 exactly after P0's spec repair.
+**This is the first audio implementation PR.** Any required #51 spec correction lands in the same PR/commit series as the code and regression proof.
 
-**Production assembly**
+### Production assembly
 
-`src/audio/` → `TacticalDirector.Audio`, `noEngineReferences: true`, zero production assembly references.
+`src/audio/` → `TacticalDirector.Audio`, `noEngineReferences: true`, zero production references.
 
-**Land**
+### Land
 
 - `AudioConstants`
 - `AudioBus`
@@ -321,294 +333,277 @@ Follow #51 §7 T0 exactly after P0's spec repair.
 - `DuckingTable`
 - test assembly
 
-**Required invariant tests**
+### Tests/invariants
 
-- bus set and APPEND-only ordinals;
+- fixed/APPEND-only bus ordinals;
 - `Master` cannot be a cue routing target;
 - duplicate `CueKey` refused;
 - missing/default caption decision refused;
 - unjustified `NoCaption` refused;
 - duck trigger==target refused;
-- attenuation cycles refused;
+- attenuation cycle refused;
 - #51 references nothing;
-- no sim types or deterministic RNG use;
-- contract tests run host-free under the normal Linux gate.
+- no sim types;
+- no deterministic RNG;
+- all contract tests run host-free.
 
-**Do not land in P2**
+### Explicitly excluded
 
-- `AudioSource` / `AudioClip` references;
-- shell adapter;
-- #48 types;
-- settings persistence;
-- Unity playback;
-- final assets.
+No `AudioSource`, `AudioClip`, shell adapter, #48 types, settings persistence, Unity playback, or final content.
 
-**Exit — G2**
+### Exit — G2
 
-T0 compiles and tests green while the game remains exactly as silent as before.
+T0 + spec back-prop + tests are green, and the game remains exactly silent.
 
 ---
 
-### P3 — #51 T1: playback contract, mixer math, settings fragment
+## P3 — #51 T1 playback contract/mixer/settings fragment
 
-**Land**
+### Land
 
-- `IAudioPlayback`
-- pure `AudioMixer` gain composition
-- `AudioSettingsFragment`
-- per-bus/master mute and gain validation
-- reset-invalid-field-to-default logic
-- duck gain computation over bus activity
+- `IAudioPlayback` API;
+- pure `AudioMixer` gain composition;
+- `AudioSettingsFragment`;
+- per-bus/master gain and mute validation;
+- invalid-field reset-to-default behavior;
+- duck-gain calculation from bus activity.
 
-**Rules**
+### Rules
 
-- still no shell adapter and no audible host binding;
-- #51 remains Unity-free and leaf-like;
-- settings fragment owns no path/file/serializer;
-- malformed preference values default without blocking launch;
-- tuning values remain client config and never enter sim state.
+- still no shell adapter or audible binding;
+- #51 remains Unity-free;
+- settings own no file/path/serializer;
+- corrupt preference values never block launch;
+- tuning stays client-side and out of sim state.
 
-**Tests**
+### Tests
 
-- unity gain identity;
+- unity-gain identity;
 - mute dominance;
 - monotone gain composition;
 - corrupt/partial settings recovery;
-- ducking only reads bus activity;
-- no sim serialization/RNG/state exposure.
+- ducking reads bus activity only;
+- no serialization/RNG/sim state.
 
-**Exit**
+### Exit
 
-T1 is host-free green and remains silent by construction.
+T1 host-free green and silent.
 
 ---
 
-### P4 — #51 T2 + audible vertical slice
+## P4 — T2 integration and G3 audible vertical slice
 
-This is the critical gate. Bulk content production is still blocked until it passes.
+Split into two reviewable slices while preserving #51's rule that completeness arrives with the adapter.
 
-#### P4.1 Shell integration
+### P4A — shell adapter + completeness, still silent
 
 Land outside #51:
 
-- `CueSinkAdapter` in the client composition root;
-- typed `CueId`→`CueKey` mapping;
-- build-time mapping completeness;
-- runtime unmapped-cue silent no-op;
-- fully qualified #48/#51 `CueParams` translation.
+- shell `CueSinkAdapter`;
+- typed `CueId → CueKey` table;
+- build-time "every emit-able `CueId` maps" proof;
+- reverse "every mapping target exists" proof;
+- runtime unmapped cue = silent no-op;
+- fully-qualified translation between #48 and #51 `CueParams`.
 
-#### P4.2 Unity host binding
+This may land before audible playback because it creates no window in which unchecked cues can make sound.
 
-Add the smallest host-only playback implementation needed to:
+### P4B — Unity host binding + vertical assets
 
-- resolve an approved runtime asset;
-- play it on the correct bus;
+Add the smallest Unity-specific playback binding required to:
+
+- resolve a runtime asset;
+- play on its routed bus;
 - apply composed gain/mute;
-- report bus activity for ducking;
-- stop/replace where the pure interface requires it.
+- expose bus activity for ducking;
+- stop/replace where the pure API requires it.
 
-Unity-specific types stay in the host binding, not `TacticalDirector.Audio`.
+Unity types remain in host/client code, never `TacticalDirector.Audio`.
 
-#### P4.3 Vertical-slice asset set
+### Vertical-slice assets
 
-Create only enough production-quality or clearly provisional audio to exercise the whole system:
+Only this minimal set is authorized before G3:
 
-- **UI:** confirm/click + one notification;
+- **UI:** one confirm/click + one notification;
 - **SFX:** whistle + ball strike;
 - **Crowd:** one seamless bed + one reaction;
-- **Music:** one seamless menu or match loop;
-- **Commentary:** no spoken line required; bus exists but content may remain deferred.
+- **Music:** one seamless loop;
+- **Commentary:** no spoken line required.
 
-At least one match cue must travel through the real #48→shell→#51 path.
+At least one match cue must traverse the real `#48 → shell → #51 → Unity` path.
 
-#### P4.4 G3 acceptance
+### G3 pass/fail
 
-The vertical slice passes only if:
+Pass only if:
 
-- every test cue resolves to a defined `CueKey` and runtime asset;
-- an intentionally unmapped cue is silent at runtime and caught by the build-time completeness test;
-- UI, SFX, Crowd, and Music route to the intended buses;
-- master/per-bus mute and gain work on real output;
-- crowd/music ducking can be demonstrated from **bus activity**, not game-state reads;
-- no audio-enabled run changes deterministic match digests or RNG cursors;
-- no #51→#48/#49/sim reference is introduced;
-- source→master→runtime→catalogue→Unity→audition workflow is repeatable;
-- provenance exists for every slice asset;
-- host profiling records memory/CPU/voice behavior sufficient to choose initial import settings;
-- the middleware re-evaluation finds no demonstrated blocker to native Unity, or records a concrete reason to switch before scaling.
+- every vertical cue resolves to a defined `CueKey` and runtime asset;
+- deliberately unmapped runtime cue is silent while build-time completeness detects the defect;
+- UI/SFX/Crowd/Music route to correct buses;
+- master/per-bus gain and mute affect real output;
+- ducking is demonstrated from bus activity, not sim polling;
+- audio-enabled and audio-disabled same-seed runs have identical deterministic digests/RNG cursors;
+- no forbidden #51 dependency appears;
+- source→master→runtime→register→import→audition workflow is repeatable;
+- provenance is complete for every slice asset;
+- host profiling records memory/CPU/voice/latency behavior sufficient for initial import settings;
+- native Unity audio is either accepted through EA or rejected with concrete G3 evidence **before** bulk production.
 
-**Exit — G3**
+### Exit — G3
 
-One small but complete audible path is proven. Only now may content production scale.
-
----
-
-### P5 — Settings, captions, and accessibility integration
-
-May overlap early P6 production once G3 is green.
-
-#### Settings via #38
-
-- register #51's settings fragment with the single client-local settings store;
-- surface master + `Music`, `SFX`, `Crowd`, `Commentary`, `UI` controls;
-- default/reset behavior follows #51; no private audio settings file.
-
-#### Captions via #49
-
-- #49 gains the legitimate `→ #51` reference when the producer is built;
-- map each information-bearing `CaptionId` to localized text;
-- ambience/texture normally use justified `NoCaption`;
-- audio never emits display strings.
-
-#### Accessibility acceptance
-
-- information-carrying audible cues have caption decisions;
-- disabling/muting a bus does not suppress equivalent visual/caption information where required;
-- caption coverage checks run over the full built `CaptionId` roster.
-
-**Exit — G4**
-
-Settings persist correctly, captions are structurally complete, mapping is complete, and the full audio path remains observer-neutral.
+The end-to-end audio path is proven. Bulk production is now permitted.
 
 ---
 
-### P6 — Production content scaling
+## P5 — Settings, captions, accessibility
+
+May overlap P6 once G3 is green.
+
+### #38 settings
+
+- register #51's fragment with the one client-local settings store;
+- expose Master + Music/SFX/Crowd/Commentary/UI controls;
+- persist without any private audio settings file;
+- corrupt values default/continue per #51.
+
+### #49 captions
+
+- #49 gains the legitimate `→ #51` reference when the producer exists;
+- map information-bearing `CaptionId`s to localized text;
+- ambience/texture use justified `NoCaption` where appropriate;
+- #51 emits identities, never display strings.
+
+### Exit — G4
+
+Settings persist, caption coverage is structurally complete, mapping is complete, and the live path remains observer-neutral.
+
+---
+
+## P6 — Production scaling
 
 Every batch follows the same lifecycle:
 
-1. **Brief** — purpose, trigger, emotional/function target, duration/loop/variation needs, reference material, caption classification.
-2. **Source** — record, synthesize, commission, license, or create; provenance created immediately.
-3. **Edit** — clean, trim, de-noise if needed, loop construction, fades.
-4. **Master** — lossless canonical master; preserve headroom; no clipping.
-5. **Export** — runtime rendition with naming/version rules.
-6. **Register** — production metadata + catalogue identity/bus/caption association.
-7. **Import** — category policy applied by Unity host tooling.
-8. **Audition in context** — never approve from a file player alone.
-9. **Mix review** — relative level, masking, repetition, transitions, ducking.
-10. **Approve or revise** — only approved, non-provisional assets can satisfy a shipping cue.
+1. **Brief** — purpose, trigger, functional/emotional goal, loop/length/variation needs, caption classification.
+2. **Source** — record/synthesize/commission/license/create; provenance begins immediately.
+3. **Edit** — cleanup, trim, fades, loop construction.
+4. **Master** — canonical lossless master with headroom/no clipping.
+5. **Export** — runtime rendition and revision.
+6. **Register** — production metadata + catalogue/bus/caption association.
+7. **Import** — Unity settings appropriate to category.
+8. **Audition in game** — never approve from a file player alone.
+9. **Mix review** — level, masking, repetition, transitions, ducking.
+10. **Approve/revise** — only approved non-provisional assets satisfy shipping cues.
 
-#### Batch order
+### Batch order
 
-**B1 — UI**
+#### B1 — UI
 
-Cheapest and highest-frequency feedback; validates consistency and settings behavior.
-
-- navigation hover/confirm/back where needed;
+- semantic navigation confirmation/back where useful;
 - toggles/sliders;
 - success/error/notification;
-- transfer/contract/board/inbox notification families only when their UI semantics stabilize.
+- flow-specific families only when the underlying UI semantics stabilize.
 
-Avoid one bespoke sound per screen; define semantic UI events that survive layout changes.
+Avoid screen-specific one-offs; semantic UI events survive redesign.
 
-**B2 — Core match SFX**
+#### B2 — Core match SFX
 
 - whistles;
-- ball strikes/pass/shot families;
-- net/goal impact where rendered;
-- tackles/contacts where presentation emits a cue;
-- substitution/restart/stoppage cues only where #48 exposes stable semantic events.
+- ball strike/pass/shot families;
+- net/goal impacts where presented;
+- tackles/contacts where stable #48 cues exist;
+- substitution/restart/stoppage only through stable presentation identities.
 
 Variation is display-side only.
 
-**B3 — Crowd**
+#### B3 — Crowd
 
-Build as layers rather than one giant match recording:
+Layered system:
 
 - neutral bed;
 - positive/negative swells;
 - goal reaction;
-- near-miss/tension where a stable presentation cue exists;
-- home/away flavor only if presentation supplies the necessary non-sim coupling through approved seams.
+- near-miss/tension only where stable presentation cues exist.
 
-Crowd should respond to emitted presentation cues and audio bus activity, never by #51 polling score/possession/etc.
+Crowd reacts to presentation cues/audio activity; #51 never polls score/possession/match state.
 
-**B4 — Music**
+#### B4 — Music
 
 - main/menu identity;
 - management/background loop set;
-- optional match/replay state where presentation context owns the state;
-- transition/stinger set only after base loop behavior is stable.
+- optional match/replay state from presentation/navigation context;
+- stingers/transitions only after loop behavior is stable.
 
-Prioritize low repetition fatigue over quantity.
+Optimize for low repetition fatigue before raw track count.
 
-**B5 — Management ambience and notifications**
+#### B5 — Management ambience/secondary notifications
 
-Only after actual screen/flow usage demonstrates value. Do not add ambience merely because a bus exists.
+Add only where real screen usage demonstrates value.
 
-**B6 — Spoken commentary — optional deep tier**
+#### B6 — Spoken commentary — optional deep-tier project
 
-Separate content project. Do not put Early Access on its critical path without an explicit product decision. If promoted, it requires voice casting/generation policy, localization strategy, line-volume estimates, streaming/build-size budget, pronunciation handling, rights/consent, and expanded caption alignment.
+Do not put EA on its critical path without a separate product decision. Promotion requires its own voice/localization/rights/pronunciation/build-size/streaming plan.
 
-#### Asset approval definition
+### Approval definition
 
-An asset is `approved` only when all are true:
+An asset is `approved` only if all are true:
 
-- semantic purpose is correct in-game;
+- correct semantic purpose in game;
 - correct bus/category;
-- no technical defect, clip, click, broken loop, or unintended silence;
-- variation/repetition behavior acceptable in context;
-- source/master/runtime chain is recoverable;
+- no clip/click/broken loop/unintended silence;
+- repetition/variation acceptable in context;
+- source package recoverable;
 - provenance/rights complete;
 - caption classification complete;
-- runtime import settings reviewed;
+- runtime import reviewed;
 - not provisional;
-- review recorded.
+- approval recorded.
 
-**Exit — G5**
+### Exit — G5
 
-All Early Access-required cue families have approved assets with no missing mappings and no provisional referenced content.
+All EA-required cue families have approved runtime assets. No mapped shipping cue references provisional/missing content.
 
 ---
 
-### P7 — Mix, performance, and regression
+## P7 — Mix, performance, regression
 
-#### Mix pass
+### Mix order
 
-Tune only on the real Unity host with representative gameplay/UI flows.
-
-Order:
-
-1. master headroom/reference level;
+1. master reference/headroom;
 2. UI intelligibility;
 3. core match SFX;
 4. crowd bed/reactions;
 5. music;
 6. ducking attack/release/attenuation;
-7. optional commentary last, because it changes every masking relationship.
+7. optional commentary last.
 
-Do not freeze loudness numbers in the spec. Record them as production tuning values after the reference mix exists.
+Loudness/mix numbers are production tuning values established on the real reference mix, not speculative spec constants.
 
-#### Performance / memory
+### Measure on Unity host
 
-Measure at minimum:
-
-- simultaneous active voices;
-- memory resident audio;
+- active voice count;
+- resident audio memory;
 - stream/decode CPU;
 - first-play latency;
-- scene/menu transition behavior;
+- menu/scene transition behavior;
 - long-session leakage;
 - build-size contribution by category.
 
-Use #51's existing budget ceilings as alert thresholds where applicable, while treating real host capture as the evidence.
+Use #51's existing budget ceilings as alert thresholds where applicable; real host capture is the evidence.
 
-#### Regression matrix
-
-Host-free:
+### Host-free regression
 
 - catalogue validity;
 - caption decisions;
-- mapping completeness where both id spaces are available in shell tests;
+- mapping completeness in shell tests;
 - settings validation;
 - assembly-direction locks;
-- determinism/observer-neutrality scenario.
+- observer-neutral deterministic scenario;
+- release metadata/provisional/rights validation.
 
-Unity-host-gated:
+### Unity-host regression
 
-- actual playback;
-- routing;
+- actual playback/routing;
 - mute/volume;
-- ducking envelope behavior;
+- ducking envelope;
 - loop seams;
 - import/load behavior;
 - memory/CPU/latency;
@@ -616,38 +611,42 @@ Unity-host-gated:
 
 ---
 
-### P8 — Early Access release gate
+## P8 — Early Access release gate
 
-**G6 requires all of the following:**
+### G6 requires
 
-- no referenced provisional assets;
-- no missing `CueId`→`CueKey` mapping;
-- no missing runtime asset for a mapped `CueKey`;
-- all information-bearing cues have caption coverage;
-- all shipping assets have complete provenance/rights records;
-- no digital clipping or broken loop accepted;
-- settings survive restart via #38 and corrupt values recover without blocking launch;
-- audio-on vs audio-off deterministic digest/RNG locks remain green;
-- production #51 assembly remains a leaf with no Unity/#48/#49/sim references;
-- host playback checks pass on the pinned Unity version;
-- build-size and runtime-memory impact are reviewed and accepted;
-- final subjective pass covers menu → management flow → full match → post-match, not isolated files.
+- zero referenced provisional assets;
+- zero missing `CueId → CueKey` mappings;
+- zero missing runtime assets for mapped cues;
+- caption coverage for information-bearing cues;
+- complete rights/provenance for every shipping asset;
+- no accepted clipping/broken loops;
+- settings persist through #38 and recover from corrupt values without blocking launch;
+- audio-on/audio-off determinism locks stay green;
+- #51 remains leaf and Unity/#48/#49/sim-free;
+- host playback checks pass on pinned Unity;
+- build-size/memory impact reviewed and accepted;
+- final subjective pass covers menu → management → full match → post-match.
 
 ---
 
-## 3. Parallel execution map
+# Part III — Parallel map and PR boundaries
+
+## Dependency map
 
 ```text
-P0 Contract reconciliation
+P0 design/recorded defect
         |
         +-----------------------+
         |                       |
-P2 T0 engineering          P1 pipeline substrate
+P2 T0 + spec fix            P1 pipeline substrate
         |                       |
-P3 T1 engineering               |
+P3 T1                          |
         +-----------+-----------+
                     |
-            P4 T2 vertical slice
+                 P4A shell
+                    |
+             P4B audible slice
                     |
               G3 AUDIBLE GREEN
               /             \
@@ -657,62 +656,71 @@ P5 settings/captions      P6 content batches
               \             /
                P7 mix + QA
                     |
-              P8 EA release gate
+               P8 EA gate
 ```
 
-Backend work, UI work, art work, and localization may continue independently. Audio dependencies are intentionally delayed:
+Dependency boundaries:
 
-- **P2/T0:** depends on nobody.
-- **P3/T1:** depends on nobody for persistence; settings are only a fragment.
-- **P4/T2:** depends on #48 cue surfaces and client-shell composition.
+- **T0:** depends on nobody; spec defect is discharged here.
+- **T1:** no #38 persistence required; only fragment behavior.
+- **T2/P4:** depends on built #48 cue surfaces and client shell.
 - **P5:** depends on #38 settings store and #49 caption renderer.
-- **P6:** can produce UI/crowd/music in parallel once G3 proves the pipeline, but semantic match SFX must follow stable #48 cue identities.
+- **P6:** UI/crowd/music can scale after G3; semantic match SFX follows stable #48 cue identities.
+
+## Recommended PR slices
+
+1. **Audio pipeline skeleton** — P1 folders/metadata/validation contract; no bulk assets.
+2. **Audio T0** — spec back-prop + `TacticalDirector.Audio` pure contracts + tests.
+3. **Audio T1** — playback API/mixer/settings-fragment pure logic + tests.
+4. **Audio T2A** — shell mapping/adapter/completeness; still silent.
+5. **Audio T2B vertical slice** — Unity binding + minimal vertical assets + host evidence + middleware decision.
+6. **Audio settings/captions** — #38/#49 integration.
+7. **One PR per production batch/sub-batch** — avoid giant binary reviews.
+8. **Mix/release hardening** — tuning, host performance evidence, release validator closure.
+
+Each code PR gets the project's normal compile/test gate and adversarial review. Binary-heavy PRs include an asset inventory, provenance status, and in-game audition result rather than relying on diffs that cannot meaningfully review sound.
 
 ---
 
-## 4. What must not happen
+# Part IV — Prohibitions
 
-- Do not begin a large SFX/music/crowd library before G3.
-- Do not put Unity types in `TacticalDirector.Audio`.
-- Do not let #51 reference #48, #49, or sim assemblies.
-- Do not create a private audio settings file.
-- Do not trigger ducking from score, possession, goal state, or other sim values.
-- Do not use deterministic-sim RNG for sample variation.
-- Do not use filenames/paths as durable cue identity.
-- Do not approve an asset with unknown rights/provenance.
-- Do not allow provisional assets into a release build.
-- Do not make spoken commentary a default Early Access blocker.
-- Do not select FMOD/Wwise speculatively; require G3 evidence.
-- Do not treat green host-free tests as proof that the game actually sounds correct.
+Do not:
 
----
-
-## 5. First implementation slice after approval of this plan
-
-The first code/content work should be deliberately small:
-
-1. Resolve the `AssetRef` / #51 `CueParams` specification gap.
-2. Land P1's directory/metadata skeleton and validation contract, without bulk assets.
-3. Land P2/T0 pure `TacticalDirector.Audio` contracts and tests.
-4. Run the full relevant gate and adversarial review.
-5. Only after T0 is clean, proceed to T1 and the G3 audible vertical slice.
-
-No final sound-library production belongs in the first slice.
+- mass-produce content before G3;
+- land a prose-only T0 defect fix before the T0 assembly;
+- put Unity types in `TacticalDirector.Audio`;
+- let #51 reference #48, #49, or sim;
+- create a private audio settings file;
+- drive ducking from game state;
+- use deterministic-sim RNG for sound variation;
+- use filenames/paths as durable identities;
+- approve unknown-rights content;
+- allow provisional content into a release build;
+- make spoken commentary a default EA blocker;
+- choose middleware without G3 evidence;
+- treat green host-free tests as proof that the game sounds correct.
 
 ---
 
-## 6. Plan acceptance
+# Part V — First implementation sequence
 
-This plan is ready for implementation because the critique/revision cycle has closed the original gaps:
+After approval of this plan:
 
-- engineering and production are separated but synchronized;
-- every large expenditure is behind a smaller proof gate;
-- the existing #51 T0→T3 architecture is preserved;
-- asset rights and provenance are first-class;
-- source/master/runtime separation is explicit;
-- stable identities are separated from replaceable file paths;
-- provisional content cannot silently ship;
-- native Unity audio is the default but not an irreversible assumption;
-- Early Access scope is bounded and does not require deep-tier spoken commentary;
-- host-free versus host-gated evidence is explicit;
-- every phase has an exit criterion and the first implementation slice is small enough to review adversarially.
+1. keep the `AssetRef` / #51 `CueParams` issue recorded, but do not patch the spec alone;
+2. land the small P1 pipeline/metadata skeleton;
+3. implement P2/T0 and discharge the spec defect in the same landing with regression tests;
+4. run the relevant full gate and adversarial review;
+5. implement T1;
+6. implement T2A;
+7. build the G3 vertical slice before authorizing any large sound-library production.
+
+This is the point at which the plan is considered **implementation-ready**: substantial engineering or production beyond these controlled slices should not begin until its preceding gate is green.
+
+---
+
+## Version history
+
+| Version | Date | Notes |
+|---|---|---|
+| 1.0 | 2026-09-04 | Initial converged plan after two high-level and two detailed critique/revision rounds. |
+| 1.1 | 2026-09-04 | Final readiness critique: corrected pre-T0 defect sequencing to obey the roadmap's record-now/discharge-with-code rule; added recoverable source-package policy, explicit P4A/P4B split, release exclusion for test assets, and PR/review boundaries. |
