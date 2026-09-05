@@ -102,6 +102,13 @@ def spec_dir_enforced(
     return any(resolved == root or root in resolved.parents for root in enforce_dirs)
 
 
+def legacy_exempt(
+    spec_id: int | None, *, changed_scope: bool, enforced: bool
+) -> bool:
+    """Keep #1-#8 survey-only except when explicitly undergoing reapproval."""
+    return is_legacy_survey(spec_id) and not (changed_scope and enforced)
+
+
 def section_block(text: str, subsection: str) -> str | None:
     """Return the `## 5.N ...` block, stopping at the next H2."""
     pattern = re.compile(
@@ -376,13 +383,19 @@ def main() -> int:
             changed_scope=args.changed_scope,
             enforce_dirs=enforce_dirs,
         )
+        blocking = (
+            enforced
+            and not legacy_exempt(
+                spec_id, changed_scope=args.changed_scope, enforced=enforced
+            )
+            and is_approved_status(status)
+        )
 
         if not files:
             if not fallback_text and not enforced:
                 continue
             if spec_id is not None:
                 checked_specs += 1
-            blocking = enforced and not is_legacy_survey(spec_id) and is_approved_status(status)
             findings.append(
                 Finding(
                     spec_id,
@@ -407,7 +420,6 @@ def main() -> int:
             continue
 
         checked_specs += 1
-        blocking = enforced and not is_legacy_survey(spec_id) and is_approved_status(status)
         for message in schema_errors(text, repo_root, spec_dir):
             findings.append(
                 Finding(
