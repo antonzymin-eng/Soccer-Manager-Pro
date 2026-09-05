@@ -300,6 +300,10 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             scenario.parent.mkdir(parents=True)
             scenario.write_text("{}\n", encoding="utf-8")
             spec9.mkdir(parents=True)
+            (spec9 / "section-9-approval-checklist.md").write_text(
+                "# Spec #9 — Approval Checklist\n## 9.1.1 Balance verified\n",
+                encoding="utf-8",
+            )
             (spec9 / "section-5.md").write_text(textwrap.dedent("""\
                 # Spec #9 — Section 5: Test Plan
                 **Status:** APPROVED
