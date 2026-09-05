@@ -94,4 +94,4 @@ Tracking: `spec-error-log.md` v1.26 (ERR-008-002..011), `file-manifest.md`,
 
 ---
 
-*Decision Tree Specification #8 | Tactical Director — Specification #8 of 20*
+*Decision Tree Specification #8 | System XI — Specification #8 of 20*

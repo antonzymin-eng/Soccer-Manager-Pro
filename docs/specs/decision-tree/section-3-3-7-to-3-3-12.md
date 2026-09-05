@@ -697,5 +697,5 @@ public static class ComposureWeights
 
 *End of Section 3.3 — Final Action Selection: Composure Model*
 
-*Decision Tree Specification #8 | Tactical Director — Specification #8 of 20 | Stage 0: Physics Foundation*
+*Decision Tree Specification #8 | System XI — Specification #8 of 20 | Stage 0: Physics Foundation*
 *Next: Section 3.4 — Tactical Context Integration (Stage 0 Stub)*

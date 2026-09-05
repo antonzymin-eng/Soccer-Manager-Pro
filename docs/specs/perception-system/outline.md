@@ -558,11 +558,11 @@ range (L_MAX = 500ms baseline).
 
 ### 8.2 Design Authority References
 
-**[MASTER-VOL1]** Tactical Director Design Team (2025). "Master Volume I: Physics Core."
+**[MASTER-VOL1]** System XI Design Team (2025). "Master Volume I: Physics Core."
 - §3.1 Layer 1 Perception: shadow cones, scanning frequency (6–8 elite, 2–4 average)
 - §3.1 Blind-side awareness, shoulder check cost (~0.3s), P_e = 1.0 default rear arc
 
-**[MASTER-VOL2]** Tactical Director Design Team (2025). "Master Volume II: Human Systems."
+**[MASTER-VOL2]** System XI Design Team (2025). "Master Volume II: Human Systems."
 - Decisions and Anticipation attribute definitions
 - Recognition latency attribute scaling authority
 
@@ -629,4 +629,4 @@ Before Section 3 can be drafted, the following must be resolved:
 ---
 
 *End of Outline — Perception System Specification #7*  
-*Tactical Director — Specification #7 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #7 of 20 | Stage 0: Physics Foundation*

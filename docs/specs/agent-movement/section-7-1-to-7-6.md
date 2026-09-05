@@ -232,7 +232,7 @@ GPS tracking data, match statistics, and empirical measurements used for validat
 
 ### 7.2.4 Planned Empirical Validation
 
-**[FIELD-TEST-PLANNED]** Tactical Director Development Team. "Field Validation Tests (PLANNED)."
+**[FIELD-TEST-PLANNED]** System XI Development Team. "Field Validation Tests (PLANNED)."
 
 - **Status:** Not yet conducted. Planned for Stage 0 implementation phase.
 - **Planned methodology:** 

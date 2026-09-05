@@ -470,5 +470,5 @@ Composure Model, Dispatch Logic).
 ---
 
 *End of Section 2 — Decision Tree Specification #8*  
-*Tactical Director — Specification #8 of 20 | Stage 0: Physics Foundation*  
+*System XI — Specification #8 of 20 | Stage 0: Physics Foundation*
 *v1.1 — March 01, 2026*

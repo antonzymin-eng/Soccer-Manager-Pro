@@ -665,4 +665,4 @@ All values within specified bounds. No floor/clamp violations. No undefined beha
 ---
 
 *End of Appendix B — Perception System Specification #7*  
-*Tactical Director — Specification #7 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #7 of 20 | Stage 0: Physics Foundation*

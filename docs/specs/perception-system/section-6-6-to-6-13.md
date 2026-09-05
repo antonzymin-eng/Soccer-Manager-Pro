@@ -291,6 +291,6 @@ as a requirement on the implementing developer.
 ---
 
 *End of Section 6 — Perception System Specification #7*
-*Tactical Director — Specification #7 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #7 of 20 | Stage 0: Physics Foundation*
 
 *Next: Section 7 — Future Extensions*

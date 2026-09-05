@@ -523,7 +523,7 @@ adequately grounded by [LEES-1998] and [STATSBOMB-OPEN] independently.*
 
 ---
 
-**[MASTER-VOL1]** *Tactical Director — Master Volume 1: Physics Core.*
+**[MASTER-VOL1]** *System XI — Master Volume 1: Physics Core.*
 Internal project document. File: `Master_Vol_1_Physics_Core.md`.
 
 - **Used for:**
@@ -539,7 +539,7 @@ Internal project document. File: `Master_Vol_1_Physics_Core.md`.
 
 ---
 
-**[MASTER-VOL2]** *Tactical Director — Master Volume 2: Human Systems.*
+**[MASTER-VOL2]** *System XI — Master Volume 2: Human Systems.*
 Internal project document. File: `Master_Vol_2_Human_Systems.md`.
 
 - **Used for:**
@@ -556,7 +556,7 @@ Internal project document. File: `Master_Vol_2_Human_Systems.md`.
 
 ---
 
-**[MASTER-VOL4]** *Tactical Director — Master Volume 4: Tech Implementation.*
+**[MASTER-VOL4]** *System XI — Master Volume 4: Tech Implementation.*
 Internal project document. File: `Master_Vol_4_Tech_Implementation.md`.
 
 - **Used for:**
@@ -637,7 +637,7 @@ section files.
 
 ---
 
-**[BEST-PRACTICES]** *Tactical Director — Development Best Practices.*
+**[BEST-PRACTICES]** *System XI — Development Best Practices.*
 Internal project document. File: `Development_Best_Practices.md`.
 
 - **Used for:** Specification structure, version control discipline, approval

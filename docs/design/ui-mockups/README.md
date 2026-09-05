@@ -1,4 +1,4 @@
-# UI Mockups — Soccer Manager Pro (design reference)
+# UI Mockups — System XI (design reference)
 
 **Created:** July 25, 2026
 **Last Updated:** July 25, 2026 (visual direction CHOSEN: `touchline`)
@@ -31,7 +31,7 @@ implementation design against.
 
 | File | Contents |
 |------|----------|
-| `Soccer Manager Pro - Design System.html` | The design-system page: philosophy, color, typography, spacing/radii, buttons, inputs, tabs/chips, data tables, cards/modals, stat tiles, attribute displays, formation pitch, match-day HUD |
+| `System XI - Design System.html` | The design-system page: philosophy, color, typography, spacing/radii, buttons, inputs, tabs/chips, data tables, cards/modals, stat tiles, attribute displays, formation pitch, match-day HUD |
 | `Desktop Guardrails.html` | Desktop layout/resolution guardrails (density tiers, 1920×1080 reference stage) |
 | `Command Palette.html` | Global command-palette / navigation pattern |
 

@@ -154,4 +154,4 @@ Run identical 90-minute simulation inputs twice with same seed and assert byte-i
 ---
 
 *End of Section 5 — Decision Tree Specification #8*  
-*Tactical Director — Specification #8 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #8 of 20 | Stage 0: Physics Foundation*

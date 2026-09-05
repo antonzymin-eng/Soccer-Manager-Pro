@@ -513,4 +513,4 @@ FOLLOW_THROUGH / STUMBLING:
 ---
 
 *End of Section 3 (Part 2) — Shot Mechanics Specification #6*
-*Tactical Director — Specification #6 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #6 of 20 | Stage 0: Physics Foundation*

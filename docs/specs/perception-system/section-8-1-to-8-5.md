@@ -401,7 +401,7 @@ Sciences, 30*(3), 247–254.
 
 ---
 
-**[MASTER-VOL1-SCAN-DATA]** Tactical Director Design Team (2025). *Master Volume I:
+**[MASTER-VOL1-SCAN-DATA]** System XI Design Team (2025). *Master Volume I:
 Physics Core — §3.1 Scanning Frequency and Elite Rate Reference.* Internal project
 reference.
 
@@ -425,7 +425,7 @@ reference.
 
 ---
 
-**[MASTER-VOL1]** Tactical Director Design Team (2025). *Tactical Director — Master
+**[MASTER-VOL1]** System XI Design Team (2025). *System XI — Master
 Volume I: Physics Core.* Internal project document. File: `Master_Vol_1_Physics_Core.md`.
 
 - **Used for:**
@@ -439,7 +439,7 @@ Volume I: Physics Core.* Internal project document. File: `Master_Vol_1_Physics_
 
 ---
 
-**[MASTER-VOL2]** Tactical Director Design Team (2025). *Tactical Director — Master
+**[MASTER-VOL2]** System XI Design Team (2025). *System XI — Master
 Volume II: Human Systems.* Internal project document. File: `Master_Vol_2_Human_Systems.md`.
 
 - **Used for:**
@@ -449,7 +449,7 @@ Volume II: Human Systems.* Internal project document. File: `Master_Vol_2_Human_
 
 ---
 
-**[MASTER-VOL4]** Tactical Director Design Team (2025). *Tactical Director — Master
+**[MASTER-VOL4]** System XI Design Team (2025). *System XI — Master
 Volume IV: Tech Implementation.* Internal project document.
 File: `Master_Vol_4_Tech_Implementation.md`.
 
@@ -539,7 +539,7 @@ Multiple section files.
 
 ---
 
-**[BEST-PRACTICES]** *Tactical Director — Development Best Practices.* Internal project
+**[BEST-PRACTICES]** *System XI — Development Best Practices.* Internal project
 document. File: `Development_Best_Practices.md`.
 
 - **Used for:** Specification structure, version control discipline, approval checklist
@@ -548,7 +548,7 @@ document. File: `Development_Best_Practices.md`.
 
 ---
 
-**[SPEC-ERROR-LOG]** *Tactical Director — Specification Error Log v1.2.* Internal
+**[SPEC-ERROR-LOG]** *System XI — Specification Error Log v1.2.* Internal
 project document. File: `Spec_Error_Log_v1_2.md`.
 
 - **Used for:** All open error flags affecting this specification are tracked in the

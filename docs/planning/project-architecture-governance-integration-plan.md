@@ -16,7 +16,7 @@
 
 ## 0.1 Purpose
 
-This document maps the Project Architecture Governance Specification into the existing Tactical Director repository.
+This document maps the Project Architecture Governance Specification into the existing System XI repository.
 
 It answers five implementation questions:
 

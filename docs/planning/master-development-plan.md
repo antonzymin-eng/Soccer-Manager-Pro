@@ -1,4 +1,4 @@
-# Master Development Plan: "Tactical Director" (Working Title)
+# Master Development Plan: "System XI" (Working Title)
 ## The Football Manager Killer - Full Simulation Engine
 
 **Created:** December 30, 2025, 10:15 AM PST  
@@ -1432,7 +1432,7 @@ This Master Development Plan represents a **10-year commitment** to building the
 5. **Endurance:** Sustainable pace for the long haul
 
 **The Vision:**
-By Year 10, "Tactical Director" (working title) will have:
+By Year 10, "System XI" (working title) will have:
 - The most realistic match physics in any football game
 - Observable, transparent tactical systems that actually work
 - Deep psychological and social modeling

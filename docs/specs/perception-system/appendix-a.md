@@ -739,4 +739,4 @@ physics-layer stability (agent position integration), not expanding this window.
 ---
 
 *End of Appendix A — Perception System Specification #7*  
-*Tactical Director — Specification #7 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #7 of 20 | Stage 0: Physics Foundation*

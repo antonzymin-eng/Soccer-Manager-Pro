@@ -442,4 +442,4 @@ under full press, with numerical verification throughout.
 ---
 
 *End of Section 3 — Perception System Specification #7*  
-*Tactical Director — Specification #7 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #7 of 20 | Stage 0: Physics Foundation*

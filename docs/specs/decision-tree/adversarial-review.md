@@ -463,5 +463,5 @@ discharge of that follow-up.
 ---
 
 *End of Adversarial Review — Decision Tree Specification #8*
-*Tactical Director — Specification #8 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #8 of 20 | Stage 0: Physics Foundation*
 *Review date: 2026-05-03, 13:58 UTC*

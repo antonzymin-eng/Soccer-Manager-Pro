@@ -1,4 +1,4 @@
-# CLAUDE.md — Tactical Director agent guide
+# CLAUDE.md — System XI agent guide
 
 > **Purpose:** Small, always-loaded routing guide for AI agents.
 > **Expanded reference:** [`docs/agent-guides/project-reference.md`](docs/agent-guides/project-reference.md).
@@ -17,7 +17,7 @@
 
 ## Project essentials
 
-Tactical Director is a Unity 6 LTS football simulation. Specifications intentionally run ahead of
+System XI is a Unity 6 LTS football simulation. Specifications intentionally run ahead of
 implementation: **APPROVED does not mean implemented**. Check `src/` before assuming a consumer exists,
 and do not wire or harden an assembly-less specification ahead of its T0 landing.
 

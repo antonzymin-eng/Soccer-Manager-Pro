@@ -1,6 +1,6 @@
 ---
 name: advisor
-description: Convene the Tactical Director advisory council on a decision, plan, or diagnosis BEFORE code is written. Two read-only Opus advisors — integrity (determinism, layering, spec governance) and evidence (test adequacy, football realism, sequencing) — answer in parallel and are synthesized into one recommendation. Use when facing a design fork, choosing a next lever, planning a T-phase landing, sizing a calibration, or whenever a plan is about to be committed to and a second opinion is worth the tokens. Also invoked by the orchestrator at its decision points. This is PRE-implementation advice; adversarial-review owns POST-implementation findings.
+description: Convene the System XI advisory council on a decision, plan, or diagnosis BEFORE code is written. Two read-only Opus advisors — integrity (determinism, layering, spec governance) and evidence (test adequacy, football realism, sequencing) — answer in parallel and are synthesized into one recommendation. Use when facing a design fork, choosing a next lever, planning a T-phase landing, sizing a calibration, or whenever a plan is about to be committed to and a second opinion is worth the tokens. Also invoked by the orchestrator at its decision points. This is PRE-implementation advice; adversarial-review owns POST-implementation findings.
 ---
 
 # Advisory Council

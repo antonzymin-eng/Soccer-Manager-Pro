@@ -465,4 +465,4 @@ approved upstream specifications. No blocking items exist.
 ---
 
 *End of Section 1 — Perception System Specification #7*
-*Tactical Director — Specification #7 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #7 of 20 | Stage 0: Physics Foundation*

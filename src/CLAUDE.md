@@ -1,4 +1,4 @@
-# src/CLAUDE.md — Tactical Director coding guide
+# src/CLAUDE.md — System XI coding guide
 
 > **Scope:** Required rules for changes under `src/`.
 > **Expanded examples and catalogues:** [`../docs/agent-guides/coding-reference.md`](../docs/agent-guides/coding-reference.md).

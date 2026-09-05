@@ -544,4 +544,4 @@ re-verification of all §9.1 and §9.2 checklist items:
 ---
 
 *End of Section 9 — Code Standards & Style Guide Specification #20*
-*Tactical Director — Specification #20 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #20 of 20 | Stage 0: Physics Foundation*

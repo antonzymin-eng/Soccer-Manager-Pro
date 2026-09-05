@@ -13,7 +13,7 @@ history.
 
 Spec #18 is the project's authoritative governance document for **how
 performance budgets are tracked, measured, regression-gated, and
-remediated** across the Tactical Director codebase. It does not own
+remediated** across the System XI codebase. It does not own
 the per-subsystem budget numbers — those are owned by each spec's §6
 (or §4.5 in Shot Mechanics #6's case) — and it does not own the
 determinism regression scenarios or the canonical record format

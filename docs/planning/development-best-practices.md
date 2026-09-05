@@ -1,4 +1,4 @@
-# Development Best Practices: Tactical Director
+# Development Best Practices: System XI
 
 **Created:** December 30, 2025, 11:45 AM PST  
 **Version:** 1.0  

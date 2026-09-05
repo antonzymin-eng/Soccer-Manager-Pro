@@ -269,4 +269,4 @@ All pre-approval actions are resolved as of v1.2.
 
 *End of Section 8 — Perception System Specification #7*
 
-*Tactical Director — Specification #7 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #7 of 20 | Stage 0: Physics Foundation*

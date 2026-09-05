@@ -24,7 +24,7 @@
 
 ### Design Philosophy
 
-Every system in Tactical Director that evaluates a player attribute â€” movement speed, pass accuracy, shot power, decision quality â€” **must** route through the PerformanceContext gateway. No specification may read a raw attribute value and use it directly in a gameplay calculation.
+Every system in System XI that evaluates a player attribute â€” movement speed, pass accuracy, shot power, decision quality â€” **must** route through the PerformanceContext gateway. No specification may read a raw attribute value and use it directly in a gameplay calculation.
 
 **Why this exists:**
 

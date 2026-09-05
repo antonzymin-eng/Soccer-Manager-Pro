@@ -410,4 +410,4 @@ These items were identified during review and accepted as non-blocking for Stage
 
 *Shot Mechanics Specification #6 — Section 9 of 9*
 
-*Tactical Director — Specification #6 of 20 | Stage 0: Physics Foundation*
+*System XI — Specification #6 of 20 | Stage 0: Physics Foundation*
