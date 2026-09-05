@@ -2,7 +2,7 @@
 
 **Created:** September 4, 2026
 **Last Updated:** September 4, 2026
-**Version:** 1.0
+**Version:** 1.1
 **Status:** READY FOR IMPLEMENTATION PLANNING GATE
 **Scope:** Localization infrastructure, producer adoption, localization QA, translation production, and release gating. Accessibility is included only where #49 owns the option/value contract; #38 owns rendering/theme application.
 **Primary authorities:** `docs/specs/localization-accessibility/` (#49, APPROVED), `docs/tracking/localization-content-a11y-design.md` (Wave-8 extension, AR-converged but not yet promoted), `docs/tracking/path-to-playable-roadmap.md`, Code Standards #20, and Project Architecture Governance.
@@ -200,12 +200,13 @@ Expected initial public contracts:
 
 Do **not** put `InteractionIntent`, `EventKind`, media/news enums, `ProducerTag.Media`, Unity types, file-system code, or client settings persistence in this assembly.
 
-## 1.2 Value safety
+## 1.2 Value and locale-identity safety
 
 Lock:
 
 - invalid/default identifiers cannot accidentally alias valid catalogue entries;
 - ordinal equality for stable string keys/locale IDs;
+- locale IDs use canonical **BCP 47 language tags** (base remains `en`); canonical casing/well-formedness is enforced by content validation rather than by inventing a project-private locale naming scheme;
 - no duplicate named slots;
 - named-slot storage is defensively copied / externally immutable;
 - `SelectionDraw` stays `ulong` end-to-end;
@@ -283,23 +284,27 @@ Malformed placeholders/categories fail at authoring/build validation, not as sil
 
 ## 2.5 Canonical serialized content format
 
-Use repository-owned UTF-8 locale data under `Assets/Localization/` as **content**, while keeping parsing/loading outside the core's platform-neutral contract.
+Use repository-owned locale data under `Assets/Localization/` as **content**, while keeping parsing/loading outside the core's platform-neutral contract.
 
-Recommended source layout:
+Canonical authoring rules:
 
-- `Assets/Localization/en.json` — authoritative base strings/templates/clauses plus translator context metadata;
-- `Assets/Localization/<locale>.json` — non-base translated rows; omissions are legal and measured as fallback gaps;
-- schema/version field in every file;
-- symbolic producer name + stable local ordinal/name for authoring readability; build validation resolves the symbolic producer through the boundary registry.
+- files are UTF-8 and strings are canonical **Unicode NFC**; validator rejects non-canonical text rather than silently rewriting committed content;
+- `LocalizationKey`/placeholder identifiers use a restricted ASCII semantic-key grammar so identity never depends on Unicode normalization or translator editing;
+- `Assets/Localization/en.json` is the authoritative base strings/templates/clauses plus translator context metadata;
+- `Assets/Localization/<bcp47>.json` contains non-base translated rows; omissions are legal and measured as fallback gaps;
+- every file carries schema/version and locale ID;
+- symbolic producer name + stable local ordinal/name are retained for authoring readability; build validation resolves the symbolic producer through the boundary registry.
 
-The runtime `Localization` assembly accepts the validated in-memory representation. Unity/platform asset loading belongs to the appropriate shipping-host composition layer, not this core.
+The runtime `Localization` assembly accepts only the validated in-memory representation. **Host loading remains host-owned:** the Unity shipping host (`match-client-unity` or its final composition surface) loads Unity/TextAsset content and injects catalogues; any maintained web host owns its equivalent loader. `client-app` and the generic localization core remain free of Unity asset APIs.
 
 ## 2.6 Content validator
 
 Add localization validation tooling/tests covering:
 
 - schema/version;
-- valid locale ID;
+- canonical BCP 47 locale ID;
+- UTF-8/NFC content policy;
+- restricted key/placeholder grammar;
 - duplicate static/template/clause keys;
 - unknown producer tags;
 - extra variants beyond the base count;
@@ -508,11 +513,19 @@ Do not put palette/font/rendering assets or behaviors into `TacticalDirector.Loc
 
 **Goal:** turn stable base copy into shippable locale content without changing runtime architecture.
 
-## 7.1 Locale selection decision gate
+## 7.1 Locale selection and capability gate
 
 Do not start large-scale translation solely because the infrastructure exists. Select Early Access/launch target locales using product criteria such as expected audience, store strategy, translator availability, QA capacity, font/script support, and support burden.
 
 The first real locale is a product decision; this plan deliberately does not assume which language it is.
+
+Before committing to a target locale, run a capability check against the approved model:
+
+- if it requires **RTL/bidi layout**, the Stage-3+ RTL extension must be designed/implemented before the locale can be offered;
+- if correct player-facing output requires locale-specific date/number/currency formatting beyond the approved base behavior, add the dedicated display-format extension rather than smuggling formatting logic into translation templates;
+- if its grammar cannot be represented by the bounded selector model, open the named morphology-depth extension rather than adding one-off locale code.
+
+Translation work may begin in parallel with such an extension if useful, but the locale cannot pass the release gate until the required capability exists.
 
 ## 7.2 Source-language production discipline
 
@@ -538,18 +551,19 @@ Initial interchange requirements:
 - translation value;
 - review status.
 
-CSV/XLIFF/vendor-specific packages are generated artifacts, not the source of truth.
+CSV/XLIFF/vendor-specific packages are generated artifacts, not the source of truth. Translators never edit producer tags, local ordinals, placeholder names, schema fields, or catalogue identities.
 
 ## 7.4 Translation QA
 
 Each candidate locale passes:
 
-1. automated schema/placeholder/coverage validation;
+1. automated schema/BCP47/Unicode/placeholder/coverage validation;
 2. native-speaker linguistic review;
 3. in-game LQA using real screens and procedural text;
 4. pseudo/max-scale layout regression already established by the UI pipeline;
 5. font/glyph coverage check;
-6. smoke test of fallback behavior for intentionally missing internal-development rows.
+6. smoke test of fallback behavior for intentionally missing internal-development rows;
+7. any locale-specific capability gate from §7.1 (RTL/formatting/grammar) required by that locale.
 
 Incomplete locales may exist in development but are not offered to players.
 
@@ -564,7 +578,8 @@ Incomplete locales may exist in development but are not offered to players.
 For each non-base locale:
 
 - translation coverage >= owner-approved release threshold; **and**
-- shipped font/fallback chain covers required script/glyphs.
+- shipped font/fallback chain covers required script/glyphs; **and**
+- all required locale-specific capability gates from §7.1 are satisfied.
 
 Base locale bypasses this gate. Pseudo-locale is always excluded from shipping choices.
 
@@ -573,7 +588,7 @@ Base locale bypasses this gate. Pseudo-locale is always excluded from shipping c
 #39 release engineering consumes the same report to verify:
 
 - in-game locale picker;
-- Steam/storefront supported-language claims;
+- Steam/storefront supported-language claims (including the explicit mapping from canonical BCP 47 IDs to platform/store language identifiers);
 - packaged locale assets;
 - font assets;
 - release checklist.
@@ -594,7 +609,8 @@ The completeness percentage is a product/release policy value, not a renderer be
 - Base template variant reordering is a visible content change because it remaps deterministic selection values; require explicit review.
 - New base placeholders require every existing translated variant to be revalidated.
 - Translation PRs receive a delta report: added/changed/deleted source entries and impacted locales.
-- No deeper morphology/RTL/bidi support is added until a target language proves the current bounded model insufficient; then open the Stage-3+ extension explicitly.
+- Locale content remains UTF-8/NFC; identity fields remain ASCII/canonical and are never translator-owned.
+- No deeper morphology/RTL/bidi/locale-formatting support is added opportunistically; each is activated by a real target-locale requirement and lands as an explicit extension.
 - Runtime fallback is a safety net, not a substitute for release completeness.
 
 ---
@@ -615,7 +631,7 @@ Recommended mergeable slices:
 | **L4+** | each subsequent producer binding | producer exists + L3 | producer coverage/layer tests |
 | **L5** | pseudo-locale + completeness report | L-P0C + L2 | non-vacuity/layout tooling tests |
 | **L6** | a11y values/settings contracts | L-P0C + #38 back-props | ownership + settings tests |
-| **L7** | first real locale content | UI/copy maturity + L5 | coverage/LQA/font gates |
+| **L7** | first real locale content | UI/copy maturity + L5 + locale capability gate | coverage/LQA/font/capability gates |
 | **L8** | release locale gate | #39 release path | picker/store/package agreement |
 
 Parallelism:
@@ -667,11 +683,14 @@ At that point implementation should begin with **L-P0A / L-P0B coordination and 
 
 - **D1 critique:** identity proof lacked an independent pre-migration oracle; ProducerTag registry placement would have forced core edits; architecture admission was treated as a total blocker rather than a merge gate; host/platform content loading was insufficiently separated from the core.
 - **D2 fixes:** exhaustive pre-retrofit golden vectors; ProducerTag moved to append-only boundary ownership; planning/schema/oracle tasks can proceed in parallel with A3 while runtime merge waits; canonical locale assets are content while the core consumes only in-memory data; Unity/platform loading remains host/composition-owned.
+- **D3 critique:** locale identifiers/Unicode canonicalization were underspecified, and a first target language could otherwise force RTL, culture formatting, or deeper morphology into T0 by accident.
+- **D3 fixes:** canonical BCP 47 IDs; UTF-8/NFC authoring policy with ASCII identity tokens; explicit host-loader ownership; pre-translation capability gates for RTL/bidi, locale-specific display formatting, and morphology depth; release gate now requires those capabilities when applicable.
 
-**D2 conclusion:** no remaining structural High/Medium planning defect identified. Ready for implementation after Phase-0 gates and user acceptance.
+**D3 conclusion:** no remaining structural High/Medium planning defect identified. Ready for implementation after Phase-0 gates and user acceptance.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-09-04 | — | Converged high-level and detailed localization implementation plan after iterative critique. |
+| 1.1 | 2026-09-04 | — | Final hardening: BCP 47/Unicode canonicalization, explicit host loading, and target-locale capability gates for RTL/formatting/morphology. |
 #endregion
