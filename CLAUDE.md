@@ -14,6 +14,9 @@
    every file in the affected spec folder.
 5. Use [`docs/tracking/path-to-playable-roadmap.md`](docs/tracking/path-to-playable-roadmap.md) for
    implementation order and [`docs/tracking/open-issues.md`](docs/tracking/open-issues.md) for live blockers.
+6. For player-facing UX/design work, read [`docs/design/ux-high-level-plan.md`](docs/design/ux-high-level-plan.md)
+   and [`docs/design/ux-detailed-plan.md`](docs/design/ux-detailed-plan.md) before editing mockups or client UX.
+   The detailed plan's F0 tracking close-out precedes F1 and any further substantial UX production.
 
 ## Project essentials
 
