@@ -32,6 +32,7 @@ class RequiredApprovalGateWiringTests(unittest.TestCase):
         self.assertIn('approval-transition audit requires the PR base commit SHA', text)
         self.assertIn('testing-strategy-approval-scope.py', text)
         self.assertIn('checklist-auditor.py', text)
+        self.assertIn('--execute-checks', text)
         self.assertIn('spec5-schema-auditor.py', text)
         self.assertNotIn('--survey-only', text)
 
