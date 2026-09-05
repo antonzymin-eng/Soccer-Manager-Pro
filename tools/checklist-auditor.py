@@ -35,6 +35,8 @@ CHECKBOX_RE = re.compile(r"^\s*[-*]\s*\[([ xX])\]\s*(.+?)\s*$")
 HEADING_SECTION_RE = re.compile(r"^#{1,6}\s+(\d+(?:\.\d+)*)\b")
 EVIDENCE_MARKER_RE = re.compile(r"\bEvidence\s*:\s*", re.IGNORECASE)
 WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.+-]*|\d+(?:\.\d+)?%?")
+NUMERIC_TERM_RE = re.compile(r"\d+(?:\.\d+)?%?")
+TOKEN_BOUNDARY_CHARS = r"A-Za-z0-9_.+%-"
 STOP_WORDS = {
     "about", "after", "against", "also", "and", "are", "been", "before",
     "being", "between", "check", "checked", "claim", "confirmed", "defined",
@@ -120,7 +122,7 @@ def section_block(text: str, section: str) -> str | None:
 
 
 def local_section_paths(evidence: str, spec_dir: Path) -> list[tuple[str, Path]]:
-    """Resolve section-only citations like `§3.2` to the owning local section file."""
+    """Resolve canonical `§N.x` citations to the owning local section file."""
     out: list[tuple[str, Path]] = []
     for section in SECTION_RE.findall(evidence):
         major = section.split(".", 1)[0]
@@ -159,10 +161,28 @@ def claim_terms(claim: str) -> list[str]:
     terms: list[str] = []
     for token in WORD_RE.findall(text):
         lowered = token.lower().strip("._+-")
-        if len(lowered) < 3 or lowered in STOP_WORDS:
+        numeric = bool(NUMERIC_TERM_RE.fullmatch(lowered))
+        if ((not numeric and len(lowered) < 3) or lowered in STOP_WORDS):
             continue
         terms.append(lowered)
     return list(dict.fromkeys(terms))
+
+
+def text_contains_complete_term(text: str, term: str) -> bool:
+    """Match a claim token without accepting it as a substring of another value.
+
+    This makes `60` distinct from `600` and prevents lexical fragments from
+    satisfying a claim merely because they occur inside a larger identifier or
+    word. Multi-word literals still use the same boundary rule at their ends.
+    """
+    needle = term.strip()
+    if not needle:
+        return False
+    return re.search(
+        rf"(?<![{TOKEN_BOUNDARY_CHARS}]){re.escape(needle)}(?![{TOKEN_BOUNDARY_CHARS}])",
+        text,
+        re.IGNORECASE,
+    ) is not None
 
 
 def path_evidence_supports_claim(claim: str, evidence: str, resolved: list[tuple[str, Path]]) -> bool:
@@ -193,16 +213,15 @@ def path_evidence_supports_claim(claim: str, evidence: str, resolved: list[tuple
         chunks.extend(path_text.values())
 
     combined = "\n".join(chunks)
-    combined_lower = combined.lower()
     path_tokens = {token for token, _ in resolved}
     literals = concrete_literals(claim, evidence, path_tokens)
     if literals:
-        return all(literal.lower() in combined_lower for literal in literals)
+        return all(text_contains_complete_term(combined, literal) for literal in literals)
 
     terms = claim_terms(claim)
     if not terms:
         return False
-    matched = sum(term in combined_lower for term in terms)
+    matched = sum(text_contains_complete_term(combined, term) for term in terms)
     required = 1 if len(terms) == 1 else min(4, max(2, math.ceil(len(terms) * 0.4)))
     return matched >= required
 
@@ -350,12 +369,50 @@ def main() -> int:
     total_rows = 0
     findings: list[Finding] = []
     audited_files = 0
+    candidate_dirs: set[Path] = set()
+    rows_by_dir: dict[Path, int] = {}
     for path in candidates:
+        parent = path.parent.resolve()
+        candidate_dirs.add(parent)
         _, checked, file_findings = audit_file(path, repo_root, survey_only=args.survey_only, changed_scope=args.changed_scope, enforce_dirs=enforce_dirs, captured_checks=captured_checks)
+        rows_by_dir[parent] = rows_by_dir.get(parent, 0) + checked
         if checked:
             audited_files += 1
             total_rows += checked
             findings.extend(file_findings)
+
+    # Approval enforcement is incomplete if an explicitly enforced spec has no
+    # checklist artifact or if its checklist contributes no auditable evidence
+    # rows. Treat absence itself as a blocking finding rather than an empty pass.
+    if not args.survey_only and enforce_dirs:
+        for enforced_dir in sorted(enforce_dirs):
+            matching_dirs = {
+                candidate_dir
+                for candidate_dir in candidate_dirs
+                if candidate_dir == enforced_dir or enforced_dir in candidate_dir.parents
+            }
+            if not matching_dirs:
+                findings.append(
+                    Finding(
+                        None,
+                        str(enforced_dir),
+                        "§9",
+                        "missing required approval-checklist file",
+                        True,
+                    )
+                )
+                continue
+            row_count = sum(rows_by_dir.get(candidate_dir, 0) for candidate_dir in matching_dirs)
+            if row_count == 0:
+                findings.append(
+                    Finding(
+                        None,
+                        str(enforced_dir),
+                        "§9",
+                        "approval-checklist contains no auditable evidence rows",
+                        True,
+                    )
+                )
 
     payload = {
         "auditor": "checklist-auditor",
