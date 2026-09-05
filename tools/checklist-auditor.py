@@ -34,8 +34,12 @@ IDENT_RE = re.compile(r"\b(?:FR-[A-Z]+-\d+|ERR-\d+-\d+|KD-\d+|[A-Za-z_][A-Za-z0-
 CHECKBOX_RE = re.compile(r"^\s*[-*]\s*\[([ xX])\]\s*(.+?)\s*$")
 HEADING_SECTION_RE = re.compile(r"^#{1,6}\s+(\d+(?:\.\d+)*)\b")
 EVIDENCE_MARKER_RE = re.compile(r"\bEvidence\s*:\s*", re.IGNORECASE)
-WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.+-]*|\d+(?:\.\d+)?%?")
-NUMERIC_TERM_RE = re.compile(r"\d+(?:\.\d+)?%?")
+WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.+-]*|[-+]?\d+(?:\.\d+)?%?")
+NUMERIC_TERM_RE = re.compile(r"[-+]?\d+(?:\.\d+)?%?")
+MANDATORY_VALUE_WORDS = {
+    "enabled", "disabled", "true", "false", "present", "absent",
+    "on", "off", "yes", "no", "not",
+}
 STOP_WORDS = {
     "about", "after", "against", "also", "and", "are", "been", "before",
     "being", "between", "check", "checked", "claim", "confirmed", "defined",
@@ -148,10 +152,15 @@ def concrete_literals(claim: str, evidence: str, path_tokens: set[str]) -> list[
                 continue
             literals.append(stripped)
     literals.extend(IDENT_RE.findall(claim))
-    # Explicit numeric values are semantic claim literals. They are mandatory,
-    # not optional members of the fuzzy lexical threshold: `60` must never be
-    # satisfied by evidence containing only `600`.
+    # Explicit numeric and polarity values are semantic claim literals. They
+    # are mandatory rather than optional members of the lexical quorum: `60`
+    # cannot be satisfied by `600`, and `disabled` cannot be outvoted by
+    # surrounding words in evidence that actually says `enabled`.
     literals.extend(NUMERIC_TERM_RE.findall(claim))
+    for token in WORD_RE.findall(claim):
+        lowered = token.lower().strip("._+-")
+        if lowered in MANDATORY_VALUE_WORDS:
+            literals.append(lowered)
     return list(dict.fromkeys(literals))
 
 
@@ -164,7 +173,7 @@ def claim_terms(claim: str) -> list[str]:
     terms: list[str] = []
     for token in WORD_RE.findall(text):
         lowered = token.lower().strip("._+-")
-        numeric = bool(NUMERIC_TERM_RE.fullmatch(lowered))
+        numeric = bool(NUMERIC_TERM_RE.fullmatch(token))
         if ((not numeric and len(lowered) < 3) or lowered in STOP_WORDS):
             continue
         terms.append(lowered)
@@ -178,13 +187,13 @@ def text_contains_complete_term(text: str, term: str) -> bool:
         return False
     escaped = re.escape(needle)
     if NUMERIC_TERM_RE.fullmatch(needle):
-        # Prevent 60 from matching 600 or 60.0. Percent is also part of a
-        # numeric value token and must not be silently discarded.
-        pattern = rf"(?<![0-9.]){escaped}(?![0-9.%])"
+        # Prevent 60 from matching 600 or 60.0. Percent/sign are part of the
+        # numeric value and must not be silently discarded.
+        pattern = rf"(?<![0-9.+-]){escaped}(?![0-9.%])"
     else:
-        # Dot and ordinary punctuation are allowed around a word/identifier;
-        # only alphanumeric/underscore adjacency makes it a larger token.
-        pattern = rf"(?<![A-Za-z0-9_]){escaped}(?![A-Za-z0-9_])"
+        # Hyphen/underscore join lexical tokens; punctuation such as a trailing
+        # period remains a boundary.
+        pattern = rf"(?<![A-Za-z0-9_-]){escaped}(?![A-Za-z0-9_-])"
     return re.search(pattern, text, re.IGNORECASE) is not None
 
 
