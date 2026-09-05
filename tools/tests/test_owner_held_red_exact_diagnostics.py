@@ -16,7 +16,7 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
             tmp = Path(td)
             ledger = tmp / "ledger.txt"
             ledger.write_text(
-                "sim_match_engine_close_chance|-0.165|0.407\n",
+                "sim_match_engine_close_chance|meanCosine=-0.165|goalwardShare=0.407\n",
                 encoding="utf-8",
             )
             results = tmp / "results"
@@ -51,6 +51,21 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
         proc = self.verify("meanCosine=-0.1659 goalwardShare=0.4078")
         self.assertEqual(proc.returncode, 1, proc.stdout)
         self.assertIn("changed diagnostics", proc.stdout)
+
+    def test_baseline_values_elsewhere_do_not_mask_drifted_fields(self) -> None:
+        proc = self.verify(
+            "meanCosine=-0.100 (baseline -0.165) "
+            "goalwardShare=0.500 (baseline 0.407)"
+        )
+        self.assertEqual(proc.returncode, 1, proc.stdout)
+        self.assertIn("changed diagnostics", proc.stdout)
+
+    def test_duplicate_field_assignment_is_ambiguous_and_fails(self) -> None:
+        proc = self.verify(
+            "meanCosine=-0.165 meanCosine=-0.100 goalwardShare=0.407"
+        )
+        self.assertEqual(proc.returncode, 1, proc.stdout)
+        self.assertIn("ambiguous field", proc.stdout)
 
     def test_unicode_minus_normalizes_but_value_must_remain_exact(self) -> None:
         proc = self.verify("meanCosine=−0.165 goalwardShare=0.407")
