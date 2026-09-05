@@ -36,6 +36,14 @@ PROGRAM_COMMANDS = {
     "rg",
     "sh",
 }
+READ_ONLY_GIT_SUBCOMMANDS = {
+    "diff",
+    "grep",
+    "ls-files",
+    "rev-parse",
+    "show",
+    "status",
+}
 
 
 @dataclass(frozen=True)
@@ -206,43 +214,81 @@ def has_resolved_local_section_reference(evidence: str, *, spec_dir: Path) -> bo
     return False
 
 
-def _inline_programmatic_command(
+def _inline_programmatic_argv(
     token: str, *, repo_root: Path, spec_dir: Path
-) -> bool:
-    """Accept only explicit inline commands, never prose that merely says 'test/check'."""
+) -> tuple[str, ...] | None:
+    """Parse an explicit, bounded programmatic invocation from a backtick span.
+
+    Merely citing a source file is never an invocation. In particular, `.cs`
+    citations remain file evidence. Commands are executed without a shell.
+    """
     try:
         argv = shlex.split(token)
     except ValueError:
-        return False
+        return None
     if not argv or argv[0] not in PROGRAM_COMMANDS:
-        return False
+        return None
 
-    # Commands that name a repository script/file must resolve that operand.
-    path_like = [
-        arg for arg in argv[1:]
-        if not arg.startswith("-") and ("/" in arg or Path(arg).suffix)
-    ]
-    if path_like:
-        return any(
+    command = argv[0]
+    if command in {"python", "python3", "bash", "sh"}:
+        # Inline code/module execution is deliberately excluded. Approval checks
+        # must name a version-controlled repository script.
+        if any(arg in {"-c", "-m"} for arg in argv[1:]):
+            return None
+        script_args = [
+            arg
+            for arg in argv[1:]
+            if not arg.startswith("-")
+            and ("/" in arg or Path(arg).suffix.lower() in {".py", ".sh"})
+        ]
+        if not script_args:
+            return None
+        if not any(
             resolve_candidate(arg, repo_root=repo_root, spec_dir=spec_dir)
-            for arg in path_like
-        )
+            for arg in script_args
+        ):
+            return None
+    elif command == "git":
+        if len(argv) < 2 or argv[1] not in READ_ONLY_GIT_SUBCOMMANDS:
+            return None
+    elif command == "dotnet":
+        if len(argv) < 2 or argv[1] != "test":
+            return None
+    elif command in {"grep", "rg"}:
+        if len(argv) < 2:
+            return None
 
-    # Repository-independent invocations such as `git diff` or `dotnet test`
-    # are still explicit programmatic checks if they have a concrete subcommand.
-    return len(argv) >= 2 and not argv[1].startswith("-")
+    return tuple(argv)
+
+
+def programmatic_check_commands(
+    evidence: str, *, repo_root: Path, spec_dir: Path
+) -> list[tuple[str, tuple[str, ...]]]:
+    """Return explicit programmatic checks as `(label, argv)` pairs.
+
+    Only backticked invocations are checks. A backticked or plain file path,
+    including `.py`, `.sh`, or `.cs`, is a source citation unless it includes
+    an explicit command such as `python3 tools/check.py`.
+    """
+    checks: list[tuple[str, tuple[str, ...]]] = []
+    seen: set[str] = set()
+    for raw in BACKTICK_RE.findall(evidence):
+        label = raw.strip()
+        argv = _inline_programmatic_argv(
+            label, repo_root=repo_root, spec_dir=spec_dir
+        )
+        if argv is None or label in seen:
+            continue
+        seen.add(label)
+        checks.append((label, argv))
+    return checks
 
 
 def has_named_programmatic_check(evidence: str, *, repo_root: Path, spec_dir: Path) -> bool:
-    for token in candidate_paths(evidence):
-        if resolve_candidate(token, repo_root=repo_root, spec_dir=spec_dir):
-            suffix = Path(token.split("#", 1)[0]).suffix.lower()
-            if suffix in {".py", ".sh", ".cs"} or token.startswith("tools/"):
-                return True
-
-    return any(
-        _inline_programmatic_command(token.strip(), repo_root=repo_root, spec_dir=spec_dir)
-        for token in BACKTICK_RE.findall(evidence)
+    return bool(
+        programmatic_check_commands(
+            evidence, repo_root=repo_root, spec_dir=spec_dir
+        )
     )
 
 
