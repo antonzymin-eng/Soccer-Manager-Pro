@@ -76,7 +76,7 @@ class TestingStrategyAuditorHardeningTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 1, proc.stdout)
             self.assertIn("BLOCK", proc.stdout)
 
-    def test_checkbox_rows_are_audited_and_section_must_support_claim(self) -> None:
+    def test_checkbox_rows_are_audited_and_section_must_resolve(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             spec = repo / "docs" / "specs" / "spec-nine"
@@ -102,12 +102,12 @@ class TestingStrategyAuditorHardeningTests(unittest.TestCase):
                 "# Spec #9 — Approval Checklist\n"
                 "> **Status:** `APPROVED`\n\n"
                 "## 9.1 Representation\n"
-                "- [x] the moon is cheese. Evidence: `section-1.md` §1.1.\n",
+                "- [x] claim reviewed manually. Evidence: `section-1.md` §1.999.\n",
                 encoding="utf-8",
             )
             bad = self.run_auditor(CHECKLIST, repo, spec)
             self.assertEqual(bad.returncode, 1, bad.stdout)
-            self.assertIn("does not contain concrete text or values supporting the claim", bad.stdout)
+            self.assertIn("unresolved evidence section", bad.stdout)
 
     def test_checkbox_without_resolved_evidence_blocks_approval(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -123,9 +123,10 @@ class TestingStrategyAuditorHardeningTests(unittest.TestCase):
             )
             proc = self.run_auditor(CHECKLIST, repo, spec)
             self.assertEqual(proc.returncode, 1, proc.stdout)
+            self.assertIn("checkbox is not checked", proc.stdout)
             self.assertIn("prose only", proc.stdout)
 
-    def test_numeric_claim_value_does_not_match_longer_number(self) -> None:
+    def test_natural_language_value_comparison_is_stage0_not_automation(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             spec = repo / "docs" / "specs" / "spec-nine"
@@ -141,8 +142,8 @@ class TestingStrategyAuditorHardeningTests(unittest.TestCase):
                 encoding="utf-8",
             )
             proc = self.run_auditor(CHECKLIST, repo, spec)
-            self.assertEqual(proc.returncode, 1, proc.stdout)
-            self.assertIn("does not contain concrete text or values supporting the claim", proc.stdout)
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertNotIn("supporting the claim", proc.stdout)
 
     def test_enforced_approved_spec_without_checklist_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as td:
