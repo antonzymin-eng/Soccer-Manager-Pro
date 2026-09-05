@@ -23,6 +23,7 @@ from testing_strategy_audit import (
     canonical_spec_status,
     describe,
     infer_spec_id,
+    invalid_programmatic_check_labels,
     is_approved_status,
     is_legacy_survey,
     iter_tables,
@@ -31,6 +32,7 @@ from testing_strategy_audit import (
 
 SECTION_RE = re.compile(r"§\s*(\d+(?:\.\d+)*)")
 CHECKBOX_RE = re.compile(r"^\s*[-*]\s*\[([ xX])\]\s*(.+?)\s*$")
+TABLE_STATUS_CHECKBOX_RE = re.compile(r"\[\s*([ xX])\s*\]")
 HEADING_SECTION_RE = re.compile(r"^#{1,6}\s+(\d+(?:\.\d+)*)\b")
 EVIDENCE_MARKER_RE = re.compile(r"\bEvidence\s*:\s*", re.IGNORECASE)
 
@@ -113,6 +115,13 @@ def is_enforced(
     return any(resolved == root or root in resolved.parents for root in enforce_dirs)
 
 
+def legacy_exempt(
+    spec_id: int | None, *, changed_scope: bool, blocking_scope: bool
+) -> bool:
+    """Keep #1-#8 survey-only except at an explicit natural-reapproval scope."""
+    return is_legacy_survey(spec_id) and not (changed_scope and blocking_scope)
+
+
 def resolve_path(token: str, *, repo_root: Path, spec_dir: Path) -> Path | None:
     token = token.split("#", 1)[0].strip()
     token = re.sub(r"\s+§.*$", "", token).strip()
@@ -165,15 +174,23 @@ def resolve_section_references(
     spec_dir: Path,
     resolved_paths: list[tuple[str, Path]],
 ) -> tuple[list[tuple[str, Path]], list[str]]:
-    """Resolve every explicit §N.x reference to an actual Markdown heading."""
+    """Resolve every explicit §N.x reference to the cited Markdown file when one exists."""
     found: list[tuple[str, Path]] = []
     missing: list[str] = []
-    markdown_candidates = [path for _, path in resolved_paths if path.suffix.lower() == ".md"]
+    markdown_candidates = [
+        path for _, path in resolved_paths if path.suffix.lower() == ".md"
+    ]
 
     for section in SECTION_RE.findall(evidence):
         major = section.split(".", 1)[0]
-        candidates = list(markdown_candidates)
-        candidates.extend(sorted(spec_dir.glob(f"section-{major}*.md")))
+        # If evidence explicitly cites one or more Markdown files, the section
+        # must resolve in those files. Falling back to the owning spec would
+        # silently rebind a broken cross-file citation to unrelated local text.
+        candidates = (
+            list(markdown_candidates)
+            if markdown_candidates
+            else sorted(spec_dir.glob(f"section-{major}*.md"))
+        )
         seen: set[Path] = set()
         matched_path: Path | None = None
         for path in candidates:
@@ -279,6 +296,19 @@ def audit_evidence_row(
             str(path),
             row_id,
             "placeholder evidence token is not executable/resolved evidence",
+            blocking,
+        )
+
+    invalid_commands = invalid_programmatic_check_labels(
+        evidence, repo_root=repo_root, spec_dir=spec_dir
+    )
+    if invalid_commands:
+        return Finding(
+            spec_id,
+            str(path),
+            row_id,
+            "invalid/unsupported programmatic invocation(s): "
+            + ", ".join(f"`{label}`" for label in invalid_commands),
             blocking,
         )
 
@@ -395,7 +425,9 @@ def audit_file(
     )
     blocking = (
         blocking_scope
-        and not is_legacy_survey(spec_id)
+        and not legacy_exempt(
+            spec_id, changed_scope=changed_scope, blocking_scope=blocking_scope
+        )
         and is_approved_status(status)
     )
 
@@ -415,6 +447,10 @@ def audit_file(
             (i for i, header in enumerate(headers) if "claim" in header.lower()),
             None,
         )
+        status_i = next(
+            (i for i, header in enumerate(headers) if header.strip().lower() == "status"),
+            None,
+        )
 
         for line_no, cells in rows:
             evidence = cells[evidence_i].strip()
@@ -425,6 +461,20 @@ def audit_file(
             )
             row_id = cells[0].strip() if cells else f"line {line_no}"
             checked += 1
+
+            if status_i is not None and status_i < len(cells):
+                status_checkbox = TABLE_STATUS_CHECKBOX_RE.search(cells[status_i])
+                if status_checkbox and status_checkbox.group(1).lower() != "x":
+                    findings.append(
+                        Finding(
+                            spec_id,
+                            str(path),
+                            row_id,
+                            "approval checklist status checkbox is not checked",
+                            blocking,
+                        )
+                    )
+
             finding = audit_evidence_row(
                 spec_id=spec_id,
                 path=path,
