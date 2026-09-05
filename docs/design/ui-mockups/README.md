@@ -1,9 +1,10 @@
 # UI Mockups — System XI (design reference)
 
 **Created:** July 25, 2026
-**Last Updated:** July 25, 2026 (visual direction CHOSEN: `touchline`)
+**Last Updated:** September 4, 2026 (UX-S1 begins: PM-1 Main Menu reference added)
 **Status:** DESIGN REFERENCE (non-normative)
 **Related spec:** UI / Client Framework **#38** (`docs/specs/ui-client-framework/`, APPROVED July 22, 2026)
+**UX foundation:** [`../ux-foundation.md`](../ux-foundation.md)
 
 ---
 
@@ -39,6 +40,7 @@ implementation design against.
 
 | File | Screen | Nearest data spec |
 |------|--------|-------------------|
+| `Main Menu.html` | Main menu / PM-1 root screen | #38 framework + current `client-app` navigation graph |
 | `Squad Screen.html` | Squad list / player detail | #27 Squad / Player Data Layer |
 | `Tactics.html` | Tactics & formation | #21 Tactical Instructions, #26 Tactical Presets |
 | `Training Screen.html` | Training | #29 Training System |
@@ -109,3 +111,4 @@ sim (see §1).
 |---------|------|--------|
 | 1.0 | July 25, 2026 | Initial landing: design system + 11 screen mockups + shared assets, imported as the #38 visual reference. |
 | 1.1 | July 25, 2026 | Visual direction chosen: `touchline` (§5). `app.js` default corrected from `stadium` — the pages had been rendering a direction their own markup did not declare. |
+| 1.2 | September 4, 2026 | Began UX-S1 from `ux-foundation.md`: added the PM-1 Main Menu reference while preserving the existing `touchline` system and art-independent fallback behavior. |
