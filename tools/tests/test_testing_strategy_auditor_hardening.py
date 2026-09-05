@@ -125,6 +125,36 @@ class TestingStrategyAuditorHardeningTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 1, proc.stdout)
             self.assertIn("prose only", proc.stdout)
 
+    def test_numeric_claim_value_does_not_match_longer_number(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            spec = repo / "docs" / "specs" / "spec-nine"
+            spec.mkdir(parents=True)
+            (spec / "section-1.md").write_text(
+                "# Spec #9 — Section 1\n## 1.1 Timeout\nThe timeout is 600 seconds.\n",
+                encoding="utf-8",
+            )
+            (spec / "section-9-approval-checklist.md").write_text(
+                "# Spec #9 — Approval Checklist\n**Status:** APPROVED\n"
+                "| Row | Claim | Evidence |\n|---|---|---|\n"
+                "| 9.1 | Timeout is 60 seconds | `section-1.md` §1.1 |\n",
+                encoding="utf-8",
+            )
+            proc = self.run_auditor(CHECKLIST, repo, spec)
+            self.assertEqual(proc.returncode, 1, proc.stdout)
+            self.assertIn("does not contain concrete text or values supporting the claim", proc.stdout)
+
+    def test_enforced_approved_spec_without_checklist_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            spec = repo / "docs" / "specs" / "spec-nine"
+            spec.mkdir(parents=True)
+            self.write_index(repo, folder="spec-nine", status="APPROVED")
+            (spec / "section-1.md").write_text("# Spec #9 — Section 1\n", encoding="utf-8")
+            proc = self.run_auditor(CHECKLIST, repo, spec)
+            self.assertEqual(proc.returncode, 1, proc.stdout)
+            self.assertIn("missing required approval-checklist file", proc.stdout)
+
     def test_appendix_c_taxonomy_requires_determinism_and_end_to_end_rows(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
@@ -176,6 +206,37 @@ class TestingStrategyAuditorHardeningTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 1, proc.stdout)
             self.assertIn("missing required section-5 test-plan file", proc.stdout)
             self.assertIn("BLOCK", proc.stdout)
+
+    def test_section5_approval_link_must_resolve_to_real_checklist_row(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            spec = repo / "docs" / "specs" / "spec-nine"
+            scenario = repo / "tests" / "scenarios" / "spec-nine" / "smoke.json"
+            scenario.parent.mkdir(parents=True)
+            scenario.write_text("{}\n", encoding="utf-8")
+            spec.mkdir(parents=True)
+            self.write_index(repo, folder="spec-nine", status="APPROVED")
+            (spec / "section-9-approval-checklist.md").write_text(
+                "# Spec #9 — Approval Checklist\n## 9.1 Real row\n",
+                encoding="utf-8",
+            )
+            (spec / "section-5.md").write_text(
+                "# Spec #9 — Section 5: Test Plan\n**Status:** APPROVED\n\n"
+                "## 5.1 Test Count by Taxonomy Layer\n"
+                "| Layer | Count | Notes |\n|---|---:|---|\n"
+                "| Unit | 1 | |\n| Integration | 1 | |\n| Simulation | 1 | |\n"
+                "| Determinism (consumed from #16 §5) | — | |\n| End-to-end / soak | 1 | |\n\n"
+                "## 5.2 Property Test List\n| Property | Tier | Owning Module |\n|---|---|---|\n| prop | A | Core |\n\n"
+                "## 5.3 Scenario List\n| Scenario | Manifest Path | Tier |\n|---|---|---|\n| smoke | `tests/scenarios/spec-nine/smoke.json` | B |\n\n"
+                "## 5.4 Coverage Targets\n| Tier | Line | Branch |\n|---|---|---|\n| A | 98% | 95% |\n| B | 90% | 80% |\n| C | lint-only | — |\n\n"
+                "## 5.5 Determinism-Tier Classification\n| Field | Tier | Source |\n|---|---|---|\n| Core.Value | A | #16 §1.1.1 |\n\n"
+                "## 5.6 Approval-Checklist Linkage\n| Test ID | Verifies §9 Row |\n|---|---|\n| unit_core | §9.999 |\n\n"
+                "## 5.7 Version History\n- v1\n",
+                encoding="utf-8",
+            )
+            proc = self.run_auditor(SCHEMA, repo, spec)
+            self.assertEqual(proc.returncode, 1, proc.stdout)
+            self.assertIn("references missing approval-checklist row §9.999", proc.stdout)
 
 
 if __name__ == "__main__":
