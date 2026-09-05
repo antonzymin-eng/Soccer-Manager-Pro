@@ -5,8 +5,11 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import re
 import sys
 import xml.etree.ElementTree as ET
+
+NUMERIC_TOKEN_RE = re.compile(r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
 
 
 def parse_args() -> argparse.Namespace:
@@ -72,6 +75,21 @@ def find_result(
     return None
 
 
+def diagnostic_token_present(body: str, token: str) -> bool:
+    """Require recorded numeric diagnostics as complete values, never prefixes."""
+    normalized_body = normalize(body)
+    normalized_token = normalize(token).strip()
+    if NUMERIC_TOKEN_RE.fullmatch(normalized_token):
+        escaped = re.escape(normalized_token)
+        # `-0.165` must not match `-0.1659`; `0.407` must not match
+        # `0.4078`. Assignment punctuation around the value remains allowed.
+        return re.search(
+            rf"(?<![0-9.+-]){escaped}(?![0-9.eE%])",
+            normalized_body,
+        ) is not None
+    return normalized_token in normalized_body
+
+
 def main() -> int:
     args = parse_args()
     try:
@@ -106,7 +124,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        missing = [token for token in tokens if normalize(token) not in body]
+        missing = [token for token in tokens if not diagnostic_token_present(body, token)]
         if missing:
             print(
                 f"ERROR: owner-held RED {name} changed diagnostics; missing token(s): "
