@@ -25,6 +25,11 @@ from testing_strategy_audit import (
     iter_tables,
 )
 
+CHECKLIST_REF_RE = re.compile(r"§\s*(9(?:\.\d+)+)")
+CHECKLIST_ROW_RE = re.compile(r"^(?:§\s*)?(9(?:\.\d+)+)\b")
+CHECKLIST_HEADING_RE = re.compile(r"^#{1,6}\s+(9(?:\.\d+)+)\b")
+CHECKBOX_ROW_RE = re.compile(r"^\s*[-*]\s*\[[ xX]\]\s*(?:§\s*)?(9(?:\.\d+)+)\b")
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -280,7 +285,35 @@ def validate_determinism(block: str | None) -> list[str]:
     return [] if valid else ["§5.5 has no concrete authoritative Field row with Tier A/B/C and #16 §1.1.1 source"]
 
 
-def validate_approval_links(block: str | None) -> list[str]:
+def approval_checklist_row_ids(spec_dir: Path) -> set[str]:
+    """Collect addressable §9 checklist rows/headings from this spec."""
+    ids: set[str] = set()
+    candidates = sorted({*spec_dir.glob("section-9*.md"), *spec_dir.glob("*approval-checklist*.md")})
+    for path in candidates:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        lines = text.splitlines()
+        for headers, rows in iter_tables(lines):
+            del headers
+            for _, cells in rows:
+                if not cells:
+                    continue
+                match = CHECKLIST_ROW_RE.match(clean(cells[0]))
+                if match:
+                    ids.add(match.group(1))
+        for line in lines:
+            heading = CHECKLIST_HEADING_RE.match(line)
+            if heading:
+                ids.add(heading.group(1))
+            checkbox = CHECKBOX_ROW_RE.match(line)
+            if checkbox:
+                ids.add(checkbox.group(1))
+    return ids
+
+
+def validate_approval_links(block: str | None, spec_dir: Path) -> list[str]:
     if block is None:
         return ["missing §5.6 Approval-Checklist Linkage subsection"]
     table = table_matching(block, ("test id", "verifies"))
@@ -289,23 +322,35 @@ def validate_approval_links(block: str | None) -> list[str]:
     headers, rows = table
     ti, vi = column_index(headers, "test id"), column_index(headers, "verifies")
     assert ti is not None and vi is not None
-    valid = [
-        r for r in rows
-        if len(r) > max(ti, vi)
-        and not placeholder(r[ti])
-        and re.search(r"§\s*9\.\d+(?:\.\d+)?", r[vi])
-    ]
-    return [] if valid else ["§5.6 has no concrete Test ID linked to a §9 checklist row"]
+    known_rows = approval_checklist_row_ids(spec_dir)
+    errors: list[str] = []
+    concrete = 0
+    for row in rows:
+        if len(row) <= max(ti, vi) or placeholder(row[ti]):
+            continue
+        match = CHECKLIST_REF_RE.search(row[vi])
+        if match is None:
+            errors.append(f"§5.6 Test ID {clean(row[ti])} has no concrete §9 checklist-row reference")
+            continue
+        concrete += 1
+        ref = match.group(1)
+        if ref not in known_rows:
+            errors.append(f"§5.6 references missing approval-checklist row §{ref}")
+    if concrete == 0:
+        errors.insert(0, "§5.6 has no concrete Test ID linked to a §9 checklist row")
+    if not known_rows:
+        errors.append("§5.6 cannot resolve any approval-checklist rows in this spec")
+    return errors
 
 
-def schema_errors(text: str, repo_root: Path) -> list[str]:
+def schema_errors(text: str, repo_root: Path, spec_dir: Path) -> list[str]:
     errors: list[str] = []
     errors.extend(validate_taxonomy(section_block(text, "5.1")))
     errors.extend(validate_properties(section_block(text, "5.2")))
     errors.extend(validate_scenarios(section_block(text, "5.3"), repo_root))
     errors.extend(validate_coverage(section_block(text, "5.4")))
     errors.extend(validate_determinism(section_block(text, "5.5")))
-    errors.extend(validate_approval_links(section_block(text, "5.6")))
+    errors.extend(validate_approval_links(section_block(text, "5.6"), spec_dir))
     if section_block(text, "5.7") is None:
         errors.append("missing §5.7 Version History subsection")
     return errors
@@ -363,7 +408,7 @@ def main() -> int:
 
         checked_specs += 1
         blocking = enforced and not is_legacy_survey(spec_id) and is_approved_status(status)
-        for message in schema_errors(text, repo_root):
+        for message in schema_errors(text, repo_root, spec_dir):
             findings.append(
                 Finding(
                     spec_id,
