@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 """Automated approval-checklist evidence auditor (FR-TS-040..045).
 
-Existence is not evidence. At an approval transition, a file/section citation
-must carry concrete text or values that support the checklist claim, or a named
-programmatic check must have captured-output attestation supplied to this run.
-Both table rows and Markdown checkbox rows are checklist rows. Routine repository
-pipelines remain survey-only.
+This Stage 0+1 tool checks only mechanically decidable facts: checklist rows
+exist, required checkboxes are checked, cited repository paths/sections resolve,
+and explicit programmatic invocations have captured successful output. It does
+not attempt natural-language entailment between a claim and prose in a cited
+file; Testing Strategy §3.5.2 assigns that semantic judgment to the Stage 0
+reviewer. Routine repository pipelines remain survey-only.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import math
 import re
+import subprocess
 from pathlib import Path
 
 from testing_strategy_audit import (
@@ -21,33 +22,17 @@ from testing_strategy_audit import (
     candidate_paths,
     canonical_spec_status,
     describe,
-    has_named_programmatic_check,
     infer_spec_id,
     is_approved_status,
     is_legacy_survey,
     iter_tables,
+    programmatic_check_commands,
 )
 
-BACKTICK_RE = re.compile(r"`([^`]+)`")
 SECTION_RE = re.compile(r"§\s*(\d+(?:\.\d+)*)")
-IDENT_RE = re.compile(r"\b(?:FR-[A-Z]+-\d+|ERR-\d+-\d+|KD-\d+|[A-Za-z_][A-Za-z0-9_.]*\([^)]*\))\b")
 CHECKBOX_RE = re.compile(r"^\s*[-*]\s*\[([ xX])\]\s*(.+?)\s*$")
 HEADING_SECTION_RE = re.compile(r"^#{1,6}\s+(\d+(?:\.\d+)*)\b")
 EVIDENCE_MARKER_RE = re.compile(r"\bEvidence\s*:\s*", re.IGNORECASE)
-WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.+-]*|[-+]?\d+(?:\.\d+)?%?")
-NUMERIC_TERM_RE = re.compile(r"[-+]?\d+(?:\.\d+)?%?")
-MANDATORY_VALUE_WORDS = {
-    "enabled", "disabled", "true", "false", "present", "absent",
-    "on", "off", "yes", "no", "not",
-}
-STOP_WORDS = {
-    "about", "after", "against", "also", "and", "are", "been", "before",
-    "being", "between", "check", "checked", "claim", "confirmed", "defined",
-    "evidence", "exact", "file", "for", "from", "granted", "has", "have",
-    "into", "its", "must", "not", "only", "per", "review", "reviewed",
-    "row", "rule", "section", "specified", "the", "their", "this", "through",
-    "under", "uses", "using", "verified", "with", "within",
-}
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,11 +40,38 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")
-    parser.add_argument("--survey-only", action="store_true", help="Report findings but never return a blocking verdict. Routine pre-commit/PR/nightly pipelines use this mode; approval transitions do not.")
-    parser.add_argument("--changed-scope", action="store_true", help="Survey the whole root but consider blocking only spec directories named by --enforce-dir.")
-    parser.add_argument("--enforce-dir", action="append", default=[], help="Spec directory, absolute or repo-relative, that is currently at an approval transition. Repeatable.")
-    parser.add_argument("--captured-check", action="append", default=[], help="Exact check/command token whose output was captured for this approval walk. Repeatable. A named check is not RESOLVED without this attestation.")
-    parser.add_argument("--quiet-survey", action="store_true", help="Print blocking findings plus counts, but omit individual survey findings.")
+    parser.add_argument(
+        "--survey-only",
+        action="store_true",
+        help="Report findings but never return a blocking verdict. Routine pre-commit/PR/nightly pipelines use this mode; approval transitions do not.",
+    )
+    parser.add_argument(
+        "--changed-scope",
+        action="store_true",
+        help="Survey the whole root but consider blocking only spec directories named by --enforce-dir.",
+    )
+    parser.add_argument(
+        "--enforce-dir",
+        action="append",
+        default=[],
+        help="Spec directory, absolute or repo-relative, that is currently at an approval transition. Repeatable.",
+    )
+    parser.add_argument(
+        "--captured-check",
+        action="append",
+        default=[],
+        help="Exact explicit command whose successful output was captured externally for this approval walk. Repeatable.",
+    )
+    parser.add_argument(
+        "--execute-checks",
+        action="store_true",
+        help="Execute explicit backticked programmatic checks without a shell and capture their output. Used by the required approval-transition CI helper.",
+    )
+    parser.add_argument(
+        "--quiet-survey",
+        action="store_true",
+        help="Print blocking findings plus counts, but omit individual survey findings.",
+    )
     return parser.parse_args()
 
 
@@ -86,7 +98,13 @@ def owning_spec_dir(path: Path, repo_root: Path) -> Path:
     return (specs_root / rel.parts[0]).resolve()
 
 
-def is_enforced(path: Path, *, survey_only: bool, changed_scope: bool, enforce_dirs: set[Path]) -> bool:
+def is_enforced(
+    path: Path,
+    *,
+    survey_only: bool,
+    changed_scope: bool,
+    enforce_dirs: set[Path],
+) -> bool:
     if survey_only:
         return False
     if not changed_scope:
@@ -98,7 +116,11 @@ def is_enforced(path: Path, *, survey_only: bool, changed_scope: bool, enforce_d
 def resolve_path(token: str, *, repo_root: Path, spec_dir: Path) -> Path | None:
     token = token.split("#", 1)[0].strip()
     token = re.sub(r"\s+§.*$", "", token).strip()
-    if not token or any(ch in token for ch in "<>*{}") or token.startswith(("http://", "https://")):
+    if (
+        not token
+        or any(ch in token for ch in "<>*{}")
+        or token.startswith(("http://", "https://"))
+    ):
         return None
     path = Path(token)
     choices = [path] if path.is_absolute() else [repo_root / path, spec_dir / path]
@@ -137,135 +159,79 @@ def section_block(text: str, section: str) -> str | None:
     return "\n".join(lines[start:end])
 
 
-def local_section_paths(evidence: str, spec_dir: Path) -> list[tuple[str, Path]]:
-    """Resolve canonical `§N.x` citations to the owning local section file."""
-    out: list[tuple[str, Path]] = []
+def resolve_section_references(
+    evidence: str,
+    *,
+    spec_dir: Path,
+    resolved_paths: list[tuple[str, Path]],
+) -> tuple[list[tuple[str, Path]], list[str]]:
+    """Resolve every explicit §N.x reference to an actual Markdown heading."""
+    found: list[tuple[str, Path]] = []
+    missing: list[str] = []
+    markdown_candidates = [path for _, path in resolved_paths if path.suffix.lower() == ".md"]
+
     for section in SECTION_RE.findall(evidence):
         major = section.split(".", 1)[0]
-        matches = sorted(spec_dir.glob(f"section-{major}*.md"))
-        for path in matches:
+        candidates = list(markdown_candidates)
+        candidates.extend(sorted(spec_dir.glob(f"section-{major}*.md")))
+        seen: set[Path] = set()
+        matched_path: Path | None = None
+        for path in candidates:
+            resolved = path.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
             try:
-                text = path.read_text(encoding="utf-8", errors="replace")
+                text = resolved.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
             if section_block(text, section) is not None:
-                out.append((f"§{section}", path.resolve()))
+                matched_path = resolved
                 break
-    return out
+        if matched_path is None:
+            missing.append(f"§{section}")
+        else:
+            found.append((f"§{section}", matched_path))
+    return found, missing
 
 
-def normalize_value_text(text: str) -> str:
-    return text.replace("−", "-")
+def captured_programmatic_check(label: str, captured_checks: set[str]) -> bool:
+    return label in captured_checks
 
 
-def concrete_literals(claim: str, evidence: str, path_tokens: set[str]) -> list[str]:
-    claim = normalize_value_text(claim)
-    evidence = normalize_value_text(evidence)
-    literals: list[str] = []
-    for source in (claim, evidence):
-        for token in BACKTICK_RE.findall(source):
-            stripped = token.strip()
-            if stripped in path_tokens or not stripped or stripped.startswith(("http://", "https://")):
-                continue
-            if stripped.split(maxsplit=1)[0] in {"bash", "python", "python3", "git", "grep", "rg", "dotnet", "sh"}:
-                continue
-            literals.append(stripped)
-    literals.extend(IDENT_RE.findall(claim))
-    # Explicit numeric and polarity values are semantic claim literals. They
-    # are mandatory rather than optional members of the lexical quorum: `60`
-    # cannot be satisfied by `600`, signed values retain their sign, and
-    # `disabled` cannot be outvoted by surrounding words saying `enabled`.
-    literals.extend(NUMERIC_TERM_RE.findall(claim))
-    for token in WORD_RE.findall(claim):
-        lowered = token.lower().strip("._+-")
-        if lowered in MANDATORY_VALUE_WORDS:
-            literals.append(lowered)
-    return list(dict.fromkeys(literals))
+def run_programmatic_check(
+    label: str,
+    argv: tuple[str, ...],
+    *,
+    repo_root: Path,
+    cache: dict[str, tuple[int, str]],
+) -> tuple[int, str]:
+    """Execute one previously validated command without a shell and capture output."""
+    if label in cache:
+        return cache[label]
+    try:
+        proc = subprocess.run(
+            list(argv),
+            cwd=repo_root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+            timeout=300,
+        )
+        result = (proc.returncode, proc.stdout or "")
+    except subprocess.TimeoutExpired as exc:
+        output = exc.stdout if isinstance(exc.stdout, str) else ""
+        result = (124, output + "\nERROR: approval check exceeded 300 seconds")
+    except OSError as exc:
+        result = (127, f"ERROR: could not execute approval check: {exc}")
+    cache[label] = result
+    return result
 
 
-def claim_terms(claim: str) -> list[str]:
-    claim = normalize_value_text(claim)
-    # Remove Markdown links/paths and section citations before lexical binding;
-    # those identify evidence location, not the value the claim says is there.
-    text = re.sub(r"\[[^\]]+\]\([^)]+\)", " ", claim)
-    text = SECTION_RE.sub(" ", text)
-    text = re.sub(r"`[^`]+\.(?:md|py|sh|cs|json|yaml|yml|txt)`", " ", text, flags=re.IGNORECASE)
-    terms: list[str] = []
-    for token in WORD_RE.findall(text):
-        lowered = token.lower().strip("._+-")
-        numeric = bool(NUMERIC_TERM_RE.fullmatch(token))
-        if ((not numeric and len(lowered) < 3) or lowered in STOP_WORDS):
-            continue
-        terms.append(lowered)
-    return list(dict.fromkeys(terms))
-
-
-def text_contains_complete_term(text: str, term: str) -> bool:
-    """Match a complete claim value/token rather than an arbitrary substring."""
-    text = normalize_value_text(text)
-    needle = normalize_value_text(term).strip()
-    if not needle:
-        return False
-    escaped = re.escape(needle)
-    if NUMERIC_TERM_RE.fullmatch(needle):
-        # Prevent 60 from matching 600 or 60.0. Percent/sign are part of the
-        # numeric value and must not be silently discarded.
-        pattern = rf"(?<![0-9.+-]){escaped}(?![0-9.%])"
-    else:
-        # Hyphen/underscore join lexical tokens; punctuation such as a trailing
-        # period remains a boundary.
-        pattern = rf"(?<![A-Za-z0-9_-]){escaped}(?![A-Za-z0-9_-])"
-    return re.search(pattern, text, re.IGNORECASE) is not None
-
-
-def path_evidence_supports_claim(claim: str, evidence: str, resolved: list[tuple[str, Path]]) -> bool:
-    if not resolved:
-        return False
-
-    path_text: dict[Path, str] = {}
-    for _, path in resolved:
-        if path in path_text:
-            continue
-        try:
-            path_text[path] = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            return False
-
-    evidence_sections = SECTION_RE.findall(evidence)
-    chunks: list[str] = []
-    if evidence_sections:
-        # A section citation constrains the evidence to that section. Merely
-        # proving that the heading exists is insufficient; the claim must bind
-        # to text/value inside the cited block.
-        for section in evidence_sections:
-            matching = [block for text in path_text.values() if (block := section_block(text, section)) is not None]
-            if not matching:
-                return False
-            chunks.extend(matching)
-    else:
-        chunks.extend(path_text.values())
-
-    combined = "\n".join(chunks)
-    path_tokens = {token for token, _ in resolved}
-    literals = concrete_literals(claim, evidence, path_tokens)
-    if literals and not all(text_contains_complete_term(combined, literal) for literal in literals):
-        return False
-
-    terms = claim_terms(claim)
-    if not terms:
-        return bool(literals)
-    matched = sum(text_contains_complete_term(combined, term) for term in terms)
-    required = 1 if len(terms) == 1 else min(4, max(2, math.ceil(len(terms) * 0.4)))
-    return matched >= required
-
-
-def captured_programmatic_check(evidence: str, captured_checks: set[str]) -> bool:
-    return bool(captured_checks) and any(check in evidence for check in captured_checks)
-
-
-def checkbox_rows(lines: list[str]) -> list[tuple[int, str, str, str]]:
-    """Return line, row-id, claim, evidence for Markdown approval checkboxes."""
-    rows: list[tuple[int, str, str, str]] = []
+def checkbox_rows(lines: list[str]) -> list[tuple[int, str, bool, str, str]]:
+    """Return line, row-id, checked, claim, evidence for Markdown checkboxes."""
+    rows: list[tuple[int, str, bool, str, str]] = []
     current_section = "§9"
     for line_no, line in enumerate(lines, start=1):
         heading = HEADING_SECTION_RE.match(line)
@@ -274,18 +240,16 @@ def checkbox_rows(lines: list[str]) -> list[tuple[int, str, str, str]]:
         match = CHECKBOX_RE.match(line)
         if not match:
             continue
+        checked = match.group(1).lower() == "x"
         body = match.group(2).strip()
         marker = EVIDENCE_MARKER_RE.search(body)
         if marker:
             claim = body[: marker.start()].strip()
             evidence = body[marker.end() :].strip()
         else:
-            # Some established checklists put citations inline rather than after
-            # an `Evidence:` marker. Use the body as evidence input so paths,
-            # sections or named checks can still resolve; prose-only rows fail.
             claim = body
             evidence = body
-        rows.append((line_no, f"{current_section} line {line_no}", claim, evidence))
+        rows.append((line_no, f"{current_section} line {line_no}", checked, claim, evidence))
     return rows
 
 
@@ -299,67 +263,122 @@ def audit_evidence_row(
     evidence: str,
     repo_root: Path,
     captured_checks: set[str],
+    execute_checks: bool,
+    execution_cache: dict[str, tuple[int, str]],
     blocking: bool,
 ) -> Finding | None:
+    # `claim` remains in the signature because reports identify the checklist
+    # claim, but semantic entailment is deliberately a Stage 0 reviewer duty.
+    del claim
+
     if not evidence:
         return Finding(spec_id, str(path), row_id, "empty evidence", blocking)
     if any(marker in evidence.lower() for marker in ("<file", "<check", "<path", "<test")):
-        return Finding(spec_id, str(path), row_id, "placeholder evidence token is not executable/resolved evidence", blocking)
-
-    path_tokens = candidate_paths(evidence)
-    resolved = [
-        (token, resolved_path)
-        for token in path_tokens
-        if (resolved_path := resolve_path(token, repo_root=repo_root, spec_dir=spec_dir)) is not None
-    ]
-    resolved.extend(local_section_paths(evidence, spec_dir))
-    resolved = list(dict.fromkeys(resolved))
-    broken = [
-        token
-        for token in path_tokens
-        if resolve_path(token, repo_root=repo_root, spec_dir=spec_dir) is None
-        and not any(ch in token for ch in "<>*{}")
-    ]
-    named_check = has_named_programmatic_check(evidence, repo_root=repo_root, spec_dir=spec_dir)
-    check_bound = named_check and captured_programmatic_check(evidence, captured_checks)
-
-    if broken and not resolved and not named_check:
-        return Finding(spec_id, str(path), row_id, "unresolved evidence path(s): " + ", ".join(broken), blocking)
-
-    # Executable evidence is evidence of behavior only when this approval walk
-    # actually captured that check. Its source code cannot satisfy the claim by
-    # mentioning the same words in comments or implementation text.
-    if named_check:
-        if check_bound:
-            return None
         return Finding(
             spec_id,
             str(path),
             row_id,
-            "programmatic check is named but this approval walk supplied no matching --captured-check output attestation",
+            "placeholder evidence token is not executable/resolved evidence",
             blocking,
         )
 
-    if path_evidence_supports_claim(claim, evidence, resolved):
+    commands = programmatic_check_commands(
+        evidence, repo_root=repo_root, spec_dir=spec_dir
+    )
+    command_labels = {label for label, _ in commands}
+
+    path_tokens = candidate_paths(evidence)
+    resolved: list[tuple[str, Path]] = []
+    broken: list[str] = []
+    for token in path_tokens:
+        if token in command_labels:
+            continue
+        resolved_path = resolve_path(token, repo_root=repo_root, spec_dir=spec_dir)
+        if resolved_path is not None:
+            resolved.append((token, resolved_path))
+        elif not any(ch in token for ch in "<>*{}"):
+            broken.append(token)
+    resolved = list(dict.fromkeys(resolved))
+
+    section_paths, missing_sections = resolve_section_references(
+        evidence, spec_dir=spec_dir, resolved_paths=resolved
+    )
+    resolved.extend(section_paths)
+    resolved = list(dict.fromkeys(resolved))
+
+    if broken:
+        return Finding(
+            spec_id,
+            str(path),
+            row_id,
+            "unresolved evidence path(s): " + ", ".join(dict.fromkeys(broken)),
+            blocking,
+        )
+    if missing_sections:
+        return Finding(
+            spec_id,
+            str(path),
+            row_id,
+            "unresolved evidence section(s): " + ", ".join(dict.fromkeys(missing_sections)),
+            blocking,
+        )
+
+    for label, argv in commands:
+        if execute_checks:
+            returncode, output = run_programmatic_check(
+                label, argv, repo_root=repo_root, cache=execution_cache
+            )
+            if returncode != 0:
+                tail = output.strip()[-1000:]
+                detail = f"; captured output: {tail}" if tail else ""
+                return Finding(
+                    spec_id,
+                    str(path),
+                    row_id,
+                    f"programmatic check failed with exit {returncode}: `{label}`{detail}",
+                    blocking,
+                )
+        elif not captured_programmatic_check(label, captured_checks):
+            return Finding(
+                spec_id,
+                str(path),
+                row_id,
+                "programmatic check is named but this approval walk supplied no matching captured output; rerun with --execute-checks or exact --captured-check attestation",
+                blocking,
+            )
+
+    if resolved or commands:
         return None
 
-    if resolved:
-        message = "evidence path/section resolves but does not contain concrete text or values supporting the claim"
-    else:
-        message = "evidence is prose only; no claim-bound version-controlled evidence or captured programmatic check"
-    return Finding(spec_id, str(path), row_id, message, blocking)
+    return Finding(
+        spec_id,
+        str(path),
+        row_id,
+        "evidence is prose only; no resolved version-controlled path/section or captured programmatic check",
+        blocking,
+    )
 
 
-def audit_file(path: Path, repo_root: Path, *, survey_only: bool, changed_scope: bool, enforce_dirs: set[Path], captured_checks: set[str]) -> tuple[int | None, int, list[Finding]]:
+def audit_file(
+    path: Path,
+    repo_root: Path,
+    *,
+    survey_only: bool,
+    changed_scope: bool,
+    enforce_dirs: set[Path],
+    captured_checks: set[str],
+    execute_checks: bool,
+    execution_cache: dict[str, tuple[int, str]],
+) -> tuple[int | None, int, list[Finding]]:
     text = path.read_text(encoding="utf-8")
     spec_dir = owning_spec_dir(path, repo_root)
     spec_id = infer_spec_id(text)
     if spec_id is None:
-        # Nested checklist files may omit the spec number; use the owning spec's
-        # section-1/section-9 metadata before giving up on identity.
         for sibling in sorted(spec_dir.glob("section-*.md")):
             try:
-                spec_id = infer_spec_id(sibling.read_text(encoding="utf-8", errors="replace"))
+                spec_id = infer_spec_id(
+                    sibling.read_text(encoding="utf-8", errors="replace")
+                )
             except OSError:
                 continue
             if spec_id is not None:
@@ -368,19 +387,42 @@ def audit_file(path: Path, repo_root: Path, *, survey_only: bool, changed_scope:
     lines = text.splitlines()
     findings: list[Finding] = []
     checked = 0
-    blocking_scope = is_enforced(spec_dir, survey_only=survey_only, changed_scope=changed_scope, enforce_dirs=enforce_dirs)
-    blocking = blocking_scope and not is_legacy_survey(spec_id) and is_approved_status(status)
+    blocking_scope = is_enforced(
+        spec_dir,
+        survey_only=survey_only,
+        changed_scope=changed_scope,
+        enforce_dirs=enforce_dirs,
+    )
+    blocking = (
+        blocking_scope
+        and not is_legacy_survey(spec_id)
+        and is_approved_status(status)
+    )
 
     for headers, rows in iter_tables(lines):
-        evidence_indexes = [i for i, header in enumerate(headers) if "evidence" in header.lower() or "verification" in header.lower()]
+        evidence_indexes = [
+            i
+            for i, header in enumerate(headers)
+            if "evidence" in header.lower() or "verification" in header.lower()
+        ]
         if not evidence_indexes:
             continue
-        evidence_i = next((i for i in evidence_indexes if "evidence" in headers[i].lower()), evidence_indexes[0])
-        claim_i = next((i for i, header in enumerate(headers) if "claim" in header.lower()), None)
+        evidence_i = next(
+            (i for i in evidence_indexes if "evidence" in headers[i].lower()),
+            evidence_indexes[0],
+        )
+        claim_i = next(
+            (i for i, header in enumerate(headers) if "claim" in header.lower()),
+            None,
+        )
 
         for line_no, cells in rows:
             evidence = cells[evidence_i].strip()
-            claim = cells[claim_i].strip() if claim_i is not None and claim_i < len(cells) else ""
+            claim = (
+                cells[claim_i].strip()
+                if claim_i is not None and claim_i < len(cells)
+                else ""
+            )
             row_id = cells[0].strip() if cells else f"line {line_no}"
             checked += 1
             finding = audit_evidence_row(
@@ -392,13 +434,25 @@ def audit_file(path: Path, repo_root: Path, *, survey_only: bool, changed_scope:
                 evidence=evidence,
                 repo_root=repo_root,
                 captured_checks=captured_checks,
+                execute_checks=execute_checks,
+                execution_cache=execution_cache,
                 blocking=blocking,
             )
             if finding is not None:
                 findings.append(finding)
 
-    for line_no, row_id, claim, evidence in checkbox_rows(lines):
+    for line_no, row_id, is_checked, claim, evidence in checkbox_rows(lines):
         checked += 1
+        if not is_checked:
+            findings.append(
+                Finding(
+                    spec_id,
+                    str(path),
+                    row_id,
+                    "approval checklist checkbox is not checked",
+                    blocking,
+                )
+            )
         finding = audit_evidence_row(
             spec_id=spec_id,
             path=path,
@@ -408,6 +462,8 @@ def audit_file(path: Path, repo_root: Path, *, survey_only: bool, changed_scope:
             evidence=evidence,
             repo_root=repo_root,
             captured_checks=captured_checks,
+            execute_checks=execute_checks,
+            execution_cache=execution_cache,
             blocking=blocking,
         )
         if finding is not None:
@@ -422,26 +478,36 @@ def main() -> int:
     repo_root = args.repo_root.resolve()
     enforce_dirs = normalize_dirs(args.enforce_dir, repo_root)
     captured_checks = {value.strip() for value in args.captured_check if value.strip()}
-    candidates = sorted({*root.rglob("section-9*.md"), *root.rglob("*approval-checklist*.md")})
+    candidates = sorted(
+        {*root.rglob("section-9*.md"), *root.rglob("*approval-checklist*.md")}
+    )
 
     total_rows = 0
     findings: list[Finding] = []
     audited_files = 0
     candidate_dirs: set[Path] = set()
     rows_by_dir: dict[Path, int] = {}
+    execution_cache: dict[str, tuple[int, str]] = {}
+
     for path in candidates:
         spec_dir = owning_spec_dir(path, repo_root)
         candidate_dirs.add(spec_dir)
-        _, checked, file_findings = audit_file(path, repo_root, survey_only=args.survey_only, changed_scope=args.changed_scope, enforce_dirs=enforce_dirs, captured_checks=captured_checks)
+        _, checked, file_findings = audit_file(
+            path,
+            repo_root,
+            survey_only=args.survey_only,
+            changed_scope=args.changed_scope,
+            enforce_dirs=enforce_dirs,
+            captured_checks=captured_checks,
+            execute_checks=args.execute_checks,
+            execution_cache=execution_cache,
+        )
         rows_by_dir[spec_dir] = rows_by_dir.get(spec_dir, 0) + checked
         if checked:
             audited_files += 1
             total_rows += checked
             findings.extend(file_findings)
 
-    # Approval enforcement is incomplete if an explicitly enforced spec has no
-    # checklist artifact or if its checklist contributes no auditable evidence
-    # rows. Treat absence itself as a blocking finding rather than an empty pass.
     if not args.survey_only and enforce_dirs:
         for enforced_dir in sorted(enforce_dirs):
             matching_dirs = {
@@ -460,7 +526,9 @@ def main() -> int:
                     )
                 )
                 continue
-            row_count = sum(rows_by_dir.get(candidate_dir, 0) for candidate_dir in matching_dirs)
+            row_count = sum(
+                rows_by_dir.get(candidate_dir, 0) for candidate_dir in matching_dirs
+            )
             if row_count == 0:
                 findings.append(
                     Finding(
@@ -482,13 +550,35 @@ def main() -> int:
         "changed_scope": args.changed_scope,
         "enforced_dirs": sorted(str(path) for path in enforce_dirs),
         "captured_checks": sorted(captured_checks),
+        "execute_checks": args.execute_checks,
+        "executed_checks": {
+            label: {"exit": result[0], "output": result[1]}
+            for label, result in sorted(execution_cache.items())
+        },
+        "semantic_entailment": "manual-stage-0-review",
         "findings": [f.__dict__ for f in findings],
     }
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
-        scope = "survey-only routine pipeline" if args.survey_only else ("approval enforcement (explicit scope)" if args.changed_scope else "approval-state enforcement")
-        print(f"checklist-auditor: {audited_files} file(s), {total_rows} evidence row(s), {describe(findings)} [{scope}]")
+        scope = (
+            "survey-only routine pipeline"
+            if args.survey_only
+            else (
+                "approval enforcement (explicit scope)"
+                if args.changed_scope
+                else "approval-state enforcement"
+            )
+        )
+        print(
+            f"checklist-auditor: {audited_files} file(s), {total_rows} evidence row(s), "
+            f"{describe(findings)} [{scope}]"
+        )
+        if execution_cache:
+            for label, (returncode, output) in sorted(execution_cache.items()):
+                print(f"CAPTURED CHECK exit={returncode}: `{label}`")
+                if output.strip():
+                    print(output.rstrip())
         for finding in findings:
             if args.quiet_survey and not finding.blocking:
                 continue
