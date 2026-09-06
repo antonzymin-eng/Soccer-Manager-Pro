@@ -3,7 +3,7 @@
 **Status:** ACCEPTED — AP-01 AUTHORIZED  
 **Started:** September 4, 2026  
 **Last Updated:** September 6, 2026  
-**Version:** 0.7  
+**Version:** 0.8  
 **Implementation gate:** G0 ACCEPTED September 6, 2026 by owner; AP-01 authorized.  
 **Purpose:** Define a production-grade art pipeline that can run in parallel with simulation, UI/UX, localization, audio, and management-layer development without creating asset debt, rights risk, or presentation-layer coupling.
 
@@ -222,7 +222,7 @@ Assets/GameArt/
   Stadiums/
 ```
 
-Every tracked file/folder created under `Assets/GameArt/` must receive the appropriate committed Unity `.meta` identity from the moment it is introduced. **Before the first GameArt path is created, AP-01 extends `tools/unity-ci/check-meta-integrity.sh` across all three of its current `src/`-scoped enumerations: (1) the missing-meta/ancestor walk, (2) the orphan-meta scan, and (3) duplicate-GUID detection. Missing/orphan coverage must include both `src/` and `Assets/GameArt/`; duplicate-GUID detection must be one combined cross-tree scan so a GUID collision between the two roots cannot pass.** `tools/unity-ci/generate-missing-metas.sh` may be expanded only for GameArt **folders and CI-safety fixtures**; it must not synthesize production `.meta` files for art assets such as textures, vector exports, or font binaries. Those asset metas come from an actual Unity import under AP-03. AP-01 proves the checker fails on a missing GameArt `.meta` before any real GameArt path is committed.
+Every tracked file/folder created under `Assets/GameArt/` must receive the appropriate committed Unity `.meta` identity from the moment it is introduced. **Before the first GameArt path is created, AP-01 extends `tools/unity-ci/check-meta-integrity.sh` across all three of its current `src/`-scoped enumerations: (1) the missing-meta/ancestor walk, (2) the orphan-meta scan, and (3) duplicate-GUID detection. Missing/orphan coverage must include both `src/` and `Assets/GameArt/`; duplicate-GUID detection must be one combined project-wide Unity-asset scan across all tracked `.meta` files under `Assets/` plus the junction-backed `src/` tree, so a GameArt GUID collision with any existing Unity asset cannot pass.** `tools/unity-ci/generate-missing-metas.sh` may be expanded only for GameArt **folders and CI-safety fixtures**; it must not synthesize production `.meta` files for art assets such as textures, vector exports, or font binaries. Those asset metas come from an actual Unity import under AP-03. AP-01 proves the checker fails on a missing GameArt `.meta` before any real GameArt path is committed.
 
 ### 4.3 Release art
 
@@ -238,7 +238,7 @@ C# remains in `src/` through the repository's existing Unity project arrangement
 
 ### 4.5 Existing repository mechanics
 
-The repo already routes common textures, 3D formats, audio, video, and fonts through Git LFS and has a whole-repository large-binary guard. The existing `.meta` checker currently scopes its missing-meta walk, orphan scan, and duplicate-GUID scan to `src/`; **AP-01 extends all three, with duplicate-GUID detection performed once across the combined `src/` + `Assets/GameArt/` universe.** The generator is expanded only for GameArt folders/CI safety, not production art-asset metas; actual asset importer blocks are created by Unity during AP-03. AP-06 may harden that baseline from H2 evidence, but it is not the first line of defense.
+The repo already routes common textures, 3D formats, audio, video, and fonts through Git LFS and has a whole-repository large-binary guard. The existing `.meta` checker currently scopes its missing-meta walk, orphan scan, and duplicate-GUID scan to `src/`; **AP-01 extends missing/orphan coverage to `Assets/GameArt/`, while duplicate-GUID detection becomes one combined scan across every tracked `.meta` under `Assets/` plus the junction-backed `src/` tree.** The generator is expanded only for GameArt folders/CI safety, not production art-asset metas; actual asset importer blocks are created by Unity during AP-03. AP-06 may harden that baseline from H2 evidence, but it is not the first line of defense.
 
 ---
 
@@ -751,9 +751,9 @@ An asset reaches `validated` only when applicable checks pass:
 
 Only after G0, in this order:
 
-1. **Extend all checker enumerations first.** Update `tools/unity-ci/check-meta-integrity.sh` so (a) the missing-meta/ancestor walk and (b) orphan-meta scan cover both `src/` and `Assets/GameArt/`, and (c) duplicate-GUID detection is one **cross-tree** scan over both roots. Keep `src/`'s existing root exception and define the corresponding GameArt root/folder behavior explicitly.
+1. **Extend all checker enumerations first.** Update `tools/unity-ci/check-meta-integrity.sh` so (a) the missing-meta/ancestor walk and (b) orphan-meta scan cover both managed roots, `src/` and `Assets/GameArt/`, while (c) duplicate-GUID detection is one **project-wide Unity-asset scan** across every tracked `.meta` under `Assets/` plus the junction-backed `src/` tree. Keep `src/`'s existing root exception and define the corresponding GameArt root/folder behavior explicitly. Duplicate detection must not be split per root: a GameArt GUID colliding with `Assets/README.md.meta`, a future scene/plugin meta, or any other tracked Unity asset must fail.
 2. **Constrain the generator.** Extend `tools/unity-ci/generate-missing-metas.sh` only for GameArt folders and CI-safety fixtures. It must not seed production art-asset metas: textures, vectors, fonts, and other imported art assets receive their importer-bearing `.meta` files from an actual Unity import in AP-03.
-3. **Prove the guard.** Before creating the real GameArt tree, use temporary tracked-path fixtures/mutations to prove the checker fails on a missing GameArt `.meta`, catches an orphan GameArt `.meta`, and catches a duplicate GUID spanning `src/` and `Assets/GameArt/`; restore each fixture and prove clean status.
+3. **Prove the guard.** Before creating the real GameArt tree, use temporary tracked-path fixtures/mutations to prove the checker fails on a missing GameArt `.meta`, catches an orphan GameArt `.meta`, and catches duplicate GUIDs between GameArt and both (i) `src/` and (ii) another tracked `Assets/` asset; restore each fixture and prove clean status.
 4. **Then create repository roots.** Create the exact `art-source/` and `Assets/GameArt/` roots/subtrees only as needed, with required Unity **folder** `.meta` identities committed from first introduction. Do not introduce production art files until their Unity-import path is available under AP-03.
 5. Add the authoritative `.art.json` schema/example.
 6. Document allowed/forbidden runtime formats.
@@ -868,7 +868,7 @@ Before production 3D content, approve a separate family recipe covering DCC/sour
 | Large unusable batches | no family scale before representative acceptance |
 | Trademark/likeness contamination | fictional-first + `.art.json` provenance + quarantine + human review |
 | Font/network/script failure | verify redistribution, vendor approved binaries, test required scripts/fallback |
-| Broken Unity references | stable paths/GUIDs + AP-01 missing/orphan coverage + one cross-tree duplicate-GUID scan + folder-only generator scope + mutation proofs before first tracked GameArt path + AP-03 Unity-generated asset metas + AP-06 evidence-driven hardening |
+| Broken Unity references | stable paths/GUIDs + AP-01 managed-root missing/orphan coverage + one project-wide tracked-Unity-meta duplicate-GUID scan across `Assets/` + `src/` + folder-only generator scope + mutation proofs before first tracked GameArt path + AP-03 Unity-generated asset metas + AP-06 evidence-driven hardening |
 | Binary repo bloat | existing LFS routing/binary guard + bounded batches |
 | Overengineered loading system | Addressables/catalog/atlas decision deferred to measured need |
 | Fake management integration claim | named real consumers; reference mockups cannot close runtime-management subgate |
@@ -890,7 +890,7 @@ G0 may be opened only when the owner accepts this grounded plan and all of these
 - APPROVED #38 and the current client code are named as architecture/integration constraints;
 - the plan does not claim a management UGUI consumer already exists;
 - the planning PR contains no premature AP-01 runtime/source directory implementation;
-- AP-01 names all three `check-meta-integrity.sh` enumerations, requires duplicate-GUID detection as one cross-tree `src/` + `Assets/GameArt/` scan, restricts `generate-missing-metas.sh` to folders/CI safety, and requires firing proofs **before** the first tracked `Assets/GameArt/` path;
+- AP-01 names all three `check-meta-integrity.sh` enumerations, requires missing/orphan coverage for `src/` + `Assets/GameArt/` and duplicate-GUID detection as one project-wide scan across tracked `Assets/**/*.meta` plus `src/**/*.meta`, restricts `generate-missing-metas.sh` to folders/CI safety, and requires firing proofs **before** the first tracked `Assets/GameArt/` path;
 - `.art.json` is the single authoritative initial provenance/production metadata format;
 - routine source revisions use Git history, not `_v001` copies;
 - Stage-1 visual-quality rationale points to `master-development-plan.md`;
@@ -913,3 +913,4 @@ Opening G0 authorizes **AP-01 only**, followed by AP-02 and AP-03 substantially 
 | 0.5 | 2026-09-05 | External follow-up: moved GameArt `.meta` checker/generator scope expansion from AP-06 to the **first action of AP-01**, before any tracked GameArt path; required a mutation/firing proof; retained only evidence-driven hardening in AP-06; removed the `where practical` hedge from integrated-asset identity preservation and routed legitimate move/rename exceptions through §6.4. |
 | 0.6 | 2026-09-06 | AP-01 execution refinement after external review: named all three checker enumerations; required duplicate-GUID detection as one cross-tree `src/` + `Assets/GameArt/` scan; restricted `generate-missing-metas.sh` to folders/CI safety rather than production art assets; assigned importer-bearing art-asset metas to actual Unity import in AP-03; expanded mutation proof to missing, orphan, and cross-tree duplicate cases. |
 | 0.7 | 2026-09-06 | **G0 accepted by owner.** Planning gate closed successfully and AP-01 repository-contract implementation authorized. No bulk asset generation or later family-scale gate was opened. |
+| 0.8 | 2026-09-06 | Post-acceptance Codex review correction before landing: preserved managed-root missing/orphan scope but widened duplicate-GUID detection to one project-wide scan across every tracked `.meta` under `Assets/` plus the junction-backed `src/` tree; expanded mutation proof to include a GameArt collision with another `Assets/` meta. G0 remains accepted and AP-01 authorization unchanged. |

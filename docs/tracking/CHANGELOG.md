@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 6, 2026 — **Art-pipeline G0 accepted by owner; plan v0.7 authorizes AP-01 only.**
+> **Last Updated:** September 6, 2026 — **Art-pipeline plan v0.8 closes post-acceptance Codex GUID-scope finding; G0 remains accepted and AP-01 authorized.**
+> Codex identified one real pre-merge defect in the v0.7 AP-01 execution contract: checking duplicate GUIDs only across `src/` + `Assets/GameArt/` is not Unity-project-wide. The repo already contains `Assets/README.md.meta`, and future scenes/plugins/other assets may live elsewhere under `Assets/`.
+> v0.8 therefore keeps missing-meta and orphan-meta enforcement scoped to the managed `src/` + `Assets/GameArt/` roots, but requires duplicate-GUID detection as **one combined scan across every tracked `.meta` under `Assets/` plus the junction-backed `src/` tree**. The mutation proof must demonstrate collisions from GameArt into both `src/` and another tracked `Assets/` meta.
+> **Gate declaration:** the owner's September 6 G0 acceptance remains valid; this correction narrows execution ambiguity without reopening visual direction or expanding authorization beyond AP-01.
+> **Determinism/runtime declaration:** no runtime behavior, snapshot/serialization schema, RNG stream/domain/draw site/draw order, production asset, workflow contract, `SPEC_INDEX.md` row, or spec status changed.
+>
+> **Last Updated (prior):** September 6, 2026 — **Art-pipeline G0 accepted by owner; plan v0.7 authorizes AP-01 only.**
 > The owner explicitly accepted G0 after the grounded v0.6 review close-out. `docs/planning/art-pipeline-foundation.md` advances **v0.6 → v0.7**, records the acceptance date/actor, and changes status from planning-gated to **ACCEPTED — AP-01 AUTHORIZED**.
 > Scope remains deliberately narrow: this decision opens AP-01 repository/meta-contract implementation only. It does not authorize bulk asset generation or silently pass AP-02/AP-03/G1/G2/G3/G4/family gates.
 > The art branch is updated from current `main` (#357) before squash merge. The merge was previously verified conflict-free and #357 did not touch this plan or either art tracking row/header chain. Separate #357 governance/tracking defects are not repaired in this art PR.
