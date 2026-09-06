@@ -1,0 +1,52 @@
+name: Temporary AP-01 proof
+
+'on':
+  push:
+    branches:
+      - tmp/ap01-proof
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: art/ap-01-repository-contract
+          fetch-depth: 0
+      - name: Shell syntax
+        run: |
+          bash -n tools/unity-ci/check-meta-integrity.sh
+          bash -n tools/unity-ci/generate-missing-metas.sh
+          bash -n tools/unity-ci/test-meta-integrity-gameart.sh
+      - name: Clean meta gate
+        run: bash tools/unity-ci/check-meta-integrity.sh
+      - name: Generator-owned paths clean
+        run: bash tools/unity-ci/generate-missing-metas.sh --check
+      - name: GameArt mutation proof
+        run: bash tools/unity-ci/test-meta-integrity-gameart.sh
+      - name: No premature GameArt tree
+        run: |
+          test ! -e Assets/GameArt
+          test ! -e Assets/GameArt.meta
+      - name: Metadata contract parses
+        run: |
+          python3 - <<'PY'
+          import json, re
+          from pathlib import Path
+          schema = json.loads(Path('docs/design/art/art-asset.schema.json').read_text())
+          example = json.loads(Path('art-source/_templates/example.art.json').read_text())
+          required = set(schema['required'])
+          assert required <= set(example), required - set(example)
+          assert not (set(example) - set(schema['properties'])), set(example) - set(schema['properties'])
+          assert example['family'] in schema['properties']['family']['enum']
+          assert example['status'] in schema['properties']['status']['enum']
+          assert example['source_kind'] in schema['properties']['source_kind']['enum']
+          assert re.fullmatch(schema['properties']['asset_id']['pattern'], example['asset_id'])
+          assert isinstance(example['export_paths'], list)
+          assert example['source_kind'] != 'generated' or 'generation' in example
+          print('Metadata schema/example structural proof PASS')
+          PY
+      - name: Binary LFS guard
+        run: bash tools/unity-ci/check-binaries.sh
+      - name: Diff whitespace
+        run: git diff origin/main...HEAD --check
