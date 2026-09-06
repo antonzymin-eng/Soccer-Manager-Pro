@@ -1,0 +1,44 @@
+name: Temporary AP-03 static proof
+
+'on':
+  push:
+    branches:
+      - tmp/ap03-static-proof
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: art/ap-03-technical-recipe-proof
+          fetch-depth: 0
+      - name: Verify pinned Unity version
+        run: |
+          grep -Fx 'm_EditorVersion: 6000.4.9f1' ProjectSettings/ProjectVersion.txt
+          grep -Fx 'm_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe)' ProjectSettings/ProjectVersion.txt
+      - name: Verify planned binary LFS routing
+        run: |
+          png='Assets/GameArt/UI/Icons/ap03_import_probe.png'
+          ttf='Assets/GameArt/Fonts/ap03_font_probe.ttf'
+          otf='Assets/GameArt/Fonts/ap03_font_probe.otf'
+          for p in "$png" "$ttf" "$otf"; do
+            out=$(git check-attr filter diff merge -- "$p")
+            echo "$out"
+            grep -F "$p: filter: lfs" <<< "$out"
+            grep -F "$p: diff: lfs" <<< "$out"
+            grep -F "$p: merge: lfs" <<< "$out"
+          done
+      - name: Verify no premature runtime art
+        run: |
+          test ! -e Assets/GameArt
+          test ! -e Assets/GameArt.meta
+          test -z "$(git ls-files 'Assets/GameArt/**' 'Assets/GameArt.meta')"
+      - name: AP-01 integrity baseline
+        run: |
+          bash tools/unity-ci/check-meta-integrity.sh
+          bash tools/unity-ci/check-binaries.sh
+      - name: Verify AP-03 stays documentation-only
+        run: |
+          test "$(git diff --name-only origin/main...HEAD | grep -v '^docs/design/art/art-technical-recipe-v1.md$' | wc -l)" -eq 0
+          git diff origin/main...HEAD --check
