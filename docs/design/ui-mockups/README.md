@@ -104,7 +104,7 @@ sim (see §1).
 
 ### 4.1 AP-02 typography correction — proposed with G1
 
-AP-03's rights/script audit found that the inherited Barlow Condensed display candidate does not provide the required Ukrainian/Cyrillic coverage. The AP-02 branch therefore changes the shared `--font-display` reference to **IBM Plex Sans Condensed**, preserving the condensed display role while giving the localization workstream a viable Cyrillic path. This does not change the `touchline` direction and does not adopt a runtime font binary; AP-03 still owns exact version/license/glyph/offline-package proof before G2 can close.
+AP-03's rights/script audit found that the inherited Barlow Condensed display candidate does not provide the required Ukrainian/Cyrillic coverage. The AP-02 branch therefore adds a `touchline`-specific `--font-display` override to **IBM Plex Sans Condensed**, preserving the root/stadium Barlow Condensed value for the historical comparison while giving the chosen direction a viable Cyrillic path. This does not change the `touchline` direction and does not adopt a runtime font binary; AP-03 still owns exact version/license/glyph/offline-package proof before G2 can close.
 
 Barlow Condensed remains part of the historical July 25 comparison record rather than being rewritten out of history.
 
