@@ -24,6 +24,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm -f .github/workflows/art-plan-v06-temp.yml tools/art-plan-v06-temp.py
           git add -A docs/planning/art-pipeline-foundation.md docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md .github/workflows tools/art-plan-v06-temp.py
-          git diff --cached --check
           git commit -m "Refine AP-01 meta execution contract"
           git push origin HEAD:art/art-pipeline-foundation
