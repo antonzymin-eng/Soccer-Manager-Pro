@@ -3,7 +3,7 @@
 **Status:** PLANNING — IMPLEMENTATION GATED  
 **Started:** September 4, 2026  
 **Last Updated:** September 5, 2026  
-**Version:** 0.4  
+**Version:** 0.5  
 **Implementation gate:** G0 CLOSED pending owner acceptance.  
 **Purpose:** Define a production-grade art pipeline that can run in parallel with simulation, UI/UX, localization, audio, and management-layer development without creating asset debt, rights risk, or presentation-layer coupling.
 
@@ -81,7 +81,7 @@ The pipeline must let production-quality art arrive incrementally while preservi
 6. **Production assets require known rights.** Unknown provenance, redistribution rights, trademark status, or likeness status blocks release-ready use.
 7. **No baked user-facing text by default.** Localization remains live UI text; reusable art is language-neutral unless an exception is explicitly approved.
 8. **Editable sources and runtime exports are separate.** Authoring masters do not leak into the shipping Unity tree.
-9. **Unity GUID stability matters.** Once a production export is integrated, ordinary revisions preserve its semantic identity, path, and `.meta` GUID where practical.
+9. **Unity GUID stability matters.** Once a production export is integrated, ordinary revisions preserve its semantic identity, path, and `.meta` GUID. Necessary move/rename exceptions follow §6.4 and require explicit GUID/reference verification.
 10. **Fallback is not placeholder.** Dynamic families receive intentional shippable defaults; temporary developer art never counts as release coverage.
 11. **Stage-1 visual quality is a release gate.** `master-development-plan.md` requires a professional-quality, readable match presentation and explicitly rejects placeholder art at the Stage-1 quality gate.
 12. **Typography is a licensed runtime dependency.** Font binaries require recorded redistribution rights and localization/script coverage.
@@ -127,7 +127,7 @@ H7 asset operations begin once production assets exist.
 
 ### H0 — Governance and repository contract
 
-Accept this plan first. After G0, create the actual art-source/runtime directory contract, metadata schema/example, and any required Unity `.meta` files as AP-01. The planning PR itself does **not** pre-land AP-01 content.
+Accept this plan first. After G0, AP-01 first extends the repository's Unity `.meta` helper/check scope to `Assets/GameArt/`; only after that guard is active does it create the art-source/runtime directory contract, metadata schema/example, and first tracked GameArt paths. The planning PR itself does **not** pre-land AP-01 content.
 
 ### H1A — `touchline` formalization and unresolved-family extension
 
@@ -222,7 +222,7 @@ Assets/GameArt/
   Stadiums/
 ```
 
-Every tracked file/folder created under `Assets/GameArt/` must receive the appropriate committed Unity `.meta` identity from the moment it is introduced. AP-01 must not rely on the current `src/`-only meta-integrity gate to catch mistakes.
+Every tracked file/folder created under `Assets/GameArt/` must receive the appropriate committed Unity `.meta` identity from the moment it is introduced. **Before the first GameArt path is created, AP-01 extends both `tools/unity-ci/check-meta-integrity.sh` and `tools/unity-ci/generate-missing-metas.sh` so their tracked-path universe includes `Assets/GameArt/` as well as `src/`, and proves the check path fails on a missing GameArt `.meta`.** No GameArt path may be committed in the interval between directory creation and that scope change.
 
 ### 4.3 Release art
 
@@ -238,7 +238,7 @@ C# remains in `src/` through the repository's existing Unity project arrangement
 
 ### 4.5 Existing repository mechanics
 
-The repo already routes common textures, 3D formats, audio, video, and fonts through Git LFS and has a whole-repository large-binary guard. The existing `.meta` integrity check currently covers `src/`; AP-06 expands equivalent integrity checking to the production art tree before content volume grows.
+The repo already routes common textures, 3D formats, audio, video, and fonts through Git LFS and has a whole-repository large-binary guard. The existing `.meta` integrity checker and generator currently enumerate only `src/`; **AP-01 extends both to `Assets/GameArt/` before creating any tracked GameArt path.** AP-06 may harden that baseline from H2 evidence, but it is not the first line of defense.
 
 ---
 
@@ -567,7 +567,7 @@ Automation follows H2 evidence.
 
 ### 11.1 Mandatory objective hardening before volume
 
-- extend missing/orphan/duplicate-GUID validation to `Assets/GameArt/`;
+- retain the AP-01 `Assets/GameArt/` missing/orphan/duplicate-GUID checks as mandatory baseline enforcement and add only H2-discovered integrity checks that are not already covered;
 - enforce allowed runtime asset roots/formats;
 - enforce production naming rules;
 - validate required `.art.json` completeness/status transitions needed for shipping;
@@ -749,15 +749,16 @@ An asset reaches `validated` only when applicable checks pass:
 
 ### AP-01 — Repository contract
 
-Only after G0:
+Only after G0, in this order:
 
-- create the exact `art-source/` and `Assets/GameArt/` roots/subtrees as needed;
-- commit required Unity folder/file `.meta` identities from first introduction;
-- add the authoritative `.art.json` schema/example;
-- document allowed/forbidden runtime formats;
-- add local scratch ignore only if actual tools need it.
+1. **Extend meta scope first.** Update `tools/unity-ci/check-meta-integrity.sh` and `tools/unity-ci/generate-missing-metas.sh` so their tracked-path universe covers both `src/` and `Assets/GameArt/`; keep `src/`'s existing root exception and define the corresponding GameArt root/folder behavior explicitly.
+2. **Prove the guard.** Before creating the real GameArt tree, use a temporary tracked-path fixture/mutation to prove the check fails on a missing GameArt `.meta` and returns clean after the meta is present; do not rely on the script merely being edited.
+3. **Then create repository roots.** Create the exact `art-source/` and `Assets/GameArt/` roots/subtrees only as needed, with required Unity folder/file `.meta` identities committed from first introduction.
+4. Add the authoritative `.art.json` schema/example.
+5. Document allowed/forbidden runtime formats.
+6. Add local scratch ignore only if actual tools need it.
 
-**No production styling.** This is infrastructure only.
+**No production styling.** This is infrastructure only. **No tracked `Assets/GameArt/` path may predate steps 1–2.**
 
 ### AP-02 — Derive art direction from `touchline`
 
@@ -798,7 +799,7 @@ Produce only §10.1.
 
 ### AP-06 — Objective validators
 
-- extend GameArt `.meta` integrity;
+- retain and re-prove the AP-01 GameArt `.meta` integrity baseline while adding any additional H2-proven meta/import integrity checks;
 - production path/naming rules;
 - `.art.json` validation;
 - runtime/source-format guard;
@@ -866,7 +867,7 @@ Before production 3D content, approve a separate family recipe covering DCC/sour
 | Large unusable batches | no family scale before representative acceptance |
 | Trademark/likeness contamination | fictional-first + `.art.json` provenance + quarantine + human review |
 | Font/network/script failure | verify redistribution, vendor approved binaries, test required scripts/fallback |
-| Broken Unity references | stable paths/GUIDs + AP-06 GameArt meta integrity |
+| Broken Unity references | stable paths/GUIDs + AP-01 GameArt meta generator/check scope and mutation proof before first tracked GameArt path + AP-06 evidence-driven hardening |
 | Binary repo bloat | existing LFS routing/binary guard + bounded batches |
 | Overengineered loading system | Addressables/catalog/atlas decision deferred to measured need |
 | Fake management integration claim | named real consumers; reference mockups cannot close runtime-management subgate |
@@ -886,6 +887,7 @@ G0 may be opened only when the owner accepts this grounded plan and all of these
 - APPROVED #38 and the current client code are named as architecture/integration constraints;
 - the plan does not claim a management UGUI consumer already exists;
 - the planning PR contains no premature AP-01 runtime/source directory implementation;
+- AP-01 orders `check-meta-integrity.sh` + `generate-missing-metas.sh` GameArt scope extension and a firing proof **before** the first tracked `Assets/GameArt/` path;
 - `.art.json` is the single authoritative initial provenance/production metadata format;
 - routine source revisions use Git history, not `_v001` copies;
 - Stage-1 visual-quality rationale points to `master-development-plan.md`;
@@ -905,3 +907,4 @@ Opening G0 authorizes **AP-01 only**, followed by AP-02 and AP-03 substantially 
 | 0.2 | 2026-09-04 | Expanded into lifecycle-driven pipeline: H0–H7 phases, semantic asset identity, replacement/deprecation, vertical slice before scale, evidence-driven automation and performance budgets. |
 | 0.3 | 2026-09-04 | Added typography rights/localization path and explicit future-3D activation boundary; retained G0 implementation gate. |
 | 0.4 | 2026-09-05 | Grounding remediation after external review: recognized July 25 `touchline` decision and existing `tokens.css`; made APPROVED #38 and actual client trees explicit; changed H1A/AP-02 from direction selection to `touchline` derivation/extension; narrowed typography work to rights/offline distribution/script coverage; named match/UI integration evidence and kept nonexistent management UGUI integration pending; made `.art.json` authoritative; prohibited routine source revision suffixes; corrected Stage-1 visual-quality source to the Master Development Plan; added standard version history and G0 close-out checklist. |
+| 0.5 | 2026-09-05 | External follow-up: moved GameArt `.meta` checker/generator scope expansion from AP-06 to the **first action of AP-01**, before any tracked GameArt path; required a mutation/firing proof; retained only evidence-driven hardening in AP-06; removed the `where practical` hedge from integrated-asset identity preservation and routed legitimate move/rename exceptions through §6.4. |
