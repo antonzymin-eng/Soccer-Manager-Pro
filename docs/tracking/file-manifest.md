@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 6, 2026 — **Art-pipeline plan v0.8 closes post-acceptance Codex GUID-scope finding; G0 remains accepted and AP-01 authorized.**
+**Last Updated:** September 6, 2026 — **AP-01 art repository/meta contract implemented and mutation-proven; no production GameArt tree or asset landed.**
+New: `art-source/README.md`, `art-source/_templates/example.art.json`, `docs/design/art/art-asset.schema.json`, and `tools/unity-ci/test-meta-integrity-gameart.sh`. Modified: `tools/unity-ci/check-meta-integrity.sh`, `tools/unity-ci/generate-missing-metas.sh`, `tools/unity-ci/README.md`, `docs/tracking/CHANGELOG.md`, and this manifest. Missing/orphan `.meta` enforcement now covers the managed `src/` + `Assets/GameArt/` roots, while duplicate-GUID detection is one project-wide scan across every tracked `.meta` under `Assets/` plus the junction-backed `src/` tree. The generator retains its existing `src/` behavior but is folder-only for GameArt; production art-file metas remain Unity-authored in AP-03. The dedicated mutation proof uses a temporary Git index and proves the generator boundary, missing GameArt meta, orphan GameArt meta, GameArt↔`src/` GUID collision, and GameArt↔other-`Assets/` GUID collision, restoring to clean after every mutation. Temporary proof run `34057630107` completed green after the exact-assertion review fix, including shell syntax, clean gate, generator-owned-path check, mutation proof, no-premature-GameArt-tree assertion, metadata contract parse, binary/LFS guard, and diff-whitespace check. `Assets/GameArt/` and `Assets/GameArt.meta` are absent from the landed AP-01 tree by design; AP-03 owns the first real Unity import. No production asset, C# runtime behavior, simulation/save schema, RNG stream/domain/draw site/draw order, `SPEC_INDEX.md` row, or spec status changed.
+**Last Updated (prior):** September 6, 2026 — **Art-pipeline plan v0.8 closes post-acceptance Codex GUID-scope finding; G0 remains accepted and AP-01 authorized.**
 Modified: `docs/planning/art-pipeline-foundation.md` **v0.7 → v0.8**, `docs/tracking/CHANGELOG.md`, and this manifest. A pre-merge Codex review found that duplicate-GUID detection limited to `src/` + `Assets/GameArt/` would miss collisions with other tracked Unity assets already under `Assets/` (for example `Assets/README.md.meta`) and future scenes/plugins. AP-01 now keeps missing/orphan enforcement on the managed `src/` + `Assets/GameArt/` roots but requires duplicate-GUID detection as one combined scan across every tracked `.meta` under `Assets/` plus the junction-backed `src/` tree, with mutation proof against both an existing `src/` meta and another `Assets/` meta. G0 acceptance and AP-01-only authorization are unchanged. No runtime, production asset, RNG, draw-order, workflow, or spec-status change.
 **Last Updated (prior):** September 6, 2026 — **Art-pipeline G0 accepted by owner; plan v0.7 authorizes AP-01 only.**
 Modified: `docs/planning/art-pipeline-foundation.md` **v0.6 → v0.7**, `docs/tracking/CHANGELOG.md`, and this manifest. The owner explicitly accepted G0 on September 6, 2026 after the v0.6 external-review close-out. AP-01 repository/meta-contract implementation is authorized; AP-02/AP-03 and later production/family-scale gates remain governed by the plan and no bulk asset generation is authorized by this acceptance record. Before this acceptance the art branch was verified to merge cleanly with current `main` (#357); this landing updates the branch from `main` before squash merge. No simulation/runtime semantics, RNG, draw order, spec status, or production asset content changed.
@@ -3211,6 +3213,22 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 
 
 *(June 12, 2026: `docs/tracking/dotnet-ci-quarantine.md` added — human-readable quarantine ledger for the dotnet CI gate; machine mirror at `tools/dotnet-ci/known-failures.txt`.)*
+
+## Art Pipeline Infrastructure
+
+Operational AP-01 surfaces. These are pipeline/tooling contracts, not production art assets.
+
+| File | Purpose |
+|------|---------|
+| `art-source/README.md` | Editable-source/runtime-export contract, rights/revision policy, allowed/forbidden runtime-format boundary, and Unity `.meta` ownership split |
+| `art-source/_templates/example.art.json` | Non-production example of the authoritative adjacent `.art.json` production-candidate record |
+| `docs/design/art/art-asset.schema.json` | Draft 2020-12 machine schema for initial art-candidate identity, lifecycle, provenance/rights, target/export, and generated-source context |
+| `tools/unity-ci/check-meta-integrity.sh` | Missing/orphan enforcement for managed `src/` + `Assets/GameArt/`; one project-wide duplicate-GUID scan across tracked `Assets/**/*.meta` + `src/**/*.meta` |
+| `tools/unity-ci/generate-missing-metas.sh` | Deterministic helper preserving `src/` behavior while limiting GameArt generation to folder metas/CI fixtures; production art file metas remain Unity-authored |
+| `tools/unity-ci/test-meta-integrity-gameart.sh` | Temporary-index mutation proof for generator boundary, missing/orphan GameArt metas, and GameArt GUID collisions with both `src/` and other tracked `Assets/` metas |
+| `tools/unity-ci/README.md` | Human contract and local commands for the AP-01 Unity asset-integrity tooling |
+
+---
 
 ## Design References
 
