@@ -73,7 +73,9 @@ fi
 # file or directory must not make a committed meta appear healthy.
 tracked_asset_exists() {
   local asset="$1"
-  if git ls-files --error-unmatch -- "$asset" >/dev/null 2>&1; then
+  local exact
+  exact=$(git ls-files -- "$asset" | grep -Fx "$asset" || true)
+  if [ -n "$exact" ]; then
     [ -e "$asset" ]
     return
   fi
