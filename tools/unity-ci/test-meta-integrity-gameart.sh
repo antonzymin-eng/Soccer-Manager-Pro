@@ -64,8 +64,8 @@ if [ "$generator_status" -eq 0 ]; then
   echo "::error::Generator --check should report missing GameArt folder metas for the probe"
   exit 1
 fi
-if ! grep -Fq "MISSING GAMEART FOLDER META: $probe_root" <<< "$generator_check" \
-   || ! grep -Fq "MISSING GAMEART FOLDER META: $probe_dir" <<< "$generator_check"; then
+if ! grep -Fxq "MISSING GAMEART FOLDER META: $probe_root" <<< "$generator_check" \
+   || ! grep -Fxq "MISSING GAMEART FOLDER META: $probe_dir" <<< "$generator_check"; then
   echo "::error::Generator did not report both GameArt folder-meta gaps"
   printf '%s\n' "$generator_check"
   exit 1
