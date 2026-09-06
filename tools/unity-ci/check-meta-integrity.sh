@@ -47,17 +47,21 @@ dirs=$(printf '%s\n' "$files" | while IFS= read -r f; do
   esac
 done | sort -u)
 
-# ---- (1) MISSING ----
+# ---- (1) MISSING / UNCOMMITTED ----
+# Filesystem existence is not sufficient: an untracked .meta would disappear on
+# checkout and Unity would assign a new GUID. Require the meta in the active Git
+# index as well as in the working tree. This also makes the local check match CI.
 missing=0
 while IFS= read -r p; do
   [ -z "$p" ] && continue
-  if [ ! -e "$p.meta" ]; then
+  meta="$p.meta"
+  if ! git ls-files --error-unmatch -- "$meta" >/dev/null 2>&1 || [ ! -e "$meta" ]; then
     echo "MISSING META: $p"
     missing=$((missing + 1))
   fi
 done < <(printf '%s\n%s\n' "$files" "$dirs" | sed '/^$/d' | sort -u)
 if [ "$missing" -gt 0 ]; then
-  echo "::error::$missing tracked path(s) under src/ or Assets/GameArt/ lack a .meta. The generator may repair src/ and GameArt folder metas; production GameArt file metas must come from Unity import."
+  echo "::error::$missing tracked path(s) under src/ or Assets/GameArt/ lack a committed .meta. The generator may repair src/ and GameArt folder metas; production GameArt file metas must come from Unity import."
   fail=1
 fi
 
