@@ -2,6 +2,8 @@
 
 **Status:** IN PROGRESS — G2 PENDING REAL UNITY IMPORT  
 **Created:** September 6, 2026  
+**Last Updated:** September 6, 2026  
+**Document version:** 0.2  
 **Unity target:** `6000.4.9f1 (f7258d6eebbe)`  
 **Parent plan:** `docs/planning/art-pipeline-foundation.md` v0.8+  
 **Repository contract:** AP-01 landed in PR #365  
@@ -29,8 +31,8 @@ The workstream may establish static/repository evidence in parallel with AP-02, 
 | Initial font rights audit | PASS WITH DISPLAY BLOCKER | §8: all three current candidates are OFL-licensed, but Barlow Condensed lacks current upstream Cyrillic support |
 | Ukrainian/Cyrillic body coverage | PASS FOR CANDIDATE | IBM Plex Sans upstream states Cyrillic support; actual vendored binary still must be glyph-tested before shipping |
 | Ukrainian/Cyrillic mono coverage | PASS FOR CANDIDATE | JetBrains Mono official character/language lists include Ukrainian Cyrillic |
-| Ukrainian/Cyrillic display coverage | **BLOCKED** | current Barlow upstream has an open Cyrillic-support issue; proposed substitute is IBM Plex Sans Condensed v3.0+ (§8.4) |
-| P0 source → export reproducibility | PENDING | create technical import probe after AP-02/G1 does not conflict with the chosen icon/source recipe |
+| Ukrainian/Cyrillic display decision path | PASS WITH VISUAL DECISION PENDING | Barlow is unsuitable as sole Ukrainian display face; IBM Plex Sans Condensed is a technically viable replacement candidate routed to AP-02/G1 (§8.4). Final visual adoption is not a G2 prerequisite. |
+| P0 source → export reproducibility | PENDING | create a deliberately neutral technical import probe that does not depend on AP-02/G1; it may later be deleted/deprecated if it has no product use |
 | Actual Unity import | **PENDING** | must be performed in Unity 6000.4.9f1; no hand-authored production file meta permitted |
 | Importer settings captured from Unity | **PENDING** | record actual `.meta`/Inspector values after import |
 | In-place replacement preserves GUID | **PENDING** | replace probe bytes/source export, reimport, verify `.meta` GUID unchanged and consumer reference intact |
@@ -41,6 +43,8 @@ The workstream may establish static/repository evidence in parallel with AP-02, 
 ## 3. Initial P0 technical probe
 
 The first runtime import will use a deliberately non-product-specific **UI icon pipeline probe**, not a portrait/badge/stadium asset. Its job is to exercise transparency, 2D sprite import, LFS routing, GUID identity, source/export replacement, and small-asset settings with minimal style dependency.
+
+The probe is intentionally **independent of G1**. AP-02 may continue refining the production icon language in parallel; AP-03 needs only a neutral geometric source that exercises the technical path. Passing G2 does not make that probe an approved production-style asset.
 
 Planned semantic identity:
 
@@ -183,9 +187,9 @@ Evidence:
 
 IBM Plex Sans Condensed v3.0 added Cyrillic support (194 glyphs per font) and Bulgarian Cyrillic forms; the family is distributed under the same IBM Plex OFL project.
 
-Disposition: **preferred technical candidate to evaluate visually in AP-02** because it can keep the condensed display role while aligning with the existing IBM Plex Sans body family and removing the known Cyrillic hole.
+Disposition: **preferred technical candidate to evaluate visually in AP-02** because it can keep the condensed display role while aligning with the existing IBM Plex Sans body family and removing the known Cyrillic hole. AP-02 has recorded this as explicit proposed token change T-01 rather than a silent substitution.
 
-This is a cross-workstream finding, **not a silent token change**. AP-02 must put the change in its token-change register and update the mockup token source in the same eventual landing if G1 accepts it.
+For **G2**, this closes the required decision-path problem: the inherited face is identified as unsuitable, a rights-compatible Cyrillic-capable candidate is identified, and final visual selection is routed to G1. G2 does **not** need to wait for G1 or vendor the final font binaries, because the accepted G2 contract requires the rights/script/fallback path to be explicit rather than final typography rollout. Exact-binary adoption and corpus validation remain required before a font is marked validated/shipping.
 
 Evidence:
 
@@ -241,19 +245,22 @@ The mockups currently fetch fonts over the network. Shipping client rules:
 
 G2 stays **OPEN** until all are true:
 
-- [ ] AP-02/G1 supplies a compatible approved style target for the technical probe and resolves the display-font finding;
-- [ ] one source asset exports reproducibly to PNG;
+- [ ] one neutral technical source asset exports reproducibly to PNG without depending on G1 approval;
 - [ ] `git check-attr` proves LFS routing on the actual runtime path;
 - [ ] Unity 6000.4.9f1 imports the PNG and authors the production `.meta`;
 - [ ] actual importer settings are recorded here;
 - [ ] in-place replacement preserves GUID and live consumer reference;
 - [ ] AP-01 `.meta`/duplicate-GUID gate passes after import and replacement;
-- [ ] selected font versions/licenses are pinned;
-- [ ] exact font binaries pass Ukrainian/Cyrillic corpus checks;
-- [ ] font runtime packaging is offline and redistribution notices are planned;
+- [x] font rights/script/fallback **decision path is explicit**: current Barlow display face is unsuitable for required Ukrainian coverage, IBM Plex Sans Condensed is the technical replacement candidate routed to AP-02/G1, and IBM Plex Sans / JetBrains Mono have viable Cyrillic paths;
 - [ ] no speculative Addressables/atlas/catalog architecture was introduced.
 
-If real Unity import cannot be executed, G2 remains pending regardless of how much static evidence is green.
+The following remain required **before font binaries are validated/shipping**, but are not G2 blockers unless AP-03 itself begins shipping those binaries:
+
+- exact selected font versions/files/hashes pinned;
+- exact vendored binaries pass the Ukrainian corpus;
+- offline runtime packaging and redistribution notices are verified.
+
+If real Unity import cannot be executed, G2 remains pending regardless of how much static evidence is green. Conversely, G2 does not wait on G1: AP-02 and AP-03 remain parallel, and G1 owns the final visual acceptance of T-01.
 
 ---
 
@@ -262,3 +269,4 @@ If real Unity import cannot be executed, G2 remains pending regardless of how mu
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | 2026-09-06 | AP-03 technical contract/evidence ledger created. Records Unity 6000.4.9f1 target, source/export/import/GUID/LFS proof procedure, initial importer candidates, and font rights/script audit. Identifies Barlow Condensed Cyrillic gap and proposes IBM Plex Sans Condensed for AP-02 visual review. G2 explicitly remains open pending real Unity import and exact-binary font proof. |
+| 0.2 | 2026-09-06 | Hostile-review sequencing correction: removes accidental G1/final-font-binary prerequisites from G2, makes the import probe explicitly style-neutral/G1-independent, and treats the font audit as an explicit rights/script/fallback decision path. G2 still requires real Unity import/replacement evidence; final font binary validation remains a later shipping requirement unless AP-03 vendors fonts. |
