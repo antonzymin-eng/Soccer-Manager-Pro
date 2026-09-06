@@ -28,6 +28,7 @@ from testing_strategy_audit import (
     is_legacy_survey,
     iter_tables,
     programmatic_check_commands,
+    repository_file,
 )
 
 SECTION_RE = re.compile(r"§\s*(\d+(?:\.\d+)*)")
@@ -35,6 +36,10 @@ CHECKBOX_RE = re.compile(r"^\s*[-*]\s*\[([ xX])\]\s*(.+?)\s*$")
 TABLE_STATUS_CHECKBOX_RE = re.compile(r"\[\s*([ xX])\s*\]")
 HEADING_SECTION_RE = re.compile(r"^#{1,6}\s+(\d+(?:\.\d+)*)\b")
 EVIDENCE_MARKER_RE = re.compile(r"\bEvidence\s*:\s*", re.IGNORECASE)
+POSITIVE_STATUS_WORD_RE = re.compile(
+    r"^(?:PASS(?:ED)?|APPROVED|COMPLETE(?:D)?|DONE|VERIFIED|RESOLVED)$",
+    re.IGNORECASE,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -134,9 +139,24 @@ def resolve_path(token: str, *, repo_root: Path, spec_dir: Path) -> Path | None:
     path = Path(token)
     choices = [path] if path.is_absolute() else [repo_root / path, spec_dir / path]
     for candidate in choices:
-        if candidate.is_file():
-            return candidate.resolve()
+        resolved = repository_file(candidate, repo_root=repo_root)
+        if resolved is not None:
+            return resolved
     return None
+
+
+def table_status_is_checked(value: str) -> bool:
+    """Fail closed unless an explicit Status cell is recognizably complete."""
+    checkbox = TABLE_STATUS_CHECKBOX_RE.search(value)
+    if checkbox is not None:
+        return checkbox.group(1).lower() == "x"
+
+    cleaned = re.sub(r"[`*_]", "", value).strip()
+    if not cleaned:
+        return False
+    if cleaned.startswith(("✅", "☑", "✓")):
+        return True
+    return bool(POSITIVE_STATUS_WORD_RE.fullmatch(cleaned))
 
 
 def section_heading_match(line: str, section: str) -> re.Match[str] | None:
@@ -247,18 +267,38 @@ def run_programmatic_check(
 
 
 def checkbox_rows(lines: list[str]) -> list[tuple[int, str, bool, str, str]]:
-    """Return line, row-id, checked, claim, evidence for Markdown checkboxes."""
+    """Return checkbox rows, folding indented continuation/evidence sub-bullets."""
     rows: list[tuple[int, str, bool, str, str]] = []
     current_section = "§9"
-    for line_no, line in enumerate(lines, start=1):
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         heading = HEADING_SECTION_RE.match(line)
         if heading:
             current_section = f"§{heading.group(1)}"
+
         match = CHECKBOX_RE.match(line)
         if not match:
+            i += 1
             continue
+
+        line_no = i + 1
         checked = match.group(1).lower() == "x"
-        body = match.group(2).strip()
+        base_indent = len(line) - len(line.lstrip())
+        body_parts = [match.group(2).strip()]
+        j = i + 1
+        while j < len(lines):
+            continuation = lines[j]
+            if not continuation.strip():
+                j += 1
+                continue
+            continuation_indent = len(continuation) - len(continuation.lstrip())
+            if continuation_indent <= base_indent:
+                break
+            body_parts.append(continuation.strip())
+            j += 1
+
+        body = " ".join(part for part in body_parts if part)
         marker = EVIDENCE_MARKER_RE.search(body)
         if marker:
             claim = body[: marker.start()].strip()
@@ -267,6 +307,7 @@ def checkbox_rows(lines: list[str]) -> list[tuple[int, str, bool, str, str]]:
             claim = body
             evidence = body
         rows.append((line_no, f"{current_section} line {line_no}", checked, claim, evidence))
+        i = j
     return rows
 
 
@@ -463,14 +504,20 @@ def audit_file(
             checked += 1
 
             if status_i is not None and status_i < len(cells):
-                status_checkbox = TABLE_STATUS_CHECKBOX_RE.search(cells[status_i])
-                if status_checkbox and status_checkbox.group(1).lower() != "x":
+                status_value = cells[status_i].strip()
+                if not table_status_is_checked(status_value):
+                    status_checkbox = TABLE_STATUS_CHECKBOX_RE.search(status_value)
+                    message = (
+                        "approval checklist status checkbox is not checked"
+                        if status_checkbox is not None
+                        else "approval checklist status is not recognizably checked"
+                    )
                     findings.append(
                         Finding(
                             spec_id,
                             str(path),
                             row_id,
-                            "approval checklist status checkbox is not checked",
+                            message,
                             blocking,
                         )
                     )
