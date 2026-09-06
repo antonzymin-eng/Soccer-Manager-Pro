@@ -26,9 +26,9 @@ jobs:
           manifest = Path('docs/tracking/file-manifest.md')
           text = manifest.read_text(encoding='utf-8')
           title = '# File Manifest (Post-Migration Baseline)\n\n'
-          assert text.startswith(title)
-          assert text.count('**Last Updated:**') == 1
-          text = text.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
+          current = title + '**Last Updated:**'
+          assert text.startswith(current)
+          text = text.replace(current, title + '**Last Updated (prior):**', 1)
           manifest_entry = (
               '**Last Updated:** September 5, 2026 — **Art-pipeline planning PR #360 grounded and tracking close-out completed; documentation only; G0 remains CLOSED pending owner acceptance.**\n'
               'New: `docs/planning/art-pipeline-foundation.md` **v0.5**. Modified: `docs/tracking/CHANGELOG.md` and this manifest. The plan now inherits the July 25 `touchline` visual-direction decision and APPROVED UI / Client Framework #38, grounds integration in the actual client trees, keeps the missing management UGUI consumer explicit, makes `.art.json` the sole initial production/provenance record, and moves `Assets/GameArt/` `.meta` checker/generator scope extension plus a firing proof to the **first AP-01 action before any tracked GameArt path exists**. The Design References row is corrected from the stale “neither chosen yet” prose to `touchline` chosen / `stadium` rejected; this was plain prose, not a maintained version citation or machine-derivable cardinality, so `doc-consistency-check.py` could not detect the drift. The new planning document is added to Planning Documents. PR #360 pre-closeout CI run #832 failed only the documented owner-held `sim_match_engine_close_chance` band in `MatchEngine.Tests` (472 passed / 1 failed / 11 skipped); Markdown link and every other completed check passed. No `src/`, `.cs`, `.asmdef`, runtime schema, RNG stream/domain/draw site/draw order, workflow contract, `SPEC_INDEX.md` row, or spec status changed.\n'
@@ -46,10 +46,10 @@ jobs:
 
           changelog = Path('docs/tracking/CHANGELOG.md')
           text = changelog.read_text(encoding='utf-8')
-          assert text.count('> **Last Updated:**') == 1
-          text = text.replace('> **Last Updated:**', '> **Last Updated (prior):**', 1)
           divider = '---\n\n'
-          assert divider in text
+          current = divider + '> **Last Updated:**'
+          assert current in text
+          text = text.replace(current, divider + '> **Last Updated (prior):**', 1)
           lines = [
               '> **Last Updated:** September 5, 2026 — **Art-pipeline planning PR #360 grounded and closed out for owner acceptance; documentation only; G0 remains CLOSED.**',
               '> **The plan now fits the project it governs.** New `docs/planning/art-pipeline-foundation.md` **v0.5** inherits the July 25 `touchline` choice in `docs/design/ui-mockups/README.md` instead of reopening visual direction, treats APPROVED UI / Client Framework #38 as the architectural authority, and names the actual client surfaces (`src/ui-framework/`, `src/match-client-core/`, `src/match-client-unity/`, `src/match-client-web/`, `src/client-app/`). The first draft\'s premature `Assets/GameArt/` / `art-source/` companion files were removed from the effective diff rather than legitimized ahead of G0. `.art.json` is the one initial production/provenance format, routine `_v001`-style revision copies are prohibited, typography work is narrowed to the existing candidates plus redistribution/offline-shipping/script/fallback validation, and Stage-1 professional visual quality is grounded in `master-development-plan.md`.',
