@@ -1,10 +1,10 @@
 # System XI — Art Pipeline Plan
 
-**Status:** PLANNING — IMPLEMENTATION GATED  
+**Status:** ACCEPTED — AP-01 AUTHORIZED  
 **Started:** September 4, 2026  
 **Last Updated:** September 6, 2026  
-**Version:** 0.6  
-**Implementation gate:** G0 CLOSED pending owner acceptance.  
+**Version:** 0.7  
+**Implementation gate:** G0 ACCEPTED September 6, 2026 by owner; AP-01 authorized.  
 **Purpose:** Define a production-grade art pipeline that can run in parallel with simulation, UI/UX, localization, audio, and management-layer development without creating asset debt, rights risk, or presentation-layer coupling.
 
 ---
@@ -882,6 +882,8 @@ Before production 3D content, approve a separate family recipe covering DCC/sour
 
 ## 21. G0 acceptance checklist
 
+**Acceptance recorded:** September 6, 2026. The owner explicitly accepted G0. AP-01 is authorized; later art-production gates remain unchanged.
+
 G0 may be opened only when the owner accepts this grounded plan and all of these statements are true:
 
 - `touchline` is treated as the existing chosen visual direction, not a candidate to reselect;
@@ -910,3 +912,4 @@ Opening G0 authorizes **AP-01 only**, followed by AP-02 and AP-03 substantially 
 | 0.4 | 2026-09-05 | Grounding remediation after external review: recognized July 25 `touchline` decision and existing `tokens.css`; made APPROVED #38 and actual client trees explicit; changed H1A/AP-02 from direction selection to `touchline` derivation/extension; narrowed typography work to rights/offline distribution/script coverage; named match/UI integration evidence and kept nonexistent management UGUI integration pending; made `.art.json` authoritative; prohibited routine source revision suffixes; corrected Stage-1 visual-quality source to the Master Development Plan; added standard version history and G0 close-out checklist. |
 | 0.5 | 2026-09-05 | External follow-up: moved GameArt `.meta` checker/generator scope expansion from AP-06 to the **first action of AP-01**, before any tracked GameArt path; required a mutation/firing proof; retained only evidence-driven hardening in AP-06; removed the `where practical` hedge from integrated-asset identity preservation and routed legitimate move/rename exceptions through §6.4. |
 | 0.6 | 2026-09-06 | AP-01 execution refinement after external review: named all three checker enumerations; required duplicate-GUID detection as one cross-tree `src/` + `Assets/GameArt/` scan; restricted `generate-missing-metas.sh` to folders/CI safety rather than production art assets; assigned importer-bearing art-asset metas to actual Unity import in AP-03; expanded mutation proof to missing, orphan, and cross-tree duplicate cases. |
+| 0.7 | 2026-09-06 | **G0 accepted by owner.** Planning gate closed successfully and AP-01 repository-contract implementation authorized. No bulk asset generation or later family-scale gate was opened. |

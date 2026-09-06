@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 6, 2026 — **Art-pipeline plan v0.6 execution details tightened after external review; documentation only; G0 remains CLOSED pending explicit owner acceptance.**
+> **Last Updated:** September 6, 2026 — **Art-pipeline G0 accepted by owner; plan v0.7 authorizes AP-01 only.**
+> The owner explicitly accepted G0 after the grounded v0.6 review close-out. `docs/planning/art-pipeline-foundation.md` advances **v0.6 → v0.7**, records the acceptance date/actor, and changes status from planning-gated to **ACCEPTED — AP-01 AUTHORIZED**.
+> Scope remains deliberately narrow: this decision opens AP-01 repository/meta-contract implementation only. It does not authorize bulk asset generation or silently pass AP-02/AP-03/G1/G2/G3/G4/family gates.
+> The art branch is updated from current `main` (#357) before squash merge. The merge was previously verified conflict-free and #357 did not touch this plan or either art tracking row/header chain. Separate #357 governance/tracking defects are not repaired in this art PR.
+> **Determinism/runtime declaration:** no snapshot/serialization schema change; no RNG stream/domain/draw-site/draw-order change; no runtime behavior, assembly graph, spec status, or production art asset changed.
+>
+> **Last Updated (prior):** September 6, 2026 — **Art-pipeline plan v0.6 execution details tightened after external review; documentation only; G0 remains CLOSED pending explicit owner acceptance.**
 > `docs/planning/art-pipeline-foundation.md` advances **v0.5 → v0.6** without changing the high-level pipeline or opening implementation. AP-01 now names the three separate `src/`-scoped enumerations in `check-meta-integrity.sh`: the missing-meta/ancestor walk, orphan-meta scan, and duplicate-GUID scan. Missing/orphan coverage must span `src/` plus `Assets/GameArt/`; duplicate detection must be **one combined cross-tree scan**, so a GameArt GUID collision with an existing `src/` meta cannot escape two per-root checks.
 > `generate-missing-metas.sh` is now explicitly limited to GameArt **folders and CI-safety fixtures**. It may not synthesize production art-asset metas because its minimal stub lacks Unity importer blocks; textures, vectors, fonts, and other imported art assets receive importer-bearing `.meta` files from actual Unity import in AP-03. AP-01's mutation proof is expanded to missing-meta, orphan-meta, and cross-tree duplicate-GUID cases before any tracked GameArt path exists.
 > Final pre-refinement CI run `34007813158` reproduced only the documented owner-held `sim_match_engine_close_chance` RED band: `MatchEngine.Tests` **472 passed / 1 failed / 11 skipped**, `SeasonSave.Tests` **447 passed / 0 failed / 3 skipped**. All other completed checks passed; the PR has no `.cs` change and makes no runtime repair or rebaseline.
