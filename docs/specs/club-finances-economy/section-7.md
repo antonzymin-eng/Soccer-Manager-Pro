@@ -1,9 +1,9 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.3 — balance-pass AR pass 8 M2: the §7 precedent citation renamed off the phantom stream)
-**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.3
+**Last Updated:** September 4, 2026 (v0.5 — T0 critique closure)
+**Last Updated (prior):** September 4, 2026 (v0.4 — T0 implementation critique/back-prop record)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -13,7 +13,9 @@
 - **T0** — `TacticalDirector.ClubFinances` assembly: value types (`FinanceTransactionKind`, `FinanceLineItem`,
   `ClubFinances`, `FinanceTransaction`, `BoardModifier`, `FinancesViewModel`), the deterministic
   `SettleFinances` + `PrizeMoneyForPosition` + `ApplyTransaction` + `AvailableTransferBudget`,
-  `ClubFinancesConstants`. Behaviour-neutral by construction (KD-8).
+  `ClubFinancesConstants`. Behaviour-neutral by construction (KD-8). The assembly also carries the
+  cross-cutting `ProjectConstants` reference required by Code Standards #20 for `[GT]`
+  `GameplayConfig.Get*` loading; this is not a domain ownership seam (FR-FN-027 / §4.1).
 - **T1** — `ClubFinancesSaveCodec` (`FINANCE_SAVE_FORMAT_VERSION` = 1) + composition into #30's season save
   (the `SeasonSaveCodec` sub-blob; #30's composing format-version bump coordinated here). Fail-loud gates.
 - **T2** — Wire `SettleFinances` at #30's **new** reserved step (b') (after the (a') #43 insertion point,
@@ -75,10 +77,36 @@
 - **#27 (squad/player data):** the `Squad.ClubId` enumeration #40 reads for F6's club-universe check MUST
   remain the authoritative club-identity source; #40 MUST NOT gain a second, competing club-identity notion.
 
+## 7.4 T0 implementation critique record
+
+The first implementation pass on September 4, 2026 was reviewed against the approved #40 contract,
+active Code Standards #20, and repository gates before T0 was treated as ready. The review found and
+resolved four landing defects:
+
+1. **`[GT]` loading / reference mismatch.** The approved architecture said the production assembly referenced
+   only #27/#16, while active Code Standards require `[GT]` values to use the established
+   `GameplayConfig.Get*` loader in `ProjectConstants`. FR-FN-027 and §4.1/§4.3 now name that cross-cutting
+   foundation edge explicitly; the implementation uses it and introduces no alternate loader.
+2. **Canonical assembly-tier seating.** A new production `.asmdef` is not conformant until its folder is
+   placed in Code Standards #20 §3.5.2 in the same landing. `club-finances` is a Tier-7 Management assembly:
+   long-horizon state above a single match, with only downward references.
+3. **General-test allocation marker.** T0's structural integer-only assertion uses reflection/LINQ in a
+   general unit test. The test file therefore carries Code Standards #20 §3.9.4's explicit
+   general-unit-test allocation-relaxation marker.
+4. **Source documentation template.** The initial revision used a historical shorthand for authors and
+   version-history rows. The final T0 source uses a named `Author:` value and the Appendix-B history shape
+   required by Code Standards #20 §3.6 / Appendix A-B. The unused friend-assembly attribute was removed at
+   the same time rather than widening internals for tests that never consume them.
+
+These are implementation-landing corrections only. T1 persistence, T2 season-loop/bootstrap wiring, and
+T3 deep behavior remain deferred exactly as listed in §7.1.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial T-phase plan (T0–T3) + deferred extensions + downstream seam contracts. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): §7.2 records the deferred periodic wage cash-out (the step that debits `Balance` from `WageBillAggregate`). |
 | 0.3 | 2026-08-08 | — | **ERR-041-012 back-prop**: the append-only-purpose precedent citation renamed — #41 has a keyed derivation, not an `injuries.occurrence` stream. |
+| 0.4 | 2026-09-04 | — | **T0 implementation critique/back-prop.** Records and discharges the `ProjectConstants` `[GT]` loader dependency mismatch, mandatory Tier-7 seating, and §3.9.4 general-test allocation marker. T1–T3 remain deferred. |
+| 0.5 | 2026-09-04 | Codex | **T0 critique closure.** Adds the source-documentation-template correction and records removal of the unused friend-assembly surface; T0 is staged atomically for gate/review. |
 #endregion

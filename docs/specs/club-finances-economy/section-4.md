@@ -1,26 +1,33 @@
 # Club Finances & Economy #40 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.1
+**Last Updated:** September 4, 2026 (v0.3 — T1 self-identifying save framing back-prop)
+**Last Updated (prior):** September 4, 2026 (v0.2 — T0 back-prop: explicit ProjectConstants config dependency)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
 
 ## 4.1 Assembly & reference direction
 
-New assembly `TacticalDirector.ClubFinances` (`src/club-finances/`), references **only**
-`TacticalDirector.PlayerDatabase` (#27) and `TacticalDirector.DeterministicSim` (#16). It does **not**
-reference `MatchEngine`, `LivingWorld`, `SeasonSave`, #30, #31, #34, or #45; #30's season-save assembly and
-#31's (future) transfer-market assembly reference *it* (the one-way composition, FR-FN-027).
+New assembly `TacticalDirector.ClubFinances` (`src/club-finances/`), references
+`TacticalDirector.PlayerDatabase` (#27), `TacticalDirector.DeterministicSim` (#16), and the cross-cutting
+`TacticalDirector.ProjectConstants` foundation solely for the Code Standards #20-mandated
+`GameplayConfig.Get*` loading of #40's `[GT]` catalogue. It does **not** reference `MatchEngine`,
+`LivingWorld`, `SeasonSave`, #30, #31, #34, or #45; #30's season-save assembly and #31's (future)
+transfer-market assembly reference *it* (the one-way composition, FR-FN-027).
 
 ```
 #30 SeasonSave/RollToNextSeason ──▶ ClubFinances (#40) ──▶ PlayerDatabase (#27)   [reads Squad.ClubId enumeration]
 #31 Transfer Market (future)    ──▶ ClubFinances (#40) ──▶ DeterministicSim (#16)  [reserved namespace only;
                                                                                      no stream at minimal, KD-2]
-#34 Staff (future)               ──▶ ClubFinances (#40)
+#34 Staff (future)               ──▶ ClubFinances (#40) ──▶ ProjectConstants       [[GT] GameplayConfig loading only]
 #45 Board & Ownership (future)   ──▶ ClubFinances (#40)
 ```
+
+The `ProjectConstants` edge is architectural infrastructure, not a domain seam: it does not change #40's
+one-way ownership graph and exists only because active Code Standards #20 require `[GT]` values to use the
+established `GameplayConfig.Get*` loader. #40 does not introduce another config loader.
 
 #27's assembly is **schema-untouched**: `Squad.ClubId` is #27's own already-published identity field, so #40
 reads it without #27 gaining a reference to #40. #40 does not consume `PlayerAttributes`/`PlayerRecord`
@@ -35,12 +42,13 @@ src/club-finances/
 ├── FinanceTransactionKind.cs         // the transaction-direction enum
 ├── FinanceLineItem.cs                // the transaction-classification enum
 ├── ClubFinances.cs                   // the #40-owned per-club state (serialized)
+├── ClubFinanceEntry.cs               // stable ClubId + ClubFinances persisted record (T1)
 ├── FinanceTransaction.cs             // the ApplyTransaction input value
 ├── BoardModifier.cs                  // KD-4 identity routing seam
 ├── FinanceStep.cs                    // SettleFinances + PrizeMoneyForPosition
 ├── FinanceLedger.cs                  // ApplyTransaction + AvailableTransferBudget
 ├── FinancesViewModel.cs              // KD-8 observer
-├── ClubFinancesSaveCodec.cs          // FINANCE_SAVE_FORMAT_VERSION sub-blob (T1)
+├── ClubFinancesSaveCodec.cs          // self-identifying FINANCE_SAVE_FORMAT_VERSION sub-blob (T1)
 ├── ClubFinancesConstants.cs          // Appendix A catalogue
 └── Tests/ …
 ```
@@ -50,6 +58,9 @@ src/club-finances/
 - **From #27 (F6/§1.3):** the `Squad.ClubId` enumeration is read to know which clubs require a
   `ClubFinances` entry; #40 declares **no** write path into `PlayerAttributes`/`PlayerRecord` and does not
   read either at Stage 2 — the dependency is club-identity only.
+- **From ProjectConstants (T0/code standards):** #40's `[GT]` catalogue uses the existing
+  `GameplayConfig.Get*` loader. This is a foundation/config-loading dependency only; it creates no
+  gameplay ownership or mutation seam and introduces no new loader.
 - **To #30 (KD-6/KD-7):** #30's `RollToNextSeason()` invokes `SettleFinances` per club at the new reserved
   step (b') (after (a')'s #43 promotion/relegation insertion point, before (c) regenerate), and calls
   `ClubFinances.CreateInitial` once per club at league/game bootstrap (never #40 itself — #40 does not
@@ -68,7 +79,7 @@ src/club-finances/
   by a season roll (clubs are a stable universe, KD-7). #30 calls `CreateInitial` exactly once per club, at
   league/game bootstrap, not at every season roll.
 
-## 4.4 The `FINANCE_SAVE_FORMAT_VERSION` sub-blob codec
+## 4.4 The self-identifying `FINANCE_SAVE_FORMAT_VERSION` sub-blob codec
 
 `ClubFinancesSaveCodec` is an opaque, independently version-gated sub-blob composed into #30's
 `SeasonSaveCodec` — the same pattern #28's `PROGRESSION_SAVE_FORMAT_VERSION`, #29's
@@ -76,11 +87,19 @@ src/club-finances/
 #30's other sub-blobs and vice-versa; #30's composing outer `SEASON_SAVE_FORMAT_VERSION` bump is coordinated
 at #40's T1 exactly as it was for #28/#29/#41.
 
+A version word alone does not identify a format because multiple sibling sub-blobs legitimately sit at
+version 1. The block therefore starts with the fixed `FINANCE_SAVE_MAGIC = 0x464E4345` (`FNCE`) and rejects
+a wrong magic **before** interpreting the version or payload. This follows the #29/#41 self-identifying
+sub-blob correction and prevents a sibling version-1 block with a structurally plausible prefix from being
+silently decoded as finance state. The fixed framing is 12 header bytes (magic + version + count) and 52
+bytes per club record (`i32 ClubId` + six `i64` finance fields).
+
 ```
 EncodeFinances(perClubFinances) -> bytes:
-    WriteU32(FINANCE_SAVE_FORMAT_VERSION)
-    WriteCount(perClubFinances.Count)                       # overflow-safe (fail loud on corrupt count, F5)
-    for (clubId, f) in perClubFinances (ClubId ascending):  # deterministic club order
+    WriteU32(FINANCE_SAVE_MAGIC)                             # identifies WHICH format
+    WriteU32(FINANCE_SAVE_FORMAT_VERSION)                    # identifies WHICH generation
+    WriteCount(perClubFinances.Count)                        # overflow-safe (fail loud on corrupt count, F5)
+    for (clubId, f) in perClubFinances (ClubId ascending):   # deterministic club order; duplicate ids fail
         WriteI32(clubId)
         WriteI64(f.Balance)
         WriteI64(f.TransferBudget)
@@ -93,21 +112,28 @@ EncodeFinances(perClubFinances) -> bytes:
     # #28/#41 precedent).
 
 DecodeFinances(bytes) -> perClubFinances:
-    version = ReadU32(); if version != FINANCE_SAVE_FORMAT_VERSION: throw          # F3
-    count = ReadCount()                                       # overflow-safe bound guard (F5)
+    magic = ReadU32(); if magic != FINANCE_SAVE_MAGIC: throw                         # wrong format
+    version = ReadU32(); if version != FINANCE_SAVE_FORMAT_VERSION: throw            # F3
+    count = ReadCount()                                        # overflow-safe bound guard (F5)
+    previousClubId = below int.MinValue
     for i in [0, count):
         clubId = ReadI32()
+        if clubId <= previousClubId: throw                     # non-canonical/duplicate key
+        previousClubId = clubId
         balance = ReadI64()
         transferBudget = ReadI64(); wageBudget = ReadI64()
         wageBillAggregate = ReadI64()
         seasonRevenueAccrued = ReadI64(); ffpBalanceWindow = ReadI64()
-        if transferBudget < 0 or wageBudget < 0 or wageBillAggregate < 0: throw     # F1 coherence gate
+        if transferBudget < 0 or wageBudget < 0 or wageBillAggregate < 0: throw       # F1 coherence gate
         ... reconstruct ClubFinances ...
-    if bytesRemaining != 0: throw                             # trailing-byte guard, F5
+    if bytesRemaining != 0: throw                              # trailing-byte guard, F5
 ```
 
-Fail-loud gates per F1/F3/F5 (the `MatchSaveCodec` / `WorldStateSerializer.ReadCount` posture). All fields
-serialized via #16's `CanonicalSerializer` (bitwise round-trip); **serialize, don't regenerate**.
+`ClubId` is treated as #27's stable opaque signed `int` identity; #40 imposes no additional sign/range
+restriction. Encode sorts a copy of the caller's keys and refuses duplicates; decode requires strictly
+ascending keys. Fail-loud gates follow F1/F3/F5 and the shared `SaveBlobFramingHelpers` posture. All fields
+serialize through #16's `CanonicalSerializer`; signed `long` fields round-trip bitwise, including negative
+`Balance` (debt). **Serialize, don't regenerate.**
 
 ## 4.5 RNG-namespace reservation (KD-2) — not registered at Stage 2
 
@@ -124,4 +150,6 @@ addition leaves every existing stream's cursor byte-identical trivially (FR-FN-0
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial architecture: assembly, file layout, seam contracts, save codec, reserved namespace slot. Status IN REVIEW. |
+| 0.2 | 2026-09-04 | — | **T0 implementation back-prop.** Adds the cross-cutting `TacticalDirector.ProjectConstants` reference required by active Code Standards #20 for #40's `[GT]` `GameplayConfig.Get*` loading. Domain ownership/reference direction is unchanged; no new loader or gameplay seam is introduced. |
+| 0.3 | 2026-09-04 | Codex | **T1 implementation back-prop.** Adds leading `FINANCE_SAVE_MAGIC`, fixed 12-byte/52-byte framing, canonical ClubId ordering/duplicate rejection, and records that #40 does not invent a ClubId sign restriction. This prevents sibling version-1 blocks from being silently cross-decoded. |
 #endregion

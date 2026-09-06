@@ -1,9 +1,9 @@
 # Club Finances & Economy #40 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.3 — balance-pass AR pass 8 M2, the ERR-041-012 back-prop: the T-FN-NEU-003 comparator claimed #41 "does register a stream" — false since ERR-041-012; #41's occurrence draw registers nothing, same as #40's minimal tier)
-**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.3
+**Last Updated:** September 4, 2026 (v0.4 — T1 self-identifying save framing back-prop)
+**Last Updated (prior):** August 8, 2026 (v0.3 — balance-pass AR pass 8 M2, the ERR-041-012 back-prop)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -15,7 +15,10 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 
 | Constant | Value | Tag | Notes |
 |---|---|---|---|
-| `FINANCE_SAVE_FORMAT_VERSION` | 1 | [FIXED] | The #40 sub-blob version (KD-7). A season-save sub-blob, independently gated from `WORLD_STORE_FORMAT_VERSION` / `SEASON_STATE_FORMAT_VERSION` / `PROGRESSION_SAVE_FORMAT_VERSION` / `TRAINING_SAVE_FORMAT_VERSION` / `MEDICAL_SAVE_FORMAT_VERSION`. |
+| `FINANCE_SAVE_MAGIC` | `0x464E4345` (`FNCE`) | [FIXED] | Self-identifying prefix for #40's finance sub-blob. Checked before the version so a sibling block at version 1 cannot be silently interpreted as finance state (§4.4). |
+| `FINANCE_SAVE_FORMAT_VERSION` | 1 | [FIXED] | The #40 sub-blob generation (KD-7), independently gated from `WORLD_STORE_FORMAT_VERSION` / `SEASON_STATE_FORMAT_VERSION` / sibling management sub-blob versions. |
+| `FINANCE_SAVE_HEADER_BYTES` | 12 | [FIXED] | `u32` magic + `u32` version + `u32` club-record count (§4.4). |
+| `FINANCE_SAVE_RECORD_BYTES` | 52 | [FIXED] | Minimum/exact T1 record width: `i32 ClubId` + six `i64` `ClubFinances` fields (§4.4). Used by the overflow-safe count bound. |
 | `PERMILLE_DENOM` | 1000 | [FIXED] | Shared per-mille denominator for `BoardModifier` and the prize-money-share weights (§3.1) — keeps every ratio integer, no float. |
 | `BOARD_MODIFIER_IDENTITY_PERMILLE` | 1000 | [FIXED] | Per-mille identity for `BoardModifier.BudgetMultiplierMillPermille` (= ×1.0). `BoardModifier.Identity` sets this; `default(BoardModifier)` (all-zero) is NOT valid (FR-FN-018 / F4). |
 | `STARTING_CLUB_BALANCE` | 500,000 | [GT] | `ClubFinances.CreateInitial`'s default starting `Balance` at league/game bootstrap. |
@@ -74,4 +77,5 @@ ERR-041-012, #41 also registers NO stream; this line originally claimed the oppo
 | 0.1 | 2026-07-23 | — | Initial constant catalogue + worked examples (mid-season + mid-boundary-roll save/restore; behaviour-neutral identity). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): Appendix B mid-season example updated — wage transactions leave `Balance` unchanged. |
 | 0.3 | 2026-08-08 | — | **ERR-041-012 back-prop (balance-pass AR pass 8, M2)**: the Appendix C comparator asserted #41 registers an `injuries.occurrence` stream — a factual claim about a sibling spec that ERR-041-012 established as never-true; restated. |
+| 0.4 | 2026-09-04 | Codex | **T1 implementation back-prop.** Adds the self-identifying finance magic and fixed framing widths after review found that a version-only header could silently cross-decode a sibling version-1 block. |
 #endregion

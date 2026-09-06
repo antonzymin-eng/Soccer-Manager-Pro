@@ -1,8 +1,9 @@
 # Club Finances & Economy #40 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** September 4, 2026 (v0.3 — T0 reference-contract back-prop)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -111,9 +112,12 @@
   wage bill) MUST be exposed for #38.
 
 **Reference direction & neutrality (KD-8)**
-- **FR-FN-027** — The reference direction MUST stay one-way: `#30 → #40 → {#27, #16}` and `#31 → #40` (and,
-  later, `#34 → #40` / `#45 → #40`); #40's assembly MUST NOT reference `MatchEngine`, `LivingWorld`,
-  `SeasonSave`, #30, #31, #34, or #45. #27's assembly stays schema-untouched.
+- **FR-FN-027** — The domain reference direction MUST stay one-way: `#30 → #40 → {#27, #16}` and
+  `#31 → #40` (and, later, `#34 → #40` / `#45 → #40`). #40 MAY additionally reference the cross-cutting
+  `TacticalDirector.ProjectConstants` foundation solely for the Code Standards #20-mandated
+  `GameplayConfig.Get*` loading of its `[GT]` catalogue; that edge introduces no domain ownership seam.
+  #40's assembly MUST NOT reference `MatchEngine`, `LivingWorld`, `SeasonSave`, #30, #31, #34, or #45.
+  #27's assembly stays schema-untouched.
 - **FR-FN-028** — Behaviour-neutral identity: with the deep dials off, `BoardModifier.Identity`, and zero
   deep-tier accumulators, `SettleFinances` MUST yield **exactly** `budget = f(finalTablePosition,
   prizeMoney)`; registering #40's reserved namespace slot MUST leave every existing stream's cursor
@@ -208,4 +212,5 @@ pure reads over a `ClubFinances` value. See §3.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-FN-001..028), data structures, F1..F7. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): FR-FN-016 — a wage `ApplyTransaction` moves the `WageBillAggregate` liability ONLY (not `Balance`); cash items (`TransferFee`/`General`) move `Balance` only. |
+| 0.3 | 2026-09-04 | — | **T0 implementation back-prop.** FR-FN-027 now explicitly permits the cross-cutting `ProjectConstants` foundation edge used only for Code Standards #20-mandated `[GT]` `GameplayConfig.Get*` loading; the domain dependency direction and forbidden upward references are unchanged. |
 #endregion

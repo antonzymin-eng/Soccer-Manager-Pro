@@ -8,8 +8,8 @@ does not restate them. Appendix D is the single source of truth for banned/requi
 API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
-**Modified:** September 2, 2026
-**Version:** 1.12
+**Modified:** September 4, 2026
+**Version:** 1.13
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.8 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
@@ -623,9 +623,9 @@ order:
 | 2 **Configuration** | `tactical-instructions` (#21) | May be referenced by Mechanics, AI, Data, Composition, Management, Presentation and Client — everything above; references only `project-constants`. Today's consumers are Mechanics (all four), AI's `decision-tree` (`perception-system` does not reference it), Composition's `match-engine`, and Client's `match-client-core`, `match-client-web` and `ui-framework` — no Data or Management or Presentation assembly, and neither `client-app` nor `match-client-unity`, references it yet. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
 | 3 **Mechanics** | `positioning-ai`, `pressing-ai`, `defensive-ai`, `attacking-ai` | Off-ball and on-ball behaviour over the physics primitives. |
 | 4 **AI** | `decision-tree`, `perception-system` | Choice and what a player can know. |
-| 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, five of the six Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save` — not `living-world`) and Client's `match-client-core` — and by **no gameplay-tier assembly**. Seating it above AI preserves that: the gameplay tiers keep operating on struct parameters, not squad rows. |
+| 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, six of the seven Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save`, `club-finances` — not `living-world`) and Client's `match-client-core` — and by **no gameplay-tier assembly**. Seating it above AI preserves that: the gameplay tiers keep operating on struct parameters, not squad rows. |
 | 6 **Composition** | `match-engine` | References all four gameplay tiers plus Data; the only assembly that does. Not a numbered spec — governed by `docs/tracking/match-engine-design.md`. |
-| 7 **Management** | `living-world` (#22), `player-progression` (#28), `training-system` (#29), `injuries-medical` (#41), `discipline` (#44), `season-save` (#30) | Long-horizon state above a single match. |
+| 7 **Management** | `living-world` (#22), `player-progression` (#28), `training-system` (#29), `injuries-medical` (#41), `discipline` (#44), `season-save` (#30), `club-finances` (#40) | Long-horizon state above a single match. |
 | 8 **Presentation** | `match-viewer`, `match-analytics` (#37) | Derived from a played match. This tier is what keeps the root `CLAUDE.md` rule that **no sim assembly may reference `match-analytics`** true. |
 | 9 **Client** | `match-client-core`, `ui-framework` (#38), `client-app`, `match-client-unity`, `match-client-web` | Screens, shells and hosts. |
 | — **Infrastructure** | `performance-optimization` (#18), `testing-strategy` (#19) | Out of band: not members of the order, and no tier may reference them at runtime. |
@@ -1326,6 +1326,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.10 | September 2, 2026 | Codex | **A3.1a review correction.** Expands §3.5's declared FR range and target length to include FR-CS-074–081 and removes the asymmetric TOC sub-bullets. Restores plan v0.34's strict post-baseline classification failure, positive test-classification inputs, and closed-world/absence-proof guards, including the blind-spot-fixture precondition and known-path limit. Aligns bypass mechanics with Governance FR-AG-025's "prohibited or explicitly classified" wording. The draft remains unapproved pending A3.4. | PENDING — A3.4 |
 | 1.11 | September 2, 2026 | Codex | **A3.1a automated-review correction.** Defines the exact binding vocabulary and resolution targets for every ownership/path string, and states the frozen schema-v1/reference-semantics-v2.1 boundary honestly: shape acceptance is not cross-registry resolution and cannot support a Machine blocker before A4. Defines `not-applicable` plus the exact `na_fields` pairing rules so absent lifecycle/testhost phases are representable without using prose placeholders. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
 | 1.12 | September 2, 2026 | Codex | **A3.1a lifecycle-binding clarification.** Removes the undefined “lifecycle `surface_id`” and “lifecycle-owner `surface_id`” qualifiers. A non-N/A activation/update/teardown value now resolves first as an exact runtime-surface `surface_id`, then as the same dependency-graph identifier with `kind: lifecycle`; the two registries' roles are explicit and mechanically testable. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
+| 1.13 | September 4, 2026 | Codex | **D4/#40 T0 seating.** Adds `club-finances` (#40) to Tier 7 Management in the same landing as its production `.asmdef` and refreshes the `player-database` current Management-consumer note from five-of-six to six-of-seven. No dependency-direction rule or A3.1a governance semantics change. | — |
 
 ---
 
