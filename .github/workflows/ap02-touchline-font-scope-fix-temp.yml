@@ -1,0 +1,33 @@
+name: Temporary AP-02 font-scope fix
+
+'on':
+  push:
+    branches:
+      - tmp/ap02-touchline-font-scope-fix
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tmp/ap02-touchline-font-scope-fix
+          path: helper
+      - uses: actions/checkout@v4
+        with:
+          ref: art/ap-02-touchline-art-direction
+          path: work
+          fetch-depth: 0
+      - name: Apply touchline-only font scope fix
+        run: python3 helper/tools/ap02-touchline-font-scope-fix-temp.py
+      - name: Commit and push
+        working-directory: work
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/design/art/art-direction-v1.md docs/design/ui-mockups/README.md docs/design/ui-mockups/assets/tokens.css
+          git commit -m "Keep AP-02 font change touchline-specific"
+          git push origin HEAD:art/ap-02-touchline-art-direction
