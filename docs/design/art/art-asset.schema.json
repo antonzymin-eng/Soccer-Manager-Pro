@@ -16,8 +16,7 @@
     "attribution_required",
     "real_person_or_likeness",
     "real_club_competition_or_trademark",
-    "export_paths",
-    "notes"
+    "export_paths"
   ],
   "properties": {
     "asset_id": {
