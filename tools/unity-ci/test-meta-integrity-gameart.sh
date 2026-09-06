@@ -170,13 +170,17 @@ expect_fail "uncommitted GameArt meta" "MISSING META: $probe_asset"
 git add -f "$probe_asset_meta"
 run_clean "after restoring committed-meta mutation"
 
-# Mutation 2: tracked GameArt meta whose asset is gone.
-mv "$probe_asset" "$tmpdir/orphan-probe.txt"
+# Mutation 2: the GameArt asset remains physically present but is removed from
+# the temporary Git index while its meta stays tracked. A committed meta for an
+# uncommitted asset would be orphaned after checkout and must fail locally too.
 git rm --cached -q "$probe_asset"
-expect_fail "orphan GameArt meta" "ORPHAN META (asset missing): $probe_asset_meta"
-mv "$tmpdir/orphan-probe.txt" "$probe_asset"
+if [ ! -e "$probe_asset" ]; then
+  echo "::error::Uncommitted-asset mutation unexpectedly removed the working-tree asset"
+  exit 1
+fi
+expect_fail "uncommitted GameArt asset" "ORPHAN META (asset untracked or missing): $probe_asset_meta"
 git add -f "$probe_asset"
-run_clean "after restoring orphan mutation"
+run_clean "after restoring committed-asset mutation"
 
 # Mutation 3: GameArt GUID collides with junction-backed src/.
 src_pair=$(find_meta_with_guid '^src/.*\.meta$') || {
@@ -220,4 +224,4 @@ echo "PASS mutation: GameArt GUID collision with other Assets/"
 cp "$tmpdir/original-probe.meta" "$probe_asset_meta"
 run_clean "after restoring Assets duplicate mutation"
 
-echo "AP-01 GameArt meta proof PASS: generator boundary, missing, orphan, src collision, and project Assets collision all proved and restored cleanly."
+echo "AP-01 GameArt meta proof PASS: generator boundary, committed meta/asset identity, src collision, and project Assets collision all proved and restored cleanly."
