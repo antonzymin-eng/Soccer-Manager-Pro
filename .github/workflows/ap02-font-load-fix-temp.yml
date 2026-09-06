@@ -1,0 +1,32 @@
+name: Temporary AP-02 font-load fix
+
+'on':
+  push:
+    branches:
+      - tmp/ap02-font-load-fix
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tmp/ap02-font-load-fix
+          path: helper
+      - uses: actions/checkout@v4
+        with:
+          ref: art/ap-02-touchline-art-direction
+          path: work
+      - name: Apply font-load fix
+        run: python3 helper/tools/ap02-font-load-fix-temp.py
+      - name: Commit and push
+        working-directory: work
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/design/ui-mockups/assets/tokens.css docs/design/art/art-direction-v1.md
+          git commit -m "Fix AP-02 display font load request"
+          git push origin HEAD:art/ap-02-touchline-art-direction
