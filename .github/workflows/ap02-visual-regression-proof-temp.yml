@@ -46,13 +46,16 @@ jobs:
                   report[variant]={}
                   for filename in pages:
                       page=browser.new_page(viewport={'width':1920,'height':1080}, device_scale_factor=1)
+                      requests=[]
+                      page.on('response', lambda r: requests.append({'url':r.url,'status':r.status}) if ('fonts.googleapis.com' in r.url or 'fonts.gstatic.com' in r.url) else None)
                       url=f'http://127.0.0.1:{port}/'+filename.replace(' ','%20')
                       page.goto(url, wait_until='networkidle', timeout=60000)
                       page.evaluate('document.fonts.ready')
+                      faces=page.evaluate('''() => [...document.fonts].map(f => ({family:f.family,style:f.style,weight:f.weight,status:f.status}))''')
                       if variant=='candidate':
-                          loaded=page.evaluate('document.fonts.check("16px \\\"IBM Plex Sans Condensed\\\"")')
+                          loaded=page.evaluate('document.fonts.check("700 16px \\\"IBM Plex Sans Condensed\\\"")')
                           if not loaded:
-                              raise RuntimeError(f'IBM Plex Sans Condensed did not load on {filename}')
+                              raise RuntimeError(f'IBM Plex Sans Condensed 700 did not load on {filename}; faces={faces}; requests={requests}')
                       metrics=page.evaluate('''() => {
                         const all=[...document.querySelectorAll('body *')];
                         const visible=all.filter(e=>{const r=e.getBoundingClientRect(); const s=getComputedStyle(e); return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'});
@@ -65,13 +68,14 @@ jobs:
                         const body=document.body;
                         return {bodyScrollWidth:body.scrollWidth,bodyScrollHeight:body.scrollHeight,viewport:[innerWidth,innerHeight],clippedCount:clipped.length,clipped:clipped.slice(0,100),displayFont:getComputedStyle(document.querySelector('.display,.hero-title,h1,h2')||body).fontFamily};
                       }''')
+                      metrics['fontFaces']=faces
+                      metrics['fontRequests']=requests
                       report[variant][filename]=metrics
                       page.screenshot(path=str(out/f'{variant}-{filename.replace(" ","_").replace(".html","")}.png'), full_page=True)
                       page.close()
               browser.close()
           for p in servers: p.terminate()
           (out/'report.json').write_text(json.dumps(report,indent=2), encoding='utf-8')
-          # Fail only on obvious viewport-width regressions or newly introduced clipped elements.
           for fn in pages:
               b=report['baseline'][fn]; c=report['candidate'][fn]
               if c['bodyScrollWidth'] > max(1920, b['bodyScrollWidth']) + 2:
