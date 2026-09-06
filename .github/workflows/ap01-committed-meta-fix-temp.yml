@@ -1,0 +1,32 @@
+name: Temporary AP-01 committed-meta proof fix
+
+'on':
+  push:
+    branches:
+      - tmp/ap01-committed-meta-fix
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tmp/ap01-committed-meta-fix
+          path: helper
+      - uses: actions/checkout@v4
+        with:
+          ref: art/ap-01-repository-contract
+          path: work
+      - name: Apply committed-meta mutation refinement
+        run: python3 helper/tools/ap01-committed-meta-fix-temp.py
+      - name: Commit and push
+        working-directory: work
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/unity-ci/test-meta-integrity-gameart.sh
+          git commit -m "Prove committed GameArt meta requirement"
+          git push origin HEAD:art/ap-01-repository-contract
