@@ -1,7 +1,7 @@
 # UI Mockups — System XI (design reference)
 
 **Created:** July 25, 2026
-**Last Updated:** July 25, 2026 (visual direction CHOSEN: `touchline`)
+**Last Updated:** September 6, 2026 (`touchline` retained; AP-02 display-font localization correction proposed)
 **Status:** DESIGN REFERENCE (non-normative)
 **Related spec:** UI / Client Framework **#38** (`docs/specs/ui-client-framework/`, APPROVED July 22, 2026)
 
@@ -74,8 +74,7 @@ python3 -m http.server 8000 --directory docs/design/ui-mockups
 
 Notes:
 
-- The pages fetch **Google Fonts over the network** (Barlow, Barlow Condensed, IBM Plex Sans,
-  JetBrains Mono). Offline they fall back to system fonts and stay readable, but metrics shift.
+- The pages fetch **Google Fonts over the network**. The historical comparison pages still request Barlow / Barlow Condensed, while the shared `tokens.css` now requests **IBM Plex Sans Condensed** for the proposed AP-02 display role alongside IBM Plex Sans and JetBrains Mono. Offline the mockups still fall back to system fonts and remain reference-only; shipping font packaging is AP-03/G2 work.
 - The design system carries **two visual directions** — `stadium` (broadcast graphics) and
   `touchline` (analyst tool) — switched by the `data-direction` attribute on `<html>` and
   persisted in `localStorage`. **`touchline` is the chosen direction** (decided July 25, 2026); see
@@ -103,9 +102,16 @@ What this does **not** pin: any of these values as final. The tokens are a start
 rendering work, not an approved constant catalogue — nothing here is `[GT]`-tagged or loaded by the
 sim (see §1).
 
+### 4.1 AP-02 typography correction — proposed with G1
+
+AP-03's rights/script audit found that the inherited Barlow Condensed display candidate does not provide the required Ukrainian/Cyrillic coverage. The AP-02 branch therefore changes the shared `--font-display` reference to **IBM Plex Sans Condensed**, preserving the condensed display role while giving the localization workstream a viable Cyrillic path. This does not change the `touchline` direction and does not adopt a runtime font binary; AP-03 still owns exact version/license/glyph/offline-package proof before G2 can close.
+
+Barlow Condensed remains part of the historical July 25 comparison record rather than being rewritten out of history.
+
 ## 5. Version History
 
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0 | July 25, 2026 | Initial landing: design system + 11 screen mockups + shared assets, imported as the #38 visual reference. |
 | 1.1 | July 25, 2026 | Visual direction chosen: `touchline` (§5). `app.js` default corrected from `stadium` — the pages had been rendering a direction their own markup did not declare. |
+| 1.2 | September 6, 2026 | AP-02 proposed typography correction: `touchline` retained; shared display token changes from Barlow Condensed to IBM Plex Sans Condensed because AP-03 identified the inherited face as unsuitable for required Ukrainian/Cyrillic coverage. Runtime font adoption remains G2-gated. |

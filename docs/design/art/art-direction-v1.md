@@ -2,6 +2,8 @@
 
 **Status:** PROPOSED — G1 PENDING  
 **Created:** September 6, 2026  
+**Last Updated:** September 6, 2026  
+**Document version:** 1.1  
 **Style version:** `art-direction-v1`  
 **Parent plan:** `docs/planning/art-pipeline-foundation.md` v0.8+  
 **Visual baseline:** `docs/design/ui-mockups/` v1.1, chosen direction `touchline`  
@@ -102,15 +104,17 @@ Production art should reinforce that geometry: crisp rectangular compositions, m
 
 ### 3.4 Typography roles
 
-Current candidates inherited from the chosen reference:
+The July 25 mockup baseline nominated:
 
 - display: **Barlow Condensed**;
 - body: **IBM Plex Sans**;
 - mono/data: **JetBrains Mono**.
 
-Touchline label behavior is uppercase, weight 600, tracking `0.08em`; display weight is 700 with `-0.01em` tracking.
+AP-03's rights/script audit found a shipping blocker in that inherited stack: current upstream Barlow/Barlow Condensed does not provide the required Ukrainian/Cyrillic coverage. AP-02 therefore proposes **IBM Plex Sans Condensed** as the display replacement while retaining IBM Plex Sans for body and JetBrains Mono for mono/data. This keeps the condensed analyst/broadcast-accent role but aligns the display/body system within the IBM Plex family and removes the known script hole.
 
-These are **visual candidates, not yet shipping font dependencies**. AP-03 owns redistribution/offline packaging and Ukrainian/Cyrillic/fallback evidence.
+Touchline label behavior remains uppercase, weight 600, tracking `0.08em`; display weight remains 700 with `-0.01em` tracking. The role changes font family, not hierarchy.
+
+These remain **visual candidates, not yet shipping font dependencies**. AP-03 owns redistribution/offline packaging, exact binary/version pinning, and Ukrainian/Cyrillic/fallback evidence. G1 acceptance would approve the visual substitution; it would not by itself close G2 or authorize font binaries.
 
 ---
 
@@ -359,7 +363,18 @@ AP-04/AP-05 must test representative assets under common color-vision-deficiency
 
 ## 14. Token-change register
 
-**v1 proposes no changes to the existing `touchline` tokens.**
+### T-01 — Display font family (PROPOSED with G1)
+
+AP-03 identified a localization blocker in the inherited display face. AP-02 therefore proposes:
+
+- **from:** `--font-display: "Barlow Condensed", ...`
+- **to:** `--font-display: "IBM Plex Sans Condensed", "IBM Plex Sans", ...`
+- **reason:** preserve a condensed display role while providing a technically viable Ukrainian/Cyrillic path and reducing cross-family typography complexity;
+- **scope:** visual reference/theme token only; no runtime font binary is adopted in AP-02;
+- **evidence owner:** AP-03 for license, exact binary/version, glyph corpus, offline packaging, and Unity import;
+- **rollback:** if G1 visual review rejects IBM Plex Sans Condensed, choose another Cyrillic-capable condensed display face through the same explicit token-change process rather than reverting to an uncovered shipping face.
+
+The AP-02 branch updates `docs/design/ui-mockups/assets/tokens.css` and the mockup README in the same proposed landing so there is no second typography source of truth. No palette, spacing, radius, body-face, mono-face, or `touchline` direction token changes are proposed.
 
 Any future change to an inherited palette, type role, spacing value, radius, or `touchline` direction value must be recorded here as a proposed change and update the UI design reference in the same landing. Family-specific values in this document (for example the icon reference grid/stroke) are extensions, not silent token replacements.
 
@@ -372,8 +387,8 @@ G1 is ready for owner acceptance when review confirms:
 1. `touchline` is visibly inherited, not reselected;
 2. no rule contradicts APPROVED #38 ownership/behavior;
 3. the identity, icon, match, portrait, fictional-club, stadium, motion, and accessibility families are specific enough to reject off-style samples;
-4. no second palette/type/spacing source has been created;
-5. AP-03 rights/font/import work remains separate and explicitly pending;
+4. the proposed T-01 display-font substitution is visually accepted or explicitly replaced by another Cyrillic-capable condensed face, with the shared mockup token updated in the same landing;
+5. no second palette/type/spacing source has been created, and AP-03 rights/font/import work remains separate and explicitly pending;
 6. the direction can produce professional Stage-1 match presentation rather than placeholder-quality visuals.
 
 Until that acceptance, `style_version = art-direction-v1` is a proposed family target, not permission for bulk production.
@@ -385,3 +400,4 @@ Until that acceptance, `style_version = art-direction-v1` is a proposed family t
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-09-06 | Initial AP-02 derivation from chosen `touchline`: maps inherited tokens and extends unresolved identity, icon, data-viz, match, portrait, fictional-club, stadium, motion, and accessibility rules. No inherited token changes proposed. |
+| 1.1 | 2026-09-06 | AP-03 cross-stream typography correction: records the inherited Barlow Condensed Ukrainian/Cyrillic gap and proposes IBM Plex Sans Condensed as T-01 display replacement; shared mockup token/reference is updated in the same proposed G1 landing. Runtime font adoption remains AP-03/G2 work. |

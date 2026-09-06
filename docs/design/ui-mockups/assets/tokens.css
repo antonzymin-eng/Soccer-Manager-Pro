@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700;800&display=swap");
+
 /* ============================================================================
    SYSTEM XI — DESIGN TOKENS
    Two directions: "stadium" (broadcast graphics) and "touchline" (analyst tool)
@@ -116,7 +118,7 @@
   --shadow-3: 0 16px 48px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.65);
 
   /* fonts: shared display, diff body per direction */
-  --font-display: "Barlow Condensed", "Oswald", "Arial Narrow", sans-serif;
+  --font-display: "IBM Plex Sans Condensed", "IBM Plex Sans", "Arial Narrow", sans-serif;
   --font-mono:    "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
 }
 
