@@ -26,13 +26,14 @@ The workstream may establish static/repository evidence in parallel with AP-02, 
 | Source/runtime separation | PASS | AP-01 `art-source/README.md`; runtime root is `Assets/GameArt/` |
 | `.art.json` production-candidate record | PASS | AP-01 schema/template |
 | Managed `.meta` / project-wide GUID enforcement | PASS | AP-01 checker + mutation proof |
-| PNG Git LFS routing | STATIC PASS | root `.gitattributes`: `*.png filter=lfs diff=lfs merge=lfs -text` |
-| TTF/OTF Git LFS routing | STATIC PASS | root `.gitattributes`: both font extensions use LFS |
+| PNG Git LFS routing | PASS | proof run `34060090061`: planned `Assets/GameArt/UI/Icons/ap03_import_probe.png` resolves `filter=lfs`, `diff=lfs`, `merge=lfs` |
+| TTF/OTF Git LFS routing | PASS | proof run `34060090061`: planned GameArt `.ttf` and `.otf` paths both resolve `filter=lfs`, `diff=lfs`, `merge=lfs` |
 | Initial font rights audit | PASS WITH DISPLAY BLOCKER | §8: all three current candidates are OFL-licensed, but Barlow Condensed lacks current upstream Cyrillic support |
 | Ukrainian/Cyrillic body coverage | PASS FOR CANDIDATE | IBM Plex Sans upstream states Cyrillic support; actual vendored binary still must be glyph-tested before shipping |
 | Ukrainian/Cyrillic mono coverage | PASS FOR CANDIDATE | JetBrains Mono official character/language lists include Ukrainian Cyrillic |
 | Ukrainian/Cyrillic display decision path | PASS WITH VISUAL DECISION PENDING | Barlow is unsuitable as sole Ukrainian display face; IBM Plex Sans Condensed is a technically viable replacement candidate routed to AP-02/G1 (§8.4). Final visual adoption is not a G2 prerequisite. |
 | P0 source → export reproducibility | PENDING | create a deliberately neutral technical import probe that does not depend on AP-02/G1; it may later be deleted/deprecated if it has no product use |
+| No premature runtime art | PASS | proof run `34060090061`: `Assets/GameArt/`, `Assets/GameArt.meta`, and tracked GameArt paths are absent |
 | Actual Unity import | **PENDING** | must be performed in Unity 6000.4.9f1; no hand-authored production file meta permitted |
 | Importer settings captured from Unity | **PENDING** | record actual `.meta`/Inspector values after import |
 | In-place replacement preserves GUID | **PENDING** | replace probe bytes/source export, reimport, verify `.meta` GUID unchanged and consumer reference intact |
@@ -270,3 +271,4 @@ If real Unity import cannot be executed, G2 remains pending regardless of how mu
 |---|---|---|
 | 0.1 | 2026-09-06 | AP-03 technical contract/evidence ledger created. Records Unity 6000.4.9f1 target, source/export/import/GUID/LFS proof procedure, initial importer candidates, and font rights/script audit. Identifies Barlow Condensed Cyrillic gap and proposes IBM Plex Sans Condensed for AP-02 visual review. G2 explicitly remains open pending real Unity import and exact-binary font proof. |
 | 0.2 | 2026-09-06 | Hostile-review sequencing correction: removes accidental G1/final-font-binary prerequisites from G2, makes the import probe explicitly style-neutral/G1-independent, and treats the font audit as an explicit rights/script/fallback decision path. G2 still requires real Unity import/replacement evidence; final font binary validation remains a later shipping requirement unless AP-03 vendors fonts. |
+| 0.3 | 2026-09-06 | Static evidence recorded from run `34060090061`: Unity pin, planned PNG/TTF/OTF LFS attributes, no-premature-GameArt assertion, AP-01 integrity/binary baseline, and documentation-only scope all passed. Remaining G2 blockers are the real source/export/Unity import/importer/replacement/reference proof. |
