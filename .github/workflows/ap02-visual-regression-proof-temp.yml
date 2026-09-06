@@ -1,0 +1,88 @@
+name: Temporary AP-02 visual regression proof
+
+'on':
+  push:
+    branches:
+      - tmp/ap02-visual-regression-proof
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: art/ap-02-touchline-art-direction
+          path: candidate
+      - name: Install browser driver
+        run: pip install playwright
+      - name: Render paired mockups and collect layout metrics
+        shell: bash
+        run: |
+          cat > /tmp/render.py <<'PY'
+          from pathlib import Path
+          import json, os, shutil, subprocess, time
+          from playwright.sync_api import sync_playwright
+
+          root = Path(os.environ['GITHUB_WORKSPACE'])
+          out = root / 'visual-proof'
+          out.mkdir(exist_ok=True)
+          pages = ['Squad Screen.html', 'Tactics.html', 'Club Finances.html']
+          servers=[]
+          for name,port in [('baseline',8000),('candidate',8001)]:
+              p=subprocess.Popen(['python3','-m','http.server',str(port),'--directory',str(root/name/'docs/design/ui-mockups')], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+              servers.append(p)
+          time.sleep(1)
+          browser_path = shutil.which('google-chrome') or shutil.which('google-chrome-stable') or shutil.which('chromium')
+          if not browser_path:
+              raise SystemExit('No system Chrome/Chromium found')
+          report={}
+          with sync_playwright() as pw:
+              browser=pw.chromium.launch(headless=True, executable_path=browser_path, args=['--no-sandbox'])
+              for variant,port in [('baseline',8000),('candidate',8001)]:
+                  report[variant]={}
+                  for filename in pages:
+                      page=browser.new_page(viewport={'width':1920,'height':1080}, device_scale_factor=1)
+                      url=f'http://127.0.0.1:{port}/'+filename.replace(' ','%20')
+                      page.goto(url, wait_until='networkidle', timeout=60000)
+                      page.evaluate('document.fonts.ready')
+                      if variant=='candidate':
+                          loaded=page.evaluate('document.fonts.check("16px \\\"IBM Plex Sans Condensed\\\"")')
+                          if not loaded:
+                              raise RuntimeError(f'IBM Plex Sans Condensed did not load on {filename}')
+                      metrics=page.evaluate('''() => {
+                        const all=[...document.querySelectorAll('body *')];
+                        const visible=all.filter(e=>{const r=e.getBoundingClientRect(); const s=getComputedStyle(e); return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'});
+                        const clipped=visible.filter(e=>{
+                          const s=getComputedStyle(e);
+                          const x=e.scrollWidth-e.clientWidth;
+                          const y=e.scrollHeight-e.clientHeight;
+                          return (x>1||y>1) && (s.overflowX==='hidden'||s.overflowY==='hidden'||s.textOverflow==='ellipsis');
+                        }).map(e=>({tag:e.tagName,cls:e.className?.toString().slice(0,120)||'',text:(e.textContent||'').trim().slice(0,80),cw:e.clientWidth,sw:e.scrollWidth,ch:e.clientHeight,sh:e.scrollHeight,ox:getComputedStyle(e).overflowX,oy:getComputedStyle(e).overflowY}));
+                        const body=document.body;
+                        return {bodyScrollWidth:body.scrollWidth,bodyScrollHeight:body.scrollHeight,viewport:[innerWidth,innerHeight],clippedCount:clipped.length,clipped:clipped.slice(0,100),displayFont:getComputedStyle(document.querySelector('.display,.hero-title,h1,h2')||body).fontFamily};
+                      }''')
+                      report[variant][filename]=metrics
+                      page.screenshot(path=str(out/f'{variant}-{filename.replace(" ","_").replace(".html","")}.png'), full_page=True)
+                      page.close()
+              browser.close()
+          for p in servers: p.terminate()
+          (out/'report.json').write_text(json.dumps(report,indent=2), encoding='utf-8')
+          # Fail only on obvious viewport-width regressions or newly introduced clipped elements.
+          for fn in pages:
+              b=report['baseline'][fn]; c=report['candidate'][fn]
+              if c['bodyScrollWidth'] > max(1920, b['bodyScrollWidth']) + 2:
+                  raise SystemExit(f'Horizontal overflow regression on {fn}: {b["bodyScrollWidth"]} -> {c["bodyScrollWidth"]}')
+              if c['clippedCount'] > b['clippedCount'] + 3:
+                  raise SystemExit(f'Clipping regression on {fn}: {b["clippedCount"]} -> {c["clippedCount"]}')
+              print(fn, 'baseline', b['bodyScrollWidth'], b['bodyScrollHeight'], b['clippedCount'], 'candidate', c['bodyScrollWidth'], c['bodyScrollHeight'], c['clippedCount'], 'font', c['displayFont'])
+          PY
+          python3 /tmp/render.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ap02-touchline-font-visual-proof
+          path: visual-proof
