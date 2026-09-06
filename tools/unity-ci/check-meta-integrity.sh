@@ -7,7 +7,8 @@
 #   (1) MISSING  — a tracked file/folder under src/ or Assets/GameArt/ has no
 #                  committed .meta (Unity would assign a fresh random GUID on
 #                  checkout, silently breaking references);
-#   (2) ORPHAN   — a committed .meta in those managed roots whose asset is gone;
+#   (2) ORPHAN   — a committed .meta in those managed roots has no committed
+#                  asset (or tracked non-meta descendant for a folder);
 #   (3) DUP GUID — any two tracked Unity .meta files under Assets/ plus the
 #                  junction-backed src/ tree share a GUID. Unity resolves GUIDs
 #                  project-wide, so duplicate detection must be one combined
@@ -65,19 +66,38 @@ if [ "$missing" -gt 0 ]; then
   fail=1
 fi
 
-# ---- (2) ORPHAN ----
+# ---- (2) ORPHAN / UNCOMMITTED ASSET ----
+# A tracked .meta must point to repository state that survives checkout. For a
+# file, require that exact asset path in the active index. For a folder meta,
+# require at least one tracked non-meta descendant. A merely local/untracked
+# file or directory must not make a committed meta appear healthy.
+tracked_asset_exists() {
+  local asset="$1"
+  if git ls-files --error-unmatch -- "$asset" >/dev/null 2>&1; then
+    [ -e "$asset" ]
+    return
+  fi
+  if [ -d "$asset" ]; then
+    local descendant
+    descendant=$(git ls-files "$asset/" | grep -v '\.meta$' | head -n 1 || true)
+    [ -n "$descendant" ]
+    return
+  fi
+  return 1
+}
+
 orphan=0
 managed_metas=$(git ls-files | grep -E '^(src/.*\.meta|Assets/GameArt\.meta|Assets/GameArt/.*\.meta)$' || true)
 while IFS= read -r m; do
   [ -z "$m" ] && continue
   asset="${m%.meta}"
-  if [ ! -e "$asset" ]; then
-    echo "ORPHAN META (asset missing): $m"
+  if ! tracked_asset_exists "$asset"; then
+    echo "ORPHAN META (asset untracked or missing): $m"
     orphan=$((orphan + 1))
   fi
 done <<< "$managed_metas"
 if [ "$orphan" -gt 0 ]; then
-  echo "::error::$orphan orphan .meta file(s) in managed Unity roots — delete them or restore the asset."
+  echo "::error::$orphan orphan .meta file(s) in managed Unity roots — delete them or restore/track the asset."
   fail=1
 fi
 
