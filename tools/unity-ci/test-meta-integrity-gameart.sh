@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # tools/unity-ci/test-meta-integrity-gameart.sh
 #
-# AP-01 mutation proof for GameArt .meta enforcement. Uses a temporary Git index
-# so tracked-path mutations never touch the caller's real staging area.
+# AP-01 mutation proof for GameArt .meta enforcement and generator ownership.
+# Uses a temporary Git index so tracked-path mutations never touch the caller's
+# real staging area.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
@@ -48,32 +49,50 @@ fi
 mkdir -p "$probe_dir"
 printf 'AP-01 meta integrity probe\n' > "$probe_asset"
 
-folder_meta() {
-  local path="$1" guid="$2"
-  {
-    printf 'fileFormatVersion: 2\n'
-    printf 'guid: %s\n' "$guid"
-    printf 'folderAsset: yes\n'
-    printf 'DefaultImporter:\n'
-    printf '  externalObjects: {}\n'
-    printf '  userData: \n'
-    printf '  assetBundleName: \n'
-    printf '  assetBundleVariant: \n'
-  } > "$path.meta"
-}
-
+# The production-like probe file is tracked first WITHOUT metas. The generator
+# must identify folder gaps while refusing to synthesize the file meta itself.
+git add -f "$probe_asset"
 if [ ! -e "$probe_root_meta" ]; then
-  folder_meta "$probe_root" "$(printf '%s' "$probe_root" | md5sum | cut -c1-32)"
   created_root_meta=1
 fi
-folder_meta "$probe_dir" "$(printf '%s' "$probe_dir" | md5sum | cut -c1-32)"
+
+set +e
+generator_check=$(bash tools/unity-ci/generate-missing-metas.sh --check 2>&1)
+generator_status=$?
+set -e
+if [ "$generator_status" -eq 0 ]; then
+  echo "::error::Generator --check should report missing GameArt folder metas for the probe"
+  exit 1
+fi
+if ! grep -Fq "MISSING GAMEART FOLDER META: $probe_root" <<< "$generator_check" \
+   || ! grep -Fq "MISSING GAMEART FOLDER META: $probe_dir" <<< "$generator_check"; then
+  echo "::error::Generator did not report both GameArt folder-meta gaps"
+  printf '%s\n' "$generator_check"
+  exit 1
+fi
+if grep -Fq "$probe_asset_meta" <<< "$generator_check"; then
+  echo "::error::Generator --check claimed ownership of a production GameArt file meta"
+  printf '%s\n' "$generator_check"
+  exit 1
+fi
+
+bash tools/unity-ci/generate-missing-metas.sh >/dev/null
+if [ ! -e "$probe_root_meta" ] || [ ! -e "$probe_dir_meta" ]; then
+  echo "::error::Generator failed to create required GameArt folder metas"
+  exit 1
+fi
+if [ -e "$probe_asset_meta" ]; then
+  echo "::error::Generator synthesized a production GameArt file meta"
+  exit 1
+fi
+echo "PASS generator boundary: folder metas created; production file meta not synthesized"
+
+# A minimal file meta is created only as a CI fixture so the checker can start
+# from a clean staged state. Production art file metas are Unity-authored AP-03.
 printf 'fileFormatVersion: 2\nguid: %s\n' \
   "$(printf '%s' "$probe_asset" | md5sum | cut -c1-32)" > "$probe_asset_meta"
 cp "$probe_asset_meta" "$tmpdir/original-probe.meta"
-
-# Stage only into the temporary index. The probe file meta is a CI fixture, not
-# a production art asset, so a minimal importer-free meta is permitted here.
-git add -f "$probe_root_meta" "$probe_dir_meta" "$probe_asset" "$probe_asset_meta"
+git add -f "$probe_root_meta" "$probe_dir_meta" "$probe_asset_meta"
 
 run_clean() {
   local label="$1"
@@ -184,4 +203,4 @@ echo "PASS mutation: GameArt GUID collision with other Assets/"
 cp "$tmpdir/original-probe.meta" "$probe_asset_meta"
 run_clean "after restoring Assets duplicate mutation"
 
-echo "AP-01 GameArt meta mutation proof PASS: missing, orphan, src collision, and project Assets collision all detected and restored cleanly."
+echo "AP-01 GameArt meta proof PASS: generator boundary, missing, orphan, src collision, and project Assets collision all proved and restored cleanly."
