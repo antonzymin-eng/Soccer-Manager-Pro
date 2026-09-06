@@ -1,0 +1,33 @@
+name: Temporary art v0.8 review fix
+
+'on':
+  push:
+    branches:
+      - tmp/art-v08-review-fix
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tmp/art-v08-review-fix
+          path: helper
+      - uses: actions/checkout@v4
+        with:
+          ref: art/art-pipeline-foundation
+          path: work
+          fetch-depth: 0
+      - name: Apply Codex scope correction
+        run: python3 helper/tools/art-v08-review-fix-temp.py
+      - name: Commit and push correction
+        working-directory: work
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/planning/art-pipeline-foundation.md docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md
+          git commit -m "Widen AP-01 Unity GUID collision scope"
+          git push origin HEAD:art/art-pipeline-foundation
