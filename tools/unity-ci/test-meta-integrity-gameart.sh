@@ -158,13 +158,17 @@ set_probe_guid() {
 
 run_clean "baseline with staged GameArt fixture"
 
-# Mutation 1: tracked GameArt file without its meta.
-mv "$probe_asset_meta" "$tmpdir/missing-probe.meta"
+# Mutation 1: the GameArt meta remains physically present but is removed from
+# the temporary Git index. The checker must reject an uncommitted meta because
+# it would disappear on checkout even though it exists in this working tree.
 git rm --cached -q "$probe_asset_meta"
-expect_fail "missing GameArt meta" "MISSING META: $probe_asset"
-mv "$tmpdir/missing-probe.meta" "$probe_asset_meta"
+if [ ! -e "$probe_asset_meta" ]; then
+  echo "::error::Uncommitted-meta mutation unexpectedly removed the working-tree meta"
+  exit 1
+fi
+expect_fail "uncommitted GameArt meta" "MISSING META: $probe_asset"
 git add -f "$probe_asset_meta"
-run_clean "after restoring missing-meta mutation"
+run_clean "after restoring committed-meta mutation"
 
 # Mutation 2: tracked GameArt meta whose asset is gone.
 mv "$probe_asset" "$tmpdir/orphan-probe.txt"
