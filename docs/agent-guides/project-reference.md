@@ -369,7 +369,7 @@ step invoke `adversarial-review` or `dotnet-gate` rather than restating them.
 - Advanced positional behaviors + game-model/AI-manager tactics — design supplements OPENED (candidate specs #23–#26) — all four promoted to specs and landed; REMAINDER: #26 §9.2 own-`[GT]` balance review
 - Living World (#22) season/world loop — slices 1–7 LANDED (incl. the KD-10 season composition root + the InteractionTextGenerator wired into it + deep-memory auto-cite + the opt-in arc-trigger evaluator / `world.arcs` sub-stream); upstream-gated services open
 - UI / Client Framework (#38) — T0 substrate LANDED; Wave-7 screens + the UGUI binding remain open.
-- UX planning package (`docs/design/ux-high-level-plan.md` + `ux-detailed-plan.md`, both v1.1) — converged and routed from root `CLAUDE.md`; F0 closed, F1 blocked on owner acceptance while PR #362 is draft. *Owning record: `open-issues.md`.*
+- UX planning package (`docs/design/ux-high-level-plan.md` + `ux-detailed-plan.md`, both v1.1) — converged and routed from root `CLAUDE.md`; **F0 closed September 6, 2026 and F1 may begin** — corrected the same day from "F1 blocked on owner acceptance while PR #362 is draft", which the plan's own text contradicts: tracking close-out was F1's only prerequisite. Owner acceptance gates UX *production* from S0-C onward, not the F1 audit. *Owning record: `open-issues.md`.*
   **The governance question the August 7, 2026 P5a landing surfaced — where the four screens'
   `ScreenId` catalogue and navigation graph live — was RESOLVED by owner decision later the same day
   and LANDED as `src/client-app/`** (`TacticalDirector.ClientApp`, references only `ui-framework`;

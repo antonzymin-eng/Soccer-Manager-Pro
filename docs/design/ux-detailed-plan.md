@@ -3,7 +3,7 @@
 **Created:** September 4, 2026  
 **Last Updated:** September 4, 2026  
 **Version:** 1.1  
-**Status:** PLAN — READY FOR F1 AFTER TRACKING CLOSE-OUT  
+**Status:** PLAN — F0 CLOSED September 6, 2026; F1 MAY BEGIN  
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -815,6 +815,23 @@ A specification is enough for conceptual research but not an implementation hand
 
 No S2 high-fidelity work may delay unresolved S0/S1 Early Access work.
 
+## 8.1 Provisional implementation state — to be confirmed, not assumed, at F1.1
+
+Recorded September 6, 2026 by symbol search over `src/`, **not** by folder naming — the #30 lesson in §2 applies to this table as much as to S1, and this is a starting hypothesis for F1.1 to verify, not a finding:
+
+| Capability | Provisional state | Evidence |
+|---|---|---|
+| Squad inspection/selection (#27) | implementation present | `player-database`, `LineupSelector`, `PlayerAttributeProjection` |
+| Training/progression (#28/#29) | implementation present (T0) | `src/training-system/`, `src/player-progression/` |
+| Injuries/availability (#41) | implementation present (T0) | `src/injuries-medical/` |
+| **Board objectives** | **partially present** | `BoardState`, `BoardObjective` in `src/season-save/` — another capability living under a differently-named assembly |
+| Transfers/contracts (#31) | **implementation-absent** | no type matches; `HeadingSpinTransfer` and `GoalkeeperPositioningContract` are physics false positives |
+| Scouting (#32) | **implementation-absent** | no matching type in `src/` |
+| Finances / wages | **implementation-absent** | no matching type; `BudgetRollupEntry` is a `performance-optimization` perf budget, not club finance |
+| Staff | **implementation-absent** | no matching type in `src/` |
+
+The four marked implementation-absent are `FUTURE-BLOCKED` for UX purposes: design research is permitted, an implementation handoff is not. **The false positives are the point of recording the evidence column** — a folder-name or bare-keyword search would have reported transfers, contracts and budgets as present, and reported board objectives as absent. Every row is re-derived at F1.1 against the tree of the day.
+
 ---
 
 # 9. Parallel-work matrix
@@ -846,7 +863,7 @@ No S2 high-fidelity work may delay unresolved S0/S1 Early Access work.
 
 Assuming one primary UX contributor; excludes external waiting:
 
-- F1: 1–2 working days;
+- F1: 3–4 working days (revised up from 1–2 at v1.2 — F1.1 spans `ui-framework`, `client-app`, `match-client-core`, `match-client-unity`, `season-save`, `match-analytics` and five spec surfaces, and the dependency review that produced v1.1 demonstrated that establishing what actually exists here is slower than it looks: two of its nine findings were wrong about implementation state);
 - F2: 0.5–1 day;
 - F3: 1–2 days;
 - F4: 0.5–1 day;
@@ -968,7 +985,13 @@ After the external dependency review, the plan now has no remaining structural e
 - gates are defined once;
 - F1 remains the correct first substantive action.
 
-The remaining prerequisite is repository tracking/discoverability close-out under F0. Once that is landed, F1 may begin.
+That prerequisite — repository tracking/discoverability close-out under F0 — **landed September 6, 2026** (`CHANGELOG.md`, `open-issues.md` 21 → 22 active, `file-manifest.md`, `project-reference.md`), so **F1 may begin now**.
+
+Three things are deliberately **not** F1 gates, having been mis-stated as such in the close-out's first draft and corrected at v1.2:
+
+- **PR draft status.** #362 remaining draft is a review-state fact, not a technical dependency. F1 is evidence-gathering against the tree and needs no acceptance decision to proceed.
+- **B8 → B9b → B10 host ordering.** It is the recommended implementation sequence and a real dependency for S0 Gates I/J, but it constrains nothing in the F1 capability audit.
+- **Gate-G tester recruitment.** §4 already places participant identification in F4, before usability testing. The two-participant requirement stays binding at Gate G; who the participants are is settled at F4, not now.
 
 ---
 
@@ -978,3 +1001,4 @@ The remaining prerequisite is repository tracking/discoverability close-out unde
 |---|---|---|
 | 1.0 | September 4, 2026 | Detailed plan after three internal critique/revision rounds. |
 | 1.1 | September 4, 2026 | External dependency-review revision: corrected P4b/#30 state; inherited current client-plan authority; tied S0 Gate I to P5b and Gate J to B8/B9b/B10; made Gate G binding at two independent participants; added real-data prototype strategy, role ownership, effort bands, S1 design-ahead conditions, and tracking close-out as the only prerequisite to F1. |
+| 1.2 | September 6, 2026 | F0 closed and F1 unblocked. F1's effort band revised 1–2 → **3–4 working days**. New §8.1 records the provisional S2 implementation state by symbol search with its evidence column, including two findings a folder-name search would have got backwards: board objectives are **present** in `src/season-save/`, while transfers, scouting, finances and staff are implementation-absent. Reaffirms that the tracking close-out was F1's only prerequisite — PR draft status, B8/B9b/B10 host ordering and Gate-G tester recruitment (which §4 already places in F4) are **not** F1 gates. |
