@@ -125,6 +125,15 @@ jobs:
         # silently land outside CI as A2 expands.
         if: always()
         run: python3 -m unittest discover -s tools/tests -p 'test_*.py'
+      - name: Testing Strategy approval-transition enforcement
+        # This step is deliberately inside the required `Spec hygiene checks`
+        # context. The non-required Linux functional job also exercises the same
+        # approval policy through run-tests-local.sh, but merge safety must not
+        # depend on that optional context being required by branch rules.
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        env:
+          TD_APPROVAL_BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: bash tools/run-testing-strategy-approval-audit.sh "$TD_APPROVAL_BASE_REF"
       - name: Cross-document consistency (stale version citations and cardinalities)
         # Catches the defect class four adversarial-review rounds surfaced more than
         # any other and that no other gate sees: a value corrected in the document
@@ -211,27 +220,30 @@ jobs:
           }
 
   dotnet-compile-test:
-    name: Compile + test (Linux shim gate, non-certifying)
+    name: PR functional gate (Linux shim, non-certifying)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Approval-transition detection compares the PR base tree to HEAD.
+          # Full history keeps that check fail-closed without a network fetch in
+          # the policy runner and mirrors the provenance job's no-silent-skip rule.
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      # Builds the ENTIRE src/ tree (production: netstandard2.1 = Unity 2022.3's
-      # BCL surface; tests: net8.0 + NUnit3 adapter) against the UnityEngine shim
-      # in tools/dotnet-ci/, then runs every NUnit suite. Catches the
-      # never-compiled defect class (CS1022/CS0111/CS0117 — see
-      # tools/dotnet-ci/README.md for the seven instances found on first run)
-      # and executes the suites that were previously only runnable in-editor.
-      # NON-CERTIFYING: determinism certification remains the pinned
-      # Windows 11 / Unity 2022.3.62f1 / Mono tuple in
-      # docs/tracking/certification-platform.md. Known pre-existing test
-      # failures are quarantined (tracked, shrinking-only) in
-      # tools/dotnet-ci/known-failures.txt + docs/tracking/dotnet-ci-quarantine.md;
-      # any NEW failure or any compile error fails this gate.
-      - name: Run gate (generate projects, build, test)
-        run: bash tools/dotnet-ci/run-gate.sh
+      # Reuse the versioned FR-TS-079 composition rather than bypassing it.
+      # This remains non-certifying Linux regression evidence. It builds the
+      # full host-free tree, runs the PR functional/scenario superset, collects
+      # coverage, and executes the owner-held RED separately against its pinned
+      # diagnostic baseline. Authoritative determinism certification is the
+      # pinned Windows 11 / Unity 6000.4.9f1 / Mono job in nightly.yml.
+      - name: Run PR testing-strategy gate
+        env:
+          # Empty on push; populated on pull_request. The policy runner uses it
+          # only to make actual non-approved -> APPROVED transitions blocking.
+          TD_APPROVAL_BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: bash tools/run-tests-local.sh --pr
 
   unity-meta-integrity:
     name: Unity .meta integrity
