@@ -1,0 +1,14 @@
+<Project>
+  <!--
+    Testing Strategy #19 D2/D3 pins for generated test projects.
+    The Unity project ignores this MSBuild file; dotnet-ci generated projects import it.
+    FsCheck.NUnit 2.16.6 is the latest compatible line for the repository's NUnit 3.14 pin.
+  -->
+  <ItemGroup Condition="$([System.String]::Copy('$(AssemblyName)').EndsWith('.Tests'))">
+    <PackageReference Include="FsCheck.NUnit" Version="2.16.6" PrivateAssets="all" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

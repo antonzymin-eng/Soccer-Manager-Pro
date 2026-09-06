@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+GIT_DIR_ABS="$(git -C "$ROOT" rev-parse --absolute-git-dir)"
+STATE_DIR="$GIT_DIR_ABS/testing-strategy"
+SNAPSHOT="$STATE_DIR/precommit-snapshot"
+TRACKED_MANIFEST="$STATE_DIR/precommit-tracked-files.txt"
+CURRENT_MANIFEST="$STATE_DIR/precommit-tracked-files.next"
+INDEX_TREE_FILE="$STATE_DIR/precommit-index-tree.txt"
+LOCK_DIR="$STATE_DIR/precommit.lock"
+
+mkdir -p "$STATE_DIR" "$SNAPSHOT"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  echo "ERROR: another pre-commit preparation/test run is already active: $LOCK_DIR" >&2
+  exit 1
+fi
+cleanup() {
+  rm -f "$CURRENT_MANIFEST"
+  rmdir "$LOCK_DIR" 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM
+
+checkout_index_no_lfs_smudge() {
+  # The test snapshot needs the staged POINTER bytes for LFS-managed assets, not
+  # their binary payloads. Disable both the modern process filter and the legacy
+  # smudge filter for this checkout so offline/unfetched LFS objects cannot
+  # reject a commit before the tests even start.
+  GIT_LFS_SKIP_SMUDGE=1 git -C "$ROOT" \
+    -c filter.lfs.process= \
+    -c filter.lfs.smudge= \
+    -c filter.lfs.required=false \
+    checkout-index "$@"
+}
+
+# Keep ONE persistent staged-index snapshot under .git. The first run materializes
+# the whole index. Later runs preserve mtimes for unchanged tracked files and
+# refresh only paths whose index blobs changed, so MSBuild can reuse bin/obj
+# outputs instead of seeing the entire source tree as freshly touched.
+LC_ALL=C git -C "$ROOT" ls-files > "$CURRENT_MANIFEST"
+CURRENT_TREE="$(git -C "$ROOT" write-tree)"
+PREVIOUS_TREE=""
+if [ -f "$INDEX_TREE_FILE" ]; then
+  PREVIOUS_TREE="$(tr -d '\r\n' < "$INDEX_TREE_FILE")"
+fi
+
+# Remove paths that were tracked in the previous snapshot but are absent from
+# the current index. Both manifests are C-locale git-sorted, so keep comm under
+# the same collation and do one linear comparison rather than a grep per path.
+if [ -f "$TRACKED_MANIFEST" ]; then
+  LC_ALL=C comm -23 "$TRACKED_MANIFEST" "$CURRENT_MANIFEST" | while IFS= read -r old_path; do
+    [ -n "$old_path" ] || continue
+    rm -f -- "$SNAPSHOT/$old_path"
+  done
+fi
+
+if [ -n "$PREVIOUS_TREE" ] \
+  && git -C "$ROOT" cat-file -e "${PREVIOUS_TREE}^{tree}" 2>/dev/null; then
+  if [ "$PREVIOUS_TREE" != "$CURRENT_TREE" ]; then
+    # --no-renames turns a rename into delete+add. Deletions were handled by
+    # comm above, so every path emitted here exists in the current index and can
+    # be refreshed safely. NUL delimiters preserve spaces in tracked paths.
+    while IFS= read -r -d '' changed_path; do
+      [ -n "$changed_path" ] || continue
+      checkout_index_no_lfs_smudge --force --prefix="$SNAPSHOT/" -- "$changed_path"
+    done < <(
+      git -C "$ROOT" diff --name-only -z --no-renames \
+        --diff-filter=ACMRTUXB "$PREVIOUS_TREE" "$CURRENT_TREE" --
+    )
+  fi
+else
+  # No trustworthy prior tree: one cold materialization. Bootstrap is designed
+  # to pay this cost outside the normal 60-second acceptance measurement.
+  checkout_index_no_lfs_smudge --all --force --prefix="$SNAPSHOT/"
+fi
+
+mv "$CURRENT_MANIFEST" "$TRACKED_MANIFEST"
+printf '%s\n' "$CURRENT_TREE" > "$INDEX_TREE_FILE"
+
+if [ "${TD_PRECOMMIT_PREPARE:-}" = "1" ]; then
+  echo "Preparing persistent pre-commit build cache (one-time cold run; 60s acceptance budget intentionally not applied)."
+  export TD_PRECOMMIT_BUDGET_ACTIVE=1
+fi
+
+(
+  cd "$SNAPSHOT"
+  GIT_DIR="$GIT_DIR_ABS" \
+  GIT_WORK_TREE="$SNAPSHOT" \
+  bash "$SNAPSHOT/tools/run-tests-local.sh" --pre-commit
+)
