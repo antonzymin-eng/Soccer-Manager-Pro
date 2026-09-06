@@ -28,6 +28,8 @@ jobs:
           title = '# File Manifest (Post-Migration Baseline)\n\n'
           current = title + '**Last Updated:**'
           assert text.startswith(current)
+          planning_row = '| `docs/planning/art-pipeline-foundation.md` |'
+          assert planning_row not in text
           text = text.replace(current, title + '**Last Updated (prior):**', 1)
           manifest_entry = (
               '**Last Updated:** September 5, 2026 — **Art-pipeline planning PR #360 grounded and tracking close-out completed; documentation only; G0 remains CLOSED pending owner acceptance.**\n'
@@ -40,8 +42,7 @@ jobs:
           text = text.replace(stale, fresh, 1)
           planning_header = '## Planning Documents\n\n| File |\n|------|\n'
           assert planning_header in text
-          assert '`docs/planning/art-pipeline-foundation.md`' not in text
-          text = text.replace(planning_header, planning_header + '| `docs/planning/art-pipeline-foundation.md` |\n', 1)
+          text = text.replace(planning_header, planning_header + planning_row + '\n', 1)
           manifest.write_text(text, encoding='utf-8')
 
           changelog = Path('docs/tracking/CHANGELOG.md')
