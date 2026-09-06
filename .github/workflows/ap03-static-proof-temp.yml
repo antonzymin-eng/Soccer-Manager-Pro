@@ -40,5 +40,5 @@ jobs:
           bash tools/unity-ci/check-binaries.sh
       - name: Verify AP-03 stays documentation-only
         run: |
-          test "$(git diff --name-only origin/main...HEAD | grep -v '^docs/design/art/art-technical-recipe-v1.md$' | wc -l)" -eq 0
-          git diff origin/main...HEAD --check
+          unexpected=$(git diff --name-only origin/main...HEAD | grep -v '^docs/design/art/art-technical-recipe-v1.md$' || true)
+          test -z "$unexpected" || { echo "$unexpected"; exit 1; }
