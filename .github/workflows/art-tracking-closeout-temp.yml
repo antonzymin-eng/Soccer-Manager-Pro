@@ -1,0 +1,78 @@
+name: Art tracking close-out helper
+
+on:
+  push:
+    branches:
+      - art/art-pipeline-foundation
+
+permissions:
+  contents: write
+
+jobs:
+  close-out:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: art/art-pipeline-foundation
+          fetch-depth: 0
+
+      - name: Patch append-only tracking ledgers
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path('docs/tracking/file-manifest.md')
+          text = manifest.read_text(encoding='utf-8')
+
+          title = '# File Manifest (Post-Migration Baseline)\n\n'
+          assert text.startswith(title)
+          assert text.count('**Last Updated:**') == 1
+          text = text.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
+
+          entry = (
+              '**Last Updated:** September 5, 2026 — **Art-pipeline planning PR #360 grounded and tracking close-out completed; documentation only; G0 remains CLOSED pending owner acceptance.**\n'
+              'New: `docs/planning/art-pipeline-foundation.md` **v0.5**. Modified: `docs/tracking/CHANGELOG.md` and this manifest. The plan now inherits the July 25 `touchline` visual-direction decision and APPROVED UI / Client Framework #38, grounds integration in the actual client trees, keeps the missing management UGUI consumer explicit, makes `.art.json` the sole initial production/provenance record, and moves `Assets/GameArt/` `.meta` checker/generator scope extension plus a firing proof to the **first AP-01 action before any tracked GameArt path exists**. The Design References row is corrected from the stale “neither chosen yet” prose to `touchline` chosen / `stadium` rejected; this was plain prose, not a maintained version citation or machine-derivable cardinality, so `doc-consistency-check.py` could not detect the drift. The new planning document is added to Planning Documents. PR #360 pre-closeout CI run #832 failed only the documented owner-held `sim_match_engine_close_chance` band in `MatchEngine.Tests` (472 passed / 1 failed / 11 skipped); Markdown link and every other completed check passed. No `src/`, `.cs`, `.asmdef`, runtime schema, RNG stream/domain/draw site/draw order, workflow contract, `SPEC_INDEX.md` row, or spec status changed.\n'
+          )
+          text = text.replace(title, title + entry, 1)
+
+          stale = '| `docs/design/ui-mockups/System XI - Design System.html` | Design-system page: color, type, spacing, components, data-viz, match-day HUD; two visual directions (`stadium` / `touchline`, neither chosen yet) |'
+          fresh = '| `docs/design/ui-mockups/System XI - Design System.html` | Design-system page: color, type, spacing, components, data-viz, match-day HUD; the July 25 comparison is retained, with `touchline` chosen and `stadium` rejected per the companion README |'
+          assert stale in text
+          text = text.replace(stale, fresh, 1)
+
+          planning_header = '## Planning Documents\n\n| File |\n|------|\n'
+          assert planning_header in text
+          assert '`docs/planning/art-pipeline-foundation.md`' not in text
+          text = text.replace(planning_header, planning_header + '| `docs/planning/art-pipeline-foundation.md` |\n', 1)
+          manifest.write_text(text, encoding='utf-8')
+
+          changelog = Path('docs/tracking/CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          assert text.count('> **Last Updated:**') == 1
+          text = text.replace('> **Last Updated:**', '> **Last Updated (prior):**', 1)
+          divider = '---\n\n'
+          assert divider in text
+          entry = '''> **Last Updated:** September 5, 2026 — **Art-pipeline planning PR #360 grounded and closed out for owner acceptance; documentation only; G0 remains CLOSED.**
+> **The plan now fits the project it governs.** New `docs/planning/art-pipeline-foundation.md` **v0.5** inherits the July 25 `touchline` choice in `docs/design/ui-mockups/README.md` instead of reopening visual direction, treats APPROVED UI / Client Framework #38 as the architectural authority, and names the actual client surfaces (`src/ui-framework/`, `src/match-client-core/`, `src/match-client-unity/`, `src/match-client-web/`, `src/client-app/`). The first draft's premature `Assets/GameArt/` / `art-source/` companion files were removed from the effective diff rather than legitimized ahead of G0. `.art.json` is the one initial production/provenance format, routine `_v001`-style revision copies are prohibited, typography work is narrowed to the existing candidates plus redistribution/offline-shipping/script/fallback validation, and Stage-1 professional visual quality is grounded in `master-development-plan.md`.
+> **The follow-up review closed the remaining enforcement gap before it could repeat the first draft's `.meta` mistake.** Both `tools/unity-ci/check-meta-integrity.sh` and `tools/unity-ci/generate-missing-metas.sh` currently enumerate only `src/`. v0.5 therefore makes widening those tracked-path universes to include `Assets/GameArt/` the **first AP-01 action**, requires a mutation/firing proof before any real GameArt path is created, and leaves AP-06 for evidence-driven hardening rather than first-line integrity. The integrated-asset identity rule also drops the `where practical` hedge; necessary move/rename exceptions are explicit under §6.4 and require GUID/reference verification.
+> **Tracking drift corrected in the same landing.** `docs/tracking/file-manifest.md` now inventories the new planning document and corrects its UI design-reference row from `stadium` / `touchline`, “neither chosen yet” to the actual July 25 disposition: **`touchline` chosen, `stadium` rejected**. That stale sentence survived because it is plain descriptive prose, not a maintained version citation or a machine-derivable count/cardinality; `doc-consistency-check.py` structurally had no oracle for it.
+> **CI classification, not a runtime repair.** PR #360 pre-closeout CI run **#832** completed with the Linux shim gate red only in `TacticalDirector.MatchEngine.Tests.dll`: **472 passed / 1 failed / 11 skipped**; the failure is `sim_match_engine_close_chance`, explicitly owner-held RED on `main` by the steward contract and existing tracking record. `SeasonSave.Tests` passed its executed tests, Markdown link passed, and every other completed job was green. This PR changes no `.cs`, `.asmdef`, or dotnet-gate file, so there is no art-planning runtime fix or rebaseline to make here.
+> **Determinism/runtime declaration:** no snapshot/serialization schema change; no new RNG stream, domain tag, draw site, or draw-order change; no runtime behavior, assembly graph, workflow contract, required status, `SPEC_INDEX.md` row, or spec status changed. **G0 remains CLOSED until the owner explicitly accepts the plan.** Merging the planning record does not itself authorize AP-01 or asset production.
+>
+'''
+          text = text.replace(divider, divider + entry, 1)
+          changelog.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit close-out
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/tracking/file-manifest.md docs/tracking/CHANGELOG.md
+          git diff --cached --check
+          git commit -m "Close out art pipeline planning tracking"
+          git push origin HEAD:art/art-pipeline-foundation
