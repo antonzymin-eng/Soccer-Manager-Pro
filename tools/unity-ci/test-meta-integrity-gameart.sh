@@ -3,7 +3,7 @@
 #
 # AP-01 mutation proof for GameArt .meta enforcement and generator ownership.
 # Uses a temporary Git index so tracked-path mutations never touch the caller's
-# real staging area.
+# real staging area. Temporary GameArt working-tree fixtures are removed on exit.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
@@ -50,7 +50,9 @@ mkdir -p "$probe_dir"
 printf 'AP-01 meta integrity probe\n' > "$probe_asset"
 
 # The production-like probe file is tracked first WITHOUT metas. The generator
-# must identify folder gaps while refusing to synthesize the file meta itself.
+# must identify exactly the two expected folder gaps while refusing to synthesize
+# the file meta itself. Any unrelated generator-owned gap makes the proof fail
+# closed before the write-mode helper can touch that path in the working tree.
 git add -f "$probe_asset"
 if [ ! -e "$probe_root_meta" ]; then
   created_root_meta=1
@@ -64,9 +66,20 @@ if [ "$generator_status" -eq 0 ]; then
   echo "::error::Generator --check should report missing GameArt folder metas for the probe"
   exit 1
 fi
+if grep -Fq 'MISSING GENERATOR-OWNED META:' <<< "$generator_check"; then
+  echo "::error::Pre-existing src/ generator-owned meta gap makes the standalone mutation proof unsafe"
+  printf '%s\n' "$generator_check"
+  exit 1
+fi
+gameart_gap_count=$(grep -Fc 'MISSING GAMEART FOLDER META:' <<< "$generator_check" || true)
+if [ "$gameart_gap_count" -ne 2 ]; then
+  echo "::error::Expected exactly two GameArt folder-meta gaps for the isolated probe, found $gameart_gap_count"
+  printf '%s\n' "$generator_check"
+  exit 1
+fi
 if ! grep -Fxq "MISSING GAMEART FOLDER META: $probe_root" <<< "$generator_check" \
    || ! grep -Fxq "MISSING GAMEART FOLDER META: $probe_dir" <<< "$generator_check"; then
-  echo "::error::Generator did not report both GameArt folder-meta gaps"
+  echo "::error::Generator did not report both expected GameArt folder-meta gaps"
   printf '%s\n' "$generator_check"
   exit 1
 fi
