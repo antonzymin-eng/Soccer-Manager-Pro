@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 import shlex
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -26,6 +27,12 @@ PATH_TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 SHELL_CONTROL_RE = re.compile(r"^[;&|<>]+$")
+# Approval checks execute with shell=False. Reject syntax whose meaning would
+# otherwise depend on shell expansion instead of silently passing it as a
+# literal argument and recording only the prefix command as executed.
+UNSUPPORTED_SHELL_EXPANSION_RE = re.compile(
+    r"(?:\$\(|\$\{|\$[A-Za-z_][A-Za-z0-9_]*|<\(|>\()"
+)
 
 PROGRAM_COMMANDS = {
     "bash",
@@ -186,6 +193,42 @@ def candidate_paths(evidence: str) -> list[str]:
     return list(dict.fromkeys(found))
 
 
+def repository_file(candidate: Path, *, repo_root: Path) -> Path | None:
+    """Return a contained repository file, requiring Git tracking when available."""
+    root = repo_root.resolve()
+    try:
+        resolved = candidate.resolve(strict=True)
+        rel = resolved.relative_to(root)
+    except (OSError, ValueError):
+        return None
+    if not resolved.is_file():
+        return None
+
+    # Unit fixtures and extracted source trees may intentionally omit .git.
+    # In a real checkout, however, approval evidence must name an indexed file.
+    if (root / ".git").exists():
+        try:
+            proc = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "ls-files",
+                    "--error-unmatch",
+                    "--",
+                    rel.as_posix(),
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except OSError:
+            return None
+        if proc.returncode != 0:
+            return None
+    return resolved
+
+
 def resolve_candidate(token: str, *, repo_root: Path, spec_dir: Path) -> bool:
     token = token.split("#", 1)[0].strip()
     token = re.sub(r"\s+§.*$", "", token).strip()
@@ -199,7 +242,10 @@ def resolve_candidate(token: str, *, repo_root: Path, spec_dir: Path) -> bool:
         options.append(p)
     else:
         options.extend((repo_root / p, spec_dir / p))
-    return any(candidate.exists() for candidate in options)
+    return any(
+        repository_file(candidate, repo_root=repo_root) is not None
+        for candidate in options
+    )
 
 
 def has_resolved_local_section_reference(evidence: str, *, spec_dir: Path) -> bool:
@@ -232,8 +278,11 @@ def _inline_programmatic_argv(
 
     Merely citing a source file is never an invocation. In particular, `.cs`
     citations remain file evidence. Commands are executed without a shell.
-    Compound commands and redirections are rejected rather than partially run.
+    Compound commands, redirections, substitutions, and shell expansion are
+    rejected rather than partially or differently executed.
     """
+    if UNSUPPORTED_SHELL_EXPANSION_RE.search(token):
+        return None
     argv = _shell_aware_argv(token)
     if not argv or argv[0] not in PROGRAM_COMMANDS:
         return None
