@@ -5,8 +5,8 @@
 // Author:   —
 // Specs:    Club Finances & Economy #40 §5; Code Standards #20
 // Purpose:  Locks the T0/T1a dependency boundary, RNG-free save shape, upper
-//           budget clamp, non-positive board-modifier failure, and decode
-//           corruption guards identified by external review of PR #363.
+//           budget clamp, non-positive board-modifier failure, overflow-safe
+//           board scaling, and decode corruption guards identified by review.
 // §3.9.4 general-unit-test — allocation rules relaxed in test body
 // ============================================================================
 
@@ -95,6 +95,23 @@ namespace TacticalDirector.ClubFinances.Tests
             Assert.That(result.WageBudget, Is.EqualTo(ClubFinancesConstants.ClubFinancesBudgetCeilingMax));
         }
 
+        /// <summary>Proves board scaling saturates before overflow while preserving exact integer-floor semantics below the cap.</summary>
+        [Test]
+        public void ScaleAndClampBudget_Int32ExtremeBase_DoesNotOverflowBeforeClamp()
+        {
+            MethodInfo method = typeof(FinanceStep).GetMethod(
+                "ScaleAndClampBudget",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.That(method, Is.Not.Null);
+
+            const long int32ExtremeBaseCeiling = 4_611_688_161_616_067L;
+            long saturated = (long)method.Invoke(null, new object[] { int32ExtremeBaseCeiling, 2_000 });
+            Assert.That(saturated, Is.EqualTo(ClubFinancesConstants.ClubFinancesBudgetCeilingMax));
+
+            long exact = (long)method.Invoke(null, new object[] { 1_234_567L, 1_250 });
+            Assert.That(exact, Is.EqualTo(1_543_208L));
+        }
+
         /// <summary>Proves an explicit negative board multiplier is a caller-contract error rather than clamp input.</summary>
         [Test]
         public void SettleFinances_NegativeBoardModifier_FailsLoud()
@@ -180,4 +197,5 @@ namespace TacticalDirector.ClubFinances.Tests
 // --------|------------|--------|----------------------------------------------
 // 1.0     | 2026-09-06 | —      | Initial external-review regression locks for PR #363.
 // 1.1     | 2026-09-07 | —      | Follow-up: negative board fails loud; header/template and asmdef rationale corrected.
+// 1.2     | 2026-09-07 | —      | Locks overflow-safe board scaling at the documented Int32 tuning extreme and below-cap floor semantics.
 #endregion

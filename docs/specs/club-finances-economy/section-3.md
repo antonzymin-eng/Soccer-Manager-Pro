@@ -1,9 +1,9 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board multiplier failure gate)
-**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.3
+**Last Updated:** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
+**Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board multiplier failure gate)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -27,19 +27,48 @@ SettleFinances(in ClubFinances prior, finalTablePosition, clubCount, in BoardMod
 
     baseTransferCeiling = BASE_TRANSFER_BUDGET
                         + prizeMoney * TRANSFER_BUDGET_PRIZE_SHARE_PERMILLE / PERMILLE_DENOM
-    result.TransferBudget = Clamp(baseTransferCeiling * board.BudgetMultiplierMillPermille / PERMILLE_DENOM,
-                                  0, CLUB_FINANCES_BUDGET_CEILING_MAX)  # SETS — overwrites the prior ceiling (F1 floor)
+    result.TransferBudget = ScaleAndClampBudget(baseTransferCeiling, board.BudgetMultiplierMillPermille)
+                                                                        # SETS — overwrites prior ceiling
 
     baseWageCeiling     = BASE_WAGE_BUDGET
                         + prizeMoney * WAGE_BUDGET_PRIZE_SHARE_PERMILLE / PERMILLE_DENOM
-    result.WageBudget   = Clamp(baseWageCeiling * board.BudgetMultiplierMillPermille / PERMILLE_DENOM,
-                                0, CLUB_FINANCES_BUDGET_CEILING_MAX)    # SETS — overwrites the prior ceiling (F1 floor)
+    result.WageBudget   = ScaleAndClampBudget(baseWageCeiling, board.BudgetMultiplierMillPermille)
+                                                                        # SETS — overwrites prior ceiling
 
     # WageBillAggregate / SeasonRevenueAccrued / FfpBalanceWindow are UNTOUCHED by the minimal projection —
     # a committed wage does not vanish at season end (WageBillAggregate carries forward); the deep-tier
     # accumulators reset or carry per their own T3 rules (deferred, KD-1/KD-8).
     return result
+
+ScaleAndClampBudget(baseCeiling, positiveMultiplier) -> long:
+    if baseCeiling <= 0: return 0                                      # F1 lower floor
+    if CLUB_FINANCES_BUDGET_CEILING_MAX <= 0:
+        return CLUB_FINANCES_BUDGET_CEILING_MAX                        # coherence validation owns bad config
+
+    whole = baseCeiling / PERMILLE_DENOM
+    remainder = baseCeiling % PERMILLE_DENOM
+
+    # Saturate before a product that could overflow Int64. This comparison is equivalent to asking whether
+    # whole * positiveMultiplier already exceeds the configured ceiling, but requires division only.
+    if whole > CLUB_FINANCES_BUDGET_CEILING_MAX / positiveMultiplier:
+        return CLUB_FINANCES_BUDGET_CEILING_MAX
+
+    scaledWhole = whole * positiveMultiplier                           # safe after the pre-check
+    scaledRemainder = remainder * positiveMultiplier / PERMILLE_DENOM  # remainder < 1000; product is bounded
+
+    if scaledRemainder >= CLUB_FINANCES_BUDGET_CEILING_MAX - scaledWhole:
+        return CLUB_FINANCES_BUDGET_CEILING_MAX
+
+    return scaledWhole + scaledRemainder                               # exact integer-floor result below cap
 ```
+
+The quotient/remainder form is mathematically identical to
+`floor(baseCeiling × positiveMultiplier / PERMILLE_DENOM)` for positive `baseCeiling`, but it never forms
+the potentially overflowing full product. This matters because Appendix A explicitly permits config values
+through the shared signed-Int32 loader; those accepted values can produce a `baseCeiling` large enough that a
+non-identity positive board multiplier would overflow `long` before a naïve post-multiply clamp ran. The cap
+therefore applies **before** any unsafe product, while ordinary below-cap values retain the exact same integer
+floor semantics.
 
 `SettleFinances` reads no caller state beyond its four parameters — it is a pure function, so calling it
 twice with identical inputs yields byte-identical output (no hidden clock, no RNG). A `ClubId` with no prior
@@ -186,4 +215,5 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 | 0.1 | 2026-07-23 | — | Initial algorithms: `SettleFinances`, `PrizeMoneyForPosition`, `ApplyTransaction`, `AvailableTransferBudget`, composition at #30's boundary roll, worked example. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): §3.2 `ApplyTransaction` split — wage line items change `WageBillAggregate` only (periodic cash-out deferred), cash line items change `Balance` only; worked example updated. |
 | 0.3 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** §3.1 now rejects every non-positive board multiplier before arithmetic; the lower budget clamp is not an authorization for a negative modifier. |
+| 0.4 | 2026-09-07 | — | **PR #363 Codex correction.** Replaces post-multiply clamping with an overflow-safe quotient/remainder scale-and-cap that preserves exact integer-floor semantics below the ceiling. |
 #endregion

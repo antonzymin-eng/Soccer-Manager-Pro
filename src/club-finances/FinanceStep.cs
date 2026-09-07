@@ -50,22 +50,18 @@ namespace TacticalDirector.ClubFinances
                     + (prizeMoney * ClubFinancesConstants.TransferBudgetPrizeSharePermille
                        / ClubFinancesConstants.PERMILLE_DENOM);
 
-                long transferWithBoard =
-                    baseTransferCeiling * board.BudgetMultiplierMillPermille
-                    / ClubFinancesConstants.PERMILLE_DENOM;
-
-                result.TransferBudget = ClampBudget(transferWithBoard);
+                result.TransferBudget = ScaleAndClampBudget(
+                    baseTransferCeiling,
+                    board.BudgetMultiplierMillPermille);
 
                 long baseWageCeiling =
                     ClubFinancesConstants.BaseWageBudget
                     + (prizeMoney * ClubFinancesConstants.WageBudgetPrizeSharePermille
                        / ClubFinancesConstants.PERMILLE_DENOM);
 
-                long wageWithBoard =
-                    baseWageCeiling * board.BudgetMultiplierMillPermille
-                    / ClubFinancesConstants.PERMILLE_DENOM;
-
-                result.WageBudget = ClampBudget(wageWithBoard);
+                result.WageBudget = ScaleAndClampBudget(
+                    baseWageCeiling,
+                    board.BudgetMultiplierMillPermille);
             }
 
             ClubFinances.ValidateCoherence(in result);
@@ -112,19 +108,38 @@ namespace TacticalDirector.ClubFinances
             }
         }
 
-        private static long ClampBudget(long value)
+        private static long ScaleAndClampBudget(long baseCeiling, int multiplier)
         {
-            if (value < 0)
+            if (baseCeiling <= 0)
             {
                 return 0;
             }
 
-            if (value > ClubFinancesConstants.ClubFinancesBudgetCeilingMax)
+            long ceiling = ClubFinancesConstants.ClubFinancesBudgetCeilingMax;
+            if (ceiling <= 0)
             {
-                return ClubFinancesConstants.ClubFinancesBudgetCeilingMax;
+                return ceiling;
             }
 
-            return value;
+            long wholeUnits = baseCeiling / ClubFinancesConstants.PERMILLE_DENOM;
+            long remainderUnits = baseCeiling % ClubFinancesConstants.PERMILLE_DENOM;
+
+            if (wholeUnits > ceiling / multiplier)
+            {
+                return ceiling;
+            }
+
+            long scaledWhole = wholeUnits * multiplier;
+            long scaledRemainder =
+                remainderUnits * (long)multiplier
+                / ClubFinancesConstants.PERMILLE_DENOM;
+
+            if (scaledRemainder >= ceiling - scaledWhole)
+            {
+                return ceiling;
+            }
+
+            return scaledWhole + scaledRemainder;
         }
     }
 }
@@ -135,4 +150,5 @@ namespace TacticalDirector.ClubFinances
 // 1.0     | 2026-09-04 | —      | Initial #40 T0 settlement and prize interpolation.
 // 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder.
 // 1.2     | 2026-09-07 | —      | F4 widened from zero-only to all non-positive board multipliers.
+// 1.3     | 2026-09-07 | —      | Board scaling now caps before any multiplication that could overflow accepted tuning ranges.
 #endregion

@@ -1,9 +1,9 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 7, 2026 (v0.7 — PR #363 follow-up review correction)
-**Last Updated (prior):** September 6, 2026 (v0.6 — PR #363 external-review correction: T1a/T1b split and phase-real dependencies)
-**Version:** 0.7
+**Last Updated:** September 7, 2026 (v0.8 — PR #363 Codex arithmetic correction)
+**Last Updated (prior):** September 7, 2026 (v0.7 — PR #363 follow-up review correction)
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -72,8 +72,9 @@
 - **#34 (staff, future):** becomes a second caller of `ApplyTransaction` (`LineItem = StaffWage`) — the same
   contract as #31's wage line items; #34 MUST NOT add a second wage-aggregation path.
 - **#45 (board & ownership, future):** becomes the producer of a non-identity `BoardModifier`. #45 MUST
-  supply a **non-zero** `BudgetMultiplierMillPermille` — `default(BoardModifier)` reaching `SettleFinances`
-  fails loud by design (FR-FN-018); #45 MUST NOT add a second budget-multiplier path.
+  supply a **positive** `BudgetMultiplierMillPermille`; every non-positive value, including
+  `default(BoardModifier)`, reaching `SettleFinances` fails loud by design (FR-FN-018). #45 MUST NOT add a
+  second budget-multiplier path.
 - **#43 (promotion/relegation, future):** when it lands, its transform inserted at #30's step (a') produces
   the post-promotion division/`finalTablePosition` #40's step (b') already reads — no #40-side change is
   needed (the KD-6 ordering rationale is written to anticipate this); #43 MUST NOT itself call
@@ -111,6 +112,10 @@ resolved the following landing defects:
 6. **Board-modifier domain correction.** A follow-up review found that the new negative-multiplier test had
    silently made a nonsense board multiplier valid without spec authority. FR-FN-018/F4 and §3.1 now reject
    every non-positive multiplier before arithmetic; the regression lock asserts that negative input fails loud.
+7. **Overflow-safe board scaling.** Codex found that an accepted large `[GT]`-derived base ceiling multiplied
+   by a positive non-identity board factor could overflow `long` before the upper clamp executed. §3.1 and
+   `FinanceStep` now use quotient/remainder scaling with a division-only pre-cap; T-FN-INT-002 locks both the
+   saturating extreme and unchanged below-cap integer-floor result.
 
 This landing therefore delivers **T0 + T1a**. **T1b, T2, and T3 remain deferred** exactly as listed in §7.1.
 
@@ -124,4 +129,5 @@ This landing therefore delivers **T0 + T1a**. **T1b, T2, and T3 remain deferred*
 | 0.5 | 2026-09-04 | Codex | **T0 critique closure.** Adds the source-documentation-template correction and records removal of the unused friend-assembly surface. |
 | 0.6 | 2026-09-06 | — | **PR #363 external-review correction.** Reclassifies the already-landed standalone codec as T1a, creates T1b for #30 composition/version bump, defers the unused PlayerDatabase edge to its first T2 consumer, and records the added regression locks. |
 | 0.7 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** Records the deliberate non-positive `BoardModifier` fail-loud decision and corrects the clamp-coverage wording. |
+| 0.8 | 2026-09-07 | — | **PR #363 Codex correction.** Records overflow-safe board scaling and corrects the downstream #45 seam from “non-zero” to the normative positive-multiplier contract. |
 #endregion
