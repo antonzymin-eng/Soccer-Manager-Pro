@@ -2,9 +2,9 @@
 
 **Status:** READY FOR G0 OWNER ACCEPTANCE  
 **Started:** September 4, 2026  
-**Last Updated:** September 7, 2026  
-**Version:** 1.3  
-**Implementation gate:** G0 CLOSED pending owner acceptance; no substantial audio implementation or bulk asset production is authorized by this document alone.  
+**Last Updated:** September 6, 2026  
+**Version:** 1.4  
+**Implementation gate:** G0 OPEN pending owner acceptance and canonical tracking completion; no substantial audio implementation or bulk asset production is authorized by this document alone.  
 **Governs:** Audio & Sound Design #51 implementation plus the production pipeline for shippable audio assets.
 
 ---
@@ -24,7 +24,7 @@ Where surfaces disagree, use this order:
 
 ### 1.2 Roadmap status
 
-The original Path-to-Playable roadmap deliberately deferred #48 and #51 past PM-3 because neither was required to prove a playable season. The owner subsequently directed that audio be developed **in parallel** with the main development stream. The companion roadmap amendment records the narrow change:
+The original Path-to-Playable roadmap deliberately deferred #48 and #51 past PM-3 because neither was required to prove a playable season. On September 4, 2026, the owner directed that audio be developed **in parallel** with the main development stream. The companion roadmap amendment records that directive and the narrow sequencing change:
 
 - #51 **T0/T1 and production-pipeline substrate may proceed in parallel** after G0 acceptance;
 - this does **not** make audio part of the PM-2 critical path and must not block Track S;
@@ -52,7 +52,7 @@ The planning review found a real pre-T0 specification defect:
 - neither concrete type shape is defined;
 - therefore §4.2's CS0104 pre-check also never checked these two names.
 
-Per Path-to-Playable C6, this finding is **recorded now** in #51 §7 and the ERR tracking surface, but the normative §2/§4 repair is **discharged at T0 with code and regression proof**, not hardened as prose ahead of the assembly.
+Per Path-to-Playable C6, this finding is **recorded now in #51 §7**, while the normative §2/§4 repair is **discharged at T0 with code and regression proof**, not hardened as prose ahead of the assembly. The canonical `docs/tracking/spec-error-log.md` row remains a G0 merge blocker and must be added after re-verifying that `ERR-051-001` is still free at the merge head.
 
 ---
 
@@ -149,7 +149,7 @@ Spoken commentary remains a separately promoted deep-tier content project.
 ### Actions
 
 1. Accept this plan and the audio parallel roadmap amendment.
-2. Keep `ERR-051-001` recorded, but do **not** patch normative §2/§4 until T0 code exists.
+2. Keep `ERR-051-001` recorded in #51 §7 and add the canonical ERR/log/tracking rows before merging G0, but do **not** patch normative §2/§4 until T0 code exists.
 3. Freeze identity rules:
    - `CueKey` is durable audio identity;
    - `AudioBus` ordinal set is APPEND-only;
@@ -163,7 +163,7 @@ Spoken commentary remains a separately promoted deep-tier content project.
 ### Exit — G0
 
 - roadmap conflict resolved by explicit amendment;
-- ERR-051-001 recorded;
+- ERR-051-001 recorded in #51 §7 and the canonical ERR/tracking surfaces;
 - D48/D49 state explicit;
 - no speculative #48/#49 implementation inside #51;
 - Early Access scope and technology decision rule accepted.
@@ -311,8 +311,7 @@ Any collision discovered is resolved in the T0 design/spec/code landing, not pap
 - `CueKey`;
 - `CaptionId`;
 - `CaptionDecision`;
-- T0-resolved `AssetRef` — must carry a variant **set**, not only a single asset, because member
-  selection is host-owned (§7.2); the T0 regression proof covers the multi-variant case;
+- T0-resolved `AssetRef` — must carry a variant **set**, not only a single asset, because member selection is host-owned (§7.2); the T0 regression proof covers the multi-variant case;
 - T0-resolved #51 `CueParams`;
 - `CueEntry`;
 - `CueCatalogue`;
@@ -352,34 +351,20 @@ T0 code + normative ERR-051-001 discharge + tests are green. The game remains ex
 
 ## 7.2 Named display-side randomness source — host-owned selection
 
-FR-AU-033 forbids deterministic-sim RNG. The replacement is explicit, and it is **not** a type inside
-`TacticalDirector.Audio`:
+FR-AU-033 forbids deterministic-sim RNG. The replacement is explicit, and it is **not** a type inside `TacticalDirector.Audio`:
 
-**variant selection is host-owned. `AssetRef` exposes the variant set; the Unity host binding picks a
-member from it using a display-only PRNG whose state is client-local, never serialized, and never exposed
-to sim.**
+**Variant selection is host-owned. `AssetRef` exposes the variant set; the Unity host binding picks a member from it using a display-only PRNG whose state is client-local, never serialized, and never exposed to sim.**
 
 Rules:
 
-- `TacticalDirector.Audio` declares **no PRNG, no seed, no cursor and no selection state**. It stays a
-  pure value-type assembly whose T0/T1 tests can assert purity without carve-outs.
-- Given the same `CueKey`, #51's contract yields the same `AssetRef` — the *set*, not a member. Choosing
-  the member is a presentation act and belongs on the same side of the boundary as `AudioSource`.
-- The host seeds its selector once at composition from non-simulation entropy. No
-  `DeterministicRngService`, domain tag, stream cursor, save field, or simulation seed is permitted.
-- The exact PRNG is selected in P4B host code review for the target Unity surface. Nothing about it is
-  #51's to specify beyond the prohibition above.
+- `TacticalDirector.Audio` declares **no PRNG, no seed, no cursor and no selection state**. It stays a pure value-type assembly whose T0/T1 tests can assert purity without carve-outs.
+- Given the same `CueKey`, #51's contract yields the same `AssetRef` — the *set*, not a member. Choosing the member is a presentation act and belongs on the same side of the boundary as `AudioSource`.
+- The host seeds its selector once at composition from non-simulation entropy. No `DeterministicRngService`, domain tag, stream cursor, save field, or simulation seed is permitted.
+- The exact PRNG is selected in P4B host code review for the target Unity surface. Nothing about it is #51's to specify beyond the prohibition above.
 
-**Why host-side rather than #51-owned.** A seeded PRNG inside #51 would be mutable state in a leaf
-assembly whose entire discipline is construction-time refusal over immutable value types, and it would be
-a type §4.2's file inventory does not declare — the same defect class as ERR-051-001, introduced
-deliberately one tier later. Keeping selection host-side removes the type instead of recording it.
+**Why host-side rather than #51-owned.** A seeded PRNG inside #51 would be mutable state in a leaf assembly whose entire discipline is construction-time refusal over immutable value types, and it would be a type §4.2's file inventory does not declare — the same defect class as ERR-051-001, introduced deliberately one tier later. Keeping selection host-side removes the type instead of recording it.
 
-**T0 consequence for ERR-051-001.** Because the host selects, `AssetRef` MUST be able to carry a variant
-*set*, not just a single asset (Appendix B.2 already describes it as *"one asset, or a variant set for
-display-side variation"*). That requirement is part of the ERR-051-001 discharge scope: whatever concrete
-shape T0 lands for `AssetRef` has to satisfy it, and the T0 regression proof must cover the multi-variant
-case, not only the single-asset one.
+**T0 consequence for ERR-051-001.** Because the host selects, `AssetRef` MUST be able to carry a variant *set*, not just a single asset (Appendix B.2 already describes it as *"one asset, or a variant set for display-side variation"*). That requirement is part of the ERR-051-001 discharge scope: whatever concrete shape T0 lands for `AssetRef` has to satisfy it, and the T0 regression proof must cover the multi-variant case, not only the single-asset one.
 
 ## 7.3 Settings branch
 
@@ -448,10 +433,7 @@ Shell mapping/completeness and neutrality are green while playback is still sile
 
 Add the smallest Unity-side binding required to resolve/play assets, route buses, apply gain/mute, expose bus activity for ducking, and stop/replace as required by the pure API.
 
-The **variant selector lands here too** (§7.2): given an `AssetRef` carrying a variant set, the host picks
-the member with its client-local display PRNG, seeded once at composition from non-simulation entropy. It
-is host state, so it never reaches a save, a digest or a sim read — which the P4A neutrality lock already
-proves and continues to prove once this binding exists.
+The **variant selector lands here too** (§7.2): given an `AssetRef` carrying a variant set, the host picks the member with its client-local display PRNG, seeded once at composition from non-simulation entropy. It is host state, so it never reaches a save, a digest or a sim read — which the P4A neutrality lock already proves and continues to prove once this binding exists.
 
 Unity types stay out of `TacticalDirector.Audio`.
 
@@ -692,9 +674,9 @@ Recommended PR boundaries:
 1. **Audio planning/G0** — this plan + roadmap amendment + ERR recording/tracking only.
 2. **P1 pipeline substrate** — folders/metadata/validator contract; no library-scale binaries.
 3. **P2 T0** — normative ERR-051-001 discharge + pure #51 code + tests.
-4. **P3 T1** — mixer/settings/display-random pure logic + tests.
+4. **P3 T1** — mixer/settings pure logic + tests; no variant-selection state in #51.
 5. **P4A** — #48 shell mapping/completeness + observer-neutrality proof; still silent.
-6. **P4B** — Unity binding + minimal G3 assets + host evidence + middleware decision.
+6. **P4B** — Unity binding + host-side variant selector + minimal G3 assets + host evidence + middleware decision.
 7. **P5A/P5B** — settings and captions may be separate because their dependencies differ.
 8. **P6 batches** — small binary-reviewable batches, not one giant asset PR.
 9. **P7/P8 hardening** — measured tuning, regression, release validation.
@@ -731,18 +713,16 @@ The final review specifically tested the plan for the failure modes found extern
 
 - **Roadmap contradiction:** closed by a narrow explicit audio-parallel amendment; audio remains non-critical to PM-2.
 - **Phantom #48/#49 consumers:** closed by D48/D49 hard gates.
-- **C6 misread:** closed; ERR-051-001 is recorded now but normative contract repair waits for T0 code/test.
+- **C6 misread:** contract sequencing is corrected; #51 §7 records ERR-051-001 now, while the canonical ERR/tracking rows remain G0 merge blockers and normative contract repair waits for T0 code/test.
 - **Under-scoped collision analysis:** closed; `AssetRef`/`CueParams` are rechecked at T0 and `AudioMixer` is explicitly fully qualified at the Unity host boundary.
 - **Filename drift:** closed; bus/revision removed from filenames; revisions preserve path/GUID.
 - **ERR-038 assumption:** closed by explicit shared-store vs FR-AU-022 fallback branches.
 - **Vertical-slice ambiguity:** closed; slice files are provisional by default and either promoted or replaced.
 - **Neutrality timing:** moved to P4A, the first wired host-free landing.
-- **Variation source:** named, and placed **host-side**. `AssetRef` exposes the variant set; the host
-  selects a member with a client-local, non-serialized display PRNG. `TacticalDirector.Audio` declares no
-  randomness type at all, so the leaf keeps its purity property and no undeclared type is introduced.
+- **Variation source:** named, and placed **host-side**. `AssetRef` exposes the variant set; the host selects a member with a client-local, non-serialized display PRNG. `TacticalDirector.Audio` declares no randomness type at all, so the leaf keeps its purity property and no undeclared type is introduced.
 - **Historical supplement:** explicitly superseded by the approved spec.
 
-No substantial implementation should begin until G0 is accepted. After acceptance, P1 and P2 are safe parallel first slices; P4 remains blocked until D48 is genuinely green.
+No substantial implementation should begin until G0 is accepted and the canonical G0 tracking rows are complete. After acceptance, P1 and P2 are safe parallel first slices; P4 remains blocked until D48 is genuinely green.
 
 ---
 
@@ -753,4 +733,5 @@ No substantial implementation should begin until G0 is accepted. After acceptanc
 | 1.0 | 2026-09-04 | Initial converged plan after two high-level and two detailed critique/revision rounds. |
 | 1.1 | 2026-09-04 | Corrected initial C6 interpretation and added PR boundaries/source recoverability. |
 | 1.2 | 2026-09-06 | External-review close-out: roadmap amendment; explicit D48/D49 gates; C6 record-vs-discharge correction; expanded collision checks; stable filename/GUID rule; ERR-038 fallback; provisional G3 status; P4A neutrality; named display PRNG; historical supplement explicitly superseded. |
-| 1.3 | 2026-09-07 | **Variant selection moved host-side (§7.2, §6.3, §10.1, §16).** v1.2 placed a display PRNG inside `TacticalDirector.Audio`, which would have put seeded mutable state in a leaf whose T0/T1 tests assert purity, and introduced a type §4.2's file inventory does not declare — the same defect class as ERR-051-001, one tier later. `AssetRef` now exposes the variant **set**, the Unity host binding selects the member with a client-local non-serialized display PRNG, and #51 declares no randomness type at all. Consequent T0 obligation added to the ERR-051-001 discharge scope: `AssetRef` must carry a variant set and the regression proof must cover the multi-variant case. FR-AU-033 is satisfied identically; nothing about the sim-RNG prohibition is relaxed. |
+| 1.3 | 2026-09-06 | Variant selection moved host-side (§7.2, §6.3, §10.1, §16). `AssetRef` exposes the variant set, the Unity host binding selects the member with a client-local non-serialized display PRNG, and #51 declares no randomness type. Consequent T0 obligation added to ERR-051-001 discharge scope: `AssetRef` must carry a variant set and regression proof must cover the multi-variant case. |
+| 1.4 | 2026-09-06 | Corrected G0 state to OPEN, tied the owner directive to September 4, 2026, removed stale T1/display-random wording after host-side selection moved to P4B, and made the still-missing canonical ERR/tracking rows explicit G0 merge blockers rather than claiming they already exist. |
