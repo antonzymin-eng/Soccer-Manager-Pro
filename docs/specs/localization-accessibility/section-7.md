@@ -1,8 +1,9 @@
 # Localization & Accessibility #49 — Section 7: Forward Extensions
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** September 7, 2026 (v0.3 — L0R records ERR-049-002/003 for T0/T1 discharge under C6; no contract hardening)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -57,9 +58,43 @@ byte-identical (Appendix C / T-LC-IDENTITY-001). It is behaviour-neutral at the 
 #22's public return type — the one real API change this spec introduces, forward-designed here and applied
 post-APPROVED like #21–#38 code.
 
+## 7.6 Recorded implementation-time defects — C6-deferred, not hardened here
+
+Root `CLAUDE.md` and the live path-to-playable roadmap C6 prohibit hardening an assembly-less specification
+ahead of its T0 landing. #49 still has no production `src/localization/` assembly at this record-only slice,
+so the two defects below are deliberately **filed OPEN without changing the affected normative contract**.
+This uses the repository ERR workflow's named-stage deferral rather than its usual same-commit back-prop:
+the code that makes each correction executable does not exist yet, and creating it in this record-only
+slice would itself violate C6.
+
+- **ERR-049-002 — OPEN; discharge wholly in L1 / #49 T0.** §1 KD-6 still says the renderer references
+  built producers — explicitly `Localization → living-world` at Stage 2 — and cites
+  `TextTemplateId.ForInteraction(intent)`. That wording contradicts the already-approved structural rule in
+  §2.2/§2.2.1, §3, §4.1 and §5: `TacticalDirector.Localization` core references no sim/producer assembly and
+  the `living-world` coupling belongs in the sibling `LivingWorldTextBoundary` composition adapter. L1 must
+  correct KD-6 in the same landing that creates the core and mechanically proves the no-producer/no-reverse
+  reference direction. Historical PASS-1 text in §9 remains historical evidence, not a live contract to
+  rewrite.
+- **ERR-049-003 — OPEN; discharge in L3B / #49 T1.** §2.2 defines `TextTemplateId.ProducerTag` only as an
+  integer field and assigns no symbolic allocation owner/table or append-only allocation rule, while later
+  approved producer specs already write symbolic catalogue identities such as `ProducerTag.Media`,
+  `ProducerTag.Inbox` and `ProducerTag.MatchCommentary`. Current-main inventory includes #35
+  `media-press-interactions/{section-4.md,appendices.md}`, #46
+  `news-inbox-man-management/{section-4.md,section-5.md,appendices.md}`, and #48
+  `match-presentation-depth/section-4.md`; L3B must repeat the repository-wide search before back-prop.
+  The executable resolution must preserve the generic core's integer identity, allocate only built
+  producers, make allocations append-only/non-reusable, and mechanically prevent collisions in the actual
+  catalogue key **pair** `(ProducerTag, LocalOrdinal)`. This record does not pre-select a code location or
+  allocate phantom tags before the boundary exists.
+
+Neither entry changes an FR, dependency, type, stream, save format, or runtime behavior here. Their owning
+`spec-error-log.md` rows are the durable backlog; L1/L3B convert them to resolved only with the executable
+proof named above.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial forward extensions: Wave-8 locale content + the a11y content surface; #35/#46/#38-static producer bindings; the grammar-depth Stage-3+ deferral; the #22 retrofit T-phase. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-09-07 | — | L0R record-only pass: filed ERR-049-002 (stale KD-6 reference direction; deferred wholly to L1/T0) and ERR-049-003 (missing ProducerTag allocation ownership/collision contract; deferred to L3B/T1). C6 forbids pre-T0 hardening, so no normative fix is landed in this slice. |
 #endregion
