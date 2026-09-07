@@ -1,111 +1,99 @@
 # tools/dotnet-ci — Non-Certifying Linux Compile/Test Gate
 
-> **Created:** June 12, 2026
-> **Purpose:** Compile the entire `src/` tree and execute every NUnit suite under
-> plain `dotnet test` on Linux CI — without Unity.
+> **Created:** June 12, 2026  
+> **Purpose:** Compile the host-free `src/` tree and execute NUnit suites under plain .NET on Linux.  
+> **Policy boundary:** `tools/dotnet-ci/run-gate.sh` is the **lower-level executor**. Normal developer and CI policy entry points are versioned in `tools/run-tests-local.sh`.
 
 ## Why this exists
 
-By June 2026, **seven consecutive specs** had shipped a structurally dead build
-surface that no tool ever checked: `PassMechanicsTests` (stray `}`, CS1022, dead
-since v1.1), First Touch ERR-004 (same class), the Decision Tree production
-assembly (static calls to instance executors), the deterministic-sim test
-assembly (missing `InternalsVisibleTo`), and more. Unit suites "verified" claims
-while being uncompilable. The certification platform (Windows / Unity
-6000.4.9f1, target pin as of `certification-platform.md` v1.3 — recertification
-pending, superseding the 2022.3.62f1 tuple this gate was originally written
-against) governs *determinism certification*, not smoke-level "does it
-compile and do the tests run" — and the codebase is, by design, pure
-deterministic C# whose only engine surface is `Vector2`/`Vector3`, `Mathf`,
-`Debug`, `ProfilerMarker`/`Profiler`, and `LogAssert`. A ~6-type shim closes the
-gap.
+Before this gate, multiple specs shipped suites or production surfaces that had never been compiled by any repository check. The Linux shim gate closes that structural gap by generating .NET projects from Unity asmdefs and running NUnit outside Unity.
 
-**On its first execution (June 12, 2026) the gate found:** 18 files importing
-`ProfilerMarker` from the wrong namespace; the EventBus/EventBusStub
-constraint-only overload triple (CS0111 — illegal in any C#; ERR-017-002, spec
-patched); `File.Move(…, overwrite:)` absent from Unity's netstandard2.1 surface
-(SaveManager); wrong enum-member casing (ShotExecutor); a missing
-`using System;` (CoverShadowSelector); an `int?`→`int` mismatch
-(GoalkeeperMechanics); the sixth stray-brace dead suite (ShotMechanicsTests);
-51 `internal` test methods NUnit cannot run (DefensiveAITests); NUnit API
-misuse in two suites; an `EventRegistry` static-init ordering fragility; and
-four fabricated SipHash reference vectors. Then 1,165 tests ran for the first
-time: 30 genuine model/expectation failures were quarantined into
-`known-failures.txt` (tracked in `docs/tracking/dotnet-ci-quarantine.md`).
+It is deliberately **non-certifying**. Determinism certification remains owned by the pinned Windows/Unity environment in `docs/tracking/certification-platform.md` and Spec #16. Linux results are regression/compile evidence only.
 
-## What it is NOT
-
-**Not a determinism certification.** Bit-exactness, FR-DS-009-GATE, perf gates,
-and golden-digest pins are certified ONLY on the pinned host in
-`docs/tracking/certification-platform.md` (target tuple as of v1.3: Windows 11 /
-Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker /
-DAZ+FTZ+fp-contract+FMA off — status ⏳ Recert required, not yet certified).
-This gate proves
-the tree *compiles* and the suites *execute and pass*; float results on Linux
-x64 under .NET 8 are expected to agree for the operations used, but no digest
-produced here is authoritative.
-
-## Layout
+## Current layout
 
 | Path | Role |
 |---|---|
-| `generate_projects.py` | Maps every `src/**/*.asmdef` → `*.gen.csproj` (gitignored; asmdefs stay the single source of truth) + `TacticalDirector.gen.sln`. Production TFM `netstandard2.1` (Unity's BCL surface), tests `net8.0`; `LangVersion` 9.0 (Unity 2022.3 C# level); `AssemblyName` = asmdef name so `InternalsVisibleTo` resolves; `DEVELOPMENT_BUILD` defined so FR-CS-031-gated emits compile and `LogAssert.Expect` stays meaningful. |
-| `UnityShim/` | `UnityEngine` shim: `Vector2`/`Vector3` (Unity-exact approximate `==`, exact `Equals`, normalize threshold), `Mathf` (Unity NaN semantics — the project NaN-gate pattern depends on them — and round-half-to-even), `Debug` + `LogType` + `ShimLog` event spine, no-op `Profiler`/`ProfilerMarker`. |
-| `UnityShim.TestTools/` | `LogAssert` with Unity Test Framework parity (unmet expectation fails the test; unexpected Error/Assert/Exception log fails the test) + `LogAssertVerifyAttribute` (assembly-level NUnit `ITestAction`). |
-| `LogAssertVerifyAssemblyInfo.cs` | Linked into every generated test project — applies the log contract to all tests. |
-| `known-failures.txt` | Machine-readable quarantine (shrinking-only). See `docs/tracking/dotnet-ci-quarantine.md`. |
-| `run-gate.sh` | The gate: generate → restore → build (errors fail) → `dotnet test` excluding quarantine (any failure fails) → report-only run of the quarantined set. |
+| `generate_projects.py` | Maps `src/**/*.asmdef` to generated `.gen.csproj` files and `TacticalDirector.gen.sln`. Asmdefs remain source of truth. |
+| `UnityShim/` | Minimal Unity API shim needed by host-free code. |
+| `UnityShim.TestTools/` | Test-framework shims used by generated projects. |
+| `known-failures.txt` | Functional flake quarantine ledger. Shrinking-only; currently comments-only. |
+| `owner-held-red.txt` | Owner-held failing acceptance predicates. **Not quarantine.** Each is executed separately and must still fail at the recorded diagnostic baseline. |
+| `verify-owner-held-red.py` | Requires one exact test identity, failed outcome, recorded diagnostic tokens, no extra results, and expected runner exit. Unexpected green/drift/ambiguity blocks. |
+| `coverage.runsettings` | Coverlet/XPlat coverage configuration used by PR/nightly policy modes. |
+| `precommit.runsettings` | NUnit pre-commit selection. Excludes taxonomy prefixes only when they occur at the start of the **method name** (`^int_`, `^sim_`, `^e2e_`), avoiding `FullyQualifiedName` substring over-exclusion. |
+| `run-gate.sh` | Lower-level generated-project executor. Accepts explicit arguments only; inherited filter/owner/coverage environment controls are rejected. |
 
-## Running locally
+## Normal developer commands
 
-```bash
-bash tools/dotnet-ci/run-gate.sh
-```
-
-Requires the .NET 8 SDK and Python 3 (stdlib only). Generated `*.gen.csproj`,
-`*.gen.sln`, `bin/`, `obj/` are gitignored — never commit them.
-
-## Running in the Claude remote environment
-
-**The full gate runs in Claude's remote (cloud) sessions.** Verified August 7,
-2026: the Ubuntu archive carries the SDK, and the egress proxy allows it —
+Run bootstrap once per clone:
 
 ```bash
-apt-get install -y dotnet-sdk-8.0    # Ubuntu 24.04 archive; verified 8.0.129
-bash tools/dotnet-ci/run-gate.sh
+bash tools/bootstrap-dev.sh
 ```
 
-The `dot.net` install script and `packages.microsoft.com` are 403-blocked at the
-proxy, which is what earlier sessions hit before concluding "no .NET SDK in the
-authoring environment; CI on push is the only compiler." That conclusion was
-about the wrong host list: **`archive.ubuntu.com` is allowed**, and the distro
-SDK compiles the tree and runs every suite. Measured on that host: whole-tree
-build ~25 s, `MatchEngine.Tests` ~48 min (vs 37–38 min on the CI runner —
-per-suite durations differ, verdicts agree with CI run 419 exactly, including
-per-predicate failure values).
+Bootstrap installs/verifies the versioned staged-index hook and performs the one-time cold preparation of its persistent build snapshot under `.git/testing-strategy/`.
 
-Two caveats. (1) Still **non-certifying** — same as every Linux run; nothing
-here touches the pinned Windows/Unity tuple. (2) A *local* (desktop) Claude
-session is a different host with a different proxy policy; this note is verified
-for the remote container image only. If `apt-cache policy dotnet-sdk-8.0` shows
-a candidate, this path works.
+Use the policy runner after that:
+
+```bash
+# Same unit/property-compatible composition used by the git hook.
+bash tools/run-tests-local.sh --pre-commit
+
+# PR-equivalent local composition.
+bash tools/run-tests-local.sh --pr
+
+# Non-certifying Linux nightly functional/simulation/soak composition.
+bash tools/run-tests-local.sh --nightly
+```
+
+Do **not** use a bare `bash tools/dotnet-ci/run-gate.sh` result as proof that the repository PR policy composition ran. The low-level command remains useful for executor debugging and targeted investigation, but it bypasses the Spec #19 auditor/owner-held/coverage composition decisions owned by `tools/run-tests-local.sh`.
+
+## Pre-commit performance design
+
+The versioned hook tests the staged Git index rather than the unstaged worktree, but it does **not** create a fresh zero-cache directory on every commit. Its snapshot lives under `.git/testing-strategy/precommit-snapshot`:
+
+- tracked source/document files are overwritten from the current Git index before each run;
+- tracked files removed from the index are removed from the snapshot;
+- untracked generated projects, `bin/`, and `obj/` remain available for incremental reuse;
+- bootstrap performs the cold cache preparation once outside the normal acceptance measurement;
+- the normal pre-commit composition remains hard-bounded to 60 seconds.
+
+This design removes the prior cold-restore/34-sequential-project construction defect. It still does **not** prove the ≤60-second requirement: that requires a successful measured run on the certified developer host.
+
+## Owner-held RED policy
+
+`sim_match_engine_close_chance` is currently owner-held RED by explicit project decision. It is not placed in `known-failures.txt` and is not treated as a flake.
+
+PR/nightly policy modes:
+
+1. exclude that exact `Name` from the ordinary blocking pass;
+2. run the exact owner-held `Name` separately;
+3. parse its TRX;
+4. require exactly one matching result and the recorded diagnostic tokens;
+5. fail if it passes, drifts, is missing/ambiguous, returns extra tests, or exits abnormally.
+
+The diagnostic contract is proven only when the real PR gate executes successfully; a unit fixture proves verifier behavior, not the live test message format.
+
+## Certified-host boundary
+
+The scheduled Linux job is non-certifying. `.github/workflows/nightly.yml` also defines the authoritative Windows/Unity Spec #16 job, but it is disabled until repository variable `DETERMINISM_CERTIFIED_RUNNER_ENABLED=true` is set after a matching self-hosted runner is actually registered/configured. Until a successful certified-host run exists, FR-TS-075's determinism leg remains operationally open.
+
+## Running in remote Linux authoring environments
+
+Where .NET 8 is already available, the policy runner can execute normally. Historical remote-container measurements established that Ubuntu-hosted .NET can run the generated gate, but those measurements remain non-certifying and do not substitute for the current PR/certified-host evidence.
 
 ## Shim fidelity rules
 
-- Shim members replicate **documented Unity semantics exactly** where the
-  codebase depends on them (Vector approximate `==`, `Mathf.Max/Min/Clamp01`
-  NaN propagation, `RoundToInt` banker's rounding, `Normalize` 1e-5 threshold).
-- The shim must stay **strictly Unity-shaped**: never add a member Unity does
-  not have, and never add a namespace alias to make broken code compile — a
-  compile error here that Unity would also produce is the gate working
-  (e.g. `ProfilerMarker` was deliberately NOT added to `UnityEngine.Profiling`).
-- When .NET 8 and Unity's netstandard2.1 BCL disagree, the **netstandard2.1
-  surface wins** (that is why production targets it).
+- Shim members replicate Unity semantics only where this codebase depends on them; never add a fake member merely to make broken code compile.
+- The shim must stay Unity-shaped. A compile error that Unity would also produce is a valid gate failure.
+- When .NET and Unity's supported BCL surface disagree, the production-compatible surface wins.
 
 ## Version History
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.0 | 2026-06-12 | — | Initial gate: shim + generator + runner + quarantine; first-ever full suite execution. |
-| 1.1 | 2026-07-13 | — | Certification-pin citations updated to the `certification-platform.md` v1.3 target tuple (Unity 6000.4.9f1, DX11) — recert pending, not yet certified. The `generate_projects.py` / `UnityShim` technical claims about Unity's actual `netstandard2.1` BCL surface and `LangVersion 9.0` C# level are UNCHANGED and unverified against Unity 6 — see root `CLAUDE.md` OPEN ISSUES. |
-| 1.2 | 2026-08-07 | — | New "Running in the Claude remote environment" section: the full gate runs in Claude remote sessions via the Ubuntu-archive `dotnet-sdk-8.0` (verified 8.0.129 — build + full `MatchEngine.Tests`, verdicts matching CI run 419 exactly). The standing "no .NET SDK; installer 403" conclusion was scoped to the wrong hosts: `dot.net` is blocked, `archive.ubuntu.com` is not. |
+| Policy addendum | 2026-09-04 | — | **Testing Strategy pipeline correction.** Makes `tools/run-tests-local.sh` the canonical developer/CI policy entry point; records exact owner-held RED handling, anchored NUnit pre-commit selection, persistent staged-index build cache, coverage settings, and the gated certified-host nightly boundary. This operational correction intentionally does not advance the historical gate-document version key, because live open-issue records cite the Aug-7 v1.2 revision as dated evidence. |
+| 1.2 | 2026-08-07 | — | Recorded that the full generated Linux gate can run in the Claude remote Ubuntu environment; still non-certifying. |
+| 1.1 | 2026-07-13 | — | Certification-pin citations updated to the Unity 6000.4.9f1 target tuple; gate remained non-certifying. |
+| 1.0 | 2026-06-12 | — | Initial gate: shim + generator + runner + quarantine; first full suite execution exposed multiple previously uncompiled defects. |
