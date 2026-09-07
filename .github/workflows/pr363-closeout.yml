@@ -19,7 +19,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply close-out synchronization
-        run: python3 .github/scripts/pr363_closeout.py
+        run: |
+          sed -i 's/old_row = "| v2.127 |"/old_row = "| 2.127 |"/' .github/scripts/pr363_closeout.py
+          python3 .github/scripts/pr363_closeout.py
 
       - name: Verify documentation and tooling
         run: |
