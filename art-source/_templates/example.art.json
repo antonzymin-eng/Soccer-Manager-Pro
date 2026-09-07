@@ -1,0 +1,15 @@
+{
+  "asset_id": "ui.icon.calendar",
+  "family": "ui",
+  "status": "candidate",
+  "style_version": "pending",
+  "target_surface": "template-only",
+  "source_kind": "original",
+  "creator_or_tool": "replace-before-production-use",
+  "license_or_rights_basis": "Template only; replace with the actual rights basis before candidate adoption.",
+  "attribution_required": false,
+  "real_person_or_likeness": false,
+  "real_club_competition_or_trademark": false,
+  "export_paths": [],
+  "notes": "Template only. This record does not represent a production asset."
+}

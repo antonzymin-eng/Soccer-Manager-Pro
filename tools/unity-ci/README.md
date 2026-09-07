@@ -1,6 +1,7 @@
 # tools/unity-ci — Unity-specific PR gates
 
 > **Created:** July 22, 2026
+> **Updated:** September 6, 2026
 > **Purpose:** CI checks the pre-Unity pure-C# gate (`tools/dotnet-ci`) does not
 > cover, now that the repo carries a real Unity 6 project (`ProjectSettings/`,
 > `Packages/`, `.meta` files, asmdefs). Runs on Linux, no Unity install required.
@@ -9,9 +10,10 @@
 
 | Script | CI job | What it enforces |
 |---|---|---|
-| `check-meta-integrity.sh` | **Unity .meta integrity** | Every tracked file/folder under `src/` has a committed `.meta`; no orphan `.meta` (asset deleted); no two `.meta` share a GUID. |
+| `check-meta-integrity.sh` | **Unity .meta integrity** | Missing/orphan metas for the managed `src/` + `Assets/GameArt/` roots; one project-wide duplicate-GUID scan across every tracked `.meta` under `Assets/` plus the junction-backed `src/` tree. |
 | `check-binaries.sh` | **Unity asset hygiene** | Any tracked file over the threshold (`TD_BINARY_THRESHOLD_BYTES`, default 1 MiB) must be routed to Git LFS by `.gitattributes`. |
-| `generate-missing-metas.sh` | *(fix helper, not a gate)* | Writes CI-safe `.meta` files for anything missing one. `--check` mode lists gaps and exits non-zero. |
+| `generate-missing-metas.sh` | *(fix helper, not a gate)* | Preserves existing deterministic placeholder generation under `src/`; for `Assets/GameArt/`, writes **folder metas only**. `--check` reports generator-owned gaps and exits non-zero. |
+| `test-meta-integrity-gameart.sh` | *(mutation proof)* | Proves missing GameArt meta, orphan GameArt meta, GameArt↔`src/` duplicate GUID, and GameArt↔other-`Assets/` duplicate GUID are detected without modifying the real Git index. |
 
 The Unity Test Runner job (`unity-tests`, EditMode + PlayMode inside real Unity
 6) lives in `.github/workflows/ci.yml`. It is **gated on the `UNITY_LICENSE`
@@ -20,35 +22,53 @@ secrets are configured, and is cleanly **skipped** (PR stays green) until then.
 
 ## Why `.meta` integrity is a hard gate
 
-A `.cs` (or any asset) without a committed `.meta` gets a **fresh random GUID**
-from Unity on every checkout. Unity resolves all inter-asset references by GUID,
-so a divergent GUID silently breaks every prefab/scene/asset that referenced the
-file — and does so differently on each machine. This is the single most common
-Unity PR footgun; catching it in CI is cheap.
+A `.cs` or Unity asset without a committed `.meta` gets a **fresh random GUID**
+from Unity on checkout. Unity resolves inter-asset references by GUID. Missing
+identity therefore breaks references, and duplicate GUIDs are unsafe even when
+the colliding assets live in different folders.
 
-## ⚠️ The generated placeholder `.meta` files still need Unity authoring
+AP-01 intentionally separates two scopes:
 
-`generate-missing-metas.sh` derives each GUID from `md5(repo-relative-path)` so
-the tree is **immediately GUID-consistent and reproducible without opening
-Unity**. These metas are format-correct and reference-stable, but they are
-**placeholders**: they were not authored by the Unity editor and carry only the
-minimal importer block this repo already uses (no editor-populated importer
-settings).
+- **missing/orphan ownership:** `src/` and `Assets/GameArt/`;
+- **duplicate-GUID ownership:** every tracked `.meta` under `Assets/` plus the
+  junction-backed `src/` tree, scanned as one universe.
 
-**Follow-up owed (do NOT skip):** when the project is next opened in Unity 6 on
-the pinned certification host, let Unity enrich these metas — **but preserve the
-existing GUIDs** (do not let Unity reassign them, or references break). The
-metas generated on July 22, 2026 cover the previously-uncovered files under
-`src/season-save/`, `src/match-engine/` (GkHeadingIntentSource, LineupSelector
-and their tests), and `src/deterministic-sim/FloatFlagTuple.cs`.
+The second scope is project-wide because a new GameArt texture must not be able
+to collide with an existing scene, plugin, reference asset, or any other Unity
+asset elsewhere under `Assets/`.
+
+## Placeholder generation boundary
+
+`generate-missing-metas.sh` derives helper-owned GUIDs from
+`md5(repo-relative-path)` so those paths are immediately stable and
+reproducible without opening Unity.
+
+For **`src/`**, the existing behavior remains: source files and folders may get
+minimal placeholder metas. Unity may later enrich them, but the GUID must be
+preserved.
+
+For **`Assets/GameArt/`**, the helper is deliberately narrower:
+
+- it may create missing **folder** metas;
+- it may support temporary CI-safety fixtures used by the mutation proof;
+- it must **not** create production file metas for textures, vector exports,
+  fonts, or other imported art assets.
+
+Production GameArt file metas must come from an actual Unity import so their
+`TextureImporter`, font importer, or other importer-specific settings are
+editor-authored from the start. AP-03 owns that import proof.
+
+`generate-missing-metas.sh --check` therefore checks only generator-owned paths.
+Use `check-meta-integrity.sh` for the full integrity gate.
 
 ## Running locally
 
 ```bash
 bash tools/unity-ci/check-meta-integrity.sh
 bash tools/unity-ci/check-binaries.sh
-bash tools/unity-ci/generate-missing-metas.sh          # write any missing metas
-bash tools/unity-ci/generate-missing-metas.sh --check   # report only
+bash tools/unity-ci/generate-missing-metas.sh          # write eligible missing metas
+bash tools/unity-ci/generate-missing-metas.sh --check  # report eligible gaps only
+bash tools/unity-ci/test-meta-integrity-gameart.sh     # mutation proof
 ```
 
 ## `.gitattributes`
