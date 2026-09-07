@@ -2,8 +2,8 @@
 
 **Created:** September 6, 2026  
 **Last Updated:** September 6, 2026  
-**Version:** 0.1  
-**Status:** F1.1 CAPABILITY MATRIX — BASELINE COMPLETE; F1.2–F1.5 OPEN  
+**Version:** 0.2  
+**Status:** F1.1–F1.2 COMPLETE; F1.3–F1.5 OPEN  
 **Parent:** [`ux-detailed-plan.md`](ux-detailed-plan.md)  
 **Evidence snapshot:** `design/ux-foundation` at `8fd178c9e5add5042a9e3e5c5124354aa1b0daf6`
 
@@ -26,6 +26,8 @@ The capability matrix follows these rules:
 6. **No phantom controls.** A mockup does not create a missing command, view model, screen or navigation edge.
 7. **Reference harnesses are not shipping UI.** `match-viewer` and `match-client-web` may validate real data and
    behavior but are not extended into a second product client.
+8. **Mockups are decomposed by capability.** A useful table, panel or interaction pattern may survive even when
+   the screen's data or actions do not; unsupported controls never inherit authority from the visual reference.
 
 Capability labels are inherited from the detailed plan:
 
@@ -116,7 +118,7 @@ its own Gate A when activated.
 | Capability | Verified source state at snapshot | UX posture |
 |---|---|---|
 | Squad inspection / selection | #27/player-data and lineup-related implementation exists | `DESIGNABLE` when prioritized; re-audit owning read/action seams at Gate A |
-| Training / progression | implementation exists in current management layer | `DESIGNABLE` subject to wiring/action audit |
+| Training / progression | `src/training-system/` exists; `TrainingViewModel` exposes focus/condition/fatigue and `TrainingSchedule.TrySetFocus` is a real per-player write | `DESIGNABLE` for the verified per-player training state/focus only; broader session-planning controls require their own seam |
 | Injuries / availability | implementation exists in current management layer | `DESIGNABLE` subject to presentation/read audit |
 | Board objective / job security summary | `BoardState` / `BoardObjective` data is present under `season-save` and projected into `SeasonViewModel` | `DESIGNABLE` for the existing objective/status summary only |
 | Full board / ownership management | current #30 board summary does **not** prove the deeper owning feature set | `FUTURE-BLOCKED` until its owning implementation is verified |
@@ -210,11 +212,244 @@ F1.1 is complete enough to support the next baseline steps:
 - #48/#49/#51 are correctly marked spec-only at this snapshot;
 - S2 capabilities are prevented from being treated as implemented merely because a spec/mockup exists.
 
-No high-fidelity UX work is authorized by this file. The next detailed-plan action is **F1.2 — reconcile the
-existing mockups against this matrix**, beginning with `Tactics.html` and provisional `Main Menu.html`.
+---
 
-F1.3–F1.5 then complete this same evidence pack with player/task assumptions, PM-1/PM-2 task priority and the
-Early Access success floor.
+# 4. F1.2 existing-reference reconciliation
+
+## 4.1 Reconciliation rule
+
+Disposition applies to the **reference**, not automatically to every primitive inside it:
+
+- `KEEP` — reference remains a useful authority for the stated visual/interaction concern.
+- `REVISE` — useful structure exists, but behavior/data/navigation must be reconciled before reuse.
+- `REFERENCE ONLY` — preserve as visual/research precedent; it may not drive an implementation handoff.
+- `DEFER` — useful later, but outside S0/S1 priority.
+- `RETIRE` — the represented product behavior should not be carried forward unless an owning spec/client change
+  explicitly reintroduces it.
+
+## 4.2 Foundation references
+
+| Reference | Disposition | Keep | Revise / constrain | Capability gaps / gate implication |
+|---|---|---|---|---|
+| `System XI - Design System.html` | `KEEP + REVISE IN F3` | `touchline`, dense analyst-tool philosophy, tabular numerals, quiet chrome, shared component vocabulary, neutral surfaces, brand accent | Treat token values as reference rather than runtime constants; status meaning must never rely on color alone; font/glyph fallback, pseudo-locale, max text scale and focus states must be added/verified | #49 runtime is absent, so accessibility/localization claims are design constraints until F3/E/J; Google Fonts are not a shipping font contract |
+| `Desktop Guardrails.html` | `KEEP + REVISE IN F3` | desktop-first density principles, compact controls, table-first information design, do/don't examples | fixed-stage scaling is a mockup technique, not shipping responsive behavior; validate smallest supported desktop, 1920×1080 and high-resolution/ultrawide, pseudo-locale and max text | F3 defines the supported renderer behavior; Gate E/J prove it |
+| `Command Palette.html` | `REFERENCE ONLY / DEFER` | keyboard-first search pattern, visible scope, arrow/Enter/Esc behavior, result grouping, focus concept | discard its current index as capability truth: it advertises unimplemented screens/actions, including transfers, contracts, scouting, finance, staff, inbox, settings, save, advance-day and management commands | no current typed career-shell destinations/command index; pattern may return after F2/S1 establishes real destinations/actions |
+
+## 4.3 PM-1 references
+
+### `Main Menu.html`
+
+**Disposition:** `REVISE` for S0; keep visual hierarchy, not current action inventory.
+
+**Keep:** 
+
+- System XI / football-management identity;
+- `touchline` hierarchy and restrained branding;
+- art-independent key-art slot and fallback;
+- explicit disabled-state reason pattern;
+- focus-visible styling, reduced-motion treatment and keyboard hint pattern;
+- primary/secondary action separation.
+
+**Revise:** 
+
+- S0's real current forward path is `MainMenu → TacticsSetup`; the S0 low-fidelity version therefore needs a
+  supported PM-1 entry such as Play Match / Match Setup rather than presenting `New Game` as implemented;
+- `Continue`, `New Game`, `Load Game` and `Settings` are PM-2/future client surfaces until their screen/dispatch
+  paths land;
+- Credits/Exit are shell concerns whose runtime ownership must be identified before handoff;
+- remove “Early Access UX Reference” and other authoring labels from any future production reference.
+
+**Gate implication:** S0-C may reuse the structure, but S0-H must not inherit any future action as live.
+
+### `Tactics.html`
+
+**Disposition:** `REVISE` heavily for S0; this is the most valuable existing screen reference.
+
+**Keep:** 
+
+- formation/pitch + squad + selected-player/context layout concept;
+- dense team-tactic controls;
+- team mentality/formation/tempo/width/passing/pressing family as a design direction where the exact control maps
+  to a real `TeamTactic` field;
+- player role + Defend/Support/Attack duty + individual-instruction concept, because `PlayerTactic` genuinely owns
+  those three dimensions;
+- compact information hierarchy and a clear Start/Cancel-ready setup surface as the target S0 task.
+
+**Revise to actual semantics:** 
+
+- `TeamTactic` currently exposes the verified manager axes: Mentality, Formation, Tempo, Width, Passing, Pressing,
+  Line of Engagement, Defensive Line, Defensive Width, Transition Won/Lost, Offside Trap, press-trigger mask,
+  Focus Play, GK Distribution, Time Wasting, Marking Orientation, Dismark Intensity, Build-Up Structure and Rotation
+  Freedom;
+- `PlayerRole` is currently the curated roster `Default`, `Poacher`, `DeepLyingPlaymaker`, `BallWinningMid`,
+  `InsideForward`, `TargetMan` — not the dozens of FM-like roles in the mockup;
+- `Duty` is exactly Defend / Support / Attack;
+- `PlayerInstructions` is a fixed set of pass/shoot/dribble/cross/positioning/closing-down biases plus tight marking,
+  optional man-mark target and set-piece duty flags — not arbitrary role-specific toggle lists;
+- replace career chrome/date/Continue/Inbox with the current PM-1 setup context for S0;
+- add explicit readiness, invalid setup, command refusal and cancel states.
+
+**Reference-only / remove from S0 unless a seam is separately proven:** 
+
+- opponent “defensive alerts”, “our tactical plan” and causal/recommendation copy;
+- elaborate opponent scouting intelligence;
+- tactical template Import / Save Current workflow;
+- elaborate set-piece routine editor beyond the implemented set-piece duty inputs;
+- any role/instruction name not present in the verified tactical contracts;
+- auto-save/career status chrome.
+
+**Gate implication:** every interactive control is remapped during S0-A; S0-C designs only the verified subset.
+
+## 4.4 PM-2 / career-shell candidates
+
+### `Club.html`
+
+**Disposition:** `REVISE` as the strongest existing starting point for the future S1 Career Home/Season surface.
+
+**Keep for S1 concept:** managed club identity, league position/table context, next fixture, current-season progress,
+attention/alert hierarchy, compact quick links, board-objective/job-security summary pattern.
+
+**Revise / remove until backed:** multi-competition claims beyond the implemented competition scope, finance/wage
+cards, transfer/contract alerts/actions, deep injury/medical advice, full board-confidence narrative, unsupported quick
+links and global career chrome.
+
+**Gate implication:** S1-A should map the five Career Home questions to verified `SeasonViewModel` fields first, then
+borrow modules from this reference only where data/action ownership exists.
+
+### `World.html`
+
+**Disposition:** `REVISE / SPLIT`.
+
+**Keep:** dense standings table, managed-club highlighting, form/position readability, competition/list navigation
+pattern.
+
+**Current designable subset:** the managed league table/fixtures backed by #30.
+
+**Future-only subset:** multiple active leagues/competitions, UEFA-style qualification zones/rankings, cross-world
+competition navigation and any competition data not exposed by the current season implementation.
+
+**Gate implication:** managed-league table may contribute to S1; the broader world browser remains S2/later.
+
+### `Squad Screen.html`
+
+**Disposition:** `REVISE / DEFER` — strong visual pattern, mixed product scope.
+
+**Keep:** sortable/filterable dense roster table, selected-player side rail, position/status filtering, keyboard table
+navigation, empty/list states, compact comparison pattern.
+
+**Split out by capability:** basic squad/player inspection can be `DESIGNABLE`; medical/availability content belongs
+to #41; dynamics/morale/cliques belong to their owning systems; contracts/wages/financial views and Offer New Contract
+are not supported by #27 merely because they appear in the same screen; Shortlist/transfer actions depend on #31/#32.
+
+**Retire from current authority:** “CA/PA”, wage/value/contract, shortlist, contract offer, custom views and any metric
+not verified in the owning projection at the journey's Gate A.
+
+**Gate implication:** preserve table/detail design language for later S2; do not let this mockup pull #31/#32/#40
+features into EA scope.
+
+### `Training Screen.html`
+
+**Disposition:** `REVISE / DEFER`.
+
+**Verified reusable capability:** per-player `TrainingViewModel` exposes Focus, Condition and TrainingFatigue;
+`TrainingSchedule.TrySetFocus` is the real player-focus mutation. `TrainingFocus` currently contains Balanced, Rest,
+Fitness, Technical, Physical and Tactical.
+
+**Keep:** player-state table, risk/condition hierarchy, individual-focus interaction pattern.
+
+**Reference-only unless separately implemented:** editable day-by-day session calendar, named session recipes,
+Auto-schedule, Copy Last Week, Apply Changes, arbitrary per-attribute development focuses, group-work/staff/analysis
+subsystems and “optimal load” recommendations.
+
+**Gate implication:** later Training Gate A starts with the six-value focus contract rather than the mockup calendar.
+
+## 4.5 Implementation-blocked management references
+
+| Reference | Disposition | Reusable visual pattern | Unsupported product behavior that must not drive implementation |
+|---|---|---|---|
+| `Scouting Screen.html` | `REFERENCE ONLY / FUTURE-BLOCKED` | shortlist/report table density, progressive-knowledge presentation, report side rail, coverage visualization | scout network, assignments, reports, shortlist mutations, estimated fee, recommendations and export; #32 implementation absent |
+| `Transfers.html` | `REFERENCE ONLY / FUTURE-BLOCKED` | deal-pipeline visualization, state badges, offer/detail split, deadline/urgency presentation | approaches, bids, negotiations, clauses, medical-to-signing pipeline, transfer/wage budgets and transfer actions; #31 implementation absent and finance constraints absent |
+| `Club Finances.html` | `REFERENCE ONLY / FUTURE-BLOCKED` | KPI hierarchy, P&L/bar/chart/table patterns, budget-cap visualization | balances, revenue/expenditure, wage caps, transfer budgets, sponsorships/commercial partners and financial actions; #40 implementation absent |
+| `Club Staff.html` | `REFERENCE ONLY / FUTURE-BLOCKED` | staff roster/card hierarchy, department grouping, attribute/budget presentation | Hire Staff, staff contracts/wages, manager/staff attribute system, vacancies and department budgets; #34 implementation absent |
+| `Club Board Room.html` | `SPLIT` | objective/status layout may inform the real #30 summary | chairman profile, confidence narrative/history, directives, meetings, requests, financial targets and deeper board interactions are not established; only the #30 objective/job-security summary is currently designable |
+
+## 4.6 Historical / later reference
+
+### `Club History.html`
+
+**Disposition:** `DEFER / REFERENCE ONLY`.
+
+The season-history table, honours, records, top scorers, manager history and milestones are useful long-term
+information-design patterns. Current #37 match analytics and #30 season state do not by themselves establish the durable
+multi-season club-history aggregate represented here.
+
+**Gate implication:** no S0/S1 dependency; re-audit persistence/history ownership before S2/P3 use.
+
+---
+
+# 5. F1.2 findings
+
+## F1-006 — Tactics is a real seam hidden inside an overgrown mockup
+
+The existing Tactics reference should not be discarded. Its central interaction model corresponds to implemented
+`TeamTactic` and `PlayerTactic` inputs. The defect is **semantic overbreadth**: the mockup invents a much larger role
+roster, instruction vocabulary, scouting advice and template/set-piece workflows.
+
+**Disposition:** `REVISE`. S0-A maps every retained control to the exact tactical type/member; unmatched controls are
+removed or explicitly future-blocked before low fidelity.
+
+## F1-007 — existing career chrome is a target architecture, not current navigation
+
+Nearly every management mockup repeats Club/Squad/Tactics/Training/Scouting/Transfers/Staff/World/Inbox, calendar,
+Continue and command-palette affordances. None of that repetition proves a current `ScreenId`, navigation edge or
+command registration.
+
+**Disposition:** F2 treats the chrome as a candidate target shell only. Current PM-1 navigation remains the typed
+four-screen graph.
+
+## F1-008 — one visual screen routinely spans several owning specs
+
+Examples:
+
+- Squad mixes #27 roster data with #41 medical, dynamics, #31 contracts, #32 shortlist and #40 wages/value;
+- Club mixes #30 table/fixture/board summary with finance, contracts, medical and deeper board claims;
+- Training mixes a real #29 individual-focus seam with an unverified session-calendar editor.
+
+**Disposition:** no future Gate A may approve a screen as one unit. Controls/modules are admitted by their owning
+capability.
+
+## F1-009 — foundation patterns survive; their implementation claims do not
+
+`touchline`, table density, selected-detail rails, compact KPI hierarchy, keyboard-first navigation and art-independent
+fallbacks remain useful. Fixed HTML stage scaling, Google-hosted fonts, color-only status accents, and synthetic data
+are not client contracts.
+
+**Disposition:** F3 audits the shared patterns against #49, renderer constraints and test extremes before they become
+implementation requirements.
+
+---
+
+# 6. F1.2 exit assessment
+
+Every landed HTML reference is now classified enough to prevent visual precedent from becoming a phantom runtime
+contract:
+
+- **Foundation:** Design System + Desktop Guardrails kept for F3 audit; Command Palette deferred as an interaction
+  pattern only.
+- **S0:** Main Menu and Tactics both require reconciliation; neither current action inventory is implementation-ready.
+- **S1:** Club and the managed-league subset of World are useful starting points, but are split from unsupported
+  finance/transfer/deep-board/world claims.
+- **S2/later:** Squad and Training contain real reusable substrates mixed with unsupported modules; Scouting,
+  Transfers, Finances and Staff are implementation-blocked references; Board is only partially backed; History is
+  deferred.
+
+No high-fidelity screen is approved by this audit. The next F1 work is:
+
+1. **F1.3** lightweight player/task assumptions;
+2. **F1.4** PM-1/PM-2 task hierarchy and priority;
+3. **F1.5** Early Access success floor reconciliation.
+
+After those land, F1 exits into F2. The next visual work remains low-fidelity, not another polished mockup.
 
 ---
 
@@ -223,3 +458,4 @@ Early Access success floor.
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | September 6, 2026 | Created UX-A and completed the F1.1 source-grounded capability matrix at branch head `8fd178c`; separated domain/read/command, projection/dispatcher, screen/navigation, binding and host-verification state; recorded the stale `AdvanceRound`/#30 client gap and the spec-only #48/#49/#51 runtime state. |
+| 0.2 | September 6, 2026 | Completed F1.2 reconciliation of all landed UX mockup references. Verified the real `PlayerTactic`/`PlayerRole`/`PlayerInstructions` and #29 training surfaces, separated reusable interaction/layout patterns from unsupported actions/data, and identified Main Menu/Tactics as S0 revisions and Club/managed-league World as the strongest S1 starting references. |
