@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/ClubFinancesSaveCodec.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-09-06
 // Author:   —
 // Specs:    Spec #16 §3.2.4.1 (CanonicalSerializer / save framing helpers)
 //           Spec #20 §3.6.2 (style & docs governance)

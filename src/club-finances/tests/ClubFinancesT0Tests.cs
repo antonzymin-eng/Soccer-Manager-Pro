@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesT0Tests.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-09-06
 // Author:   —
 // Specs:    Spec #20 §3.6.2, §3.9.4 (style/docs; general-test allocation carve-out)
 //           Spec #40 §5 (T0-coverable acceptance contract)

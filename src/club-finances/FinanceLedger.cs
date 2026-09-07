@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/FinanceLedger.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-09-06
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §3.2-§3.3, FR-FN-003/004/012-016 (ledger semantics)

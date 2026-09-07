@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/FinanceTransaction.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-09-06
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §2.2, §3.2 (ledger transaction value)

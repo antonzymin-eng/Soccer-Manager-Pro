@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/ClubFinancesConstants.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-09-06
 // Author:   —
 // Specs:    Spec #20 §3.2.3, §3.6.2 (constant catalogue, GT loading, style/docs)
 //           Spec #40 Appendix A, §3.1, §4.4 (Club Finances constants/save framing)

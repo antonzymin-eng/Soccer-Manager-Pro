@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/FinancesViewModel.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-09-06
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 FR-FN-026, KD-8 (read-only finance observer)

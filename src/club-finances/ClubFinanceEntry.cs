@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/ClubFinanceEntry.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-09-06
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 FR-FN-002/020/021, §4.4 (ClubId-keyed persisted finance state)
