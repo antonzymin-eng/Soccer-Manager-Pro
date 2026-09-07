@@ -124,6 +124,19 @@ case "$MODE" in
     ;;
 esac
 
+# DIAGNOSTIC ONLY — this branch exists to isolate the repository-wide six-hour
+# PR-gate timeout. Keep the production policy/dry-run contract unchanged, but on
+# this PR's real execution remove only Coverlet instrumentation. Nightly remains
+# unchanged. This branch-specific exception must not be merged as the permanent
+# coverage solution; its only purpose is to establish or falsify causation.
+PR_COVERAGE_DIAGNOSTIC_DISABLED=0
+if [ "$MODE" = "--pr" ] \
+    && [ "${GITHUB_HEAD_REF:-}" = "fix/pr-gate-coverage-timeout" ] \
+    && [ "${TD_PIPELINE_DRY_RUN:-0}" != "1" ]; then
+    GATE_ARGS=(--owner-held-red report-only)
+    PR_COVERAGE_DIAGNOSTIC_DISABLED=1
+fi
+
 AUDITOR_SCOPE_ARGS=(--survey-only --quiet-survey)
 
 printf '== Testing Strategy %s pipeline ==\n' "$PIPELINE_NAME"
@@ -136,7 +149,11 @@ if [ -n "${TD_SHOT_DIAGNOSTIC:-}" ]; then
 fi
 if [ "$MODE" != "--pre-commit" ]; then
     printf 'Owner-held-red policy: execute separately and verify recorded diagnostics\n'
-    printf 'Coverage: XPlat Code Coverage (coverlet.collector)\n'
+    if [ "$PR_COVERAGE_DIAGNOSTIC_DISABLED" = "1" ]; then
+        printf 'DIAGNOSTIC: PR Coverlet instrumentation disabled only on fix/pr-gate-coverage-timeout\n'
+    else
+        printf 'Coverage: XPlat Code Coverage (coverlet.collector)\n'
+    fi
 fi
 if [ "$MODE" = "--pr" ] && [ -n "${TD_APPROVAL_BASE_REF:-}" ]; then
     printf 'Approval-transition base: %s\n' "$TD_APPROVAL_BASE_REF"
