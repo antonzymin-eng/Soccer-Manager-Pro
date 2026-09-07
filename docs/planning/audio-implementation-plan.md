@@ -2,8 +2,8 @@
 
 **Status:** READY FOR G0 OWNER ACCEPTANCE  
 **Started:** September 4, 2026  
-**Last Updated:** September 6, 2026  
-**Version:** 1.2  
+**Last Updated:** September 7, 2026  
+**Version:** 1.3  
 **Implementation gate:** G0 CLOSED pending owner acceptance; no substantial audio implementation or bulk asset production is authorized by this document alone.  
 **Governs:** Audio & Sound Design #51 implementation plus the production pipeline for shippable audio assets.
 
@@ -311,7 +311,8 @@ Any collision discovered is resolved in the T0 design/spec/code landing, not pap
 - `CueKey`;
 - `CaptionId`;
 - `CaptionDecision`;
-- T0-resolved `AssetRef`;
+- T0-resolved `AssetRef` — must carry a variant **set**, not only a single asset, because member
+  selection is host-owned (§7.2); the T0 regression proof covers the multi-variant case;
 - T0-resolved #51 `CueParams`;
 - `CueEntry`;
 - `CueCatalogue`;
@@ -347,18 +348,38 @@ T0 code + normative ERR-051-001 discharge + tests are green. The game remains ex
 - `AudioSettingsFragment`;
 - master/per-bus gain+mute validation;
 - invalid-field reset-to-default logic;
-- duck-gain computation from bus activity;
-- display-side variation source contract.
+- duck-gain computation from bus activity.
 
-## 7.2 Named display-side randomness source
+## 7.2 Named display-side randomness source — host-owned selection
 
-FR-AU-033 forbids deterministic-sim RNG. The replacement is explicit:
+FR-AU-033 forbids deterministic-sim RNG. The replacement is explicit, and it is **not** a type inside
+`TacticalDirector.Audio`:
 
-**an audio-owned display-only PRNG whose state is client-local, never serialized, never exposed to sim, and seeded once by the client host from non-simulation entropy.**
+**variant selection is host-owned. `AssetRef` exposes the variant set; the Unity host binding picks a
+member from it using a display-only PRNG whose state is client-local, never serialized, and never exposed
+to sim.**
 
-The host supplies/initializes the display seed at composition; #51 owns only the display-side variation behavior. No `DeterministicRngService`, domain tag, stream cursor, save field, or simulation seed is permitted.
+Rules:
 
-The exact PRNG implementation is selected in T1 code review for the target BCL/Unity surface; the architecture is fixed here so the implementer does not reach for the nearest deterministic-sim stream.
+- `TacticalDirector.Audio` declares **no PRNG, no seed, no cursor and no selection state**. It stays a
+  pure value-type assembly whose T0/T1 tests can assert purity without carve-outs.
+- Given the same `CueKey`, #51's contract yields the same `AssetRef` — the *set*, not a member. Choosing
+  the member is a presentation act and belongs on the same side of the boundary as `AudioSource`.
+- The host seeds its selector once at composition from non-simulation entropy. No
+  `DeterministicRngService`, domain tag, stream cursor, save field, or simulation seed is permitted.
+- The exact PRNG is selected in P4B host code review for the target Unity surface. Nothing about it is
+  #51's to specify beyond the prohibition above.
+
+**Why host-side rather than #51-owned.** A seeded PRNG inside #51 would be mutable state in a leaf
+assembly whose entire discipline is construction-time refusal over immutable value types, and it would be
+a type §4.2's file inventory does not declare — the same defect class as ERR-051-001, introduced
+deliberately one tier later. Keeping selection host-side removes the type instead of recording it.
+
+**T0 consequence for ERR-051-001.** Because the host selects, `AssetRef` MUST be able to carry a variant
+*set*, not just a single asset (Appendix B.2 already describes it as *"one asset, or a variant set for
+display-side variation"*). That requirement is part of the ERR-051-001 discharge scope: whatever concrete
+shape T0 lands for `AssetRef` has to satisfy it, and the T0 regression proof must cover the multi-variant
+case, not only the single-asset one.
 
 ## 7.3 Settings branch
 
@@ -426,6 +447,11 @@ Shell mapping/completeness and neutrality are green while playback is still sile
 ## 10.1 Unity host boundary
 
 Add the smallest Unity-side binding required to resolve/play assets, route buses, apply gain/mute, expose bus activity for ducking, and stop/replace as required by the pure API.
+
+The **variant selector lands here too** (§7.2): given an `AssetRef` carrying a variant set, the host picks
+the member with its client-local display PRNG, seeded once at composition from non-simulation entropy. It
+is host state, so it never reaches a save, a digest or a sim read — which the P4A neutrality lock already
+proves and continues to prove once this binding exists.
 
 Unity types stay out of `TacticalDirector.Audio`.
 
@@ -688,6 +714,7 @@ Do not:
 - create a private audio settings file;
 - drive ducking from score/possession/world state;
 - use deterministic-sim RNG for variation;
+- declare a PRNG, seed, cursor or selection state inside `TacticalDirector.Audio`;
 - encode bus or revision into runtime filenames;
 - change asset paths for ordinary remasters;
 - approve unknown-rights content;
@@ -710,7 +737,9 @@ The final review specifically tested the plan for the failure modes found extern
 - **ERR-038 assumption:** closed by explicit shared-store vs FR-AU-022 fallback branches.
 - **Vertical-slice ambiguity:** closed; slice files are provisional by default and either promoted or replaced.
 - **Neutrality timing:** moved to P4A, the first wired host-free landing.
-- **Variation source:** named as audio-owned display-only PRNG, client-local and non-serialized.
+- **Variation source:** named, and placed **host-side**. `AssetRef` exposes the variant set; the host
+  selects a member with a client-local, non-serialized display PRNG. `TacticalDirector.Audio` declares no
+  randomness type at all, so the leaf keeps its purity property and no undeclared type is introduced.
 - **Historical supplement:** explicitly superseded by the approved spec.
 
 No substantial implementation should begin until G0 is accepted. After acceptance, P1 and P2 are safe parallel first slices; P4 remains blocked until D48 is genuinely green.
@@ -724,3 +753,4 @@ No substantial implementation should begin until G0 is accepted. After acceptanc
 | 1.0 | 2026-09-04 | Initial converged plan after two high-level and two detailed critique/revision rounds. |
 | 1.1 | 2026-09-04 | Corrected initial C6 interpretation and added PR boundaries/source recoverability. |
 | 1.2 | 2026-09-06 | External-review close-out: roadmap amendment; explicit D48/D49 gates; C6 record-vs-discharge correction; expanded collision checks; stable filename/GUID rule; ERR-038 fallback; provisional G3 status; P4A neutrality; named display PRNG; historical supplement explicitly superseded. |
+| 1.3 | 2026-09-07 | **Variant selection moved host-side (§7.2, §6.3, §10.1, §16).** v1.2 placed a display PRNG inside `TacticalDirector.Audio`, which would have put seeded mutable state in a leaf whose T0/T1 tests assert purity, and introduced a type §4.2's file inventory does not declare — the same defect class as ERR-051-001, one tier later. `AssetRef` now exposes the variant **set**, the Unity host binding selects the member with a client-local non-serialized display PRNG, and #51 declares no randomness type at all. Consequent T0 obligation added to the ERR-051-001 discharge scope: `AssetRef` must carry a variant set and the regression proof must cover the multi-variant case. FR-AU-033 is satisfied identically; nothing about the sim-RNG prohibition is relaxed. |

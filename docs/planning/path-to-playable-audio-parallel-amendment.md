@@ -12,9 +12,11 @@
 
 The Path-to-Playable roadmap deliberately deferred **#48 Match Presentation Depth** and **#51 Audio & Sound Design** past PM-3 because neither is required to prove a playable season. That remains correct for the **critical path**.
 
-The owner has subsequently directed that audio development proceed **in parallel** with the main development stream. The original deferral did not distinguish "not on the playable-season critical path" from "must not be worked on concurrently." This amendment makes that distinction explicit.
+**Owner directive, September 7, 2026** (recorded here because it is the sole authority this amendment rests on): the owner authorized **parallel development of audio, UX, UI, localization, and the art pipeline** alongside the main development stream. This amendment covers only the **audio** portion of that directive; UX, UI, localization, and art are governed by their own planning documents (the art pipeline already by `docs/planning/art-pipeline-foundation.md`).
 
-The amendment is intentionally narrow: it authorizes safe #51 work that cannot block Track S, while preserving all prerequisite boundaries for the audible integration stages.
+The original deferral did not distinguish "not on the playable-season critical path" from "must not be worked on concurrently." This amendment makes that distinction explicit for audio.
+
+The amendment is intentionally narrow: it authorizes safe #51 work that cannot block Track S, while preserving all prerequisite boundaries for the audible integration stages. It does not widen the directive — nothing here authorizes #48, and the parallel authorization does not by itself satisfy D48 or D49.
 
 ---
 
@@ -94,3 +96,4 @@ All other Path-to-Playable sequencing and constraints remain unchanged.
 | Version | Date | Notes |
 |---|---|---|
 | 0.1 | 2026-09-06 | Narrow owner-directed sequencing amendment: authorizes #51 T0/T1 + pipeline work in parallel without adding audio to the PM-2 critical path; keeps T2 blocked on #48 and caption rendering blocked on #49; keeps bulk production behind G3. |
+| 0.2 | 2026-09-07 | §1 records the authorizing owner directive explicitly — dated September 7, 2026, covering parallel audio / UX / UI / localization / art-pipeline development — replacing the unsourced "the owner has subsequently directed" assertion that the external review flagged as an unverifiable premise. Scope narrowed in text: this amendment governs the audio portion only, authorizes nothing for #48, and does not satisfy D48/D49. No sequencing rule changed. |
