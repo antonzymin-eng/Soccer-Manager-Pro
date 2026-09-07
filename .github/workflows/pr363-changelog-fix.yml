@@ -1,0 +1,34 @@
+name: PR363 changelog correction
+
+on:
+  push:
+    branches:
+      - codex/d4-club-finances-t0
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/d4-club-finances-t0
+          fetch-depth: 0
+      - name: Correct stale clamp wording
+        run: python3 .github/scripts/pr363_changelog_fix.py
+      - name: Verify documentation/tooling
+        run: |
+          python3 tools/doc-consistency-check.py --repo .
+          python3 tools/assembly-tier-check.py --repo .
+          python3 -m unittest discover -s tools/tests -p 'test_*.py'
+          git diff --check
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Correct PR #363 clamp coverage record"
+          git push origin HEAD:codex/d4-club-finances-t0
