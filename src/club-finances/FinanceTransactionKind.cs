@@ -1,8 +1,8 @@
 // ============================================================================
 // File:     src/club-finances/FinanceTransactionKind.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
-// Author:   Codex / Anton
+// Modified: 2026-09-06
+// Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §2.2 (finance transaction direction)
 // Purpose:  Declares the direction of a finance transaction; Amount carries magnitude only.
@@ -25,4 +25,5 @@ namespace TacticalDirector.ClubFinances
 // Version | Date       | Author        | Change
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 transaction-direction enum.
+// 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
 #endregion

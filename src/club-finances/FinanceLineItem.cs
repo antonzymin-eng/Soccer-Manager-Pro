@@ -1,8 +1,8 @@
 // ============================================================================
 // File:     src/club-finances/FinanceLineItem.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
-// Author:   Codex / Anton
+// Modified: 2026-09-06
+// Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §2.2 (finance line-item classification)
 // Purpose:  Declares the classifications consumed by the single Club Finances ledger mutation path.
@@ -31,4 +31,5 @@ namespace TacticalDirector.ClubFinances
 // Version | Date       | Author        | Change
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 line-item catalogue.
+// 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
 #endregion

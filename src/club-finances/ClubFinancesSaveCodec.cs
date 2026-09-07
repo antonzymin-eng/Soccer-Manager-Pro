@@ -1,8 +1,8 @@
 // ============================================================================
 // File:     src/club-finances/ClubFinancesSaveCodec.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
-// Author:   Codex / Anton
+// Modified: 2026-09-06
+// Author:   —
 // Specs:    Spec #16 §3.2.4.1 (CanonicalSerializer / save framing helpers)
 //           Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 FR-FN-020/021/022, §4.4 (finance persistence)
@@ -164,4 +164,5 @@ namespace TacticalDirector.ClubFinances
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T1a canonical finance sub-blob codec.
 // 1.1     | 2026-09-04 | Codex / Anton | Critique: catalogue framing widths; unchecked signed restores.
 // 1.2     | 2026-09-04 | Codex / Anton | Critique: remove unsupported ClubId sign restriction.
+// 1.3     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
 #endregion

@@ -1,8 +1,8 @@
 // ============================================================================
 // File:     src/club-finances/FinanceLedger.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
-// Author:   Codex / Anton
+// Modified: 2026-09-06
+// Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §3.2-§3.3, FR-FN-003/004/012-016 (ledger semantics)
 // Purpose:  Implements Club Finances' single between-boundary mutation path and transfer-budget query.
@@ -93,4 +93,5 @@ namespace TacticalDirector.ClubFinances
 // Version | Date       | Author        | Change
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 finance ledger and query.
+// 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
 #endregion

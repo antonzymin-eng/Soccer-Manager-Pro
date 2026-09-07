@@ -1,8 +1,8 @@
 // ============================================================================
 // File:     src/club-finances/ClubFinances.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
-// Author:   Codex / Anton
+// Modified: 2026-09-06
+// Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §2.2 (per-club finance state)
 // Purpose:  Declares Club Finances' integer-only per-club financial state and its initial identity.
@@ -73,4 +73,5 @@ namespace TacticalDirector.ClubFinances
 // Version | Date       | Author        | Change
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 per-club finance state.
+// 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
 #endregion

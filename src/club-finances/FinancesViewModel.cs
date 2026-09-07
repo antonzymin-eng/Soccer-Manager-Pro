@@ -1,8 +1,8 @@
 // ============================================================================
 // File:     src/club-finances/FinancesViewModel.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
-// Author:   Codex / Anton
+// Modified: 2026-09-06
+// Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 FR-FN-026, KD-8 (read-only finance observer)
 // Purpose:  Declares the value-copy observer surface that a future client may read without mutating state.
@@ -56,4 +56,5 @@ namespace TacticalDirector.ClubFinances
 // Version | Date       | Author        | Change
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 observer surface.
+// 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
 #endregion

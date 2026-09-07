@@ -1,8 +1,8 @@
 // ============================================================================
 // File:     src/club-finances/FinanceStep.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
-// Author:   Codex / Anton
+// Modified: 2026-09-06
+// Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §3.1, FR-FN-001/005-008/011/018/028 (season settlement)
 // Purpose:  Implements the pure deterministic season-boundary finance projection and prize interpolation.
@@ -133,4 +133,5 @@ namespace TacticalDirector.ClubFinances
 // Version | Date       | Author        | Change
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 settlement and prize interpolation.
+// 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
 #endregion

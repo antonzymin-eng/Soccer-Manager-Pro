@@ -1,8 +1,8 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesT0Tests.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
-// Author:   Codex / Anton
+// Modified: 2026-09-06
+// Author:   —
 // Specs:    Spec #20 §3.6.2, §3.9.4 (style/docs; general-test allocation carve-out)
 //           Spec #40 §5 (T0-coverable acceptance contract)
 // Purpose:  Locks the deterministic projection, ledger separation, failure gates, and integer-only shape.
@@ -299,4 +299,5 @@ namespace TacticalDirector.ClubFinances.Tests
 // Version | Date       | Author        | Change
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 acceptance coverage.
+// 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
 #endregion

@@ -1,8 +1,8 @@
 // ============================================================================
 // File:     src/club-finances/ClubFinancesConstants.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
-// Author:   Codex / Anton
+// Modified: 2026-09-06
+// Author:   —
 // Specs:    Spec #20 §3.2.3, §3.6.2 (constant catalogue, GT loading, style/docs)
 //           Spec #40 Appendix A, §3.1, §4.4 (Club Finances constants/save framing)
 // Purpose:  Declares the integer-only fixed and tunable constants used by the minimal finance model.
@@ -73,4 +73,5 @@ namespace TacticalDirector.ClubFinances
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 constants catalogue.
 // 1.1     | 2026-09-04 | Codex / Anton | T1a: add save magic/version and framing widths.
+// 1.2     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
 #endregion
