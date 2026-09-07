@@ -1,11 +1,14 @@
+// ============================================================================
 // File:     src/club-finances/tests/ClubFinancesCritiqueTests.cs
 // Created:  2026-09-06
-// Modified: 2026-09-06
-// Author:   —
-// Spec:     Club Finances & Economy #40 §5; Code Standards #20
-// Purpose:  Locks the T0/T1a dependency boundary, RNG-free save shape, budget clamps,
-//           and decode corruption guards identified by external review of PR #363.
+// Modified: 2026-09-07
+// Author:   OpenAI
+// Specs:    Club Finances & Economy #40 §5; Code Standards #20
+// Purpose:  Locks the T0/T1a dependency boundary, RNG-free save shape, upper
+//           budget clamp, non-positive board-modifier failure, and decode
+//           corruption guards identified by external review of PR #363.
 // §3.9.4 general-unit-test — allocation rules relaxed in test body
+// ============================================================================
 
 using System;
 using System.IO;
@@ -26,6 +29,9 @@ namespace TacticalDirector.ClubFinances.Tests
             DirectoryInfo root = FindRepoRoot();
             Assert.That(root, Is.Not.Null, "could not locate repository root; dependency lock must fail loud");
 
+            // Read the asmdef itself rather than Assembly.GetReferencedAssemblies(): runtime reflection can
+            // elide an unused/dead reference, which is exactly the edge this structural lock must detect.
+            // The checkout-root dependency is therefore intentional and fails loud outside a repo checkout.
             string path = Path.Combine(root.FullName, "src", "club-finances", "club-finances.asmdef");
             string asmdef = File.ReadAllText(path);
             int referencesStart = asmdef.IndexOf("\"references\"", StringComparison.Ordinal);
@@ -89,17 +95,15 @@ namespace TacticalDirector.ClubFinances.Tests
             Assert.That(result.WageBudget, Is.EqualTo(ClubFinancesConstants.ClubFinancesBudgetCeilingMax));
         }
 
-        /// <summary>Proves a non-identity negative multiplier reaches the specified lower clamp rather than creating a negative ceiling.</summary>
+        /// <summary>Proves an explicit negative board multiplier is a caller-contract error rather than clamp input.</summary>
         [Test]
-        public void SettleFinances_NegativeBoardModifier_ClampsBothBudgetsToZero()
+        public void SettleFinances_NegativeBoardModifier_FailsLoud()
         {
             ClubFinances prior = ClubFinances.CreateInitial(0L);
             BoardModifier modifier = new BoardModifier(-1_000);
 
-            ClubFinances result = FinanceStep.SettleFinances(in prior, 1, 20, in modifier);
-
-            Assert.That(result.TransferBudget, Is.Zero);
-            Assert.That(result.WageBudget, Is.Zero);
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => FinanceStep.SettleFinances(in prior, 1, 20, in modifier));
         }
 
         /// <summary>Proves decode rejects duplicate/non-ascending ClubIds even when the byte length is otherwise valid.</summary>
@@ -172,6 +176,8 @@ namespace TacticalDirector.ClubFinances.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                                        |
-// | 1.0     | 2026-09-06 | —      | Initial external-review regression locks for PR #363.       |
+// Version | Date       | Author | Change
+// --------|------------|--------|----------------------------------------------
+// 1.0     | 2026-09-06 | —      | Initial external-review regression locks for PR #363.
+// 1.1     | 2026-09-07 | OpenAI | Follow-up: negative board fails loud; header/template and asmdef rationale corrected.
 #endregion
