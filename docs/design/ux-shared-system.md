@@ -2,8 +2,8 @@
 
 **Created:** September 7, 2026  
 **Last Updated:** September 7, 2026  
-**Version:** 0.2  
-**Status:** F3 CANDIDATE — AR-1 corrected; final consistency pass pending  
+**Version:** 0.3  
+**Status:** F3 COMPLETE — F4 NEXT  
 **Parent execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md)  
 **Experience architecture:** [`ux-experience-architecture.md`](ux-experience-architecture.md) v0.1  
 **Evidence parent:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
@@ -335,12 +335,13 @@ toggles; help; modal/confirmation/drawer; feedback; loading/empty/partial/stale/
 pseudo-locale/reflow/max scale; color-independent semantics; glyph fallback expectation; missing-art fallback;
 caption/HUD/muted-audio behavior; and desktop layout cases.
 
-**Candidate conclusion:** F3 content is complete. One final consistency pass must verify that AR-1 introduced no new
-ownership/status drift before changing status to `F3 COMPLETE — F4 NEXT`.
+**F3 COMPLETE.** AR-2 found no new ownership, capability or status drift after the AR-1 correction. F4 validation setup
+is next; no high-fidelity journey production is authorized by this phase alone.
 
 #region VersionHistory
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | 2026-09-07 | Initial UX-B shared system. |
-| 0.2 | 2026-09-07 | AR-1: corrected the substantive ownership overclaim. Approved #49 defines the read-only a11y boundary and defers option content/store; #38 application/palette/font assignment remains content-tier design/back-prop intent, not a landed approved/runtime fact. Compacted wording while preserving the F3 primitive/state coverage. |
+| 0.2 | 2026-09-07 | AR-1: corrected the substantive ownership overclaim. Approved #49 defines the read-only a11y boundary and defers option content/store; #38 application/palette/font assignment remains content-tier design/back-prop intent, not a landed approved/runtime fact. Compacted wording while preserving F3 primitive/state coverage. |
+| 0.3 | 2026-09-07 | AR-2: rechecked against F1/F2 plus approved #38/#49/#51. No new substantive findings. Marked F3 complete and F4 next. |
 #endregion
