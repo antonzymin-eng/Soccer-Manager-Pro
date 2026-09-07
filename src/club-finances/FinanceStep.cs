@@ -19,7 +19,7 @@ namespace TacticalDirector.ClubFinances
         /// <param name="prior">Existing coherent club finance state.</param>
         /// <param name="finalTablePosition">One-based final league position.</param>
         /// <param name="clubCount">Number of clubs in the division; must be at least two.</param>
-        /// <param name="board">Board multiplier; use <see cref="BoardModifier.Identity"/> for no adjustment.</param>
+        /// <param name="board">Board multiplier; <see cref="BoardModifier.BudgetMultiplierMillPermille"/> must be positive; use <see cref="BoardModifier.Identity"/> for no adjustment.</param>
         /// <returns>A new settled value; wage liability and deep-tier accumulators are carried unchanged.</returns>
         public static ClubFinances SettleFinances(
             in ClubFinances prior,
@@ -130,9 +130,9 @@ namespace TacticalDirector.ClubFinances
 }
 
 #region VersionHistory
-// Version | Date       | Author        | Change
-// --------|------------|---------------|----------------------------------------------
-// 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 settlement and prize interpolation.
-// 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
-// 1.2     | 2026-09-07 | OpenAI        | F4 widened from zero-only to all non-positive board multipliers.
+// Version | Date       | Author | Change
+// --------|------------|--------|----------------------------------------------
+// 1.0     | 2026-09-04 | —      | Initial #40 T0 settlement and prize interpolation.
+// 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder.
+// 1.2     | 2026-09-07 | —      | F4 widened from zero-only to all non-positive board multipliers.
 #endregion

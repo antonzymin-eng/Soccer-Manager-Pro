@@ -29,9 +29,9 @@ namespace TacticalDirector.ClubFinances
 }
 
 #region VersionHistory
-// Version | Date       | Author        | Change
-// --------|------------|---------------|----------------------------------------------
-// 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 board routing seam.
-// 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
-// 1.2     | 2026-09-07 | OpenAI        | Documented the F4 positive-multiplier runtime contract.
+// Version | Date       | Author | Change
+// --------|------------|--------|----------------------------------------------
+// 1.0     | 2026-09-04 | —      | Initial #40 T0 board routing seam.
+// 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder.
+// 1.2     | 2026-09-07 | —      | Documented the F4 positive-multiplier runtime contract.
 #endregion

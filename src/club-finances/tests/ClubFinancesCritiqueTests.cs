@@ -2,7 +2,7 @@
 // File:     src/club-finances/tests/ClubFinancesCritiqueTests.cs
 // Created:  2026-09-06
 // Modified: 2026-09-07
-// Author:   OpenAI
+// Author:   —
 // Specs:    Club Finances & Economy #40 §5; Code Standards #20
 // Purpose:  Locks the T0/T1a dependency boundary, RNG-free save shape, upper
 //           budget clamp, non-positive board-modifier failure, and decode
@@ -179,5 +179,5 @@ namespace TacticalDirector.ClubFinances.Tests
 // Version | Date       | Author | Change
 // --------|------------|--------|----------------------------------------------
 // 1.0     | 2026-09-06 | —      | Initial external-review regression locks for PR #363.
-// 1.1     | 2026-09-07 | OpenAI | Follow-up: negative board fails loud; header/template and asmdef rationale corrected.
+// 1.1     | 2026-09-07 | —      | Follow-up: negative board fails loud; header/template and asmdef rationale corrected.
 #endregion
