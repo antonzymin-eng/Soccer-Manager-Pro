@@ -1,10 +1,10 @@
 # System XI — Audio Implementation & Production Plan
 
-**Status:** READY FOR G0 OWNER ACCEPTANCE  
+**Status:** G0 ACCEPTED — P1/P2 AUTHORIZED AFTER THIS PLANNING PR LANDS
 **Started:** September 4, 2026  
-**Last Updated:** September 6, 2026  
-**Version:** 1.4  
-**Implementation gate:** G0 OPEN pending owner acceptance and canonical tracking completion; no substantial audio implementation or bulk asset production is authorized by this document alone.  
+**Last Updated:** September 7, 2026
+**Version:** 1.5
+**Implementation gate:** G0 CLOSED by owner acceptance on September 7, 2026; P1/P2 may begin after this planning PR lands. No bulk audio production is authorized before G3.
 **Governs:** Audio & Sound Design #51 implementation plus the production pipeline for shippable audio assets.
 
 ---
@@ -52,7 +52,7 @@ The planning review found a real pre-T0 specification defect:
 - neither concrete type shape is defined;
 - therefore §4.2's CS0104 pre-check also never checked these two names.
 
-Per Path-to-Playable C6, this finding is **recorded now in #51 §7**, while the normative §2/§4 repair is **discharged at T0 with code and regression proof**, not hardened as prose ahead of the assembly. The canonical `docs/tracking/spec-error-log.md` row remains a G0 merge blocker and must be added after re-verifying that `ERR-051-001` is still free at the merge head.
+Per Path-to-Playable C6, this finding is **recorded now in #51 §7**, while the normative §2/§4 repair is **discharged at T0 with code and regression proof**, not hardened as prose ahead of the assembly. The canonical `docs/tracking/spec-error-log.md` row is present at v2.51. `ERR-051-001` remains **RECORDED — OPEN** and must still be re-verified against merge-head `main` immediately before merge, per the `ERR-030-025` collision precedent.
 
 ---
 
@@ -148,8 +148,8 @@ Spoken commentary remains a separately promoted deep-tier content project.
 
 ### Actions
 
-1. Accept this plan and the audio parallel roadmap amendment.
-2. Keep `ERR-051-001` recorded in #51 §7 and add the canonical ERR/log/tracking rows before merging G0, but do **not** patch normative §2/§4 until T0 code exists.
+1. **Accepted by the owner on September 7, 2026:** this plan and the audio parallel roadmap amendment.
+2. Keep `ERR-051-001` recorded in #51 §7 and the canonical ERR/log/tracking surfaces, but do **not** patch normative §2/§4 until T0 code exists.
 3. Freeze identity rules:
    - `CueKey` is durable audio identity;
    - `AudioBus` ordinal set is APPEND-only;
@@ -713,7 +713,7 @@ The final review specifically tested the plan for the failure modes found extern
 
 - **Roadmap contradiction:** closed by a narrow explicit audio-parallel amendment; audio remains non-critical to PM-2.
 - **Phantom #48/#49 consumers:** closed by D48/D49 hard gates.
-- **C6 misread:** contract sequencing is corrected; #51 §7 records ERR-051-001 now, while the canonical ERR/tracking rows remain G0 merge blockers and normative contract repair waits for T0 code/test.
+- **C6 misread:** contract sequencing is corrected; #51 §7 and the canonical ERR/tracking surfaces record ERR-051-001 now, while normative contract repair waits for T0 code/test.
 - **Under-scoped collision analysis:** closed; `AssetRef`/`CueParams` are rechecked at T0 and `AudioMixer` is explicitly fully qualified at the Unity host boundary.
 - **Filename drift:** closed; bus/revision removed from filenames; revisions preserve path/GUID.
 - **ERR-038 assumption:** closed by explicit shared-store vs FR-AU-022 fallback branches.
@@ -722,7 +722,7 @@ The final review specifically tested the plan for the failure modes found extern
 - **Variation source:** named, and placed **host-side**. `AssetRef` exposes the variant set; the host selects a member with a client-local, non-serialized display PRNG. `TacticalDirector.Audio` declares no randomness type at all, so the leaf keeps its purity property and no undeclared type is introduced.
 - **Historical supplement:** explicitly superseded by the approved spec.
 
-No substantial implementation should begin until G0 is accepted and the canonical G0 tracking rows are complete. After acceptance, P1 and P2 are safe parallel first slices; P4 remains blocked until D48 is genuinely green.
+G0 was accepted by the owner on September 7, 2026 and the canonical G0 tracking rows are complete. After this planning PR lands, P1 and P2 are safe parallel first slices; P4 remains blocked until D48 is genuinely green.
 
 ---
 
@@ -735,3 +735,4 @@ No substantial implementation should begin until G0 is accepted and the canonica
 | 1.2 | 2026-09-06 | External-review close-out: roadmap amendment; explicit D48/D49 gates; C6 record-vs-discharge correction; expanded collision checks; stable filename/GUID rule; ERR-038 fallback; provisional G3 status; P4A neutrality; named display PRNG; historical supplement explicitly superseded. |
 | 1.3 | 2026-09-06 | Variant selection moved host-side (§7.2, §6.3, §10.1, §16). `AssetRef` exposes the variant set, the Unity host binding selects the member with a client-local non-serialized display PRNG, and #51 declares no randomness type. Consequent T0 obligation added to ERR-051-001 discharge scope: `AssetRef` must carry a variant set and regression proof must cover the multi-variant case. |
 | 1.4 | 2026-09-06 | Corrected G0 state to OPEN, tied the owner directive to September 4, 2026, removed stale T1/display-random wording after host-side selection moved to P4B, and made the still-missing canonical ERR/tracking rows explicit G0 merge blockers rather than claiming they already exist. |
+| 1.5 | 2026-09-07 | Owner accepted G0 and the narrow roadmap amendment; canonical close-out acknowledged as complete; P1/P2 authorized after the planning PR lands; ERR-051-001 remains recorded for T0 discharge; G3/D48 and caption/D49 gates unchanged. |

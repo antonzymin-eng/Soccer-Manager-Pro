@@ -1,9 +1,9 @@
 # Path to Playable — Audio Parallel Workstream Amendment
 
 > **Created:** September 6, 2026
-> **Last Updated:** September 6, 2026
-> **Version:** 0.4
-> **Status:** ROADMAP AMENDMENT — pending owner acceptance with the audio G0 plan
+> **Last Updated:** September 7, 2026
+> **Version:** 0.5
+> **Status:** ROADMAP AMENDMENT — ACCEPTED by owner September 7, 2026
 > **Amends:** `docs/tracking/path-to-playable-roadmap.md`
 > **Scope:** implementation sequencing only. This document changes no APPROVED specification, no `SPEC_INDEX.md` row, and no PM-1/PM-2/PM-3 exit criterion.
 
@@ -23,7 +23,7 @@ The original deferral did not distinguish "not on the playable-season critical p
 
 ### 2.1 Authorized in parallel
 
-After acceptance of `docs/planning/audio-implementation-plan.md` G0, the following may proceed concurrently with the primary roadmap:
+Following the owner's September 7, 2026 acceptance of `docs/planning/audio-implementation-plan.md` G0, the following may proceed concurrently with the primary roadmap after this planning landing reaches `main`:
 
 - #51 **T0** — the pure, silent `TacticalDirector.Audio` contract/catalogue/ducking assembly;
 - #51 **T1** — the host-free playback contract, mixer arithmetic, and settings fragment;
@@ -98,3 +98,4 @@ All other Path-to-Playable sequencing and constraints remain unchanged.
 | 0.2 | 2026-09-06 | Superseded provenance wording from Claude review: attempted to date the broader parallel directive to September 7 and included UI. Corrected in v0.3 after checking the actual project conversation chronology. No sequencing rule changed. |
 | 0.3 | 2026-09-06 | Corrected directive provenance to the September 4, 2026 owner instructions and removed stale T1/display-variation wording after variant member selection moved host-side at P4B. Its omission of UI was subsequently found to contradict the owner's explicit September 4 UI-parallel directive and is corrected by v0.4. No sequencing rule changed. |
 | 0.4 | 2026-09-06 | Restored UI to the recorded September 4 parallel-workstream authorization, while keeping this amendment audio-only and preserving D48/D49 as independent gates. Corrected the v0.2 history date to the Pacific-time edit date used by this project; all current version rows now follow the same local-date convention. |
+| 0.5 | 2026-09-07 | Owner accepted the narrow audio-parallel roadmap amendment and G0. #51 T0/T1 plus pipeline substrate are authorized after the planning landing reaches main; T2/G3 remains blocked on D48, caption rendering on D49, and bulk production remains behind G3. |
