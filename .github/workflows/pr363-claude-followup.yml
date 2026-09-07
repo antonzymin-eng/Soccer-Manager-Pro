@@ -19,7 +19,10 @@ jobs:
           fetch-depth: 0
 
       - name: Apply Claude follow-up corrections
-        run: python3 .github/scripts/pr363_claude_followup.py
+        run: |
+          sed -i 's#    "Added locks cover exact current references, no RNG cursor/action ordinal, upper/lower budget clamps, decode ordering, and short/truncated framing.",#    "and added boundary/RNG/clamp/corrupt-save locks.",#' .github/scripts/pr363_claude_followup.py
+          sed -i 's#    "Added locks cover exact current references, no RNG cursor/action ordinal, the upper budget clamp, non-positive board-modifier failure, decode ordering, and short/truncated framing.",#    "and added boundary/RNG/upper-clamp/non-positive-board/corrupt-save locks.",#' .github/scripts/pr363_claude_followup.py
+          python3 .github/scripts/pr363_claude_followup.py
 
       - name: Verify documentation and tooling
         run: |
