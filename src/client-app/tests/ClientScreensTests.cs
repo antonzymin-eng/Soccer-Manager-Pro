@@ -1,15 +1,13 @@
 // File:     src/client-app/tests/ClientScreensTests.cs
 // Created:  2026-08-07
-// Modified: 2026-08-07
+// Modified: 2026-09-06
 // Author:   —
-// Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a (screen catalogue), Code
-//           Standards #20
-// Purpose:  Locks the screen catalogue's identity properties: four distinct ids, none of them the
-//           zero value default(ScreenId) aliases, each reading from its constant.
+// Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b, Code Standards #20
+// Purpose:  Locks the screen catalogue's identity properties and the shell bootstrap execution-order
+//           constant's only mechanically testable requirement: it is earlier than Unity default zero.
 
 using NUnit.Framework;
 
-using TacticalDirector.ClientApp;
 using TacticalDirector.UiFramework;
 
 namespace TacticalDirector.ClientApp.Tests
@@ -61,11 +59,21 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(ClientAppConstants.SCREEN_ID_MATCH_VIEW, ClientScreens.MatchView.Value);
             Assert.AreEqual(ClientAppConstants.SCREEN_ID_POST_MATCH_REPORT, ClientScreens.PostMatchReport.Value);
         }
+
+        [Test]
+        public void ShellBootstrapExecutionOrderIsBeforeDefaultZero()
+        {
+            Assert.Less(ClientAppConstants.SHELL_BOOTSTRAP_EXECUTION_ORDER, 0,
+                "The P5b shell bootstrap execution-order constant must remain earlier than Unity's " +
+                "default script execution order of zero.");
+        }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
-// | 1.0     | 2026-08-07 | —      | Initial creation: distinctness, zero-value safety, constant    |
-// |         |            |        | wiring.                                                        |
+// | 1.0     | 2026-08-07 | —      | Initial creation: distinctness, zero-value safety, constants.  |
+// | 1.1     | 2026-09-04 | —      | P5b H2: add shell bootstrap execution-order constant lock.     |
+// | 1.2     | 2026-09-06 | —      | Rename the ordering test to match exactly what its body locks; |
+// |         |            |        | remove redundant same-namespace using.                         |
 #endregion
