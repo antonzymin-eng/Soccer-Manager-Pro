@@ -1,8 +1,9 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board failure coverage)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -92,9 +93,9 @@ Tests land at T-phase; this is the acceptance contract.
 
 - **T-FN-MOD-001** — `BoardModifier.Identity` yields the exact Stage-2 budget-ceiling projection (×1.0) —
   KD-4/KD-8.
-- **T-FN-FAIL-BOARD-001** — `default(BoardModifier)` (`BudgetMultiplierMillPermille == 0`) reaching
-  `SettleFinances` fails loud (the zero-value-trap gate, mirrors #41's `MedicalModifier` F4 lesson) —
-  FR-FN-018/F4.
+- **T-FN-FAIL-BOARD-001** — Any `BoardModifier` with `BudgetMultiplierMillPermille <= 0`, including
+  `default(BoardModifier)` and an explicit negative multiplier, reaching `SettleFinances` fails loud —
+  FR-FN-018/F4. The clamp is not used to legitimize an invalid board multiplier.
 - **T-FN-FAIL-001** — Bad `FINANCE_SAVE_FORMAT_VERSION` → fail loud (F3).
 - **T-FN-FAIL-002** — Out-of-bounds length prefix / trailing bytes → fail loud (F5).
 - **T-FN-FAIL-003** — `TransferBudget` or `WageBudget` negative reaching a consuming seam (e.g. a corrupted
@@ -145,4 +146,5 @@ Tests land at T-phase; this is the acceptance contract.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial test plan (T-FN-*) + full FR-FN-001..028 traceability table. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): T-FN-LEDGER-002 / T-FN-BOUND-003 restated — wage transaction moves the aggregate only, `Balance` unchanged. |
+| 0.3 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** T-FN-FAIL-BOARD-001 widened from default/zero only to every non-positive board multiplier. |
 #endregion

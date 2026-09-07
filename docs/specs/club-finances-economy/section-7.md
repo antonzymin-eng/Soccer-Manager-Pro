@@ -1,9 +1,9 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 6, 2026 (v0.6 — PR #363 external-review correction: T1a/T1b split and phase-real dependencies)
-**Last Updated (prior):** September 4, 2026 (v0.5 — T0 critique closure)
-**Version:** 0.6
+**Last Updated:** September 7, 2026 (v0.7 — PR #363 follow-up review correction)
+**Last Updated (prior):** September 6, 2026 (v0.6 — PR #363 external-review correction: T1a/T1b split and phase-real dependencies)
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -106,8 +106,11 @@ resolved the following landing defects:
    real boundary as **T1a**, keeps `SeasonSaveCodec` composition/version bump in **T1b**, and the PR scope is
    relabeled accordingly. The same review found `PlayerDatabase` referenced with no consumer; the edge is
    removed from T0/T1a and assigned to T2, where `Squad.ClubId` is first consumed. Executable locks now cover
-   the exact current asmdef boundary, no-RNG serialized shape, both budget clamps, decode ordering, and short/
+   the exact current asmdef boundary, no-RNG serialized shape, the upper budget clamp, decode ordering, and short/
    truncated framing.
+6. **Board-modifier domain correction.** A follow-up review found that the new negative-multiplier test had
+   silently made a nonsense board multiplier valid without spec authority. FR-FN-018/F4 and §3.1 now reject
+   every non-positive multiplier before arithmetic; the regression lock asserts that negative input fails loud.
 
 This landing therefore delivers **T0 + T1a**. **T1b, T2, and T3 remain deferred** exactly as listed in §7.1.
 
@@ -120,4 +123,5 @@ This landing therefore delivers **T0 + T1a**. **T1b, T2, and T3 remain deferred*
 | 0.4 | 2026-09-04 | — | **T0 implementation critique/back-prop.** Records and discharges the `ProjectConstants` `[GT]` loader dependency mismatch, mandatory Tier-7 seating, and §3.9.4 general-test allocation marker. |
 | 0.5 | 2026-09-04 | Codex | **T0 critique closure.** Adds the source-documentation-template correction and records removal of the unused friend-assembly surface. |
 | 0.6 | 2026-09-06 | — | **PR #363 external-review correction.** Reclassifies the already-landed standalone codec as T1a, creates T1b for #30 composition/version bump, defers the unused PlayerDatabase edge to its first T2 consumer, and records the added regression locks. |
+| 0.7 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** Records the deliberate non-positive `BoardModifier` fail-loud decision and corrects the clamp-coverage wording. |
 #endregion

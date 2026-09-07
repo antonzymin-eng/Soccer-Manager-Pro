@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/BoardModifier.cs
 // Created:  2026-09-04
-// Modified: 2026-09-06
+// Modified: 2026-09-07
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 KD-4, FR-FN-018 (board identity routing seam)
@@ -13,7 +13,7 @@ namespace TacticalDirector.ClubFinances
     /// <summary>Per-mille board multiplier; <see cref="Identity"/> is the Stage-2 neutral value.</summary>
     public readonly struct BoardModifier
     {
-        /// <summary>Budget multiplier in per-mille units; zero is invalid at the settlement seam.</summary>
+        /// <summary>Budget multiplier in per-mille units; non-positive values are invalid at the settlement seam.</summary>
         public readonly int BudgetMultiplierMillPermille;
 
         /// <summary>Creates a board modifier with the supplied per-mille multiplier.</summary>
@@ -33,4 +33,5 @@ namespace TacticalDirector.ClubFinances
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 board routing seam.
 // 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
+// 1.2     | 2026-09-07 | OpenAI        | Documented the F4 positive-multiplier runtime contract.
 #endregion

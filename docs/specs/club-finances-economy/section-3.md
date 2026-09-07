@@ -1,8 +1,9 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board multiplier failure gate)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -16,7 +17,7 @@ across a save/restore boundary.
 ```
 SettleFinances(in ClubFinances prior, finalTablePosition, clubCount, in BoardModifier board) -> ClubFinances:
     assert 1 <= finalTablePosition <= clubCount                        # F7 — bad input bound
-    assert board.BudgetMultiplierMillPermille != 0                     # F4 — zero-value trap (fail loud)
+    assert board.BudgetMultiplierMillPermille > 0                      # F4 — non-positive caller error (fail loud)
 
     prizeMoney = PrizeMoneyForPosition(finalTablePosition, clubCount)   # §3.1.1 — fixed integer interpolation
 
@@ -184,4 +185,5 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial algorithms: `SettleFinances`, `PrizeMoneyForPosition`, `ApplyTransaction`, `AvailableTransferBudget`, composition at #30's boundary roll, worked example. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): §3.2 `ApplyTransaction` split — wage line items change `WageBillAggregate` only (periodic cash-out deferred), cash line items change `Balance` only; worked example updated. |
+| 0.3 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** §3.1 now rejects every non-positive board multiplier before arithmetic; the lower budget clamp is not an authorization for a negative modifier. |
 #endregion

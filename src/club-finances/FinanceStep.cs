@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/FinanceStep.cs
 // Created:  2026-09-04
-// Modified: 2026-09-06
+// Modified: 2026-09-07
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §3.1, FR-FN-001/005-008/011/018/028 (season settlement)
@@ -30,12 +30,12 @@ namespace TacticalDirector.ClubFinances
             ClubFinances.ValidateCoherence(in prior);
             ValidatePosition(finalTablePosition, clubCount);
 
-            if (board.BudgetMultiplierMillPermille == 0)
+            if (board.BudgetMultiplierMillPermille <= 0)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(board),
                     board.BudgetMultiplierMillPermille,
-                    "BoardModifier multiplier 0 is invalid; use BoardModifier.Identity for no adjustment (F4).");
+                    "BoardModifier multiplier must be positive; use BoardModifier.Identity for no adjustment (F4).");
             }
 
             long prizeMoney = PrizeMoneyForPosition(finalTablePosition, clubCount);
@@ -134,4 +134,5 @@ namespace TacticalDirector.ClubFinances
 // --------|------------|---------------|----------------------------------------------
 // 1.0     | 2026-09-04 | Codex / Anton | Initial #40 T0 settlement and prize interpolation.
 // 1.1     | 2026-09-06 | —             | Header author attribution corrected to automated-agent placeholder.
+// 1.2     | 2026-09-07 | OpenAI        | F4 widened from zero-only to all non-positive board multipliers.
 #endregion
