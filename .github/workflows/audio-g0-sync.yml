@@ -47,19 +47,19 @@ jobs:
           t = read(p)
           t = replace_once(t,
               "**Status:** READY FOR G0 OWNER ACCEPTANCE  ",
-              "**Status:** G0 ACCEPTED — P1/P2 AUTHORIZED AFTER THIS PLANNING PR LANDS  ",
+              "**Status:** G0 ACCEPTED — P1/P2 AUTHORIZED AFTER THIS PLANNING PR LANDS",
               "plan status")
           t = replace_once(t,
               "**Last Updated:** September 6, 2026  ",
-              "**Last Updated:** September 7, 2026  ",
+              "**Last Updated:** September 7, 2026",
               "plan updated date")
           t = replace_once(t,
               "**Version:** 1.4  ",
-              "**Version:** 1.5  ",
+              "**Version:** 1.5",
               "plan version")
           t = replace_once(t,
               "**Implementation gate:** G0 OPEN pending owner acceptance and canonical tracking completion; no substantial audio implementation or bulk asset production is authorized by this document alone.  ",
-              "**Implementation gate:** G0 CLOSED by owner acceptance on September 7, 2026; P1/P2 may begin after this planning PR lands. No bulk audio production is authorized before G3.  ",
+              "**Implementation gate:** G0 CLOSED by owner acceptance on September 7, 2026; P1/P2 may begin after this planning PR lands. No bulk audio production is authorized before G3.",
               "plan implementation gate")
           t = replace_once(t,
               "The canonical `docs/tracking/spec-error-log.md` row remains a G0 merge blocker and must be added after re-verifying that `ERR-051-001` is still free at the merge head.",
