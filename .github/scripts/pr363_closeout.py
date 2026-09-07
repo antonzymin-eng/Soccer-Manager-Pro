@@ -1,3 +1,4 @@
+# Temporary branch-only helper; it deletes itself after a verified close-out.
 from pathlib import Path
 import re
 import subprocess
