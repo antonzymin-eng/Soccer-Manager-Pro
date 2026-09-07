@@ -17,7 +17,7 @@ The Path-to-Playable roadmap deliberately deferred **#48 Match Presentation Dept
 
 The original deferral did not distinguish "not on the playable-season critical path" from "must not be worked on concurrently." This amendment makes that distinction explicit for audio.
 
-The amendment is intentionally narrow: it authorizes safe #51 work that cannot block Track S, while preserving all prerequisite boundaries for the audible integration stages. Nothing here authorizes #48, and the parallel authorization does not by itself satisfy D48 or D49.
+The amendment is intentionally narrow: it authorizes safe #51 work that cannot block Track S, while preserving all prerequisite boundaries for the audible integration stages.
 
 ---
 
