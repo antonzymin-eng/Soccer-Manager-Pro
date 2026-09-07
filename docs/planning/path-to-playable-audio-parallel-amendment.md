@@ -2,7 +2,7 @@
 
 > **Created:** September 6, 2026
 > **Last Updated:** September 6, 2026
-> **Version:** 0.3
+> **Version:** 0.4
 > **Status:** ROADMAP AMENDMENT — pending owner acceptance with the audio G0 plan
 > **Amends:** `docs/tracking/path-to-playable-roadmap.md`
 > **Scope:** implementation sequencing only. This document changes no APPROVED specification, no `SPEC_INDEX.md` row, and no PM-1/PM-2/PM-3 exit criterion.
@@ -13,7 +13,7 @@
 
 The Path-to-Playable roadmap deliberately deferred **#48 Match Presentation Depth** and **#51 Audio & Sound Design** past PM-3 because neither is required to prove a playable season. That remains correct for the **critical path**.
 
-**Owner directive, September 4, 2026** (recorded here because it is the authority this amendment rests on): the owner directed that **audio** proceed in parallel with the rest of development, and separately started parallel **localization infrastructure, art-pipeline, and UX** workstreams the same day. This amendment governs only the **audio** directive. It does not infer a broader authorization for #48 or any other specification from those parallel workstreams.
+**Owner directive, September 4, 2026** (recorded here because it is the authority this amendment rests on): the owner authorized parallel development of **audio, UI, UX, localization infrastructure, and the art pipeline** alongside the rest of development. This amendment governs only the **audio** portion of that directive. It does not infer authorization for #48 or any other specification, and the parallel authorization does not by itself satisfy D48 or D49.
 
 The original deferral did not distinguish "not on the playable-season critical path" from "must not be worked on concurrently." This amendment makes that distinction explicit for audio.
 
@@ -97,5 +97,6 @@ All other Path-to-Playable sequencing and constraints remain unchanged.
 | Version | Date | Notes |
 |---|---|---|
 | 0.1 | 2026-09-06 | Narrow owner-directed sequencing amendment: authorizes #51 T0/T1 + pipeline work in parallel without adding audio to the PM-2 critical path; keeps T2 blocked on #48 and caption rendering blocked on #49; keeps bulk production behind G3. |
-| 0.2 | 2026-09-07 | Superseded provenance wording from Claude review: attempted to date the broader parallel directive to September 7 and included UI. Corrected in v0.3 after checking the actual project conversation chronology. No sequencing rule changed. |
-| 0.3 | 2026-09-06 | Corrected directive provenance to the actual September 4, 2026 owner instructions; limits the evidence to audio plus the separately started localization/art-pipeline/UX workstreams, removes unsupported UI wording, and removes the stale implication that T1 owns a display-variation contract now that variant member selection is host-side at P4B. No sequencing rule changed. |
+| 0.2 | 2026-09-06 | Superseded provenance wording from Claude review: attempted to date the broader parallel directive to September 7 and included UI. Corrected in v0.3 after checking the actual project conversation chronology. No sequencing rule changed. |
+| 0.3 | 2026-09-06 | Corrected directive provenance to the September 4, 2026 owner instructions and removed stale T1/display-variation wording after variant member selection moved host-side at P4B. Its omission of UI was subsequently found to contradict the owner's explicit September 4 UI-parallel directive and is corrected by v0.4. No sequencing rule changed. |
+| 0.4 | 2026-09-06 | Restored UI to the recorded September 4 parallel-workstream authorization, while keeping this amendment audio-only and preserving D48/D49 as independent gates. Corrected the v0.2 history date to the Pacific-time edit date used by this project; all current version rows now follow the same local-date convention. |
