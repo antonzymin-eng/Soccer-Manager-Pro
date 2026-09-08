@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
@@ -15,6 +16,7 @@ MODULE_PATH = ROOT / "tools" / "dotnet-ci" / "pr_coverage_settings.py"
 SPEC = importlib.util.spec_from_file_location("pr_coverage_settings", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None
 PCS = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = PCS
 SPEC.loader.exec_module(PCS)
 
 
