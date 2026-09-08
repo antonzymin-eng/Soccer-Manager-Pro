@@ -1,8 +1,8 @@
 # Audio & Sound Design #51 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** September 6, 2026 (v0.2 — record ERR-051-001 for T0 discharge)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -94,9 +94,27 @@ than a change to it — so it is a sequencing dependency, not an open question.
   FR-MP-027 continues to instruct implementers to key #51's catalogue on `CueId`. The cost of deferring is
   not a stale sentence; it is that **the next person to implement either spec builds the forbidden
   reference in good faith**, and finds out at the assembly cycle.
+- **R-7 — ERR-051-001 is a pre-T0 type-definition hole.** `CueEntry` names #51-owned `AssetRef` and
+  `CueParams`, and §2 explicitly says #51 declares its own `CueParams`, but §4.2's file/type inventory
+  declares neither type and neither concrete shape is defined. The same omission means §4.2's CS0104
+  pre-check never checked those two names. Per Path-to-Playable C6 this finding is **recorded now, not
+  normatively hardened now**: the §2/§4 correction, concrete types, full collision re-scan, and a
+  regression/mutation proof that fails when the repaired invariant is reverted MUST land together with
+  #51 T0. Until then T0 is blocked from claiming its catalogue contract complete.
+
+## 7.5 Pre-T0 recorded findings
+
+| ERR | Status | T0 discharge obligation |
+|---|---|---|
+| **ERR-051-001** | **RECORDED — OPEN; normative repair intentionally deferred to T0** | Define #51-owned `AssetRef` and `CueParams`; add both to §4.2's file/type inventory; reconcile §2's `CueEntry`/type declarations and Appendix B schema; rerun the project-wide collision scan including both omitted names; land the normative correction with the T0 code and regression/mutation proof. No prose-only §2/§4 hardening before the assembly. |
+
+This row is the C6 durable record, not a partial fix. It exists so the T0 implementer cannot miss a
+finding merely because the approved normative sections are intentionally left unchanged until executable
+proof exists.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3, with the argument that T0 is where **every rule the spec enforces** lives, since all of them are construction-time refusals — so a playback-first ordering would land the sound before the discipline; the completeness check pinned to arrive **with** the adapter rather than after it; the predicted `CueParams` CS0104 failure and why the compile error is the good case; deep-tier extensions incl. a11y beyond captions; the not-planned list, which carries the two "natural fix" traps — moving `CaptionId` into #49, and reading sim state for a mix decision; risks R-1..R-6, with R-6 added because ERR-048-001 changes no code and is therefore the back-prop most likely to be deferred, at the price of the next implementer building the forbidden reference in good faith). Status IN REVIEW. |
+| 0.2 | 2026-09-06 | — | **C6 record-only landing for ERR-051-001.** Added R-7 and §7.5: `CueEntry` names #51-owned `AssetRef` / `CueParams`, but §4.2 inventories neither and neither shape is defined; therefore the original CS0104 pre-check omitted them too. This version deliberately does **not** patch normative §2/§4. The type definitions + §2/§4/Appendix reconciliation + collision re-scan + regression/mutation proof are pinned to land together at T0, when the assembly makes the fix executable. |
 #endregion
