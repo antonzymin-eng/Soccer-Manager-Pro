@@ -2,13 +2,28 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import json
 from pathlib import Path
 import subprocess
 import sys
-from xml.sax.saxutils import escape
+import xml.etree.ElementTree as ET
+
+DOTNET_CI_DIR = Path(__file__).resolve().parent
+if str(DOTNET_CI_DIR) not in sys.path:
+    sys.path.insert(0, str(DOTNET_CI_DIR))
+
+from generate_projects import UNITY_ONLY_REFS, load_asmdefs  # noqa: E402
 
 NO_DELTA_ASSEMBLY = "__NoProductionCoverageDelta__"
+MAX_PR_COVERAGE_ASSEMBLIES = 8
+CANONICAL_COVERAGE_SETTINGS = DOTNET_CI_DIR / "coverage.runsettings"
+
+
+@dataclass(frozen=True)
+class CoverageScope:
+    assemblies: tuple[str, ...]
+    excluded: tuple[str, ...]
 
 
 def _read_asmdef(path: Path) -> dict[str, object]:
@@ -78,9 +93,27 @@ def _resolve_reference(ref_name: str, guid_map: dict[str, str]) -> str:
     return resolved
 
 
-def coverage_assemblies(repo_root: Path, changed_paths: list[str]) -> list[str]:
+def coverage_scope(
+    repo_root: Path,
+    changed_paths: list[str],
+    shim_asmdefs: dict[str, object] | None = None,
+) -> CoverageScope:
+    # The shim project's own generator is the coverage-eligibility authority.
+    # An assembly can be instrumented here iff generate_projects.load_asmdefs()
+    # would generate it into the Linux shim solution.
+    coverable = set((shim_asmdefs if shim_asmdefs is not None else load_asmdefs()).keys())
     assemblies: set[str] = set()
+    excluded: set[str] = set()
     guid_map: dict[str, str] | None = None
+
+    def add_candidate(name: str) -> None:
+        if name in UNITY_ONLY_REFS or _is_test_or_shim(name):
+            return
+        if name in coverable:
+            assemblies.add(name)
+        else:
+            excluded.add(name)
+
     for rel in changed_paths:
         if not rel.startswith("src/"):
             continue
@@ -101,12 +134,29 @@ def coverage_assemblies(repo_root: Path, changed_paths: list[str]) -> list[str]:
                     if guid_map is None:
                         guid_map = _asmdef_guid_map(repo_root)
                     ref_name = _resolve_reference(ref_name, guid_map)
-                if _is_test_or_shim(ref_name):
-                    continue
-                assemblies.add(ref_name)
+                add_candidate(ref_name)
         else:
-            assemblies.add(name)
-    return sorted(assemblies)
+            add_candidate(name)
+
+    return CoverageScope(tuple(sorted(assemblies)), tuple(sorted(excluded)))
+
+
+def coverage_assemblies(
+    repo_root: Path,
+    changed_paths: list[str],
+    shim_asmdefs: dict[str, object] | None = None,
+) -> list[str]:
+    return list(coverage_scope(repo_root, changed_paths, shim_asmdefs).assemblies)
+
+
+def apply_coverage_ceiling(
+    assemblies: list[str] | tuple[str, ...],
+    max_assemblies: int = MAX_PR_COVERAGE_ASSEMBLIES,
+) -> tuple[list[str], int | None]:
+    selected = sorted(set(assemblies))
+    if len(selected) > max_assemblies:
+        return [], len(selected)
+    return selected, None
 
 
 def _git_rev(repo_root: Path, revision: str) -> str | None:
@@ -189,27 +239,46 @@ def changed_paths(repo_root: Path, base: str, head: str) -> list[str]:
     return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
 
-def render_settings(assemblies: list[str]) -> str:
-    selected = assemblies or [NO_DELTA_ASSEMBLY]
+def render_settings(
+    assemblies: list[str] | tuple[str, ...],
+    canonical_path: Path = CANONICAL_COVERAGE_SETTINGS,
+) -> str:
+    selected = list(assemblies) or [NO_DELTA_ASSEMBLY]
     include = ",".join(f"[{name}]*" for name in selected)
-    return f'''<?xml version="1.0" encoding="utf-8"?>
-<RunSettings>
-  <DataCollectionRunSettings>
-    <DataCollectors>
-      <DataCollector friendlyName="XPlat Code Coverage">
-        <Configuration>
-          <Format>cobertura</Format>
-          <Include>{escape(include)}</Include>
-          <Exclude>[*.Tests]*,[UnityShim*]*</Exclude>
-          <ExcludeByFile>**/tests/**,**/Tests/**,**/*.gen.cs</ExcludeByFile>
-          <SingleHit>true</SingleHit>
-          <UseSourceLink>false</UseSourceLink>
-        </Configuration>
-      </DataCollector>
-    </DataCollectors>
-  </DataCollectionRunSettings>
-</RunSettings>
-'''
+
+    try:
+        tree = ET.parse(canonical_path)
+    except (OSError, ET.ParseError) as exc:
+        raise ValueError(f"cannot read canonical coverage settings {canonical_path}: {exc}") from exc
+
+    root = tree.getroot()
+    collectors = [
+        collector
+        for collector in root.findall(".//DataCollector")
+        if collector.get("friendlyName") == "XPlat Code Coverage"
+    ]
+    if len(collectors) != 1:
+        raise ValueError("canonical coverage settings must contain exactly one XPlat Code Coverage collector")
+    configuration = collectors[0].find("Configuration")
+    if configuration is None:
+        raise ValueError("canonical XPlat Code Coverage collector has no Configuration")
+
+    includes = configuration.findall("Include")
+    if len(includes) > 1:
+        raise ValueError("canonical XPlat Code Coverage Configuration has multiple Include elements")
+    if includes:
+        include_element = includes[0]
+    else:
+        include_element = ET.Element("Include")
+        children = list(configuration)
+        format_element = configuration.find("Format")
+        insert_at = children.index(format_element) + 1 if format_element is not None else 0
+        configuration.insert(insert_at, include_element)
+    include_element.text = include
+
+    ET.indent(tree, space="  ")
+    xml = ET.tostring(root, encoding="unicode")
+    return '<?xml version="1.0" encoding="utf-8"?>\n' + xml + "\n"
 
 
 def main() -> int:
@@ -224,18 +293,29 @@ def main() -> int:
     try:
         base = resolve_base(root, args.base, args.head)
         paths = changed_paths(root, base, args.head)
-        assemblies = coverage_assemblies(root, paths)
+        scope = coverage_scope(root, paths)
+        assemblies, overflow_count = apply_coverage_ceiling(scope.assemblies)
+        settings = render_settings(assemblies, root / "tools" / "dotnet-ci" / "coverage.runsettings")
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(render_settings(assemblies), encoding="utf-8")
+    args.output.write_text(settings, encoding="utf-8")
     print(f"PR coverage base: {base}")
-    if assemblies:
+    if scope.excluded:
+        print("PR coverage assemblies excluded from shim gate: " + ", ".join(scope.excluded))
+    if overflow_count is not None:
+        print(
+            f"WARNING: PR coverage scope resolved {overflow_count} assemblies, exceeding the "
+            f"ceiling of {MAX_PR_COVERAGE_ASSEMBLIES}; instrumentation disabled for this run "
+            f"and sentinel coverage settings emitted."
+        )
+        print("PR coverage assemblies: none (scope ceiling fallback)")
+    elif assemblies:
         print("PR coverage assemblies: " + ", ".join(assemblies))
     else:
-        print("PR coverage assemblies: none (no changed production/test-owned src assembly)")
+        print("PR coverage assemblies: none (no shim-coverable changed production/test-owned src assembly)")
     return 0
 
 
