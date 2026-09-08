@@ -37,12 +37,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
     def test_policy_modes_use_survey_auditors_and_explicit_gate_arguments(self) -> None:
         expected = {
             "--pre-commit": ("budget_seconds=60", "--settings"),
-            "--pr": (
-                "Coverage: XPlat Code Coverage",
-                "Coverage scope: changed src assemblies",
-                "--owner-held-red report-only --coverage",
-                "--coverage-settings",
-            ),
+            "--pr": ("Coverage: XPlat Code Coverage", "--owner-held-red report-only --coverage"),
             "--nightly": ("Full-match soak driver: ShotOutcomeDiagnosticTests", "--owner-held-red report-only --coverage"),
         }
         for mode, needles in expected.items():
@@ -61,7 +56,8 @@ class TestingPipelineConformanceTests(unittest.TestCase):
     def test_lower_gate_rejects_ambient_filter_and_fast_mode_is_defined_without_filter(self) -> None:
         gate = ROOT / "tools" / "dotnet-ci" / "run-gate.sh"
         injected = self.run_cmd(
-            "bash", str(gate),
+            "bash",
+            str(gate),
             env={"TD_GATE_DRY_RUN": "1", "TD_GATE_TEST_FILTER": "FullyQualifiedName~OnlyMe"},
         )
         self.assertEqual(injected.returncode, 2, injected.stdout)
@@ -262,18 +258,150 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 "# Spec #9 — Section 3\n## 3.2 Algorithm\nAlgorithm reviewed with proof.\n",
                 encoding="utf-8",
             )
-            (spec9 / "section-9-approval-checklist.md").write_text(
+            (repo / "tools").mkdir()
+            (repo / "tools" / "verify.py").write_text("print('ok')\n", encoding="utf-8")
+            checklist = spec9 / "section-9-approval-checklist.md"
+            checklist.write_text(
                 "# Spec #9 — Approval Checklist\n**Status:** APPROVED\n"
                 "| Row | Claim | Evidence |\n| --- | --- | --- |\n"
-                "| 9.1 | algorithm | `section-3.md` §3.2 |\n",
+                "| 9.1 | algorithm reviewed | `section-3.md` §3.2 |\n"
+                "| 9.2 | executable check | `python3 tools/verify.py` |\n",
                 encoding="utf-8",
             )
-            proc = self.run_cmd(
+            missing_capture = self.run_cmd(
                 "python3", str(ROOT / "tools" / "checklist-auditor.py"),
                 "--root", str(specs), "--repo-root", str(repo),
                 "--changed-scope", "--enforce-dir", str(spec9),
             )
+            self.assertEqual(missing_capture.returncode, 1, missing_capture.stdout)
+            self.assertIn("no matching captured output", missing_capture.stdout)
+
+            captured = self.run_cmd(
+                "python3", str(ROOT / "tools" / "checklist-auditor.py"),
+                "--root", str(specs), "--repo-root", str(repo),
+                "--changed-scope", "--enforce-dir", str(spec9),
+                "--captured-check", "python3 tools/verify.py",
+            )
+            self.assertEqual(captured.returncode, 0, captured.stdout)
+
+            executed = self.run_cmd(
+                "python3", str(ROOT / "tools" / "checklist-auditor.py"),
+                "--root", str(specs), "--repo-root", str(repo),
+                "--changed-scope", "--enforce-dir", str(spec9),
+                "--execute-checks",
+            )
+            self.assertEqual(executed.returncode, 0, executed.stdout)
+            self.assertIn("CAPTURED CHECK exit=0", executed.stdout)
+
+    def test_spec5_keyword_bullets_do_not_satisfy_appendix_c(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            specs = repo / "docs" / "specs"
+            spec9 = specs / "spec-nine"
+            spec9.mkdir(parents=True)
+            (spec9 / "section-5.md").write_text(
+                "# Spec #9 — Section 5\n**Status:** APPROVED\n"
+                "- unit integration simulation\n- property\n- scenario\n- coverage tier\n- determinism\n- approval\n",
+                encoding="utf-8",
+            )
+            proc = self.run_cmd(
+                "python3", str(ROOT / "tools" / "spec5-schema-auditor.py"),
+                "--root", str(specs), "--repo-root", str(repo),
+                "--changed-scope", "--enforce-dir", str(spec9),
+            )
+            self.assertEqual(proc.returncode, 1, proc.stdout)
+            self.assertIn("§5.1", proc.stdout)
+            self.assertIn("§5.6", proc.stdout)
+
+    def test_spec5_valid_appendix_c_payload_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            specs = repo / "docs" / "specs"
+            spec9 = specs / "spec-nine"
+            scenario = repo / "tests" / "scenarios" / "spec-nine" / "smoke.json"
+            scenario.parent.mkdir(parents=True)
+            scenario.write_text("{}\n", encoding="utf-8")
+            spec9.mkdir(parents=True)
+            (spec9 / "section-9-approval-checklist.md").write_text(
+                "# Spec #9 — Approval Checklist\n## 9.1.1 Balance verified\n",
+                encoding="utf-8",
+            )
+            (spec9 / "section-5.md").write_text(textwrap.dedent("""\
+                # Spec #9 — Section 5: Test Plan
+                **Status:** APPROVED
+
+                ## 5.1 Test Count by Taxonomy Layer
+                | Layer | Count | Notes |
+                |---|---:|---|
+                | Unit | 3 | |
+                | Integration | 1 | |
+                | Simulation | 1 | |
+                | Determinism (consumed from #16 §5) | — | Owned by #16 |
+                | End-to-end / soak | 1 | |
+
+                ## 5.2 Property Test List
+                | Property | Tier (A/B/C) | Owning Module |
+                |---|---|---|
+                | `prop_balance` | A | Economy |
+
+                ## 5.3 Scenario List
+                | Scenario | Manifest Path | Tier |
+                |---|---|---|
+                | smoke | `tests/scenarios/spec-nine/smoke.json` | B |
+
+                ## 5.4 Coverage Targets (Per Tier per KD-9)
+                | Tier | Line | Branch |
+                |---|---|---|
+                | A | ≥ 98% | ≥ 95% |
+                | B | ≥ 90% | ≥ 80% |
+                | C | lint-only | — |
+
+                ## 5.5 Determinism-Tier Classification of Authoritative Fields
+                | Field | Tier | Source (#16 §1.1.1) |
+                |---|---|---|
+                | `Economy.Balance` | A | #16 §1.1.1 row Economy |
+
+                ## 5.6 Approval-Checklist Linkage
+                | Test ID | Verifies §9 Row |
+                |---|---|
+                | `unit_balance` | §9.1.1 |
+
+                ## 5.7 Version History
+                - v1
+                """), encoding="utf-8")
+            proc = self.run_cmd(
+                "python3", str(ROOT / "tools" / "spec5-schema-auditor.py"),
+                "--root", str(specs), "--repo-root", str(repo),
+                "--changed-scope", "--enforce-dir", str(spec9),
+            )
             self.assertEqual(proc.returncode, 0, proc.stdout)
+
+    def test_legacy_schema_findings_remain_survey_only(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            specs = repo / "docs" / "specs"
+            legacy = specs / "legacy"
+            legacy.mkdir(parents=True)
+            (legacy / "section-5.md").write_text("# Spec #1 — Section 5\n**Status:** APPROVED\nUnit only.\n", encoding="utf-8")
+            proc = self.run_cmd(
+                "python3", str(ROOT / "tools" / "spec5-schema-auditor.py"),
+                "--root", str(specs), "--repo-root", str(repo),
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertIn("SURVEY", proc.stdout)
+
+    def test_workflows_route_policy_and_gate_unregistered_certified_runner(self) -> None:
+        ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        nightly = (ROOT / ".github" / "workflows" / "nightly.yml").read_text(encoding="utf-8")
+        self.assertIn("bash tools/run-tests-local.sh --pr", ci)
+        self.assertNotIn("run: bash tools/dotnet-ci/run-gate.sh\n", ci)
+        self.assertIn("vars.DETERMINISM_CERTIFIED_RUNNER_ENABLED == 'true'", nightly)
+        self.assertIn("vars.DETERMINISM_CERTIFIED_RUNNER_ENABLED != 'true'", nightly)
+        self.assertIn("[self-hosted, windows, x64, determinism-certified]", nightly)
+
+    def test_policy_shells_avoid_bash_4_mapfile(self) -> None:
+        self.assertNotIn("mapfile", (ROOT / "tools" / "run-tests-local.sh").read_text(encoding="utf-8"))
+        self.assertNotIn("mapfile", (ROOT / "tools" / "dotnet-ci" / "run-gate.sh").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
