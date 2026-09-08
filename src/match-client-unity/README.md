@@ -14,13 +14,15 @@ per-round code detail.
 > document's to assert.
 
 This is the **Unity-host** half of the interactive Unity client — the
-`MonoBehaviour` that owns a `MatchSession`, reads frames each `Update`, and binds
-them onto scene objects. It is deliberately thin: every render/camera/click
-*decision* is already made in the host-free sibling `src/match-client-core/`
-(`TacticalDirector.MatchClientCore`), which the `tools/dotnet-ci` shim gate
-compiles and tests on every push. This assembly only ever depends on that core
-plus the reused `match-viewer` streamer; it adds a skin, never new engine-facing
-logic (§12 rule 1 — see `docs/tracking/interactive-unity-client-design.md`).
+`MonoBehaviour` that binds a `MatchSession`, reads frames each `Update`, and binds
+them onto scene objects. During the P5b transition its old self-created neutral
+demo is explicit opt-in only; a normal shell scene leaves that boot path disabled.
+It is deliberately thin: every render/camera/click *decision* is already made in
+the host-free sibling `src/match-client-core/` (`TacticalDirector.MatchClientCore`),
+which the `tools/dotnet-ci` shim gate compiles and tests on every push. This
+assembly only ever depends on that core plus the reused `match-viewer` streamer;
+it adds a skin, never new engine-facing logic (§12 rule 1 — see
+`docs/tracking/interactive-unity-client-design.md`).
 
 ## Excluded from the shim gate — code here has never compiled
 
@@ -37,11 +39,13 @@ Every AR round over it has been reviewed by hand.
 see §1) and every project-setting requirement here, since a `MonoBehaviour` can
 neither enforce a Project Settings value nor fail a Unity install that lacks it,
 and a contract stated in two places drifts. This section is that document —
-the single one. `ValidateWiring()` enforces everything it can detect at runtime
-(null references, array lengths, transform scale/rotation) and fails loud,
-naming the offending field, when it can — but the five items below are either
-checked only once a prefab is instantiated, or cannot be checked from code at
-all.
+the single one. `ValidateWiring()` runs on every `Awake`, including when temporary
+demo boot is off, and enforces everything session-independent it can detect at
+runtime (null references, array lengths, transform scale/rotation, colour-property
+name), failing loud and naming the offending field. The demo seed is the one
+exception: `ValidateDemoSeed()` runs only when the temporary demo path is explicitly
+enabled, because the seed has no meaning otherwise. The items below are either
+checked only once a prefab is instantiated, or cannot be checked from code at all.
 
 ### 1. The prefab contract — 8 slots
 
@@ -142,9 +146,8 @@ project-setup requirement the binding cannot enforce or detect from code.
 ### 3. The host GameObject's own transform must be at identity scale AND rotation
 
 `ValidateWiring()` checks both and rejects the client, naming the actual value,
-if either fails — but only for the `MatchClient` GameObject and its own
-`transform`; it cannot see the scene hierarchy ahead of time, so set this up
-correctly rather than relying on the runtime check alone:
+if either fails — and it does so even when temporary demo boot is disabled. Set
+this up correctly rather than relying on the runtime check alone:
 
 - **Identity scale** (`transform.lossyScale == Vector3.one`) — `PlaceLine` /
   `PlaceRadial` mix a world POSITION with a LOCAL scale, so a scaled ancestor
@@ -170,8 +173,8 @@ rotation applied anywhere in its ancestry, at the scene root if in doubt.
 `_teamColors` must have exactly `MatchEngineConstants.TEAM_COUNT` (2) entries:
 **index 0 = home, index 1 = away.** `RenderAgents` indexes it by
 `AgentRenderModel.TeamId` unguarded past `ValidateWiring`'s length check, so a
-mis-sized array is rejected at boot rather than index-out-of-ranging the first
-time an away-team agent is drawn.
+mis-sized array is rejected at `Awake` even when demo boot is disabled, rather
+than index-out-of-ranging later when a session is attached or a demo is enabled.
 
 ### 5. The pitch/ground surface (L13) — not a prefab slot, but still this contract's
 
@@ -208,3 +211,29 @@ ground surface narrower than that clips at the touchline/goal line before the
 camera's `CameraOverscanM` margin does; a generous overshoot (the standard
 run-off area a broadcast pitch model already has) costs nothing and avoids the
 edge being visible at the tilted camera's default overscan.
+
+### 6. Temporary demo boot during P5b
+
+`_autoBootDemoMatch` is temporary migration scaffolding. It defaults to
+**false**. P5b shell scenes must leave it false: merely having a
+`MatchClientBehaviour` in the scene must not construct or start a hidden demo
+match before the shell has a real lifecycle owner.
+
+The default has one deliberate compatibility consequence: Unity scenes saved
+before this field existed deserialize it as false. Therefore the August P4b
+demo scene no longer self-starts after this change. To keep using that isolated
+legacy demo before `Attach(MatchSession)` lands, explicitly tick **Demo boot
+(temporary; leave off in P5b shell scenes)** in the Inspector. This is an
+intentional transition, not a silent regression.
+
+Demo-off does **not** mean validation-off. `Awake()` always runs
+`ValidateWiring()` first, so prefab references, camera, palette size, host
+transform and `_colorPropertyName` still fail loud in an inert shell scene.
+Only `_demoSeedText` is deferred to `ValidateDemoSeed()`, because that value is
+consumed exclusively by `MatchSetup.NeutralDemo` and is meaningless when demo
+boot is disabled.
+
+The next lifecycle slice removes this flag and the internal
+`new MatchSession(MatchSetup.NeutralDemo(...))` ownership entirely, replacing
+it with an `Attach(MatchSession)`-style seam driven by the host-free lifecycle
+owner.
