@@ -18,12 +18,26 @@ SPEC.loader.exec_module(PCS)
 
 
 class PrCoverageSettingsTests(unittest.TestCase):
-    def write_asmdef(self, path: Path, name: str, references: list[str] | None = None) -> None:
+    def write_asmdef(
+        self,
+        path: Path,
+        name: str,
+        references: list[str] | None = None,
+        guid: str | None = None,
+    ) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
             json.dumps({"name": name, "references": references or []}, indent=2) + "\n",
             encoding="utf-8",
         )
+        if guid is not None:
+            path.with_name(path.name + ".meta").write_text(
+                f"fileFormatVersion: 2\nguid: {guid}\n",
+                encoding="utf-8",
+            )
+
+    def git(self, root: Path, *args: str) -> str:
+        return subprocess.check_output(["git", *args], cwd=root, text=True).strip()
 
     def test_production_change_selects_owning_assembly(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -34,25 +48,42 @@ class PrCoverageSettingsTests(unittest.TestCase):
             selected = PCS.coverage_assemblies(root, ["src/alpha/Thing.cs"])
             self.assertEqual(selected, ["TacticalDirector.Alpha"])
 
-    def test_changed_test_assembly_selects_production_references(self) -> None:
+    def test_changed_test_assembly_resolves_guid_and_named_production_references(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
+            guid = "0123456789abcdef0123456789abcdef"
             self.write_asmdef(root / "src" / "alpha" / "alpha.asmdef", "TacticalDirector.Alpha")
-            self.write_asmdef(root / "src" / "shared" / "shared.asmdef", "TacticalDirector.Shared")
+            self.write_asmdef(
+                root / "src" / "shared" / "shared.asmdef",
+                "TacticalDirector.Shared",
+                guid=guid,
+            )
             self.write_asmdef(
                 root / "src" / "alpha" / "tests" / "alpha-tests.asmdef",
                 "TacticalDirector.Alpha.Tests",
                 [
                     "TacticalDirector.Alpha",
-                    "TacticalDirector.Shared",
+                    f"GUID:{guid}",
                     "TacticalDirector.Other.Tests",
-                    "GUID:0123456789abcdef",
                 ],
             )
             test_source = root / "src" / "alpha" / "tests" / "AlphaTests.cs"
             test_source.write_text("class AlphaTests {}\n", encoding="utf-8")
             selected = PCS.coverage_assemblies(root, ["src/alpha/tests/AlphaTests.cs"])
             self.assertEqual(selected, ["TacticalDirector.Alpha", "TacticalDirector.Shared"])
+
+    def test_unresolved_guid_reference_fails_loud(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self.write_asmdef(
+                root / "src" / "alpha" / "tests" / "alpha-tests.asmdef",
+                "TacticalDirector.Alpha.Tests",
+                ["GUID:missing"],
+            )
+            test_source = root / "src" / "alpha" / "tests" / "AlphaTests.cs"
+            test_source.write_text("class AlphaTests {}\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "cannot resolve asmdef GUID reference"):
+                PCS.coverage_assemblies(root, ["src/alpha/tests/AlphaTests.cs"])
 
     def test_no_source_delta_uses_non_matching_sentinel_and_single_hit(self) -> None:
         settings = PCS.render_settings([])
@@ -68,6 +99,38 @@ class PrCoverageSettingsTests(unittest.TestCase):
             source.write_text("class Thing {}\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "no asmdef owner"):
                 PCS.coverage_assemblies(root, ["src/orphan/Thing.cs"])
+
+    def test_main_head_without_explicit_base_uses_first_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True)
+            tracked = root / "tracked.txt"
+            tracked.write_text("base\n", encoding="utf-8")
+            subprocess.run(["git", "add", "tracked.txt"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "base"], cwd=root, check=True)
+            parent = self.git(root, "rev-parse", "HEAD")
+            tracked.write_text("next\n", encoding="utf-8")
+            subprocess.run(["git", "commit", "-qam", "next"], cwd=root, check=True)
+
+            self.assertEqual(PCS.resolve_base(root, None), parent)
+
+    def test_explicit_base_wins_over_main_push_detection(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True)
+            tracked = root / "tracked.txt"
+            tracked.write_text("base\n", encoding="utf-8")
+            subprocess.run(["git", "add", "tracked.txt"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "base"], cwd=root, check=True)
+            base = self.git(root, "rev-parse", "HEAD")
+            tracked.write_text("next\n", encoding="utf-8")
+            subprocess.run(["git", "commit", "-qam", "next"], cwd=root, check=True)
+
+            self.assertEqual(PCS.resolve_base(root, base), base)
 
     def test_lower_gate_accepts_explicit_coverage_settings_only_with_coverage(self) -> None:
         gate = ROOT / "tools" / "dotnet-ci" / "run-gate.sh"
