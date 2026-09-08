@@ -37,7 +37,7 @@ namespace TacticalDirector.LivingWorld
             // InteractionIntent.MediaProvokeTitlePressure = 1 (vol-2 §7.1 trap class).
             new[]
             {
-                "Journalists press {subject} on the title race after the {score} against {opponent}.",
+                "Journalists quiz {subject} on the title race after the {score} against {opponent}.",
                 "The press corner {subject}: is the title slipping after the {score} against {opponent}?",
                 "A pointed question lands on {subject} — title pressure, and that {score} against {opponent}.",
             },
@@ -45,8 +45,8 @@ namespace TacticalDirector.LivingWorld
             // InteractionIntent.PlayerQuestionsMinutes = 2.
             new[]
             {
-                "{subject} asks why the minutes have dried up since the {opponent} match.",
                 "{subject} wants a word about playing time after the {score} against {opponent}.",
+                "{subject} asks why the minutes have dried up since the {opponent} match.",
             },
 
             // InteractionIntent.BoardSignalsConfidence = 3.
@@ -85,7 +85,7 @@ namespace TacticalDirector.LivingWorld
             switch (kind)
             {
                 case EventKind.ManagerCriticism:
-                    return "The public criticism still hangs over the exchange.";
+                    return "The public criticism still hangs over the exchange!";
                 case EventKind.ManagerDefence:
                     return "Your public defence is remembered.";
                 case EventKind.Benching:
