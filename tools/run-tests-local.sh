@@ -102,10 +102,37 @@ resolve_pr_coverage_base() {
     printf '%s\n' "$TD_APPROVAL_BASE_REF"
     return 0
   fi
-  if git -C "$ROOT" rev-parse --verify --quiet 'main^{commit}' >/dev/null; then
-    git -C "$ROOT" merge-base HEAD main
-    return 0
-  fi
+
+  local head_sha main_ref main_sha
+  head_sha="$(git -C "$ROOT" rev-parse HEAD)"
+
+  # On a push to main, HEAD and main/origin-main identify the same commit.
+  # Comparing HEAD...main would silently create an empty coverage delta, so
+  # explicitly measure the pushed commit against its first parent.
+  for main_ref in main origin/main; do
+    if ! git -C "$ROOT" rev-parse --verify --quiet "${main_ref}^{commit}" >/dev/null; then
+      continue
+    fi
+    main_sha="$(git -C "$ROOT" rev-parse "${main_ref}^{commit}")"
+    if [ "$head_sha" = "$main_sha" ]; then
+      if git -C "$ROOT" rev-parse --verify --quiet 'HEAD^' >/dev/null; then
+        git -C "$ROOT" rev-parse HEAD^
+        return 0
+      fi
+      printf 'ERROR: cannot resolve previous commit for main-push coverage scoping.\n' >&2
+      return 2
+    fi
+  done
+
+  # Local feature-branch invocation without an explicit PR base compares to the
+  # merge-base with main when available.
+  for main_ref in main origin/main; do
+    if git -C "$ROOT" rev-parse --verify --quiet "${main_ref}^{commit}" >/dev/null; then
+      git -C "$ROOT" merge-base HEAD "$main_ref"
+      return 0
+    fi
+  done
+
   if git -C "$ROOT" rev-parse --verify --quiet 'HEAD^' >/dev/null; then
     git -C "$ROOT" rev-parse HEAD^
     return 0
