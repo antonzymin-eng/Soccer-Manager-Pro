@@ -97,50 +97,6 @@ install_hook() {
   verify_hook
 }
 
-resolve_pr_coverage_base() {
-  if [ -n "${TD_APPROVAL_BASE_REF:-}" ]; then
-    printf '%s\n' "$TD_APPROVAL_BASE_REF"
-    return 0
-  fi
-
-  local head_sha main_ref main_sha
-  head_sha="$(git -C "$ROOT" rev-parse HEAD)"
-
-  # On a push to main, HEAD and main/origin-main identify the same commit.
-  # Comparing HEAD...main would silently create an empty coverage delta, so
-  # explicitly measure the pushed commit against its first parent.
-  for main_ref in main origin/main; do
-    if ! git -C "$ROOT" rev-parse --verify --quiet "${main_ref}^{commit}" >/dev/null; then
-      continue
-    fi
-    main_sha="$(git -C "$ROOT" rev-parse "${main_ref}^{commit}")"
-    if [ "$head_sha" = "$main_sha" ]; then
-      if git -C "$ROOT" rev-parse --verify --quiet 'HEAD^' >/dev/null; then
-        git -C "$ROOT" rev-parse HEAD^
-        return 0
-      fi
-      printf 'ERROR: cannot resolve previous commit for main-push coverage scoping.\n' >&2
-      return 2
-    fi
-  done
-
-  # Local feature-branch invocation without an explicit PR base compares to the
-  # merge-base with main when available.
-  for main_ref in main origin/main; do
-    if git -C "$ROOT" rev-parse --verify --quiet "${main_ref}^{commit}" >/dev/null; then
-      git -C "$ROOT" merge-base HEAD "$main_ref"
-      return 0
-    fi
-  done
-
-  if git -C "$ROOT" rev-parse --verify --quiet 'HEAD^' >/dev/null; then
-    git -C "$ROOT" rev-parse HEAD^
-    return 0
-  fi
-  printf 'ERROR: cannot resolve a base revision for PR coverage scoping.\n' >&2
-  return 2
-}
-
 case "$MODE" in
   --install-hook)
     install_hook
@@ -230,11 +186,15 @@ if [ "$MODE" = "--pre-commit" ] && [ "${TD_PRECOMMIT_BUDGET_ACTIVE:-}" != "1" ];
 fi
 
 if [ "$MODE" = "--pr" ]; then
-    PR_COVERAGE_BASE="$(resolve_pr_coverage_base)"
-    printf 'PR coverage base: %s\n' "$PR_COVERAGE_BASE"
-    python3 "$PR_COVERAGE_GENERATOR" \
-        --repo-root "$ROOT" --base "$PR_COVERAGE_BASE" --head HEAD \
+    PR_COVERAGE_ARGS=(
+        --repo-root "$ROOT"
+        --head HEAD
         --output "$PR_COVERAGE_SETTINGS"
+    )
+    if [ -n "${TD_APPROVAL_BASE_REF:-}" ]; then
+        PR_COVERAGE_ARGS+=(--base "$TD_APPROVAL_BASE_REF")
+    fi
+    python3 "$PR_COVERAGE_GENERATOR" "${PR_COVERAGE_ARGS[@]}"
 fi
 
 printf 'Auditor: approval-checklist evidence (survey)\n'
