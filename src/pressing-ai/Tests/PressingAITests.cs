@@ -1,9 +1,11 @@
 // File:     src/pressing-ai/Tests/PressingAITests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-15
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Pressing AI #13 §5, Code Standards #20
 // Purpose:  Unit tests for Pressing AI. T-U unit tests from §5.
+
+using System;
 
 using NUnit.Framework;
 
@@ -1550,6 +1552,16 @@ namespace TacticalDirector.PressingAI.Tests
     // ────────────────────────────────────────────────────────────────────────────
 
     [TestFixture]
+    internal sealed class PassEventRingTests
+    {
+        [TestCase(0)]
+        [TestCase(-1)]
+        public void Constructor_RejectsNonPositiveCapacityAtMisuseSite(int capacity)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PassEventRing(capacity));
+        }
+    }
+
     internal sealed class PressingAIIntegrationTests
     {
         // ── §5.3 Integration ──────────────────────────────────────────────────────
@@ -1763,4 +1775,6 @@ namespace TacticalDirector.PressingAI.Tests
 // |         |            |        | possessing team's frame. T-U-002 targets re-derived (backward = +X for a −X-attacking         |
 // |         |            |        | possessor); new BackwardPass_DoesNotFireForOwnTeamPasser; T-U-031 high-threat receiver moved  |
 // |         |            |        | to (40,34) so progression gain is exercised in the corrected frame.                           |
+// | 1.4     | 2026-09-08 | —      | Regression coverage: PassEventRing refuses non-positive capacity at construction instead of  |
+// |         |            |        | failing later in Push with an indexing or divide-by-zero exception.                            |
 #endregion

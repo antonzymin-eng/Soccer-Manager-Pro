@@ -1,6 +1,6 @@
 // File:     src/positioning-ai/Tests/MarkingPressureEvaluatorTests.cs
 // Created:  2026-07-10
-// Modified: 2026-07-10
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Dismarking AI #23 §3.1–§3.3 (FM-DM-01/02), §5 test plan, Code Standards #20
 // Purpose:  Locks the #23 T0 pure math: §3.1/§3.3 worked examples, the §3.2 dwell state machine
@@ -55,6 +55,12 @@ namespace TacticalDirector.PositioningAI.Tests
             float atCap = MarkingPressureEvaluator.ComputePressure(
                 Phase.InPoss, true, 0f, PositioningAIConstants.MARKING_DWELL_FULL_TICKS);
             Assert.AreEqual(1f, atCap, Tolerance);
+        }
+
+        [Test]
+        public void Pressure_NegativeDwellCannotProduceNegativePressure()
+        {
+            Assert.AreEqual(0f, MarkingPressureEvaluator.ComputePressure(Phase.InPoss, true, 0f, -1));
         }
 
         // ---------- §3.1 marker search ----------
@@ -158,6 +164,24 @@ namespace TacticalDirector.PositioningAI.Tests
             Assert.AreEqual(9, s.LastMarkerId);
         }
 
+        [Test]
+        public void Dwell_OverCapacityStateSaturatesWithoutOverflow()
+        {
+            var state = new MarkingDwellState { DwellTicks = int.MaxValue, LastMarkerId = 4 };
+            MarkingDwellState next = MarkingPressureEvaluator.UpdateDwell(
+                in state, Phase.InPoss, markerExists: true, markerId: 4);
+            Assert.AreEqual(PositioningAIConstants.MARKING_DWELL_FULL_TICKS, next.DwellTicks);
+        }
+
+        [Test]
+        public void Dwell_NegativeStateClampsToZeroWithoutUnderflow()
+        {
+            var state = new MarkingDwellState { DwellTicks = int.MinValue, LastMarkerId = 4 };
+            MarkingDwellState next = MarkingPressureEvaluator.UpdateDwell(
+                in state, Phase.OutOfPoss, markerExists: false, markerId: MarkingDwellState.NoMarker);
+            Assert.AreEqual(0, next.DwellTicks);
+        }
+
         // ---------- §3.3 FM-DM-02 offset ----------
 
         [Test]
@@ -240,4 +264,5 @@ namespace TacticalDirector.PositioningAI.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                                   |
 // | 1.0     | 2026-07-10 | —      | Initial T0 suite (#23): FM-DM-01/02 worked examples, dwell machine, gates. |
+// | 1.1     | 2026-09-08 | —      | Regression coverage for malformed dwell values.       |
 #endregion
