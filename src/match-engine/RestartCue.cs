@@ -6,6 +6,7 @@
 //           Code Standards #20
 // Purpose:  What kind of restart the engine applied, for the presentation layer's HUD. Reported
 //           per-tick through MatchEngine.RestartAppliedThisTick; never serialized, never drawn against.
+// CI evidence-only no-op: force PR #375's changed-assembly coverage path for MatchEngine.
 
 namespace TacticalDirector.MatchEngine
 {
