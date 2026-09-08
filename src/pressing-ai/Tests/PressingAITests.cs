@@ -1547,10 +1547,6 @@ namespace TacticalDirector.PressingAI.Tests
         }
     }
 
-    // ────────────────────────────────────────────────────────────────────────────
-    // §5.3 Integration / §5.4 Determinism / §5.5 Performance / §5.6 Anti-Chaos
-    // ────────────────────────────────────────────────────────────────────────────
-
     [TestFixture]
     internal sealed class PassEventRingTests
     {
@@ -1562,6 +1558,11 @@ namespace TacticalDirector.PressingAI.Tests
         }
     }
 
+    // ────────────────────────────────────────────────────────────────────────────
+    // §5.3 Integration / §5.4 Determinism / §5.5 Performance / §5.6 Anti-Chaos
+    // ────────────────────────────────────────────────────────────────────────────
+
+    [TestFixture]
     internal sealed class PressingAIIntegrationTests
     {
         // ── §5.3 Integration ──────────────────────────────────────────────────────
