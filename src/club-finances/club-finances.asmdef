@@ -1,0 +1,17 @@
+{
+    "name": "TacticalDirector.ClubFinances",
+    "rootNamespace": "TacticalDirector.ClubFinances",
+    "references": [
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.ProjectConstants"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
