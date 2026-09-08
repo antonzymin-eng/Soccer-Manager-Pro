@@ -5,6 +5,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="${1:---pr}"
 PRECOMMIT_BUDGET_SECONDS=60
 PRECOMMIT_SETTINGS="$ROOT/tools/dotnet-ci/precommit.runsettings"
+PR_COVERAGE_SETTINGS="$ROOT/artifacts/pr-coverage.runsettings"
+PR_COVERAGE_GENERATOR="$ROOT/tools/dotnet-ci/pr_coverage_settings.py"
 
 # Legacy ambient controls are deliberately not policy inputs. The stable runner
 # owns composition and sanitizes them before invoking the lower-level gate.
@@ -17,8 +19,8 @@ Usage: bash tools/run-tests-local.sh [--pre-commit|--pr|--nightly|--install-hook
 Stable local/CI entry point for Testing Strategy #19 FR-TS-075/079.
 
   --pre-commit   Fast unit/property compatibility gate. Whole composition is hard-bounded to 60 seconds.
-  --pr           PR gate: survey auditors + approval-transition blocking + whole-tree functional test superset + coverage.
-  --nightly      Survey auditors + full non-certifying simulation/soak gate + coverage.
+  --pr           PR gate: survey auditors + approval-transition blocking + whole-tree functional test superset + change-scoped coverage.
+  --nightly      Survey auditors + full non-certifying simulation/soak gate + full-repository coverage.
   --install-hook Configure this clone to use the versioned .githooks directory.
   --verify-hook  Fail unless this clone is configured to execute that hook.
 
@@ -33,10 +35,15 @@ unrelated changes on pre-existing corpus debt.
 
 D2 is pinned to FsCheck.NUnit 2.16.6 and D3 is pinned to
 coverlet.collector 6.0.4 through Directory.Build.targets. Property tests
-participate automatically when present. Pre-commit selection is expressed with
-NUnit's test-selection language in tools/dotnet-ci/precommit.runsettings, where
-canonical int_/sim_/e2e_ exclusions are anchored to METHOD-name prefixes rather
-than unsafe substrings of FullyQualifiedName.
+participate automatically when present. PR coverage remains a full functional
+test run but instruments only production assemblies changed by the PR, plus the
+production references of changed test assemblies. Nightly retains the full
+repository coverage collector. This bounded collection is runtime policy only;
+the separate FR-TS-057/058 per-tier threshold/delta auditor is not claimed here.
+Pre-commit selection is expressed with NUnit's test-selection language in
+tools/dotnet-ci/precommit.runsettings, where canonical int_/sim_/e2e_ exclusions
+are anchored to METHOD-name prefixes rather than unsafe substrings of
+FullyQualifiedName.
 
 The pre-commit path skips the separate whole-tree meta/build pass and uses one
 incremental generated-solution test invocation; the versioned hook preserves a
@@ -107,7 +114,7 @@ case "$MODE" in
   --pr)
     PIPELINE_NAME="PR"
     unset TD_SHOT_DIAGNOSTIC || true
-    GATE_ARGS=(--owner-held-red report-only --coverage)
+    GATE_ARGS=(--owner-held-red report-only --coverage --coverage-settings "$PR_COVERAGE_SETTINGS")
     ;;
   --nightly)
     PIPELINE_NAME="nightly-functional"
@@ -138,6 +145,9 @@ if [ "$MODE" != "--pre-commit" ]; then
     printf 'Owner-held-red policy: execute separately and verify recorded diagnostics\n'
     printf 'Coverage: XPlat Code Coverage (coverlet.collector)\n'
 fi
+if [ "$MODE" = "--pr" ]; then
+    printf 'Coverage scope: changed src assemblies plus production references of changed test assemblies\n'
+fi
 if [ "$MODE" = "--pr" ] && [ -n "${TD_APPROVAL_BASE_REF:-}" ]; then
     printf 'Approval-transition base: %s\n' "$TD_APPROVAL_BASE_REF"
 fi
@@ -151,6 +161,8 @@ if [ "${TD_PIPELINE_DRY_RUN:-}" = "1" ]; then
     if [ "$MODE" = "--pr" ]; then
         printf 'DRY-RUN approval_scope_detector=%s\n' "$ROOT/tools/testing-strategy-approval-scope.py"
         printf 'DRY-RUN approval_base=%s\n' "${TD_APPROVAL_BASE_REF:-<none>}"
+        printf 'DRY-RUN pr_coverage_generator=%s\n' "$PR_COVERAGE_GENERATOR"
+        printf 'DRY-RUN pr_coverage_base=%s\n' "${TD_APPROVAL_BASE_REF:-<auto>}"
     fi
     printf 'DRY-RUN gate=%s\n' "$ROOT/tools/dotnet-ci/run-gate.sh"
     printf 'DRY-RUN gate_args='
@@ -171,6 +183,18 @@ if [ "$MODE" = "--pre-commit" ] && [ "${TD_PRECOMMIT_BUDGET_ACTIVE:-}" != "1" ];
     exec python3 "$ROOT/tools/run-with-time-budget.py" \
         --seconds "$PRECOMMIT_BUDGET_SECONDS" -- \
         bash "$ROOT/tools/run-tests-local.sh" --pre-commit
+fi
+
+if [ "$MODE" = "--pr" ]; then
+    PR_COVERAGE_ARGS=(
+        --repo-root "$ROOT"
+        --head HEAD
+        --output "$PR_COVERAGE_SETTINGS"
+    )
+    if [ -n "${TD_APPROVAL_BASE_REF:-}" ]; then
+        PR_COVERAGE_ARGS+=(--base "$TD_APPROVAL_BASE_REF")
+    fi
+    python3 "$PR_COVERAGE_GENERATOR" "${PR_COVERAGE_ARGS[@]}"
 fi
 
 printf 'Auditor: approval-checklist evidence (survey)\n'
