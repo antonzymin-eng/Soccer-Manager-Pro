@@ -1,10 +1,18 @@
 # ERR-019-001 / ERR-019-003 — Current Candidate Status
 
-**Date:** September 4, 2026  
+**Date:** September 9, 2026  
 **Issues:** Testing Strategy #19 FR-TS-075 / FR-TS-079 pipeline gap (`ERR-019-001`) and missing automated checklist/schema auditor deliverables (`ERR-019-003`)  
 **Status:** OPEN — implementation candidate present; operational acceptance, aggregate landing synchronization, and A3.4 decisions remain outstanding
 
-This record is the current-status successor to the September 3/4 diagnoses retained in `docs/tracking/open-issues.md` and `docs/tracking/spec-error-log.md`. Those original entries remain historical statements of what was absent when each ERR was filed. Their claims that `tools/run-tests-local.sh`, `tools/checklist-auditor.py`, and `tools/spec5-schema-auditor.py` do not exist are **superseded for PR #357's candidate tree** by the implementation below; the ERRs themselves are not closed merely because candidate files now exist.
+## September 9 live-tracking correction
+
+The September 3/4 filing-time narratives in `docs/tracking/open-issues.md` still contain bold current-state wording that says `tools/run-tests-local.sh`, `tools/checklist-auditor.py`, and `tools/spec5-schema-auditor.py` do not exist and that no nightly pipeline exists. Those absence claims are **historical only and superseded**. All three scripts are present on the current tree, and `.github/workflows/nightly.yml` contains both the scheduled non-certifying Linux lane and the gated certified Windows/Unity lane. The implementation choice has therefore already been made; there is no remaining owner decision between "build the tooling" and "weaken the requirement."
+
+What remains open is the acceptance boundary documented below: the ≤60-second certified-developer-host pre-commit run, successful certified Windows/Unity Spec #16 nightly execution, A3.4 normative/reapproval decisions, fresh debt measurement, and aggregate landing synchronization. The stale `open-issues.md` prose should be annotated in place when the tracking landing is assembled; it must not be used as current repository state in the meantime.
+
+The KD-4 source-count figure is also a landing-time measurement, not a durable constant. Historical `947` and `956` counts must not be copied forward. A3.4 must re-run `find src -name '*.cs' | wc -l` against its final checkout immediately before the atomic normative/supporting-surface patch and record that branch-head result. This tracking-only correction deliberately pins no replacement count.
+
+This record is the current-status successor to the September 3/4 diagnoses retained in `docs/tracking/open-issues.md` and `docs/tracking/spec-error-log.md`. Those original entries remain historical statements of what was absent when each ERR was filed. Their claims that `tools/run-tests-local.sh`, `tools/checklist-auditor.py`, and `tools/spec5-schema-auditor.py` do not exist are superseded by the implementation below; the ERRs themselves are not closed merely because candidate files now exist.
 
 PR #357 was reconciled with `main` after PR #358 landed. The reconciliation deliberately preserved PR #358's authoritative `docs/specs/testing-strategy/*` files unchanged. This candidate therefore does not smuggle normative changes into the executable repair; A3.4 remains the place where any substantive requirement amendment is judged.
 
