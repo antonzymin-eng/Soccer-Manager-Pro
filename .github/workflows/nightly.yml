@@ -1,0 +1,97 @@
+name: Nightly test pipeline
+
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-test-pipeline
+  cancel-in-progress: false
+
+jobs:
+  nightly-functional:
+    name: Nightly full simulation + soak (non-certifying)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run full functional/simulation pipeline
+        run: bash tools/run-tests-local.sh --nightly
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-linux-coverage
+          path: artifacts/coverage/
+          if-no-files-found: warn
+
+  determinism-certification-not-configured:
+    name: Certified determinism runner not activated
+    if: ${{ vars.DETERMINISM_CERTIFIED_RUNNER_ENABLED != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record operational gap
+        run: |
+          echo "::warning::Certified determinism nightly is intentionally disabled until a pinned self-hosted Windows/Unity runner is registered and repository variable DETERMINISM_CERTIFIED_RUNNER_ENABLED=true is set. FR-TS-075 certified-host acceptance remains open."
+
+  nightly-determinism-certified:
+    name: Nightly #16 determinism suite (certified Windows/Unity host)
+    if: ${{ vars.DETERMINISM_CERTIFIED_RUNNER_ENABLED == 'true' }}
+    runs-on: [self-hosted, windows, x64, determinism-certified]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify pinned certification host
+        shell: pwsh
+        run: |
+          $expected = 'win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags'
+          if ($env:TD_CERTIFIED_PLATFORM_PIN -ne $expected) {
+            throw "TD_CERTIFIED_PLATFORM_PIN must equal $expected on this runner."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:TD_UNITY_EXE)) {
+            throw 'TD_UNITY_EXE must point to the certified Unity 6000.4.9f1 executable.'
+          }
+          if (-not (Test-Path -LiteralPath $env:TD_UNITY_EXE -PathType Leaf)) {
+            throw "TD_UNITY_EXE does not exist: $env:TD_UNITY_EXE"
+          }
+
+      - name: Create Unity source junction
+        shell: cmd
+        run: |
+          if exist Assets\Scripts rmdir Assets\Scripts
+          mklink /J Assets\Scripts src
+
+      - name: Run #16 full determinism suite in Unity
+        shell: pwsh
+        run: |
+          $results = Join-Path $env:RUNNER_TEMP 'determinism-results.xml'
+          & $env:TD_UNITY_EXE -batchmode -runTests -projectPath . `
+            -testPlatform EditMode `
+            -testFilter "TacticalDirector.DeterministicSim.Tests" `
+            -testResults $results `
+            -logFile -
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Upload determinism result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-determinism-certified
+          path: ${{ runner.temp }}/determinism-results.xml
+          if-no-files-found: error

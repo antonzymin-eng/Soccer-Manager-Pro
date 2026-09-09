@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <NUnit>
+    <!--
+      Pre-commit is unit + property only. Use NUnit's test-selection language so
+      taxonomy prefixes are anchored to the METHOD name. VSTest `!~int_` on the
+      fully-qualified name is unsafe because it also matches Point_, Fingerprint_,
+      MalformedInt_, etc. QuickSim_* likewise remains a unit test because only a
+      method beginning exactly `sim_` is excluded.
+    -->
+    <Where>method !~ '^int_' and method !~ '^sim_' and method !~ '^e2e_' and namespace !~ '^TacticalDirector\.DeterministicSim\.Tests' and cat != Calibration</Where>
+    <PreFilter>true</PreFilter>
+  </NUnit>
+</RunSettings>
