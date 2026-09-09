@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>System XI — AP-02 G1 Visual Review</title>
+<link rel="stylesheet" href="../ui-mockups/assets/tokens.css">
+<style>
+*{box-sizing:border-box}
+:root{color-scheme:dark}
+body{margin:0;background:#07090c;color:var(--ink-1,#f4f6fa);font-family:var(--font-body,"IBM Plex Sans",system-ui,sans-serif)}
+.board{width:min(1880px,calc(100vw - 32px));margin:16px auto 60px}
+.head{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;padding:24px 26px;border:1px solid var(--line-2,rgba(255,255,255,.1));background:linear-gradient(180deg,#11151b,#0d1015);border-radius:6px}
+.kicker,.eyebrow,.label{font-family:var(--font-mono,monospace);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3,#8a93a3)}
+h1,h2,h3,.display{font-family:var(--font-display,"Arial Narrow",sans-serif);letter-spacing:-.01em}
+h1{font-size:54px;line-height:.95;margin:7px 0 8px}.sub{max-width:930px;color:var(--ink-2,#c1c7d2);font-size:15px;line-height:1.55}.status{align-self:start;padding:9px 12px;border:1px solid rgba(0,255,136,.28);background:rgba(0,255,136,.08);color:var(--brand-400,#00ff88);font-family:var(--font-mono,monospace);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:4px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-top:14px}.card{border:1px solid var(--line-2,rgba(255,255,255,.1));background:var(--bg-card,#11151b);border-radius:6px;overflow:hidden;min-height:180px}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}.card-head{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:10px 13px;border-bottom:1px solid var(--line-2,rgba(255,255,255,.1));background:#0e1218}.card-head h2{font-size:17px;margin:0;text-transform:uppercase;letter-spacing:.05em}.criterion{font-family:var(--font-mono,monospace);font-size:9px;color:var(--ink-4,#5a6371);letter-spacing:.08em}.body{padding:16px}.note{font-size:12px;line-height:1.45;color:var(--ink-3,#8a93a3)}
+/* identity */
+.identity-stage{height:250px;display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:center;padding:24px;background:radial-gradient(circle at 80% 20%,rgba(0,255,136,.10),transparent 28%),linear-gradient(135deg,#0a0d11,#141920)}
+.wordmark{display:flex;align-items:baseline;gap:13px;font-family:var(--font-display,"Arial Narrow",sans-serif);font-weight:700;font-size:84px;line-height:.82;letter-spacing:-.055em}.wordmark .xi{color:var(--brand-400,#00ff88);position:relative}.wordmark .xi:after{content:"";position:absolute;left:2px;right:0;bottom:-9px;height:3px;background:var(--brand-400,#00ff88)}.identity-copy{margin-top:20px;display:flex;gap:15px;align-items:center}.mini-mark{width:56px;height:56px;border:2px solid var(--brand-400,#00ff88);display:grid;place-items:center;font:700 27px/1 var(--font-display,"Arial Narrow",sans-serif);border-radius:4px}.tagline{max-width:330px}.tagline b{display:block;font-family:var(--font-display,"Arial Narrow",sans-serif);font-size:23px;letter-spacing:.02em;text-transform:uppercase}.tagline span{font-size:11px;color:var(--ink-3,#8a93a3);letter-spacing:.06em;text-transform:uppercase}.grid-motif{height:170px;border:1px solid var(--line-2,rgba(255,255,255,.1));background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:22px 22px;position:relative}.grid-motif:before,.grid-motif:after{content:"";position:absolute;background:var(--brand-400,#00ff88)}.grid-motif:before{width:68%;height:2px;left:16%;top:50%;transform:rotate(-17deg)}.grid-motif:after{width:2px;height:70%;left:51%;top:15%}
+/* icons */
+.icon-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.icon-tile{height:112px;border:1px solid var(--line-2,rgba(255,255,255,.1));background:#0d1015;display:grid;grid-template-rows:1fr auto;place-items:center;padding:12px 8px 9px;border-radius:4px}.icon-tile svg{width:34px;height:34px;stroke:var(--ink-2,#c1c7d2);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}.icon-tile.active{border-color:rgba(0,255,136,.45);background:rgba(0,255,136,.06)}.icon-tile.active svg{stroke:var(--brand-400,#00ff88)}.icon-name{font-family:var(--font-mono,monospace);font-size:9px;color:var(--ink-3,#8a93a3);text-transform:uppercase;letter-spacing:.08em}
+/* match */
+.match-wrap{display:grid;grid-template-columns:1fr 255px;gap:12px}.pitch{position:relative;height:390px;border:1px solid rgba(255,255,255,.16);background:repeating-linear-gradient(90deg,#143124 0 11%,#102b20 11% 22%);overflow:hidden}.pitch:before{content:"";position:absolute;inset:18px;border:2px solid rgba(230,244,236,.54)}.half,.circle,.box-l,.box-r,.six-l,.six-r{position:absolute;border:2px solid rgba(230,244,236,.54)}.half{left:50%;top:18px;bottom:18px;border-width:0 0 0 2px}.circle{width:92px;height:92px;border-radius:50%;left:calc(50% - 46px);top:calc(50% - 46px)}.box-l,.box-r{width:92px;height:180px;top:calc(50% - 90px)}.box-l{left:18px}.box-r{right:18px}.six-l,.six-r{width:40px;height:82px;top:calc(50% - 41px)}.six-l{left:18px}.six-r{right:18px}.player,.gk,.ball{position:absolute;display:grid;place-items:center;z-index:4;font:600 9px/1 var(--font-mono,monospace)}.player{width:24px;height:24px;border-radius:50%;border:2px solid #e8edf5;background:#243348;color:#fff;box-shadow:0 2px 7px rgba(0,0,0,.6)}.player.away{background:#551f30;border-color:#ffbcc6}.player.selected:after{content:"";position:absolute;width:32px;height:32px;border:2px solid var(--brand-400,#00ff88);border-radius:50%}.gk{width:24px;height:24px;transform:rotate(45deg);border:2px solid #ffd75c;background:#433819;color:#fff}.gk span{transform:rotate(-45deg)}.ball{width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #0a0d11;box-shadow:0 0 0 2px rgba(255,255,255,.2)}.run-line{position:absolute;left:43%;top:47%;width:110px;height:3px;background:linear-gradient(90deg,var(--brand-400,#00ff88),transparent);transform:rotate(-24deg);transform-origin:left center;z-index:3}.run-line:after{content:"";position:absolute;right:2px;top:-4px;border-left:8px solid rgba(0,255,136,.8);border-top:5px solid transparent;border-bottom:5px solid transparent}.match-side{display:grid;gap:10px}.metric{border:1px solid var(--line-2,rgba(255,255,255,.1));background:#0d1015;padding:12px}.metric b{display:block;font:700 28px/1 var(--font-display,"Arial Narrow",sans-serif)}.metric span{font:500 9px/1 var(--font-mono,monospace);color:var(--ink-3,#8a93a3);text-transform:uppercase;letter-spacing:.08em}.event{display:flex;align-items:center;gap:9px;padding:10px;border-left:2px solid var(--brand-400,#00ff88);background:#0d1015;font-size:11px}.event i{font-style:normal;color:var(--brand-400,#00ff88)}
+/* portrait */
+.portrait-shell{display:grid;grid-template-columns:220px 1fr;gap:18px}.portrait{height:270px;border-radius:4px;overflow:hidden;border:1px solid var(--line-2,rgba(255,255,255,.1));background:linear-gradient(160deg,#242b33,#0d1116)}.portrait svg{width:100%;height:100%}.bio h3{margin:2px 0 3px;font-size:34px}.bio .role{color:var(--brand-400,#00ff88);font-family:var(--font-mono,monospace);font-size:10px;letter-spacing:.1em;text-transform:uppercase}.bio-grid{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:9px}.bio-stat{padding:10px;border:1px solid var(--line-2,rgba(255,255,255,.1));background:#0d1015}.bio-stat b{display:block;font-family:var(--font-display,"Arial Narrow",sans-serif);font-size:21px}.bio-stat span{font-size:9px;color:var(--ink-3,#8a93a3);text-transform:uppercase;letter-spacing:.08em}
+/* clubs */
+.club-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}.club{border:1px solid var(--line-2,rgba(255,255,255,.1));background:#0d1015;padding:13px;text-align:center}.badge{height:92px;display:grid;place-items:center}.badge svg{width:74px;height:82px}.club b{font-family:var(--font-display,"Arial Narrow",sans-serif);font-size:15px;text-transform:uppercase;letter-spacing:.04em}.club small{display:block;margin-top:2px;color:var(--ink-4,#5a6371);font:9px/1.4 var(--font-mono,monospace);text-transform:uppercase}.kits{display:flex;justify-content:center;gap:8px;margin-top:10px}.shirt{width:24px;height:30px;clip-path:polygon(20% 0,38% 8%,62% 8%,80% 0,100% 20%,84% 34%,80% 100%,20% 100%,16% 34%,0 20%);border:1px solid rgba(255,255,255,.2)}
+/* stadium */
+.stadium{height:315px;position:relative;overflow:hidden;background:linear-gradient(#07101a 0 42%,#18232b 42% 63%,#0d2c1d 63%);border:1px solid var(--line-2,rgba(255,255,255,.1))}.lights{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 5%,rgba(255,255,235,.22),transparent 18%),radial-gradient(ellipse at 80% 5%,rgba(255,255,235,.20),transparent 18%)}.stand{position:absolute;left:2%;right:2%;top:35%;height:125px;clip-path:polygon(4% 0,96% 0,100% 100%,0 100%);background:repeating-linear-gradient(0deg,#222a32 0 7px,#151b21 7px 12px);border-top:3px solid #39434d}.crowd{position:absolute;left:6%;right:6%;top:52%;height:45px;background-image:radial-gradient(circle,#8b929a 1px,transparent 1.5px);background-size:9px 7px;opacity:.42}.stadium-pitch{position:absolute;left:16%;right:16%;bottom:-45px;height:125px;transform:perspective(350px) rotateX(58deg);background:repeating-linear-gradient(90deg,#193d28 0 45px,#163724 45px 90px);border:2px solid rgba(255,255,255,.5)}.safe-zone{position:absolute;left:6%;top:7%;width:43%;height:102px;border:1px dashed rgba(0,255,136,.42);background:rgba(7,9,12,.48);padding:12px}.safe-zone b{font-family:var(--font-display,"Arial Narrow",sans-serif);font-size:27px;text-transform:uppercase}.safe-zone span{display:block;font-size:10px;color:var(--ink-3,#8a93a3);max-width:310px;line-height:1.45}
+/* composed management */
+.composed{height:370px;display:grid;grid-template-columns:220px 1fr 300px;grid-template-rows:52px 1fr;background:#07090c;border:1px solid var(--line-2,rgba(255,255,255,.1));overflow:hidden}.chrome{grid-column:1/-1;display:flex;align-items:center;padding:0 16px;background:#0d1015;border-bottom:1px solid var(--line-2,rgba(255,255,255,.1));gap:18px}.chrome .brand{font:700 20px/1 var(--font-display,"Arial Narrow",sans-serif)}.chrome .brand em{color:var(--brand-400,#00ff88);font-style:normal}.chrome .nav{font-size:10px;color:var(--ink-3,#8a93a3);display:flex;gap:16px}.side{padding:12px;border-right:1px solid var(--line-2,rgba(255,255,255,.1));background:#0d1015}.side .side-item{padding:9px 8px;margin-bottom:4px;font-size:10px;color:var(--ink-3,#8a93a3);border-radius:3px}.side .side-item.on{background:rgba(0,255,136,.08);color:var(--brand-400,#00ff88);border-left:2px solid var(--brand-400,#00ff88)}.table{padding:12px;overflow:hidden}.table-title{display:flex;justify-content:space-between;align-items:end;margin-bottom:11px}.table-title h3{margin:0;font-size:28px}.rows{display:grid;gap:4px}.row{display:grid;grid-template-columns:34px 1.6fr .7fr .6fr .6fr .8fr;gap:8px;align-items:center;height:29px;padding:0 8px;background:#0e1218;border-bottom:1px solid rgba(255,255,255,.04);font-size:9.5px}.row.head{height:24px;background:transparent;color:var(--ink-4,#5a6371);font-family:var(--font-mono,monospace);text-transform:uppercase}.dot{width:9px;height:9px;border-radius:50%;background:var(--brand-400,#00ff88)}.rail{padding:12px;border-left:1px solid var(--line-2,rgba(255,255,255,.1));background:#0d1015}.mini-profile{height:86px;display:grid;grid-template-columns:65px 1fr;gap:10px}.avatar{border:1px solid var(--line-2,rgba(255,255,255,.1));background:linear-gradient(145deg,#2b333d,#151a21);display:grid;place-items:center}.avatar:before{content:"";width:33px;height:33px;border-radius:50%;background:#9c6f55;box-shadow:0 27px 0 12px #303b48}.rail h3{font-size:21px;margin:3px 0}.spark{height:65px;margin-top:12px;border:1px solid var(--line-2,rgba(255,255,255,.1));background:linear-gradient(180deg,transparent 49%,rgba(255,255,255,.05) 50%,transparent 51%);position:relative}.spark:after{content:"";position:absolute;left:8px;right:8px;top:30px;height:2px;background:linear-gradient(90deg,#4aa8ff,#00ff88);transform:skewY(-8deg)}
+/* accessibility / motion */
+.a11y{display:grid;grid-template-columns:1fr 1fr;gap:12px}.state-set{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.state{min-height:86px;border:1px solid var(--line-2,rgba(255,255,255,.1));background:#0d1015;display:grid;place-items:center;text-align:center;padding:8px;font-size:9px;color:var(--ink-3,#8a93a3)}.state .mark{width:26px;height:26px;border-radius:50%;border:2px solid #cdd5df;margin-bottom:6px;position:relative}.state.sel .mark{box-shadow:0 0 0 4px rgba(0,255,136,.25);border-color:var(--brand-400,#00ff88)}.state.warn .mark{border-radius:4px;border-color:#f5b942}.state.warn .mark:after{content:"!";position:absolute;inset:0;display:grid;place-items:center;color:#f5b942;font-weight:700}.state.gk .mark{border-radius:3px;transform:rotate(45deg);border-color:#ffd75c}.state.gk .mark:after{content:"GK";position:absolute;inset:0;display:grid;place-items:center;transform:rotate(-45deg);font:700 7px/1 var(--font-mono,monospace);color:#ffd75c}.motion-frames{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.frame{height:86px;border:1px solid var(--line-2,rgba(255,255,255,.1));background:#0d1015;position:relative;overflow:hidden}.frame .m{position:absolute;width:16px;height:16px;border-radius:50%;background:#243348;border:2px solid #e8edf5;top:34px}.frame:nth-child(1) .m{left:20px}.frame:nth-child(2) .m{left:50%}.frame:nth-child(3) .m{right:20px}.frame:after{content:"";position:absolute;left:18px;right:18px;top:42px;height:1px;background:rgba(0,255,136,.28)}
+.review{padding:18px 20px;background:#0d1015;border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:6px}.review h2{margin:0 0 12px;font-size:25px}.check{display:grid;grid-template-columns:18px 1fr;gap:9px;margin:8px 0;color:var(--ink-2,#c1c7d2);font-size:12px}.box{width:14px;height:14px;border:1px solid var(--ink-4,#5a6371);border-radius:2px;margin-top:1px}.review code{font-family:var(--font-mono,monospace);color:var(--brand-400,#00ff88)}
+@media(max-width:1100px){.c4,.c5,.c6,.c7,.c8{grid-column:span 12}.identity-stage,.match-wrap,.portrait-shell{grid-template-columns:1fr}.composed{grid-template-columns:170px 1fr}.rail{display:none}.club-grid{grid-template-columns:1fr 1fr}.icon-row{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="board">
+  <section class="head">
+    <div>
+      <div class="kicker">AP-02 · G1 owner review · representative visual evidence</div>
+      <h1>System XI — Touchline Art Direction</h1>
+      <div class="sub">This board exists to answer the visual question the dense HTML mockups cannot: whether the proposed art-direction rules form one coherent, professional Stage-1 visual language. It is reference art only — not production assets, not Unity integration, and not permission for bulk family generation.</div>
+    </div>
+    <div class="status">G1 · pending owner acceptance</div>
+  </section>
+
+  <div class="grid">
+    <section class="card c12">
+      <div class="card-head"><h2>01 · Identity / wordmark language</h2><span class="criterion">G1-3 · identity family</span></div>
+      <div class="identity-stage">
+        <div>
+          <div class="wordmark"><span>SYSTEM</span><span class="xi">XI</span></div>
+          <div class="identity-copy"><div class="mini-mark">XI</div><div class="tagline"><b>Structure becomes story.</b><span>Analytical football management · restrained broadcast energy</span></div></div>
+        </div>
+        <div class="grid-motif" aria-label="modular tactical grid motif"></div>
+      </div>
+    </section>
+
+    <section class="card c6">
+      <div class="card-head"><h2>02 · Analyst-tool icon family</h2><span class="criterion">G1-3 · icon family</span></div>
+      <div class="body">
+        <div class="icon-row">
+          <div class="icon-tile active"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M8 8h8M8 12h5M8 16h7"/></svg><span class="icon-name">Squad</span></div>
+          <div class="icon-tile"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="8" cy="9" r="1.5"/><circle cx="15.5" cy="14" r="1.5"/><path d="M9.4 9.6l4.6 3.4M12 4v16"/></svg><span class="icon-name">Tactics</span></div>
+          <div class="icon-tile"><svg viewBox="0 0 24 24"><path d="M4 19V9M9 19V5M14 19v-7M19 19V3"/><path d="M3 19h18"/></svg><span class="icon-name">Data</span></div>
+          <div class="icon-tile"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><path d="M3 19c.6-4 2.4-6 5-6s4.4 2 5 6M15 8h6M18 5v6"/></svg><span class="icon-name">Staff</span></div>
+          <div class="icon-tile"><svg viewBox="0 0 24 24"><path d="M5 6h14v12H5z"/><path d="M8 10h8M8 14h4"/><path d="M3 9h2M19 9h2"/></svg><span class="icon-name">Finance</span></div>
+          <div class="icon-tile"><svg viewBox="0 0 24 24"><path d="M4 12h13M13 8l4 4-4 4"/><path d="M20 5v14"/></svg><span class="icon-name">Transfer</span></div>
+        </div>
+        <p class="note">24×24 reference geometry, consistent line weight, restrained rounding, state color applied by the UI rather than baked into separate icon files.</p>
+      </div>
+    </section>
+
+    <section class="card c6">
+      <div class="card-head"><h2>03 · Editorial portrait treatment</h2><span class="criterion">G1-3 · portrait family</span></div>
+      <div class="body portrait-shell">
+        <div class="portrait">
+          <svg viewBox="0 0 220 270" role="img" aria-label="fictional editorial football portrait">
+            <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2a333d"/><stop offset="1" stop-color="#10151b"/></linearGradient><linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bd876b"/><stop offset="1" stop-color="#8b5e49"/></linearGradient></defs>
+            <rect width="220" height="270" fill="url(#bg)"/>
+            <circle cx="174" cy="44" r="70" fill="#00ff88" opacity=".07"/>
+            <path d="M48 270c8-67 31-91 62-91s55 24 64 91z" fill="#202a35"/>
+            <path d="M76 270l14-76 21 19 21-19 14 76" fill="#2d3a48"/>
+            <ellipse cx="111" cy="113" rx="49" ry="61" fill="url(#skin)"/>
+            <path d="M64 101c3-47 21-66 52-66 28 0 45 18 47 53-17-15-36-19-58-14-17 4-29 13-41 27z" fill="#20252b"/>
+            <path d="M75 103c4 45 18 72 37 72 20 0 35-25 39-69-8 9-18 14-30 14-21 0-32-10-46-17z" fill="#a56f55" opacity=".24"/>
+            <path d="M86 108c8-5 16-5 23 0M121 108c8-5 16-5 23 0" stroke="#33251f" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <circle cx="98" cy="113" r="2.2" fill="#171b1f"/><circle cx="133" cy="113" r="2.2" fill="#171b1f"/>
+            <path d="M116 116l-3 18 8 1M101 149c10 7 20 7 30 0" stroke="#6d4434" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <rect x="13" y="16" width="2" height="74" fill="#00ff88" opacity=".6"/>
+          </svg>
+        </div>
+        <div class="bio">
+          <div class="eyebrow">Fictional player database treatment</div>
+          <h3>Mateo Kovač</h3>
+          <div class="role">Central midfielder · Riverside FC</div>
+          <p class="note">Square master composition; consistent eye line and head scale; neutral dark background; controlled soft light; editorial rather than collectible-card treatment.</p>
+          <div class="bio-grid"><div class="bio-stat"><b>17</b><span>Vision</span></div><div class="bio-stat"><b>15</b><span>Work rate</span></div><div class="bio-stat"><b>24</b><span>Age</span></div><div class="bio-stat"><b>€32m</b><span>Value</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card c8">
+      <div class="card-head"><h2>04 · Match instrument language</h2><span class="criterion">G1-3 / G1-7 · match family + professional Stage-1 potential</span></div>
+      <div class="body match-wrap">
+        <div class="pitch">
+          <div class="half"></div><div class="circle"></div><div class="box-l"></div><div class="box-r"></div><div class="six-l"></div><div class="six-r"></div>
+          <div class="player" style="left:20%;top:48%">4</div><div class="player selected" style="left:42%;top:55%">8</div><div class="player" style="left:59%;top:29%">10</div><div class="player" style="left:69%;top:64%">11</div>
+          <div class="gk" style="left:7%;top:47%"><span>1</span></div>
+          <div class="player away" style="left:54%;top:47%">6</div><div class="player away" style="left:73%;top:35%">3</div><div class="player away" style="left:82%;top:59%">5</div>
+          <div class="gk" style="right:7%;top:47%;background:#392a4b;border-color:#d8b6ff"><span>1</span></div>
+          <div class="ball" style="left:50%;top:49%"></div><div class="run-line"></div>
+        </div>
+        <div class="match-side">
+          <div class="metric"><span>Possession</span><b>58%</b></div><div class="metric"><span>xG</span><b>1.84</b></div><div class="metric"><span>Field tilt</span><b>63</b></div>
+          <div class="event"><i>72′</i><span>Line-breaking pass · #8</span></div><div class="event" style="border-color:#4aa8ff"><i style="color:#4aa8ff">68′</i><span>Shape change · 4-3-3</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card c4">
+      <div class="card-head"><h2>05 · Fictional clubs / kits</h2><span class="criterion">G1-3 · fictional-club family</span></div>
+      <div class="body club-grid">
+        <div class="club"><div class="badge"><svg viewBox="0 0 80 90"><path d="M40 3L70 14v29c0 19-12 33-30 43C22 76 10 62 10 43V14z" fill="#1a2630" stroke="#00ff88" stroke-width="3"/><path d="M22 31h36M27 46h26M33 61h14" stroke="#00ff88" stroke-width="4"/></svg></div><b>Riverside</b><small>structured bars</small><div class="kits"><span class="shirt" style="background:#0e191d;border-top:7px solid #00ff88"></span><span class="shirt" style="background:#e9edf2"></span></div></div>
+        <div class="club"><div class="badge"><svg viewBox="0 0 80 90"><path d="M12 14h56v42L40 84 12 56z" fill="#2d1f35" stroke="#b066ff" stroke-width="3"/><circle cx="40" cy="40" r="15" fill="none" stroke="#f1e7ff" stroke-width="4"/><path d="M25 40h30" stroke="#b066ff" stroke-width="4"/></svg></div><b>North Vale</b><small>ring / horizon</small><div class="kits"><span class="shirt" style="background:repeating-linear-gradient(90deg,#362244 0 6px,#b066ff 6px 11px)"></span><span class="shirt" style="background:#cbd0d7"></span></div></div>
+        <div class="club"><div class="badge"><svg viewBox="0 0 80 90"><path d="M40 4L72 27 60 73 40 86 20 73 8 27z" fill="#352c14" stroke="#ffc933" stroke-width="3"/><path d="M22 56l18-32 18 32z" fill="none" stroke="#ffc933" stroke-width="4"/><circle cx="40" cy="52" r="5" fill="#f4f6fa"/></svg></div><b>Forge City</b><small>triangle / forge</small><div class="kits"><span class="shirt" style="background:#24211b;border-left:7px solid #ffc933"></span><span class="shirt" style="background:#fafafa;border-bottom:8px solid #ffc933"></span></div></div>
+        <div class="club"><div class="badge"><svg viewBox="0 0 80 90"><circle cx="40" cy="44" r="32" fill="#1f2630" stroke="#4aa8ff" stroke-width="3"/><path d="M18 47c12-18 32-24 44-11-9 0-17 4-23 12 9-3 17-2 23 4-14 11-31 13-44-5z" fill="#4aa8ff"/><circle cx="40" cy="44" r="4" fill="#f4f6fa"/></svg></div><b>Harbour Athletic</b><small>wave / current</small><div class="kits"><span class="shirt" style="background:#15283d;border-right:7px solid #4aa8ff"></span><span class="shirt" style="background:#e9edf2;border-left:7px solid #15283d"></span></div></div>
+      </div>
+    </section>
+
+    <section class="card c7">
+      <div class="card-head"><h2>06 · Stadium / atmosphere treatment</h2><span class="criterion">G1-3 · stadium family</span></div>
+      <div class="body">
+        <div class="stadium"><div class="lights"></div><div class="stand"></div><div class="crowd"></div><div class="stadium-pitch"></div><div class="safe-zone"><div class="eyebrow">UI-safe atmosphere zone</div><b>Matchday context, not spectacle</b><span>Subdued venue texture and contrast fall away behind live information. No sponsor signage, landmark imitation, or photoreal detail competing with the interface.</span></div></div>
+      </div>
+    </section>
+
+    <section class="card c5">
+      <div class="card-head"><h2>07 · Accessibility + motion grammar</h2><span class="criterion">G1-3 · motion / accessibility families</span></div>
+      <div class="body a11y">
+        <div><div class="eyebrow" style="margin-bottom:8px">Redundant state cues</div><div class="state-set"><div class="state"><div class="mark"></div>normal</div><div class="state sel"><div class="mark"></div>selected</div><div class="state warn"><div class="mark"></div>warning</div><div class="state gk"><div class="mark"></div>keeper</div></div></div>
+        <div><div class="eyebrow" style="margin-bottom:8px">Contained action emphasis</div><div class="motion-frames"><div class="frame"><i class="m"></i></div><div class="frame"><i class="m"></i></div><div class="frame"><i class="m"></i></div></div><p class="note">Motion communicates transition/action; no perpetual glow or arcade trail. Essential meaning remains available without animation.</p></div>
+      </div>
+    </section>
+
+    <section class="card c12">
+      <div class="card-head"><h2>08 · Composed management-screen sample</h2><span class="criterion">G1-1 / G1-7 · touchline inheritance + professional composition</span></div>
+      <div class="body">
+        <div class="composed">
+          <div class="chrome"><div class="brand">SYSTEM <em>XI</em></div><div class="nav">CLUB&nbsp;&nbsp; SQUAD&nbsp;&nbsp; TACTICS&nbsp;&nbsp; TRAINING&nbsp;&nbsp; SCOUTING&nbsp;&nbsp; TRANSFERS</div></div>
+          <aside class="side"><div class="eyebrow" style="padding:5px 8px 10px">Squad</div><div class="side-item on">First XI</div><div class="side-item">All players</div><div class="side-item">Contracts</div><div class="side-item">Medical centre</div><div class="side-item">Dynamics</div><div class="side-item">Status</div></aside>
+          <main class="table"><div class="table-title"><div><div class="eyebrow">Riverside FC</div><h3>First XI overview</h3></div><div class="label">28 players · avg age 25.4</div></div><div class="rows"><div class="row head"><span>#</span><span>Name</span><span>Pos</span><span>Fit</span><span>Form</span><span>Value</span></div><div class="row"><span>1</span><span>J. Marin</span><span>GK</span><span>96</span><span>7.10</span><span>€18m</span></div><div class="row"><span>4</span><span>O. Danyliuk</span><span>CB</span><span>93</span><span>7.34</span><span>€41m</span></div><div class="row"><span>8</span><span>M. Kovač</span><span>CM</span><span>91</span><span>7.52</span><span>€32m</span></div><div class="row"><span>10</span><span>L. Vieira</span><span>AM</span><span>88</span><span>7.61</span><span>€56m</span></div><div class="row"><span>11</span><span>A. Mensah</span><span>RW</span><span>94</span><span>7.28</span><span>€48m</span></div><div class="row"><span>17</span><span>S. Petrenko</span><span>LB</span><span>97</span><span>6.92</span><span>€22m</span></div><div class="row"><span>19</span><span>R. Holt</span><span>ST</span><span>85</span><span>7.45</span><span>€61m</span></div></div></main>
+          <aside class="rail"><div class="mini-profile"><div class="avatar"></div><div><div class="eyebrow">Selected</div><h3>Mateo Kovač</h3><div class="label" style="color:var(--brand-400,#00ff88)">CM · Playmaker</div></div></div><div class="spark"></div><div class="bio-grid"><div class="bio-stat"><b>17</b><span>Vision</span></div><div class="bio-stat"><b>15</b><span>Work rate</span></div></div></aside>
+        </div>
+        <p class="note">This intentionally remains a dense management tool. The art direction adds identity, portrait/club vocabulary, and controlled football atmosphere without turning the screen into a decorative broadcast package.</p>
+      </div>
+    </section>
+
+    <section class="card c12">
+      <div class="card-head"><h2>09 · G1 owner review checklist</h2><span class="criterion">decision surface</span></div>
+      <div class="body review">
+        <h2>Accept only if these read as one System XI visual language.</h2>
+        <div class="check"><span class="box"></span><span>The board clearly inherits the existing <code>touchline</code> analyst-tool direction rather than reopening <code>stadium</code> vs <code>touchline</code>.</span></div>
+        <div class="check"><span class="box"></span><span>The wordmark, icon, match, portrait, fictional-club, stadium, motion, and accessibility samples are specific enough that an off-style future sample would be recognizable and rejectable.</span></div>
+        <div class="check"><span class="box"></span><span>The match presentation looks capable of becoming professional Stage-1 presentation rather than placeholder-quality visuals.</span></div>
+        <div class="check"><span class="box"></span><span>Separately inspect <code>Squad Screen.html</code>, <code>Tactics.html</code>, and <code>Club Finances.html</code> at the 1920×1080 reference stage for the IBM Plex Sans Condensed T-01 substitution: no unacceptable clipping, wrapping, hierarchy loss, or density regression.</span></div>
+        <div class="check"><span class="box"></span><span>If all visual checks pass, record: <strong>“G1 accepted.”</strong> If not, identify the numbered board section or dense mockup screen and the visual defect.</span></div>
+      </div>
+    </section>
+  </div>
+</div>
+</body>
+</html>
