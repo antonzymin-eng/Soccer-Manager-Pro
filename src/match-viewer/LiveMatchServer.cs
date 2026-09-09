@@ -192,6 +192,9 @@ namespace TacticalDirector.MatchViewer
             {
                 int b = stream.ReadByte();
                 if (b < 0) { return null; }
+                // Reject high-bit wire bytes before ASCII decoding can replace them with '?'. A
+                // replacement '?' could otherwise become a query delimiter and change the route.
+                if (b > 0x7F) { return string.Empty; }
                 if (b == '\n')
                 {
                     int end = bytes.Count;
@@ -697,5 +700,6 @@ poll();
 // |         |            |        | implementation, served to both Views. Unlike the v1.3 gk fix   |
 // |         |            |        | this IS a JSON key addition and a viewer-script change.        |
 // | 1.5     | 2026-09-09 | —      | Request parsing now requires exact HTTP/1.1 grammar, a valid   |
-// |         |            |        | method token, and an ASCII origin-form target before routing.  |
+// |         |            |        | method token, raw ASCII octets, and an origin-form target      |
+// |         |            |        | before routing.                                                |
 #endregion

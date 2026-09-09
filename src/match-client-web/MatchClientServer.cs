@@ -184,6 +184,9 @@ namespace TacticalDirector.MatchClientWeb
             {
                 int b = stream.ReadByte();
                 if (b < 0) { return null; }
+                // Reject high-bit wire bytes before ASCII decoding can replace them with '?'. A
+                // replacement '?' could otherwise become a query delimiter and change the route.
+                if (b > 0x7F) { return string.Empty; }
                 if (b == '\n')
                 {
                     int end = bytes.Count;
@@ -291,6 +294,6 @@ namespace TacticalDirector.MatchClientWeb
 // | 1.0     | 2026-07-27 | —      | Initial creation (B6): loopback-only transport delegating every|
 // |         |            |        | decision to MatchClientRouter, with the viewer's proven        |
 // |         |            |        | lifecycle, request-line bound and post-Stop 503 refusal.       |
-// | 1.1     | 2026-09-09 | —      | Reject malformed HTTP versions, spacing, method tokens, and    |
-// |         |            |        | non-origin-form request targets before routing.                 |
+// | 1.1     | 2026-09-09 | —      | Reject malformed HTTP versions, spacing, method tokens, raw    |
+// |         |            |        | non-ASCII octets, and non-origin-form targets before routing.  |
 #endregion

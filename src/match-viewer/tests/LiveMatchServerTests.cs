@@ -182,6 +182,25 @@ namespace TacticalDirector.MatchViewer.Tests
         }
 
         [Test]
+        public void NonAsciiOctet_IsRejectedBeforeDecoding_AndCannotRouteControl()
+        {
+            LiveMatchServer server = StartServer(out LiveMatchStreamer streamer);
+            try
+            {
+                byte[] prefix = Encoding.ASCII.GetBytes("GET /control");
+                byte[] suffix = Encoding.ASCII.GetBytes("action=pause HTTP/1.1\r\n");
+                var request = new byte[prefix.Length + 1 + suffix.Length];
+                Buffer.BlockCopy(prefix, 0, request, 0, prefix.Length);
+                request[prefix.Length] = 0xFF; // Encoding.ASCII would otherwise replace this with '?'.
+                Buffer.BlockCopy(suffix, 0, request, prefix.Length + 1, suffix.Length);
+
+                Assert.AreEqual(400, SendRequest(server.Port, request).status);
+                Assert.IsFalse(streamer.IsPaused);
+            }
+            finally { server.Stop(); }
+        }
+
+        [Test]
         public void OversizedRequestLine_DropsThatConnection_ButServerKeepsServingOtherRequests()
         {
             LiveMatchServer server = StartServer(out _);
@@ -239,13 +258,17 @@ namespace TacticalDirector.MatchViewer.Tests
 
         private static (int status, string body) SendRequest(int port, string requestLine)
         {
+            return SendRequest(port, Encoding.ASCII.GetBytes(requestLine + "\r\n"));
+        }
+
+        private static (int status, string body) SendRequest(int port, byte[] requestBytes)
+        {
             using (var client = new TcpClient())
             {
                 client.Connect(IPAddress.Loopback, port);
                 using (NetworkStream stream = client.GetStream())
                 {
-                    byte[] reqBytes = Encoding.ASCII.GetBytes(requestLine + "\r\n");
-                    stream.Write(reqBytes, 0, reqBytes.Length);
+                    stream.Write(requestBytes, 0, requestBytes.Length);
 
                     string all = new StreamReader(stream, Encoding.UTF8).ReadToEnd();
                     int lineEnd = all.IndexOf("\r\n", StringComparison.Ordinal);
@@ -278,6 +301,6 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | 400/404/405 error paths, oversized-request-line abuse guard     |
 // |         |            |        | (one bad connection does not affect the server), clean/         |
 // |         |            |        | idempotent shutdown.                                            |
-// | 1.1     | 2026-09-09 | —      | Locks malformed whitespace, version, token, and target forms  |
-// |         |            |        | to HTTP 400 before routing.                                    |
+// | 1.1     | 2026-09-09 | —      | Locks malformed whitespace, version, token, target, and raw    |
+// |         |            |        | non-ASCII forms to HTTP 400 before routing.                    |
 #endregion

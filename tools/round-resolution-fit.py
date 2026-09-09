@@ -123,15 +123,13 @@ def read_rows(paths):
 
 
 def _parse_goal_count(raw, field, location):
-    """Parse one canonical bounded integer score without accepting float spellings."""
+    """Parse one canonical non-negative integer score without accepting float spellings."""
     try:
         value = int(raw, 10)
     except ValueError as error:
         raise CorpusError(f"{location}: {field} must be an integer, got {raw!r}") from error
-    if value < 0 or value > MAX_GOALS_PER_SIDE:
-        raise CorpusError(
-            f"{location}: {field} must be in [0, {MAX_GOALS_PER_SIDE}], got {value}"
-        )
+    if value < 0:
+        raise CorpusError(f"{location}: {field} must be >= 0, got {value}")
     return value
 
 

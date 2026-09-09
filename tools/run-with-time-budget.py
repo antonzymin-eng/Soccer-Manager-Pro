@@ -51,30 +51,52 @@ def main() -> int:
 
     def stop_process_tree() -> None:
         """Stop the complete child tree while tolerating exit races."""
-        if proc.poll() is not None:
-            return
-        try:
-            if os.name == "nt":
+        if os.name == "nt":
+            if proc.poll() is not None:
+                return
+            try:
                 proc.send_signal(signal.CTRL_BREAK_EVENT)
-            else:
-                os.killpg(proc.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                return
+
+            try:
+                proc.wait(timeout=2)
+                return
+            except subprocess.TimeoutExpired:
+                pass
+
+            try:
+                proc.kill()
+            except ProcessLookupError:
+                pass
+            proc.wait()
+            return
+
+        # On POSIX the leader may exit on SIGTERM while a descendant in the same
+        # process group ignores it. Do not treat leader exit as proof that the
+        # process tree is gone; probe the group and escalate any survivors.
+        process_group = proc.pid
+        try:
+            os.killpg(process_group, signal.SIGTERM)
         except ProcessLookupError:
+            if proc.poll() is None:
+                proc.wait()
             return
 
         try:
             proc.wait(timeout=2)
-            return
         except subprocess.TimeoutExpired:
             pass
 
         try:
-            if os.name == "nt":
-                proc.kill()
-            else:
-                os.killpg(proc.pid, signal.SIGKILL)
+            os.killpg(process_group, 0)
+        except ProcessLookupError:
+            return
+
+        try:
+            os.killpg(process_group, signal.SIGKILL)
         except ProcessLookupError:
             pass
-
         proc.wait()
 
     try:

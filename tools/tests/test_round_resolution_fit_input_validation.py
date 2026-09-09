@@ -62,13 +62,20 @@ class RoundResolutionFitInputValidationTests(unittest.TestCase):
     def test_rejects_negative_goal_counts_for_both_sides(self):
         for row in ("0,-1,1", "0,1,-1"):
             with self.subTest(row=row):
-                self.assert_invalid("dSquad,homeGoals,awayGoals\n" + row + "\n", "must be in")
+                self.assert_invalid("dSquad,homeGoals,awayGoals\n" + row + "\n", "must be >= 0")
 
-    def test_rejects_goal_counts_above_simulation_cap_for_both_sides(self):
+    def test_accepts_engine_scores_above_surrogate_model_cap(self):
         excessive = MODULE.MAX_GOALS_PER_SIDE + 1
-        for row in (f"0,{excessive},1", f"0,1,{excessive}"):
-            with self.subTest(row=row):
-                self.assert_invalid("dSquad,homeGoals,awayGoals\n" + row + "\n", "must be in")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "corpus.csv"
+            path.write_text(
+                f"dSquad,homeGoals,awayGoals\n0,{excessive},{excessive + 1}\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                MODULE.read_rows([path]),
+                [{"d": 0.0, "h": excessive, "a": excessive + 1}],
+            )
 
     def test_rejects_rows_wider_than_header(self):
         self.assert_invalid("dSquad,homeGoals,awayGoals\n0,1,1,unexpected\n", "more values")

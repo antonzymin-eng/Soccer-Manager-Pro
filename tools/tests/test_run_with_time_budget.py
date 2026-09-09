@@ -80,6 +80,42 @@ class RunWithTimeBudgetTests(unittest.TestCase):
             else:
                 self.fail("descendant survived timeout process-group termination")
 
+    @unittest.skipIf(os.name == "nt", "POSIX process-group assertion")
+    def test_timeout_escalates_after_process_leader_exits(self):
+        with tempfile.TemporaryDirectory() as directory:
+            pid_file = Path(directory) / "pid"
+            ready_file = Path(directory) / "ready"
+            grandchild_source = (
+                "import pathlib,signal,time; "
+                "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+                f"pathlib.Path({str(ready_file)!r}).write_text('ready'); "
+                "time.sleep(30)"
+            )
+            leader_source = (
+                "import pathlib,subprocess,sys,time; "
+                f"p=subprocess.Popen([sys.executable,'-c',{grandchild_source!r}]); "
+                f"pathlib.Path({str(pid_file)!r}).write_text(str(p.pid)); "
+                f"ready=pathlib.Path({str(ready_file)!r}); "
+                "deadline=time.monotonic()+2; "
+                "exec(\"while not ready.exists() and time.monotonic() < deadline:\\n time.sleep(0.01)\"); "
+                "time.sleep(30)"
+            )
+
+            result = self.run_runner("--seconds", "0.5", "--", sys.executable, "-c", leader_source)
+            self.assertEqual(result.returncode, 124)
+            child_pid = int(pid_file.read_text())
+            for _ in range(50):
+                try:
+                    os.kill(child_pid, 0)
+                except ProcessLookupError:
+                    break
+                status = Path(f"/proc/{child_pid}/status")
+                if status.exists() and "State:\tZ" in status.read_text():
+                    break
+                time.sleep(0.02)
+            else:
+                self.fail("SIGTERM-ignoring descendant survived SIGKILL escalation")
+
     @unittest.skipIf(os.name == "nt", "POSIX signal assertion")
     def test_interrupt_cleans_up_child_and_returns_130(self):
         proc = subprocess.Popen(
