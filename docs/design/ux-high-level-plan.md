@@ -1,8 +1,8 @@
 # System XI — UX High-Level Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** September 4, 2026  
-**Version:** 1.1  
+**Last Updated:** September 9, 2026  
+**Version:** 1.2  
 **Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW  
 **Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop  
 **Execution plan:** [`ux-detailed-plan.md`](ux-detailed-plan.md)
@@ -264,7 +264,7 @@ These are **effort bands, not release dates**. They assume one primary UX contri
 
 | Work | Active UX effort | Dependency note |
 |---|---:|---|
-| F1 evidence/capability baseline | 1–2 working days | starts immediately after plan/tracking close-out |
+| F1 evidence/capability baseline | 3–4 working days | starts immediately after plan/tracking close-out |
 | F2 current-vs-target architecture | 0.5–1 day | uses existing PM-1 graph; no re-authoring |
 | F3 shared S0/S1 interaction audit | 1–2 days | only primitives actually needed |
 | F4 validation setup | 0.5–1 day | includes participant booking before S0-G |
@@ -276,6 +276,8 @@ These are **effort bands, not release dates**. They assume one primary UX contri
 | S1 F–G | 2–4 days | one capped participant round |
 | S1 H–I | 2–4 days | only current/designable scope handed off |
 | S1 J | implementation-dependent | career-shell/Unity surfaces must exist |
+
+`ux-detailed-plan.md` §10.2 is the authority for these bands and this table mirrors it; where the two disagree the detailed plan wins and this table is the defect. That is the same single-definition rule §0 applies to Gates A–J.
 
 Planning therefore does not place a quarter-long design phase in front of PM-2. The foundation is intentionally measured in days, then work proceeds in vertical slices.
 
@@ -340,7 +342,7 @@ The high-level plan is settled when:
 - effort/ownership are explicit;
 - repository tracking surfaces route agents to the plan.
 
-After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it.
+After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 9, 2026: those conditions landed on September 6, 2026 and F1–F3 are now complete, with F4 next. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
 
 ---
 
@@ -350,3 +352,4 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 |---|---|---|
 | 1.0 | September 4, 2026 | Initial converged high-level plan after three internal critique/revision rounds. |
 | 1.1 | September 4, 2026 | External dependency-review revision: inherited existing client-plan authority; corrected P4b/#30 status; tied S0 to B8/B9b/B10; made Gate G binding; added prototype vehicle, role ownership, effort bands, and tracking/discoverability exit condition; removed duplicated gate definitions from the high-level plan. |
+| 1.2 | September 9, 2026 | Corrects §8's F1 effort band 1–2 → **3–4 working days**, matching the revision `ux-detailed-plan.md` made at its own v1.2 on September 6, 2026. This table had duplicated the band rather than citing it, was not updated with the detailed plan, and so contradicted the execution authority for three days — found by an external pre-merge review of PR #362. §8 now names `ux-detailed-plan.md` §10.2 as the authority it mirrors, so the next band revision has one place to land. §11's "F1 is the next UX action" carries a dated status note: F0–F3 are complete and F4 is next. `**Version:**` and `**Last Updated:**` are re-derived in the same commit — omitting that is exactly the desync this workstream had to correct in the detailed plan at v1.3. No band other than F1 differs between the two documents; all twelve were compared. |
