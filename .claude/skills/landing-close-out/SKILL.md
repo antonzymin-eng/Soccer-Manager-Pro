@@ -30,24 +30,24 @@ scripted:
 .claude/skills/landing-close-out/scripts/check_drift.sh
 ```
 
-It flags a duplicate bare `**Last Updated:**` label in the changelog chain (found and fixed at least
-three times — see the rule under item 1 below), reports each tracking doc's declared date next to
-when it was actually last touched, and checks the open-issues active/archived counts against a direct
-recount — the same comparison this repo's own changelog has had to make by hand, repeatedly, and got
-wrong at least once (the August 10, 2026 correction in root `CLAUDE.md`). It also FAILs if a
-`Last Updated` chain has reappeared in root `CLAUDE.md` or `README.md`, both of which had theirs split
-out.
+It checks the three maintained landing chains — `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md`, and `docs/tracking/file-manifest.md` — and requires each to exist and
+carry exactly one bare `**Last Updated:**` label. It also reports each tracking doc's declared date
+next to when it was actually last touched, checks the open-issues active/archived counts against a
+direct recount, and FAILs if a `Last Updated` chain has reappeared in root `CLAUDE.md` or `README.md`,
+both of which had theirs split out.
 
-**Read the output; do not just read the exit status.** Two conditions are status-affecting and exit
-non-zero — a reappeared header chain, and `BROKEN` from the count check, which means the check could
-not find the surface carrying the claim and therefore verified *nothing*. Both are contract
-violations rather than judgment calls. Everything else is advisory and exits 0, including `FAIL` on a
-count disagreement: whether stale counts are acceptable to land on is your call, not the script's. So
-a green exit still requires you to scan the report for `FAIL`. This distinction exists because the
-count check silently read a file with no OPEN ISSUES section from the compact restructure until
-September 4, 2026, printing `UNPARSED` on every run while the real claim drifted — a check reporting
-nothing, read as a check finding nothing. If `docs/tracking/file-manifest.md` trails the last few landings, say so rather than adding a
-seventh layer on top of a stale base.
+**Read the output; do not just read the exit status.** Structural failures are status-affecting and
+exit non-zero: a maintained landing-chain file is missing; a maintained chain has anything other than
+exactly one bare `**Last Updated:**` label; a header chain has reappeared in root `CLAUDE.md` or
+`README.md`; or the open-issues count check is `BROKEN`, meaning it could not read exactly one
+authoritative claim and therefore verified *nothing*. These are contract violations rather than
+judgment calls. Tracking-document staleness and a count **disagreement** remain advisory and exit 0:
+whether stale counts are acceptable to land on is your call, not the script's. So a green exit still
+requires you to scan the report for advisory `FAIL` output. This distinction exists because the count
+check silently read a file with no OPEN ISSUES section from the compact restructure until September
+4, 2026, printing `UNPARSED` on every run while the real claim drifted — a check reporting nothing,
+read as a check finding nothing.
 
 ## What to update
 
