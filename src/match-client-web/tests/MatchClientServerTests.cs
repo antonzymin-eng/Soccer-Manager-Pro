@@ -1,6 +1,6 @@
 // File:     src/match-client-web/tests/MatchClientServerTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-09-09
 // Author:   —
 // Spec:     Path-to-playable roadmap §7 (B6), Code Standards #20
 // Purpose:  Drives the transport over real loopback sockets — the part the router tests cannot
@@ -44,10 +44,15 @@ namespace TacticalDirector.MatchClientWeb.Tests
         /// <summary>Issues one raw request line and returns the whole response.</summary>
         private string Request(string requestLine)
         {
+            return Request(Encoding.ASCII.GetBytes(requestLine + "\r\n\r\n"));
+        }
+
+        /// <summary>Issues exact wire bytes and returns the whole response.</summary>
+        private string Request(byte[] bytes)
+        {
             using (var client = new TcpClient("127.0.0.1", _server.Port))
             using (NetworkStream stream = client.GetStream())
             {
-                byte[] bytes = Encoding.ASCII.GetBytes(requestLine + "\r\n\r\n");
                 stream.Write(bytes, 0, bytes.Length);
                 stream.Flush();
 
@@ -91,6 +96,47 @@ namespace TacticalDirector.MatchClientWeb.Tests
         {
             StringAssert.StartsWith("HTTP/1.1 404", Request("GET /missing HTTP/1.1"));
             StringAssert.StartsWith("HTTP/1.1 400", Request("GARBAGE"));
+        }
+
+        private static readonly string[] MalformedRequestLines =
+        {
+            string.Empty, "GET", "GET /", " GET / HTTP/1.1", "GET  / HTTP/1.1",
+            "GET /  HTTP/1.1", "GET / HTTP/1.1 ", "GET / HTTP/1.1 EXTRA",
+            "GET / HTTP/1.0", "GET / HTTP/2", "GET / FTP/1.0", "GE(T / HTTP/1.1",
+            "GE:T / HTTP/1.1", "GE@T / HTTP/1.1", "GE[T / HTTP/1.1",
+            "GE]T / HTTP/1.1", "GE{T / HTTP/1.1", "GE}T / HTTP/1.1",
+            "GET\t/ HTTP/1.1", "GET frame HTTP/1.1", "GET http://localhost/frame HTTP/1.1",
+            "GET /bad\\path HTTP/1.1", "GET /frame#fragment HTTP/1.1",
+            "GET /bad\u0001path HTTP/1.1", "GE\u0001T / HTTP/1.1",
+        };
+
+        /// <summary>Rejects 25 malformed request-line classes before any privileged route can run.</summary>
+        [TestCaseSource(nameof(MalformedRequestLines))]
+        public void MalformedRequestLines_Return400WithoutRouting(string requestLine)
+        {
+            int before = _host.Session.Commands.Count;
+            string response = Request(requestLine);
+
+            StringAssert.StartsWith("HTTP/1.1 400", response);
+            Assert.AreEqual(before, _host.Session.Commands.Count);
+        }
+
+        [Test]
+        public void NonAsciiOctet_IsRejectedBeforeDecoding_AndCannotRouteIntent()
+        {
+            int before = _host.Session.Commands.Count;
+            byte[] prefix = Encoding.ASCII.GetBytes("GET /intent");
+            byte[] suffix = Encoding.ASCII.GetBytes(
+                "kind=SetTeamTactic&team=0&mentality=Attacking HTTP/1.1\r\n\r\n");
+            var request = new byte[prefix.Length + 1 + suffix.Length];
+            Buffer.BlockCopy(prefix, 0, request, 0, prefix.Length);
+            request[prefix.Length] = 0xFF; // Encoding.ASCII would otherwise replace this with '?'.
+            Buffer.BlockCopy(suffix, 0, request, prefix.Length + 1, suffix.Length);
+
+            string response = Request(request);
+
+            StringAssert.StartsWith("HTTP/1.1 400", response);
+            Assert.AreEqual(before, _host.Session.Commands.Count);
         }
 
         [Test]
@@ -160,4 +206,6 @@ namespace TacticalDirector.MatchClientWeb.Tests
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-27 | —      | Initial creation (B6): real-loopback framing, routing, the     |
 // |         |            |        | request-line bound, post-Stop refusal and lifecycle idempotence|
+// | 1.1     | 2026-09-09 | —      | Locks malformed whitespace, version, token, target, and raw   |
+// |         |            |        | non-ASCII forms to HTTP 400 before routing.                   |
 #endregion
