@@ -1,7 +1,7 @@
 # Localization #49 — End-to-End Implementation Plan
 
 **Created:** September 6, 2026
-**Version:** 2.4
+**Version:** 2.5
 **Status:** READY FOR IMPLEMENTATION
 **Baseline:** `main` at `67f2343c34e767ba02a4dc13816c91090b3bf3d9` — the L3A merge commit (PR #370, September 9, 2026). v2.0–v2.2 were authored against `9fbd7533`; the historical review records below keep that value and are not rewritten.
 **Scope:** the APPROVED #49 seam/T0+T1 implementation first; Wave-8 locale/a11y content remains a later, separately approved tier.
@@ -51,9 +51,11 @@ The provisional `codex/localization-infrastructure-t0` branch remains non-author
 Before implementation, record known #49 defects without correcting their contract text:
 
 - authoritative §1 KD-6 still contradicts §2/§3/§4/§5 by describing a core `Localization -> living-world` reference and `TextTemplateId.ForInteraction` factory;
-- the generic `TextTemplateId` has an integer producer tag, while later approved specs assume symbolic append-only `ProducerTag.*` allocations without an owning allocation contract.
+- the generic `TextTemplateId` has an integer producer tag, while later approved specs assume symbolic append-only `ProducerTag.*` allocations without an owning allocation contract;
+- FR-LC-009 mandates a bounded plural/gender category selector, while §2.2 supplies no typed operand it could consume — `NamedSlotSet` values are already-formatted strings and `LocalizedTextRequest` has no operand field;
+- FR-LC-011's "render the base-locale identity" is circular for a **static** `LocalizationKey` absent from both catalogues, because FR-LC-008a/§2.3 F5's loud construction coverage is enumerated over the procedural rosters only.
 
-Recording is allowed by C6; correction waits for the implementation commit that proves the replacement.
+Recording is allowed by C6; correction waits for the implementation commit that proves the replacement. **All four are recorded, not two** — see §3.1–§3.4.
 
 ## H2 — Capture the pre-migration English oracle first
 
@@ -106,7 +108,7 @@ The AR-converged `localization-content-a11y-design.md` is useful design input, b
 
 **Purpose:** make known defects durable without violating C6.
 
-The repository's `err-file-and-backprop` skill normally patches defective approved spec text in the same commit. **C6 is the controlling exception here because #49 has no production assembly yet.** L0R therefore uses the skill's explicit **deferred to a named stage** timing: file both entries as OPEN/deferred, name their discharge slices, and do not “helpfully” patch the contract early.
+The repository's `err-file-and-backprop` skill normally patches defective approved spec text in the same commit. **C6 is the controlling exception here because #49 has no production assembly yet.** L0R therefore uses the skill's explicit **deferred to a named stage** timing: file **all four** entries (§3.1–§3.4) as OPEN/deferred, name their discharge slices, and do not “helpfully” patch the contract early.
 
 ## 3.1 Proposed ERR-049-002 — stale core reference direction
 
@@ -300,11 +302,13 @@ Re-read the active A3/A4 architecture state and the current landing-close-out sk
 
 Implement the minimum approved public surface:
 
-- `ILocalizer` — exactly `Resolve(LocalizationKey)` and `Render(in LocalizedTextRequest)` as rendered-string entry points;
+**Three of the shapes below are the pre-fix §2.2 text and are explicitly subject to the two recorded L1 decisions (§3.3, §3.4).** They are listed as the starting point, not as a contract to freeze as written: ERR-049-004 requires a locale-neutral typed selector operand on `LocalizedTextRequest` or `NamedSlotSet`, and ERR-049-005's resolution may add a found/not-found signal to `ILocalizer`. Landing this list unchanged would freeze the defect the same commit is supposed to discharge.
+
+- `ILocalizer` — `Resolve(LocalizationKey)` and `Render(in LocalizedTextRequest)` as rendered-string entry points. **Subject to §3.4:** if that decision takes a Try-pattern resolution, `Resolve`'s signature changes here; otherwise L1 records the signature as final;
 - `LocalizationKey` — stable static-string identity;
 - `TextTemplateId` — generic `(int ProducerTag, int LocalOrdinal)`;
-- `NamedSlotSet` — immutable name -> already-formatted string values;
-- `LocalizedTextRequest` — id, `ulong SelectionDraw`, slots, citation flag/key;
+- `NamedSlotSet` — immutable name -> already-formatted string values. **Subject to §3.3**, which may extend it, or `LocalizedTextRequest`, with the typed selector operand;
+- `LocalizedTextRequest` — id, `ulong SelectionDraw`, slots, citation flag/key. **Subject to §3.3** per the previous bullet;
 - minimal `LocaleId`/base-locale representation needed to distinguish base vs selected locale, with **no** new BCP-47 conformance requirement beyond `BaseLocale = "en"`.
 
 No `InteractionIntent`, `EventKind`, `ProducerTag.Media`, Unity types, file I/O, client-settings store, RNG or save state.
@@ -319,7 +323,8 @@ Lock:
 - duplicate named slot names are refused;
 - slot storage cannot be mutated through retained caller references;
 - citation namespace includes `ProducerTag`;
-- no public baked-string pass-through API exists.
+- no public baked-string pass-through API exists;
+- **the ERR-049-004 selector operand, structurally** (§3.3): it exists on the core seam, is a typed value rather than a formatted string, is locale-neutral — carrying no locale identity and no locale-dependent formatting — has deterministic value equality/hash like the other seam types, cannot be mutated through retained caller references, and adds no persisted or RNG state. These are L1-runnable type-level locks; they do **not** attempt to prove selection behavior, which needs the L2 renderer and catalogue.
 
 ## 5.4 Layer tests
 
@@ -341,7 +346,7 @@ This executable layer proof is the evidence used to discharge ERR-049-002 in ful
 - if the lower-level raw generated-project executor is also run for investigation, its owner-held RED result is recorded as baseline evidence rather than incorrectly required to be whole-tree green;
 - all assembly/spec/ERR/open-issue cardinalities changed by L1 are current;
 - ERR-049-002 is `✅ RESOLVED` with executable evidence;
-- ERR-049-004 is `✅ RESOLVED` with executable evidence: the core seam carries a locale-neutral typed selector operand satisfying FR-LC-009, proven by a synthetic non-English catalogue test that selects a non-`other` plural category, and the FR-LC-006 byte-identical save round-trip is re-proven across display locales;
+- ERR-049-004 is `✅ RESOLVED` with executable evidence that is **runnable in L1**: the §5.3 structural locks prove the core seam now carries a locale-neutral typed selector operand, and FR-LC-006 is re-proven — no locale-dependent state is persisted and the operand does not enter serialized bytes. That is the whole of this ERR: the recorded defect is that the seam supplies *no* operand, and it is discharged when the operand exists with the right properties. **The behavioral half is L2's and is not required here** — proving the operand actually drives `one/few/many/other` selection needs the renderer and catalogue, which §6 builds; requiring it in L1 would pull L2 forward. §6.6 carries that proof as FR-LC-009 conformance, not as this ERR's discharge;
 - §3.4 is settled on the record: either ERR-049-005's resolution changed `ILocalizer` here, or the L1 entry states that `Resolve`'s signature is final and the discharge stays in L2. Do not leave it undecided — L1 freezes the interface.
 
 ---
@@ -423,6 +428,7 @@ Explicitly absent from L2:
 - no file/Unity dependency introduced;
 - canonical `bash tools/run-tests-local.sh --pr` passes with no new failures and the owner-held RED verifier accepting its recorded baseline;
 - normal landing-close-out/document-consistency surfaces are current;
+- **FR-LC-009 selector behavior is proven here, on the operand L1 delivered** (§3.3, §5.3): a synthetic non-English catalogue selects a non-`other` plural category through the real renderer, and base-locale English still takes the identity path. This is FR-LC-009 conformance, not ERR-049-004's discharge — that entry closed in L1 on the structural locks;
 - ERR-049-005 is `✅ RESOLVED` with executable evidence, unless §3.4's L1 decision already discharged it there: a static `LocalizationKey` absent from **both** the selected and the base catalogue has one defined, production-safe terminal result, proven by a test asserting that exact result and asserting no throw and no state mutation (FR-LC-011). If the resolution was to extend construction coverage to static keys instead, the proof is a killed mutant: a catalogue omitting one admitted static key must fail construction.
 
 ---
@@ -775,6 +781,16 @@ A review of the v2.3 landing raised two Codex findings against §6 and correctly
 
 ---
 
+## v2.5 propagate the four-defect scope into the L1 contract and split the ERR-049-004 evidence
+
+Review of v2.4 found that the two new records had been added without following them through into every place the old two-defect scope was written down, and that one piece of exit evidence had been placed in a slice that cannot run it. Both are corrected here. No new defect is recorded and no normative fix is chosen.
+
+- **§5.2 no longer freezes the pre-fix API it is meant to repair.** It still listed `ILocalizer` as "exactly `Resolve`/`Render`", `NamedSlotSet` as name→already-formatted-string, and `LocalizedTextRequest` with only the old fields — directly contradicting §3.3, §3.4, §5.1 item 4a and §5.5, which require L1 to change those very shapes. Landing that list unchanged would have frozen the defect the same commit is supposed to discharge. The three affected bullets are now marked **subject to** the two recorded L1 decisions, and the list is framed as the starting point rather than the contract.
+- **ERR-049-004's exit evidence is split, because v2.4 placed a behavioral proof in a slice that cannot execute it.** §5.5 required "a synthetic non-English catalogue test that selects a non-`other` plural category" — but the renderer, catalogue and selector behavior are all §6 (L2) work, so L1 could not have run it without pulling L2 forward. The evidence now divides along the slice boundary: **L1** proves the operand *exists* with the right properties (§5.3 — typed not string, locale-neutral, deterministic equality, immutable, no persisted or RNG state, FR-LC-006 re-proven), which is the whole of the recorded defect, since the defect is that the seam supplies no operand; **L2** proves the operand *drives* `one/few/many/other` selection (§6.6), recorded there as **FR-LC-009 conformance, not as this ERR's discharge**. ERR-049-004 still closes in L1.
+- **The stale two-defect scope is swept.** §2 H1 listed only the original two known defects and the §3 preamble still said "file both entries as OPEN/deferred"; both now name all four. This completes the propagation begun in v2.4, which had correctly updated §3.5, §3.6, §11 and §14 but missed these two narrative sites.
+
+---
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -783,4 +799,5 @@ A review of the v2.3 landing raised two Codex findings against §6 and correctly
 | 2.2 | 2026-09-08 | — | Rebased plan onto PR-#375 current main; consolidated L3B non-sentinel coverage acceptance and the two-dot frozen-oracle diff into §7.7/§12; froze producer enum rosters in L3A; removed the orphan acceptance supplement. |
 | 2.3 | 2026-09-09 | — | L3A landing reconciliation: resolved `<L3A_MERGE_COMMIT>` to the PR #370 merge commit `67f2343` in §7.7 and §12 (naming the merged branch tip as the wrong value and recording the frozen blob hash as informational corroboration), advanced the header baseline to that commit, discharged the v2.2 hold on L1 with the CI and negative-control run ids, and carried forward the narrowed end-to-end citation-clause evidence limitation. No requirement added or relaxed. |
 | 2.4 | 2026-09-09 | — | Recorded two further pre-T0 defects found by review of the v2.3 landing: §3.3 proposed ERR-049-004 (FR-LC-009 mandates a plural/gender selector for which §2.2 supplies no typed operand) and §3.4 proposed ERR-049-005 (FR-LC-011's base-locale-identity fallback is circular for a static key outside FR-LC-008a/F5's procedural-roster-only coverage). L0R grows from two recorded entries to four across §3.5, §3.6, §11 row 0 and §14 criterion 6; ERR-049-004 assigned to **L1** because the operand lands on a core seam type frozen there, with §3.4's signature question settled before L1 rather than at L2; executable exit evidence named in §5.5 and §6.6. No normative fix chosen and no FR/KD wording altered. |
+| 2.5 | 2026-09-09 | — | Followed the v2.4 four-defect scope through the places it had not reached, and fixed one mis-sliced proof. §5.2 no longer hard-codes the pre-fix `ILocalizer`/`NamedSlotSet`/`LocalizedTextRequest` shapes that §3.3/§3.4 require L1 to change — the three bullets are marked subject to those decisions. ERR-049-004's exit evidence split at the slice boundary: L1 proves the operand exists with the required type/locale-neutrality/immutability/no-persisted-state properties (§5.3, §5.5) and closes the ERR there; L2 proves it drives plural selection (§6.6) as FR-LC-009 conformance, since the renderer and catalogue are L2. §2 H1 and the §3 preamble updated from two known defects to four. No new defect recorded, no normative fix chosen, no FR/KD wording altered. |
 #endregion
