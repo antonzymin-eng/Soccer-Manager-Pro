@@ -1,9 +1,9 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** September 7, 2026  
-**Version:** 1.3  
-**Status:** PLAN — F0–F3 COMPLETE September 7, 2026; F4 NEXT  
+**Last Updated:** September 9, 2026  
+**Version:** 1.4  
+**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F3 COMPLETE; F4 NEXT  
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -995,6 +995,25 @@ Three things are deliberately **not** F1 gates, having been mis-stated as such i
 
 ---
 
+# 17. Owner acceptance
+
+**The project owner accepted this UX planning package on September 9, 2026.** The acceptance covers the package as it stands at this revision: `ux-high-level-plan.md` v1.2, this plan at v1.4, and the F1–F3 outputs `ux-baseline-evidence.md` v0.3, `ux-experience-architecture.md` v0.1 and `ux-shared-system.md` v0.3.
+
+**What it releases.** The acceptance condition recorded against S0-C in `open-issues.md` since F0 is discharged, so substantial UX *production* from S0-C onward is authorized to proceed under this plan's gates. F4 remains the next work package; nothing here reorders it.
+
+**What it does not release.** Acceptance is of the plan, not of any outcome the plan still has to earn:
+
+- every Gate A–J pass criterion in §5 stands unchanged, and acceptance is not a pass at any of them;
+- **Gate G still binds at two independent participants** (§5, §6.7) and the removed "provisional" bypass is not reinstated;
+- **S0 Gate J remains unreachable** until the B8/P4b host verification → B9b/P5b → B10/P6 evidence exists (§6.9, §15); acceptance supplies none of it;
+- the §10.1 UX-workstream role owner and the Gate-G participants are still unassigned — §4 settles both at F4, not here;
+- no simulation, view-model, command, save or navigation contract is created, and the career-return move F2 identified is still owed by the client workstream, not by UX;
+- **S2 stays `FUTURE-BLOCKED`** where §8.1 records the owning implementation as absent.
+
+Acceptance is a dated project-owner decision recorded here, in `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG.md` and `docs/tracking/file-manifest.md`. It is not an agent's to record, infer or extend.
+
+---
+
 ## Version History
 
 | Version | Date | Change |
@@ -1003,3 +1022,4 @@ Three things are deliberately **not** F1 gates, having been mis-stated as such i
 | 1.1 | September 4, 2026 | External dependency-review revision: corrected P4b/#30 state; inherited current client-plan authority; tied S0 Gate I to P5b and Gate J to B8/B9b/B10; made Gate G binding at two independent participants; added real-data prototype strategy, role ownership, effort bands, S1 design-ahead conditions, and tracking close-out as the only prerequisite to F1. |
 | 1.2 | September 6, 2026 | F0 closed and F1 unblocked. F1's effort band revised 1–2 → **3–4 working days**. New §8.1 records the provisional S2 implementation state by symbol search with its evidence column, including two findings a folder-name search would have got backwards: board objectives are **present** in `src/season-save/`, while transfers, scouting, finances and staff are implementation-absent. Reaffirms that the tracking close-out was F1's only prerequisite — PR draft status, B8/B9b/B10 host ordering and Gate-G tester recruitment (which §4 already places in F4) are **not** F1 gates. |
 | 1.3 | September 7, 2026 | F1, F2 and F3 complete; status advanced to *F0–F3 COMPLETE; F4 NEXT*. Outputs: `ux-baseline-evidence.md` v0.3 (F1), `ux-experience-architecture.md` v0.1 (F2), `ux-shared-system.md` v0.3 (F3). **Also corrects a header/version-history desync introduced at v1.2:** that revision appended its history row and edited the status line but left `**Version:**` at 1.1 and `**Last Updated:**` at September 4, so the file's own header contradicted the manifest, changelog and open-issues entries that all cited it as v1.2. Both fields are re-derived here. |
+| 1.4 | September 9, 2026 | **Owner acceptance of the UX planning package, recorded September 9, 2026**, discharging the condition `open-issues.md` had held open since F0. New **§17** states the scope of that acceptance and, more importantly, its limits: Gates A–J are unchanged and unpassed, Gate G still binds at two independent participants, S0 Gate J is still unreachable without B8/B9b/B10 host evidence, the §10.1 role owner and Gate-G participants are still F4 outputs, and §8.1's `FUTURE-BLOCKED` S2 rows are unmoved. Status line advanced accordingly; F4 remains the next work package. Landed alongside `ux-high-level-plan.md` v1.2, which reconciled its §8 F1 band to §10.2's 3–4 working days. |

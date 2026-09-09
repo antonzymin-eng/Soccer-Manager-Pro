@@ -16,7 +16,8 @@
    implementation order and [`docs/tracking/open-issues.md`](docs/tracking/open-issues.md) for live blockers.
 6. For player-facing UX/design work, read [`docs/design/ux-high-level-plan.md`](docs/design/ux-high-level-plan.md)
    and [`docs/design/ux-detailed-plan.md`](docs/design/ux-detailed-plan.md) before editing mockups or client UX.
-   The detailed plan's F0 tracking close-out precedes F1 and any further substantial UX production.
+   The package was accepted by the project owner on September 9, 2026; F0–F3 are complete and F4 is next.
+   Live status belongs to the detailed plan and `docs/tracking/open-issues.md`, not to this line.
 
 ## Project essentials
 
