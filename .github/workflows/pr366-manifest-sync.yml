@@ -1,0 +1,39 @@
+name: PR 366 manifest sync
+
+on:
+  push:
+    branches:
+      - art/ap-02-touchline-art-direction
+
+permissions:
+  contents: write
+
+jobs:
+  sync-manifest:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: art/ap-02-touchline-art-direction
+          fetch-depth: 1
+      - name: Synchronize maintained UI mockups version pointer
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/tracking/file-manifest.md")
+          old = "`docs/design/ui-mockups/README.md` | Index + scope contract for the UI mockups (v1.1, Jul 25, 2026)"
+          new = "`docs/design/ui-mockups/README.md` | Index + scope contract for the UI mockups (v1.2, Sep 6, 2026)"
+          text = path.read_text(encoding="utf-8")
+          if text.count(old) != 1:
+              raise SystemExit(f"expected exactly one stale pointer, found {text.count(old)}")
+          path.write_text(text.replace(old, new), encoding="utf-8")
+          PY
+          git rm .github/workflows/pr366-manifest-sync.yml
+          git add docs/tracking/file-manifest.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: sync UI mockups manifest version"
+          git push origin HEAD:art/ap-02-touchline-art-direction
