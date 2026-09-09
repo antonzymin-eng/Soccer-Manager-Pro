@@ -1,9 +1,9 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.3 — balance-pass AR pass 8 M2: the §7 precedent citation renamed off the phantom stream)
-**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.3
+**Last Updated:** September 7, 2026 (v0.8 — PR #363 Codex arithmetic correction)
+**Last Updated (prior):** September 7, 2026 (v0.7 — PR #363 follow-up review correction)
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -12,13 +12,22 @@
 
 - **T0** — `TacticalDirector.ClubFinances` assembly: value types (`FinanceTransactionKind`, `FinanceLineItem`,
   `ClubFinances`, `FinanceTransaction`, `BoardModifier`, `FinancesViewModel`), the deterministic
-  `SettleFinances` + `PrizeMoneyForPosition` + `ApplyTransaction` + `AvailableTransferBudget`,
-  `ClubFinancesConstants`. Behaviour-neutral by construction (KD-8).
-- **T1** — `ClubFinancesSaveCodec` (`FINANCE_SAVE_FORMAT_VERSION` = 1) + composition into #30's season save
-  (the `SeasonSaveCodec` sub-blob; #30's composing format-version bump coordinated here). Fail-loud gates.
+  `SettleFinances` + `PrizeMoneyForPosition` + `ApplyTransaction` + `AvailableTransferBudget`, and
+  `ClubFinancesConstants`. Behaviour-neutral by construction (KD-8). The assembly carries the cross-cutting
+  `ProjectConstants` reference required by Code Standards #20 for `[GT]` `GameplayConfig.Get*` loading;
+  this is not a domain ownership seam (FR-FN-027 / §4.1).
+- **T1a** — Standalone, uncomposed persistence block: `ClubFinanceEntry` + self-identifying
+  `ClubFinancesSaveCodec` (`FINANCE_SAVE_MAGIC`, `FINANCE_SAVE_FORMAT_VERSION` = 1), canonical ascending
+  `ClubId` order, exact-consumption framing, and fail-loud corruption gates. This phase adds the
+  `DeterministicSim` dependency for `CanonicalSerializer` / `SaveBlobFramingHelpers` but deliberately does
+  **not** modify #30, `SeasonSaveCodec`, or `SEASON_SAVE_FORMAT_VERSION`.
+- **T1b** — Compose the T1a finance sub-blob into #30's `SeasonSaveCodec` and coordinate #30's composing
+  `SEASON_SAVE_FORMAT_VERSION` bump. This is the first phase in which #40 persistence participates in the
+  full season-save envelope and the cross-assembly save/restore acceptance cases can run.
 - **T2** — Wire `SettleFinances` at #30's **new** reserved step (b') (after the (a') #43 insertion point,
-  before (c) regenerate, the ERR-030-003 back-prop); wire `CreateInitial` at league/game bootstrap for every
-  `ClubId` (#30-driven, not #40-driven); expose `AvailableTransferBudget`/`ApplyTransaction` for #31/#34/#42
+  before (c) regenerate); wire `CreateInitial` at league/game bootstrap for every `ClubId` (#30-driven, not
+  #40-driven); and add the `PlayerDatabase` reference only here, when the specified `Squad.ClubId`
+  enumeration becomes a real consumer. Expose `AvailableTransferBudget`/`ApplyTransaction` for #31/#34/#42
   to call once those specs exist. No #30 tick-order change beyond the KD-6 back-prop already filed (KD-6).
 - **T3** — Deep tier: per-day revenue accrual (matchday/sponsorship, a new daily #30 tick-order slot — the
   #41 pattern), the stochastic sponsorship-variance draw (promotes `DOMAIN_TAG_CLUB_FINANCES = 0x29` /
@@ -63,8 +72,9 @@
 - **#34 (staff, future):** becomes a second caller of `ApplyTransaction` (`LineItem = StaffWage`) — the same
   contract as #31's wage line items; #34 MUST NOT add a second wage-aggregation path.
 - **#45 (board & ownership, future):** becomes the producer of a non-identity `BoardModifier`. #45 MUST
-  supply a **non-zero** `BudgetMultiplierMillPermille` — `default(BoardModifier)` reaching `SettleFinances`
-  fails loud by design (FR-FN-018); #45 MUST NOT add a second budget-multiplier path.
+  supply a **positive** `BudgetMultiplierMillPermille`; every non-positive value, including
+  `default(BoardModifier)`, reaching `SettleFinances` fails loud by design (FR-FN-018). #45 MUST NOT add a
+  second budget-multiplier path.
 - **#43 (promotion/relegation, future):** when it lands, its transform inserted at #30's step (a') produces
   the post-promotion division/`finalTablePosition` #40's step (b') already reads — no #40-side change is
   needed (the KD-6 ordering rationale is written to anticipate this); #43 MUST NOT itself call
@@ -72,8 +82,42 @@
 - **#30 (season loop):** owns `SettleFinances` invocation timing (KD-6) and the one-time
   `ClubFinances.CreateInitial` bootstrap per club; #40 MUST NOT reference #30 or drive its own club-bootstrap
   independently (the one-way composition, FR-FN-027).
-- **#27 (squad/player data):** the `Squad.ClubId` enumeration #40 reads for F6's club-universe check MUST
-  remain the authoritative club-identity source; #40 MUST NOT gain a second, competing club-identity notion.
+- **#27 (squad/player data):** at T2, the `Squad.ClubId` enumeration #40 reads for F6's club-universe check
+  becomes the authoritative club-identity source; before T2 there is no #27 consumer and therefore no
+  `PlayerDatabase` asmdef reference. #40 MUST NOT gain a second, competing club-identity notion.
+
+## 7.4 T0/T1a implementation critique record
+
+The first implementation pass on September 4, 2026 was reviewed against the approved #40 contract,
+active Code Standards #20, repository gates, and then an external review of PR #363. The review found and
+resolved the following landing defects:
+
+1. **`[GT]` loading / reference mismatch.** The approved architecture omitted the cross-cutting foundation
+   required by active Code Standards for `[GT]` loading. §4.1/§4.3 now name `ProjectConstants` explicitly;
+   the implementation uses the established loader and introduces no alternate loader.
+2. **Canonical assembly-tier seating.** A new production `.asmdef` is not conformant until its folder is
+   placed in Code Standards #20 §3.5.2 in the same landing. `club-finances` is a Tier-7 Management assembly:
+   long-horizon state above a single match, with only downward/foundation references.
+3. **General-test allocation marker.** Structural tests use reflection/file inspection in general unit tests;
+   their files carry Code Standards #20 §3.9.4's explicit general-unit-test allocation-relaxation marker.
+4. **Source documentation surface.** The production/test files carry the required file headers, XML summaries
+   on public APIs, and append-only version histories; no unused friend-assembly widening remains.
+5. **External-review phase correction.** The second commit had already landed a complete standalone save codec
+   while the PR/spec still called the slice “T0” and claimed all T1 persistence deferred. §7.1 now names that
+   real boundary as **T1a**, keeps `SeasonSaveCodec` composition/version bump in **T1b**, and the PR scope is
+   relabeled accordingly. The same review found `PlayerDatabase` referenced with no consumer; the edge is
+   removed from T0/T1a and assigned to T2, where `Squad.ClubId` is first consumed. Executable locks now cover
+   the exact current asmdef boundary, no-RNG serialized shape, the upper budget clamp, decode ordering, and short/
+   truncated framing.
+6. **Board-modifier domain correction.** A follow-up review found that the new negative-multiplier test had
+   silently made a nonsense board multiplier valid without spec authority. FR-FN-018/F4 and §3.1 now reject
+   every non-positive multiplier before arithmetic; the regression lock asserts that negative input fails loud.
+7. **Overflow-safe board scaling.** Codex found that an accepted large `[GT]`-derived base ceiling multiplied
+   by a positive non-identity board factor could overflow `long` before the upper clamp executed. §3.1 and
+   `FinanceStep` now use quotient/remainder scaling with a division-only pre-cap; T-FN-INT-002 locks both the
+   saturating extreme and unchanged below-cap integer-floor result.
+
+This landing therefore delivers **T0 + T1a**. **T1b, T2, and T3 remain deferred** exactly as listed in §7.1.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -81,4 +125,9 @@
 | 0.1 | 2026-07-23 | — | Initial T-phase plan (T0–T3) + deferred extensions + downstream seam contracts. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): §7.2 records the deferred periodic wage cash-out (the step that debits `Balance` from `WageBillAggregate`). |
 | 0.3 | 2026-08-08 | — | **ERR-041-012 back-prop**: the append-only-purpose precedent citation renamed — #41 has a keyed derivation, not an `injuries.occurrence` stream. |
+| 0.4 | 2026-09-04 | — | **T0 implementation critique/back-prop.** Records and discharges the `ProjectConstants` `[GT]` loader dependency mismatch, mandatory Tier-7 seating, and §3.9.4 general-test allocation marker. |
+| 0.5 | 2026-09-04 | Codex | **T0 critique closure.** Adds the source-documentation-template correction and records removal of the unused friend-assembly surface. |
+| 0.6 | 2026-09-06 | — | **PR #363 external-review correction.** Reclassifies the already-landed standalone codec as T1a, creates T1b for #30 composition/version bump, defers the unused PlayerDatabase edge to its first T2 consumer, and records the added regression locks. |
+| 0.7 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** Records the deliberate non-positive `BoardModifier` fail-loud decision and corrects the clamp-coverage wording. |
+| 0.8 | 2026-09-07 | — | **PR #363 Codex correction.** Records overflow-safe board scaling and corrects the downstream #45 seam from “non-zero” to the normative positive-multiplier contract. |
 #endregion

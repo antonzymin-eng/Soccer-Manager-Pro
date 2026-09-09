@@ -10,6 +10,7 @@ SLN="$ROOT/tools/dotnet-ci/TacticalDirector.gen.sln"
 QUARANTINE="$ROOT/tools/dotnet-ci/known-failures.txt"
 OWNER_HELD_RED="$ROOT/tools/dotnet-ci/owner-held-red.txt"
 COVERAGE_SETTINGS="$ROOT/tools/dotnet-ci/coverage.runsettings"
+COVERAGE_SETTINGS_EXPLICIT=0
 REQUESTED_FILTER=""
 SETTINGS_FILE=""
 OWNER_MODE=""
@@ -25,6 +26,7 @@ Options:
   --settings <runsettings>         Apply an explicit .runsettings file (used by pre-commit for anchored NUnit selection).
   --owner-held-red report-only     Exclude the owner-held RED from the blocking pass, then execute and value-verify it separately.
   --coverage                       Collect XPlat Code Coverage.
+  --coverage-settings <runsettings>  Override the coverage runsettings file for an explicit policy caller.
   --fast                           Skip the separate whole-tree meta/build pass. `dotnet test` still builds the generated solution once, incrementally.
   -h, --help                       Show this help.
 
@@ -54,6 +56,12 @@ while [ "$#" -gt 0 ]; do
         --coverage)
             COLLECT_COVERAGE=1
             shift
+            ;;
+        --coverage-settings)
+            [ "$#" -ge 2 ] || { echo "ERROR: --coverage-settings requires a value." >&2; exit 2; }
+            COVERAGE_SETTINGS="$2"
+            COVERAGE_SETTINGS_EXPLICIT=1
+            shift 2
             ;;
         --fast)
             FAST_MODE=1
@@ -90,8 +98,16 @@ if [ "$COLLECT_COVERAGE" -eq 1 ] && [ -n "$SETTINGS_FILE" ]; then
     echo "ERROR: --coverage and --settings cannot be combined; coverage owns its runsettings file." >&2
     exit 2
 fi
+if [ "$COLLECT_COVERAGE" -eq 0 ] && [ "$COVERAGE_SETTINGS_EXPLICIT" -eq 1 ]; then
+    echo "ERROR: --coverage-settings requires --coverage." >&2
+    exit 2
+fi
 if [ -n "$SETTINGS_FILE" ] && [ ! -f "$SETTINGS_FILE" ]; then
     echo "ERROR: runsettings file does not exist: $SETTINGS_FILE" >&2
+    exit 2
+fi
+if [ "$COLLECT_COVERAGE" -eq 1 ] && [ ! -f "$COVERAGE_SETTINGS" ]; then
+    echo "ERROR: coverage runsettings file does not exist: $COVERAGE_SETTINGS" >&2
     exit 2
 fi
 
@@ -148,6 +164,7 @@ if [ "${TD_GATE_DRY_RUN:-}" = "1" ]; then
     printf 'DRY-RUN quarantine_include=%s\n' "$(quarantine_include_filter "$QUARANTINE")"
     printf 'DRY-RUN owner_held_include=%s\n' "${OWNER_INCLUDE:-<none>}"
     printf 'DRY-RUN coverage=%s\n' "$COLLECT_COVERAGE"
+    printf 'DRY-RUN coverage_settings=%s\n' "${COVERAGE_SETTINGS:-<none>}"
     printf 'DRY-RUN fast=%s\n' "$FAST_MODE"
     exit 0
 fi
@@ -190,6 +207,9 @@ if [ -n "$FILTER" ]; then
 fi
 if [ -n "$SETTINGS_FILE" ]; then
     printf 'Runsettings: %s\n' "$SETTINGS_FILE"
+fi
+if [ "$COLLECT_COVERAGE" -eq 1 ]; then
+    printf 'Coverage runsettings: %s\n' "$COVERAGE_SETTINGS"
 fi
 
 # Fast mode intentionally avoids 34 sequential per-project `dotnet test` calls.
