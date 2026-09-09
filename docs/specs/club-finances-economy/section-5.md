@@ -1,8 +1,9 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board-scaling coverage)
+**Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board failure coverage)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -87,14 +88,19 @@ Tests land at T-phase; this is the acceptance contract.
 - **T-FN-INT-001** — Every `ClubFinances`/`FinanceTransaction`/`BoardModifier` field is an integer type; no
   accounting formula (`PrizeMoneyForPosition`, the budget-ceiling projection, `ApplyTransaction`) introduces
   a float — a static/reflection-level assertion mirroring #41's integer posture (FR-FN-011).
+- **T-FN-INT-002** — Board scaling MUST not overflow before the upper budget cap can apply. A base ceiling
+  derived from accepted signed-Int32 tuning extremes and a positive non-identity board multiplier that would
+  overflow a direct `baseCeiling * multiplier` MUST return `CLUB_FINANCES_BUDGET_CEILING_MAX` without an
+  `OverflowException`; a representative below-cap case MUST retain the exact integer-floor result from
+  `baseCeiling * multiplier / PERMILLE_DENOM` (FR-FN-011, §3.1).
 
 ## 5.7 FFP/board seam & fail-loud
 
 - **T-FN-MOD-001** — `BoardModifier.Identity` yields the exact Stage-2 budget-ceiling projection (×1.0) —
   KD-4/KD-8.
-- **T-FN-FAIL-BOARD-001** — `default(BoardModifier)` (`BudgetMultiplierMillPermille == 0`) reaching
-  `SettleFinances` fails loud (the zero-value-trap gate, mirrors #41's `MedicalModifier` F4 lesson) —
-  FR-FN-018/F4.
+- **T-FN-FAIL-BOARD-001** — Any `BoardModifier` with `BudgetMultiplierMillPermille <= 0`, including
+  `default(BoardModifier)` and an explicit negative multiplier, reaching `SettleFinances` fails loud —
+  FR-FN-018/F4. The clamp is not used to legitimize an invalid board multiplier.
 - **T-FN-FAIL-001** — Bad `FINANCE_SAVE_FORMAT_VERSION` → fail loud (F3).
 - **T-FN-FAIL-002** — Out-of-bounds length prefix / trailing bytes → fail loud (F5).
 - **T-FN-FAIL-003** — `TransferBudget` or `WageBudget` negative reaching a consuming seam (e.g. a corrupted
@@ -121,7 +127,7 @@ Tests land at T-phase; this is the acceptance contract.
 | FR-FN-008 | T-FN-DET-004, T-FN-DET-005 |
 | FR-FN-009 | T-FN-DET-004 |
 | FR-FN-010 | (deferred to T3 — recorded in §7) |
-| FR-FN-011 | T-FN-INT-001 |
+| FR-FN-011 | T-FN-INT-001, T-FN-INT-002 |
 | FR-FN-012 | T-FN-BOUND-001 |
 | FR-FN-013 | T-FN-BOUND-002 |
 | FR-FN-014 | T-FN-FAIL-004 |
@@ -145,4 +151,6 @@ Tests land at T-phase; this is the acceptance contract.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial test plan (T-FN-*) + full FR-FN-001..028 traceability table. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): T-FN-LEDGER-002 / T-FN-BOUND-003 restated — wage transaction moves the aggregate only, `Balance` unchanged. |
+| 0.3 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** T-FN-FAIL-BOARD-001 widened from default/zero only to every non-positive board multiplier. |
+| 0.4 | 2026-09-07 | — | **PR #363 Codex correction.** Adds T-FN-INT-002 to lock overflow-safe pre-cap board scaling and exact below-cap integer-floor semantics. |
 #endregion

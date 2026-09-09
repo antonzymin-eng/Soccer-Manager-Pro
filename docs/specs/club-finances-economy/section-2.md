@@ -1,8 +1,9 @@
 # Club Finances & Economy #40 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** September 7, 2026 (v0.4 — PR #363 follow-up: non-positive BoardModifier values fail loud)
+**Last Updated (prior):** September 4, 2026 (v0.3 — T0 reference-contract back-prop)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -77,9 +78,10 @@
   projected budget, never a hard gate that could deadlock a club unable to sell (KD-4).
 - **FR-FN-018** — `BoardModifier` MUST compose multiplicatively with the FFP term (both defaulting to
   identity at Stage 2); `BoardModifier.Identity` MUST be an **explicit factory**
-  (`BudgetMultiplierMillPermille = 1000`), and `default(BoardModifier)` (all-zero, ×0) MUST NOT be treated
+  (`BudgetMultiplierMillPermille = 1000`), and any `BoardModifier` with
+  `BudgetMultiplierMillPermille <= 0` (including `default(BoardModifier)`, all-zero ×0) MUST NOT be treated
   as a valid runtime value — reaching `SettleFinances` it MUST **fail loud** (F4, the #41 `MedicalModifier`
-  zero-value-trap lesson applied here per §1.6).
+  zero-value-trap lesson generalized to the full invalid non-positive domain per §1.6).
 - **FR-FN-019** — No #45 interface MUST be built ahead of #45 landing (FR-LW-031); #45 becomes the producer
   of a non-identity `BoardModifier` when it exists.
 
@@ -111,9 +113,12 @@
   wage bill) MUST be exposed for #38.
 
 **Reference direction & neutrality (KD-8)**
-- **FR-FN-027** — The reference direction MUST stay one-way: `#30 → #40 → {#27, #16}` and `#31 → #40` (and,
-  later, `#34 → #40` / `#45 → #40`); #40's assembly MUST NOT reference `MatchEngine`, `LivingWorld`,
-  `SeasonSave`, #30, #31, #34, or #45. #27's assembly stays schema-untouched.
+- **FR-FN-027** — The domain reference direction MUST stay one-way: `#30 → #40 → {#27, #16}` and
+  `#31 → #40` (and, later, `#34 → #40` / `#45 → #40`). #40 MAY additionally reference the cross-cutting
+  `TacticalDirector.ProjectConstants` foundation solely for the Code Standards #20-mandated
+  `GameplayConfig.Get*` loading of its `[GT]` catalogue; that edge introduces no domain ownership seam.
+  #40's assembly MUST NOT reference `MatchEngine`, `LivingWorld`, `SeasonSave`, #30, #31, #34, or #45.
+  #27's assembly stays schema-untouched.
 - **FR-FN-028** — Behaviour-neutral identity: with the deep dials off, `BoardModifier.Identity`, and zero
   deep-tier accumulators, `SettleFinances` MUST yield **exactly** `budget = f(finalTablePosition,
   prizeMoney)`; registering #40's reserved namespace slot MUST leave every existing stream's cursor
@@ -144,11 +149,11 @@ public struct ClubFinances
 
 // KD-4 board routing seam — identity until #45 lands. Per-mille integer multiplier (1000 = x1.0) so the
 // budget projection stays integer-only (FR-FN-011). Identity is an EXPLICIT factory — default() (all-zero,
-// x0) is NOT a valid runtime value; it MUST fail loud at SettleFinances (FR-FN-018 / F4), mirroring #41's
-// MedicalModifier Identity-vs-default() lesson (§1.6).
+// x0) and any negative multiplier are NOT valid runtime values; they MUST fail loud at SettleFinances
+// (FR-FN-018 / F4), mirroring #41's MedicalModifier Identity-vs-default() lesson (§1.6).
 public readonly struct BoardModifier
 {
-    public readonly int BudgetMultiplierMillPermille;   // 1000 = x1.0; > 1000 raises the projected ceilings
+    public readonly int BudgetMultiplierMillPermille;   // must be > 0; 1000 = x1.0; > 1000 raises the projected ceilings
     public static BoardModifier Identity => new(1000);
     public BoardModifier(int mult) { BudgetMultiplierMillPermille = mult; }
 }
@@ -198,7 +203,7 @@ pure reads over a `ClubFinances` value. See §3.
 | **F1** | `ClubFinances` coherence violated — `TransferBudget < 0`, `WageBudget < 0`, or `WageBillAggregate < 0` reaching a consuming seam (incl. a Credit wage-reversal larger than the current aggregate) | **Fail loud** — an invalid combination is a bug, never silently clamped or repaired (the #27/#28/#41 F1-class precedent). |
 | **F2** | `ApplyTransaction` invoked with a malformed `FinanceTransaction` (negative `Amount`, or an out-of-contract `Kind`/`LineItem` value) | **Fail loud** — magnitude/enum validity is a caller-contract bug, never defaulted. |
 | **F3** | `FINANCE_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`ArgumentException`), the `MatchSaveCodec` posture. |
-| **F4** | A `BoardModifier` with `BudgetMultiplierMillPermille == 0` (e.g. `default(BoardModifier)`) reaching `SettleFinances` | **Fail loud** — a zero multiplier is a caller-contract bug (×0 budget), not a legitimate "no adjustment" identity (the #41 `MedicalModifier` zero-value-trap precedent, §1.6). |
+| **F4** | A `BoardModifier` with `BudgetMultiplierMillPermille <= 0` (including `default(BoardModifier)`) reaching `SettleFinances` | **Fail loud** — a non-positive multiplier is a caller-contract bug, not a legitimate budget adjustment or "no adjustment" identity (the #41 `MedicalModifier` zero-value-trap precedent generalized to the invalid negative domain, §1.6). |
 | **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the finance block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
 | **F6** | `SettleFinances` or `ApplyTransaction` invoked for a `ClubId` with no `ClubFinances` entry | **Fail loud** — clubs do not churn (KD-7), so a missing entry is a bootstrap/lifecycle bug, never auto-created. |
 | **F7** | `finalTablePosition` outside `[1, clubCount]` passed to `SettleFinances` | **Fail loud** (`ArgumentException`) — an out-of-range position is a caller bug, never clamped. |
@@ -208,4 +213,6 @@ pure reads over a `ClubFinances` value. See §3.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-FN-001..028), data structures, F1..F7. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): FR-FN-016 — a wage `ApplyTransaction` moves the `WageBillAggregate` liability ONLY (not `Balance`); cash items (`TransferFee`/`General`) move `Balance` only. |
+| 0.3 | 2026-09-04 | — | **T0 implementation back-prop.** FR-FN-027 now explicitly permits the cross-cutting `ProjectConstants` foundation edge used only for Code Standards #20-mandated `[GT]` `GameplayConfig.Get*` loading; the domain dependency direction and forbidden upward references are unchanged. |
+| 0.4 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** FR-FN-018/F4 now make the whole non-positive `BoardModifier` domain (`<= 0`) fail loud instead of allowing a negative multiplier to reach the budget clamp. |
 #endregion
