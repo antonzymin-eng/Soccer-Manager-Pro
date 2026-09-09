@@ -1,9 +1,9 @@
 # Localization #49 — End-to-End Implementation Plan
 
 **Created:** September 6, 2026
-**Version:** 2.2
+**Version:** 2.3
 **Status:** READY FOR IMPLEMENTATION
-**Baseline:** `main` at `9fbd7533b7df85964fd9bcea2922ba3139472054`
+**Baseline:** `main` at `67f2343c34e767ba02a4dc13816c91090b3bf3d9` — the L3A merge commit (PR #370, September 9, 2026). v2.0–v2.2 were authored against `9fbd7533`; the historical review records below keep that value and are not rewritten.
 **Scope:** the APPROVED #49 seam/T0+T1 implementation first; Wave-8 locale/a11y content remains a later, separately approved tier.
 
 ---
@@ -484,9 +484,9 @@ Against L3A, prove:
   - `PR coverage assemblies: none (scope ceiling fallback)`
   - `PR coverage assemblies: none (no shim-coverable changed production/test-owned src assembly)`
 - if L3B resolves more than `MAX_PR_COVERAGE_ASSEMBLIES` and triggers the global ceiling, split L3B only where semantics/atomicity allow or land a separately reviewed Testing Strategy coverage-policy solution. Never waive the zero-instrumentation result merely to satisfy this slice;
-- after L3A is merged, record its **actual merge commit** as `<L3A_MERGE_COMMIT>` and mechanically prove the frozen expectations file is unchanged with two-dot semantics:
-  `git diff --quiet <L3A_MERGE_COMMIT> HEAD -- src/living-world/Tests/InteractionTextOracleExpectations.cs`
-  A non-zero result blocks L3B. This catches modification, deletion and rename without depending on branch topology.
+- L3A merged as PR #370 on September 9, 2026, so `<L3A_MERGE_COMMIT>` is no longer a placeholder. It is **`67f2343c34e767ba02a4dc13816c91090b3bf3d9`** — the merge commit on `main`, *not* the merged branch tip `79543a5` and not a later `main` commit. Mechanically prove the frozen expectations file is unchanged with two-dot semantics:
+  `git diff --quiet 67f2343c34e767ba02a4dc13816c91090b3bf3d9 HEAD -- src/living-world/Tests/InteractionTextOracleExpectations.cs`
+  A non-zero result blocks L3B. This catches modification, deletion and rename without depending on branch topology. For independent verification the frozen blob is `0907c88b312e43e07363abb847fc3fae6a475b05`; that hash is informational corroboration, not a second gate — the `git diff --quiet` result above is the acceptance criterion.
 
 ---
 
@@ -598,8 +598,8 @@ L3B adds two mandatory evidence checks beyond generic PR-gate success:
    - `PR coverage assemblies: none (scope ceiling fallback)`
    - `PR coverage assemblies: none (no shim-coverable changed production/test-owned src assembly)`
    Do not infer coverage merely from a green job.
-2. **Frozen-oracle immutability.** Use the actual merged L3A commit, not a branch tip, and run:
-   `git diff --quiet <L3A_MERGE_COMMIT> HEAD -- src/living-world/Tests/InteractionTextOracleExpectations.cs`
+2. **Frozen-oracle immutability.** Use the actual merged L3A commit — **`67f2343c34e767ba02a4dc13816c91090b3bf3d9`** (PR #370, September 9, 2026) — not a branch tip, and run:
+   `git diff --quiet 67f2343c34e767ba02a4dc13816c91090b3bf3d9 HEAD -- src/living-world/Tests/InteractionTextOracleExpectations.cs`
    The command must return zero. Use two-dot semantics; do not use `...` here.
 
 Do not claim Unity-host rendering/font/layout certification from the Linux shim. No Unity-host behavior is introduced in T0/T1 anyway.
@@ -699,10 +699,24 @@ Accepted and consolidated directly into the authoritative plan:
 
 **v2.2 conclusion:** no remaining known structural High/Medium planning defect. L1 remains held until L3A positive CI and negative-control evidence are both complete; after that, execution follows L1 -> L2 -> L3B with the stricter L3B acceptance above.
 
+## v2.3 L3A landing reconciliation
+
+L3A merged. This revision records what landed and resolves the one placeholder v2.2 could not fill; it adds no new requirement and relaxes none.
+
+- **`<L3A_MERGE_COMMIT>` is resolved.** PR #370 merged into `main` on September 9, 2026 as `67f2343c34e767ba02a4dc13816c91090b3bf3d9`. §7.7 and §12 now carry that literal instead of the placeholder, together with the explicit warning that the merged branch tip `79543a5` is *not* the value to use. The frozen blob at that commit is `0907c88b312e43e07363abb847fc3fae6a475b05`.
+- **The header baseline advances** from `9fbd7533` to the L3A merge commit, so §14 criterion 1 ("implementation starts from current `main`") is measured against a `main` that already contains the oracle. The v2.0–v2.2 review records keep `9fbd7533` and are deliberately not rewritten.
+- **The v2.2 hold on L1 is discharged.** v2.2 held L1 until L3A had both positive CI and negative-control evidence. Both are complete: the PR #370 head `79543a5` passed the canonical gate (run `34308477489`, `Gate PASSED`, quarantine empty, the one failure the recorded owner-held RED `sim_match_engine_close_chance`, not rebaselined), and disposable negative-control PR #371 — closed unmerged — produced 9 `LivingWorld.Tests` failures in run `34263162049` covering all three §4.4 mutation classes.
+- **One evidence limitation is carried forward rather than smoothed over.** `Generator_EveryCitationClause_IsFrozenEndToEnd` diverged at index 12 on the *row-text* mutation, so that single end-to-end assertion evidences the row-text class only. The clause-punctuation class rests on `Corpus_EveryCitationClause_IsFrozen` (`EventKind` ordinal 1, index 50). The classes are all covered; no one assertion covers all of them.
+- **The execution order in §11 is unchanged; only its remaining span shortens** to **L0R -> L1 -> L2 -> L3B**, L3A having landed. §11 is a dependency/order table and carries no status column, so its L3A row is left as written rather than annotated here. §11 row 4's `L2 + merged L3A` dependency for L3B is now half-satisfied: the merged-L3A half is met.
+- **`codex/localization-infrastructure-t0` remains non-authoritative and must not be merged.** Landing L3A does not change that disposition; L1 is built fresh per §5, not by promoting that scaffold.
+
+---
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 2.0 | 2026-09-06 | — | Rebuilt from current main after external C6/T0 review: removed pre-T0 hardening, atomicized asmdef seating, deferred Wave-8 scope, added ERR recording/back-prop inventory and pair-identity locks, removed external locale-file requirement, and re-sequenced to oracle -> T0 -> renderer -> T1 retrofit. |
 | 2.1 | 2026-09-06 | — | Closed second external review: canonicalized PR-policy gate wording around owner-held RED, made close-out/cardinality updates explicit, fixed ERR-049-002 to an all-L1 discharge, documented C6 deferred-ERR timing, pinned base content to Localization, omitted the optional T0 dev marker, and made living-world corpus removal a hard T1 exit. |
 | 2.2 | 2026-09-08 | — | Rebased plan onto PR-#375 current main; consolidated L3B non-sentinel coverage acceptance and the two-dot frozen-oracle diff into §7.7/§12; froze producer enum rosters in L3A; removed the orphan acceptance supplement. |
+| 2.3 | 2026-09-09 | — | L3A landing reconciliation: resolved `<L3A_MERGE_COMMIT>` to the PR #370 merge commit `67f2343` in §7.7 and §12 (naming the merged branch tip as the wrong value and recording the frozen blob hash as informational corroboration), advanced the header baseline to that commit, discharged the v2.2 hold on L1 with the CI and negative-control run ids, and carried forward the narrowed end-to-end citation-clause evidence limitation. No requirement added or relaxed. |
 #endregion
