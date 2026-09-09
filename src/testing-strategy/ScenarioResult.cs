@@ -1,6 +1,6 @@
 // File:     src/testing-strategy/ScenarioResult.cs
 // Created:  2026-06-10
-// Modified: 2026-06-10
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Testing Strategy & Framework #19 §3.3.3 / FR-TS-024,
 //           Deterministic Simulation #16 §4.8 (EnvironmentFingerprint), Code Standards #20
@@ -50,6 +50,10 @@ namespace TacticalDirector.TestingStrategy
             int durationMs,
             EnvironmentFingerprint fingerprint)
         {
+            if ((uint)status > (uint)ScenarioStatus.Quarantined)
+            {
+                throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown scenario status.");
+            }
             if (durationMs < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(durationMs), "Duration must be non-negative.");
@@ -69,4 +73,5 @@ namespace TacticalDirector.TestingStrategy
 // | 1.1     | 2026-06-10 | —      | AR-1 M-3 doc: diagnostics values are CR/LF-sanitized; Failed with  |
 // |         |            |        | predicates_failed=0 documented as exception / implicit-pass with   |
 // |         |            |        | dedicated cause lines. Documentation-only change.                  |
+// | 1.2     | 2026-09-08 | —      | Reject undefined scenario-status ordinals.                         |
 #endregion

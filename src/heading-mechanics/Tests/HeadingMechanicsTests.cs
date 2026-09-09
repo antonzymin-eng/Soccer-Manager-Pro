@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/Tests/HeadingMechanicsTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-12
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Heading Mechanics #10 §5, Code Standards #20
 // Purpose:  Unit tests for Heading Mechanics. §5.1 unit test groups.
@@ -161,6 +161,22 @@ namespace TacticalDirector.HeadingMechanics.Tests
             Assert.AreEqual(expected, apexFrame,
                 "Apex frame from jumpStartFrame=0 must equal round(JUMP_PHASE_DURATION_MS * JUMP_APEX_FRACTION / FRAME_MS).");
         }
+
+        [Test]
+        public void ComputeApexFrame_RejectsNegativeStart() =>
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => HeadingJumpKinematics.ComputeApexFrame(-1));
+
+        [Test]
+        public void ComputeLandingFrame_RejectsNegativeStart() =>
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => HeadingJumpKinematics.ComputeLandingFrame(-1));
+
+        [Test]
+        public void ComputeApexFrame_RejectsFrameOverflow() =>
+            Assert.Throws<System.OverflowException>(() => HeadingJumpKinematics.ComputeApexFrame(int.MaxValue));
+
+        [Test]
+        public void ComputeLandingFrame_RejectsFrameOverflow() =>
+            Assert.Throws<System.OverflowException>(() => HeadingJumpKinematics.ComputeLandingFrame(int.MaxValue));
 
         [Test]
         public void ComputeApexFrame_NonZeroStart_OffsetByStart()
@@ -1082,4 +1098,5 @@ namespace TacticalDirector.HeadingMechanics.Tests
 // |         |            |        | (TEST-DEFECT): outgoing vz 1.0 → 5.0 — the prior ball grounded out at x≈5.7 m  |
 // |         |            |        | (z=0 at t≈0.66 s) and reached x=0 only at z≈−3.05 m, so the predicate          |
 // |         |            |        | correctly returned false; vz=5 keeps it at z≈1.23 m ∈ [0,2.44] when x=0.       |
+// | 1.4     | 2026-09-08 | —      | Regression coverage for invalid jump-frame inputs.                 |
 #endregion
