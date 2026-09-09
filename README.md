@@ -28,11 +28,10 @@ and the four master design volumes under `docs/planning/`.
 
 ## Current state
 
-**Status snapshot — September 3, 2026:** 35 production assemblies exist, while **19 of the 53 approved
-specs have no `src/` assembly**. The specification frontier therefore remains materially ahead of
-implementation. A2, the architecture-governance schema and executable-semantics freeze, closed
-September 2; A3 governance integration is in progress. The Unity target is 6000.4.9f1 / DX11 and was
-recertified July 19, 2026.
+**Status snapshot — September 6, 2026:** 36 production assemblies exist. The specification frontier
+remains materially ahead of implementation. A2, the architecture-governance schema and
+executable-semantics freeze, closed September 2; A3 governance integration is in progress. The Unity
+target is 6000.4.9f1 / DX11 and was recertified July 19, 2026.
 
 This snapshot is orientation only. It is not an authoritative project-status registry. For current
 state, use:

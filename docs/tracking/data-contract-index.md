@@ -74,6 +74,8 @@ file inventory. This file adds only the entity → (spec §, assembly) hop those
 | League table | #30 §2.2 | `season-save` | `LeagueTable`, `LeagueTableRow` |
 | Season calendar / day cursor | #30 §2.2 | `season-save` | `SeasonCalendar` |
 | Board objective & job security | #30 §2.2 | `season-save` | `BoardObjective`, `BoardState` (job security becomes a derived read over #45 at its T2) |
+| Club finance state and read model | #40 §2.2, §3 | `club-finances` | `ClubFinances`, `FinancesViewModel` |
+| Club finance transaction seam | #40 §2.2, §3.2 | `club-finances` | `FinanceTransaction`, `FinanceLedger` |
 | Match outcome payload | #30 §2.2 | `season-save` | `MatchResult` |
 | Season state (serialized surface) | #30 §2.2, Appendix B | `season-save` | `SeasonState` |
 | Season composition root | #30 §2.2 | `season-save` | `SeasonLoop` |
@@ -144,6 +146,7 @@ read the value from the file.
 | Progression sub-blob (`PROG`) | `PROGRESSION_SAVE_FORMAT_VERSION` | `src/player-progression/PlayerProgressionConstants.cs` |
 | Training sub-blob | `TRAINING_SAVE_FORMAT_VERSION` | `src/training-system/TrainingSystemConstants.cs` |
 | Medical sub-blob | `MEDICAL_SAVE_FORMAT_VERSION` | `src/injuries-medical/InjuriesMedicalConstants.cs` |
+| Finance sub-blob (`FNCE`) | `FINANCE_SAVE_FORMAT_VERSION` | `src/club-finances/ClubFinancesConstants.cs` |
 | Match save | `MATCH_SAVE_FORMAT_VERSION` | `src/match-engine/MatchEngineConstants.cs` |
 | World store / world snapshot (#22) | `WORLD_STORE_FORMAT_VERSION`, `WORLD_SNAPSHOT_FORMAT_VERSION` | `src/living-world/LivingWorldConstants.cs` |
 | Scenario manifest (#19) | `SCENARIO_MANIFEST_FORMAT_VERSION` | `src/testing-strategy/TestingStrategyConstants.cs` |
@@ -186,7 +189,8 @@ read the value from the file.
 
 These entities have an **APPROVED spec and no code**. There is nothing in `src/` to point at, and
 that is the single most important thing this index can tell you: an APPROVED spec says nothing
-about whether an implementation exists, and it is true of roughly 42% of the registry.
+about whether an implementation exists. This table is a navigational snapshot; verify it against
+`src/` before relying on it.
 
 | Spec | Folder | Entities it will own |
 |---|---|---|
@@ -197,7 +201,6 @@ about whether an implementation exists, and it is true of roughly 42% of the reg
 | #35 | `media-press-interactions/` | press events, interview state |
 | #36 | `national-teams-international/` | national squads, call-ups |
 | #39 | `steam-packaging-release/` | build/release artefacts |
-| #40 | `club-finances-economy/` | budgets, wage bill, transactions |
 | #42 | `youth-academy-intake/` | intake cohorts, youth candidates |
 | #43 | `competition-structure/` | cups, knockouts, multi-competition calendar |
 | #44 | `discipline-suspensions/` | cards, bans, suspension state |
@@ -253,6 +256,7 @@ career-roster projection, `season-save`). They are three different layers of the
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.3 | September 6, 2026 | #40 T0 + T1a landing: registered `ClubFinances` / `FinancesViewModel` and the finance transaction seam under `club-finances`, added the standalone `FINANCE_SAVE_FORMAT_VERSION` pointer, and removed #40 from the no-assembly table. The §8 percentage was deliberately removed rather than creating another volatile cardinality claim. |
 | v1.2 | August 22, 2026 | `ERR-016-009`'s `buildHash` half CLOSED. New §4 row **Build identity (`buildHash`) → #16 §2.3.2 → `deterministic-sim`, `match-engine` → `BuildIdentity` / `BuildModule` / `SnapshotHeader.BuildHash` / `MatchEngineBuildIdentity`**, and the note above it updated: the `DeterminismContext` mapping row reads SPLIT rather than SPLIT + GAP, and only `ToleranceRow`/`ComparatorRegistry` remain deferred. Every named type verified to exist per this file's own landing rule. No other row changed. |
 | v1.1 | August 22, 2026 | The §4 note on unresolved `#16 §2.3` names is **superseded by `ERR-016-009`**, filed the same day: the count is **six of nine**, not four (the note omitted `ToleranceRow` and `ComparatorRegistry`), and it is a filed defect rather than the observation this file first recorded. #16 §2.3 v1.1 now carries the authoritative per-row mapping table, so the note points there instead of restating it — §0 rule 2 working as intended: the pointer target won. The two open items it surfaces (`buildHash` has no representation anywhere in `src/`; `ToleranceRow`/`ComparatorRegistry` are Stage-1+ deferrals) are tracked in `open-issues.md` beside the `Fingerprint = null` remainder on the same contract. No row in any table changed. |
 | v1.0 | August 21, 2026 | Initial index. Created after a proposed `DATA_SCHEMA.md` master-schema document was rejected as a parallel surface over #27/#30/#16, which already own these contracts — this file is the pointer-only alternative that was adopted instead. Covers player/squad, club/league/season, the three career-state sets, match runtime and determinism, save-format constant locations, tactics, presentation, the 20 specified-but-unimplemented entity sets, and three name hazards (two `PlayerAttributes` types, two `SNAPSHOT_SCHEMA_VERSION` constants, three senses of "Squad"). §0's three rules — restate nothing, the pointer targets win, rows not columns — are what keep it from becoming the document it replaced. |
