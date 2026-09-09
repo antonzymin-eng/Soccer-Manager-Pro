@@ -1,172 +1,104 @@
 ---
 name: steward
 description: >-
-  Drive a pull request on this repo to green and to merged — triaging a red
-  `Compile + test (Linux shim gate, non-certifying)` job, resolving a mergeability
-  notice, answering review threads, and landing the tracking-document half that a
-  merge or a CI fix always drags with it. Use this skill on any PR or CI event
-  here: "CI is red on #N", "watch this PR", "resolve the conflicts", "is the PR
-  green", a merge-conflict or base-branch-recovered notice, a review comment
-  arriving on a branch you pushed, and any `claude/<slug>` branch you are about
-  to merge. Trigger it even when the failure looks like infrastructure — the one
-  red band in `MatchEngine.Tests` here is owner-held by decision, and every other
-  failure in this tree has been real.
+  Drive a pull request on this repo to green and to merged — triaging CI,
+  resolving mergeability notices and conflicts, answering review threads, and
+  landing the tracking-document half that a merge or CI fix drags with it. Use
+  this skill for PR/CI events such as "CI is red on #N", "watch this PR",
+  "resolve the conflicts", "is the PR green", a mergeability/base-branch
+  notice, or review feedback arriving on a branch you pushed.
 ---
 
 # Steward
 
-**The authority for the general PR rules is Claude Code's own account-level
-system prompt** — the "GitHub Integration" / "Driving a PR to green" sections
-it carries into every session, not a document in this repo. Conflict-resolution
-order, root-cause-before-retry, the two postures (a PR you own vs. one you're
-only watching), the standing-down comment, never skip or quarantine a test to
-get green: all of that lives there and is not repeated here. This file is only
-what that generic authority cannot know about this repo: which script the gate
-actually runs, which of this project's own skills to hand off to, which band
-is red on purpose, and how this repo's own tracking documents conflict on a
-merge.
-
-**Why this exists.** Five sessions in the last two weeks re-derived this from
-scratch, at a combined ~$133, and three of them ended without finishing: one
-asked whether to even subscribe to a PR's CI rather than just doing it, one
-was left watching CI at 7-passed/3-pending, one left "untangle the
-`CHANGELOG-src.md` v2.84/v2.115 series" as an open decision nobody came back
-to.
+The general PR-driving authority lives in Claude Code's account-level GitHub rules. This file contains only repository-specific routing: which test entry point is policy-authoritative, how the owner-held RED is treated, and which tracking surfaces must be reconciled at landing.
 
 ## Before you touch the PR
 
-Run the `orientation` skill first — not re-described here.
+Run the `orientation` skill first. Base is `main`.
 
-Branch names are `claude/<short-slug>` (`claude/spec-upgrade-review-te3ta0`,
-`claude/branch-commit-divergence-1armum`); push with
-`git push -u origin claude/<slug>`. Base is `main`.
+One landing set carries code, spec/ERR changes, and tracking synchronization together per `landing-close-out`. A bare test fix without its changed authority/tracking surfaces is incomplete.
 
-One commit carries code, spec patch, ERR entry, and doc sync together, per
-`landing-close-out`. That rule binds a CI-triage fix exactly as it binds a
-full landing — a bare "fix the test" commit is how the tracking docs start
-drifting from the code.
+## The policy gate is the truth
 
-## The gate is the truth
+The repository policy entry point is now:
 
-CI's compile/test job runs the same script the `dotnet-gate` skill runs
-locally. Run that skill before every push and read its own output rather than
-the CI log tail — including its quarantine rule, not restated here.
+```bash
+bash tools/run-tests-local.sh --pr
+```
 
-Three CI-log-reading traps this repo has actually hit, none of which the
-generic rules know about:
+CI's non-certifying Linux functional job invokes that command. `tools/dotnet-ci/run-gate.sh` is a **lower-level executor** and must not be substituted for the policy runner when claiming PR-equivalent evidence; a bare low-level run omits the Spec #19 auditor/coverage/owner-held composition.
 
-1. **The gate script is `set -euo pipefail`.** It exits non-zero on the
-   blocking phase and therefore never reaches its own quarantine-report
-   section or its `── Gate PASSED ──` line. A run that failed printed **no
-   verdict at all** — do not report "quarantine empty" or round a red run up
-   to a pass. A landing did exactly that at seven sites before it was caught.
-2. **Count suites, don't eyeball them.** `ls -d src/*/[Tt]ests/*.asmdef` —
-   several suites live under a capitalised `Tests/` folder and a hand count
-   has missed them before, publishing "31 of 32" against an actual 33.
-3. **`MatchEngine.Tests` is the long pole (tens of minutes) and does not
-   finish alphabetically.** Suites run in parallel, so another suite
-   finishing proves nothing about this one. A run cancelled minutes into
-   testing has been read as "the sweep ran to completion" before, and that
-   claim had to be publicly withdrawn once it reached the root `CLAUDE.md`.
+For developer bootstrap and pre-commit:
 
-## The band that is red on purpose
+```bash
+bash tools/bootstrap-dev.sh
+bash tools/run-tests-local.sh --pre-commit
+```
 
-`sim_match_engine_close_chance` in `MatchEngine.Tests` is **owner-held RED by
-decision** (`docs/tracking/close-chance-creation-design.md` §10.9 item 6). It
-fails at baseline with recorded values — check the current entry in the root
-`CLAUDE.md` OPEN ISSUES section for the exact numbers, since they get
-re-measured. A CI red that is *only* that predicate, at those same recorded
-values, is the expected state: report it as e.g. **461/1/11 (the count as of
-Aug 2026 — re-check the live entry)** — no new failure, no band rebaselined —
-and do not "fix" it. Different numbers on the same
-predicate, or any second failure anywhere, is a real finding.
+The hook evaluates the staged Git index through a persistent build snapshot under `.git/testing-strategy/`; bootstrap prepares its cold cache once. After that first materialization the hook refreshes only tracked paths whose index blobs changed, preserving unchanged source mtimes as well as untracked bin/obj outputs so MSBuild can actually reuse incremental state. Snapshot checkout disables Git-LFS smudging locally because this gate needs staged pointer bytes, not binary asset payloads. The normal attempted composition is hard-bounded to 60 seconds, but that limit is not acceptance evidence until a successful run is measured on the certified developer host.
 
-**Never rebaseline an acceptance band just to get green.** That is an owner
-call — see "Where this stops" below.
+Routine checklist/§5 audits are survey-only. `docs/specs/SPEC_INDEX.md` is the canonical approval authority. On PR CI, the policy runner receives the PR base SHA, compares the base/head registry states, and reruns the auditors as blocking only for spec directories whose canonical status changes from non-approved/missing to `APPROVED`. Missing/unparseable registry history fails closed. This prevents historical corpus debt from blocking an unrelated edit without leaving FR-TS-042/052 enforcement as a command somebody has to remember.
+
+Three CI-reading rules remain important:
+
+1. **Never round an incomplete run up to green.** A pending/cancelled long functional job proves nothing about its final test verdict.
+2. **Count suites mechanically.** `ls -d src/*/[Tt]ests/*.asmdef` rather than hand-counting.
+3. **`MatchEngine.Tests` is the long pole.** Another suite finishing does not imply it completed.
+
+## Owner-held RED is not quarantine
+
+`sim_match_engine_close_chance` remains **owner-held RED by decision** (`docs/tracking/close-chance-creation-design.md` §10.9 item 6). Never rebaseline it just to get green.
+
+The policy runner no longer makes the whole Linux job red merely because this one owner-held predicate remains at its approved RED state. Instead it:
+
+1. excludes that exact test `Name` from the ordinary blocking pass;
+2. executes the exact test separately;
+3. requires exactly one result;
+4. requires outcome `Failed` and the recorded diagnostic tokens;
+5. fails on unexpected green, changed diagnostics, missing/ambiguous identity, extra results, or abnormal runner exit.
+
+That is **not flake quarantine**. `tools/dotnet-ci/known-failures.txt` remains the separate shrinking-only quarantine source. If any new ordinary test fails, or the owner-held predicate changes state, treat it as a real finding.
+
+## Required-status configuration
+
+Do not infer merge protection from a job name. Read the live repository ruleset before making a required-context claim.
+
+As of the September 4, 2026 PR #357 correction, ruleset `CI for Main branch` requires exactly these six contexts:
+
+- `Markdown lint`
+- `YAML lint`
+- `Markdown link check`
+- `Spec hygiene checks`
+- `File manifest sanity`
+- `C# format check`
+
+The non-certifying Linux functional job is **not** currently required. Historical A1c records that explain why the old steady-red job was not required remain historical evidence; PR #357 changes the owner-held RED handling and therefore invalidates that old rationale as a statement of current behavior without invalidating the historical measurement.
+
+## Certified determinism boundary
+
+GitHub-hosted Linux is non-certifying regression/functional evidence only. Authoritative Spec #16 determinism runs on the pinned Windows/Unity environment.
+
+`.github/workflows/nightly.yml` keeps the self-hosted certified job disabled unless repository variable `DETERMINISM_CERTIFIED_RUNNER_ENABLED=true`. Do not treat the workflow definition, labels, or variable as proof that a runner exists or that certification passed; require an actual successful certified-host run.
 
 ## When triage finds a real defect
 
-This is routing, not a restatement:
+- **Approved spec/code contradiction:** run `err-file-and-backprop`; re-check the ERR id against `main` at merge time.
+- **Anything that actually lands:** run `landing-close-out`.
+- **Pre-existing debt discovered by survey tooling:** do not turn it into an unrelated PR blocker by accident. File/update an issue if it will outlive the PR; Spec #19 checklist/schema auditors block only at a detected canonical registry approval transition, while routine composition is survey-only.
+- **Football-plausibility symptom:** route through `match-realism-pass`, including KD-W1 wiring checks; never tune a `[GT]` from a CI symptom without proving the component is active.
+- **Design fork / new `[GT]` / layer-membership call:** owner/advisor decision, not an agent guess.
+- **Review comment asking for judgment over a surface rather than a direct patch:** hand off to `adversarial-review`.
+- **Force-push, discard another branch's work, rebaseline acceptance, or merge with a newly-red band:** owner call.
 
-- **Root-caused into APPROVED spec text, or code that contradicts one** — run
-  the `err-file-and-backprop` skill. One addition specific to a merge: **re-verify
-  the ERR id is still free against `main` at merge time**, not only at
-  authoring — an id verified free on a branch has been claimed on `main` by
-  another landing while that branch was still open.
-- **Anything actually landed** — a fix, a conflict resolution that changed
-  real content, a doc correction — run `landing-close-out`.
-- **Pre-existing on the base branch** — the generic rule already covers the
-  standing-down comment. This repo adds one decision on top: file an
-  `open-issues.md` entry only if the failure will outlive this PR (it needs
-  an owner decision, or it's a held band like the one above); otherwise the
-  PR comment is the whole record. `open-issues.md` needed a de-duplication
-  pass once already because one issue had two entries and the header count
-  double-counted it — a redundant entry here is not free.
+## Conflicts in tracking documents
 
-## Conflicts in the tracking documents
-
-These files conflict on almost every merge that touches them, and "take both
-sides" is wrong for most of them:
-
-- **`docs/tracking/CHANGELOG.md`.** Both sides append at the top. Keep both
-  entries, newest first, and relabel every entry below the new top one
-  `**Last Updated (prior):**` so exactly one bare `**Last Updated:**` label
-  survives — the file has been found with two, more than once. **Never edit a
-  historical entry to resolve the conflict**; the chain is the record, and a
-  wrong entry gets corrected by a new one, not rewritten in place.
-- **`docs/tracking/open-issues.md`.** Entries are `- **…**` bullets, each with
-  its own "since" date. Resolve as a union — never drop a side. Then
-  re-derive the counts (`grep -c '^- \*\*'` on `open-issues.md` and on
-  `open-issues-resolved.md`) and correct the "N active / M resolved" figure in
-  the root `CLAUDE.md` OPEN ISSUES header; that figure has drifted from
-  unreconciled edits before.
-- **`docs/tracking/spec-error-log.md`.** Every entry has two surfaces — the
-  `## Error Index` summary row and the full `##` body further down. A
-  conflict resolved on only one surface ships half an entry. Check both.
-- **`docs/tracking/CHANGELOG-src.md`.** Same append-at-top, one-bare-label
-  treatment as `CHANGELOG.md` above — this is `src/CLAUDE.md`'s own version
-  chain, split into its own file, and it churns on nearly every landing.
-- **`docs/tracking/file-manifest.md`, `src/CLAUDE.md`, spec section files.**
-  Version-history rows are a union of both sides; the version *number* itself
-  is re-derived from the merged tree, never taken verbatim from either side.
-- **`tools/dotnet-ci/known-failures.txt`.** Resolve shrinking-only. A merge
-  conflict here is never a reason to re-add a line.
-
-## Where this stops
-
-- **A small, direct review comment** — a nit, a rename, a one-function ask —
-  fix and push per the account-level rules; nothing repo-specific about it.
-  **A review comment asking for judgment over a surface**, not a patch, is the
-  one that hands off — to `adversarial-review`.
-- **A football-plausibility symptom** — goal rate, shots, saves, fouls/cards,
-  possession, a moved per-90 band — hand off to `match-realism-pass`,
-  including its KD-W1 wiring gate. Under this repo's wire-first posture the
-  symptom is often a stage that was never wired; do not tune a `[GT]` from a
-  CI log.
-- **A design fork, a `[GT]` value with no recorded target, or a layer-membership
-  call** — convene `advisor`, or file the ERR `Open` and stop. Do not write a
-  guess into an authority file.
-- **Force-pushing, discarding another branch's work, rebaselining an
-  acceptance band, or merging with a newly-red band** — owner call. End the
-  turn and ask.
-
-Underneath all of it: never punt, address every unresolved thread, and a
-failing test in this tree has never once turned out to be an infra flake.
-
-This file deliberately leaves the mechanics themselves — merge-conflict
-resolution order, the CI-red root-cause sequence, the two postures, the
-"Claude Approvals" check, mergeability notices — to that account-level
-authority, and points at rather than restates three of this repo's own
-skills: the gate's stages (`dotnet-gate`), the ERR entry shape
-(`err-file-and-backprop`), the six-document landing sync
-(`landing-close-out`).
+- **`docs/tracking/CHANGELOG.md` / `CHANGELOG-src.md`:** keep both append-only histories, newest first; exactly one bare `**Last Updated:**` label. Correct old errors with successor entries, not rewrites.
+- **`docs/tracking/open-issues.md`:** union both sides. Re-derive active/resolved counts after moving an issue.
+- **`docs/tracking/spec-error-log.md`:** keep the Error Index row and full ERR body synchronized.
+- **`docs/tracking/file-manifest.md`, `src/CLAUDE.md`, spec files:** merge version histories and re-derive the resulting version/state from the merged tree.
+- **`tools/dotnet-ci/known-failures.txt`:** shrinking-only; a conflict is never permission to re-add a quarantine.
 
 ## Reporting
 
-One form, every time: PR number, head sha, CI run id, per-suite before →
-after counts, the quarantine state **and where that state came from** (a
-printed verdict, or an inspection because none was printed), what was pushed,
-what remains open. If no `── Gate PASSED ──` line was printed, say so
-plainly and say what was checked instead — the credible green entries in this
-project's history are credible only because the red ones were stated just as
-plainly.
+Report PR number, head SHA, CI run id, completed job conclusions, owner-held/quarantine state and its evidence source, what was pushed, and what remains open. If a long job has not completed, say so. If certified-host execution or the ≤60-second measured pre-commit acceptance has not happened, say so rather than inferring it from configuration.

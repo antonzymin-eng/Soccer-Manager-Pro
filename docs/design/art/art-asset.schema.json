@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:system-xi:art-asset-schema:1",
+  "title": "System XI art production candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "asset_id",
+    "family",
+    "status",
+    "style_version",
+    "target_surface",
+    "source_kind",
+    "creator_or_tool",
+    "license_or_rights_basis",
+    "attribution_required",
+    "real_person_or_likeness",
+    "real_club_competition_or_trademark",
+    "export_paths"
+  ],
+  "properties": {
+    "asset_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+    },
+    "family": {
+      "type": "string",
+      "enum": [
+        "identity",
+        "typography",
+        "ui",
+        "match",
+        "clubs",
+        "people",
+        "stadiums",
+        "marketing"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "candidate",
+        "source-approved",
+        "exported",
+        "integrated",
+        "validated",
+        "release-ready",
+        "rejected",
+        "deprecated",
+        "quarantined"
+      ]
+    },
+    "style_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_surface": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_kind": {
+      "type": "string",
+      "enum": [
+        "original",
+        "licensed",
+        "generated",
+        "public-domain"
+      ]
+    },
+    "creator_or_tool": {
+      "type": "string",
+      "minLength": 1
+    },
+    "license_or_rights_basis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "attribution_required": {
+      "type": "boolean"
+    },
+    "real_person_or_likeness": {
+      "type": "boolean"
+    },
+    "real_club_competition_or_trademark": {
+      "type": "boolean"
+    },
+    "export_paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "notes": {
+      "type": "string"
+    },
+    "generation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_or_tool",
+        "model_or_version",
+        "prompt_or_recipe_reference",
+        "input_reference_rights",
+        "material_manual_edits",
+        "generation_date_or_batch",
+        "commercial_use_basis"
+      ],
+      "properties": {
+        "provider_or_tool": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model_or_version": {
+          "type": "string"
+        },
+        "prompt_or_recipe_reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input_reference_rights": {
+          "type": "string",
+          "minLength": 1
+        },
+        "material_manual_edits": {
+          "type": "string"
+        },
+        "generation_date_or_batch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commercial_use_basis": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["source_kind"],
+        "properties": {
+          "source_kind": {
+            "const": "generated"
+          }
+        }
+      },
+      "then": {
+        "required": ["generation"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# Owner-held RED tests. This is NOT flake quarantine.
+# Format: test_name|diagnostic_field=expected_value|diagnostic_field=expected_value|...
+# A failing test is report-only only while each exact recorded diagnostic field matches.
+# A changed failure, a missing/ambiguous field, a missing result, or an unexpected execution outcome blocks.
+# Owner decision: close-chance-creation-design.md §10.9 item 6 / PR #316.
+sim_match_engine_close_chance|meanCosine=-0.165|goalwardShare=0.407
