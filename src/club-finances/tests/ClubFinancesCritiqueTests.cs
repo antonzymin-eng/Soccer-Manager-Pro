@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesCritiqueTests.cs
 // Created:  2026-09-06
-// Modified: 2026-09-07
+// Modified: 2026-09-08
 // Author:   —
 // Specs:    Club Finances & Economy #40 §5; Code Standards #20
 // Purpose:  Locks the T0/T1a dependency boundary, RNG-free save shape, upper
@@ -193,9 +193,10 @@ namespace TacticalDirector.ClubFinances.Tests
 }
 
 #region VersionHistory
-// Version | Date       | Author | Change
-// --------|------------|--------|----------------------------------------------
-// 1.0     | 2026-09-06 | —      | Initial external-review regression locks for PR #363.
-// 1.1     | 2026-09-07 | —      | Follow-up: negative board fails loud; header/template and asmdef rationale corrected.
-// 1.2     | 2026-09-07 | —      | Locks overflow-safe board scaling at the documented Int32 tuning extreme and below-cap floor semantics.
+// | Version | Date       | Author | Change |
+// | --------|------------|--------|---------------------------------------------- |
+// | 1.0     | 2026-09-06 | —      | Initial external-review regression locks for PR #363. |
+// | 1.1     | 2026-09-07 | —      | Follow-up: negative board fails loud; header/template and asmdef rationale corrected. |
+// | 1.2     | 2026-09-07 | —      | Locks overflow-safe board scaling at the documented Int32 tuning extreme and below-cap floor semantics. |
+// | 1.4     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
 #endregion

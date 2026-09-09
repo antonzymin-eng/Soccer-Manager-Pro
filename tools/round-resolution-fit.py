@@ -66,6 +66,10 @@ LEAGUE_CLUB_COUNT = 20
 FOOTBALL_GOALS_PER_MATCH = 2.7
 
 
+class CorpusError(ValueError):
+    """A deterministic, user-actionable corpus validation failure."""
+
+
 def lam(base, slope, signed_edge):
     """The model's expected goals for one side — SeasonLoopConstants shape, clamps included."""
     raw = base * math.exp(slope * signed_edge)
@@ -75,14 +79,60 @@ def lam(base, slope, signed_edge):
 def read_rows(paths):
     rows = []
     for path in paths:
-        with open(path, newline="") as handle:
-            for record in csv.DictReader(handle):
-                rows.append({
-                    "d": float(record["dSquad"]),
-                    "h": int(record["homeGoals"]),
-                    "a": int(record["awayGoals"]),
-                })
+        try:
+            handle = open(path, newline="", encoding="utf-8-sig")
+        except OSError as error:
+            raise CorpusError(f"{path}: cannot read corpus: {error}") from error
+
+        with handle:
+            reader = csv.DictReader(handle)
+            if reader.fieldnames is None:
+                raise CorpusError(f"{path}: corpus is empty or has no CSV header")
+
+            required = ("dSquad", "homeGoals", "awayGoals")
+            missing = [name for name in required if name not in reader.fieldnames]
+            if missing:
+                raise CorpusError(f"{path}: missing required column(s): {', '.join(missing)}")
+
+            for line_number, record in enumerate(reader, start=2):
+                location = f"{path}:{line_number}"
+                if None in record:
+                    raise CorpusError(f"{location}: row has more values than the CSV header")
+
+                raw_d = record["dSquad"]
+                raw_h = record["homeGoals"]
+                raw_a = record["awayGoals"]
+                if raw_d is None or not raw_d.strip():
+                    raise CorpusError(f"{location}: dSquad must not be blank")
+                if raw_h is None or not raw_h.strip():
+                    raise CorpusError(f"{location}: homeGoals must not be blank")
+                if raw_a is None or not raw_a.strip():
+                    raise CorpusError(f"{location}: awayGoals must not be blank")
+
+                try:
+                    d_squad = float(raw_d)
+                except ValueError as error:
+                    raise CorpusError(f"{location}: invalid dSquad {raw_d!r}") from error
+                if not math.isfinite(d_squad):
+                    raise CorpusError(f"{location}: dSquad must be finite")
+
+                home_goals = _parse_goal_count(raw_h, "homeGoals", location)
+                away_goals = _parse_goal_count(raw_a, "awayGoals", location)
+                rows.append({"d": d_squad, "h": home_goals, "a": away_goals})
     return rows
+
+
+def _parse_goal_count(raw, field, location):
+    """Parse one canonical bounded integer score without accepting float spellings."""
+    try:
+        value = int(raw, 10)
+    except ValueError as error:
+        raise CorpusError(f"{location}: {field} must be an integer, got {raw!r}") from error
+    if value < 0 or value > MAX_GOALS_PER_SIDE:
+        raise CorpusError(
+            f"{location}: {field} must be in [0, {MAX_GOALS_PER_SIDE}], got {value}"
+        )
+    return value
 
 
 def bucket(rows):
@@ -388,7 +438,12 @@ def main():
     ap.add_argument("--wdl-csv", nargs="*", default=[])
     args = ap.parse_args()
 
-    rows = read_rows(args.csv)
+    try:
+        rows = read_rows(args.csv)
+        wdl_rows = read_rows(args.wdl_csv)
+    except CorpusError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
     if not rows:
         print("no rows", file=sys.stderr)
         return 1
@@ -435,7 +490,7 @@ def main():
           f"across {res['ratios']} bucket-sides, {res['above_one']} above 1; "
           f"pooled chi2={res['chi2']:.1f} dof={res['dof']} -> z={res['z']:+.2f} sigma")
 
-    zero, deep_n = wdl_bucket(summary, args.wdl_csv)
+    zero, deep_n = wdl_bucket(summary, wdl_rows)
 
     rates = goal_rates(summary, rows, zero)
     print(f"goals/match — grid-weighted {rates['grid']:.2f} (over-weights blowouts, NOT a football "
@@ -532,17 +587,17 @@ def goal_rates(summary, rows, zero):
             "n_balanced": zero["n"]}
 
 
-def wdl_bucket(summary, wdl_paths):
+def wdl_bucket(summary, wdl_rows):
     """
     The bucket KD-8 evaluates the W/D/L bar at: dSquad ~ 0, where home advantage is the only thing
     left to produce an asymmetry. Optionally deepened from --wdl-csv, because at the corpus's own
     18-per-bucket depth a draw share carries a ~10pp standard error and cannot resolve a 5pp bar.
     """
     zero = min(summary, key=lambda b: abs(b["mean_d"]))
-    if not wdl_paths:
+    if not wdl_rows:
         return zero, 0
 
-    extra = [r for r in read_rows(wdl_paths) if int(round(r["d"])) == zero["key"]]
+    extra = [r for r in wdl_rows if int(round(r["d"])) == zero["key"]]
     if not extra:
         return zero, 0
 

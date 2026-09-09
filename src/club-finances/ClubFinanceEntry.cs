@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/ClubFinanceEntry.cs
 // Created:  2026-09-04
-// Modified: 2026-09-06
+// Modified: 2026-09-08
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 FR-FN-002/020/021, §4.4 (ClubId-keyed persisted finance state)
@@ -29,8 +29,9 @@ namespace TacticalDirector.ClubFinances
 }
 
 #region VersionHistory
-// Version | Date       | Author | Change
-// --------|------------|--------|----------------------------------------------
-// 1.0     | 2026-09-04 | —      | Initial #40 T1a persisted entry value.
-// 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder.
+// | Version | Date       | Author | Change |
+// | --------|------------|--------|---------------------------------------------- |
+// | 1.0     | 2026-09-04 | —      | Initial #40 T1a persisted entry value. |
+// | 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder. |
+// | 1.3     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
 #endregion
