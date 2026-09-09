@@ -5,11 +5,11 @@
 # which have happened more than once and cost a dedicated reconciliation pass
 # to notice by eye:
 #
-#   1. The changelog chain (docs/tracking/CHANGELOG.md and CHANGELOG-src.md —
-#      root CLAUDE.md itself carries no header chain any more) ends up with
-#      more than one bare "**Last Updated:**" label — found and fixed at least
-#      three times. The rule is exactly one; every older entry must read
-#      "**Last Updated (prior):**".
+#   1. The maintained landing chains (docs/tracking/CHANGELOG.md,
+#      CHANGELOG-src.md, and file-manifest.md — root CLAUDE.md itself carries no
+#      header chain any more) end up missing or with more than one bare
+#      "**Last Updated:**" label. The rule is exactly one; every older entry must
+#      read "**Last Updated (prior):**".
 #   2. A tracking doc's own "Last Updated" claim trails the commits that
 #      actually touched it, so a new entry gets layered on a stale base.
 #   3. The open-issues active/archived counts drift from the real count — this
@@ -26,44 +26,69 @@
 # whoever is about to write the entry. The one carve-out is structural failure of
 # check 3 itself (BROKEN), described below.
 #
-# TWO structural conditions are the exceptions, and they exit 1. A header chain
-# reintroduced into a file whose chain was split out is a contract violation,
-# not a judgment call, so a caller reading the status must not see a pass. The
-# second, added September 4, 2026: BROKEN from the count check, meaning the
-# check could not read exactly one authoritative claim and therefore verified
-# NOTHING. That covers three sub-cases — the claim file is missing, it carries
-# no claim line, or it carries MORE THAN ONE, which is equally undecidable: the
-# check cannot know which is authoritative. (The multiple-match case printed
-# UNPARSED and exited 0 until it was caught in review on September 4, 2026;
-# it is the same structural class as the other two and now exits 1 with them.) That is also structural, not a judgment call — and it is exactly the
-# state this script sat in from the compact restructure until that date, printing
-# UNPARSED on every run and exiting 0 while the real claim drifted to 15/46
-# against a true 21/51. A count DISAGREEMENT (FAIL) stays advisory: whether stale
-# counts are acceptable to land on is a judgment, but a check that cannot run is
-# never a pass. The
-# guard sets chain_violation and the script exits AFTER printing the whole
-# report, so a run still shows every section rather than stopping at the first
-# violation. (Added September 3, 2026: the guard previously printed FAIL and
-# still exited 0, so automation and chained close-out commands treated a
-# forbidden chain as a successful check.)
+# TWO structural conditions are the exceptions, and they exit 1. A maintained
+# landing chain that is missing or has anything other than exactly one bare
+# "Last Updated" label, or a header chain reintroduced into a file whose chain
+# was split out, is a contract violation, not a judgment call, so a caller reading
+# the status must not see a pass. The second, added September 4, 2026: BROKEN
+# from the count check, meaning the check could not read exactly one authoritative
+# claim and therefore verified NOTHING. That covers three sub-cases — the claim
+# file is missing, it carries no claim line, or it carries MORE THAN ONE, which is
+# equally undecidable: the check cannot know which is authoritative. (The
+# multiple-match case printed UNPARSED and exited 0 until it was caught in review
+# on September 4, 2026; it is the same structural class as the other two and now
+# exits 1 with them.) That is also structural, not a judgment call — and it is
+# exactly the state this script sat in from the compact restructure until that
+# date, printing UNPARSED on every run and exiting 0 while the real claim drifted
+# to 15/46 against a true 21/51. A count DISAGREEMENT (FAIL) stays advisory:
+# whether stale counts are acceptable to land on is a judgment, but a check that
+# cannot run is never a pass. The guard sets chain_violation and the script exits
+# AFTER printing the whole report, so a run still shows every section rather than
+# stopping at the first violation. (Added September 3, 2026: the guard previously
+# printed FAIL and still exited 0, so automation and chained close-out commands
+# treated a forbidden chain as a successful check.)
 set -euo pipefail
 chain_violation=0
 check_broken=0
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$repo_root"
 
-echo "== Duplicate bare '**Last Updated:**' label check (changelog chain) =="
+echo "== Duplicate bare '**Last Updated:**' label check (maintained chains) =="
 for f in docs/tracking/CHANGELOG.md docs/tracking/CHANGELOG-src.md; do
-  [[ -f "$f" ]] || { echo "MISSING: $f"; continue; }
+  if [[ ! -f "$f" ]]; then
+    echo "FAIL: $f is missing — maintained landing chains must exist."
+    chain_violation=1
+    continue
+  fi
   bare="$(grep -cE '^> \*\*Last Updated:\*\*' "$f" || true)"
   prior="$(grep -cE '^> \*\*Last Updated \(prior\):\*\*' "$f" || true)"
   if [[ "$bare" -ne 1 ]]; then
     echo "FAIL: $f has $bare bare '**Last Updated:**' label(s) — exactly one is required."
     grep -nE '^> \*\*Last Updated' "$f" | cut -c1-160
+    chain_violation=1
   else
     echo "OK: $f — 1 bare label, $prior (prior) entries."
   fi
 done
+
+# file-manifest.md uses the same maintained chain convention without the
+# changelogs' blockquote prefix, so it needs the plain-line form of the check.
+f=docs/tracking/file-manifest.md
+if [[ ! -f "$f" ]]; then
+  echo "FAIL: $f is missing — maintained landing chains must exist."
+  chain_violation=1
+else
+  bare="$(grep -cE '^\*\*Last Updated:\*\*' "$f" || true)"
+  prior="$(grep -cE '^\*\*Last Updated \(prior\):\*\*' "$f" || true)"
+  if [[ "$bare" -ne 1 ]]; then
+    echo "FAIL: $f has $bare bare '**Last Updated:**' label(s) — exactly one is required."
+    grep -nE '^\*\*Last Updated' "$f" | cut -c1-160
+    chain_violation=1
+  else
+    echo "OK: $f — 1 bare label, $prior (prior) entries."
+  fi
+fi
+
 # Two root docs have had their chains split out and neither may regrow one.
 # Root CLAUDE.md's moved on July 31, 2026 (~52 blockquote-prefixed occurrences
 # pre-split); README.md's moved on September 3, 2026 (38 entries, 564 lines,
@@ -108,7 +133,7 @@ echo
 echo "== Open-issues active/archived count check =="
 # NOTE: the second number counts ARCHIVE MEMBERSHIP, not resolved issues.
 # open-issues-resolved.md also holds superseded parallel records, which its own
-# entries annotate as "'"'"not a resolved issue"'"'". Calling the count "resolved"
+# entries annotate as "'not a resolved issue'". Calling the count "resolved"
 # published a semantically false claim; it is "archived".
 active="$(grep -c '^- \*\*' docs/tracking/open-issues.md 2>/dev/null || true)"
 archived="$(grep -c '^- \*\*' docs/tracking/open-issues-resolved.md 2>/dev/null || true)"
@@ -145,7 +170,7 @@ fi
 # The status-affecting conditions — see the EXIT-CODE CONTRACT at the top.
 if [[ "$chain_violation" -ne 0 || "$check_broken" -ne 0 ]]; then
   echo
-  [[ "$chain_violation" -ne 0 ]] && echo "check_drift.sh: FAILED — a forbidden 'Last Updated' header chain is present (see above)."
+  [[ "$chain_violation" -ne 0 ]] && echo "check_drift.sh: FAILED — a maintained or forbidden 'Last Updated' header chain is structurally invalid or missing (see above)."
   [[ "$check_broken" -ne 0 ]] && echo "check_drift.sh: FAILED — the open-issues count check is BROKEN: it could not find the surface carrying the claim, so it verified nothing (see above)."
   exit 1
 fi
