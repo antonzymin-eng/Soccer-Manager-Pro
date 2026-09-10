@@ -1,0 +1,42 @@
+name: Repair PR389 project reference count
+
+on:
+  push:
+    branches:
+      - fix/localization-pr380-revert
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/localization-pr380-revert
+          fetch-depth: 0
+      - name: Update archived count and verify drift
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('docs/agent-guides/project-reference.md')
+          text = p.read_text()
+          old = '**23 active** / **53 archived**. *(September 7, 2026 —'
+          new = '**23 active** / **54 archived**. *(September 10, 2026 — PR #389 filed the resolved non-authoritative localization T0 landing/revert incident to `open-issues-resolved.md`, taking archive membership 53 → 54 while active remains 23; both figures were re-derived by direct count on this branch.)* *(September 7, 2026 —'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one target, found {text.count(old)}')
+          p.write_text(text.replace(old, new, 1))
+          PY
+          bash tools/check_drift.sh
+      - name: Commit repair and remove helper workflow
+        shell: bash
+        run: |
+          rm .github/workflows/repair-pr389-project-reference.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/agent-guides/project-reference.md .github/workflows/repair-pr389-project-reference.yml
+          git commit -m 'docs: synchronize archived issue count for PR 389'
+          git push origin HEAD:fix/localization-pr380-revert
