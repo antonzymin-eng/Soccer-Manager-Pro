@@ -124,8 +124,16 @@ jobs:
                           '**Last Updated (prior):**')
                       replacement = theirs + ours
                   else:
-                      # Maintained pointer conflict: current main's v1.14 value wins.
-                      replacement = theirs
+                      # This historical maintained-pointer line was edited independently on both sides:
+                      # main advances match-engine-wiring-backlog to v1.14, while PR #391 advances
+                      # spec-error-log to v2.54. Preserve both current values in one line.
+                      text = ''.join(theirs)
+                      old = 'since advanced to **v2.52**'
+                      occurrences = text.count(old)
+                      if occurrences != 2:
+                          raise RuntimeError(f'file-manifest pointer conflict: expected 2 v2.52 pointers, found {occurrences}')
+                      text = text.replace(old, 'since advanced to **v2.54**')
+                      replacement = text.splitlines(keepends=True)
                   replacements.append((start, end, replacement))
 
               for start, end, replacement in reversed(replacements):
@@ -141,14 +149,14 @@ jobs:
 
           git add docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md
 
-          # open-issues.md merged cleanly in the actual three-way merge; leave that merge result intact.
+          # open-issues.md merged cleanly in the actual three-way merge; preserve that result.
           if git diff --name-only --diff-filter=U | grep -q .; then
             echo "Unresolved conflicts remain" >&2
             git diff --name-only --diff-filter=U >&2
             exit 4
           fi
 
-          # The resolver is temporary; remove it from the final PR tree.
+          # The resolver is temporary and must not remain in the final tree.
           git rm .github/workflows/resolve-pr391-main.yml
 
           git diff --check
