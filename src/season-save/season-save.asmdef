@@ -10,6 +10,7 @@
         "TacticalDirector.InjuriesMedical",
         "TacticalDirector.PlayerProgression",
         "TacticalDirector.Discipline",
+        "TacticalDirector.ClubFinances",
         "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
