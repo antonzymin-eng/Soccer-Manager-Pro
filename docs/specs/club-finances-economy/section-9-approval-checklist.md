@@ -1,9 +1,10 @@
 # Club Finances & Economy #40 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** September 10, 2026 (v0.3 — §9.2 refreshed against real source at the T1b landing; it had published T0/T1a as NOT STARTED since PR #363 merged)
+**Last Updated:** September 10, 2026 (v0.4 — ERR-030-050: T1b resume seam/coherence close-out; T2 runtime scope corrected. Prior update follows)
+**Last Updated (prior):** September 10, 2026 (v0.3 — §9.2 refreshed against real source at the T1b landing; it had published T0/T1a as NOT STARTED since PR #363 merged)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/club-finances-economy-design.md` v0.2
 
@@ -48,10 +49,12 @@ implementation gates are open by construction (nothing is built yet); review gat
 - [x] Season-save composition (a #30 change) — **LANDED** (T1b, September 10, 2026, ERR-030-049).
       Anchors: `src/season-save/FinanceBlock.cs`; `SeasonSaveCodec.Encode/Decode`'s `finance` block;
       `SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION = 7`; `SeasonSaveManager`'s required `finances`
-      parameter, `SeasonSaveContents.Finances` and `RequireDestinationCarriesNoFinances`;
+      parameter, `SeasonSaveContents.Finances`, `RequireDestinationCarriesNoFinances`, the loop-held
+      finance carrier, `SeasonLoop.Restore(..., financesOrNull)`, `Save(SeasonLoop, ...)` forwarding, and
+      exact non-empty coherence with `SeasonState.ClubIds` (ERR-030-050);
       `season-save.asmdef`'s `TacticalDirector.ClubFinances` reference.
-- [ ] `SettleFinances` wired at #30's new reserved slot + `CreateInitial` at bootstrap + the
-      `SeasonLoop.Restore` resume seam — NOT STARTED (T2). The ERR-030-003 back-prop it was gated on has
+- [ ] `SettleFinances` wired at #30's new reserved slot + `CreateInitial` at bootstrap + actual producer
+      wiring/consumer exposure — NOT STARTED (T2). The ERR-030-003 back-prop it was gated on has
       landed in #30; the gate is open. Verified absent: no `SettleFinances` / `CreateInitial` call site
       exists outside `src/club-finances/` and its own tests.
 - [ ] Deep-tier per-day accrual / stochastic sponsorship variance / FFP soft-penalty / board modulation / #31
@@ -117,4 +120,5 @@ itself.
 | 0.1 | 2026-07-23 | — | Initial checklist. Content/consistency/implementation gates open by construction; review gates NOT YET RUN. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M wage semantics) / AR-2 / AR-3 CONVERGENCE recorded (§9.3.1); 9.1/9.4 gates checked; R-01..R-05 signed (§9.5); §9.6 APPROVED. |
 | 0.3 | 2026-09-10 | — | **§9.2 stale-status correction, at the T1b landing.** The section was written as a forward-design snapshot and never refreshed when PR #363 merged, so it published `TacticalDirector.ClubFinances` and `ClubFinancesSaveCodec` as NOT STARTED against shipped code for six days. Rewritten with a per-row verifying source anchor (never a bare checkbox), the T1/T1b split made explicit, and the T2 row's ERR-030-003 gate recorded as OPEN rather than blocking. No review gate, FR, or approval decision is touched; §9.6's APPROVED stands unchanged. |
+| 0.4 | 2026-09-10 | — | **ERR-030-050 review correction.** T1b is checked for the finance restore/carrier/save seam and current-season coherence guard; the T2 unchecked row is restricted to bootstrap, settlement, actual producer wiring and consumer exposure. |
 #endregion
