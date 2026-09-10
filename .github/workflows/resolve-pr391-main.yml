@@ -42,7 +42,6 @@ jobs:
 
           mkdir -p /tmp/pr391-resolve
 
-          # open-issues changes are on disjoint parts of the same long-lived file.
           git show "$OUR_HEAD:docs/tracking/open-issues.md" > /tmp/pr391-resolve/open.ours
           git show "$BASE:docs/tracking/open-issues.md" > /tmp/pr391-resolve/open.base
           git show "origin/main:docs/tracking/open-issues.md" > /tmp/pr391-resolve/open.theirs
@@ -55,34 +54,39 @@ jobs:
             exit 3
           fi
 
-          # Both CHANGELOG.md and file-manifest.md are append-at-top chains.
-          # Keep main's newest PR #390 block as current, then the PR #391 block
-          # as immediately prior, then PR #391's already-reconciled history.
           python3 - <<'PY'
           import subprocess
           from pathlib import Path
 
           ours = subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()
 
-          def show(ref, path):
-              return subprocess.check_output(['git','show',f'{ref}:{path}'], text=True)
+          def show_lines(ref, path):
+              return subprocess.check_output(['git','show',f'{ref}:{path}'], text=True).splitlines(keepends=True)
+
+          def first_header(lines, marker, start=0):
+              for i in range(start, len(lines)):
+                  if lines[i].startswith(marker):
+                      return i
+              raise RuntimeError(f'header marker not found: {marker}')
 
           def merge_chain(path, current_marker, prior_marker):
-              a = show(ours, path)
-              b = show('origin/main', path)
-              ai = a.index(current_marker)
-              bi = b.index(current_marker)
-              bj = b.index(prior_marker, bi)
-              prefix = a[:ai]
+              a = show_lines(ours, path)
+              b = show_lines('origin/main', path)
+              ai = first_header(a, current_marker)
+              bi = first_header(b, current_marker)
+              bj = first_header(b, prior_marker, bi + 1)
+
               main_current = b[bi:bj]
               ours_chain = a[ai:]
-              if not ours_chain.startswith(current_marker):
+              if not ours_chain[0].startswith(current_marker):
                   raise RuntimeError(f'{path}: branch current marker not at split')
-              ours_chain = prior_marker + ours_chain[len(current_marker):]
-              merged = prefix + main_current + ours_chain
-              if merged.count(current_marker) != 1:
-                  raise RuntimeError(f'{path}: expected exactly one current marker')
-              Path('/tmp/pr391-resolve/' + Path(path).name + '.merged').write_text(merged)
+              ours_chain[0] = prior_marker + ours_chain[0][len(current_marker):]
+              merged = a[:ai] + main_current + ours_chain
+
+              current_headers = sum(1 for line in merged if line.startswith(current_marker))
+              if current_headers != 1:
+                  raise RuntimeError(f'{path}: expected exactly one current header, found {current_headers}')
+              Path('/tmp/pr391-resolve/' + Path(path).name + '.merged').write_text(''.join(merged))
 
           merge_chain(
               'docs/tracking/CHANGELOG.md',
@@ -94,15 +98,12 @@ jobs:
               '**Last Updated (prior):**')
           PY
 
-          # Let git take all non-overlapping main changes, then install the
-          # three reviewed semantic resolutions above.
           git merge --no-commit --no-ff origin/main || true
           cp /tmp/pr391-resolve/CHANGELOG.md.merged docs/tracking/CHANGELOG.md
           cp /tmp/pr391-resolve/file-manifest.md.merged docs/tracking/file-manifest.md
           cp /tmp/pr391-resolve/open.merged docs/tracking/open-issues.md
           git add docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md docs/tracking/open-issues.md
 
-          # Resolver is temporary and must not remain in the final PR tree.
           git rm .github/workflows/resolve-pr391-main.yml
 
           UNMERGED="$(git diff --name-only --diff-filter=U)"
@@ -112,7 +113,6 @@ jobs:
             exit 4
           fi
 
-          # Cheap final-tree checks before publishing. Full PR CI follows.
           git diff --check
           python3 tools/doc-consistency-check.py --repo .
           python3 tools/recurring-defect-lint.py --repo .
