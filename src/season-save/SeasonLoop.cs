@@ -1,5 +1,8 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
+// Modified: 2026-09-10 (ERR-030-050 — v1.31: the #40 T1b review restores the persisted-family
+//           resume invariant. SeasonLoop now carries the finance entries, constructor/Restore accept
+//           financesOrNull, and composition validates any non-empty set against SeasonState.ClubIds.)
 // Modified: 2026-08-16, latest (reviewed findings pass, findings A/B — v1.30: the CardLedgerFold
 //           construction site in PlayThroughEngine now passes the new required onPitchAgentIdCount
 //           parameter (ERR-044-022), MatchEngineConstants.SQUAD_SIZE — the same cross-assembly
@@ -49,10 +52,11 @@
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
-//           producer boundary / KD-3), §4.7 (CS0104);
+//           producer boundary / KD-3), §4.7 (CS0104), Appendix B.1;
 //           FR-SN-010/011/012/013/013a/013b/016/017/018/025/026/029/030/031/032/033/034;
 //           Training System #29 §3.3/§3.5, FR-TR-004/016/025; Injuries & Medical #41 §3.5,
-//           FR-MD-003/022/023/025; ERR-030-002 / ERR-030-009;
+//           FR-MD-003/022/023/025; Club Finances & Economy #40 FR-FN-020/021/025, §7.1 T1b;
+//           ERR-030-002 / ERR-030-009 / ERR-030-050;
 //           path-to-playable A4 + A5 + D2/D3 (T2); Code Standards #20
 // Purpose:  The season composition root — the only writer of SeasonState (KD-7 / FR-SN-032). Advances the
 //           world one calendar day at a time in the KD-2 fixed order, resolves a whole round of fixtures,
@@ -70,6 +74,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
+using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
@@ -116,6 +121,11 @@ namespace TacticalDirector.SeasonSave
         private readonly PlayerCareerStates _career;
         private readonly ISquadProvider _careerSquads;
         private readonly ProgressionEngine _progression;
+
+        // #40 T1b: persistence-only state. Empty is the explicit pre-T2 composition. Once non-empty,
+        // SeasonFinanceCoherence requires exactly one entry for every SeasonState.ClubId. The loop does
+        // not mutate this state until T2 wires CreateInitial and SettleFinances; T1b only preserves it.
+        private readonly ClubFinanceEntry[] _finances;
 
         // #44 T2: the discipline tally and its sole writer. Held UNPAIRED (see the constructor) — #44
         // has no day step, no cursor and no provider of its own, so nothing here can fall out of step
@@ -230,12 +240,15 @@ namespace TacticalDirector.SeasonSave
         /// documented, because two providers would silently advance training against one league's
         /// attributes and resolve fixtures against another's.
         /// </param>
+        /// <param name="financesOrNull">The #40 T1b finance entries to carry through this loop. Null or
+        /// empty is the explicit pre-T2 state. A non-empty set must exactly match the season's club set
+        /// and is snapshot-copied/canonicalized at composition (ERR-030-050).</param>
         /// <exception cref="System.ArgumentNullException">A required reference is null.</exception>
         /// <exception cref="System.ArgumentException">
         /// The KD-4 cursor invariant is already violated: the world clock has passed the season's pending
         /// round (F4). Checked here as well as at <c>SeasonSaveManager.Load</c> because a loop can be
         /// composed from a freshly built world and an advanced season without any file involved. Or the
-        /// career pair is half-supplied.
+        /// career pair is half-supplied, or a non-empty finance set disagrees with the season's club set.
         /// </exception>
         public SeasonLoop(
             WorldStore world,
@@ -244,10 +257,11 @@ namespace TacticalDirector.SeasonSave
             PlayerCareerStates careerOrNull = null,
             ISquadProvider careerSquadsOrNull = null,
             ProgressionEngine progressionOrNull = null,
-            DisciplineState disciplineOrNull = null)
+            DisciplineState disciplineOrNull = null,
+            ClubFinanceEntry[] financesOrNull = null)
             : this(
                 world, season, mode, careerOrNull, careerSquadsOrNull, progressionOrNull,
-                disciplineOrNull, disciplineDriverOrNull: null)
+                disciplineOrNull, disciplineDriverOrNull: null, financesOrNull: financesOrNull)
         {
         }
 
@@ -273,7 +287,8 @@ namespace TacticalDirector.SeasonSave
             ISquadProvider careerSquadsOrNull,
             ProgressionEngine progressionOrNull,
             DisciplineState disciplineOrNull,
-            IFixtureDisciplineDriver disciplineDriverOrNull)
+            IFixtureDisciplineDriver disciplineDriverOrNull,
+            ClubFinanceEntry[] financesOrNull = null)
         {
             if (world == null)
             {
@@ -439,6 +454,12 @@ namespace TacticalDirector.SeasonSave
                 }
             }
 
+            // ERR-030-050: #40 is persisted from T1b, so the loop must be able to carry the restored
+            // value before T2 gives it a producer. Null/empty is the explicit pre-T2 state. A non-empty
+            // set is snapshot-copied and must exactly match this season's stable ClubId universe.
+            ClubFinanceEntry[] resolvedFinances = SeasonFinanceCoherence.Normalize(
+                season, financesOrNull, nameof(financesOrNull));
+
             _world = world;
             _state = season;
             Mode = mode;
@@ -451,6 +472,7 @@ namespace TacticalDirector.SeasonSave
             // loop composed from an empty store still round-trips to the same well-formed zero-club
             // block it was built from.
             _progression = progressionIsRoster ? progressionOrNull : null;
+            _finances = resolvedFinances;
 
             // #44 T2. Optional and UNPAIRED, unlike the career/provider pair above: #44 needs no squad
             // provider of its own (it reads the squads the seam already resolved) and no world clock
@@ -628,6 +650,12 @@ namespace TacticalDirector.SeasonSave
         /// </para>
         /// </summary>
         public ProgressionEngine Progression => _progression;
+
+        /// <summary>
+        /// A value-copy snapshot of the #40 finance entries this loop carries for persistence. Internal:
+        /// the T1b loop is a carrier, not a second mutation owner; the save root consumes this copy.
+        /// </summary>
+        internal ClubFinanceEntry[] FinanceEntriesForSave() => (ClubFinanceEntry[])_finances.Clone();
 
         /// <summary>
         /// Advances the world one calendar day at a time, in the KD-2 fixed order, until the clock sits ON
@@ -1023,7 +1051,8 @@ namespace TacticalDirector.SeasonSave
         /// <b>Insertion points (FR-SN-031), declared and empty.</b> (a') #43's promotion/relegation
         /// transform and (b') #40's finance settlement sit between the board evaluation and the
         /// regeneration, in that order, so budgets reflect the post-promotion division. They are
-        /// positions in this method, not interfaces — neither spec has code (FR-SN-034 / FR-LW-031).
+        /// positions in this method, not interfaces — #40's T0/T1b code now exists, but its boundary
+        /// producer remains deliberately unwired until T2 (FR-SN-034 / FR-LW-031).
         /// (d) #28's age advance is the same: a documented position, empty until #28 T2.
         /// </para>
         /// <para>
@@ -1065,7 +1094,7 @@ namespace TacticalDirector.SeasonSave
             int securityAfter = evaluated.JobSecurityPerMille;
 
             // ── (a') #43 promotion/relegation inserts HERE (FR-SN-031) — empty at Stage 2. ──────
-            // ── (b') #40 finance settlement inserts HERE (ERR-030-003) — empty at Stage 2. ──────
+            // ── (b') #40 finance settlement inserts HERE (ERR-030-003) — T2-deferred. ───────────
 
             // ── (c) regenerate ──────────────────────────────────────────────────────────────────
             ulong nextSeed = DeriveNextSeasonSeed(_state.Seed, _state.SeasonNumber);
@@ -1261,8 +1290,15 @@ namespace TacticalDirector.SeasonSave
         /// destination guard at the write is the second half of that fix; this is the half that makes
         /// the correct resume expressible at all.
         /// </para></param>
-        /// <exception cref="System.ArgumentException">The blob is malformed (F3) or the restored pair
-        /// violates the cursor invariant (F4).</exception>
+        /// <param name="financesOrNull">The restored #40 per-club entries from
+        /// <see cref="SeasonSaveContents.Finances"/>, or null/empty only for the pre-T2 composition.
+        /// ERR-030-050 restores Appendix B.1's persisted-family rule here: once the frame can contain
+        /// populated finance state, the documented resume path must be able to carry it even before the
+        /// runtime producer is wired. Otherwise Load→Restore→Save As can silently replace it with an
+        /// empty block because a new destination gives the overwrite guard nothing to compare against.</param>
+        /// <exception cref="System.ArgumentException">The blob is malformed (F3), the restored pair
+        /// violates the cursor invariant (F4), or a non-empty finance set disagrees with the season club
+        /// universe.</exception>
         public static SeasonLoop Restore(
             WorldStore world,
             byte[] seasonBlob,
@@ -1270,11 +1306,12 @@ namespace TacticalDirector.SeasonSave
             PlayerCareerStates careerOrNull = null,
             ISquadProvider careerSquadsOrNull = null,
             ProgressionEngine progressionOrNull = null,
-            DisciplineState disciplineOrNull = null)
+            DisciplineState disciplineOrNull = null,
+            ClubFinanceEntry[] financesOrNull = null)
         {
             return new SeasonLoop(
                 world, SeasonStateCodec.Decode(seasonBlob), mode, careerOrNull, careerSquadsOrNull,
-                progressionOrNull, disciplineOrNull);
+                progressionOrNull, disciplineOrNull, financesOrNull);
         }
 
         /// <summary>
@@ -1428,7 +1465,7 @@ namespace TacticalDirector.SeasonSave
             awayXi = FieldedXi(away);
 
             // ERR-044-014: the UNFILTERED rosters — see RosterIds for why serving cannot read the
-            // filtered squad, every id it serves being one the filter has just removed.
+            // filtered squad, every id it serves being one the filter has just removed from it.
             homeRosterIds = RosterIds(homeRoster);
             awayRosterIds = RosterIds(awayRoster);
 
@@ -1709,8 +1746,8 @@ namespace TacticalDirector.SeasonSave
         /// exemption (ERR-044-003 stage 1) is worse than stale in that case — a suspended player pressed
         /// in by the extremis back-fill and then substituted OFF before a card is drawn would still read
         /// as "fielded" and have his ban served for a match he barely played, while one substituted ON
-        /// (including a suspended player brought on as a sub) would NOT read as fielded and would have
-        /// his ban served for a match he did play. <c>SquadRating.StartingElevenPlayerIds</c>'s own XML
+        /// (including a suspended player brought on as a sub) would NOT read as fielded and have his
+        /// ban served for a match he did play. <c>SquadRating.StartingElevenPlayerIds</c>'s own XML
         /// doc (v1.3, `src/match-engine/SquadRating.cs`) names only the appearance record as affected by
         /// this dependency — the #44 serving exemption is a second consumer of the same gap, added
         /// August 15, 2026, and is not yet recorded there. Out of this assembly's scope to fix (that
@@ -1848,7 +1885,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | splits: the roster reconciliation is STAGED at (d′) and INSTALLED |
 // |         |            |        | after (e)'s commits. v1.6 wrote it before BeginNextSeason — the   |
 // |         |            |        | one commit this method's own docs call fallible — so a refused    |
-// |         |            |        | roll left a career reconciled against a season that never began,  |
+// |         |            |        | roll left a career reconciled against a season that never began, |
 // |         |            |        | flatly contradicting the comment that claimed otherwise. Plus an  |
 // |         |            |        | INTERNAL World accessor, so the new SeasonSaveManager.Save        |
 // |         |            |        | overload can capture a whole season from the loop alone without   |
@@ -2128,4 +2165,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | CardLedgerFold.NO_PLAYER via NO_PLAYER_ID. Comment added noting |
 // |         |            |        | this call site is where the ERR-044-023 boot-time precondition  |
 // |         |            |        | on the seed is satisfied. No behaviour change.                   |
+// | 1.31    | 2026-09-10 | —      | ERR-030-050: the #40 T1b finance state now lives on SeasonLoop,  |
+// |         |            |        | constructor/Restore accept financesOrNull, and non-empty entries |
+// |         |            |        | are normalized against the current SeasonState.ClubIds so the    |
+// |         |            |        | persisted family is resumable before T2 wires its producer.      |
 #endregion
