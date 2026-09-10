@@ -1,0 +1,44 @@
+name: One-shot localization tracking formatting repair
+
+on:
+  push:
+    branches:
+      - fix/localization-pr380-revert
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repair root changelog emphasis
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('docs/tracking/CHANGELOG.md')
+          text = p.read_text(encoding='utf-8')
+          old = '**Localization T0 scaffold governance repair (PR #389).** PR #380'
+          new = '**Localization T0 scaffold governance repair (PR #389). PR #380'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one emphasis defect, found {text.count(old)}')
+          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Verify
+        shell: bash
+        run: |
+          git diff --check
+          .claude/skills/landing-close-out/scripts/check_drift.sh
+          python3 tools/doc-consistency-check.py
+          python3 tools/recurring-defect-lint.py
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/tracking/CHANGELOG.md
+          git commit -m "docs: fix localization repair changelog emphasis"
+          git push origin HEAD:fix/localization-pr380-revert
