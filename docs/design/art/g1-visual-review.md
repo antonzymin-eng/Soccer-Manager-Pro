@@ -1,6 +1,6 @@
 # AP-02 — G1 Visual Review Evidence
 
-**Status:** ROUND 3 READY FOR OWNER VISUAL REVIEW — G1 NOT YET ACCEPTED  
+**Status:** ROUND 4 READY FOR OWNER VISUAL REVIEW — G1 NOT YET ACCEPTED  
 **Date:** September 9, 2026  
 **Art direction:** `docs/design/art/art-direction-v1.md` (`art-direction-v1`, still PROPOSED pending G1)  
 **Visual board:** `docs/design/art/g1-visual-review.html`  
@@ -41,27 +41,31 @@ The owner also promoted the density preference into the main visual-review princ
 
 This does not mean indiscriminate clutter. Empty space is justified when it improves hierarchy, scanning, interaction targets, or preserves room for a real state/content requirement. Decorative emptiness is not a default System XI aesthetic.
 
+### Round 3 — superseded by font trial
+
+Round 3 addressed the density, overflow, stadium, club-separation, and player-reference findings and introduced Fira Sans Condensed as a replacement display-face candidate. The layout corrections remain in Round 4; the font trial does not.
+
 ---
 
-## Round 3 candidate
+## Round 4 candidate
 
-Round 3 directly addresses every Round 2 finding:
+Round 4 retains the accepted-in-principle layout corrections from Round 3 and changes only the display-face candidate:
 
 - retains the preferred blue/navy/white palette with restrained yellow emphasis;
-- replaces the Round 2 display-face trial with **Fira Sans Condensed** for visual evaluation;
-- changes tool tiles to a large left-hand label/sub-label plus a large right-hand icon;
-- narrows the portrait, centres player statistics, removes the clipped `Key passes` treatment, fills the bottom of the profile area, and highlights the most important player attributes/information;
-- increases the size and density of match-stat values and makes the Kovač/Mensah relationship explicit in both pitch labels and event text;
-- adds a distinct team-color underlay/accent beneath each club-kit panel so shirt colors do not disappear into the surrounding surface;
-- recomposes the stadium sample so the complete field and both stands are visible;
-- shows accessibility/selection states inside squad and match contexts with named player references;
-- expands the composed squad screen to **16 visible data columns**, larger in-cell values, more useful footer/rail information, and a vertically/horizontally centred, enlarged Role Fit block.
+- trials **PT Sans Narrow** in place of Fira Sans Condensed for a more editorial, less synthetic display character;
+- keeps tool tiles as a large left-hand label/sub-label plus a large right-hand icon;
+- keeps the narrower portrait, centred player statistics, unclipped `Key passes`, filled lower profile area, and highlighted key player attributes/information;
+- keeps larger, denser match-stat values and explicit Kovač/Mensah pitch/event references;
+- keeps the distinct team-color underlay/accent beneath each club-kit panel;
+- keeps the complete field and both stands visible in the stadium sample;
+- keeps accessibility/selection states inside squad and match contexts with named player references;
+- keeps the composed squad screen at **16 visible data columns**, with larger in-cell values, fuller footer/rail information, and a vertically/horizontally centred enlarged Role Fit block.
 
-The Round 3 font remains a **visual candidate only**. Fira Sans Condensed has Cyrillic support suitable for this review path, but AP-03 still owns exact shipping binary/version, redistribution, Ukrainian glyph-corpus proof, offline packaging, fallback, and Unity import. The canonical `touchline` token/art-direction sources are not changed to this candidate until owner visual acceptance; otherwise the review board would prematurely become production authority.
+PT Sans Narrow is a **visual candidate only**. The Google Fonts metadata records OFL licensing plus `cyrillic` and `cyrillic-ext` subsets, making it suitable for the Ukrainian-capable visual trial. AP-03 still owns exact shipping binary/version, redistribution verification, Ukrainian glyph-corpus proof, offline packaging, fallback, and Unity import. The canonical `touchline` token/art-direction sources are not changed to this candidate until owner visual acceptance; otherwise the review board would prematurely become production authority.
 
 ---
 
-## How to review Round 3
+## How to review Round 4
 
 Open:
 
@@ -69,12 +73,12 @@ Open:
 
 Review Sections 01–08 as one system. In particular:
 
-- **01:** palette and new display-face feel;
-- **02:** whether tool labels/icons finally use their tiles efficiently;
-- **03:** clipping, centering, player-information hierarchy, and bottom-area utilization;
+- **01:** palette and PT Sans Narrow display-face feel;
+- **02:** whether tool labels/icons use their tiles efficiently;
+- **03:** clipping, centering, player-information hierarchy, key-player highlighting, and lower-area utilization;
 - **04:** match-stat density and explicit Kovač/Mensah references;
 - **05:** club/kit separation from the panel background;
-- **06:** whether the stadium is now complete enough to judge;
+- **06:** whether the full field and both stands make the stadium complete enough to judge;
 - **07:** whether state cues are understandable in real context;
 - **08:** whether the squad screen is busy enough for a normal monitor without sacrificing readability.
 
@@ -112,7 +116,7 @@ G1 does **not** close:
 
 ## Owner response
 
-If Round 3 and the later dense-screen typography regression checks are acceptable, respond:
+If Round 4 and the later dense-screen typography regression checks are acceptable, respond:
 
 > **G1 accepted.**
 
