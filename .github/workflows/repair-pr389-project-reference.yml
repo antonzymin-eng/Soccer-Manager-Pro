@@ -30,7 +30,7 @@ jobs:
               raise SystemExit(f'expected exactly one target, found {text.count(old)}')
           p.write_text(text.replace(old, new, 1))
           PY
-          bash tools/check_drift.sh
+          .claude/skills/landing-close-out/scripts/check_drift.sh
       - name: Commit repair and remove helper workflow
         shell: bash
         run: |
