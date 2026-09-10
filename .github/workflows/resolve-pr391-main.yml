@@ -1,0 +1,123 @@
+name: Temporary PR391 main conflict resolver
+
+on:
+  push:
+    branches:
+      - claude/spec-40-finance-t1b-ucb6np
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/spec-40-finance-t1b-ucb6np
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Merge current main and resolve known tracking conflicts
+        shell: bash
+        env:
+          EXPECTED_MAIN: e34af3fbbb7332f66d95f9a4cda11e49be3971bc
+          BRANCH: claude/spec-40-finance-t1b-ucb6np
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          ACTUAL_MAIN="$(git rev-parse origin/main)"
+          if [ "$ACTUAL_MAIN" != "$EXPECTED_MAIN" ]; then
+            echo "main moved: expected $EXPECTED_MAIN, found $ACTUAL_MAIN" >&2
+            exit 2
+          fi
+
+          OUR_HEAD="$(git rev-parse HEAD)"
+          BASE="$(git merge-base "$OUR_HEAD" origin/main)"
+          echo "ours=$OUR_HEAD base=$BASE main=$ACTUAL_MAIN"
+
+          mkdir -p /tmp/pr391-resolve
+
+          # open-issues changes are on disjoint parts of the same long-lived file.
+          git show "$OUR_HEAD:docs/tracking/open-issues.md" > /tmp/pr391-resolve/open.ours
+          git show "$BASE:docs/tracking/open-issues.md" > /tmp/pr391-resolve/open.base
+          git show "origin/main:docs/tracking/open-issues.md" > /tmp/pr391-resolve/open.theirs
+          if ! git merge-file -p --diff3 \
+              /tmp/pr391-resolve/open.ours \
+              /tmp/pr391-resolve/open.base \
+              /tmp/pr391-resolve/open.theirs \
+              > /tmp/pr391-resolve/open.merged; then
+            echo "open-issues.md did not merge cleanly; refusing to guess" >&2
+            exit 3
+          fi
+
+          # Both CHANGELOG.md and file-manifest.md are append-at-top chains.
+          # Keep main's newest PR #390 block as current, then the PR #391 block
+          # as immediately prior, then PR #391's already-reconciled history.
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+
+          ours = subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()
+
+          def show(ref, path):
+              return subprocess.check_output(['git','show',f'{ref}:{path}'], text=True)
+
+          def merge_chain(path, current_marker, prior_marker):
+              a = show(ours, path)
+              b = show('origin/main', path)
+              ai = a.index(current_marker)
+              bi = b.index(current_marker)
+              bj = b.index(prior_marker, bi)
+              prefix = a[:ai]
+              main_current = b[bi:bj]
+              ours_chain = a[ai:]
+              if not ours_chain.startswith(current_marker):
+                  raise RuntimeError(f'{path}: branch current marker not at split')
+              ours_chain = prior_marker + ours_chain[len(current_marker):]
+              merged = prefix + main_current + ours_chain
+              if merged.count(current_marker) != 1:
+                  raise RuntimeError(f'{path}: expected exactly one current marker')
+              Path('/tmp/pr391-resolve/' + Path(path).name + '.merged').write_text(merged)
+
+          merge_chain(
+              'docs/tracking/CHANGELOG.md',
+              '> **Last Updated:**',
+              '> **Last Updated (prior):**')
+          merge_chain(
+              'docs/tracking/file-manifest.md',
+              '**Last Updated:**',
+              '**Last Updated (prior):**')
+          PY
+
+          # Let git take all non-overlapping main changes, then install the
+          # three reviewed semantic resolutions above.
+          git merge --no-commit --no-ff origin/main || true
+          cp /tmp/pr391-resolve/CHANGELOG.md.merged docs/tracking/CHANGELOG.md
+          cp /tmp/pr391-resolve/file-manifest.md.merged docs/tracking/file-manifest.md
+          cp /tmp/pr391-resolve/open.merged docs/tracking/open-issues.md
+          git add docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md docs/tracking/open-issues.md
+
+          # Resolver is temporary and must not remain in the final PR tree.
+          git rm .github/workflows/resolve-pr391-main.yml
+
+          UNMERGED="$(git diff --name-only --diff-filter=U)"
+          if [ -n "$UNMERGED" ]; then
+            echo "Unexpected unresolved paths:" >&2
+            echo "$UNMERGED" >&2
+            exit 4
+          fi
+
+          # Cheap final-tree checks before publishing. Full PR CI follows.
+          git diff --check
+          python3 tools/doc-consistency-check.py --repo .
+          python3 tools/recurring-defect-lint.py --repo .
+          python3 tools/dotnet-ci/measurement_catalog.py validate --repo .
+          bash tools/unity-ci/check-meta-integrity.sh
+
+          git commit -m "Merge remote main into PR #391"
+          git push origin HEAD:"$BRANCH"
