@@ -28,7 +28,7 @@ and the four master design volumes under `docs/planning/`.
 
 ## Current state
 
-**Status snapshot — September 6, 2026:** 37 production assemblies exist. The specification frontier
+**Status snapshot — September 6, 2026:** 36 production assemblies exist. The specification frontier
 remains materially ahead of implementation. A2, the architecture-governance schema and
 executable-semantics freeze, closed September 2; A3 governance integration is in progress. The Unity
 target is 6000.4.9f1 / DX11 and was recertified July 19, 2026.
