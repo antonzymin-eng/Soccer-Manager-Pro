@@ -44,12 +44,14 @@ jobs:
               if old_anchor < 0 or main_anchor < 0:
                   raise SystemExit(f'{path}: PR #382 anchor not found')
               main_entry = main[len(prefix):main_anchor]
-              if bare not in main_entry:
-                  raise SystemExit(f'{path}: PR #389 bare Last Updated label not found')
+              if not main_entry.startswith(bare):
+                  raise SystemExit(f'{path}: PR #389 head entry is not the bare Last Updated entry')
               main_entry = main_entry.replace(bare, prior, 1)
               merged = old[:old_anchor] + main_entry + old[old_anchor:]
-              if merged.count(bare) != 1:
-                  raise SystemExit(f'{path}: expected exactly one bare Last Updated label')
+              if not merged.startswith(prefix + bare):
+                  raise SystemExit(f'{path}: PR #390 is not the newest header entry')
+              if sum(line.startswith(bare) for line in merged.splitlines()) != 1:
+                  raise SystemExit(f'{path}: expected exactly one structural bare Last Updated label')
               if must_old not in merged or must_main not in merged:
                   raise SystemExit(f'{path}: one landing record was lost')
               if '*(since v1.13)*' in merged or '*(since advanced to **v1.13**)*' in merged:
@@ -72,7 +74,7 @@ jobs:
               '**Last Updated (prior):** September 9, 2026 — **The localization implementation plan reaches',
               '**Last Updated:**',
               '**Last Updated (prior):**',
-              'A wrong wiring-backlog claim is corrected',
+              'Wiring-backlog W4\'s evidence corrected',
               'Localization T0 scaffold governance repair (PR #389)',
           )
           PY
