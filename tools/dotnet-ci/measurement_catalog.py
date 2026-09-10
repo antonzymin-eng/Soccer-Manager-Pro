@@ -107,7 +107,7 @@ INSTRUMENTS = {
         "src/season-save/tests/EngineScoringDiagnosticTests.cs",
         "src/season-save/tests/season-save-tests.gen.csproj",
         "FullyQualifiedName~EngineScoringDiagnostic",
-        "=== ENGINE SCORING DIAGNOSTIC (ERR-025-005) ===",
+        "ERR-030-014 [distinct-squads] ticks=",
     ),
 }
 
