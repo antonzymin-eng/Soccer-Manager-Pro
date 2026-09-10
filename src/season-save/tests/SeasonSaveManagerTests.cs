@@ -1,5 +1,9 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
+// Modified: 2026-09-10, later (ERR-030-050 — the finance fixture is made coherent with the season it
+//           is saved against: the two-club {3, 7} helper described a club universe MidSeasonState
+//           never had, which the new SeasonFinanceCoherence gate refuses. Now a four-club set over
+//           SeasonClubs, still handed over descending, still carrying negative balances — v1.26)
 // Modified: 2026-09-10 (#40 T1b, ERR-030-049 — every long-form Save call site passes the new required
 //           finance set; new locks for the v7 frame, the finance block's round-trip through the file,
 //           the transposition/order guards and the empty-overwrite refusal — v1.25)
@@ -1556,14 +1560,21 @@ namespace TacticalDirector.SeasonSave
         // ── #40 T1b (ERR-030-049): the finance sub-blob in the season envelope ──────
 
         /// <summary>
-        /// A populated per-club finance set. The values are deliberately distinct per field and per
-        /// club so a field transposition inside the sub-blob, or a club-order change, is visible in the
-        /// assertions rather than being absorbed by equal numbers. <c>Balance</c> goes negative on one
-        /// club because debt is a real state a signed <c>i64</c> must round-trip (#40 §4.4).
+        /// A populated per-club finance set covering EXACTLY <see cref="SeasonClubs"/>. The values are
+        /// deliberately distinct per field and per club so a field transposition inside the sub-blob, or
+        /// a club-order change, is visible in the assertions rather than being absorbed by equal
+        /// numbers. <c>Balance</c> goes negative on one club because debt is a real state a signed
+        /// <c>i64</c> must round-trip (#40 §4.4).
+        /// <para>
+        /// The club set is not incidental (ERR-030-050): once a finance set is non-empty,
+        /// <c>SeasonFinanceCoherence</c> requires it to match <see cref="SeasonState.ClubIds"/> exactly
+        /// on Save, Load and loop composition. An earlier two-club-{3,7} helper predated that rule and
+        /// described a club universe the season it was saved against never had.
+        /// </para>
         /// </summary>
-        private static ClubFinanceEntry[] TwoClubFinances()
+        private static ClubFinanceEntry[] SeasonClubFinances()
         {
-            var first = new CFinances
+            var club10 = new CFinances
             {
                 Balance = -4_250_000L,
                 TransferBudget = 1_000_000L,
@@ -1572,7 +1583,7 @@ namespace TacticalDirector.SeasonSave
                 SeasonRevenueAccrued = 3_000_000L,
                 FfpBalanceWindow = -500_000L,
             };
-            var second = new CFinances
+            var club11 = new CFinances
             {
                 Balance = 9_100_000L,
                 TransferBudget = 4_400_000L,
@@ -1581,10 +1592,34 @@ namespace TacticalDirector.SeasonSave
                 SeasonRevenueAccrued = 7_700_000L,
                 FfpBalanceWindow = 8_800_000L,
             };
+            var club12 = new CFinances
+            {
+                Balance = 12_000_000L,
+                TransferBudget = 13_000_000L,
+                WageBudget = 14_000_000L,
+                WageBillAggregate = 15_000_000L,
+                SeasonRevenueAccrued = 16_000_000L,
+                FfpBalanceWindow = 17_000_000L,
+            };
+            var club13 = new CFinances
+            {
+                Balance = 21_000_000L,
+                TransferBudget = 22_000_000L,
+                WageBudget = 23_000_000L,
+                WageBillAggregate = 24_000_000L,
+                SeasonRevenueAccrued = 25_000_000L,
+                FfpBalanceWindow = -26_000_000L,
+            };
 
             // Handed over in DESCENDING club order: the codec canonicalises to ascending ClubId
             // (FR-FN-021), and a save that only ever passed sorted input would never exercise it.
-            return new[] { new ClubFinanceEntry(7, in second), new ClubFinanceEntry(3, in first) };
+            return new[]
+            {
+                new ClubFinanceEntry(13, in club13),
+                new ClubFinanceEntry(12, in club12),
+                new ClubFinanceEntry(11, in club11),
+                new ClubFinanceEntry(10, in club10),
+            };
         }
 
         [Test]
@@ -1594,7 +1629,7 @@ namespace TacticalDirector.SeasonSave
             // inside #30's envelope, survives the file, and comes back field-identical and canonically
             // ordered. Until this landing the codec could only be exercised standalone (T1a).
             string path = TempPath("finance-roundtrip.season");
-            ClubFinanceEntry[] finances = TwoClubFinances();
+            ClubFinanceEntry[] finances = SeasonClubFinances();
 
             SeasonSaveManager.Save(
                 PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
@@ -1603,9 +1638,17 @@ namespace TacticalDirector.SeasonSave
 
             ClubFinanceEntry[] got = SeasonSaveManager.Load(path).Finances;
 
-            Assert.AreEqual(2, got.Length, "both clubs' entries must survive the season envelope.");
-            Assert.AreEqual(3, got[0].ClubId, "records come back in ascending ClubId order (FR-FN-021)");
-            Assert.AreEqual(7, got[1].ClubId);
+            Assert.AreEqual(4, got.Length, "every club's entry must survive the season envelope.");
+
+            // Ascending ClubId (FR-FN-021), covering exactly the season's club universe (ERR-030-050).
+            // Asserted index by index rather than as a set: the ORDER is the property under test, and a
+            // set comparison would pass on a codec that returned the descending input untouched.
+            int[] expectedClubs = SeasonClubs;
+            for (int i = 0; i < expectedClubs.Length; i++)
+            {
+                Assert.AreEqual(expectedClubs[i], got[i].ClubId,
+                    "record " + i + " must be the season's club at that ascending position.");
+            }
 
             Assert.AreEqual(-4_250_000L, got[0].Finances.Balance,
                 "a negative balance is debt, not corruption — the signed i64 must round-trip bitwise.");
@@ -1621,6 +1664,22 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(6_600_000L, got[1].Finances.WageBillAggregate);
             Assert.AreEqual(7_700_000L, got[1].Finances.SeasonRevenueAccrued);
             Assert.AreEqual(8_800_000L, got[1].Finances.FfpBalanceWindow);
+
+            Assert.AreEqual(12_000_000L, got[2].Finances.Balance);
+            Assert.AreEqual(13_000_000L, got[2].Finances.TransferBudget);
+            Assert.AreEqual(14_000_000L, got[2].Finances.WageBudget);
+            Assert.AreEqual(15_000_000L, got[2].Finances.WageBillAggregate);
+            Assert.AreEqual(16_000_000L, got[2].Finances.SeasonRevenueAccrued);
+            Assert.AreEqual(17_000_000L, got[2].Finances.FfpBalanceWindow);
+
+            Assert.AreEqual(21_000_000L, got[3].Finances.Balance);
+            Assert.AreEqual(22_000_000L, got[3].Finances.TransferBudget);
+            Assert.AreEqual(23_000_000L, got[3].Finances.WageBudget);
+            Assert.AreEqual(24_000_000L, got[3].Finances.WageBillAggregate);
+            Assert.AreEqual(25_000_000L, got[3].Finances.SeasonRevenueAccrued);
+            Assert.AreEqual(-26_000_000L, got[3].Finances.FfpBalanceWindow,
+                "the last club's FFP window is negative too: a sign error in the final record is the "
+                + "one a short set would never reach.");
         }
 
         [Test]
@@ -1724,8 +1783,8 @@ namespace TacticalDirector.SeasonSave
             SeasonSaveManager.Save(
                 PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
                 NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(),
-                disciplineWired: false, TwoClubFinances());
-            Assert.AreEqual(2, SeasonSaveManager.Load(path).Finances.Length,
+                disciplineWired: false, SeasonClubFinances());
+            Assert.AreEqual(4, SeasonSaveManager.Load(path).Finances.Length,
                 "Precondition: the destination carries the entries the second save must not delete.");
 
             Assert.Throws<InvalidOperationException>(
@@ -1736,7 +1795,7 @@ namespace TacticalDirector.SeasonSave
                 "a finance-less save over a populated finance block must be refused, not written: "
                 + "FR-FN-025 makes the entry permanent once created, so the empty set here is a drop.");
 
-            Assert.AreEqual(2, SeasonSaveManager.Load(path).Finances.Length,
+            Assert.AreEqual(4, SeasonSaveManager.Load(path).Finances.Length,
                 "the refused write must leave the destination's finance entries intact.");
         }
 
@@ -2672,4 +2731,13 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | over an empty one, since the latter is every production save    |
 // |         |            |        | until T2 and a guard that refused it would make the format      |
 // |         |            |        | unwritable.                                                     |
+// | 1.26    | 2026-09-10 | —      | ERR-030-050: TwoClubFinances -> SeasonClubFinances. The fixture |
+// |         |            |        | covered clubs {3, 7} while every season it was saved against    |
+// |         |            |        | carried {10, 11, 12, 13}, so the coherence gate landed with     |
+// |         |            |        | Save_Load_RoundTripsTheFinanceBlockThroughTheFile and           |
+// |         |            |        | Save_CarryingNoFinances_CannotEmptyAPopulatedFinanceBlock       |
+// |         |            |        | already red. Now four entries over SeasonClubs, still handed    |
+// |         |            |        | over in DESCENDING order and still carrying two negative        |
+// |         |            |        | fields, with the ascending result asserted index by index       |
+// |         |            |        | rather than as a set — order is the property under test.        |
 #endregion
