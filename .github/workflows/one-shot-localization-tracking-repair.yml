@@ -1,0 +1,81 @@
+name: One-shot localization tracking repair
+
+on:
+  push:
+    branches:
+      - fix/localization-pr380-revert
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply tracking close-out
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected exactly one match, found {count}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          # Root changelog: prepend a forward record and relabel only the previous newest entry.
+          path = "docs/tracking/CHANGELOG.md"
+          old = "> **Last Updated:** September 9, 2026 — **The localization execution plan reaches `main` on PR #382 as v2.5, closing the discoverability gap the L3A landing recorded but could not close. The `<L3A_MERGE_COMMIT>` placeholder is resolved and two further pre-T0 spec defects are recorded. Documentation only; a stray header label from the PR #370 close-out is repaired.**"
+          new = "> **Last Updated:** September 10, 2026 — **Localization T0 scaffold governance repair (PR #389).** PR #380 merged `codex/localization-infrastructure-t0` even though the subsequently-landed authoritative `localization-implementation-plan.md` v2.5 records that scaffold as non-authoritative, says it must not be merged, and requires L1 to be built fresh. PR #389 exactly reverts #380 after proving all 22 affected paths were untouched by the 19 intervening commits: the competing `localization-t0-implementation-plan.md` and `src/localization/` scaffold are removed, Code Standards §3.5.2 returns to its pre-#380 state, and the README production-assembly count returns 37 -> 36. No later work is overwritten; historical tracking entries are not rewritten. PR #388 was closed unmerged because it built additional unauthorized behavior on the reverted scaffold. Localization resumes from the v2.5 authority at L1.**\n>\n> **Last Updated (prior):** September 9, 2026 — **The localization execution plan reaches `main` on PR #382 as v2.5, closing the discoverability gap the L3A landing recorded but could not close. The `<L3A_MERGE_COMMIT>` placeholder is resolved and two further pre-T0 spec defects are recorded. Documentation only; a stray header label from the PR #370 close-out is repaired.**"
+          replace_once(path, old, new)
+
+          # src changelog: record the production assembly removal and bump 2.129 -> 2.130.
+          path = "docs/tracking/CHANGELOG-src.md"
+          old = "> **Last Updated:** September 8, 2026 (v2.129 — **Localization L3A frozen English oracle; `src/living-world/Tests/` only, no production file touched.**"
+          new = "> **Last Updated:** September 10, 2026 (v2.130 — **Localization T0 scaffold governance repair (PR #389).** Exact revert of PR #380 removes the non-authoritative `src/localization/` production assembly/scaffold and Unity meta after proving none of #380's 22 affected paths changed in the 19 intervening commits. Production assemblies return 37 -> 36; no consumer is removed because the scaffold had no production consumers. The authoritative #49 v2.5 plan again governs a fresh L1 landing.)\n>\n> **Last Updated (prior):** September 8, 2026 (v2.129 — **Localization L3A frozen English oracle; `src/living-world/Tests/` only, no production file touched.**"
+          replace_once(path, old, new)
+          old = "| 2.129 | 2026-09-08 | — | **Localization L3A frozen English oracle (PR #370).**"
+          new = "| 2.130 | 2026-09-10 | — | **Localization T0 scaffold governance repair (PR #389).** Exact revert of PR #380 removes the non-authoritative `src/localization/` scaffold/asmdef after proving its 22-path footprint was untouched by later commits; production assemblies return 37 -> 36 and #49 returns to the v2.5 pre-L1 state. |\n| 2.129 | 2026-09-08 | — | **Localization L3A frozen English oracle (PR #370).**"
+          replace_once(path, old, new)
+
+          # File manifest: add the forward landing record. Existing #49 no-assembly row becomes true again and stays untouched.
+          path = "docs/tracking/file-manifest.md"
+          old = "**Last Updated:** September 9, 2026 — **The localization implementation plan reaches `main` (PR #382) as v2.5 with the L3A merge commit resolved and two further pre-T0 spec defects recorded; documentation only, and a stray bare header label from the PR #370 close-out is repaired.**"
+          new = "**Last Updated:** September 10, 2026 — **Localization T0 scaffold governance repair (PR #389).** Exact revert of PR #380 removes `src/localization/`, `src/localization.meta`, and the competing `docs/tracking/localization-t0-implementation-plan.md`; restores the README production-assembly count 37 -> 36 and Code Standards §3.5.2/version history to the pre-#380 state. All 22 #380 paths were verified untouched by the 19 intervening commits, so no later work is overwritten. The existing #49 `no assembly` manifest status is accurate again; localization resumes from the authoritative v2.5 plan at L1.\n**Last Updated (prior):** September 9, 2026 — **The localization implementation plan reaches `main` (PR #382) as v2.5 with the L3A merge commit resolved and two further pre-T0 spec defects recorded; documentation only, and a stray bare header label from the PR #370 close-out is repaired.**"
+          replace_once(path, old, new)
+
+          # Resolved archive, not open-issues: this PR closes the incident in the same landing.
+          path = "docs/tracking/open-issues-resolved.md"
+          marker = "---\n\n"
+          p = Path(path)
+          text = p.read_text(encoding="utf-8")
+          if text.count(marker) < 1:
+              raise SystemExit(f"{path}: archive insertion marker missing")
+          entry = "- **Localization #49 non-authoritative T0 scaffold reached `main` — RESOLVED September 10, 2026 by PR #389.** PR #380 merged `codex/localization-infrastructure-t0` as commit `83e3a5c` even though the authoritative `docs/tracking/localization-implementation-plan.md` v2.5 records that scaffold as non-authoritative, says it must not be merged, and later states that L1 is built fresh rather than by promoting it. #380 also introduced `docs/tracking/localization-t0-implementation-plan.md`, creating a competing execution authority over `src/localization/`, and landed without a root/source changelog close-out. Review during PR #388 exposed the contradiction. **Resolution:** PR #389 performs an exact 22-path revert of #380 after verifying none of those paths changed in the 19 intervening commits, removes the competing plan and scaffold, restores the production-assembly count 37 -> 36 and Code Standards seating, and returns #49 to the pre-L1 state required by v2.5. PR #388 is closed unmerged because it depended on that scaffold and added behavior explicitly outside the authorized L1/L2 scope. Future localization implementation proceeds through the named v2.5 slices; no live blocker remains from this incident.\n\n"
+          text = text.replace(marker, marker + entry, 1)
+          p.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Verify tracking repair
+        shell: bash
+        run: |
+          git diff --check
+          .claude/skills/landing-close-out/scripts/check_drift.sh
+          python3 tools/doc-consistency-check.py
+          python3 tools/recurring-defect-lint.py
+
+      - name: Commit tracking close-out
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/tracking/CHANGELOG.md docs/tracking/CHANGELOG-src.md docs/tracking/file-manifest.md docs/tracking/open-issues-resolved.md
+          git commit -m "docs: record localization T0 governance repair"
+          git push origin HEAD:fix/localization-pr380-revert
