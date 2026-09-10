@@ -1,6 +1,6 @@
 // File:     src/localization/LocalizedTextRequest.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
+// Modified: 2026-09-10
 // Author:   —
 // Spec:     Localization & Accessibility #49 §2.2/§3.1, FR-LC-004/010/014/020, Code Standards #20
 // Purpose:  Immutable producer-agnostic procedural-text request assembled outside simulation code.
@@ -32,6 +32,11 @@ namespace TacticalDirector.Localization
             if (hasCitedEpisode && citationKind < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(citationKind), "Citation kind cannot be negative when a citation is present.");
+            }
+
+            if (!hasCitedEpisode && citationKind != 0)
+            {
+                throw new ArgumentException("Citation kind must be zero when no citation is present.", nameof(citationKind));
             }
 
             Id = id;
@@ -71,4 +76,5 @@ namespace TacticalDirector.Localization
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                |
 // | 1.0     | 2026-09-04 | —      | Initial generic procedural-text request contract.   |
+// | 1.1     | 2026-09-10 | —      | Reject contradictory absent-citation payloads.      |
 #endregion

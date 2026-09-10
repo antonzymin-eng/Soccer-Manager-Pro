@@ -1,6 +1,6 @@
 // File:     src/localization/NamedSlotSet.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
+// Modified: 2026-09-10
 // Author:   —
 // Spec:     Localization & Accessibility #49 §2.2/§3.5, FR-LC-004/009/014, Code Standards #20
 // Purpose:  Immutable producer-agnostic name-to-string slot collection with no mutable storage exposure.
@@ -30,7 +30,7 @@ namespace TacticalDirector.Localization
             for (int i = 0; i < slots.Length; i++)
             {
                 NamedSlot slot = slots[i];
-                if (string.IsNullOrEmpty(slot.Name))
+                if (slot.Name == null || slot.Value == null)
                 {
                     throw new ArgumentException("NamedSlotSet contains a default or malformed slot.", nameof(slots));
                 }
@@ -97,4 +97,5 @@ namespace TacticalDirector.Localization
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                     |
 // | 1.0     | 2026-09-04 | —      | Initial defensive-copy immutable slot collection.        |
+// | 1.1     | 2026-09-10 | —      | Reject partially default slot values as malformed.       |
 #endregion

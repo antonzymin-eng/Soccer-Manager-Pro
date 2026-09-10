@@ -1,6 +1,6 @@
 // File:     src/localization/NamedSlot.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
+// Modified: 2026-09-10
 // Author:   —
 // Spec:     Localization & Accessibility #49 §2.2/§3.5, FR-LC-004/009/014, Code Standards #20
 // Purpose:  Immutable name-to-string slot entry used by producer-agnostic localization requests.
@@ -19,11 +19,7 @@ namespace TacticalDirector.Localization
         /// </summary>
         public NamedSlot(string name, string value)
         {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                throw new ArgumentException("NamedSlot requires a non-empty slot name.", nameof(name));
-            }
-
+            LocalizationIdentifier.ValidateSlotName(name, nameof(name));
             if (value == null)
             {
                 throw new ArgumentNullException(nameof(value));
@@ -48,4 +44,5 @@ namespace TacticalDirector.Localization
 #region VersionHistory
 // | Version | Date       | Author | Notes                                      |
 // | 1.0     | 2026-09-04 | —      | Initial immutable named-slot value.        |
+// | 1.1     | 2026-09-10 | —      | Enforce placeholder-safe bounded names.    |
 #endregion

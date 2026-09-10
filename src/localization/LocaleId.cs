@@ -1,6 +1,6 @@
 // File:     src/localization/LocaleId.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
+// Modified: 2026-09-10
 // Author:   —
 // Spec:     Localization & Accessibility #49 §4.2, FR-LC-011/018, Appendix A, Code Standards #20
 // Purpose:  Immutable locale identity for display-time catalogue selection and fallback.
@@ -21,11 +21,7 @@ namespace TacticalDirector.Localization
         /// </summary>
         public LocaleId(string value)
         {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                throw new ArgumentException("LocaleId requires a non-empty locale code.", nameof(value));
-            }
-
+            LocalizationIdentifier.ValidateLocale(value, nameof(value));
             _value = value;
         }
 
@@ -89,4 +85,5 @@ namespace TacticalDirector.Localization
 #region VersionHistory
 // | Version | Date       | Author | Notes                                      |
 // | 1.0     | 2026-09-04 | —      | Initial immutable locale identity.         |
+// | 1.1     | 2026-09-10 | —      | Reject malformed and unbounded locale tags. |
 #endregion

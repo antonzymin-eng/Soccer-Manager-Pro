@@ -1,6 +1,6 @@
 // File:     src/localization/LocalizationKey.cs
 // Created:  2026-09-04
-// Modified: 2026-09-04
+// Modified: 2026-09-10
 // Author:   —
 // Spec:     Localization & Accessibility #49 §2.1/§2.2, FR-LC-002/003, Code Standards #20
 // Purpose:  Immutable stable identity for one static user-facing string.
@@ -21,11 +21,7 @@ namespace TacticalDirector.Localization
         /// </summary>
         public LocalizationKey(string value)
         {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                throw new ArgumentException("LocalizationKey requires a non-empty key.", nameof(value));
-            }
-
+            LocalizationIdentifier.ValidateKey(value, nameof(value));
             _value = value;
         }
 
@@ -84,4 +80,5 @@ namespace TacticalDirector.Localization
 #region VersionHistory
 // | Version | Date       | Author | Notes                                      |
 // | 1.0     | 2026-09-04 | —      | Initial static localization key contract.  |
+// | 1.1     | 2026-09-10 | —      | Reject malformed and unbounded key paths.  |
 #endregion
