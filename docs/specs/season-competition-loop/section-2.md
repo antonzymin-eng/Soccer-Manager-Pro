@@ -161,15 +161,17 @@ the outline's pass-13 L4 class, in the FR preamble).
   through, defaulting to a thin pass-through over the loop's own `DisciplineRules`, so a test can
   substitute a failing collaborator without process-static state (FR-CS-051..054); since **#40 T1b's
   review correction (ERR-030-050)** also holds a canonical snapshot copy of `ClubFinanceEntry[]`, accepted
-  as `financesOrNull` by `Restore` and exposed read-only as `Finances`, so populated finance state loaded
-  from the frame survives `Save(SeasonLoop, ...)`. Empty is legal before T2; once non-empty, its ClubIds
-  exactly match `SeasonState.ClubIds`. T2 still owns `CreateInitial` and `SettleFinances`, not this carrier;
+  as `financesOrNull` by `Restore` and kept private — unlike `Discipline`, no public property is exposed;
+  the state reaches persistence only through the assembly-internal `FinanceEntriesForSave()` clone, so
+  populated finance state loaded from the frame survives `Save(SeasonLoop, ...)`. Empty is legal before
+  T2; once non-empty, its ClubIds exactly match `SeasonState.ClubIds`. T2 still owns `CreateInitial` and `SettleFinances`, not this carrier;
   exposes
   the command API (`AdvanceToNextFixtureDay`, `AdvanceDays`, `AdvanceAndPlayNextRound(ISquadProvider)`,
   `RollToNextSeason`, `View`) + `Snapshot()`/`Restore()` for the season sub-blob.
 - **`ClubFinanceEntry[]`** (#40-owned entries, loop-held since T1b / ERR-030-050): the persisted
   current-season finance carrier. `SeasonLoop` snapshot-copies and canonicalizes it at composition,
-  exposes a defensive copy through `Finances`, and forwards it on the loop save path. Empty is the legal
+  holds it in the private `_finances` field with NO public accessor, and forwards a defensive copy on the
+  loop save path through the assembly-internal `FinanceEntriesForSave()`. Empty is the legal
   pre-T2 state; non-empty ClubIds MUST exactly equal `SeasonState.ClubIds`. Runtime bootstrap and mutation
   remain T2 responsibilities.
 - **`DisciplineState`** (#44-owned, `TacticalDirector.Discipline`; added at ERR-030-035, #44 C1/C2
@@ -256,5 +258,5 @@ the outline's pass-13 L4 class, in the FR preamble).
 | 1.9 | 2026-08-15 | — | **M26** (#44 adversarial-review round 4, `open-issues.md`): **FR-SN-021** was nine arguments — `Save(world, season, matchOrNull, path, trainingClubs, medicalClubs, appearanceClubs, progression, discipline)` — against `SeasonSaveManager.Save`'s real ten (verified by reading `src/season-save/SeasonSaveManager.cs`'s live signature): ERR-030-039 (v2.23, filed and fixed the same round as v1.6/v1.8 above) had promoted a tenth, required, never-defaulted `disciplineWired: bool` parameter onto the public form after finding the prior `discipline`-implies-wired reasoning bypassable — a fix this section never picked up. Refreshed to the true ten-argument signature, with `disciplineWired`'s purpose stated (it is not derivable from `discipline`, since FR-DC-017 makes an empty tally ambiguous between "drained" and "unwired"). Also notes this row as the SINGLE normative copy of the signature — `section-4.md` §4.4 already points here rather than restating it (AR pass 13 M3 deleted that second copy), and Appendix B/B.1 covers only the byte layout, not the call — so no third copy exists to reconcile. |
 | 2.0 | 2026-08-15 | — | **`ERR-030-042`** (reviewed High, spec-only): **F9**'s parenthetical gloss on the depleted-squad back-fill — "least-injured first, selector-probed" — restated §3.4's single-ordering-key description of a rule the code has implemented in TWO TIERS since the #44 C1/C2 landing (injured first; a suspended player only once no injured one remains — #44 §2.3/§7.2's owner decision, which #30's own spec set never stated). F9 now names both tiers, states that the tier is a discriminator separate from the ordering key #41 alone writes, and points at §3.4, where the rule, the requalified inheritance ("the INVARIANT, not the ordering") and the zero-default trap are stated in full. NO code change — the code is correct. |
 | 2.1 | 2026-09-10 | — | **ERR-030-049** (#40 T1b): FR-SN-021's `Save` signature refreshed to eleven arguments with the new required, null-rejecting `finances` (`ClubFinanceEntry[]`, #40 FR-FN-020), and `Load`'s return description gains the reconstructed `Finances` (never null, ascending `ClubId`, empty until #40 T2 bootstraps the entries). The row also now records why #40 gets **no** `financesWired` companion to `disciplineWired` — FR-FN-025 makes a finance entry permanent once created, so Appendix B.1's emptiness key is sound for it, whereas FR-DC-017 makes #44's empty tally canonical and forced the wiring key there. §2.2 is deliberately untouched: unlike the M21 finding at v1.8, `SeasonLoop` holds no #40 type at T1b; it acquires one at T2 with the resume seam, and that is when a §2.2 bullet is owed. |
-| 2.2 | 2026-09-10 | — | **ERR-030-050 review correction.** §2.2 now records the T1b `SeasonLoop` finance carrier, `financesOrNull` restore seam, defensive `Finances` view, and current-season ClubId coherence. T2 remains the producer phase for `CreateInitial` and `SettleFinances`. Supersedes v2.1's claim that all loop-held finance state was deferred. |
+| 2.2 | 2026-09-10 | — | **ERR-030-050 review correction.** §2.2 now records the T1b `SeasonLoop` finance carrier, `financesOrNull` restore seam, the private-with-no-public-accessor holding whose only persistence surface is the assembly-internal `FinanceEntriesForSave()` clone, and current-season ClubId coherence. T2 remains the producer phase for `CreateInitial` and `SettleFinances`. Supersedes v2.1's claim that all loop-held finance state was deferred. |
 #endregion
