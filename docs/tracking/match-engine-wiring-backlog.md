@@ -218,16 +218,56 @@ Blocked on the same missing multi-agent contact feed as the GK/Heading `Collisio
 AGENT_BALL duel fan-out already recorded in OPEN ISSUES — these are one dependency, not two.
 
 ### W4 — The keeper is never unsighted
-**Evidence:** `match-engine/GkHeadingIntentSource.cs:27` `SaveArmed` is four lines of pure geometry
+**Evidence:** `match-engine/GkHeadingIntentSource.cs:33` `SaveArmed` is four lines of pure geometry
 (ball loose, within range of the goal line, closing, above a minimum speed). Reaction latency is a
 flat constant scaled by Reflexes.
 
 A real, tested `OcclusionFilter` (shadow-cone test against other agents) is live in the perception
-system for outfield players — `perception-system/PerceptionSystem.cs:396`,
-`BallPerceptionEvaluator.cs:72`. The keeper is simply not on that path.
+system — `perception-system/PerceptionSystem.cs:396`, `BallPerceptionEvaluator.cs:71-74`.
 
-**Consequence:** traffic in front of goal costs the keeper nothing, and a deflection off a defender
-does not restart his reaction window. Shots *do* deflect off bodies
+> **⚠️ CORRECTED September 10, 2026 (v1.14) — read this before designing W4.** As filed, this entry
+> closed *"The keeper is simply not on that path."* **That is false, and it is the kind of false that
+> sends an implementer at the wrong seam.** The keeper **is** on the perception path:
+> `MatchEngine.cs:3074` runs `_perception.OnHeartbeat` over the full `SQUAD_SIZE`, keepers included
+> (keeper index == team id, `MatchEngine.cs:922`), and `BallPerceptionEvaluator` already computes an
+> occluded ball visibility for him every heartbeat. Nothing needs putting on the path. The defect is
+> **downstream consumption and tick order** — `SaveArmed` never reads the view that already exists —
+> and the three constraints below are the actual content of W4. Verified by direct source read at
+> `81c6ae0`; no sequencing changed by this correction.
+
+**Three constraints any W4 design must resolve explicitly.** None were visible while the entry read
+"not on that path", and the first two make the obvious implementation a *regression* rather than a
+fidelity gain:
+
+1. **Occlusion is not `BallVisible`.** `FilteredView.BallVisible` is `range AND FoV AND
+   not-occluded` (`BallPerceptionEvaluator.cs:60-76`). The FoV term is taken against
+   `AgentState.FacingDirection`, which for a keeper is `AUTO_ALIGN` — velocity direction, else the
+   vector to his movement target, else unchanged when he is stopped
+   (`AgentMovementSystem.cs:454-465`). A keeper is dispatched `MOVE_TO_POSITION` at the
+   #12-composed GK slot (`MatchEngine.cs:4665-4670`); settled on that slot his velocity is ~0 and the
+   fallback degenerates, so his facing is whatever it last was — **not** ball-directed. Base FoV
+   half-angle is 80° (`PerceptionConstants.cs:57-65`, floor 60°). A keeper who last shuffled laterally
+   has a shot from in front of goal at ~90° separation, i.e. **outside the cone**. Gating the save on
+   `BallVisible` would therefore blind keepers to ordinary *unobstructed* shots while presenting as a
+   working occlusion feature. W4 must either consume the occlusion term alone, or give the keeper a
+   ball-directed facing first. **How often this bites is UNMEASURED** — it is a W12a question, and it
+   is one of the reasons W12a is worth taking first.
+2. **Both call sites precede the perception heartbeat.** `SaveArmed` has **two** production callers,
+   not one: `MatchEngine.cs:3311` (the DT-emitted-SAVE gate inside `RunMechanicsAI`, entered at
+   `:3046`) and `MatchEngine.cs:4461` (the W1 rush exclusion inside `TryCommitRushIntents`, reached
+   from `DriveGkHeadingTactical` at `:3072`). Both run **before** `_perception.OnHeartbeat` at
+   `:3074`, so a view read at either site is the **previous** heartbeat — 100 ms stale at 10 Hz, the
+   same order as the reaction latency W4 exists to model. The staleness is at least *uniform* across
+   the two sites. W1 chose its side of that boundary deliberately (the rush is a 10 Hz state-machine
+   input); the ordering must be re-decided in the open, not inherited by accident.
+3. **The two call sites must not drift.** `MatchEngine.cs:4457-4460` states the invariant outright —
+   *"Same pure predicate the DT-emitted SAVE gate uses, so the two cannot drift"* — because a keeper
+   who rushes on a ball he should be diving at is the ERR-011-007 regression shape. A
+   perception-dependent `SaveArmed` must stay **one** predicate across both sites, or the save/rush
+   mutual exclusion breaks.
+
+**Consequence (unchanged):** traffic in front of goal costs the keeper nothing, and a deflection off a
+defender does not restart his reaction window. Shots *do* deflect off bodies
 (`CollisionSystem.ProcessAgentBall`) — the keeper just doesn't notice.
 
 ### W5 — The pressing AI's pass-event trigger never fires
@@ -468,7 +508,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 | 2 | ~~**C1** the `InPoss` gate~~ ✅ **FIXED Aug 8, 2026** (`ERR-012-011`) | Cheap, and the phase label was simply wrong. But the "unblocks #13/#14/#15" rationale was refuted before implementation — see the C1 entry: two of the three consumers are inert for reasons the gate does not touch. Re-measurement is the deliverable, not a creation gain. |
 | 3 | ~~**W2** tackles~~ ✅ **WIRED Aug 12, 2026** | **Four**-link chain, not three. Measured before building: the gate supplied ~4× football's tackle rate, so this was a RESOLUTION problem, not a producer one. Governance question resolved by `ERR-014-006`: new #14 §3.6.5 takes the outcome model back on the W1 precedent, a four-outcome (`MISSED`/`BALL_WON`/`BALL_LOOSE`/`FOUL`) abstract attribute duel, ten new `[GT]` un-calibrated per KD-W1. Surfaced **C9**, **C10**. **GATE PASSED for W2 (August 12, 2026):** whole-tree build 0 errors / 0 warnings, quarantine empty, 32 suites; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** (38 m 2 s). The single failure is `sim_match_engine_close_chance`, the inherited owner-held-red predicate that also fails at the pre-change baseline `4b9271c` — so the branch is at its baseline red state and W2 adds no new failure. Baseline was 451/1/10; the +10 passed are W2 locks and the +1 skipped is the env-gated census instrument. — see the W2 entry above. |
 
-| 4 | **W4** keeper perception | Reuses tested occlusion. Upstream of all keeper behaviour, so it should precede any keeper calibration. **Next in sequence.** |
+| 4 | **W4** keeper perception | Reuses tested occlusion. Upstream of all keeper behaviour, so it should precede any keeper calibration. **Next in sequence.** ⚠️ **The W4 entry above was corrected September 10, 2026 (v1.14)** — the keeper IS already on the perception path, and W4 is a consumption/tick-order problem with three named constraints. This row's *ordering* is untouched by that correction and a revision of it is pending separately. |
 | 5 | **W12** the gate-firing instrument | Before calibration, and before assuming Class B is only four items. |
 | 6 | **W5**, **W7**, **W6** | Small, independent, each self-contained. |
 | 7 | **W3** + AGENT_BALL fan-out | One dependency, two consumers. The largest single build in this document. |
@@ -565,6 +605,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.14 | 2026-09-10 | — | **W4's evidence was factually wrong and is corrected in place; documentation only, no sequencing changed.** As filed since v1.0 the entry closed *"The keeper is simply not on that path."* Direct source read at `81c6ae0` refutes it: `MatchEngine.cs:3074` runs `_perception.OnHeartbeat` over the full `SQUAD_SIZE` including both keepers (keeper index == team id, `:922`), and `BallPerceptionEvaluator` already computes an occluded ball visibility for each of them every heartbeat. W4 is a **downstream-consumption and tick-order** problem, not an absence from the perception path, and the wrong framing pointed at the wrong seam. Three constraints recorded, none of which were visible under the old wording and the first two of which make the obvious implementation a regression: (1) `FilteredView.BallVisible` bundles **FoV** with occlusion, and keeper facing is `AUTO_ALIGN` (velocity, else movement-target vector, else unchanged when stopped — `AgentMovementSystem.cs:454-465`) rather than ball-directed, so against an 80° half-angle cone (`PerceptionConstants.cs:57-65`) gating the save on `BallVisible` would blind keepers to ordinary **unobstructed** shots — frequency **UNMEASURED**; (2) `SaveArmed` has **two** production callers, `MatchEngine.cs:3311` (DT-emitted-SAVE gate, in `RunMechanicsAI` entered at `:3046`) and `:4461` (the W1 rush exclusion, via `DriveGkHeadingTactical` at `:3072`), and **both precede** the `:3074` heartbeat, so either read is the previous heartbeat — 100 ms stale at 10 Hz, the same order as the reaction latency W4 models; (3) `:4457-4460` requires the two sites to share **one** predicate or the save/rush exclusion drifts into the ERR-011-007 shape. The §5 row-4 ordering is deliberately **untouched**; a revision of the order (and the W12a/W12b split) is a separate pending decision. No `[GT]` moved, no code changed, no schema change, no gate run — documentation only. |
 | 1.13 | 2026-08-18, later | — | **Reviewed-findings pass, part of one High (H-B), documentation only.** §6's `pointQuality` note corrected: it still framed the parking condition present-tense as W1 changing the contact geometry ("a problem about to change shape"), which published an already-satisfied release condition — W1 landed August 4 and its rush anatomy was measured August 12, 2026. The note now states the surviving condition: parked until the close-range CONVERSION comparison on identical seeds exists (`gk-rush-trigger-design.md` §6's still-owed pre/post pair), per the August 17, 2026 owner decision (KD-CC6a). The same H-B fixed the twin stale framings at `open-issues.md`'s owning record headline and `CLAUDE.md`'s index bullet. |
 | 1.12 | 2026-08-18 | — | **Reviewed-findings pass, one Low (L2), documentation only.** §5's "attack the ball" note (added at 1.4, rewritten at 1.5, both 2026-08-09) was headed "Note (Aug 10, 2026; updated 2026-08-09)" — a date this file's own version history does not support: the note's content (the §10.7 → §10.8 → §10.10 sequence) matches v1.5's description exactly, and both the note's first appearance (v1.4) and its rewrite (v1.5) are dated 2026-08-09; no version row anywhere in this file, and no dated correction in `close-chance-creation-design.md`'s own version history, touches this note on August 10. Corrected to a single "Note (2026-08-09)." No sequence changed, no `[GT]` moved, no code changed, no gate run. |
 | 1.11 | 2026-08-17, later | — | **Reviewed-findings pass, two Lows, both fixed.** **L6:** the 1.10 row below had been inserted BELOW 1.9 in this newest-first table (the sequence ran 1.9, 1.10, 1.8, 1.7 …); moved above 1.9, where it belongs by date and by version order. **L11:** the 1.10 row and the §5 blockquote note it added both claimed W2's arming "gates three separate held decisions … each cite W2 independently" — false of item 3, the un-isolated `sim_match_engine_inposs_gate` collapse to 0.501 against its 0.70 bound: that finding is the reason arming is BLOCKED, not something arming unblocks. Both corrected in place to state two held decisions gated on arming (foul/card calibration, KD-7a) with the inposs stall named separately as arming's own blocker (leading candidate W6). No sequence changed, no `[GT]` moved, no code changed, no gate run — documentation only. |

@@ -13,6 +13,7 @@ COVERAGE_SETTINGS="$ROOT/tools/dotnet-ci/coverage.runsettings"
 COVERAGE_SETTINGS_EXPLICIT=0
 REQUESTED_FILTER=""
 SETTINGS_FILE=""
+TEST_LOGGER=""
 OWNER_MODE=""
 COLLECT_COVERAGE=0
 FAST_MODE=0
@@ -24,6 +25,9 @@ Usage: bash tools/dotnet-ci/run-gate.sh [options]
 Options:
   --test-filter <vstest-filter>    Restrict the blocking test set with an explicit VSTest filter.
   --settings <runsettings>         Apply an explicit .runsettings file (used by pre-commit for anchored NUnit selection).
+  --test-logger <logger-spec>      Pass an explicit `dotnet test --logger` spec. Required to capture the
+                                   env-gated instruments, which print to stdout and are discarded at
+                                   default verbosity: use 'console;verbosity=detailed'.
   --owner-held-red report-only     Exclude the owner-held RED from the blocking pass, then execute and value-verify it separately.
   --coverage                       Collect XPlat Code Coverage.
   --coverage-settings <runsettings>  Override the coverage runsettings file for an explicit policy caller.
@@ -46,6 +50,11 @@ while [ "$#" -gt 0 ]; do
         --settings)
             [ "$#" -ge 2 ] || { echo "ERROR: --settings requires a value." >&2; exit 2; }
             SETTINGS_FILE="$2"
+            shift 2
+            ;;
+        --test-logger)
+            [ "$#" -ge 2 ] || { echo "ERROR: --test-logger requires a value." >&2; exit 2; }
+            TEST_LOGGER="$2"
             shift 2
             ;;
         --owner-held-red)
@@ -161,6 +170,7 @@ append_filter "$OWNER_EXCLUSION"
 if [ "${TD_GATE_DRY_RUN:-}" = "1" ]; then
     printf 'DRY-RUN blocking_filter=%s\n' "${FILTER:-<none>}"
     printf 'DRY-RUN settings=%s\n' "${SETTINGS_FILE:-<none>}"
+    printf 'DRY-RUN test_logger=%s\n' "${TEST_LOGGER:-<none>}"
     printf 'DRY-RUN quarantine_include=%s\n' "$(quarantine_include_filter "$QUARANTINE")"
     printf 'DRY-RUN owner_held_include=%s\n' "${OWNER_INCLUDE:-<none>}"
     printf 'DRY-RUN coverage=%s\n' "$COLLECT_COVERAGE"
@@ -195,6 +205,15 @@ fi
 if [ -n "$SETTINGS_FILE" ]; then
     TEST_ARGS+=(--settings "$SETTINGS_FILE")
 fi
+# The measurement lane's reason for existing. The env-gated §5.Z instruments report by WRITING TO
+# STDOUT and asserting nothing (the ERR-030-014 convention), and at dotnet test's default verbosity
+# that output is discarded: the run goes green and the measurement is silently lost. This has cost a
+# measurement pass before — see docs/tracking/file-manifest.md, "learned the hard way". No env-var
+# form on purpose: this file rejects ambient configuration by design (see the legacy_var loop above),
+# so the logger is an explicit argument like every other selection.
+if [ -n "$TEST_LOGGER" ]; then
+    TEST_ARGS+=(--logger "$TEST_LOGGER")
+fi
 if [ "$COLLECT_COVERAGE" -eq 1 ]; then
     COVERAGE_DIR="$ROOT/artifacts/coverage"
     mkdir -p "$COVERAGE_DIR"
@@ -207,6 +226,9 @@ if [ -n "$FILTER" ]; then
 fi
 if [ -n "$SETTINGS_FILE" ]; then
     printf 'Runsettings: %s\n' "$SETTINGS_FILE"
+fi
+if [ -n "$TEST_LOGGER" ]; then
+    printf 'Test logger: %s\n' "$TEST_LOGGER"
 fi
 if [ "$COLLECT_COVERAGE" -eq 1 ]; then
     printf 'Coverage runsettings: %s\n' "$COVERAGE_SETTINGS"

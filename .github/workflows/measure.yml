@@ -1,0 +1,142 @@
+name: Match measurement lane
+
+# Manually dispatched host for the env-gated §5.Z match-engine instruments.
+#
+# WHY THIS IS SEPARATE FROM ci.yml:
+#   1. These instruments are deliberately opt-in and expensive (the W2 tackle census ran multi-seed
+#      x 90 minutes of simulated match). Running them on every PR would tax the merge gate for
+#      evidence nobody asked for on that PR.
+#   2. They assert nothing by design (the ERR-030-014 convention: pinning measured-but-wrong
+#      behaviour turns a defect into a contract). A job that cannot fail does not belong in a
+#      blocking gate, where it would read as passing evidence.
+#   3. Measurement should be a deliberate act with a recorded reason, not a side effect of pushing.
+#
+# WHAT IT DELIBERATELY DOES NOT DO:
+#   It does not commit anything. `permissions: contents: read` is the enforcement, not a convention.
+#   A run produces an artifact; a human reads it, accepts it, and only then is the raw output
+#   committed under docs/tracking/corpus-data/ by hand. Measurement provenance stays deliberate.
+#
+# KNOWN CONSTRAINT: GitHub only offers workflow_dispatch for workflows present on the DEFAULT
+# branch. Until this file is on main it cannot be dispatched from a feature branch, however green
+# that branch's other checks are. Validate locally with TD_GATE_DRY_RUN=1 (see below) meanwhile.
+
+on:
+  workflow_dispatch:
+    inputs:
+      diagnostic:
+        description: 'Instrument env switch to enable for this run'
+        required: true
+        type: choice
+        options:
+          - TD_TACKLE_DIAGNOSTIC
+          - TD_GK_DIAGNOSTIC
+          - TD_CONVERSION_DIAGNOSTIC
+          - TD_SHOT_DIAGNOSTIC
+          - TD_FOUL_DIAGNOSTIC
+          - TD_CREATION_DIAGNOSTIC
+          - TD_BALANCE_DIAGNOSTIC
+          - TD_ENGINE_DIAGNOSTIC
+      test_filter:
+        description: 'VSTest filter selecting the instrument (e.g. GoalConversionDiagnostic)'
+        required: true
+        type: string
+      reason:
+        description: 'Why this measurement is being taken — recorded in the artifact header'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: match-measurement-lane
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    name: Run one env-gated instrument and capture its output
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Inputs reach the shell through env, never through ${{ }} interpolation into a script body:
+      # test_filter and reason are free text, and a dispatch input is untrusted for the same reason
+      # any other user-supplied string is. The diagnostic name is re-validated even though it is a
+      # choice input, because it is about to become an environment variable NAME.
+      - name: Validate inputs
+        env:
+          DIAGNOSTIC: ${{ inputs.diagnostic }}
+          TEST_FILTER: ${{ inputs.test_filter }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$DIAGNOSTIC" | grep -Eq '^TD_[A-Z_]+$'; then
+            echo "ERROR: diagnostic must look like TD_SOMETHING, got: $DIAGNOSTIC" >&2
+            exit 2
+          fi
+          if [ -z "${TEST_FILTER//[[:space:]]/}" ]; then
+            echo "ERROR: test_filter must not be blank — an empty filter runs the whole tree." >&2
+            exit 2
+          fi
+          echo "$DIAGNOSTIC=1" >> "$GITHUB_ENV"
+
+      - name: Run instrument
+        env:
+          TEST_FILTER: ${{ inputs.test_filter }}
+          REASON: ${{ inputs.reason }}
+          DIAGNOSTIC: ${{ inputs.diagnostic }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/measurements
+          OUT="artifacts/measurements/measurement.txt"
+
+          # Provenance header. An instrument result is only citable if the tree it was taken at is
+          # recoverable, so the commit is recorded in the file itself, not just in the run metadata.
+          {
+            echo "# System XI measurement run"
+            echo "# commit:     $GITHUB_SHA"
+            echo "# ref:        $GITHUB_REF"
+            echo "# run:        $GITHUB_RUN_ID (attempt $GITHUB_RUN_ATTEMPT)"
+            echo "# diagnostic: $DIAGNOSTIC"
+            echo "# filter:     $TEST_FILTER"
+            echo "# reason:     $REASON"
+            echo "# taken:      $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "#"
+            echo "# This output asserts nothing. A green run means the instrument executed, NOT that"
+            echo "# any measured value is correct or acceptable."
+            echo
+          } > "$OUT"
+
+          # --test-logger is what makes this lane work at all: without an explicit detailed console
+          # logger the instruments print into a void, the job goes green, and the measurement is
+          # silently lost. Do not remove it to make logs shorter.
+          #
+          # PIPESTATUS, not the pipeline status: `... | tee` would otherwise report tee's success and
+          # mask a failed gate.
+          set +e
+          bash tools/dotnet-ci/run-gate.sh \
+            --test-filter "$TEST_FILTER" \
+            --test-logger 'console;verbosity=detailed' 2>&1 | tee -a "$OUT"
+          status="${PIPESTATUS[0]}"
+          set -e
+
+          echo >> "$OUT"
+          echo "# run-gate.sh exit status: $status" >> "$OUT"
+          exit "$status"
+
+      # always(): a failed run's log is the most useful artifact there is, and losing it forces the
+      # whole measurement to be retaken.
+      - name: Upload measurement
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: measurement-${{ inputs.diagnostic }}-${{ github.run_id }}
+          path: artifacts/measurements/
+          if-no-files-found: error
+          retention-days: 90
