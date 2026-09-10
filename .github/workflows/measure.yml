@@ -2,46 +2,21 @@ name: Match measurement lane
 
 # Manually dispatched host for the env-gated §5.Z match-engine instruments.
 #
-# WHY THIS IS SEPARATE FROM ci.yml:
-#   1. These instruments are deliberately opt-in and expensive (the W2 tackle census ran multi-seed
-#      x 90 minutes of simulated match). Running them on every PR would tax the merge gate for
-#      evidence nobody asked for on that PR.
-#   2. They assert nothing by design (the ERR-030-014 convention: pinning measured-but-wrong
-#      behaviour turns a defect into a contract). A job that cannot fail does not belong in a
-#      blocking gate, where it would read as passing evidence.
-#   3. Measurement should be a deliberate act with a recorded reason, not a side effect of pushing.
-#
-# WHAT IT DELIBERATELY DOES NOT DO:
-#   It does not commit anything. `permissions: contents: read` is the enforcement, not a convention.
-#   A run produces an artifact; a human reads it, accepts it, and only then is the raw output
-#   committed under docs/tracking/corpus-data/ by hand. Measurement provenance stays deliberate.
-#
-# KNOWN CONSTRAINT: GitHub only offers workflow_dispatch for workflows present on the DEFAULT
-# branch. Until this file is on main it cannot be dispatched from a feature branch, however green
-# that branch's other checks are. Validate locally with TD_GATE_DRY_RUN=1 (see below) meanwhile.
+# A green compile/test gate is necessary but NOT sufficient evidence that a measurement happened.
+# This lane therefore resolves a named instrument to one canonical env/filter/project/sentinel tuple,
+# executes the diagnostic in its owning generated test project, requires VSTest to treat zero matches
+# as an error, records TRX, and verifies that at least one test passed AND the expected report sentinel
+# reached the captured output. The artifact is evidence; the workflow itself never writes to the repo.
 
 on:
   workflow_dispatch:
     inputs:
-      diagnostic:
-        description: 'Instrument env switch to enable for this run'
-        required: true
-        type: choice
-        options:
-          - TD_TACKLE_DIAGNOSTIC
-          - TD_GK_DIAGNOSTIC
-          - TD_CONVERSION_DIAGNOSTIC
-          - TD_SHOT_DIAGNOSTIC
-          - TD_FOUL_DIAGNOSTIC
-          - TD_CREATION_DIAGNOSTIC
-          - TD_BALANCE_DIAGNOSTIC
-          - TD_ENGINE_DIAGNOSTIC
-      test_filter:
-        description: 'VSTest filter selecting the instrument (e.g. GoalConversionDiagnostic)'
+      instrument:
+        description: 'Canonical instrument id (invalid ids fail and print the available list)'
         required: true
         type: string
       reason:
-        description: 'Why this measurement is being taken — recorded in the artifact header'
+        description: 'Single-line reason for taking this measurement; recorded in the artifact'
         required: true
         type: string
 
@@ -54,7 +29,7 @@ concurrency:
 
 jobs:
   measure:
-    name: Run one env-gated instrument and capture its output
+    name: Run one env-gated instrument and prove its report was captured
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -66,77 +41,103 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # Inputs reach the shell through env, never through ${{ }} interpolation into a script body:
-      # test_filter and reason are free text, and a dispatch input is untrusted for the same reason
-      # any other user-supplied string is. The diagnostic name is re-validated even though it is a
-      # choice input, because it is about to become an environment variable NAME.
-      - name: Validate inputs
+      - name: Resolve canonical instrument
         env:
-          DIAGNOSTIC: ${{ inputs.diagnostic }}
-          TEST_FILTER: ${{ inputs.test_filter }}
-        run: |
-          set -euo pipefail
-          if ! printf '%s' "$DIAGNOSTIC" | grep -Eq '^TD_[A-Z_]+$'; then
-            echo "ERROR: diagnostic must look like TD_SOMETHING, got: $DIAGNOSTIC" >&2
-            exit 2
-          fi
-          if [ -z "${TEST_FILTER//[[:space:]]/}" ]; then
-            echo "ERROR: test_filter must not be blank — an empty filter runs the whole tree." >&2
-            exit 2
-          fi
-          echo "$DIAGNOSTIC=1" >> "$GITHUB_ENV"
-
-      - name: Run instrument
-        env:
-          TEST_FILTER: ${{ inputs.test_filter }}
+          INSTRUMENT: ${{ inputs.instrument }}
           REASON: ${{ inputs.reason }}
-          DIAGNOSTIC: ${{ inputs.diagnostic }}
         run: |
           set -euo pipefail
-          mkdir -p artifacts/measurements
-          OUT="artifacts/measurements/measurement.txt"
+          if [[ "$REASON" == *$'\n'* || "$REASON" == *$'\r'* ]]; then
+            echo "ERROR: reason must be a single line." >&2
+            exit 2
+          fi
+          python3 tools/dotnet-ci/measurement_catalog.py validate --repo .
+          python3 tools/dotnet-ci/measurement_catalog.py resolve \
+            "$INSTRUMENT" --repo . --github-env "$GITHUB_ENV"
 
-          # Provenance header. An instrument result is only citable if the tree it was taken at is
-          # recoverable, so the commit is recorded in the file itself, not just in the run metadata.
+      - name: Build gate and run instrument
+        env:
+          REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/measurements/trx
+          OUT="artifacts/measurements/measurement.txt"
+          RESULTS="artifacts/measurements/trx"
+          RUNSETTINGS="artifacts/measurements/measurement.runsettings"
+
+          cat > "$RUNSETTINGS" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <RunSettings>
+            <RunConfiguration>
+              <TreatNoTestsAsError>true</TreatNoTestsAsError>
+            </RunConfiguration>
+          </RunSettings>
+          XML
+
           {
             echo "# System XI measurement run"
             echo "# commit:     $GITHUB_SHA"
             echo "# ref:        $GITHUB_REF"
             echo "# run:        $GITHUB_RUN_ID (attempt $GITHUB_RUN_ATTEMPT)"
-            echo "# diagnostic: $DIAGNOSTIC"
-            echo "# filter:     $TEST_FILTER"
+            echo "# instrument: $MEASUREMENT_INSTRUMENT"
+            echo "# env:        $MEASUREMENT_ENV"
+            echo "# filter:     $MEASUREMENT_FILTER"
+            echo "# project:    $MEASUREMENT_PROJECT"
             echo "# reason:     $REASON"
             echo "# taken:      $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "#"
-            echo "# This output asserts nothing. A green run means the instrument executed, NOT that"
-            echo "# any measured value is correct or acceptable."
+            echo "# A green build gate is not measurement evidence. The lane succeeds only after"
+            echo "# TRX proves a test passed and the catalogued report sentinel is present below."
             echo
           } > "$OUT"
 
-          # --test-logger is what makes this lane work at all: without an explicit detailed console
-          # logger the instruments print into a void, the job goes green, and the measurement is
-          # silently lost. Do not remove it to make logs shorter.
-          #
-          # PIPESTATUS, not the pipeline status: `... | tee` would otherwise report tee's success and
-          # mask a failed gate.
+          # First run the repository's normal whole-tree build/meta gate. Explicitly remove the
+          # selected diagnostic env name from this child process: the gate is structural evidence,
+          # not the measurement, and must not execute the expensive diagnostic once here and again
+          # in the proved run below.
           set +e
-          bash tools/dotnet-ci/run-gate.sh \
-            --test-filter "$TEST_FILTER" \
-            --test-logger 'console;verbosity=detailed' 2>&1 | tee -a "$OUT"
-          status="${PIPESTATUS[0]}"
+          env -u "$MEASUREMENT_ENV" bash tools/dotnet-ci/run-gate.sh \
+            --test-filter "$MEASUREMENT_FILTER" 2>&1 | tee -a "$OUT"
+          gate_status="${PIPESTATUS[0]}"
+          set -e
+          if [ "$gate_status" -ne 0 ]; then
+            echo "# build gate exit status: $gate_status" >> "$OUT"
+            exit "$gate_status"
+          fi
+
+          echo >> "$OUT"
+          echo "── Proved measurement run ───────────────────────────────────────────" | tee -a "$OUT"
+
+          # The no-tests policy is deliberately scoped to THIS project invocation. Applying it to
+          # run-gate.sh's whole solution would make unrelated generated test projects with zero
+          # filter matches fail. Two loggers are intentional: detailed console carries TestContext
+          # output into the artifact, while TRX is the machine-readable execution proof.
+          set +e
+          env "$MEASUREMENT_ENV=1" dotnet test "$MEASUREMENT_PROJECT" \
+            --no-build --no-restore \
+            --filter "$MEASUREMENT_FILTER" \
+            --settings "$RUNSETTINGS" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=measurement.trx" \
+            --results-directory "$RESULTS" 2>&1 | tee -a "$OUT"
+          measurement_status="${PIPESTATUS[0]}"
           set -e
 
           echo >> "$OUT"
-          echo "# run-gate.sh exit status: $status" >> "$OUT"
-          exit "$status"
+          echo "# dotnet measurement exit status: $measurement_status" >> "$OUT"
+          if [ "$measurement_status" -ne 0 ]; then
+            exit "$measurement_status"
+          fi
 
-      # always(): a failed run's log is the most useful artifact there is, and losing it forces the
-      # whole measurement to be retaken.
-      - name: Upload measurement
+          python3 tools/dotnet-ci/measurement_catalog.py verify-run \
+            "$MEASUREMENT_INSTRUMENT" --trx-dir "$RESULTS" --output "$OUT" | tee -a "$OUT"
+          echo "# measurement verification: PASS" >> "$OUT"
+
+      - name: Upload measurement evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: measurement-${{ inputs.diagnostic }}-${{ github.run_id }}
+          name: measurement-${{ github.run_id }}
           path: artifacts/measurements/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
