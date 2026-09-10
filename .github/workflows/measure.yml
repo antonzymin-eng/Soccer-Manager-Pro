@@ -6,7 +6,8 @@ name: Match measurement lane
 # This lane therefore resolves a named instrument to one canonical env/filter/project/sentinel tuple,
 # executes the diagnostic in its owning generated test project, requires VSTest to treat zero matches
 # as an error, records TRX, and verifies that at least one test passed AND the expected report sentinel
-# reached the captured output. The artifact is evidence; the workflow itself never writes to the repo.
+# reached the instrument-only captured output. The artifact is evidence; the workflow itself never
+# writes to the repo.
 
 on:
   workflow_dispatch:
@@ -62,6 +63,7 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/measurements/trx
           OUT="artifacts/measurements/measurement.txt"
+          MEASURE_OUT="artifacts/measurements/instrument-output.txt"
           RESULTS="artifacts/measurements/trx"
           RUNSETTINGS="artifacts/measurements/measurement.runsettings"
 
@@ -87,7 +89,8 @@ jobs:
             echo "# taken:      $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "#"
             echo "# A green build gate is not measurement evidence. The lane succeeds only after"
-            echo "# TRX proves a test passed and the catalogued report sentinel is present below."
+            echo "# TRX proves a test passed and the catalogued report sentinel is present in the"
+            echo "# instrument-only output, which intentionally excludes this operator preamble."
             echo
           } > "$OUT"
 
@@ -112,6 +115,8 @@ jobs:
           # run-gate.sh's whole solution would make unrelated generated test projects with zero
           # filter matches fail. Two loggers are intentional: detailed console carries TestContext
           # output into the artifact, while TRX is the machine-readable execution proof.
+          # MEASURE_OUT contains ONLY this dotnet-test stream; free-form metadata such as REASON is
+          # kept in OUT so operator text cannot satisfy the report-sentinel postcondition.
           set +e
           env "$MEASUREMENT_ENV=1" dotnet test "$MEASUREMENT_PROJECT" \
             --no-build --no-restore \
@@ -119,7 +124,7 @@ jobs:
             --settings "$RUNSETTINGS" \
             --logger "console;verbosity=detailed" \
             --logger "trx;LogFileName=measurement.trx" \
-            --results-directory "$RESULTS" 2>&1 | tee -a "$OUT"
+            --results-directory "$RESULTS" 2>&1 | tee "$MEASURE_OUT" | tee -a "$OUT"
           measurement_status="${PIPESTATUS[0]}"
           set -e
 
@@ -130,7 +135,7 @@ jobs:
           fi
 
           python3 tools/dotnet-ci/measurement_catalog.py verify-run \
-            "$MEASUREMENT_INSTRUMENT" --trx-dir "$RESULTS" --output "$OUT" | tee -a "$OUT"
+            "$MEASUREMENT_INSTRUMENT" --trx-dir "$RESULTS" --output "$MEASURE_OUT" | tee -a "$OUT"
           echo "# measurement verification: PASS" >> "$OUT"
 
       - name: Upload measurement evidence
