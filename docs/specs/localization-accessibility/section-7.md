@@ -3,6 +3,8 @@
 **Created:** July 23, 2026
 **Last Updated:** September 11, 2026 (v0.5 — L1 resolves ERR-049-002/004 and fixes ERR-049-005 discharge at L2)
 **Last Updated (prior):** September 9, 2026 (v0.4 — L0R records ERR-049-002/003/004/005 with named T0/T1 discharge stages under C6; no contract hardening)
+**Last Updated (prior):** September 7, 2026 (v0.3 — L0R records ERR-049-002/003 for T0/T1 discharge under C6; no contract hardening)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
 **Version:** 0.5
 **Status:** APPROVED
 
@@ -67,8 +69,10 @@ The remaining two stay open for the named later slices.
 - **ERR-049-002 — RESOLVED in L1 / #49 T0.** §1 KD-6 and the dependency table now state the already-approved
   architecture consistently: `TacticalDirector.Localization` references no sim/producer assembly; later
   producer-specific mapping belongs in a sibling boundary adapter. The L1 production asmdef has an empty
-  production-reference list, and the L1 contract test asserts that the compiled core assembly references no
-  other `TacticalDirector.*` production assembly. Historical PASS-1 text in §9 remains historical evidence.
+  production-reference list; L1 tests parse that declared list, verify no other production asmdef references
+  localization at this slice, and reflect the public type shape to exclude sim-owned types. The assembly-tier
+  checker independently enforces the tier direction across the whole production graph. Historical PASS-1
+  text in §9 remains historical evidence.
 - **ERR-049-003 — OPEN; discharge in L3B / #49 T1.** §2.2 defines `TextTemplateId.ProducerTag` as an integer
   identity but still assigns no symbolic allocation owner/table or append-only allocation rule, while later
   producer specs use symbolic catalogue identities. L3B must preserve the generic integer identity, allocate
@@ -78,9 +82,10 @@ The remaining two stay open for the named later slices.
   operands carried separately from preformatted string slots. `SelectorOperand` carries a cardinal value
   and/or bounded grammatical-gender value; `NamedSelectorSet` defensively copies caller storage, canonicalizes
   names, rejects duplicates, and participates in deterministic value equality/hash. `LocalizedTextRequest`
-  carries that set without locale state, persisted state or RNG behavior. L2 remains responsible for mapping
-  those operands to locale-authored `one/few/many/other`/gender sub-forms; that renderer behavior is outside
-  this ERR's structural discharge.
+  carries that set without locale state, persisted state or RNG behavior. L1 tests reflect the operand shape,
+  lock deterministic hashes, prove retained caller arrays cannot mutate the sets, and verify the core exposes
+  no mutable static/RNG/persistence state. L2 remains responsible for mapping those operands to locale-authored
+  `one/few/many/other`/gender sub-forms; that renderer behavior is outside this ERR's structural discharge.
 - **ERR-049-005 — OPEN; discharge fixed at L2.** L1 keeps the approved public seam final:
   `string Resolve(LocalizationKey key)` and `string Render(in LocalizedTextRequest req)`. No Try/found-not-found
   signature is introduced. L2 must therefore resolve the still-undefined production terminal case for a
@@ -95,7 +100,7 @@ close-out.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial forward extensions: Wave-8 locale content + the a11y content surface; #35/#46/#38-static producer bindings; the grammar-depth Stage-3+ deferral; the #22 retrofit T-phase. Status IN REVIEW. |
-| 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.2 | 2026-07-23 | — | Section-file PASS-1 fixes: H-1 generic core / per-producer boundary-adapter split (§2.2 core references nothing sim-side; §2.2.1 `LivingWorldTextBoundary`); M-1 FR-LC-008a construction-time roster-coverage invariant + F1/F5 rewrite + FR-LC-015 intent-value gate; L-1 `{score}` derived → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-09-07 | — | L0R record-only pass: filed ERR-049-002 (stale KD-6 reference direction; deferred wholly to L1/T0) and ERR-049-003 (missing ProducerTag allocation ownership/collision contract; deferred to L3B/T1). C6 forbids pre-T0 hardening, so no normative fix is landed in this slice. |
 | 0.4 | 2026-09-09 | — | L0R record-only scope extended to ERR-049-004 (missing typed plural/gender selector operand; deferred wholly to L1/T0) and ERR-049-005 (undefined static-key terminal fallback; resolution family decided at L1, discharge in L1 if signature-changing otherwise L2). Existing ERR-049-002/003 dispositions unchanged. C6 still forbids pre-T0 normative hardening. |
 | 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 dispositions.** ERR-049-002 and ERR-049-004 resolved with executable structural proof. The approved `Resolve`/`Render` signatures remain final, so ERR-049-005 is explicitly assigned to L2. ERR-049-003 remains open for L3B/T1. |
