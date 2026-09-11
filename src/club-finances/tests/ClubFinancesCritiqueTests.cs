@@ -1,12 +1,12 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesCritiqueTests.cs
 // Created:  2026-09-06
-// Modified: 2026-09-11 (#40 T3a — daily revenue accrual primitive locks)
+// Modified: 2026-09-11 (#40 T3a — daily revenue accrual primitive + season lifecycle locks)
 // Author:   —
 // Specs:    Club Finances & Economy #40 §5/§7.1; Code Standards #20
 // Purpose:  Locks the current T3a dependency boundary, RNG-free save shape, upper
 //           budget clamp, non-positive board-modifier failure, overflow-safe
-//           board scaling, decode corruption guards, and daily revenue accrual semantics.
+//           board scaling, decode corruption guards, and daily revenue lifecycle semantics.
 // §3.9.4 general-unit-test — allocation rules relaxed in test body
 // ============================================================================
 
@@ -123,6 +123,27 @@ namespace TacticalDirector.ClubFinances.Tests
 
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => FinanceStep.SettleFinances(in prior, 1, 20, in modifier));
+        }
+
+        /// <summary>T3a lifecycle: settlement closes the prior season revenue accumulator without inventing an FFP-window update.</summary>
+        [Test]
+        public void SettleFinances_ResetsSeasonRevenue_AndCarriesFfpWindow()
+        {
+            ClubFinances prior = new ClubFinances
+            {
+                Balance = 1_000,
+                TransferBudget = 200,
+                WageBudget = 300,
+                WageBillAggregate = 400,
+                SeasonRevenueAccrued = 9_999,
+                FfpBalanceWindow = -2_500
+            };
+
+            ClubFinances result = FinanceStep.SettleFinances(in prior, 1, 20, BoardModifier.Identity);
+
+            Assert.That(result.SeasonRevenueAccrued, Is.Zero);
+            Assert.That(result.FfpBalanceWindow, Is.EqualTo(prior.FfpBalanceWindow));
+            Assert.That(result.WageBillAggregate, Is.EqualTo(prior.WageBillAggregate));
         }
 
         /// <summary>T3a identity: the deep gate off returns the complete finance record field-identically.</summary>
@@ -310,4 +331,5 @@ namespace TacticalDirector.ClubFinances.Tests
 // | 1.5     | 2026-09-11 | —      | T2a: dependency lock now requires consumed PlayerDatabase edge and exactly three production refs. |
 // | 1.6     | 2026-09-11 | OpenAI | T3a: lock identity, accrual isolation, negative-input refusal and overflow failure. |
 // | 1.7     | 2026-09-11 | OpenAI | Critique: lock true off-state and each checked-arithmetic overflow site. |
+// | 1.8     | 2026-09-11 | OpenAI | T3a lifecycle: lock season revenue reset and unchanged future FFP window. |
 #endregion
