@@ -60,6 +60,18 @@ namespace TacticalDirector.Localization
                 LocalizationHash.StringOrdinal(Name),
                 LocalizationHash.StringOrdinal(Value));
         }
+
+        /// <summary>Compares two slots by value.</summary>
+        public static bool operator ==(NamedSlot left, NamedSlot right)
+        {
+            return left.Equals(right);
+        }
+
+        /// <summary>Compares two slots by value.</summary>
+        public static bool operator !=(NamedSlot left, NamedSlot right)
+        {
+            return !left.Equals(right);
+        }
     }
 }
 
@@ -67,4 +79,5 @@ namespace TacticalDirector.Localization
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial L1 named slot entry. |
+// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Add value equality operators. |
 #endregion
