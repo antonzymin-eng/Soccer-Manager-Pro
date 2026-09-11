@@ -1,120 +1,130 @@
 # System XI — Art Direction v1
 
-**Status:** PROPOSED — G1 PENDING  
+**Status:** ACCEPTED — G1 CLOSED  
 **Created:** September 6, 2026  
-**Last Updated:** September 6, 2026  
-**Document version:** 1.1  
+**Last Updated:** September 10, 2026  
+**Document version:** 1.4  
 **Style version:** `art-direction-v1`  
 **Parent plan:** `docs/planning/art-pipeline-foundation.md` v0.8+  
-**Visual baseline:** `docs/design/ui-mockups/` v1.1, chosen direction `touchline`  
+**Visual baseline:** `docs/design/ui-mockups/`, inherited direction `touchline`  
+**G1 evidence:** `docs/design/art/g1-visual-review.md` and `docs/design/art/g1-visual-review.html`  
 **Architecture authority:** UI / Client Framework #38
 
 ---
 
 ## 1. Purpose and precedence
 
-This document turns the already-chosen `touchline` design reference into a production-art direction. It does **not** reopen the July 25, 2026 `stadium` versus `touchline` decision.
+This document converts the already-selected `touchline` reference into the accepted production art direction for System XI. It does not reopen the July 25, 2026 `stadium` versus `touchline` decision.
 
 Precedence remains:
 
-1. APPROVED specifications govern behavior, ownership, and runtime boundaries.
-2. `master-development-plan.md` governs stage quality gates.
-3. The chosen `touchline` mockup/tokens are the visual baseline where specs do not pin a value.
-4. This document extends that baseline into art families the mockups do not define.
-5. Family recipes may specialize this document without silently contradicting it.
+1. APPROVED specifications govern behavior, ownership, runtime boundaries, and simulation truth.
+2. `master-development-plan.md` governs stage-level quality gates.
+3. The chosen `touchline` design reference governs the visual baseline where specifications are silent.
+4. This document governs the accepted production-art language and its skins.
+5. Family recipes may specialize this document but may not silently contradict it.
 
-No value here is simulation truth, determinism input, or a runtime wire-format constant.
+No art-direction value is simulation truth, a determinism input, or a runtime wire-format constant.
 
 ---
 
 ## 2. Direction in one sentence
 
-**System XI is a dense football-analysis tool with restrained broadcast energy: dark technical surfaces, precise information hierarchy, electric-green focus, and visual character that comes from systems thinking rather than spectacle.**
+**System XI is a dense football-analysis tool with a restrained retro football character: deep blue technical surfaces, precise information hierarchy, yellow/gold emphasis, archival texture, and visual identity that comes from football systems thinking rather than spectacle.**
 
-### 2.1 What it should feel like
+### 2.1 Primary skin — Retro Dynamo Blue
 
-- precise;
-- analytical;
-- modern but not glossy;
-- football-specific without imitating a TV graphics package;
-- information-dense without looking like a spreadsheet skin;
-- confident and authored, not generic SaaS;
+The primary accepted skin is internally named **Retro Dynamo Blue**:
+
+- deep navy / midnight blue base;
+- royal/Dynamo-adjacent blue for structure and active identity;
+- lighter sky blue for secondary information and focus support;
+- cream/near-white text;
+- yellow/gold for selection, stars, high-priority emphasis, and active accents;
+- restrained aged-paper/paint/print texture rather than sterile perfect surfaces.
+
+The label describes palette inspiration only. It does not authorize copying Dynamo Kyiv trademarks, crests, kits, sponsor marks, or protected artwork.
+
+### 2.2 Alternate skin — Retro Bronze
+
+The earlier bronze treatment is preserved as an alternate skin, **Retro Bronze**. It uses the same layout, semantic states, icons, density rules, and interaction behavior. Only presentation tokens change.
+
+The alternate skin is not a second design system. It must be implemented as a skin/theme over the same structural UI.
+
+### 2.3 What System XI should feel like
+
+- precise and analytical;
+- information-dense without becoming visually chaotic;
+- football-specific without imitating a television package;
+- modern in function but slightly archival/retro in finish;
+- authored and human rather than generic SaaS or overly polished AI-style concept art;
 - alive on match day without becoming arcade-like.
 
-### 2.2 What it should not become
+### 2.4 What it should not become
 
-- a broadcast lower-third package (`stadium` is the rejected comparison);
 - neon cyberpunk;
-- skeuomorphic leather/wood “manager office” decoration;
 - glossy mobile-game cards;
+- a broadcast lower-third package;
+- skeuomorphic leather/wood manager-office decoration;
+- excessive chrome or bronze framing on the primary skin;
 - photorealism used as a substitute for hierarchy;
-- a collection of unrelated AI-generated styles;
+- a collection of unrelated generated styles;
 - a national-symbol theme park.
 
 ---
 
-## 3. Inherited `touchline` foundation
+## 3. Core visual system
 
-The following values are inherited from `docs/design/ui-mockups/assets/tokens.css`. They are repeated here only as a mapping for art production; `tokens.css` remains the current source reference for these values until a deliberate token change is accepted.
+### 3.1 Surfaces and hierarchy
 
-### 3.1 Surfaces and ink
+Primary screens use layered blue-black surfaces rather than true black. Panels are visually **elevated** through surface/value contrast and restrained shadow; internal sub-boxes should not default to heavy outlines.
 
-| Role | Inherited token/value | Art use |
-|---|---|---|
-| Deep background | `--bg-0 #07090c` | outer canvas, deepest negative space |
-| Primary surface | `--bg-1 #0d1015` | base application/match surround |
-| Touchline card | `--bg-card #11151b` | normal panels / art-safe UI surface |
-| Strong card | `--bg-card-strong #181d25` | raised/selected containers |
-| Stripe | `--bg-stripe #0e1218` | alternating dense rows / subtle segmentation |
-| Primary ink | `--ink-1 #f4f6fa` | highest-emphasis text/symbol details |
-| Secondary ink | `--ink-2 #c1c7d2` | secondary labels/details |
-| Tertiary ink | `--ink-3 #8a93a3` | metadata/quiet annotation |
-| Disabled ink | `--ink-4 #5a6371` | inactive/hint content |
+Rules:
 
-Art should normally sit close to these surfaces rather than introduce new large-area background colors.
+- use outlines when they communicate focus, danger, selection, or a true boundary;
+- use elevation/value contrast for ordinary grouping;
+- keep panel radii restrained and geometry predominantly rectangular;
+- texture may soften digital perfection but may not interfere with text, charts, or exact reading.
 
-### 3.2 Brand and semantic color
+### 3.2 Density rule
 
-Primary brand is **electric green `#00ff88`** (`--brand-400`). Use it for focus, active identity, and selected-state accents—not as a flood fill across large surfaces.
+The accepted governing principle is:
 
-Inherited semantic colors:
+> **Do not waste screen space. Every box must earn its footprint.**
 
-- positive: `#2ee572`;
-- caution/neutral: `#f5b942`;
-- negative: `#ff4d5a`;
-- information: `#4aa8ff`;
-- trophy/highlight: `#ffc933`.
+This does not mean indiscriminate clutter. Empty space is justified only when it materially improves hierarchy, scanning, interaction targets, or state comprehension.
 
-Inherited categorical data-viz sequence:
+For an average desktop monitor:
 
-`#00ff88`, `#4aa8ff`, `#ffc933`, `#ff4d5a`, `#b066ff`, `#ff8a3c`.
+- enlarge useful content before preserving decorative emptiness;
+- prefer additional useful columns/rows over oversized empty cards;
+- center compact values appropriately within their cells;
+- do not create a large panel for a single short label when the same information can coexist with related data;
+- preserve enough spacing to separate information groups and maintain click targets.
 
-**Rule:** brand green is not a synonym for “good.” Semantic meaning uses the semantic tokens; brand green indicates System XI identity/focus unless the UI context already assigns it a data role.
+### 3.3 Brand and semantic color
 
-### 3.3 Density, spacing, and shape
+In the primary skin:
 
-The mockups use a 4px-derived dense spacing system and restrained radii. `touchline` specifically inherits:
+- blue is the dominant structural/identity family;
+- yellow/gold is the primary selection and rating emphasis;
+- green remains semantic positive/available;
+- red remains semantic danger/unavailable/critical risk;
+- warning/risk must not rely on the same gold used for ordinary selection if the two can appear together.
 
-- HUD radius: `4px` (`--r-2`);
-- panel radius: `6px` (`--r-3`);
-- button radius: `4px` (`--r-2`);
-- no skew (`--skew: 0deg`).
+**Selection is not status.** Clicking/selecting a player highlights the row or marker; it does not overwrite availability, injury, suspension, workload, or squad-status text.
 
-Production art should reinforce that geometry: crisp rectangular compositions, modest rounding, no gratuitous pills, bevels, chrome, or diagonal broadcast slashes.
+### 3.4 Typography
 
-### 3.4 Typography roles
+The accepted visual role is a **condensed, humanist/editorial football-analysis display face**, paired with a highly readable body face and monospaced/data face.
 
-The July 25 mockup baseline nominated:
+Current reference stack:
 
-- display: **Barlow Condensed**;
-- body: **IBM Plex Sans**;
-- mono/data: **JetBrains Mono**.
+- display reference: **PT Sans Narrow** / equivalent Cyrillic-capable condensed face;
+- body reference: **IBM Plex Sans**;
+- mono/data reference: **JetBrains Mono**.
 
-AP-03's rights/script audit found a shipping blocker in that inherited stack: current upstream Barlow/Barlow Condensed does not provide the required Ukrainian/Cyrillic coverage. AP-02 therefore proposes **IBM Plex Sans Condensed** as the display replacement while retaining IBM Plex Sans for body and JetBrains Mono for mono/data. This keeps the condensed analyst/broadcast-accent role but aligns the display/body system within the IBM Plex family and removes the known script hole.
-
-Touchline label behavior remains uppercase, weight 600, tracking `0.08em`; display weight remains 700 with `-0.01em` tracking. The role changes font family, not hierarchy.
-
-These remain **visual candidates, not yet shipping font dependencies**. AP-03 owns redistribution/offline packaging, exact binary/version pinning, and Ukrainian/Cyrillic/fallback evidence. G1 acceptance would approve the visual substitution; it would not by itself close G2 or authorize font binaries.
+The earlier IBM Plex Sans Condensed trial was rejected visually as too synthetic. G1 accepts the current typography character and hierarchy. AP-03 owns the exact shipping binary/version, redistribution rights, offline packaging, Ukrainian glyph-corpus proof, and fallback behavior. If AP-03 must substitute another Cyrillic-capable condensed face for technical/legal reasons, it may do so without reopening G1 only if the accepted visual role and dense-screen behavior are preserved.
 
 ---
 
@@ -122,277 +132,249 @@ These remain **visual candidates, not yet shipping font dependencies**. AP-03 ow
 
 ### 4.1 Hierarchy before decoration
 
-A production asset must improve at least one of:
+A production asset must materially improve at least one of recognition, hierarchy, football context, state readability, identity, or atmosphere. If it only fills empty space, omit it.
 
-- recognition;
-- hierarchy;
-- football context;
-- state readability;
-- identity;
-- atmosphere.
+### 4.2 Retro texture with restraint
 
-If it only fills empty space, omit it.
+The accepted retro character may use:
 
-### 4.2 Flat first, depth only when useful
+- subtle print/grain/paint variation;
+- slightly imperfect edge texture;
+- modest archival-football cues;
+- restrained warm highlights.
 
-Use surface contrast, line weight, scale, and spacing before shadow/glow. Existing shadows may support true elevation such as modal/overlay separation. Brand glow is an accent, not a default treatment.
+It must not reduce small-text clarity or turn the UI into a distressed poster.
 
 ### 4.3 Live text stays live
 
-Reusable art contains no baked user-facing text by default. Numbers, names, competition labels, dates, tactical instructions, and localized copy remain UI text.
+Player names, numbers, competition labels, dates, tactical instructions, ratings, localized strings, and other dynamic data remain live UI text by default.
 
 ### 4.4 One coherent family language
 
-Within a family, lock geometry, crop, light, texture level, and edge treatment before volume. A technically clean asset in the wrong family style is a failed asset.
+Within each family, lock geometry, crop, texture level, light direction, edge treatment, and information role before scaling volume.
 
 ### 4.5 Fictional-first identity
 
-Until rights are explicit, clubs, people, sponsors, competitions, kits, and venue marks are fictional. Avoid accidental one-to-one resemblance to real crests, sponsors, kit patterns, or recognizable people.
+Until rights are explicit, clubs, people, sponsors, competitions, kits, venue marks, and stadium branding are fictional. Avoid accidental one-to-one resemblance to real protected assets.
 
 ---
 
-## 5. System XI identity and wordmark extension
+## 5. Product identity and wordmark
 
-The working title should express **system, structure, and football intelligence**, not a generic sports badge.
+- `SYSTEM` carries the analytical/system identity; `XI` is the football signifier and may receive stronger yellow/gold emphasis;
+- use condensed uppercase typography and engineered spacing;
+- keep the mark readable at small header sizes;
+- prefer modular grid alignment to broadcast slashes/shields;
+- primary treatment is blue/cream with restrained yellow emphasis;
+- the brand may reference Ukrainian/Eastern-European football-school rigor structurally, not through default use of flags, tridents, folk ornament, Soviet motifs, or real-club marks.
 
-### 5.1 Wordmark direction
-
-- primary construction: condensed uppercase display typography;
-- `SYSTEM` carries the analytical/system identity; `XI` is the football signifier and may receive stronger brand emphasis;
-- use modular spacing/grid alignment rather than broadcast slashes or shield framing;
-- favor one-color/flat versions first; electric green on dark and light/white on dark must both work;
-- the mark must survive small header use without a separate micro-detail crest.
-
-### 5.2 Ukrainian / Eastern-European reference language
-
-If used, keep the connection **structural rather than literal**:
-
-- football-school analytical rigor;
-- technical notebook / tactical-diagram discipline;
-- modernist grid and engineered proportion;
-- restrained archival-football cues.
-
-Do **not** make flag blue/yellow, the trident, folk ornament, Cyrillic decoration, or Soviet-era visual tropes the default brand shorthand. Any explicit national symbol requires a separate intentional decision.
-
-### 5.3 Identity rejection tests
-
-Reject a concept if it reads primarily as:
-
-- esports team branding;
-- television network graphics;
-- betting/crypto branding;
-- generic football crest;
-- military/tactical software;
-- national-team merchandise.
+Reject identity concepts that primarily read as esports, betting/crypto, military software, generic football crest, national-team merchandise, or television-network graphics.
 
 ---
 
-## 6. Icon family extension
+## 6. Icon family
 
-Icons should read like tools in an analyst workstation.
+Icons should read as tools in an analyst workstation.
 
-### 6.1 Geometry
-
-AP-02 production extension:
-
-- author on a **24×24 reference grid**;
-- default optical stroke: **2px** at 24px reference size;
-- use simple geometric silhouettes and consistent optical weight;
-- default to outline/line construction; filled mass is reserved for states where stronger emphasis is needed;
-- corners should follow the touchline system's modest rounding rather than soft consumer-app blobs;
-- do not encode a word/letter when a language-neutral football symbol works.
-
-These are art-family rules, not replacements for UI layout tokens.
-
-### 6.2 States
-
-Icons should be designed to accept UI-driven state styling rather than bake separate color variants into files. Normal, hover, selected, disabled, warning, and destructive color come from the UI/theme when technically practical.
-
-### 6.3 Small-size test
-
-Every core icon must remain identifiable at the smallest actual shipping size used by the consuming screen. Thin interior details that disappear before the outer silhouette are rejected.
+- author on a 24×24 reference grid;
+- default optical stroke around 2px at reference size;
+- use simple geometric silhouettes with consistent weight;
+- yellow/gold icon treatment is permitted where it improves contrast/pop against dark blue surfaces;
+- selected module state is applied to the containing control, not baked into a separate icon asset;
+- normal/hover/selected/disabled/warning/destructive states should come from the UI/theme where practical;
+- every core icon must remain identifiable at the smallest actual shipping size.
 
 ---
 
-## 7. Data-visualization art extension
+## 7. Player data language
 
-Most charts should remain primitives/text. Create art assets only where a primitive cannot express the intended football concept.
+### 7.1 Individual attributes
 
-Rules:
+Individual attributes remain **numeric**. Examples: Vision 15, Dribbling 14, Finishing 12.
 
-- inherit `--viz-1` through `--viz-6` for categorical identity;
-- no 3D charts, glass effects, textured bars, or decorative gradients that alter perceived magnitude;
-- data marks must remain visually subordinate to labels/values when exact reading matters;
-- textures/patterns may reinforce color differentiation for accessibility but may not encode hidden values;
-- heat-map or pitch overlays use transparent layers over a quiet pitch base rather than a second decorative field illustration.
+### 7.2 Composite player-game areas
+
+Broader areas that summarize multiple attributes use a **five-star gauge** with half-star increments available. Examples include:
+
+- Passing;
+- Ball Carrying;
+- Press Resistance;
+- Build Up;
+- Chance Creation;
+- Scoring;
+- defensive/goalkeeping equivalents for other player functions.
+
+The displayed composites may differ by position/function. A goalkeeper, centre-back, striker, and winger do not need the same set of composite categories.
+
+### 7.3 Ability, potential, and role fit
+
+- current ability: five-star gauge;
+- potential: five-star gauge;
+- role fit: five-star gauge;
+- half-stars are valid;
+- filled stars use yellow/gold in the primary skin;
+- unfilled stars remain clearly visible but subordinate.
+
+### 7.4 Form
+
+Where the UI uses `Form (Last 5)`, the displayed value is the average of the player's last five match ratings. This art document records the accepted presentation convention; authoritative runtime calculation remains owned by the appropriate gameplay/data specification.
+
+### 7.5 Preferred-position diagram
+
+The position diagram shows the full supported position map. Preferred positions are indicated by highlighting the **position circle**, not the abbreviation text. The abbreviation sits beneath its circle consistently. The accepted example highlights `CM`, `CAM`, and `RM`.
 
 ---
 
-## 8. Match-view art extension
+## 8. Match-view art
 
-The 2D match view should feel like **a live tactical instrument**, not a miniature television broadcast or arcade game.
+The 2D match view is a **live tactical instrument**, not a television broadcast or arcade scene.
 
 ### 8.1 Pitch
 
-- top-down / tactical readability is primary;
-- use a dark, restrained, low-noise grass/pitch surface rather than photoreal blades, mowing spectacle, or high-frequency texture;
-- field markings remain clear across zoom levels but should not compete with players/ball;
-- pitch character may include subtle material variation, but gameplay geometry remains owned by the client, not painted into the texture;
-- overlays such as zones, heat, passing lanes, or tactical annotations must remain separable layers.
+- top-down readability is primary;
+- grass texture is restrained and low-noise;
+- field geometry remains crisp;
+- tactical overlays remain separable layers;
+- pitch aspect ratio should read like a football field, not a square diagram.
 
-### 8.2 Player markers
+### 8.2 Players and officials
 
-- outfield marker base: compact circular/near-circular form with a strong edge;
-- goalkeeper must have a redundant non-color distinction (shape, inset, or glyph treatment);
-- selected/controlled/focused state uses a separate outer ring/halo layer rather than replacing team identity;
-- home/away distinction cannot depend on hue alone;
-- player number/name remains live UI text if shown.
+- outfield players use compact circular markers with strong edges;
+- goalkeeper uses a redundant visual distinction and team-specific keeper treatment;
+- selected player gets a separate yellow/gold outer emphasis while retaining team identity;
+- player name/number labels remain live text;
+- referee and assistant referees use distinct marker shapes from players;
+- the visual reference must contain exactly **11 players per team** plus **1 referee and 2 assistant referees** unless the depicted game state explicitly represents a dismissal/substitution transition.
 
-### 8.3 Ball and event marks
+The deterministic G1 reference encodes that 11-v-11 + 3-official invariant in data and checks it at runtime. Generated concept images are not authoritative for countable match geometry.
 
-- ball is the highest-priority tiny moving object and must remain visible against every pitch region;
-- any ball trail is restrained and functional, never a permanent arcade streak;
-- goal/card/substitution/event marks use the same icon geometry as the UI family where possible;
-- feedback effects use brief, low-area emphasis and do not obscure nearby markers or tactical overlays.
+### 8.3 Event-linked labels
 
-### 8.4 Match color discipline
+Only the selected player is labeled by default. A second player may be labeled when a user-selected event explicitly references that player. The event itself must be visibly selected so the extra label has clear context.
 
-The pitch, team colors, semantic events, selected-state brand green, and data overlays can coexist. Do not assume brand green is always available for the home team or for positive data. Final marker palette is resolved with actual match-client integration in AP-05.
+### 8.4 Team/semantic color discipline
+
+Team colors, goalkeeper colors, selected-state yellow, semantic events, and data overlays must remain distinguishable simultaneously. Team identity may not be replaced by the selection color.
 
 ---
 
-## 9. Portrait family extension
+## 9. Portrait family
 
-Portraits should look like a coherent editorial database, not collectible cards.
+Portraits should read as a coherent editorial database, not collectible cards.
 
-### 9.1 Treatment
-
-- restrained semi-realistic/editorial rendering;
-- square master composition;
 - head-and-shoulders / upper-chest crop;
 - consistent eye line and head scale;
-- simple dark/neutral background compatible with touchline surfaces;
-- controlled soft directional light with readable facial structure;
-- moderate texture/detail: enough individuality at 512px runtime target, no pore-level hyperrealism requirement;
-- neutral-to-natural expression; no heroic poster pose.
+- simple dark/neutral background compatible with blue surfaces;
+- controlled soft directional light;
+- moderate detail, natural expressions, no heroic poster pose;
+- consistent camera/crop/light/texture across the family;
+- reject malformed anatomy, embedded text, visible watermarks, celebrity/real-player resemblance, and real club/sponsor marks.
 
-### 9.2 Consistency over novelty
-
-Across the family, preserve:
-
-- camera angle;
-- crop;
-- focal length impression;
-- background value range;
-- light direction/contrast;
-- edge treatment;
-- realism/stylization level.
-
-### 9.3 Generated-person safeguards
-
-Reject visible watermarks, malformed anatomy, embedded text, celebrity/real-player resemblance, real club/sponsor marks, and inconsistent age/ethnicity cues relative to the fictional record being depicted.
-
-The deliberate fallback portrait must look authored and shippable—not like a missing-image placeholder.
+The deliberate fallback portrait must look authored and shippable rather than like a missing-image placeholder.
 
 ---
 
-## 10. Fictional club badge and kit extension
+## 10. Fictional clubs and kits
 
 ### 10.1 Badges
 
 - readable silhouette first;
-- simple geometry that survives small navigation/table sizes;
+- simple geometry that survives small sizes;
 - generally 2–4 principal colors;
-- avoid microtext, fake founding dates, and tiny interior illustration unless the actual target size proves them useful;
-- avoid shield templates or motif/color combinations that closely reproduce a real club;
-- a league of fictional clubs should feel related in production quality, not identical in shape.
+- no microtext or fake decorative detail unless target-size testing justifies it;
+- avoid close resemblance to real clubs;
+- family quality should be consistent without forcing identical badge shapes.
 
-### 10.2 Kits / color identities
+### 10.2 Kits
 
-- establish clear home/away contrast before decorative pattern;
-- use simple controlled families: solid, stripe, sash, hoop, block, or restrained geometric pattern;
-- no sponsor marks until explicit rights/product policy says otherwise;
-- kit design must still function when reduced to marker/thumbnail color identity;
-- accessibility review must check likely home/away pairings rather than individual kits in isolation.
-
----
-
-## 11. Stadium and environment extension
-
-Stadium/background imagery supplies football atmosphere behind an information-heavy interface.
-
-- composition should reserve low-detail UI-safe zones;
-- use subdued contrast and saturation behind live UI;
-- favor coherent architectural atmosphere over recognizable landmark imitation;
-- no large sponsor/competition signage unless fictional and intentionally designed;
-- background detail should fall away before foreground UI detail;
-- day/night/weather variants are created only when the actual client exposes those states;
-- do not pre-generate combinatorial venue libraries.
-
-A stadium image is optional until a real consuming screen/state exists.
+- establish home/away contrast before decoration;
+- use controlled solids, stripes, sashes, hoops, blocks, or restrained patterns;
+- each kit should have its own vertically stacked presentation box in dense club-summary contexts where that improves separation;
+- use panel/background contrast so shirt colors do not disappear into the card;
+- no sponsor marks until rights/product policy explicitly allows them.
 
 ---
 
-## 12. Motion and feedback principles
+## 11. Stadium and environment
 
-This document does not set UI timing or interaction behavior; those remain screen/framework concerns.
+Stadium imagery supplies football atmosphere but must not overpower the information layer.
 
-For art/effect assets:
+- the field is the visual emphasis; stands should frame it rather than dominate it;
+- use real-looking venue detail in representative review imagery rather than bare placeholder rectangles;
+- center venue name/location information above capacity/weather/pitch-information boxes when using the accepted stadium-summary composition;
+- reserve low-detail regions behind live UI;
+- avoid recognizable landmark imitation and real sponsor signage;
+- day/night/weather variants are created only when actual client states require them.
 
-- motion should explain state change or match action, not decorate idle screens;
-- prefer short, contained emphasis over loops and perpetual glow;
-- avoid camera-shake, lens-flare, confetti, or particle excess as default feedback;
-- preserve text/data legibility during any effect;
-- reduced-motion support must remain possible because essential meaning is never encoded only in animation.
+---
+
+## 12. Panel and interaction affordances
+
+Every customizable dashboard panel uses a consistent upper-right affordance:
+
+- lock/unlock control;
+- dropdown/menu control;
+- locked by default to prevent accidental movement;
+- unlocked panels may be drag-reordered and resized;
+- menu may expose swap/move/size/reset actions as supported by the owning UI specification.
+
+This section defines the accepted visual affordance and interaction expectation. Final runtime behavior/ownership remains subject to UI / Client Framework #38 and later screen specifications.
 
 ---
 
 ## 13. Accessibility and readability
 
-- critical state must use at least one cue beyond hue when practical: shape, outline, glyph, pattern, number, or text;
-- do not use brand green and semantic positive green as the only distinction between two simultaneous meanings;
-- evaluate contrast on the **final composed screen**, not just isolated swatches;
-- preserve a strong marker/ball silhouette at actual match zoom;
-- categorical data should remain traceable when color perception is reduced;
-- avoid high-frequency textures behind small text or icons;
+- critical state should have a cue beyond hue when practical;
+- danger/unavailability cannot be communicated only by yellow/gold;
+- selected/clicked state must remain distinguishable from positive/available state;
+- goalkeeper and officials use redundant non-color distinctions;
+- evaluate contrast on composed screens, not isolated swatches;
+- preserve marker/ball silhouettes at actual match zoom;
+- avoid high-frequency texture behind small text;
 - no rasterized text as a script-coverage workaround.
 
-AP-04/AP-05 must test representative assets under common color-vision-deficiency simulations and at actual intended sizes.
+AP-04/AP-05 should test representative assets under common color-vision-deficiency simulations and actual intended sizes.
 
 ---
 
-## 14. Token-change register
+## 14. Accepted token/skin changes
 
-### T-01 — Display font family (PROPOSED with G1)
+### T-01 — Display typography role — ACCEPTED AT G1
 
-AP-03 identified a localization blocker in the inherited display face. AP-02 therefore proposes:
+The inherited Barlow Condensed shipping path is unsuitable because Ukrainian/Cyrillic coverage must be proven. The IBM Plex Sans Condensed visual trial was rejected. G1 accepts PT Sans Narrow / equivalent humanist condensed character as the current visual direction, subject to AP-03 exact-font validation.
 
-- **from:** shared/root `--font-display: "Barlow Condensed", ...` for both historical directions;
-- **to:** keep the root/stadium historical value unchanged and add a `touchline`-specific `--font-display: "IBM Plex Sans Condensed", "IBM Plex Sans", ...` override;
-- **reason:** preserve a condensed display role and the historical `stadium` comparison while providing the chosen `touchline` direction a technically viable Ukrainian/Cyrillic path and reducing cross-family typography complexity;
-- **scope:** visual reference/theme token only; no runtime font binary is adopted in AP-02;
-- **evidence owner:** AP-03 for license, exact binary/version, glyph corpus, offline packaging, and Unity import;
-- **rollback:** if G1 visual review rejects IBM Plex Sans Condensed, choose another Cyrillic-capable condensed display face through the same explicit token-change process rather than reverting to an uncovered shipping face.
+### T-02 — Primary color identity — ACCEPTED AT G1
 
-The AP-02 branch updates `docs/design/ui-mockups/assets/tokens.css` and the mockup README in the same proposed landing so there is no second typography source of truth. The rejected `stadium` direction keeps Barlow Condensed for historical comparison; only the chosen `touchline` display role is overridden. No palette, spacing, radius, body-face, mono-face, or direction-selection changes are proposed.
+The earlier electric-green-first treatment is superseded for `touchline` by the accepted **Retro Dynamo Blue** skin:
 
-Any future change to an inherited palette, type role, spacing value, radius, or `touchline` direction value must be recorded here as a proposed change and update the UI design reference in the same landing. Family-specific values in this document (for example the icon reference grid/stroke) are extensions, not silent token replacements.
+- blue/navy structural identity;
+- cream/white ink;
+- yellow/gold selection and star emphasis;
+- semantic green/red retained for state meaning.
+
+### T-03 — Alternate Retro Bronze skin — ACCEPTED AT G1
+
+The bronze concept is retained as a second skin over the same structural UI. It may not fork layout, state semantics, or interaction behavior.
+
+The shared mockup token source must be updated in the same AP-02 landing so these accepted values do not exist only in the review board.
 
 ---
 
-## 15. G1 acceptance criteria
+## 15. G1 acceptance record
 
-G1 is ready for owner acceptance when review confirms:
+**G1 accepted by owner on September 10, 2026.**
 
-1. `touchline` is visibly inherited, not reselected;
-2. no rule contradicts APPROVED #38 ownership/behavior;
-3. the identity, icon, match, portrait, fictional-club, stadium, motion, and accessibility families are specific enough to reject off-style samples;
-4. the proposed T-01 display-font substitution is visually accepted or explicitly replaced by another Cyrillic-capable condensed face, with the shared mockup token source updated in the same landing;
-5. T-01 has been rendered at the mockups' 1920×1080 reference stage on at least **Squad Screen**, **Tactics**, and one finance/data-heavy screen, with no unacceptable clipping, wrapping, hierarchy loss, or density regression relative to the chosen `touchline` baseline;
-6. no second palette/type/spacing source has been created, and AP-03 rights/font/import work remains separate and explicitly pending;
-7. the direction can produce professional Stage-1 match presentation rather than placeholder-quality visuals.
+Acceptance confirms:
 
-Until that acceptance, `style_version = art-direction-v1` is a proposed family target, not permission for bulk production.
+1. `touchline` remains the inherited structural direction;
+2. Retro Dynamo Blue is the accepted primary visual skin;
+3. Retro Bronze is retained as the alternate skin;
+4. the density/no-wasted-space principle is accepted;
+5. composite star gauges, numeric individual attributes, preferred-position highlighting, match marker language, club/kit treatment, stadium treatment, and panel-control affordances are sufficiently defined to judge later samples;
+6. the deterministic reference demonstrates a professional Stage-1 target rather than placeholder-quality presentation;
+7. AP-03 technical/font/rights/import proof remains separate and pending.
+
+`style_version = art-direction-v1` is now an accepted family target. G1 should be reopened only for a deliberate material art-direction change, not ordinary implementation polish.
 
 ---
 
@@ -400,7 +382,8 @@ Until that acceptance, `style_version = art-direction-v1` is a proposed family t
 
 | Version | Date | Change |
 |---|---|---|
-| 1.0 | 2026-09-06 | Initial AP-02 derivation from chosen `touchline`: maps inherited tokens and extends unresolved identity, icon, data-viz, match, portrait, fictional-club, stadium, motion, and accessibility rules. No inherited token changes proposed. |
-| 1.1 | 2026-09-06 | AP-03 cross-stream typography correction: records the inherited Barlow Condensed Ukrainian/Cyrillic gap and proposes IBM Plex Sans Condensed as a `touchline`-specific T-01 display replacement; the root/stadium Barlow reference remains intact for historical comparison. Runtime font adoption remains AP-03/G2 work. |
-| 1.2 | 2026-09-06 | Second hostile-review refinement: G1 now requires representative 1920×1080 dense-screen visual regression evidence for T-01 so the font substitution cannot be accepted from script coverage/prose alone. |
-| 1.3 | 2026-09-06 | Visual-proof correction: the first Google Fonts request incorrectly asked IBM Plex Sans Condensed for weight 800, which the family does not provide; the failed font-load proof caught the fallback. Import narrowed to the actually required 500/600/700 weights before rerunning G1 visual evidence. |
+| 1.0 | 2026-09-06 | Initial AP-02 derivation from chosen `touchline`; extended unresolved identity, icon, match, portrait, fictional-club, stadium, motion, and accessibility families. |
+| 1.1 | 2026-09-06 | Recorded the inherited Barlow Condensed Ukrainian/Cyrillic gap and initial IBM Plex Sans Condensed replacement proposal. |
+| 1.2 | 2026-09-06 | Required representative dense-screen visual regression evidence before G1. |
+| 1.3 | 2026-09-06 | Corrected unsupported font-weight assumptions in the visual proof. |
+| 1.4 | 2026-09-10 | **G1 accepted.** Freezes Retro Dynamo Blue as primary skin, preserves Retro Bronze as alternate skin, records the no-wasted-space rule, humanist condensed typography role, deterministic 11-v-11 match invariant, star-gauge conventions, preferred-position behavior, retro texture, elevated panel language, and lock/dropdown/drag/resize panel affordances. AP-03/G2 technical proof remains pending. |
