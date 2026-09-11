@@ -2,7 +2,7 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 11, 2026  
-**Version:** 0.4  
+**Version:** 0.5  
 **Status:** F4 PROTOCOL AUTHORED — UX owner and participant assignments still open  
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.4 §F4 and Gates E–G  
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.3  
@@ -73,9 +73,12 @@ S0-T7 exists specifically to exercise Gate F's binding requirement that the comp
 back/cancel behavior. The moderator may place S0-T7 before S0-T2 when that produces a cleaner session,
 provided the task ID and evidence remain unchanged.
 
-If a task depends on a capability still marked `FUTURE-BLOCKED`, record the dependency and omit that
-task from completion scoring until the prototype provides an honest simulated representation of the
-specified future surface. Do not silently convert it to `LIVE`.
+If a prescribed task depends on a capability still marked `FUTURE-BLOCKED`, Gate F remains **FAIL**
+until the prototype provides an honest simulated representation of that specified future surface.
+Do not run the Gate-G participant round with the task omitted from scoring, and do not silently convert
+the dependency to `LIVE`. If the dependency is discovered only during a participant session, record it
+as a prototype/dependency blocker, fail Gate G for that round, and return to Gate F; it is not a
+participant error. Prescribed task coverage therefore has no "honestly testable" denominator escape.
 
 ### 3.2 Critical observations
 
@@ -145,31 +148,36 @@ conditions when that does not hide the failure mode; split them when interaction
 ambiguous. The table explicitly covers every minimum F4.6 test-data profile and every condition named
 by F4.3; rows beyond that floor are Gate-E-only resilience checks and are marked as such.
 
-| Condition | Required check |
-|---|---|
-| Ordinary case | Complete all S0 tasks with representative real-match data. |
-| Color-independent meaning *(Gate-E requirement)* | Across ordinary applicable S0 states, score/result, availability, selection, warning/error and action-state meaning remains understandable without relying on hue alone; use text, iconography, shape, pattern, position or another non-color cue where meaning would otherwise be color-only. This check is independent of indicator density. |
-| Long player/club/competition names | No clipped critical identity, control label or result; long football identities remain distinguishable. |
-| Empty/large lists | S1/shared list primitives preserve empty explanation and usable selection/sort behavior. |
-| Many status indicators | Dense status presentation remains scannable and priority/order does not collapse; the separate color-independent row above still applies. |
-| Pseudo-locale | Expanded/localized strings reflow without hiding critical actions or state. |
-| Alternate date/currency formatting | Relevant S1/management surfaces format without hard-coded width assumptions. |
-| No save | Surfaces do not imply a usable save/resume capability when no save exists for the tested state; unavailable behavior is explicit. |
-| Save/load failure where relevant | A failed save/load never masquerades as success; recovery/next safe action is clear. |
-| No match frame yet | Match View does not falsely present the match as live/ended; waiting/initial state is intelligible. |
-| Disabled action with reason | The reason is available when it affects the player's next decision. |
-| Error/failure state (general) | F4.3 names `disabled/error states`, of which the two save rows above are only one class. Any reachable failure — a rejected or refused action, a load/start that cannot proceed, an unavailable dependency — must not masquerade as success, and the next safe action must be clear. |
-| Missing art | Fallback preserves identity/layout and does not create a blank critical region. |
-| Event-heavy match | HUD/stat attention remains usable under dense events. |
-| Unusual scoreline | Score/result hierarchy survives wider values. |
-| Full-time/frozen state | Tactical input is unavailable; save/report behavior is not confused with a still-live match. |
-| Smallest supported desktop | No critical action or information is pushed irretrievably off-screen. |
-| 1920×1080 reference | Intended hierarchy/density matches the reference composition. |
-| High-resolution/ultrawide behavior | Expansion does not produce unusable line lengths, extreme separation or floating controls. |
-| Max supported text scale | Critical path remains operable; focus/control relationships remain clear. |
-| Keyboard only | Every critical action, including S0-T7 back/cancel, is reachable in coherent order; no focus trap; state is visible without hover. |
-| Mouse only | Complete path, including S0-T7 back/cancel, without keyboard-only dependency. |
-| Audio muted/caption path *(Gate-E only)* | No required S0 information depends on sound alone. Named by Gate E, not by the F4.6 minimum set; run it where the prototype has any audio/caption surface at all. |
+| Condition | Required check | Result | Prototype/version | Evidence / finding or N/A reason |
+|---|---|---|---|---|
+| Ordinary case | Complete all S0 tasks with representative real-match data.  | | | |
+| Color-independent meaning *(Gate-E requirement)* | Across ordinary applicable S0 states, score/result, availability, selection, warning/error and action-state meaning remains understandable without relying on hue alone; use text, iconography, shape, pattern, position or another non-color cue where meaning would otherwise be color-only. This check is independent of indicator density.  | | | |
+| Long player/club/competition names | No clipped critical identity, control label or result; long football identities remain distinguishable.  | | | |
+| Empty/large lists | S1/shared list primitives preserve empty explanation and usable selection/sort behavior.  | | | |
+| Many status indicators | Dense status presentation remains scannable and priority/order does not collapse; the separate color-independent row above still applies.  | | | |
+| Pseudo-locale | Expanded/localized strings reflow without hiding critical actions or state.  | | | |
+| Alternate date/currency formatting | Relevant S1/management surfaces format without hard-coded width assumptions.  | | | |
+| No save | Surfaces do not imply a usable save/resume capability when no save exists for the tested state; unavailable behavior is explicit.  | | | |
+| Save/load failure where relevant | A failed save/load never masquerades as success; recovery/next safe action is clear.  | | | |
+| No match frame yet | Match View does not falsely present the match as live/ended; waiting/initial state is intelligible.  | | | |
+| Disabled action with reason | The reason is available when it affects the player's next decision.  | | | |
+| Error/failure state (general) | F4.3 names `disabled/error states`, of which the two save rows above are only one class. Any reachable failure — a rejected or refused action, a load/start that cannot proceed, an unavailable dependency — must not masquerade as success, and the next safe action must be clear.  | | | |
+| Missing art | Fallback preserves identity/layout and does not create a blank critical region.  | | | |
+| Event-heavy match | HUD/stat attention remains usable under dense events.  | | | |
+| Unusual scoreline | Score/result hierarchy survives wider values.  | | | |
+| Full-time/frozen state | Tactical input is unavailable; save/report behavior is not confused with a still-live match.  | | | |
+| Smallest supported desktop | No critical action or information is pushed irretrievably off-screen.  | | | |
+| 1920×1080 reference | Intended hierarchy/density matches the reference composition.  | | | |
+| High-resolution/ultrawide behavior | Expansion does not produce unusable line lengths, extreme separation or floating controls.  | | | |
+| Max supported text scale | Critical path remains operable; focus/control relationships remain clear.  | | | |
+| Keyboard only | Every critical action, including S0-T7 back/cancel, is reachable in coherent order; no focus trap; state is visible without hover.  | | | |
+| Mouse only | Complete path, including S0-T7 back/cancel, without keyboard-only dependency.  | | | |
+| Audio muted/caption path *(Gate-E only)* | No required S0 information depends on sound alone. Named by Gate E, not by the F4.6 minimum set; run it where the prototype has any audio/caption surface at all.  | | | |
+
+Every Gate-E run must complete the `Result`, `Prototype/version`, and evidence/finding field for
+every condition row. `Result` is `PASS`, `FAIL`, or justified `N/A`; a blank result/evidence field means
+Gate E is incomplete and cannot pass. A `FAIL` links a stable finding ID where one exists. `N/A` must
+state why the condition cannot apply to that prototype version rather than merely that it was not run.
 
 For S0 conditions that do not apply to a given prototype, record `N/A` with a reason rather than
 silently skipping the row. The color-independent-meaning row is not discharged by marking `Many status
@@ -217,7 +225,10 @@ Stop or skip a task when:
 - a missing `FUTURE-BLOCKED` dependency makes the remaining interaction fictional;
 - continuing would contaminate later observations more than restarting from a known state.
 
-Record the stop reason as evidence; do not count it as participant error.
+Record the stop reason as evidence; do not count it as participant error. A stop caused by a missing
+prescribed capability or `FUTURE-BLOCKED` dependency invalidates Gate G for that round and returns the
+prototype to Gate F. The task may not be removed from the Gate-G denominator simply because the
+prototype could not honestly present it.
 
 ---
 
@@ -294,7 +305,8 @@ After both sessions, record:
 | Check | Result |
 |---|---|
 | Two independent participants completed the round | PASS / FAIL |
-| All prescribed tasks attempted where honestly testable | PASS / FAIL |
+| Gate F passed with the complete prescribed S0-T1–T7 task, including back/cancel | PASS / FAIL |
+| All prescribed S0-T1–T7 tasks attempted in the participant round | PASS / FAIL |
 | Back/cancel task S0-T7 attempted | PASS / FAIL |
 | Unresolved Blockers | count |
 | Unresolved Majors | count |
@@ -302,9 +314,11 @@ After both sessions, record:
 | Second round required | yes / no |
 | Gate G | PASS / FAIL |
 
-Gate G passes only when both independent participants completed the round, all honestly testable
-prescribed tasks including back/cancel were attempted, there is no unresolved Blocker, and every
-remaining Major has explicit owner acceptance with rationale.
+Gate G passes only when Gate F had already passed with the complete prescribed task, both independent
+participants completed the round, **every** prescribed S0-T1–T7 task including back/cancel was
+attempted, there is no unresolved Blocker, and every remaining Major has explicit owner acceptance with
+rationale. If a prescribed task proves untestable during the round, Gate G is `FAIL`; record the
+prototype/dependency blocker and return to Gate F rather than excluding that task from scoring.
 
 ---
 
@@ -332,7 +346,7 @@ semantics and evidence-backed interaction states.
 | F4 requirement | Status | Evidence / blocker |
 |---|---|---|
 | Four-layer method made repeatable | READY | §§2, 5, 6, 10 |
-| Scripted self-walkthrough defined | READY | §5 covers the complete F4.6 minimum profile set plus Gate-E-only resilience checks |
+| Scripted self-walkthrough defined | READY | §5 covers the complete F4.6 minimum profile set plus Gate-E-only resilience checks and an auditable per-condition result/evidence record |
 | S0 task protocol defined | READY | §§3, 6, 7 include the required back/cancel task |
 | Severity/disposition repeatable | READY | §§8–9 |
 | Evidence capture format defined | READY | §7 |
@@ -355,3 +369,4 @@ workstream should not claim F4 complete until all three assignments are explicit
 | 0.2 | September 11, 2026 | Review correction: added the binding F4.6 `no save` and `save/load failure where relevant` profiles; added S0-T7 to exercise Gate F back/cancel behavior; narrowed S0-T1 so current New Game/start limitations are recorded honestly; added this version history and tightened the READY claims to the corrected coverage. |
 | 0.3 | September 11, 2026 | Review correction: restored a general `Error/failure state` row to §5. The v0.2 pass had *replaced* the original generic error row with `Save/load failure where relevant` rather than adding alongside it, narrowing coverage against F4.3, which names `disabled/error states` as a condition in its own right and of which a save/load failure is only one class. §5's preamble now states the F4.3 floor explicitly and the closing note makes the non-substitution symmetric. |
 | 0.4 | September 11, 2026 | Codex review correction: split color-independent meaning into its own Gate-E condition so it remains binding even when the `Many status indicators` stress profile is N/A; density/scannability is now checked separately. |
+| 0.5 | September 11, 2026 | Codex review corrections: prescribed tasks can no longer disappear behind an `honestly testable` qualifier — an untestable prescribed task fails Gate F/G and returns the prototype to Gate F; Gate E now has per-condition `PASS`/`FAIL`/justified-`N/A`, prototype-version, evidence and finding/reason fields, with blank rows explicitly preventing a Gate-E pass. |
