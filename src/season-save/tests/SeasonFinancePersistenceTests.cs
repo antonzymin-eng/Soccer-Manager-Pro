@@ -1,11 +1,11 @@
 // File:     src/season-save/tests/SeasonFinancePersistenceTests.cs
 // Created:  2026-09-10
-// Modified: 2026-09-10
+// Modified: 2026-09-11 (#40 T2a — prove bootstrap Squad.ClubId universe composes with SeasonState.ClubIds)
 // Author:   —
 // Spec:     Club Finances & Economy #40 FR-FN-020/021/025; Season & Competition Loop #30 Appendix B.1;
 //           ERR-030-050; Code Standards #20
-// Purpose:  Locks the T1b finance resume seam and the current-season ClubId coherence rule that
-//           prevents both Save-As loss and partial/wrong-club finance persistence.
+// Purpose:  Locks the T1b finance resume seam, the current-season ClubId coherence rule, and T2a's
+//           canonical #27 bootstrap universe so save/composition cannot drift between club identities.
 
 using System;
 using System.IO;
@@ -16,6 +16,7 @@ using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
+using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
@@ -53,6 +54,13 @@ namespace TacticalDirector.SeasonSave
             firstRoundDay: 5u,
             daysBetweenRounds: 7u,
             seasonNumber: 3);
+
+        private static Squad SquadFor(int clubId)
+        {
+            return new Squad(
+                clubId,
+                new[] { PlayerRecord.CreateDefault(clubId * PlayerDatabaseConstants.CLUB_SQUAD_SIZE) });
+        }
 
         private static ClubFinanceEntry Entry(int clubId, long balance)
         {
@@ -106,6 +114,28 @@ namespace TacticalDirector.SeasonSave
                 Assert.AreEqual(left[i].Finances.SeasonRevenueAccrued, right[i].Finances.SeasonRevenueAccrued, $"SeasonRevenueAccrued for club {left[i].ClubId}");
                 Assert.AreEqual(left[i].Finances.FfpBalanceWindow, right[i].Finances.FfpBalanceWindow, $"FfpBalanceWindow for club {left[i].ClubId}");
             }
+        }
+
+        /// <summary>T-FN-LIFE-001: #27 bootstrap identities and #30's season club universe compose exactly.</summary>
+        [Test]
+        public void BootstrapSquadUniverse_ExactlyMatchesSeasonFinanceCoherenceUniverse()
+        {
+            Squad[] squads =
+            {
+                SquadFor(13),
+                SquadFor(10),
+                SquadFor(12),
+                SquadFor(11)
+            };
+
+            ClubFinanceEntry[] bootstrap = ClubFinanceEntry.CreateInitialForSquads(squads);
+            ClubFinanceEntry[] canonical = SeasonFinanceCoherence.Normalize(Season(), bootstrap, "finances");
+
+            Assert.AreEqual(4, canonical.Length);
+            Assert.AreEqual(10, canonical[0].ClubId);
+            Assert.AreEqual(11, canonical[1].ClubId);
+            Assert.AreEqual(12, canonical[2].ClubId);
+            Assert.AreEqual(13, canonical[3].ClubId);
         }
 
         [Test]
@@ -185,4 +215,5 @@ namespace TacticalDirector.SeasonSave
 // | Version | Date       | Author | Notes                                                        |
 // | 1.0     | 2026-09-10 | —      | ERR-030-050 regression locks: populated load→loop→Save As;   |
 // |         |            |        | missing/foreign ClubId refusal at save and composition.      |
+// | 1.1     | 2026-09-11 | —      | T2a: #27 Squad.ClubId bootstrap universe proven compatible with #30 SeasonState.ClubIds. |
 #endregion

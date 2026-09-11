@@ -1,9 +1,10 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board-scaling coverage)
+**Last Updated:** September 11, 2026 (v0.5 — T-FN-LIFE-001 coverage split recorded across T2a/T2b)
+**Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board-scaling coverage)
 **Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board failure coverage)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -33,7 +34,10 @@ Tests land at T-phase; this is the acceptance contract.
 
 - **T-FN-LIFE-001** — Every `ClubId` in #27's `Squad` enumeration has a `ClubFinances` entry after
   `CreateInitial` bootstrap; the per-club entry count is unchanged across any number of season rolls (clubs
-  do not churn, KD-7) — no leak, no removal.
+  do not churn, KD-7) — no leak, no removal. **Coverage is deliberately phased:** T2a proves the bootstrap
+  half (one canonical initialized entry per supplied `Squad.ClubId` and exact composition with the current
+  `SeasonState.ClubIds` universe); T2b must prove the across-season-roll half once #30 owns the live
+  bootstrap invocation and settlement wiring.
 - **T-FN-FAIL-CLUB-001** — `SettleFinances` or `ApplyTransaction` invoked for a `ClubId` with no
   `ClubFinances` entry fails loud (F6).
 
@@ -153,4 +157,5 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.2 | 2026-07-23 | — | AR-1 (1M): T-FN-LEDGER-002 / T-FN-BOUND-003 restated — wage transaction moves the aggregate only, `Balance` unchanged. |
 | 0.3 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** T-FN-FAIL-BOARD-001 widened from default/zero only to every non-positive board multiplier. |
 | 0.4 | 2026-09-07 | — | **PR #363 Codex correction.** Adds T-FN-INT-002 to lock overflow-safe pre-cap board scaling and exact below-cap integer-floor semantics. |
+| 0.5 | 2026-09-11 | — | **PR #392 review follow-up.** T-FN-LIFE-001 remains one acceptance id, but its executable evidence is phase-split: T2a covers canonical bootstrap/universe coherence; T2b must cover unchanged entry cardinality across season rolls after live #30 wiring exists. |
 #endregion
