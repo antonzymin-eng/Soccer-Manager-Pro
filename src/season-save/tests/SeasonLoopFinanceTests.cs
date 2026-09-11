@@ -6,7 +6,7 @@
 // Spec:     Club Finances & Economy #40 §3.2/§3.4/§4.1-§4.3/§7.1 T2b,
 //           T-FN-LIFE-001, T-FN-ORD-001/003, T-FN-DET-002; Season Loop #30 §3.5;
 //           Code Standards #20 §3.9.4
-// Purpose:  Locks #40's production bootstrap, compatibility activation, runtime ledger surface,
+// Purpose:  Locks #40's production bootstrap, Restore-only legacy migration, runtime ledger surface,
 //           boundary settlement ordering, across-roll identity, refused-roll atomicity, and preservation
 //           of already-composed runtime subsystems at the #30 composition root.
 // ============================================================================
@@ -16,8 +16,8 @@ using NUnit.Framework;
 using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
 using TacticalDirector.LivingWorld;
-
-using ClubFinanceState = TacticalDirector.ClubFinances.ClubFinances;
+using TacticalDirector.PlayerDatabase;
+using TacticalDirector.PlayerProgression;
 
 namespace TacticalDirector.SeasonSave.Tests
 {
@@ -51,10 +51,11 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
-        public void GenericPreT2Composition_UpgradesEmptyFinanceInputInsteadOfSilentlySkippingT2b()
+        public void GenericLegacyComposition_EmptyFinanceStateIsNotSilentlyInitialized()
         {
-            // T1b allowed null/empty while the producer did not exist. T2b must make that a
-            // compatibility INPUT only: once the loop exists, its live finance set is complete.
+            // The generic constructor can still represent the explicit pre-T2/unwired state used by
+            // existing low-level tests and callers. It must not manufacture starting cash: the first
+            // finance operation fails loud. Only Restore is allowed to migrate a persisted empty T1b block.
             League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
             var world = new WorldStore(0, WorldSeed);
             var loop = new SeasonLoop(
@@ -62,7 +63,27 @@ namespace TacticalDirector.SeasonSave.Tests
                 league.CreateSeason(managedClubId: 0),
                 RoundResolutionMode.QuickSimAll);
 
-            ClubFinanceEntry[] entries = loop.FinanceEntriesForSave();
+            Assert.That(loop.FinanceEntriesForSave(), Is.Empty);
+            Assert.Throws<System.InvalidOperationException>(() => loop.FinanceView(0));
+        }
+
+        [Test]
+        public void Restore_EmptyLegacyFinanceBlock_UpgradesExactlyOnceToPersistedSeasonClubUniverse()
+        {
+            // This is the compatibility path the P2 correction exists for: a well-formed v7/T1b save
+            // can contain an empty FNCE block because the producer did not yet exist. Restore, and only
+            // Restore, converts that persisted representation into live T2b state.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(0, WorldSeed);
+            SeasonState season = league.CreateSeason(managedClubId: 0);
+
+            SeasonLoop restored = SeasonLoop.Restore(
+                world,
+                SeasonStateCodec.Encode(season),
+                RoundResolutionMode.QuickSimAll,
+                financesOrNull: System.Array.Empty<ClubFinanceEntry>());
+
+            ClubFinanceEntry[] entries = restored.FinanceEntriesForSave();
             Assert.That(entries, Has.Length.EqualTo(ClubCount));
             for (int i = 0; i < entries.Length; i++)
             {
@@ -72,21 +93,51 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
-        public void CreateLoop_PreservesAlreadyComposedDisciplineStateWhileAddingFinances()
+        public void CreateLoop_PreservesCareerAndDisciplineWhenProgressionIsAbsent()
         {
-            // Regression for Codex P1: finance bootstrap is additive composition, not a fresh bare loop
-            // that quietly drops already-live subsystems.
+            // P1 regression, false branch of progressionIsRoster: career must still bind to this league
+            // and discipline must survive finance bootstrap instead of being discarded by a bare loop.
             League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
             var world = new WorldStore(0, WorldSeed);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(
+                league, league.ClubIds(), injuryOccurrenceEnabled: false);
             var discipline = new DisciplineState();
 
             SeasonLoop loop = league.CreateLoop(
                 world,
                 managedClubId: 0,
                 RoundResolutionMode.QuickSimAll,
+                careerOrNull: career,
                 disciplineOrNull: discipline);
 
+            Assert.That(loop.Career, Is.SameAs(career));
+            Assert.That(loop.Progression, Is.Null);
             Assert.That(loop.Discipline, Is.SameAs(discipline));
+            Assert.That(loop.FinanceEntriesForSave(), Has.Length.EqualTo(ClubCount));
+        }
+
+        [Test]
+        public void CreateLoop_PreservesCareerAndProgression_WhenProgressionOwnsTheRosterAuthority()
+        {
+            // P1 regression, true branch of progressionIsRoster: CreateLoop must pass NO second squad
+            // provider, allowing SeasonLoop to project its provider from this exact progression store.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(0, WorldSeed);
+            ProgressionEngine progression = SeedProgression(league);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(
+                new ProgressionSquads(progression),
+                league.ClubIds(),
+                injuryOccurrenceEnabled: false);
+
+            SeasonLoop loop = league.CreateLoop(
+                world,
+                managedClubId: 0,
+                RoundResolutionMode.QuickSimAll,
+                careerOrNull: career,
+                progressionOrNull: progression);
+
+            Assert.That(loop.Career, Is.SameAs(career));
+            Assert.That(loop.Progression, Is.SameAs(progression));
             Assert.That(loop.FinanceEntriesForSave(), Has.Length.EqualTo(ClubCount));
         }
 
@@ -115,7 +166,7 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
-        public void RollToNextSeason_SettlesEveryClubFromFinalTable_AndPreservesClubSetAcrossRolls()
+        public void RollToNextSeason_SettlesFromFinalTableWithConcretePositionEconomics_AndPreservesClubSet()
         {
             // §3.9.4 general-unit-test — allocation rules relaxed in test body.
             League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
@@ -124,22 +175,36 @@ namespace TacticalDirector.SeasonSave.Tests
 
             CompleteSeason(loop, league);
 
-            ClubFinanceEntry[] before = loop.FinanceEntriesForSave();
-            var expected = new ClubFinanceEntry[before.Length];
-            BoardModifier board = BoardModifier.Identity;
-            for (int i = 0; i < before.Length; i++)
-            {
-                ClubFinanceState prior = before[i].Finances;
-                ClubFinanceState next = FinanceStep.SettleFinances(
-                    in prior,
-                    loop.State.PositionOf(before[i].ClubId),
-                    ClubCount,
-                    in board);
-                expected[i] = new ClubFinanceEntry(before[i].ClubId, in next);
-            }
-
+            int championClubId = ClubAtPosition(loop.State, 1);
+            int bottomClubId = ClubAtPosition(loop.State, ClubCount);
             loop.RollToNextSeason();
-            AssertEntriesEqual(expected, loop.FinanceEntriesForSave());
+
+            ClubFinanceEntry[] after = loop.FinanceEntriesForSave();
+            ClubFinanceEntry champion = EntryFor(after, championClubId);
+            ClubFinanceEntry bottom = EntryFor(after, bottomClubId);
+
+            // Independent endpoint locks: these do NOT call SettleFinances, so reversing/ignoring the
+            // table position in SeasonFinanceRuntime cannot make production and expected fail together.
+            Assert.That(
+                champion.Finances.Balance,
+                Is.EqualTo(ClubFinancesConstants.StartingClubBalance + ClubFinancesConstants.PrizeMoneyWinner));
+            Assert.That(
+                bottom.Finances.Balance,
+                Is.EqualTo(ClubFinancesConstants.StartingClubBalance + ClubFinancesConstants.PrizeMoneyLastPlace));
+
+            long championTransfer =
+                ClubFinancesConstants.BaseTransferBudget
+                + ClubFinancesConstants.PrizeMoneyWinner
+                * ClubFinancesConstants.TransferBudgetPrizeSharePermille
+                / ClubFinancesConstants.PERMILLE_DENOM;
+            long bottomTransfer =
+                ClubFinancesConstants.BaseTransferBudget
+                + ClubFinancesConstants.PrizeMoneyLastPlace
+                * ClubFinancesConstants.TransferBudgetPrizeSharePermille
+                / ClubFinancesConstants.PERMILLE_DENOM;
+            Assert.That(champion.Finances.TransferBudget, Is.EqualTo(championTransfer));
+            Assert.That(bottom.Finances.TransferBudget, Is.EqualTo(bottomTransfer));
+            Assert.That(champion.Finances.TransferBudget, Is.GreaterThan(bottom.Finances.TransferBudget));
 
             // T-FN-LIFE-001 across-roll half: the same stable ClubIds survive another full boundary.
             CompleteSeason(loop, league);
@@ -174,6 +239,45 @@ namespace TacticalDirector.SeasonSave.Tests
             AssertEntriesEqual(before, loop.FinanceEntriesForSave());
         }
 
+        private static ProgressionEngine SeedProgression(League league)
+        {
+            var squads = new Squad[league.ClubCount];
+            for (int clubId = 0; clubId < squads.Length; clubId++)
+            {
+                squads[clubId] = league.ResolveByClubId(clubId);
+            }
+
+            return ProgressionEngine.SeedFrom(squads, newGameWorldDay: 0u);
+        }
+
+        private static int ClubAtPosition(SeasonState state, int position)
+        {
+            for (int clubId = 0; clubId < ClubCount; clubId++)
+            {
+                if (state.PositionOf(clubId) == position)
+                {
+                    return clubId;
+                }
+            }
+
+            Assert.Fail($"No club finished in position {position}.");
+            return -1;
+        }
+
+        private static ClubFinanceEntry EntryFor(ClubFinanceEntry[] entries, int clubId)
+        {
+            for (int i = 0; i < entries.Length; i++)
+            {
+                if (entries[i].ClubId == clubId)
+                {
+                    return entries[i];
+                }
+            }
+
+            Assert.Fail($"No finance entry exists for club {clubId}.");
+            return default;
+        }
+
         private static void CompleteSeason(SeasonLoop loop, League league)
         {
             while (!loop.IsSeasonComplete)
@@ -201,9 +305,10 @@ namespace TacticalDirector.SeasonSave.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                                   |
-// | 1.0     | 2026-09-11 | —      | #40 T2b production lifecycle and boundary regression set. |
+// | Version | Date       | Author | Notes                                                     |
+// | 1.0     | 2026-09-11 | —      | #40 T2b production lifecycle and boundary regression set.   |
 // | 1.1     | 2026-09-11 | —      | Alias finance state type to avoid namespace/type ambiguity. |
-// | 1.2     | 2026-09-11 | —      | Review locks: legacy empty input upgrades at composition;   |
-// |         |            |        | CreateLoop preserves already-live subsystem state.          |
+// | 1.2     | 2026-09-11 | —      | First review locks for empty-state and subsystem handling.   |
+// | 1.3     | 2026-09-11 | —      | Claude review: Restore-only migration, career/progression    |
+// |         |            |        | preservation coverage, and independent position economics.  |
 #endregion
