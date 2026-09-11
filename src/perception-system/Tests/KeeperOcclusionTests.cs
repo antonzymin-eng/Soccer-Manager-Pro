@@ -1,8 +1,11 @@
 // File:     src/perception-system/Tests/KeeperOcclusionTests.cs
 // Created:  2026-09-11
+// Modified: 2026-09-11 (W4 review: header compliance and exclusion-mask fail-loud coverage)
 // Author:   —
 // Spec:     Perception System #7 §3.2; Match-engine wiring backlog W4
 // Purpose:  Regression coverage for goalkeeper-specific all-body line of sight.
+
+using System;
 
 using NUnit.Framework;
 using UnityEngine;
@@ -91,5 +94,25 @@ namespace TacticalDirector.PerceptionSystem.Tests
             Assert.IsFalse(occluded,
                 "W4: the observer must be excluded from its own all-body shadow test");
         }
+
+        [Test]
+        public void W4_ShortExclusionMask_FailsLoud()
+        {
+            AgentState[] states = MakeSeparatedAgents();
+            bool[] excluded = new bool[states.Length - 1];
+
+            Assert.Throws<ArgumentException>(() =>
+                OcclusionFilter.IsOccludedByAnyAgent(
+                    observerPos: states[0].Position,
+                    targetPos: new Vector2(10.0f, 0.0f),
+                    observerId: 0,
+                    agentStates: states,
+                    excludedAgents: excluded));
+        }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                      |
+// | 1.0     | 2026-09-11 | —      | W4: keeper all-body LOS, Stage-0 isolation and mask guard. |
+#endregion
