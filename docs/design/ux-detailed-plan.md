@@ -1,9 +1,9 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** September 9, 2026  
-**Version:** 1.4  
-**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F3 COMPLETE; F4 NEXT  
+**Last Updated:** September 11, 2026\
+**Version:** 1.5\
+**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 COMPLETE; S0 GATE A NEXT\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -344,7 +344,10 @@ For **S0 and S1 only**, Gate G requires:
 - the designer/implementer does not count;
 - where practical, one experienced management-sim player and one football-literate newcomer;
 - participants may be recruited from the owner's/team's personal or community network; paid recruitment is optional, not assumed;
-- F4 records the intended participants/recruiting channel before the journey reaches Gate F;
+- repository evidence uses stable anonymous slot IDs (`S0-P1`/`S0-P2`, then `S1-P1`/`S1-P2`);
+- personal names and contact details are not repository outputs and must not be recorded;
+- F4 records the participant profiles, recruiting channel and privacy-safe attestation mechanism;
+- before the journey reaches Gate F, the UX owner attests that two distinct real participants are available for the anonymous slots;
 - the test round is scheduled for the first practical session after the prototype passes Gate F;
 - if either participant is unavailable, Gate G simply does not pass — there is **no provisional bypass to Gate H/I**.
 
@@ -414,7 +417,12 @@ Minimum profiles:
 
 ### F4 exit
 
-The protocol is repeatable by someone other than its author, and two independent participants are identified/recruitable for S0.
+The protocol is repeatable by someone other than its author, the UX owner is assigned, and two
+privacy-safe independent-participant slots with profiles, recruiting channels and an availability
+attestation mechanism are defined for S0. Personal identity disclosure is not an F4 output. The
+availability attestations are due before S0 reaches Gate F; two real independent completions remain
+mandatory at Gate G. **This is a deliberate timing relaxation from v1.4, which required the two S0
+participants to be identified/recruitable at F4 exit; anonymity itself does not require that timing change.**
 
 ---
 
@@ -493,7 +501,7 @@ Run the F4 participant round.
 Record:
 
 - version tested;
-- participant profile;
+- anonymous participant slot, profile and independence attestation;
 - task completion;
 - wrong turns/hesitation;
 - missed information;
@@ -950,7 +958,7 @@ No additional polished screen comes next.
 3. **F1.4 — PM-1/PM-2 task hierarchy and EA priority.**
 4. **F2 — record the existing `ClientScreenFlow`; produce separate future career-shell map.**
 5. **F3 — audit only S0-required component/state/a11y/localization/fallback primitives.**
-6. **F4 — write scripts, severity ledger and participant mechanism; identify two S0 testers.**
+6. **F4 — write scripts, severity ledger and privacy-safe participant mechanism; define two anonymous S0 slots.**
 7. **S0 Gate A — full PM-1 dependency/control audit.**
 8. **S0 Gate B — complete task flow.**
 9. **S0 Gate C — low-fidelity wireframes.**
@@ -991,22 +999,30 @@ Three things are deliberately **not** F1 gates, having been mis-stated as such i
 
 - **PR draft status.** #362 remaining draft is a review-state fact, not a technical dependency. F1 is evidence-gathering against the tree and needs no acceptance decision to proceed.
 - **B8 → B9b → B10 host ordering.** It is the recommended implementation sequence and a real dependency for S0 Gates I/J, but it constrains nothing in the F1 capability audit.
-- **Gate-G tester recruitment.** §4 already places participant identification in F4, before usability testing. The two-participant requirement stays binding at Gate G; who the participants are is settled at F4, not now.
+- **Gate-G tester recruitment.** §4 defines the anonymous participant slots and recruitment mechanism
+  in F4 without requiring public identity disclosure. The UX owner attests that two distinct real
+  participants are available before Gate F; the two-participant requirement stays binding at Gate G.
 
 ---
 
 # 17. Owner acceptance
 
-**The project owner accepted this UX planning package on September 9, 2026.** The acceptance covers the package as it stands at this revision: `ux-high-level-plan.md` v1.2, this plan at v1.4, and the F1–F3 outputs `ux-baseline-evidence.md` v0.3, `ux-experience-architecture.md` v0.1 and `ux-shared-system.md` v0.3.
+**The project owner accepted this UX planning package on September 9, 2026.** The acceptance covers the package as it stands at this revision: `ux-high-level-plan.md` v1.2, this plan at v1.4, and the F1–F3 outputs `ux-baseline-evidence.md` v0.3, `ux-experience-architecture.md` v0.1 and `ux-shared-system.md` v0.3 (since advanced to v0.4 by the September 11 status-authority correction).
 
-**What it releases.** The acceptance condition recorded against S0-C in `open-issues.md` since F0 is discharged, so substantial UX *production* from S0-C onward is authorized to proceed under this plan's gates. F4 remains the next work package; nothing here reorders it.
+**What it releases.** The acceptance condition recorded against S0-C in `open-issues.md` since F0 is
+discharged, so substantial UX *production* from S0-C onward is authorized to proceed under this
+plan's gates. At the September 9 acceptance, F4 remained the next work package. The September 11
+v1.5 revision records the owner/privacy decisions and separately relaxes F4 participant-availability
+timing from F4 exit to pre-Gate-F; under that revised rule F4 is complete and the workstream advances to S0 Gate A.
 
 **What it does not release.** Acceptance is of the plan, not of any outcome the plan still has to earn:
 
 - every Gate A–J pass criterion in §5 stands unchanged, and acceptance is not a pass at any of them;
 - **Gate G still binds at two independent participants** (§5, §6.7) and the removed "provisional" bypass is not reinstated;
 - **S0 Gate J remains unreachable** until the B8/P4b host verification → B9b/P5b → B10/P6 evidence exists (§6.9, §15); acceptance supplies none of it;
-- the §10.1 UX-workstream role owner and the Gate-G participants are still unassigned — §4 settles both at F4, not here;
+- the acceptance itself did not assign the §10.1 UX-workstream role or waive Gate-G participants;
+  subsequent September 11 decisions assign Anton Zymin, make participant identities private, and
+  leave the two real independent completions binding at Gate G;
 - no simulation, view-model, command, save or navigation contract is created, and the career-return move F2 identified is still owed by the client workstream, not by UX;
 - **S2 stays `FUTURE-BLOCKED`** where §8.1 records the owning implementation as absent.
 
@@ -1023,3 +1039,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.2 | September 6, 2026 | F0 closed and F1 unblocked. F1's effort band revised 1–2 → **3–4 working days**. New §8.1 records the provisional S2 implementation state by symbol search with its evidence column, including two findings a folder-name search would have got backwards: board objectives are **present** in `src/season-save/`, while transfers, scouting, finances and staff are implementation-absent. Reaffirms that the tracking close-out was F1's only prerequisite — PR draft status, B8/B9b/B10 host ordering and Gate-G tester recruitment (which §4 already places in F4) are **not** F1 gates. |
 | 1.3 | September 7, 2026 | F1, F2 and F3 complete; status advanced to *F0–F3 COMPLETE; F4 NEXT*. Outputs: `ux-baseline-evidence.md` v0.3 (F1), `ux-experience-architecture.md` v0.1 (F2), `ux-shared-system.md` v0.3 (F3). **Also corrects a header/version-history desync introduced at v1.2:** that revision appended its history row and edited the status line but left `**Version:**` at 1.1 and `**Last Updated:**` at September 4, so the file's own header contradicted the manifest, changelog and open-issues entries that all cited it as v1.2. Both fields are re-derived here. |
 | 1.4 | September 9, 2026 | **Owner acceptance of the UX planning package, recorded September 9, 2026**, discharging the condition `open-issues.md` had held open since F0. New **§17** states the scope of that acceptance and, more importantly, its limits: Gates A–J are unchanged and unpassed, Gate G still binds at two independent participants, S0 Gate J is still unreachable without B8/B9b/B10 host evidence, the §10.1 role owner and Gate-G participants are still F4 outputs, and §8.1's `FUTURE-BLOCKED` S2 rows are unmoved. Status line advanced accordingly; F4 remains the next work package. Landed alongside `ux-high-level-plan.md` v1.2, which reconciled its §8 F1 band to §10.2's 3–4 working days. |
+| 1.5 | September 11, 2026 | Records the project owner's privacy decision: participant names/contact details are omitted from repository evidence and stable anonymous slots are used instead. Separately, this revision deliberately relaxes F4 exit timing from v1.4: participant availability is now owner-attested before Gate F rather than required at F4 exit. Gate G itself is unchanged — two independent completions remain mandatory, with no bypass to H/I. Status advances to **F0–F4 COMPLETE; S0 GATE A NEXT** under that revised timing rule. |
