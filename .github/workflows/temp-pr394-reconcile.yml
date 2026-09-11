@@ -1,0 +1,252 @@
+name: Temporary PR394 reconcile
+
+on:
+  push:
+    branches:
+      - design/ux-f4-validation-setup
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: design/ux-f4-validation-setup
+          fetch-depth: 0
+
+      - name: Merge current main and apply v0.5 review fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('docs/tracking/file-manifest.md')
+          s = p.read_text(encoding='utf-8')
+          title = '# File Manifest (Post-Migration Baseline)\n\n'
+          if not s.startswith(title):
+              raise SystemExit('manifest title changed')
+          rest = s[len(title):]
+          prior = rest.find('**Last Updated (prior):**')
+          if prior < 0:
+              raise SystemExit('manifest prior-header anchor missing')
+          Path('/tmp/pr394-manifest-header.txt').write_text(rest[:prior], encoding='utf-8')
+          start = s.find('## UX Workstream Documents')
+          end = s.find('## Planning Documents', start)
+          if start < 0 or end < 0:
+              raise SystemExit('UX manifest section missing before merge')
+          Path('/tmp/pr394-ux-section.txt').write_text(s[start:end], encoding='utf-8')
+          PY
+
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_rc=$?
+          set -e
+
+          if [ "$merge_rc" -ne 0 ]; then
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            if [ "$conflicts" != "docs/tracking/file-manifest.md" ]; then
+              echo "Unexpected conflicts:"
+              printf '%s\n' "$conflicts"
+              git merge --abort
+              exit 1
+            fi
+            git checkout --theirs docs/tracking/file-manifest.md
+            python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('docs/tracking/file-manifest.md')
+          s = p.read_text(encoding='utf-8')
+          title = '# File Manifest (Post-Migration Baseline)\n\n'
+          if not s.startswith(title):
+              raise SystemExit('main manifest title changed')
+          rest = s[len(title):]
+          if not rest.startswith('**Last Updated:**'):
+              raise SystemExit('main manifest newest header missing')
+          rest = rest.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
+          ours = Path('/tmp/pr394-manifest-header.txt').read_text(encoding='utf-8')
+          ux = Path('/tmp/pr394-ux-section.txt').read_text(encoding='utf-8')
+          s = title + ours + rest
+          if '## UX Workstream Documents' not in s:
+              marker = '## Planning Documents'
+              i = s.find(marker)
+              if i < 0:
+                  raise SystemExit('Planning Documents anchor missing on main manifest')
+              s = s[:i] + ux + s[i:]
+          p.write_text(s, encoding='utf-8')
+          PY
+            git add docs/tracking/file-manifest.md
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # Protocol v0.5 — close both current Codex findings.
+          p = Path('docs/design/ux-validation-protocol.md')
+          s = p.read_text(encoding='utf-8')
+          if '**Version:** 0.4' not in s:
+              raise SystemExit('protocol is not at expected v0.4 base')
+          s = s.replace('**Version:** 0.4', '**Version:** 0.5', 1)
+
+          old = '''If a task depends on a capability still marked `FUTURE-BLOCKED`, record the dependency and omit that
+task from completion scoring until the prototype provides an honest simulated representation of the
+specified future surface. Do not silently convert it to `LIVE`.'''
+          new = '''If a prescribed task depends on a capability still marked `FUTURE-BLOCKED`, Gate F remains **FAIL**
+until the prototype provides an honest simulated representation of that specified future surface.
+Do not run the Gate-G participant round with the task omitted from scoring, and do not silently convert
+the dependency to `LIVE`. If the dependency is discovered only during a participant session, record it
+as a prototype/dependency blocker, fail Gate G for that round, and return to Gate F; it is not a
+participant error. Prescribed task coverage therefore has no "honestly testable" denominator escape.'''
+          if old not in s:
+              raise SystemExit('FUTURE-BLOCKED scoring paragraph changed')
+          s = s.replace(old, new, 1)
+
+          start = s.find('| Condition | Required check |')
+          end = s.find('\n\nFor S0 conditions', start)
+          if start < 0 or end < 0:
+              raise SystemExit('Gate-E matrix anchor missing')
+          block = s[start:end]
+          lines = block.splitlines()
+          if lines[:2] != ['| Condition | Required check |', '|---|---|']:
+              raise SystemExit('Gate-E matrix header changed')
+          expanded = [
+              '| Condition | Required check | Result | Prototype/version | Evidence / finding or N/A reason |',
+              '|---|---|---|---|---|',
+          ]
+          for line in lines[2:]:
+              if line.startswith('|') and line.endswith('|'):
+                  expanded.append(line[:-1] + ' | | | |')
+              else:
+                  expanded.append(line)
+          s = s[:start] + '\n'.join(expanded) + s[end:]
+
+          marker = '''For S0 conditions that do not apply to a given prototype, record `N/A` with a reason rather than
+silently skipping the row.'''
+          replacement = '''Every Gate-E run must complete the `Result`, `Prototype/version`, and evidence/finding field for
+every condition row. `Result` is `PASS`, `FAIL`, or justified `N/A`; a blank result/evidence field means
+Gate E is incomplete and cannot pass. A `FAIL` links a stable finding ID where one exists. `N/A` must
+state why the condition cannot apply to that prototype version rather than merely that it was not run.
+
+For S0 conditions that do not apply to a given prototype, record `N/A` with a reason rather than
+silently skipping the row.'''
+          if marker not in s:
+              raise SystemExit('Gate-E N/A guidance changed')
+          s = s.replace(marker, replacement, 1)
+
+          old = '''Record the stop reason as evidence; do not count it as participant error.'''
+          new = '''Record the stop reason as evidence; do not count it as participant error. A stop caused by a missing
+prescribed capability or `FUTURE-BLOCKED` dependency invalidates Gate G for that round and returns the
+prototype to Gate F. The task may not be removed from the Gate-G denominator simply because the
+prototype could not honestly present it.'''
+          if old not in s:
+              raise SystemExit('session stop guidance changed')
+          s = s.replace(old, new, 1)
+
+          old = '''| Two independent participants completed the round | PASS / FAIL |
+| All prescribed tasks attempted where honestly testable | PASS / FAIL |
+| Back/cancel task S0-T7 attempted | PASS / FAIL |'''
+          new = '''| Two independent participants completed the round | PASS / FAIL |
+| Gate F passed with the complete prescribed S0-T1–T7 task, including back/cancel | PASS / FAIL |
+| All prescribed S0-T1–T7 tasks attempted in the participant round | PASS / FAIL |
+| Back/cancel task S0-T7 attempted | PASS / FAIL |'''
+          if old not in s:
+              raise SystemExit('Gate-G check table changed')
+          s = s.replace(old, new, 1)
+
+          old = '''Gate G passes only when both independent participants completed the round, all honestly testable
+prescribed tasks including back/cancel were attempted, there is no unresolved Blocker, and every
+remaining Major has explicit owner acceptance with rationale.'''
+          new = '''Gate G passes only when Gate F had already passed with the complete prescribed task, both independent
+participants completed the round, **every** prescribed S0-T1–T7 task including back/cancel was
+attempted, there is no unresolved Blocker, and every remaining Major has explicit owner acceptance with
+rationale. If a prescribed task proves untestable during the round, Gate G is `FAIL`; record the
+prototype/dependency blocker and return to Gate F rather than excluding that task from scoring.'''
+          if old not in s:
+              raise SystemExit('Gate-G pass paragraph changed')
+          s = s.replace(old, new, 1)
+
+          s = s.replace(
+              '| Scripted self-walkthrough defined | READY | §5 covers the complete F4.6 minimum profile set plus Gate-E-only resilience checks |',
+              '| Scripted self-walkthrough defined | READY | §5 covers the complete F4.6 minimum profile set plus Gate-E-only resilience checks and an auditable per-condition result/evidence record |',
+              1,
+          )
+
+          history = '| 0.4 | September 11, 2026 | Codex review correction: split color-independent meaning into its own Gate-E condition so it remains binding even when the `Many status indicators` stress profile is N/A; density/scannability is now checked separately. |'
+          if history not in s:
+              raise SystemExit('v0.4 history row missing')
+          s = s.replace(history, history + '\n| 0.5 | September 11, 2026 | Codex review corrections: prescribed tasks can no longer disappear behind an `honestly testable` qualifier — an untestable prescribed task fails Gate F/G and returns the prototype to Gate F; Gate E now has per-condition `PASS`/`FAIL`/justified-`N/A`, prototype-version, evidence and finding/reason fields, with blank rows explicitly preventing a Gate-E pass. |', 1)
+          p.write_text(s, encoding='utf-8')
+
+          # Tracking CHANGELOG — update the PR394 landing record to v0.5/eight findings.
+          p = Path('docs/tracking/CHANGELOG.md')
+          s = p.read_text(encoding='utf-8')
+          start = s.find('> **Last Updated:** September 11, 2026 — **UX F4 validation protocol packet lands (PR #394).')
+          end = s.find('> **Last Updated (prior):**', start)
+          if start < 0 or end < 0:
+              raise SystemExit('PR394 CHANGELOG header region missing')
+          region = s[start:end]
+          region = region.replace('**v0.4**', '**v0.5**')
+          region = region.replace(
+              '**Six review findings were raised across three rounds and all six are fixed (v0.1 → v0.4).**',
+              '**Eight review findings were raised across four rounds and all eight are fixed (v0.1 → v0.5).**',
+          )
+          f6 = '**(6) Codex found that color-independent meaning was coupled to the `Many status indicators` stress row, so marking that density profile N/A could silently waive Gate E\'s color-independent-meaning requirement. v0.4 splits color-independent meaning into its own Gate-E condition that remains binding wherever semantic state or action meaning uses color; the many-indicators row now tests density/scannability only.**'
+          if f6 not in region:
+              raise SystemExit('CHANGELOG finding 6 text missing')
+          region = region.replace(f6, f6 + ' **(7) Codex found that the `honestly testable` qualifier could let Gate G pass after a prescribed `FUTURE-BLOCKED` task was omitted, bypassing Gate F\'s complete-task requirement; v0.5 makes any untestable prescribed task a Gate-F/G failure and sends the prototype back to Gate F.** **(8) Codex found that the Gate-E matrix had no per-condition outcome/evidence record; v0.5 adds `PASS`/`FAIL`/justified-`N/A`, prototype/version, evidence, and finding/reason fields for every condition and makes blank rows gate-blocking.**')
+          s = s[:start] + region + s[end:]
+          p.write_text(s, encoding='utf-8')
+
+          # Manifest — current PR394 header + UX inventory row to v0.5/eight findings.
+          p = Path('docs/tracking/file-manifest.md')
+          s = p.read_text(encoding='utf-8')
+          title = '# File Manifest (Post-Migration Baseline)\n\n'
+          if not s.startswith(title):
+              raise SystemExit('merged manifest title changed')
+          rest = s[len(title):]
+          prior = rest.find('**Last Updated (prior):**')
+          if prior < 0:
+              raise SystemExit('merged manifest prior anchor missing')
+          region = rest[:prior]
+          region = region.replace('**v0.4**', '**v0.5**')
+          region = region.replace(
+              '**Review corrections carried in the same PR across three rounds (v0.1 → v0.4), all six verified against `ux-detailed-plan.md` rather than taken on report:**',
+              '**Review corrections carried in the same PR across four rounds (v0.1 → v0.5), all eight verified against `ux-detailed-plan.md` rather than taken on report:**',
+          )
+          tail = 'At v0.4, the Codex finding that color-independent meaning disappeared whenever `Many status indicators` was N/A is closed by a standalone Gate-E color-independent-meaning condition; the many-indicators row now covers density/scannability only.'
+          if tail not in region:
+              raise SystemExit('manifest v0.4 review text missing')
+          region = region.replace(tail, tail + ' At v0.5, Codex\'s two follow-up findings are closed: a prescribed task that cannot be honestly represented now blocks Gate F/G instead of disappearing from the scoring denominator, and every Gate-E condition now carries an explicit result, prototype/version, evidence, and finding-or-N/A-reason record.')
+          s = title + region + rest[prior:]
+
+          ux_start = s.find('## UX Workstream Documents')
+          ux_end = s.find('## Planning Documents', ux_start)
+          if ux_start < 0 or ux_end < 0:
+              raise SystemExit('merged UX manifest section missing')
+          ux = s[ux_start:ux_end]
+          old_row_fragment = '`docs/design/ux-validation-protocol.md` | F4 output — the repeatable validation operating packet (v0.4, Sep 11, 2026):'
+          if old_row_fragment not in ux:
+              raise SystemExit('UX protocol manifest row v0.4 missing')
+          ux = ux.replace(old_row_fragment, '`docs/design/ux-validation-protocol.md` | F4 output — the repeatable validation operating packet (v0.5, Sep 11, 2026):', 1)
+          ux = ux.replace(
+              'a standalone Gate-E color-independent-meaning condition, moderator script, evidence templates, severity/disposition, and the Gate-G/Gate-J records |',
+              'a standalone Gate-E color-independent-meaning condition, auditable per-condition Gate-E results/evidence, moderator script, evidence templates, severity/disposition, Gate-G no-skip semantics for prescribed tasks, and the Gate-G/Gate-J records |',
+              1,
+          )
+          s = s[:ux_start] + ux + s[ux_end:]
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          python3 tools/recurring-defect-lint.py --repo .
+          python3 tools/doc-consistency-check.py --repo .
+
+          git rm .github/workflows/temp-pr394-reconcile.yml
+          git add docs/design/ux-validation-protocol.md docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md
+          git commit -m "docs(ux): reconcile F4 validation review"
+          git push origin HEAD:design/ux-f4-validation-setup
