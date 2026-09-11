@@ -1,9 +1,9 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
-**Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board multiplier failure gate)
-**Version:** 0.4
+**Last Updated:** September 11, 2026 (v0.5 — T3a accounting primitive: identity gate, checked daily revenue accrual, no producer/RNG/tick wiring)
+**Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -164,6 +164,52 @@ actually play in next season (KD-6's ordering rationale). While #43 is unbuilt, 
 the pre-#43 `finalTable` directly — the same "prerequisite gate degenerates to a pass-through" pattern #26's
 T2/T4 decision gates use ahead of their own upstream engine-substrate deliverables.
 
+### 3.4.1 T3a daily revenue accounting primitive (`AccrueDailyRevenue`)
+
+T3a defines the **accounting mutation only**. It deliberately does not decide how much sponsorship or
+matchday revenue a club earns, does not own the calendar invocation, and does not draw sponsorship variance.
+Those are later T3 slices (§7.1/§7.2). Keeping this primitive pure preserves #40's ownership of the accounting
+rule while allowing #30 to remain the lifecycle/composition owner when the daily slot is wired.
+
+```
+AccrueDailyRevenue(in ClubFinances prior,
+                   sponsorshipRevenue,
+                   matchdayRevenue,
+                   deepRevenueEnabled) -> ClubFinances:
+    validate prior coherence
+
+    if deepRevenueEnabled == false:
+        return prior exactly                              # KD-8 identity: do not interpret deep inputs
+
+    assert sponsorshipRevenue >= 0                       # revenue is not an expenditure channel
+    assert matchdayRevenue >= 0
+
+    dailyRevenue = checked(sponsorshipRevenue + matchdayRevenue)
+    result = prior
+    result.Balance = checked(result.Balance + dailyRevenue)
+    result.SeasonRevenueAccrued = checked(result.SeasonRevenueAccrued + dailyRevenue)
+
+    # T3a changes NO other field:
+    # TransferBudget / WageBudget / WageBillAggregate / FfpBalanceWindow stay field-identical.
+    validate result coherence
+    return result
+```
+
+The three additions are checked independently: a component-sum overflow, cash-balance overflow, or season-
+accumulator overflow fails loud rather than wrapping into a plausible finance value. Because `result` is a
+value copy and the function returns only after all checks pass, no partial mutation can escape on failure.
+
+`deepRevenueEnabled = false` is the exact Stage-2 identity, including for otherwise-invalid deep-only input
+amounts: the off path returns before interpreting those amounts. This is intentional KD-8 behavior, not a
+validation loophole — while the feature is disabled there is no deep revenue event to validate.
+
+This T3a primitive **does not promote** `_RESERVED_0x29_` / `SubsystemOrdinals.ClubFinances = 91`: it performs
+no draw and stores no draw cursor/action ordinal. Promotion remains atomic with the first genuine stochastic
+sponsorship-variance consumer. It also does not update `FfpBalanceWindow`, debit `WageBillAggregate`, choose
+`[GT]` revenue magnitudes, or add a #30 world-tick call. Passing already-derived amounts into this pure
+primitive is an internal layering boundary, not permission for #30/#31/#34/#45 to invent competing finance
+models; the amount-production rules remain #40-owned when those later T3 slices are specified.
+
 ## 3.5 Worked example
 
 Club 12, season 7, finishes **position 4 of 20** clubs. Prior `ClubFinances` (from season 6's end):
@@ -216,4 +262,5 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 | 0.2 | 2026-07-23 | — | AR-1 (1M): §3.2 `ApplyTransaction` split — wage line items change `WageBillAggregate` only (periodic cash-out deferred), cash line items change `Balance` only; worked example updated. |
 | 0.3 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** §3.1 now rejects every non-positive board multiplier before arithmetic; the lower budget clamp is not an authorization for a negative modifier. |
 | 0.4 | 2026-09-07 | — | **PR #363 Codex correction.** Replaces post-multiply clamping with an overflow-safe quotient/remainder scale-and-cap that preserves exact integer-floor semantics below the ceiling. |
+| 0.5 | 2026-09-11 | OpenAI | **T3a contract.** Adds the pure identity-gated daily sponsorship/matchday accounting primitive; pins checked arithmetic and field isolation while explicitly deferring amount producers, #30 tick wiring, RNG promotion, wage cash-out, and FFP. |
 #endregion
