@@ -14,33 +14,32 @@ namespace TacticalDirector.Localization
     /// <summary>Locale-neutral typed operand for bounded plural/gender selection.</summary>
     public readonly struct SelectorOperand : IEquatable<SelectorOperand>
     {
-        /// <summary>Creates a cardinal-only selector operand.</summary>
-        public SelectorOperand(long cardinalValue)
+        private SelectorOperand(bool hasCardinal, long cardinalValue, bool hasGender, GrammaticalGender gender)
         {
-            HasCardinal = true;
+            HasCardinal = hasCardinal;
             CardinalValue = cardinalValue;
-            HasGender = false;
-            Gender = GrammaticalGender.Unspecified;
+            HasGender = hasGender;
+            Gender = gender;
+        }
+
+        /// <summary>Creates a cardinal-only selector operand.</summary>
+        public static SelectorOperand FromCardinal(long cardinalValue)
+        {
+            return new SelectorOperand(true, cardinalValue, false, GrammaticalGender.Unspecified);
         }
 
         /// <summary>Creates a gender-only selector operand.</summary>
-        public SelectorOperand(GrammaticalGender gender)
+        public static SelectorOperand FromGender(GrammaticalGender gender)
         {
             ValidateGender(gender);
-            HasCardinal = false;
-            CardinalValue = 0;
-            HasGender = true;
-            Gender = gender;
+            return new SelectorOperand(false, 0, true, gender);
         }
 
         /// <summary>Creates a selector operand carrying both cardinal and gender values.</summary>
-        public SelectorOperand(long cardinalValue, GrammaticalGender gender)
+        public static SelectorOperand From(long cardinalValue, GrammaticalGender gender)
         {
             ValidateGender(gender);
-            HasCardinal = true;
-            CardinalValue = cardinalValue;
-            HasGender = true;
-            Gender = gender;
+            return new SelectorOperand(true, cardinalValue, true, gender);
         }
 
         /// <summary>Gets whether a cardinal value is present.</summary>
@@ -81,10 +80,21 @@ namespace TacticalDirector.Localization
             return LocalizationHash.Combine(hash, (int)Gender);
         }
 
+        /// <summary>Compares two selector operands by value.</summary>
+        public static bool operator ==(SelectorOperand left, SelectorOperand right)
+        {
+            return left.Equals(right);
+        }
+
+        /// <summary>Compares two selector operands by value.</summary>
+        public static bool operator !=(SelectorOperand left, SelectorOperand right)
+        {
+            return !left.Equals(right);
+        }
+
         private static void ValidateGender(GrammaticalGender gender)
         {
-            int ordinal = (int)gender;
-            if (ordinal < (int)GrammaticalGender.Masculine || ordinal > (int)GrammaticalGender.Other)
+            if (gender < GrammaticalGender.Masculine || gender > GrammaticalGender.Other)
             {
                 throw new ArgumentOutOfRangeException(nameof(gender), "A gender selector requires a defined non-default category.");
             }
@@ -96,5 +106,5 @@ namespace TacticalDirector.Localization
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial typed selector operand; no rendering behavior. |
-// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Validate enum range through its integer ordinal for C# compatibility. |
+// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Make construction unambiguous with named factories; retain direct enum range validation. |
 #endregion
