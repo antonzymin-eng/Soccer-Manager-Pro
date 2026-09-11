@@ -1,7 +1,7 @@
 # Localization & Accessibility #49 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.3 — L1 dependency-direction correction; ERR-049-002 discharge)
+**Last Updated:** September 11, 2026 (v0.3 — L1 dependency-direction correction implemented; ERR-049-002 tracker closure pending landing close-out)
 **Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/localization-seam-template-design.md` v0.2
@@ -158,5 +158,5 @@ no `SubsystemOrdinal`, holds no persistent sim state, and bumps no save format. 
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial section from the converged supplement. Scope/deps/KD-1..7/boundary matrix, grounded in `InteractionTextGenerator`/`InteractionSlots`/`InteractionTextCorpus` + #38 FR-UI-004/KD-5. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
-| 0.3 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-002 discharge.** Corrects stale §1 dependency/KD-6 wording to the already-approved generic-core + sibling-boundary architecture: the #49 core references no sim/producer assembly; a later producer adapter references both sides and constructs generic request identities. No runtime behavior or producer integration is added. |
+| 0.3 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-002 fix implementation.** Corrects stale §1 dependency/KD-6 wording to the already-approved generic-core + sibling-boundary architecture: the #49 core references no sim/producer assembly; a later producer adapter references both sides and constructs generic request identities. Authoritative ERR closure remains pending `spec-error-log.md` landing-closeout synchronization. No runtime behavior or producer integration is added. |
 #endregion
