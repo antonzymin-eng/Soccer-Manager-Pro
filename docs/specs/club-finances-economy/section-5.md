@@ -1,12 +1,13 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.7 — T3a daily-revenue identity, mutation-isolation and overflow acceptance locks)
+**Last Updated:** September 11, 2026 (v0.8 — T3a lifecycle acceptance: settlement resets current-season revenue and carries FFP window)
+**Last Updated (prior):** September 11, 2026 (v0.7 — T3a daily-revenue identity, mutation-isolation and overflow acceptance locks)
 **Last Updated (prior):** September 11, 2026 (v0.6 — ERR-030-051/T2b: boundary atomicity contract corrected and live lifecycle evidence named)
 **Last Updated (prior):** September 11, 2026 (v0.5 — T-FN-LIFE-001 coverage split recorded across T2a/T2b)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board-scaling coverage)
 **Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board failure coverage)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -101,6 +102,10 @@ Tests land at T-phase; this is the acceptance contract.
   `WageBillAggregate`, and `FfpBalanceWindow` remain field-identical (FR-FN-003 / §3.4.1).
 - **T-FN-REV-002** — With T3a enabled, a negative sponsorship or matchday component fails loud (F8) rather
   than turning the revenue path into an implicit expenditure channel.
+- **T-FN-REV-003** — `SettleFinances` given a non-zero `prior.SeasonRevenueAccrued` MUST return
+  `SeasonRevenueAccrued = 0`, while carrying `WageBillAggregate` and `FfpBalanceWindow` field-identically.
+  This closes the current-season accumulator at the boundary without inventing the future FFP-window rule;
+  the Stage-2 zero-accumulator case remains exactly behaviour-neutral (FR-FN-005 / §3.1).
 - **T-FN-INT-001** — Every `ClubFinances`/`FinanceTransaction`/`BoardModifier` field is an integer type; no
   accounting formula (`PrizeMoneyForPosition`, the budget-ceiling projection, `ApplyTransaction`,
   `AccrueDailyRevenue`) introduces a float — a static/reflection-level assertion mirroring #41's integer
@@ -142,7 +147,7 @@ Tests land at T-phase; this is the acceptance contract.
 | FR-FN-002 | T-FN-DET-001, T-FN-LIFE-001 |
 | FR-FN-003 | T-FN-BOUND-003, T-FN-REV-001 |
 | FR-FN-004 | T-FN-BOUND-003 |
-| FR-FN-005 | (worked-example locked, §3.5) |
+| FR-FN-005 | T-FN-REV-003, worked-example lock (§3.5) |
 | FR-FN-006 | T-FN-NEU-001 |
 | FR-FN-007 | T-FN-FAIL-005 |
 | FR-FN-008 | T-FN-DET-004, T-FN-DET-005 |
@@ -177,4 +182,5 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.5 | 2026-09-11 | — | **PR #392 review follow-up.** T-FN-LIFE-001 remains one acceptance id, but its executable evidence is phase-split: T2a covers canonical bootstrap/universe coherence; T2b must cover unchanged entry cardinality across season rolls after live #30 wiring exists. |
 | 0.6 | 2026-09-11 | — | **ERR-030-051 / T2b executable-contract correction.** T-FN-DET-002 removes the unsupported mid-call save premise and instead locks synchronous all-or-nothing boundary semantics; T-FN-LIFE-001 names the live across-roll regression evidence. |
 | 0.7 | 2026-09-11 | OpenAI | **T3a acceptance back-prop.** Adds identity-off, revenue-field isolation, negative-component and all three overflow-site locks; updates FR-FN-003/011/028 traceability while keeping stochastic FR-FN-010 and FFP FR-FN-017 deferred. |
+| 0.8 | 2026-09-11 | OpenAI | **T3a lifecycle acceptance.** Adds T-FN-REV-003 for boundary reset of current-season revenue while carrying the future FFP window; FR-FN-005 traceability now includes that executable lock. |
 #endregion
