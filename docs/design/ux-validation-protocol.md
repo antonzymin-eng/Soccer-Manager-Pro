@@ -23,7 +23,9 @@ produce comparable evidence rather than an informal design review.
 F4 is **not complete** merely because this document exists. Project tracking still records the
 `ux-detailed-plan.md` §10.1 UX-workstream accountable owner as unassigned, and the detailed plan
 requires two independent participants to be identified/recruitable for S0. The owner slot and the
-recruitment slots in §4 therefore remain open until real assignments are recorded.
+S0 recruitment slots in §4 therefore remain open until real assignments are recorded. S1 participant
+slots are also defined here because F4.2 applies the two-participant mechanism to S1, but they become
+journey-level prerequisites before S1 reaches Gate F rather than additional F4-exit blockers.
 
 ---
 
@@ -45,7 +47,9 @@ substitutes for the two-participant Gate-G round.
 
 ---
 
-## 3. S0 validation target
+## 3. Journey validation targets
+
+### 3.1 S0 participant tasks
 
 S0 is the PM-1 journey:
 
@@ -54,8 +58,6 @@ S0 is the PM-1 journey:
 The current product graph is authoritative for navigation semantics. The prototype may be non-Unity,
 but it must distinguish current behavior from future behavior and may not invent a domain command to
 make a task testable.
-
-### 3.1 S0 participant tasks
 
 Use these outcome-oriented tasks. Do not tell the participant which control to click.
 
@@ -85,7 +87,31 @@ the dependency to `LIVE`. If the dependency is discovered only during a particip
 as a prototype/dependency blocker, fail Gate G for that round, and return to Gate F; it is not a
 participant error. Prescribed task coverage therefore has no "honestly testable" denominator escape.
 
-### 3.2 Critical observations
+### 3.2 S1 participant tasks
+
+S1 is the PM-2 / Early Access season-loop journey from `ux-detailed-plan.md` §7:
+
+`Launch → New/Continue/Load → Career Home/Season → inspect/prepare/advance → Match → Report → Career Home/Season → Save/Continue`
+
+The following task IDs operationalize the minimum outcomes in `ux-detailed-plan.md` §7.6 without
+inventing a control path or unresolved product rule:
+
+| ID | Task | Completion evidence |
+|---|---|---|
+| S1-T1 | Start or resume the supported career mode. | Participant enters the supported career state through the behavior admitted by the prototype; unresolved New/Continue/Load product choices are recorded as dependencies rather than invented. |
+| S1-T2 | Identify the next match and current league position. | Participant can report both from the Career Home/Season surface without developer knowledge of #30 internals. |
+| S1-T3 | Reach the preparation context for the next match. | Participant reaches the admitted preparation surface without moderator navigation help. |
+| S1-T4 | Progress correctly toward the next match. | Participant identifies the action that advances the season and can explain what will progress before committing. |
+| S1-T5 | Complete one round through the match and report loop. | Participant reaches the match, completes the supported match/report path, and returns to Career Home/Season. |
+| S1-T6 | Understand the changed result and league table after the round. | Participant can identify the completed result and explain the visible league-position/table change. |
+| S1-T7 | Save, quit and resume according to the product promise. | Participant completes the supported persistence flow exactly as admitted by the prototype; unresolved save/continue promises block Gate F rather than being cosmetically simulated as live. |
+| S1-T8 | Find settings/accessibility. | Participant locates the admitted settings/accessibility surface or the prototype records the explicit implementation dependency if that surface is not yet live. |
+
+The same Gate-F no-skip rule applies to S1. A prescribed S1 task with an unresolved dependency remains
+in the task set and blocks Gate F/G until an honest prototype representation exists; it is not removed
+from the participant denominator.
+
+### 3.3 Critical observations
 
 For every task, capture:
 
@@ -122,41 +148,46 @@ rights or the domain/client owners' authority defined in §10.1.
 
 ### 4.1 Recruitment slots
 
-Gate G for S0 requires exactly the binding floor from the detailed plan: two independent participants
-in one formative round; the designer/implementer does not count.
+`ux-detailed-plan.md` F4.2 requires two independent participants for both S0 and S1; the
+designer/implementer does not count. F4 exit itself requires the S0 pair to be identified/recruitable.
+The S1 pair may remain unassigned until S1 approaches Gate F, but must be recorded before that journey
+reaches Gate F and must be available before S1 Gate G can pass.
 
-| Slot | Preferred profile | Recruiting channel | Candidate | Availability | Status |
-|---|---|---|---|---|---|
-| S0-P1 | Experienced football/management-sim player | Owner/team personal or relevant community network | **TBD — real person required** | TBD | OPEN |
-| S0-P2 | Football-literate newcomer to management sims, where practical | Owner/team personal or relevant community network | **TBD — real person required** | TBD | OPEN |
+| Slot | Journey | Preferred profile | Recruiting channel | Candidate | Availability | Status |
+|---|---|---|---|---|---|---|
+| S0-P1 | S0 | Experienced football/management-sim player | Owner/team personal or relevant community network | **TBD — real person required** | TBD | OPEN |
+| S0-P2 | S0 | Football-literate newcomer to management sims, where practical | Owner/team personal or relevant community network | **TBD — real person required** | TBD | OPEN |
+| S1-P1 | S1 | Experienced football/management-sim player | Owner/team personal or relevant community network | **TBD before S1 Gate F** | TBD | OPEN / FUTURE S1 |
+| S1-P2 | S1 | Football-literate newcomer to management sims, where practical | Owner/team personal or relevant community network | **TBD before S1 Gate F** | TBD | OPEN / FUTURE S1 |
 
 Paid recruitment is optional. The important properties are independence from authorship and enough
 football/product context to attempt the task without being coached through the UI.
 
-**F4 exit blockers:** the UX-workstream assignee in §4.0 and both participant candidate cells in §4.1
-must identify real people (or concrete pre-agreed participants for the Gate-G slots) before F4 can be
-marked complete. If either participant becomes unavailable, Gate G does not pass; there is no
-provisional bypass to Gate H/I.
+**F4 exit blockers:** the UX-workstream assignee in §4.0 and both **S0** participant candidate cells
+in §4.1 must identify real people (or concrete pre-agreed participants for the Gate-G slots) before F4
+can be marked complete. If either participant for the journey under test becomes unavailable, that
+journey's Gate G does not pass; there is no provisional bypass to Gate H/I.
 
 ### 4.2 Scheduling rule
 
-The participant round is booked for the first practical session after the S0 prototype passes Gate F.
-One round is the default cap. A second round is required only when a Blocker/Major causes a material
-flow redesign or the project owner explicitly requests another pass.
+The participant round is booked for the first practical session after the applicable journey prototype
+passes Gate F. One round is the default cap. A second round is required only when a Blocker/Major
+causes a material flow redesign or the project owner explicitly requests another pass.
 
 ---
 
 ## 5. Gate-E scripted self-walkthrough
 
-Run the complete S0 task set once per relevant condition below before independent testing. Combine
-conditions when that does not hide the failure mode; split them when interaction would make the cause
-ambiguous. The table explicitly covers every minimum F4.6 test-data profile and every condition named
-by F4.3; rows beyond that floor are Gate-E-only resilience checks and are marked as such.
+Run the complete applicable journey task set once per relevant condition below before independent
+testing. Combine conditions when that does not hide the failure mode; split them when interaction would
+make the cause ambiguous. The table explicitly covers every minimum F4.6 test-data profile and every
+condition named by F4.3; rows beyond that floor are Gate-E-only resilience checks and are marked as
+such.
 
 | Condition | Required check | Result | Prototype/version | Evidence / finding or N/A reason |
 |---|---|---|---|---|
-| Ordinary case | Complete all S0 tasks with representative real-match data. | | | |
-| Color-independent meaning *(Gate-E requirement)* | Across ordinary applicable S0 states, score/result, availability, selection, warning/error and action-state meaning remains understandable without relying on hue alone; use text, iconography, shape, pattern, position or another non-color cue where meaning would otherwise be color-only. This check is independent of indicator density. | | | |
+| Ordinary case | Complete all prescribed tasks with representative real data for the journey. | | | |
+| Color-independent meaning *(Gate-E requirement)* | Across ordinary applicable states, result/status, availability, selection, warning/error and action-state meaning remains understandable without relying on hue alone; use text, iconography, shape, pattern, position or another non-color cue where meaning would otherwise be color-only. This check is independent of indicator density. | | | |
 | Contrast *(Gate-E / F3-001 requirement)* | Verify that critical/high-priority text, controls, focus, disabled states and warning/error/status content remain readable and distinguishable with adequate contrast. Record the actual verification evidence used; existing mockup colors or token values are references and do not count as contrast evidence. | | | |
 | Long player/club/competition names | No clipped critical identity, control label or result; long football identities remain distinguishable. | | | |
 | Empty/large lists | S1/shared list primitives preserve empty explanation and usable selection/sort behavior. | | | |
@@ -176,21 +207,21 @@ by F4.3; rows beyond that floor are Gate-E-only resilience checks and are marked
 | 1920×1080 reference | Intended hierarchy/density matches the reference composition. | | | |
 | High-resolution/ultrawide behavior | Expansion does not produce unusable line lengths, extreme separation or floating controls. | | | |
 | Max supported text scale | Critical path remains operable; focus/control relationships remain clear. | | | |
-| Keyboard only | Every critical action, including S0-T7 back/cancel, is reachable in coherent order; no focus trap; state is visible without hover. | | | |
-| Mouse only | Complete path, including S0-T7 back/cancel, without keyboard-only dependency. | | | |
-| Audio muted/caption path *(Gate-E only)* | No required S0 information depends on sound alone. Named by Gate E, not by the F4.6 minimum set; run it where the prototype has any audio/caption surface at all. | | | |
+| Keyboard only | Every critical action in the applicable journey is reachable in coherent order; no focus trap; state is visible without hover. | | | |
+| Mouse only | Complete the applicable journey path without keyboard-only dependency. | | | |
+| Audio muted/caption path *(Gate-E only)* | No required journey information depends on sound alone. Named by Gate E, not by the F4.6 minimum set; run it where the prototype has any audio/caption surface at all. | | | |
 
 Every Gate-E run must complete the `Result`, `Prototype/version`, and evidence/finding field for
 every condition row. `Result` is `PASS`, `FAIL`, or justified `N/A`; a blank result/evidence field means
 Gate E is incomplete and cannot pass. A `FAIL` links a stable finding ID where one exists. `N/A` must
 state why the condition cannot apply to that prototype version rather than merely that it was not run.
 
-For S0 conditions that do not apply to a given prototype, record `N/A` with a reason rather than
-silently skipping the row. The color-independent-meaning row is not discharged by marking `Many status
-indicators` N/A: wherever the prototype conveys semantic state or action meaning with color, the
-standalone check applies even in an ordinary low-density interface. The contrast row is independent of
-that non-hue check and must carry its own result/evidence wherever critical/high-priority content is
-present, as required by `ux-shared-system.md` F3-001.
+For conditions that do not apply to the tested journey/prototype, record `N/A` with a reason rather
+than silently skipping the row. The color-independent-meaning row is not discharged by marking `Many
+status indicators` N/A: wherever the prototype conveys semantic state or action meaning with color,
+the standalone check applies even in an ordinary low-density interface. The contrast row is
+independent of that non-hue check and must carry its own result/evidence wherever critical/high-priority
+content is present, as required by `ux-shared-system.md` F3-001.
 
 The save rows and the general error row do not substitute for each other in either direction. A
 generic error-state check does not discharge the two binding F4.6 save profiles, and the two save
@@ -251,7 +282,7 @@ Create one record per participant and one consolidated finding table per tested 
 | Journey | S0 / S1 |
 | Prototype/version | |
 | Date | |
-| Participant slot | S0-P1 / S0-P2 / S1 equivalent |
+| Participant slot | S0-P1 / S0-P2 / S1-P1 / S1-P2 |
 | Participant profile | |
 | Management-sim familiarity | |
 | Football familiarity | |
@@ -262,6 +293,10 @@ Create one record per participant and one consolidated finding table per tested 
 
 ### 7.2 Task evidence
 
+Use the table matching the `Journey` in §7.1. Do not mix S0 and S1 task IDs in one session record.
+
+**S0 task evidence**
+
 | Task | Complete without intervention? | First action | Wrong turns / hesitation | Missed info | Misunderstood state/control | Confidence about next step | Notes |
 |---|---|---|---|---|---|---|---|
 | S0-T1 | | | | | | | |
@@ -271,6 +306,19 @@ Create one record per participant and one consolidated finding table per tested 
 | S0-T5 | | | | | | | |
 | S0-T6 | | | | | | | |
 | S0-T7 | | | | | | | |
+
+**S1 task evidence**
+
+| Task | Complete without intervention? | First action | Wrong turns / hesitation | Missed info | Misunderstood state/control | Confidence about next step | Notes |
+|---|---|---|---|---|---|---|---|
+| S1-T1 | | | | | | | |
+| S1-T2 | | | | | | | |
+| S1-T3 | | | | | | | |
+| S1-T4 | | | | | | | |
+| S1-T5 | | | | | | | |
+| S1-T6 | | | | | | | |
+| S1-T7 | | | | | | | |
+| S1-T8 | | | | | | | |
 
 ### 7.3 Finding ledger
 
@@ -283,13 +331,14 @@ state/task alongside the required fields rather than replacing any of them.
 
 Use stable IDs when a finding survives revisions so evidence and retest results remain traceable. A
 deferred Major must name the concrete milestone/condition governing release; a later retest records its
-actual result in `Retest result` rather than hiding that outcome in a generic status field.
+actual result in `Retest result` rather than hiding that outcome in a generic status field. The
+`Disposition` field must use exactly one value from the closed vocabulary in §8.
 
 ---
 
 ## 8. Severity and disposition
 
-The definitions below operationalize, but do not replace, `ux-detailed-plan.md` F4.4–F4.5.
+The definitions below operationalize, but do not replace, `ux-detailed-plan.md` F4.4–F4.5 and §12.
 
 - **Blocker** — critical task cannot be completed; critical path is inaccessible; destructive
   ambiguity exists; or false capability is presented as live.
@@ -298,7 +347,19 @@ The definitions below operationalize, but do not replace, `ux-detailed-plan.md` 
 - **Moderate** — meaningful confusion/inefficiency with a workable path.
 - **Minor** — polish, microcopy or low-impact consistency issue.
 
-Disposition rules:
+`ux-detailed-plan.md` §12 defines a closed disposition vocabulary. The `Disposition` field in §7.3
+must contain exactly one of:
+
+- `FIX NOW`;
+- `ACCEPT FOR CURRENT GATE`;
+- `DEFER TO P2/P3`;
+- `BLOCKED BY DOMAIN/CLIENT IMPLEMENTATION`;
+- `INVALID / NOT REPRODUCED`.
+
+No free-text disposition value is valid. Rationale, milestone/dependency detail and retest evidence
+belong in the adjacent ledger fields rather than by inventing a sixth disposition.
+
+Disposition/pass rules:
 
 - Gate G cannot pass with any unresolved Blocker.
 - Gate G cannot pass with an unresolved Major unless the project owner explicitly accepts it with a
@@ -313,24 +374,26 @@ Do not downgrade severity merely because a participant eventually found a workar
 
 ## 9. Gate-G decision record
 
-After both sessions, record:
+After both sessions, complete the record for the journey under test.
 
 | Check | Result |
 |---|---|
+| Journey | S0 / S1 |
+| Prescribed task set | S0-T1–T7 / S1-T1–T8 |
 | Two independent participants completed the round | PASS / FAIL |
-| Gate F passed with the complete prescribed S0-T1–T7 task, including back/cancel | PASS / FAIL |
-| All prescribed S0-T1–T7 tasks attempted in the participant round | PASS / FAIL |
-| Back/cancel task S0-T7 attempted | PASS / FAIL |
+| Gate F passed with the complete prescribed task set | PASS / FAIL |
+| All prescribed tasks attempted in the participant round | PASS / FAIL |
+| S0 back/cancel task S0-T7 attempted | PASS / FAIL / N/A for S1 |
 | Unresolved Blockers | count |
 | Unresolved Majors | count |
 | Owner-accepted Majors with rationale | IDs / none |
 | Second round required | yes / no |
 | Gate G | PASS / FAIL |
 
-Gate G passes only when Gate F had already passed with the complete prescribed task, both independent
-participants completed the round, **every** prescribed S0-T1–T7 task including back/cancel was
-attempted, there is no unresolved Blocker, and every remaining Major has explicit owner acceptance with
-rationale. If a prescribed task proves untestable during the round, Gate G is `FAIL`; record the
+Gate G passes only when Gate F had already passed with the complete prescribed task set for that
+journey, both independent participants completed the round, **every** prescribed task was attempted,
+there is no unresolved Blocker, and every remaining Major has explicit owner acceptance with rationale.
+If a prescribed task proves untestable during the round, Gate G is `FAIL`; record the
 prototype/dependency blocker and return to Gate F rather than excluding that task from scoring.
 
 ---
@@ -360,17 +423,20 @@ semantics and evidence-backed interaction states.
 |---|---|---|
 | Four-layer method made repeatable | READY | §§2, 5, 6, 10 |
 | Scripted self-walkthrough defined | READY | §5 covers the complete F4.6 minimum profile set plus Gate-E-only resilience checks, explicit contrast verification, and an auditable per-condition result/evidence record |
-| S0 task protocol defined | READY | §§3, 6, 7 include the required back/cancel task |
-| Severity/disposition repeatable | READY | §§8–9 |
+| S0 task protocol defined | READY | §§3.1, 6, 7 include the required back/cancel task |
+| S1 task/evidence protocol defined | READY | §§3.2, 4.1, 7, 9 map the §7.6 S1 outcomes into S1 participant slots, task records and journey-specific Gate-G evidence |
+| Severity/disposition repeatable | READY | §§7.3–9 include the closed §12 disposition vocabulary and Gate-G pass rules |
 | Evidence capture format defined | READY | §7 includes the complete `ux-detailed-plan.md` §12 finding-ledger fields plus task/state context |
 | §10.1 UX-workstream accountable owner assigned | **OPEN** | §4.0 assignee is TBD |
 | S0 participant 1 identified/recruitable | **OPEN** | §4.1 candidate is TBD |
 | S0 participant 2 identified/recruitable | **OPEN** | §4.1 candidate is TBD |
 
-**F4 verdict: NOT COMPLETE.** The protocol is operational. Three human-assignment facts remain open:
-assign the UX-workstream accountable owner and identify/recruit S0-P1 and S0-P2. No UX or client
-implementation work should claim Gate G is available until the participant rows are closed, and the
-workstream should not claim F4 complete until all three assignments are explicit.
+**F4 verdict: NOT COMPLETE.** The protocol is operational for S0 and S1. Three F4-exit human-assignment
+facts remain open: assign the UX-workstream accountable owner and identify/recruit S0-P1 and S0-P2.
+S1-P1/S1-P2 are defined but are journey-level prerequisites before S1 reaches Gate F, not additional
+F4-exit blockers. No UX or client implementation work should claim S0 Gate G is available until the S0
+participant rows are closed, and the workstream should not claim F4 complete until all three F4-exit
+assignments are explicit.
 
 ---
 
@@ -382,4 +448,4 @@ workstream should not claim F4 complete until all three assignments are explicit
 | 0.2 | September 11, 2026 | Review correction: added the binding F4.6 `no save` and `save/load failure where relevant` profiles; added S0-T7 to exercise Gate F back/cancel behavior; narrowed S0-T1 so current New Game/start limitations are recorded honestly; added this version history and tightened the READY claims to the corrected coverage. |
 | 0.3 | September 11, 2026 | Review correction: restored a general `Error/failure state` row to §5. The v0.2 pass had *replaced* the original generic error row with `Save/load failure where relevant` rather than adding alongside it, narrowing coverage against F4.3, which names `disabled/error states` as a condition in its own right and of which a save/load failure is only one class. §5's preamble now states the F4.3 floor explicitly and the closing note makes the non-substitution symmetric. |
 | 0.4 | September 11, 2026 | Codex review correction: split color-independent meaning into its own Gate-E condition so it remains binding even when the `Many status indicators` stress profile is N/A; density/scannability is now checked separately. |
-| 0.5 | September 11, 2026 | Codex review corrections: prescribed tasks can no longer disappear behind an `honestly testable` qualifier — an untestable prescribed task fails Gate F/G and returns the prototype to Gate F; Gate E now has per-condition `PASS`/`FAIL`/justified-`N/A`, prototype-version, evidence and finding/reason fields, with blank rows explicitly preventing a Gate-E pass; Gate E now carries a standalone contrast verification condition per `ux-shared-system.md` F3-001; and the finding ledger now preserves all `ux-detailed-plan.md` §12 fields, including journey, gate, release condition, and retest result. |
+| 0.5 | September 11, 2026 | Review corrections: prescribed tasks can no longer disappear behind an `honestly testable` qualifier — an untestable prescribed task fails Gate F/G and returns the prototype to Gate F; Gate E now has per-condition `PASS`/`FAIL`/justified-`N/A`, prototype-version, evidence and finding/reason fields, with blank rows explicitly preventing a Gate-E pass; Gate E now carries a standalone contrast verification condition per `ux-shared-system.md` F3-001; the finding ledger preserves all `ux-detailed-plan.md` §12 fields; §8 now carries §12's closed five-value disposition vocabulary; and the S1 participant slots, §7.6 task outcomes, task evidence and journey-specific Gate-G record are explicitly defined. |
