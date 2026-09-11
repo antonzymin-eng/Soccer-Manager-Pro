@@ -3277,7 +3277,7 @@ snapshot/digest; where a reference and an APPROVED spec disagree, the spec wins.
 
 | File / folder | Purpose |
 |---------------|---------|
-| `docs/design/ui-mockups/README.md` | Index + scope contract for the UI mockups (v1.1, Jul 25, 2026) |
+| `docs/design/ui-mockups/README.md` | Index + scope contract for the UI mockups (v1.2, Sep 6, 2026) |
 | `docs/design/ui-mockups/System XI - Design System.html` | Design-system page: color, type, spacing, components, data-viz, match-day HUD; the July 25 comparison is retained, with `touchline` chosen and `stadium` rejected per the companion README |
 | `docs/design/ui-mockups/Desktop Guardrails.html` | Desktop layout/resolution guardrails (1920×1080 reference stage) |
 | `docs/design/ui-mockups/Command Palette.html` | Global command-palette / navigation pattern |
