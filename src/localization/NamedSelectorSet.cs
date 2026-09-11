@@ -96,6 +96,18 @@ namespace TacticalDirector.Localization
             return hash;
         }
 
+        /// <summary>Compares two selector sets by canonical value.</summary>
+        public static bool operator ==(NamedSelectorSet left, NamedSelectorSet right)
+        {
+            return left.Equals(right);
+        }
+
+        /// <summary>Compares two selector sets by canonical value.</summary>
+        public static bool operator !=(NamedSelectorSet left, NamedSelectorSet right)
+        {
+            return !left.Equals(right);
+        }
+
         private static void SortAndValidate(NamedSelector[] selectors)
         {
             for (int i = 0; i < selectors.Length; i++)
@@ -118,12 +130,6 @@ namespace TacticalDirector.Localization
                 {
                     throw new ArgumentException("NamedSelectorSet cannot contain duplicate selector names.", nameof(selectors));
                 }
-
-                if (insert + 1 < selectors.Length && i > 0
-                    && string.Equals(selectors[insert].Name, selectors[insert + 1].Name, StringComparison.Ordinal))
-                {
-                    throw new ArgumentException("NamedSelectorSet cannot contain duplicate selector names.", nameof(selectors));
-                }
             }
         }
     }
@@ -133,4 +139,5 @@ namespace TacticalDirector.Localization
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial immutable L1 named selector set. |
+// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Add equality operators and remove redundant duplicate check. |
 #endregion
