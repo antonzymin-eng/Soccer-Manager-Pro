@@ -18,7 +18,18 @@ jobs:
           ref: openai/spec-40-finance-t2b-runtime
           fetch-depth: 0
       - name: Apply guarded documentation patch
-        run: python3 tools/spec40_t2b_docs_patch.py
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("tools/spec40_t2b_docs_patch.py")
+          s = p.read_text(encoding="utf-8")
+          old = '    if row.split(" | ", 2)[1] in text:\n'
+          new = '    if row in text:\n'
+          if s.count(old) != 1:
+              raise SystemExit("history-guard repair anchor missing")
+          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+          PY
+          python3 tools/spec40_t2b_docs_patch.py
       - name: Validate patch hygiene
         run: git diff --check -- docs/specs docs/tracking/spec-error-log.md
       - name: Commit changed documents through GitHub API
