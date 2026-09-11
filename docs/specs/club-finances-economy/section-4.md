@@ -1,9 +1,10 @@
 # Club Finances & Economy #40 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** September 6, 2026 (v0.4 — PR #363 external-review correction: phase-real dependencies and T1a/T1b persistence boundary)
+**Last Updated:** September 10, 2026 (v0.5 — T1b landed: the #30 composition edge is now real, ERR-030-049)
+**Last Updated (prior):** September 6, 2026 (v0.4 — PR #363 external-review correction: phase-real dependencies and T1a/T1b persistence boundary)
 **Last Updated (prior):** September 4, 2026 (v0.3 — T1 self-identifying save framing back-prop)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -21,12 +22,17 @@ reference. At every phase #40 does **not** reference `MatchEngine`, `LivingWorld
 #34, or #45; those higher/future systems call down into #40 rather than reversing ownership (FR-FN-027).
 
 ```
-T1a current:  ClubFinances (#40) ──▶ DeterministicSim (#16)     [canonical save framing]
+T1b current:  ClubFinances (#40) ──▶ DeterministicSim (#16)     [canonical save framing]
                                 └──▶ ProjectConstants           [[GT] GameplayConfig loading]
-T1b future:   #30 SeasonSave ──────▶ ClubFinances (#40)         [compose finance sub-blob]
+T1b current:  #30 SeasonSave ──────▶ ClubFinances (#40)         [compose finance sub-blob]
 T2 future:    ClubFinances (#40) ──▶ PlayerDatabase (#27)       [Squad.ClubId enumeration only]
 T2+ future:   #31/#34/#45 ─────────▶ ClubFinances (#40)         [query/commands/modifier producer]
 ```
+
+The T1b edge is **intra-tier**: `season-save` and `club-finances` are both Tier-7 Management (Code
+Standards #20 §3.5.2), which permits the reference and forbids only a cycle. The direction is the one
+FR-FN-027 fixes — #30 reads down into #40, never the reverse — so #40's own reference set is unchanged
+by T1b.
 
 The foundation edges introduce no domain ownership seam and #40 introduces no alternate config/serialization
 framework. #27's assembly remains schema-untouched when the T2 reference lands.
@@ -74,10 +80,13 @@ src/club-finances/
 
 ## 4.4 The T1a self-identifying `FINANCE_SAVE_FORMAT_VERSION` sub-blob codec
 
-`ClubFinancesSaveCodec` is an opaque, independently version-gated sub-blob. **T1a owns only this standalone
-codec.** Composition into #30's `SeasonSaveCodec` and the coordinating outer `SEASON_SAVE_FORMAT_VERSION`
-bump are **T1b**. This split makes the implementation phase match the code: the codec can be built and
-validated without pretending the season-save envelope has already changed.
+`ClubFinancesSaveCodec` is an opaque, independently version-gated sub-blob. **T1a owned only this standalone
+codec**; composition into #30's `SeasonSaveCodec` and the coordinating outer `SEASON_SAVE_FORMAT_VERSION`
+bump were **T1b**, and landed September 10, 2026 (ERR-030-049: frame `6 → 7`, the mandatory `FNCE` block
+between #44's discipline block and the optional match block). The split kept each implementation phase
+matched to the code: the codec was built and validated without pretending the season-save envelope had
+already changed. The byte layout below is unchanged by T1b — the frame nests this block opaquely and
+never parses it, so `FINANCE_SAVE_FORMAT_VERSION` stays 1.
 
 A version word alone does not identify a format because multiple sibling sub-blobs legitimately sit at
 version 1. The block therefore starts with fixed `FINANCE_SAVE_MAGIC = 0x464E4345` (`FNCE`) and rejects a
@@ -132,4 +141,5 @@ no `RngCursor` or `actionOrdinal`, and adding #40 through T2 leaves existing str
 | 0.2 | 2026-09-04 | — | **T0 implementation back-prop.** Adds the cross-cutting `TacticalDirector.ProjectConstants` reference required by active Code Standards #20 for #40's `[GT]` loading. |
 | 0.3 | 2026-09-04 | Codex | **T1 implementation back-prop.** Adds leading `FINANCE_SAVE_MAGIC`, fixed framing, canonical ClubId ordering/duplicate rejection, and signed ClubId preservation. |
 | 0.4 | 2026-09-06 | — | **PR #363 external-review correction.** Defines the implemented codec as standalone T1a, moves #30 composition/version bump to T1b, and removes the dead PlayerDatabase edge until its T2 `Squad.ClubId` consumer lands. |
+| 0.5 | 2026-09-10 | — | **T1b landed (ERR-030-049).** §4.1's reference diagram promotes the `#30 SeasonSave → ClubFinances` edge from future to current and records that it is an intra-Tier-7 reference (permitted; only cycles are forbidden) leaving #40's own reference set unchanged. §4.4 records the composition and the outer frame bump `6 → 7` as landed, and states that the block's own byte layout and `FINANCE_SAVE_FORMAT_VERSION = 1` are untouched by it — the frame nests the block opaquely. |
 #endregion

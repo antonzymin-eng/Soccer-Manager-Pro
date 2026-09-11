@@ -1,9 +1,11 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 7, 2026 (v0.8 — PR #363 Codex arithmetic correction)
+**Last Updated:** September 10, 2026 (v1.0 — ERR-030-050 review correction: T1b includes the resume carrier/coherence guard; T2 remains runtime production. Prior update follows)
+**Last Updated (prior):** September 10, 2026 (v0.9 — T1b landed: #30 season-save composition + frame bump, ERR-030-049)
+**Last Updated (prior):** September 7, 2026 (v0.8 — PR #363 Codex arithmetic correction)
 **Last Updated (prior):** September 7, 2026 (v0.7 — PR #363 follow-up review correction)
-**Version:** 0.8
+**Version:** 1.0
 **Status:** APPROVED
 
 ---
@@ -21,12 +23,24 @@
   `ClubId` order, exact-consumption framing, and fail-loud corruption gates. This phase adds the
   `DeterministicSim` dependency for `CanonicalSerializer` / `SaveBlobFramingHelpers` but deliberately does
   **not** modify #30, `SeasonSaveCodec`, or `SEASON_SAVE_FORMAT_VERSION`.
-- **T1b** — Compose the T1a finance sub-blob into #30's `SeasonSaveCodec` and coordinate #30's composing
+- **T1b** *(landed September 10, 2026)* — Compose the T1a finance sub-blob into #30's `SeasonSaveCodec` and coordinate #30's composing
   `SEASON_SAVE_FORMAT_VERSION` bump. This is the first phase in which #40 persistence participates in the
-  full season-save envelope and the cross-assembly save/restore acceptance cases can run.
+  full season-save envelope and the cross-assembly save/restore acceptance cases can run. Delivered as
+  the #30-side back-prop **ERR-030-049**: `SEASON_SAVE_FORMAT_VERSION` 6 → 7, a new mandatory `FNCE`
+  sub-blob between the #44 discipline block and the optional match block, the typed `FinanceBlock`
+  frame handle (the ERR-029-005 discipline), a required `ClubFinanceEntry[]` parameter on
+  `SeasonSaveManager.Save`, `SeasonSaveContents.Finances` on the restore side, and
+  `RequireDestinationCarriesNoFinances` — the fourth of #30 Appendix B.1's destination guards, keyed on
+  emptiness because FR-FN-025 leaves #40 no legitimate drained state. `season-save` gains the
+  `TacticalDirector.ClubFinances` reference (an intra-Tier-7 edge; #40 gains none). T1b also includes
+  the loop-held canonical finance carrier, `SeasonLoop.Restore(..., financesOrNull)`, forwarding through
+  `Save(SeasonLoop, ...)`, and the shared current-season coherence guard: empty is legal pre-T2; once
+  non-empty, finance ClubIds exactly equal `SeasonState.ClubIds` (ERR-030-050).
 - **T2** — Wire `SettleFinances` at #30's **new** reserved step (b') (after the (a') #43 insertion point,
   before (c) regenerate); wire `CreateInitial` at league/game bootstrap for every `ClubId` (#30-driven, not
-  #40-driven); and add the `PlayerDatabase` reference only here, when the specified `Squad.ClubId`
+  #40-driven); consume the T1b-held finance state through those runtime producers/mutators; and add the
+  `PlayerDatabase` reference only here, when
+  the specified `Squad.ClubId`
   enumeration becomes a real consumer. Expose `AvailableTransferBudget`/`ApplyTransaction` for #31/#34/#42
   to call once those specs exist. No #30 tick-order change beyond the KD-6 back-prop already filed (KD-6).
 - **T3** — Deep tier: per-day revenue accrual (matchday/sponsorship, a new daily #30 tick-order slot — the
@@ -117,7 +131,31 @@ resolved the following landing defects:
    `FinanceStep` now use quotient/remainder scaling with a division-only pre-cap; T-FN-INT-002 locks both the
    saturating extreme and unchanged below-cap integer-floor result.
 
-This landing therefore delivers **T0 + T1a**. **T1b, T2, and T3 remain deferred** exactly as listed in §7.1.
+That landing (PR #363, merged to `main`) therefore delivered **T0 + T1a**.
+
+## 7.5 T1b landing record
+
+The September 10, 2026 landing delivers **T1b**, filed against #30 as **ERR-030-049** (spec + code in
+one commit, the standing rule). Three decisions in it are worth recording because a later reader will
+otherwise have to re-derive them:
+
+1. **The block is mandatory, not presence-flagged.** #40 has no absent case, only an empty one: a club
+   universe with no entries yet is a well-formed zero-club block. Flagging it would add a presence bit
+   distinguishing "no clubs" from "no block" — a distinction with no meaning — and would force a second
+   frame bump the day T2 bootstraps the entries. The five sibling career blocks all reason this way
+   (#30 Appendix B).
+2. **The destination guard landed with the block, ahead of its producer.** Its three siblings were each
+   written *after* a career's state had already been deleted (ERR-028-008, the career-triple guard,
+   ERR-030-036). Until T2 wires `CreateInitial` the predicate cannot fire — every save carries the
+   empty set over a destination that also carries an empty block — so this is hardening a path that has
+   no live traffic yet. It is deliberate: #30 Appendix B.1 already requires any family added to the
+   frame to bring its own guard, and the alternative is writing the fourth one after the fourth loss.
+3. **No `financesWired` flag; the resume seam is T1b (ERR-030-050 correction).** The flag is unnecessary
+   because FR-FN-025 puts #40 on the #28 side of ERR-030-038's line — an emptied *destination* is
+   unambiguously a drop. But the prior conclusion that `SeasonLoop.Restore` could wait for the producer
+   was incorrect: a populated block can arrive from `Load` before runtime production is wired. T1b
+   therefore includes `financesOrNull`, loop-held canonical state, Save forwarding, and exact non-empty
+   coherence with `SeasonState.ClubIds`; T2 remains `CreateInitial` and `SettleFinances` only.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -130,4 +168,6 @@ This landing therefore delivers **T0 + T1a**. **T1b, T2, and T3 remain deferred*
 | 0.6 | 2026-09-06 | — | **PR #363 external-review correction.** Reclassifies the already-landed standalone codec as T1a, creates T1b for #30 composition/version bump, defers the unused PlayerDatabase edge to its first T2 consumer, and records the added regression locks. |
 | 0.7 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** Records the deliberate non-positive `BoardModifier` fail-loud decision and corrects the clamp-coverage wording. |
 | 0.8 | 2026-09-07 | — | **PR #363 Codex correction.** Records overflow-safe board scaling and corrects the downstream #45 seam from “non-zero” to the normative positive-multiplier contract. |
+| 0.9 | 2026-09-10 | — | **T1b landed (ERR-030-049).** §7.1's T1b entry records what shipped (frame v6 → 7, the mandatory `FNCE` sub-blob, the typed `FinanceBlock` handle, the required `Save` parameter, `SeasonSaveContents.Finances`, `RequireDestinationCarriesNoFinances`, the intra-Tier-7 `season-save` → `club-finances` reference); T2 gains the `SeasonLoop` resume seam T1b deliberately deferred; new §7.5 records the three decisions a later reader would otherwise re-derive — mandatory-not-flagged, the guard landing ahead of its producer, and why #40 needs neither a wiring flag nor a `Restore` parameter yet. |
+| 1.0 | 2026-09-10 | — | **ERR-030-050 review correction.** T1b includes the `SeasonLoop` restore/carrier/save seam and exact current-season finance coherence; T2 is limited to `CreateInitial`, `SettleFinances`, producer wiring and consumer exposure. The v0.9 producer-wired deferral remains historical but is superseded. |
 #endregion
