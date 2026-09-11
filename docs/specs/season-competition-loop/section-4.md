@@ -1,7 +1,9 @@
 # Season & Competition Loop Specification #30 — Section 4: Architecture
 
 **Created:** July 22, 2026
-**Last Updated:** September 10, 2026 (v1.0 — ERR-030-050: the T1b resume/composition surface includes `SeasonLoop.Restore(..., financesOrNull)` and loop-held finance state. Prior update follows)
+**Last Updated:** September 11, 2026 (v1.2 — T2b review correction: legacy empty finance initialization is Restore-only; generic composition remains validation-only/fail-loud)
+**Last Updated (prior):** September 11, 2026 (v1.1 — ERR-030-051 / #40 T2b: live bootstrap/settlement and finance observer/query/command surfaces on the #30 composition root)
+**Last Updated (prior):** September 10, 2026 (v1.0 — ERR-030-050: the T1b resume/composition surface includes `SeasonLoop.Restore(..., financesOrNull)` and loop-held finance state. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v0.9 — ERR-030-049, #40 T1b: §4.2's frame-version delta line
 1 → 7, `FinanceBlock.cs` added to the file layout, and BOTH asmdef lines annotated — the production
 one gains `ClubFinances` and the tests one names it too, because Unity asmdef references are not
@@ -18,7 +20,7 @@ this section's own recorded omission class after the v0.4 and v0.6 rows below. N
 **Last Updated (prior):** August 8, 2026, later same day (v0.5 — AR pass 14 L4: §4.2's leftover 1 → 2 delta line corrected to 1 → 4; the tests list marked illustrative)
 **Last Updated (prior):** August 8, 2026 (v0.4 — balance-pass AR pass 13 M3: §4 was three landings stale — §4.4's third signature copy deleted in favour of Appendix B, §4.3 gains the career pair + AdvanceDays, §4.2 the eight T1/T2/D2 files)
 **Last Updated (prior):** July 26, 2026 (v0.3 — ERR-030-012 §4.5 keyed-not-cursor correction + ERR-030-013 §4.6 producer-record location, both found at #30 T2 implementation; prior v0.2 section-file PASS-1 reconciliation, §9.3)
-**Version:** 1.0
+**Version:** 1.2
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -128,21 +130,26 @@ src/season-save/
   to prove the serve+commit block's ordering. All four travel together: `disciplineOrNull` is accepted
   on both the constructor and `Restore` (a resumed career cannot carry its outstanding suspensions
   without it), and a driver supplied without its companion state is refused at construction.
-- the **`ClubFinanceEntry[] _finances`** carrier (since #40 T1b / ERR-030-050): a canonical snapshot copy
-  of the current frame state, held **private with no public accessor** — deliberately unlike `Discipline`
-  above, because nothing outside this assembly consumes finance state before T2. It reaches persistence
-  through the assembly-internal defensive-copy clone `FinanceEntriesForSave()` alone. `Restore(...,
-  financesOrNull)` accepts the decoded `SeasonSaveContents.Finances`, and `Save(SeasonLoop, ...)` forwards
-  it unchanged. Empty is legal pre-T2; non-empty entries must exactly cover `_state.ClubIds`. This is the
-  persistence resume seam, not T2's still-deferred `CreateInitial`/`SettleFinances` production wiring.
+- the **`ClubFinanceEntry[] _finances`** live finance state (T1b carrier; T2b producer/mutator,
+  ERR-030-050/051). `League.CreateLoop` bootstraps exactly one entry per canonical league squad for a new
+  game. `Restore(..., financesOrNull)` validates populated persisted state and is the **only** path that
+  upgrades an empty T1b pre-producer finance block to one initial entry per restored `SeasonState.ClubId`;
+  ordinary constructor composition never manufactures finance state. The low-level generic constructor may
+  still carry the explicit legacy/unwired empty representation for compatibility, but finance reads/commands
+  and season settlement fail loud on it. Non-empty entries exactly cover `_state.ClubIds`.
+  `FinanceView(clubId)` returns a detached observer value;
+  `AvailableTransferBudget(clubId)` and `ApplyTransaction(clubId, ...)` route through #40's canonical
+  ledger; `FinanceEntriesForSave()` remains an internal defensive-copy persistence bridge. At the season
+  boundary #30 stages #40's (b') settlement and installs it only after the fallible season commit succeeds.
 
 Public command API (the only mutation path, FR-SN-032): `AdvanceToNextFixtureDay()`, `AdvanceDays(n)`
 (the bounded free-advance — refused past the season's last fixture day and past the next season's
 opening day, KD-4), `AdvanceAndPlayNextRound(ISquadProvider)` (resolves the whole round, KD-9),
-`RollToNextSeason()`, plus read-only `View()` → `SeasonViewModel`
-(FR-SN-033) and `Snapshot()` / `Restore(...)` for the season sub-blob. It is **not** on the 60 Hz hot
+`RollToNextSeason()`, the #40-facing `FinanceView(clubId)` / `AvailableTransferBudget(clubId)` /
+`ApplyTransaction(clubId, ...)` surfaces, plus read-only `View()` → `SeasonViewModel` (FR-SN-033) and
+`Snapshot()` / `Restore(...)` for the season sub-blob. It is **not** on the 60 Hz hot
 path (§1.2 world-tick cadence), so allocation / `new` / exceptions are permitted — the
-`SeasonSaveManager` / `WorldStore` precedent. The normative resume composition is `SeasonLoop.Restore(..., financesOrNull)` followed by `SeasonSaveManager.Save(loop, matchOrNull, path)`, which preserves the carried finance entries (ERR-030-050).
+`SeasonSaveManager` / `WorldStore` precedent. The normative resume composition is `SeasonLoop.Restore(..., financesOrNull)` followed by `SeasonSaveManager.Save(loop, matchOrNull, path)`: populated entries are preserved, while an empty persisted T1b block is migrated at Restore before the loop is constructed (ERR-030-050 / T2b review).
 
 ## 4.4 The `SeasonSaveManager` / `SeasonSaveCodec` surface (FR-SN-019..021)
 
@@ -225,4 +232,6 @@ fully-qualify `MatchEngine` and any `player-database` type that shares a bare na
 | 0.8 | 2026-08-15 | — | **ERR-030-043** (extends ERR-030-035; reviewed-findings pass): §4.3's `SeasonLoop` holdings list, last touched at v0.6 to add the career pair and `_progression`, had no equivalent entry for #44 — v0.7's ERR-030-035 fix amended §4.2's file layout for the same landing but did not reach this list, the THIRD instance of this section's own recorded omission class. New bullet: the optional, unpaired `DisciplineState _discipline`, the `DisciplineRules _disciplineRules` view, the read-only `Discipline` property, and the internal `IFixtureDisciplineDriver _disciplineDriver` collaborator — all four verified against `src/season-save/SeasonLoop.cs` (fields, the `disciplineOrNull` constructor and `Restore` parameters, the property, and the driver's construction-time companion-state refusal). |
 | 0.9 | 2026-09-10 | — | **ERR-030-049** (#40 T1b): §4.2's frame-version delta line 1 → 6 becomes 1 → 7 for the mandatory #40 `FNCE` sub-blob; `FinanceBlock.cs` joins the file layout beside `DisciplineBlock.cs`; `season-save.asmdef` is annotated with its new intra-Tier-7 `ClubFinances` reference and the tests asmdef with the same name, since Unity does not make asmdef references transitive and the Linux gate's generated csprojs do — a difference that would surface only in the Unity host. §4.3's `SeasonLoop` holdings list is deliberately NOT amended, which is the omission class rows 0.4 / 0.6 / 0.8 above each recorded: T1b adds no loop-held state, and #30 Appendix B.1 v1.6 now says the resume seam is owed at the phase that wires the producer (#40 T2), not at the phase that composes the block. |
 | 1.0 | 2026-09-10 | — | **ERR-030-050 review correction.** §4.3 now represents the actual T1b composition surface: loop-held canonical finance state (private `_finances`, no public property), `Restore(..., financesOrNull)`, the internal defensive-copy `FinanceEntriesForSave()`, and forwarding by `Save(SeasonLoop, ...)`; T2 retains only bootstrap/settlement production. This expressly supersedes v0.9's deliberate omission while preserving that row historically. |
+| 1.1 | 2026-09-11 | — | **ERR-030-051 / #40 T2b.** §4.3 promotes `_finances` from persistence-only carrier to live composed state, records `League.CreateLoop` bootstrap ownership, the observer/query/command surfaces, and staged-(b')/post-commit installation semantics. |
+| 1.2 | 2026-09-11 | — | **T2b review correction.** Separates ordinary finance-set validation from compatibility migration: only `SeasonLoop.Restore` may initialize an empty persisted T1b block; generic composition may retain the explicit legacy/unwired empty representation, on which finance use and settlement fail loud. |
 #endregion

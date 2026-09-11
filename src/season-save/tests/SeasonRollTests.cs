@@ -1,8 +1,7 @@
 // File:     src/season-save/tests/SeasonRollTests.cs
 // Created:  2026-07-27
-// Modified: 2026-09-10 (#40 T1b, ERR-030-049 — both Save call sites pass the new required finance
-//           set; a season roll neither reads nor writes finances until #40 T2 wires SettleFinances
-//           at step (b'), so the empty set is the honest capture here — v1.8)
+// Modified: 2026-09-11 (#40 T2b — roll fixtures use League.CreateLoop, persist live finance
+//           entries, and restore them rather than carrying the retired pre-T2 empty sentinel — v1.9)
 // Prior-Modified: 2026-08-15 (M4, reviewed-findings pass — the two Save call sites here drive no #44
 //           subsystem; flipped disciplineWired: true → false, matching SeasonSaveManagerTests.cs'
 //           companion fix — v1.7)
@@ -40,17 +39,13 @@ namespace TacticalDirector.SeasonSave.Tests
         private const ulong WorldSeed = 0x5EED1EA6D0DEC0DEUL;
         private const int ManagerId = 1;
 
-        // "No club has a finance entry yet" — the only value a save can carry until #40 T2
-        // wires ClubFinances.CreateInitial; said explicitly because Save requires it to be said.
-        private static ClubFinanceEntry[] NoFinances => Array.Empty<ClubFinanceEntry>();
-
         private static League FourClubLeague() => LeagueBootstrap.Generate(WorldSeed, 4);
 
         private static SeasonLoop NewLoop(League league, out WorldStore world, int managedClubId = 0)
         {
             world = new WorldStore(ManagerId, WorldSeed);
-            return new SeasonLoop(
-                world, league.CreateSeason(managedClubId), RoundResolutionMode.QuickSimAll);
+            return league.CreateLoop(
+                world, managedClubId, RoundResolutionMode.QuickSimAll);
         }
 
         private static void PlayWholeSeason(SeasonLoop loop, League league)
@@ -356,10 +351,12 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(world, interrupted.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false, NoFinances);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false,
+                    interrupted.FinanceEntriesForSave());
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
-                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
+                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll,
+                    financesOrNull: contents.Finances);
 
                 resumed.RollToNextSeason();
 
@@ -393,14 +390,16 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(world, loop.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false, NoFinances);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false,
+                    loop.FinanceEntriesForSave());
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
 
                 Assert.IsTrue(loop.State.FieldsEqual(contents.Season),
                     "A season saved just after the roll must decode field-identical.");
 
                 var resumed = new SeasonLoop(
-                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
+                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll,
+                    financesOrNull: contents.Finances);
 
                 // And it must still be playable — the ERR-030-015 property, across a file this time.
                 resumed.AdvanceToNextFixtureDay();
@@ -627,4 +626,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | rather than inlining Array.Empty at each site. A season roll      |
 // |         |            |        | touches no finance state until #40 T2. No assertion or intent     |
 // |         |            |        | change.                                                           |
+// | 1.9     | 2026-09-11 | —      | #40 T2b: production bootstrap plus live finance save/restore.     |
 #endregion

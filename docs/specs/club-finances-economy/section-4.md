@@ -1,11 +1,12 @@
 # Club Finances & Economy #40 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.6 — PR #392 T2a: the consumed #40 → #27 Squad.ClubId edge is now live; #30 invocation remains T2b)
+**Last Updated:** September 11, 2026 (v0.7 — T2b: #30 bootstrap/settlement composition is live; ERR-030-051 pins staged commit semantics)
+**Last Updated (prior):** September 11, 2026 (v0.6 — PR #392 T2a: the consumed #40 → #27 Squad.ClubId edge is now live; #30 invocation remains T2b)
 **Last Updated (prior):** September 10, 2026 (v0.5 — T1b landed: the #30 composition edge is now real, ERR-030-049)
 **Last Updated (prior):** September 6, 2026 (v0.4 — PR #363 external-review correction: phase-real dependencies and T1a/T1b persistence boundary)
 **Last Updated (prior):** September 4, 2026 (v0.3 — T1 self-identifying save framing back-prop)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -29,8 +30,8 @@ T2a current:  ClubFinances (#40) ──▶ DeterministicSim (#16)     [canonical
                                  ├──▶ ProjectConstants           [[GT] GameplayConfig loading]
                                  └──▶ PlayerDatabase (#27)       [Squad.ClubId bootstrap transform]
 T1b current:  #30 SeasonSave ──────▶ ClubFinances (#40)         [compose finance sub-blob]
-T2b future:   #30 SeasonSave ──────▶ ClubFinances (#40)         [invoke bootstrap + settle at step (b')]
-T2+ future:   #31/#34/#45 ─────────▶ ClubFinances (#40)         [query/commands/modifier producer]
+T2b current:  #30 SeasonSave ──────▶ ClubFinances (#40)         [League.CreateLoop bootstrap + staged settle at step (b')]
+T3/future:    #31/#34/#45 ─────────▶ ClubFinances (#40)         [downstream query/commands/modifier producers]
 ```
 
 The T1b edge is **intra-tier**: `season-save` and `club-finances` are both Tier-7 Management (Code
@@ -70,10 +71,11 @@ src/club-finances/
   produces one initial entry per distinct club and canonicalizes by ClubId. #40 declares no write path into
   `Squad`, `PlayerAttributes`, or `PlayerRecord`; the caller supplies the club universe and retains lifecycle
   ownership.
-- **To #30 (T1b/T2b):** T1b composes #40's opaque codec into `SeasonSaveCodec` and bumps the composing
-  format. T2b makes the #30 composition root invoke T2a's bootstrap transform once at league/game bootstrap,
-  then makes `RollToNextSeason()` invoke `SettleFinances` per club at the reserved step (b'). #40 never
-  references #30 and never invokes its own bootstrap factory independently.
+- **To #30 (T1b/T2b, live):** T1b composes #40's opaque codec into `SeasonSaveCodec`. T2b's
+  `League.CreateLoop` is the new-game lifecycle seam: it invokes T2a's bootstrap transform exactly once.
+  `SeasonLoop.RollToNextSeason()` computes `SettleFinances` per club at reserved step (b') and stages those
+  values until the fallible #30 season commit succeeds; only then are they installed (ERR-030-051). #40
+  never references #30 and never invokes its own bootstrap factory independently.
 - **From #31 (future):** `AvailableTransferBudget` is a read-only query; `ApplyTransaction` is the single
   command #31 invokes on a committed deal. #40 declares no interface into #31 — #31 is a caller only.
 - **From #34 (future):** staff wage line items reach #40 through the same `ApplyTransaction` command; no #34
@@ -150,4 +152,5 @@ no `RngCursor` or `actionOrdinal`, and adding #40 through T2 leaves existing str
 | 0.4 | 2026-09-06 | — | **PR #363 external-review correction.** Defines the implemented codec as standalone T1a, moves #30 composition/version bump to T1b, and removes the dead PlayerDatabase edge until its T2 `Squad.ClubId` consumer lands. |
 | 0.5 | 2026-09-10 | — | **T1b landed (ERR-030-049).** §4.1's reference diagram promotes the `#30 SeasonSave → ClubFinances` edge from future to current and records that it is an intra-Tier-7 reference (permitted; only cycles are forbidden) leaving #40's own reference set unchanged. §4.4 records the composition and the outer frame bump `6 → 7` as landed, and states that the block's own byte layout and `FINANCE_SAVE_FORMAT_VERSION = 1` are untouched by it — the frame nests the block opaquely. |
 | 0.6 | 2026-09-11 | — | **PR #392 T2a architecture back-prop.** Promotes the authorized #40 → #27 `PlayerDatabase` edge from future to current with its `Squad.ClubId` bootstrap consumer, records the factory as a pure transform rather than a lifecycle owner, and keeps #30's production invocation/settlement wiring in T2b. |
+| 0.7 | 2026-09-11 | — | **T2b / ERR-030-051 architecture back-prop.** Promotes #30's bootstrap/settlement edge to current, records `League.CreateLoop` as the lifecycle owner, and pins settlement-at-(b') with post-commit installation to preserve #30 atomicity. |
 #endregion
