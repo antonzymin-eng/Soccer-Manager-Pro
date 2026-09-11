@@ -155,29 +155,30 @@ by F4.3; rows beyond that floor are Gate-E-only resilience checks and are marked
 
 | Condition | Required check | Result | Prototype/version | Evidence / finding or N/A reason |
 |---|---|---|---|---|
-| Ordinary case | Complete all S0 tasks with representative real-match data.  | | | |
-| Color-independent meaning *(Gate-E requirement)* | Across ordinary applicable S0 states, score/result, availability, selection, warning/error and action-state meaning remains understandable without relying on hue alone; use text, iconography, shape, pattern, position or another non-color cue where meaning would otherwise be color-only. This check is independent of indicator density.  | | | |
-| Long player/club/competition names | No clipped critical identity, control label or result; long football identities remain distinguishable.  | | | |
-| Empty/large lists | S1/shared list primitives preserve empty explanation and usable selection/sort behavior.  | | | |
-| Many status indicators | Dense status presentation remains scannable and priority/order does not collapse; the separate color-independent row above still applies.  | | | |
-| Pseudo-locale | Expanded/localized strings reflow without hiding critical actions or state.  | | | |
-| Alternate date/currency formatting | Relevant S1/management surfaces format without hard-coded width assumptions.  | | | |
-| No save | Surfaces do not imply a usable save/resume capability when no save exists for the tested state; unavailable behavior is explicit.  | | | |
-| Save/load failure where relevant | A failed save/load never masquerades as success; recovery/next safe action is clear.  | | | |
-| No match frame yet | Match View does not falsely present the match as live/ended; waiting/initial state is intelligible.  | | | |
-| Disabled action with reason | The reason is available when it affects the player's next decision.  | | | |
-| Error/failure state (general) | F4.3 names `disabled/error states`, of which the two save rows above are only one class. Any reachable failure — a rejected or refused action, a load/start that cannot proceed, an unavailable dependency — must not masquerade as success, and the next safe action must be clear.  | | | |
-| Missing art | Fallback preserves identity/layout and does not create a blank critical region.  | | | |
-| Event-heavy match | HUD/stat attention remains usable under dense events.  | | | |
-| Unusual scoreline | Score/result hierarchy survives wider values.  | | | |
-| Full-time/frozen state | Tactical input is unavailable; save/report behavior is not confused with a still-live match.  | | | |
-| Smallest supported desktop | No critical action or information is pushed irretrievably off-screen.  | | | |
-| 1920×1080 reference | Intended hierarchy/density matches the reference composition.  | | | |
-| High-resolution/ultrawide behavior | Expansion does not produce unusable line lengths, extreme separation or floating controls.  | | | |
-| Max supported text scale | Critical path remains operable; focus/control relationships remain clear.  | | | |
-| Keyboard only | Every critical action, including S0-T7 back/cancel, is reachable in coherent order; no focus trap; state is visible without hover.  | | | |
-| Mouse only | Complete path, including S0-T7 back/cancel, without keyboard-only dependency.  | | | |
-| Audio muted/caption path *(Gate-E only)* | No required S0 information depends on sound alone. Named by Gate E, not by the F4.6 minimum set; run it where the prototype has any audio/caption surface at all.  | | | |
+| Ordinary case | Complete all S0 tasks with representative real-match data. | | | |
+| Color-independent meaning *(Gate-E requirement)* | Across ordinary applicable S0 states, score/result, availability, selection, warning/error and action-state meaning remains understandable without relying on hue alone; use text, iconography, shape, pattern, position or another non-color cue where meaning would otherwise be color-only. This check is independent of indicator density. | | | |
+| Contrast *(Gate-E / F3-001 requirement)* | Verify that critical/high-priority text, controls, focus, disabled states and warning/error/status content remain readable and distinguishable with adequate contrast. Record the actual verification evidence used; existing mockup colors or token values are references and do not count as contrast evidence. | | | |
+| Long player/club/competition names | No clipped critical identity, control label or result; long football identities remain distinguishable. | | | |
+| Empty/large lists | S1/shared list primitives preserve empty explanation and usable selection/sort behavior. | | | |
+| Many status indicators | Dense status presentation remains scannable and priority/order does not collapse; the separate color-independent row above still applies. | | | |
+| Pseudo-locale | Expanded/localized strings reflow without hiding critical actions or state. | | | |
+| Alternate date/currency formatting | Relevant S1/management surfaces format without hard-coded width assumptions. | | | |
+| No save | Surfaces do not imply a usable save/resume capability when no save exists for the tested state; unavailable behavior is explicit. | | | |
+| Save/load failure where relevant | A failed save/load never masquerades as success; recovery/next safe action is clear. | | | |
+| No match frame yet | Match View does not falsely present the match as live/ended; waiting/initial state is intelligible. | | | |
+| Disabled action with reason | The reason is available when it affects the player's next decision. | | | |
+| Error/failure state (general) | F4.3 names `disabled/error states`, of which the two save rows above are only one class. Any reachable failure — a rejected or refused action, a load/start that cannot proceed, an unavailable dependency — must not masquerade as success, and the next safe action must be clear. | | | |
+| Missing art | Fallback preserves identity/layout and does not create a blank critical region. | | | |
+| Event-heavy match | HUD/stat attention remains usable under dense events. | | | |
+| Unusual scoreline | Score/result hierarchy survives wider values. | | | |
+| Full-time/frozen state | Tactical input is unavailable; save/report behavior is not confused with a still-live match. | | | |
+| Smallest supported desktop | No critical action or information is pushed irretrievably off-screen. | | | |
+| 1920×1080 reference | Intended hierarchy/density matches the reference composition. | | | |
+| High-resolution/ultrawide behavior | Expansion does not produce unusable line lengths, extreme separation or floating controls. | | | |
+| Max supported text scale | Critical path remains operable; focus/control relationships remain clear. | | | |
+| Keyboard only | Every critical action, including S0-T7 back/cancel, is reachable in coherent order; no focus trap; state is visible without hover. | | | |
+| Mouse only | Complete path, including S0-T7 back/cancel, without keyboard-only dependency. | | | |
+| Audio muted/caption path *(Gate-E only)* | No required S0 information depends on sound alone. Named by Gate E, not by the F4.6 minimum set; run it where the prototype has any audio/caption surface at all. | | | |
 
 Every Gate-E run must complete the `Result`, `Prototype/version`, and evidence/finding field for
 every condition row. `Result` is `PASS`, `FAIL`, or justified `N/A`; a blank result/evidence field means
@@ -187,7 +188,9 @@ state why the condition cannot apply to that prototype version rather than merel
 For S0 conditions that do not apply to a given prototype, record `N/A` with a reason rather than
 silently skipping the row. The color-independent-meaning row is not discharged by marking `Many status
 indicators` N/A: wherever the prototype conveys semantic state or action meaning with color, the
-standalone check applies even in an ordinary low-density interface.
+standalone check applies even in an ordinary low-density interface. The contrast row is independent of
+that non-hue check and must carry its own result/evidence wherever critical/high-priority content is
+present, as required by `ux-shared-system.md` F3-001.
 
 The save rows and the general error row do not substitute for each other in either direction. A
 generic error-state check does not discharge the two binding F4.6 save profiles, and the two save
@@ -271,11 +274,16 @@ Create one record per participant and one consolidated finding table per tested 
 
 ### 7.3 Finding ledger
 
-| ID | Evidence | Affected task/state | Severity | Disposition | Owner | Retest needed? | Status |
-|---|---|---|---|---|---|---|---|
-| UX-S0-001 | | | | | | | |
+`ux-detailed-plan.md` §12 is the field authority for this ledger. The packet keeps the affected
+state/task alongside the required fields rather than replacing any of them.
 
-Use stable IDs when a finding survives revisions so evidence and retest results remain traceable.
+| ID | Journey | Gate | Evidence | Affected task/state | Severity | Owner | Disposition | Release condition | Retest result |
+|---|---|---|---|---|---|---|---|---|---|
+| UX-S0-001 | | | | | | | | | |
+
+Use stable IDs when a finding survives revisions so evidence and retest results remain traceable. A
+deferred Major must name the concrete milestone/condition governing release; a later retest records its
+actual result in `Retest result` rather than hiding that outcome in a generic status field.
 
 ---
 
@@ -351,10 +359,10 @@ semantics and evidence-backed interaction states.
 | F4 requirement | Status | Evidence / blocker |
 |---|---|---|
 | Four-layer method made repeatable | READY | §§2, 5, 6, 10 |
-| Scripted self-walkthrough defined | READY | §5 covers the complete F4.6 minimum profile set plus Gate-E-only resilience checks and an auditable per-condition result/evidence record |
+| Scripted self-walkthrough defined | READY | §5 covers the complete F4.6 minimum profile set plus Gate-E-only resilience checks, explicit contrast verification, and an auditable per-condition result/evidence record |
 | S0 task protocol defined | READY | §§3, 6, 7 include the required back/cancel task |
 | Severity/disposition repeatable | READY | §§8–9 |
-| Evidence capture format defined | READY | §7 |
+| Evidence capture format defined | READY | §7 includes the complete `ux-detailed-plan.md` §12 finding-ledger fields plus task/state context |
 | §10.1 UX-workstream accountable owner assigned | **OPEN** | §4.0 assignee is TBD |
 | S0 participant 1 identified/recruitable | **OPEN** | §4.1 candidate is TBD |
 | S0 participant 2 identified/recruitable | **OPEN** | §4.1 candidate is TBD |
@@ -374,4 +382,4 @@ workstream should not claim F4 complete until all three assignments are explicit
 | 0.2 | September 11, 2026 | Review correction: added the binding F4.6 `no save` and `save/load failure where relevant` profiles; added S0-T7 to exercise Gate F back/cancel behavior; narrowed S0-T1 so current New Game/start limitations are recorded honestly; added this version history and tightened the READY claims to the corrected coverage. |
 | 0.3 | September 11, 2026 | Review correction: restored a general `Error/failure state` row to §5. The v0.2 pass had *replaced* the original generic error row with `Save/load failure where relevant` rather than adding alongside it, narrowing coverage against F4.3, which names `disabled/error states` as a condition in its own right and of which a save/load failure is only one class. §5's preamble now states the F4.3 floor explicitly and the closing note makes the non-substitution symmetric. |
 | 0.4 | September 11, 2026 | Codex review correction: split color-independent meaning into its own Gate-E condition so it remains binding even when the `Many status indicators` stress profile is N/A; density/scannability is now checked separately. |
-| 0.5 | September 11, 2026 | Codex review corrections: prescribed tasks can no longer disappear behind an `honestly testable` qualifier — an untestable prescribed task fails Gate F/G and returns the prototype to Gate F; Gate E now has per-condition `PASS`/`FAIL`/justified-`N/A`, prototype-version, evidence and finding/reason fields, with blank rows explicitly preventing a Gate-E pass. |
+| 0.5 | September 11, 2026 | Codex review corrections: prescribed tasks can no longer disappear behind an `honestly testable` qualifier — an untestable prescribed task fails Gate F/G and returns the prototype to Gate F; Gate E now has per-condition `PASS`/`FAIL`/justified-`N/A`, prototype-version, evidence and finding/reason fields, with blank rows explicitly preventing a Gate-E pass; Gate E now carries a standalone contrast verification condition per `ux-shared-system.md` F3-001; and the finding ledger now preserves all `ux-detailed-plan.md` §12 fields, including journey, gate, release condition, and retest result. |
