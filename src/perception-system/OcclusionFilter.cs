@@ -73,14 +73,15 @@ namespace TacticalDirector.PerceptionSystem
                 candidateCount,
                 observerTeamId,
                 agentAttrs,
-                opponentsOnly: true);
+                opponentsOnly: true,
+                excludedAgents: null);
         }
 
         /// <summary>
         /// W4 goalkeeper line-of-sight query over a caller-supplied candidate set. Returns true when
-        /// <em>any</em> agent body between the observer and target casts a shadow cone over the target.
-        /// Unlike <see cref="IsOccluded"/>, this deliberately includes same-team bodies: a defender
-        /// can unsight his own keeper.
+        /// <em>any</em> participating agent body between the observer and target casts a shadow cone
+        /// over the target. Unlike <see cref="IsOccluded"/>, this deliberately includes same-team
+        /// bodies: a defender can unsight his own keeper.
         /// </summary>
         public static bool IsOccludedByAnyAgent(
             Vector2 observerPos,
@@ -91,7 +92,8 @@ namespace TacticalDirector.PerceptionSystem
             int[] candidateIds,
             int candidateCount,
             int observerTeamId,
-            PerceptionAgentAttributes[] agentAttrs)
+            PerceptionAgentAttributes[] agentAttrs,
+            bool[] excludedAgents = null)
         {
             return IsOccludedCore(
                 observerPos,
@@ -103,19 +105,23 @@ namespace TacticalDirector.PerceptionSystem
                 candidateCount,
                 observerTeamId,
                 agentAttrs,
-                opponentsOnly: false);
+                opponentsOnly: false,
+                excludedAgents);
         }
 
         /// <summary>
         /// W4 allocation-free goalkeeper line-of-sight query across the complete agent array.
         /// This is intentionally separate from ordinary Stage-0 perception: OQ-1 remains intact,
-        /// while the goalkeeper save gate can treat either team as a physical screen.
+        /// while the goalkeeper save gate can treat either team as a physical screen. Callers may
+        /// provide an exclusion mask for agents that no longer participate (for example, sent-off
+        /// players whose last world position is retained for deterministic bookkeeping).
         /// </summary>
         public static bool IsOccludedByAnyAgent(
             Vector2 observerPos,
             Vector2 targetPos,
             int observerId,
-            AgentState[] agentStates)
+            AgentState[] agentStates,
+            bool[] excludedAgents = null)
         {
             return IsOccludedCore(
                 observerPos,
@@ -127,7 +133,8 @@ namespace TacticalDirector.PerceptionSystem
                 candidateCount: agentStates.Length,
                 observerTeamId: 0,
                 agentAttrs: null,
-                opponentsOnly: false);
+                opponentsOnly: false,
+                excludedAgents);
         }
 
         private static bool IsOccludedCore(
@@ -140,7 +147,8 @@ namespace TacticalDirector.PerceptionSystem
             int candidateCount,
             int observerTeamId,
             PerceptionAgentAttributes[] agentAttrs,
-            bool opponentsOnly)
+            bool opponentsOnly,
+            bool[] excludedAgents)
         {
             float targetDistSq = (targetPos - observerPos).sqrMagnitude;
             float targetBearing = Mathf.Atan2(
@@ -152,8 +160,12 @@ namespace TacticalDirector.PerceptionSystem
             {
                 int occluderId = candidateIds == null ? i : candidateIds[i];
 
-                // Skip: ball entities, the target itself, and the observer itself.
-                if (occluderId < 0 || occluderId == targetId || occluderId == observerId)
+                // Skip: ball entities, the target itself, the observer itself, and bodies that are
+                // no longer participating in the match (for example a sent-off player).
+                if (occluderId < 0
+                    || occluderId == targetId
+                    || occluderId == observerId
+                    || (excludedAgents != null && excludedAgents[occluderId]))
                 {
                     continue;
                 }
@@ -198,6 +210,7 @@ namespace TacticalDirector.PerceptionSystem
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                               |
+// | 1.3     | 2026-09-11 | —      | W4 review: exclude non-participating bodies from keeper LOS.        |
 // | 1.2     | 2026-09-11 | —      | W4: allocation-free complete-agent goalkeeper LOS overload.         |
 // | 1.1     | 2026-09-11 | —      | W4: keeper all-body occlusion query; Stage-0 semantics unchanged.   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                             |
