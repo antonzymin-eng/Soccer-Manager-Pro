@@ -27,7 +27,12 @@ jobs:
           new = '    if row in text:\n'
           if s.count(old) != 1:
               raise SystemExit("history-guard repair anchor missing")
-          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+          s = s.replace(old, new, 1)
+          boundary = '"a refused roll leaves the season'
+          if s.count(boundary) != 2:
+              raise SystemExit("boundary-condition repair anchors missing")
+          s = s.replace(boundary, '"refused roll leaves the season')
+          p.write_text(s, encoding="utf-8")
           PY
           python3 tools/spec40_t2b_docs_patch.py
       - name: Validate patch hygiene
