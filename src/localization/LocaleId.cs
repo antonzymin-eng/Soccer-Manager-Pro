@@ -16,7 +16,10 @@ namespace TacticalDirector.Localization
     {
         private readonly string _value;
 
-        /// <summary>Creates a locale identity from a non-empty opaque code.</summary>
+        /// <summary>
+        /// Creates a locale identity from a non-empty code. L1 does not impose BCP-47 validation; it only
+        /// canonicalizes identity by trimming surrounding whitespace and using invariant lower-case.
+        /// </summary>
         public LocaleId(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -24,10 +27,10 @@ namespace TacticalDirector.Localization
                 throw new ArgumentException("LocaleId requires a non-empty locale code.", nameof(value));
             }
 
-            _value = value;
+            _value = value.Trim().ToLowerInvariant();
         }
 
-        /// <summary>Gets the opaque locale code.</summary>
+        /// <summary>Gets the canonical locale code.</summary>
         public string Value => _value ?? string.Empty;
 
         /// <summary>Gets whether this value is a constructed locale identity.</summary>
@@ -59,6 +62,18 @@ namespace TacticalDirector.Localization
         {
             return Value;
         }
+
+        /// <summary>Compares two locale identities by canonical value.</summary>
+        public static bool operator ==(LocaleId left, LocaleId right)
+        {
+            return left.Equals(right);
+        }
+
+        /// <summary>Compares two locale identities by canonical value.</summary>
+        public static bool operator !=(LocaleId left, LocaleId right)
+        {
+            return !left.Equals(right);
+        }
     }
 }
 
@@ -66,4 +81,5 @@ namespace TacticalDirector.Localization
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial minimal L1 locale identity. |
+// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Freeze trim + invariant-lowercase identity policy and operators. |
 #endregion
