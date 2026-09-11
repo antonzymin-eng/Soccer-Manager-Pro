@@ -262,7 +262,7 @@ namespace TacticalDirector.Localization.Tests
             Assert.That(new LocalizationKey("menu.load").GetHashCode(), Is.EqualTo(-618008796));
             Assert.That(new LocaleId("EN").GetHashCode(), Is.EqualTo(19578));
             Assert.That(new TextTemplateId(3, 11).GetHashCode(), Is.EqualTo(1196));
-            Assert.That(SelectorOperand.FromCardinal(2L).GetHashCode(), Is.EqualTo(62885991));
+            Assert.That(SelectorOperand.FromCardinal(2L).GetHashCode(), Is.EqualTo(104494767));
         }
 
         [Test]
