@@ -46,7 +46,6 @@ jobs:
                   elif c in ('notes', 'note', 'change', 'changes', 'description'): vals.append(note)
                   else: vals.append(note if not vals else '')
               row = '| ' + ' | '.join(vals) + ' |'
-              # Some repo history tables intentionally omit a separator; support both forms.
               nl = text.find('\n', header_end)
               if nl < 0: nl = header_end
               next_end = text.find('\n', nl + 1)
@@ -72,7 +71,13 @@ jobs:
                   'The project owner approved this exact bounded exception on September 11, 2026 after review of PR #393.\n\n'
               )
               s = s[:i] + rec + s[i:]
-              save(p, s)
+          old = '`interactive-unity-client-design.md` §5-P5a resolution / v0.17, now v0.21'
+          new = '`interactive-unity-client-design.md` §5-P5a resolution / v0.17, now v0.22'
+          if old in s:
+              s = s.replace(old, new, 1)
+          elif new not in s:
+              raise SystemExit('open-issues design-version citation anchor missing')
+          save(p, s)
 
           # Canonical file inventory.
           p = 'docs/tracking/file-manifest.md'; s = load(p)
@@ -85,7 +90,7 @@ jobs:
               head = (
                   '**Last Updated:** September 11, 2026 — **PR #393 P5b lifecycle prerequisite: host-free repeated-match session ownership lands as one owner-approved bounded, deliberately unconsumed prerequisite.**\n\n'
                   '**NEW (4):** `src/match-client-core/MatchSessionLifecycle.cs` + `.meta`, and `src/match-client-core/tests/MatchSessionLifecycleTests.cs` + `.meta`. '
-                  '**Modified tracking:** `docs/tracking/interactive-unity-client-design.md`, `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG-src.md`, and this manifest. '
+                  '**Modified tracking:** `docs/tracking/interactive-unity-client-design.md`, `docs/tracking/open-issues.md`, `docs/tracking/path-to-playable-roadmap.md`, `docs/tracking/CHANGELOG-src.md`, and this manifest. '
                   'The lifecycle remains unconsumed until the UX-Gate-I-authorized Unity `Attach(MatchSession)` / shell binding; owner decision: no second unconsumed lifecycle/UI prerequisite may land before it is consumed. '
                   'No new assembly/dependency and no simulation, RNG, schema, save-format or navigation-graph change. Gate result is not predicted here; current-head CI is authoritative.\n\n'
               )
@@ -144,6 +149,16 @@ jobs:
               s = s[:pos] + note + s[pos:]
               s = add_version_row(s, r'^##\s+Version History\s*$', '0.22', '2026-09-11', '**P5b prerequisite:** `MatchSessionLifecycle` + eight host-free tests landed. Owner approves exactly one bounded deliberately-unconsumed prerequisite; no second unconsumed lifecycle/UI prerequisite may land before the Gate-I-authorized `Attach(MatchSession)` / shell binding consumes it. Chosen stale-never-started-reference boundary and Stop/direct-drive limits recorded; P5b remains open.')
               save(p, s)
+
+          # Current-state roadmap citation follows the design supplement version bump.
+          p = 'docs/tracking/path-to-playable-roadmap.md'; s = load(p)
+          old = '`interactive-unity-client-design.md` §5-P5a / v0.17–v0.18, now v0.21'
+          new = '`interactive-unity-client-design.md` §5-P5a / v0.17–v0.18, now v0.22'
+          if old in s:
+              s = s.replace(old, new, 1)
+          elif new not in s:
+              raise SystemExit('roadmap design-version citation anchor missing')
+          save(p, s)
           PY
 
           python3 tools/recurring-defect-lint.py --repo .
@@ -155,6 +170,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/temp-pr393-tracking-closeout.yml
-          git add docs/tracking/open-issues.md docs/tracking/file-manifest.md docs/tracking/CHANGELOG-src.md docs/tracking/interactive-unity-client-design.md
+          git add docs/tracking/open-issues.md docs/tracking/file-manifest.md docs/tracking/CHANGELOG-src.md docs/tracking/interactive-unity-client-design.md docs/tracking/path-to-playable-roadmap.md
           git commit -m "docs(ui): close P5b lifecycle tracking"
           git push origin HEAD:ui/p5b-lifecycle-owner
