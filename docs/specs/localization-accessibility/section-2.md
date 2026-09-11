@@ -1,7 +1,7 @@
 # Localization & Accessibility #49 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.5 — L1 typed-selector contract; ERR-049-004 discharge)
+**Last Updated:** September 11, 2026 (v0.5 — L1 typed-selector and value-identity contract; ERR-049-004 fix implemented pending tracker close-out)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Version:** 0.5
 **Status:** APPROVED
@@ -99,6 +99,13 @@
 **The core seam is producer-agnostic (references nothing sim-side — the #38 rule, §4.1). The #22 coupling
 lives in a per-producer boundary adapter (§2.2.1), the only thing that references `living-world`.**
 
+L1 also freezes two identity policies needed before L2 catalogue keys exist:
+
+- `LocalizationKey` is an exact **ordinal, case-sensitive** authored identity. Surrounding whitespace is
+  invalid and is rejected rather than silently normalized into another key.
+- `LocaleId` performs only identity canonicalization — trim surrounding whitespace and apply invariant
+  lower-case. This is **not** a new BCP-47 validation requirement; `BaseLocale` remains the fixed `"en"`.
+
 ```csharp
 // --- CORE seam (in TacticalDirector.Localization) — references NO sim assembly ---
 public interface ILocalizer
@@ -107,13 +114,22 @@ public interface ILocalizer
     string Render(in LocalizedTextRequest req);          // procedural text — generic input only
 }
 
-public readonly struct LocalizationKey { /* stable identity for one static string */ }
+public readonly struct LocalizationKey
+{
+    public string Value { get; }                         // ordinal/case-sensitive; surrounding whitespace invalid
+}
+
+public readonly struct LocaleId
+{
+    public string Value { get; }                         // trimmed + invariant lower-case identity
+    public static LocaleId BaseLocale { get; }           // fixed "en"
+}
 
 public readonly struct TextTemplateId
 {
     // GENERIC identity: (producerTag, localOrdinal) — NOT modeled on any one producer's enum.
-    public readonly int ProducerTag;      // which producer family (e.g. living-world interactions)
-    public readonly int LocalOrdinal;     // the producer's own id within that family
+    public int ProducerTag { get; }                      // which producer family (e.g. living-world interactions)
+    public int LocalOrdinal { get; }                     // the producer's own id within that family
 }
 
 public readonly struct NamedSlotSet
@@ -137,10 +153,15 @@ public readonly struct SelectorOperand
 {
     // LOCALE-NEUTRAL typed data only. Carries a cardinal value and/or an authored grammatical-gender
     // value. It does NOT carry localized category names such as "one"/"few" or rendered text.
-    public readonly bool HasCardinal;
-    public readonly long CardinalValue;
-    public readonly bool HasGender;
-    public readonly GrammaticalGender Gender;
+    public bool HasCardinal { get; }
+    public long CardinalValue { get; }
+    public bool HasGender { get; }
+    public GrammaticalGender Gender { get; }
+
+    // Named factories avoid an ambiguous numeric-literal overload between cardinal and enum forms.
+    public static SelectorOperand FromCardinal(long cardinalValue);
+    public static SelectorOperand FromGender(GrammaticalGender gender);
+    public static SelectorOperand From(long cardinalValue, GrammaticalGender gender);
 }
 
 public readonly struct NamedSelectorSet
@@ -150,12 +171,12 @@ public readonly struct NamedSelectorSet
 
 public readonly struct LocalizedTextRequest
 {
-    public readonly TextTemplateId Id;        // carries ProducerTag — scopes both template AND clause lookups
-    public readonly ulong SelectionDraw;      // producer-owned deterministic selection value, verbatim (FR-LC-020)
-    public readonly NamedSlotSet Slots;       // name -> string (already formatted; §3.5)
-    public readonly NamedSelectorSet Selectors; // typed locale-neutral bounded-selector input (FR-LC-009)
-    public readonly bool HasCitedEpisode;
-    public readonly int CitationKind;         // the producer's clause key; looked up producer-scoped by (Id.ProducerTag, CitationKind)
+    public TextTemplateId Id { get; }                    // carries ProducerTag — scopes template + clause lookups
+    public ulong SelectionDraw { get; }                  // producer-owned deterministic selection value, verbatim
+    public NamedSlotSet Slots { get; }                   // name -> string (already formatted; §3.5)
+    public NamedSelectorSet Selectors { get; }           // typed locale-neutral bounded-selector input
+    public bool HasCitedEpisode { get; }
+    public int CitationKind { get; }                     // producer-scoped by (Id.ProducerTag, CitationKind)
 }
 
 // content (in TacticalDirector.Localization): per-locale keyed static strings + per-(Id, variant) templates
@@ -199,6 +220,6 @@ public static class LivingWorldTextBoundary
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-LC-001..020), data structures, failure modes F1–F6. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 fixes: H-1 generic core / per-producer boundary-adapter split (§2.2 core references nothing sim-side; §2.2.1 `LivingWorldTextBoundary`); M-1 FR-LC-008a construction-time roster-coverage invariant + F1/F5 rewrite + FR-LC-015 intent-value gate; L-1 `{score}` derived → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
-| 0.4 | 2026-07-27 | — | **ERR-049-001** (at #35's approval): **FR-LC-020 generalized** — `SelectionDraw` is *the producer's own deterministic, locale-independent selection value, carried verbatim*, with #22's `world.text` draw retained as the named example. The original wording named one producer's RNG reservation on a producer-agnostic seam, contradicting §7.3, FR-LC-013/014 and FR-LC-005 — and would have forced every later producer either to register an RNG stream it does not need or to violate the requirement. **Contract-widening only; no code, type or catalogue change.** Load-bearing for #35, #46 and #48. |
-| 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-004 discharge.** Extends the procedural request contract with immutable typed locale-neutral selector operands (cardinal and/or grammatical gender), so FR-LC-009 can be implemented without smuggling locale-specific selector strings through `NamedSlotSet`. Selector interpretation remains L2 rendering behavior. |
+| 0.4 | 2026-07-27 | — | **ERR-049-001** (at #35's approval): **FR-LC-020 generalized** — `SelectionDraw` is *the producer's own deterministic, locale-independent selection value, carried verbatim*, with #22's `world.text` draw retained as the named example. The original wording named one producer's RNG reservation on a producer-agnostic seam, contradicting §7.3, FR-LC-013/014 and FR-LC-005 — and would have forced every later producer either to register an RNG stream it does not need or to violate the requirement. **Contract-widening only; no #49 code, type or catalogue change.** Load-bearing for #35, #46 and #48. |
+| 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-004 fix implementation.** Extends the procedural request contract with immutable typed locale-neutral selector operands (cardinal and/or grammatical gender), aligns the pseudo-contract to the L1 get-only property API, and freezes static-key/locale identity policy. Authoritative ERR closure remains pending `spec-error-log.md` landing-closeout synchronization. Selector interpretation remains L2 rendering behavior. |
 #endregion
