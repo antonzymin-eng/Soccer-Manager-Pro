@@ -77,13 +77,10 @@ namespace TacticalDirector.PerceptionSystem
         }
 
         /// <summary>
-        /// W4 goalkeeper line-of-sight query. Returns true when <em>any</em> agent body between the
-        /// observer and target casts a shadow cone over the target. Unlike <see cref="IsOccluded"/>,
-        /// this deliberately includes same-team bodies: a defender can unsight his own keeper.
-        ///
-        /// <para>This is a separate query rather than a change to the Stage-0 perception rule. OQ-1
-        /// therefore remains intact for ordinary agents, while the goalkeeper save gate can consume
-        /// the physically relevant all-body line of sight.</para>
+        /// W4 goalkeeper line-of-sight query over a caller-supplied candidate set. Returns true when
+        /// <em>any</em> agent body between the observer and target casts a shadow cone over the target.
+        /// Unlike <see cref="IsOccluded"/>, this deliberately includes same-team bodies: a defender
+        /// can unsight his own keeper.
         /// </summary>
         public static bool IsOccludedByAnyAgent(
             Vector2 observerPos,
@@ -109,6 +106,30 @@ namespace TacticalDirector.PerceptionSystem
                 opponentsOnly: false);
         }
 
+        /// <summary>
+        /// W4 allocation-free goalkeeper line-of-sight query across the complete agent array.
+        /// This is intentionally separate from ordinary Stage-0 perception: OQ-1 remains intact,
+        /// while the goalkeeper save gate can treat either team as a physical screen.
+        /// </summary>
+        public static bool IsOccludedByAnyAgent(
+            Vector2 observerPos,
+            Vector2 targetPos,
+            int observerId,
+            AgentState[] agentStates)
+        {
+            return IsOccludedCore(
+                observerPos,
+                targetPos,
+                targetId: -1,
+                observerId,
+                agentStates,
+                candidateIds: null,
+                candidateCount: agentStates.Length,
+                observerTeamId: 0,
+                agentAttrs: null,
+                opponentsOnly: false);
+        }
+
         private static bool IsOccludedCore(
             Vector2 observerPos,
             Vector2 targetPos,
@@ -126,9 +147,10 @@ namespace TacticalDirector.PerceptionSystem
                 targetPos.y - observerPos.y,
                 targetPos.x - observerPos.x) * PerceptionConstants.RAD_TO_DEG;
 
-            for (int i = 0; i < candidateCount; i++)
+            int sourceCount = candidateIds == null ? agentStates.Length : candidateCount;
+            for (int i = 0; i < sourceCount; i++)
             {
-                int occluderId = candidateIds[i];
+                int occluderId = candidateIds == null ? i : candidateIds[i];
 
                 // Skip: ball entities, the target itself, and the observer itself.
                 if (occluderId < 0 || occluderId == targetId || occluderId == observerId)
@@ -176,6 +198,7 @@ namespace TacticalDirector.PerceptionSystem
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                               |
+// | 1.2     | 2026-09-11 | —      | W4: allocation-free complete-agent goalkeeper LOS overload.         |
 // | 1.1     | 2026-09-11 | —      | W4: keeper all-body occlusion query; Stage-0 semantics unchanged.   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                             |
 #endregion
