@@ -2,7 +2,7 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 11, 2026  
-**Version:** 0.2  
+**Version:** 0.3  
 **Status:** F4 PROTOCOL AUTHORED — UX owner and participant assignments still open  
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.4 §F4 and Gates E–G  
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.3  
@@ -142,8 +142,8 @@ flow redesign or the project owner explicitly requests another pass.
 
 Run the complete S0 task set once per relevant condition below before independent testing. Combine
 conditions when that does not hide the failure mode; split them when interaction would make the cause
-ambiguous. The table explicitly covers every minimum F4.6 test-data profile; Gate-E-only resilience
-checks may add rows beyond that minimum.
+ambiguous. The table explicitly covers every minimum F4.6 test-data profile and every condition named
+by F4.3; rows beyond that floor are Gate-E-only resilience checks and are marked as such.
 
 | Condition | Required check |
 |---|---|
@@ -157,6 +157,7 @@ checks may add rows beyond that minimum.
 | Save/load failure where relevant | A failed save/load never masquerades as success; recovery/next safe action is clear. |
 | No match frame yet | Match View does not falsely present the match as live/ended; waiting/initial state is intelligible. |
 | Disabled action with reason | The reason is available when it affects the player's next decision. |
+| Error/failure state (general) | F4.3 names `disabled/error states`, of which the two save rows above are only one class. Any reachable failure — a rejected or refused action, a load/start that cannot proceed, an unavailable dependency — must not masquerade as success, and the next safe action must be clear. |
 | Missing art | Fallback preserves identity/layout and does not create a blank critical region. |
 | Event-heavy match | HUD/stat attention remains usable under dense events. |
 | Unusual scoreline | Score/result hierarchy survives wider values. |
@@ -167,11 +168,14 @@ checks may add rows beyond that minimum.
 | Max supported text scale | Critical path remains operable; focus/control relationships remain clear. |
 | Keyboard only | Every critical action, including S0-T7 back/cancel, is reachable in coherent order; no focus trap; state is visible without hover. |
 | Mouse only | Complete path, including S0-T7 back/cancel, without keyboard-only dependency. |
-| Audio muted/caption path | No required S0 information depends on sound alone. |
+| Audio muted/caption path *(Gate-E only)* | No required S0 information depends on sound alone. Named by Gate E, not by the F4.6 minimum set; run it where the prototype has any audio/caption surface at all. |
 
 For S0 conditions that do not apply to a given prototype, record `N/A` with a reason rather than
-silently skipping the row. A generic error-state check does not substitute for the two binding F4.6
-save profiles above.
+silently skipping the row.
+
+The save rows and the general error row do not substitute for each other in either direction. A
+generic error-state check does not discharge the two binding F4.6 save profiles, and the two save
+profiles do not discharge F4.3's wider `disabled/error states` condition.
 
 ---
 
@@ -345,4 +349,5 @@ workstream should not claim F4 complete until all three assignments are explicit
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | September 11, 2026 | Created the repeatable F4 validation packet: four-layer method, S0 task set, participant mechanism, Gate-E walkthrough matrix, moderator/evidence templates, severity/disposition rules and Gate-G/Gate-J continuity. F4 remained open on the §10.1 UX owner plus two real participant assignments. |
+| 0.3 | September 11, 2026 | Review correction: restored a general `Error/failure state` row to §5. The v0.2 pass had *replaced* the original generic error row with `Save/load failure where relevant` rather than adding alongside it, narrowing coverage against F4.3, which names `disabled/error states` as a condition in its own right and of which a save/load failure is only one class. §5's preamble now states the F4.3 floor explicitly and the closing note makes the non-substitution symmetric. |
 | 0.2 | September 11, 2026 | Review correction: added the binding F4.6 `no save` and `save/load failure where relevant` profiles; added S0-T7 to exercise Gate F back/cancel behavior; narrowed S0-T1 so current New Game/start limitations are recorded honestly; added this version history and tightened the READY claims to the corrected coverage. |

@@ -1,6 +1,18 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 10, 2026 — **Wiring-backlog W4's evidence corrected, and a dispatched measurement lane landed after review found its first cut could report a measurement that never happened. Documentation + CI tooling only; no `src/` file touched, so no suite-count delta and no gate owed on `src/`.**
+**Last Updated:** September 11, 2026 — **UX F4 validation protocol packet registered (PR #394), and the manifest's complete absence of `docs/design/ux-*.md` rows is corrected. Documentation only; no `src/` file touched, so no suite-count delta and no gate owed on `src/`.**
+
+**NEW (1):** `docs/design/ux-validation-protocol.md` **v0.3** — the repeatable F4 operating packet required by `ux-detailed-plan.md` v1.4 F4 and Gates E–G; inventory row below. **Modified (2):** `docs/tracking/CHANGELOG.md` and this file. **`open-issues.md` and the `project-reference.md` 23 active / 54 archived count are deliberately untouched** — this landing opens no blocker and closes none, and does not advance the UX entry's F0–F3-complete/F4-next status. `src/CLAUDE.md` and `CHANGELOG-src.md` untouched: no `src/` change. `README.md` untouched: no snapshot fact falsified.
+
+**F4 is not closed by this file existing, and the packet's own §11 says so.** Three human-assignment facts remain unfilled and none is invented: the `ux-detailed-plan.md` §10.1 UX-workstream accountable owner, S0-P1 and S0-P2. Gate G is unavailable until both participant rows close.
+
+**The manifest gap this landing found in itself.** This file carried **zero** `docs/design/ux-*.md` rows, while `open-issues.md`'s September 7 updates twice assert that `ux-baseline-evidence.md` and `ux-experience-architecture.md` are "inventoried in `file-manifest.md`". Direct check refutes it — neither was, and neither were `ux-high-level-plan.md`, `ux-detailed-plan.md`, `ux-shared-system.md` or the superseded `ux-foundation.md` stub. Registering a sixth UX document beneath a false claim that the fifth was already registered is the exact drift `9af9626` was a whole pass to clean up, so the new **UX Workstream Documents** section below lists all six at their current versions. **Five of those rows are retrospective** — those files landed in earlier passes and are inventoried here for the first time; only `ux-validation-protocol.md` is new in this commit. Those two `open-issues.md` sentences are left verbatim per this repo's never-rewrite-a-historical-entry rule; this entry supersedes them.
+
+**Review corrections carried in the same PR across two rounds (v0.1 → v0.3), all five verified against `ux-detailed-plan.md` rather than taken on report:** §5 had dropped F4.6's `no save` and `save/load failure where relevant` profiles while §11 claimed the walkthrough READY, and now covers all nineteen minimum profiles in F4.6's order; **S0-T7** was added to exercise the §6.4 cancel/back edge Gate F requires; §12 Version History was added against the previously history-less `Version:` field; S0-T1 was narrowed so the current New Game/start limitation is recorded as a dependency rather than scored as participant failure; and at v0.3 a general `Error/failure state` row was restored, the v0.2 pass having *replaced* rather than supplemented the original generic error row and thereby narrowed §5 against F4.3's `disabled/error states` condition.
+
+No `.cs`, `.asmdef`, asset, `SNAPSHOT_SCHEMA_VERSION`, save/snapshot schema, RNG stream/domain/draw site/draw order, `[GT]` constant, new assembly, `SPEC_INDEX.md` row, spec status or roadmap row changed. No `ERR` filed — the packet is a `docs/design/` document and contradicts no APPROVED spec. **GATE: not owed and not run** for a Markdown-only landing; the PR's documentation checks (`Markdown lint`, `Markdown link check`, `Spec hygiene checks`, `File manifest sanity`, `YAML lint`) are the applicable evidence and were green on `ee0cf7d`; re-running at the close-out head is owed before merge.
+
+**Last Updated (prior):** September 10, 2026 — **Wiring-backlog W4's evidence corrected, and a dispatched measurement lane landed after review found its first cut could report a measurement that never happened. Documentation + CI tooling only; no `src/` file touched, so no suite-count delta and no gate owed on `src/`.**
 
 **NEW (3):** `.github/workflows/measure.yml`, `tools/dotnet-ci/measurement_catalog.py`, `tools/tests/test_measurement_lane.py` — inventory rows below. **Modified (4):** `docs/tracking/match-engine-wiring-backlog.md` **v1.13 → v1.14**, `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG.md`, and this file. **`tools/dotnet-ci/run-gate.sh` is deliberately NOT modified by this branch and is byte-identical to `main`.** An earlier cut of this landing added a `--test-logger` flag to it; the hardened workflow then moved the measurement leg to a direct project-scoped `dotnet test` with two loggers, leaving that flag with **zero production callers**. It was removed at review rather than kept — a dormant surface is precisely what `match-engine-wiring-backlog.md` exists to catalogue, and adding one while correcting that backlog's own entry would have been the joke writing itself.
 
@@ -3288,6 +3300,29 @@ snapshot/digest; where a reference and an APPROVED spec disagree, the spec wins.
 Landed July 25, 2026 as the visual reference for UI / Client Framework **#38** (framework slice,
 APPROVED Jul 22, 2026) and the Wave-7 screen specs it defers to (#38 §7.1). All mockup data is
 hardcoded and illustrative.
+
+---
+
+## UX Workstream Documents
+
+Execution and evidence documents for the player-facing UX workstream (`ux-detailed-plan.md` work
+packages F0–F4, journey slices S0–S2, Gates A–J). `ux-detailed-plan.md` is the single execution
+authority; the others cite it and are the defect where they disagree. None of these is an APPROVED
+spec — where one and a spec under `docs/specs/` disagree, the spec wins.
+
+| File | Purpose |
+|------|---------|
+| `docs/design/ux-high-level-plan.md` | Strategy, milestone cut and dependency posture (v1.2, Sep 9, 2026); mirrors `ux-detailed-plan.md` §10.2's effort bands rather than duplicating them |
+| `docs/design/ux-detailed-plan.md` | **The single UX execution authority** (v1.4, Sep 9, 2026): work packages F0–F4, journey slices S0–S2, the one authoritative Gates A–J definition, validation severity, QA handoff, change control, and §17's record of the owner's September 9, 2026 acceptance and its limits |
+| `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
+| `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
+| `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.3, Sep 7, 2026); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
+| `docs/design/ux-validation-protocol.md` | F4 output — the repeatable validation operating packet (v0.3, Sep 11, 2026): four-layer sequence, S0-T1–T7 participant tasks, the F4 human-assignment table, the scripted walkthrough matrix covering all nineteen F4.6 minimum profiles plus F4.3's general error condition, moderator script, evidence templates, severity/disposition, and the Gate-G/Gate-J records |
+| `docs/design/ux-foundation.md` | Superseded stub — historical design reference, explicitly **not** execution authority; retained so older citations resolve |
+
+Registered September 11, 2026 with the F4 packet's landing. The first five rows are **retrospective**:
+those files landed in earlier passes and had never been inventoried here, despite
+`open-issues.md`'s September 7 updates asserting twice that two of them were.
 
 ---
 
