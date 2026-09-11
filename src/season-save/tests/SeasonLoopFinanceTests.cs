@@ -6,13 +6,15 @@
 // Spec:     Club Finances & Economy #40 §3.2/§3.4/§4.1-§4.3/§7.1 T2b,
 //           T-FN-LIFE-001, T-FN-ORD-001/003, T-FN-DET-002; Season Loop #30 §3.5;
 //           Code Standards #20 §3.9.4
-// Purpose:  Locks #40's production bootstrap, runtime ledger surface, boundary settlement ordering,
-//           across-roll identity, and refused-roll atomicity at the #30 composition root.
+// Purpose:  Locks #40's production bootstrap, compatibility activation, runtime ledger surface,
+//           boundary settlement ordering, across-roll identity, refused-roll atomicity, and preservation
+//           of already-composed runtime subsystems at the #30 composition root.
 // ============================================================================
 
 using NUnit.Framework;
 
 using TacticalDirector.ClubFinances;
+using TacticalDirector.Discipline;
 using TacticalDirector.LivingWorld;
 
 using ClubFinanceState = TacticalDirector.ClubFinances.ClubFinances;
@@ -46,6 +48,46 @@ namespace TacticalDirector.SeasonSave.Tests
                 Assert.That(entries[i].Finances.SeasonRevenueAccrued, Is.Zero);
                 Assert.That(entries[i].Finances.FfpBalanceWindow, Is.Zero);
             }
+        }
+
+        [Test]
+        public void GenericPreT2Composition_UpgradesEmptyFinanceInputInsteadOfSilentlySkippingT2b()
+        {
+            // T1b allowed null/empty while the producer did not exist. T2b must make that a
+            // compatibility INPUT only: once the loop exists, its live finance set is complete.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(0, WorldSeed);
+            var loop = new SeasonLoop(
+                world,
+                league.CreateSeason(managedClubId: 0),
+                RoundResolutionMode.QuickSimAll);
+
+            ClubFinanceEntry[] entries = loop.FinanceEntriesForSave();
+            Assert.That(entries, Has.Length.EqualTo(ClubCount));
+            for (int i = 0; i < entries.Length; i++)
+            {
+                Assert.That(entries[i].ClubId, Is.EqualTo(i));
+                Assert.That(entries[i].Finances.Balance, Is.EqualTo(ClubFinancesConstants.StartingClubBalance));
+            }
+        }
+
+        [Test]
+        public void CreateLoop_PreservesAlreadyComposedDisciplineStateWhileAddingFinances()
+        {
+            // Regression for Codex P1: finance bootstrap is additive composition, not a fresh bare loop
+            // that quietly drops already-live subsystems.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(0, WorldSeed);
+            var discipline = new DisciplineState();
+
+            SeasonLoop loop = league.CreateLoop(
+                world,
+                managedClubId: 0,
+                RoundResolutionMode.QuickSimAll,
+                disciplineOrNull: discipline);
+
+            Assert.That(loop.Discipline, Is.SameAs(discipline));
+            Assert.That(loop.FinanceEntriesForSave(), Has.Length.EqualTo(ClubCount));
         }
 
         [Test]
@@ -162,4 +204,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // | Version | Date       | Author | Notes                                                   |
 // | 1.0     | 2026-09-11 | —      | #40 T2b production lifecycle and boundary regression set. |
 // | 1.1     | 2026-09-11 | —      | Alias finance state type to avoid namespace/type ambiguity. |
+// | 1.2     | 2026-09-11 | —      | Review locks: legacy empty input upgrades at composition;   |
+// |         |            |        | CreateLoop preserves already-live subsystem state.          |
 #endregion
