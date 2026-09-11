@@ -14,6 +14,8 @@ using System;
 
 using TacticalDirector.ClubFinances;
 
+using ClubFinanceState = TacticalDirector.ClubFinances.ClubFinances;
+
 namespace TacticalDirector.SeasonSave
 {
     /// <summary>
@@ -56,9 +58,9 @@ namespace TacticalDirector.SeasonSave
             for (int i = 0; i < entries.Length; i++)
             {
                 ClubFinanceEntry entry = entries[i];
-                ClubFinances prior = entry.Finances;
+                ClubFinanceState prior = entry.Finances;
                 int position = season.PositionOf(entry.ClubId);
-                ClubFinances next = FinanceStep.SettleFinances(
+                ClubFinanceState next = FinanceStep.SettleFinances(
                     in prior,
                     position,
                     clubCount,
@@ -73,7 +75,7 @@ namespace TacticalDirector.SeasonSave
         internal static FinancesViewModel View(ClubFinanceEntry[] entries, int clubId)
         {
             int index = IndexOf(entries, clubId);
-            ClubFinances finances = entries[index].Finances;
+            ClubFinanceState finances = entries[index].Finances;
             return FinancesViewModel.From(in finances);
         }
 
@@ -81,7 +83,7 @@ namespace TacticalDirector.SeasonSave
         internal static long AvailableTransferBudget(ClubFinanceEntry[] entries, int clubId)
         {
             int index = IndexOf(entries, clubId);
-            ClubFinances finances = entries[index].Finances;
+            ClubFinanceState finances = entries[index].Finances;
             return FinanceLedger.AvailableTransferBudget(in finances);
         }
 
@@ -96,7 +98,7 @@ namespace TacticalDirector.SeasonSave
         {
             int index = IndexOf(entries, clubId);
             ClubFinanceEntry entry = entries[index];
-            ClubFinances finances = entry.Finances;
+            ClubFinanceState finances = entry.Finances;
             FinanceLedger.ApplyTransaction(ref finances, in transaction);
             entries[index] = new ClubFinanceEntry(clubId, in finances);
         }
@@ -147,4 +149,5 @@ namespace TacticalDirector.SeasonSave
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                        |
 // | 1.0     | 2026-09-11 | —      | #40 T2b: keyed runtime access plus staged boundary settlement. |
+// | 1.1     | 2026-09-11 | —      | Alias finance state type to avoid namespace/type ambiguity.   |
 #endregion
