@@ -1,6 +1,9 @@
 // File:     src/season-save/tests/SeasonRollTests.cs
 // Created:  2026-07-27
-// Modified: 2026-08-15 (M4, reviewed-findings pass — the two Save call sites here drive no #44
+// Modified: 2026-09-10 (#40 T1b, ERR-030-049 — both Save call sites pass the new required finance
+//           set; a season roll neither reads nor writes finances until #40 T2 wires SettleFinances
+//           at step (b'), so the empty set is the honest capture here — v1.8)
+// Prior-Modified: 2026-08-15 (M4, reviewed-findings pass — the two Save call sites here drive no #44
 //           subsystem; flipped disciplineWired: true → false, matching SeasonSaveManagerTests.cs'
 //           companion fix — v1.7)
 //           Prior: 2026-08-13 (#44 C1/C2 AR round 4, H4/ERR-030-039 — call sites updated for the required
@@ -22,6 +25,7 @@ using System.IO;
 
 using NUnit.Framework;
 
+using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
@@ -35,6 +39,10 @@ namespace TacticalDirector.SeasonSave.Tests
     {
         private const ulong WorldSeed = 0x5EED1EA6D0DEC0DEUL;
         private const int ManagerId = 1;
+
+        // "No club has a finance entry yet" — the only value a save can carry until #40 T2
+        // wires ClubFinances.CreateInitial; said explicitly because Save requires it to be said.
+        private static ClubFinanceEntry[] NoFinances => Array.Empty<ClubFinanceEntry>();
 
         private static League FourClubLeague() => LeagueBootstrap.Generate(WorldSeed, 4);
 
@@ -348,7 +356,7 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(world, interrupted.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false, NoFinances);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
@@ -385,7 +393,7 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(world, loop.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false, NoFinances);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
 
                 Assert.IsTrue(loop.State.FieldsEqual(contents.Season),
@@ -614,4 +622,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | tally to a fresh temp path and drive no #44 subsystem —             |
 // |         |            |        | disciplineWired: true flipped to false to match the parameter's     |
 // |         |            |        | own contract. No assertion or intent change; suite still green.     |
+// | 1.8     | 2026-09-10 | —      | #40 T1b (ERR-030-049): both Save call sites pass the required     |
+// |         |            |        | empty finance set, and a NoFinances helper says so explicitly     |
+// |         |            |        | rather than inlining Array.Empty at each site. A season roll      |
+// |         |            |        | touches no finance state until #40 T2. No assertion or intent     |
+// |         |            |        | change.                                                           |
 #endregion

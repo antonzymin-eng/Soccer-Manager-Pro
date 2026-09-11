@@ -609,7 +609,7 @@ src/
 │   │                                     Also hosts Season & Competition Loop #30 (T0 value types, T1 codec)
 │   │                                     and the league bootstrap (league-bootstrap-design.md) — same layer,
 │   │                                     no new assembly.
-│   ├── season-save.asmdef             ← references match-engine + living-world + deterministic-sim + player-database + project-constants
+│   ├── season-save.asmdef             ← references match-engine + living-world + deterministic-sim + player-database + training-system + injuries-medical + player-progression + discipline + club-finances + project-constants
 │   ├── SeasonLoopConstants.cs         ← #30 Appendix A: points, SEASON_STATE_FORMAT_VERSION, identity-permutation seed
 │   ├── Fixture.cs / FixtureScheduler.cs         ← #30 T0: the concrete schedule + the pure round-robin generator (local SplitMix64)
 │   ├── LeagueTableRow.cs / LeagueTable.cs       ← #30 T0: ApplyResult + FR-SN-007 tie-break OrderedView
@@ -625,18 +625,19 @@ src/
 │   ├── Club.cs                        ← A3: club identity (ClubId / Name / StrengthDelta); not serialized
 │   ├── League.cs                      ← A3: the immutable bootstrap product; IS the ISquadProvider; CreateSeason → SeasonState (KD-9)
 │   ├── LeagueBootstrap.cs             ← A3: worldSeed → N clubs × 25 position-coherent players (KD-4 derivations, KD-5 strength ramp, KD-6 template)
-│   ├── SeasonSaveConstants.cs         ← [FIXED] SEASON_SAVE_FORMAT_VERSION = 2 (a fourth format version; KD-4)
+│   ├── SeasonSaveConstants.cs         ← [FIXED] SEASON_SAVE_FORMAT_VERSION = 7 (KD-4) — 1→2 #30 T1, 2→3 #29/#41 T1, 3→4 balance D2, 4→5 #28 T1, 5→6 #44 T1, 6→7 #40 T1b (ERR-030-049)
 │   ├── TrainingBlock.cs               ← typed handle on the #29 sub-blob's bytes at the frame boundary (ERR-029-005): the two blocks are byte-shape-identical, so transposing them in Encode's five byte[] had no compile-time signal
 │   ├── MedicalBlock.cs                ← the #41 counterpart (ERR-041-009)
-│   ├── SeasonSaveBlobs.cs             ← deframe result: World + Season + Training + Medical (all always) + MatchBlob (null if no match) — five opaque sub-blobs (KD-2/KD-3)
-│   ├── SeasonSaveCodec.cs             ← pure static: Encode(world, season, training, medical, matchOrNull) / Decode → v3 frame + matchPresent flag + 5 length-prefixed opaque blocks; overflow-safe bounds + fail-loud (KD-7/KD-8)
-│   ├── SeasonSaveContents.cs          ← Load result: reconstructed WorldStore (never null) + nullable MatchEngine
-│   ├── SeasonSaveManager.cs           ← static: Save(world, matchOrNull, path) (capture both → Encode → atomic temp→fsync→rename) / Load(path, ISquadProvider = null) → SeasonSaveContents (KD-1/KD-5/KD-6/KD-8)
+│   ├── SeasonSaveBlobs.cs             ← deframe result: World + Season + Training + Medical + Appearance + Progression + Discipline + Finance (all always) + MatchBlob (null if no match) — nine opaque sub-blobs (KD-2/KD-3)
+│   ├── SeasonSaveCodec.cs             ← pure static: Encode(world, season, training, medical, appearance, progression, discipline, finance, matchOrNull) / Decode → v7 frame + matchPresent flag + 9 length-prefixed opaque blocks; overflow-safe bounds + fail-loud (KD-7/KD-8)
+│   ├── SeasonSaveContents.cs          ← Load result: reconstructed WorldStore + SeasonState + the career/discipline/finance state (all never null) + nullable MatchEngine
+│   ├── SeasonSaveManager.cs           ← static: Save(...) (capture every block → Encode → atomic temp→fsync→rename, behind four destination-overwrite guards) / Load(path, ISquadProvider = null) → SeasonSaveContents (KD-1/KD-5/KD-6/KD-8)
 │   ├── AvailabilityComposition.cs     ← #44 C2 (Aug 13, 2026): the composed removal-set intersection + back-fill split out of PlayerCareerStates.SelectAvailable so a second contributor (#44) can join before the back-fill runs
 │   ├── DisciplineBlock.cs             ← #44 C2: typed handle on the seventh sub-blob's bytes (DISC-magic-led, ERR-044-001)
 │   ├── MatchEngineDisciplineTap.cs    ← #44 C2: wires discipline/CardLedgerFold into the engine's per-tick observation surface via IDisciplineTickLedgerTap
+│   ├── FinanceBlock.cs                ← #40 T1b (Sep 10, 2026): typed handle on the eighth sub-blob's bytes (FNCE-magic-led, the ERR-029-005 discipline)
 │   └── tests/
-│       ├── season-save-tests.asmdef   ← EditMode; references season-save + match-engine + living-world + deterministic-sim + player-database + discipline
+│       ├── season-save-tests.asmdef   ← EditMode; references season-save + match-engine + agent-movement + living-world + deterministic-sim + player-database + player-progression + training-system + injuries-medical + discipline + club-finances + testing-strategy
 │       ├── SeasonSaveManagerTests.cs  ← disk round-trip determinism (no-match / neutral+distinct-squad match via ISquadProvider) + SeasonSaveCodec round-trip/fail-loud + manager fail-loud paths
 │       ├── SeasonStateTests.cs        ← #30 T0 value-type + aggregate-field-count coupling guards
 │       ├── SeasonStateCodecTests.cs   ← #30 T1 round-trip / pinned-offset layout lock / FR-SN-023 fail-loud gates
