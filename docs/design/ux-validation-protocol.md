@@ -2,7 +2,7 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 11, 2026  
-**Version:** 0.3  
+**Version:** 0.4  
 **Status:** F4 PROTOCOL AUTHORED — UX owner and participant assignments still open  
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.4 §F4 and Gates E–G  
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.3  
@@ -148,9 +148,10 @@ by F4.3; rows beyond that floor are Gate-E-only resilience checks and are marked
 | Condition | Required check |
 |---|---|
 | Ordinary case | Complete all S0 tasks with representative real-match data. |
+| Color-independent meaning *(Gate-E requirement)* | Across ordinary applicable S0 states, score/result, availability, selection, warning/error and action-state meaning remains understandable without relying on hue alone; use text, iconography, shape, pattern, position or another non-color cue where meaning would otherwise be color-only. This check is independent of indicator density. |
 | Long player/club/competition names | No clipped critical identity, control label or result; long football identities remain distinguishable. |
 | Empty/large lists | S1/shared list primitives preserve empty explanation and usable selection/sort behavior. |
-| Many status indicators | Meaning remains color-independent and scan order does not collapse. |
+| Many status indicators | Dense status presentation remains scannable and priority/order does not collapse; the separate color-independent row above still applies. |
 | Pseudo-locale | Expanded/localized strings reflow without hiding critical actions or state. |
 | Alternate date/currency formatting | Relevant S1/management surfaces format without hard-coded width assumptions. |
 | No save | Surfaces do not imply a usable save/resume capability when no save exists for the tested state; unavailable behavior is explicit. |
@@ -171,7 +172,9 @@ by F4.3; rows beyond that floor are Gate-E-only resilience checks and are marked
 | Audio muted/caption path *(Gate-E only)* | No required S0 information depends on sound alone. Named by Gate E, not by the F4.6 minimum set; run it where the prototype has any audio/caption surface at all. |
 
 For S0 conditions that do not apply to a given prototype, record `N/A` with a reason rather than
-silently skipping the row.
+silently skipping the row. The color-independent-meaning row is not discharged by marking `Many status
+indicators` N/A: wherever the prototype conveys semantic state or action meaning with color, the
+standalone check applies even in an ordinary low-density interface.
 
 The save rows and the general error row do not substitute for each other in either direction. A
 generic error-state check does not discharge the two binding F4.6 save profiles, and the two save
@@ -349,5 +352,6 @@ workstream should not claim F4 complete until all three assignments are explicit
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | September 11, 2026 | Created the repeatable F4 validation packet: four-layer method, S0 task set, participant mechanism, Gate-E walkthrough matrix, moderator/evidence templates, severity/disposition rules and Gate-G/Gate-J continuity. F4 remained open on the §10.1 UX owner plus two real participant assignments. |
+| 0.4 | September 11, 2026 | Codex review correction: split color-independent meaning into its own Gate-E condition so it remains binding even when the `Many status indicators` stress profile is N/A; density/scannability is now checked separately. |
 | 0.3 | September 11, 2026 | Review correction: restored a general `Error/failure state` row to §5. The v0.2 pass had *replaced* the original generic error row with `Save/load failure where relevant` rather than adding alongside it, narrowing coverage against F4.3, which names `disabled/error states` as a condition in its own right and of which a save/load failure is only one class. §5's preamble now states the F4.3 floor explicitly and the closing note makes the non-substitution symmetric. |
 | 0.2 | September 11, 2026 | Review correction: added the binding F4.6 `no save` and `save/load failure where relevant` profiles; added S0-T7 to exercise Gate F back/cancel behavior; narrowed S0-T1 so current New Game/start limitations are recorded honestly; added this version history and tightened the READY claims to the corrected coverage. |
