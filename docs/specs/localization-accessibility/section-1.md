@@ -1,8 +1,8 @@
 # Localization & Accessibility #49 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** September 11, 2026 (v0.3 — L1 dependency-direction correction; ERR-049-002 discharge)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/localization-seam-template-design.md` v0.2
 
@@ -80,8 +80,8 @@ zero-allocation game-loop code.
 
 | Direction | Spec / surface | Nature |
 |---|---|---|
-| Upstream (needs) | #22 `living-world` — `InteractionIntent` + `InteractionSlots` facts + the `world.text` draw; the migrated `InteractionTextCorpus` content | renderer references the one built producer (KD-6) |
-| Upstream (composes, as they land) | #38 static UI keys; #35 media; #46 news/inbox — each binds to the seam as it is authored | producers emit through the seam (KD-1) |
+| Upstream (needs) | #22 `living-world` — `InteractionIntent` + `InteractionSlots` facts + the `world.text` draw; the migrated `InteractionTextCorpus` content | a later sibling `localization-boundary` adapter references both #49 and the built producer; the #49 core references no producer (KD-6) |
+| Upstream (composes, as they land) | #38 static UI keys; #35 media; #46 news/inbox — each binds to the seam as it is authored | producer-native values are mapped by a boundary adapter; producers do not reference #49 (KD-1/KD-6) |
 | Downstream (consumers) | UI screens (#38 Wave-7) render localized strings through the seam | read-only |
 | Downstream (references #49) | **no sim/loop assembly** — top of the presentation graph (KD-6) |
 
@@ -127,15 +127,17 @@ through to the base locale**. Because a missing translation resolves to base-loc
 strings — **base-locale identity is the correctness anchor**: with only the base locale loaded, every
 rendered string is byte-identical to today's output (§3 / Appendix C).
 
-**KD-6 — Seam placement / one-way reference direction (load-bearing for layering).** The renderer
-(`ILocalizer` + the base-locale catalogue + all locale data) lives high, in a new presentation/content
-assembly `TacticalDirector.Localization` (`src/localization/`). One-way, exactly the #38 rule: **no
-sim/loop assembly references it** (a sim-side producer like #22 must not gain a presentation reference); the
-renderer references only **built** producers (at Stage 2: `Localization → living-world`, one reference — a
-reference to an unbuilt producer is the FR-LW-031 phantom-dependency class). A producer emits only its own
-native values; `LocalizedTextRequest`/`TextTemplateId` are #49 types assembled at the #49 boundary
-(`TextTemplateId.ForInteraction(intent)`), so a producer never references a #49 type. The **pre-draw
-validation stays sim-side** (§1.4 / §3.4).
+**KD-6 — Seam placement / one-way reference direction (load-bearing for layering).** The generic core seam
+(`ILocalizer`, request/value contracts, catalogue/renderer behavior and locale data) lives high in
+`TacticalDirector.Localization` (`src/localization/`) and references **nothing sim-side**. A sim/loop
+assembly MUST NOT reference the localization assembly. Producer-specific mapping lives instead in a sibling
+boundary-adapter assembly added only when that producer is integrated; that adapter references both
+`TacticalDirector.Localization` and the built producer, maps the producer's native values to the generic
+`TextTemplateId (ProducerTag, LocalOrdinal)` plus slots/selectors, and constructs `LocalizedTextRequest`.
+For #22 that later adapter is `localization-boundary`; the core therefore never gains a
+`Localization → living-world` edge and `TextTemplateId` never gains a producer-specific `ForInteraction`
+helper. The producer itself continues to emit only its own native values and never references a #49 type.
+The **pre-draw validation stays sim-side** (§1.4 / §3.4).
 
 **KD-7 — No determinism identifiers (the #37/#38 posture).** #49 registers no RNG stream, no `DOMAIN_TAG_*`,
 no `SubsystemOrdinal`, holds no persistent sim state, and bumps no save format. It appears nowhere in the
@@ -156,4 +158,5 @@ no `SubsystemOrdinal`, holds no persistent sim state, and bumps no save format. 
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial section from the converged supplement. Scope/deps/KD-1..7/boundary matrix, grounded in `InteractionTextGenerator`/`InteractionSlots`/`InteractionTextCorpus` + #38 FR-UI-004/KD-5. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-002 discharge.** Corrects stale §1 dependency/KD-6 wording to the already-approved generic-core + sibling-boundary architecture: the #49 core references no sim/producer assembly; a later producer adapter references both sides and constructs generic request identities. No runtime behavior or producer integration is added. |
 #endregion
