@@ -44,19 +44,24 @@ namespace TacticalDirector.SeasonSave
                 throw new ArgumentNullException(nameof(entries));
             }
 
-            // T2b composition no longer permits an empty LIVE finance set. Older empty T1b saves and
-            // generic pre-T2 loops are upgraded by SeasonFinanceCoherence.Normalize before assignment.
-            // Reaching this branch therefore means the runtime invariant was broken after composition;
-            // silently returning an empty settlement would let a career skip prize/budget settlement.
+            // The low-level generic SeasonLoop constructor may still carry the explicit legacy/unwired
+            // empty state for compatibility. Canonical new games never do (League.CreateLoop bootstraps
+            // them), and Restore upgrades a persisted empty T1b block before ordinary composition.
+            // Settlement is a finance operation, so the remaining generic empty state fails loud here
+            // rather than silently skipping prize money and next-season budget projection.
             if (entries.Length == 0)
             {
                 throw new InvalidOperationException(
-                    "T2b finance state is empty after composition. SeasonFinanceCoherence must upgrade "
-                    + "legacy empty input to one entry per SeasonState club before a season can roll.");
+                    "Club finances are not initialized on this SeasonLoop. Canonical new games must use "
+                    + "League.CreateLoop and restored T1b saves must enter through SeasonLoop.Restore "
+                    + "before a season can settle finances.");
             }
 
             var settled = new ClubFinanceEntry[entries.Length];
             int clubCount = season.ClubIds.Count;
+
+            // T2b intentionally consumes the identity board input. #45/non-identity BoardModifier
+            // production is explicitly deferred to #40 T3 (§7.1); do not invent a second producer here.
             BoardModifier board = BoardModifier.Identity;
 
             for (int i = 0; i < entries.Length; i++)
@@ -117,8 +122,9 @@ namespace TacticalDirector.SeasonSave
             if (entries.Length == 0)
             {
                 throw new InvalidOperationException(
-                    "Club finances are not initialized on this SeasonLoop; T2b composition requires "
-                    + "one finance entry per SeasonState club (F6 / FR-FN-025).");
+                    "Club finances are not initialized on this SeasonLoop. Canonical new games must use "
+                    + "League.CreateLoop and restored T1b saves must enter through SeasonLoop.Restore "
+                    + "before finance commands or queries are valid (F6 / FR-FN-025).");
             }
 
             int low = 0;
@@ -154,6 +160,7 @@ namespace TacticalDirector.SeasonSave
 // | Version | Date       | Author | Notes                                                        |
 // | 1.0     | 2026-09-11 | —      | #40 T2b: keyed runtime access plus staged boundary settlement. |
 // | 1.1     | 2026-09-11 | —      | Alias finance state type to avoid namespace/type ambiguity.   |
-// | 1.2     | 2026-09-11 | —      | Review: empty runtime state is now an invariant failure;      |
-// |         |            |        | legacy empties are upgraded during composition instead.       |
+// | 1.2     | 2026-09-11 | —      | First review made empty state fail loud at runtime.           |
+// | 1.3     | 2026-09-11 | —      | Claude review: comments align with Restore-only legacy        |
+// |         |            |        | migration; BoardModifier.Identity explicitly pinned to T2b.   |
 #endregion
