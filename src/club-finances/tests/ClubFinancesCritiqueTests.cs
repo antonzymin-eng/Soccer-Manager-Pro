@@ -149,6 +149,22 @@ namespace TacticalDirector.ClubFinances.Tests
             Assert.That(result.FfpBalanceWindow, Is.EqualTo(prior.FfpBalanceWindow));
         }
 
+        /// <summary>T3a identity is a real off-switch: disabled deep inputs are not interpreted or validated.</summary>
+        [Test]
+        public void AccrueDailyRevenue_DeepOff_IgnoresOtherwiseInvalidRevenueInputs()
+        {
+            ClubFinances prior = ClubFinances.CreateInitial(1_000L);
+
+            ClubFinances result = FinanceStep.AccrueDailyRevenue(
+                in prior,
+                long.MinValue,
+                -1,
+                false);
+
+            Assert.That(result.Balance, Is.EqualTo(prior.Balance));
+            Assert.That(result.SeasonRevenueAccrued, Is.EqualTo(prior.SeasonRevenueAccrued));
+        }
+
         /// <summary>T3a accounting: both daily revenue sources accrue once, while unrelated state is untouched.</summary>
         [Test]
         public void AccrueDailyRevenue_Enabled_AccruesBothComponentsOnly()
@@ -184,11 +200,32 @@ namespace TacticalDirector.ClubFinances.Tests
                 () => FinanceStep.AccrueDailyRevenue(in prior, sponsorship, matchday, true));
         }
 
-        /// <summary>T3a performs checked arithmetic before returning, so an overflow cannot wrap club cash.</summary>
+        /// <summary>T3a checks the component sum before it can wrap into a plausible-looking daily amount.</summary>
+        [Test]
+        public void AccrueDailyRevenue_ComponentSumOverflow_FailsLoud()
+        {
+            ClubFinances prior = ClubFinances.CreateInitial(0L);
+
+            Assert.Throws<OverflowException>(
+                () => FinanceStep.AccrueDailyRevenue(in prior, long.MaxValue, 1, true));
+        }
+
+        /// <summary>T3a performs checked cash arithmetic before returning, so an overflow cannot wrap club cash.</summary>
         [Test]
         public void AccrueDailyRevenue_BalanceOverflow_FailsLoud()
         {
             ClubFinances prior = ClubFinances.CreateInitial(long.MaxValue);
+
+            Assert.Throws<OverflowException>(
+                () => FinanceStep.AccrueDailyRevenue(in prior, 1, 0, true));
+        }
+
+        /// <summary>T3a independently checks the season accumulator; a safe Balance cannot mask accumulator overflow.</summary>
+        [Test]
+        public void AccrueDailyRevenue_SeasonAccumulatorOverflow_FailsLoud()
+        {
+            ClubFinances prior = ClubFinances.CreateInitial(0L);
+            prior.SeasonRevenueAccrued = long.MaxValue;
 
             Assert.Throws<OverflowException>(
                 () => FinanceStep.AccrueDailyRevenue(in prior, 1, 0, true));
@@ -272,4 +309,5 @@ namespace TacticalDirector.ClubFinances.Tests
 // | 1.4     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
 // | 1.5     | 2026-09-11 | —      | T2a: dependency lock now requires consumed PlayerDatabase edge and exactly three production refs. |
 // | 1.6     | 2026-09-11 | OpenAI | T3a: lock identity, accrual isolation, negative-input refusal and overflow failure. |
+// | 1.7     | 2026-09-11 | OpenAI | Critique: lock true off-state and each checked-arithmetic overflow site. |
 #endregion
