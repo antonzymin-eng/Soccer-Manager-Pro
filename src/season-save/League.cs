@@ -1,5 +1,7 @@
 // File:     src/season-save/League.cs
 // Created:  2026-07-25
+// Modified: 2026-09-11 (#40 T2b review — CreateLoop now preserves already-composed career,
+//           progression and discipline state instead of bootstrapping finances by dropping them.)
 // Modified: 2026-09-11 (#40 T2b — League.CreateLoop is the #30-owned new-game composition seam that
 //           bootstraps exactly one finance entry per canonical squad and passes it into SeasonLoop.)
 // Modified: 2026-07-25
@@ -15,9 +17,11 @@
 using System.Collections.ObjectModel;
 
 using TacticalDirector.ClubFinances;
+using TacticalDirector.Discipline;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
+using TacticalDirector.PlayerProgression;
 
 namespace TacticalDirector.SeasonSave
 {
@@ -199,19 +203,32 @@ namespace TacticalDirector.SeasonSave
         /// exactly once from this league's canonical #27 squad identities (FR-FN-025). Restored games
         /// do not use this method; they thread their persisted finance block through
         /// <see cref="SeasonLoop.Restore"/>, so bootstrap can never overwrite resumed state.
+        /// <para>
+        /// The finance bootstrap is additive to the already-composed runtime, not a replacement for it:
+        /// optional career, progression and discipline state are forwarded to <see cref="SeasonLoop"/>.
+        /// When a populated progression store is supplied it remains the roster authority; otherwise a
+        /// supplied career reads this league's canonical squads, matching the pre-#40 composition.
+        /// </para>
         /// </summary>
         /// <param name="world">The world created from the same world seed as this league.</param>
         /// <param name="managedClubId">The human manager's club.</param>
         /// <param name="mode">How fixtures are resolved.</param>
         /// <param name="objective">Optional board objective; defaults through <see cref="CreateSeason"/>.</param>
-        /// <returns>A new loop with one initialized finance entry per club.</returns>
+        /// <param name="careerOrNull">Existing #29/#41 career state, if already composed.</param>
+        /// <param name="progressionOrNull">Existing #28 progression/roster authority, if already composed.</param>
+        /// <param name="disciplineOrNull">Existing #44 discipline state, if already composed.</param>
+        /// <returns>A new loop with one initialized finance entry per club and all supplied subsystems preserved.</returns>
         /// <exception cref="System.ArgumentNullException"><paramref name="world"/> is null.</exception>
-        /// <exception cref="System.ArgumentException">The world and league seeds disagree.</exception>
+        /// <exception cref="System.ArgumentException">The world and league seeds disagree, or a supplied
+        /// subsystem violates <see cref="SeasonLoop"/>'s existing composition invariants.</exception>
         public SeasonLoop CreateLoop(
             WorldStore world,
             int managedClubId,
             RoundResolutionMode mode = RoundResolutionMode.ManagedThroughEngine,
-            BoardObjective? objective = null)
+            BoardObjective? objective = null,
+            PlayerCareerStates careerOrNull = null,
+            ProgressionEngine progressionOrNull = null,
+            DisciplineState disciplineOrNull = null)
         {
             if (world == null)
             {
@@ -227,11 +244,18 @@ namespace TacticalDirector.SeasonSave
             }
 
             ClubFinanceEntry[] finances = ClubFinanceEntry.CreateInitialForSquads(_squads);
+            bool progressionIsRoster = progressionOrNull != null && progressionOrNull.ClubCount > 0;
+            ISquadProvider careerSquads = careerOrNull != null && !progressionIsRoster ? this : null;
+
             return new SeasonLoop(
                 world,
                 CreateSeason(managedClubId, objective),
                 mode,
-                financesOrNull: finances);
+                careerOrNull,
+                careerSquads,
+                progressionOrNull,
+                disciplineOrNull,
+                finances);
         }
 
         /// <summary>
@@ -248,4 +272,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | ISquadProvider, CreateSeason over SeasonState.CreateNew.           |
 // | 1.1     | 2026-09-11 | —      | #40 T2b: CreateLoop is the new-game lifecycle owner and invokes   |
 // |         |            |        | CreateInitialForSquads exactly once before composing SeasonLoop.   |
+// | 1.2     | 2026-09-11 | —      | Review: CreateLoop forwards career/progression/discipline state,   |
+// |         |            |        | so enabling #40 cannot disable already-live subsystems.            |
 #endregion
