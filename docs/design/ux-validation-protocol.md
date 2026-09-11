@@ -2,7 +2,7 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 11, 2026  
-**Version:** 0.1  
+**Version:** 0.2  
 **Status:** F4 PROTOCOL AUTHORED — UX owner and participant assignments still open  
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.4 §F4 and Gates E–G  
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.3  
@@ -61,12 +61,17 @@ Use these outcome-oriented tasks. Do not tell the participant which control to c
 
 | ID | Task | Completion evidence |
 |---|---|---|
-| S0-T1 | Start a new match and reach the place where you can prepare your team. | Participant reaches Tactics Setup without moderator navigation help. |
+| S0-T1 | From the launch/Main Menu state, use the supported match-entry path presented by the prototype and reach the place where you can prepare your team. | Participant reaches Tactics Setup without moderator navigation help; if the current New Game/start limitation blocks the path, the dependency is recorded rather than treated as participant failure. |
 | S0-T2 | Make one understandable pre-match tactical choice, then start the match. | Participant identifies the relevant tactic control, understands the consequence well enough to choose, and reaches Match View. |
 | S0-T3 | During the match, determine the score, match time/state and current playback speed. | Participant reports all three from the interface without guessing from animation alone. |
 | S0-T4 | Change playback speed, then make one in-match tactical adjustment. | Participant finds both actions, distinguishes presentation pacing from a football decision, and can tell whether each action took effect. |
 | S0-T5 | Open/close the live statistics area and identify at least one useful match statistic. | Participant can expose the stats area, locate a requested statistic, and return attention to the match. |
 | S0-T6 | At full time, determine the result and key match summary, then return to the main menu. | Participant recognizes the frozen/full-time state, uses the report rather than trying to resume a live match, and returns to Main Menu. |
+| S0-T7 | From Tactics Setup, use the available back/cancel path to leave without starting a match, then re-enter Tactics Setup. | Participant returns to Main Menu through the defined cancel/back edge, does not accidentally start a match, and can re-enter the setup flow without losing orientation. |
+
+S0-T7 exists specifically to exercise Gate F's binding requirement that the complete task include
+back/cancel behavior. The moderator may place S0-T7 before S0-T2 when that produces a cleaner session,
+provided the task ID and evidence remain unchanged.
 
 If a task depends on a capability still marked `FUTURE-BLOCKED`, record the dependency and omit that
 task from completion scoring until the prototype provides an honest simulated representation of the
@@ -137,32 +142,36 @@ flow redesign or the project owner explicitly requests another pass.
 
 Run the complete S0 task set once per relevant condition below before independent testing. Combine
 conditions when that does not hide the failure mode; split them when interaction would make the cause
-ambiguous.
+ambiguous. The table explicitly covers every minimum F4.6 test-data profile; Gate-E-only resilience
+checks may add rows beyond that minimum.
 
 | Condition | Required check |
 |---|---|
 | Ordinary case | Complete all S0 tasks with representative real-match data. |
-| Long names / pseudo-locale | No clipped critical identity, control label or result; reflow remains understandable. |
-| Max supported text scale | Critical path remains operable; focus/control relationships remain clear. |
-| Keyboard only | Every critical action reachable in coherent order; no focus trap; state is visible without hover. |
-| Mouse only | Complete path without keyboard-only dependency. |
-| Missing art | Fallback preserves identity/layout and does not create a blank critical region. |
-| Disabled action with reason | The reason is available when it affects the player's next decision. |
-| Error/failure state | Failure does not masquerade as success; next safe action is clear. |
-| No match frame yet | Match View does not falsely present the match as live/ended; waiting/initial state is intelligible. |
-| Event-heavy match | HUD/stat attention remains usable under dense events. |
-| Unusual scoreline | Score/result hierarchy survives wider values. |
-| Full-time/frozen | Tactical input is unavailable; save/report behavior is not confused with a still-live match. |
-| Smallest supported desktop | No critical action or information is pushed irretrievably off-screen. |
-| 1920×1080 reference | Intended hierarchy/density matches the reference composition. |
-| High-resolution/ultrawide | Expansion does not produce unusable line lengths, extreme separation or floating controls. |
-| Alternate date/currency | Relevant S1/management surfaces format without hard-coded width assumptions. |
+| Long player/club/competition names | No clipped critical identity, control label or result; long football identities remain distinguishable. |
 | Empty/large lists | S1/shared list primitives preserve empty explanation and usable selection/sort behavior. |
 | Many status indicators | Meaning remains color-independent and scan order does not collapse. |
+| Pseudo-locale | Expanded/localized strings reflow without hiding critical actions or state. |
+| Alternate date/currency formatting | Relevant S1/management surfaces format without hard-coded width assumptions. |
+| No save | Surfaces do not imply a usable save/resume capability when no save exists for the tested state; unavailable behavior is explicit. |
+| Save/load failure where relevant | A failed save/load never masquerades as success; recovery/next safe action is clear. |
+| No match frame yet | Match View does not falsely present the match as live/ended; waiting/initial state is intelligible. |
+| Disabled action with reason | The reason is available when it affects the player's next decision. |
+| Missing art | Fallback preserves identity/layout and does not create a blank critical region. |
+| Event-heavy match | HUD/stat attention remains usable under dense events. |
+| Unusual scoreline | Score/result hierarchy survives wider values. |
+| Full-time/frozen state | Tactical input is unavailable; save/report behavior is not confused with a still-live match. |
+| Smallest supported desktop | No critical action or information is pushed irretrievably off-screen. |
+| 1920×1080 reference | Intended hierarchy/density matches the reference composition. |
+| High-resolution/ultrawide behavior | Expansion does not produce unusable line lengths, extreme separation or floating controls. |
+| Max supported text scale | Critical path remains operable; focus/control relationships remain clear. |
+| Keyboard only | Every critical action, including S0-T7 back/cancel, is reachable in coherent order; no focus trap; state is visible without hover. |
+| Mouse only | Complete path, including S0-T7 back/cancel, without keyboard-only dependency. |
 | Audio muted/caption path | No required S0 information depends on sound alone. |
 
 For S0 conditions that do not apply to a given prototype, record `N/A` with a reason rather than
-silently skipping the row.
+silently skipping the row. A generic error-state check does not substitute for the two binding F4.6
+save profiles above.
 
 ---
 
@@ -235,6 +244,7 @@ Create one record per participant and one consolidated finding table per tested 
 | S0-T4 | | | | | | | |
 | S0-T5 | | | | | | | |
 | S0-T6 | | | | | | | |
+| S0-T7 | | | | | | | |
 
 ### 7.3 Finding ledger
 
@@ -278,14 +288,16 @@ After both sessions, record:
 |---|---|
 | Two independent participants completed the round | PASS / FAIL |
 | All prescribed tasks attempted where honestly testable | PASS / FAIL |
+| Back/cancel task S0-T7 attempted | PASS / FAIL |
 | Unresolved Blockers | count |
 | Unresolved Majors | count |
 | Owner-accepted Majors with rationale | IDs / none |
 | Second round required | yes / no |
 | Gate G | PASS / FAIL |
 
-Gate G passes only when both independent participants completed the round, there is no unresolved
-Blocker, and every remaining Major has explicit owner acceptance with rationale.
+Gate G passes only when both independent participants completed the round, all honestly testable
+prescribed tasks including back/cancel were attempted, there is no unresolved Blocker, and every
+remaining Major has explicit owner acceptance with rationale.
 
 ---
 
@@ -313,8 +325,8 @@ semantics and evidence-backed interaction states.
 | F4 requirement | Status | Evidence / blocker |
 |---|---|---|
 | Four-layer method made repeatable | READY | §§2, 5, 6, 10 |
-| Scripted self-walkthrough defined | READY | §5 |
-| S0 task protocol defined | READY | §§3, 6, 7 |
+| Scripted self-walkthrough defined | READY | §5 covers the complete F4.6 minimum profile set plus Gate-E-only resilience checks |
+| S0 task protocol defined | READY | §§3, 6, 7 include the required back/cancel task |
 | Severity/disposition repeatable | READY | §§8–9 |
 | Evidence capture format defined | READY | §7 |
 | §10.1 UX-workstream accountable owner assigned | **OPEN** | §4.0 assignee is TBD |
@@ -325,3 +337,12 @@ semantics and evidence-backed interaction states.
 assign the UX-workstream accountable owner and identify/recruit S0-P1 and S0-P2. No UX or client
 implementation work should claim Gate G is available until the participant rows are closed, and the
 workstream should not claim F4 complete until all three assignments are explicit.
+
+---
+
+## 12. Version History
+
+| Version | Date | Change |
+|---|---|---|
+| 0.1 | September 11, 2026 | Created the repeatable F4 validation packet: four-layer method, S0 task set, participant mechanism, Gate-E walkthrough matrix, moderator/evidence templates, severity/disposition rules and Gate-G/Gate-J continuity. F4 remained open on the §10.1 UX owner plus two real participant assignments. |
+| 0.2 | September 11, 2026 | Review correction: added the binding F4.6 `no save` and `save/load failure where relevant` profiles; added S0-T7 to exercise Gate F back/cancel behavior; narrowed S0-T1 so current New Game/start limitations are recorded honestly; added this version history and tightened the READY claims to the corrected coverage. |
