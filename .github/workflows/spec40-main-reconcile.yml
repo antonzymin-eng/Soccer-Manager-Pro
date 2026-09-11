@@ -1,0 +1,93 @@
+name: Temporary Spec 40 main reconciliation
+
+on:
+  push:
+    branches:
+      - openai/spec-40-finance-t2b-runtime
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge current main and resolve the one expected manifest conflict
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_rc=$?
+          set -e
+
+          conflicts="$(git diff --name-only --diff-filter=U)"
+          if [ "$merge_rc" -ne 0 ]; then
+            if [ "$conflicts" != "docs/tracking/file-manifest.md" ]; then
+              echo "Unexpected conflicts:" >&2
+              printf '%s\n' "$conflicts" >&2
+              exit 1
+            fi
+            git checkout --ours docs/tracking/file-manifest.md
+          elif [ -n "$conflicts" ]; then
+            echo "Unexpected unresolved paths despite successful merge: $conflicts" >&2
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('docs/tracking/file-manifest.md')
+          s = p.read_text()
+
+          def replace_once(old, new):
+              global s
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'file-manifest guard failed; count={count}: {old[:140]!r}')
+              s = s.replace(old, new, 1)
+
+          # Keep the finance landing newest, but retain PR #393's already-main lifecycle entry immediately below it.
+          replace_once(
+              "**NEW (4):** `src/season-save/SeasonFinanceRuntime.cs` (+ `.meta`) and `src/season-save/tests/SeasonLoopFinanceTests.cs` (+ `.meta`). **Modified production:** `src/season-save/League.cs` and `src/season-save/SeasonLoop.cs`. `League.CreateLoop` is now the #30-owned one-time new-game bootstrap seam for #40; `SeasonLoop` exposes keyed finance observer/query/transaction surfaces and stages each club's season settlement at (b') until `BeginNextSeason` succeeds, preserving refused-roll atomicity. The same landing reconciles #30/#40 spec text and records resolved `ERR-030-051`; the maintained header-chain pointers for #30 §3 and the error log are advanced below to their new versions.\n\n**Last Updated (prior):** September 10, 2026 — **Wiring-backlog W4's evidence corrected, and a dispatched measurement lane landed after review found its first cut could report a measurement that never happened. Documentation + CI tooling only; no `src/` file touched, so no suite-count delta and no gate owed on `src/`.**\n",
+              "**NEW (4):** `src/season-save/SeasonFinanceRuntime.cs` (+ `.meta`) and `src/season-save/tests/SeasonLoopFinanceTests.cs` (+ `.meta`). **Modified production:** `src/season-save/League.cs` and `src/season-save/SeasonLoop.cs`. `League.CreateLoop` is now the #30-owned one-time new-game bootstrap seam for #40; `SeasonLoop` exposes keyed finance observer/query/transaction surfaces and stages each club's season settlement at (b') until `BeginNextSeason` succeeds, preserving refused-roll atomicity. Review correction keeps ordinary finance composition validation-only: only `SeasonLoop.Restore` migrates a persisted empty T1b block; the generic legacy/unwired empty state fails loud on finance use. The same landing reconciles #30/#40 spec text and records resolved `ERR-030-051`; the maintained header-chain pointers for #30 §3 and the error log are advanced below to their new versions.\n\n**Last Updated (prior):** September 11, 2026 — **PR #393 P5b lifecycle prerequisite: host-free repeated-match session ownership lands as one owner-approved bounded, deliberately unconsumed prerequisite.**\n\n**NEW (4):** `src/match-client-core/MatchSessionLifecycle.cs` + `.meta`, and `src/match-client-core/tests/MatchSessionLifecycleTests.cs` + `.meta`. **Modified tracking:** `docs/tracking/interactive-unity-client-design.md`, `docs/tracking/open-issues.md`, `docs/tracking/path-to-playable-roadmap.md`, `docs/tracking/CHANGELOG-src.md`, and this manifest. The lifecycle remains unconsumed until the UX-Gate-I-authorized Unity `Attach(MatchSession)` / shell binding; owner decision: no second unconsumed lifecycle/UI prerequisite may land before it is consumed. No new assembly/dependency and no simulation, RNG, schema, save-format or navigation-graph change. Gate result is not predicted here; current-head CI is authoritative.\n\n**Last Updated (prior):** September 10, 2026 — **Wiring-backlog W4's evidence corrected, and a dispatched measurement lane landed after review found its first cut could report a measurement that never happened. Documentation + CI tooling only; no `src/` file touched, so no suite-count delta and no gate owed on `src/`.**\n")
+
+          replace_once(
+              "| `src/season-save/SeasonFinanceCoherence.cs` | #40 T1b / ERR-030-050 shared Save, Load, and loop-composition rule: empty legal pre-T2; non-empty finance ClubIds exactly equal the current `SeasonState.ClubIds` |",
+              "| `src/season-save/SeasonFinanceCoherence.cs` | #40 T1b/T2b / ERR-030-050 shared club-universe validator: ordinary `Normalize` is validation-only (legacy generic empty remains empty; non-empty ClubIds exactly equal `SeasonState.ClubIds`); `NormalizeLegacyRestore` is the sole compatibility migration for an empty persisted T1b block |")
+          replace_once(
+              "| `src/season-save/tests/SeasonLoopFinanceTests.cs` | #40 T2b lifecycle locks: canonical new-game bootstrap, keyed ledger routing, settlement from the final table, stable ClubId finance set across repeated rolls, and refused-roll finance immutability |",
+              "| `src/season-save/tests/SeasonLoopFinanceTests.cs` | #40 T2b lifecycle locks: canonical bootstrap; generic-empty fail-loud behavior; Restore-only legacy migration; career/progression/discipline preservation; keyed ledger routing; independently asserted winner-vs-last-place settlement economics; stable ClubIds across repeated rolls; refused-roll finance immutability |")
+
+          # Reapply PR #393's two inventory rows that are present on main but absent from this branch's pre-merge manifest.
+          match_session = "| `MatchSession.cs` | Composition root — builds and wires engine + streamer + driver, installs the drain hook, exposes read = frames / write = commands / `ServiceOnce`. **v1.2 (P6):** constructor split into a static `BootEngine` (boot-only mutators) + a private engine-agnostic wiring ctor, so `RestoreFrom(blob, squads)` can build a session over a RESTORED engine without re-applying boot mutators (`ConfigureSquads` would throw on a ticked engine; re-staging tactics would overwrite restored ones). Adds `TickOnce()` (the head-less deterministic advance, fail-loud against a `Start()`ed session), `CurrentTick` / `MatchEnded` / `CurrentSnapshotDigest` reads, and `CaptureSave()` — the durable capture riding the `ServiceOnce` seam, with §6.3's drained-empty-before-capture invariant held by ORDERING (drain, then capture, one sim-thread pass) and an `Encode` fault handed back to the caller instead of killing the pacing thread |\n"
+          lifecycle = "| `MatchSessionLifecycle.cs` | **P5b prerequisite (Sep 11, 2026)** — host-free serial owner above single-match `MatchSession`; fresh not-started replacement, predecessor Stop-before-publish, explicit clear, chosen non-revocation of stale never-started raw references. Owner-approved as exactly one bounded unconsumed prerequisite until the Gate-I-authorized Unity binding consumes it. |\n"
+          if lifecycle not in s:
+              replace_once(match_session, match_session + lifecycle)
+
+          match_tests = "| `tests/MatchSessionTests.cs` | Neutral build, off-tick `ServiceOnce` drain through a real engine, GK-heading setup, both-or-neither squad guard. **P6:** `TickOnce` advance + pre-tick stamping, its fail-loud refusal to race a `Start()`ed pacing loop, the digest chain advancing, the §6.3 drained-empty-before-capture invariant (a command enqueued immediately before `CaptureSave` must come back applied and logged — the non-vacuous form of that lock), a paused capture, and `RestoreFrom` resuming at the saved tick with a fresh log |\n"
+          lifecycle_tests = "| `tests/MatchSessionLifecycleTests.cs` | **P5b prerequisite** — eight host-free lifecycle locks: empty/current state, null refusal, fresh repeat-match composition, chosen stale-never-started-reference boundary, running predecessor shutdown and idempotent teardown. |\n"
+          if lifecycle_tests not in s:
+              replace_once(match_tests, match_tests + lifecycle_tests)
+
+          p.write_text(s)
+          PY
+
+          git add docs/tracking/file-manifest.md
+          rm .github/workflows/spec40-main-reconcile.yml
+          git add -u .github/workflows/spec40-main-reconcile.yml
+
+          if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+            echo "Unresolved merge conflicts remain" >&2
+            git diff --name-only --diff-filter=U >&2
+            exit 1
+          fi
+
+          git commit -m "merge: reconcile main into Spec 40 T2b"
+          git push
