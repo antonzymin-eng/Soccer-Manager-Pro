@@ -6,7 +6,7 @@
 //           Code Standards #20
 // Purpose:  Locks the host-free serial-session lifecycle needed before P5b may hand Tactics Setup to
 //           Match View: empty/current semantics, null refusal, replacement, repeat-match freshness,
-//           running-session shutdown, and idempotent teardown.
+//           running-session shutdown, stale-reference boundary, and idempotent teardown.
 
 using System;
 
@@ -81,6 +81,23 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
 
         [Test]
+        public void CreateSession_NeverStartedPredecessor_DoesNotRevokeStaleRawReference()
+        {
+            var lifecycle = new MatchSessionLifecycle();
+            MatchSession first = lifecycle.CreateSession(MatchSetup.NeutralDemo(FirstSeed));
+
+            MatchSession second = lifecycle.CreateSession(MatchSetup.NeutralDemo(SecondSeed));
+
+            Assert.AreSame(second, lifecycle.Current);
+            Assert.DoesNotThrow(() => first.TickOnce(),
+                "lifecycle ownership does not revoke a caller-held raw reference to a never-started session");
+            Assert.AreEqual(1UL, first.CurrentTick,
+                "positive control: the stale raw reference remains independently usable");
+            Assert.AreEqual(0UL, second.CurrentTick,
+                "using the stale predecessor must not mutate the lifecycle's replacement");
+        }
+
+        [Test]
         public void CreateSession_WhenCurrentPlaybackIsRunning_StopsOldSessionBeforeReplacement()
         {
             var lifecycle = new MatchSessionLifecycle();
@@ -125,5 +142,7 @@ namespace TacticalDirector.MatchClientCore.Tests
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.1     | 2026-09-11 | —      | Review: lock stale never-started raw-reference boundary;       |
+// |         |            |        | lifecycle coverage now 8 tests.                                |
 // | 1.0     | 2026-09-11 | —      | Initial P5b host-free lifecycle coverage (7 tests).            |
 #endregion
