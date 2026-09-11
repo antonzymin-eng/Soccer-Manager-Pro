@@ -25,17 +25,16 @@ namespace TacticalDirector.MatchClientCore
     /// <para>
     /// This is an ownership selector, not a capability-revocation wrapper. <see cref="MatchSession.Stop"/>
     /// delegates to <c>LiveMatchStreamer.Stop()</c>, whose existing contract is a no-op before playback
-    /// has started. Therefore a caller that kept a stale reference to a never-started predecessor could
-    /// still use that stale object. P5b's later <c>Attach(MatchSession)</c> binding must replace its held
-    /// reference atomically and must never keep using a session after this lifecycle installs another.
-    /// A predecessor running through <see cref="MatchSession.Start"/> is fully stopped/joined before the
-    /// replacement becomes current.
+    /// has started. Therefore a caller that kept a stale reference to a never-started predecessor can
+    /// still service that stale object. This permissive boundary is CHOSEN for this bounded prerequisite,
+    /// not accidental: the later P5b <c>Attach(MatchSession)</c> binding must replace its held reference
+    /// atomically and must never keep using a session after this lifecycle installs another. A running
+    /// predecessor is fully stopped/joined before the replacement becomes current.
     /// </para>
     /// <para>
-    /// Direct head-less driving is outside that Stop guarantee. A caller invoking
-    /// <see cref="MatchSession.TickOnce"/> or <see cref="MatchSession.ServiceOnce"/> on another thread
-    /// must quiesce that thread before replacement; Stop owns the streamer's paced thread, not arbitrary
-    /// external callers.
+    /// Direct-driving callers are outside Stop's paced-thread authority. A caller using TickOnce or
+    /// ServiceOnce from another thread must quiesce that external driver before replacement; Stop only
+    /// governs the streamer's own pacing loop.
     /// </para>
     /// <para>
     /// <see cref="CreateSession"/> does <b>not</b> call <see cref="MatchSession.Start"/>. Construction,
@@ -80,8 +79,8 @@ namespace TacticalDirector.MatchClientCore
         /// valid current match and leave the lifecycle empty.
         /// </para>
         /// <para>
-        /// If predecessor Stop throws, the exception propagates and the predecessor remains
-        /// <see cref="Current"/>. The already-constructed replacement is not installed.
+        /// If predecessor Stop throws, the exception propagates and the predecessor remains current;
+        /// the already-constructed replacement is discarded rather than published over a failed teardown.
         /// </para>
         /// </summary>
         /// <param name="setup">Immutable boot configuration for the new match. Must not be null.</param>
@@ -109,9 +108,9 @@ namespace TacticalDirector.MatchClientCore
 
         /// <summary>
         /// Runs Stop on and forgets the current session. Idempotent when no session exists, which keeps
-        /// host teardown safe when initialization failed before a session was created. See the class
-        /// ownership note for the existing Stop-before-Start and direct-headless-driving boundaries.
-        /// If Stop throws, the exception propagates and the current reference is retained.
+        /// host teardown safe when initialization failed before a session was created. If Stop throws,
+        /// the exception propagates and the current reference is retained. See the class ownership note
+        /// for the existing Stop-before-Start no-op behavior.
         /// </summary>
         public void ClearSession()
         {
@@ -128,8 +127,9 @@ namespace TacticalDirector.MatchClientCore
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
-// | 1.1     | 2026-09-11 | —      | Review: document Stop-failure retention and the direct         |
-// |         |            |        | TickOnce/ServiceOnce concurrency boundary.                     |
+// | 1.2     | 2026-09-11 | —      | Owner-approved bounded prerequisite: chosen permissive stale-  |
+// |         |            |        | reference boundary and direct-drive/Stop-failure docs.         |
+// | 1.1     | 2026-09-11 | —      | Review: document Stop failure and direct-driving boundaries.   |
 // | 1.0     | 2026-09-11 | —      | P5b lifecycle slice: host-free current-session ownership,      |
 // |         |            |        | repeat-match replacement, and idempotent clear.                |
 #endregion
