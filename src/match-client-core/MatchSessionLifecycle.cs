@@ -28,7 +28,14 @@ namespace TacticalDirector.MatchClientCore
     /// has started. Therefore a caller that kept a stale reference to a never-started predecessor could
     /// still use that stale object. P5b's later <c>Attach(MatchSession)</c> binding must replace its held
     /// reference atomically and must never keep using a session after this lifecycle installs another.
-    /// A running predecessor is fully stopped/joined before the replacement becomes current.
+    /// A predecessor running through <see cref="MatchSession.Start"/> is fully stopped/joined before the
+    /// replacement becomes current.
+    /// </para>
+    /// <para>
+    /// Direct head-less driving is outside that Stop guarantee. A caller invoking
+    /// <see cref="MatchSession.TickOnce"/> or <see cref="MatchSession.ServiceOnce"/> on another thread
+    /// must quiesce that thread before replacement; Stop owns the streamer's paced thread, not arbitrary
+    /// external callers.
     /// </para>
     /// <para>
     /// <see cref="CreateSession"/> does <b>not</b> call <see cref="MatchSession.Start"/>. Construction,
@@ -72,6 +79,10 @@ namespace TacticalDirector.MatchClientCore
         /// The replacement is constructed first. Therefore a constructor failure cannot tear down a
         /// valid current match and leave the lifecycle empty.
         /// </para>
+        /// <para>
+        /// If predecessor Stop throws, the exception propagates and the predecessor remains
+        /// <see cref="Current"/>. The already-constructed replacement is not installed.
+        /// </para>
         /// </summary>
         /// <param name="setup">Immutable boot configuration for the new match. Must not be null.</param>
         /// <returns>The newly installed session; identical by reference to <see cref="Current"/>.</returns>
@@ -99,7 +110,8 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>
         /// Runs Stop on and forgets the current session. Idempotent when no session exists, which keeps
         /// host teardown safe when initialization failed before a session was created. See the class
-        /// ownership note for the existing Stop-before-Start no-op behavior.
+        /// ownership note for the existing Stop-before-Start and direct-headless-driving boundaries.
+        /// If Stop throws, the exception propagates and the current reference is retained.
         /// </summary>
         public void ClearSession()
         {
@@ -116,6 +128,8 @@ namespace TacticalDirector.MatchClientCore
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.1     | 2026-09-11 | —      | Review: document Stop-failure retention and the direct         |
+// |         |            |        | TickOnce/ServiceOnce concurrency boundary.                     |
 // | 1.0     | 2026-09-11 | —      | P5b lifecycle slice: host-free current-session ownership,      |
 // |         |            |        | repeat-match replacement, and idempotent clear.                |
 #endregion
