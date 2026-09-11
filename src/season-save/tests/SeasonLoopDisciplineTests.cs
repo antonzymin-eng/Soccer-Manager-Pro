@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
+// Modified: 2026-09-11 (#40 T2b — season-boundary discipline fixtures carry finance state)
 // Modified: 2026-08-16, latest of all again (M-C, adversarial review — v1.13: the production
 //           onPitchAgentIdCount argument at SeasonLoop.PlayThroughEngine's CardLedgerFold construction
 //           site (MatchEngineConstants.SQUAD_SIZE) had no lock — ApplySubstitution is reachable only
@@ -148,7 +149,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 league,
                 progressionOrNull: null,
                 disciplineOrNull: discipline,
-                disciplineDriverOrNull: disciplineDriverOrNull);
+                disciplineDriverOrNull: disciplineDriverOrNull,
+                financesOrNull: SeasonLoopScenarios.InitialFinances(league));
         }
 
         /// <summary>
@@ -1633,4 +1635,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | MatchEngineConstants.SQUAD_SIZE and re-ran green. Both mutations  |
 // |         |            |        | were applied to the ACTUAL FILE, built and run via dotnet test,   |
 // |         |            |        | not merely reasoned about.                                        |
+// | 1.14    | 2026-09-11 | —      | #40 T2b: LoopOver carries canonical finance state at boundary.   |
 #endregion
