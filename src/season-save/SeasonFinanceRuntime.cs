@@ -44,11 +44,15 @@ namespace TacticalDirector.SeasonSave
                 throw new ArgumentNullException(nameof(entries));
             }
 
-            // Empty remains legal for a legacy/pre-T2 loop composed through the generic constructor.
-            // The T2b production bootstrap (League.CreateLoop) always supplies one entry per club.
+            // T2b composition no longer permits an empty LIVE finance set. Older empty T1b saves and
+            // generic pre-T2 loops are upgraded by SeasonFinanceCoherence.Normalize before assignment.
+            // Reaching this branch therefore means the runtime invariant was broken after composition;
+            // silently returning an empty settlement would let a career skip prize/budget settlement.
             if (entries.Length == 0)
             {
-                return Array.Empty<ClubFinanceEntry>();
+                throw new InvalidOperationException(
+                    "T2b finance state is empty after composition. SeasonFinanceCoherence must upgrade "
+                    + "legacy empty input to one entry per SeasonState club before a season can roll.");
             }
 
             var settled = new ClubFinanceEntry[entries.Length];
@@ -113,8 +117,8 @@ namespace TacticalDirector.SeasonSave
             if (entries.Length == 0)
             {
                 throw new InvalidOperationException(
-                    "Club finances are not bootstrapped on this SeasonLoop. Create a new game through "
-                    + "League.CreateLoop or restore populated #40 state before using finance commands (F6).");
+                    "Club finances are not initialized on this SeasonLoop; T2b composition requires "
+                    + "one finance entry per SeasonState club (F6 / FR-FN-025).");
             }
 
             int low = 0;
@@ -150,4 +154,6 @@ namespace TacticalDirector.SeasonSave
 // | Version | Date       | Author | Notes                                                        |
 // | 1.0     | 2026-09-11 | —      | #40 T2b: keyed runtime access plus staged boundary settlement. |
 // | 1.1     | 2026-09-11 | —      | Alias finance state type to avoid namespace/type ambiguity.   |
+// | 1.2     | 2026-09-11 | —      | Review: empty runtime state is now an invariant failure;      |
+// |         |            |        | legacy empties are upgraded during composition instead.       |
 #endregion
