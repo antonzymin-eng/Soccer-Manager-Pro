@@ -1,0 +1,174 @@
+name: Temporary PR393 tracking close-out
+
+on:
+  push:
+    branches:
+      - ui/p5b-lifecycle-owner
+
+permissions:
+  contents: write
+
+jobs:
+  closeout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/p5b-lifecycle-owner
+          fetch-depth: 0
+
+      - name: Patch tracking records
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def read(path):
+              return Path(path).read_text(encoding="utf-8")
+
+          def write(path, text):
+              Path(path).write_text(text, encoding="utf-8")
+
+          # 1) Durable owner-approved bounded-unconsumed constraint.
+          path = "docs/tracking/open-issues.md"
+          text = read(path)
+          marker = "- **Approval tags —"
+          if "MatchSessionLifecycle` is the ONE bounded unconsumed prerequisite" not in text:
+              idx = text.find(marker)
+              if idx < 0:
+                  raise SystemExit("open-issues insertion anchor not found")
+              record = (
+                  "**UPDATE September 11, 2026 — OWNER-APPROVED bounded P5b prerequisite.** "
+                  "`MatchSessionLifecycle` is the ONE bounded unconsumed prerequisite permitted before UX Gate I authorizes the Unity shell binding. "
+                  "The concrete consumer is already named by closed PR #361: the Unity `Attach(MatchSession)` / shell binding that replaces `MatchClientBehaviour`'s internal demo-session ownership. "
+                  "**Constraint:** no second unconsumed lifecycle/UI prerequisite may land before `MatchSessionLifecycle` is consumed by that authorized binding. "
+                  "This is deliberately a live remainder, not a precedent for consumer-less surfaces: keep this record active until the binding consumes the type, then move the resolved record through the normal archive path. "
+                  "The owner approved this exact bounded exception on September 11, 2026 after review of PR #393.\n\n"
+              )
+              text = text[:idx] + record + text[idx:]
+              write(path, text)
+
+          # 2) Canonical file inventory.
+          path = "docs/tracking/file-manifest.md"
+          text = read(path)
+          if "PR #393 P5b lifecycle prerequisite" not in text:
+              title = "# File Manifest (Post-Migration Baseline)\n\n"
+              if not text.startswith(title):
+                  raise SystemExit("file-manifest title anchor changed")
+              remainder = text[len(title):]
+              if not remainder.startswith("**Last Updated:**"):
+                  raise SystemExit("file-manifest newest Last Updated anchor missing")
+              remainder = remainder.replace("**Last Updated:**", "**Last Updated (prior):**", 1)
+              head = (
+                  "**Last Updated:** September 11, 2026 — **PR #393 P5b lifecycle prerequisite: host-free repeated-match session ownership lands as one owner-approved bounded, deliberately unconsumed prerequisite.**\n\n"
+                  "**NEW (4):** `src/match-client-core/MatchSessionLifecycle.cs` + `.meta`, and `src/match-client-core/tests/MatchSessionLifecycleTests.cs` + `.meta`. "
+                  "**Modified tracking:** `docs/tracking/interactive-unity-client-design.md`, `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG-src.md`, and this manifest. "
+                  "The lifecycle is intentionally unconsumed until the UX-Gate-I-authorized Unity `Attach(MatchSession)` / shell binding; owner decision: no second unconsumed lifecycle/UI prerequisite may land before this one is consumed. "
+                  "No new assembly or dependency, no simulation/RNG/schema/save/navigation-graph change. The functional gate result is not predicted here; current-head CI is authoritative.\n\n"
+              )
+              text = title + head + remainder
+
+              lifecycle_row = "| `MatchSessionLifecycle.cs` | **P5b prerequisite (Sep 11, 2026)** — host-free owner of the serial sequence of single-match `MatchSession` instances; creates replacements before stopping predecessors, never auto-starts, exposes explicit clear, and deliberately does not revoke stale raw references to never-started predecessors. Owner-approved as exactly one bounded unconsumed prerequisite until the Gate-I-authorized Unity binding consumes it. |\n"
+              if "| `MatchSessionLifecycle.cs` |" not in text:
+                  m = re.search(r"(?m)^\| `MatchSession\.cs` \|.*\n", text)
+                  if not m:
+                      raise SystemExit("MatchSession.cs manifest row not found")
+                  text = text[:m.end()] + lifecycle_row + text[m.end():]
+
+              test_row = "| `tests/MatchSessionLifecycleTests.cs` | **P5b prerequisite** — eight host-free locks for empty/current state, null refusal, fresh repeat-match composition, chosen stale-never-started-reference boundary, running predecessor shutdown and idempotent teardown. |\n"
+              if "| `tests/MatchSessionLifecycleTests.cs` |" not in text:
+                  m = re.search(r"(?m)^\| `tests/MatchSessionTests\.cs` \|.*\n", text)
+                  if m:
+                      text = text[:m.end()] + test_row + text[m.end():]
+                  else:
+                      # Fall back to the first test row inside the match-client-core section only.
+                      s = text.find("### `src/match-client-core/`")
+                      e = text.find("\n### `src/", s + 1)
+                      if s < 0:
+                          raise SystemExit("match-client-core section not found")
+                      if e < 0:
+                          e = len(text)
+                      mm = re.search(r"(?m)^\| `tests/.*\n", text[s:e])
+                      if not mm:
+                          raise SystemExit("match-client-core test-row anchor not found")
+                      pos = s + mm.start()
+                      text = text[:pos] + test_row + text[pos:]
+              write(path, text)
+
+          # 3) Source history (the compact src/CLAUDE.md history authority).
+          path = "docs/tracking/CHANGELOG-src.md"
+          text = read(path)
+          if "v2.133 — **P5b repeated-match lifecycle prerequisite" not in text:
+              marker = "## Header chain\n\n"
+              idx = text.find(marker)
+              if idx < 0:
+                  raise SystemExit("CHANGELOG-src Header chain anchor missing")
+              start = idx + len(marker)
+              if not text.startswith("> **Last Updated:**", start):
+                  raise SystemExit("CHANGELOG-src newest entry anchor missing")
+              text = text[:start] + text[start:].replace("> **Last Updated:**", "> **Last Updated (prior):**", 1)
+              entry = (
+                  "> **Last Updated:** September 11, 2026 (v2.133 — **P5b repeated-match lifecycle prerequisite.** "
+                  "New `src/match-client-core/MatchSessionLifecycle.cs` + meta and `tests/MatchSessionLifecycleTests.cs` + meta. "
+                  "The host-free type owns serial `MatchSession` replacement without auto-starting and has eight locks. "
+                  "Owner decision: this is exactly one bounded deliberately-unconsumed prerequisite; no second unconsumed lifecycle/UI prerequisite may land before the Gate-I-authorized Unity `Attach(MatchSession)` / shell binding consumes it. "
+                  "No new assembly/dependency, RNG, schema, save-format, simulation or navigation-graph change. Current-head CI, not this history entry, owns the gate verdict.)\n>\n"
+              )
+              text = text[:start] + entry + text[start:]
+
+              vh = re.search(r"(?im)^##\s+VERSION HISTORY\s*$", text)
+              if not vh:
+                  raise SystemExit("CHANGELOG-src VERSION HISTORY heading missing")
+              table = re.search(r"(?m)^\|\s*Version\s*\|.*\n^\|[-: |]+\|\s*$", text[vh.end():])
+              if not table:
+                  raise SystemExit("CHANGELOG-src version table header missing")
+              insert_at = vh.end() + table.end()
+              row = "\n| 2.133 | September 11, 2026 | P5b host-free repeated-match `MatchSessionLifecycle` prerequisite + eight locks; owner-approved as the one bounded unconsumed prerequisite until the Gate-I-authorized Unity binding consumes it. |"
+              text = text[:insert_at] + row + text[insert_at:]
+              write(path, text)
+
+          # 4) Owning design supplement / P5b and its version history.
+          path = "docs/tracking/interactive-unity-client-design.md"
+          text = read(path)
+          if "P5b prerequisite landed September 11, 2026" not in text:
+              anchor = "#### P5b — Unity UGUI binding (host, cert-verified)\n"
+              idx = text.find(anchor)
+              if idx < 0:
+                  raise SystemExit("P5b section anchor missing")
+              insert_at = idx + len(anchor)
+              note = (
+                  "\n**P5b prerequisite landed September 11, 2026 — deliberately unconsumed, owner-bounded.** "
+                  "`MatchSessionLifecycle` now exists in gate-compiled `match-client-core` as the serial owner above single-match `MatchSession`: it constructs a fresh not-yet-started replacement, stops a running predecessor before publishing the replacement, and provides explicit teardown. "
+                  "It is intentionally not consumed yet because the concrete consumer is the Gate-I-authorized Unity `Attach(MatchSession)` / shell binding identified by PR #361. "
+                  "Owner decision: exactly this one consumer-less prerequisite is allowed; **no second unconsumed lifecycle/UI prerequisite may land before this one is consumed**. "
+                  "The never-started predecessor boundary is chosen rather than accidental: `Stop()` is a no-op before paced playback starts, so lifecycle selection does not revoke a caller-held stale raw reference; the eventual Unity binding must atomically replace its held session and never continue using the predecessor. "
+                  "Eight host-free tests lock the lifecycle surface. This landing does not make P5b complete and does not authorize the UGUI binding ahead of UX Gate I.\n"
+              )
+              text = text[:insert_at] + note + text[insert_at:]
+
+              vh = text.find("## Version History")
+              if vh < 0:
+                  raise SystemExit("interactive client Version History heading missing")
+              header = re.search(r"(?m)^\| Version \| Date \| Notes \|\n^\|[-: |]+\|\s*$", text[vh:])
+              if not header:
+                  raise SystemExit("interactive client version table header missing")
+              insert_at = vh + header.end()
+              row = "\n| 0.22 | 2026-09-11 | **P5b prerequisite:** `MatchSessionLifecycle` + eight host-free tests landed. Owner approves exactly one bounded deliberately-unconsumed prerequisite; no second unconsumed lifecycle/UI prerequisite may land before the Gate-I-authorized `Attach(MatchSession)` / shell binding consumes it. Chosen stale-never-started-reference boundary and Stop/direct-drive limits recorded; P5b itself remains open. |"
+              text = text[:insert_at] + row + text[insert_at:]
+              write(path, text)
+
+          PY
+
+          python3 tools/recurring-defect-lint.py --repo .
+          python3 tools/doc-consistency-check.py --repo .
+
+      - name: Commit close-out and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/temp-pr393-tracking-closeout.yml
+          git add docs/tracking/open-issues.md docs/tracking/file-manifest.md docs/tracking/CHANGELOG-src.md docs/tracking/interactive-unity-client-design.md
+          git commit -m "docs(ui): close P5b lifecycle tracking"
+          git push origin HEAD:ui/p5b-lifecycle-owner
