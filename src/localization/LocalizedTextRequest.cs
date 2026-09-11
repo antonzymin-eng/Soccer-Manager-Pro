@@ -7,10 +7,12 @@
 // Purpose:  Immutable locale-neutral request envelope for later L2 rendering.
 // ============================================================================
 
+using System;
+
 namespace TacticalDirector.Localization
 {
     /// <summary>Locale-neutral procedural-text request assembled outside simulation producers.</summary>
-    public readonly struct LocalizedTextRequest
+    public readonly struct LocalizedTextRequest : IEquatable<LocalizedTextRequest>
     {
         /// <summary>Creates a fully typed procedural-text request.</summary>
         public LocalizedTextRequest(
@@ -46,6 +48,45 @@ namespace TacticalDirector.Localization
 
         /// <summary>Gets the producer-native citation-kind ordinal; the producer namespace is <see cref="Id"/>.</summary>
         public int CitationKind { get; }
+
+        /// <inheritdoc />
+        public bool Equals(LocalizedTextRequest other)
+        {
+            return Id.Equals(other.Id)
+                && SelectionDraw == other.SelectionDraw
+                && Slots.Equals(other.Slots)
+                && Selectors.Equals(other.Selectors)
+                && HasCitedEpisode == other.HasCitedEpisode
+                && CitationKind == other.CitationKind;
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(object obj)
+        {
+            return obj is LocalizedTextRequest other && Equals(other);
+        }
+
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            int hash = LocalizationHash.Combine(Id.GetHashCode(), LocalizationHash.Long(unchecked((long)SelectionDraw)));
+            hash = LocalizationHash.Combine(hash, Slots.GetHashCode());
+            hash = LocalizationHash.Combine(hash, Selectors.GetHashCode());
+            hash = LocalizationHash.Combine(hash, HasCitedEpisode ? 1 : 0);
+            return LocalizationHash.Combine(hash, CitationKind);
+        }
+
+        /// <summary>Compares two requests by value.</summary>
+        public static bool operator ==(LocalizedTextRequest left, LocalizedTextRequest right)
+        {
+            return left.Equals(right);
+        }
+
+        /// <summary>Compares two requests by value.</summary>
+        public static bool operator !=(LocalizedTextRequest left, LocalizedTextRequest right)
+        {
+            return !left.Equals(right);
+        }
     }
 }
 
@@ -53,4 +94,5 @@ namespace TacticalDirector.Localization
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial L1 request with typed selector operands. |
+// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Add explicit deterministic value equality/hash and operators. |
 #endregion
