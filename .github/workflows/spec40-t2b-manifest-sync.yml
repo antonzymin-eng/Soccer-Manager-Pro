@@ -1,0 +1,108 @@
+name: Spec 40 T2b manifest sync
+
+on:
+  push:
+    branches:
+      - openai/spec-40-finance-t2b-runtime
+
+permissions:
+  contents: write
+
+jobs:
+  sync-manifest:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: openai/spec-40-finance-t2b-runtime
+          fetch-depth: 0
+      - name: Patch manifest
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('docs/tracking/file-manifest.md')
+          s = p.read_text(encoding='utf-8')
+
+          old_header = '**Last Updated:** September 10, 2026 — **Wiring-backlog W4\'s evidence corrected, and a dispatched measurement lane landed after review found its first cut could report a measurement that never happened. Documentation + CI tooling only; no `src/` file touched, so no suite-count delta and no gate owed on `src/`.**'
+          if s.count(old_header) != 1:
+              raise SystemExit('manifest newest-header anchor missing/ambiguous')
+          new_header = (
+              '**Last Updated:** September 11, 2026 — **#40 Club Finances T2b runtime wiring / `ERR-030-051` manifest sync.**\n'
+              '**NEW (4):** `src/season-save/SeasonFinanceRuntime.cs` (+ `.meta`) and '
+              '`src/season-save/tests/SeasonLoopFinanceTests.cs` (+ `.meta`). **Modified production:** '
+              '`src/season-save/League.cs` and `src/season-save/SeasonLoop.cs`. `League.CreateLoop` is now the '
+              '#30-owned one-time new-game bootstrap seam for #40; `SeasonLoop` exposes keyed finance '
+              'observer/query/transaction surfaces and stages each club\'s season settlement at (b\') until '
+              '`BeginNextSeason` succeeds, preserving refused-roll atomicity. The same landing reconciles #30/#40 '
+              'spec text and records resolved `ERR-030-051`; the maintained header-chain pointers for #30 §3 and '
+              'the error log are advanced below to their new versions.\n\n'
+              + old_header.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
+          )
+          s = s.replace(old_header, new_header, 1)
+
+          replacements = {
+              '`docs/specs/season-competition-loop/section-3.md` **v2.11 → v2.12**, since advanced to **v2.19**':
+                  '`docs/specs/season-competition-loop/section-3.md` **v2.11 → v2.12**, since advanced to **v2.20**',
+              '`docs/tracking/spec-error-log.md` **v2.42 → v2.43**, since advanced to **v2.54**':
+                  '`docs/tracking/spec-error-log.md` **v2.42 → v2.43**, since advanced to **v2.55**',
+              '`spec-error-log.md` citation (previously missing its own "since advanced to" clause) now reads **v2.42 → v2.43**, since advanced to **v2.54**':
+                  '`spec-error-log.md` citation (previously missing its own "since advanced to" clause) now reads **v2.42 → v2.43**, since advanced to **v2.55**',
+          }
+          for old, new in replacements.items():
+              if s.count(old) != 1:
+                  raise SystemExit(f'maintained-pointer anchor missing/ambiguous: {old[:80]}')
+              s = s.replace(old, new, 1)
+
+          old_league = '| `src/season-save/League.cs` | A3: the immutable bootstrap product; implements `ISquadProvider` (so one instance serves the engine, `SeasonSaveManager.Load` and A4\'s round loop); `CreateSeason(managedClubId)` → `SeasonState` via `SeasonState.CreateNew`; default objective = top half (KD-9) |'
+          new_league = '| `src/season-save/League.cs` | A3 + #40 T2b: immutable bootstrap product and `ISquadProvider`; `CreateSeason(managedClubId)` builds #30 state, while `CreateLoop(...)` is the canonical new-game composition seam that invokes `ClubFinanceEntry.CreateInitialForSquads` exactly once and passes the initialized #40 state into `SeasonLoop`; default objective = top half (KD-9) |'
+          if s.count(old_league) != 1:
+              raise SystemExit('League manifest row anchor missing')
+          s = s.replace(old_league, new_league, 1)
+
+          coh = '| `src/season-save/SeasonFinanceCoherence.cs.meta` | Unity metadata sidecar |'
+          runtime_rows = (
+              coh + '\n'
+              '| `src/season-save/SeasonFinanceRuntime.cs` | #40 T2b / ERR-030-051 composition mechanics owned by #30: stable-ClubId lookup; detached finance view; canonical ledger query/transaction routing; pure per-club season-boundary settlement staging from the final table |\n'
+              '| `src/season-save/SeasonFinanceRuntime.cs.meta` | Unity metadata sidecar |'
+          )
+          if s.count(coh) != 1:
+              raise SystemExit('SeasonFinanceCoherence meta row anchor missing')
+          s = s.replace(coh, runtime_rows, 1)
+
+          persist_meta = '| `src/season-save/tests/SeasonFinancePersistenceTests.cs.meta` | Unity metadata sidecar |'
+          test_rows = (
+              persist_meta + '\n'
+              '| `src/season-save/tests/SeasonLoopFinanceTests.cs` | #40 T2b lifecycle locks: canonical new-game bootstrap, keyed ledger routing, settlement from the final table, stable ClubId finance set across repeated rolls, and refused-roll finance immutability |\n'
+              '| `src/season-save/tests/SeasonLoopFinanceTests.cs.meta` | Unity metadata sidecar |'
+          )
+          if s.count(persist_meta) != 1:
+              raise SystemExit('finance persistence meta row anchor missing')
+          s = s.replace(persist_meta, test_rows, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+          git diff --check -- docs/tracking/file-manifest.md
+          python3 tools/doc-consistency-check.py --repo .
+      - name: Commit manifest through GitHub API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, urllib.parse, urllib.request
+          repo = os.environ['GH_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          branch = 'openai/spec-40-finance-t2b-runtime'
+          path = 'docs/tracking/file-manifest.md'
+          quoted = urllib.parse.quote(path, safe='/')
+          headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}
+          api = f'https://api.github.com/repos/{repo}/contents/{quoted}?ref={urllib.parse.quote(branch, safe="")}'
+          with urllib.request.urlopen(urllib.request.Request(api, headers=headers)) as r:
+              current = json.load(r)
+          payload = json.dumps({'message':'docs(finance): sync T2b file manifest','content':base64.b64encode(open(path,'rb').read()).decode('ascii'),'sha':current['sha'],'branch':branch}).encode()
+          req = urllib.request.Request(f'https://api.github.com/repos/{repo}/contents/{quoted}', data=payload, headers={**headers,'Content-Type':'application/json'}, method='PUT')
+          with urllib.request.urlopen(req) as r:
+              result = json.load(r)
+          print(result['commit']['sha'])
+          PY
