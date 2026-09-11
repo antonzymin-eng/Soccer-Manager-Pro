@@ -96,6 +96,18 @@ namespace TacticalDirector.Localization
             return hash;
         }
 
+        /// <summary>Compares two slot sets by canonical value.</summary>
+        public static bool operator ==(NamedSlotSet left, NamedSlotSet right)
+        {
+            return left.Equals(right);
+        }
+
+        /// <summary>Compares two slot sets by canonical value.</summary>
+        public static bool operator !=(NamedSlotSet left, NamedSlotSet right)
+        {
+            return !left.Equals(right);
+        }
+
         private static void SortAndValidate(NamedSlot[] slots)
         {
             for (int i = 0; i < slots.Length; i++)
@@ -118,12 +130,6 @@ namespace TacticalDirector.Localization
                 {
                     throw new ArgumentException("NamedSlotSet cannot contain duplicate slot names.", nameof(slots));
                 }
-
-                if (insert + 1 < slots.Length && i > 0
-                    && string.Equals(slots[insert].Name, slots[insert + 1].Name, StringComparison.Ordinal))
-                {
-                    throw new ArgumentException("NamedSlotSet cannot contain duplicate slot names.", nameof(slots));
-                }
             }
         }
     }
@@ -133,4 +139,5 @@ namespace TacticalDirector.Localization
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial immutable L1 named slot set. |
+// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Add equality operators and remove redundant duplicate check. |
 #endregion
