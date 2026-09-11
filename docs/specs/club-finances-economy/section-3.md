@@ -1,9 +1,10 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.5 — T3a accounting primitive: identity gate, checked daily revenue accrual, no producer/RNG/tick wiring)
+**Last Updated:** September 11, 2026 (v0.6 — T3a lifecycle: current-season revenue resets at settlement; FFP window still carries)
+**Last Updated (prior):** September 11, 2026 (v0.5 — T3a accounting primitive: identity gate, checked daily revenue accrual, no producer/RNG/tick wiring)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -35,9 +36,12 @@ SettleFinances(in ClubFinances prior, finalTablePosition, clubCount, in BoardMod
     result.WageBudget   = ScaleAndClampBudget(baseWageCeiling, board.BudgetMultiplierMillPermille)
                                                                         # SETS — overwrites prior ceiling
 
-    # WageBillAggregate / SeasonRevenueAccrued / FfpBalanceWindow are UNTOUCHED by the minimal projection —
-    # a committed wage does not vanish at season end (WageBillAggregate carries forward); the deep-tier
-    # accumulators reset or carry per their own T3 rules (deferred, KD-1/KD-8).
+    # T3a lifecycle closure: SeasonRevenueAccrued is CURRENT-season state. Any later FFP term that needs
+    # the completed season consumes prior.SeasonRevenueAccrued inside this same settlement before reset.
+    result.SeasonRevenueAccrued = 0
+
+    # WageBillAggregate carries: a committed wage does not vanish at season end.
+    # FfpBalanceWindow carries unchanged until the later FFP slice defines its own window update.
     return result
 
 ScaleAndClampBudget(baseCeiling, positiveMultiplier) -> long:
@@ -69,6 +73,13 @@ through the shared signed-Int32 loader; those accepted values can produce a `bas
 non-identity positive board multiplier would overflow `long` before a naïve post-multiply clamp ran. The cap
 therefore applies **before** any unsafe product, while ordinary below-cap values retain the exact same integer
 floor semantics.
+
+`SeasonRevenueAccrued` is explicitly a **current-season** accumulator at T3a. Resetting it in
+`SettleFinances` prevents a live daily accrual from silently spanning seasons. The reset does not discard any
+future FFP input: the FFP slice is required to derive its next-season penalty from
+`prior.SeasonRevenueAccrued` (and any other then-specified terms) before the returned value is reset. T3a does
+not guess how `FfpBalanceWindow` rolls, so that field is carried field-identically until its own slice lands.
+This rule is behaviour-neutral at Stage 2 because the accumulator is always zero there (KD-8).
 
 `SettleFinances` reads no caller state beyond its four parameters — it is a pure function, so calling it
 twice with identical inputs yields byte-identical output (no hidden clock, no RNG). A `ClubId` with no prior
@@ -232,7 +243,8 @@ Club 12, season 7, finishes **position 4 of 20** clubs. Prior `ClubFinances` (fr
 (`1,715,790 × 150 = 257,368,500`, integer-divided by 1000 floors to `257,368`). `× 1000/1000 = 307,368`
 unchanged. `result.WageBudget = 307,368` (SETS, overwriting the stale `180,000`).
 
-`WageBillAggregate` stays `95,000` — `SettleFinances` never touches it.
+`WageBillAggregate` stays `95,000` — `SettleFinances` never touches it. `SeasonRevenueAccrued` is reset to
+`0` for the new season; `FfpBalanceWindow` carries unchanged until its later T3 rule lands.
 
 **Post-`SettleFinances` state:** `{ Balance: 2,965,790, TransferBudget: 786,316, WageBudget: 307,368,
 WageBillAggregate: 95,000, SeasonRevenueAccrued: 0, FfpBalanceWindow: 0 }`.
@@ -263,4 +275,5 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 | 0.3 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** §3.1 now rejects every non-positive board multiplier before arithmetic; the lower budget clamp is not an authorization for a negative modifier. |
 | 0.4 | 2026-09-07 | — | **PR #363 Codex correction.** Replaces post-multiply clamping with an overflow-safe quotient/remainder scale-and-cap that preserves exact integer-floor semantics below the ceiling. |
 | 0.5 | 2026-09-11 | OpenAI | **T3a contract.** Adds the pure identity-gated daily sponsorship/matchday accounting primitive; pins checked arithmetic and field isolation while explicitly deferring amount producers, #30 tick wiring, RNG promotion, wage cash-out, and FFP. |
+| 0.6 | 2026-09-11 | OpenAI | **T3a lifecycle closure.** Defines `SeasonRevenueAccrued` as current-season state reset by `SettleFinances`; the future FFP term must consume the prior value before reset, while `FfpBalanceWindow` continues to carry until its own rule lands. |
 #endregion
