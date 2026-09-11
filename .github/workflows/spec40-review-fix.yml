@@ -1,0 +1,74 @@
+name: Temporary Spec 40 review fix
+
+on:
+  push:
+    branches:
+      - openai/spec-40-finance-t2b-runtime
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply exact guarded SeasonLoop replacements
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/season-save/SeasonLoop.cs')
+          s = path.read_text()
+
+          replacements = [
+              (
+                  "// Created:  2026-07-26\n// Modified: 2026-09-11 (ERR-030-051 — v1.32: #40 T2b runtime wiring. Finance bootstrap is owned by\n",
+                  "// Created:  2026-07-26\n// Modified: 2026-09-11 (T2b review — v1.33: legacy empty finance migration is Restore-only;\n//           generic legacy/unwired empty composition is preserved but every finance read/roll fails loud.)\n// Modified: 2026-09-11 (ERR-030-051 — v1.32: #40 T2b runtime wiring. Finance bootstrap is owned by\n",
+              ),
+              (
+                  "        // #40 T2b: live per-club finance state. League.CreateLoop bootstraps one entry per canonical\n        // squad for a new game; Restore threads the persisted entries back in. Empty remains legal only\n        // for the explicit legacy/pre-T2 generic-constructor path. Non-empty state is canonicalized and\n        // club-set checked by SeasonFinanceCoherence before this field is assigned.\n",
+                  "        // #40 T2b: live per-club finance state. League.CreateLoop bootstraps one entry per canonical\n        // squad for a new game. Restore validates populated persisted entries and upgrades ONLY an empty\n        // persisted T1b block. The generic constructor may still carry the explicit legacy/unwired empty\n        // state, but finance reads/commands and the season-boundary settlement fail loud on that state.\n",
+              ),
+              (
+                  "        /// <param name=\"financesOrNull\">The #40 finance entries this loop owns at runtime. Null or empty\n        /// remains legal only for legacy/pre-T2 generic composition; <see cref=\"League.CreateLoop\"/>\n        /// bootstraps new games and <see cref=\"Restore\"/> threads resumed state. A non-empty set must\n        /// exactly match the season's club set and is snapshot-copied/canonicalized at composition\n        /// (ERR-030-050 / ERR-030-051).</param>\n",
+                  "        /// <param name=\"financesOrNull\">The #40 finance entries this loop owns at runtime. Null or empty\n        /// is the explicit legacy/unwired state for this low-level generic constructor and is NOT silently\n        /// initialized here; finance reads/commands and settlement fail loud until a real set exists.\n        /// <see cref=\"League.CreateLoop\"/> bootstraps new games, while <see cref=\"Restore\"/> alone may\n        /// migrate an empty persisted T1b block. A non-empty set must exactly match the season's club set\n        /// and is snapshot-copied/canonicalized at composition (ERR-030-050 / ERR-030-051).</param>\n",
+              ),
+              (
+                  "            // ERR-030-050: #40 is persisted from T1b, so the loop must be able to carry the restored\n            // value before T2 gives it a producer. Null/empty is the explicit pre-T2 state. A non-empty\n            // set is snapshot-copied and must exactly match this season's stable ClubId universe.\n",
+                  "            // ERR-030-050 / T2b review: ordinary composition is validation-only. Null/empty stays\n            // the explicit legacy/unwired generic state; the Restore entry point performs the one allowed\n            // compatibility migration before it calls this constructor. A non-empty set is snapshot-copied\n            // and must exactly match this season's stable ClubId universe.\n",
+              ),
+              (
+                  "        /// <param name=\"financesOrNull\">The restored #40 per-club entries from\n        /// <see cref=\"SeasonSaveContents.Finances\"/>, or null/empty only for the pre-T2 composition.\n        /// ERR-030-050 restores Appendix B.1's persisted-family rule here: once the frame can contain\n        /// populated finance state, the documented resume path must be able to carry it even before the\n        /// runtime producer is wired. Otherwise Load→Restore→Save As can silently replace it with an\n        /// empty block because a new destination gives the overwrite guard nothing to compare against.</param>\n",
+                  "        /// <param name=\"financesOrNull\">The restored #40 per-club entries from\n        /// <see cref=\"SeasonSaveContents.Finances\"/>. A null/empty value here means the persisted T1b\n        /// pre-producer representation and is upgraded by this Restore entry point to one initial entry\n        /// per restored SeasonState ClubId before normal composition validation. No ordinary constructor\n        /// path performs that migration (ERR-030-050 / T2b review).</param>\n",
+              ),
+              (
+                  "        {\n            return new SeasonLoop(\n                world, SeasonStateCodec.Decode(seasonBlob), mode, careerOrNull, careerSquadsOrNull,\n                progressionOrNull, disciplineOrNull, financesOrNull);\n        }\n\n        /// <summary>\n        /// One calendar day, in the KD-2 pinned order",
+                  "        {\n            SeasonState restoredSeason = SeasonStateCodec.Decode(seasonBlob);\n            ClubFinanceEntry[] restoredFinances = SeasonFinanceCoherence.NormalizeLegacyRestore(\n                restoredSeason, financesOrNull, nameof(financesOrNull));\n\n            return new SeasonLoop(\n                world, restoredSeason, mode, careerOrNull, careerSquadsOrNull,\n                progressionOrNull, disciplineOrNull, restoredFinances);\n        }\n\n        /// <summary>\n        /// One calendar day, in the KD-2 pinned order",
+              ),
+              (
+                  "// | 1.32    | 2026-09-11 | —      | ERR-030-051 / #40 T2b: live keyed finance read/ledger commands;   |\n// |         |            |        | settlement staged at (b') and installed only after the season    |\n// |         |            |        | commit succeeds, preserving all-or-nothing boundary semantics.    |\n#endregion\n",
+                  "// | 1.32    | 2026-09-11 | —      | ERR-030-051 / #40 T2b: live keyed finance read/ledger commands;   |\n// |         |            |        | settlement staged at (b') and installed only after the season    |\n// |         |            |        | commit succeeds, preserving all-or-nothing boundary semantics.    |\n// | 1.33    | 2026-09-11 | —      | T2b review: legacy empty initialization moved behind Restore;     |\n// |         |            |        | ordinary generic composition is validation-only and fail-loud.    |\n#endregion\n",
+              ),
+          ]
+
+          for old, new in replacements:
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'guard failed: expected exactly one occurrence, got {count}: {old[:100]!r}')
+              s = s.replace(old, new, 1)
+
+          path.write_text(s)
+          PY
+      - name: Remove temporary workflow and commit correction
+        shell: bash
+        run: |
+          rm .github/workflows/spec40-review-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/season-save/SeasonLoop.cs .github/workflows/spec40-review-fix.yml
+          git commit -m "fix(finance): isolate legacy migration to Restore"
+          git push
