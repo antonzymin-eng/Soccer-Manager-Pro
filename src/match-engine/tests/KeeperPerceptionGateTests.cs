@@ -1,14 +1,15 @@
 // File:     src/match-engine/tests/KeeperPerceptionGateTests.cs
 // Created:  2026-09-11
-// Modified: 2026-09-11 (W4 review: sent-off/non-participating bodies cannot screen the keeper)
+// Modified: 2026-09-11 (W4 review: participation mask + high-ball body-height bypass)
 // Author:   —
 // Spec:     Match-engine wiring backlog W4
-// Purpose:  Pure regression locks for the unified keeper save-perception predicate.
+// Purpose:  Pure regression locks for the keeper DT-SAVE perception gate.
 
 using NUnit.Framework;
 using UnityEngine;
 
 using TacticalDirector.AgentMovement;
+using TacticalDirector.CollisionSystem;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -118,6 +119,31 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void W4_BallAboveAgentReachHeight_BypassesTwoDimensionalBodyScreen()
+        {
+            Vector2 keeper = new Vector2(0.0f, 34.0f);
+            AgentState[] agents = AgentsWithKeeperAt(keeper);
+            agents[1].Position = new Vector2(2.5f, 34.0f);
+            Vector3 ball = new Vector3(
+                5.0f,
+                34.0f,
+                CollisionPhysicsConstants.AgentReachHeight + 0.1f);
+            Vector3 velocity = new Vector3(-10.0f, 0.0f, 0.0f);
+
+            bool available = KeeperPerceptionGate.SaveAvailable(
+                keeperTeam: 0,
+                keeperAgentId: 0,
+                keeperPosition: in keeper,
+                ballPosition: in ball,
+                ballVelocity: in velocity,
+                ballLoose: true,
+                agents: agents);
+
+            Assert.IsTrue(available,
+                "W4: the inherited 2D shadow must not behave as an infinite-height body cylinder");
+        }
+
+        [Test]
         public void W4_OcclusionCannotArmOtherwiseInvalidFlight()
         {
             Vector2 keeper = new Vector2(0.0f, 34.0f);
@@ -139,3 +165,8 @@ namespace TacticalDirector.MatchEngine
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                               |
+// | 1.0     | 2026-09-11 | —      | W4: geometry, screens, participation, height and invalid-flight locks. |
+#endregion
