@@ -1,10 +1,11 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.6 — T3a lifecycle: current-season revenue resets at settlement; FFP window still carries)
+**Last Updated:** September 11, 2026 (v0.7 — wording correction: ApplyTransaction remains the single externally-commanded ledger path, not the only T3 mutation)
+**Last Updated (prior):** September 11, 2026 (v0.6 — T3a lifecycle: current-season revenue resets at settlement; FFP window still carries)
 **Last Updated (prior):** September 11, 2026 (v0.5 — T3a accounting primitive: identity gate, checked daily revenue accrual, no producer/RNG/tick wiring)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -130,8 +131,10 @@ ApplyTransaction(ref ClubFinances f, in FinanceTransaction txn):
     # This function NEVER touches TransferBudget/WageBudget (FR-FN-004) — those are SettleFinances-only.
 ```
 
-`ApplyTransaction` is the single mutation path between season boundaries (KD-3/KD-5, FR-FN-013). It never
-reads or writes `TransferBudget`/`WageBudget` — those are set exclusively by `SettleFinances` once per season
+`ApplyTransaction` is the single **externally-commanded ledger** mutation path between season boundaries
+(KD-3/KD-5, FR-FN-013). At T3+, #40-owned autonomous accrual functions such as `AccrueDailyRevenue` are
+separate accounting transforms, not a second caller-command ledger. `ApplyTransaction` never reads or writes
+`TransferBudget`/`WageBudget` — those are set exclusively by `SettleFinances` once per season
 (§1.6/FR-FN-004); Stage 2 has no concept of "budget remaining after this season's spend" as a tracked field —
 if a caller (#31) wants that, it computes it externally by summing the transactions it has itself submitted,
 or a future deep-tier extension adds it as a new field (recorded in §7, not built here).
@@ -276,4 +279,5 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 | 0.4 | 2026-09-07 | — | **PR #363 Codex correction.** Replaces post-multiply clamping with an overflow-safe quotient/remainder scale-and-cap that preserves exact integer-floor semantics below the ceiling. |
 | 0.5 | 2026-09-11 | OpenAI | **T3a contract.** Adds the pure identity-gated daily sponsorship/matchday accounting primitive; pins checked arithmetic and field isolation while explicitly deferring amount producers, #30 tick wiring, RNG promotion, wage cash-out, and FFP. |
 | 0.6 | 2026-09-11 | OpenAI | **T3a lifecycle closure.** Defines `SeasonRevenueAccrued` as current-season state reset by `SettleFinances`; the future FFP term must consume the prior value before reset, while `FfpBalanceWindow` continues to carry until its own rule lands. |
+| 0.7 | 2026-09-11 | OpenAI | **T3a wording correction.** Restates `ApplyTransaction` as the single externally-commanded ledger mutation path so §3.2 no longer conflicts with the autonomous T3a accrual path defined in §3.4.1 and FR-FN-003. |
 #endregion
