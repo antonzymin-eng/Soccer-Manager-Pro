@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-09-11  [v1.9]
+// Modified: 2026-07-27  [v1.8]
 // Author:   —
 // Spec:     Collision System #3 §3.4.1, §4.1.3, §4.4.4, Code Standards #20
 // Purpose:  Main collision system — orchestrates spatial hash, narrow phase, and response.
@@ -455,11 +455,10 @@ namespace TacticalDirector.CollisionSystem
                 IsGoalkeeper = isGoalkeeper[agentId]
             };
 
-            bool ballDeflected = BallCollisionHandler.OnAgentCollision(ref ball, in data);
+            BallCollisionHandler.OnAgentCollision(ref ball, in data);
 
             RecordEvent(matchTime, CollisionType.AGENT_BALL, agentId,
-                SpatialHashConstants.BALL_ENTITY_ID, contactPoint, 0f, default,
-                ballDeflected: ballDeflected);
+                SpatialHashConstants.BALL_ENTITY_ID, contactPoint, 0f, default);
 
             return true;
         }
@@ -470,8 +469,7 @@ namespace TacticalDirector.CollisionSystem
             int e1, int e2,
             Vector3 contactPoint,
             float impactForce,
-            ContactForceData foulData,
-            bool ballDeflected = false)
+            ContactForceData foulData)
         {
             // Defensive only — the confirmed-collision valve in UpdateCollisions caps
             // processing at MaxCollisionPairs, so the buffer cannot overflow via that path.
@@ -496,7 +494,6 @@ namespace TacticalDirector.CollisionSystem
                 Entity2ID = hi,
                 ContactPoint = contactPoint,
                 ImpactForce = impactForce,
-                BallDeflected = ballDeflected,
                 FoulData = foulData
             };
         }
@@ -547,7 +544,6 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246 under    |
 // |         |            |        | Unity and the Linux compile gate alike, so this assembly could not have compiled        |
 // |         |            |        | in-engine. No functional change.                                                        |
-// | 1.8     | 2026-07-27 | —      | Shot-outcome design KD-6: ProcessAgentBall populates                                   |
-// |         |            |        | AgentBallCollisionData.AgentPosition (the deflection-normal input).                     |
-// | 1.9     | 2026-09-11 | —      | W4: propagate Ball Physics applied-deflection truth onto CollisionEvent.BallDeflected. |
+// | 1.8     | 2026-07-27 | —      | Shot-outcome design KD-6: ProcessAgentBall populates                        |
+// |         |            |        | AgentBallCollisionData.AgentPosition (the deflection-normal input).         |
 #endregion
