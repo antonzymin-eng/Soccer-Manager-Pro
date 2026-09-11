@@ -1,18 +1,19 @@
 # Club Finances & Economy #40 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** September 10, 2026 (v0.4 — ERR-030-050: T1b resume seam/coherence close-out; T2 runtime scope corrected. Prior update follows)
+**Last Updated:** September 11, 2026 (v0.5 — PR #392 T2a source status recorded; checkbox held open pending executed gate evidence)
+**Last Updated (prior):** September 10, 2026 (v0.4 — ERR-030-050: T1b resume seam/coherence close-out; T2 runtime scope corrected. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v0.3 — §9.2 refreshed against real source at the T1b landing; it had published T0/T1a as NOT STARTED since PR #363 merged)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 **Source:** `docs/tracking/club-finances-economy-design.md` v0.2
 
 ---
 
 Checklist entries are verified against real source; nothing is checked without a programmatically
-verifiable anchor (CLAUDE.md "Never fabricate verification values"). This is a **forward-design** spec —
-implementation gates are open by construction (nothing is built yet); review gates track the pipeline.
+verifiable anchor (CLAUDE.md "Never fabricate verification values"). This is a forward-design spec whose
+implementation status is refreshed as each T-phase lands; review gates track the original approval pipeline.
 
 ## 9.1 Content gates
 
@@ -35,9 +36,8 @@ implementation gates are open by construction (nothing is built yet); review gat
 
 > This section was authored as a forward-design snapshot ("nothing built yet") and was **not refreshed
 > when T0/T1a landed in PR #363** (merged to `main`), so from September 4 to September 10, 2026 it
-> published NOT STARTED against shipped code. Corrected here at the T1b landing; every box below is
-> verified against real source at `src/`, per root `CLAUDE.md`'s never-fabricate rule, with the
-> verifying anchor named.
+> published NOT STARTED against shipped code. It is now refreshed at each landing; every checked box below
+> requires both a real source anchor and executed gate evidence where a test suite is named as proof.
 
 - [x] FR set complete + stable: FR-FN-001..028 (grep-verified: 28 unique, contiguous, in §2).
 - [x] `TacticalDirector.ClubFinances` assembly (value types + deterministic Stage-2 step) — **LANDED**
@@ -53,10 +53,18 @@ implementation gates are open by construction (nothing is built yet); review gat
       finance carrier, `SeasonLoop.Restore(..., financesOrNull)`, `Save(SeasonLoop, ...)` forwarding, and
       exact non-empty coherence with `SeasonState.ClubIds` (ERR-030-050);
       `season-save.asmdef`'s `TacticalDirector.ClubFinances` reference.
-- [ ] `SettleFinances` wired at #30's new reserved slot + `CreateInitial` at bootstrap + actual producer
-      wiring/consumer exposure — NOT STARTED (T2). The ERR-030-003 back-prop it was gated on has
-      landed in #30; the gate is open. Verified absent: no `SettleFinances` / `CreateInitial` call site
-      exists outside `src/club-finances/` and its own tests.
+- [ ] T2a bootstrap transform + first #27 consumer — **IMPLEMENTED ON PR #392; GATE EVIDENCE PENDING**.
+      Source anchors are present: `ClubFinanceEntry.CreateInitialForSquads(Squad[])`;
+      `club-finances.asmdef`'s live `TacticalDirector.PlayerDatabase` reference;
+      `ClubFinancesT2BootstrapTests`; and
+      `SeasonFinancePersistenceTests.BootstrapSquadUniverse_ExactlyMatchesSeasonFinanceCoherenceUniverse`,
+      which proves the factory's `Squad.ClubId` universe composes with `SeasonState.ClubIds`. Keep this box
+      open until the current landing head's functional gate has executed successfully; source presence alone
+      is not test-execution evidence.
+- [ ] T2b production invocation + settlement — NOT YET LANDED. #30 must invoke the T2a factory once at
+      league/game bootstrap and `SettleFinances` once per club at reserved step (b'), then expose the
+      already-built query/command seams to downstream producers. No claim is made that T-FN-LIFE-001's
+      across-season-roll half or T-FN-ORD-001/003 is satisfied until this wiring lands.
 - [ ] Deep-tier per-day accrual / stochastic sponsorship variance / FFP soft-penalty / board modulation / #31
       / #34 wage producers — NOT STARTED (T3).
 
@@ -100,7 +108,8 @@ implementation gates are open by construction (nothing is built yet); review gat
 | R-03 | **Cross-spec consistency** — the #30 ERR-030-003 back-prop (new step (b') after (a'), before (c));
         the KD-3 read-only #31 boundary + one-way `ApplyTransaction` command (no two-way coupling); the
         KD-5 identity seam (no phantom #31/#34); the KD-4 identity seam (no phantom #45); no reverse
-        reference (#40 references #27/#16 only); the `_RESERVED_0x29_`/91 + ERR-030-003 back-props filed | §1 / §4 / §7 | ☑ |
+        reference (#40 currently references #27/#16 plus the cross-cutting config foundation only); the
+        `_RESERVED_0x29_`/91 + ERR-030-003 back-props filed | §1 / §4 / §7 | ☑ |
 | R-04 | **Stage-binding correctness** — season-boundary cadence (not the world tick, not the match loops);
         byte-exact save/restore with no RNG cursor to restore at minimal; the `[GT]` magnitudes honestly
         illustrative | §1 / §3 / §6 | ☑ |
@@ -110,9 +119,9 @@ implementation gates are open by construction (nothing is built yet); review gat
 
 **APPROVED — July 23, 2026.** Section files authored from the converged design supplement
 (`docs/tracking/club-finances-economy-design.md` v0.2, design-AR 1M+1L → CONVERGENCE); section-file AR-1 (1M wage semantics) → AR-2 → AR-3 CONVERGENCE; R-01..R-05 signed; `SPEC_INDEX.md` row 40 flipped `IN REVIEW → APPROVED`; the `_RESERVED_0x29_`/91 (ERR-040-001) and #30 boundary-roll (ERR-030-003) back-props landed atomically. The §7 T-phase plan
-(T0 value types → T1 save sub-blob → T2 wiring at #30's slot + `ApplyTransaction` command → T3 deep tier) is
-the post-`APPROVED` implementation sequence and is not gated on anything in this checklist beyond `APPROVED`
-itself.
+(T0 value types → T1a/T1b persistence → T2a bootstrap transform/#27 edge → T2b #30 invocation/settlement →
+T3 deep tier) is the post-`APPROVED` implementation sequence and is not gated on anything in this checklist
+beyond `APPROVED` itself.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -121,4 +130,5 @@ itself.
 | 0.2 | 2026-07-23 | — | AR-1 (1M wage semantics) / AR-2 / AR-3 CONVERGENCE recorded (§9.3.1); 9.1/9.4 gates checked; R-01..R-05 signed (§9.5); §9.6 APPROVED. |
 | 0.3 | 2026-09-10 | — | **§9.2 stale-status correction, at the T1b landing.** The section was written as a forward-design snapshot and never refreshed when PR #363 merged, so it published `TacticalDirector.ClubFinances` and `ClubFinancesSaveCodec` as NOT STARTED against shipped code for six days. Rewritten with a per-row verifying source anchor (never a bare checkbox), the T1/T1b split made explicit, and the T2 row's ERR-030-003 gate recorded as OPEN rather than blocking. No review gate, FR, or approval decision is touched; §9.6's APPROVED stands unchanged. |
 | 0.4 | 2026-09-10 | — | **ERR-030-050 review correction.** T1b is checked for the finance restore/carrier/save seam and current-season coherence guard; the T2 unchecked row is restricted to bootstrap, settlement, actual producer wiring and consumer exposure. |
+| 0.5 | 2026-09-11 | — | **PR #392 T2a status refresh, review-corrected.** Records the pure `Squad.ClubId` bootstrap transform and live `PlayerDatabase` dependency against source, but deliberately leaves the T2a implementation box open until the named suites have actually executed successfully; T2b remains #30 invocation/settlement and the across-roll half of T-FN-LIFE-001. |
 #endregion
