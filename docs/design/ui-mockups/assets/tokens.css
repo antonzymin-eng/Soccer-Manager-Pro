@@ -140,6 +140,8 @@
 [data-direction="touchline"] {
   --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --font-display: "PT Sans Narrow", "Arial Narrow", sans-serif;
+  /* PT Sans Narrow ships a real 700 bold face; never synthesize an 800 face. */
+  font-synthesis: none;
 
   --bg-0: #061320;
   --bg-1: #071a2b;
