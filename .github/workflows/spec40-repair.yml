@@ -1,0 +1,193 @@
+name: Temporary Spec 40 repair
+
+on:
+  push:
+    branches:
+      - openai/spec-40-finance-t2b-runtime
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Repair T2b fixtures and reconcile current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected exactly one replacement target, found {count}")
+              p.write_text(text.replace(old, new, 1))
+
+          def append_version(path, block):
+              p = Path(path)
+              text = p.read_text()
+              if block.strip() in text:
+                  return
+              marker = "#endregion"
+              pos = text.rfind(marker)
+              if pos < 0:
+                  raise SystemExit(f"{path}: missing final #endregion")
+              text = text[:pos] + block + text[pos:]
+              p.write_text(text)
+
+          # Shared test-only canonical finance bootstrap. This keeps test fixtures on the same
+          # T2a transform as production rather than re-deriving starting balances from constants.
+          replace_once(
+              "src/season-save/tests/SeasonLoopScenarios.cs",
+              "using TacticalDirector.Discipline;\n",
+              "using TacticalDirector.ClubFinances;\nusing TacticalDirector.Discipline;\n")
+          replace_once(
+              "src/season-save/tests/SeasonLoopScenarios.cs",
+              "        internal static Squad ComposedOracle(\n            Squad squad, PlayerCareerStates career, DisciplineState discipline, int competitionId) =>\n            AvailabilityComposition.Compose(squad, career, discipline, competitionId);\n",
+              "        internal static Squad ComposedOracle(\n            Squad squad, PlayerCareerStates career, DisciplineState discipline, int competitionId) =>\n            AvailabilityComposition.Compose(squad, career, discipline, competitionId);\n\n        /// <summary>\n        /// Builds the canonical #40 starting state for a test league through the same T2a transform\n        /// production uses. Roll-capable test loops call this instead of carrying the pre-T2 empty\n        /// sentinel into <c>RollToNextSeason</c>.\n        /// </summary>\n        internal static ClubFinanceEntry[] InitialFinances(League league)\n        {\n            if (league == null)\n            {\n                throw new ArgumentNullException(nameof(league));\n            }\n\n            var squads = new Squad[league.ClubCount];\n            for (int clubId = 0; clubId < squads.Length; clubId++)\n            {\n                squads[clubId] = league.ResolveByClubId(clubId);\n            }\n\n            return ClubFinanceEntry.CreateInitialForSquads(squads);\n        }\n")
+          replace_once(
+              "src/season-save/tests/SeasonLoopScenarios.cs",
+              "// Created:  2026-07-26\n",
+              "// Created:  2026-07-26\n// Modified: 2026-09-11 (#40 T2b — shared canonical finance bootstrap for roll-capable fixtures)\n")
+          append_version(
+              "src/season-save/tests/SeasonLoopScenarios.cs",
+              "// | 1.6     | 2026-09-11 | —      | #40 T2b: shared InitialFinances helper keeps roll-capable test     |\n// |         |            |        | loops on the canonical T2a bootstrap instead of an empty sentinel. |\n")
+
+          # Career boundary fixtures retain their mutable squad provider, but now also carry #40.
+          replace_once(
+              "src/season-save/tests/SeasonLoopCareerTests.cs",
+              "            return new SeasonLoop(\n                world, league.CreateSeason(0), RoundResolutionMode.QuickSimAll, career, provider);\n",
+              "            return new SeasonLoop(\n                world, league.CreateSeason(0), RoundResolutionMode.QuickSimAll, career, provider,\n                financesOrNull: SeasonLoopScenarios.InitialFinances(league));\n")
+          replace_once(
+              "src/season-save/tests/SeasonLoopCareerTests.cs",
+              "// Created:  2026-08-06\n",
+              "// Created:  2026-08-06\n// Modified: 2026-09-11 (#40 T2b — roll-capable career fixtures now carry canonical finance state)\n")
+          append_version(
+              "src/season-save/tests/SeasonLoopCareerTests.cs",
+              "// | 1.11    | 2026-09-11 | —      | #40 T2b: WiredLoop carries canonical finance state so boundary    |\n// |         |            |        | tests exercise the post-T2 composition contract.                  |\n")
+
+          # Discipline boundary fixture uses the internal driver seam, so thread finances explicitly.
+          replace_once(
+              "src/season-save/tests/SeasonLoopDisciplineTests.cs",
+              "                disciplineOrNull: discipline,\n                disciplineDriverOrNull: disciplineDriverOrNull);\n",
+              "                disciplineOrNull: discipline,\n                disciplineDriverOrNull: disciplineDriverOrNull,\n                financesOrNull: SeasonLoopScenarios.InitialFinances(league));\n")
+          replace_once(
+              "src/season-save/tests/SeasonLoopDisciplineTests.cs",
+              "// Created:  2026-08-13\n",
+              "// Created:  2026-08-13\n// Modified: 2026-09-11 (#40 T2b — season-boundary discipline fixtures carry finance state)\n")
+          append_version(
+              "src/season-save/tests/SeasonLoopDisciplineTests.cs",
+              "// | 1.14    | 2026-09-11 | —      | #40 T2b: LoopOver carries canonical finance state before any      |\n// |         |            |        | season-boundary roll.                                             |\n")
+
+          # Season-roll suite is itself a production-lifecycle test: use the production new-game seam,
+          # persist its live finance set, and restore that persisted set instead of dropping it.
+          replace_once(
+              "src/season-save/tests/SeasonRollTests.cs",
+              "// Modified: 2026-09-10 (#40 T1b, ERR-030-049 — both Save call sites pass the new required finance\n//           set; a season roll neither reads nor writes finances until #40 T2 wires SettleFinances\n//           at step (b'), so the empty set is the honest capture here — v1.8)\n",
+              "// Modified: 2026-09-11 (#40 T2b — roll fixtures use League.CreateLoop, persist live finance\n//           entries, and restore them rather than carrying the retired pre-T2 empty sentinel — v1.9)\n")
+          replace_once(
+              "src/season-save/tests/SeasonRollTests.cs",
+              "        // \"No club has a finance entry yet\" — the only value a save can carry until #40 T2\n        // wires ClubFinances.CreateInitial; said explicitly because Save requires it to be said.\n        private static ClubFinanceEntry[] NoFinances => Array.Empty<ClubFinanceEntry>();\n\n",
+              "")
+          replace_once(
+              "src/season-save/tests/SeasonRollTests.cs",
+              "            return new SeasonLoop(\n                world, league.CreateSeason(managedClubId), RoundResolutionMode.QuickSimAll);\n",
+              "            return league.CreateLoop(\n                world, managedClubId, RoundResolutionMode.QuickSimAll);\n")
+          replace_once(
+              "src/season-save/tests/SeasonRollTests.cs",
+              "                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false, NoFinances);\n                SeasonSaveContents contents = SeasonSaveManager.Load(path, league);\n                var resumed = new SeasonLoop(\n                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll);\n",
+              "                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false,\n                    interrupted.FinanceEntriesForSave());\n                SeasonSaveContents contents = SeasonSaveManager.Load(path, league);\n                var resumed = new SeasonLoop(\n                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll,\n                    financesOrNull: contents.Finances);\n")
+          replace_once(
+              "src/season-save/tests/SeasonRollTests.cs",
+              "                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false, NoFinances);\n                SeasonSaveContents contents = SeasonSaveManager.Load(path, league);\n\n                Assert.IsTrue(loop.State.FieldsEqual(contents.Season),\n",
+              "                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false,\n                    loop.FinanceEntriesForSave());\n                SeasonSaveContents contents = SeasonSaveManager.Load(path, league);\n\n                Assert.IsTrue(loop.State.FieldsEqual(contents.Season),\n")
+          replace_once(
+              "src/season-save/tests/SeasonRollTests.cs",
+              "                var resumed = new SeasonLoop(\n                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll);\n\n                // And it must still be playable",
+              "                var resumed = new SeasonLoop(\n                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll,\n                    financesOrNull: contents.Finances);\n\n                // And it must still be playable")
+          append_version(
+              "src/season-save/tests/SeasonRollTests.cs",
+              "// | 1.9     | 2026-09-11 | —      | #40 T2b: NewLoop uses League.CreateLoop; save/restore boundary     |\n// |         |            |        | cases persist and recompose the live finance set.                 |\n")
+          PY
+
+          git add src/season-save/tests/SeasonLoopScenarios.cs \
+                  src/season-save/tests/SeasonLoopCareerTests.cs \
+                  src/season-save/tests/SeasonLoopDisciplineTests.cs \
+                  src/season-save/tests/SeasonRollTests.cs
+          git commit -m "test(finance): migrate season-roll fixtures to T2b composition"
+
+          # Reconcile the latest remote main. The finance branch and PR #394 both prepend the manifest;
+          # every other PR #394 change is non-overlapping and should merge normally.
+          git fetch origin main
+          set +e
+          git merge --no-ff --no-commit origin/main
+          merge_rc=$?
+          set -e
+          if [ "$merge_rc" -ne 0 ]; then
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            if [ "$conflicts" != "docs/tracking/file-manifest.md" ]; then
+              echo "Unexpected merge conflicts:" >&2
+              printf '%s\n' "$conflicts" >&2
+              exit 1
+            fi
+
+            python3 - <<'PY'
+            from pathlib import Path
+            import re
+
+            p = Path("docs/tracking/file-manifest.md")
+            text = p.read_text()
+            pattern = re.compile(
+                r"<<<<<<< HEAD\n(.*?)=======\n(.*?)>>>>>>> .*?\n",
+                re.S,
+            )
+            matches = list(pattern.finditer(text))
+            if len(matches) != 1:
+                raise SystemExit(f"expected one manifest conflict hunk, found {len(matches)}")
+            m = matches[0]
+            ours = m.group(1).rstrip()
+            theirs = m.group(2).rstrip()
+            if "#40 Club Finances T2b" not in ours:
+                raise SystemExit("manifest conflict ours side is not the finance T2b header")
+            if "UX F4 validation protocol packet" not in theirs:
+                raise SystemExit("manifest conflict theirs side is not the PR #394 UX F4 header")
+            theirs = theirs.replace("**Last Updated:**", "**Last Updated (prior):**", 1)
+            merged = ours + "\n\n" + theirs + "\n"
+            text = text[:m.start()] + merged + text[m.end():]
+            if "<<<<<<<" in text or ">>>>>>>" in text or "=======\n" in text:
+                raise SystemExit("unresolved conflict marker remains in manifest")
+            p.write_text(text)
+            PY
+          fi
+
+          # Record the review-driven existing-test migration in the finance manifest entry, without
+          # disturbing PR #394's imported UX inventory lower in the same file.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("docs/tracking/file-manifest.md")
+          text = p.read_text()
+          needle = "**Modified production:** `src/season-save/League.cs` and `src/season-save/SeasonLoop.cs`."
+          replacement = needle + " **Modified existing tests:** `src/season-save/tests/SeasonRollTests.cs`, `SeasonLoopCareerTests.cs`, `SeasonLoopDisciplineTests.cs`, and `SeasonLoopScenarios.cs` migrate every season-boundary fixture to canonical T2b finance composition."
+          if text.count(needle) != 1:
+              raise SystemExit(f"manifest finance header target count={text.count(needle)}")
+          p.write_text(text.replace(needle, replacement, 1))
+          PY
+
+          git add -A
+          git commit -m "merge: reconcile Spec 40 T2b with current main"
+
+          # This workflow is an editing transport only. It must not survive in the PR diff.
+          rm .github/workflows/spec40-repair.yml
+          git add -u .github/workflows/spec40-repair.yml
+          git commit -m "chore(finance): remove temporary repair workflow"
+          git push origin HEAD:openai/spec-40-finance-t2b-runtime
