@@ -3,11 +3,37 @@
   const root = document.documentElement;
   const STORAGE_KEY = "smp-direction";
 
+  const TYPE_COPY = {
+    touchline: {
+      summary: "PT Sans Narrow + IBM Plex Sans",
+      description: "PT Sans Narrow is the G1 display reference — compact, humanist, and condensed; AP-03 validates the exact shipping font. IBM Plex Sans remains the touchline body face. JetBrains Mono is used for comparative numeric/data content.",
+      heavy: "700"
+    },
+    stadium: {
+      summary: "Barlow Condensed + Barlow",
+      description: "Barlow Condensed is the display face for the historical Stadium reference, with Barlow as its body face. JetBrains Mono is used for comparative numeric/data content.",
+      heavy: "800"
+    }
+  };
+
+  function updateDirectionCopy(dir) {
+    const copy = TYPE_COPY[dir] || TYPE_COPY.touchline;
+    const typeSummary = document.querySelector(".hero-meta > div:nth-child(4) .v");
+    const typeDescription = document.querySelector("#type .s-head .desc");
+    const heavySpecimens = [...document.querySelectorAll("#type .type-row .meta:first-child")].slice(0, 2);
+    if (typeSummary) typeSummary.textContent = copy.summary;
+    if (typeDescription) typeDescription.textContent = copy.description;
+    heavySpecimens.forEach((node) => {
+      node.textContent = node.textContent.replace(/\/(?:\s*)\d+$/, `/ ${copy.heavy}`);
+    });
+  }
+
   function setDirection(dir) {
     root.setAttribute("data-direction", dir);
     document.querySelectorAll(".switcher button").forEach((b) => {
       b.setAttribute("aria-pressed", b.dataset.dir === dir ? "true" : "false");
     });
+    updateDirectionCopy(dir);
     try { localStorage.setItem(STORAGE_KEY, dir); } catch (e) {}
   }
 
