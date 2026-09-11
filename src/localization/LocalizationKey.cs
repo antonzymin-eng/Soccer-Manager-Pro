@@ -16,12 +16,20 @@ namespace TacticalDirector.Localization
     {
         private readonly string _value;
 
-        /// <summary>Creates a non-empty static localization key.</summary>
+        /// <summary>
+        /// Creates a non-empty static localization key. Keys are ordinal and case-sensitive; surrounding
+        /// whitespace is invalid rather than normalized so authoring mistakes cannot silently alias a key.
+        /// </summary>
         public LocalizationKey(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
             {
                 throw new ArgumentException("LocalizationKey requires a non-empty key.", nameof(value));
+            }
+
+            if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+            {
+                throw new ArgumentException("LocalizationKey cannot contain surrounding whitespace.", nameof(value));
             }
 
             _value = value;
@@ -75,4 +83,5 @@ namespace TacticalDirector.Localization
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial L1 static-key contract. |
+// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Freeze ordinal case-sensitive identity; reject surrounding whitespace. |
 #endregion
