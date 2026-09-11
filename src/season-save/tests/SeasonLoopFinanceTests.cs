@@ -15,6 +15,8 @@ using NUnit.Framework;
 using TacticalDirector.ClubFinances;
 using TacticalDirector.LivingWorld;
 
+using ClubFinanceState = TacticalDirector.ClubFinances.ClubFinances;
+
 namespace TacticalDirector.SeasonSave.Tests
 {
     [TestFixture]
@@ -85,8 +87,8 @@ namespace TacticalDirector.SeasonSave.Tests
             BoardModifier board = BoardModifier.Identity;
             for (int i = 0; i < before.Length; i++)
             {
-                ClubFinances prior = before[i].Finances;
-                ClubFinances next = FinanceStep.SettleFinances(
+                ClubFinanceState prior = before[i].Finances;
+                ClubFinanceState next = FinanceStep.SettleFinances(
                     in prior,
                     loop.State.PositionOf(before[i].ClubId),
                     ClubCount,
@@ -159,4 +161,5 @@ namespace TacticalDirector.SeasonSave.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                   |
 // | 1.0     | 2026-09-11 | —      | #40 T2b production lifecycle and boundary regression set. |
+// | 1.1     | 2026-09-11 | —      | Alias finance state type to avoid namespace/type ambiguity. |
 #endregion
