@@ -20,7 +20,7 @@
     const copy = TYPE_COPY[dir] || TYPE_COPY.touchline;
     const typeSummary = document.querySelector(".hero-meta > div:nth-child(4) .v");
     const typeDescription = document.querySelector("#type .s-head .desc");
-    const heavySpecimens = document.querySelectorAll("#type .type-row:nth-of-type(-n+2) .meta:first-child");
+    const heavySpecimens = [...document.querySelectorAll("#type .type-row .meta:first-child")].slice(0, 2);
     if (typeSummary) typeSummary.textContent = copy.summary;
     if (typeDescription) typeDescription.textContent = copy.description;
     heavySpecimens.forEach((node) => {
