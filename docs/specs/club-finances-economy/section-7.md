@@ -1,11 +1,12 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 10, 2026 (v1.0 — ERR-030-050 review correction: T1b includes the resume carrier/coherence guard; T2 remains runtime production. Prior update follows)
+**Last Updated:** September 11, 2026 (v1.1 — PR #392 formalizes T2a/T2b: T2a is the #27-backed bootstrap factory/reference activation; T2b is #30 invocation + settlement wiring)
+**Last Updated (prior):** September 10, 2026 (v1.0 — ERR-030-050 review correction: T1b includes the resume carrier/coherence guard; T2 remains runtime production. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v0.9 — T1b landed: #30 season-save composition + frame bump, ERR-030-049)
 **Last Updated (prior):** September 7, 2026 (v0.8 — PR #363 Codex arithmetic correction)
 **Last Updated (prior):** September 7, 2026 (v0.7 — PR #363 follow-up review correction)
-**Version:** 1.0
+**Version:** 1.1
 **Status:** APPROVED
 
 ---
@@ -36,13 +37,17 @@
   the loop-held canonical finance carrier, `SeasonLoop.Restore(..., financesOrNull)`, forwarding through
   `Save(SeasonLoop, ...)`, and the shared current-season coherence guard: empty is legal pre-T2; once
   non-empty, finance ClubIds exactly equal `SeasonState.ClubIds` (ERR-030-050).
-- **T2** — Wire `SettleFinances` at #30's **new** reserved step (b') (after the (a') #43 insertion point,
-  before (c) regenerate); wire `CreateInitial` at league/game bootstrap for every `ClubId` (#30-driven, not
-  #40-driven); consume the T1b-held finance state through those runtime producers/mutators; and add the
-  `PlayerDatabase` reference only here, when
-  the specified `Squad.ClubId`
-  enumeration becomes a real consumer. Expose `AvailableTransferBudget`/`ApplyTransaction` for #31/#34/#42
-  to call once those specs exist. No #30 tick-order change beyond the KD-6 back-prop already filed (KD-6).
+- **T2a** — Activate the planned `PlayerDatabase` dependency together with its first real consumer: a pure
+  #40 factory over caller-supplied canonical `Squad[]` values that reads only `Squad.ClubId`, creates one
+  `ClubFinances.CreateInitial(StartingClubBalance)` entry per distinct club, canonicalizes by ascending
+  `ClubId`, and fails loud on a null/empty/malformed or duplicate club set. This phase does **not** itself
+  start a game or mutate #30; it only provides the typed bootstrap transform that T2b's composition root
+  invokes. T1b persistence/resume guards remain unchanged.
+- **T2b** — Wire #30's one-time invocation of the T2a factory at league/game bootstrap, then wire
+  `SettleFinances` at #30's **new** reserved step (b') (after the (a') #43 insertion point, before (c)
+  regenerate), consuming the T1b-held finance state through that runtime producer/mutator. Expose
+  `AvailableTransferBudget`/`ApplyTransaction` for #31/#34/#42 to call once those specs exist. No #30
+  tick-order change beyond the KD-6 back-prop already filed (KD-6).
 - **T3** — Deep tier: per-day revenue accrual (matchday/sponsorship, a new daily #30 tick-order slot — the
   #41 pattern), the stochastic sponsorship-variance draw (promotes `DOMAIN_TAG_CLUB_FINANCES = 0x29` /
   `SubsystemOrdinals.ClubFinances = 91`, keyed on `(clubId, seasonNumber, purpose)`), the FFP soft-penalty
@@ -93,12 +98,14 @@
   the post-promotion division/`finalTablePosition` #40's step (b') already reads — no #40-side change is
   needed (the KD-6 ordering rationale is written to anticipate this); #43 MUST NOT itself call
   `SettleFinances` or otherwise reach into #40.
-- **#30 (season loop):** owns `SettleFinances` invocation timing (KD-6) and the one-time
-  `ClubFinances.CreateInitial` bootstrap per club; #40 MUST NOT reference #30 or drive its own club-bootstrap
-  independently (the one-way composition, FR-FN-027).
-- **#27 (squad/player data):** at T2, the `Squad.ClubId` enumeration #40 reads for F6's club-universe check
-  becomes the authoritative club-identity source; before T2 there is no #27 consumer and therefore no
-  `PlayerDatabase` asmdef reference. #40 MUST NOT gain a second, competing club-identity notion.
+- **#30 (season loop):** owns `SettleFinances` invocation timing (KD-6) and the one-time production
+  bootstrap invocation per club. T2a's `CreateInitialForSquads(Squad[])` is a pure transform over the
+  canonical squads #30 supplies; its presence in #40 does **not** make #40 a lifecycle/composition owner.
+  #40 MUST NOT reference #30, discover clubs independently, or invoke that factory on its own (the one-way
+  composition, FR-FN-027).
+- **#27 (squad/player data):** at T2a, the `Squad.ClubId` enumeration #40 reads becomes the authoritative
+  club-identity source and the `PlayerDatabase` asmdef reference becomes live in the same landing. #40 MUST
+  NOT gain a second, competing club-identity notion.
 
 ## 7.4 T0/T1a implementation critique record
 
@@ -146,7 +153,7 @@ otherwise have to re-derive them:
    (#30 Appendix B).
 2. **The destination guard landed with the block, ahead of its producer.** Its three siblings were each
    written *after* a career's state had already been deleted (ERR-028-008, the career-triple guard,
-   ERR-030-036). Until T2 wires `CreateInitial` the predicate cannot fire — every save carries the
+   ERR-030-036). Until T2b invokes the bootstrap the predicate cannot fire — every save carries the
    empty set over a destination that also carries an empty block — so this is hardening a path that has
    no live traffic yet. It is deliberate: #30 Appendix B.1 already requires any family added to the
    frame to bring its own guard, and the alternative is writing the fourth one after the fourth loss.
@@ -155,7 +162,7 @@ otherwise have to re-derive them:
    unambiguously a drop. But the prior conclusion that `SeasonLoop.Restore` could wait for the producer
    was incorrect: a populated block can arrive from `Load` before runtime production is wired. T1b
    therefore includes `financesOrNull`, loop-held canonical state, Save forwarding, and exact non-empty
-   coherence with `SeasonState.ClubIds`; T2 remains `CreateInitial` and `SettleFinances` only.
+   coherence with `SeasonState.ClubIds`; T2a/T2b remain runtime bootstrap/settlement work only.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -170,4 +177,5 @@ otherwise have to re-derive them:
 | 0.8 | 2026-09-07 | — | **PR #363 Codex correction.** Records overflow-safe board scaling and corrects the downstream #45 seam from “non-zero” to the normative positive-multiplier contract. |
 | 0.9 | 2026-09-10 | — | **T1b landed (ERR-030-049).** §7.1's T1b entry records what shipped (frame v6 → 7, the mandatory `FNCE` sub-blob, the typed `FinanceBlock` handle, the required `Save` parameter, `SeasonSaveContents.Finances`, `RequireDestinationCarriesNoFinances`, the intra-Tier-7 `season-save` → `club-finances` reference); T2 gains the `SeasonLoop` resume seam T1b deliberately deferred; new §7.5 records the three decisions a later reader would otherwise re-derive — mandatory-not-flagged, the guard landing ahead of its producer, and why #40 needs neither a wiring flag nor a `Restore` parameter yet. |
 | 1.0 | 2026-09-10 | — | **ERR-030-050 review correction.** T1b includes the `SeasonLoop` restore/carrier/save seam and exact current-season finance coherence; T2 is limited to `CreateInitial`, `SettleFinances`, producer wiring and consumer exposure. The v0.9 producer-wired deferral remains historical but is superseded. |
+| 1.1 | 2026-09-11 | — | **PR #392 T2 split back-prop.** T2a owns only the pure #27-backed bootstrap factory and activation of the consumed `PlayerDatabase` edge; T2b owns #30's production invocation plus step-(b') settlement wiring. §7.3 explicitly keeps lifecycle/composition ownership in #30 so the factory is not a second bootstrap authority. |
 #endregion
