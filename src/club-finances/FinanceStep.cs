@@ -16,12 +16,16 @@ namespace TacticalDirector.ClubFinances
     /// <summary>Pure finance calculations; no clock, world tick, or RNG dependency.</summary>
     public static class FinanceStep
     {
-        /// <summary>Adds position prize money and overwrites the next season's transfer and wage ceilings.</summary>
+        /// <summary>Adds position prize money, overwrites next-season budget ceilings, and closes the prior season revenue accumulator.</summary>
         /// <param name="prior">Existing coherent club finance state.</param>
         /// <param name="finalTablePosition">One-based final league position.</param>
         /// <param name="clubCount">Number of clubs in the division; must be at least two.</param>
         /// <param name="board">Board multiplier; <see cref="BoardModifier.BudgetMultiplierMillPermille"/> must be positive; use <see cref="BoardModifier.Identity"/> for no adjustment.</param>
-        /// <returns>A new settled value; wage liability and deep-tier accumulators are carried unchanged.</returns>
+        /// <returns>
+        /// A new settled value. Wage liability and <see cref="ClubFinances.FfpBalanceWindow"/> carry forward;
+        /// <see cref="ClubFinances.SeasonRevenueAccrued"/> resets to zero for the new season after the prior
+        /// season state has reached this boundary.
+        /// </returns>
         public static ClubFinances SettleFinances(
             in ClubFinances prior,
             int finalTablePosition,
@@ -64,6 +68,12 @@ namespace TacticalDirector.ClubFinances
                     baseWageCeiling,
                     board.BudgetMultiplierMillPermille);
             }
+
+            // T3a lifecycle closure: this is a CURRENT-season accumulator. The season boundary is the
+            // single point at which it becomes prior-season history, so the next season starts at zero.
+            // The future FFP slice may consume prior.SeasonRevenueAccrued before this reset as part of
+            // this same pure settlement calculation; FfpBalanceWindow itself carries unchanged today.
+            result.SeasonRevenueAccrued = 0L;
 
             ClubFinances.ValidateCoherence(in result);
             return result;
@@ -218,4 +228,5 @@ namespace TacticalDirector.ClubFinances
 // | 1.3     | 2026-09-07 | —      | Board scaling now caps before any multiplication that could overflow accepted tuning ranges. |
 // | 1.4     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
 // | 1.5     | 2026-09-11 | OpenAI | T3a: add pure identity-gated daily sponsorship/matchday revenue accrual primitive. |
+// | 1.6     | 2026-09-11 | OpenAI | T3a: reset current-season revenue at settlement while carrying the future FFP window. |
 #endregion
