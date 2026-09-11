@@ -8,6 +8,7 @@
 // ============================================================================
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -30,6 +31,27 @@ namespace TacticalDirector.Localization.Tests
             Assert.That(default(LocalizationKey), Is.Not.EqualTo(key));
             Assert.That(default(LocaleId), Is.Not.EqualTo(locale));
             Assert.That(default(TextTemplateId), Is.Not.EqualTo(template));
+        }
+
+        [Test]
+        public void LocalizationKey_UsesExactOrdinalIdentityAndRejectsSurroundingWhitespace()
+        {
+            LocalizationKey lower = new LocalizationKey("menu.load");
+            LocalizationKey upper = new LocalizationKey("MENU.LOAD");
+
+            Assert.That(lower, Is.Not.EqualTo(upper));
+            Assert.Throws<ArgumentException>(() => new LocalizationKey(" menu.load"));
+            Assert.Throws<ArgumentException>(() => new LocalizationKey("menu.load "));
+        }
+
+        [Test]
+        public void LocaleId_CanonicalizesCaseAndSurroundingWhitespaceOnly()
+        {
+            LocaleId canonical = new LocaleId("en");
+
+            Assert.That(new LocaleId("EN"), Is.EqualTo(canonical));
+            Assert.That(new LocaleId(" en "), Is.EqualTo(canonical));
+            Assert.That(canonical.Value, Is.EqualTo("en"));
         }
 
         [Test]
@@ -56,13 +78,13 @@ namespace TacticalDirector.Localization.Tests
         {
             NamedSelector[] source =
             {
-                new NamedSelector("count", new SelectorOperand(2L)),
-                new NamedSelector("subject", new SelectorOperand(GrammaticalGender.Feminine))
+                new NamedSelector("count", SelectorOperand.FromCardinal(2L)),
+                new NamedSelector("subject", SelectorOperand.FromGender(GrammaticalGender.Feminine))
             };
             NamedSelectorSet set = new NamedSelectorSet(source);
             NamedSelectorSet reversed = new NamedSelectorSet(source[1], source[0]);
 
-            source[0] = new NamedSelector("count", new SelectorOperand(99L));
+            source[0] = new NamedSelector("count", SelectorOperand.FromCardinal(99L));
 
             Assert.That(set, Is.EqualTo(reversed));
             Assert.That(set.GetHashCode(), Is.EqualTo(reversed.GetHashCode()));
@@ -72,20 +94,55 @@ namespace TacticalDirector.Localization.Tests
         }
 
         [Test]
+        public void SelectorOperand_ZeroCardinalIsUnambiguousAndLocaleNeutral()
+        {
+            SelectorOperand zero = SelectorOperand.FromCardinal(0L);
+            PropertyInfo[] properties = typeof(SelectorOperand).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            Assert.That(zero.IsValid, Is.True);
+            Assert.That(zero.HasCardinal, Is.True);
+            Assert.That(zero.CardinalValue, Is.EqualTo(0L));
+            Assert.That(properties.Any(property => property.PropertyType == typeof(string)), Is.False);
+            Assert.That(properties.Any(property => property.PropertyType == typeof(LocaleId)), Is.False);
+        }
+
+        [Test]
         public void Request_CarriesTypedSelectorsWithoutRenderingPolicy()
         {
             NamedSelectorSet selectors = new NamedSelectorSet(
-                new NamedSelector("count", new SelectorOperand(3L, GrammaticalGender.Neutral)));
+                new NamedSelector("count", SelectorOperand.From(3L, GrammaticalGender.Neutral)));
             LocalizedTextRequest request = new LocalizedTextRequest(
                 new TextTemplateId(7, 2),
-                42UL,
+                ulong.MaxValue,
                 new NamedSlotSet(new NamedSlot("club", "Dynamo")),
                 selectors,
                 true,
                 5);
 
             Assert.That(request.Selectors, Is.EqualTo(selectors));
-            Assert.That(request.SelectionDraw, Is.EqualTo(42UL));
+            Assert.That(request.SelectionDraw, Is.EqualTo(ulong.MaxValue));
+        }
+
+        [Test]
+        public void SelectionDraw_PublicContractRemainsUlongEndToEnd()
+        {
+            PropertyInfo property = typeof(LocalizedTextRequest).GetProperty(nameof(LocalizedTextRequest.SelectionDraw));
+            ConstructorInfo constructor = typeof(LocalizedTextRequest).GetConstructors().Single();
+            ParameterInfo selectionParameter = constructor.GetParameters()
+                .Single(parameter => parameter.Name == "selectionDraw");
+
+            Assert.That(property, Is.Not.Null);
+            Assert.That(property.PropertyType, Is.EqualTo(typeof(ulong)));
+            Assert.That(selectionParameter.ParameterType, Is.EqualTo(typeof(ulong)));
+
+            LocalizedTextRequest request = new LocalizedTextRequest(
+                new TextTemplateId(1, 1),
+                ulong.MaxValue,
+                default(NamedSlotSet),
+                default(NamedSelectorSet),
+                false,
+                0);
+            Assert.That(request.SelectionDraw, Is.EqualTo(ulong.MaxValue));
         }
 
         [Test]
@@ -102,7 +159,7 @@ namespace TacticalDirector.Localization.Tests
         }
 
         [Test]
-        public void ILocalizer_ExposesOnlyApprovedResolveAndRenderSurface()
+        public void ILocalizer_ExposesOnlyApprovedResolveAndRenderSurfaceWithoutBakedStringInput()
         {
             MethodInfo[] methods = typeof(ILocalizer).GetMethods();
             Assert.That(methods.Length, Is.EqualTo(2));
@@ -114,18 +171,81 @@ namespace TacticalDirector.Localization.Tests
             Assert.That(resolve.GetParameters().Single().ParameterType, Is.EqualTo(typeof(LocalizationKey)));
             Assert.That(render.ReturnType, Is.EqualTo(typeof(string)));
             Assert.That(render.GetParameters().Single().ParameterType, Is.EqualTo(typeof(LocalizedTextRequest).MakeByRefType()));
+            Assert.That(methods.SelectMany(method => method.GetParameters())
+                .Any(parameter => parameter.ParameterType == typeof(string)), Is.False);
         }
 
         [Test]
-        public void CoreAssembly_HasNoOtherTacticalDirectorAssemblyReference()
+        public void CoreAsmdef_DeclaresNoProjectReferences()
         {
-            string[] projectReferences = typeof(ILocalizer).Assembly
-                .GetReferencedAssemblies()
-                .Select(reference => reference.Name)
-                .Where(name => name.StartsWith("TacticalDirector.", StringComparison.Ordinal))
+            string repoRoot = FindRepositoryRoot();
+            string asmdef = File.ReadAllText(Path.Combine(repoRoot, "src", "localization", "localization.asmdef"));
+            string compact = new string(asmdef.Where(character => !char.IsWhiteSpace(character)).ToArray());
+
+            Assert.That(compact, Does.Contain("\"references\":[]"));
+        }
+
+        [Test]
+        public void NoOtherProductionAsmdef_ReferencesLocalizationAtL1()
+        {
+            string srcRoot = Path.Combine(FindRepositoryRoot(), "src");
+            string[] offenders = Directory.GetFiles(srcRoot, "*.asmdef", SearchOption.AllDirectories)
+                .Where(path => !path.Contains(Path.DirectorySeparatorChar + "tests" + Path.DirectorySeparatorChar))
+                .Where(path => !string.Equals(Path.GetFileName(path), "localization.asmdef", StringComparison.Ordinal))
+                .Where(path => File.ReadAllText(path).Contains("TacticalDirector.Localization"))
                 .ToArray();
 
-            Assert.That(projectReferences, Is.Empty);
+            Assert.That(offenders, Is.Empty);
+        }
+
+        [Test]
+        public void PublicCoreTypeShape_ContainsOnlySystemOrLocalizationTypes()
+        {
+            Assembly assembly = typeof(ILocalizer).Assembly;
+            Type[] publicTypes = assembly.GetExportedTypes();
+
+            foreach (Type type in publicTypes)
+            {
+                foreach (ConstructorInfo constructor in type.GetConstructors(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    foreach (ParameterInfo parameter in constructor.GetParameters())
+                    {
+                        AssertContractType(parameter.ParameterType, assembly, type.FullName + " constructor");
+                    }
+                }
+
+                foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+                {
+                    AssertContractType(method.ReturnType, assembly, type.FullName + "." + method.Name + " return");
+                    foreach (ParameterInfo parameter in method.GetParameters())
+                    {
+                        AssertContractType(parameter.ParameterType, assembly, type.FullName + "." + method.Name);
+                    }
+                }
+
+                foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+                {
+                    AssertContractType(property.PropertyType, assembly, type.FullName + "." + property.Name);
+                }
+
+                foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+                {
+                    AssertContractType(field.FieldType, assembly, type.FullName + "." + field.Name);
+                }
+            }
+        }
+
+        [Test]
+        public void CoreContracts_HaveNoMutableStaticRngOrPersistenceState()
+        {
+            Assembly assembly = typeof(ILocalizer).Assembly;
+            FieldInfo[] fields = assembly.GetTypes()
+                .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                .ToArray();
+
+            Assert.That(fields.Any(field => field.IsStatic && !field.IsLiteral && !field.IsInitOnly), Is.False);
+            Assert.That(fields.Any(field => ContainsForbiddenStateName(field.FieldType)), Is.False);
+            Assert.That(assembly.GetExportedTypes().Any(type => type.IsSerializable), Is.False);
         }
 
         [Test]
@@ -136,15 +256,12 @@ namespace TacticalDirector.Localization.Tests
         }
 
         [Test]
-        public void EqualContractValues_ProduceEqualStableHashes()
+        public void StableHashAlgorithm_IsPinnedByGoldenContractValues()
         {
-            LocalizationKey firstKey = new LocalizationKey("menu.load");
-            LocalizationKey secondKey = new LocalizationKey("menu.load");
-            TextTemplateId firstTemplate = new TextTemplateId(3, 11);
-            TextTemplateId secondTemplate = new TextTemplateId(3, 11);
-
-            Assert.That(firstKey.GetHashCode(), Is.EqualTo(secondKey.GetHashCode()));
-            Assert.That(firstTemplate.GetHashCode(), Is.EqualTo(secondTemplate.GetHashCode()));
+            Assert.That(new LocalizationKey("menu.load").GetHashCode(), Is.EqualTo(-618008796));
+            Assert.That(new LocaleId("EN").GetHashCode(), Is.EqualTo(19578));
+            Assert.That(new TextTemplateId(3, 11).GetHashCode(), Is.EqualTo(1196));
+            Assert.That(SelectorOperand.FromCardinal(2L).GetHashCode(), Is.EqualTo(62885991));
         }
 
         [Test]
@@ -154,8 +271,60 @@ namespace TacticalDirector.Localization.Tests
                 new NamedSlot("name", "one"),
                 new NamedSlot("name", "two")));
             Assert.Throws<ArgumentException>(() => new NamedSelectorSet(
-                new NamedSelector("count", new SelectorOperand(1L)),
-                new NamedSelector("count", new SelectorOperand(2L))));
+                new NamedSelector("count", SelectorOperand.FromCardinal(1L)),
+                new NamedSelector("count", SelectorOperand.FromCardinal(2L))));
+        }
+
+        private static string FindRepositoryRoot()
+        {
+            DirectoryInfo directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+            while (directory != null)
+            {
+                if (Directory.Exists(Path.Combine(directory.FullName, "src"))
+                    && File.Exists(Path.Combine(directory.FullName, "README.md")))
+                {
+                    return directory.FullName;
+                }
+
+                directory = directory.Parent;
+            }
+
+            Assert.Fail("Could not locate repository root from the test directory.");
+            return string.Empty;
+        }
+
+        private static void AssertContractType(Type type, Assembly localizationAssembly, string context)
+        {
+            if (type.IsByRef || type.IsArray || type.IsPointer)
+            {
+                AssertContractType(type.GetElementType(), localizationAssembly, context);
+                return;
+            }
+
+            if (type.IsGenericType)
+            {
+                Assert.That(type.GetGenericTypeDefinition().Assembly, Is.Not.EqualTo(localizationAssembly)
+                    .Or.EqualTo(localizationAssembly), context);
+                foreach (Type argument in type.GetGenericArguments())
+                {
+                    AssertContractType(argument, localizationAssembly, context);
+                }
+                return;
+            }
+
+            bool allowed = type == typeof(void)
+                || type.Assembly == localizationAssembly
+                || type.Namespace != null && type.Namespace.StartsWith("System", StringComparison.Ordinal);
+            Assert.That(allowed, Is.True, context + " leaked external type " + type.FullName);
+        }
+
+        private static bool ContainsForbiddenStateName(Type type)
+        {
+            string name = type.FullName ?? type.Name;
+            return name.IndexOf("Random", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf("Rng", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf("Save", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf("Snapshot", StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }
@@ -164,4 +333,5 @@ namespace TacticalDirector.Localization.Tests
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial L1 contract and dependency-boundary coverage. |
+// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Close §5.3/§5.4 evidence gaps: asmdef direction, type-shape, ulong, pass-through, state, identity and golden hashes. |
 #endregion
