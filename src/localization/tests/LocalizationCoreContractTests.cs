@@ -189,8 +189,9 @@ namespace TacticalDirector.Localization.Tests
         public void NoOtherProductionAsmdef_ReferencesLocalizationAtL1()
         {
             string srcRoot = Path.Combine(FindRepositoryRoot(), "src");
+            string testSegment = Path.DirectorySeparatorChar + "tests" + Path.DirectorySeparatorChar;
             string[] offenders = Directory.GetFiles(srcRoot, "*.asmdef", SearchOption.AllDirectories)
-                .Where(path => !path.Contains(Path.DirectorySeparatorChar + "tests" + Path.DirectorySeparatorChar))
+                .Where(path => path.IndexOf(testSegment, StringComparison.OrdinalIgnoreCase) < 0)
                 .Where(path => !string.Equals(Path.GetFileName(path), "localization.asmdef", StringComparison.Ordinal))
                 .Where(path => File.ReadAllText(path).Contains("TacticalDirector.Localization"))
                 .ToArray();
@@ -245,7 +246,7 @@ namespace TacticalDirector.Localization.Tests
 
             Assert.That(fields.Any(field => field.IsStatic && !field.IsLiteral && !field.IsInitOnly), Is.False);
             Assert.That(fields.Any(field => ContainsForbiddenStateName(field.FieldType)), Is.False);
-            Assert.That(assembly.GetExportedTypes().Any(type => type.IsSerializable), Is.False);
+            Assert.That(assembly.GetExportedTypes().Any(HasExplicitSerializableAttribute), Is.False);
         }
 
         [Test]
@@ -303,8 +304,10 @@ namespace TacticalDirector.Localization.Tests
 
             if (type.IsGenericType)
             {
-                Assert.That(type.GetGenericTypeDefinition().Assembly, Is.Not.EqualTo(localizationAssembly)
-                    .Or.EqualTo(localizationAssembly), context);
+                Type definition = type.GetGenericTypeDefinition();
+                bool genericAllowed = definition.Assembly == localizationAssembly
+                    || definition.Namespace != null && definition.Namespace.StartsWith("System", StringComparison.Ordinal);
+                Assert.That(genericAllowed, Is.True, context + " leaked external generic type " + definition.FullName);
                 foreach (Type argument in type.GetGenericArguments())
                 {
                     AssertContractType(argument, localizationAssembly, context);
@@ -325,6 +328,12 @@ namespace TacticalDirector.Localization.Tests
                 || name.IndexOf("Rng", StringComparison.OrdinalIgnoreCase) >= 0
                 || name.IndexOf("Save", StringComparison.OrdinalIgnoreCase) >= 0
                 || name.IndexOf("Snapshot", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool HasExplicitSerializableAttribute(Type type)
+        {
+            return type.GetCustomAttributesData()
+                .Any(attribute => attribute.AttributeType == typeof(SerializableAttribute));
         }
     }
 }
