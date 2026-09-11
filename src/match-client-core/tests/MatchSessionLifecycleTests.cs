@@ -89,12 +89,17 @@ namespace TacticalDirector.MatchClientCore.Tests
             MatchSession second = lifecycle.CreateSession(MatchSetup.NeutralDemo(SecondSeed));
 
             Assert.AreSame(second, lifecycle.Current);
-            Assert.DoesNotThrow(() => first.TickOnce(),
+            first.Commands.Enqueue(ManagerCommand.SetTeamTactic(0, TeamTactic.Balanced));
+            Assert.DoesNotThrow(() => first.ServiceOnce(),
                 "lifecycle ownership does not revoke a caller-held raw reference to a never-started session");
-            Assert.AreEqual(1UL, first.CurrentTick,
-                "positive control: the stale raw reference remains independently usable");
+            Assert.AreEqual(1, first.Driver.Log.Count,
+                "positive control: the stale raw reference remains independently serviceable");
+            Assert.AreEqual(0UL, first.CurrentTick,
+                "the stale-reference proof must stay inside ServiceOnce rather than violate TickOnce's post-Stop contract");
             Assert.AreEqual(0UL, second.CurrentTick,
                 "using the stale predecessor must not mutate the lifecycle's replacement");
+            Assert.AreEqual(0, second.Driver.Log.Count,
+                "servicing the stale predecessor must not leak commands into the replacement");
         }
 
         [Test]
@@ -142,6 +147,8 @@ namespace TacticalDirector.MatchClientCore.Tests
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.2     | 2026-09-11 | —      | Review: stale-reference lock now uses ServiceOnce, preserving  |
+// |         |            |        | LiveMatchStreamer's no-TickOnce-after-Stop contract.           |
 // | 1.1     | 2026-09-11 | —      | Review: lock stale never-started raw-reference boundary;       |
 // |         |            |        | lifecycle coverage now 8 tests.                                |
 // | 1.0     | 2026-09-11 | —      | Initial P5b host-free lifecycle coverage (7 tests).            |
