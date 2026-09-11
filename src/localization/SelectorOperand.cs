@@ -83,7 +83,8 @@ namespace TacticalDirector.Localization
 
         private static void ValidateGender(GrammaticalGender gender)
         {
-            if (gender < GrammaticalGender.Masculine || gender > GrammaticalGender.Other)
+            int ordinal = (int)gender;
+            if (ordinal < (int)GrammaticalGender.Masculine || ordinal > (int)GrammaticalGender.Other)
             {
                 throw new ArgumentOutOfRangeException(nameof(gender), "A gender selector requires a defined non-default category.");
             }
@@ -95,4 +96,5 @@ namespace TacticalDirector.Localization
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial typed selector operand; no rendering behavior. |
+// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Validate enum range through its integer ordinal for C# compatibility. |
 #endregion
