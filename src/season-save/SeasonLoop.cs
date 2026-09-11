@@ -1,5 +1,7 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
+// Modified: 2026-09-11 (T2b review — v1.33: legacy empty finance migration is Restore-only;
+//           generic legacy/unwired empty composition is preserved but every finance read/roll fails loud.)
 // Modified: 2026-09-11 (ERR-030-051 — v1.32: #40 T2b runtime wiring. Finance bootstrap is owned by
 //           League.CreateLoop; this loop exposes the keyed ledger/read surfaces, stages every club's
 //           season settlement at step (b'), and installs it only after BeginNextSeason succeeds.)
@@ -127,9 +129,9 @@ namespace TacticalDirector.SeasonSave
         private readonly ProgressionEngine _progression;
 
         // #40 T2b: live per-club finance state. League.CreateLoop bootstraps one entry per canonical
-        // squad for a new game; Restore threads the persisted entries back in. Empty remains legal only
-        // for the explicit legacy/pre-T2 generic-constructor path. Non-empty state is canonicalized and
-        // club-set checked by SeasonFinanceCoherence before this field is assigned.
+        // squad for a new game. Restore validates populated persisted entries and upgrades ONLY an empty
+        // persisted T1b block. The generic constructor may still carry the explicit legacy/unwired empty
+        // state, but finance reads/commands and the season-boundary settlement fail loud on that state.
         private readonly ClubFinanceEntry[] _finances;
 
         // #44 T2: the discipline tally and its sole writer. Held UNPAIRED (see the constructor) — #44
@@ -246,10 +248,11 @@ namespace TacticalDirector.SeasonSave
         /// attributes and resolve fixtures against another's.
         /// </param>
         /// <param name="financesOrNull">The #40 finance entries this loop owns at runtime. Null or empty
-        /// remains legal only for legacy/pre-T2 generic composition; <see cref="League.CreateLoop"/>
-        /// bootstraps new games and <see cref="Restore"/> threads resumed state. A non-empty set must
-        /// exactly match the season's club set and is snapshot-copied/canonicalized at composition
-        /// (ERR-030-050 / ERR-030-051).</param>
+        /// is the explicit legacy/unwired state for this low-level generic constructor and is NOT silently
+        /// initialized here; finance reads/commands and settlement fail loud until a real set exists.
+        /// <see cref="League.CreateLoop"/> bootstraps new games, while <see cref="Restore"/> alone may
+        /// migrate an empty persisted T1b block. A non-empty set must exactly match the season's club set
+        /// and is snapshot-copied/canonicalized at composition (ERR-030-050 / ERR-030-051).</param>
         /// <exception cref="System.ArgumentNullException">A required reference is null.</exception>
         /// <exception cref="System.ArgumentException">
         /// The KD-4 cursor invariant is already violated: the world clock has passed the season's pending
@@ -461,9 +464,10 @@ namespace TacticalDirector.SeasonSave
                 }
             }
 
-            // ERR-030-050: #40 is persisted from T1b, so the loop must be able to carry the restored
-            // value before T2 gives it a producer. Null/empty is the explicit pre-T2 state. A non-empty
-            // set is snapshot-copied and must exactly match this season's stable ClubId universe.
+            // ERR-030-050 / T2b review: ordinary composition is validation-only. Null/empty stays
+            // the explicit legacy/unwired generic state; the Restore entry point performs the one allowed
+            // compatibility migration before it calls this constructor. A non-empty set is snapshot-copied
+            // and must exactly match this season's stable ClubId universe.
             ClubFinanceEntry[] resolvedFinances = SeasonFinanceCoherence.Normalize(
                 season, financesOrNull, nameof(financesOrNull));
 
@@ -1318,11 +1322,10 @@ namespace TacticalDirector.SeasonSave
         /// the correct resume expressible at all.
         /// </para></param>
         /// <param name="financesOrNull">The restored #40 per-club entries from
-        /// <see cref="SeasonSaveContents.Finances"/>, or null/empty only for the pre-T2 composition.
-        /// ERR-030-050 restores Appendix B.1's persisted-family rule here: once the frame can contain
-        /// populated finance state, the documented resume path must be able to carry it even before the
-        /// runtime producer is wired. Otherwise Load→Restore→Save As can silently replace it with an
-        /// empty block because a new destination gives the overwrite guard nothing to compare against.</param>
+        /// <see cref="SeasonSaveContents.Finances"/>. A null/empty value here means the persisted T1b
+        /// pre-producer representation and is upgraded by this Restore entry point to one initial entry
+        /// per restored SeasonState ClubId before normal composition validation. No ordinary constructor
+        /// path performs that migration (ERR-030-050 / T2b review).</param>
         /// <exception cref="System.ArgumentException">The blob is malformed (F3), the restored pair
         /// violates the cursor invariant (F4), or a non-empty finance set disagrees with the season club
         /// universe.</exception>
@@ -1336,9 +1339,13 @@ namespace TacticalDirector.SeasonSave
             DisciplineState disciplineOrNull = null,
             ClubFinanceEntry[] financesOrNull = null)
         {
+            SeasonState restoredSeason = SeasonStateCodec.Decode(seasonBlob);
+            ClubFinanceEntry[] restoredFinances = SeasonFinanceCoherence.NormalizeLegacyRestore(
+                restoredSeason, financesOrNull, nameof(financesOrNull));
+
             return new SeasonLoop(
-                world, SeasonStateCodec.Decode(seasonBlob), mode, careerOrNull, careerSquadsOrNull,
-                progressionOrNull, disciplineOrNull, financesOrNull);
+                world, restoredSeason, mode, careerOrNull, careerSquadsOrNull,
+                progressionOrNull, disciplineOrNull, restoredFinances);
         }
 
         /// <summary>
@@ -2199,4 +2206,6 @@ namespace TacticalDirector.SeasonSave
 // | 1.32    | 2026-09-11 | —      | ERR-030-051 / #40 T2b: live keyed finance read/ledger commands;   |
 // |         |            |        | settlement staged at (b') and installed only after the season    |
 // |         |            |        | commit succeeds, preserving all-or-nothing boundary semantics.    |
+// | 1.33    | 2026-09-11 | —      | T2b review: legacy empty initialization moved behind Restore;     |
+// |         |            |        | ordinary generic composition is validation-only and fail-loud.    |
 #endregion
