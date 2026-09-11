@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionEvent.cs
 // Created:  2026-05-25
-// Modified: 2026-06-10  [v1.3]
+// Modified: 2026-09-11  [v1.4]
 // Author:   —
 // Spec:     Collision System #3 §3.4.2, §4.2.3, FR-07, Code Standards #20
 // Purpose:  Per-collision event record published to the Event System each frame.
@@ -47,6 +47,14 @@ namespace TacticalDirector.CollisionSystem
         public float ImpactForce;
 
         /// <summary>
+        /// W4 new-threat signal for AGENT_BALL events. True only when Ball Physics actually applied
+        /// an agent deflection and changed the live flight; false for a mere overlap, controlled-ball
+        /// contact, slow first-touch territory, separating contact, and every AGENT_AGENT event.
+        /// This is event-local observation state and is not serialized independently.
+        /// </summary>
+        public bool BallDeflected;
+
+        /// <summary>
         /// Foul detection data. Populated only for AGENT_AGENT collisions.
         /// Default (zeroed) for AGENT_BALL.
         /// </summary>
@@ -63,4 +71,5 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | / ContactDurationS (ERR-003-001).                                           |
 // | 1.3     | 2026-06-10 | —      | AR-9 L-2. ContactPoint doc corrected — "Stage 0: Z = 0" was wrong for       |
 // |         |            |        | AGENT_BALL events, which carry the ball's contact height (≤ 2.0 m).         |
+// | 1.4     | 2026-09-11 | —      | W4: BallDeflected carries applied-response/new-threat truth to consumers.   |
 #endregion
