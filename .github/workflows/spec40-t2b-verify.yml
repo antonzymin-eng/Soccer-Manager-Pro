@@ -1,0 +1,26 @@
+name: Spec 40 T2b verification
+
+on:
+  push:
+    branches:
+      - openai/spec-40-finance-t2b-runtime
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Cross-document consistency
+        run: python3 tools/doc-consistency-check.py --repo .
+      - name: PR functional gate
+        env:
+          TD_APPROVAL_BASE_REF: a4db868ffc2f2620ee1f6111b9a94d5d550c8ebb
+        run: bash tools/run-tests-local.sh --pr
