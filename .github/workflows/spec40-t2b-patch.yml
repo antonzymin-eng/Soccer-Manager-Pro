@@ -1,0 +1,29 @@
+name: Spec 40 T2b patch
+
+on:
+  push:
+    branches:
+      - openai/spec-40-finance-t2b-runtime
+
+permissions:
+  contents: write
+
+jobs:
+  apply-season-loop-patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: openai/spec-40-finance-t2b-runtime
+          fetch-depth: 0
+      - name: Apply guarded SeasonLoop patch
+        run: python3 tools/spec40_t2b_patch.py
+      - name: Commit SeasonLoop patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/season-save/SeasonLoop.cs
+          git diff --cached --check
+          git commit -m "feat(finance): wire Spec 40 T2b into season loop"
+          git push origin HEAD:openai/spec-40-finance-t2b-runtime
