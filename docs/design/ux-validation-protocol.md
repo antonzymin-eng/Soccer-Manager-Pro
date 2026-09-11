@@ -203,13 +203,17 @@ such.
 | Event-heavy match | HUD/stat attention remains usable under dense events. | | | |
 | Unusual scoreline | Score/result hierarchy survives wider values. | | | |
 | Full-time/frozen state | Tactical input is unavailable; save/report behavior is not confused with a still-live match. | | | |
-| Smallest supported desktop | No critical action or information is pushed irretrievably off-screen. | | | |
-| 1920×1080 reference | Intended hierarchy/density matches the reference composition. | | | |
-| High-resolution/ultrawide behavior | Expansion does not produce unusable line lengths, extreme separation or floating controls. | | | |
+| Small desktop — 1366-wide design-validation case | Preserve critical context/state/action and fold secondary detail. This is the shared-system validation case, **not** a declaration that 1366 is the shipping minimum. | | | |
+| Reference — 1920×1080 | Intended hierarchy/density matches the reference composition. | | | |
+| Expanded — 2560-wide/high-resolution/ultrawide design-validation case | Reveal useful detail or safe breathing room without merely stretching; avoid unusable line lengths, extreme separation or floating controls. | | | |
 | Max supported text scale | Critical path remains operable; focus/control relationships remain clear. | | | |
 | Keyboard only | Every critical action in the applicable journey is reachable in coherent order; no focus trap; state is visible without hover. | | | |
 | Mouse only | Complete the applicable journey path without keyboard-only dependency. | | | |
 | Audio muted/caption path *(Gate-E only)* | No required journey information depends on sound alone. Named by Gate E, not by the F4.6 minimum set; run it where the prototype has any audio/caption surface at all. | | | |
+
+The desktop rows above use the explicit **1366-wide / 1920×1080 / 2560-wide** design-validation cases
+from `ux-shared-system.md` §13 so independent runs use comparable dimensions. They do not convert the
+1366-wide case into a shipping-platform minimum; that product/implementation decision remains open.
 
 Every Gate-E run must complete the `Result`, `Prototype/version`, and evidence/finding field for
 every condition row. `Result` is `PASS`, `FAIL`, or justified `N/A`; a blank result/evidence field means
@@ -323,16 +327,20 @@ Use the table matching the `Journey` in §7.1. Do not mix S0 and S1 task IDs in 
 ### 7.3 Finding ledger
 
 `ux-detailed-plan.md` §12 is the field authority for this ledger. The packet keeps the affected
-state/task alongside the required fields rather than replacing any of them.
+state/task and owner-acceptance evidence alongside the required fields rather than replacing any of
+them.
 
-| ID | Journey | Gate | Evidence | Affected task/state | Severity | Owner | Disposition | Release condition | Retest result |
-|---|---|---|---|---|---|---|---|---|---|
-| UX-S0-001 | | | | | | | | | |
+| ID | Journey | Gate | Evidence | Affected task/state | Severity | Owner | Disposition | Acceptance rationale / reference | Release condition | Retest result |
+|---|---|---|---|---|---|---|---|---|---|---|
+| UX-S0-001 | | | | | | | | | | |
 
 Use stable IDs when a finding survives revisions so evidence and retest results remain traceable. A
 deferred Major must name the concrete milestone/condition governing release; a later retest records its
 actual result in `Retest result` rather than hiding that outcome in a generic status field. The
-`Disposition` field must use exactly one value from the closed vocabulary in §8.
+`Disposition` field must use exactly one value from the closed vocabulary in §8. If an unresolved
+Major is accepted for Gate G, `Acceptance rationale / reference` must contain the project owner's
+rationale or a precise durable reference to where that rationale is recorded; an ID alone is not
+sufficient acceptance evidence.
 
 ---
 
@@ -363,7 +371,8 @@ Disposition/pass rules:
 
 - Gate G cannot pass with any unresolved Blocker.
 - Gate G cannot pass with an unresolved Major unless the project owner explicitly accepts it with a
-  rationale and target disposition.
+  rationale and target disposition; the finding ledger must preserve that rationale directly or by a
+  precise durable reference in `Acceptance rationale / reference`.
 - Moderate may be accepted only when documented and non-compounding.
 - Minor enters backlog unless it is cheap and safe to fix in the current revision.
 - A Blocker/Major that materially changes the flow triggers a second participant round after revision.
@@ -386,14 +395,15 @@ After both sessions, complete the record for the journey under test.
 | S0 back/cancel task S0-T7 attempted | PASS / FAIL / N/A for S1 |
 | Unresolved Blockers | count |
 | Unresolved Majors | count |
-| Owner-accepted Majors with rationale | IDs / none |
+| Owner-accepted Majors with rationale/reference | IDs + ledger rationale/reference / none |
 | Second round required | yes / no |
 | Gate G | PASS / FAIL |
 
 Gate G passes only when Gate F had already passed with the complete prescribed task set for that
 journey, both independent participants completed the round, **every** prescribed task was attempted,
-there is no unresolved Blocker, and every remaining Major has explicit owner acceptance with rationale.
-If a prescribed task proves untestable during the round, Gate G is `FAIL`; record the
+there is no unresolved Blocker, and every remaining Major has explicit project-owner acceptance with
+both a target disposition and rationale preserved in the finding ledger directly or by precise durable
+reference. If a prescribed task proves untestable during the round, Gate G is `FAIL`; record the
 prototype/dependency blocker and return to Gate F rather than excluding that task from scoring.
 
 ---
@@ -422,11 +432,11 @@ semantics and evidence-backed interaction states.
 | F4 requirement | Status | Evidence / blocker |
 |---|---|---|
 | Four-layer method made repeatable | READY | §§2, 5, 6, 10 |
-| Scripted self-walkthrough defined | READY | §5 covers the complete F4.6 minimum profile set plus Gate-E-only resilience checks, explicit contrast verification, and an auditable per-condition result/evidence record |
+| Scripted self-walkthrough defined | READY | §5 covers the complete F4.6 minimum profile set plus Gate-E-only resilience checks, explicit contrast verification, pinned desktop validation cases, and an auditable per-condition result/evidence record |
 | S0 task protocol defined | READY | §§3.1, 6, 7 include the required back/cancel task |
 | S1 task/evidence protocol defined | READY | §§3.2, 4.1, 7, 9 map the §7.6 S1 outcomes into S1 participant slots, task records and journey-specific Gate-G evidence |
-| Severity/disposition repeatable | READY | §§7.3–9 include the closed §12 disposition vocabulary and Gate-G pass rules |
-| Evidence capture format defined | READY | §7 includes the complete `ux-detailed-plan.md` §12 finding-ledger fields plus task/state context |
+| Severity/disposition repeatable | READY | §§7.3–9 include the closed §12 disposition vocabulary, owner-acceptance rationale evidence, and Gate-G pass rules |
+| Evidence capture format defined | READY | §7 includes the complete `ux-detailed-plan.md` §12 finding-ledger fields plus task/state and acceptance-rationale context |
 | §10.1 UX-workstream accountable owner assigned | **OPEN** | §4.0 assignee is TBD |
 | S0 participant 1 identified/recruitable | **OPEN** | §4.1 candidate is TBD |
 | S0 participant 2 identified/recruitable | **OPEN** | §4.1 candidate is TBD |
@@ -448,4 +458,4 @@ assignments are explicit.
 | 0.2 | September 11, 2026 | Review correction: added the binding F4.6 `no save` and `save/load failure where relevant` profiles; added S0-T7 to exercise Gate F back/cancel behavior; narrowed S0-T1 so current New Game/start limitations are recorded honestly; added this version history and tightened the READY claims to the corrected coverage. |
 | 0.3 | September 11, 2026 | Review correction: restored a general `Error/failure state` row to §5. The v0.2 pass had *replaced* the original generic error row with `Save/load failure where relevant` rather than adding alongside it, narrowing coverage against F4.3, which names `disabled/error states` as a condition in its own right and of which a save/load failure is only one class. §5's preamble now states the F4.3 floor explicitly and the closing note makes the non-substitution symmetric. |
 | 0.4 | September 11, 2026 | Codex review correction: split color-independent meaning into its own Gate-E condition so it remains binding even when the `Many status indicators` stress profile is N/A; density/scannability is now checked separately. |
-| 0.5 | September 11, 2026 | Review corrections: prescribed tasks can no longer disappear behind an `honestly testable` qualifier — an untestable prescribed task fails Gate F/G and returns the prototype to Gate F; Gate E now has per-condition `PASS`/`FAIL`/justified-`N/A`, prototype-version, evidence and finding/reason fields, with blank rows explicitly preventing a Gate-E pass; Gate E now carries a standalone contrast verification condition per `ux-shared-system.md` F3-001; the finding ledger preserves all `ux-detailed-plan.md` §12 fields; §8 now carries §12's closed five-value disposition vocabulary; and the S1 participant slots, §7.6 task outcomes, task evidence and journey-specific Gate-G record are explicitly defined. |
+| 0.5 | September 11, 2026 | Review corrections: prescribed tasks can no longer disappear behind an `honestly testable` qualifier — an untestable prescribed task fails Gate F/G and returns the prototype to Gate F; Gate E now has per-condition `PASS`/`FAIL`/justified-`N/A`, prototype-version, evidence and finding/reason fields, with blank rows explicitly preventing a Gate-E pass; Gate E carries standalone contrast verification per `ux-shared-system.md` F3-001 and pins desktop validation to the shared-system 1366-wide / 1920×1080 / 2560-wide cases without declaring a shipping minimum; the finding ledger preserves all `ux-detailed-plan.md` §12 fields plus project-owner acceptance rationale/reference for accepted unresolved Majors; §8 carries §12's closed five-value disposition vocabulary; and the S1 participant slots, §7.6 task outcomes, task evidence and journey-specific Gate-G record are explicitly defined. |
