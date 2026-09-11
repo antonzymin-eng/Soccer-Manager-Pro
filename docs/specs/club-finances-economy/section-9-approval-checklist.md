@@ -1,11 +1,12 @@
 # Club Finances & Economy #40 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.5 — PR #392 T2a source status recorded; checkbox held open pending executed gate evidence)
+**Last Updated:** September 11, 2026 (v0.6 — T2b source status recorded; T2a/T2b checkboxes remain open pending executed current-head gate evidence)
+**Last Updated (prior):** September 11, 2026 (v0.5 — PR #392 T2a source status recorded; checkbox held open pending executed gate evidence)
 **Last Updated (prior):** September 10, 2026 (v0.4 — ERR-030-050: T1b resume seam/coherence close-out; T2 runtime scope corrected. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v0.3 — §9.2 refreshed against real source at the T1b landing; it had published T0/T1a as NOT STARTED since PR #363 merged)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 **Source:** `docs/tracking/club-finances-economy-design.md` v0.2
 
@@ -61,10 +62,13 @@ implementation status is refreshed as each T-phase lands; review gates track the
       which proves the factory's `Squad.ClubId` universe composes with `SeasonState.ClubIds`. Keep this box
       open until the current landing head's functional gate has executed successfully; source presence alone
       is not test-execution evidence.
-- [ ] T2b production invocation + settlement — NOT YET LANDED. #30 must invoke the T2a factory once at
-      league/game bootstrap and `SettleFinances` once per club at reserved step (b'), then expose the
-      already-built query/command seams to downstream producers. No claim is made that T-FN-LIFE-001's
-      across-season-roll half or T-FN-ORD-001/003 is satisfied until this wiring lands.
+- [ ] T2b production invocation + settlement — **IMPLEMENTED ON THIS BRANCH; GATE EVIDENCE PENDING**.
+      Source anchors: `League.CreateLoop` invokes `CreateInitialForSquads` once from canonical league
+      squads; `SeasonFinanceRuntime.PrepareSettlement` computes every club at (b'); `SeasonLoop` installs
+      the staged values only after `BeginNextSeason` succeeds (ERR-030-051); `FinanceView`,
+      `AvailableTransferBudget`, and `ApplyTransaction` expose the observer/query/command surfaces; and
+      `SeasonLoopFinanceTests` covers bootstrap, keyed ledger routing, across-roll identity/settlement, and
+      refused-roll atomicity. Keep this box open until the current landing head's functional gate passes.
 - [ ] Deep-tier per-day accrual / stochastic sponsorship variance / FFP soft-penalty / board modulation / #31
       / #34 wage producers — NOT STARTED (T3).
 
@@ -131,4 +135,5 @@ beyond `APPROVED` itself.
 | 0.3 | 2026-09-10 | — | **§9.2 stale-status correction, at the T1b landing.** The section was written as a forward-design snapshot and never refreshed when PR #363 merged, so it published `TacticalDirector.ClubFinances` and `ClubFinancesSaveCodec` as NOT STARTED against shipped code for six days. Rewritten with a per-row verifying source anchor (never a bare checkbox), the T1/T1b split made explicit, and the T2 row's ERR-030-003 gate recorded as OPEN rather than blocking. No review gate, FR, or approval decision is touched; §9.6's APPROVED stands unchanged. |
 | 0.4 | 2026-09-10 | — | **ERR-030-050 review correction.** T1b is checked for the finance restore/carrier/save seam and current-season coherence guard; the T2 unchecked row is restricted to bootstrap, settlement, actual producer wiring and consumer exposure. |
 | 0.5 | 2026-09-11 | — | **PR #392 T2a status refresh, review-corrected.** Records the pure `Squad.ClubId` bootstrap transform and live `PlayerDatabase` dependency against source, but deliberately leaves the T2a implementation box open until the named suites have actually executed successfully; T2b remains #30 invocation/settlement and the across-roll half of T-FN-LIFE-001. |
+| 0.6 | 2026-09-11 | — | **T2b source-status refresh / ERR-030-051.** Records the live #30 bootstrap, staged boundary settlement, command/read surfaces and `SeasonLoopFinanceTests`; both T2a/T2b evidence boxes remain deliberately unchecked until the current-head functional gate executes successfully. |
 #endregion
