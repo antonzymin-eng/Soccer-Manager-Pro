@@ -73,6 +73,11 @@ S0-T7 exists specifically to exercise Gate F's binding requirement that the comp
 back/cancel behavior. The moderator may place S0-T7 before S0-T2 when that produces a cleaner session,
 provided the task ID and evidence remain unchanged.
 
+The no-skip rule below operationalizes [`ux-detailed-plan.md`](ux-detailed-plan.md) §5 **Gate F —
+Interactive prototype**: prototype the **complete task**, accurately label real versus future behavior,
+and pass only when a participant can attempt that complete task without control-by-control instruction.
+It does not add a new gate criterion beyond that authority.
+
 If a prescribed task depends on a capability still marked `FUTURE-BLOCKED`, Gate F remains **FAIL**
 until the prototype provides an honest simulated representation of that specified future surface.
 Do not run the Gate-G participant round with the task omitted from scoring, and do not silently convert
