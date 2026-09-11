@@ -1,9 +1,9 @@
 # Localization & Accessibility #49 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
-**Last Updated (prior):** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
-**Version:** 0.4
+**Last Updated:** September 11, 2026 (v0.5 — L1 typed-selector contract; ERR-049-004 discharge)
+**Last Updated (prior):** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -18,8 +18,9 @@
   enforced at the producer's own spec.
 - **FR-LC-003** — Static strings MUST resolve via `string Resolve(LocalizationKey key)`.
 - **FR-LC-004** — Procedural text MUST render via `string Render(in LocalizedTextRequest req)`, where the
-  request carries a `TextTemplateId`, the `ulong` selection draw, the slot facts, and the citation
-  `(hasCitedEpisode, citationKind)`.
+  request carries a `TextTemplateId`, the `ulong` selection draw, immutable preformatted string slots,
+  immutable **typed locale-neutral selector operands** for bounded cardinal/gender selection, and the
+  citation `(hasCitedEpisode, citationKind)`.
 
 **Localize-after-generate (KD-2)**
 - **FR-LC-005** — The localization transform MUST run display-side, strictly **after** deterministic
@@ -35,8 +36,10 @@
 
 **Template model (KD-3)**
 - **FR-LC-009** — The template model MUST be named-placeholder substitution plus a bounded plural/gender
-  category selector (CLDR-style categories + a small gender set). A template MUST NOT require arbitrary
-  runtime morphology. Base-locale English declares no categories (identity with `.Replace`).
+  category selector (CLDR-style categories + a small gender set). The request-side selector input MUST be
+  typed and locale-neutral (for example, a cardinal number and/or authored grammatical-gender value), not
+  a preformatted localized category string. A template MUST NOT require arbitrary runtime morphology.
+  Base-locale English declares no categories (identity with `.Replace`).
 - **FR-LC-010** — The episode citation clause MUST be a per-`EventKind` localizable string, selected by
   `EventKind` (a sim fact), **not** by the draw, and appended when `hasCitedEpisode` — matching
   `InteractionTextGenerator`'s `text + " " + clause`. The clause table migrates to the base-locale catalogue
@@ -121,19 +124,48 @@ public readonly struct NamedSlotSet
     // expander does pure string substitution and no producer-specific formatting.
 }
 
+public enum GrammaticalGender
+{
+    Unspecified = 0,
+    Masculine,
+    Feminine,
+    Neutral,
+    Other
+}
+
+public readonly struct SelectorOperand
+{
+    // LOCALE-NEUTRAL typed data only. Carries a cardinal value and/or an authored grammatical-gender
+    // value. It does NOT carry localized category names such as "one"/"few" or rendered text.
+    public readonly bool HasCardinal;
+    public readonly long CardinalValue;
+    public readonly bool HasGender;
+    public readonly GrammaticalGender Gender;
+}
+
+public readonly struct NamedSelectorSet
+{
+    // immutable name -> SelectorOperand map; producer-specific names are introduced only by adapters.
+}
+
 public readonly struct LocalizedTextRequest
 {
     public readonly TextTemplateId Id;        // carries ProducerTag — scopes both template AND clause lookups
-    public readonly ulong SelectionDraw;      // the world.text draw, verbatim (FR-LC-020)
+    public readonly ulong SelectionDraw;      // producer-owned deterministic selection value, verbatim (FR-LC-020)
     public readonly NamedSlotSet Slots;       // name -> string (already formatted; §3.5)
+    public readonly NamedSelectorSet Selectors; // typed locale-neutral bounded-selector input (FR-LC-009)
     public readonly bool HasCitedEpisode;
-    public readonly int CitationKind;         // the producer's clause key (e.g. #22 EventKind ordinal); looked up PRODUCER-SCOPED by (Id.ProducerTag, CitationKind) (FR-LC-010)
+    public readonly int CitationKind;         // the producer's clause key; looked up producer-scoped by (Id.ProducerTag, CitationKind)
 }
 
 // content (in TacticalDirector.Localization): per-locale keyed static strings + per-(Id, variant) templates
 // + variantCount(Id) + per-(ProducerTag, clauseKey) clauses. Base-locale = the migrated InteractionTextCorpus content.
 public sealed class TemplateCatalogue { /* ... */ }
 ```
+
+The L1 contract stores selector operands immutably and deterministically but performs **no selector
+interpretation**. Mapping a typed cardinal/gender operand to an authored locale-specific category and
+choosing a sub-form is renderer behavior and therefore begins in L2.
 
 ### 2.2.1 Per-producer boundary adapter (the ONLY sim-side reference)
 
@@ -168,4 +200,5 @@ public static class LivingWorldTextBoundary
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 fixes: H-1 generic core / per-producer boundary-adapter split (§2.2 core references nothing sim-side; §2.2.1 `LivingWorldTextBoundary`); M-1 FR-LC-008a construction-time roster-coverage invariant + F1/F5 rewrite + FR-LC-015 intent-value gate; L-1 `{score}` derived → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
 | 0.4 | 2026-07-27 | — | **ERR-049-001** (at #35's approval): **FR-LC-020 generalized** — `SelectionDraw` is *the producer's own deterministic, locale-independent selection value, carried verbatim*, with #22's `world.text` draw retained as the named example. The original wording named one producer's RNG reservation on a producer-agnostic seam, contradicting §7.3, FR-LC-013/014 and FR-LC-005 — and would have forced every later producer either to register an RNG stream it does not need or to violate the requirement. **Contract-widening only; no code, type or catalogue change.** Load-bearing for #35, #46 and #48. |
+| 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-004 discharge.** Extends the procedural request contract with immutable typed locale-neutral selector operands (cardinal and/or grammatical gender), so FR-LC-009 can be implemented without smuggling locale-specific selector strings through `NamedSlotSet`. Selector interpretation remains L2 rendering behavior. |
 #endregion
