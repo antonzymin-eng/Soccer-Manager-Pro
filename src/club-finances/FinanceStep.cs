@@ -1,18 +1,19 @@
 // ============================================================================
 // File:     src/club-finances/FinanceStep.cs
 // Created:  2026-09-04
-// Modified: 2026-09-08
+// Modified: 2026-09-11
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
-//           Spec #40 §3.1, FR-FN-001/005-008/011/018/028 (season settlement)
-// Purpose:  Implements the pure deterministic season-boundary finance projection and prize interpolation.
+//           Spec #40 §3.1/§7.1, FR-FN-001/005-008/011/018/028 (season settlement + T3a daily accrual)
+// Purpose:  Implements the pure deterministic season-boundary finance projection, prize interpolation,
+//           and the T3a accounting primitive for daily sponsorship/matchday revenue accrual.
 // ============================================================================
 
 using System;
 
 namespace TacticalDirector.ClubFinances
 {
-    /// <summary>Pure T0 season-boundary finance calculations; no clock, world tick, or RNG dependency.</summary>
+    /// <summary>Pure finance calculations; no clock, world tick, or RNG dependency.</summary>
     public static class FinanceStep
     {
         /// <summary>Adds position prize money and overwrites the next season's transfer and wage ceilings.</summary>
@@ -62,6 +63,70 @@ namespace TacticalDirector.ClubFinances
                 result.WageBudget = ScaleAndClampBudget(
                     baseWageCeiling,
                     board.BudgetMultiplierMillPermille);
+            }
+
+            ClubFinances.ValidateCoherence(in result);
+            return result;
+        }
+
+        /// <summary>
+        /// Applies one T3a calendar day's already-derived sponsorship and matchday revenue to the club's
+        /// accounting state. This method owns the mutation semantics only: later T3 slices own the
+        /// sponsorship model, matchday model, stochastic variance and #30 daily invocation.
+        /// </summary>
+        /// <param name="prior">Existing coherent club finance state.</param>
+        /// <param name="sponsorshipRevenue">Non-negative sponsorship cash attributable to this day.</param>
+        /// <param name="matchdayRevenue">Non-negative matchday cash for this day; zero on non-match days.</param>
+        /// <param name="deepRevenueEnabled">
+        /// Behaviour-neutral T3 gate. <c>false</c> returns <paramref name="prior"/> field-identically.
+        /// </param>
+        /// <returns>
+        /// A detached value with the day's total added to both <see cref="ClubFinances.Balance"/> and
+        /// <see cref="ClubFinances.SeasonRevenueAccrued"/>. Budgets, wage liability and
+        /// <see cref="ClubFinances.FfpBalanceWindow"/> are unchanged in T3a.
+        /// </returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// The deep path is enabled and either revenue component is negative.
+        /// </exception>
+        /// <exception cref="OverflowException">
+        /// The component sum, resulting balance, or season accumulator is outside signed 64-bit range.
+        /// No caller-visible state is mutated because the operation returns a value copy.
+        /// </exception>
+        public static ClubFinances AccrueDailyRevenue(
+            in ClubFinances prior,
+            long sponsorshipRevenue,
+            long matchdayRevenue,
+            bool deepRevenueEnabled)
+        {
+            ClubFinances.ValidateCoherence(in prior);
+
+            if (!deepRevenueEnabled)
+            {
+                return prior;
+            }
+
+            if (sponsorshipRevenue < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(sponsorshipRevenue),
+                    sponsorshipRevenue,
+                    "Daily sponsorship revenue must be non-negative.");
+            }
+
+            if (matchdayRevenue < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(matchdayRevenue),
+                    matchdayRevenue,
+                    "Daily matchday revenue must be non-negative.");
+            }
+
+            ClubFinances result = prior;
+            checked
+            {
+                long dailyRevenue = sponsorshipRevenue + matchdayRevenue;
+                result.Balance += dailyRevenue;
+                result.SeasonRevenueAccrued += dailyRevenue;
             }
 
             ClubFinances.ValidateCoherence(in result);
@@ -152,4 +217,5 @@ namespace TacticalDirector.ClubFinances
 // | 1.2     | 2026-09-07 | —      | F4 widened from zero-only to all non-positive board multipliers. |
 // | 1.3     | 2026-09-07 | —      | Board scaling now caps before any multiplication that could overflow accepted tuning ranges. |
 // | 1.4     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
+// | 1.5     | 2026-09-11 | OpenAI | T3a: add pure identity-gated daily sponsorship/matchday revenue accrual primitive. |
 #endregion
