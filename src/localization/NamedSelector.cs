@@ -57,6 +57,18 @@ namespace TacticalDirector.Localization
         {
             return LocalizationHash.Combine(LocalizationHash.StringOrdinal(Name), Operand.GetHashCode());
         }
+
+        /// <summary>Compares two named selectors by value.</summary>
+        public static bool operator ==(NamedSelector left, NamedSelector right)
+        {
+            return left.Equals(right);
+        }
+
+        /// <summary>Compares two named selectors by value.</summary>
+        public static bool operator !=(NamedSelector left, NamedSelector right)
+        {
+            return !left.Equals(right);
+        }
     }
 }
 
@@ -64,4 +76,5 @@ namespace TacticalDirector.Localization
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial L1 named selector entry. |
+// | 1.1     | 2026-09-11 | GPT-5.6 Sol | Add value equality operators. |
 #endregion
