@@ -1,13 +1,14 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v1.2 — T2b implemented: #30 bootstrap invocation, live boundary settlement, and finance command/read surfaces; ERR-030-051 atomicity correction)
+**Last Updated:** September 11, 2026 (v1.3 — T2b review correction: Restore-only migration of the legacy empty T1b finance block; generic composition does not silently initialize)
+**Last Updated (prior):** September 11, 2026 (v1.2 — T2b implemented: #30 bootstrap invocation, live boundary settlement, and finance command/read surfaces; ERR-030-051 atomicity correction)
 **Last Updated (prior):** September 11, 2026 (v1.1 — PR #392 formalizes T2a/T2b: T2a is the #27-backed bootstrap factory/reference activation; T2b is #30 invocation + settlement wiring)
 **Last Updated (prior):** September 10, 2026 (v1.0 — ERR-030-050 review correction: T1b includes the resume carrier/coherence guard; T2 remains runtime production. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v0.9 — T1b landed: #30 season-save composition + frame bump, ERR-030-049)
 **Last Updated (prior):** September 7, 2026 (v0.8 — PR #363 Codex arithmetic correction)
 **Last Updated (prior):** September 7, 2026 (v0.7 — PR #363 follow-up review correction)
-**Version:** 1.2
+**Version:** 1.3
 **Status:** APPROVED
 
 ---
@@ -52,7 +53,13 @@
   values are staged until `BeginNextSeason` succeeds and only then copied into the live finance array,
   preserving #30's refused-roll atomicity (ERR-030-051) without moving the semantic settlement point.
   `SeasonLoop.FinanceView`, `AvailableTransferBudget`, and `ApplyTransaction` expose the #40-owned
-  observer/query/command surfaces without granting direct field mutation. T3 is now the next #40 phase.
+  observer/query/command surfaces without granting direct field mutation. T2b also closes the T1b empty-
+  block compatibility edge explicitly: `SeasonFinanceCoherence.Normalize` remains validation-only, while
+  `SeasonLoop.Restore` alone invokes `NormalizeLegacyRestore` to initialize a persisted empty T1b block
+  from the restored `SeasonState.ClubIds`. The generic constructor may still represent legacy/unwired
+  emptiness for low-level compatibility, but every finance read/command and season settlement fails loud
+  on that state; a forgotten finance argument therefore cannot grant a club starting cash silently.
+  T3 is now the next #40 phase.
 - **T3** — Deep tier: per-day revenue accrual (matchday/sponsorship, a new daily #30 tick-order slot — the
   #41 pattern), the stochastic sponsorship-variance draw (promotes `DOMAIN_TAG_CLUB_FINANCES = 0x29` /
   `SubsystemOrdinals.ClubFinances = 91`, keyed on `(clubId, seasonNumber, purpose)`), the FFP soft-penalty
@@ -184,4 +191,5 @@ otherwise have to re-derive them:
 | 1.0 | 2026-09-10 | — | **ERR-030-050 review correction.** T1b includes the `SeasonLoop` restore/carrier/save seam and exact current-season finance coherence; T2 is limited to `CreateInitial`, `SettleFinances`, producer wiring and consumer exposure. The v0.9 producer-wired deferral remains historical but is superseded. |
 | 1.1 | 2026-09-11 | — | **PR #392 T2 split back-prop.** T2a owns only the pure #27-backed bootstrap factory and activation of the consumed `PlayerDatabase` edge; T2b owns #30's production invocation plus step-(b') settlement wiring. §7.3 explicitly keeps lifecycle/composition ownership in #30 so the factory is not a second bootstrap authority. |
 | 1.2 | 2026-09-11 | — | **T2b implementation / ERR-030-051.** Records `League.CreateLoop` as #30's one-time bootstrap owner, the live staged settlement at (b'), post-commit finance installation preserving refused-roll atomicity, and the public observer/query/command surfaces. T3 becomes the next phase. |
+| 1.3 | 2026-09-11 | — | **T2b review correction.** Legacy empty T1b state is migrated only through `SeasonLoop.Restore`/`NormalizeLegacyRestore`; ordinary normalization remains validation-only, and generic legacy/unwired empty composition fails loud on finance use rather than silently receiving starting cash. |
 #endregion
