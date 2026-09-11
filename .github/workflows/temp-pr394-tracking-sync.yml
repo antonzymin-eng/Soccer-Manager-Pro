@@ -1,0 +1,93 @@
+name: Temporary PR394 tracking sync
+
+on:
+  push:
+    branches: [design/ux-f4-validation-setup]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: design/ux-f4-validation-setup
+          fetch-depth: 0
+
+      - name: Synchronize v0.4 tracking prose
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_required(text, old, new, label):
+              if old not in text:
+                  if new in text:
+                      return text
+                  raise SystemExit(f'missing replacement anchor: {label}')
+              return text.replace(old, new, 1)
+
+          p = Path('docs/tracking/CHANGELOG.md')
+          s = p.read_text(encoding='utf-8')
+          s = replace_required(
+              s,
+              'New: `docs/design/ux-validation-protocol.md` **v0.3**',
+              'New: `docs/design/ux-validation-protocol.md` **v0.4**',
+              'CHANGELOG protocol version')
+          s = replace_required(
+              s,
+              '**Five review findings were raised across two rounds and all five are fixed (v0.1 → v0.3).**',
+              '**Six review findings were raised across three rounds and all six are fixed (v0.1 → v0.4).**',
+              'CHANGELOG finding count')
+          anchor = 'v0.3 restores a general `Error/failure state` row, states the F4.3 floor in §5\'s preamble, marks the audio row as the one Gate-E-only addition beyond that floor, and makes the non-substitution note symmetric in both directions.'
+          addition = anchor + ' **(6) Codex found that color-independent meaning was coupled to the `Many status indicators` stress row, so marking that density profile N/A could silently waive Gate E\'s color-independent-meaning requirement. v0.4 splits color-independent meaning into its own Gate-E condition that remains binding wherever semantic state or action meaning uses color; the many-indicators row now tests density/scannability only.**'
+          s = replace_required(s, anchor, addition, 'CHANGELOG sixth finding')
+          s = replace_required(
+              s,
+              'The PR\'s documentation checks are the applicable evidence — `Markdown lint`, `Markdown link check`, `Spec hygiene checks`, `File manifest sanity` and `YAML lint` all green on `ee0cf7d`; re-running at the close-out head is owed before merge.',
+              'The PR\'s documentation checks are the applicable evidence — `Markdown lint`, `Markdown link check`, `Spec hygiene checks`, `File manifest sanity` and `YAML lint`; the current-head GitHub run is authoritative and must be green before merge.',
+              'CHANGELOG gate wording')
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('docs/tracking/file-manifest.md')
+          s = p.read_text(encoding='utf-8')
+          s = replace_required(
+              s,
+              '**NEW (1):** `docs/design/ux-validation-protocol.md` **v0.3**',
+              '**NEW (1):** `docs/design/ux-validation-protocol.md` **v0.4**',
+              'manifest protocol version')
+          s = replace_required(
+              s,
+              '**Review corrections carried in the same PR across two rounds (v0.1 → v0.3), all five verified against `ux-detailed-plan.md` rather than taken on report:**',
+              '**Review corrections carried in the same PR across three rounds (v0.1 → v0.4), all six verified against `ux-detailed-plan.md` rather than taken on report:**',
+              'manifest finding count')
+          anchor = 'and at v0.3 a general `Error/failure state` row was restored, the v0.2 pass having *replaced* rather than supplemented the original generic error row and thereby narrowed §5 against F4.3\'s `disabled/error states` condition.'
+          addition = anchor + ' At v0.4, the Codex finding that color-independent meaning disappeared whenever `Many status indicators` was N/A is closed by a standalone Gate-E color-independent-meaning condition; the many-indicators row now covers density/scannability only.'
+          s = replace_required(s, anchor, addition, 'manifest sixth finding')
+          s = replace_required(
+              s,
+              '**GATE: not owed and not run** for a Markdown-only landing; the PR\'s documentation checks (`Markdown lint`, `Markdown link check`, `Spec hygiene checks`, `File manifest sanity`, `YAML lint`) are the applicable evidence and were green on `ee0cf7d`; re-running at the close-out head is owed before merge.',
+              '**GATE: not owed and not run** for a Markdown-only landing; the PR\'s documentation checks (`Markdown lint`, `Markdown link check`, `Spec hygiene checks`, `File manifest sanity`, `YAML lint`) are the applicable evidence, and the current-head GitHub run must be green before merge.',
+              'manifest gate wording')
+          s = replace_required(
+              s,
+              '| `docs/design/ux-validation-protocol.md` | F4 output — the repeatable validation operating packet (v0.3, Sep 11, 2026): four-layer sequence, S0-T1–T7 participant tasks, the F4 human-assignment table, the scripted walkthrough matrix covering all nineteen F4.6 minimum profiles plus F4.3\'s general error condition, moderator script, evidence templates, severity/disposition, and the Gate-G/Gate-J records |',
+              '| `docs/design/ux-validation-protocol.md` | F4 output — the repeatable validation operating packet (v0.4, Sep 11, 2026): four-layer sequence, S0-T1–T7 participant tasks, the F4 human-assignment table, the scripted walkthrough matrix covering all nineteen F4.6 minimum profiles plus F4.3\'s general error condition and a standalone Gate-E color-independent-meaning condition, moderator script, evidence templates, severity/disposition, and the Gate-G/Gate-J records |',
+              'manifest UX row')
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          python3 tools/recurring-defect-lint.py --repo .
+          python3 tools/doc-consistency-check.py --repo .
+
+      - name: Commit sync and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/temp-pr394-tracking-sync.yml
+          git add docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md
+          git commit -m "docs(ux): sync F4 v0.4 tracking"
+          git push origin HEAD:design/ux-f4-validation-setup
