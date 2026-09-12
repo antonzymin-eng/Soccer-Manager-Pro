@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-07-27  [v1.8]
+// Modified: 2026-09-11  [v1.9] (W4: transient applied-deflection feedback; CollisionEvent ABI unchanged)
 // Author:   —
 // Spec:     Collision System #3 §3.4.1, §4.1.3, §4.4.4, Code Standards #20
 // Purpose:  Main collision system — orchestrates spatial hash, narrow phase, and response.
@@ -583,4 +583,7 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | in-engine. No functional change.                                                        |
 // | 1.8     | 2026-07-27 | —      | Shot-outcome design KD-6: ProcessAgentBall populates                        |
 // |         |            |        | AgentBallCollisionData.AgentPosition (the deflection-normal input).         |
+// | 1.9     | 2026-09-11 | —      | W4: source-compatible UpdateCollisions overload reports whether any      |
+// |         |            |        | AGENT_BALL response actually changed ball flight. The signal is transient |
+// |         |            |        | per call; CollisionEvent and cross-tick state remain unchanged.           |
 #endregion

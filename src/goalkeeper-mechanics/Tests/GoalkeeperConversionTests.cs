@@ -1,6 +1,6 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperConversionTests.cs
 // Created:  2026-07-28
-// Modified: 2026-08-03
+// Modified: 2026-09-11 (W4: explicit deflection reaction-reset lock)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.2 / §3.5 / §4.6, Code Standards #20
 // Purpose:  Unit locks for the gk-catch-parry-conversion pass (ERR-011-005 / ERR-011-006):
@@ -388,4 +388,6 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | SaveIntent.AttemptCommittedTick (KD-CR5) with commits retimed so  |
 // |         |            |        | elapsed-at-commit brackets requiredReactionMs. Intent preserved.  |
 // | 1.2     | 2026-08-03 | —      | ERR-011-008: SilentBallSystem implements the new ParkBall seam. |
+// | 1.3     | 2026-09-11 | —      | W4: real deflection overwrites the reaction stamp while preserving    |
+// |         |            |        | ShotEventPending=false; locks the dedicated new-threat seam.          |
 #endregion

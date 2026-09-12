@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 11, 2026 — **UX F4 validation protocol packet lands (PR #394). Documentation only; no `src/` file, `.asmdef`, spec status or roadmap row touched. F4 is deliberately NOT closed.**
+> **Last Updated:** September 11, 2026 — **W4 keeper perception is wired on PR #403, completing the consumer half that PR #399 prepared.**
+>
+> Decision Tree `SAVE` now uses current-frame all-body physical LOS through `KeeperPerceptionGate.SaveAvailable`; raw `GkHeadingIntentSource.SaveArmed` deliberately remains the shared threat geometry and the independent W1 rush veto, so being screened never makes charging at a goal-bound ball legal. Collision System now returns one transient per-call fact only when `BallCollisionHandler` actually changes flight; Match Engine consumes it immediately in the same Resolve phase, evaluates the post-deflection trajectory, and restarts only the newly threatened keeper through `GoalkeeperMechanics.OnThreatDeflected`. That seam overwrites reaction timing without setting the shot-event latch. Added applied-vs-overlap collision, reaction-reset, screened-DT-SAVE, and non-vacuous raw-rush-veto regressions. No new serialized latch, snapshot schema, `CollisionEvent` ABI, save format, RNG stream/domain/draw site or draw order. Canonical Perception sent-off asymmetry remains separately tracked by #401. `match-engine-wiring-backlog.md` advances v1.14 → v1.15 and closes sequence item W4; W12 is next. Current-head CI is the gate authority.
+
+> **Last Updated (prior):** September 11, 2026 — **UX F4 validation protocol packet lands (PR #394). Documentation only; no `src/` file, `.asmdef`, spec status or roadmap row touched. F4 is deliberately NOT closed.**
 >
 > New: `docs/design/ux-validation-protocol.md` **v0.5** — the repeatable operating packet `ux-detailed-plan.md` v1.4 F4 requires, so that someone other than the UX author can run the same S0/S1 validation and produce comparable evidence. It carries the four-layer sequence (§2), seven outcome-oriented S0 tasks and the eight S1 tasks of the plan's §7.6 (§3), the F4 human-assignment table with S0 and S1 participant slots (§4), the scripted walkthrough matrix (§5), the neutral moderator script and stop conditions (§6), session/task evidence templates and the full §12 finding ledger (§7), severity plus §12's closed disposition vocabulary (§8), the journey-parameterized Gate-G decision record (§9), and Gate-J continuity (§10).
 >

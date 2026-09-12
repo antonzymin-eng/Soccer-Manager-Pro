@@ -7,6 +7,7 @@
 // Modified: 2026-07-28 (gk-contact-rate (ERR-011-007/KD-CR5): the frozen reaction window's elapsed anchors at SaveIntent.AttemptCommittedTick (under the held dive the launch is deliberate timing, not reaction); ComputeDiveDirectionLateral delegates its prediction to the shared TryPredictPlaneCrossing)
 // Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: ClearRushIntent + GetState/HasActiveRushIntent observation accessors give CommitRushIntent its first production caller; rushTargetReached ends a rush that ARRIVED — the loose-ball strand. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (W1 AR-2: + ResetSlot — the per-GK arrays are indexed by TEAM, and the agent occupying that slot can change mid-match (dismissal + substitute keeper), so the slot needs a way to be disowned. See docs/tracking/gk-rush-trigger-design.md v1.3)
+// Modified: 2026-09-11 (W4: OnThreatDeflected restarts reaction timing for a changed live flight without setting the shot-event latch; no new state/schema)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
 // Purpose:  Main 10 Hz + 60 Hz orchestrator. Manages per-GK state, dive kinematics, reaction pipeline,
@@ -1340,4 +1341,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |      |            |   | which Set → Rushing then launched him at. Unconditional by design, and    |
 // |      |            |   | so NOT ClearRushIntent/ClearSaveIntent, which refuse to disarm a chain    |
 // |      |            |   | in flight (FR-GK-018): the flight belongs to nobody now.                  |
+// | 1.13 | 2026-09-11 | — | W4: OnThreatDeflected explicitly restarts the detection / required-reaction |
+// |      |            |   | stamp after a real body deflection without setting _shotEventPending. A   |
+// |      |            |   | deflection is a changed threat, not a newly struck shot. No new state.     |
 #endregion

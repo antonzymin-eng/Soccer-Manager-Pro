@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-08-16, latest (reviewed findings pass, finding B — v1.72, DOC ONLY, no code change).
+// Modified: 2026-09-11, latest (W4 keeper perception — v1.73: DT SAVE uses live all-body LOS; same-Resolve applied deflections restart the threatened keeper's reaction timing; raw SaveArmed remains the W1 rush veto; no schema/RNG change).
+// Modified: 2026-08-16, prior latest (reviewed findings pass, finding B — v1.72, DOC ONLY, no code change).
 //           PlayerIdsByAgentId's XML doc now states the boot-only one-to-one precondition explicitly
 //           (ERR-044-023): SubstitutePlayer copies the incoming player's identity onto the outgoing
 //           on-pitch slot but never clears his OWN bench-origin entry, so after any substitution the
@@ -9411,7 +9412,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | literals. Now MatchEngineConstants.FoulOrdinalNone, the [CROSS]  |
 // |         |            |        | mirror of #17's FOUL_ORDINAL_NONE. Same value; no behaviour     |
 // |         |            |        | change.                                                         |
-// | 1.72    | 2026-08-16, latest | — | Reviewed findings pass, finding B (ERR-044-023), DOC     |
+// | 1.72    | 2026-08-16 | — | Reviewed findings pass, finding B (ERR-044-023), DOC     |
 // |         |            |        | ONLY. PlayerIdsByAgentId's XML doc now states the boot-only      |
 // |         |            |        | one-to-one precondition explicitly: SubstitutePlayer never       |
 // |         |            |        | clears the incoming player's own bench-origin entry, so after    |
@@ -9419,4 +9420,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | longer one-to-one. Matches the corrected CardLedgerFold           |
 // |         |            |        | constructor doc and the new SeasonLoopDisciplineTests             |
 // |         |            |        | cross-assembly lock. No code change.                              |
+// | 1.73    | 2026-09-11 | —      | W4 keeper perception. RunMechanicsAI gates only DT SAVE availability    |
+// |         |            |        | through KeeperPerceptionGate (raw SaveArmed + current-frame all-body   |
+// |         |            |        | LOS); raw SaveArmed remains the threat episode and W1 rush exclusion.  |
+// |         |            |        | CollisionSystem's transient applied-deflection result is consumed in   |
+// |         |            |        | the same Resolve call and restarts only the post-deflection-threatened  |
+// |         |            |        | keeper via OnThreatDeflected. No new cross-tick state/schema/RNG.      |
 #endregion
