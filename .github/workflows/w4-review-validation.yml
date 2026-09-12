@@ -1,0 +1,49 @@
+name: W4 Review Validation
+
+on:
+  push:
+    branches:
+      - codex/w4-keeper-perception-final
+    paths:
+      - .github/w4-review-validation-marker
+
+jobs:
+  targeted-w4:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/w4-keeper-perception-final
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run W4 targeted regression set
+        run: >-
+          bash tools/dotnet-ci/run-gate.sh --fast
+          --test-filter "FullyQualifiedName~MatchEngineKeeperPerceptionW4Tests|FullyQualifiedName~CollisionDeflectionFeedbackTests|FullyQualifiedName~GoalkeeperConversionTests"
+
+  save-funnel-measurement:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: pre-w4-consumer
+            ref: d7305d083254988f042bd017e0d430c069a978cb
+          - label: w4-review-head
+            ref: codex/w4-keeper-perception-final
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Measure GK save funnel on identical diagnostic seeds
+        env:
+          TD_GK_DIAGNOSTIC: '1'
+        run: |
+          echo "=== W4_MEASUREMENT_LABEL=${{ matrix.label }} ==="
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter "FullyQualifiedName~GkSaveDiagnosticTests"
