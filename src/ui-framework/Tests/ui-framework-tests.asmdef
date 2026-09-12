@@ -8,7 +8,9 @@
         "TacticalDirector.MatchClientCore",
         "TacticalDirector.TacticalInstructions",
         "TacticalDirector.PlayerDatabase",
-        "TacticalDirector.DeterministicSim"
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.BallPhysics"
     ],
     "includePlatforms": [
         "Editor"
