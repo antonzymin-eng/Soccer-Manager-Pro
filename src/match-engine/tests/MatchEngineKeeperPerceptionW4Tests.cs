@@ -261,7 +261,7 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(0f, engine.TestOnly_GoalkeeperState.ShotDetectedTickMs[OtherTeam(keeperTeam)], 1e-6f);
 
             engine.TestOnly_ForceBallLoose(preDeflectionPosition, preDeflectionVelocity);
-            engine.RunTick();
+            engine.TestOnly_RunResolvePhase();
 
             Assert.Greater(engine.TestOnly_GoalkeeperState.ShotDetectedTickMs[keeperTeam], 0f,
                 "W4 wire: CollisionSystem's applied-deflection output must reach the keeper reaction reset in the same Resolve.");

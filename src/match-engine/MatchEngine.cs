@@ -4727,6 +4727,13 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
+        /// <summary>
+        /// Test-only composition seam for a single Resolve phase. W4 uses this to prove that the
+        /// CollisionSystem applied-deflection result reaches the goalkeeper reaction consumer inside
+        /// the same Resolve call without unrelated Physics/AI setup mutating the staged collision first.
+        /// </summary>
+        internal void TestOnly_RunResolvePhase() => RunResolvePhase();
+
         /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor
         /// lifecycles (C2/C3), runs first touch on a loose arriving ball (D3), then authors the
         /// authoritative <see cref="MatchContext"/> from the settled world state (C4). Intra-Resolve
