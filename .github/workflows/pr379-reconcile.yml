@@ -25,24 +25,28 @@ jobs:
           from pathlib import Path
           import re
 
-          # 1) Canonical ERR ledger: advance the live version and add only the
-          # missing ERR-051-001 Error Index row. The detailed body already exists.
+          # 1) Canonical ERR ledger: advance only the live header and add only
+          # the missing ERR-051-001 Error Index row. Its detailed body exists.
           p = Path('docs/tracking/spec-error-log.md')
           s = p.read_text(encoding='utf-8')
-          if s.count('**Version:** 2.55') != 1:
+          version_token = '**Version:** 2.55'
+          if s.count(version_token) != 1:
               raise SystemExit('expected exactly one live spec-error-log v2.55 header')
-          s = s.replace('**Version:** 2.55', '**Version:** 2.56', 1)
+          version_pos = s.index(version_token)
+          s = s[:version_pos] + s[version_pos:].replace(version_token, '**Version:** 2.56', 1)
 
-          updated_matches = list(re.finditer(r'(?m)^\*\*Updated:\*\* ', s))
-          if len(updated_matches) != 1:
-              raise SystemExit(f'expected one bare Updated label, got {len(updated_matches)}')
-          m = updated_matches[0]
-          line_end = s.index('\n', m.start())
-          prior_line = s[m.start():line_end].replace('**Updated:**', '**Updated (prior):**', 1)
+          # This document contains other historical "Updated" labels. Target the
+          # first bare Updated label after the live Version header only.
+          rel = re.search(r'(?m)^\*\*Updated:\*\* ', s[version_pos:])
+          if not rel:
+              raise SystemExit('live spec-error-log Updated label not found')
+          m_start = version_pos + rel.start()
+          line_end = s.index('\n', m_start)
+          prior_line = s[m_start:line_end].replace('**Updated:**', '**Updated (prior):**', 1)
           new_line = ('**Updated:** September 11, 2026, later (v2.56 — PR #379 semantic reconciliation: '
                       'the detailed ERR-051-001 record already existed, but its authoritative Error Index row '
                       'was omitted; index 236 → 237 rows. Status remains RECORDED — OPEN; no normative spec or code change.)')
-          s = s[:m.start()] + new_line + '\n' + prior_line + s[line_end:]
+          s = s[:m_start] + new_line + '\n' + prior_line + s[line_end:]
 
           idx = s.index('## Error Index')
           next_sep = s.index('\n---', idx)
@@ -92,7 +96,7 @@ jobs:
           s = s[:start] + block + s[end:]
           p.write_text(s, encoding='utf-8')
 
-          # 3) CHANGELOG: prepend a new entry; never rewrite the September 7 history.
+          # 3) CHANGELOG: prepend a new entry; never rewrite September 7 history.
           p = Path('docs/tracking/CHANGELOG.md')
           s = p.read_text(encoding='utf-8')
           bare = list(re.finditer(r'(?m)^> \*\*Last Updated:\*\* ', s))
