@@ -11,6 +11,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 using NUnit.Framework;
 
@@ -240,11 +241,21 @@ namespace TacticalDirector.Localization.Tests
         public void CoreContracts_HaveNoMutableStaticRngOrPersistenceState()
         {
             Assembly assembly = typeof(ILocalizer).Assembly;
-            FieldInfo[] fields = assembly.GetTypes()
+            Type[] authoredTypes = assembly.GetTypes()
+                .Where(type => !type.IsDefined(typeof(CompilerGeneratedAttribute), false))
+                .ToArray();
+            FieldInfo[] fields = authoredTypes
                 .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
                 .ToArray();
+            string[] mutableStaticFields = fields
+                .Where(field => field.IsStatic && !field.IsLiteral && !field.IsInitOnly)
+                .Select(field => field.DeclaringType.FullName + "." + field.Name)
+                .ToArray();
 
-            Assert.That(fields.Any(field => field.IsStatic && !field.IsLiteral && !field.IsInitOnly), Is.False);
+            Assert.That(
+                mutableStaticFields,
+                Is.Empty,
+                "Authored L1 localization types must not contain mutable static fields. Compiler-generated delegate/cache types are implementation artifacts, not localization-owned state.");
             Assert.That(fields.Any(field => ContainsForbiddenStateName(field.FieldType)), Is.False);
             Assert.That(assembly.GetExportedTypes().Any(HasExplicitSerializableAttribute), Is.False);
         }
@@ -343,4 +354,5 @@ namespace TacticalDirector.Localization.Tests
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial L1 contract and dependency-boundary coverage. |
 // | 1.1     | 2026-09-11 | GPT-5.6 Sol | Close §5.3/§5.4 evidence gaps: asmdef direction, type-shape, ulong, pass-through, state, identity and golden hashes. |
+// | 1.2     | 2026-09-11 | GPT-5.6 Sol | Scope mutable-static lock to authored types; report exact offenders while excluding compiler-generated delegate/cache artifacts. |
 #endregion
