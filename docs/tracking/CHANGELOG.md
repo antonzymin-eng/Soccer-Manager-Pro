@@ -1318,7 +1318,7 @@ break it, and do not edit historical entries.
 > knowingly wrong meanwhile, with the acceptance bands (fouls ≤ 90, yellows ≤ 20, reds ≤ 5) reading
 > green throughout.
 >
-> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.14)* records the consequence none of these three holds could
+> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.15)* records the consequence none of these three holds could
 > see individually: W2's *arming* now gates three separate decisions** — the foul/card calibration,
 > KD-7a's successor distribution, and everything behind the un-isolated `sim_match_engine_inposs_gate`
 > stall whose leading candidate is W6. The path **W4 → W12 → W6** therefore unblocks three decisions,
@@ -1328,7 +1328,7 @@ break it, and do not edit historical entries.
 > FALSE — W2's arming gates **two** held decisions (the foul/card calibration and KD-7a's successor
 > distribution); the third item, the un-isolated `sim_match_engine_inposs_gate` stall, is what BLOCKS
 > arming, not something arming unblocks, so it does not belong beside them. The citation above is
-> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.14)*, whose §5 note carries the corrected
+> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.15)*, whose §5 note carries the corrected
 > two-plus-the-blocker form; the W4 → W12 → W6 path aims to clear the blocker and thereby unblock
 > the two.
 >
