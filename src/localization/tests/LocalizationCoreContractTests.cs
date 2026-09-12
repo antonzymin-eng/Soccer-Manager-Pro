@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/localization/tests/LocalizationCoreContractTests.cs
 // Created:  2026-09-11
-// Modified: 2026-09-11
+// Modified: 2026-09-12
 // Author:   —
 // Specs:    Localization & Accessibility #49 §5, FR-LC-001-005/009/010/012/014/020
 // Purpose:  L1 contract, value-safety, selector-shape and dependency-boundary tests.
@@ -204,7 +204,9 @@ namespace TacticalDirector.Localization.Tests
         public void PublicCoreTypeShape_ContainsOnlySystemOrLocalizationTypes()
         {
             Assembly assembly = typeof(ILocalizer).Assembly;
-            Type[] publicTypes = assembly.GetExportedTypes();
+            Type[] publicTypes = assembly.GetExportedTypes()
+                .Where(IsAuthoredLocalizationType)
+                .ToArray();
 
             foreach (Type type in publicTypes)
             {
@@ -242,10 +244,7 @@ namespace TacticalDirector.Localization.Tests
         {
             Assembly assembly = typeof(ILocalizer).Assembly;
             Type[] authoredTypes = assembly.GetTypes()
-                .Where(type => type.Namespace != null
-                    && (string.Equals(type.Namespace, "TacticalDirector.Localization", StringComparison.Ordinal)
-                        || type.Namespace.StartsWith("TacticalDirector.Localization.", StringComparison.Ordinal)))
-                .Where(type => !type.IsDefined(typeof(CompilerGeneratedAttribute), false))
+                .Where(IsAuthoredLocalizationType)
                 .ToArray();
             FieldInfo[] fields = authoredTypes
                 .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
@@ -260,7 +259,7 @@ namespace TacticalDirector.Localization.Tests
                 Is.Empty,
                 "Authored L1 localization types must not contain mutable static fields. Compiler-generated and coverage-instrumentation types are not localization-owned state.");
             Assert.That(fields.Any(field => ContainsForbiddenStateName(field.FieldType)), Is.False);
-            Assert.That(assembly.GetExportedTypes().Any(HasExplicitSerializableAttribute), Is.False);
+            Assert.That(authoredTypes.Where(type => type.IsPublic || type.IsNestedPublic).Any(HasExplicitSerializableAttribute), Is.False);
         }
 
         [Test]
@@ -335,6 +334,14 @@ namespace TacticalDirector.Localization.Tests
             Assert.That(allowed, Is.True, context + " leaked external type " + type.FullName);
         }
 
+        private static bool IsAuthoredLocalizationType(Type type)
+        {
+            return type.Namespace != null
+                && (string.Equals(type.Namespace, "TacticalDirector.Localization", StringComparison.Ordinal)
+                    || type.Namespace.StartsWith("TacticalDirector.Localization.", StringComparison.Ordinal))
+                && !type.IsDefined(typeof(CompilerGeneratedAttribute), false);
+        }
+
         private static bool ContainsForbiddenStateName(Type type)
         {
             string name = type.FullName ?? type.Name;
@@ -359,4 +366,5 @@ namespace TacticalDirector.Localization.Tests
 // | 1.1     | 2026-09-11 | GPT-5.6 Sol | Close §5.3/§5.4 evidence gaps: asmdef direction, type-shape, ulong, pass-through, state, identity and golden hashes. |
 // | 1.2     | 2026-09-11 | GPT-5.6 Sol | Scope mutable-static lock to authored types; report exact offenders while excluding compiler-generated delegate/cache artifacts. |
 // | 1.3     | 2026-09-11 | GPT-5.6 Sol | Scope authored-state reflection to localization-owned namespaces so coverage instrumentation is ignored. |
+// | 1.4     | 2026-09-12 | GPT-5.6 Sol | Apply the same authored-type scope to the public type-shape and serializable-attribute locks; compiler/coverage tracker types are not part of the localization contract. |
 #endregion

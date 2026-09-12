@@ -1,9 +1,10 @@
 # Localization & Accessibility #49 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.5 — L1 typed-selector and value-identity contract; ERR-049-004 fix implemented pending tracker close-out)
+**Last Updated:** September 12, 2026 (v0.6 — frozen-history restoration and LocaleId external-tag clarification)
+**Last Updated (prior):** September 11, 2026 (v0.5 — L1 typed-selector and value-identity contract; ERR-049-004 fix implemented pending tracker close-out)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -104,7 +105,10 @@ L1 also freezes two identity policies needed before L2 catalogue keys exist:
 - `LocalizationKey` is an exact **ordinal, case-sensitive** authored identity. Surrounding whitespace is
   invalid and is rejected rather than silently normalized into another key.
 - `LocaleId` performs only identity canonicalization — trim surrounding whitespace and apply invariant
-  lower-case. This is **not** a new BCP-47 validation requirement; `BaseLocale` remains the fixed `"en"`.
+  lower-case. That internal identity is **not a BCP-47 canonical-form guarantee**: for example, `en-US`
+  normalizes to `en-us`. Wave-8 file/CLDR/external-locale lookup must map from this normalized internal
+  identity to the canonical external tag/form required by that boundary. This is **not** a new BCP-47
+  validation requirement; `BaseLocale` remains the fixed `"en"`.
 
 ```csharp
 // --- CORE seam (in TacticalDirector.Localization) — references NO sim assembly ---
@@ -220,6 +224,7 @@ public static class LivingWorldTextBoundary
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-LC-001..020), data structures, failure modes F1–F6. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 fixes: H-1 generic core / per-producer boundary-adapter split (§2.2 core references nothing sim-side; §2.2.1 `LivingWorldTextBoundary`); M-1 FR-LC-008a construction-time roster-coverage invariant + F1/F5 rewrite + FR-LC-015 intent-value gate; L-1 `{score}` derived → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
-| 0.4 | 2026-07-27 | — | **ERR-049-001** (at #35's approval): **FR-LC-020 generalized** — `SelectionDraw` is *the producer's own deterministic, locale-independent selection value, carried verbatim*, with #22's `world.text` draw retained as the named example. The original wording named one producer's RNG reservation on a producer-agnostic seam, contradicting §7.3, FR-LC-013/014 and FR-LC-005 — and would have forced every later producer either to register an RNG stream it does not need or to violate the requirement. **Contract-widening only; no #49 code, type or catalogue change.** Load-bearing for #35, #46 and #48. |
+| 0.4 | 2026-07-27 | — | **ERR-049-001** (at #35's approval): **FR-LC-020 generalized** — `SelectionDraw` is *the producer's own deterministic, locale-independent selection value, carried verbatim*, with #22's `world.text` draw retained as the named example. The original wording named one producer's RNG reservation on a producer-agnostic seam, contradicting §7.3, FR-LC-013/014 and FR-LC-005 — and would have forced every later producer either to register an RNG stream it does not need or to violate the requirement. **Contract-widening only; no code, type or catalogue change.** Load-bearing for #35, #46 and #48. |
 | 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-004 fix implementation.** Extends the procedural request contract with immutable typed locale-neutral selector operands (cardinal and/or grammatical gender), aligns the pseudo-contract to the L1 get-only property API, and freezes static-key/locale identity policy. Authoritative ERR closure remains pending `spec-error-log.md` landing-closeout synchronization. Selector interpretation remains L2 rendering behavior. |
+| 0.6 | 2026-09-12 | GPT-5.6 Sol | Restores the frozen v0.4 history row verbatim and clarifies that `LocaleId.Value` is an internal lower-case identity, not BCP-47 canonical form; Wave-8 external file/CLDR lookups map from it to the external canonical tag/form they require. |
 #endregion

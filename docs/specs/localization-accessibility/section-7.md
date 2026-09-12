@@ -1,11 +1,12 @@
 # Localization & Accessibility #49 — Section 7: Forward Extensions
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.5 — L1 implements fixes for ERR-049-002/004; authoritative tracker closure remains landing-closeout work; ERR-049-005 fixed to L2)
+**Last Updated:** September 12, 2026 (v0.6 — L1 tracker close-out plus frozen v0.2 restoration)
+**Last Updated (prior):** September 11, 2026 (v0.5 — L1 implements fixes for ERR-049-002/004; authoritative tracker closure remains landing-closeout work; ERR-049-005 fixed to L2)
 **Last Updated (prior):** September 9, 2026 (v0.4 — L0R records ERR-049-002/003/004/005 with named T0/T1 discharge stages under C6; no contract hardening)
 **Last Updated (prior):** September 7, 2026 (v0.3 — L0R records ERR-049-002/003 for T0/T1 discharge under C6; no contract hardening)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -63,12 +64,11 @@ post-APPROVED like #21–#38 code.
 ## 7.6 Recorded implementation-time defects and L1 dispositions
 
 The L0R pass filed four implementation-time defects before a production localization assembly existed. L1
-now supplies the executable core seam and implements the two fixes whose proof is purely structural. The
-authoritative `spec-error-log.md` rows remain OPEN until the landing-closeout pass synchronizes those rows
-with current-head executable evidence; this section does not pre-empt that tracker state. The other two
-remain open for their named later slices.
+now supplies the executable core seam and discharges the two defects whose proof is purely structural. The
+authoritative `spec-error-log.md` is synchronized in this close-out: ERR-049-002 and ERR-049-004 are RESOLVED;
+ERR-049-003 remains open for L3B/T1 and ERR-049-005 remains open for L2.
 
-- **ERR-049-002 — L1 FIX IMPLEMENTED; tracker closure pending landing close-out.** §1 KD-6 and the dependency
+- **ERR-049-002 — RESOLVED in L1.** §1 KD-6 and the dependency
   table now state the already-approved architecture consistently: `TacticalDirector.Localization` references
   no sim/producer assembly; later producer-specific mapping belongs in a sibling boundary adapter. The L1
   production asmdef has an empty production-reference list; L1 tests parse that declared list, verify no
@@ -80,7 +80,7 @@ remain open for their named later slices.
   producer specs use symbolic catalogue identities. L3B must preserve the generic integer identity, allocate
   only built producers, make allocations append-only/non-reusable, and mechanically prevent collisions in
   `(ProducerTag, LocalOrdinal)`.
-- **ERR-049-004 — L1 FIX IMPLEMENTED; tracker closure pending landing close-out.** §2.2 and the L1 core now
+- **ERR-049-004 — RESOLVED in L1.** §2.2 and the L1 core now
   define typed locale-neutral selector operands carried separately from preformatted string slots.
   `SelectorOperand` carries a cardinal value and/or bounded grammatical-gender value; `NamedSelectorSet`
   defensively copies caller storage, canonicalizes names, rejects duplicates, and participates in deterministic
@@ -96,15 +96,15 @@ remain open for their named later slices.
   every admitted static key or by one explicit production-safe terminal result. L2 must prove no throw and no
   mutation for that terminal path (or kill the corresponding missing-key construction mutant).
 
-The owning `spec-error-log.md` rows are the durable status authority and must be synchronized before this L1
-landing is merge-ready.
+The owning `spec-error-log.md` rows are the durable status authority and are synchronized by this L1 close-out.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial forward extensions: Wave-8 locale content + the a11y content surface; #35/#46/#38-static producer bindings; the grammar-depth Stage-3+ deferral; the #22 retrofit T-phase. Status IN REVIEW. |
-| 0.2 | 2026-07-23 | — | Section-file PASS-1 fixes: H-1 generic core / per-producer boundary-adapter split (§2.2 core references nothing sim-side; §2.2.1 `LivingWorldTextBoundary`); M-1 FR-LC-008a construction-time roster-coverage invariant + F1/F5 rewrite + FR-LC-015 intent-value gate; L-1 `{score}` derived → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-09-07 | — | L0R record-only pass: filed ERR-049-002 (stale KD-6 reference direction; deferred wholly to L1/T0) and ERR-049-003 (missing ProducerTag allocation ownership/collision contract; deferred to L3B/T1). C6 forbids pre-T0 hardening, so no normative fix is landed in this slice. |
 | 0.4 | 2026-09-09 | — | L0R record-only scope extended to ERR-049-004 (missing typed plural/gender selector operand; deferred wholly to L1/T0) and ERR-049-005 (undefined static-key terminal fallback; resolution family decided at L1, discharge in L1 if signature-changing otherwise L2). Existing ERR-049-002/003 dispositions unchanged. C6 still forbids pre-T0 normative hardening. |
 | 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 implementation disposition.** ERR-049-002 and ERR-049-004 fixes are implemented with structural tests, but their authoritative tracker rows remain OPEN until landing-closeout synchronization. The approved `Resolve`/`Render` signatures remain final, so ERR-049-005 is explicitly assigned to L2. ERR-049-003 remains open for L3B/T1. |
+| 0.6 | 2026-09-12 | GPT-5.6 Sol | L1 landing close-out: restores the frozen v0.2 history row verbatim; synchronizes ERR-049-002 and ERR-049-004 to RESOLVED; retains ERR-049-003 OPEN for L3B/T1 and ERR-049-005 OPEN for L2. |
 #endregion
