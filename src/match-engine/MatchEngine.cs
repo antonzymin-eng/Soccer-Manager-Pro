@@ -4464,7 +4464,9 @@ namespace TacticalDirector.MatchEngine
                 // compete for the same ball: a shot arms both, and because Anticipate → Rushing is
                 // evaluated while the ERR-011-007 commit-lead gate is still holding the dive, the keeper
                 // would charge out instead of diving — a straight regression of the §5.Z.17–§5.Z.22 save
-                // pipeline. Same pure predicate the DT-emitted SAVE gate uses, so the two cannot drift.
+                // pipeline. W4 preserves this RAW SaveArmed geometry as the shared threat
+                // predicate, but deliberately adds live LOS only to DT SAVE availability; applying LOS
+                // here would let an unsighted keeper rush at a goal-bound ball.
                 bool saveArmed = GkHeadingIntentSource.SaveArmed(
                     k, in _ball.Position, in _ball.Velocity, loose);
 
