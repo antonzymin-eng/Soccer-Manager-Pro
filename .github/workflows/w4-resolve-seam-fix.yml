@@ -22,30 +22,27 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-
           engine = Path('src/match-engine/MatchEngine.cs')
           s = engine.read_text()
           marker = '        /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor\n'
-          addition = '''        /// <summary>
-        /// Test-only composition seam for a single Resolve phase. W4 uses this to prove that the
-        /// CollisionSystem applied-deflection result reaches the goalkeeper reaction consumer inside
-        /// the same Resolve call without unrelated Physics/AI setup mutating the staged collision first.
-        /// </summary>
-        internal void TestOnly_RunResolvePhase() => RunResolvePhase();
-
-'''
+          lines = [
+              '        /// <summary>',
+              '        /// Test-only composition seam for a single Resolve phase. W4 uses this to prove that the',
+              '        /// CollisionSystem applied-deflection result reaches the goalkeeper reaction consumer inside',
+              '        /// the same Resolve call without unrelated Physics/AI setup mutating the staged collision first.',
+              '        /// </summary>',
+              '        internal void TestOnly_RunResolvePhase() => RunResolvePhase();',
+              '',
+          ]
+          addition = '\n'.join(lines) + '\n'
           if s.count(marker) != 1:
               raise SystemExit(f'MatchEngine Resolve marker count={s.count(marker)}')
           engine.write_text(s.replace(marker, addition + marker, 1))
 
           test = Path('src/match-engine/tests/MatchEngineKeeperPerceptionW4Tests.cs')
           t = test.read_text()
-          old = '''            engine.TestOnly_ForceBallLoose(preDeflectionPosition, preDeflectionVelocity);
-            engine.RunTick();
-'''
-          new = '''            engine.TestOnly_ForceBallLoose(preDeflectionPosition, preDeflectionVelocity);
-            engine.TestOnly_RunResolvePhase();
-'''
+          old = '            engine.TestOnly_ForceBallLoose(preDeflectionPosition, preDeflectionVelocity);\n            engine.RunTick();\n'
+          new = '            engine.TestOnly_ForceBallLoose(preDeflectionPosition, preDeflectionVelocity);\n            engine.TestOnly_RunResolvePhase();\n'
           if t.count(old) != 1:
               raise SystemExit(f'W4 deflection RunTick site count={t.count(old)}')
           test.write_text(t.replace(old, new, 1))
