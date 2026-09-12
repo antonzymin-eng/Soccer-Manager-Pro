@@ -1,13 +1,14 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.8 — T3a lifecycle acceptance: settlement resets current-season revenue and carries FFP window)
+**Last Updated:** September 11, 2026 (v0.9 — ERR-040-003 review: traceability IDs, gate-order lock, and negative-revenue restore coherence)
+**Last Updated (prior):** September 11, 2026 (v0.8 — T3a lifecycle acceptance: settlement resets current-season revenue and carries FFP window)
 **Last Updated (prior):** September 11, 2026 (v0.7 — T3a daily-revenue identity, mutation-isolation and overflow acceptance locks)
 **Last Updated (prior):** September 11, 2026 (v0.6 — ERR-030-051/T2b: boundary atomicity contract corrected and live lifecycle evidence named)
 **Last Updated (prior):** September 11, 2026 (v0.5 — T-FN-LIFE-001 coverage split recorded across T2a/T2b)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board-scaling coverage)
 **Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board failure coverage)
-**Version:** 0.8
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -58,9 +59,12 @@ Tests land at T-phase; this is the acceptance contract.
   minimal) leaves every existing stream's cursor byte-identical across a full season run with and without
   #40 active (stream independence) — trivially true at Stage 2 since no stream exists yet, the same test
   class as #41's `T-MD-NEU-003`.
-- **T-FN-NEU-004** — T3a `AccrueDailyRevenue(..., deepRevenueEnabled:false)` returns the complete
-  `ClubFinances` value field-identically and does not interpret deep-only revenue inputs; even negative
-  placeholder inputs on the disabled path cannot change state or throw (KD-8 / §3.4.1).
+- **T-FN-NEU-004** — For a **coherent prior finance value**, T3a
+  `AccrueDailyRevenue(..., deepRevenueEnabled:false)` returns the complete `ClubFinances` value
+  field-identically and does not interpret deep-only revenue amounts; even negative placeholder amounts on
+  the disabled path cannot change state or throw. Canonical prior-state coherence is validated **before**
+  the gate, so an incoherent prior (e.g. negative `TransferBudget`) still fails loud with the feature off
+  (KD-8 / §3.4.1 / ERR-040-003).
 
 ## 5.4 Season-boundary ordering (KD-6)
 
@@ -129,8 +133,10 @@ Tests land at T-phase; this is the acceptance contract.
   FR-FN-018/F4. The clamp is not used to legitimize an invalid board multiplier.
 - **T-FN-FAIL-001** — Bad `FINANCE_SAVE_FORMAT_VERSION` → fail loud (F3).
 - **T-FN-FAIL-002** — Out-of-bounds length prefix / trailing bytes → fail loud (F5).
-- **T-FN-FAIL-003** — `TransferBudget` or `WageBudget` negative reaching a consuming seam (e.g. a corrupted
-  restore) → fail loud (F1).
+- **T-FN-FAIL-003** — `TransferBudget`, `WageBudget`, `WageBillAggregate`, or T3a
+  `SeasonRevenueAccrued` negative reaching a consuming/restore seam → fail loud (F1). The save-codec
+  regression mutates an otherwise-canonical finance block to a negative current-season revenue value and
+  proves restore rejects it.
 - **T-FN-FAIL-004** — `ApplyTransaction` with a negative `Amount`, or an out-of-contract `Kind`/`LineItem`
   byte on restore, → fail loud (F2).
 - **T-FN-FAIL-005** — `finalTablePosition` outside `[1, clubCount]` passed to `SettleFinances` → fail loud
@@ -144,7 +150,7 @@ Tests land at T-phase; this is the acceptance contract.
 | FR | Covering test(s) |
 |---|---|
 | FR-FN-001 | T-FN-ORD-003 |
-| FR-FN-002 | T-FN-DET-001, T-FN-LIFE-001 |
+| FR-FN-002 | T-FN-DET-001, T-FN-LIFE-001, T-FN-FAIL-003 |
 | FR-FN-003 | T-FN-BOUND-003, T-FN-REV-001 |
 | FR-FN-004 | T-FN-BOUND-003 |
 | FR-FN-005 | T-FN-REV-003, worked-example lock (§3.5) |
@@ -163,8 +169,8 @@ Tests land at T-phase; this is the acceptance contract.
 | FR-FN-018 | T-FN-MOD-001, T-FN-FAIL-BOARD-001 |
 | FR-FN-019 | (structural — no #45 interface exists to test against; asserted by assembly-reference absence, T-FN-BOUND-002-class) |
 | FR-FN-020 | T-FN-FAIL-001 |
-| FR-FN-021 | T-FN-DET-001 |
-| FR-FN-022 | T-FN-FAIL-001, T-FN-FAIL-002 |
+| FR-FN-021 | T-FN-DET-001, T-FN-FAIL-003 |
+| FR-FN-022 | T-FN-FAIL-001, T-FN-FAIL-002, T-FN-FAIL-003 |
 | FR-FN-023 | T-FN-ORD-001 |
 | FR-FN-024 | T-FN-DET-002 |
 | FR-FN-025 | T-FN-LIFE-001, T-FN-FAIL-CLUB-001 |
@@ -183,4 +189,5 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.6 | 2026-09-11 | — | **ERR-030-051 / T2b executable-contract correction.** T-FN-DET-002 removes the unsupported mid-call save premise and instead locks synchronous all-or-nothing boundary semantics; T-FN-LIFE-001 names the live across-roll regression evidence. |
 | 0.7 | 2026-09-11 | OpenAI | **T3a acceptance back-prop.** Adds identity-off, revenue-field isolation, negative-component and all three overflow-site locks; updates FR-FN-003/011/028 traceability while keeping stochastic FR-FN-010 and FFP FR-FN-017 deferred. |
 | 0.8 | 2026-09-11 | OpenAI | **T3a lifecycle acceptance.** Adds T-FN-REV-003 for boundary reset of current-season revenue while carrying the future FFP window; FR-FN-005 traceability now includes that executable lock. |
+| 0.9 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Every new T3a acceptance ID is now cited by executable test summaries; T-FN-NEU-004 pins coherence-before-gate ordering, and T-FN-FAIL-003 expands to reject negative restored `SeasonRevenueAccrued`. |
 #endregion
