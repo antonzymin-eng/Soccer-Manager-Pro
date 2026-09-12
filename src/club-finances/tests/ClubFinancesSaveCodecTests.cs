@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesSaveCodecTests.cs
 // Created:  2026-09-04
-// Modified: 2026-09-08
+// Modified: 2026-09-11 (#40 T3a review — revenue accumulator restore coherence)
 // Author:   —
 // Specs:    Spec #20 §3.6.2, §3.9.4 (style/docs; general-test allocation carve-out)
 //           Spec #40 FR-FN-020/021/022, §4.4 (finance persistence)
@@ -138,6 +138,19 @@ namespace TacticalDirector.ClubFinances.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => ClubFinancesSaveCodec.Encode(entries));
         }
 
+        /// <summary>T-FN-FAIL-003: restore rejects a negative current-season revenue accumulator instead of admitting impossible T3a state.</summary>
+        [Test]
+        public void Decode_RejectsNegativeSeasonRevenueAccrued()
+        {
+            byte[] blob = ClubFinancesSaveCodec.Encode(
+                new[] { Entry(1, 0L, 0L, 0L, 0L, 0L, -5L) });
+
+            // Header (12) + ClubId (4) + Balance/Transfer/Wage/WageBill (4 x 8) = byte 48.
+            WriteI64(blob, 48, -1L);
+
+            Assert.Throws<InvalidOperationException>(() => ClubFinancesSaveCodec.Decode(blob));
+        }
+
         private static ClubFinanceEntry Entry(
             int clubId,
             long balance,
@@ -185,6 +198,15 @@ namespace TacticalDirector.ClubFinances.Tests
                 | ((uint)bytes[offset + 2] << 16)
                 | ((uint)bytes[offset + 3] << 24);
         }
+
+        private static void WriteI64(byte[] bytes, int offset, long value)
+        {
+            ulong raw = unchecked((ulong)value);
+            for (int i = 0; i < sizeof(long); i++)
+            {
+                bytes[offset + i] = (byte)(raw >> (8 * i));
+            }
+        }
     }
 }
 
@@ -194,4 +216,5 @@ namespace TacticalDirector.ClubFinances.Tests
 // | 1.0     | 2026-09-04 | —      | Initial #40 T1a save-codec acceptance coverage. |
 // | 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder. |
 // | 1.3     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
+// | 1.4     | 2026-09-11 | OpenAI | T3a review: lock negative SeasonRevenueAccrued rejection at restore. |
 #endregion
