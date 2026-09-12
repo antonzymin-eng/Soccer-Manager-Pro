@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs
 // Created:  2026-07-20
+// Modified: 2026-09-11 (W5/v22: non-default pressing pass-ring save/restore round-trip)
 // Modified: 2026-07-23
 // Author:   —
 // Spec:     Snapshot-deserialize design note (docs/tracking/snapshot-deserialize-design.md) §5 Phase 1/2
@@ -18,6 +19,7 @@ using NUnit.Framework;
 
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.PlayerDatabase;
+using TacticalDirector.PassMechanics;
 using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.MatchEngine
@@ -172,6 +174,31 @@ namespace TacticalDirector.MatchEngine
             AssertRoundTripDeterministic(
                 setup: e => e.TestOnly_SetCardSeverityStreamCursor(rngCursor: 12345UL, actionOrdinal: 7UL),
                 n: 200, k: 90);
+        }
+
+        [Test]
+        public void RoundTrip_LatestPressPassEvent_IsDeterministic()
+        {
+            // W5/v22: save with a genuinely non-default latest opposing pass retained between CONTACT
+            // and a later pressing read. If restore drops the ring event, the v22 preimage differs on the
+            // first compared tick and the backward-pass trigger input disappears at the next AI stride.
+            AssertRoundTripDeterministic(
+                setup: e =>
+                {
+                    PassAttemptEvent pass = new PassAttemptEvent
+                    {
+                        AgentId = 16,
+                        TeamId = 1,
+                        TargetPosition = new UnityEngine.Vector3(90f, 34f, 0f),
+                        FinalVelocity = new UnityEngine.Vector3(8f, 0f, 0f),
+                        TargetAgentId = -1,
+                        Frame = 17,
+                        MatchTime = 0.25f,
+                    };
+                    e.TestOnly_PushPressPassEvent(0, in pass);
+                    e.TestOnly_SetPossession(16);
+                },
+                n: 1, k: 12);
         }
 
         [Test]
@@ -468,4 +495,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | engine (incl. a committed save advancing the GK RNG cursor +   |
 // |         |            |        | latches + GkContactState arrays) restores and continues the    |
 // |         |            |        | chain byte-for-byte.                                            |
+// | 1.3     | 2026-09-11 | —      | W5/v22: round-trip lock saves with a non-default latest opposing pass retained in the home pressing ring. |
 #endregion

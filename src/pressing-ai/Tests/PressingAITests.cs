@@ -1,5 +1,6 @@
 // File:     src/pressing-ai/Tests/PressingAITests.cs
 // Created:  2026-05-31
+// Modified: 2026-09-11 (ERR-013-011 / W5 second review: lock 60 Hz stride-window acceptance, bounded event dwell completion, stale rejection, and away-frame normalization)
 // Modified: 2026-09-08
 // Author:   —
 // Spec:     Pressing AI #13 §5, Code Standards #20
@@ -42,6 +43,8 @@ namespace TacticalDirector.PressingAI.Tests
             PressingSnapshot snap = new PressingSnapshot
             {
                 TickIndex           = 1,
+                PhysicsTick         = 6u,
+                PassEventWindowStartTick = 0u,
                 BallPosition        = new Vector3(50f, 34f, 0f),
                 BallVelocity        = Vector3.zero,
                 BallCarrierEntityId = CarrierEntityId,
@@ -297,6 +300,102 @@ namespace TacticalDirector.PressingAI.Tests
 
             Assert.IsFalse(result,
                 "BackwardPass must NOT fire for a pass made by the pressing team itself.");
+        }
+
+        /// <summary>
+        /// W5 frame lock: the event ring retains world coordinates, while an away pressing snapshot is
+        /// already canonicalized to attack +X. The evaluator must normalize the target at the read site.
+        /// Without that normalization this geometrically backward home pass is classified forward.
+        /// </summary>
+        [Test]
+        public void BackwardPass_AwayPressing_NormalizesWorldTargetAtReadSite()
+        {
+            PressingSnapshot snap = SnapshotFactory.MakeDefault();
+            snap.PressingTeamId = 1;
+            snap.PossessionTeamId = 0;
+            snap.AttackingDirection = new Vector2(1f, 0f);
+
+            const int passerId = 4;
+            SnapshotFactory.SetAgent(
+                snap,
+                0,
+                entityId: passerId,
+                teamId: 0,
+                position: new Vector2(
+                    PressingAIConstants.PITCH_LENGTH_M - 20f,
+                    PressingAIConstants.PITCH_WIDTH_M - 10f));
+
+            // Home attacks +X in world space. Retreating from x=20 to x=14 is backward for home.
+            // In away-canonical space those points are mirrored to x=85 -> x=91.
+            PassAttemptEvent evt = SnapshotFactory.MakePassEvent(
+                passerId,
+                new Vector3(14f, 10f, 0f));
+
+            Assert.IsTrue(TriggerEvaluator.EvaluateBackwardPass(snap, evt),
+                "Away pressing must classify the world-frame home pass after normalizing its target into the snapshot frame.");
+        }
+
+        [Test]
+        public void Evaluate_PassBeforeCompletedStrideWindow_DoesNotStartBackwardPassDwell()
+        {
+            PressingSnapshot snap = SnapshotFactory.MakeDefault();
+            snap.TickIndex = 2;
+            snap.PhysicsTick = 12u;
+            snap.PassEventWindowStartTick = 6u;
+            const int passerId = 20;
+            SnapshotFactory.SetAgent(snap, 0, passerId, SnapshotFactory.OpposingTeamId, new Vector2(50f, 34f));
+            PassAttemptEvent evt = SnapshotFactory.MakePassEvent(passerId, new Vector3(56f, 37f, 0f));
+            evt.Tick = 5u;
+
+            PressTrigger state = default;
+            TriggerFlags flags = TriggerEvaluator.Evaluate(snap, evt, true, ref state);
+
+            Assert.AreEqual(0, state.BackwardPassDwell);
+            Assert.AreEqual(TriggerFlags.None, flags & TriggerFlags.BackwardPass);
+        }
+
+        [Test]
+        public void Evaluate_CurrentStridePass_CompletesDiscreteEventDwellAndCommits()
+        {
+            PressingSnapshot snap = SnapshotFactory.MakeDefault();
+            snap.TickIndex = 2;
+            snap.PhysicsTick = 12u;
+            snap.PassEventWindowStartTick = 6u;
+            const int passerId = 20;
+            SnapshotFactory.SetAgent(snap, 0, passerId, SnapshotFactory.OpposingTeamId, new Vector2(50f, 34f));
+            PassAttemptEvent evt = SnapshotFactory.MakePassEvent(passerId, new Vector3(56f, 37f, 0f));
+            evt.Tick = 9u;
+
+            PressTrigger state = default;
+            TriggerFlags first = TriggerEvaluator.Evaluate(snap, evt, true, ref state);
+            Assert.AreEqual(1, state.BackwardPassDwell);
+            Assert.AreEqual(TriggerFlags.None, first & TriggerFlags.BackwardPass);
+
+            snap.TickIndex = 3;
+            snap.PhysicsTick = 18u;
+            snap.PassEventWindowStartTick = 12u;
+            TriggerFlags second = TriggerEvaluator.Evaluate(snap, evt, true, ref state);
+
+            Assert.AreEqual(PressingAIConstants.TriggerDwellTicks, state.BackwardPassDwell);
+            Assert.AreNotEqual(TriggerFlags.None, second & TriggerFlags.BackwardPass,
+                "A qualifying pass must be capable of committing BACKWARD_PASS without a second pass.");
+        }
+
+        [Test]
+        public void Evaluate_PassAtPreviousStrideBoundary_StartsDwell()
+        {
+            PressingSnapshot snap = SnapshotFactory.MakeDefault();
+            snap.TickIndex = 2;
+            snap.PhysicsTick = 12u;
+            snap.PassEventWindowStartTick = 6u;
+            const int passerId = 20;
+            SnapshotFactory.SetAgent(snap, 0, passerId, SnapshotFactory.OpposingTeamId, new Vector2(50f, 34f));
+            PassAttemptEvent evt = SnapshotFactory.MakePassEvent(passerId, new Vector3(56f, 37f, 0f));
+            evt.Tick = 6u;
+
+            PressTrigger state = default;
+            TriggerEvaluator.Evaluate(snap, evt, true, ref state);
+            Assert.AreEqual(1, state.BackwardPassDwell);
         }
     }
 
@@ -1778,4 +1877,6 @@ namespace TacticalDirector.PressingAI.Tests
 // |         |            |        | to (40,34) so progression gain is exercised in the corrected frame.                           |
 // | 1.4     | 2026-09-08 | —      | Regression coverage: PassEventRing refuses non-positive capacity at construction instead of  |
 // |         |            |        | failing later in Push with an indexing or divide-by-zero exception.                            |
+// | 1.9     | 2026-09-11 | —      | W5 / ERR-013-011: added stale-pass recency and away world-frame target normalization locks for BACKWARD_PASS. |
+// | 1.10    | 2026-09-11 | —            | ERR-013-011 second review: positive [N-stride,N) acceptance, lower-bound inclusion, stale-start rejection, and discrete-event dwell completion. |
 #endregion

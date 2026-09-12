@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-11 (wiring backlog W5: PassAttemptEvent CONTACT events feed the opposing team's pressing ring; v22 snapshots the latest ring event so save/restore remains deterministic)
 // Modified: 2026-08-16, latest (reviewed findings pass, finding B — v1.72, DOC ONLY, no code change).
 //           PlayerIdsByAgentId's XML doc now states the boot-only one-to-one precondition explicitly
 //           (ERR-044-023): SubstitutePlayer copies the incoming player's identity onto the outgoing
@@ -1060,6 +1061,13 @@ namespace TacticalDirector.MatchEngine
             // already populated its ordinal cache by now. The returned token is discarded — the bus is
             // reset per match (ResetForNewMatch above), so there is no per-subscription teardown to do.
             EventBus.Subscribe<PossessionChangedEvent>(OnPossessionChanged);
+
+            // Wiring backlog W5 / #13 §4.4.2 — pass CONTACT is the authoritative press-trigger event.
+            // PassAttemptEvent is Tier A / Resolve-produced, so the consumer must subscribe here during
+            // boot, beside the possession consumer, before the first DrainTick closes registration. The
+            // handler routes the event only into the OPPOSING team's ring: #13 asks for the most-recent
+            // opposing pass, and letting an own-team pass overwrite it would suppress a valid trigger.
+            EventBus.Subscribe<PassAttemptEvent>(OnPassAttempt);
 
             // §5.Z Phase H — award the opening kickoff to the HOME team (team 0 kicks off the first half;
             // CheckMatchFlowTransitions hands the second-half kickoff to the other side). This is the one
@@ -2630,6 +2638,23 @@ namespace TacticalDirector.MatchEngine
         /// so a test can perturb it and prove the pressing hysteresis is in the snapshot digest preimage.</summary>
         internal PressingTickState TestOnly_PressingState(int teamId) => _pressing[teamId].CaptureState();
 
+        /// <summary>Test-only: injects the latest pass directly into one pressing ring so snapshot
+        /// schema tests can isolate the v22 cross-tick field without fabricating unrelated match state.</summary>
+        internal void TestOnly_PushPressPassEvent(int pressingTeamId, in PassAttemptEvent evt)
+        {
+            if (pressingTeamId < 0 || pressingTeamId >= MatchEngineConstants.TEAM_COUNT)
+                throw new ArgumentOutOfRangeException(nameof(pressingTeamId));
+            _passRings[pressingTeamId].Push(evt);
+        }
+
+        /// <summary>Test-only: observes the latest event retained for one pressing team.</summary>
+        internal bool TestOnly_TryGetPressPassEvent(int pressingTeamId, out PassAttemptEvent evt)
+        {
+            if (pressingTeamId < 0 || pressingTeamId >= MatchEngineConstants.TEAM_COUNT)
+                throw new ArgumentOutOfRangeException(nameof(pressingTeamId));
+            return _passRings[pressingTeamId].TryGetLatest(out evt);
+        }
+
         /// <summary>Test-only: the live per-team Defensive AI (#14) cross-tick state (D4 CaptureState seam).</summary>
         internal DefensiveTickState TestOnly_DefensiveState(int teamId) => _defensive[teamId].CaptureState();
 
@@ -3953,6 +3978,15 @@ namespace TacticalDirector.MatchEngine
             int owner = _possessingAgentId;
 
             snap.TickIndex = tickIndex;
+            // ERR-013-011: PassAttemptEvent.Tick is a 60 Hz EventBus tick while TickIndex is the
+            // 10 Hz tactical heartbeat. TickOrchestrator advances the clock before phases and AI
+            // runs before Resolve/Events, so at AI physics tick N the newly observable pass window
+            // is the previous completed stride [N - AI_PHASE_STRIDE, N).
+            snap.PhysicsTick = (uint)_clock.CurrentTick;
+            uint passWindowWidth = (uint)DeterministicSimConstants.AI_PHASE_STRIDE;
+            snap.PassEventWindowStartTick = snap.PhysicsTick >= passWindowWidth
+                ? snap.PhysicsTick - passWindowWidth
+                : 0u;
             snap.BallPosition = MirrorPitchIfAway(team, _ball.Position);
             snap.BallVelocity = MirrorVelocityIfAway(team, _ball.Velocity);
             snap.BallCarrierEntityId = owner;
@@ -5440,6 +5474,21 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// Wiring backlog W5: records the authoritative resolved pass for the team that may press it.
+        /// The source event is published by #5 at CONTACT after ApplyKick succeeds; no pass is reconstructed.
+        /// The retained struct stays entirely in EventBus world coordinates. #13 owns the team-relative
+        /// geometric read and normalizes only TargetPosition when evaluating BACKWARD_PASS, so serialized
+        /// PassAttemptEvent state never mixes coordinate frames. Each pressing ring contains only opponent
+        /// passes, matching #13 §4.4.2. PassExecutor is the sole production producer and owns the valid
+        /// two-team TeamId precondition, so this subscriber does not add an unreachable duplicate guard.
+        /// </summary>
+        private void OnPassAttempt(in PassAttemptEvent evt)
+        {
+            int pressingTeam = 1 - evt.TeamId;
+            _passRings[pressingTeam].Push(evt);
+        }
+
+        /// <summary>
         /// Phase E consumer (possession-changed → AI). Subscribed once at boot (#17 boot-phase Subscribe);
         /// invoked from <see cref="EventBus.DrainTick"/> in the Events phase. Forces the NEW holder's
         /// DecisionTree to re-plan on its next AI stride: <see cref="DecisionTreeAI.NotifyInterrupt"/>
@@ -6303,6 +6352,47 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, _tackleCooldown[i]);
             }
 
+            // v22 / wiring backlog W5 — latest opposing pass retained by each #13 trigger ring.
+            // ONLY the latest event can affect future production behaviour: the engine-owned ring is
+            // private, and PressingAITick's sole production read is PassEventRing.TryGetLatest. No
+            // production path reachable from MatchEngine reads Count or older entries. Keeping the
+            // full latest event (rather than a reconstructed AgentId/target projection) preserves the
+            // ring's exact public value across restore while legitimately excluding unreachable history.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                bool hasLatest = _passRings[t].TryGetLatest(out PassAttemptEvent latest);
+                CanonicalSerializer.WriteBool(buf, ref o, hasLatest);
+                if (!hasLatest)
+                    continue;
+
+                CanonicalSerializer.WriteU8(buf, ref o, latest.EventTypeOrdinal);
+                CanonicalSerializer.WriteU8(buf, ref o, latest.PayloadVersion);
+                CanonicalSerializer.WriteU16(buf, ref o, latest.Reserved);
+                CanonicalSerializer.WriteU32(buf, ref o, latest.Tick);
+                CanonicalSerializer.WriteU16(buf, ref o, latest.SubsystemOrdinal);
+                CanonicalSerializer.WriteU16(buf, ref o, latest.IntraPhaseDrawIndex);
+                CanonicalSerializer.WriteI32(buf, ref o, latest.AgentId);
+                CanonicalSerializer.WriteI32(buf, ref o, latest.TeamId);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)latest.PassType);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)latest.CrossSubType);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.TargetPosition.x);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.TargetPosition.y);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.TargetPosition.z);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalVelocity.x);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalVelocity.y);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalVelocity.z);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalSpin.x);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalSpin.y);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalSpin.z);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.ErrorAngleDeg);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.KickSpeed);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.LeadDistance);
+                CanonicalSerializer.WriteBool(buf, ref o, latest.IsWeakFoot);
+                CanonicalSerializer.WriteI32(buf, ref o, latest.TargetAgentId);
+                CanonicalSerializer.WriteI32(buf, ref o, latest.Frame);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.MatchTime);
+            }
+
             payload.BytesWritten = o;
         }
 
@@ -6534,6 +6624,50 @@ namespace TacticalDirector.MatchEngine
             {
                 _tackleFlag[i] = CanonicalSerializer.ReadBool(buf, ref o);
                 _tackleCooldown[i] = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+
+            // v22 / W5 — restore exactly the latest event visible through each press ring. Older ring
+            // entries are intentionally not reconstructed because no production API can observe them.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _passRings[t].Clear();
+                bool hasLatest = CanonicalSerializer.ReadBool(buf, ref o);
+                if (!hasLatest)
+                    continue;
+
+                PassAttemptEvent latest = new PassAttemptEvent
+                {
+                    EventTypeOrdinal = CanonicalSerializer.ReadU8(buf, ref o),
+                    PayloadVersion = CanonicalSerializer.ReadU8(buf, ref o),
+                    Reserved = CanonicalSerializer.ReadU16(buf, ref o),
+                    Tick = CanonicalSerializer.ReadU32(buf, ref o),
+                    SubsystemOrdinal = CanonicalSerializer.ReadU16(buf, ref o),
+                    IntraPhaseDrawIndex = CanonicalSerializer.ReadU16(buf, ref o),
+                    AgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                    TeamId = CanonicalSerializer.ReadI32(buf, ref o),
+                    PassType = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
+                    CrossSubType = (CrossSubType)CanonicalSerializer.ReadI32(buf, ref o),
+                    TargetPosition = new Vector3(
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o)),
+                    FinalVelocity = new Vector3(
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o)),
+                    FinalSpin = new Vector3(
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o)),
+                    ErrorAngleDeg = CanonicalSerializer.ReadF32(buf, ref o),
+                    KickSpeed = CanonicalSerializer.ReadF32(buf, ref o),
+                    LeadDistance = CanonicalSerializer.ReadF32(buf, ref o),
+                    IsWeakFoot = CanonicalSerializer.ReadBool(buf, ref o),
+                    TargetAgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                    Frame = CanonicalSerializer.ReadI32(buf, ref o),
+                    MatchTime = CanonicalSerializer.ReadF32(buf, ref o),
+                };
+                _passRings[t].Push(latest);
             }
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
@@ -9371,4 +9505,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | longer one-to-one. Matches the corrected CardLedgerFold           |
 // |         |            |        | constructor doc and the new SeasonLoopDisciplineTests             |
 // |         |            |        | cross-assembly lock. No code change.                              |
+// | 1.73     | 2026-09-11 | —      | W5: subscribe to PassAttemptEvent at boot, route CONTACT events to the opposing #13 ring, and append/restore each ring latest event in snapshot v22; no RNG or draw-order change. |
+// | 1.74     | 2026-09-11 | —      | ERR-013-011: FillPressingSnapshot carries the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
 #endregion
