@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-08-16, latest (reviewed findings pass, finding B — v1.72, DOC ONLY, no code change).
+// Modified: 2026-09-11, latest (W4 keeper perception — v1.73: DT SAVE uses live all-body LOS; same-Resolve applied deflections restart the threatened keeper's reaction timing; raw SaveArmed remains the W1 rush veto; no schema/RNG change).
+// Modified: 2026-08-16, prior latest (reviewed findings pass, finding B — v1.72, DOC ONLY, no code change).
 //           PlayerIdsByAgentId's XML doc now states the boot-only one-to-one precondition explicitly
 //           (ERR-044-023): SubstitutePlayer copies the incoming player's identity onto the outgoing
 //           on-pitch slot but never clears his OWN bench-origin entry, so after any substitution the
@@ -3310,7 +3311,13 @@ namespace TacticalDirector.MatchEngine
                         bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
                         bool armed = GkHeadingIntentSource.SaveArmed(
                             t, in _ball.Position, in _ball.Velocity, loose);
-                        ctx.SaveAvailable = armed;
+                        // W4: SAVE emission is perception-aware, but the raw threat episode remains
+                        // geometry-owned. TryCommitRushIntents MUST keep vetoing on raw SaveArmed:
+                        // being unsighted does not make charging at a goal-bound ball safe.
+                        ctx.SaveAvailable = KeeperPerceptionGate.SaveAvailable(
+                            t, i, _agents[i].Position,
+                            _ball.Position, _ball.Velocity, loose,
+                            _agents, _isSentOff);
                         if (armed)
                         {
                             // ERR-011-006 (design KD-C2): seed the §3.2 detection stamp at the
@@ -4457,7 +4464,9 @@ namespace TacticalDirector.MatchEngine
                 // compete for the same ball: a shot arms both, and because Anticipate → Rushing is
                 // evaluated while the ERR-011-007 commit-lead gate is still holding the dive, the keeper
                 // would charge out instead of diving — a straight regression of the §5.Z.17–§5.Z.22 save
-                // pipeline. Same pure predicate the DT-emitted SAVE gate uses, so the two cannot drift.
+                // pipeline. W4 preserves this RAW SaveArmed geometry as the shared threat
+                // predicate, but deliberately adds live LOS only to DT SAVE availability; applying LOS
+                // here would let an unsighted keeper rush at a goal-bound ball.
                 bool saveArmed = GkHeadingIntentSource.SaveArmed(
                     k, in _ball.Position, in _ball.Velocity, loose);
 
@@ -4688,6 +4697,40 @@ namespace TacticalDirector.MatchEngine
             DriveGkHeadingPhysics();
         }
 
+        /// <summary>
+        /// W4 same-Resolve deflection consumer. A changed flight restarts reaction timing only for
+        /// the keeper whose goal the POST-deflection ball threatens under raw SaveArmed geometry.
+        /// LOS deliberately gates DT SAVE emission, not existence of the reaction episode.
+        /// </summary>
+        private void ResetKeeperReactionAfterDeflection()
+        {
+            // Resolve may publish a queued substitution after Physics last refreshed this map.
+            RefreshGkAgentIds();
+            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                int agentId = _gkAgentIds[k];
+                if (agentId < 0 || _isSentOff[agentId])
+                {
+                    continue;
+                }
+
+                if (!GkHeadingIntentSource.SaveArmed(
+                        k, in _ball.Position, in _ball.Velocity, loose))
+                {
+                    continue;
+                }
+
+                _goalkeeper.OnThreatDeflected(
+                    k,
+                    _clock.CurrentMatchTimeMs,
+                    _ball.Velocity.magnitude,
+                    PlayerAttributeProjection.ToGoalkeeper(
+                        in _canonicalAttrs[agentId], k, fatigue: 0f));
+            }
+        }
+
         /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor
         /// lifecycles (C2/C3), runs first touch on a loose arriving ball (D3), then authors the
         /// authoritative <see cref="MatchContext"/> from the settled world state (C4). Intra-Resolve
@@ -4747,7 +4790,15 @@ namespace TacticalDirector.MatchEngine
                 matchSeed: _matchSeed,
                 frameNumber: frameNumber,
                 matchTime: matchTime,
-                eventConsumer: _eventConsumer);
+                eventConsumer: _eventConsumer,
+                ballDeflected: out bool ballDeflected);
+
+            // W4: consume an APPLIED flight change immediately in this Resolve phase. No pending
+            // deflection latch survives the tick; existing GK reaction fields remain the only state.
+            if (_gkHeadingEnabled && ballDeflected)
+            {
+                ResetKeeperReactionAfterDeflection();
+            }
 
             // Match-flow completion (design note §3): apply the (at most one) foul candidate the
             // consumer just captured — RNG-drawn severity, card issuance, sent-off, and a free kick.
@@ -9363,7 +9414,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | literals. Now MatchEngineConstants.FoulOrdinalNone, the [CROSS]  |
 // |         |            |        | mirror of #17's FOUL_ORDINAL_NONE. Same value; no behaviour     |
 // |         |            |        | change.                                                         |
-// | 1.72    | 2026-08-16, latest | — | Reviewed findings pass, finding B (ERR-044-023), DOC     |
+// | 1.72    | 2026-08-16 | — | Reviewed findings pass, finding B (ERR-044-023), DOC     |
 // |         |            |        | ONLY. PlayerIdsByAgentId's XML doc now states the boot-only      |
 // |         |            |        | one-to-one precondition explicitly: SubstitutePlayer never       |
 // |         |            |        | clears the incoming player's own bench-origin entry, so after    |
@@ -9371,4 +9422,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | longer one-to-one. Matches the corrected CardLedgerFold           |
 // |         |            |        | constructor doc and the new SeasonLoopDisciplineTests             |
 // |         |            |        | cross-assembly lock. No code change.                              |
+// | 1.73    | 2026-09-11 | —      | W4 keeper perception. RunMechanicsAI gates only DT SAVE availability    |
+// |         |            |        | through KeeperPerceptionGate (raw SaveArmed + current-frame all-body   |
+// |         |            |        | LOS); raw SaveArmed remains the threat episode and W1 rush exclusion.  |
+// |         |            |        | CollisionSystem's transient applied-deflection result is consumed in   |
+// |         |            |        | the same Resolve call and restarts only the post-deflection-threatened  |
+// |         |            |        | keeper via OnThreatDeflected. No new cross-tick state/schema/RNG.      |
 #endregion
