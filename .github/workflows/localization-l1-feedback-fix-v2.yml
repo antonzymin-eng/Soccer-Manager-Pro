@@ -1,0 +1,121 @@
+name: Localization L1 feedback fix v2 (one-shot)
+
+on:
+  push:
+    branches:
+      - localization/l1-core-contracts
+    paths:
+      - .github/workflows/localization-l1-feedback-fix-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge current main and apply feedback fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          set +e
+          git merge origin/main --no-commit --no-ff
+          merge_rc=$?
+          set -e
+          if [[ $merge_rc -ne 0 ]]; then
+            mapfile -t conflicts < <(git diff --name-only --diff-filter=U)
+            printf 'Merge conflicts: %s\n' "${conflicts[*]}"
+            for path in "${conflicts[@]}"; do
+              case "$path" in
+                docs/planning/audio-implementation-plan.md|docs/tracking/file-manifest.md)
+                  git checkout --theirs -- "$path"
+                  git add -- "$path"
+                  ;;
+                *)
+                  echo "Unexpected merge conflict: $path" >&2
+                  exit 1
+                  ;;
+              esac
+            done
+          fi
+
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected exactly one match, found {count}: {old!r}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          audio = "docs/planning/audio-implementation-plan.md"
+          replace_once(audio, "**Last Updated:** September 8, 2026\n**Version:** 1.6", "**Last Updated:** September 12, 2026\n**Version:** 1.7")
+          replace_once(audio, "- caption-renderer integration remains blocked on **D49: #49 Localization & Accessibility T0**;", "- #49 L1 core now exists; caption-renderer integration remains blocked on **D49: #49 L2 renderer/catalogue plus the approved caption boundary**, not on the absence of a localization assembly;")
+          replace_once(audio, "- #49 has no production assembly; therefore T3 caption rendering is not currently available.", "- #49 now has the dependency-free L1 production assembly `TacticalDirector.Localization`; T3 caption rendering is still unavailable because L2 renderer/catalogue behavior and the approved caption boundary have not landed.")
+          replace_once(audio, "- **D49 — Localization & Accessibility T0 exists.** Required before caption rendering integration; not required for T0/T1 audio framework work.", "- **D49 — Localization caption-rendering capability exists.** The L1 core-assembly prerequisite is met by #397; P5B still requires L2 renderer/catalogue behavior plus an approved #49/#51 caption boundary.")
+          replace_once(audio, "- real caption rendering once D49 is available;", "- real caption rendering once D49's L2 rendering/boundary capability is available;")
+          replace_once(audio, "Before P5B begins, verify #49 T0 exists and can legitimately add the inbound `#49 → #51` reference required by #51 §4.5.", "Before P5B begins, verify #49 L2 rendering/catalogue behavior exists and that the approved integration topology provides a legitimate caption boundary between #49 and #51. #49 L1 core existence alone does not satisfy D49, and this plan does not force the generic localization core to acquire a #51 dependency.")
+          replace_once(audio, "| 1.6 | 2026-09-08 | **Codex review of PR #368, two P2 findings, both accepted and both real.**", "| 1.7 | 2026-09-12 | Synchronizes D49 with #397: the dependency-free localization L1 core assembly now exists, while P5B remains blocked on L2 renderer/catalogue behavior plus an approved #49/#51 caption boundary; the generic localization core acquires no audio dependency. |\n| 1.6 | 2026-09-08 | **Codex review of PR #368, two P2 findings, both accepted and both real.**")
+
+          manifest = "docs/tracking/file-manifest.md"
+          replace_once(manifest, "# File Manifest (Post-Migration Baseline)\n\n**Last Updated:** September 11, 2026, later — **PR #379 semantic reconciliation of the two valid post-#368 Audio #51 corrections onto current `main`.**", "# File Manifest (Post-Migration Baseline)\n\n**Last Updated:** September 12, 2026 — **#49 Localization L1 core assembly registry sync (PR #397).**\n`src/localization/localization.asmdef` now exists as the dependency-free `TacticalDirector.Localization` L1 core. The spec inventory row below is corrected from `no assembly` to the implemented L1 state; L2 renderer/catalogue/content and L3B producer-boundary wiring remain pending. Canonical ERR closure remains a separate landing-close-out step after final-head evidence.\n\n**Last Updated (prior):** September 11, 2026, later — **PR #379 semantic reconciliation of the two valid post-#368 Audio #51 corrections onto current `main`.**")
+          replace_once(manifest, "| 49 | `docs/specs/localization-accessibility/` | APPROVED (Jul 23, 2026) — no assembly |", "| 49 | `docs/specs/localization-accessibility/` | APPROVED (Jul 23, 2026) — L1 core implemented in `TacticalDirector.Localization`; L2+ pending |")
+
+          s2 = "docs/specs/localization-accessibility/section-2.md"
+          replace_once(s2, "**Last Updated:** September 11, 2026 (v0.5 — L1 typed-selector and value-identity contract; ERR-049-004 fix implemented pending tracker close-out)", "**Last Updated:** September 12, 2026 (v0.6 — frozen-history restoration and LocaleId external-tag clarification)\n**Last Updated (prior):** September 11, 2026 (v0.5 — L1 typed-selector and value-identity contract; ERR-049-004 fix implemented pending tracker close-out)")
+          replace_once(s2, "**Version:** 0.5", "**Version:** 0.6")
+          replace_once(s2, "- `LocaleId` performs only identity canonicalization — trim surrounding whitespace and apply invariant\n  lower-case. This is **not** a new BCP-47 validation requirement; `BaseLocale` remains the fixed `\"en\"`.", "- `LocaleId` performs only identity canonicalization — trim surrounding whitespace and apply invariant\n  lower-case. That internal identity is **not a BCP-47 canonical-form guarantee**: for example, `en-US`\n  normalizes to `en-us`. Wave-8 file/CLDR/external-locale lookup must map from this normalized internal\n  identity to the canonical external tag/form required by that boundary. This is **not** a new BCP-47\n  validation requirement; `BaseLocale` remains the fixed `\"en\"`.")
+          replace_once(s2, "| 0.4 | 2026-07-27 | — | **ERR-049-001** (at #35's approval): **FR-LC-020 generalized** — `SelectionDraw` is *the producer's own deterministic, locale-independent selection value, carried verbatim*, with #22's `world.text` draw retained as the named example. The original wording named one producer's RNG reservation on a producer-agnostic seam, contradicting §7.3, FR-LC-013/014 and FR-LC-005 — and would have forced every later producer either to register an RNG stream it does not need or to violate the requirement. **Contract-widening only; no #49 code, type or catalogue change.** Load-bearing for #35, #46 and #48. |", "| 0.4 | 2026-07-27 | — | **ERR-049-001** (at #35's approval): **FR-LC-020 generalized** — `SelectionDraw` is *the producer's own deterministic, locale-independent selection value, carried verbatim*, with #22's `world.text` draw retained as the named example. The original wording named one producer's RNG reservation on a producer-agnostic seam, contradicting §7.3, FR-LC-013/014 and FR-LC-005 — and would have forced every later producer either to register an RNG stream it does not need or to violate the requirement. **Contract-widening only; no code, type or catalogue change.** Load-bearing for #35, #46 and #48. |")
+          replace_once(s2, "| 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-004 fix implementation.** Extends the procedural request contract with immutable typed locale-neutral selector operands (cardinal and/or grammatical gender), aligns the pseudo-contract to the L1 get-only property API, and freezes static-key/locale identity policy. Authoritative ERR closure remains pending `spec-error-log.md` landing-closeout synchronization. Selector interpretation remains L2 rendering behavior. |", "| 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-004 fix implementation.** Extends the procedural request contract with immutable typed locale-neutral selector operands (cardinal and/or grammatical gender), aligns the pseudo-contract to the L1 get-only property API, and freezes static-key/locale identity policy. Authoritative ERR closure remains pending `spec-error-log.md` landing-closeout synchronization. Selector interpretation remains L2 rendering behavior. |\n| 0.6 | 2026-09-12 | GPT-5.6 Sol | Restores the frozen v0.4 history row verbatim and clarifies that `LocaleId.Value` is an internal lower-case identity, not BCP-47 canonical form; Wave-8 external file/CLDR lookups map from it to the external canonical tag/form they require. |")
+
+          s7 = "docs/specs/localization-accessibility/section-7.md"
+          replace_once(s7, "**Last Updated:** September 11, 2026 (v0.5 — L1 implements fixes for ERR-049-002/004; authoritative tracker closure remains landing-closeout work; ERR-049-005 fixed to L2)", "**Last Updated:** September 12, 2026 (v0.6 — restore frozen v0.2 history row)\n**Last Updated (prior):** September 11, 2026 (v0.5 — L1 implements fixes for ERR-049-002/004; authoritative tracker closure remains landing-closeout work; ERR-049-005 fixed to L2)")
+          replace_once(s7, "**Version:** 0.5", "**Version:** 0.6")
+          replace_once(s7, "| 0.2 | 2026-07-23 | — | Section-file PASS-1 fixes: H-1 generic core / per-producer boundary-adapter split (§2.2 core references nothing sim-side; §2.2.1 `LivingWorldTextBoundary`); M-1 FR-LC-008a construction-time roster-coverage invariant + F1/F5 rewrite + FR-LC-015 intent-value gate; L-1 `{score}` derived → AR-2 convergence; APPROVED. See section-9 §9.3.1. |", "| 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |")
+          replace_once(s7, "| 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 implementation disposition.** ERR-049-002 and ERR-049-004 fixes are implemented with structural tests, but their authoritative tracker rows remain OPEN until landing-closeout synchronization. The approved `Resolve`/`Render` signatures remain final, so ERR-049-005 is explicitly assigned to L2. ERR-049-003 remains open for L3B/T1. |", "| 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 implementation disposition.** ERR-049-002 and ERR-049-004 fixes are implemented with structural tests, but their authoritative tracker rows remain OPEN until landing-closeout synchronization. The approved `Resolve`/`Render` signatures remain final, so ERR-049-005 is explicitly assigned to L2. ERR-049-003 remains open for L3B/T1. |\n| 0.6 | 2026-09-12 | GPT-5.6 Sol | Restores the frozen v0.2 history row verbatim after the L1 edit accidentally substituted section-2's PASS-1 wording. No current requirement or disposition changes. |")
+
+          plan = "docs/tracking/localization-implementation-plan.md"
+          replace_once(plan, "**Version:** 2.5", "**Version:** 2.6")
+          replace_once(plan, "- layer/tier/governance/document-consistency checks green;\n- **no human-readable `InteractionTextCorpus` template/clause ownership remains sim-side**;", "- layer/tier/governance/document-consistency checks green;\n- the L1-only `NoOtherProductionAsmdef_ReferencesLocalizationAtL1` tripwire is deliberately narrowed in L3B, **not deleted or disabled**: it must admit only the approved `TacticalDirector.LocalizationBoundary` production consumer while continuing to reject direct sim/loop references and every other unauthorized production reference to `TacticalDirector.Localization`;\n- **no human-readable `InteractionTextCorpus` template/clause ownership remains sim-side**;")
+          replace_once(plan, "| 2.5 | 2026-09-09 | — | Followed the v2.4 four-defect scope through the places it had not reached, and fixed one mis-sliced proof.", "| 2.6 | 2026-09-12 | GPT-5.6 Sol | Records the intentional L1 reverse-reference tripwire lifecycle: L3B must narrow `NoOtherProductionAsmdef_ReferencesLocalizationAtL1` to admit only the approved localization-boundary consumer while preserving the prohibition on direct sim/loop and other unauthorized production references. |\n| 2.5 | 2026-09-09 | — | Followed the v2.4 four-defect scope through the places it had not reached, and fixed one mis-sliced proof.")
+
+          test = "src/localization/tests/LocalizationCoreContractTests.cs"
+          replace_once(test, "            Type[] publicTypes = assembly.GetExportedTypes();", "            Type[] publicTypes = assembly.GetExportedTypes()\n                .Where(IsAuthoredLocalizationType)\n                .ToArray();")
+          replace_once(test, "            Type[] authoredTypes = assembly.GetTypes()\n                .Where(type => type.Namespace != null\n                    && (string.Equals(type.Namespace, \"TacticalDirector.Localization\", StringComparison.Ordinal)\n                        || type.Namespace.StartsWith(\"TacticalDirector.Localization.\", StringComparison.Ordinal)))\n                .Where(type => !type.IsDefined(typeof(CompilerGeneratedAttribute), false))\n                .ToArray();", "            Type[] authoredTypes = assembly.GetTypes()\n                .Where(IsAuthoredLocalizationType)\n                .ToArray();")
+          replace_once(test, "            Assert.That(assembly.GetExportedTypes().Any(HasExplicitSerializableAttribute), Is.False);", "            Assert.That(authoredTypes.Where(type => type.IsPublic || type.IsNestedPublic).Any(HasExplicitSerializableAttribute), Is.False);")
+          replace_once(test, "        private static bool ContainsForbiddenStateName(Type type)\n        {", "        private static bool IsAuthoredLocalizationType(Type type)\n        {\n            return type.Namespace != null\n                && (string.Equals(type.Namespace, \"TacticalDirector.Localization\", StringComparison.Ordinal)\n                    || type.Namespace.StartsWith(\"TacticalDirector.Localization.\", StringComparison.Ordinal))\n                && !type.IsDefined(typeof(CompilerGeneratedAttribute), false);\n        }\n\n        private static bool ContainsForbiddenStateName(Type type)\n        {")
+          replace_once(test, "// | 1.3     | 2026-09-11 | GPT-5.6 Sol | Scope authored-state reflection to localization-owned namespaces so coverage instrumentation is ignored. |\n#endregion", "// | 1.3     | 2026-09-11 | GPT-5.6 Sol | Scope authored-state reflection to localization-owned namespaces so coverage instrumentation is ignored. |\n// | 1.4     | 2026-09-12 | GPT-5.6 Sol | Apply the same authored-type scope to the public type-shape and serializable-attribute locks; compiler/coverage tracker types are not part of the localization contract. |\n#endregion\n")
+          p = Path(test)
+          p.write_text(p.read_text(encoding="utf-8").rstrip("\n") + "\n", encoding="utf-8")
+          PY
+
+          git rm -- .github/workflows/localization-l1-feedback-fix.yml .github/workflows/localization-l1-feedback-fix-v2.yml
+          git add -A
+          git diff --cached --check
+          python tools/assembly-tier-check.py
+          python tools/doc-consistency-check.py
+          python tools/recurring-defect-lint.py
+
+          echo '--- close-out inspection: spec-error-log ERR-049 records ---'
+          grep -n -A 18 -B 5 'ERR-049-002' docs/tracking/spec-error-log.md | head -n 180 || true
+          echo '--- close-out inspection: tracking headers ---'
+          head -n 22 docs/tracking/CHANGELOG.md
+          head -n 22 docs/tracking/CHANGELOG-src.md
+          head -n 36 src/CLAUDE.md
+          echo '--- localization open issues ---'
+          grep -n -A 12 -B 12 -i 'localization' docs/tracking/open-issues.md | head -n 120 || true
+          echo '--- localization project-reference ---'
+          grep -n -A 12 -B 12 -i 'localization' docs/agent-guides/project-reference.md | head -n 120 || true
+
+          git commit -m "fix(localization): address L1 review follow-up"
+          git push
