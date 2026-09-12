@@ -19,21 +19,7 @@ jobs:
           ref: codex/w4-keeper-perception-final
       - name: Use the explicit raw predicate in the visible gate
         shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('src/match-engine/MatchEngine.cs')
-          s = p.read_text()
-          old = '''                        bool saveVisible = KeeperPerceptionGate.SaveAvailable(
-                            t, i, _agents[i].Position,
-'''
-          new = '''                        bool saveVisible = armed && KeeperPerceptionGate.SaveAvailable(
-                            t, i, _agents[i].Position,
-'''
-          if s.count(old) != 1:
-              raise SystemExit(f'expected one W4 saveVisible site, found {s.count(old)}')
-          p.write_text(s.replace(old, new, 1))
-          PY
+        run: python3 -c "from pathlib import Path; p=Path('src/match-engine/MatchEngine.cs'); s=p.read_text(); old='bool saveVisible = KeeperPerceptionGate.SaveAvailable('; new='bool saveVisible = armed && KeeperPerceptionGate.SaveAvailable('; assert s.count(old)==1, s.count(old); p.write_text(s.replace(old,new,1))"
       - name: Commit cleanup
         shell: bash
         run: |
