@@ -1,0 +1,46 @@
+name: Fix PR398 AgentState import
+
+on:
+  push:
+    branches: [wiring/w5-w7-press-kickoff]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wiring/w5-w7-press-kickoff
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Add test import and run PR gate
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('src/match-engine/tests/MatchEngineEventsTests.cs')
+          t = p.read_text(encoding='utf-8')
+          anchor = 'using TacticalDirector.DecisionTree;\n'
+          addition = 'using TacticalDirector.AgentMovement;\nusing TacticalDirector.DecisionTree;\n'
+          if 'using TacticalDirector.AgentMovement;' not in t:
+              if anchor not in t:
+                  raise SystemExit('using anchor missing')
+              t = t.replace(anchor, addition, 1)
+          p.write_text(t, encoding='utf-8')
+          Path('.github/workflows/fix-pr398-agentstate-import.yml').unlink()
+          PY
+
+          git diff --check
+          bash tools/run-tests-local.sh --pr
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: import AgentState in W5 integration test [skip ci]"
+          git push origin HEAD:wiring/w5-w7-press-kickoff
