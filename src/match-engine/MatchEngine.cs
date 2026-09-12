@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-09-11, latest (W4 keeper perception — v1.73: DT SAVE uses live all-body LOS; same-Resolve applied deflections restart the threatened keeper's reaction timing; raw SaveArmed remains the W1 rush veto; no schema/RNG change).
+// Modified: 2026-09-12, latest (W4 review closure — v1.74: reaction timing now begins only on visible save threats; post-deflection reset is visibility-gated; keeper-slot refresh moved to unconditional Resolve entry under the GK flag; no schema/RNG change).
+// Modified: 2026-09-11 (W4 keeper perception — v1.73: DT SAVE uses live all-body LOS; same-Resolve applied deflections restart the threatened keeper's reaction timing; raw SaveArmed remains the W1 rush veto; no schema/RNG change).
 // Modified: 2026-08-16, prior latest (reviewed findings pass, finding B — v1.72, DOC ONLY, no code change).
 //           PlayerIdsByAgentId's XML doc now states the boot-only one-to-one precondition explicitly
 //           (ERR-044-023): SubstitutePlayer copies the incoming player's identity onto the outgoing
@@ -3314,34 +3315,28 @@ namespace TacticalDirector.MatchEngine
                         // W4: SAVE emission is perception-aware, but the raw threat episode remains
                         // geometry-owned. TryCommitRushIntents MUST keep vetoing on raw SaveArmed:
                         // being unsighted does not make charging at a goal-bound ball safe.
-                        ctx.SaveAvailable = KeeperPerceptionGate.SaveAvailable(
+                        bool saveVisible = KeeperPerceptionGate.SaveAvailable(
                             t, i, _agents[i].Position,
                             _ball.Position, _ball.Velocity, loose,
                             _agents, _isSentOff);
-                        if (armed)
+                        ctx.SaveAvailable = saveVisible;
+                        if (saveVisible)
                         {
-                            // ERR-011-006 (design KD-C2): seed the §3.2 detection stamp at the
-                            // episode's ONSET when no stamp is live — the fallback anchor for
-                            // threats with no shot event (deflections, rebounds, mis-hit passes).
-                            // A no-op after the episode's first call (the stamp itself is the
-                            // latch, serialized in the v19 GK block — no new cross-tick state),
-                            // and a true shot CONTACT's NotifyKeeperOfShot stamp, landing in the
-                            // prior Resolve phase, is already live by the time this runs, so the
-                            // precise strike anchor survives.
+                            // W4 review closure: the §3.2 reaction episode begins when the keeper can
+                            // actually SEE the raw save threat, not when hidden geometry first arms.
+                            // OnThreatArmed remains idempotent while the visible episode stays live, and
+                            // a true shot CONTACT can still overwrite it through NotifyKeeperOfShot.
                             _goalkeeper.OnThreatArmed(
                                 t, _clock.CurrentMatchTimeMs, _ball.Velocity.magnitude,
                                 PlayerAttributeProjection.ToGoalkeeper(in _canonicalAttrs[i], t, fatigue: 0f));
                         }
                         else
                         {
-                            // One owner of "the episode is over". This latch and #11's own
-                            // _saveIntentActive used to have DIFFERENT lifetimes — #11 cleared only when
-                            // a dive resolved, this one clears as soon as the geometry lapses — so a
-                            // threat that armed, committed and then cleared before the keeper dived left
-                            // #11 armed indefinitely and fired at the next Anticipate: a dive at nothing.
-                            // Disarming both here keeps them from disagreeing (ClearSaveIntent is a no-op
-                            // while a dive is already in flight, so a live attempt still runs to its own
-                            // resolution).
+                            // A raw goal-bound threat may still exist here (armed == true) but be hidden
+                            // by a live body screen. It continues to veto RUSH through raw SaveArmed, yet
+                            // it must not bank reaction time or leave an unconsumed SAVE intent behind.
+                            // ClearSaveIntent preserves a dive already in flight, so losing sight cannot
+                            // tear down a committed physical attempt.
                             _saveCommittedForGk[t] = false;
                             _goalkeeper.ClearSaveIntent(t);
                         }
@@ -4699,13 +4694,12 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>
         /// W4 same-Resolve deflection consumer. A changed flight restarts reaction timing only for
-        /// the keeper whose goal the POST-deflection ball threatens under raw SaveArmed geometry.
-        /// LOS deliberately gates DT SAVE emission, not existence of the reaction episode.
+        /// the keeper who can currently SEE the POST-deflection raw save threat. A hidden deflection does
+        /// not bank reaction credit; the ordinary 10 Hz visibility gate will seed the episode if/when the
+        /// ball emerges from the screen.
         /// </summary>
         private void ResetKeeperReactionAfterDeflection()
         {
-            // Resolve may publish a queued substitution after Physics last refreshed this map.
-            RefreshGkAgentIds();
             bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
 
             for (int k = 0; k < _gkAgentIds.Length; k++)
@@ -4716,8 +4710,10 @@ namespace TacticalDirector.MatchEngine
                     continue;
                 }
 
-                if (!GkHeadingIntentSource.SaveArmed(
-                        k, in _ball.Position, in _ball.Velocity, loose))
+                if (!KeeperPerceptionGate.SaveAvailable(
+                        k, agentId, _agents[agentId].Position,
+                        _ball.Position, _ball.Velocity, loose,
+                        _agents, _isSentOff))
                 {
                     continue;
                 }
@@ -4752,6 +4748,15 @@ namespace TacticalDirector.MatchEngine
             // Match-flow completion (design note §6, AR-5): flush any SubstitutePlayer calls made
             // since the last tick — CurrentPhase is now Resolve, the registered producer phase.
             PublishPendingSubstitutions();
+
+            // W4 review closure: a substitution published at Resolve entry can change which agent owns
+            // a keeper slot. Refresh unconditionally under the GK flag here, before collision/deflection
+            // and shot-notification consumers, rather than making ResetSlot timing depend on whether a
+            // body deflection happened later in this phase.
+            if (_gkHeadingEnabled)
+            {
+                RefreshGkAgentIds();
+            }
 
             int frameNumber = (int)_clock.CurrentTick;          // narrows safely at Stage 0 (~414 days @ 60 Hz)
             float matchTime = _clock.CurrentMatchTimeSeconds;
@@ -9428,4 +9433,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | CollisionSystem's transient applied-deflection result is consumed in   |
 // |         |            |        | the same Resolve call and restarts only the post-deflection-threatened  |
 // |         |            |        | keeper via OnThreatDeflected. No new cross-tick state/schema/RNG.      |
+// | 1.74    | 2026-09-12 | —      | W4 review closure: reaction stamps are visibility-owned (screened raw  |
+// |         |            |        | threats neither emit SAVE nor accrue reaction credit); deflection reset |
+// |         |            |        | also requires live LOS. RefreshGkAgentIds moved to Resolve entry after |
+// |         |            |        | pending substitutions, removing deflection-conditional ResetSlot timing.|
 #endregion
