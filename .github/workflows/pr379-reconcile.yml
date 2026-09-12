@@ -1,0 +1,136 @@
+name: PR 379 one-shot tracking reconciliation
+
+on:
+  push:
+    branches:
+      - claude/brave-fermat-1pwubn
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/brave-fermat-1pwubn
+          fetch-depth: 0
+
+      - name: Reconcile append-only tracking surfaces
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          # 1) Canonical ERR ledger: advance the live version and add only the
+          # missing ERR-051-001 Error Index row. The detailed body already exists.
+          p = Path('docs/tracking/spec-error-log.md')
+          s = p.read_text(encoding='utf-8')
+          if s.count('**Version:** 2.55') != 1:
+              raise SystemExit('expected exactly one live spec-error-log v2.55 header')
+          s = s.replace('**Version:** 2.55', '**Version:** 2.56', 1)
+
+          updated_matches = list(re.finditer(r'(?m)^\*\*Updated:\*\* ', s))
+          if len(updated_matches) != 1:
+              raise SystemExit(f'expected one bare Updated label, got {len(updated_matches)}')
+          m = updated_matches[0]
+          line_end = s.index('\n', m.start())
+          prior_line = s[m.start():line_end].replace('**Updated:**', '**Updated (prior):**', 1)
+          new_line = ('**Updated:** September 11, 2026, later (v2.56 — PR #379 semantic reconciliation: '
+                      'the detailed ERR-051-001 record already existed, but its authoritative Error Index row '
+                      'was omitted; index 236 → 237 rows. Status remains RECORDED — OPEN; no normative spec or code change.)')
+          s = s[:m.start()] + new_line + '\n' + prior_line + s[line_end:]
+
+          idx = s.index('## Error Index')
+          next_sep = s.index('\n---', idx)
+          section = s[idx:next_sep]
+          before_count = sum(1 for line in section.splitlines() if line.startswith('| ERR-'))
+          if before_count != 236:
+              raise SystemExit(f'expected 236 Error Index rows before repair, got {before_count}')
+          if '| ERR-051-001 |' in section:
+              raise SystemExit('ERR-051-001 already present in Error Index unexpectedly')
+          row = ('| ERR-051-001 | Audio & Sound Design #51 **§2.2 / §4.2** — `CueEntry` names two **#51-owned** types, '
+                 '`AssetRef` and `CueParams`, that §4.2\'s file/type inventory never declares and the spec never shapes; '
+                 'because both are absent from §4.2\'s CS0104 pre-check enumeration, that pre-check has a **two-name hole**. '
+                 'Found by the audio G0 planning review. | Major | 4 | **RECORDED — OPEN.** Normative §2/§4 repair deliberately '
+                 'deferred to #51 T0 per Path-to-Playable **C6** (#51 has no `src/audio/` assembly). Durable record: '
+                 '`audio-sound-design/section-7.md` v0.2 (R-7 + §7.5). Discharged with T0 code + revert-failing regression proof. |')
+          lines = section.splitlines(keepends=True)
+          last_row_end = None
+          offset = 0
+          for line in lines:
+              offset += len(line)
+              if line.startswith('| ERR-'):
+                  last_row_end = offset
+          if last_row_end is None:
+              raise SystemExit('could not locate Error Index table rows')
+          insert_at = idx + last_row_end
+          s = s[:insert_at] + row + '\n' + s[insert_at:]
+          section2 = s[idx:s.index('\n---', idx)]
+          after_count = sum(1 for line in section2.splitlines() if line.startswith('| ERR-'))
+          if after_count != 237 or section2.count('| ERR-051-001 |') != 1:
+              raise SystemExit('Error Index repair postcondition failed')
+          p.write_text(s, encoding='utf-8')
+
+          # 2) Active audio issue: advance both live pointers together.
+          p = Path('docs/tracking/open-issues.md')
+          s = p.read_text(encoding='utf-8')
+          start = s.index('- **Audio & Sound Design (#51)')
+          end = s.find('\n\n- **', start + 1)
+          if end == -1:
+              raise SystemExit('could not bound Audio & Sound Design open-issue block')
+          block = s[start:end]
+          old_plan = '`docs/planning/audio-implementation-plan.md` v1.5'
+          old_log = '`spec-error-log.md` v2.51'
+          if block.count(old_plan) != 1 or block.count(old_log) != 1:
+              raise SystemExit('unexpected audio issue version-pointer cardinality')
+          block = block.replace(old_plan, '`docs/planning/audio-implementation-plan.md` v1.6', 1)
+          block = block.replace(old_log, '`spec-error-log.md` v2.56', 1)
+          s = s[:start] + block + s[end:]
+          p.write_text(s, encoding='utf-8')
+
+          # 3) CHANGELOG: prepend a new entry; never rewrite the September 7 history.
+          p = Path('docs/tracking/CHANGELOG.md')
+          s = p.read_text(encoding='utf-8')
+          bare = list(re.finditer(r'(?m)^> \*\*Last Updated:\*\* ', s))
+          if len(bare) != 1:
+              raise SystemExit(f'expected one bare CHANGELOG Last Updated label, got {len(bare)}')
+          s = s[:bare[0].start()] + s[bare[0].start():].replace('> **Last Updated:**', '> **Last Updated (prior):**', 1)
+          anchor = s.index('---\n\n') + len('---\n\n')
+          entry = (
+              '> **Last Updated:** September 11, 2026, later — **PR #379 reconciled onto current `main`; two post-#368 audio corrections preserved without replaying stale tracking history. Documentation only.**\n'
+              '>\n'
+              '> `docs/planning/audio-implementation-plan.md` **v1.5 → v1.6** corrects P4A observer-neutrality: digest/RNG-cursor/serialization equality detects writes and draws, not a prohibited simulation read, so the proof now combines output neutrality with **T-AU-BOUND-006** behavioural no-call, **T-AU-BOUND-007**, and the `src/**/*.asmdef` direction scan. `docs/tracking/spec-error-log.md` **v2.55 → v2.56** adds the previously omitted **ERR-051-001** Error Index row (**236 → 237**) while leaving its existing detailed record and RECORDED — OPEN status unchanged. `open-issues.md` advances the live audio-plan/error-log pointers to v1.6/v2.56. The prior September 7 audio acceptance entry is preserved verbatim rather than rewritten. No `.cs`, `.asmdef`, asset, RNG, save/snapshot schema, spec status, or roadmap row changed.\n\n'
+          )
+          s = s[:anchor] + entry + s[anchor:]
+          p.write_text(s, encoding='utf-8')
+
+          # 4) File manifest: prepend the reconciliation record without touching history.
+          p = Path('docs/tracking/file-manifest.md')
+          s = p.read_text(encoding='utf-8')
+          bare = list(re.finditer(r'(?m)^\*\*Last Updated:\*\* ', s))
+          if len(bare) != 1:
+              raise SystemExit(f'expected one bare manifest Last Updated label, got {len(bare)}')
+          s = s[:bare[0].start()] + s[bare[0].start():].replace('**Last Updated:**', '**Last Updated (prior):**', 1)
+          anchor = s.index('\n\n') + 2
+          entry = (
+              '**Last Updated:** September 11, 2026, later — **PR #379 semantic reconciliation of the two valid post-#368 Audio #51 corrections onto current `main`.**\n'
+              '**Modified (4):** `docs/planning/audio-implementation-plan.md` **v1.5 → v1.6**; `docs/tracking/spec-error-log.md` **v2.55 → v2.56** (ERR-051-001 added to Error Index only; **236 → 237** rows, detailed body/status unchanged); `docs/tracking/open-issues.md` (live audio pointers v1.5/v2.51 → v1.6/v2.56); and `docs/tracking/CHANGELOG.md` (new reconciliation entry, prior history untouched). The observer-neutrality correction states the actual proof boundary: output equality catches writes/draws, while prohibited reads require T-AU-BOUND-006 plus T-AU-BOUND-007/asmdef structural locks. No `.cs`, `.asmdef`, asset, RNG, save/snapshot schema, spec status, or roadmap row changed.\n\n'
+          )
+          s = s[:anchor] + entry + s[anchor:]
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/tracking/spec-error-log.md docs/tracking/open-issues.md docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md
+          if git diff --cached --quiet; then
+            echo "No reconciliation changes required"
+            exit 0
+          fi
+          git commit -m "Reconcile PR 379 tracking corrections on current main"
+          git push origin HEAD:claude/brave-fermat-1pwubn
