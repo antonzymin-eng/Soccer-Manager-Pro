@@ -1,9 +1,9 @@
 # System XI — Shared S0/S1 UX System
 
 **Created:** September 7, 2026  
-**Last Updated:** September 7, 2026  
-**Version:** 0.3  
-**Status:** F3 COMPLETE — F4 NEXT  
+**Last Updated:** September 11, 2026  
+**Version:** 0.4  
+**Status:** F3 COMPLETE — current workstream phase is defined by [`ux-detailed-plan.md`](ux-detailed-plan.md)  
 **Parent execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md)  
 **Experience architecture:** [`ux-experience-architecture.md`](ux-experience-architecture.md) v0.1  
 **Evidence parent:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
@@ -335,8 +335,8 @@ toggles; help; modal/confirmation/drawer; feedback; loading/empty/partial/stale/
 pseudo-locale/reflow/max scale; color-independent semantics; glyph fallback expectation; missing-art fallback;
 caption/HUD/muted-audio behavior; and desktop layout cases.
 
-**F3 COMPLETE.** AR-2 found no new ownership, capability or status drift after the AR-1 correction. F4 validation setup
-is next; no high-fidelity journey production is authorized by this phase alone.
+**F3 COMPLETE.** AR-2 found no new ownership, capability or status drift after the AR-1 correction. The current
+workstream phase is defined only by [`ux-detailed-plan.md`](ux-detailed-plan.md); this F3 artifact does not duplicate that moving status. No high-fidelity journey production is authorized by F3 alone.
 
 #region VersionHistory
 | Version | Date | Change |
@@ -344,4 +344,5 @@ is next; no high-fidelity journey production is authorized by this phase alone.
 | 0.1 | 2026-09-07 | Initial UX-B shared system. |
 | 0.2 | 2026-09-07 | AR-1: corrected the substantive ownership overclaim. Approved #49 defines the read-only a11y boundary and defers option content/store; #38 application/palette/font assignment remains content-tier design/back-prop intent, not a landed approved/runtime fact. Compacted wording while preserving F3 primitive/state coverage. |
 | 0.3 | 2026-09-07 | AR-2: rechecked against F1/F2 plus approved #38/#49/#51. No new substantive findings. Marked F3 complete and F4 next. |
+| 0.4 | 2026-09-11 | Review correction: removes the stale moving-phase claim from this completed F3 artifact and points current workstream status to `ux-detailed-plan.md`. No F3 interaction-system semantics change. |
 #endregion
