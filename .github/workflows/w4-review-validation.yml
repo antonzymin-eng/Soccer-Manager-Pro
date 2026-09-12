@@ -25,6 +25,7 @@ jobs:
 
   save-funnel-measurement:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -41,9 +42,16 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Generate projects and restore match-engine tests
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore src/match-engine/tests/match-engine-tests.gen.csproj
       - name: Measure GK save funnel on identical diagnostic seeds
         env:
           TD_GK_DIAGNOSTIC: '1'
         run: |
           echo "=== W4_MEASUREMENT_LABEL=${{ matrix.label }} ==="
-          bash tools/dotnet-ci/run-gate.sh --fast --test-filter "FullyQualifiedName~GkSaveDiagnosticTests"
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "FullyQualifiedName~GkSaveDiagnosticTests" \
+            --logger "console;verbosity=detailed"
