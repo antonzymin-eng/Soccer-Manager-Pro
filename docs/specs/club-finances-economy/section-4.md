@@ -1,13 +1,14 @@
 # Club Finances & Economy #40 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.8 — T3a: record draw-free daily revenue accounting surface; dependency graph unchanged)
+**Last Updated:** September 11, 2026 (v0.9 — T3a review close-out: restore-time coherence includes accumulated revenue; canonical newline restored)
+**Last Updated (prior):** September 11, 2026 (v0.8 — T3a: record draw-free daily revenue accounting surface; dependency graph unchanged)
 **Last Updated (prior):** September 11, 2026 (v0.7 — T2b: #30 bootstrap/settlement composition is live; ERR-030-051 pins staged commit semantics)
 **Last Updated (prior):** September 11, 2026 (v0.6 — PR #392 T2a: the consumed #40 → #27 Squad.ClubId edge is now live; #30 invocation remains T2b)
 **Last Updated (prior):** September 10, 2026 (v0.5 — T1b landed: the #30 composition edge is now real, ERR-030-049)
 **Last Updated (prior):** September 6, 2026 (v0.4 — PR #363 external-review correction: phase-real dependencies and T1a/T1b persistence boundary)
 **Last Updated (prior):** September 4, 2026 (v0.3 — T1 self-identifying save framing back-prop)
-**Version:** 0.8
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -141,7 +142,7 @@ DecodeFinances(bytes) -> perClubFinances:
         clubId = ReadI32(); if clubId <= previousClubId: throw
         previousClubId = clubId
         ... read six i64 fields ...
-        if transferBudget < 0 or wageBudget < 0 or wageBillAggregate < 0: throw
+        if transferBudget < 0 or wageBudget < 0 or wageBillAggregate < 0 or seasonRevenueAccrued < 0: throw
     if bytesRemaining != 0: throw
 ```
 
@@ -171,4 +172,5 @@ its deterministic accounting transform leaves every existing stream cursor uncha
 | 0.6 | 2026-09-11 | — | **PR #392 T2a architecture back-prop.** Promotes the authorized #40 → #27 `PlayerDatabase` edge from future to current with its `Squad.ClubId` bootstrap consumer, records the factory as a pure transform rather than a lifecycle owner, and keeps #30's production invocation/settlement wiring in T2b. |
 | 0.7 | 2026-09-11 | — | **T2b / ERR-030-051 architecture back-prop.** Promotes #30's bootstrap/settlement edge to current, records `League.CreateLoop` as the lifecycle owner, and pins settlement-at-(b') with post-commit installation to preserve #30 atomicity. |
 | 0.8 | 2026-09-11 | OpenAI | **T3a architecture back-prop.** Records `AccrueDailyRevenue` as a draw-free #40-owned autonomous accounting transform, keeps the assembly graph unchanged, leaves #30 daily invocation deferred, and keeps `0x29`/91 reserved until the first stochastic sponsorship-variance consumer. |
+| 0.9 | 2026-09-11 | OpenAI | **T3a review close-out.** Restore-time coherence pseudocode now includes negative `SeasonRevenueAccrued` rejection and the file regains a canonical trailing newline. |
 #endregion
