@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 11, 2026 — **PR #396 review closure: shared UX status versioned, tracking synchronized, header rendering repaired, and F4 timing relaxation made explicit. Documentation only.**
+> **Last Updated:** September 11, 2026, later — **PR #379 reconciled onto current `main`; two post-#368 audio corrections preserved without replaying stale tracking history. Documentation only.**
+>
+> `docs/planning/audio-implementation-plan.md` **v1.5 → v1.6** corrects P4A observer-neutrality: digest/RNG-cursor/serialization equality detects writes and draws, not a prohibited simulation read, so the proof now combines output neutrality with **T-AU-BOUND-006** behavioural no-call, **T-AU-BOUND-007**, and the `src/**/*.asmdef` direction scan. `docs/tracking/spec-error-log.md` **v2.55 → v2.56** adds the previously omitted **ERR-051-001** Error Index row (**236 → 237**) while leaving its existing detailed record and RECORDED — OPEN status unchanged. `open-issues.md` advances the live audio-plan/error-log pointers to v1.6/v2.56. The prior September 7 audio acceptance entry is preserved verbatim rather than rewritten. No `.cs`, `.asmdef`, asset, RNG, save/snapshot schema, spec status, or roadmap row changed.
+
+> **Last Updated (prior):** September 11, 2026 — **PR #396 review closure: shared UX status versioned, tracking synchronized, header rendering repaired, and F4 timing relaxation made explicit. Documentation only.**
 >
 > `docs/design/ux-shared-system.md` advances **v0.3 → v0.4** so the September 11 status-authority correction no longer mutates the already-landed v0.3 body. Current phase lives in `ux-detailed-plan.md`; the shared F3 artifact no longer duplicates it. The maintained current shared-system citation inside `ux-validation-protocol.md` and the manifest inventory now point to `ux-shared-system.md` v0.4.
 >
