@@ -1,0 +1,113 @@
+name: Localization L1 tracking sync (one-shot)
+
+on:
+  push:
+    branches:
+      - localization/l1-core-contracts
+    paths:
+      - .github/workflows/localization-l1-tracking-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply exact tracking replacements
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected exactly one match, found {count}: {old!r}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          roadmap = "docs/tracking/path-to-playable-roadmap.md"
+          replace_once(
+              roadmap,
+              "| **#29, #30, #31, #32, #33, #34, #37, #38, #40, #41, #43, #44, #49** | ✅ **APPROVED** | **no assembly exists** |",
+              "| **#29, #30, #31, #32, #33, #34, #37, #38, #40, #41, #43, #44** | ✅ **APPROVED** | **no assembly exists in this original baseline** |\n| Localization & Accessibility #49 | ✅ **APPROVED** | **L1 core contracts implemented in `TacticalDirector.Localization`; L2 renderer/catalogue/content and L3B producer-boundary wiring pending** |",
+          )
+          replace_once(
+              roadmap,
+              "Thirteen approved specs (~13,000 spec lines) sit at zero implementation.",
+              "That original baseline counted thirteen approved specs (~13,000 spec lines) at zero implementation. #49 is no longer in that set after its L1 core landing; later version-history rows record other implemented slices without rewriting this motivating baseline.",
+          )
+          replace_once(
+              roadmap,
+              "with caption\n> rendering blocked on #49 (`D49`). No PM milestone is redefined.",
+              "with caption\n> rendering still blocked on #49's L2 rendering/boundary capability (`D49`); the #49 L1 core assembly now exists. No PM milestone is redefined.",
+          )
+          replace_once(
+              roadmap,
+              "| Version | Date | Change |\n|---------|------|--------|\n| v0.26 |",
+              "| Version | Date | Change |\n|---------|------|--------|\n| v0.27 | September 12, 2026 | **#49 L1 registry synchronization.** The motivating baseline no longer reports #49 as assembly-less: `TacticalDirector.Localization` now carries the L1 dependency-free core contracts. Renderer/catalogue/content and L3B producer-boundary wiring remain later work. The audio-amendment D49 wording is narrowed accordingly: caption rendering still waits on #49's L2 rendering/boundary capability, not on creation of the core assembly. No PM milestone or critical-path ordering changes. |\n| v0.26 |",
+          )
+
+          manifest = "docs/tracking/file-manifest.md"
+          replace_once(
+              manifest,
+              "# File Manifest (Post-Migration Baseline)\n\n**Last Updated:**",
+              "# File Manifest (Post-Migration Baseline)\n\n**Last Updated:** September 12, 2026 — **#49 Localization L1 core assembly registry sync (PR #397).**\n`src/localization/localization.asmdef` now exists as the dependency-free `TacticalDirector.Localization` L1 core. The spec inventory row below is corrected from `no assembly` to the implemented L1 state; L2 renderer/catalogue/content and L3B producer-boundary wiring remain pending. This registry synchronization does **not** mark ERR-049-002/004 tracker-resolved; canonical ERR closure remains a separate landing-close-out step after current-head evidence. No historical manifest entry is rewritten.\n\n**Last Updated (prior):**",
+          )
+          replace_once(
+              manifest,
+              "| 49 | `docs/specs/localization-accessibility/` | APPROVED (Jul 23, 2026) — no assembly |",
+              "| 49 | `docs/specs/localization-accessibility/` | APPROVED (Jul 23, 2026) — L1 core implemented in `TacticalDirector.Localization`; L2+ pending |",
+          )
+
+          audio = "docs/planning/audio-implementation-plan.md"
+          replace_once(audio, "**Last Updated:** September 7, 2026", "**Last Updated:** September 12, 2026")
+          replace_once(audio, "**Version:** 1.5", "**Version:** 1.6")
+          replace_once(
+              audio,
+              "- caption-renderer integration remains blocked on **D49: #49 Localization & Accessibility T0**;",
+              "- #49 L1 core now exists; caption-renderer integration remains blocked on **D49: #49 L2 renderer/catalogue plus the approved caption boundary**, not on the absence of a localization assembly;",
+          )
+          replace_once(
+              audio,
+              "- #49 has no production assembly; therefore T3 caption rendering is not currently available.",
+              "- #49 now has the dependency-free L1 production assembly `TacticalDirector.Localization`; T3 caption rendering is still unavailable because L2 renderer/catalogue behavior and the approved caption boundary have not landed.",
+          )
+          replace_once(
+              audio,
+              "- **D49 — Localization & Accessibility T0 exists.** Required before caption rendering integration; not required for T0/T1 audio framework work.",
+              "- **D49 — Localization caption-rendering capability exists.** The L1 core-assembly prerequisite is met by #397; P5B still requires L2 renderer/catalogue behavior plus an approved #49/#51 caption boundary.",
+          )
+          replace_once(
+              audio,
+              "- real caption rendering once D49 is available;",
+              "- real caption rendering once D49's L2 rendering/boundary capability is available;",
+          )
+          replace_once(
+              audio,
+              "Before P5B begins, verify #49 T0 exists and can legitimately add the inbound `#49 → #51` reference required by #51 §4.5.",
+              "Before P5B begins, verify #49 L2 rendering/catalogue behavior exists and that the approved integration topology provides a legitimate caption boundary between #49 and #51. #49 L1 core existence alone does not satisfy D49, and this plan does not force the generic localization core to acquire a #51 dependency.",
+          )
+          replace_once(
+              audio,
+              "| 1.5 | 2026-09-07 | Owner accepted G0 and the narrow roadmap amendment; canonical close-out acknowledged as complete; P1/P2 authorized after the planning PR lands; ERR-051-001 remains recorded for T0 discharge; G3/D48 and caption/D49 gates unchanged. |",
+              "| 1.5 | 2026-09-07 | Owner accepted G0 and the narrow roadmap amendment; canonical close-out acknowledged as complete; P1/P2 authorized after the planning PR lands; ERR-051-001 remains recorded for T0 discharge; G3/D48 and caption/D49 gates unchanged. |\n| 1.6 | 2026-09-12 | Synchronizes D49 with #397: the localization L1 core assembly now exists, so audio captions are no longer blocked on creation of #49 T0/L1. P5B remains blocked on L2 renderer/catalogue behavior plus an approved #49/#51 caption boundary; the generic localization core is not given an audio dependency. |",
+          )
+
+      - name: Verify and commit one-shot sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git rm -- .github/workflows/localization-l1-tracking-sync.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/tracking/path-to-playable-roadmap.md docs/tracking/file-manifest.md docs/planning/audio-implementation-plan.md
+          git diff --cached --check
+          git commit -m "docs: synchronize localization L1 registries"
+          git push
