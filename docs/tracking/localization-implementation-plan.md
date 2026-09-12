@@ -1,7 +1,7 @@
 # Localization #49 — End-to-End Implementation Plan
 
 **Created:** September 6, 2026
-**Version:** 2.5
+**Version:** 2.6
 **Status:** READY FOR IMPLEMENTATION
 **Baseline:** `main` at `67f2343c34e767ba02a4dc13816c91090b3bf3d9` — the L3A merge commit (PR #370, September 9, 2026). v2.0–v2.2 were authored against `9fbd7533`; the historical review records below keep that value and are not rewritten.
 **Scope:** the APPROVED #49 seam/T0+T1 implementation first; Wave-8 locale/a11y content remains a later, separately approved tier.
@@ -532,6 +532,7 @@ Against L3A, prove:
 
 - oracle fully green;
 - layer/tier/governance/document-consistency checks green;
+- the L1-only `NoOtherProductionAsmdef_ReferencesLocalizationAtL1` tripwire is deliberately narrowed in L3B, **not deleted or disabled**: it must admit only the approved `TacticalDirector.LocalizationBoundary` production consumer while continuing to reject direct sim/loop references and every other unauthorized production reference to `TacticalDirector.Localization`;
 - **no human-readable `InteractionTextCorpus` template/clause ownership remains sim-side**;
 - ERR-049-003 is `✅ RESOLVED` and all downstream spec back-props are consistent;
 - every changed assembly/ERR/open-issue/current-state cardinality is current;
@@ -799,5 +800,6 @@ Review of v2.4 found that the two new records had been added without following t
 | 2.2 | 2026-09-08 | — | Rebased plan onto PR-#375 current main; consolidated L3B non-sentinel coverage acceptance and the two-dot frozen-oracle diff into §7.7/§12; froze producer enum rosters in L3A; removed the orphan acceptance supplement. |
 | 2.3 | 2026-09-09 | — | L3A landing reconciliation: resolved `<L3A_MERGE_COMMIT>` to the PR #370 merge commit `67f2343` in §7.7 and §12 (naming the merged branch tip as the wrong value and recording the frozen blob hash as informational corroboration), advanced the header baseline to that commit, discharged the v2.2 hold on L1 with the CI and negative-control run ids, and carried forward the narrowed end-to-end citation-clause evidence limitation. No requirement added or relaxed. |
 | 2.4 | 2026-09-09 | — | Recorded two further pre-T0 defects found by review of the v2.3 landing: §3.3 proposed ERR-049-004 (FR-LC-009 mandates a plural/gender selector for which §2.2 supplies no typed operand) and §3.4 proposed ERR-049-005 (FR-LC-011's base-locale-identity fallback is circular for a static key outside FR-LC-008a/F5's procedural-roster-only coverage). L0R grows from two recorded entries to four across §3.5, §3.6, §11 row 0 and §14 criterion 6; ERR-049-004 assigned to **L1** because the operand lands on a core seam type frozen there, with §3.4's signature question settled before L1 rather than at L2; executable exit evidence named in §5.5 and §6.6. No normative fix chosen and no FR/KD wording altered. |
+| 2.6 | 2026-09-12 | GPT-5.6 Sol | Records the intentional L1 reverse-reference tripwire lifecycle: L3B must narrow `NoOtherProductionAsmdef_ReferencesLocalizationAtL1` to admit only the approved localization-boundary consumer while preserving the prohibition on direct sim/loop and other unauthorized production references. |
 | 2.5 | 2026-09-09 | — | Followed the v2.4 four-defect scope through the places it had not reached, and fixed one mis-sliced proof. §5.2 no longer hard-codes the pre-fix `ILocalizer`/`NamedSlotSet`/`LocalizedTextRequest` shapes that §3.3/§3.4 require L1 to change — the three bullets are marked subject to those decisions. ERR-049-004's exit evidence split at the slice boundary: L1 proves the operand exists with the required type/locale-neutrality/immutability/no-persisted-state properties (§5.3, §5.5) and closes the ERR there; L2 proves it drives plural selection (§6.6) as FR-LC-009 conformance, since the renderer and catalogue are L2. §2 H1 and the §3 preamble updated from two known defects to four. No new defect recorded, no normative fix chosen, no FR/KD wording altered. |
 #endregion
