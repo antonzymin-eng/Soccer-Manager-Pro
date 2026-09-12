@@ -1,0 +1,17 @@
+{
+  "asset_id": "ui.pipeline.import-probe",
+  "family": "ui",
+  "status": "candidate",
+  "style_version": "none-technical-probe",
+  "target_surface": "ap03-import-proof-only",
+  "source_kind": "original",
+  "creator_or_tool": "Hand-authored SVG (Claude Code, AP-03); exported with resvg 0.47.0 (official win64 release)",
+  "license_or_rights_basis": "Original geometric work authored in this repository for the System XI project; contains no third-party material.",
+  "attribution_required": false,
+  "real_person_or_likeness": false,
+  "real_club_competition_or_trademark": false,
+  "export_paths": [
+    "Assets/GameArt/UI/Icons/ap03_import_probe.png"
+  ],
+  "notes": "AP-03 technical import probe only. Deliberately neutral geometry, independent of G1/AP-02, not an approved production-style asset. May be deprecated after G2; the evidence stays in docs/design/art/art-technical-recipe-v1.md."
+}
