@@ -1,4 +1,4 @@
-name: Fix PR398 AgentState import fast
+name: Finalize PR398 W5 repair
 
 on:
   push:
@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   patch-and-verify:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,25 +18,29 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Add import and run focused W5 gate
+      - name: Fix import, remove duplicate history row, and run focused W5 gate
         shell: bash
         run: |
           python3 <<'PY'
           from pathlib import Path
-          p = Path('src/match-engine/tests/MatchEngineEventsTests.cs')
-          t = p.read_text(encoding='utf-8')
+
+          test = Path('src/match-engine/tests/MatchEngineEventsTests.cs')
+          t = test.read_text(encoding='utf-8')
           anchor = 'using TacticalDirector.DecisionTree;\n'
           if 'using TacticalDirector.AgentMovement;' not in t:
               if anchor not in t:
-                  raise SystemExit('using anchor missing')
+                  raise SystemExit('MatchEngineEventsTests using anchor missing')
               t = t.replace(anchor, 'using TacticalDirector.AgentMovement;\n' + anchor, 1)
-          p.write_text(t, encoding='utf-8')
-          for wf in (
-              '.github/workflows/fix-pr398-agentstate-import.yml',
-              '.github/workflows/fix-pr398-agentstate-fast.yml'):
-              q = Path(wf)
-              if q.exists():
-                  q.unlink()
+          test.write_text(t, encoding='utf-8')
+
+          engine = Path('src/match-engine/MatchEngine.cs')
+          e = engine.read_text(encoding='utf-8')
+          duplicate = '// | 1.74     | 2026-09-11 | —      | ERR-013-011: FillPressingSnapshot writes the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |\n'
+          if duplicate in e:
+              e = e.replace(duplicate, '', 1)
+          engine.write_text(e, encoding='utf-8')
+
+          Path('.github/workflows/fix-pr398-agentstate-fast.yml').unlink()
           PY
 
           git diff --check
@@ -46,5 +49,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "fix: import AgentState in W5 integration test [skip ci]"
+          git commit -m "fix: complete W5 clock-domain remediation [skip ci]"
           git push origin HEAD:wiring/w5-w7-press-kickoff
