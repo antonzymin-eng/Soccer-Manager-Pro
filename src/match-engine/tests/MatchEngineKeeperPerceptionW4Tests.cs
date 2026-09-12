@@ -231,6 +231,10 @@ namespace TacticalDirector.MatchEngine
         {
             var engine = new MatchEngine(MatchSeed ^ (ulong)(0x500 + keeperTeam));
             engine.EnableGkHeading();
+            // TestOnly_RunResolvePhase bypasses the normal tick-clock advance. Prime one ordinary
+            // tick so frame 0 cannot alias any default ContactFrame sentinel in inactive shot results.
+            // The staged collision below is applied only after this priming tick.
+            engine.RunTick();
             int keeper = FindKeeper(engine, keeperTeam);
             int deflector = FindOutfielder(engine, OtherTeam(keeperTeam));
             Assert.GreaterOrEqual(keeper, 0);
