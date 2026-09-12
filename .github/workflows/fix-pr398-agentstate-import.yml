@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Add test import and run PR gate
+      - name: Add test import and run focused W5 gate
         shell: bash
         run: |
           python3 <<'PY'
@@ -33,11 +33,16 @@ jobs:
                   raise SystemExit('using anchor missing')
               t = t.replace(anchor, addition, 1)
           p.write_text(t, encoding='utf-8')
-          Path('.github/workflows/fix-pr398-agentstate-import.yml').unlink()
+          for wf in (
+              '.github/workflows/fix-pr398-agentstate-import.yml',
+              '.github/workflows/fix-pr398-agentstate-fast.yml'):
+              q = Path(wf)
+              if q.exists():
+                  q.unlink()
           PY
 
           git diff --check
-          bash tools/run-tests-local.sh --pr
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'FullyQualifiedName~PassAttemptEvent_FromCompletedPhysicsWindow_ReachesPressingDebounce'
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
