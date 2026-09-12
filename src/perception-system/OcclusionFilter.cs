@@ -1,12 +1,16 @@
 // File:     src/perception-system/OcclusionFilter.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-09-11 (W4: keeper-specific all-body occlusion; harden participation-mask contract)
 // Author:   —
 // Spec:     Perception System #7 §3.2, Code Standards #20
 // Purpose:  Computes shadow cone geometry for opponent occluders (§3.2.3) and tests
 //           whether a candidate entity falls inside any shadow cone (§3.2.4).
 //           Opponents only at Stage 0 — teammate shadow cones deferred (OQ-1).
+//           W4 exposes a separate all-body query for goalkeeper line-of-sight so a friendly
+//           screen can unsight the keeper without changing ordinary agent perception semantics.
 //           Static class. All methods are deterministic. No side effects.
+
+using System;
 
 using UnityEngine;
 
@@ -61,23 +65,91 @@ namespace TacticalDirector.PerceptionSystem
             int observerTeamId,
             PerceptionAgentAttributes[] agentAttrs)
         {
+            return IsOccludedCore(
+                observerPos,
+                targetPos,
+                targetId,
+                observerId: -1,
+                agentStates,
+                candidateIds,
+                candidateCount,
+                observerTeamId,
+                agentAttrs,
+                opponentsOnly: true,
+                excludedAgents: null);
+        }
+
+        /// <summary>
+        /// W4 allocation-free goalkeeper line-of-sight query across the complete agent array.
+        /// This is intentionally separate from ordinary Stage-0 perception: OQ-1 remains intact,
+        /// while the goalkeeper save gate can treat either team as a physical screen. Callers may
+        /// provide an exclusion mask for agents that no longer participate (for example, sent-off
+        /// players whose last world position is retained for deterministic bookkeeping).
+        /// </summary>
+        public static bool IsOccludedByAnyAgent(
+            Vector2 observerPos,
+            Vector2 targetPos,
+            int observerId,
+            AgentState[] agentStates,
+            bool[] excludedAgents = null)
+        {
+            if (excludedAgents != null && excludedAgents.Length < agentStates.Length)
+            {
+                throw new ArgumentException(
+                    $"excludedAgents length ({excludedAgents.Length}) must cover agentStates ({agentStates.Length}).",
+                    nameof(excludedAgents));
+            }
+
+            return IsOccludedCore(
+                observerPos,
+                targetPos,
+                targetId: -1,
+                observerId,
+                agentStates,
+                candidateIds: null,
+                candidateCount: agentStates.Length,
+                observerTeamId: 0,
+                agentAttrs: null,
+                opponentsOnly: false,
+                excludedAgents);
+        }
+
+        private static bool IsOccludedCore(
+            Vector2 observerPos,
+            Vector2 targetPos,
+            int targetId,
+            int observerId,
+            AgentState[] agentStates,
+            int[] candidateIds,
+            int candidateCount,
+            int observerTeamId,
+            PerceptionAgentAttributes[] agentAttrs,
+            bool opponentsOnly,
+            bool[] excludedAgents)
+        {
             float targetDistSq = (targetPos - observerPos).sqrMagnitude;
             float targetBearing = Mathf.Atan2(
                 targetPos.y - observerPos.y,
                 targetPos.x - observerPos.x) * PerceptionConstants.RAD_TO_DEG;
 
-            for (int i = 0; i < candidateCount; i++)
+            int sourceCount = candidateIds == null ? agentStates.Length : candidateCount;
+            for (int i = 0; i < sourceCount; i++)
             {
-                int occluderId = candidateIds[i];
+                int occluderId = candidateIds == null ? i : candidateIds[i];
 
-                // Skip: ball entities, the target itself, and self
-                if (occluderId < 0 || occluderId == targetId)
+                // Skip: ball entities, the target itself, the observer itself, and bodies that are
+                // no longer participating in the match (for example a sent-off player).
+                if (occluderId < 0
+                    || occluderId == targetId
+                    || occluderId == observerId
+                    || (excludedAgents != null && excludedAgents[occluderId]))
                 {
                     continue;
                 }
 
-                // Skip: only opponents cast shadow cones at Stage 0 (OQ-1)
-                if (agentAttrs[occluderId].TeamId == observerTeamId)
+                // The canonical Stage-0 query remains opponent-only (OQ-1). The W4 goalkeeper query
+                // opts out of this one filter while sharing exactly the same shadow/depth geometry.
+                if (opponentsOnly && agentAttrs[occluderId].TeamId == observerTeamId)
                 {
                     continue;
                 }
@@ -85,7 +157,7 @@ namespace TacticalDirector.PerceptionSystem
                 Vector2 occluderPos  = agentStates[occluderId].Position;
                 float occluderDistSq = (occluderPos - observerPos).sqrMagnitude;
 
-                // Depth ordering: occluder must be closer than target
+                // Depth ordering: occluder must be closer than target.
                 if (occluderDistSq >= targetDistSq)
                 {
                     continue;
@@ -114,6 +186,7 @@ namespace TacticalDirector.PerceptionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                    |
+// | 1.1     | 2026-09-11 | —      | W4: add hardened keeper all-body LOS while Stage-0 semantics stay fixed. |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                                  |
 #endregion
