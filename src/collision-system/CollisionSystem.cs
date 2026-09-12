@@ -145,7 +145,36 @@ namespace TacticalDirector.CollisionSystem
             float matchTime,
             ICollisionEventConsumer eventConsumer)
         {
+            UpdateCollisions(
+                agentStates, agentAttrs, agentTeamIds, agentIsGoalkeeper,
+                knockdownOut, knockdownForceOut, stumbleOut,
+                ref ball, matchSeed, frameNumber, matchTime, eventConsumer,
+                out _);
+        }
+
+        /// <summary>
+        /// W4 composition overload. Runs the identical collision pipeline and reports whether at least
+        /// one confirmed AGENT_BALL contact applied a real Ball Physics deflection during this call.
+        /// The result is per-call output only: no latch is retained and CollisionEvent remains unchanged.
+        /// </summary>
+        /// <param name="ballDeflected">True iff BallCollisionHandler changed ball flight at least once.</param>
+        public void UpdateCollisions(
+            AgentState[] agentStates,
+            PlayerAttributes[] agentAttrs,
+            int[] agentTeamIds,
+            bool[] agentIsGoalkeeper,
+            bool[] knockdownOut,
+            float[] knockdownForceOut,
+            bool[] stumbleOut,
+            ref BallState ball,
+            ulong matchSeed,
+            int frameNumber,
+            float matchTime,
+            ICollisionEventConsumer eventConsumer,
+            out bool ballDeflected)
+        {
             using var _ = s_updateMarker.Auto();
+            ballDeflected = false;
 
             int count = agentStates.Length;
 
@@ -258,7 +287,8 @@ namespace TacticalDirector.CollisionSystem
                     _processedPairs.Set(lo, hi);
 
                     bool collided = j == SpatialHashConstants.BALL_ENTITY_ID
-                        ? ProcessAgentBall(agentTeamIds, agentIsGoalkeeper, i, ref ball, matchTime)
+                        ? ProcessAgentBall(
+                            agentTeamIds, agentIsGoalkeeper, i, ref ball, matchTime, ref ballDeflected)
                         : ProcessAgentAgent(agentTeamIds, i, j, matchTime);
 
                     if (collided && ++confirmed >= SpatialHashConstants.MaxCollisionPairs)
@@ -432,7 +462,8 @@ namespace TacticalDirector.CollisionSystem
             bool[] isGoalkeeper,
             int agentId,
             ref BallState ball,
-            float matchTime)
+            float matchTime,
+            ref bool ballDeflected)
         {
             AgentPhysicalProperties snap = _snapshots[agentId];
 
@@ -455,7 +486,13 @@ namespace TacticalDirector.CollisionSystem
                 IsGoalkeeper = isGoalkeeper[agentId]
             };
 
-            BallCollisionHandler.OnAgentCollision(ref ball, in data);
+            // W4: contact truth and response truth are distinct. A confirmed overlap still
+            // counts toward the collision valve and emits the existing CollisionEvent; only an
+            // actually-applied Ball Physics response becomes the keeper new-threat signal.
+            if (BallCollisionHandler.OnAgentCollision(ref ball, in data))
+            {
+                ballDeflected = true; // OR-reduce across AGENT_BALL contacts in this call.
+            }
 
             RecordEvent(matchTime, CollisionType.AGENT_BALL, agentId,
                 SpatialHashConstants.BALL_ENTITY_ID, contactPoint, 0f, default);

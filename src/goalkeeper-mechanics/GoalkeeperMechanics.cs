@@ -331,6 +331,27 @@ namespace TacticalDirector.GoalkeeperMechanics
         }
 
         /// <summary>
+        /// W4 new-threat seam: a real body deflection changed the live ball flight during Resolve.
+        /// Unlike <see cref="OnThreatArmed"/>, this deliberately overwrites an already-live detection
+        /// and required-reaction stamp. Unlike <see cref="OnShotExecutedEvent"/>, it does NOT set
+        /// <c>_shotEventPending</c>: a deflection is not a newly struck shot.
+        /// </summary>
+        public void OnThreatDeflected(
+            int gkIndex, float matchTimeMs, float ballSpeedMps, GoalkeeperAgentAttributes attrs)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return;
+            }
+
+            _attrs[gkIndex] = attrs;
+            _shotDetectedTickMs[gkIndex] =
+                GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(matchTimeMs, attrs);
+            _requiredReactionMs[gkIndex] =
+                GoalkeeperReactionPipeline.ComputeRequiredReactionMs(attrs, ballSpeedMps, _states[gkIndex]);
+        }
+
+        /// <summary>
         /// Notifies that a shot has been struck at the specified GK's goal, opening the §3.2 reaction
         /// window. Sets the pending-shot flag for the next 60 Hz tick.
         ///

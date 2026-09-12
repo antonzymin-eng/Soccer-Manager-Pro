@@ -3310,7 +3310,13 @@ namespace TacticalDirector.MatchEngine
                         bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
                         bool armed = GkHeadingIntentSource.SaveArmed(
                             t, in _ball.Position, in _ball.Velocity, loose);
-                        ctx.SaveAvailable = armed;
+                        // W4: SAVE emission is perception-aware, but the raw threat episode remains
+                        // geometry-owned. TryCommitRushIntents MUST keep vetoing on raw SaveArmed:
+                        // being unsighted does not make charging at a goal-bound ball safe.
+                        ctx.SaveAvailable = KeeperPerceptionGate.SaveAvailable(
+                            t, i, _agents[i].Position,
+                            _ball.Position, _ball.Velocity, loose,
+                            _agents, _isSentOff);
                         if (armed)
                         {
                             // ERR-011-006 (design KD-C2): seed the §3.2 detection stamp at the
@@ -4688,6 +4694,40 @@ namespace TacticalDirector.MatchEngine
             DriveGkHeadingPhysics();
         }
 
+        /// <summary>
+        /// W4 same-Resolve deflection consumer. A changed flight restarts reaction timing only for
+        /// the keeper whose goal the POST-deflection ball threatens under raw SaveArmed geometry.
+        /// LOS deliberately gates DT SAVE emission, not existence of the reaction episode.
+        /// </summary>
+        private void ResetKeeperReactionAfterDeflection()
+        {
+            // Resolve may publish a queued substitution after Physics last refreshed this map.
+            RefreshGkAgentIds();
+            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                int agentId = _gkAgentIds[k];
+                if (agentId < 0 || _isSentOff[agentId])
+                {
+                    continue;
+                }
+
+                if (!GkHeadingIntentSource.SaveArmed(
+                        k, in _ball.Position, in _ball.Velocity, loose))
+                {
+                    continue;
+                }
+
+                _goalkeeper.OnThreatDeflected(
+                    k,
+                    _clock.CurrentMatchTimeMs,
+                    _ball.Velocity.magnitude,
+                    PlayerAttributeProjection.ToGoalkeeper(
+                        in _canonicalAttrs[agentId], k, fatigue: 0f));
+            }
+        }
+
         /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor
         /// lifecycles (C2/C3), runs first touch on a loose arriving ball (D3), then authors the
         /// authoritative <see cref="MatchContext"/> from the settled world state (C4). Intra-Resolve
@@ -4747,7 +4787,15 @@ namespace TacticalDirector.MatchEngine
                 matchSeed: _matchSeed,
                 frameNumber: frameNumber,
                 matchTime: matchTime,
-                eventConsumer: _eventConsumer);
+                eventConsumer: _eventConsumer,
+                ballDeflected: out bool ballDeflected);
+
+            // W4: consume an APPLIED flight change immediately in this Resolve phase. No pending
+            // deflection latch survives the tick; existing GK reaction fields remain the only state.
+            if (_gkHeadingEnabled && ballDeflected)
+            {
+                ResetKeeperReactionAfterDeflection();
+            }
 
             // Match-flow completion (design note §3): apply the (at most one) foul candidate the
             // consumer just captured — RNG-drawn severity, card issuance, sent-off, and a free kick.

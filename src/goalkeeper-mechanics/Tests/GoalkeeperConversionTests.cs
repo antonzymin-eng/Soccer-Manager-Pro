@@ -181,6 +181,25 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
         }
 
         [Test]
+        public void OnThreatDeflected_OverwritesArmingStamp_WithoutShotPending()
+        {
+            GoalkeeperMechanics gk = NewGk();
+
+            gk.OnThreatArmed(Gk0, 1000f, 20f, MidAttrs());
+            float first = gk.CaptureState().ShotDetectedTickMs[Gk0];
+            gk.OnThreatDeflected(Gk0, 1400f, 18f, MidAttrs());
+
+            GoalkeeperTickState state = gk.CaptureState();
+            float expected = GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(1400f, MidAttrs());
+            Assert.AreEqual(expected, state.ShotDetectedTickMs[Gk0], 1e-3f,
+                "W4: a real deflection must overwrite the live reaction stamp.");
+            Assert.AreNotEqual(first, state.ShotDetectedTickMs[Gk0],
+                "W4: the changed flight must not inherit the pre-deflection timing episode.");
+            Assert.IsFalse(state.ShotEventPending[Gk0],
+                "W4: a body deflection is not a newly struck shot.");
+        }
+
+        [Test]
         public void ClearSaveIntent_ClearsDetectionStamp()
         {
             GoalkeeperMechanics gk = NewGk();
