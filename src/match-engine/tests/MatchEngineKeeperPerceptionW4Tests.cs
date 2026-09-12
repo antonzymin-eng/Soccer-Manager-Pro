@@ -21,7 +21,17 @@ namespace TacticalDirector.MatchEngine
         private const int AwayTeam = 1;
         private static readonly Vector3 ThreatPosition = new Vector3(5f, 34f, 0.11f);
         private static readonly Vector3 ThreatVelocity = new Vector3(-3.5f, 0f, 0f);
+        private static readonly Vector2 KeeperPosition = new Vector2(2f, 34f);
         private static readonly Vector2 ScreenPosition = new Vector2(2.5f, 34f);
+
+        private static int FindKeeper(MatchEngine engine, int team)
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (engine.AgentTeamId(i) == team && engine.AgentIsGoalkeeper(i)) return i;
+            }
+            return -1;
+        }
 
         private static int FindOutfielder(MatchEngine engine, int team)
         {
@@ -32,8 +42,12 @@ namespace TacticalDirector.MatchEngine
             return -1;
         }
 
-        private static void StageOpponentScreen(MatchEngine engine, int screenAgent)
+        private static void StageOpponentScreen(MatchEngine engine, int keeper, int screenAgent)
         {
+            engine.TestOnly_SetAgent(
+                keeper,
+                AgentState.CreateAtPosition(KeeperPosition, Vector2.right));
+            engine.TestOnly_SetCommand(keeper, MovementCommand.Stop(KeeperPosition));
             engine.TestOnly_SetAgent(
                 screenAgent,
                 AgentState.CreateAtPosition(ScreenPosition, Vector2.left));
@@ -45,14 +59,16 @@ namespace TacticalDirector.MatchEngine
         public void OpponentScreenedGoalBoundThreat_DoesNotCommitDtSave()
         {
             var engine = new MatchEngine(MatchSeed);
+            int keeper = FindKeeper(engine, HomeTeam);
             int screen = FindOutfielder(engine, AwayTeam);
+            Assert.GreaterOrEqual(keeper, 0);
             Assert.GreaterOrEqual(screen, 0);
             Assert.IsTrue(GkHeadingIntentSource.SaveArmed(
                 HomeTeam, ThreatPosition, ThreatVelocity, ballLoose: true));
 
             for (int i = 0; i < 2 * DeterministicSimConstants.AI_PHASE_STRIDE; i++)
             {
-                StageOpponentScreen(engine, screen);
+                StageOpponentScreen(engine, keeper, screen);
                 engine.RunTick();
             }
 
@@ -64,14 +80,17 @@ namespace TacticalDirector.MatchEngine
         public void OpponentScreenedGoalBoundThreat_DoesNotArmRush()
         {
             var engine = new MatchEngine(MatchSeed ^ 0x55UL);
+            int keeper = FindKeeper(engine, HomeTeam);
             int screen = FindOutfielder(engine, AwayTeam);
+            Assert.GreaterOrEqual(keeper, 0);
             Assert.GreaterOrEqual(screen, 0);
+            StageOpponentScreen(engine, keeper, screen);
             Assert.IsTrue(GkHeadingIntentSource.SaveArmed(
                 HomeTeam, ThreatPosition, ThreatVelocity, ballLoose: true));
 
             for (int i = 0; i < 5; i++)
             {
-                StageOpponentScreen(engine, screen);
+                StageOpponentScreen(engine, keeper, screen);
                 engine.TestOnly_DriveGkHeadingTactical();
             }
 
