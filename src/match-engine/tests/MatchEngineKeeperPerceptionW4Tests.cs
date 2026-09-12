@@ -82,7 +82,9 @@ namespace TacticalDirector.MatchEngine
                     continue;
                 }
 
-                float y = 4f + (i % 11) * 5f;
+                // Unique, widely spaced Y coordinates eliminate unrelated agent-agent overlaps while
+                // keeping every parked body much farther from either keeper than the staged threat.
+                float y = 2f + i * 3f;
                 var parked = new Vector2(MatchEngineConstants.PITCH_LENGTH_M * 0.5f, y);
                 engine.TestOnly_SetAgent(i, AgentState.CreateAtPosition(parked, Vector2.right));
                 engine.TestOnly_SetCommand(i, MovementCommand.Stop(parked));
