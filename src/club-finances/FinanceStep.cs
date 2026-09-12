@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/FinanceStep.cs
 // Created:  2026-09-04
-// Modified: 2026-09-11
+// Modified: 2026-09-11 (#40 T3a review — explicit completed-season revenue handoff)
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §3.1/§7.1, FR-FN-001/005-008/011/018/028 (season settlement + T3a daily accrual)
@@ -43,6 +43,11 @@ namespace TacticalDirector.ClubFinances
                     "BoardModifier multiplier must be positive; use BoardModifier.Identity for no adjustment (F4).");
             }
 
+            // Capture the completed season's revenue before constructing the next-season value. The future
+            // FFP slice consumes THIS named handoff inside SettleFinances before CloseCompletedSeasonRevenue
+            // resets the returned accumulator; appending an FFP term after the reset must not read result.
+            long completedSeasonRevenue = prior.SeasonRevenueAccrued;
+
             long prizeMoney = PrizeMoneyForPosition(finalTablePosition, clubCount);
             ClubFinances result = prior;
 
@@ -69,11 +74,7 @@ namespace TacticalDirector.ClubFinances
                     board.BudgetMultiplierMillPermille);
             }
 
-            // T3a lifecycle closure: this is a CURRENT-season accumulator. The season boundary is the
-            // single point at which it becomes prior-season history, so the next season starts at zero.
-            // The future FFP slice may consume prior.SeasonRevenueAccrued before this reset as part of
-            // this same pure settlement calculation; FfpBalanceWindow itself carries unchanged today.
-            result.SeasonRevenueAccrued = 0L;
+            result.SeasonRevenueAccrued = CloseCompletedSeasonRevenue(completedSeasonRevenue);
 
             ClubFinances.ValidateCoherence(in result);
             return result;
@@ -84,11 +85,12 @@ namespace TacticalDirector.ClubFinances
         /// accounting state. This method owns the mutation semantics only: later T3 slices own the
         /// sponsorship model, matchday model, stochastic variance and #30 daily invocation.
         /// </summary>
-        /// <param name="prior">Existing coherent club finance state.</param>
+        /// <param name="prior">Existing coherent club finance state. Coherence is validated even when the deep gate is off.</param>
         /// <param name="sponsorshipRevenue">Non-negative sponsorship cash attributable to this day.</param>
         /// <param name="matchdayRevenue">Non-negative matchday cash for this day; zero on non-match days.</param>
         /// <param name="deepRevenueEnabled">
-        /// Behaviour-neutral T3 gate. <c>false</c> returns <paramref name="prior"/> field-identically.
+        /// Behaviour-neutral T3 gate. For a coherent <paramref name="prior"/>, <c>false</c> returns it
+        /// field-identically and does not interpret the deep-only revenue amounts.
         /// </param>
         /// <returns>
         /// A detached value with the day's total added to both <see cref="ClubFinances.Balance"/> and
@@ -96,7 +98,7 @@ namespace TacticalDirector.ClubFinances
         /// <see cref="ClubFinances.FfpBalanceWindow"/> are unchanged in T3a.
         /// </returns>
         /// <exception cref="ArgumentOutOfRangeException">
-        /// The deep path is enabled and either revenue component is negative.
+        /// <paramref name="prior"/> is incoherent; or the deep path is enabled and either revenue component is negative.
         /// </exception>
         /// <exception cref="OverflowException">
         /// The component sum, resulting balance, or season accumulator is outside signed 64-bit range.
@@ -172,6 +174,18 @@ namespace TacticalDirector.ClubFinances
             }
         }
 
+        /// <summary>
+        /// Closes the completed-season accumulator after all consumers of <paramref name="completedSeasonRevenue"/>
+        /// have run. T3a has no FFP consumer yet, so closure is the only operation today.
+        /// </summary>
+        private static long CloseCompletedSeasonRevenue(long completedSeasonRevenue)
+        {
+            // The named parameter is deliberately retained as the future FFP handoff even though T3a's
+            // closure value is always zero. It prevents the FFP slice from treating result's reset field
+            // as the completed-season source of truth.
+            return 0L;
+        }
+
         private static void ValidatePosition(int position, int clubCount)
         {
             if (clubCount <= 0 || position < 1 || position > clubCount)
@@ -229,4 +243,5 @@ namespace TacticalDirector.ClubFinances
 // | 1.4     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
 // | 1.5     | 2026-09-11 | OpenAI | T3a: add pure identity-gated daily sponsorship/matchday revenue accrual primitive. |
 // | 1.6     | 2026-09-11 | OpenAI | T3a: reset current-season revenue at settlement while carrying the future FFP window. |
+// | 1.7     | 2026-09-11 | OpenAI | Review: name the completed-season revenue handoff and clarify coherence-before-gate semantics. |
 #endregion
