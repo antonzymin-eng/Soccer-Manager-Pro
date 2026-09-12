@@ -16,6 +16,36 @@ break it, and do not edit historical entries.
 >
 > `docs/planning/audio-implementation-plan.md` **v1.5 → v1.6** corrects P4A observer-neutrality: digest/RNG-cursor/serialization equality detects writes and draws, not a prohibited simulation read, so the proof now combines output neutrality with **T-AU-BOUND-006** behavioural no-call, **T-AU-BOUND-007**, and the `src/**/*.asmdef` direction scan. `docs/tracking/spec-error-log.md` **v2.55 → v2.56** adds the previously omitted **ERR-051-001** Error Index row (**236 → 237**) while leaving its existing detailed record and RECORDED — OPEN status unchanged. `open-issues.md` advances the live audio-plan/error-log pointers to v1.6/v2.56. The prior September 7 audio acceptance entry is preserved verbatim rather than rewritten. No `.cs`, `.asmdef`, asset, RNG, save/snapshot schema, spec status, or roadmap row changed.
 
+> **Last Updated (prior):** September 11, 2026 — **PR #396 review closure: shared UX status versioned, tracking synchronized, header rendering repaired, and F4 timing relaxation made explicit. Documentation only.**
+>
+> `docs/design/ux-shared-system.md` advances **v0.3 → v0.4** so the September 11 status-authority correction no longer mutates the already-landed v0.3 body. Current phase lives in `ux-detailed-plan.md`; the shared F3 artifact no longer duplicates it. The maintained current shared-system citation inside `ux-validation-protocol.md` and the manifest inventory now point to `ux-shared-system.md` v0.4.
+>
+> The review also repairs the six header hard breaks in `ux-detailed-plan.md` and `ux-validation-protocol.md` using Markdown backslash breaks (avoiding added trailing-whitespace failures), removes the moving phase from root `CLAUDE.md` and `project-reference.md`, and explicitly records that moving participant availability from F4 exit to pre-Gate-F is a **separate deliberate v1.5 timing relaxation**, not something required by anonymous identities. Gate G remains unchanged.
+>
+> Modified: root `CLAUDE.md`, `docs/agent-guides/project-reference.md`, `docs/design/ux-detailed-plan.md`, `docs/design/ux-shared-system.md`, `docs/design/ux-validation-protocol.md`, `docs/tracking/open-issues.md`, this changelog and `docs/tracking/file-manifest.md`. No `src/`, `.asmdef`, APPROVED spec, roadmap, save/schema, RNG, `[GT]` or `ERR` surface changed.
+
+> **Last Updated (prior):** September 11, 2026 — **PR #396 Codex correction: anonymous participant evidence now has explicit independence/distinctness attestations. Documentation only.**
+>
+> `docs/design/ux-validation-protocol.md` advances **v0.7 → v0.8**. The recruitment table now carries a per-slot `Independence/distinctness attestation`, each §7.1 participant-session header must repeat the matching attestation, and §9 makes those records a binding Gate-G pass check. This closes Codex P2 without changing the owner privacy decision, F4 completion, Gate ordering or the two-real-participant requirement.
+>
+> Modified: `docs/design/ux-validation-protocol.md`, `docs/tracking/open-issues.md`, this changelog and `docs/tracking/file-manifest.md`. No `src/`, `.asmdef`, APPROVED spec, roadmap, save/schema, RNG, `[GT]` or `ERR` surface changed.
+
+> **Last Updated (prior):** September 11, 2026 — **UX F4 COMPLETE; tester names are intentionally omitted; S0 Gate A is next. Documentation only.**
+>
+> The project owner directed that the two independent-test participant names be skipped. `docs/design/ux-detailed-plan.md` advances **v1.4 → v1.5** and `docs/design/ux-validation-protocol.md` **v0.6 → v0.7**: repository evidence now uses stable anonymous slots, excludes names/contact details, and records privacy-safe profile, independence and owner-availability attestations. Anton Zymin remains the accountable UX-workstream owner.
+>
+> **F4 is complete and S0 Gate A is next.** This changes disclosure and timing, not validation strength: Anton must attest that two distinct real participants are available before S0 Gate F, and both must complete the full round before Gate G can pass. There is still no provisional bypass to H/I, and P5b remains unreleased until S0 Gate I.
+>
+> Modified: root `CLAUDE.md`, `docs/design/ux-detailed-plan.md`, `docs/design/ux-validation-protocol.md`, `docs/agent-guides/project-reference.md`, `docs/tracking/open-issues.md`, this changelog and `docs/tracking/file-manifest.md`. No `src/` file, `.asmdef`, APPROVED spec, `SPEC_INDEX.md` row, roadmap row, navigation graph, command seam, snapshot/save schema, RNG stream/domain/draw site/order, `[GT]` constant or `ERR` changes. Active/archive counts remain **24/54**.
+
+> **Last Updated (prior):** September 11, 2026 — **UX F4 accountable-owner assignment recorded. Anton Zymin owns the UX workstream; F4 remains OPEN on two S0 participants. Documentation only.**
+>
+> The project owner explicitly assigned **Anton Zymin** to the `ux-detailed-plan.md` §10.1 UX-workstream role, accountable for UX artifacts, flows, prototypes, findings and implementation handoffs. `docs/design/ux-validation-protocol.md` advances **v0.5 → v0.6** and closes its §4.0/§11 owner-assignment row.
+>
+> No S0 tester was selected in the same decision. S0-P1 and S0-P2 remain `TBD`, so the two-participant F4 exit condition is still unmet, Gate G is unavailable, F4 is not complete, and the UX-Gate-I-authorized P5b Unity shell binding is not released. The UX issue remains live and the active/archive counts stay **24/54**.
+>
+> Modified: `docs/design/ux-validation-protocol.md`, `docs/tracking/open-issues.md`, this changelog and `docs/tracking/file-manifest.md`. No `src/` file, `.asmdef`, APPROVED spec, `SPEC_INDEX.md` row, roadmap row, navigation graph, command seam, snapshot/save schema, RNG stream/domain/draw site/order, `[GT]` constant or `ERR` changes. The source gate is not owed for this documentation-only assignment; the PR's current-head documentation checks remain authoritative.
+
 > **Last Updated (prior):** September 11, 2026 — **UX F4 validation protocol packet lands (PR #394). Documentation only; no `src/` file, `.asmdef`, spec status or roadmap row touched. F4 is deliberately NOT closed.**
 >
 > New: `docs/design/ux-validation-protocol.md` **v0.5** — the repeatable operating packet `ux-detailed-plan.md` v1.4 F4 requires, so that someone other than the UX author can run the same S0/S1 validation and produce comparable evidence. It carries the four-layer sequence (§2), seven outcome-oriented S0 tasks and the eight S1 tasks of the plan's §7.6 (§3), the F4 human-assignment table with S0 and S1 participant slots (§4), the scripted walkthrough matrix (§5), the neutral moderator script and stop conditions (§6), session/task evidence templates and the full §12 finding ledger (§7), severity plus §12's closed disposition vocabulary (§8), the journey-parameterized Gate-G decision record (§9), and Gate-J continuity (§10).
