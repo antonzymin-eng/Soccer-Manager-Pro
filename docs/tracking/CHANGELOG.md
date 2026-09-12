@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 11, 2026 — **UX F4 validation protocol packet lands (PR #394). Documentation only; no `src/` file, `.asmdef`, spec status or roadmap row touched. F4 is deliberately NOT closed.**
+> **Last Updated:** September 11, 2026, later — **PR #379 reconciled onto current `main`; two post-#368 audio corrections preserved without replaying stale tracking history. Documentation only.**
+>
+> `docs/planning/audio-implementation-plan.md` **v1.5 → v1.6** corrects P4A observer-neutrality: digest/RNG-cursor/serialization equality detects writes and draws, not a prohibited simulation read, so the proof now combines output neutrality with **T-AU-BOUND-006** behavioural no-call, **T-AU-BOUND-007**, and the `src/**/*.asmdef` direction scan. `docs/tracking/spec-error-log.md` **v2.55 → v2.56** adds the previously omitted **ERR-051-001** Error Index row (**236 → 237**) while leaving its existing detailed record and RECORDED — OPEN status unchanged. `open-issues.md` advances the live audio-plan/error-log pointers to v1.6/v2.56. The prior September 7 audio acceptance entry is preserved verbatim rather than rewritten. No `.cs`, `.asmdef`, asset, RNG, save/snapshot schema, spec status, or roadmap row changed.
+
+> **Last Updated (prior):** September 11, 2026 — **UX F4 validation protocol packet lands (PR #394). Documentation only; no `src/` file, `.asmdef`, spec status or roadmap row touched. F4 is deliberately NOT closed.**
 >
 > New: `docs/design/ux-validation-protocol.md` **v0.5** — the repeatable operating packet `ux-detailed-plan.md` v1.4 F4 requires, so that someone other than the UX author can run the same S0/S1 validation and produce comparable evidence. It carries the four-layer sequence (§2), seven outcome-oriented S0 tasks and the eight S1 tasks of the plan's §7.6 (§3), the F4 human-assignment table with S0 and S1 participant slots (§4), the scripted walkthrough matrix (§5), the neutral moderator script and stop conditions (§6), session/task evidence templates and the full §12 finding ledger (§7), severity plus §12's closed disposition vocabulary (§8), the journey-parameterized Gate-G decision record (§9), and Gate-J continuity (§10).
 >
