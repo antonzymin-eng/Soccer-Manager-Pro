@@ -1,6 +1,6 @@
 // File:     src/collision-system/tests/CollisionDeflectionFeedbackTests.cs
 // Created:  2026-09-11
-// Modified: 2026-09-11
+// Modified: 2026-09-12
 // Author:   —
 // Spec:     Collision System #3 §3.4.3; Match-engine wiring backlog W4; Code Standards #20
 // Purpose:  Lock W4 per-call feedback: real response reports a deflection; separating overlap does not.
@@ -47,12 +47,21 @@ namespace TacticalDirector.CollisionSystem.Tests
         }
 
         [Test]
-        public void SeparatingOverlap_DoesNotReportDeflection()
+        public void SeparatingOverlap_DoesNotReportDeflection_AndLeavesFlightUnchanged()
         {
             float speed = BallPhysicsConstants.AgentDeflection.MinBallSpeedMps + 5f;
-            bool deflected = Run(new Vector3(-speed, 0f, 0f), out BallState ball);
-            Assert.IsFalse(deflected);
-            Assert.Less(ball.Velocity.x, 0f);
+            Vector3 inputVelocity = new Vector3(-speed, 0.75f, 0.25f);
+
+            bool deflected = Run(inputVelocity, out BallState ball);
+
+            Assert.IsFalse(deflected,
+                "W4: a separating geometric overlap must not be reported as a changed threat.");
+            Assert.AreEqual(inputVelocity.x, ball.Velocity.x, 1e-6f,
+                "A no-response overlap must preserve the X flight component exactly.");
+            Assert.AreEqual(inputVelocity.y, ball.Velocity.y, 1e-6f,
+                "A no-response overlap must preserve the Y flight component exactly.");
+            Assert.AreEqual(inputVelocity.z, ball.Velocity.z, 1e-6f,
+                "A no-response overlap must preserve the Z flight component exactly.");
         }
     }
 }
@@ -60,4 +69,5 @@ namespace TacticalDirector.CollisionSystem.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                        |
 // | 1.0     | 2026-09-11 | —      | W4: applied-vs-overlap collision feedback regression locks. |
+// | 1.1     | 2026-09-12 | —      | Review: unchanged-flight case now locks all velocity terms. |
 #endregion
