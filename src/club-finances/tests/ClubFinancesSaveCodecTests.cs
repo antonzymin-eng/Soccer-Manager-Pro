@@ -148,7 +148,7 @@ namespace TacticalDirector.ClubFinances.Tests
             // Header (12) + ClubId (4) + Balance/Transfer/Wage/WageBill (4 x 8) = byte 48.
             WriteI64(blob, 48, -1L);
 
-            Assert.Throws<InvalidOperationException>(() => ClubFinancesSaveCodec.Decode(blob));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ClubFinancesSaveCodec.Decode(blob));
         }
 
         private static ClubFinanceEntry Entry(
