@@ -3315,7 +3315,7 @@ namespace TacticalDirector.MatchEngine
                         // W4: SAVE emission is perception-aware, but the raw threat episode remains
                         // geometry-owned. TryCommitRushIntents MUST keep vetoing on raw SaveArmed:
                         // being unsighted does not make charging at a goal-bound ball safe.
-                        bool saveVisible = KeeperPerceptionGate.SaveAvailable(
+                        bool saveVisible = armed && KeeperPerceptionGate.SaveAvailable(
                             t, i, _agents[i].Position,
                             _ball.Position, _ball.Velocity, loose,
                             _agents, _isSentOff);
