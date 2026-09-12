@@ -1,6 +1,9 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 11, 2026 — **#40 Club Finances T2b runtime wiring / `ERR-030-051` manifest sync.**
+**Last Updated:** September 12, 2026 — **#49 Localization L1 core assembly registry sync (PR #397).**
+`src/localization/localization.asmdef` now exists as the dependency-free `TacticalDirector.Localization` L1 core. The spec inventory row below is corrected from `no assembly` to the implemented L1 state; L2 renderer/catalogue/content and L3B producer-boundary wiring remain pending. This registry synchronization does **not** mark ERR-049-002/004 tracker-resolved; canonical ERR closure remains a separate landing-close-out step after current-head evidence. No historical manifest entry is rewritten.
+
+**Last Updated (prior):** September 11, 2026 — **#40 Club Finances T2b runtime wiring / `ERR-030-051` manifest sync.**
 **NEW (4):** `src/season-save/SeasonFinanceRuntime.cs` (+ `.meta`) and `src/season-save/tests/SeasonLoopFinanceTests.cs` (+ `.meta`). **Modified production:** `src/season-save/League.cs` and `src/season-save/SeasonLoop.cs`. **Modified existing tests:** `src/season-save/tests/SeasonRollTests.cs`, `SeasonLoopCareerTests.cs`, `SeasonLoopDisciplineTests.cs`, and `SeasonLoopScenarios.cs` migrate season-boundary fixtures to canonical T2b finance composition. `League.CreateLoop` is now the #30-owned one-time new-game bootstrap seam for #40; `SeasonLoop` exposes keyed finance observer/query/transaction surfaces and stages each club's season settlement at (b') until `BeginNextSeason` succeeds, preserving refused-roll atomicity. Review correction keeps ordinary finance composition validation-only: only `SeasonLoop.Restore` migrates a persisted empty T1b block; the generic legacy/unwired empty state fails loud on finance use. The same landing reconciles #30/#40 spec text and records resolved `ERR-030-051`; the maintained header-chain pointers for #30 §3 and the error log are advanced below to their new versions.
 
 **Last Updated (prior):** September 11, 2026 — **UX F4 validation protocol packet registered (PR #394), and the manifest's complete absence of `docs/design/ux-*.md` rows is corrected. Documentation only; no `src/` file touched, so no suite-count delta and no gate owed on `src/`.**
@@ -3417,7 +3420,7 @@ here. Status reflects authoritative classification in `SPEC_INDEX.md`.
 | 46 | `docs/specs/news-inbox-man-management/` | APPROVED (Jul 27, 2026) — no assembly |
 | 47 | `docs/specs/new-game-setup-db-editor/` | APPROVED (Jul 27, 2026) — no assembly |
 | 48 | `docs/specs/match-presentation-depth/` | APPROVED (Jul 27, 2026) — no assembly |
-| 49 | `docs/specs/localization-accessibility/` | APPROVED (Jul 23, 2026) — no assembly |
+| 49 | `docs/specs/localization-accessibility/` | APPROVED (Jul 23, 2026) — L1 core implemented in `TacticalDirector.Localization`; L2+ pending |
 | 50 | `docs/specs/save-migration-versioning/` | APPROVED (Jul 27, 2026) — no assembly |
 | 51 | `docs/specs/audio-sound-design/` | APPROVED (Jul 27, 2026) — no assembly |
 | 53 | `docs/specs/club-infrastructure-facilities/` | APPROVED (Jul 27, 2026) — no assembly |

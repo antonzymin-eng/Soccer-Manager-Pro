@@ -23,13 +23,14 @@ The project has run a specification-first strategy to a measurable position:
 |---|---|---|
 | Match engine + tactical layer (#1–#26) | ✅ 41 approved specs | ✅ ~110k lines, 321 engine tests, deterministic save/restore/season-save |
 | Squad data #27 / progression #28 | ✅ | #27 built; **#28 T0 only** (draw-free core, unwired, behaviour-neutral) |
-| **#29, #30, #31, #32, #33, #34, #37, #38, #40, #41, #43, #44, #49** | ✅ **APPROVED** | **no assembly exists** |
+| **#29, #30, #31, #32, #33, #34, #37, #38, #40, #41, #43, #44** | ✅ **APPROVED** | **no assembly exists in this original baseline** |
+| Localization & Accessibility #49 | ✅ **APPROVED** | **L1 core contracts implemented in `TacticalDirector.Localization`; L2 renderer/catalogue/content and L3B producer-boundary wiring pending** |
 
 `src/` contains no `season-competition-loop`, no `training-system`, no `transfers`, no `finances`,
 no `analytics`, no `discipline`, no UI screens. #30's own §9 checklist records it plainly:
 *"Layer built — **NOT STARTED**."*
 
-Thirteen approved specs (~13,000 spec lines) sit at zero implementation. At the spec→code ratios
+That original baseline counted thirteen approved specs (~13,000 spec lines) at zero implementation. #49 is no longer in that set after its L1 core landing; later version-history rows record other implemented slices without rewriting this motivating baseline. At the spec→code ratios
 this project actually realises (#22: 1,338→6,636; #21: 1,187→2,878; #12: 3,416→6,607 — call it
 2–5×), that is **30–60k lines of unwritten code**. Meanwhile the question a playable build answers —
 *is this game any good* — has never once been asked.
@@ -402,7 +403,7 @@ all of which govern shipped code with no numbered spec:
 > advance as a parallel, non-blocking workstream**, governed by
 > `docs/planning/audio-implementation-plan.md`. **#48 gains nothing from this** — it is not authorized
 > here, and #51 T2 and the G3 audible slice stay hard-blocked on #48 T0 existing (`D48`), with caption
-> rendering blocked on #49 (`D49`). No PM milestone is redefined.
+> rendering still blocked on #49's L2 rendering/boundary capability (`D49`); the #49 L1 core assembly now exists. No PM milestone is redefined.
 
 ---
 
@@ -549,6 +550,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.27 | September 12, 2026 | **#49 L1 registry synchronization.** The motivating baseline no longer reports #49 as assembly-less: `TacticalDirector.Localization` now carries the L1 dependency-free core contracts. Renderer/catalogue/content and L3B producer-boundary wiring remain later work. The audio-amendment D49 wording is narrowed accordingly: caption rendering still waits on #49's L2 rendering/boundary capability, not on creation of the core assembly. No PM milestone or critical-path ordering changes. |
 | v0.26 | September 10, 2026 | **D4 #40 T1b landing.** The D4 row records the finance sub-blob's composition into #30's `SeasonSaveCodec`, `SEASON_SAVE_FORMAT_VERSION` **6 → 7** (`ERR-030-049`), the required `Save` parameter and restored `SeasonSaveContents.Finances`, `RequireDestinationCarriesNoFinances` as Appendix B.1's fourth destination guard, and the intra-Tier-7 `season-save` → `club-finances` reference. The remainder narrows to T2 (bootstrap, step-(b') wiring, the `SeasonLoop.Restore` resume seam, first #27 consumer) and T3. No PM milestone, exit criterion, phase, constraint or later D-item moved; nothing is pulled forward. Version claimed against `main` at `81c6ae0` — per the v0.25 row's own `ERR-030-025` lesson, that is a check and not a reservation, and it must be re-run at merge. |
 | v0.25 | September 8, 2026 | **§6's "deliberately deferred past PM-3" line now carries a pointer to the audio parallel-workstream amendment**, and the amendment is now **ACCEPTED by the owner (September 7, 2026)** (`docs/planning/path-to-playable-audio-parallel-amendment.md` v0.4), documentation only — **no sequencing decision in this document changed**. The line said #48/#51 are deferred and *"none is on the path to a playable season"*, which is still true of the critical path, but it did not distinguish "off the critical path" from "must not be worked concurrently"; the September 4, 2026 owner directive authorizing parallel audio / UI / UX / localization / art-pipeline work made that gap load-bearing. The pointer was added because an amendment living only in `docs/planning/` is unreachable from the document root `CLAUDE.md` routes agents to for implementation order — the amendment existed for two days with nothing here referring to it. #51 T0/T1 and its pipeline substrate may proceed in parallel; **#48 is authorized by none of this**, and #51 T2/G3 stay blocked on #48 T0 (`D48`), captions on #49 (`D49`). No PM milestone, exit criterion, phase or constraint moved. *(Noted in passing, not fixed: this table carries **two v0.21 rows** — August 13 (C1/C2 landing) and August 21 (constraint C6) — a pre-existing duplicate left as written per this table's history convention.)* **Renumbered v0.24 → v0.25 at the merge with `main`:** the audio pointer was authored as v0.24 on a branch while `main` independently claimed v0.24 for the D4 #40 finance landing below — the `ERR-030-025` collision class (a verified identifier is not a reservation, and the check must be re-run at merge), here in the roadmap version table rather than the ERR log. Main's claim takes precedence. |
 | v0.24 | September 6, 2026 | **D4 #40 T0 + T1a landing.** Records the implemented finance core and standalone codec, the T1a/T1b correction, and remaining T1b/T2/T3 work; no later D-item is pulled forward. |
