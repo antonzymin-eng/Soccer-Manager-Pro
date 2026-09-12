@@ -76,7 +76,7 @@
   width: 18px; height: 18px;
   display: inline-flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: var(--display-weight);
   font-size: 10px;
   letter-spacing: 0;
   border-radius: var(--r-1);
@@ -173,7 +173,7 @@
   border: 2px solid var(--brand-400);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: var(--display-weight);
   font-size: var(--t-13);
   color: var(--ink-1);
   box-shadow: 0 2px 6px rgba(0,0,0,0.5);
@@ -238,7 +238,7 @@
 .ring .ring-num {
   position: absolute;
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: var(--display-weight);
   font-size: var(--t-18);
   color: var(--ink-1);
   font-variant-numeric: tabular-nums;

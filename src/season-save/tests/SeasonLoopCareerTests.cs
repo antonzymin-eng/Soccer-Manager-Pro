@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopCareerTests.cs
 // Created:  2026-08-06
+// Modified: 2026-09-11 (#40 T2b — roll-capable career fixtures carry finance state)
 // Modified: 2026-08-16, latest (L-3, adversarial review — v1.10: the two identical "Oracle = the
 //           composed seam..." comments (covering three call sites) were documented, not enforced. Both
 //           sites now call the new SeasonLoopScenarios.ComposedOracle instead of
@@ -62,7 +63,8 @@ namespace TacticalDirector.SeasonSave.Tests
             career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
             world = new WorldStore(ManagerId, WorldSeed);
             return new SeasonLoop(
-                world, league.CreateSeason(0), RoundResolutionMode.QuickSimAll, career, provider);
+                world, league.CreateSeason(0), RoundResolutionMode.QuickSimAll, career, provider,
+                financesOrNull: SeasonLoopScenarios.InitialFinances(league));
         }
 
         // ── binding ────────────────────────────────────────────────────────────────────────
@@ -931,4 +933,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | identical copies. All three call sites now route through the new  |
 // |         |            |        | SeasonLoopScenarios.ComposedOracle, whose doc states the oracle's |
 // |         |            |        | scope once for every caller. No behaviour change.                  |
+// | 1.11    | 2026-09-11 | —      | #40 T2b: WiredLoop carries canonical finance state at boundary.  |
 #endregion

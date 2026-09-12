@@ -1,6 +1,6 @@
 // File:     src/testing-strategy/DeterminismTierResult.cs
 // Created:  2026-06-02
-// Modified: 2026-06-02
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Testing Strategy & Framework #19 §3.2 / §5.7, Code Standards #20
 // Purpose:  Per-tier outcome produced by DeterminismGate. Failures in any tier
@@ -71,6 +71,10 @@ namespace TacticalDirector.TestingStrategy
             int testsFailed,
             string diagnostic)
         {
+            if ((uint)tier > (uint)DeterminismTierKind.Soak)
+            {
+                throw new ArgumentOutOfRangeException(nameof(tier), tier, "Unknown determinism tier.");
+            }
             if (diagnostic == null)
             {
                 throw new ArgumentNullException(nameof(diagnostic));
@@ -122,4 +126,5 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | bypass.                                                            |
 // | 1.3     | 2026-06-02 | —      | AR-3 L-1: diagnostic null-vs-empty split — ArgumentNullException  |
 // |         |            |        | for null, ArgumentException for empty (idiomatic .NET BCL).       |
+// | 1.4     | 2026-09-08 | —      | Reject undefined determinism-tier ordinals.                       |
 #endregion

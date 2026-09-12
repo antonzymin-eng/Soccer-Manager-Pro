@@ -261,7 +261,7 @@ section.s {
   border-radius: var(--r-2);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: var(--display-weight);
   font-size: var(--t-20);
   color: #fff;
   flex-shrink: 0;
@@ -304,7 +304,7 @@ section.s {
 .hud .crest {
   width: 36px; height: 36px;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: var(--t-16);
+  font-weight: var(--display-weight); font-size: var(--t-16);
   color: #fff;
   border-radius: var(--r-1);
 }
@@ -323,7 +323,7 @@ section.s {
 }
 .hud .score .n {
   font-size: var(--t-40);
-  font-weight: 800;
+  font-weight: var(--display-weight);
   color: var(--ink-1);
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -335,7 +335,7 @@ section.s {
   color: #001a0e;
   padding: 2px 10px;
   font-size: var(--t-11);
-  font-weight: 800;
+  font-weight: var(--display-weight);
   letter-spacing: 0.08em;
   border-radius: 0 0 var(--r-1) var(--r-1);
 }
@@ -362,7 +362,7 @@ section.s {
   background: var(--brand-400);
   color: #001a0e;
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: var(--display-weight);
   font-size: var(--t-18);
   border-radius: var(--r-1);
   letter-spacing: -0.02em;
