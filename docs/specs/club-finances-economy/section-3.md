@@ -1,12 +1,13 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.8 — ERR-040-003 review: explicit completed-season revenue handoff and coherent-prior gate semantics)
+**Last Updated:** September 11, 2026 (v0.9 — ERR-040-003 review close-out: §3.1 pseudocode realigned to the shipped direct reset after the handoff helper was removed)
+**Last Updated (prior):** September 11, 2026 (v0.8 — ERR-040-003 review: explicit completed-season revenue handoff and coherent-prior gate semantics)
 **Last Updated (prior):** September 11, 2026 (v0.7 — wording correction: ApplyTransaction remains the single externally-commanded ledger path, not the only T3 mutation)
 **Last Updated (prior):** September 11, 2026 (v0.6 — T3a lifecycle: current-season revenue resets at settlement; FFP window still carries)
 **Last Updated (prior):** September 11, 2026 (v0.5 — T3a accounting primitive: identity gate, checked daily revenue accrual, no producer/RNG/tick wiring)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
-**Version:** 0.8
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -23,7 +24,6 @@ SettleFinances(in ClubFinances prior, finalTablePosition, clubCount, in BoardMod
     assert 1 <= finalTablePosition <= clubCount                        # F7 — bad input bound
     assert board.BudgetMultiplierMillPermille > 0                      # F4 — non-positive caller error (fail loud)
 
-    completedSeasonRevenue = prior.SeasonRevenueAccrued                # named T3a handoff for future FFP
     prizeMoney = PrizeMoneyForPosition(finalTablePosition, clubCount)   # §3.1.1 — fixed integer interpolation
 
     result = prior
@@ -40,9 +40,9 @@ SettleFinances(in ClubFinances prior, finalTablePosition, clubCount, in BoardMod
     result.WageBudget   = ScaleAndClampBudget(baseWageCeiling, board.BudgetMultiplierMillPermille)
                                                                         # SETS — overwrites prior ceiling
 
-    # Future FFP logic that consumes completed-season revenue inserts HERE and reads
-    # completedSeasonRevenue, never result.SeasonRevenueAccrued after closure.
-    result.SeasonRevenueAccrued = CloseCompletedSeasonRevenue(completedSeasonRevenue)  # returns 0 at T3a
+    # Future FFP logic that consumes the completed season's revenue inserts HERE, ABOVE the reset, and
+    # reads prior.SeasonRevenueAccrued — never result.SeasonRevenueAccrued, which is zero from here on.
+    result.SeasonRevenueAccrued = 0
 
     # WageBillAggregate carries: a committed wage does not vanish at season end.
     # FfpBalanceWindow carries unchanged until the later FFP slice defines its own window update.
@@ -79,10 +79,13 @@ therefore applies **before** any unsafe product, while ordinary below-cap values
 floor semantics.
 
 `SeasonRevenueAccrued` is explicitly a **non-negative current-season** accumulator at T3a. Resetting it in
-`SettleFinances` prevents a live daily accrual from silently spanning seasons. The completed season value is
-captured in the named `completedSeasonRevenue` handoff before the returned state is reset; the FFP slice is
-required to derive its next-season penalty from that handoff (plus any other then-specified terms), not from
-`result.SeasonRevenueAccrued` after closure. T3a does not guess how `FfpBalanceWindow` rolls, so that field is
+`SettleFinances` prevents a live daily accrual from silently spanning seasons. The completed season's value
+remains readable as `prior.SeasonRevenueAccrued` for the whole of the settlement calculation; the FFP slice is
+required to derive its next-season penalty from that parameter (plus any other then-specified terms) at a point
+**above** the reset, not from `result.SeasonRevenueAccrued`, which is zero from the reset onward. T3a introduces
+no intermediate handoff local or helper for this: `prior` is already the source of truth, and a second named
+carrier would give the FFP slice a place to accumulate state the reset then contradicts.
+T3a does not guess how `FfpBalanceWindow` rolls, so that field is
 carried field-identically until its own slice lands. This rule is behaviour-neutral at Stage 2 because the
 accumulator is always zero there (KD-8).
 
@@ -287,4 +290,5 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 | 0.6 | 2026-09-11 | OpenAI | **T3a lifecycle closure.** Defines `SeasonRevenueAccrued` as current-season state reset by `SettleFinances`; the future FFP term must consume the prior value before reset, while `FfpBalanceWindow` continues to carry until its own rule lands. |
 | 0.7 | 2026-09-11 | OpenAI | **T3a wording correction.** Restates `ApplyTransaction` as the single externally-commanded ledger mutation path so §3.2 no longer conflicts with the autonomous T3a accrual path defined in §3.4.1 and FR-FN-003. |
 | 0.8 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Names the completed-season revenue handoff before reset, pins future FFP consumption to that handoff, and clarifies that the disabled revenue gate is identity only after canonical prior-state coherence validation. |
+| 0.9 | 2026-09-11 | Claude | **ERR-040-003 close-out.** v0.8's `completedSeasonRevenue` local and `CloseCompletedSeasonRevenue(...)` call were removed from `FinanceStep.cs` (v1.8) as a misleading indirection, but §3.1's pseudocode and §3.1's prose still described both — an APPROVED spec instructing the next implementer to rebuild a construct the code had just deleted. §3.1 now shows the shipped `result.SeasonRevenueAccrued = 0` with the FFP insertion point pinned **above** the reset and reading `prior.SeasonRevenueAccrued`, and records why no intermediate carrier is reintroduced. No requirement, arithmetic or worked-example value changes. |
 #endregion
