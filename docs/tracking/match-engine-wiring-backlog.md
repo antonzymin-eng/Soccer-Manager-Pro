@@ -10,6 +10,8 @@
 
 ---
 
+> **UPDATED September 11, 2026 (v1.15):** W5 and W7 are production-wired by PR #398 after two W5 review corrections. `ERR-013-011` now defines the 60 Hz `[N-AI_PHASE_STRIDE,N)` event window and bounded discrete-event dwell required by #13; world-frame ring storage remains intact. W7 kickoff selection runs before tick 1. Six Class-A items from W3–W10 remain: W3, W4, W6, W8, W9, W10.
+
 ## 0. Why this document exists, and the rule it establishes
 
 Seven consecutive `§5.Z` match-realism passes fitted `[GT]` constants against the composed engine.
@@ -292,10 +294,10 @@ but not consumed by save arming; a **friendly-defender** screen is not represent
 opponent-only occlusion primitive at all; and a body deflection does not restart the keeper's reaction
 window because no deflection-to-reaction seam exists.
 
-### W5 — The pressing AI's pass-event trigger never fires
-**Evidence:** `pressing-ai/PassEventRing.cs` `Push` has no production caller anywhere.
-`MatchEngine.cs:809` constructs one ring per team and hands it to `PressingAITick`
-(`PressingAITick.cs:76`), which reads it via `TryGetLatest`. Nothing ever writes to it.
+### W5 — The pressing AI's pass-event trigger never fires — ✅ **WIRED September 11, 2026 (PR #398)**
+**Pre-fix evidence:** `PassEventRing.Push` had no production caller; `PressingAITick` read a permanently empty ring.
+
+**Resolved:** `MatchEngine` subscribes to #5 `PassAttemptEvent` at boot and pushes CONTACT only into the opposing ring. The first review correction kept the event world-frame but used an impossible 60 Hz-event-tick == 10 Hz-heartbeat equality. Final `ERR-013-011` carries the 60 Hz current tick and inclusive window start on `PressingSnapshot`; at AI tick `N`, only `[N-AI_PHASE_STRIDE,N)` can start dwell because Resolve/Events follows AI. A qualifying discrete pass latches only until #13's required two-heartbeat dwell commits; the retained event cannot restart a later dwell. Positive EventBus→next-stride→commit coverage proves the accepting path; stale/boundary locks prove recency. v22 byte layout is unchanged.
 
 **Consequence:** the ring is permanently empty, so #13's BackwardPass press trigger is dead. A
 press that should be sprung by a backward pass never is.
@@ -310,10 +312,12 @@ Already recorded from the other direction in OPEN ISSUES §5.Z.23 item (c): a cl
 held at hand height and the keeper cannot carry it, because the parked ball settles under gravity.
 Same root cause. Possession in the engine is a flag, never a kinematic constraint.
 
-### W7 — The AI manager never picks a kickoff preset
-**Evidence:** `match-engine/ManagerAdaptation.cs:250` `ApplyKickoff` has no caller. Its own doc says
+### W7 — The AI manager never picks a kickoff preset — ✅ **WIRED September 11, 2026 (PR #398)**
+**Pre-fix evidence:** `match-engine/ManagerAdaptation.cs:250` `ApplyKickoff` had no caller. Its own doc says
 *"Call BEFORE the first RunTick."* The mid-match half **is** wired
 (`MatchEngine.cs:2510–2514` — `ManagerDecisionGate.DecisionDue` → `RunDecisionPoint`).
+
+**Resolved:** `MatchSession.BootEngine` now calls `ManagerAdaptation.ApplyKickoff` after manager configuration and before tick 1, passing `MatchSetup` team tactics as the human baseline. AI teams therefore select and seed the #26 kickoff preset without a later setup write overwriting it; human teams retain their authored baseline. The AI path is first-tick digest-locked against the explicit reference composition, and the neutral/no-manager path is separately locked byte-identical to the prior two-`SetTeamTactic` boot despite identity player-tactic staging. `SelectKickoffPreset` consumes no RNG, so draw order is unchanged.
 
 **Consequence:** #26's FR-TP-004 boot path is dead. An AI-managed team starts every match on the
 human baseline tactic and can only ladder away from it mid-match.

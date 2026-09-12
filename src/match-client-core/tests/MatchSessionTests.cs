@@ -1,6 +1,6 @@
 // File:     src/match-client-core/tests/MatchSessionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-08
+// Modified: 2026-09-11 (wiring backlog W7: live MatchSession boot is digest-locked against the explicit ManagerAdaptation.ApplyKickoff reference path before tick 1)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P6/§6.3),
 //           Code Standards #20
@@ -39,6 +39,65 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.IsNotNull(session.Commands);
             Assert.AreEqual(0, session.Driver.Log.Count, "nothing serviced yet");
             Assert.IsFalse(session.TryGetLatestFrame(out _), "no frame before the first tick");
+        }
+
+
+        [Test]
+        public void NeutralDemo_KickoffWiring_IsDigestIdenticalToPriorBaselinePath()
+        {
+            MatchSetup setup = MatchSetup.NeutralDemo(Seed);
+
+            // Reference the pre-W7 neutral boot path: no manager selection, only the two setup team
+            // tactics staged before tick 1. ApplyKickoff additionally writes identity player tactics;
+            // this lock proves those neutral writes remain byte-equivalent to engine defaults.
+            var expected = new MatchEngine.MatchEngine(Seed);
+            TeamTactic home = setup.HomeTactic;
+            TeamTactic away = setup.AwayTactic;
+            expected.SetTeamTactic(0, in home);
+            expected.SetTeamTactic(1, in away);
+            expected.RunTick();
+            byte[] expectedDigest = expected.CurrentSnapshotDigest;
+
+            var session = new MatchSession(setup);
+            session.TickOnce();
+
+            CollectionAssert.AreEqual(
+                expectedDigest,
+                session.CurrentSnapshotDigest,
+                "Neutral W7 boot must remain byte-identical to the prior baseline tactic path.");
+        }
+
+        [Test]
+        public void AiManagerSetup_MatchesExplicitKickoffSelectionBeforeFirstTick()
+        {
+            var setup = new MatchSetup(
+                Seed,
+                homeManagerMode: ManagerMode.AI,
+                homeManagerProfile: TacticalPresetsConstants.ARCHETYPE_AGGRESSIVE);
+
+            // Build + advance the explicit #26 reference path FIRST. EventBus is process-static and every
+            // new MatchEngine resets its subscribers, so interleaving two live engines would make the test
+            // itself invalid. Capture the reference digest, then boot the MatchSession independently.
+            var expected = new MatchEngine.MatchEngine(Seed);
+            expected.ConfigureManager(
+                0,
+                setup.HomeManagerMode,
+                setup.HomeManagerProfile);
+            ManagerAdaptation.ApplyKickoff(
+                expected,
+                new InCodeTacticPresetCatalogue(),
+                new TeamTacticConfig(setup.HomeTactic, setup.AwayTactic));
+            expected.RunTick();
+            byte[] expectedDigest = expected.CurrentSnapshotDigest;
+
+            var session = new MatchSession(setup);
+            session.TickOnce();
+
+            CollectionAssert.AreEqual(
+                expectedDigest,
+                session.CurrentSnapshotDigest,
+                "The live composition root must perform the same pre-tick kickoff preset selection and " +
+                "manager-state seeding as the explicit #26 ApplyKickoff reference path.");
         }
 
         [Test]
@@ -214,4 +273,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.0     | 2026-07-24 | —            | Initial file. |
 // | 1.1     | 2026-08-03 | —            | Substantive edit; no version-history row was recorded for it at the time (FR-CS-058 gap, predates this hygiene pass). |
 // | 1.2     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+// | 1.3     | 2026-09-11 | —            | W7 regression locks: AI boot matches explicit ApplyKickoff; neutral boot remains digest-identical to the prior two-team-tactic baseline despite identity player-tactic staging. |
 #endregion
