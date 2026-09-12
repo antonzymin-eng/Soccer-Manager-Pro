@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
+using TacticalDirector.AgentMovement;
 using TacticalDirector.DecisionTree;
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
@@ -243,20 +244,24 @@ namespace TacticalDirector.MatchEngine
         {
             var engine = new MatchEngine(MatchSeed);
             const int awayPasser = 16;
+            var passerPos = new Vector2(50f, 34f);
+            var passerState = AgentState.CreateAtPosition(passerPos, new Vector2(-1f, 0f));
 
-            for (int i = 0; i < 5; i++)
+            // Positioning AI seeds InPoss and requires three 10 Hz observations before committing
+            // OutOfPoss. Warm that real production phase gate first (AI strides 6, 12, 18); otherwise
+            // PressingAITick correctly returns before trigger evaluation on the first away-possession stride.
+            for (int tick = 1; tick <= 18; tick++)
             {
+                engine.TestOnly_SetAgent(awayPasser, passerState);
                 engine.TestOnly_SetPossession(awayPasser);
                 engine.RunTick();
             }
-            Assert.AreEqual(5UL, engine.CurrentTick);
+            Assert.AreEqual(18UL, engine.CurrentTick);
 
-            var passerPos = new Vector2(50f, 34f);
-            engine.TestOnly_SetAgent(
-                awayPasser, AgentState.CreateAtPosition(passerPos, new Vector2(-1f, 0f)));
-            engine.TestOnly_SetPossession(awayPasser);
-
-            EventBus.BeginTick(5);
+            // Publish after tick 18's AI read. At the next tactical evaluation (physics tick 24),
+            // ERR-013-011 makes the completed visible interval [18,24), so the lower-bound event
+            // must be accepted. Keeping the passer at a fixed point isolates the #13 geometry.
+            EventBus.BeginTick(18);
             EventBus.BeginPhase(PhaseId.Resolve);
             EventBus.Publish(new PassAttemptEvent
             {
@@ -269,20 +274,28 @@ namespace TacticalDirector.MatchEngine
             EventBus.DrainTick();
             EventBus.OnTickBoundary();
 
-            engine.RunTick(); // physics tick 6, first AI observation; visible window [0,6)
-            Assert.AreEqual(1, engine.TestOnly_PressingState(0).Trigger.BackwardPassDwell,
-                "An EventBus pass delivered after the prior AI read must start dwell next stride.");
-
-            for (int tick = 7; tick <= 12; tick++)
+            for (int tick = 19; tick <= 24; tick++)
             {
+                engine.TestOnly_SetAgent(awayPasser, passerState);
                 engine.TestOnly_SetPossession(awayPasser);
                 engine.RunTick();
             }
 
-            Assert.AreEqual(12UL, engine.CurrentTick);
+            Assert.AreEqual(24UL, engine.CurrentTick);
+            Assert.AreEqual(1, engine.TestOnly_PressingState(0).Trigger.BackwardPassDwell,
+                "A lower-bound EventBus pass delivered after the prior AI read must start dwell on the next stride.");
+
+            for (int tick = 25; tick <= 30; tick++)
+            {
+                engine.TestOnly_SetAgent(awayPasser, passerState);
+                engine.TestOnly_SetPossession(awayPasser);
+                engine.RunTick();
+            }
+
+            Assert.AreEqual(30UL, engine.CurrentTick);
             Assert.AreEqual(PressingAIConstants.TriggerDwellTicks,
                 engine.TestOnly_PressingState(0).Trigger.BackwardPassDwell,
-                "The EventBus-fed discrete pass must complete #13's two-heartbeat debounce.");
+                "The EventBus-fed discrete pass must complete #13's two-heartbeat debounce after the event leaves the fresh window.");
         }
 
         [Test]

@@ -9507,5 +9507,4 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | cross-assembly lock. No code change.                              |
 // | 1.73     | 2026-09-11 | —      | W5: subscribe to PassAttemptEvent at boot, route CONTACT events to the opposing #13 ring, and append/restore each ring latest event in snapshot v22; no RNG or draw-order change. |
 // | 1.74     | 2026-09-11 | —      | ERR-013-011: FillPressingSnapshot carries the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
-// | 1.74     | 2026-09-11 | —      | ERR-013-011: FillPressingSnapshot writes the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
 #endregion
