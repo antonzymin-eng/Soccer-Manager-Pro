@@ -59,6 +59,7 @@ namespace TacticalDirector.MatchEngine
         public void OpponentScreenedGoalBoundThreat_DoesNotCommitDtSave()
         {
             var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
             int keeper = FindKeeper(engine, HomeTeam);
             int screen = FindOutfielder(engine, AwayTeam);
             Assert.GreaterOrEqual(keeper, 0);
@@ -80,6 +81,7 @@ namespace TacticalDirector.MatchEngine
         public void OpponentScreenedGoalBoundThreat_DoesNotArmRush()
         {
             var engine = new MatchEngine(MatchSeed ^ 0x55UL);
+            engine.EnableGkHeading();
             int keeper = FindKeeper(engine, HomeTeam);
             int screen = FindOutfielder(engine, AwayTeam);
             Assert.GreaterOrEqual(keeper, 0);
