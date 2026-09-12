@@ -1,0 +1,31 @@
+name: W4 Review Fix Runner
+
+on:
+  push:
+    branches:
+      - codex/w4-keeper-perception-final
+    paths:
+      - .github/w4-review-fix-marker
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/w4-keeper-perception-final
+          fetch-depth: 0
+      - name: Apply W4 review fixes
+        run: python3 .github/w4_review_fix.py
+      - name: Commit fixes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/match-engine/MatchEngine.cs src/goalkeeper-mechanics/GoalkeeperMechanics.cs
+          git diff --cached --check
+          git commit -m "fix: close W4 reaction and deflection review gaps"
+          git push origin HEAD:codex/w4-keeper-perception-final
