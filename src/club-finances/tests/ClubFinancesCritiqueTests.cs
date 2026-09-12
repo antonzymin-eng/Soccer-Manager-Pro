@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesCritiqueTests.cs
 // Created:  2026-09-06
-// Modified: 2026-09-11 (#40 T3a — daily revenue accrual primitive + season lifecycle locks)
+// Modified: 2026-09-11 (#40 T3a — review traceability + coherence locks)
 // Author:   —
 // Specs:    Club Finances & Economy #40 §5/§7.1; Code Standards #20
 // Purpose:  Locks the current T3a dependency boundary, RNG-free save shape, upper
@@ -125,7 +125,7 @@ namespace TacticalDirector.ClubFinances.Tests
                 () => FinanceStep.SettleFinances(in prior, 1, 20, in modifier));
         }
 
-        /// <summary>T3a lifecycle: settlement closes the prior season revenue accumulator without inventing an FFP-window update.</summary>
+        /// <summary>T-FN-REV-003: settlement closes current-season revenue while carrying wage liability and the not-yet-defined FFP window.</summary>
         [Test]
         public void SettleFinances_ResetsSeasonRevenue_AndCarriesFfpWindow()
         {
@@ -146,7 +146,7 @@ namespace TacticalDirector.ClubFinances.Tests
             Assert.That(result.WageBillAggregate, Is.EqualTo(prior.WageBillAggregate));
         }
 
-        /// <summary>T3a identity: the deep gate off returns the complete finance record field-identically.</summary>
+        /// <summary>T-FN-NEU-004: for coherent prior state, the deep gate off returns the complete finance record field-identically.</summary>
         [Test]
         public void AccrueDailyRevenue_DeepOff_IsExactIdentity()
         {
@@ -170,7 +170,7 @@ namespace TacticalDirector.ClubFinances.Tests
             Assert.That(result.FfpBalanceWindow, Is.EqualTo(prior.FfpBalanceWindow));
         }
 
-        /// <summary>T3a identity is a real off-switch: disabled deep inputs are not interpreted or validated.</summary>
+        /// <summary>T-FN-NEU-004: disabled deep revenue amounts are not interpreted after prior-state coherence succeeds.</summary>
         [Test]
         public void AccrueDailyRevenue_DeepOff_IgnoresOtherwiseInvalidRevenueInputs()
         {
@@ -186,7 +186,18 @@ namespace TacticalDirector.ClubFinances.Tests
             Assert.That(result.SeasonRevenueAccrued, Is.EqualTo(prior.SeasonRevenueAccrued));
         }
 
-        /// <summary>T3a accounting: both daily revenue sources accrue once, while unrelated state is untouched.</summary>
+        /// <summary>T-FN-NEU-004: the off gate does not bypass canonical finance-state coherence validation.</summary>
+        [Test]
+        public void AccrueDailyRevenue_DeepOff_IncoherentPriorStillFailsLoud()
+        {
+            ClubFinances prior = ClubFinances.CreateInitial(1_000L);
+            prior.TransferBudget = -1L;
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => FinanceStep.AccrueDailyRevenue(in prior, long.MinValue, -1L, false));
+        }
+
+        /// <summary>T-FN-REV-001: both daily revenue sources accrue once, while unrelated state is untouched.</summary>
         [Test]
         public void AccrueDailyRevenue_Enabled_AccruesBothComponentsOnly()
         {
@@ -210,7 +221,7 @@ namespace TacticalDirector.ClubFinances.Tests
             Assert.That(result.FfpBalanceWindow, Is.EqualTo(prior.FfpBalanceWindow));
         }
 
-        /// <summary>T3a refuses negative revenue components instead of silently turning revenue into expenditure.</summary>
+        /// <summary>T-FN-REV-002: enabled T3a refuses negative revenue components instead of treating them as expenditure.</summary>
         [TestCase(-1L, 0L)]
         [TestCase(0L, -1L)]
         public void AccrueDailyRevenue_EnabledNegativeComponent_FailsLoud(long sponsorship, long matchday)
@@ -221,7 +232,7 @@ namespace TacticalDirector.ClubFinances.Tests
                 () => FinanceStep.AccrueDailyRevenue(in prior, sponsorship, matchday, true));
         }
 
-        /// <summary>T3a checks the component sum before it can wrap into a plausible-looking daily amount.</summary>
+        /// <summary>T-FN-INT-003: T3a checks the component sum before it can wrap into a plausible-looking daily amount.</summary>
         [Test]
         public void AccrueDailyRevenue_ComponentSumOverflow_FailsLoud()
         {
@@ -231,7 +242,7 @@ namespace TacticalDirector.ClubFinances.Tests
                 () => FinanceStep.AccrueDailyRevenue(in prior, long.MaxValue, 1, true));
         }
 
-        /// <summary>T3a performs checked cash arithmetic before returning, so an overflow cannot wrap club cash.</summary>
+        /// <summary>T-FN-INT-003: T3a performs checked cash arithmetic before returning, so overflow cannot wrap club cash.</summary>
         [Test]
         public void AccrueDailyRevenue_BalanceOverflow_FailsLoud()
         {
@@ -241,7 +252,7 @@ namespace TacticalDirector.ClubFinances.Tests
                 () => FinanceStep.AccrueDailyRevenue(in prior, 1, 0, true));
         }
 
-        /// <summary>T3a independently checks the season accumulator; a safe Balance cannot mask accumulator overflow.</summary>
+        /// <summary>T-FN-INT-003: T3a independently checks the season accumulator; a safe Balance cannot mask accumulator overflow.</summary>
         [Test]
         public void AccrueDailyRevenue_SeasonAccumulatorOverflow_FailsLoud()
         {
@@ -332,4 +343,5 @@ namespace TacticalDirector.ClubFinances.Tests
 // | 1.6     | 2026-09-11 | OpenAI | T3a: lock identity, accrual isolation, negative-input refusal and overflow failure. |
 // | 1.7     | 2026-09-11 | OpenAI | Critique: lock true off-state and each checked-arithmetic overflow site. |
 // | 1.8     | 2026-09-11 | OpenAI | T3a lifecycle: lock season revenue reset and unchanged future FFP window. |
+// | 1.9     | 2026-09-11 | OpenAI | Review: trace every new acceptance ID in code and lock coherence-before-off-gate ordering. |
 #endregion
