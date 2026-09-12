@@ -1,0 +1,50 @@
+name: Fix PR398 AgentState import fast
+
+on:
+  push:
+    branches: [wiring/w5-w7-press-kickoff]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wiring/w5-w7-press-kickoff
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Add import and run focused W5 gate
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('src/match-engine/tests/MatchEngineEventsTests.cs')
+          t = p.read_text(encoding='utf-8')
+          anchor = 'using TacticalDirector.DecisionTree;\n'
+          if 'using TacticalDirector.AgentMovement;' not in t:
+              if anchor not in t:
+                  raise SystemExit('using anchor missing')
+              t = t.replace(anchor, 'using TacticalDirector.AgentMovement;\n' + anchor, 1)
+          p.write_text(t, encoding='utf-8')
+          for wf in (
+              '.github/workflows/fix-pr398-agentstate-import.yml',
+              '.github/workflows/fix-pr398-agentstate-fast.yml'):
+              q = Path(wf)
+              if q.exists():
+                  q.unlink()
+          PY
+
+          git diff --check
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'FullyQualifiedName~PassAttemptEvent_FromCompletedPhysicsWindow_ReachesPressingDebounce'
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: import AgentState in W5 integration test [skip ci]"
+          git push origin HEAD:wiring/w5-w7-press-kickoff
