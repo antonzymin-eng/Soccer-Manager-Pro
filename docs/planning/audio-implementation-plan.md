@@ -2,8 +2,8 @@
 
 **Status:** G0 ACCEPTED — P1/P2 AUTHORIZED AFTER THIS PLANNING PR LANDS
 **Started:** September 4, 2026  
-**Last Updated:** September 8, 2026
-**Version:** 1.6
+**Last Updated:** September 7, 2026
+**Version:** 1.5
 **Implementation gate:** G0 CLOSED by owner acceptance on September 7, 2026; P1/P2 may begin after this planning PR lands. No bulk audio production is authorized before G3.
 **Governs:** Audio & Sound Design #51 implementation plus the production pipeline for shippable audio assets.
 
@@ -413,34 +413,11 @@ Land outside #51:
 
 P4A is the first landing that wires sim/presentation output through the shell into the audio contract. Therefore the unconditional neutrality lock lands **now**, not at G3:
 
-**Output neutrality (necessary, and it detects writes and draws):**
-
 - same seed + same commands with audio adapter enabled vs no-op sink → byte-identical digest chain;
 - every deterministic RNG cursor unchanged;
 - no audio state serialized.
 
-**Output neutrality is NOT sufficient, and must not be described as if it were.** A prohibited *read* is
-invisible to every assertion above. An adapter that consults the score to pick a crowd cue changes only
-what is heard: the digest, the RNG cursors and the serialized bytes stay identical, so the whole block
-passes while FR-AU-015 is being violated. And a read is precisely what #51 forbids — §7.3's own example is
-*"duck the crowd when a goal is scored"* reading identically to a designer and being architecturally
-different from *"duck the crowd when the commentary bus is sounding."* Output equality can only ever catch
-a **write** (state mutation) or a **draw** (cursor advance).
-
-**The spec already prescribes the lock that does work, and P4A lands it:**
-
-- **T-AU-BOUND-006** (§5) — *"the audio path makes no call into the sim (FR-AU-035), asserted
-  **behaviourally over the host callback path, which the reference graph does not cover once a host is
-  involved** (F6)."* The spec had already reasoned that the reference graph alone is insufficient here;
-  this is a no-call assertion, not an output comparison.
-- **T-AU-BOUND-007** (§5) — the structural half: exactly one file references both #48 and #51, and no
-  other file references both assemblies.
-- the mechanical assembly-direction scan over `src/**/*.asmdef`, in the shape #38's FR-UI-001 lock already
-  established, so `TacticalDirector.Audio` cannot acquire a sim, #48 or #49 reference at all.
-
-All three are structural or behavioural — they fail on the *attempt to read*, not on a downstream
-difference — and they are what makes the neutrality claim true. The digest-equality assertions stay, as
-the write/draw half of the same guarantee. Neither half substitutes for the other.
+This is host-free and should fail if the adapter acquires a sim read or deterministic draw.
 
 ### Exit
 
@@ -627,8 +604,7 @@ Loudness/mix values are measured production tuning, not speculative spec constan
 - mapping completeness;
 - settings validation;
 - assembly-direction locks;
-- P4A observer neutrality — the digest/cursor half **and** the T-AU-BOUND-006 no-call assertion plus the
-  T-AU-BOUND-007 / asmdef structural locks, since output equality cannot detect a sim *read*;
+- P4A observer neutrality;
 - production metadata/provisional/rights validation.
 
 ## 13.4 Host-gated regression
@@ -699,7 +675,7 @@ Recommended PR boundaries:
 2. **P1 pipeline substrate** — folders/metadata/validator contract; no library-scale binaries.
 3. **P2 T0** — normative ERR-051-001 discharge + pure #51 code + tests.
 4. **P3 T1** — mixer/settings pure logic + tests; no variant-selection state in #51.
-5. **P4A** — #48 shell mapping/completeness + observer-neutrality proof (output-equality **and** the no-call/structural locks); still silent.
+5. **P4A** — #48 shell mapping/completeness + observer-neutrality proof; still silent.
 6. **P4B** — Unity binding + host-side variant selector + minimal G3 assets + host evidence + middleware decision.
 7. **P5A/P5B** — settings and captions may be separate because their dependencies differ.
 8. **P6 batches** — small binary-reviewable batches, not one giant asset PR.
@@ -742,7 +718,7 @@ The final review specifically tested the plan for the failure modes found extern
 - **Filename drift:** closed; bus/revision removed from filenames; revisions preserve path/GUID.
 - **ERR-038 assumption:** closed by explicit shared-store vs FR-AU-022 fallback branches.
 - **Vertical-slice ambiguity:** closed; slice files are provisional by default and either promoted or replaced.
-- **Neutrality timing:** moved to P4A, the first wired host-free landing. **Corrected after Codex review of this PR:** the P4A section had claimed output neutrality would fail on a sim read, which is false — a read leaves digest, cursors and serialized bytes identical, so it is exactly the violation output equality cannot see. §9.1 now lands T-AU-BOUND-006's behavioural no-call assertion and the T-AU-BOUND-007 / asmdef structural locks alongside the digest half.
+- **Neutrality timing:** moved to P4A, the first wired host-free landing.
 - **Variation source:** named, and placed **host-side**. `AssetRef` exposes the variant set; the host selects a member with a client-local, non-serialized display PRNG. `TacticalDirector.Audio` declares no randomness type at all, so the leaf keeps its purity property and no undeclared type is introduced.
 - **Historical supplement:** explicitly superseded by the approved spec.
 
@@ -760,4 +736,3 @@ G0 was accepted by the owner on September 7, 2026 and the canonical G0 tracking 
 | 1.3 | 2026-09-06 | Variant selection moved host-side (§7.2, §6.3, §10.1, §16). `AssetRef` exposes the variant set, the Unity host binding selects the member with a client-local non-serialized display PRNG, and #51 declares no randomness type. Consequent T0 obligation added to ERR-051-001 discharge scope: `AssetRef` must carry a variant set and regression proof must cover the multi-variant case. |
 | 1.4 | 2026-09-06 | Corrected G0 state to OPEN, tied the owner directive to September 4, 2026, removed stale T1/display-random wording after host-side selection moved to P4B, and made the still-missing canonical ERR/tracking rows explicit G0 merge blockers rather than claiming they already exist. |
 | 1.5 | 2026-09-07 | Owner accepted G0 and the narrow roadmap amendment; canonical close-out acknowledged as complete; P1/P2 authorized after the planning PR lands; ERR-051-001 remains recorded for T0 discharge; G3/D48 and caption/D49 gates unchanged. |
-| 1.6 | 2026-09-08 | **Codex review of PR #368, two P2 findings, both accepted and both real.** (1) §9.1 asserted that the P4A output-neutrality lock *"should fail if the adapter acquires a sim read or deterministic draw"* — false for the read half: a prohibited read (consulting the score to choose a cue) leaves the digest chain, every RNG cursor and the serialized bytes byte-identical, so the lock passes while FR-AU-015 is violated. Output equality detects **writes and draws only**. §9.1 now lands the lock the APPROVED spec already prescribed — **T-AU-BOUND-006**'s behavioural no-call assertion (which §5 explicitly justifies on the ground that the reference graph does not cover the host callback path) plus **T-AU-BOUND-007** and the `src/**/*.asmdef` direction scan — with the digest assertions kept as the write/draw half. (2) `ERR-051-001` had a detailed `spec-error-log.md` entry but no `## Error Index` row, so the index that enumerates the authoritative remediation backlog would not have surfaced the new open T0 blocker; index 229 → 230 rows. Neither defect was caught by `doc-consistency-check.py`, `recurring-defect-lint.py` or `check_drift.sh`, all of which passed over both. |

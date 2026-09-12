@@ -1,10 +1,10 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesCritiqueTests.cs
 // Created:  2026-09-06
-// Modified: 2026-09-07
+// Modified: 2026-09-11 (#40 T2a — advance the assembly-boundary lock with the first real #27 consumer)
 // Author:   —
 // Specs:    Club Finances & Economy #40 §5; Code Standards #20
-// Purpose:  Locks the T0/T1a dependency boundary, RNG-free save shape, upper
+// Purpose:  Locks the current T2a dependency boundary, RNG-free save shape, upper
 //           budget clamp, non-positive board-modifier failure, overflow-safe
 //           board scaling, and decode corruption guards identified by review.
 // §3.9.4 general-unit-test — allocation rules relaxed in test body
@@ -18,11 +18,11 @@ using NUnit.Framework;
 
 namespace TacticalDirector.ClubFinances.Tests
 {
-    /// <summary>Regression locks added by the PR #363 critique/revision pass.</summary>
+    /// <summary>Regression locks added by the PR #363 critique/revision pass and advanced at T2a.</summary>
     [TestFixture]
     public sealed class ClubFinancesCritiqueTests
     {
-        /// <summary>T-FN-BOUND-002: the current T0/T1a production assembly carries only dependencies it consumes.</summary>
+        /// <summary>T-FN-BOUND-002: the current T2a production assembly carries only dependencies it consumes.</summary>
         [Test]
         public void AssemblyReferences_AreExactlyCurrentPhaseDependencies()
         {
@@ -42,14 +42,16 @@ namespace TacticalDirector.ClubFinances.Tests
             string references = asmdef.Substring(referencesStart, referencesEnd - referencesStart);
             StringAssert.Contains("TacticalDirector.DeterministicSim", references);
             StringAssert.Contains("TacticalDirector.ProjectConstants", references);
-            StringAssert.DoesNotContain("TacticalDirector.PlayerDatabase", references,
-                "PlayerDatabase is a T2 dependency and must not land before the Squad.ClubId consumer");
+            StringAssert.Contains("TacticalDirector.PlayerDatabase", references,
+                "T2a's Squad.ClubId bootstrap consumer requires the planned #27 dependency");
+            StringAssert.DoesNotContain("TacticalDirector.SeasonSave", references,
+                "#30 composes #40; #40 must never reverse that ownership edge");
 
             int productionReferenceCount = references.Split(
                 new[] { "TacticalDirector." },
                 StringSplitOptions.None).Length - 1;
-            Assert.That(productionReferenceCount, Is.EqualTo(2),
-                "T0/T1a may reference only DeterministicSim and ProjectConstants; this also excludes #30/#31/#34/#45");
+            Assert.That(productionReferenceCount, Is.EqualTo(3),
+                "T2a may reference only DeterministicSim, ProjectConstants and PlayerDatabase; this also excludes #30/#31/#34/#45");
         }
 
         /// <summary>T-FN-DET-004: persisted finance state and production source contain no cursor/draw-order field or promoted #40 RNG tag.</summary>
@@ -193,9 +195,11 @@ namespace TacticalDirector.ClubFinances.Tests
 }
 
 #region VersionHistory
-// Version | Date       | Author | Change
-// --------|------------|--------|----------------------------------------------
-// 1.0     | 2026-09-06 | —      | Initial external-review regression locks for PR #363.
-// 1.1     | 2026-09-07 | —      | Follow-up: negative board fails loud; header/template and asmdef rationale corrected.
-// 1.2     | 2026-09-07 | —      | Locks overflow-safe board scaling at the documented Int32 tuning extreme and below-cap floor semantics.
+// | Version | Date       | Author | Change |
+// | --------|------------|--------|---------------------------------------------- |
+// | 1.0     | 2026-09-06 | —      | Initial external-review regression locks for PR #363. |
+// | 1.1     | 2026-09-07 | —      | Follow-up: negative board fails loud; header/template and asmdef rationale corrected. |
+// | 1.2     | 2026-09-07 | —      | Locks overflow-safe board scaling at the documented Int32 tuning extreme and below-cap floor semantics. |
+// | 1.4     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
+// | 1.5     | 2026-09-11 | —      | T2a: dependency lock now requires consumed PlayerDatabase edge and exactly three production refs. |
 #endregion

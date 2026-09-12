@@ -1,9 +1,10 @@
 # Club Finances & Economy #40 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** September 6, 2026 (v0.5 — PR #363 critique: config-loader range disclosure and T1a terminology)
+**Last Updated:** September 11, 2026 (v0.6 — ERR-030-051: season-boundary worked example corrected to synchronous atomic RollToNextSeason semantics)
+**Last Updated (prior):** September 6, 2026 (v0.5 — PR #363 critique: config-loader range disclosure and T1a terminology)
 **Last Updated (prior):** September 4, 2026 (v0.4 — T1 self-identifying save framing back-prop)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -44,7 +45,7 @@ promoted** at this spec's approval (ERR-040-001 adds only a `_RESERVED_0x29_` pl
 `[GT]`/`[FIXED]` project constants declared in this catalogue — they are #16's tag-namespace reservation,
 to be cross-cited `[CROSS: #16 §3.4]` once genuinely promoted at #40 T3's first stochastic draw.
 
-## Appendix B — Worked example: save/restore across a mid-season AND a mid-boundary-roll boundary
+## Appendix B — Worked example: save/restore mid-season AND across the atomic season boundary
 
 **Mid-season boundary.** Seed (from §3.5): club 12, season 8, after the transfer + wage-sign transactions:
 `ClubFinances { Balance: 2,315,790, TransferBudget: 786,316, WageBudget: 307,368, WageBillAggregate:
@@ -55,11 +56,13 @@ field-identical. Continuing to apply the wage-release `Credit` transaction
 identical to an uninterrupted run that never saved (T-FN-DET-001), because `ApplyTransaction` is a pure
 function of its inputs with no cursor to diverge.
 
-**Mid-`RollToNextSeason()` boundary.** This acceptance case belongs to **T1b/T2 integration**, not standalone
-T1a. A save is taken between step (b') `SettleFinances` and step (c) regenerate. Restoring resumes
-`RollToNextSeason()` at (c) with every club's `ClubFinances` already committed and field-identical —
-`SettleFinances` is not re-run. This extends FR-SN-029 through #40's inserted step once the #30 composition
-and season-boundary wiring phases land.
+**Atomic `RollToNextSeason()` boundary.** `RollToNextSeason()` is synchronous; callers cannot save
+between its internal steps. At step (b') #30 computes every club's settled finance value from the final
+table and holds those values staged. If the later season commit refuses, the live finance array remains
+unchanged and a save still contains the pre-roll values. After a successful return the staged values are
+installed exactly once; a save taken then restores those six fields identically. Restoring that completed
+save does not re-run settlement merely because a restore occurred. This is T-FN-DET-002 after the
+ERR-030-051 atomicity correction.
 
 ## Appendix C — Worked example: behaviour-neutral identity (KD-8)
 
@@ -78,4 +81,5 @@ reserving `_RESERVED_0x29_`/91 leaves every existing stream cursor byte-identica
 | 0.3 | 2026-08-08 | — | **ERR-041-012 back-prop:** Appendix C comparator corrected after #41's RNG-shape correction. |
 | 0.4 | 2026-09-04 | Codex | **T1 implementation back-prop.** Adds self-identifying finance magic and fixed framing widths. |
 | 0.5 | 2026-09-06 | — | **PR #363 critique correction.** Uses T1a terminology for the standalone codec and discloses that shared `GameplayConfig.GetInt` currently caps config-sourced currency tuning at signed Int32 range while #40 accounting remains `long`. |
+| 0.6 | 2026-09-11 | — | **ERR-030-051 / T2b correction.** Replaces the impossible mid-`RollToNextSeason()` save example with the supported synchronous contract: stage finance settlement at (b'), leave live values untouched on refusal, install once after a successful season commit, and round-trip before/after-call saves field-identically. |
 #endregion

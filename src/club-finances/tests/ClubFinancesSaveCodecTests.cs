@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesSaveCodecTests.cs
 // Created:  2026-09-04
-// Modified: 2026-09-06
+// Modified: 2026-09-08
 // Author:   —
 // Specs:    Spec #20 §3.6.2, §3.9.4 (style/docs; general-test allocation carve-out)
 //           Spec #40 FR-FN-020/021/022, §4.4 (finance persistence)
@@ -189,8 +189,9 @@ namespace TacticalDirector.ClubFinances.Tests
 }
 
 #region VersionHistory
-// Version | Date       | Author | Change
-// --------|------------|--------|----------------------------------------------
-// 1.0     | 2026-09-04 | —      | Initial #40 T1a save-codec acceptance coverage.
-// 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder.
+// | Version | Date       | Author | Change |
+// | --------|------------|--------|---------------------------------------------- |
+// | 1.0     | 2026-09-04 | —      | Initial #40 T1a save-codec acceptance coverage. |
+// | 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder. |
+// | 1.3     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
 #endregion

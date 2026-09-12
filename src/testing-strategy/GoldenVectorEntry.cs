@@ -1,6 +1,6 @@
 // File:     src/testing-strategy/GoldenVectorEntry.cs
 // Created:  2026-06-02
-// Modified: 2026-06-02
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Testing Strategy & Framework #19 §3.8 / Appendix F,
 //           Deterministic Simulation #16 §9.5 acceptance criterion #4,
@@ -58,6 +58,10 @@ namespace TacticalDirector.TestingStrategy
             string sourcePath,
             string citation)
         {
+            if ((uint)kind > (uint)GoldenVectorKind.CanonicalSerializeCorpus)
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown golden-vector kind.");
+            }
             if (name == null)
             {
                 throw new ArgumentNullException(nameof(name));
@@ -102,4 +106,5 @@ namespace TacticalDirector.TestingStrategy
 // | 1.3     | 2026-06-02 | —      | AR-3 L-1: null-vs-empty checks split — ArgumentNullException for  |
 // |         |            |        | null, ArgumentException for empty (idiomatic .NET BCL convention; |
 // |         |            |        | parallels the AR-2 L-3 range-vs-relation split).                   |
+// | 1.4     | 2026-09-08 | —      | Reject undefined golden-vector kind ordinals.                     |
 #endregion

@@ -1,10 +1,20 @@
 # ERR-019-001 / ERR-019-003 — Current Candidate Status
 
-**Date:** September 4, 2026  
+**Date:** September 11, 2026  
 **Issues:** Testing Strategy #19 FR-TS-075 / FR-TS-079 pipeline gap (`ERR-019-001`) and missing automated checklist/schema auditor deliverables (`ERR-019-003`)  
-**Status:** OPEN — implementation candidate present; operational acceptance, aggregate landing synchronization, and A3.4 decisions remain outstanding
+**Status:** OPEN — implementation candidate present; operational acceptance and A3.4 normative/reapproval decisions remain outstanding
 
-This record is the current-status successor to the September 3/4 diagnoses retained in `docs/tracking/open-issues.md` and `docs/tracking/spec-error-log.md`. Those original entries remain historical statements of what was absent when each ERR was filed. Their claims that `tools/run-tests-local.sh`, `tools/checklist-auditor.py`, and `tools/spec5-schema-auditor.py` do not exist are **superseded for PR #357's candidate tree** by the implementation below; the ERRs themselves are not closed merely because candidate files now exist.
+## September 11 live-tracking correction
+
+The September 3/4 filing-time narratives in `docs/tracking/open-issues.md` and the corresponding name-keyed guidance still contain current-tense wording that says `tools/run-tests-local.sh`, `tools/checklist-auditor.py`, and `tools/spec5-schema-auditor.py` do not exist and that no nightly pipeline exists. Those absence claims are **historical only and superseded**. All three scripts are present on the current tree, and `.github/workflows/nightly.yml` contains both the scheduled non-certifying Linux lane and the gated certified Windows/Unity lane. The implementation choice has therefore already been made; there is no remaining owner decision between "build the tooling" and "weaken the requirement."
+
+This file is the current-state successor for `ERR-019-001` / `ERR-019-003` until the final A3.4 atomic reapproval landing synchronizes the historical ledgers and name-keyed guidance. PR #387 is deliberately a narrow tracking correction: it does **not** rewrite the original filing narratives, does **not** claim either ERR closed, and does **not** perform the final A3.4 aggregate synchronization. Historical entries remain evidence of what was absent when filed; where they conflict with this status file about present repository contents, this status file governs.
+
+What remains open is the acceptance boundary documented below: the ≤60-second certified-developer-host pre-commit run, successful certified Windows/Unity Spec #16 nightly execution, A3.4 normative/reapproval decisions, fresh debt measurement, and the final aggregate landing synchronization. Those are closure conditions for A3.4 / the ERRs; they are not prerequisites to landing this current-state correction.
+
+The KD-4 source-count figure is also a landing-time measurement, not a durable constant. Historical `947` and `956` counts must not be copied forward. A3.4 must re-run `find src -name '*.cs' | wc -l` against its final checkout immediately before the atomic normative/supporting-surface patch and record that branch-head result. This tracking-only correction deliberately pins no replacement count.
+
+This record is the current-status successor to the September 3/4 diagnoses retained in `docs/tracking/open-issues.md` and `docs/tracking/spec-error-log.md`. Those original entries remain historical statements of what was absent when each ERR was filed. Their claims that `tools/run-tests-local.sh`, `tools/checklist-auditor.py`, and `tools/spec5-schema-auditor.py` do not exist are superseded by the implementation below; the ERRs themselves are not closed merely because candidate files now exist.
 
 PR #357 was reconciled with `main` after PR #358 landed. The reconciliation deliberately preserved PR #358's authoritative `docs/specs/testing-strategy/*` files unchanged. This candidate therefore does not smuggle normative changes into the executable repair; A3.4 remains the place where any substantive requirement amendment is judged.
 
@@ -34,7 +44,7 @@ PR #357 was reconciled with `main` after PR #358 landed. The reconciliation deli
 2. **Certified nightly execution is unproven.** The Windows/Unity job is deliberately gated off until a runner carrying `[self-hosted, windows, x64, determinism-certified]` is actually registered/configured and the enable variable is set. A successful execution on the pinned host is still required.
 3. **Normative acceptance is pending.** The currently approved Spec #19 text on `main` remains authoritative. Any proposed relaxation such as FR-TS-011 pipeline scoping or FR-TS-062 deferred double-run activation must be accepted or rejected on its merits at A3.4; implementation state is not authority.
 4. **Current auditor debt must be remeasured.** The recorded 548 count predates the final hardening and MUST NOT be presented as the current survey total.
-5. **Aggregate landing synchronization is pending.** Before merge, the landing set still must add forward/current-state pointers in `open-issues.md` / `spec-error-log.md`, synchronize changelog/file-manifest/name-keyed guidance, and re-derive maintained counts against the final branch head. Historical entries should be preserved rather than rewritten.
+5. **Final A3.4 aggregate synchronization is pending.** The atomic reapproval landing still must add/update the durable forward pointers in the historical ledgers and name-keyed guidance, synchronize the maintained tracking chains, and re-derive landing-time counts against that final branch head. PR #387 does not claim to perform or discharge that closure work.
 
 ## Closure rule
 
