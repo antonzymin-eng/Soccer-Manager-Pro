@@ -1,0 +1,45 @@
+name: W4 Local Cleanup
+
+on:
+  push:
+    branches:
+      - codex/w4-keeper-perception-final
+    paths:
+      - .github/w4-unused-local-marker
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/w4-keeper-perception-final
+      - name: Use the explicit raw predicate in the visible gate
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/match-engine/MatchEngine.cs')
+          s = p.read_text()
+          old = '''                        bool saveVisible = KeeperPerceptionGate.SaveAvailable(
+                            t, i, _agents[i].Position,
+'''
+          new = '''                        bool saveVisible = armed && KeeperPerceptionGate.SaveAvailable(
+                            t, i, _agents[i].Position,
+'''
+          if s.count(old) != 1:
+              raise SystemExit(f'expected one W4 saveVisible site, found {s.count(old)}')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/match-engine/MatchEngine.cs
+          git diff --cached --check
+          git commit -m "fix: retain explicit raw W4 save predicate"
+          git push origin HEAD:codex/w4-keeper-perception-final
