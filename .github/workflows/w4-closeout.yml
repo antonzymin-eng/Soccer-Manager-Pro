@@ -19,7 +19,19 @@ jobs:
           ref: codex/w4-keeper-perception-final
           fetch-depth: 0
       - name: Apply W4 close-out edits
-        run: python3 .github/w4_closeout.py
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/w4_closeout.py')
+          s = p.read_text()
+          old = 'text = replace_once(text, "**Last Updated:**", "**Last Updated (prior):**", "manifest prior label")'
+          new = 'text = text.replace("**Last Updated:**", "**Last Updated (prior):**", 1)'
+          if s.count(old) != 1:
+              raise SystemExit(f'expected one manifest replacement line, found {s.count(old)}')
+          p.write_text(s.replace(old, new, 1))
+          PY
+          python3 .github/w4_closeout.py
       - name: Validate and commit close-out
         shell: bash
         run: |
