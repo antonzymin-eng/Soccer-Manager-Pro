@@ -1,9 +1,11 @@
 # Club Finances & Economy #40 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** September 7, 2026 (v0.4 — PR #363 follow-up: non-positive BoardModifier values fail loud)
-**Last Updated (prior):** September 4, 2026 (v0.3 — T0 reference-contract back-prop)
-**Version:** 0.4
+**Last Updated:** September 11, 2026 (v0.7 — ERR-040-003: T3 autonomous accrual exception, revenue coherence, and gate-order review correction)
+**Last Updated (prior):** September 11, 2026 (v0.6 — T3a lifecycle: SeasonRevenueAccrued closes at settlement; FFP window remains carried)
+**Last Updated (prior):** September 11, 2026 (v0.5 — T3a back-prop: reconcile FR-FN-003 with the planned deep revenue mutation path)
+**Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 follow-up: non-positive BoardModifier values fail loud)
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -18,9 +20,15 @@
   `ClubId`, serialized under #40's sub-blob (KD-7). It is the single source of truth for a club's financial
   position.
 - **FR-FN-003** — `SettleFinances` MUST be the sole entry point that sets `TransferBudget`/`WageBudget` and
-  adds to `Balance` at the season boundary; `ApplyTransaction` MUST be the sole entry point that mutates
-  `Balance`/`WageBillAggregate` between boundaries (KD-3/KD-5). `AvailableTransferBudget` (FR-FN-012) and
-  `FinancesViewModel` (FR-FN-026) MUST NOT mutate state.
+  adds to `Balance` at the season boundary. At Stage 2, `ApplyTransaction` MUST be the sole between-boundary
+  mutation path. At T3+, #40-owned deep-tier accrual entry points MAY mutate `Balance` and their own deep
+  accumulators without going through `ApplyTransaction`; they MUST NOT set `TransferBudget`/`WageBudget`,
+  mutate `WageBillAggregate`, or create a second externally-commanded transaction ledger. T3a's
+  `AccrueDailyRevenue` is the first such path and may mutate only `Balance` + `SeasonRevenueAccrued`.
+  `AvailableTransferBudget` (FR-FN-012) and `FinancesViewModel` (FR-FN-026) MUST NOT mutate state.
+  **ERR-040-003** records this approved-spec correction: the prior unqualified "sole between-boundary
+  mutation path" wording was too broad for the already-approved T3 autonomous-accrual design; ledger
+  exclusivity remains unchanged.
 - **FR-FN-004** — `ApplyTransaction` MUST NOT mutate `TransferBudget` or `WageBudget`; those ceilings are set
   exclusively by `SettleFinances` once per season (KD-1/KD-3) — Stage 2 has no "remaining budget net of
   spend" running total (§1.6).
@@ -28,7 +36,10 @@
 **Budget projection semantics (KD-1/KD-6)**
 - **FR-FN-005** — `SettleFinances` MUST carry `prior.Balance` forward and **ADD** the position-keyed prize
   money to it (never overwrite); it MUST **SET** (overwrite) `TransferBudget` and `WageBudget` to the newly
-  projected ceilings.
+  projected ceilings. At T3a it MUST also reset `SeasonRevenueAccrued` to `0` for the new season while
+  carrying `WageBillAggregate` and `FfpBalanceWindow` unchanged. A later FFP term that needs the completed
+  season's revenue MUST consume `prior.SeasonRevenueAccrued` within the same pure settlement before that
+  returned-field reset; T3a MUST NOT invent an FFP-window update ahead of the FFP slice.
 - **FR-FN-006** — The Stage-2 budget projection MUST be `budget = f(finalTablePosition, prizeMoney)` — a
   pure integer function of the final league position (and the fixed prize-money table it derives from) —
   with no per-day step and no per-day accrual state at Stage 2 (KD-1).
@@ -48,8 +59,9 @@
 **Integer currency**
 - **FR-FN-011** — All currency-bearing fields (`Balance`, `TransferBudget`, `WageBudget`,
   `WageBillAggregate`, `SeasonRevenueAccrued`, `FfpBalanceWindow`) and every accounting formula (prize-money
-  interpolation, budget-ceiling projection, `ApplyTransaction`) MUST be integer; no float MUST appear
-  anywhere in the accounting path (the #28/#29/#41 integer-projection posture).
+  interpolation, budget-ceiling projection, `ApplyTransaction`, and T3 deep-tier accruals such as
+  `AccrueDailyRevenue`) MUST be integer; no float MUST appear anywhere in the accounting path (the
+  #28/#29/#41 integer-projection posture).
 
 **#31 boundary — read-only query + one-way command (KD-3)**
 - **FR-FN-012** — `AvailableTransferBudget` MUST be a pure read-only query (returns `TransferBudget`); it
@@ -93,7 +105,8 @@
   field-identical; **serialize, don't regenerate** (#30 KD-5). No RNG cursor exists to serialize at Stage 2
   (FR-FN-009/010).
 - **FR-FN-022** — Restore MUST **fail loud** on version mismatch / out-of-bounds length prefix (overflow-
-  safe `ReadCount`) / trailing bytes (F3/F5).
+  safe `ReadCount`) / trailing bytes (F3/F5), and MUST reject incoherent finance state including a negative
+  current-season `SeasonRevenueAccrued` (F1).
 
 **Season-boundary integration (KD-6)**
 - **FR-FN-023** — #40's `SettleFinances` step MUST be invoked at #30's **new** reserved slot (b'),
@@ -139,8 +152,8 @@ public struct ClubFinances
     public long WageBudget;          // wage-ceiling #31/#34 read (>= 0, clamped, F1); SET only by SettleFinances
     public long WageBillAggregate;   // sum of committed wage line items (0 at Stage 2 — no producer yet, KD-5); >= 0 (F1)
     // deep-tier accumulators (0 at Stage 2 -> minimal identity, KD-8/FR-FN-028):
-    public long SeasonRevenueAccrued;
-    public long FfpBalanceWindow;
+    public long SeasonRevenueAccrued; // current-season accumulator; >= 0; SettleFinances resets to 0 for the next season
+    public long FfpBalanceWindow;     // carried unchanged at T3a; later FFP slice owns its window update
 
     public static ClubFinances CreateInitial(long startingBalance) =>
         new() { Balance = startingBalance, TransferBudget = 0, WageBudget = 0,
@@ -159,15 +172,26 @@ public readonly struct BoardModifier
 }
 
 // The season-boundary step (KD-1/KD-6, invoked at #30's new slot (b')): pure budget projection from the
-// final table. Carries prior.Balance forward, ADDS position-keyed prize money to Balance, and SETS the
-// season's TransferBudget/WageBudget ceilings. Fully deterministic — no RNG parameter at minimal (KD-2).
+// final table. Carries prior.Balance forward, ADDS position-keyed prize money to Balance, SETS the season's
+// TransferBudget/WageBudget ceilings, and closes the prior current-season revenue accumulator to zero.
+// WageBillAggregate and the not-yet-defined FfpBalanceWindow carry. Fully deterministic — no RNG parameter.
 public static ClubFinances SettleFinances(in ClubFinances prior, int finalTablePosition, int clubCount,
                                           in BoardModifier board);
 
-// KD-3/KD-5 — the SINGLE ledger-mutation path between season boundaries: #31 (transfers/player wages) and
-// #34 (staff wages) call this; #40 owns the ledger, callers never write ClubFinances fields directly.
+// KD-3/KD-5 — the SINGLE externally-commanded ledger-mutation path between season boundaries: #31
+// (transfers/player wages) and #34 (staff wages) call this; #40 owns the ledger, callers never write
+// ClubFinances fields directly. Deep-tier autonomous accruals are separate #40-owned paths (FR-FN-003).
 // Fails loud on a malformed transaction (F2) or a wage-reversal larger than the current aggregate (F1).
 public static void ApplyTransaction(ref ClubFinances f, in FinanceTransaction txn);
+
+// T3a deep-tier accounting primitive. Pure over caller-supplied already-derived amounts; for a coherent
+// prior state the disabled path is an exact identity and does not interpret the deep-only amounts. Prior
+// coherence is validated before the gate. Enabled amounts are non-negative revenue and are added, with
+// checked arithmetic, to Balance + SeasonRevenueAccrued only. Amount production, stochastic variance, and
+// #30 daily invocation are later T3 slices; this primitive performs no RNG draw and consumes no reserved
+// namespace identifier.
+public static ClubFinances AccrueDailyRevenue(in ClubFinances prior, long sponsorshipRevenue,
+                                               long matchdayRevenue, bool deepRevenueEnabled);
 
 // The transaction value #31/#34 construct. Amount is an unsigned MAGNITUDE — sign is carried by Kind, never
 // by Amount's own sign (a negative Amount is malformed, F2).
@@ -192,21 +216,25 @@ The **finance block** persisted under `FINANCE_SAVE_FORMAT_VERSION` is, per club
 there is nothing beyond `ClubFinances` to persist. The set tracks the stable `ClubId` universe (FR-FN-025) —
 unlike #28/#41's per-`PlayerId` roster churn, entries are never removed by a season roll.
 
-`SettleFinances` is the sole season-boundary mutating entry point (FR-FN-003); `ApplyTransaction` is the sole
-between-boundary mutating entry point; `AvailableTransferBudget` and `FinancesViewModel` construction are
-pure reads over a `ClubFinances` value. See §3.
+`SettleFinances` is the sole season-boundary mutating entry point (FR-FN-003): in T3a it also closes
+`SeasonRevenueAccrued` to zero for the new season while carrying `FfpBalanceWindow`. `ApplyTransaction`
+remains the single externally-commanded ledger mutation path; T3a adds the separate #40-owned autonomous
+`AccrueDailyRevenue` path for `Balance` + `SeasonRevenueAccrued` only. `AvailableTransferBudget` and
+`FinancesViewModel` construction are pure reads over a `ClubFinances` value. See §3.
 
 ## 2.3 Failure modes
 
 | ID | Condition | Handling |
 |---|---|---|
-| **F1** | `ClubFinances` coherence violated — `TransferBudget < 0`, `WageBudget < 0`, or `WageBillAggregate < 0` reaching a consuming seam (incl. a Credit wage-reversal larger than the current aggregate) | **Fail loud** — an invalid combination is a bug, never silently clamped or repaired (the #27/#28/#41 F1-class precedent). |
+| **F1** | `ClubFinances` coherence violated — `TransferBudget < 0`, `WageBudget < 0`, `WageBillAggregate < 0`, or T3a `SeasonRevenueAccrued < 0` reaching a consuming/restore seam (incl. a Credit wage-reversal larger than the current aggregate) | **Fail loud** — an invalid combination is a bug, never silently clamped or repaired (the #27/#28/#41 F1-class precedent). |
 | **F2** | `ApplyTransaction` invoked with a malformed `FinanceTransaction` (negative `Amount`, or an out-of-contract `Kind`/`LineItem` value) | **Fail loud** — magnitude/enum validity is a caller-contract bug, never defaulted. |
 | **F3** | `FINANCE_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`ArgumentException`), the `MatchSaveCodec` posture. |
 | **F4** | A `BoardModifier` with `BudgetMultiplierMillPermille <= 0` (including `default(BoardModifier)`) reaching `SettleFinances` | **Fail loud** — a non-positive multiplier is a caller-contract bug, not a legitimate budget adjustment or "no adjustment" identity (the #41 `MedicalModifier` zero-value-trap precedent generalized to the invalid negative domain, §1.6). |
 | **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the finance block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
 | **F6** | `SettleFinances` or `ApplyTransaction` invoked for a `ClubId` with no `ClubFinances` entry | **Fail loud** — clubs do not churn (KD-7), so a missing entry is a bootstrap/lifecycle bug, never auto-created. |
 | **F7** | `finalTablePosition` outside `[1, clubCount]` passed to `SettleFinances` | **Fail loud** (`ArgumentException`) — an out-of-range position is a caller bug, never clamped. |
+| **F8** | T3a `AccrueDailyRevenue` is enabled and either sponsorship or matchday revenue is negative | **Fail loud** (`ArgumentOutOfRangeException`) — revenue is non-negative; expenditure uses a different accounting path. The prior finance value is validated for F1 coherence before the gate; only deep-only amount validation is skipped when disabled. |
+| **F9** | T3a component-sum, `Balance`, or `SeasonRevenueAccrued` addition exceeds signed 64-bit range | **Fail loud** (`OverflowException`) — never wrap currency state; the pure value-return path exposes no partial mutation. |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -215,4 +243,7 @@ pure reads over a `ClubFinances` value. See §3.
 | 0.2 | 2026-07-23 | — | AR-1 (1M): FR-FN-016 — a wage `ApplyTransaction` moves the `WageBillAggregate` liability ONLY (not `Balance`); cash items (`TransferFee`/`General`) move `Balance` only. |
 | 0.3 | 2026-09-04 | — | **T0 implementation back-prop.** FR-FN-027 now explicitly permits the cross-cutting `ProjectConstants` foundation edge used only for Code Standards #20-mandated `[GT]` `GameplayConfig.Get*` loading; the domain dependency direction and forbidden upward references are unchanged. |
 | 0.4 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** FR-FN-018/F4 now make the whole non-positive `BoardModifier` domain (`<= 0`) fail loud instead of allowing a negative multiplier to reach the budget clamp. |
+| 0.5 | 2026-09-11 | OpenAI | **T3a implementation back-prop.** FR-FN-003's Stage-2-only ledger exclusivity is reconciled with the already-planned deep revenue accrual path; `AccrueDailyRevenue` is named as a #40-owned autonomous mutation limited to `Balance` + `SeasonRevenueAccrued`, with F8/F9 fail-loud rules. |
+| 0.6 | 2026-09-11 | OpenAI | **T3a lifecycle back-prop.** FR-FN-005 defines `SeasonRevenueAccrued` as current-season state reset by settlement, requires future FFP consumption to occur before reset, and leaves `FfpBalanceWindow` carried until that slice defines its update. |
+| 0.7 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Formally scopes FR-FN-003's Stage-2 sole-mutation rule to the externally-commanded ledger while permitting #40-owned T3 accrual, makes `SeasonRevenueAccrued >= 0` an F1 coherence invariant enforced on restore/consumption, and pins coherence validation before the disabled T3a gate. |
 #endregion

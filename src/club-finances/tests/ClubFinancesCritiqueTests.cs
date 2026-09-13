@@ -1,12 +1,12 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesCritiqueTests.cs
 // Created:  2026-09-06
-// Modified: 2026-09-11 (#40 T2a — advance the assembly-boundary lock with the first real #27 consumer)
+// Modified: 2026-09-11 (#40 T3a — review traceability + coherence locks)
 // Author:   —
-// Specs:    Club Finances & Economy #40 §5; Code Standards #20
-// Purpose:  Locks the current T2a dependency boundary, RNG-free save shape, upper
+// Specs:    Club Finances & Economy #40 §5/§7.1; Code Standards #20
+// Purpose:  Locks the current T3a dependency boundary, RNG-free save shape, upper
 //           budget clamp, non-positive board-modifier failure, overflow-safe
-//           board scaling, and decode corruption guards identified by review.
+//           board scaling, decode corruption guards, and daily revenue lifecycle semantics.
 // §3.9.4 general-unit-test — allocation rules relaxed in test body
 // ============================================================================
 
@@ -18,11 +18,11 @@ using NUnit.Framework;
 
 namespace TacticalDirector.ClubFinances.Tests
 {
-    /// <summary>Regression locks added by the PR #363 critique/revision pass and advanced at T2a.</summary>
+    /// <summary>Regression locks added by the PR #363 critique/revision pass and advanced through T3a.</summary>
     [TestFixture]
     public sealed class ClubFinancesCritiqueTests
     {
-        /// <summary>T-FN-BOUND-002: the current T2a production assembly carries only dependencies it consumes.</summary>
+        /// <summary>T-FN-BOUND-002: the current T3a production assembly carries only dependencies it consumes.</summary>
         [Test]
         public void AssemblyReferences_AreExactlyCurrentPhaseDependencies()
         {
@@ -51,10 +51,10 @@ namespace TacticalDirector.ClubFinances.Tests
                 new[] { "TacticalDirector." },
                 StringSplitOptions.None).Length - 1;
             Assert.That(productionReferenceCount, Is.EqualTo(3),
-                "T2a may reference only DeterministicSim, ProjectConstants and PlayerDatabase; this also excludes #30/#31/#34/#45");
+                "T3a may reference only DeterministicSim, ProjectConstants and PlayerDatabase; this also excludes #30/#31/#34/#45");
         }
 
-        /// <summary>T-FN-DET-004: persisted finance state and production source contain no cursor/draw-order field or promoted #40 RNG tag.</summary>
+        /// <summary>T-FN-DET-004: T3a remains draw-free; no cursor/action ordinal or promoted #40 RNG tag exists yet.</summary>
         [Test]
         public void MinimalFinanceSaveShape_HasNoRngCursorOrActionOrdinal()
         {
@@ -123,6 +123,144 @@ namespace TacticalDirector.ClubFinances.Tests
 
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => FinanceStep.SettleFinances(in prior, 1, 20, in modifier));
+        }
+
+        /// <summary>T-FN-REV-003: settlement closes current-season revenue while carrying wage liability and the not-yet-defined FFP window.</summary>
+        [Test]
+        public void SettleFinances_ResetsSeasonRevenue_AndCarriesFfpWindow()
+        {
+            ClubFinances prior = new ClubFinances
+            {
+                Balance = 1_000,
+                TransferBudget = 200,
+                WageBudget = 300,
+                WageBillAggregate = 400,
+                SeasonRevenueAccrued = 9_999,
+                FfpBalanceWindow = -2_500
+            };
+
+            ClubFinances result = FinanceStep.SettleFinances(in prior, 1, 20, BoardModifier.Identity);
+
+            Assert.That(result.SeasonRevenueAccrued, Is.Zero);
+            Assert.That(result.FfpBalanceWindow, Is.EqualTo(prior.FfpBalanceWindow));
+            Assert.That(result.WageBillAggregate, Is.EqualTo(prior.WageBillAggregate));
+        }
+
+        /// <summary>T-FN-NEU-004: for coherent prior state, the deep gate off returns the complete finance record field-identically.</summary>
+        [Test]
+        public void AccrueDailyRevenue_DeepOff_IsExactIdentity()
+        {
+            ClubFinances prior = new ClubFinances
+            {
+                Balance = 1_000,
+                TransferBudget = 200,
+                WageBudget = 300,
+                WageBillAggregate = 400,
+                SeasonRevenueAccrued = 500,
+                FfpBalanceWindow = -600
+            };
+
+            ClubFinances result = FinanceStep.AccrueDailyRevenue(in prior, 70, 80, false);
+
+            Assert.That(result.Balance, Is.EqualTo(prior.Balance));
+            Assert.That(result.TransferBudget, Is.EqualTo(prior.TransferBudget));
+            Assert.That(result.WageBudget, Is.EqualTo(prior.WageBudget));
+            Assert.That(result.WageBillAggregate, Is.EqualTo(prior.WageBillAggregate));
+            Assert.That(result.SeasonRevenueAccrued, Is.EqualTo(prior.SeasonRevenueAccrued));
+            Assert.That(result.FfpBalanceWindow, Is.EqualTo(prior.FfpBalanceWindow));
+        }
+
+        /// <summary>T-FN-NEU-004: disabled deep revenue amounts are not interpreted after prior-state coherence succeeds.</summary>
+        [Test]
+        public void AccrueDailyRevenue_DeepOff_IgnoresOtherwiseInvalidRevenueInputs()
+        {
+            ClubFinances prior = ClubFinances.CreateInitial(1_000L);
+
+            ClubFinances result = FinanceStep.AccrueDailyRevenue(
+                in prior,
+                long.MinValue,
+                -1,
+                false);
+
+            Assert.That(result.Balance, Is.EqualTo(prior.Balance));
+            Assert.That(result.SeasonRevenueAccrued, Is.EqualTo(prior.SeasonRevenueAccrued));
+        }
+
+        /// <summary>T-FN-NEU-004: the off gate does not bypass canonical finance-state coherence validation.</summary>
+        [Test]
+        public void AccrueDailyRevenue_DeepOff_IncoherentPriorStillFailsLoud()
+        {
+            ClubFinances prior = ClubFinances.CreateInitial(1_000L);
+            prior.TransferBudget = -1L;
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => FinanceStep.AccrueDailyRevenue(in prior, long.MinValue, -1L, false));
+        }
+
+        /// <summary>T-FN-REV-001: both daily revenue sources accrue once, while unrelated state is untouched.</summary>
+        [Test]
+        public void AccrueDailyRevenue_Enabled_AccruesBothComponentsOnly()
+        {
+            ClubFinances prior = new ClubFinances
+            {
+                Balance = 1_000,
+                TransferBudget = 200,
+                WageBudget = 300,
+                WageBillAggregate = 400,
+                SeasonRevenueAccrued = 75,
+                FfpBalanceWindow = -25
+            };
+
+            ClubFinances result = FinanceStep.AccrueDailyRevenue(in prior, 120, 380, true);
+
+            Assert.That(result.Balance, Is.EqualTo(1_500));
+            Assert.That(result.SeasonRevenueAccrued, Is.EqualTo(575));
+            Assert.That(result.TransferBudget, Is.EqualTo(prior.TransferBudget));
+            Assert.That(result.WageBudget, Is.EqualTo(prior.WageBudget));
+            Assert.That(result.WageBillAggregate, Is.EqualTo(prior.WageBillAggregate));
+            Assert.That(result.FfpBalanceWindow, Is.EqualTo(prior.FfpBalanceWindow));
+        }
+
+        /// <summary>T-FN-REV-002: enabled T3a refuses negative revenue components instead of treating them as expenditure.</summary>
+        [TestCase(-1L, 0L)]
+        [TestCase(0L, -1L)]
+        public void AccrueDailyRevenue_EnabledNegativeComponent_FailsLoud(long sponsorship, long matchday)
+        {
+            ClubFinances prior = ClubFinances.CreateInitial(1_000L);
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => FinanceStep.AccrueDailyRevenue(in prior, sponsorship, matchday, true));
+        }
+
+        /// <summary>T-FN-INT-003: T3a checks the component sum before it can wrap into a plausible-looking daily amount.</summary>
+        [Test]
+        public void AccrueDailyRevenue_ComponentSumOverflow_FailsLoud()
+        {
+            ClubFinances prior = ClubFinances.CreateInitial(0L);
+
+            Assert.Throws<OverflowException>(
+                () => FinanceStep.AccrueDailyRevenue(in prior, long.MaxValue, 1, true));
+        }
+
+        /// <summary>T-FN-INT-003: T3a performs checked cash arithmetic before returning, so overflow cannot wrap club cash.</summary>
+        [Test]
+        public void AccrueDailyRevenue_BalanceOverflow_FailsLoud()
+        {
+            ClubFinances prior = ClubFinances.CreateInitial(long.MaxValue);
+
+            Assert.Throws<OverflowException>(
+                () => FinanceStep.AccrueDailyRevenue(in prior, 1, 0, true));
+        }
+
+        /// <summary>T-FN-INT-003: T3a independently checks the season accumulator; a safe Balance cannot mask accumulator overflow.</summary>
+        [Test]
+        public void AccrueDailyRevenue_SeasonAccumulatorOverflow_FailsLoud()
+        {
+            ClubFinances prior = ClubFinances.CreateInitial(0L);
+            prior.SeasonRevenueAccrued = long.MaxValue;
+
+            Assert.Throws<OverflowException>(
+                () => FinanceStep.AccrueDailyRevenue(in prior, 1, 0, true));
         }
 
         /// <summary>Proves decode rejects duplicate/non-ascending ClubIds even when the byte length is otherwise valid.</summary>
@@ -202,4 +340,8 @@ namespace TacticalDirector.ClubFinances.Tests
 // | 1.2     | 2026-09-07 | —      | Locks overflow-safe board scaling at the documented Int32 tuning extreme and below-cap floor semantics. |
 // | 1.4     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
 // | 1.5     | 2026-09-11 | —      | T2a: dependency lock now requires consumed PlayerDatabase edge and exactly three production refs. |
+// | 1.6     | 2026-09-11 | OpenAI | T3a: lock identity, accrual isolation, negative-input refusal and overflow failure. |
+// | 1.7     | 2026-09-11 | OpenAI | Critique: lock true off-state and each checked-arithmetic overflow site. |
+// | 1.8     | 2026-09-11 | OpenAI | T3a lifecycle: lock season revenue reset and unchanged future FFP window. |
+// | 1.9     | 2026-09-11 | OpenAI | Review: trace every new acceptance ID in code and lock coherence-before-off-gate ordering. |
 #endregion

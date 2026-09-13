@@ -1,9 +1,13 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
-**Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board multiplier failure gate)
-**Version:** 0.4
+**Last Updated:** September 11, 2026 (v0.9 — ERR-040-003 review close-out: §3.1 pseudocode realigned to the shipped direct reset after the handoff helper was removed)
+**Last Updated (prior):** September 11, 2026 (v0.8 — ERR-040-003 review: explicit completed-season revenue handoff and coherent-prior gate semantics)
+**Last Updated (prior):** September 11, 2026 (v0.7 — wording correction: ApplyTransaction remains the single externally-commanded ledger path, not the only T3 mutation)
+**Last Updated (prior):** September 11, 2026 (v0.6 — T3a lifecycle: current-season revenue resets at settlement; FFP window still carries)
+**Last Updated (prior):** September 11, 2026 (v0.5 — T3a accounting primitive: identity gate, checked daily revenue accrual, no producer/RNG/tick wiring)
+**Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -16,6 +20,7 @@ across a save/restore boundary.
 
 ```
 SettleFinances(in ClubFinances prior, finalTablePosition, clubCount, in BoardModifier board) -> ClubFinances:
+    validate prior coherence
     assert 1 <= finalTablePosition <= clubCount                        # F7 — bad input bound
     assert board.BudgetMultiplierMillPermille > 0                      # F4 — non-positive caller error (fail loud)
 
@@ -35,9 +40,12 @@ SettleFinances(in ClubFinances prior, finalTablePosition, clubCount, in BoardMod
     result.WageBudget   = ScaleAndClampBudget(baseWageCeiling, board.BudgetMultiplierMillPermille)
                                                                         # SETS — overwrites prior ceiling
 
-    # WageBillAggregate / SeasonRevenueAccrued / FfpBalanceWindow are UNTOUCHED by the minimal projection —
-    # a committed wage does not vanish at season end (WageBillAggregate carries forward); the deep-tier
-    # accumulators reset or carry per their own T3 rules (deferred, KD-1/KD-8).
+    # Future FFP logic that consumes the completed season's revenue inserts HERE, ABOVE the reset, and
+    # reads prior.SeasonRevenueAccrued — never result.SeasonRevenueAccrued, which is zero from here on.
+    result.SeasonRevenueAccrued = 0
+
+    # WageBillAggregate carries: a committed wage does not vanish at season end.
+    # FfpBalanceWindow carries unchanged until the later FFP slice defines its own window update.
     return result
 
 ScaleAndClampBudget(baseCeiling, positiveMultiplier) -> long:
@@ -69,6 +77,17 @@ through the shared signed-Int32 loader; those accepted values can produce a `bas
 non-identity positive board multiplier would overflow `long` before a naïve post-multiply clamp ran. The cap
 therefore applies **before** any unsafe product, while ordinary below-cap values retain the exact same integer
 floor semantics.
+
+`SeasonRevenueAccrued` is explicitly a **non-negative current-season** accumulator at T3a. Resetting it in
+`SettleFinances` prevents a live daily accrual from silently spanning seasons. The completed season's value
+remains readable as `prior.SeasonRevenueAccrued` for the whole of the settlement calculation; the FFP slice is
+required to derive its next-season penalty from that parameter (plus any other then-specified terms) at a point
+**above** the reset, not from `result.SeasonRevenueAccrued`, which is zero from the reset onward. T3a introduces
+no intermediate handoff local or helper for this: `prior` is already the source of truth, and a second named
+carrier would give the FFP slice a place to accumulate state the reset then contradicts.
+T3a does not guess how `FfpBalanceWindow` rolls, so that field is
+carried field-identically until its own slice lands. This rule is behaviour-neutral at Stage 2 because the
+accumulator is always zero there (KD-8).
 
 `SettleFinances` reads no caller state beyond its four parameters — it is a pure function, so calling it
 twice with identical inputs yields byte-identical output (no hidden clock, no RNG). A `ClubId` with no prior
@@ -119,11 +138,14 @@ ApplyTransaction(ref ClubFinances f, in FinanceTransaction txn):
     # This function NEVER touches TransferBudget/WageBudget (FR-FN-004) — those are SettleFinances-only.
 ```
 
-`ApplyTransaction` is the single mutation path between season boundaries (KD-3/KD-5, FR-FN-013). It never
-reads or writes `TransferBudget`/`WageBudget` — those are set exclusively by `SettleFinances` once per season
-(§1.6/FR-FN-004); Stage 2 has no concept of "budget remaining after this season's spend" as a tracked field —
-if a caller (#31) wants that, it computes it externally by summing the transactions it has itself submitted,
-or a future deep-tier extension adds it as a new field (recorded in §7, not built here).
+`ApplyTransaction` is the single **externally-commanded ledger** mutation path between season boundaries
+(KD-3/KD-5, FR-FN-013). At T3+, #40-owned autonomous accrual functions such as `AccrueDailyRevenue` are
+separate accounting transforms, not a second caller-command ledger. This is the ERR-040-003 correction to
+the earlier over-broad wording. `ApplyTransaction` never reads or writes `TransferBudget`/`WageBudget` — those
+are set exclusively by `SettleFinances` once per season (§1.6/FR-FN-004); Stage 2 has no concept of "budget
+remaining after this season's spend" as a tracked field — if a caller (#31) wants that, it computes it
+externally by summing the transactions it has itself submitted, or a future deep-tier extension adds it as a
+new field (recorded in §7, not built here).
 
 ## 3.3 The read-only constraint query (`AvailableTransferBudget`)
 
@@ -164,6 +186,53 @@ actually play in next season (KD-6's ordering rationale). While #43 is unbuilt, 
 the pre-#43 `finalTable` directly — the same "prerequisite gate degenerates to a pass-through" pattern #26's
 T2/T4 decision gates use ahead of their own upstream engine-substrate deliverables.
 
+### 3.4.1 T3a daily revenue accounting primitive (`AccrueDailyRevenue`)
+
+T3a defines the **accounting mutation only**. It deliberately does not decide how much sponsorship or
+matchday revenue a club earns, does not own the calendar invocation, and does not draw sponsorship variance.
+Those are later T3 slices (§7.1/§7.2). Keeping this primitive pure preserves #40's ownership of the accounting
+rule while allowing #30 to remain the lifecycle/composition owner when the daily slot is wired.
+
+```
+AccrueDailyRevenue(in ClubFinances prior,
+                   sponsorshipRevenue,
+                   matchdayRevenue,
+                   deepRevenueEnabled) -> ClubFinances:
+    validate prior coherence                              # F1 runs even when the deep gate is off
+
+    if deepRevenueEnabled == false:
+        return prior exactly                              # coherent-prior KD-8 identity; do not interpret deep amounts
+
+    assert sponsorshipRevenue >= 0                       # revenue is not an expenditure channel
+    assert matchdayRevenue >= 0
+
+    dailyRevenue = checked(sponsorshipRevenue + matchdayRevenue)
+    result = prior
+    result.Balance = checked(result.Balance + dailyRevenue)
+    result.SeasonRevenueAccrued = checked(result.SeasonRevenueAccrued + dailyRevenue)
+
+    # T3a changes NO other field:
+    # TransferBudget / WageBudget / WageBillAggregate / FfpBalanceWindow stay field-identical.
+    validate result coherence
+    return result
+```
+
+The three additions are checked independently: a component-sum overflow, cash-balance overflow, or season-
+accumulator overflow fails loud rather than wrapping into a plausible finance value. Because `result` is a
+value copy and the function returns only after all checks pass, no partial mutation can escape on failure.
+
+`deepRevenueEnabled = false` is the exact Stage-2 identity **for a coherent prior finance value**, including
+for otherwise-invalid deep-only input amounts: the off path returns before interpreting those amounts.
+Canonical finance-state coherence is intentionally validated first; disabling a feature is not permission to
+admit corrupt budget/liability/revenue state. T-FN-NEU-004 locks both halves of that ordering.
+
+This T3a primitive **does not promote** `_RESERVED_0x29_` / `SubsystemOrdinals.ClubFinances = 91`: it performs
+no draw and stores no draw cursor/action ordinal. Promotion remains atomic with the first genuine stochastic
+sponsorship-variance consumer. It also does not update `FfpBalanceWindow`, debit `WageBillAggregate`, choose
+`[GT]` revenue magnitudes, or add a #30 world-tick call. Passing already-derived amounts into this pure
+primitive is an internal layering boundary, not permission for #30/#31/#34/#45 to invent competing finance
+models; the amount-production rules remain #40-owned when those later T3 slices are specified.
+
 ## 3.5 Worked example
 
 Club 12, season 7, finishes **position 4 of 20** clubs. Prior `ClubFinances` (from season 6's end):
@@ -186,7 +255,8 @@ Club 12, season 7, finishes **position 4 of 20** clubs. Prior `ClubFinances` (fr
 (`1,715,790 × 150 = 257,368,500`, integer-divided by 1000 floors to `257,368`). `× 1000/1000 = 307,368`
 unchanged. `result.WageBudget = 307,368` (SETS, overwriting the stale `180,000`).
 
-`WageBillAggregate` stays `95,000` — `SettleFinances` never touches it.
+`WageBillAggregate` stays `95,000` — `SettleFinances` never touches it. `SeasonRevenueAccrued` is reset to
+`0` for the new season; `FfpBalanceWindow` carries unchanged until its later T3 rule lands.
 
 **Post-`SettleFinances` state:** `{ Balance: 2,965,790, TransferBudget: 786,316, WageBudget: 307,368,
 WageBillAggregate: 95,000, SeasonRevenueAccrued: 0, FfpBalanceWindow: 0 }`.
@@ -216,4 +286,9 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 | 0.2 | 2026-07-23 | — | AR-1 (1M): §3.2 `ApplyTransaction` split — wage line items change `WageBillAggregate` only (periodic cash-out deferred), cash line items change `Balance` only; worked example updated. |
 | 0.3 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** §3.1 now rejects every non-positive board multiplier before arithmetic; the lower budget clamp is not an authorization for a negative modifier. |
 | 0.4 | 2026-09-07 | — | **PR #363 Codex correction.** Replaces post-multiply clamping with an overflow-safe quotient/remainder scale-and-cap that preserves exact integer-floor semantics below the ceiling. |
+| 0.5 | 2026-09-11 | OpenAI | **T3a contract.** Adds the pure identity-gated daily sponsorship/matchday accounting primitive; pins checked arithmetic and field isolation while explicitly deferring amount producers, #30 tick wiring, RNG promotion, wage cash-out, and FFP. |
+| 0.6 | 2026-09-11 | OpenAI | **T3a lifecycle closure.** Defines `SeasonRevenueAccrued` as current-season state reset by `SettleFinances`; the future FFP term must consume the prior value before reset, while `FfpBalanceWindow` continues to carry until its own rule lands. |
+| 0.7 | 2026-09-11 | OpenAI | **T3a wording correction.** Restates `ApplyTransaction` as the single externally-commanded ledger mutation path so §3.2 no longer conflicts with the autonomous T3a accrual path defined in §3.4.1 and FR-FN-003. |
+| 0.8 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Names the completed-season revenue handoff before reset, pins future FFP consumption to that handoff, and clarifies that the disabled revenue gate is identity only after canonical prior-state coherence validation. |
+| 0.9 | 2026-09-11 | Claude | **ERR-040-003 close-out.** v0.8's `completedSeasonRevenue` local and `CloseCompletedSeasonRevenue(...)` call were removed from `FinanceStep.cs` (v1.8) as a misleading indirection, but §3.1's pseudocode and §3.1's prose still described both — an APPROVED spec instructing the next implementer to rebuild a construct the code had just deleted. §3.1 now shows the shipped `result.SeasonRevenueAccrued = 0` with the FFP insertion point pinned **above** the reset and reading `prior.SeasonRevenueAccrued`, and records why no intermediate carrier is reintroduced. No requirement, arithmetic or worked-example value changes. |
 #endregion
