@@ -1,6 +1,9 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 12, 2026 — **G2 ACCEPTED by the owner (AP-03). Documentation only.**
+**Last Updated:** September 13, 2026 — **`.gitignore`: ignore Unity `.meta` files for the dotnet-ci gate's generated `.gen.csproj` projects. Repository hygiene only.**
+**Modified (3):** `.gitignore` (adds `*.gen.csproj.meta` beside `*.gen.csproj`); `docs/tracking/CHANGELOG.md`; and this file. No tracked file matches the new rule, and no source, spec, asset or schema change.
+
+**Last Updated (prior):** September 12, 2026 — **G2 ACCEPTED by the owner (AP-03). Documentation only.**
 **Modified (5):**
 - `docs/design/art/art-technical-recipe-v1.md` **v0.6 → v0.7** — new §11a acceptance record with the pre-acceptance re-verification and explicit non-closures; status header, §2 G2 row and §11 heading updated.
 - `docs/planning/art-pipeline-foundation.md` **v0.9 → v0.10** — status header only.
