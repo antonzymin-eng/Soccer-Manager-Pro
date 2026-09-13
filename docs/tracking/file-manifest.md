@@ -1,6 +1,15 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 12, 2026, latest — **AP-03 external-review corrections (PR #405): LFS pointer evidence and AI provenance.**
+**Last Updated:** September 12, 2026 — **G2 ACCEPTED by the owner (AP-03). Documentation only.**
+**Modified (5):**
+- `docs/design/art/art-technical-recipe-v1.md` **v0.6 → v0.7** — new §11a acceptance record with the pre-acceptance re-verification and explicit non-closures; status header, §2 G2 row and §11 heading updated.
+- `docs/planning/art-pipeline-foundation.md` **v0.9 → v0.10** — status header only.
+- `docs/design/art/art-direction-v1.md` **v1.5 → v1.6** — §15 item 7 annotation.
+- `docs/tracking/CHANGELOG.md`, and this file.
+
+No asset, meta, GUID, `.cs`, `.asmdef`, spec or schema change.
+
+**Last Updated (prior):** September 12, 2026, latest — **AP-03 external-review corrections (PR #405): LFS pointer evidence and AI provenance.**
 **Modified (4):**
 - `docs/design/art/art-technical-recipe-v1.md` **v0.5 → v0.6** — §7.1 records both LFS pointers against their commits: initial import `826f667f…` / 2 298 B, final replacement `0018e255…` / 2 568 B. §2 and §3 provenance lines updated.
 - `art-source/ui/icons/ap03_import_probe.art.json` — `source_kind` `original` → `generated`, with the plan §7.2 `generation` record; the rights basis no longer asserts original authorship.

@@ -12,7 +12,25 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 12, 2026, latest — **AP-03: two external-review findings on PR #405 fixed — the LFS evidence named the wrong pointer for the branch head, and the probe's provenance was misclassified. Documentation and metadata only.**
+> **Last Updated:** September 12, 2026 — **G2 ACCEPTED by the owner: the art pipeline's technical contract is proven. Documentation only.**
+>
+> Before acceptance, the five §G2 conditions were re-verified against the committed tree and the live Unity 6000.4.9f1 editor rather than read off the ledger:
+> 1. fresh resvg exports of the SVG at the import commit and at head matched the committed LFS oids;
+> 2. a forced reimport reported the documented Sprite profile;
+> 3. GUID `24746b6a…` and the whole `.meta` blob are identical at import and head;
+> 4. the path routes to LFS, the head blob is a pointer, and no object is missing on the remote;
+> 5. the font rights/script/fallback path is explicit.
+>
+> The acceptance record is `art-technical-recipe-v1.md` §11a, which states what acceptance does **not** close:
+> - no fallback chain is chosen (only the rules are);
+> - the shipping font binaries, Reserved-Font-Name handling, semi-bold gap, Ukrainian corpus proof and offline packaging stay open;
+> - the import profile is documented, not automated;
+> - the probe is not adopted;
+> - the evidence came from one AI agent session, with an external AI review of PR #405 as the independent check.
+>
+> The art plan and `art-direction-v1.md` status lines record the acceptance. No asset, meta, `.cs`, spec, RNG or schema change.
+
+> **Last Updated (prior):** September 12, 2026, latest — **AP-03: two external-review findings on PR #405 fixed — the LFS evidence named the wrong pointer for the branch head, and the probe's provenance was misclassified. Documentation and metadata only.**
 >
 > **(1) LFS evidence.** The recipe's LFS proof quoted one pointer, `826f667f…` / 2 298 B, as "the committed blob". That is the *initial import* commit `dd0d1ff5`; the replacement commit `abc07f2f` and the branch head carry `0018e255…` / 2 568 B. `art-technical-recipe-v1.md` v0.6 now records both pointers against their commits — verified with `git show <commit>:<path>` — and notes that the `.meta` blob is identical at both.
 >

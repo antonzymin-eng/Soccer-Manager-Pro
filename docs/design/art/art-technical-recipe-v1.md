@@ -1,9 +1,9 @@
 # System XI — Art Technical Recipe v1
 
-**Status:** IN PROGRESS — G2 EVIDENCE COMPLETE; awaiting G2 review  
+**Status:** G2 ACCEPTED (owner, September 12, 2026) — see §11a  
 **Created:** September 6, 2026  
 **Last Updated:** September 12, 2026  
-**Document version:** 0.6  
+**Document version:** 0.7  
 **Unity target:** `6000.4.9f1 (f7258d6eebbe)`  
 **Parent plan:** `docs/planning/art-pipeline-foundation.md` v0.8+  
 **Repository contract:** AP-01 landed in PR #365  
@@ -37,7 +37,7 @@ The workstream may establish static/repository evidence in parallel with AP-02, 
 | Actual Unity import | **PASS** | Unity 6000.4.9f1 editor on the pinned Windows 11 host, September 12, 2026; commit `dd0d1ff5` (§5.1) |
 | Importer settings captured from Unity | **PASS** | §5.1: first-import defaults, applied candidate settings, generated `.meta` fields, dimensions, format and memory |
 | In-place replacement preserves GUID | **PASS** | §6.1: GUID `24746b6a9f9592e41be3206d04b7b96e` unchanged, `.meta` byte-identical, consumer reference resolves; commit `abc07f2f` |
-| G2 | **OPEN — evidence complete** | every §11 checklist item is ticked with recorded evidence; G2 passes only on review, not on this ledger's own say-so |
+| G2 | **ACCEPTED** | owner acceptance September 12, 2026, recorded in §11a after the five §G2 conditions were re-verified against the tree and the live editor |
 
 ---
 
@@ -339,7 +339,9 @@ The mockups currently fetch fonts over the network. Shipping client rules:
 
 ## 11. G2 closure checklist
 
-G2 stays **OPEN** until all are true:
+**G2 ACCEPTED by the owner on September 12, 2026.** The record is §11a. The checklist below is kept as the evidence the acceptance rests on.
+
+G2 could pass only when all of these were true — all are, and G2 is accepted:
 
 - [x] one neutral technical source asset exports reproducibly to PNG without depending on G1 approval — §4.4;
 - [x] `git check-attr` proves LFS routing on the actual runtime path — §7.1;
@@ -360,6 +362,34 @@ If real Unity import cannot be executed, G2 remains pending regardless of how mu
 
 ---
 
+## 11a. G2 acceptance record
+
+**G2 accepted by owner on September 12, 2026**, on PR #405 at head `0da3186a`.
+
+Before acceptance, the five §G2 conditions of `docs/planning/art-pipeline-foundation.md` were re-verified against the committed tree and the live editor, rather than read off this ledger:
+
+1. **Reproducible source → export.** Fresh resvg 0.47.0 exports of the SVG at the import commit and at head matched the committed LFS oids exactly: `826f667f…` and `0018e255…`.
+2. **Into the actual Unity project with documented settings.** A forced reimport in Unity 6000.4.9f1 reported Sprite / Single / sRGB / alpha-is-transparency / no mips / Clamp / Bilinear, producing a 128×128 DXT5 sprite — the §5.1 profile.
+3. **Committed `.meta` identity.** The `.meta` is tracked; GUID `24746b6a9f9592e41be3206d04b7b96e` and the entire blob are identical at the import commit and at head. CI "Unity .meta integrity" passed.
+4. **Verified LFS behaviour.** `git check-attr` routes the path to LFS, the head blob is an LFS pointer, and `git lfs push --dry-run` shows no object missing on the remote. CI "Unity asset hygiene" passed.
+5. **Font rights/script/fallback decision path explicit.** §8.3, §8.4 and §8.4a, and the §10 fallback rules.
+
+Acceptance confirms:
+
+1. the §4.4 exporter pin and the §5.1 import profile are the locked initial recipe for P0 2D UI art;
+2. in-place revision on the same semantic path is the proven replacement behaviour (§6.1);
+3. the font decision path is sufficient for G2.
+
+**What acceptance deliberately does not do** — each is recorded so it is not mistaken for closed:
+
+- **No fallback chain is chosen.** §10 states the rules — no silent fall to a platform font, and equivalent-face substitution is allowed without reopening G1 — but not which face backs PT Sans Narrow.
+- **Exact shipping fonts are not validated.** The binaries, versions and hashes, Reserved Font Name handling for any conversion, the missing semi-bold weight, the §9 Ukrainian corpus proof and offline packaging all remain shipping requirements (§8.4a, §8.5, §9, §10).
+- **The import profile is not automated.** §5.1 was applied by editor script and documented; no importer preset exists. Every later import sets it explicitly until evidence justifies automation (§4.3).
+- **The probe is not adopted.** `ui.pipeline.import-probe` stays `status: candidate`, `source_kind: generated`, and is not a production-style asset; its commercial-use basis is unconfirmed because it is not intended to ship.
+- **Evidence independence is limited.** The evidence and the pre-acceptance re-verification were produced by the same AI agent session. The independent check was an external AI review of PR #405, whose two findings were fixed before acceptance.
+
+---
+
 ## 12. Version History
 
 | Version | Date | Change |
@@ -370,3 +400,4 @@ If real Unity import cannot be executed, G2 remains pending regardless of how mu
 | 0.4 | 2026-09-12 | **Real Unity evidence recorded** on the pinned Windows 11 / Unity 6000.4.9f1 host. New §4.4: exporter pinned to resvg 0.47.0 (newest release with an official win64 binary; 0.48.x ships none), with the release-digest match and byte-identical export evidence, including LF/CRLF invariance. New §5.1: first-import defaults — five differ from the candidate, so the recipe must set them explicitly — plus applied settings, generated `.meta` fields, DXT5 format and 33 672 B editor-reported memory. New §6.1: GUID `24746b6a…` and the whole `.meta` byte-identical across in-place revision, the temporary consumer reference resolving to the new content, and before/after pixels measured. New §7.1: actual LFS pointer. Commits `dd0d1ff5` (import) and `abc07f2f` (replacement). The §2 import/importer/replacement/reproducibility rows move to PASS. AP-01 `check-meta-integrity.sh` PASS after both commits; every §11 item ticked. G2 stays OPEN pending review. |
 | 0.5 | 2026-09-12 | **Typography section re-synchronised with the G1 decision.** v0.1–0.4 still carried IBM Plex Sans Condensed as the proposed display substitute, but `art-direction-v1.md` v1.4 (G1 accepted September 10, 2026) had already rejected it visually and accepted PT Sans Narrow / an equivalent humanist condensed face. §8.4 now records that rejection. New §8.4a records PT Sans Narrow's upstream evidence: OFL 1.1 with Reserved Font Names 'PT Sans' and 'ParaType', `cyrillic`/`cyrillic-ext` subsets declared, Regular 400 + Bold 700 only. It also records three open consequences — RFN handling for any font-file conversion, no semi-bold weight, and the still-required Ukrainian corpus proof. §2 display row and the §11 font item updated. No Unity evidence changed; G2 remains OPEN pending review. |
 | 0.6 | 2026-09-12 | **External review corrections (PR #405).** (1) §7.1 described one LFS pointer, the initial import's `826f667f…` / 2 298 B, as "the committed blob", but the branch head carries the replacement's `0018e255…` / 2 568 B. §7.1 now records both pointers against their commits. (2) The probe's `.art.json` said `source_kind: original` while naming an AI agent as creator. The plan §7.2 treats AI-assisted work as generated, so it is reclassified `generated` with the full `generation` record, and the rights basis no longer asserts original authorship. §2 and §3 updated to match. No Unity evidence, hash or GUID changed; G2 remains OPEN pending review. |
+| 0.7 | 2026-09-12 | **G2 ACCEPTED by the owner.** New §11a acceptance record: the five §G2 conditions were re-verified against the committed tree and the live Unity 6000.4.9f1 editor before acceptance — fresh exports match committed oids, forced reimport reports the §5.1 profile, GUID and `.meta` blob identical at import and head, LFS pointer with no missing remote object, font path explicit. It lists what acceptance confirms, and five things it deliberately does not do: no fallback chain chosen, shipping fonts not validated, import profile not automated, probe not adopted, evidence independence limited. The status header, §2 G2 row and §11 heading record the acceptance. |
