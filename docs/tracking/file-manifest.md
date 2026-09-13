@@ -1,6 +1,29 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 12, 2026 — **Unity-editor compile fixes; Unity recorded as the governing compiler.**
+**Last Updated:** September 12, 2026 — **G2 ACCEPTED by the owner (AP-03). Documentation only.**
+**Modified (5):**
+- `docs/design/art/art-technical-recipe-v1.md` **v0.6 → v0.7** — new §11a acceptance record with the pre-acceptance re-verification and explicit non-closures; status header, §2 G2 row and §11 heading updated.
+- `docs/planning/art-pipeline-foundation.md` **v0.9 → v0.10** — status header only.
+- `docs/design/art/art-direction-v1.md` **v1.5 → v1.6** — §15 item 7 annotation.
+- `docs/tracking/CHANGELOG.md`, and this file.
+
+No asset, meta, GUID, `.cs`, `.asmdef`, spec or schema change.
+
+**Last Updated (prior):** September 12, 2026, latest — **AP-03 external-review corrections (PR #405): LFS pointer evidence and AI provenance.**
+**Modified (4):**
+- `docs/design/art/art-technical-recipe-v1.md` **v0.5 → v0.6** — §7.1 records both LFS pointers against their commits: initial import `826f667f…` / 2 298 B, final replacement `0018e255…` / 2 568 B. §2 and §3 provenance lines updated.
+- `art-source/ui/icons/ap03_import_probe.art.json` — `source_kind` `original` → `generated`, with the plan §7.2 `generation` record; the rights basis no longer asserts original authorship.
+- `docs/tracking/CHANGELOG.md`, and this file, including its AP-03 probe row.
+
+No asset, meta, GUID, hash, `.cs`, `.asmdef`, spec or schema change. G2 remains OPEN pending review.
+
+**Last Updated (prior):** September 12, 2026, later — **AP-03 documentation synchronisation: typography ledger aligned with G1, status headers current, `BLOCKED-` branch prefix retired.**
+**Modified (6):** `docs/design/art/art-technical-recipe-v1.md` **v0.4 → v0.5** (§8.4 records IBM Plex Sans Condensed's G1 visual rejection; new §8.4a records PT Sans Narrow's upstream evidence and three open consequences — OFL 1.1 Reserved Font Names, Regular/Bold only, Ukrainian corpus proof still owed; §2 rights and display rows plus the §11 font item updated); `docs/design/art/art-direction-v1.md` **v1.4 → v1.5** (§15 item 7 annotated with AP-03 progress); `docs/planning/art-pipeline-foundation.md` **v0.8 → v0.9** (status header only); `art-source/README.md` (`Assets/GameArt/` now exists via the AP-03 import); `docs/tracking/CHANGELOG.md`; and this file. The AP-03 work now lives on `art/ap-03-technical-recipe-proof`, and the superseded `BLOCKED-art/ap-03-technical-recipe-proof` remote branch was deleted after its commits were verified as ancestors of the new branch. No asset, meta, `.cs`, `.asmdef`, spec, RNG or schema change.
+
+**Last Updated (prior):** September 12, 2026 — **AP-03 G2 Unity evidence: the first runtime GameArt asset imported through Unity 6000.4.9f1 on the pinned host.**
+**NEW (8):** `art-source/ui/icons/ap03_import_probe.svg`; `art-source/ui/icons/ap03_import_probe.art.json`; `Assets/GameArt.meta`, `Assets/GameArt/UI.meta`, `Assets/GameArt/UI/Icons.meta` (Unity-authored folder metas); `Assets/GameArt/UI/Icons/ap03_import_probe.png` (Git LFS); `Assets/GameArt/UI/Icons/ap03_import_probe.png.meta` (Unity-authored, GUID `24746b6a9f9592e41be3206d04b7b96e`); and this file's first row for `docs/design/art/art-technical-recipe-v1.md`, which landed on the AP-03 branch unlisted. **Modified (2):** `docs/design/art/art-technical-recipe-v1.md` **v0.3 (header read 0.2) → v0.4** (§4.4 resvg 0.47.0 exporter pin + reproducibility, §5.1 recorded importer behaviour, §6.1 GUID in-place replacement proof, §7.1 LFS pointer proof, §11 every G2 item ticked); `docs/tracking/CHANGELOG.md`. `tools/unity-ci/check-meta-integrity.sh` passes after both the import and the replacement commit. G2 is evidence-complete and awaits review, not passed. No `.cs`, `.asmdef`, spec, RNG, schema or roadmap row changed.
+
+**Last Updated (prior):** September 12, 2026 — **Unity-editor compile fixes; Unity recorded as the governing compiler.**
 **Modified (14):**
 - asmdefs: `src/match-analytics/match-analytics.asmdef`, `src/ui-framework/Tests/ui-framework-tests.asmdef`, `src/season-save/tests/season-save-tests.asmdef` — direct references Unity requires;
 - tests: `src/defensive-ai/Tests/TackleOutcomeResolverTests.cs`, `src/match-engine/tests/MatchEngineTackleTests.cs`, `src/season-save/tests/AvailabilityCompositionExtremisTests.cs`, `src/season-save/tests/SeasonLoopDisciplineTests.cs` — NUnit 3.5-compatible assertions, semantics unchanged;
@@ -3319,6 +3342,17 @@ Operational AP-01 surfaces. These are pipeline/tooling contracts, not production
 | `tools/unity-ci/generate-missing-metas.sh` | Deterministic helper preserving `src/` behavior while limiting GameArt generation to folder metas/CI fixtures; production art file metas remain Unity-authored |
 | `tools/unity-ci/test-meta-integrity-gameart.sh` | Temporary-index mutation proof for generator boundary, missing/orphan GameArt metas, and GameArt GUID collisions with both `src/` and other tracked `Assets/` metas |
 | `tools/unity-ci/README.md` | Human contract and local commands for the AP-01 Unity asset-integrity tooling |
+| `docs/design/art/art-technical-recipe-v1.md` | AP-03 technical recipe and G2 evidence ledger — resvg 0.47.0 exporter pin, recorded Unity 6000.4.9f1 importer behaviour, GUID in-place replacement proof, LFS proof, font rights/script audit, G2 closure checklist |
+
+### AP-03 technical import probe (G2 evidence; not a production-style asset)
+
+| File | Purpose |
+|------|---------|
+| `art-source/ui/icons/ap03_import_probe.svg` | Neutral geometric source for `ui.pipeline.import-probe` (128×128 viewBox); revised in place during the §6 replacement proof |
+| `art-source/ui/icons/ap03_import_probe.art.json` | Adjacent `.art.json` production-candidate record for the probe. `source_kind: generated` (Claude Code / claude-opus-5), with the §7.2 `generation` record; no third-party inputs; not adopted for release |
+| `Assets/GameArt.meta`, `Assets/GameArt/UI.meta`, `Assets/GameArt/UI/Icons.meta` | Unity-authored folder metas for the first runtime GameArt path |
+| `Assets/GameArt/UI/Icons/ap03_import_probe.png` | Git LFS runtime export of the probe (resvg 0.47.0, 128×128); the first runtime GameArt asset |
+| `Assets/GameArt/UI/Icons/ap03_import_probe.png.meta` | Unity-authored TextureImporter meta (Sprite/Single, no mips, Clamp, Bilinear); GUID `24746b6a9f9592e41be3206d04b7b96e`, byte-identical across in-place replacement |
 
 ---
 
