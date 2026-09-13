@@ -5,6 +5,8 @@
         "TacticalDirector.SeasonSave",
         "TacticalDirector.MatchEngine",
         "TacticalDirector.AgentMovement",
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.EventSystem",
         "TacticalDirector.LivingWorld",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.PlayerDatabase",
