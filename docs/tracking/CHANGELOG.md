@@ -14,7 +14,7 @@ break it, and do not edit historical entries.
 
 > **Last Updated:** September 12, 2026, later — **AP-03 docs synchronised: the recipe's typography section was still recommending a font G1 had already rejected. Documentation only.**
 >
-> `art-technical-recipe-v1.md` v0.4 still carried IBM Plex Sans Condensed as the proposed display face, two days after G1 (`art-direction-v1.md` v1.4, September 10) had rejected it visually and accepted **PT Sans Narrow** / an equivalent humanist condensed face. v0.5 records the rejection (§8.4) and PT Sans Narrow's upstream evidence from `google/fonts` (§8.4a): SIL OFL 1.1, **with Reserved Font Names "PT Sans" and "ParaType"**, `cyrillic`/`cyrillic-ext` subsets declared, Regular 400 and Bold 700 only.
+> The earlier AP-03 recipe revision still carried IBM Plex Sans Condensed as the proposed display face, two days after the G1 acceptance record (September 10, 2026) had rejected it visually and accepted **PT Sans Narrow** / an equivalent humanist condensed face. v0.5 records the rejection (§8.4) and PT Sans Narrow's upstream evidence from `google/fonts` (§8.4a): SIL OFL 1.1, **with Reserved Font Names "PT Sans" and "ParaType"**, `cyrillic`/`cyrillic-ext` subsets declared, Regular 400 and Bold 700 only.
 >
 > Three consequences are recorded as open, not resolved:
 > - any conversion or subsetting of the font file must be checked against the RFN clause, and whether a TextMeshPro atlas counts as a Modified Version is explicitly left undecided;
