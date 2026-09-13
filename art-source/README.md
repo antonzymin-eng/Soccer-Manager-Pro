@@ -13,7 +13,10 @@ started. G0 authorizes AP-01 only.
 - Unity-ready exports eventually live under `Assets/GameArt/` only after the
   applicable import/integration gate.
 - `Assets/GameArt/` is intentionally **not** created by AP-01 merely to reserve
-  folders. AP-03 creates/imports the first real runtime asset through Unity.
+  folders. AP-03 created it on September 12, 2026 by importing the first real
+  runtime asset through Unity: the neutral `ui.pipeline.import-probe`
+  (`art-source/ui/icons/`), with Unity-authored metas. See
+  `docs/design/art/art-technical-recipe-v1.md` for the export/import recipe.
 - Final storefront/press exports remain outside the Unity shipping tree under
   the future `release-art/` root.
 
