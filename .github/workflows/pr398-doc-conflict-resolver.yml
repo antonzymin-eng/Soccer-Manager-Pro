@@ -31,7 +31,6 @@ jobs:
           docs/tracking/CHANGELOG-src.md
           docs/tracking/CHANGELOG.md
           docs/tracking/file-manifest.md
-          docs/tracking/open-issues.md
           docs/tracking/spec-error-log.md
           EOF
           )
@@ -45,13 +44,13 @@ jobs:
             exit 1
           fi
 
-          # Start each conflicted tracking surface from current main, then reapply
-          # PR398's semantic close-out in append-only form.
+          # open-issues.md auto-merges cleanly; preserve that three-way result.
+          # Start the four actual conflicts from current main, then reapply PR398's
+          # semantic close-out in append-only form.
           for f in \
             docs/tracking/CHANGELOG-src.md \
             docs/tracking/CHANGELOG.md \
             docs/tracking/file-manifest.md \
-            docs/tracking/open-issues.md \
             docs/tracking/spec-error-log.md; do
             git checkout --theirs -- "$f"
           done
@@ -60,8 +59,6 @@ jobs:
           from pathlib import Path
           import re
 
-          # 1) Error log: advance from whatever main currently owns, preserve its
-          # newest update as prior, then add ERR-013-011 and its index row.
           ep = Path('docs/tracking/spec-error-log.md')
           e = ep.read_text()
           vm = re.search(r'^\*\*Version:\*\*\s+(\d+)\.(\d+)\s*$', e, re.M)
@@ -96,8 +93,6 @@ jobs:
               e = e.replace(hdr, hdr + '\n' + row, 1)
           ep.write_text(e)
 
-          # 2) CHANGELOG-src: main owns the current latest row. PR398 becomes the
-          # next sequential version and is prepended without editing main history.
           cp = Path('docs/tracking/CHANGELOG-src.md')
           c = cp.read_text()
           hm = re.search(r'^> \*\*Last Updated:\*\*.*?\(v(\d+)\.(\d+)\s+—', c, re.M)
@@ -105,8 +100,6 @@ jobs:
               raise SystemExit('CHANGELOG-src: current header/version not found')
           cmaj, cmin = map(int, hm.groups())
           new_src = f'{cmaj}.{cmin + 1}'
-          old_head = hm.group(0)
-          # Replace only the label on the existing newest line, leaving all text intact.
           line_end = c.find('\n', hm.start())
           existing_line = c[hm.start():line_end]
           prior_line = existing_line.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
@@ -128,7 +121,6 @@ jobs:
           c = c[:ins] + row + c[ins:]
           cp.write_text(c)
 
-          # 3) Root tracking changelog: prepend PR398 and demote main's newest label.
           rp = Path('docs/tracking/CHANGELOG.md')
           r = rp.read_text()
           rm = re.search(r'^> \*\*Last Updated:\*\*.*$', r, re.M)
@@ -143,7 +135,6 @@ jobs:
           r = r[:rm.start()] + w5 + '\n>\n' + prior + r[rm.end():]
           rp.write_text(r)
 
-          # 4) Manifest: same append-only treatment, with live error-log version numbers.
           mp = Path('docs/tracking/file-manifest.md')
           m = mp.read_text()
           mm = re.search(r'^\*\*Last Updated:\*\*.*$', m, re.M)
@@ -156,35 +147,12 @@ jobs:
                  f'Tracking: backlog **v1.14 → v1.15**, error log **v{old_err} → v{new_err}**, both changelogs, open issues, this manifest. W5 accepts only the completed 60 Hz `[N-AI_PHASE_STRIDE,N)` interval at AI tick `N`, completes a qualifying discrete event through the required two-heartbeat dwell, and retains homogeneous world-frame ring state. '
                  'Snapshot schema remains **21 → 22**; timing carriers are ephemeral and add no v22 bytes. No new assembly, RNG stream/domain/draw site/order or save format. README, `src/CLAUDE.md`, `SPEC_INDEX.md`, project-reference counts and roadmap stay unchanged. **GATE:** current-head PR CI owns the verdict; merge is prohibited until green.')
           m = m[:mm.start()] + w5m + '\n\n' + prior + m[mm.end():]
-          # Keep the manifest's historical "since advanced to" pointer current.
           m = re.sub(
               r'(`docs/tracking/spec-error-log\.md` \*\*v2\.42 → v2\.43\*\*, since advanced to \*\*v)\d+\.\d+(\*\*)',
               lambda x: x.group(1) + new_err + x.group(2),
               m,
           )
           mp.write_text(m)
-
-          # 5) Open issues: preserve main's current giant audit record, but update the
-          # active backlog headline and append PR398's closure note exactly once.
-          op = Path('docs/tracking/open-issues.md')
-          o = op.read_text()
-          start = o.find('- **Match-engine wiring backlog —')
-          end = o.find('\n\n- **Conversion at contact', start)
-          if start < 0 or end < 0:
-              raise SystemExit('open-issues: match-engine backlog bullet boundaries not found')
-          bullet = o[start:end]
-          bullet = bullet.replace(
-              '8 built subsystems (W3–W10) still have no production caller',
-              '6 built subsystems (W3, W4, W6, W8–W10) still have no production caller',
-              1,
-          )
-          if 'UPDATE September 12, 2026 — W5 + W7 WIRED on PR #398' not in bullet:
-              bullet += (' **UPDATE September 12, 2026 — W5 + W7 WIRED on PR #398 after two W5 review corrections.** '
-                         'W5 consumes #5 CONTACT `PassAttemptEvent`s through the opposing ring. `ERR-013-011` separates the 60 Hz EventBus clock from the 10 Hz tactical heartbeat: at AI physics tick `N`, only `[N-AI_PHASE_STRIDE,N)` may start BACKWARD_PASS dwell, and the discrete event latches only until the required two-heartbeat dwell commits. '
-                         'World-frame storage and evaluator-side normalization remain. Positive EventBus→next-stride→commit coverage proves W5 is live. W7 calls #26 `ApplyKickoff` after manager configuration and before tick 1, with AI and neutral digest locks. '
-                         'The active backlog therefore falls from eight to six Class-A items in W3–W10: **W3, W4, W6, W8, W9, W10**. KD-W1 remains active because those items and W2\'s disabled challenge still prevent complete-engine calibration.')
-          o = o[:start] + bullet + o[end:]
-          op.write_text(o)
 
           print(f'spec-error-log {old_err} -> {new_err}')
           print(f'CHANGELOG-src -> v{new_src}')
@@ -193,7 +161,6 @@ jobs:
           git add docs/tracking/CHANGELOG-src.md \
                   docs/tracking/CHANGELOG.md \
                   docs/tracking/file-manifest.md \
-                  docs/tracking/open-issues.md \
                   docs/tracking/spec-error-log.md
 
           if git diff --name-only --diff-filter=U | grep -q .; then
@@ -205,7 +172,6 @@ jobs:
           python3 tools/doc-consistency-check.py --repo .
           bash .claude/skills/landing-close-out/scripts/check_drift.sh
 
-          # Remove this one-shot resolver from the final branch tree.
           git rm .github/workflows/pr398-doc-conflict-resolver.yml
           git commit -m "docs: reconcile PR 398 tracking with main"
           git push origin HEAD:wiring/w5-w7-press-kickoff
