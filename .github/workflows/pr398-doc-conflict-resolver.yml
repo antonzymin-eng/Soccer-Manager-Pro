@@ -152,6 +152,11 @@ jobs:
               lambda x: x.group(1) + new_err + x.group(2),
               m,
           )
+          m = re.sub(
+              r'(`spec-error-log\.md` citation \(previously missing its own "since advanced to" clause\) now reads \*\*v2\.42 → v2\.43\*\*, since advanced to \*\*v)\d+\.\d+(\*\*)',
+              lambda x: x.group(1) + new_err + x.group(2),
+              m,
+          )
           mp.write_text(m)
 
           print(f'spec-error-log {old_err} -> {new_err}')
