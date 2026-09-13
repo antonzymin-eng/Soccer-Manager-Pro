@@ -12,7 +12,66 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 12, 2026 — **Unity now governs the build: 22 Unity-editor-only compile errors fixed that the Linux gate could not see. The Linux gate is kept.**
+> **Last Updated:** September 12, 2026 — **G2 ACCEPTED by the owner: the art pipeline's technical contract is proven. Documentation only.**
+>
+> Before acceptance, the five §G2 conditions were re-verified against the committed tree and the live Unity 6000.4.9f1 editor rather than read off the ledger:
+> 1. fresh resvg exports of the SVG at the import commit and at head matched the committed LFS oids;
+> 2. a forced reimport reported the documented Sprite profile;
+> 3. GUID `24746b6a…` and the whole `.meta` blob are identical at import and head;
+> 4. the path routes to LFS, the head blob is a pointer, and no object is missing on the remote;
+> 5. the font rights/script/fallback path is explicit.
+>
+> The acceptance record is `art-technical-recipe-v1.md` §11a, which states what acceptance does **not** close:
+> - no fallback chain is chosen (only the rules are);
+> - the shipping font binaries, Reserved-Font-Name handling, semi-bold gap, Ukrainian corpus proof and offline packaging stay open;
+> - the import profile is documented, not automated;
+> - the probe is not adopted;
+> - the evidence came from one AI agent session, with an external AI review of PR #405 as the independent check.
+>
+> The art plan and `art-direction-v1.md` status lines record the acceptance. No asset, meta, `.cs`, spec, RNG or schema change.
+
+> **Last Updated (prior):** September 12, 2026, latest — **AP-03: two external-review findings on PR #405 fixed — the LFS evidence named the wrong pointer for the branch head, and the probe's provenance was misclassified. Documentation and metadata only.**
+>
+> **(1) LFS evidence.** The recipe's LFS proof quoted one pointer, `826f667f…` / 2 298 B, as "the committed blob". That is the *initial import* commit `dd0d1ff5`; the replacement commit `abc07f2f` and the branch head carry `0018e255…` / 2 568 B. `art-technical-recipe-v1.md` v0.6 now records both pointers against their commits — verified with `git show <commit>:<path>` — and notes that the `.meta` blob is identical at both.
+>
+> **(2) Provenance.** The probe's `.art.json` said `source_kind: original` while naming an AI agent as its creator. The plan's §7.2 treats AI-assisted work as generated, so the record is now `generated`, with the schema's `generation` block:
+> - Claude Code / claude-opus-5, SVG markup written directly with no image model;
+> - no inputs or third-party references;
+> - no human edits, and the one in-place agent revision recorded;
+> - dates and commits.
+>
+> The rights basis no longer asserts original authorship. It states the probe is not adopted for release, and that the commercial-use basis is for the owner to confirm before any release-ready use. The sidecar passes the schema's required-key, enum, pattern and generation-block checks.
+>
+> Neither finding changes a hash, GUID or Unity result. G2 remains OPEN pending review.
+
+> **Last Updated (prior):** September 12, 2026, later — **AP-03 docs synchronised: the recipe's typography section was still recommending a font G1 had already rejected. Documentation only.**
+>
+> The earlier AP-03 recipe revision still carried IBM Plex Sans Condensed as the proposed display face, two days after the G1 acceptance record (September 10, 2026) had rejected it visually and accepted **PT Sans Narrow** / an equivalent humanist condensed face. v0.5 records the rejection (§8.4) and PT Sans Narrow's upstream evidence from `google/fonts` (§8.4a): SIL OFL 1.1, **with Reserved Font Names "PT Sans" and "ParaType"**, `cyrillic`/`cyrillic-ext` subsets declared, Regular 400 and Bold 700 only.
+>
+> Three consequences are recorded as open, not resolved:
+> - any conversion or subsetting of the font file must be checked against the RFN clause, and whether a TextMeshPro atlas counts as a Modified Version is explicitly left undecided;
+> - there is no semi-bold weight;
+> - the Ukrainian corpus proof on the exact binary is still owed.
+>
+> None of these is a G2 blocker. `art-direction-v1.md` v1.5, `art-pipeline-foundation.md` v0.9 (status header) and `art-source/README.md` now point at the AP-03 evidence. The branch is `art/ap-03-technical-recipe-proof`; the superseded `BLOCKED-art/…` remote branch was deleted after its commits were confirmed ancestors. G2 remains OPEN pending review.
+
+> **Last Updated (prior):** September 12, 2026 — **AP-03: the art pipeline's first real Unity import. G2 is evidence-complete and awaits review; it is not declared passed.**
+>
+> Run in the Unity 6000.4.9f1 editor on the pinned Windows 11 host, driven through the editor API. A deliberately neutral probe (`ui.pipeline.import-probe`) went from `art-source/ui/icons/ap03_import_probe.svg` through **resvg 0.47.0** to `Assets/GameArt/UI/Icons/ap03_import_probe.png`.
+>
+> **Exporter pin.** 0.47.0 is the newest resvg release that ships a Windows binary; 0.48.x ships none. The download matched GitHub's published release digest, and the binary lives outside the repository.
+>
+> **Reproducibility.** Exports are byte-identical across runs, and identical whether the SVG has LF or CRLF line endings. That matters because `*.svg` has no `.gitattributes` rule and this host checks out CRLF.
+>
+> **Importer behaviour — the finding with design consequence.** Five of the candidate settings differ from Unity's first-import defaults: Default type, no sprite mode, mips on, Repeat wrap, alpha-is-transparency off. A PNG dropped into `Assets/GameArt/` does not get the recipe profile unless it is set explicitly. Unity also flipped non-power-of-2 scaling to None on its own when the type became Sprite. Result: DXT5 on Standalone, about 33.7 KB editor-reported.
+>
+> **Replacement proof.** Revising the source in place and force-reimporting left GUID `24746b6a9f9592e41be3206d04b7b96e` and the entire `.meta` byte-identical. A temporary, never-committed `SpriteRenderer` prefab still resolved to the new content, and before/after pixels were measured on both the PNGs and the reimported texture. The PNG is committed as an LFS pointer whose oid is the export's sha256. `check-meta-integrity.sh` passes after both commits (`dd0d1ff5` import, `abc07f2f` replacement).
+>
+> **Recorded, not pinned.** The fallback physics shape and Tight mesh type are Unity defaults, unmeasured at probe scale. DXT5 quality has not been judged on real icon art. `com.unity.ugui` is absent from the manifest, which is why the consumer was a `SpriteRenderer` — P5b will need the package.
+>
+> The recipe ledger is `art-technical-recipe-v1.md` v0.4. No `.cs`, `.asmdef`, spec, RNG, schema or roadmap row changed.
+
+> **Last Updated (prior):** September 12, 2026 — **Unity now governs the build: 22 Unity-editor-only compile errors fixed that the Linux gate could not see. The Linux gate is kept.**
 >
 > After a fast-forward of 893 commits, the Unity 6000.4.9f1 editor on the pinned host would not compile `main`. Every error was invisible to `tools/dotnet-ci`. That gate resolves references transitively through MSBuild and compiles tests against NUnit 3.14; Unity requires every referenced assembly in the asmdef itself and bundles NUnit 3.5. Two recompile rounds surfaced them, the first set masking the second.
 >
