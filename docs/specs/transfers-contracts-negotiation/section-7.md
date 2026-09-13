@@ -1,25 +1,32 @@
 # Transfers, Contracts & Negotiation #31 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** September 12, 2026 (v0.3 — T0 landed; T1/T2/T3 remain deferred)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
 
 ## 7.1 T-phase implementation plan (post-APPROVED)
 
-- **T0** — `TacticalDirector.Transfers` assembly: value types (`Contract`, `Offer`, `NegotiationOutcome`,
-  `TransferWindow`, `ClubTransferState`, `TransfersState`), the deterministic `ValuePlayerPermille` /
-  `EvaluateOffer` / `IsWindowOpen`, `SubmitBid` (the atomic validate-all-first pipeline), `TransfersConstants`.
-  Behaviour-neutral by construction (KD-8 — no autonomous producer; a bid is a manager command).
+- **T0 — LANDED September 12, 2026.** `TacticalDirector.Transfers` production/test assemblies; value types
+  (`Contract`, `Offer`, `NegotiationOutcome`, `TransferWindow`, `ClubTransferState`, `TransfersState`); pure
+  deterministic `ValuePlayerPermille` / `EvaluateOffer` / inclusive `IsWindowOpen`; `TransfersConstants`
+  loaded through Code Standards #20's `GameplayConfig` path; and `SubmitBid` with validate-all-first atomic
+  semantics. `ITransferRosterPort` is the consumer-owned read/preflight/commit seam for the already-specified
+  #30 T2 producer, so T0 can prove atomicity without referencing #30 or mutating #27 squads directly.
+  Behaviour-neutral by construction (KD-8 — no autonomous producer; a bid is a manager command). No RNG
+  stream, save codec, season-loop invocation, or production roster adapter lands in T0.
 - **T1** — `TransfersSaveCodec` (`TRANSFERS_SAVE_FORMAT_VERSION` = 1) + composition into #30's season save
   (the `SeasonSaveCodec` sub-blob; #30's outer `SEASON_SAVE_FORMAT_VERSION` bump coordinated here — exact
   version TBD, §4.4). Fail-loud gates (F3).
 - **T2** — Wire the world-tick step at #30's **new transfers slot** (ERR-030-004, declared at approval — §8);
-  **build the #30 mid-season `RequestRosterCommit` entry point + `DispatchRosterMoveHook`** (KD-7 — a new #30
-  capability; #28/#33 subscribe their own keyed migration; recorded ERR-030-005/T2 in #30). Expose the
-  read-only transfer/contract accessors later consumers need. **No RNG stream registered (draw-free).**
+  **build the #30 mid-season roster-commit producer behind `ITransferRosterPort` + `DispatchRosterMoveHook`**
+  (KD-7 — a new #30 capability; #28/#33 subscribe their own keyed migration; recorded ERR-030-005/T2 in #30).
+  Add genesis contract seeding, season-boundary aging/reset, calendar-derived summer window, and the production
+  composition adapter. Expose the read-only transfer/contract accessors later consumers need. **No RNG stream
+  registered (draw-free).**
 - **T3** — Deep tier (each defaulting to its Stage-2 identity via `deepTransfersEnabled`): the **club-need
   signal** (`needMult`, positional scarcity — the first deep multiplicative bias on the identity); the **#33
   personality-modulated valuation** (`personalityMult` — requires a #33 back-prop for the trait read surface,
@@ -65,8 +72,8 @@
   The deep-tier `PlayerWage` producer + a `WageBudget` affordability gate (which #40 exposes as a read for
   #31/#34 but wires no gate for) land together with a #40 back-prop relaxing FR-FN-015.
 - **#30 (season loop):** owns the world-tick slot timing, the season-save composition, and the **new
-  mid-season `RequestRosterCommit` entry point + roster-move hook** (KD-7). #30 stays producer-only for #22
-  (FR-SN-017). #31 MUST NOT reference #30.
+  mid-season roster-commit producer behind `ITransferRosterPort` + roster-move hook** (KD-7). #30 stays
+  producer-only for #22 (FR-SN-017). #31 MUST NOT reference #30.
 - **#27 (squad/player data):** `Squad.ClubId` / `PlayerId = clubId*CLUB_SQUAD_SIZE+localIndex` is the
   authoritative identity; a transfer **re-keys** through #30's roster owner, never by #31 mutating #27
   directly. #31 MUST NOT gain a competing identity notion.
@@ -85,4 +92,5 @@
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial T-phase plan (T0–T3) + deferred extensions + downstream seam contracts. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-3: T3/§7.2 add the deferred wage-bill producer + `WageBudget` gate + #40 FR-FN-015 back-prop (H), the deep club-need signal, and contract free-agency; §7.3 #40 seam corrected (minimal is fee-only, no back-prop at approval) + #33 seam notes only `MoraleOf` is granted, `PersonalityProfile` needs a T3 back-prop (L). |
+| 0.3 | 2026-09-12 | — | T0 landed: production/test assemblies, deterministic valuation/offer/window core, atomic `SubmitBid`, GameplayConfig-backed `[GT]` catalogue, and consumer-owned roster port. T1/T2/T3 remain deferred. |
 #endregion
