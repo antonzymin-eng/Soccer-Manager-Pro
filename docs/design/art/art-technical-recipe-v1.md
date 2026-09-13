@@ -3,7 +3,7 @@
 **Status:** IN PROGRESS — G2 EVIDENCE COMPLETE; awaiting G2 review  
 **Created:** September 6, 2026  
 **Last Updated:** September 12, 2026  
-**Document version:** 0.4  
+**Document version:** 0.5  
 **Unity target:** `6000.4.9f1 (f7258d6eebbe)`  
 **Parent plan:** `docs/planning/art-pipeline-foundation.md` v0.8+  
 **Repository contract:** AP-01 landed in PR #365  
@@ -28,10 +28,10 @@ The workstream may establish static/repository evidence in parallel with AP-02, 
 | Managed `.meta` / project-wide GUID enforcement | PASS | AP-01 checker + mutation proof |
 | PNG Git LFS routing | PASS | proof run `34060090061` (planned path) **and** the actual committed probe: `git check-attr` resolves `filter=lfs`, `diff=lfs`, `merge=lfs`, and the committed blob is an LFS pointer (§7.1) |
 | TTF/OTF Git LFS routing | PASS | proof run `34060090061`: planned GameArt `.ttf` and `.otf` paths both resolve `filter=lfs`, `diff=lfs`, `merge=lfs` |
-| Initial font rights audit | PASS WITH DISPLAY BLOCKER | §8: all three current candidates are OFL-licensed, but Barlow Condensed lacks current upstream Cyrillic support |
+| Initial font rights audit | PASS | §8: the G1-accepted stack — PT Sans Narrow (display, §8.4a), IBM Plex Sans (body), JetBrains Mono (mono/data) — is all SIL OFL 1.1. PT Sans Narrow carries Reserved Font Names. The inherited Barlow Condensed display blocker is resolved by G1 retiring it (§8.3) |
 | Ukrainian/Cyrillic body coverage | PASS FOR CANDIDATE | IBM Plex Sans upstream states Cyrillic support; actual vendored binary still must be glyph-tested before shipping |
 | Ukrainian/Cyrillic mono coverage | PASS FOR CANDIDATE | JetBrains Mono official character/language lists include Ukrainian Cyrillic |
-| Ukrainian/Cyrillic display decision path | PASS WITH VISUAL DECISION PENDING | Barlow is unsuitable as sole Ukrainian display face; IBM Plex Sans Condensed is a technically viable replacement candidate routed to AP-02/G1 (§8.4). Final visual adoption is not a G2 prerequisite. |
+| Ukrainian/Cyrillic display decision path | PASS — VISUAL ROLE ACCEPTED AT G1; EXACT-FONT VALIDATION PENDING | Barlow is unsuitable as sole Ukrainian display face (§8.3). G1 rejected IBM Plex Sans Condensed visually (§8.4) and accepted **PT Sans Narrow** / equivalent humanist condensed face (§8.4a): OFL 1.1 with Reserved Font Names, `cyrillic` subsets declared upstream, Regular + Bold only. Exact binary, RFN handling for any conversion, and the Ukrainian corpus proof remain shipping requirements, not G2 blockers. |
 | P0 source → export reproducibility | **PASS** | §4.4: resvg 0.47.0, three exports of the original source byte-identical (`826f667f…`); the revised source likewise (`0018e255…`); output invariant to LF vs CRLF source line endings |
 | No premature runtime art | PASS (superseded by the import) | proof run `34060090061` asserted `Assets/GameArt/` absent *before* import. AP-03 has now created it legitimately through a Unity import; the only GameArt content is the probe and its Unity-authored folder/file metas |
 | Actual Unity import | **PASS** | Unity 6000.4.9f1 editor on the pinned Windows 11 host, September 12, 2026; commit `dd0d1ff5` (§5.1) |
@@ -259,18 +259,34 @@ Evidence:
 - <https://github.com/jpt/barlow>
 - <https://github.com/jpt/barlow/issues/16>
 
-### 8.4 Proposed display substitute for AP-02 review: IBM Plex Sans Condensed
+### 8.4 IBM Plex Sans Condensed — REJECTED at G1 (visual)
 
-IBM Plex Sans Condensed v3.0 added Cyrillic support (194 glyphs per font) and Bulgarian Cyrillic forms; the family is distributed under the same IBM Plex OFL project.
-
-Disposition: **preferred technical candidate to evaluate visually in AP-02** because it can keep the condensed display role while aligning with the existing IBM Plex Sans body family and removing the known Cyrillic hole. AP-02 has recorded this as explicit proposed token change T-01 rather than a silent substitution.
-
-For **G2**, this closes the required decision-path problem: the inherited face is identified as unsuitable, a rights-compatible Cyrillic-capable candidate is identified, and final visual selection is routed to G1. G2 does **not** need to wait for G1 or vendor the final font binaries, because the accepted G2 contract requires the rights/script/fallback path to be explicit rather than final typography rollout. Exact-binary adoption and corpus validation remain required before a font is marked validated/shipping.
+IBM Plex Sans Condensed v3.0 added Cyrillic support and was proposed here at v0.1 as the display substitute (AP-02 token change T-01). **G1 (owner, September 10, 2026) rejected it visually as too synthetic** — `art-direction-v1.md` §3.4 and §14 T-01. It is technically viable, but it is no longer a candidate unless the accepted role below fails exact-font validation and G1 is deliberately reopened.
 
 Evidence:
 
 - <https://github.com/IBM/plex/releases>
 
+### 8.4a PT Sans Narrow — accepted display reference (G1), pending AP-03 exact-font validation
+
+G1 accepted **PT Sans Narrow / an equivalent Cyrillic-capable humanist condensed face** for the display role (`art-direction-v1.md` §3.4, T-01). AP-03 owns the exact shipping binary, rights, offline packaging, glyph-corpus proof and fallback. It may substitute another face without reopening G1 only if the accepted visual role and dense-screen behaviour are preserved.
+
+Upstream: ParaType, distributed in `google/fonts` as `ofl/ptsansnarrow`  
+License: SIL Open Font License 1.1, **with Reserved Font Names "PT Sans" and "ParaType"** (`OFL.txt`: "Copyright (c) 2010, ParaType Ltd. … with Reserved Font Names 'PT Sans' and 'ParaType'")  
+Upstream coverage claim: `METADATA.pb` subsets `cyrillic`, `cyrillic-ext`, `latin`, `latin-ext`  
+Upstream files: `PT_Sans-Narrow-Web-Regular.ttf` (400) and `PT_Sans-Narrow-Web-Bold.ttf` (700) — **only two weights**; there is no semi-bold
+
+Disposition: **accepted visual reference; rights-compatible; Cyrillic declared upstream.** Three things follow for AP-03 and are recorded as open, not resolved:
+
+- **Reserved Font Names.** Under OFL 1.1 a Modified Version may not use a Reserved Font Name. §8.5 already forbids modifying or renaming a font in this slice. Any later subsetting, glyph-merging or format conversion of the *font file* must be checked against the RFN clause before it ships under the name "PT Sans". Whether generating a Unity/TextMeshPro atlas from an unmodified binary counts as creating a Modified Version is **not** decided here — it is a question for the typography import slice, not an assumption.
+- **Weight availability.** The display role needs "one bold/semi-bold weight" (§8.5). Bold 700 exists; semi-bold does not, so the role is Bold unless an equivalent face is substituted.
+- **Ukrainian proof.** The `cyrillic` subset declaration is upstream's claim. §9's corpus test on the exact vendored binary — Ґ ґ, Є є, І і, Ї ї, apostrophe forms — is still required before the face is marked validated.
+
+Evidence (retrieved September 12, 2026):
+
+- <https://github.com/google/fonts/blob/main/ofl/ptsansnarrow/METADATA.pb>
+- <https://github.com/google/fonts/blob/main/ofl/ptsansnarrow/OFL.txt>
+- `docs/design/art/art-direction-v1.md` §3.4, §14 T-01, §15
 ### 8.5 Packaging rule for OFL fonts
 
 For any selected font binary:
@@ -327,7 +343,7 @@ G2 stays **OPEN** until all are true:
 - [x] actual importer settings are recorded here — §5.1;
 - [x] in-place replacement preserves GUID and live consumer reference — §6.1;
 - [x] AP-01 `.meta`/duplicate-GUID gate passes after import and replacement — `check-meta-integrity.sh` **PASS** after import (`dd0d1ff5`) and after replacement (`abc07f2f`), §6.1 step 8. The whole-repo `check-binaries.sh` safety net (§7) is not a checklist item, and its run result is recorded in §7.1;
-- [x] font rights/script/fallback **decision path is explicit**: current Barlow display face is unsuitable for required Ukrainian coverage, IBM Plex Sans Condensed is the technical replacement candidate routed to AP-02/G1, and IBM Plex Sans / JetBrains Mono have viable Cyrillic paths;
+- [x] font rights/script/fallback **decision path is explicit**: current Barlow display face is unsuitable for required Ukrainian coverage; IBM Plex Sans Condensed was rejected visually at G1; G1-accepted PT Sans Narrow is OFL 1.1 (Reserved Font Names recorded) with upstream-declared Cyrillic subsets, §8.4a; IBM Plex Sans / JetBrains Mono have viable Cyrillic paths;
 - [x] no speculative Addressables/atlas/catalog architecture was introduced — the slice adds only the probe SVG, its sidecar, one PNG, and Unity-authored metas; the §6.1 consumer was temporary and is not in the tree.
 
 The following remain required **before font binaries are validated/shipping**, but are not G2 blockers unless AP-03 itself begins shipping those binaries:
@@ -348,3 +364,4 @@ If real Unity import cannot be executed, G2 remains pending regardless of how mu
 | 0.2 | 2026-09-06 | Hostile-review sequencing correction: removes accidental G1/final-font-binary prerequisites from G2, makes the import probe explicitly style-neutral/G1-independent, and treats the font audit as an explicit rights/script/fallback decision path. G2 still requires real Unity import/replacement evidence; final font binary validation remains a later shipping requirement unless AP-03 vendors fonts. |
 | 0.3 | 2026-09-06 | Static evidence recorded from run `34060090061`: Unity pin, planned PNG/TTF/OTF LFS attributes, no-premature-GameArt assertion, AP-01 integrity/binary baseline, and documentation-only scope all passed. Remaining G2 blockers are the real source/export/Unity import/importer/replacement/reference proof. *(The header still read 0.2 after this row landed; corrected at 0.4.)* |
 | 0.4 | 2026-09-12 | **Real Unity evidence recorded** on the pinned Windows 11 / Unity 6000.4.9f1 host. New §4.4: exporter pinned to resvg 0.47.0 (newest release with an official win64 binary; 0.48.x ships none), with the release-digest match and byte-identical export evidence, including LF/CRLF invariance. New §5.1: first-import defaults — five differ from the candidate, so the recipe must set them explicitly — plus applied settings, generated `.meta` fields, DXT5 format and 33 672 B editor-reported memory. New §6.1: GUID `24746b6a…` and the whole `.meta` byte-identical across in-place revision, the temporary consumer reference resolving to the new content, and before/after pixels measured. New §7.1: actual LFS pointer. Commits `dd0d1ff5` (import) and `abc07f2f` (replacement). The §2 import/importer/replacement/reproducibility rows move to PASS. AP-01 `check-meta-integrity.sh` PASS after both commits; every §11 item ticked. G2 stays OPEN pending review. |
+| 0.5 | 2026-09-12 | **Typography section re-synchronised with the G1 decision.** v0.1–0.4 still carried IBM Plex Sans Condensed as the proposed display substitute, but `art-direction-v1.md` v1.4 (G1 accepted September 10, 2026) had already rejected it visually and accepted PT Sans Narrow / an equivalent humanist condensed face. §8.4 now records that rejection. New §8.4a records PT Sans Narrow's upstream evidence: OFL 1.1 with Reserved Font Names 'PT Sans' and 'ParaType', `cyrillic`/`cyrillic-ext` subsets declared, Regular 400 + Bold 700 only. It also records three open consequences — RFN handling for any font-file conversion, no semi-bold weight, and the still-required Ukrainian corpus proof. §2 display row and the §11 font item updated. No Unity evidence changed; G2 remains OPEN pending review. |

@@ -1,9 +1,9 @@
 # System XI — Art Pipeline Plan
 
-**Status:** ACCEPTED — AP-01 AUTHORIZED  
+**Status:** ACCEPTED — AP-01 landed; G1 accepted (September 10, 2026); AP-03/G2 Unity evidence complete, awaiting review (September 12, 2026)  
 **Started:** September 4, 2026  
-**Last Updated:** September 6, 2026  
-**Version:** 0.8  
+**Last Updated:** September 12, 2026  
+**Version:** 0.9  
 **Implementation gate:** G0 ACCEPTED September 6, 2026 by owner; AP-01 authorized.  
 **Purpose:** Define a production-grade art pipeline that can run in parallel with simulation, UI/UX, localization, audio, and management-layer development without creating asset debt, rights risk, or presentation-layer coupling.
 
@@ -914,3 +914,4 @@ Opening G0 authorizes **AP-01 only**, followed by AP-02 and AP-03 substantially 
 | 0.6 | 2026-09-06 | AP-01 execution refinement after external review: named all three checker enumerations; required duplicate-GUID detection as one cross-tree `src/` + `Assets/GameArt/` scan; restricted `generate-missing-metas.sh` to folders/CI safety rather than production art assets; assigned importer-bearing art-asset metas to actual Unity import in AP-03; expanded mutation proof to missing, orphan, and cross-tree duplicate cases. |
 | 0.7 | 2026-09-06 | **G0 accepted by owner.** Planning gate closed successfully and AP-01 repository-contract implementation authorized. No bulk asset generation or later family-scale gate was opened. |
 | 0.8 | 2026-09-06 | Post-acceptance Codex review correction before landing: preserved managed-root missing/orphan scope but widened duplicate-GUID detection to one project-wide scan across every tracked `.meta` under `Assets/` plus the junction-backed `src/` tree; expanded mutation proof to include a GameArt collision with another `Assets/` meta. G0 remains accepted and AP-01 authorization unchanged. |
+| 0.9 | 2026-09-12 | Status-header synchronisation only; no plan content changed. AP-01 landed (PR #365). G1 was accepted by the owner on September 10, 2026 (`docs/design/art/art-direction-v1.md` v1.4). AP-03 has recorded real Unity 6000.4.9f1 import, importer, GUID-replacement and LFS evidence for G2 in `docs/design/art/art-technical-recipe-v1.md` v0.5. G2 is **not** passed — it awaits review under §G2, and exact shipping-font validation remains AP-03 work. |

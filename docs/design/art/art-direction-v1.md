@@ -372,7 +372,7 @@ Acceptance confirms:
 4. the density/no-wasted-space principle is accepted;
 5. composite star gauges, numeric individual attributes, preferred-position highlighting, match marker language, club/kit treatment, stadium treatment, and panel-control affordances are sufficiently defined to judge later samples;
 6. the deterministic reference demonstrates a professional Stage-1 target rather than placeholder-quality presentation;
-7. AP-03 technical/font/rights/import proof remains separate and pending.
+7. AP-03 technical/font/rights/import proof remains separate and pending. *(Update September 12, 2026: the source → export → Unity import/GUID/LFS half of AP-03 is evidence-complete in `art-technical-recipe-v1.md` v0.5, with G2 awaiting review. The exact PT Sans Narrow binary, its Reserved-Font-Name handling, offline packaging and the Ukrainian corpus proof are still pending.)*
 
 `style_version = art-direction-v1` is now an accepted family target. G1 should be reopened only for a deliberate material art-direction change, not ordinary implementation polish.
 
@@ -387,3 +387,4 @@ Acceptance confirms:
 | 1.2 | 2026-09-06 | Required representative dense-screen visual regression evidence before G1. |
 | 1.3 | 2026-09-06 | Corrected unsupported font-weight assumptions in the visual proof. |
 | 1.4 | 2026-09-10 | **G1 accepted.** Freezes Retro Dynamo Blue as primary skin, preserves Retro Bronze as alternate skin, records the no-wasted-space rule, humanist condensed typography role, deterministic 11-v-11 match invariant, star-gauge conventions, preferred-position behavior, retro texture, elevated panel language, and lock/dropdown/drag/resize panel affordances. AP-03/G2 technical proof remains pending. |
+| 1.5 | 2026-09-12 | Cross-reference only: §15 item 7 annotated with AP-03's progress — Unity import/GUID/LFS evidence recorded, G2 awaiting review — and the font-validation work still open (see `art-technical-recipe-v1.md` §8.4a). No art-direction decision changed. |
