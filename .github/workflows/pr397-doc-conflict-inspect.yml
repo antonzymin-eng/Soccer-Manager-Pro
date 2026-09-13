@@ -1,0 +1,54 @@
+name: PR397 documentation conflict inspection
+
+on:
+  push:
+    branches:
+      - localization/l1-core-contracts
+    paths:
+      - .github/workflows/pr397-doc-conflict-inspect.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Inspect merge conflicts against current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          rc=$?
+          set -e
+          echo "merge exit: $rc"
+          conflicts="$(git diff --name-only --diff-filter=U)"
+          echo "CONFLICTS_BEGIN"
+          printf '%s\n' "$conflicts"
+          echo "CONFLICTS_END"
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            echo "===== $path ====="
+            python - "$path" <<'PY'
+          import sys
+          from pathlib import Path
+          p = Path(sys.argv[1])
+          lines = p.read_text(encoding='utf-8').splitlines()
+          marks = [i for i, line in enumerate(lines) if line.startswith('<<<<<<< ')]
+          for n, i in enumerate(marks, 1):
+              j = i
+              while j < len(lines) and not lines[j].startswith('>>>>>>> '):
+                  j += 1
+              lo = max(0, i - 3)
+              hi = min(len(lines), j + 4)
+              print(f'--- conflict {n} lines {i+1}-{j+1} ---')
+              for k in range(lo, hi):
+                  print(f'{k+1:06d}: {lines[k]}')
+          PY
+          done <<< "$conflicts"
+          test "$rc" -ne 0
