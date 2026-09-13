@@ -12,7 +12,15 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 12, 2026 — **G2 ACCEPTED by the owner: the art pipeline's technical contract is proven. Documentation only.**
+> **Last Updated:** September 13, 2026 — **`.gitignore` now ignores Unity's `.meta` files for the Linux gate's generated `.gen.csproj` projects. Repository hygiene only.**
+>
+> `tools/dotnet-ci` writes a `.gen.csproj` next to every asmdef in `src/`, and those were already ignored. Unity sees `src/` through the `Assets/Scripts` junction, though, and writes a `.meta` for each one, which nothing ignored. After one local gate run, 70 of them sat untracked in `git status`.
+>
+> They are harmless while untracked. A broad `git add` would commit them, and `check-meta-integrity.sh` would then fail every one as an orphan meta, since its asset is ignored. Deleting them is not a fix: Unity recreates them while the `.gen.csproj` files exist, and the next gate run recreates those.
+>
+> One rule, `*.gen.csproj.meta`, added beside the existing `*.gen.csproj` rule. No tracked file matches it, and ordinary asset metas such as `*.cs.meta` are unaffected. No source, spec or asset change.
+
+> **Last Updated (prior):** September 12, 2026 — **G2 ACCEPTED by the owner: the art pipeline's technical contract is proven. Documentation only.**
 >
 > Before acceptance, the five §G2 conditions were re-verified against the committed tree and the live Unity 6000.4.9f1 editor rather than read off the ledger:
 > 1. fresh resvg exports of the SVG at the import commit and at head matched the committed LFS oids;
