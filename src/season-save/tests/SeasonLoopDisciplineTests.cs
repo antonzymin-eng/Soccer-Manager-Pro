@@ -1,5 +1,7 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
+// Modified: 2026-09-12 (Unity editor compile — Does.Not.Contain(int) → Has.No.Member: Unity's bundled
+//           NUnit 3.5 only has the string overload; same assertion, compiles under both NUnits)
 // Modified: 2026-09-11 (#40 T2b — season-boundary discipline fixtures carry finance state)
 // Modified: 2026-08-16, latest of all again (M-C, adversarial review — v1.13: the production
 //           onPitchAgentIdCount argument at SeasonLoop.PlayThroughEngine's CardLedgerFold construction
@@ -482,7 +484,7 @@ namespace TacticalDirector.SeasonSave.Tests
 
             loop.BootFixtureEngine(in fixture, league, out int[] homeXi, out _, out _, out _);
 
-            Assert.That(homeXi, Does.Not.Contain(bannedStarter),
+            Assert.That(homeXi, Has.No.Member(bannedStarter),
                 "A suspended home starter was still fielded. The filter is not reaching the engine "
                 + "boot's resolve→filter→configure seam (ERR-030-009 / FR-DC-010).");
             Assert.That(homeXi.Length, Is.EqualTo(baselineXi.Length),
@@ -507,7 +509,7 @@ namespace TacticalDirector.SeasonSave.Tests
 
             loop.BootFixtureEngine(in fixture, league, out _, out int[] awayXi, out _, out _);
 
-            Assert.That(awayXi, Does.Not.Contain(bannedStarter),
+            Assert.That(awayXi, Has.No.Member(bannedStarter),
                 "A suspended AWAY starter was still fielded. The seam must filter each resolved squad "
                 + "of the fixture, not only the managed club's.");
         }
@@ -868,9 +870,9 @@ namespace TacticalDirector.SeasonSave.Tests
 
             loop.BootFixtureEngine(in fixture, league, out int[] homeXi, out _, out _, out _);
 
-            Assert.That(homeXi, Does.Not.Contain(suspended),
+            Assert.That(homeXi, Has.No.Member(suspended),
                 "The suspension removal was lost when composed with the injury removal.");
-            Assert.That(homeXi, Does.Not.Contain(injured),
+            Assert.That(homeXi, Has.No.Member(injured),
                 "The injury removal was lost when composed with the suspension removal. Both are "
                 + "removals and the composition is a union — neither may mask the other.");
         }

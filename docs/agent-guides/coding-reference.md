@@ -111,7 +111,32 @@ dotnet build /p:TreatWarningsAsErrors=true
 dotnet test
 ```
 
-**Linux compile/test gate (non-certifying; runs in CI on every push):**
+**Unity editor compile (governing — owner decision, September 12, 2026):**
+
+The Unity 6000.4.9f1 editor on the pinned host is the authoritative compiler. Code that passes the
+Linux gate below can still fail in Unity, and on September 12, 2026 it had — `main` carried 22
+editor-only compile errors across two recompiles that no CI run could see. Three differences cause this:
+
+| Linux gate | Unity editor | Consequence |
+|---|---|---|
+| MSBuild `ProjectReference` is transitive | an `.asmdef` sees only the assemblies it lists | a file naming e.g. `AgentState` or `BallState` needs `TacticalDirector.AgentMovement` / `TacticalDirector.BallPhysics` in its **own** asmdef (CS0012 / CS0234) |
+| NUnit 3.14 (NuGet) | NUnit 3.5 (bundled with `com.unity.test-framework` 1.1.33) | no `Assert.Multiple` (CS0117) |
+| same | same | `Does.Not.Contain(x)` has only the string overload — use `Has.No.Member(x)` for non-string `x` (CS1503). The positive `Does.Contain(x)` compiles in both |
+
+Verifying a change in the editor. `Assets/Scripts` is a junction to `src/` (see `Assets/README.md`).
+
+1. Unity does **not** see file changes through the junction. **Assets → Refresh** is a 0.1 s no-op after a pull
+   or edit. Force a recursive reimport instead:
+   `AssetDatabase.ImportAsset("Assets/Scripts", ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate)`
+   (from an editor script or the Unity MCP `RunCommand` tool), or restart the editor.
+2. Read the result from `%LOCALAPPDATA%\Unity\Editor\Editor.log`: take the `error CS` lines between the last
+   two `CompileScripts:` markers, then confirm a following `Reloading assemblies after finishing script
+   compilation`. Compile errors reach the console as type *Log*, so an Error-type console filter
+   reports zero while errors exist.
+3. A recompile can expose a new set of errors that the previous set was masking. Repeat until a pass
+   reports none.
+
+**Linux compile/test gate (non-certifying; runs in CI on every push; kept as a supplement to the Unity compile):**
 
 ```bash
 bash tools/dotnet-ci/run-gate.sh
