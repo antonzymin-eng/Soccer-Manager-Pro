@@ -1,9 +1,9 @@
 # System XI — Art Technical Recipe v1
 
-**Status:** IN PROGRESS — G2 PENDING REAL UNITY IMPORT  
+**Status:** IN PROGRESS — G2 EVIDENCE COMPLETE; awaiting G2 review  
 **Created:** September 6, 2026  
-**Last Updated:** September 6, 2026  
-**Document version:** 0.2  
+**Last Updated:** September 12, 2026  
+**Document version:** 0.4  
 **Unity target:** `6000.4.9f1 (f7258d6eebbe)`  
 **Parent plan:** `docs/planning/art-pipeline-foundation.md` v0.8+  
 **Repository contract:** AP-01 landed in PR #365  
@@ -24,20 +24,20 @@ The workstream may establish static/repository evidence in parallel with AP-02, 
 |---|---|---|
 | Unity version pinned | PASS | `ProjectSettings/ProjectVersion.txt`: 6000.4.9f1, revision `f7258d6eebbe` |
 | Source/runtime separation | PASS | AP-01 `art-source/README.md`; runtime root is `Assets/GameArt/` |
-| `.art.json` production-candidate record | PASS | AP-01 schema/template |
+| `.art.json` production-candidate record | PASS | AP-01 schema/template; the probe's `art-source/ui/icons/ap03_import_probe.art.json` satisfies the schema's required keys, enums and `asset_id` pattern |
 | Managed `.meta` / project-wide GUID enforcement | PASS | AP-01 checker + mutation proof |
-| PNG Git LFS routing | PASS | proof run `34060090061`: planned `Assets/GameArt/UI/Icons/ap03_import_probe.png` resolves `filter=lfs`, `diff=lfs`, `merge=lfs` |
+| PNG Git LFS routing | PASS | proof run `34060090061` (planned path) **and** the actual committed probe: `git check-attr` resolves `filter=lfs`, `diff=lfs`, `merge=lfs`, and the committed blob is an LFS pointer (§7.1) |
 | TTF/OTF Git LFS routing | PASS | proof run `34060090061`: planned GameArt `.ttf` and `.otf` paths both resolve `filter=lfs`, `diff=lfs`, `merge=lfs` |
 | Initial font rights audit | PASS WITH DISPLAY BLOCKER | §8: all three current candidates are OFL-licensed, but Barlow Condensed lacks current upstream Cyrillic support |
 | Ukrainian/Cyrillic body coverage | PASS FOR CANDIDATE | IBM Plex Sans upstream states Cyrillic support; actual vendored binary still must be glyph-tested before shipping |
 | Ukrainian/Cyrillic mono coverage | PASS FOR CANDIDATE | JetBrains Mono official character/language lists include Ukrainian Cyrillic |
 | Ukrainian/Cyrillic display decision path | PASS WITH VISUAL DECISION PENDING | Barlow is unsuitable as sole Ukrainian display face; IBM Plex Sans Condensed is a technically viable replacement candidate routed to AP-02/G1 (§8.4). Final visual adoption is not a G2 prerequisite. |
-| P0 source → export reproducibility | PENDING | create a deliberately neutral technical import probe that does not depend on AP-02/G1; it may later be deleted/deprecated if it has no product use |
-| No premature runtime art | PASS | proof run `34060090061`: `Assets/GameArt/`, `Assets/GameArt.meta`, and tracked GameArt paths are absent |
-| Actual Unity import | **PENDING** | must be performed in Unity 6000.4.9f1; no hand-authored production file meta permitted |
-| Importer settings captured from Unity | **PENDING** | record actual `.meta`/Inspector values after import |
-| In-place replacement preserves GUID | **PENDING** | replace probe bytes/source export, reimport, verify `.meta` GUID unchanged and consumer reference intact |
-| G2 | **OPEN** | cannot pass without the pending Unity evidence above |
+| P0 source → export reproducibility | **PASS** | §4.4: resvg 0.47.0, three exports of the original source byte-identical (`826f667f…`); the revised source likewise (`0018e255…`); output invariant to LF vs CRLF source line endings |
+| No premature runtime art | PASS (superseded by the import) | proof run `34060090061` asserted `Assets/GameArt/` absent *before* import. AP-03 has now created it legitimately through a Unity import; the only GameArt content is the probe and its Unity-authored folder/file metas |
+| Actual Unity import | **PASS** | Unity 6000.4.9f1 editor on the pinned Windows 11 host, September 12, 2026; commit `dd0d1ff5` (§5.1) |
+| Importer settings captured from Unity | **PASS** | §5.1: first-import defaults, applied candidate settings, generated `.meta` fields, dimensions, format and memory |
+| In-place replacement preserves GUID | **PASS** | §6.1: GUID `24746b6a9f9592e41be3206d04b7b96e` unchanged, `.meta` byte-identical, consumer reference resolves; commit `abc07f2f` |
+| G2 | **OPEN — evidence complete** | every §11 checklist item is ticked with recorded evidence; G2 passes only on review, not on this ledger's own say-so |
 
 ---
 
@@ -47,15 +47,15 @@ The first runtime import will use a deliberately non-product-specific **UI icon 
 
 The probe is intentionally **independent of G1**. AP-02 may continue refining the production icon language in parallel; AP-03 needs only a neutral geometric source that exercises the technical path. Passing G2 does not make that probe an approved production-style asset.
 
-Planned semantic identity:
+Semantic identity (as landed):
 
 - art asset ID: `ui.pipeline.import-probe`;
-- planned source: `art-source/ui/icons/ap03_import_probe.svg` (or the AP-02-approved vector-master equivalent);
-- planned runtime export: `Assets/GameArt/UI/Icons/ap03_import_probe.png`;
-- planned metadata sidecar: adjacent to the source as `ap03_import_probe.art.json`;
+- source: `art-source/ui/icons/ap03_import_probe.svg` — a 128×128 viewBox with a rounded-square outline (`#5A6270`, 8 px stroke) and a filled circle, on a transparent background;
+- runtime export: `Assets/GameArt/UI/Icons/ap03_import_probe.png`;
+- metadata sidecar: `art-source/ui/icons/ap03_import_probe.art.json`;
 - runtime filename is semantic/lower-snake-case; no revision suffix.
 
-**Do not create the runtime PNG on the branch until the same operation can pass through actual Unity import and commit the Unity-authored `.meta`.** AP-01's checker intentionally makes a half-imported state fail.
+**Do not create the runtime PNG on the branch until the same operation can pass through actual Unity import and commit the Unity-authored `.meta`.** AP-01's checker intentionally makes a half-imported state fail. *(Satisfied: the PNG entered Git in the same commit as its Unity-authored `.meta`, `dd0d1ff5`.)*
 
 The probe may be deleted/deprecated after G2 if it has no product use; its evidence remains in Git/this document.
 
@@ -81,6 +81,25 @@ PSD, TIFF, EXR/HDR working masters, DCC-specific sources, generation working fil
 ### 4.3 Future formats
 
 3D/model production remains AP-14. Atlases, Addressables, catalogs, and importer automation remain evidence-gated.
+
+### 4.4 SVG → PNG exporter (recipe, proven on the probe)
+
+| Item | Value |
+|---|---|
+| Tool | `resvg` **0.47.0**, official `resvg-win64.zip` from `github.com/linebender/resvg` releases (tag `v0.47.0`) |
+| Archive integrity | zip sha256 `5684e59ceaa53ce720b49efb441b0918ae99d04e8ce3f6f753664524592d67f1` — matches the digest GitHub publishes for the release asset; `resvg.exe` sha256 `433a7c744cff561ed64fcf73c7c04e239d7a07ae5f0aadbf1ba8471d63707402` |
+| Install location | outside the repository (`%LOCALAPPDATA%\Programs\resvg-0.47.0\` on the pinned host); no binary is vendored |
+| Command | `resvg --width <W> --height <H> <source.svg> <Assets/GameArt/.../<name>.png>` — the probe uses `--width 128 --height 128` |
+| Why 0.47.0 and not latest | `v0.48.0`/`v0.48.1` (August 2026) publish **no Windows binary**; 0.47.0 is the newest release with an official win64 build. Moving the pin is a recipe change: re-run the reproducibility check and record new hashes |
+
+Reproducibility evidence on the pinned host:
+
+| Source revision | Source sha256 | Export sha256 | Size | Runs compared |
+|---|---|---|---|---|
+| original (`dd0d1ff5`) | `cd033dbe9a277f5ffc84d024147f5f6c935e33ff1b2ec50cf12c444f5ea98acc` (as authored, LF) | `826f667f5e58f35026e373babad6e1c240c618129659bb30503e621a1d7bb08a` | 2 298 B | 3 exports, byte-identical |
+| revised (`abc07f2f`) | — | `0018e255ed05541f16eb96e47dc48c34c44d1f9fb20eaecec91b9549928f66ef` | 2 568 B | 2 exports byte-identical; the same source rewritten with LF and with CRLF line endings exports byte-identically |
+
+The line-ending check matters because `.gitattributes` carries no rule for `*.svg` (it falls to `* text=auto`) and this host checks out with `core.autocrlf=true`, so the SVG's bytes on disk differ by platform. The export does not, so no `.gitattributes` change is needed for reproducibility.
 
 ---
 
@@ -109,6 +128,40 @@ After the first import, record:
 3. imported texture dimensions/runtime memory where available;
 4. any automatic value Unity writes that differs from this candidate table.
 
+### 5.1 Recorded Unity 6000.4.9f1 result (September 12, 2026)
+
+Imported in the Unity 6000.4.9f1 editor on the pinned Windows 11 / DX11 / Mono host. Values were read from `TextureImporter` through the editor API immediately after each import, and cross-checked against the generated `.meta`.
+
+**First-import defaults — what Unity chose with no settings applied.** Every row marked ≠ differs from the candidate, so the recipe must set it explicitly; a PNG dropped into `Assets/GameArt/` and left at defaults does not get the candidate profile.
+
+| Setting | Unity first-import default | Candidate | |
+|---|---|---|---|
+| Texture Type | Default | Sprite (2D and UI) | ≠ |
+| Sprite Mode | None | Single | ≠ |
+| sRGB | on | on | = |
+| Alpha Is Transparency | off (Alpha Source: From Input) | on | ≠ |
+| Mip Maps | on | off | ≠ |
+| Wrap Mode | Repeat | Clamp | ≠ |
+| Filter Mode | Bilinear | Bilinear | = |
+| Aniso level | 1 | — | |
+| Compression | Compressed (Normal Quality) | editor/platform default | = |
+| Max Size | 2048 | none pinned | |
+| Non-Power-of-2 | ToNearest | — | |
+| Read/Write | off | — | |
+
+**After applying the candidate settings** (`SaveAndReimport`): Texture Type Sprite, Sprite Mode Single, sRGB on, Alpha Is Transparency on, Mip Maps off, Wrap Clamp, Filter Bilinear, Compression Compressed, Max Size 2048, Pixels Per Unit 100, pivot centre (0.5, 0.5), Read/Write off. **Automatic value Unity changed on its own:** Non-Power-of-2 went `ToNearest → None` when the type became Sprite (the probe is 128×128, so this has no effect here, but it will on NPOT exports).
+
+**Generated `.meta` fields worth pinning** (`Assets/GameArt/UI/Icons/ap03_import_probe.png.meta`, sha256 `48a517931ff1dbc9f08c72a6b709328a824d983c6d77ea5a232af38d3289cfe0`): `serializedVersion: 13`; `textureType: 8`; `spriteMode: 1`; `enableMipMap: 0`; `sRGBTexture: 1`; `alphaIsTransparency: 1`; `alphaUsage: 1`; `textureSettings` `filterMode: 1`, `aniso: 1`, `wrapU/V/W: 1`; `nPOTScale: 0`; `maxTextureSize: 2048`; `compressionQuality: 50`; `spriteMeshType: 1` (Tight); `spriteExtrude: 1`; `spriteGenerateFallbackPhysicsShape: 1`; `spritePixelsToUnits: 100`. `platformSettings` holds three non-overridden entries — `DefaultTexturePlatform`, `Standalone`, `WebGL` — each `textureFormat: -1` (automatic), `textureCompression: 1`, `crunchedCompression: 0`.
+
+**Imported result:** 128×128; Standalone automatic format **DXT5** (`RGBA_DXT5_SRGB`), 1 mip level; editor-reported runtime memory (`Profiler.GetRuntimeMemorySizeLong`) **33 672 bytes**. The sprite imported as `ap03_import_probe`, rect 128×128, 100 PPU, pivot (64, 64) px.
+
+**Recorded, not yet pinned** — these are observations for AP-06 or a family recipe, not settings changed here:
+
+- `spriteGenerateFallbackPhysicsShape: 1` is on by default. A UI icon needs no physics shape, but turning it off is an optimisation with no measured need at probe scale.
+- `spriteMeshType: 1` (Tight) is the default. For UGUI `Image` rendering the mesh type is not used, but for `SpriteRenderer` Tight costs extra vertices on simple shapes.
+- DXT5 at 128×128 is small, and the probe shows no visible banding. Compression quality has **not** been judged on real icon art. The candidate "platform default initially" stands until AP-04 has representative assets.
+- `com.unity.ugui` is **not** in `Packages/manifest.json`, so the probe's consumer was a `SpriteRenderer`, not a UGUI `Image` (§6.1). The UGUI binding (P5b) will need the package added before any `Image`-based consumer exists.
+
 ---
 
 ## 6. GUID replacement proof
@@ -126,6 +179,20 @@ G2 requires this exact sequence on the imported probe:
 
 If the path must be moved during the proof, move the asset and `.meta` together and treat that as a separate rename test rather than conflating it with ordinary replacement.
 
+### 6.1 Recorded proof (September 12, 2026)
+
+| Step | Result |
+|---|---|
+| 1. Import + commit | Commit `dd0d1ff5`: PNG (LFS), Unity-authored file `.meta`, and the three Unity-authored folder metas `Assets/GameArt.meta` (`47f3359c00fa4cb4e88a49ea9afdd8b6`), `Assets/GameArt/UI.meta` (`3875ca4a73fc02d4a9555611b2e4fe44`), `Assets/GameArt/UI/Icons.meta` (`82801b7cb8e3c82418fc1fb53b76a9f5`). No meta was hand-written or generated by script. |
+| 2. GUID | `24746b6a9f9592e41be3206d04b7b96e`; unchanged across first import and the candidate-settings reimport. |
+| 3. Consumer | A prefab with one `SpriteRenderer` whose sprite is the probe. Its YAML serialized `m_Sprite: {fileID: 21300000, guid: 24746b6a9f9592e41be3206d04b7b96e, type: 3}` and `AssetDatabase.GetDependencies` listed the probe PNG. **Temporary by design:** created at `Assets/ArtPipelineProof/`, never committed, and deleted after step 7, so G2 introduces no consumer surface of its own (§11, no speculative architecture). |
+| 4. In-place revision | Same source and export path. Inner circle `r=26 #8A93A3` → `r=32 #B4BBC7`, re-exported with the §4.4 command (`826f667f…` → `0018e255…`). |
+| 5. Reimport | `AssetDatabase.ImportAsset(…, ForceUpdate \| ForceSynchronousImport)`. |
+| 6. `.meta` identity | GUID identical, and the whole `.meta` **byte-identical** (sha256 `48a51793…` before and after). Commit `abc07f2f` changes only the SVG and the PNG pointer; the `.meta` is absent from its diff. |
+| 7. Consumer resolves | After reimport the prefab's `SpriteRenderer.sprite` resolved to `ap03_import_probe` at the same path, GUID `24746b6a…` and local file id `21300000`. Its texture's `imageContentsHash` equals the freshly reimported texture's (`eb151f10deb6e5feeb50acdfd365ff2a`), so the reference sees the **new** content, not a cached copy. |
+| Content actually changed | Pixel (64, 93), Unity's bottom-up coordinates, measured on both sides. The original export decodes to RGBA `(0,0,0,0)` there and the revised export to `(180,187,199,255)` = `#B4BBC7`. The reimported Unity texture samples `(181,186,198,255)` there — the revised colour within DXT5 error. |
+| 8. AP-01 gate | `tools/unity-ci/check-meta-integrity.sh` — after step 1 (`dd0d1ff5`): **"Meta integrity OK: no managed-root missing/orphan metas and no duplicate GUIDs across tracked Assets/ + src/."**, exit 0. After replacement (`abc07f2f`): **same output, exit 0.** Both runs on the pinned host, Git Bash. |
+
 ---
 
 ## 7. Git/LFS proof
@@ -139,6 +206,14 @@ The repository already routes the initial binary categories through Git LFS:
 Before G2 closes, record `git check-attr filter diff merge -- <runtime-path>` for the actual probe and any font binary introduced by this slice. Expected binary result is `filter=lfs`, `diff=lfs`, `merge=lfs`.
 
 `tools/unity-ci/check-binaries.sh` remains the whole-repository large-binary safety net. LFS routing is a repository contract; AP-03 does not introduce a second binary storage system.
+
+### 7.1 Recorded proof (September 12, 2026)
+
+- `git check-attr filter diff merge -- Assets/GameArt/UI/Icons/ap03_import_probe.png` → `filter: lfs`, `diff: lfs`, `merge: lfs`.
+- The staged/committed blob is an LFS pointer, not image bytes: `version https://git-lfs.github.com/spec/v1` / `oid sha256:826f667f5e58f35026e373babad6e1c240c618129659bb30503e621a1d7bb08a` / `size 2298`. The oid equals the exported PNG's sha256 (§4.4). `git lfs ls-files` lists the path.
+- Host: `git-lfs/3.7.0`, with the `filter.lfs.*` config and the `pre-push` hook installed.
+- No font binary was introduced by this slice.
+- `tools/unity-ci/check-binaries.sh` (pinned host, Git Bash, started on the `dd0d1ff5` tree; the replacement adds no binary over threshold): **"Binary guard OK: no un-LFS'd binaries over 1048576 bytes, no text files over 4194304 bytes."**, exit 0.
 
 ---
 
@@ -246,14 +321,14 @@ The mockups currently fetch fonts over the network. Shipping client rules:
 
 G2 stays **OPEN** until all are true:
 
-- [ ] one neutral technical source asset exports reproducibly to PNG without depending on G1 approval;
-- [ ] `git check-attr` proves LFS routing on the actual runtime path;
-- [ ] Unity 6000.4.9f1 imports the PNG and authors the production `.meta`;
-- [ ] actual importer settings are recorded here;
-- [ ] in-place replacement preserves GUID and live consumer reference;
-- [ ] AP-01 `.meta`/duplicate-GUID gate passes after import and replacement;
+- [x] one neutral technical source asset exports reproducibly to PNG without depending on G1 approval — §4.4;
+- [x] `git check-attr` proves LFS routing on the actual runtime path — §7.1;
+- [x] Unity 6000.4.9f1 imports the PNG and authors the production `.meta` — §5.1, §6.1 step 1;
+- [x] actual importer settings are recorded here — §5.1;
+- [x] in-place replacement preserves GUID and live consumer reference — §6.1;
+- [x] AP-01 `.meta`/duplicate-GUID gate passes after import and replacement — `check-meta-integrity.sh` **PASS** after import (`dd0d1ff5`) and after replacement (`abc07f2f`), §6.1 step 8. The whole-repo `check-binaries.sh` safety net (§7) is not a checklist item, and its run result is recorded in §7.1;
 - [x] font rights/script/fallback **decision path is explicit**: current Barlow display face is unsuitable for required Ukrainian coverage, IBM Plex Sans Condensed is the technical replacement candidate routed to AP-02/G1, and IBM Plex Sans / JetBrains Mono have viable Cyrillic paths;
-- [ ] no speculative Addressables/atlas/catalog architecture was introduced.
+- [x] no speculative Addressables/atlas/catalog architecture was introduced — the slice adds only the probe SVG, its sidecar, one PNG, and Unity-authored metas; the §6.1 consumer was temporary and is not in the tree.
 
 The following remain required **before font binaries are validated/shipping**, but are not G2 blockers unless AP-03 itself begins shipping those binaries:
 
@@ -271,4 +346,5 @@ If real Unity import cannot be executed, G2 remains pending regardless of how mu
 |---|---|---|
 | 0.1 | 2026-09-06 | AP-03 technical contract/evidence ledger created. Records Unity 6000.4.9f1 target, source/export/import/GUID/LFS proof procedure, initial importer candidates, and font rights/script audit. Identifies Barlow Condensed Cyrillic gap and proposes IBM Plex Sans Condensed for AP-02 visual review. G2 explicitly remains open pending real Unity import and exact-binary font proof. |
 | 0.2 | 2026-09-06 | Hostile-review sequencing correction: removes accidental G1/final-font-binary prerequisites from G2, makes the import probe explicitly style-neutral/G1-independent, and treats the font audit as an explicit rights/script/fallback decision path. G2 still requires real Unity import/replacement evidence; final font binary validation remains a later shipping requirement unless AP-03 vendors fonts. |
-| 0.3 | 2026-09-06 | Static evidence recorded from run `34060090061`: Unity pin, planned PNG/TTF/OTF LFS attributes, no-premature-GameArt assertion, AP-01 integrity/binary baseline, and documentation-only scope all passed. Remaining G2 blockers are the real source/export/Unity import/importer/replacement/reference proof. |
+| 0.3 | 2026-09-06 | Static evidence recorded from run `34060090061`: Unity pin, planned PNG/TTF/OTF LFS attributes, no-premature-GameArt assertion, AP-01 integrity/binary baseline, and documentation-only scope all passed. Remaining G2 blockers are the real source/export/Unity import/importer/replacement/reference proof. *(The header still read 0.2 after this row landed; corrected at 0.4.)* |
+| 0.4 | 2026-09-12 | **Real Unity evidence recorded** on the pinned Windows 11 / Unity 6000.4.9f1 host. New §4.4: exporter pinned to resvg 0.47.0 (newest release with an official win64 binary; 0.48.x ships none), with the release-digest match and byte-identical export evidence, including LF/CRLF invariance. New §5.1: first-import defaults — five differ from the candidate, so the recipe must set them explicitly — plus applied settings, generated `.meta` fields, DXT5 format and 33 672 B editor-reported memory. New §6.1: GUID `24746b6a…` and the whole `.meta` byte-identical across in-place revision, the temporary consumer reference resolving to the new content, and before/after pixels measured. New §7.1: actual LFS pointer. Commits `dd0d1ff5` (import) and `abc07f2f` (replacement). The §2 import/importer/replacement/reproducibility rows move to PASS. AP-01 `check-meta-integrity.sh` PASS after both commits; every §11 item ticked. G2 stays OPEN pending review. |

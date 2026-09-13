@@ -1,6 +1,9 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 11, 2026, later — **PR #379 semantic reconciliation of the two valid post-#368 Audio #51 corrections onto current `main`.**
+**Last Updated:** September 12, 2026 — **AP-03 G2 Unity evidence: the first runtime GameArt asset imported through Unity 6000.4.9f1 on the pinned host.**
+**NEW (8):** `art-source/ui/icons/ap03_import_probe.svg`; `art-source/ui/icons/ap03_import_probe.art.json`; `Assets/GameArt.meta`, `Assets/GameArt/UI.meta`, `Assets/GameArt/UI/Icons.meta` (Unity-authored folder metas); `Assets/GameArt/UI/Icons/ap03_import_probe.png` (Git LFS); `Assets/GameArt/UI/Icons/ap03_import_probe.png.meta` (Unity-authored, GUID `24746b6a9f9592e41be3206d04b7b96e`); and this file's first row for `docs/design/art/art-technical-recipe-v1.md`, which landed on the AP-03 branch unlisted. **Modified (2):** `docs/design/art/art-technical-recipe-v1.md` **v0.3 (header read 0.2) → v0.4** (§4.4 resvg 0.47.0 exporter pin + reproducibility, §5.1 recorded importer behaviour, §6.1 GUID in-place replacement proof, §7.1 LFS pointer proof, §11 every G2 item ticked); `docs/tracking/CHANGELOG.md`. `tools/unity-ci/check-meta-integrity.sh` passes after both the import and the replacement commit. G2 is evidence-complete and awaits review, not passed. No `.cs`, `.asmdef`, spec, RNG, schema or roadmap row changed.
+
+**Last Updated (prior):** September 11, 2026, later — **PR #379 semantic reconciliation of the two valid post-#368 Audio #51 corrections onto current `main`.**
 **Modified (4):** `docs/planning/audio-implementation-plan.md` **v1.5 → v1.6**; `docs/tracking/spec-error-log.md` **v2.55 → v2.56** (ERR-051-001 added to Error Index only; **236 → 237** rows, detailed body/status unchanged); `docs/tracking/open-issues.md` (live audio pointers v1.5/v2.51 → v1.6/v2.56); and `docs/tracking/CHANGELOG.md` (new reconciliation entry, prior history untouched). The observer-neutrality correction states the actual proof boundary: output equality catches writes/draws, while prohibited reads require T-AU-BOUND-006 plus T-AU-BOUND-007/asmdef structural locks. No `.cs`, `.asmdef`, asset, RNG, save/snapshot schema, spec status, or roadmap row changed.
 
 **Last Updated (prior):** September 11, 2026 — **PR #396 review closure: version/status/tracking consistency and rendered-header repair.**
@@ -3310,6 +3313,17 @@ Operational AP-01 surfaces. These are pipeline/tooling contracts, not production
 | `tools/unity-ci/generate-missing-metas.sh` | Deterministic helper preserving `src/` behavior while limiting GameArt generation to folder metas/CI fixtures; production art file metas remain Unity-authored |
 | `tools/unity-ci/test-meta-integrity-gameart.sh` | Temporary-index mutation proof for generator boundary, missing/orphan GameArt metas, and GameArt GUID collisions with both `src/` and other tracked `Assets/` metas |
 | `tools/unity-ci/README.md` | Human contract and local commands for the AP-01 Unity asset-integrity tooling |
+| `docs/design/art/art-technical-recipe-v1.md` | AP-03 technical recipe and G2 evidence ledger — resvg 0.47.0 exporter pin, recorded Unity 6000.4.9f1 importer behaviour, GUID in-place replacement proof, LFS proof, font rights/script audit, G2 closure checklist |
+
+### AP-03 technical import probe (G2 evidence; not a production-style asset)
+
+| File | Purpose |
+|------|---------|
+| `art-source/ui/icons/ap03_import_probe.svg` | Neutral geometric source for `ui.pipeline.import-probe` (128×128 viewBox); revised in place during the §6 replacement proof |
+| `art-source/ui/icons/ap03_import_probe.art.json` | Adjacent `.art.json` production-candidate record for the probe (original work, no third-party material) |
+| `Assets/GameArt.meta`, `Assets/GameArt/UI.meta`, `Assets/GameArt/UI/Icons.meta` | Unity-authored folder metas for the first runtime GameArt path |
+| `Assets/GameArt/UI/Icons/ap03_import_probe.png` | Git LFS runtime export of the probe (resvg 0.47.0, 128×128); the first runtime GameArt asset |
+| `Assets/GameArt/UI/Icons/ap03_import_probe.png.meta` | Unity-authored TextureImporter meta (Sprite/Single, no mips, Clamp, Bilinear); GUID `24746b6a9f9592e41be3206d04b7b96e`, byte-identical across in-place replacement |
 
 ---
 

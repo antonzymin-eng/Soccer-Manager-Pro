@@ -12,7 +12,23 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 11, 2026, later — **PR #379 reconciled onto current `main`; two post-#368 audio corrections preserved without replaying stale tracking history. Documentation only.**
+> **Last Updated:** September 12, 2026 — **AP-03: the art pipeline's first real Unity import. G2 is evidence-complete and awaits review; it is not declared passed.**
+>
+> Run in the Unity 6000.4.9f1 editor on the pinned Windows 11 host, driven through the editor API. A deliberately neutral probe (`ui.pipeline.import-probe`) went from `art-source/ui/icons/ap03_import_probe.svg` through **resvg 0.47.0** to `Assets/GameArt/UI/Icons/ap03_import_probe.png`.
+>
+> **Exporter pin.** 0.47.0 is the newest resvg release that ships a Windows binary; 0.48.x ships none. The download matched GitHub's published release digest, and the binary lives outside the repository.
+>
+> **Reproducibility.** Exports are byte-identical across runs, and identical whether the SVG has LF or CRLF line endings. That matters because `*.svg` has no `.gitattributes` rule and this host checks out CRLF.
+>
+> **Importer behaviour — the finding with design consequence.** Five of the candidate settings differ from Unity's first-import defaults: Default type, no sprite mode, mips on, Repeat wrap, alpha-is-transparency off. A PNG dropped into `Assets/GameArt/` does not get the recipe profile unless it is set explicitly. Unity also flipped non-power-of-2 scaling to None on its own when the type became Sprite. Result: DXT5 on Standalone, about 33.7 KB editor-reported.
+>
+> **Replacement proof.** Revising the source in place and force-reimporting left GUID `24746b6a9f9592e41be3206d04b7b96e` and the entire `.meta` byte-identical. A temporary, never-committed `SpriteRenderer` prefab still resolved to the new content, and before/after pixels were measured on both the PNGs and the reimported texture. The PNG is committed as an LFS pointer whose oid is the export's sha256. `check-meta-integrity.sh` passes after both commits (`dd0d1ff5` import, `abc07f2f` replacement).
+>
+> **Recorded, not pinned.** The fallback physics shape and Tight mesh type are Unity defaults, unmeasured at probe scale. DXT5 quality has not been judged on real icon art. `com.unity.ugui` is absent from the manifest, which is why the consumer was a `SpriteRenderer` — P5b will need the package.
+>
+> The recipe ledger is `art-technical-recipe-v1.md` v0.4. No `.cs`, `.asmdef`, spec, RNG, schema or roadmap row changed.
+
+> **Last Updated (prior):** September 11, 2026, later — **PR #379 reconciled onto current `main`; two post-#368 audio corrections preserved without replaying stale tracking history. Documentation only.**
 >
 > `docs/planning/audio-implementation-plan.md` **v1.5 → v1.6** corrects P4A observer-neutrality: digest/RNG-cursor/serialization equality detects writes and draws, not a prohibited simulation read, so the proof now combines output neutrality with **T-AU-BOUND-006** behavioural no-call, **T-AU-BOUND-007**, and the `src/**/*.asmdef` direction scan. `docs/tracking/spec-error-log.md` **v2.55 → v2.56** adds the previously omitted **ERR-051-001** Error Index row (**236 → 237**) while leaving its existing detailed record and RECORDED — OPEN status unchanged. `open-issues.md` advances the live audio-plan/error-log pointers to v1.6/v2.56. The prior September 7 audio acceptance entry is preserved verbatim rather than rewritten. No `.cs`, `.asmdef`, asset, RNG, save/snapshot schema, spec status, or roadmap row changed.
 
