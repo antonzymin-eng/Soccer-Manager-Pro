@@ -231,10 +231,21 @@ namespace TacticalDirector.MatchEngine
         {
             var engine = new MatchEngine(MatchSeed ^ (ulong)(0x500 + keeperTeam));
             engine.EnableGkHeading();
-            // TestOnly_RunResolvePhase bypasses the normal tick-clock advance. Prime one ordinary
-            // tick so frame 0 cannot alias any default ContactFrame sentinel in inactive shot results.
-            // The staged collision below is applied only after this priming tick.
+
+            // TestOnly_RunResolvePhase bypasses the normal tick-clock advance, so prime one ordinary
+            // tick past frame zero. Keep the ball high and unclaimable while doing so: the previous
+            // fixture primed with the normal kickoff ball, which First Touch could leave in
+            // BallStateType.Controlled; TestOnly_ForceBallLoose clears possession but intentionally
+            // does not rewrite BallState.State, and BallCollisionHandler correctly refuses a
+            // Controlled ball. This prime advances the clock without poisoning the later deflection.
+            engine.TestOnly_ForceBallLoose(
+                new Vector3(
+                    MatchEngineConstants.PITCH_LENGTH_M * 0.5f,
+                    PitchY,
+                    10f),
+                Vector3.zero);
             engine.RunTick();
+
             int keeper = FindKeeper(engine, keeperTeam);
             int deflector = FindOutfielder(engine, OtherTeam(keeperTeam));
             Assert.GreaterOrEqual(keeper, 0);
@@ -267,6 +278,9 @@ namespace TacticalDirector.MatchEngine
             engine.TestOnly_ForceBallLoose(preDeflectionPosition, preDeflectionVelocity);
             engine.TestOnly_RunResolvePhase();
 
+            Assert.IsTrue(GkHeadingIntentSource.SaveArmed(
+                keeperTeam, engine.BallView.Position, engine.BallView.Velocity, ballLoose: true),
+                $"W4 fixture must produce a post-deflection raw save threat; pos={engine.BallView.Position} vel={engine.BallView.Velocity}.");
             Assert.Greater(engine.TestOnly_GoalkeeperState.ShotDetectedTickMs[keeperTeam], 0f,
                 "W4 wire: CollisionSystem's applied-deflection output must reach the keeper reaction reset in the same Resolve.");
             Assert.Greater(engine.TestOnly_GoalkeeperState.RequiredReactionMs[keeperTeam], 0f,
