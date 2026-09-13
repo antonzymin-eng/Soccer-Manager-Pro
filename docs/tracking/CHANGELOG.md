@@ -12,7 +12,23 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 11, 2026, later — **PR #379 reconciled onto current `main`; two post-#368 audio corrections preserved without replaying stale tracking history. Documentation only.**
+> **Last Updated:** September 12, 2026 — **Unity now governs the build: 22 Unity-editor-only compile errors fixed that the Linux gate could not see. The Linux gate is kept.**
+>
+> After a fast-forward of 893 commits, the Unity 6000.4.9f1 editor on the pinned host would not compile `main`. Every error was invisible to `tools/dotnet-ci`. That gate resolves references transitively through MSBuild and compiles tests against NUnit 3.14; Unity requires every referenced assembly in the asmdef itself and bundles NUnit 3.5. Two recompile rounds surfaced them, the first set masking the second.
+>
+> **Round 1 (7 errors):**
+> - three asmdefs gained direct references — `match-analytics` → `AgentMovement`; `ui-framework` tests → `AgentMovement`, `BallPhysics`; `season-save` tests → `EventSystem`;
+> - three `Assert.Multiple` blocks became sequential asserts.
+>
+> **Round 2 (15 errors):**
+> - `season-save` tests → `BallPhysics`;
+> - thirteen `Does.Not.Contain(<int>)` became `Has.No.Member(<int>)`.
+>
+> Assertion semantics are unchanged: both forms compile under both NUnits, and the only lost behaviour is `Assert.Multiple`'s aggregated reporting. Verified by forced reimport — 0 errors, successful assembly reload. **The Linux gate and the Unity test runner were not run on this change.**
+>
+> **Owner decision recorded:** the Unity editor is the governing compiler; the Linux gate stays as a supplement. `src/CLAUDE.md` (Verification), `docs/agent-guides/coding-reference.md` (BUILD AND TEST COMMANDS — the three trap classes and the editor procedure) and `src/match-client-unity/README.md` (which said that assembly "has never compiled") now say so. The procedure matters because Unity does not see edits through the `Assets/Scripts` junction on a plain Refresh, and reports compile errors as console *Log* entries. Fix commit `f445c84e`.
+
+> **Last Updated (prior):** September 11, 2026, later — **PR #379 reconciled onto current `main`; two post-#368 audio corrections preserved without replaying stale tracking history. Documentation only.**
 >
 > `docs/planning/audio-implementation-plan.md` **v1.5 → v1.6** corrects P4A observer-neutrality: digest/RNG-cursor/serialization equality detects writes and draws, not a prohibited simulation read, so the proof now combines output neutrality with **T-AU-BOUND-006** behavioural no-call, **T-AU-BOUND-007**, and the `src/**/*.asmdef` direction scan. `docs/tracking/spec-error-log.md` **v2.55 → v2.56** adds the previously omitted **ERR-051-001** Error Index row (**236 → 237**) while leaving its existing detailed record and RECORDED — OPEN status unchanged. `open-issues.md` advances the live audio-plan/error-log pointers to v1.6/v2.56. The prior September 7 audio acceptance entry is preserved verbatim rather than rewritten. No `.cs`, `.asmdef`, asset, RNG, save/snapshot schema, spec status, or roadmap row changed.
 
