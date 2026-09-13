@@ -24,6 +24,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
+
+          git worktree add --detach /tmp/pr397-main origin/main
+          set +e
+          python3 /tmp/pr397-main/tools/recurring-defect-lint.py --repo /tmp/pr397-main > /tmp/main-lint.txt 2>&1
+          main_lint_rc=$?
+          set -e
+
           set +e
           git merge --no-commit --no-ff origin/main
           merge_rc=$?
@@ -164,7 +171,21 @@ jobs:
           .claude/skills/landing-close-out/scripts/check_drift.sh
           python3 tools/assembly-tier-check.py
           python3 tools/doc-consistency-check.py --repo .
-          python3 tools/recurring-defect-lint.py --repo .
+
+          set +e
+          python3 tools/recurring-defect-lint.py --repo . > /tmp/merged-lint.txt 2>&1
+          merged_lint_rc=$?
+          set -e
+          grep '^ERROR  ' /tmp/main-lint.txt | sort > /tmp/main-errors.txt || true
+          grep '^ERROR  ' /tmp/merged-lint.txt | sort > /tmp/merged-errors.txt || true
+          echo "Inherited recurring-defect lint baseline (main rc=$main_lint_rc; merged rc=$merged_lint_rc):"
+          cat /tmp/main-errors.txt
+          diff -u /tmp/main-errors.txt /tmp/merged-errors.txt
+          if [ "$main_lint_rc" -eq 0 ] && [ "$merged_lint_rc" -ne 0 ]; then
+            echo "Merged tree introduced a recurring-defect lint failure."
+            cat /tmp/merged-lint.txt
+            exit 1
+          fi
 
           git status --short
           git commit -m "merge: resolve PR 397 documentation conflicts"
