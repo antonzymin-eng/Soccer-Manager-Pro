@@ -22,14 +22,22 @@ compiles and tests on every push. This assembly only ever depends on that core
 plus the reused `match-viewer` streamer; it adds a skin, never new engine-facing
 logic (§12 rule 1 — see `docs/tracking/interactive-unity-client-design.md`).
 
-## Excluded from the shim gate — code here has never compiled
+## Excluded from the shim gate — compiled only by the Unity editor
 
 `tools/dotnet-ci/generate_projects.py` compiles every `src/**/*.asmdef` against a
 ~9-type UnityEngine shim with **no** rendering types. This assembly is therefore
 listed in that generator's `SHIM_EXCLUDED_ASMDEFS` set — it is never generated,
-compiled, or referenced by the Linux gate. It is verified only on the pinned
-Unity host at a cert run, which has not yet happened for `MatchClientBehaviour.cs`.
-Every AR round over it has been reviewed by hand.
+compiled, or referenced by the Linux gate. Every AR round over it has been
+reviewed by hand.
+
+**Compiles in Unity (September 12, 2026).** A forced recursive reimport in the
+Unity 6000.4.9f1 editor on the pinned host compiled the whole tree, this assembly
+included, with **0 errors**. That was after fixing 22 editor-only errors elsewhere
+in `src/`, all in other assemblies' asmdefs and tests. **Compiling is not
+verification:** `MatchClientBehaviour.cs` has still never run in a scene, and P4b's
+on-host verification (scene boot, 60 FPS, click-to-select) remains open. The Unity
+editor is now the governing compiler (owner decision, September 12, 2026 —
+`src/CLAUDE.md` → Verification).
 
 ## Editor setup — this is the document `MatchClientBehaviour.cs` defers to
 

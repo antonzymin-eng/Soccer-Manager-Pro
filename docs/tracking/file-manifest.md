@@ -1,6 +1,15 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 11, 2026, later — **PR #379 semantic reconciliation of the two valid post-#368 Audio #51 corrections onto current `main`.**
+**Last Updated:** September 12, 2026 — **Unity-editor compile fixes; Unity recorded as the governing compiler.**
+**Modified (14):**
+- asmdefs: `src/match-analytics/match-analytics.asmdef`, `src/ui-framework/Tests/ui-framework-tests.asmdef`, `src/season-save/tests/season-save-tests.asmdef` — direct references Unity requires;
+- tests: `src/defensive-ai/Tests/TackleOutcomeResolverTests.cs`, `src/match-engine/tests/MatchEngineTackleTests.cs`, `src/season-save/tests/AvailabilityCompositionExtremisTests.cs`, `src/season-save/tests/SeasonLoopDisciplineTests.cs` — NUnit 3.5-compatible assertions, semantics unchanged;
+- docs: `src/CLAUDE.md` (Verification — Unity governs), `docs/agent-guides/coding-reference.md` (BUILD AND TEST COMMANDS — Unity editor compile procedure and trap table), `src/match-client-unity/README.md` (no longer "never compiled"; still never run in a scene), `docs/agent-guides/project-reference.md` (new "Green Linux gate, broken Unity build" trap row);
+- tracking: `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` (v2.134), and this file.
+
+No production logic, RNG, save/snapshot schema, spec status or roadmap row changed. Unity editor compile: 0 errors. Linux gate not run on this change.
+
+**Last Updated (prior):** September 11, 2026, later — **PR #379 semantic reconciliation of the two valid post-#368 Audio #51 corrections onto current `main`.**
 **Modified (4):** `docs/planning/audio-implementation-plan.md` **v1.5 → v1.6**; `docs/tracking/spec-error-log.md` **v2.55 → v2.56** (ERR-051-001 added to Error Index only; **236 → 237** rows, detailed body/status unchanged); `docs/tracking/open-issues.md` (live audio pointers v1.5/v2.51 → v1.6/v2.56); and `docs/tracking/CHANGELOG.md` (new reconciliation entry, prior history untouched). The observer-neutrality correction states the actual proof boundary: output equality catches writes/draws, while prohibited reads require T-AU-BOUND-006 plus T-AU-BOUND-007/asmdef structural locks. No `.cs`, `.asmdef`, asset, RNG, save/snapshot schema, spec status, or roadmap row changed.
 
 **Last Updated (prior):** September 11, 2026 — **PR #396 review closure: version/status/tracking consistency and rendered-header repair.**
