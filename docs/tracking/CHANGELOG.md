@@ -12,7 +12,21 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 12, 2026, later — **AP-03 docs synchronised: the recipe's typography section was still recommending a font G1 had already rejected. Documentation only.**
+> **Last Updated:** September 12, 2026, latest — **AP-03: two external-review findings on PR #405 fixed — the LFS evidence named the wrong pointer for the branch head, and the probe's provenance was misclassified. Documentation and metadata only.**
+>
+> **(1) LFS evidence.** The recipe's LFS proof quoted one pointer, `826f667f…` / 2 298 B, as "the committed blob". That is the *initial import* commit `dd0d1ff5`; the replacement commit `abc07f2f` and the branch head carry `0018e255…` / 2 568 B. `art-technical-recipe-v1.md` v0.6 now records both pointers against their commits — verified with `git show <commit>:<path>` — and notes that the `.meta` blob is identical at both.
+>
+> **(2) Provenance.** The probe's `.art.json` said `source_kind: original` while naming an AI agent as its creator. The plan's §7.2 treats AI-assisted work as generated, so the record is now `generated`, with the schema's `generation` block:
+> - Claude Code / claude-opus-5, SVG markup written directly with no image model;
+> - no inputs or third-party references;
+> - no human edits, and the one in-place agent revision recorded;
+> - dates and commits.
+>
+> The rights basis no longer asserts original authorship. It states the probe is not adopted for release, and that the commercial-use basis is for the owner to confirm before any release-ready use. The sidecar passes the schema's required-key, enum, pattern and generation-block checks.
+>
+> Neither finding changes a hash, GUID or Unity result. G2 remains OPEN pending review.
+
+> **Last Updated (prior):** September 12, 2026, later — **AP-03 docs synchronised: the recipe's typography section was still recommending a font G1 had already rejected. Documentation only.**
 >
 > The earlier AP-03 recipe revision still carried IBM Plex Sans Condensed as the proposed display face, two days after the G1 acceptance record (September 10, 2026) had rejected it visually and accepted **PT Sans Narrow** / an equivalent humanist condensed face. v0.5 records the rejection (§8.4) and PT Sans Narrow's upstream evidence from `google/fonts` (§8.4a): SIL OFL 1.1, **with Reserved Font Names "PT Sans" and "ParaType"**, `cyrillic`/`cyrillic-ext` subsets declared, Regular 400 and Bold 700 only.
 >

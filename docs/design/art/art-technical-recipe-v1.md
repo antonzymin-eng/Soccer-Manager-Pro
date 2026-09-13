@@ -3,7 +3,7 @@
 **Status:** IN PROGRESS — G2 EVIDENCE COMPLETE; awaiting G2 review  
 **Created:** September 6, 2026  
 **Last Updated:** September 12, 2026  
-**Document version:** 0.5  
+**Document version:** 0.6  
 **Unity target:** `6000.4.9f1 (f7258d6eebbe)`  
 **Parent plan:** `docs/planning/art-pipeline-foundation.md` v0.8+  
 **Repository contract:** AP-01 landed in PR #365  
@@ -24,7 +24,7 @@ The workstream may establish static/repository evidence in parallel with AP-02, 
 |---|---|---|
 | Unity version pinned | PASS | `ProjectSettings/ProjectVersion.txt`: 6000.4.9f1, revision `f7258d6eebbe` |
 | Source/runtime separation | PASS | AP-01 `art-source/README.md`; runtime root is `Assets/GameArt/` |
-| `.art.json` production-candidate record | PASS | AP-01 schema/template; the probe's `art-source/ui/icons/ap03_import_probe.art.json` satisfies the schema's required keys, enums and `asset_id` pattern |
+| `.art.json` production-candidate record | PASS | AP-01 schema/template. The probe's `art-source/ui/icons/ap03_import_probe.art.json` satisfies the schema's required keys, enums and `asset_id` pattern. It is classified **`source_kind: generated`** — the SVG was written by an AI agent (Claude Code, claude-opus-5) — and carries the plan §7.2 `generation` record the schema requires for that kind |
 | Managed `.meta` / project-wide GUID enforcement | PASS | AP-01 checker + mutation proof |
 | PNG Git LFS routing | PASS | proof run `34060090061` (planned path) **and** the actual committed probe: `git check-attr` resolves `filter=lfs`, `diff=lfs`, `merge=lfs`, and the committed blob is an LFS pointer (§7.1) |
 | TTF/OTF Git LFS routing | PASS | proof run `34060090061`: planned GameArt `.ttf` and `.otf` paths both resolve `filter=lfs`, `diff=lfs`, `merge=lfs` |
@@ -52,7 +52,7 @@ Semantic identity (as landed):
 - art asset ID: `ui.pipeline.import-probe`;
 - source: `art-source/ui/icons/ap03_import_probe.svg` — a 128×128 viewBox with a rounded-square outline (`#5A6270`, 8 px stroke) and a filled circle, on a transparent background;
 - runtime export: `Assets/GameArt/UI/Icons/ap03_import_probe.png`;
-- metadata sidecar: `art-source/ui/icons/ap03_import_probe.art.json`;
+- metadata sidecar: `art-source/ui/icons/ap03_import_probe.art.json` — `source_kind: generated` with a `generation` record (AI-agent-written SVG markup; no image model, no third-party inputs, not adopted for release);
 - runtime filename is semantic/lower-snake-case; no revision suffix.
 
 **Do not create the runtime PNG on the branch until the same operation can pass through actual Unity import and commit the Unity-authored `.meta`.** AP-01's checker intentionally makes a half-imported state fail. *(Satisfied: the PNG entered Git in the same commit as its Unity-authored `.meta`, `dd0d1ff5`.)*
@@ -210,7 +210,11 @@ Before G2 closes, record `git check-attr filter diff merge -- <runtime-path>` fo
 ### 7.1 Recorded proof (September 12, 2026)
 
 - `git check-attr filter diff merge -- Assets/GameArt/UI/Icons/ap03_import_probe.png` → `filter: lfs`, `diff: lfs`, `merge: lfs`.
-- The staged/committed blob is an LFS pointer, not image bytes: `version https://git-lfs.github.com/spec/v1` / `oid sha256:826f667f5e58f35026e373babad6e1c240c618129659bb30503e621a1d7bb08a` / `size 2298`. The oid equals the exported PNG's sha256 (§4.4). `git lfs ls-files` lists the path.
+- The committed blob is an LFS pointer, not image bytes, at **both** proof commits, and the two are different pointers because the replacement changed the image. The .meta blob is identical at both:
+  - **initial import** `dd0d1ff5`: `oid sha256:826f667f5e58f35026e373babad6e1c240c618129659bb30503e621a1d7bb08a` / `size 2298` — the original export (§4.4);
+  - **final replacement** `abc07f2f` and every later commit on the branch: `oid sha256:0018e255ed05541f16eb96e47dc48c34c44d1f9fb20eaecec91b9549928f66ef` / `size 2568` — the revised export (§4.4).
+  
+  Each oid equals the sha256 of the export it records. `git lfs ls-files` lists the path. Both LFS objects were uploaded by the `pre-push` hook, so the initial-import commit remains checkout-able, not a dangling pointer.
 - Host: `git-lfs/3.7.0`, with the `filter.lfs.*` config and the `pre-push` hook installed.
 - No font binary was introduced by this slice.
 - `tools/unity-ci/check-binaries.sh` (pinned host, Git Bash, started on the `dd0d1ff5` tree; the replacement adds no binary over threshold): **"Binary guard OK: no un-LFS'd binaries over 1048576 bytes, no text files over 4194304 bytes."**, exit 0.
@@ -365,3 +369,4 @@ If real Unity import cannot be executed, G2 remains pending regardless of how mu
 | 0.3 | 2026-09-06 | Static evidence recorded from run `34060090061`: Unity pin, planned PNG/TTF/OTF LFS attributes, no-premature-GameArt assertion, AP-01 integrity/binary baseline, and documentation-only scope all passed. Remaining G2 blockers are the real source/export/Unity import/importer/replacement/reference proof. *(The header still read 0.2 after this row landed; corrected at 0.4.)* |
 | 0.4 | 2026-09-12 | **Real Unity evidence recorded** on the pinned Windows 11 / Unity 6000.4.9f1 host. New §4.4: exporter pinned to resvg 0.47.0 (newest release with an official win64 binary; 0.48.x ships none), with the release-digest match and byte-identical export evidence, including LF/CRLF invariance. New §5.1: first-import defaults — five differ from the candidate, so the recipe must set them explicitly — plus applied settings, generated `.meta` fields, DXT5 format and 33 672 B editor-reported memory. New §6.1: GUID `24746b6a…` and the whole `.meta` byte-identical across in-place revision, the temporary consumer reference resolving to the new content, and before/after pixels measured. New §7.1: actual LFS pointer. Commits `dd0d1ff5` (import) and `abc07f2f` (replacement). The §2 import/importer/replacement/reproducibility rows move to PASS. AP-01 `check-meta-integrity.sh` PASS after both commits; every §11 item ticked. G2 stays OPEN pending review. |
 | 0.5 | 2026-09-12 | **Typography section re-synchronised with the G1 decision.** v0.1–0.4 still carried IBM Plex Sans Condensed as the proposed display substitute, but `art-direction-v1.md` v1.4 (G1 accepted September 10, 2026) had already rejected it visually and accepted PT Sans Narrow / an equivalent humanist condensed face. §8.4 now records that rejection. New §8.4a records PT Sans Narrow's upstream evidence: OFL 1.1 with Reserved Font Names 'PT Sans' and 'ParaType', `cyrillic`/`cyrillic-ext` subsets declared, Regular 400 + Bold 700 only. It also records three open consequences — RFN handling for any font-file conversion, no semi-bold weight, and the still-required Ukrainian corpus proof. §2 display row and the §11 font item updated. No Unity evidence changed; G2 remains OPEN pending review. |
+| 0.6 | 2026-09-12 | **External review corrections (PR #405).** (1) §7.1 described one LFS pointer, the initial import's `826f667f…` / 2 298 B, as "the committed blob", but the branch head carries the replacement's `0018e255…` / 2 568 B. §7.1 now records both pointers against their commits. (2) The probe's `.art.json` said `source_kind: original` while naming an AI agent as creator. The plan §7.2 treats AI-assisted work as generated, so it is reclassified `generated` with the full `generation` record, and the rights basis no longer asserts original authorship. §2 and §3 updated to match. No Unity evidence, hash or GUID changed; G2 remains OPEN pending review. |
