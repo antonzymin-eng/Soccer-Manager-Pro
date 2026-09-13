@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineTackleTests.cs
 // Created:  2026-08-12
-// Modified: 2026-08-12
+// Modified: 2026-09-12
 // Author:   —
 // Spec:     Defensive AI #14 §3.6.5, Pass Mechanics #5 §3.8.5/§4.4.2, Shot Mechanics #6 §4.4.2,
 //           foul-discipline-balance-design.md KD-F1/KD-F2/KD-F4, Code Standards #20
@@ -361,13 +361,11 @@ namespace TacticalDirector.MatchEngine
             var afterReplay = engine.TestOnly_TackleOutcomeCounts;
             var restoredCounts = restored.TestOnly_TackleOutcomeCounts;
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(restoredCounts.Won, Is.EqualTo(afterReplay.Won - beforeReplay.Won), "won diverged");
-                Assert.That(restoredCounts.Loose, Is.EqualTo(afterReplay.Loose - beforeReplay.Loose), "loose diverged");
-                Assert.That(restoredCounts.Foul, Is.EqualTo(afterReplay.Foul - beforeReplay.Foul), "foul diverged");
-                Assert.That(restoredCounts.Missed, Is.EqualTo(afterReplay.Missed - beforeReplay.Missed), "missed diverged");
-            });
+            // Sequential asserts, not Assert.Multiple: Unity's bundled NUnit 3.5 does not have it.
+            Assert.That(restoredCounts.Won, Is.EqualTo(afterReplay.Won - beforeReplay.Won), "won diverged");
+            Assert.That(restoredCounts.Loose, Is.EqualTo(afterReplay.Loose - beforeReplay.Loose), "loose diverged");
+            Assert.That(restoredCounts.Foul, Is.EqualTo(afterReplay.Foul - beforeReplay.Foul), "foul diverged");
+            Assert.That(restoredCounts.Missed, Is.EqualTo(afterReplay.Missed - beforeReplay.Missed), "missed diverged");
 
             // A window in which nothing happened would satisfy every equality above trivially.
             Assert.That(
