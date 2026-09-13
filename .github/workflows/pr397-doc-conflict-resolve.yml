@@ -1,0 +1,171 @@
+name: PR397 documentation conflict resolver
+
+on:
+  push:
+    branches:
+      - localization/l1-core-contracts
+    paths:
+      - .github/workflows/pr397-doc-conflict-resolve.yml
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge current main and resolve documentation conflicts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_rc=$?
+          set -e
+          if [ "$merge_rc" -eq 0 ]; then
+            echo "Expected documentation conflicts, but merge completed cleanly."
+            exit 1
+          fi
+
+          mapfile -t conflicts < <(git diff --name-only --diff-filter=U)
+          expected=(
+            "docs/tracking/CHANGELOG-src.md"
+            "docs/tracking/CHANGELOG.md"
+            "docs/tracking/file-manifest.md"
+            "docs/tracking/open-issues.md"
+          )
+          if [ "${#conflicts[@]}" -ne "${#expected[@]}" ]; then
+            printf 'Unexpected conflict count: %s\n' "${#conflicts[@]}"
+            printf 'Conflicts:\n%s\n' "${conflicts[*]}"
+            exit 1
+          fi
+          for path in "${expected[@]}"; do
+            printf '%s\n' "${conflicts[@]}" | grep -Fxq "$path" || { echo "Missing expected conflict: $path"; exit 1; }
+          done
+
+          python - <<'PY'
+          from pathlib import Path
+
+          def parse_conflicts(path):
+              p = Path(path)
+              lines = p.read_text(encoding="utf-8").splitlines()
+              out = []
+              conflicts = []
+              i = 0
+              while i < len(lines):
+                  if not lines[i].startswith("<<<<<<< "):
+                      out.append(lines[i])
+                      i += 1
+                      continue
+                  i += 1
+                  ours = []
+                  while i < len(lines) and lines[i] != "=======":
+                      ours.append(lines[i]); i += 1
+                  if i >= len(lines):
+                      raise SystemExit(f"{path}: unterminated ours side")
+                  i += 1
+                  theirs = []
+                  while i < len(lines) and not lines[i].startswith(">>>>>>> "):
+                      theirs.append(lines[i]); i += 1
+                  if i >= len(lines):
+                      raise SystemExit(f"{path}: unterminated theirs side")
+                  i += 1
+                  conflicts.append((ours, theirs))
+                  out.append(("__CONFLICT__", len(conflicts)-1))
+              return p, out, conflicts
+
+          def write_resolved(path, resolver):
+              p, parsed, conflicts = parse_conflicts(path)
+              resolved = []
+              for item in parsed:
+                  if isinstance(item, tuple):
+                      idx = item[1]
+                      resolved.extend(resolver(idx, *conflicts[idx]))
+                  else:
+                      resolved.append(item)
+              text = "\n".join(resolved) + "\n"
+              for marker in ("<<<<<<< ", "=======", ">>>>>>> "):
+                  if marker in text:
+                      raise SystemExit(f"{path}: conflict marker remains: {marker}")
+              p.write_text(text, encoding="utf-8")
+
+          def resolve_src(idx, ours, theirs):
+              if idx == 0:
+                  if len(ours) != 1 or len(theirs) != 2:
+                      raise SystemExit(f"CHANGELOG-src header conflict shape changed: ours={len(ours)} theirs={len(theirs)}")
+                  local = ours[0].replace("(v2.134 —", "(v2.135 —", 1)
+                  if local == ours[0]:
+                      raise SystemExit("CHANGELOG-src localization version anchor missing")
+                  main = theirs[0].replace("> **Last Updated:**", "> **Last Updated (prior):**", 1)
+                  if main == theirs[0]:
+                      raise SystemExit("CHANGELOG-src main Last Updated anchor missing")
+                  return [local, ">", main, ">"]
+              if idx == 1:
+                  if len(ours) != 1 or len(theirs) != 1:
+                      raise SystemExit(f"CHANGELOG-src table conflict shape changed: ours={len(ours)} theirs={len(theirs)}")
+                  local = ours[0].replace("| 2.134 |", "| 2.135 |", 1)
+                  if local == ours[0]:
+                      raise SystemExit("CHANGELOG-src table localization version anchor missing")
+                  return [local, theirs[0]]
+              raise SystemExit(f"CHANGELOG-src unexpected conflict index {idx}")
+
+          def resolve_changelog(idx, ours, theirs):
+              if idx != 0 or len(ours) != 3 or len(theirs) < 3:
+                  raise SystemExit(f"CHANGELOG conflict shape changed: idx={idx} ours={len(ours)} theirs={len(theirs)}")
+              main = list(theirs)
+              converted = main[0].replace("> **Last Updated:**", "> **Last Updated (prior):**", 1)
+              if converted == main[0]:
+                  raise SystemExit("CHANGELOG main Last Updated anchor missing")
+              main[0] = converted
+              return ours + [""] + main
+
+          def resolve_manifest(idx, ours, theirs):
+              if idx != 0 or len(ours) != 2 or len(theirs) < 3:
+                  raise SystemExit(f"manifest conflict shape changed: idx={idx} ours={len(ours)} theirs={len(theirs)}")
+              local = list(ours)
+              local[1] = local[1].replace("`CHANGELOG-src.md` v2.134", "`CHANGELOG-src.md` v2.135", 1)
+              if local[1] == ours[1]:
+                  raise SystemExit("manifest CHANGELOG-src version anchor missing")
+              main = list(theirs)
+              converted = main[0].replace("**Last Updated:**", "**Last Updated (prior):**", 1)
+              if converted == main[0]:
+                  raise SystemExit("manifest main Last Updated anchor missing")
+              main[0] = converted
+              return local + [""] + main
+
+          def resolve_open_issues(idx, ours, theirs):
+              if idx != 0 or len(ours) != 2 or len(theirs) != 2:
+                  raise SystemExit(f"open-issues conflict shape changed: idx={idx} ours={len(ours)} theirs={len(theirs)}")
+              if "audio-implementation-plan.md` v1.7" not in ours[0] or "#49's dependency-free L1 core now exists" not in ours[0]:
+                  raise SystemExit("open-issues localization-aware audio side no longer matches expected content")
+              if "F0–F4 are COMPLETE; S0 Gate A is next" not in theirs[1]:
+                  raise SystemExit("open-issues current UX side no longer matches expected content")
+              return [ours[0], theirs[1]]
+
+          write_resolved("docs/tracking/CHANGELOG-src.md", resolve_src)
+          write_resolved("docs/tracking/CHANGELOG.md", resolve_changelog)
+          write_resolved("docs/tracking/file-manifest.md", resolve_manifest)
+          write_resolved("docs/tracking/open-issues.md", resolve_open_issues)
+          PY
+
+          git rm .github/workflows/pr397-doc-conflict-inspect.yml
+          git rm .github/workflows/pr397-doc-conflict-resolve.yml
+          git add docs/tracking/CHANGELOG-src.md docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md docs/tracking/open-issues.md
+
+          test -z "$(git diff --name-only --diff-filter=U)"
+          ! grep -nE '^(<<<<<<<|=======|>>>>>>>)' docs/tracking/CHANGELOG-src.md docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md docs/tracking/open-issues.md
+
+          .claude/skills/landing-close-out/scripts/check_drift.sh
+          python3 tools/assembly-tier-check.py
+          python3 tools/doc-consistency-check.py --repo .
+          python3 tools/recurring-defect-lint.py --repo .
+
+          git status --short
+          git commit -m "merge: resolve PR 397 documentation conflicts"
+          git push origin HEAD:localization/l1-core-contracts
