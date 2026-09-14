@@ -96,7 +96,9 @@ jobs:
           w4_block = lines[start:end]
           del lines[start:end]
           text = ''.join(lines)
-          text = replace_once(text, '**Last Updated:**', '**Last Updated (prior):**', 'demote prior manifest head')
+          if '**Last Updated:**' not in text:
+              raise SystemExit('manifest: current head label not found')
+          text = text.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
           w4_block[0] = w4_block[0].replace('**Last Updated (prior):** September 11, 2026', '**Last Updated:** September 13, 2026', 1)
           text = replace_once(
               text,
