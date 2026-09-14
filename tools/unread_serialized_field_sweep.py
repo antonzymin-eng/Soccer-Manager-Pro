@@ -258,6 +258,50 @@ def method_names_by_line(lines: Sequence[str]) -> list[str | None]:
     return result
 
 
+def initializer_types_by_line(
+    lines: Sequence[str],
+    known_types: set[str],
+) -> list[str | None]:
+    """Return the active known object-initializer type for each source line."""
+    if not known_types:
+        return [None] * len(lines)
+
+    type_pattern = re.compile(
+        r"\bnew\s+(?:[A-Za-z_]\w*\.)*(?P<type>"
+        + "|".join(
+            re.escape(name)
+            for name in sorted(known_types, key=lambda value: (-len(value), value))
+        )
+        + r")\b"
+    )
+    stack: list[tuple[str, int]] = []
+    pending: str | None = None
+    depth = 0
+    result: list[str | None] = []
+
+    for raw in lines:
+        line = strip_line_comments(raw)
+
+        while stack and depth < stack[-1][1]:
+            stack.pop()
+
+        match = type_pattern.search(line)
+        if match:
+            pending = match.group("type")
+
+        if pending is not None and "{" in line:
+            stack.append((pending, depth + 1))
+            pending = None
+
+        result.append(stack[-1][0] if stack else None)
+        depth += brace_delta(line)
+
+        while stack and depth < stack[-1][1]:
+            stack.pop()
+
+    return result
+
+
 def is_transport_context(path: str, method: str | None, line: str) -> bool:
     base = Path(path).stem.lower()
     if any(marker in base for marker in TRANSPORT_PATH_MARKERS):
@@ -277,7 +321,7 @@ def is_transport_context(path: str, method: str | None, line: str) -> bool:
 
 
 def occurrence_kind(line: str, field_name: str) -> str | None:
-    """Classify one occurrence as a plain write, a read, or no meaningful use."""
+    """Classify one line occurrence as a plain write, a read, or no meaningful use."""
     code = strip_line_comments(line)
     if not re.search(IDENT_RE_TEMPLATE.format(re.escape(field_name)), code):
         return None
@@ -320,6 +364,7 @@ def collect_evidence(repo: Path, fields: Sequence[FieldDecl]) -> dict[str, Evide
     if not by_name:
         return evidence
 
+    known_types = {decl.type_name for decl in fields}
     ordered_names = sorted(by_name, key=lambda value: (-len(value), value))
     name_pattern = re.compile(
         r"\b(?:" + "|".join(re.escape(name) for name in ordered_names) + r")\b"
@@ -329,8 +374,11 @@ def collect_evidence(repo: Path, fields: Sequence[FieldDecl]) -> dict[str, Evide
         rel = str(path.relative_to(repo)).replace("\\", "/")
         lines = path.read_text(encoding="utf-8-sig").splitlines()
         methods = method_names_by_line(lines)
+        initializer_types = initializer_types_by_line(lines, known_types)
 
-        for lineno, (raw, method) in enumerate(zip(lines, methods), start=1):
+        for lineno, (raw, method, initializer_type) in enumerate(
+            zip(lines, methods, initializer_types), start=1
+        ):
             code = strip_line_comments(raw)
             present = {match.group(0) for match in name_pattern.finditer(code)}
             for name in present:
@@ -342,11 +390,12 @@ def collect_evidence(repo: Path, fields: Sequence[FieldDecl]) -> dict[str, Evide
                 qualified = bool(re.search(rf"\.\s*{re.escape(name)}\b", code))
                 for decl in decls:
                     same_file = rel == decl.path
-                    # Unqualified object-initializer/member assignments are common when a
-                    # snapshot is populated outside its declaring file. A globally unique
-                    # field name is safe to associate across files; ambiguous names still
-                    # require qualification to avoid inventing type resolution.
-                    if not same_file and not qualified and len(decls) > 1:
+                    if (
+                        not same_file
+                        and not qualified
+                        and initializer_type != decl.type_name
+                        and len(decls) > 1
+                    ):
                         continue
                     target = evidence[decl.key]
                     if kind == "write":
@@ -367,9 +416,7 @@ def find_candidates(repo: Path) -> list[Finding]:
         writes = list(ev.writes)
         if decl.unity_serialized and not writes:
             writes.append("<Unity serialization>")
-        if not writes:
-            continue
-        if ev.behavioral_reads:
+        if not writes or ev.behavioral_reads:
             continue
         findings.append(
             Finding(
@@ -380,7 +427,11 @@ def find_candidates(repo: Path) -> list[Finding]:
         )
     return sorted(
         findings,
-        key=lambda f: (f.declaration.path, f.declaration.line, f.declaration.name),
+        key=lambda item: (
+            item.declaration.path,
+            item.declaration.line,
+            item.declaration.name,
+        ),
     )
 
 
