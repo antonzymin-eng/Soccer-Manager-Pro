@@ -28,6 +28,17 @@ jobs:
           git fetch origin main
           git merge -X theirs --no-commit --no-ff origin/main
           python3 tools/_temporary_d5_reconcile.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('docs/tracking/file-manifest.md')
+          lines = p.read_text(encoding='utf-8').splitlines(keepends=True)
+          hits = [i for i, line in enumerate(lines) if 'docs/specs/code-standards/section-3.md' in line and 'since advanced to **v1.13**' in line]
+          if len(hits) != 1:
+              raise SystemExit(f'expected one maintained Code Standards v1.13 pointer, found {len(hits)}')
+          i = hits[0]
+          lines[i] = lines[i].replace('since advanced to **v1.13**', 'since advanced to **v1.14**', 1)
+          p.write_text(''.join(lines), encoding='utf-8')
+          PY
           rm -f tools/_temporary_d5_reconcile.py .github/workflows/_temporary-d5-reconcile.yml
           git add -A
           git diff --cached --check -- \
