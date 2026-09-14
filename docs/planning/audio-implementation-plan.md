@@ -2,8 +2,8 @@
 
 **Status:** G0 ACCEPTED — P1/P2 AUTHORIZED AFTER THIS PLANNING PR LANDS
 **Started:** September 4, 2026  
-**Last Updated:** September 8, 2026
-**Version:** 1.6
+**Last Updated:** September 12, 2026
+**Version:** 1.7
 **Implementation gate:** G0 CLOSED by owner acceptance on September 7, 2026; P1/P2 may begin after this planning PR lands. No bulk audio production is authorized before G3.
 **Governs:** Audio & Sound Design #51 implementation plus the production pipeline for shippable audio assets.
 
@@ -29,7 +29,7 @@ The original Path-to-Playable roadmap deliberately deferred #48 and #51 past PM-
 - #51 **T0/T1 and production-pipeline substrate may proceed in parallel** after G0 acceptance;
 - this does **not** make audio part of the PM-2 critical path and must not block Track S;
 - #51 T2/G3 remains blocked on **D48: #48 Match Presentation Depth T0**;
-- caption-renderer integration remains blocked on **D49: #49 Localization & Accessibility T0**;
+- #49 L1 core now exists; caption-renderer integration remains blocked on **D49: #49 L2 renderer/catalogue plus the approved caption boundary**, not on the absence of a localization assembly;
 - the audio workstream does not silently reorder or implement those other specs inside #51 PRs.
 
 ### 1.3 Verified repository starting point
@@ -37,7 +37,7 @@ The original Path-to-Playable roadmap deliberately deferred #48 and #51 past PM-
 - No `src/audio/` assembly exists.
 - No runtime audio content exists under `Assets/`.
 - #48 has no `src/match-presentation-depth/` assembly and no live `CueId`/`ICueSink` implementation surface.
-- #49 has no production assembly; therefore T3 caption rendering is not currently available.
+- #49 now has the dependency-free L1 production assembly `TacticalDirector.Localization`; T3 caption rendering is still unavailable because L2 renderer/catalogue behavior and the approved caption boundary have not landed.
 - #38 `ui-framework` exists, but the audio plan must still honor FR-AU-022 if the shared settings-store integration is unavailable or declined.
 - Git LFS already covers `.wav`, `.mp3`, `.ogg`, `.aif`, and `.aiff`.
 - Unity is pinned to `6000.4.9f1`.
@@ -91,7 +91,7 @@ Still incomplete. It does not resolve the Path-to-Playable deferral, assumes #48
 The audio workstream uses **seven gates plus two external dependency gates**:
 
 - **D48 — Match Presentation Depth T0 exists.** Required before T2 shell mapping / any real match cue can reach audio.
-- **D49 — Localization & Accessibility T0 exists.** Required before caption rendering integration; not required for T0/T1 audio framework work.
+- **D49 — Localization caption-rendering capability exists.** The L1 core-assembly prerequisite is met by #397; P5B still requires L2 renderer/catalogue behavior plus an approved #49/#51 caption boundary.
 - **G0 — Plan accepted.** Roadmap amendment, dependency boundaries, ERR-051-001 recording, identity rules, Early Access scope, and technology posture are accepted.
 - **G1 — Pipeline substrate ready.** Source/runtime layout, provenance, rights, stable naming, provisional status, and validation contract exist.
 - **G2 — T0 green and silent.** #51 pure contracts land together with the normative ERR-051-001 discharge and tests.
@@ -128,7 +128,7 @@ If G3 exposes no such blocker, native Unity is frozen through the first Early Ac
 - menu/management/match music sufficient to avoid silence and obvious repetition fatigue;
 - master + per-bus gain/mute;
 - explicit caption decisions for information-bearing cues;
-- real caption rendering once D49 is available;
+- real caption rendering once D49's L2 rendering/boundary capability is available;
 - complete rights/provenance;
 - no missing mappings/assets, broken loops, clipping, or referenced provisional audio.
 
@@ -512,7 +512,7 @@ End-to-end audio architecture is proven. Bulk production may now begin.
 
 ## D49 — caption renderer prerequisite
 
-Before P5B begins, verify #49 T0 exists and can legitimately add the inbound `#49 → #51` reference required by #51 §4.5.
+Before P5B begins, verify #49 L2 rendering/catalogue behavior exists and that the approved integration topology provides a legitimate caption boundary between #49 and #51. #49 L1 core existence alone does not satisfy D49, and this plan does not force the generic localization core to acquire a #51 dependency.
 
 ## P5B — Caption rendering
 
@@ -760,4 +760,5 @@ G0 was accepted by the owner on September 7, 2026 and the canonical G0 tracking 
 | 1.3 | 2026-09-06 | Variant selection moved host-side (§7.2, §6.3, §10.1, §16). `AssetRef` exposes the variant set, the Unity host binding selects the member with a client-local non-serialized display PRNG, and #51 declares no randomness type. Consequent T0 obligation added to ERR-051-001 discharge scope: `AssetRef` must carry a variant set and regression proof must cover the multi-variant case. |
 | 1.4 | 2026-09-06 | Corrected G0 state to OPEN, tied the owner directive to September 4, 2026, removed stale T1/display-random wording after host-side selection moved to P4B, and made the still-missing canonical ERR/tracking rows explicit G0 merge blockers rather than claiming they already exist. |
 | 1.5 | 2026-09-07 | Owner accepted G0 and the narrow roadmap amendment; canonical close-out acknowledged as complete; P1/P2 authorized after the planning PR lands; ERR-051-001 remains recorded for T0 discharge; G3/D48 and caption/D49 gates unchanged. |
+| 1.7 | 2026-09-12 | Synchronizes D49 with #397: the dependency-free localization L1 core assembly now exists, while P5B remains blocked on L2 renderer/catalogue behavior plus an approved #49/#51 caption boundary; the generic localization core acquires no audio dependency. |
 | 1.6 | 2026-09-08 | **Codex review of PR #368, two P2 findings, both accepted and both real.** (1) §9.1 asserted that the P4A output-neutrality lock *"should fail if the adapter acquires a sim read or deterministic draw"* — false for the read half: a prohibited read (consulting the score to choose a cue) leaves the digest chain, every RNG cursor and the serialized bytes byte-identical, so the lock passes while FR-AU-015 is violated. Output equality detects **writes and draws only**. §9.1 now lands the lock the APPROVED spec already prescribed — **T-AU-BOUND-006**'s behavioural no-call assertion (which §5 explicitly justifies on the ground that the reference graph does not cover the host callback path) plus **T-AU-BOUND-007** and the `src/**/*.asmdef` direction scan — with the digest assertions kept as the write/draw half. (2) `ERR-051-001` had a detailed `spec-error-log.md` entry but no `## Error Index` row, so the index that enumerates the authoritative remediation backlog would not have surfaced the new open T0 blocker; index 229 → 230 rows. Neither defect was caught by `doc-consistency-check.py`, `recurring-defect-lint.py` or `check_drift.sh`, all of which passed over both. |
