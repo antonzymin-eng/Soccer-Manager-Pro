@@ -251,9 +251,13 @@ namespace TacticalDirector.PressingAI
             StaminaAccumulator.ApplyAll(_assignments, _assignmentCount, _pressFatigue, _entityIdCapacity);
 
             _lastDirective     = directive;
+            PressingGateExit finalExit = directive.IsActive
+                ? PressingGateExit.Active
+                : PressingGateExit.NoPrimaryPresser;
             _lastDiagnostics   = new PressingTickDiagnostics(
-                snapshot.TickIndex, phase, PressingGateExit.Active,
-                hasLatestPass, raw, committed, primaryId, shadowCount);
+                snapshot.TickIndex, phase, finalExit,
+                hasLatestPass, raw, committed,
+                directive.PrimaryPresserId, directive.CoverShadowCount);
             _lastProcessedTick = snapshot.TickIndex;
         }
 
