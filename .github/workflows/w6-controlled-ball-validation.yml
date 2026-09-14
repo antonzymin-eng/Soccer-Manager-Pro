@@ -1,0 +1,22 @@
+name: W6 Controlled Ball Validation
+
+on:
+  push:
+    branches:
+      - wiring/w6-controlled-ball
+    paths:
+      - .github/w6-controlled-ball-validation-marker
+
+jobs:
+  targeted-w6:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wiring/w6-controlled-ball
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Run W6 affected tests
+        run: bash tools/dotnet-ci/run-gate.sh --fast --test-filter "FullyQualifiedName~MatchEngineControlledBallW6Tests|FullyQualifiedName~BallControlStateTests|FullyQualifiedName~MatchEnginePossessionBootstrapTests|FullyQualifiedName~MatchEngineFirstTouchTests|FullyQualifiedName~MatchEngineGkHeadingTests|FullyQualifiedName~MatchEngineTackleTests"
