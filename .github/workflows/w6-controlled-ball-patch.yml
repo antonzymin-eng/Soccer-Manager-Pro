@@ -18,7 +18,9 @@ jobs:
         with:
           ref: wiring/w6-controlled-ball
       - name: Apply W6 controlled-ball wiring
-        run: python3 .github/w6-controlled-ball-patch.py
+        run: |
+          python3 .github/w6-controlled-ball-patch-fix.py
+          python3 .github/w6-controlled-ball-patch.py
       - name: Commit W6 wiring
         shell: bash
         run: |
