@@ -1,9 +1,9 @@
 # Transfers, Contracts & Negotiation #31 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.5 — PR #407 review correction to T0 public API and valuation contract)
-**Last Updated (prior):** September 14, 2026 (v0.4 — T0 review close-out; prior v0.3 T0 authored, v0.2 AR-3, v0.1 initial)
-**Version:** 0.5
+**Last Updated:** September 14, 2026 (v0.6 — PR #407 residual review cleanup: T2 hook regression pinned)
+**Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction to T0 public API and valuation contract; prior v0.4 T0 review close-out, v0.3 T0 authored, v0.2 AR-3, v0.1 initial)
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -16,13 +16,17 @@
   always-on #27 positional stock measured prospectively with the negotiated player excluded; synchronous
   accepted/counter/rejected negotiation; typed `InsufficientBudget`/`SquadFull` command results; inclusive
   `IsWindowOpen`; and `SubmitBid` with validate/preflight-first semantics. `ITransferRosterPort` remains the
-  consumer-owned read/preflight/commit seam for the already-specified #30 T2 producer. No autonomous producer,
-  RNG stream, save codec, season-loop invocation, or production roster adapter lands in T0.
+  consumer-owned read/preflight/commit seam for the already-specified #30 T2 producer. T0 tests cover both buy
+  and sell producer preview/commit mismatch residuals while keeping local #31/#40 state untouched. No autonomous
+  producer, RNG stream, save codec, season-loop invocation, or production roster adapter lands in T0.
 - **T1** — `TransfersSaveCodec` (`TRANSFERS_SAVE_FORMAT_VERSION = 1`) + composition into #30's season save;
   coordinate the outer `SEASON_SAVE_FORMAT_VERSION` bump and F3 gates.
 - **T2** — wire #30's transfers world-tick slot (ERR-030-004); build the production #30 adapter behind
   `ITransferRosterPort` + `DispatchRosterMoveHook` (ERR-030-005); add genesis contract seeding,
-  season-boundary aging/reset, calendar-derived summer window, and production composition. No RNG stream.
+  season-boundary aging/reset, calendar-derived summer window, and production composition. The production
+  adapter MUST prove successful preview→commit is infallible and add the §5 T-TX-REKEY-005 integration lock:
+  hook dispatch occurs on managed↔external moves while #31's subscriber is observably a no-op during dispatch,
+  leaving explicit contract insert/remove to `SubmitBid`. No RNG stream.
 - **T3** — deep tier: #33 personality-modulated valuation, #28 CA/PA refinement, wage-bill producer and
   `WageBudget` gate with #40 back-prop, clauses/loans/wage structures, multi-day negotiation, stochastic rival
   bidding (first #31 draw site), and #34 staff influence.
@@ -38,6 +42,8 @@
 - Multi-day counter negotiation; T0 `CounterOffered` remains synchronous/no-state.
 - Indexed/cached player search.
 - `CommittedSpendThisWindow` reset/next-window mechanics, owned by T2 season-boundary/window wiring.
+- Production proof that #30 hook dispatch and #31 managed↔external no-op semantics coexist exactly as specified;
+  T0 can only test the #31 subscriber and fake-port contract separately.
 
 ## 7.3 Seam contracts recorded for downstream authors
 
@@ -46,7 +52,9 @@
   the commit matches its preview.
 - **#30:** owns world-tick timing, save composition, and the production roster adapter/move hook at T2. A full
   destination is surfaced by preview as `false` and maps to `TransferSubmissionOutcome.SquadFull`; a successful
-  preview fixes the exact id the commit MUST return.
+  preview fixes the exact id the commit MUST return. The T2 adapter must dispatch `DispatchRosterMoveHook` and
+  simultaneously demonstrate that #31's managed↔external subscriber does nothing during that callback, because
+  `SubmitBid` owns the explicit managed contract insert/remove immediately after the commit returns.
 - **#27:** authoritative player identity and coarse `PlayerPosition`. Positional need uses the valuing club's
   current same-position count converted to **stock excluding the negotiated player** before valuation.
 - **#32 / #34:** may consume `Offer` + `NegotiationOutcome` + `EvaluateOffer`; they do not consume the manager
@@ -62,4 +70,5 @@
 | 0.3 | 2026-09-12 | — | T0 implementation authored. |
 | 0.4 | 2026-09-14 | — | T0 football-judgment close-out: positional scarcity + synchronous deterministic counter band. |
 | 0.5 | 2026-09-14 | — | PR #407 review correction: currency API names, exact-rational attribute mean, exclude-player positional stock, separate submission outcomes, and preview/commit-before-local-mutation contract. |
+| 0.6 | 2026-09-14 | — | Residual review cleanup: T0 covers both preview/commit breach directions; T2 explicitly owes successful-preview infallibility plus real hook-dispatch and observable managed↔external #31 no-op integration coverage. |
 #endregion
