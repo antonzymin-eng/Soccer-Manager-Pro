@@ -1,6 +1,9 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-08-16, latest (reviewed findings pass, finding B — v1.72, DOC ONLY, no code change).
+// Modified: 2026-09-14 (W5/W7 reconciliation — W5 CONTACT pass feed + snapshot v22 / ERR-013-011 timing merged on top of W4; no RNG/draw-order change)
+// Modified: 2026-09-12 (W4 review closure — v1.74: reaction timing now begins only on visible save threats; post-deflection reset is visibility-gated; keeper-slot refresh moved to unconditional Resolve entry under the GK flag; no schema/RNG change).
+// Modified: 2026-09-11 (W4 keeper perception — v1.73: DT SAVE uses live all-body LOS; same-Resolve applied deflections restart the threatened keeper's reaction timing; raw SaveArmed remains the W1 rush veto; no schema/RNG change).
+// Modified: 2026-08-16, prior latest (reviewed findings pass, finding B — v1.72, DOC ONLY, no code change).
 //           PlayerIdsByAgentId's XML doc now states the boot-only one-to-one precondition explicitly
 //           (ERR-044-023): SubstitutePlayer copies the incoming player's identity onto the outgoing
 //           on-pitch slot but never clears his OWN bench-origin entry, so after any substitution the
@@ -1060,6 +1063,13 @@ namespace TacticalDirector.MatchEngine
             // already populated its ordinal cache by now. The returned token is discarded — the bus is
             // reset per match (ResetForNewMatch above), so there is no per-subscription teardown to do.
             EventBus.Subscribe<PossessionChangedEvent>(OnPossessionChanged);
+
+            // Wiring backlog W5 / #13 §4.4.2 — pass CONTACT is the authoritative press-trigger event.
+            // PassAttemptEvent is Tier A / Resolve-produced, so the consumer must subscribe here during
+            // boot, beside the possession consumer, before the first DrainTick closes registration. The
+            // handler routes the event only into the OPPOSING team's ring: #13 asks for the most-recent
+            // opposing pass, and letting an own-team pass overwrite it would suppress a valid trigger.
+            EventBus.Subscribe<PassAttemptEvent>(OnPassAttempt);
 
             // §5.Z Phase H — award the opening kickoff to the HOME team (team 0 kicks off the first half;
             // CheckMatchFlowTransitions hands the second-half kickoff to the other side). This is the one
@@ -2630,6 +2640,23 @@ namespace TacticalDirector.MatchEngine
         /// so a test can perturb it and prove the pressing hysteresis is in the snapshot digest preimage.</summary>
         internal PressingTickState TestOnly_PressingState(int teamId) => _pressing[teamId].CaptureState();
 
+        /// <summary>Test-only: injects the latest pass directly into one pressing ring so snapshot
+        /// schema tests can isolate the v22 cross-tick field without fabricating unrelated match state.</summary>
+        internal void TestOnly_PushPressPassEvent(int pressingTeamId, in PassAttemptEvent evt)
+        {
+            if (pressingTeamId < 0 || pressingTeamId >= MatchEngineConstants.TEAM_COUNT)
+                throw new ArgumentOutOfRangeException(nameof(pressingTeamId));
+            _passRings[pressingTeamId].Push(evt);
+        }
+
+        /// <summary>Test-only: observes the latest event retained for one pressing team.</summary>
+        internal bool TestOnly_TryGetPressPassEvent(int pressingTeamId, out PassAttemptEvent evt)
+        {
+            if (pressingTeamId < 0 || pressingTeamId >= MatchEngineConstants.TEAM_COUNT)
+                throw new ArgumentOutOfRangeException(nameof(pressingTeamId));
+            return _passRings[pressingTeamId].TryGetLatest(out evt);
+        }
+
         /// <summary>Test-only: the live per-team Defensive AI (#14) cross-tick state (D4 CaptureState seam).</summary>
         internal DefensiveTickState TestOnly_DefensiveState(int teamId) => _defensive[teamId].CaptureState();
 
@@ -3310,31 +3337,31 @@ namespace TacticalDirector.MatchEngine
                         bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
                         bool armed = GkHeadingIntentSource.SaveArmed(
                             t, in _ball.Position, in _ball.Velocity, loose);
-                        ctx.SaveAvailable = armed;
-                        if (armed)
+                        // W4: SAVE emission is perception-aware, but the raw threat episode remains
+                        // geometry-owned. TryCommitRushIntents MUST keep vetoing on raw SaveArmed:
+                        // being unsighted does not make charging at a goal-bound ball safe.
+                        bool saveVisible = armed && KeeperPerceptionGate.SaveAvailable(
+                            t, i, _agents[i].Position,
+                            _ball.Position, _ball.Velocity, loose,
+                            _agents, _isSentOff);
+                        ctx.SaveAvailable = saveVisible;
+                        if (saveVisible)
                         {
-                            // ERR-011-006 (design KD-C2): seed the §3.2 detection stamp at the
-                            // episode's ONSET when no stamp is live — the fallback anchor for
-                            // threats with no shot event (deflections, rebounds, mis-hit passes).
-                            // A no-op after the episode's first call (the stamp itself is the
-                            // latch, serialized in the v19 GK block — no new cross-tick state),
-                            // and a true shot CONTACT's NotifyKeeperOfShot stamp, landing in the
-                            // prior Resolve phase, is already live by the time this runs, so the
-                            // precise strike anchor survives.
+                            // W4 review closure: the §3.2 reaction episode begins when the keeper can
+                            // actually SEE the raw save threat, not when hidden geometry first arms.
+                            // OnThreatArmed remains idempotent while the visible episode stays live, and
+                            // a true shot CONTACT can still overwrite it through NotifyKeeperOfShot.
                             _goalkeeper.OnThreatArmed(
                                 t, _clock.CurrentMatchTimeMs, _ball.Velocity.magnitude,
                                 PlayerAttributeProjection.ToGoalkeeper(in _canonicalAttrs[i], t, fatigue: 0f));
                         }
                         else
                         {
-                            // One owner of "the episode is over". This latch and #11's own
-                            // _saveIntentActive used to have DIFFERENT lifetimes — #11 cleared only when
-                            // a dive resolved, this one clears as soon as the geometry lapses — so a
-                            // threat that armed, committed and then cleared before the keeper dived left
-                            // #11 armed indefinitely and fired at the next Anticipate: a dive at nothing.
-                            // Disarming both here keeps them from disagreeing (ClearSaveIntent is a no-op
-                            // while a dive is already in flight, so a live attempt still runs to its own
-                            // resolution).
+                            // A raw goal-bound threat may still exist here (armed == true) but be hidden
+                            // by a live body screen. It continues to veto RUSH through raw SaveArmed, yet
+                            // it must not bank reaction time or leave an unconsumed SAVE intent behind.
+                            // ClearSaveIntent preserves a dive already in flight, so losing sight cannot
+                            // tear down a committed physical attempt.
                             _saveCommittedForGk[t] = false;
                             _goalkeeper.ClearSaveIntent(t);
                         }
@@ -3953,6 +3980,15 @@ namespace TacticalDirector.MatchEngine
             int owner = _possessingAgentId;
 
             snap.TickIndex = tickIndex;
+            // ERR-013-011: PassAttemptEvent.Tick is a 60 Hz EventBus tick while TickIndex is the
+            // 10 Hz tactical heartbeat. TickOrchestrator advances the clock before phases and AI
+            // runs before Resolve/Events, so at AI physics tick N the newly observable pass window
+            // is the previous completed stride [N - AI_PHASE_STRIDE, N).
+            snap.PhysicsTick = (uint)_clock.CurrentTick;
+            uint passWindowWidth = (uint)DeterministicSimConstants.AI_PHASE_STRIDE;
+            snap.PassEventWindowStartTick = snap.PhysicsTick >= passWindowWidth
+                ? snap.PhysicsTick - passWindowWidth
+                : 0u;
             snap.BallPosition = MirrorPitchIfAway(team, _ball.Position);
             snap.BallVelocity = MirrorVelocityIfAway(team, _ball.Velocity);
             snap.BallCarrierEntityId = owner;
@@ -4457,7 +4493,9 @@ namespace TacticalDirector.MatchEngine
                 // compete for the same ball: a shot arms both, and because Anticipate → Rushing is
                 // evaluated while the ERR-011-007 commit-lead gate is still holding the dive, the keeper
                 // would charge out instead of diving — a straight regression of the §5.Z.17–§5.Z.22 save
-                // pipeline. Same pure predicate the DT-emitted SAVE gate uses, so the two cannot drift.
+                // pipeline. W4 preserves this RAW SaveArmed geometry as the shared threat
+                // predicate, but deliberately adds live LOS only to DT SAVE availability; applying LOS
+                // here would let an unsighted keeper rush at a goal-bound ball.
                 bool saveArmed = GkHeadingIntentSource.SaveArmed(
                     k, in _ball.Position, in _ball.Velocity, loose);
 
@@ -4688,6 +4726,48 @@ namespace TacticalDirector.MatchEngine
             DriveGkHeadingPhysics();
         }
 
+        /// <summary>
+        /// W4 same-Resolve deflection consumer. A changed flight restarts reaction timing only for
+        /// the keeper who can currently SEE the POST-deflection raw save threat. A hidden deflection does
+        /// not bank reaction credit; the ordinary 10 Hz visibility gate will seed the episode if/when the
+        /// ball emerges from the screen.
+        /// </summary>
+        private void ResetKeeperReactionAfterDeflection()
+        {
+            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                int agentId = _gkAgentIds[k];
+                if (agentId < 0 || _isSentOff[agentId])
+                {
+                    continue;
+                }
+
+                if (!KeeperPerceptionGate.SaveAvailable(
+                        k, agentId, _agents[agentId].Position,
+                        _ball.Position, _ball.Velocity, loose,
+                        _agents, _isSentOff))
+                {
+                    continue;
+                }
+
+                _goalkeeper.OnThreatDeflected(
+                    k,
+                    _clock.CurrentMatchTimeMs,
+                    _ball.Velocity.magnitude,
+                    PlayerAttributeProjection.ToGoalkeeper(
+                        in _canonicalAttrs[agentId], k, fatigue: 0f));
+            }
+        }
+
+        /// <summary>
+        /// Test-only composition seam for a single Resolve phase. W4 uses this to prove that the
+        /// CollisionSystem applied-deflection result reaches the goalkeeper reaction consumer inside
+        /// the same Resolve call without unrelated Physics/AI setup mutating the staged collision first.
+        /// </summary>
+        internal void TestOnly_RunResolvePhase() => RunResolvePhase();
+
         /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor
         /// lifecycles (C2/C3), runs first touch on a loose arriving ball (D3), then authors the
         /// authoritative <see cref="MatchContext"/> from the settled world state (C4). Intra-Resolve
@@ -4709,6 +4789,15 @@ namespace TacticalDirector.MatchEngine
             // Match-flow completion (design note §6, AR-5): flush any SubstitutePlayer calls made
             // since the last tick — CurrentPhase is now Resolve, the registered producer phase.
             PublishPendingSubstitutions();
+
+            // W4 review closure: a substitution published at Resolve entry can change which agent owns
+            // a keeper slot. Refresh unconditionally under the GK flag here, before collision/deflection
+            // and shot-notification consumers, rather than making ResetSlot timing depend on whether a
+            // body deflection happened later in this phase.
+            if (_gkHeadingEnabled)
+            {
+                RefreshGkAgentIds();
+            }
 
             int frameNumber = (int)_clock.CurrentTick;          // narrows safely at Stage 0 (~414 days @ 60 Hz)
             float matchTime = _clock.CurrentMatchTimeSeconds;
@@ -4747,7 +4836,15 @@ namespace TacticalDirector.MatchEngine
                 matchSeed: _matchSeed,
                 frameNumber: frameNumber,
                 matchTime: matchTime,
-                eventConsumer: _eventConsumer);
+                eventConsumer: _eventConsumer,
+                ballDeflected: out bool ballDeflected);
+
+            // W4: consume an APPLIED flight change immediately in this Resolve phase. No pending
+            // deflection latch survives the tick; existing GK reaction fields remain the only state.
+            if (_gkHeadingEnabled && ballDeflected)
+            {
+                ResetKeeperReactionAfterDeflection();
+            }
 
             // Match-flow completion (design note §3): apply the (at most one) foul candidate the
             // consumer just captured — RNG-drawn severity, card issuance, sent-off, and a free kick.
@@ -5437,6 +5534,21 @@ namespace TacticalDirector.MatchEngine
             EventBus.Publish(in evt);
 
             _prevPossessingAgentId = _possessingAgentId;
+        }
+
+        /// <summary>
+        /// Wiring backlog W5: records the authoritative resolved pass for the team that may press it.
+        /// The source event is published by #5 at CONTACT after ApplyKick succeeds; no pass is reconstructed.
+        /// The retained struct stays entirely in EventBus world coordinates. #13 owns the team-relative
+        /// geometric read and normalizes only TargetPosition when evaluating BACKWARD_PASS, so serialized
+        /// PassAttemptEvent state never mixes coordinate frames. Each pressing ring contains only opponent
+        /// passes, matching #13 §4.4.2. PassExecutor is the sole production producer and owns the valid
+        /// two-team TeamId precondition, so this subscriber does not add an unreachable duplicate guard.
+        /// </summary>
+        private void OnPassAttempt(in PassAttemptEvent evt)
+        {
+            int pressingTeam = 1 - evt.TeamId;
+            _passRings[pressingTeam].Push(evt);
         }
 
         /// <summary>
@@ -6303,6 +6415,47 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, _tackleCooldown[i]);
             }
 
+            // v22 / wiring backlog W5 — latest opposing pass retained by each #13 trigger ring.
+            // ONLY the latest event can affect future production behaviour: the engine-owned ring is
+            // private, and PressingAITick's sole production read is PassEventRing.TryGetLatest. No
+            // production path reachable from MatchEngine reads Count or older entries. Keeping the
+            // full latest event (rather than a reconstructed AgentId/target projection) preserves the
+            // ring's exact public value across restore while legitimately excluding unreachable history.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                bool hasLatest = _passRings[t].TryGetLatest(out PassAttemptEvent latest);
+                CanonicalSerializer.WriteBool(buf, ref o, hasLatest);
+                if (!hasLatest)
+                    continue;
+
+                CanonicalSerializer.WriteU8(buf, ref o, latest.EventTypeOrdinal);
+                CanonicalSerializer.WriteU8(buf, ref o, latest.PayloadVersion);
+                CanonicalSerializer.WriteU16(buf, ref o, latest.Reserved);
+                CanonicalSerializer.WriteU32(buf, ref o, latest.Tick);
+                CanonicalSerializer.WriteU16(buf, ref o, latest.SubsystemOrdinal);
+                CanonicalSerializer.WriteU16(buf, ref o, latest.IntraPhaseDrawIndex);
+                CanonicalSerializer.WriteI32(buf, ref o, latest.AgentId);
+                CanonicalSerializer.WriteI32(buf, ref o, latest.TeamId);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)latest.PassType);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)latest.CrossSubType);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.TargetPosition.x);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.TargetPosition.y);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.TargetPosition.z);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalVelocity.x);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalVelocity.y);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalVelocity.z);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalSpin.x);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalSpin.y);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.FinalSpin.z);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.ErrorAngleDeg);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.KickSpeed);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.LeadDistance);
+                CanonicalSerializer.WriteBool(buf, ref o, latest.IsWeakFoot);
+                CanonicalSerializer.WriteI32(buf, ref o, latest.TargetAgentId);
+                CanonicalSerializer.WriteI32(buf, ref o, latest.Frame);
+                CanonicalSerializer.WriteF32(buf, ref o, latest.MatchTime);
+            }
+
             payload.BytesWritten = o;
         }
 
@@ -6534,6 +6687,50 @@ namespace TacticalDirector.MatchEngine
             {
                 _tackleFlag[i] = CanonicalSerializer.ReadBool(buf, ref o);
                 _tackleCooldown[i] = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+
+            // v22 / W5 — restore exactly the latest event visible through each press ring. Older ring
+            // entries are intentionally not reconstructed because no production API can observe them.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _passRings[t].Clear();
+                bool hasLatest = CanonicalSerializer.ReadBool(buf, ref o);
+                if (!hasLatest)
+                    continue;
+
+                PassAttemptEvent latest = new PassAttemptEvent
+                {
+                    EventTypeOrdinal = CanonicalSerializer.ReadU8(buf, ref o),
+                    PayloadVersion = CanonicalSerializer.ReadU8(buf, ref o),
+                    Reserved = CanonicalSerializer.ReadU16(buf, ref o),
+                    Tick = CanonicalSerializer.ReadU32(buf, ref o),
+                    SubsystemOrdinal = CanonicalSerializer.ReadU16(buf, ref o),
+                    IntraPhaseDrawIndex = CanonicalSerializer.ReadU16(buf, ref o),
+                    AgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                    TeamId = CanonicalSerializer.ReadI32(buf, ref o),
+                    PassType = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
+                    CrossSubType = (CrossSubType)CanonicalSerializer.ReadI32(buf, ref o),
+                    TargetPosition = new Vector3(
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o)),
+                    FinalVelocity = new Vector3(
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o)),
+                    FinalSpin = new Vector3(
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o),
+                        CanonicalSerializer.ReadF32(buf, ref o)),
+                    ErrorAngleDeg = CanonicalSerializer.ReadF32(buf, ref o),
+                    KickSpeed = CanonicalSerializer.ReadF32(buf, ref o),
+                    LeadDistance = CanonicalSerializer.ReadF32(buf, ref o),
+                    IsWeakFoot = CanonicalSerializer.ReadBool(buf, ref o),
+                    TargetAgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                    Frame = CanonicalSerializer.ReadI32(buf, ref o),
+                    MatchTime = CanonicalSerializer.ReadF32(buf, ref o),
+                };
+                _passRings[t].Push(latest);
             }
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
@@ -9363,7 +9560,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | literals. Now MatchEngineConstants.FoulOrdinalNone, the [CROSS]  |
 // |         |            |        | mirror of #17's FOUL_ORDINAL_NONE. Same value; no behaviour     |
 // |         |            |        | change.                                                         |
-// | 1.72    | 2026-08-16, latest | — | Reviewed findings pass, finding B (ERR-044-023), DOC     |
+// | 1.72    | 2026-08-16 | — | Reviewed findings pass, finding B (ERR-044-023), DOC     |
 // |         |            |        | ONLY. PlayerIdsByAgentId's XML doc now states the boot-only      |
 // |         |            |        | one-to-one precondition explicitly: SubstitutePlayer never       |
 // |         |            |        | clears the incoming player's own bench-origin entry, so after    |
@@ -9371,4 +9568,16 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | longer one-to-one. Matches the corrected CardLedgerFold           |
 // |         |            |        | constructor doc and the new SeasonLoopDisciplineTests             |
 // |         |            |        | cross-assembly lock. No code change.                              |
+// | 1.73    | 2026-09-11 | —      | W4 keeper perception. RunMechanicsAI gates only DT SAVE availability    |
+// |         |            |        | through KeeperPerceptionGate (raw SaveArmed + current-frame all-body   |
+// |         |            |        | LOS); raw SaveArmed remains the threat episode and W1 rush exclusion.  |
+// |         |            |        | CollisionSystem's transient applied-deflection result is consumed in   |
+// |         |            |        | the same Resolve call and restarts only the post-deflection-threatened  |
+// |         |            |        | keeper via OnThreatDeflected. No new cross-tick state/schema/RNG.      |
+// | 1.74    | 2026-09-12 | —      | W4 review closure: reaction stamps are visibility-owned (screened raw  |
+// |         |            |        | threats neither emit SAVE nor accrue reaction credit); deflection reset |
+// |         |            |        | also requires live LOS. RefreshGkAgentIds moved to Resolve entry after |
+// |         |            |        | pending substitutions, removing deflection-conditional ResetSlot timing.|
+// | 1.75    | 2026-09-14 | —      | W5: subscribe to PassAttemptEvent at boot, route CONTACT events to the opposing #13 ring, and append/restore each ring latest event in snapshot v22; no RNG or draw-order change. |
+// | 1.76    | 2026-09-14 | —      | ERR-013-011: FillPressingSnapshot carries the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
 #endregion

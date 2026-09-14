@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
+// Modified: 2026-09-11 (wiring backlog W5 — SNAPSHOT_SCHEMA_VERSION 21 -> 22 for the per-team latest opposing-pass trigger event)
 // Modified: 2026-08-15, later still (reviewed findings pass, L1 — corrected the L3 entry directly below:
 //           MatchEngine.cs's card-issuing call site (MatchEngine.cs:5286) WAS repointed onto
 //           FoulOrdinalNone, by the SAME DAY's later "#44 AR round 5, L3" pass on MatchEngine.cs — so
@@ -290,7 +291,14 @@ namespace TacticalDirector.MatchEngine
         /// that a challenge was made. Dropping the cooldown would let every defender re-challenge
         /// immediately after a restore, diverging on the very next stride and in the direction of MORE
         /// tackles. The eight W2 diagnostic counters are excluded; the proof is at the write site.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 21;
+        /// <para>v22 (wiring backlog W5 — pressing triggers) appends one optional latest
+        /// <c>PassAttemptEvent</c> per pressing team. #13's production consumer reads only
+        /// <c>PassEventRing.TryGetLatest</c>; the engine-owned rings are private, so older
+        /// overwritten/history entries cannot affect future production behaviour. The full latest event
+        /// is retained exactly. Without this block, a save
+        /// between pass CONTACT and the next 10 Hz pressing stride would restore an empty ring and
+        /// silently suppress the BACKWARD_PASS trigger.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 22;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -1067,4 +1075,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | FoulOrdinalNone XML doc, both of which still claimed the call     |
 // |         |            |        | site was open — MatchEngine.cs:5286 reads this constant. No code  |
 // |         |            |        | change in this file.                                              |
+// | 1.36     | 2026-09-11 | —      | W5: SNAPSHOT_SCHEMA_VERSION 21 -> 22; append latest opposing PassAttemptEvent per pressing team so the newly-live backward-pass trigger survives save/restore. |
 #endregion
