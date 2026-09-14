@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/PressingAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-07-20
+// Modified: 2026-09-13 (W12: observation-only per-heartbeat gate/trigger diagnostics)
 // Author:   —
 // Spec:     Pressing AI #13 §3.11, §4.2, new §3.3/§7.12, Code Standards #20
 // Purpose:  10 Hz Pressing AI orchestrator for one team. Runs the full §3.11 pipeline:
@@ -47,9 +47,10 @@ namespace TacticalDirector.PressingAI
         private readonly PressAssignment[] _assignments; // length = SQUAD_SIZE
 
         // ── Last computed output ──────────────────────────────────────────────
-        private PressDirective _lastDirective;
-        private int            _lastProcessedTick = -1;
-        private int            _assignmentCount;
+        private PressDirective        _lastDirective;
+        private PressingTickDiagnostics _lastDiagnostics;
+        private int                   _lastProcessedTick = -1;
+        private int                   _assignmentCount;
 
         // ── Fast EntityId → assignment-index map ─────────────────────────────
         private readonly int[] _entityToAssignmentIdx; // entityId → idx; -1 = not mapped
@@ -65,6 +66,13 @@ namespace TacticalDirector.PressingAI
 
         /// <summary>The press directive produced by the most recent Tick() call.</summary>
         public PressDirective LastDirective => _lastDirective;
+
+        /// <summary>
+        /// W12 observation-only record for the most recent Tick() call. This value is not serialized
+        /// and is never read by the decision path; it exists only so representative match execution can
+        /// report where the pipeline stopped and which raw/committed triggers fired.
+        /// </summary>
+        public PressingTickDiagnostics LastDiagnostics => _lastDiagnostics;
 
         /// <summary>
         /// Constructs the orchestrator.
@@ -88,10 +96,11 @@ namespace TacticalDirector.PressingAI
             _hystState    = new RoleHysteresisState(_entityIdCapacity);
             _pressFatigue = new float[_entityIdCapacity];
 
-            _lastDirective  = PressDirective.Inactive;
-            _triggerState   = default;
-            _disengageDwell = 0;
-            _cooldownTicks  = 0;
+            _lastDirective   = PressDirective.Inactive;
+            _lastDiagnostics = default;
+            _triggerState    = default;
+            _disengageDwell  = 0;
+            _cooldownTicks   = 0;
         }
 
         // ── Per-tick entry point ───────────────────────────────────────────────
@@ -109,6 +118,9 @@ namespace TacticalDirector.PressingAI
             // F1 — stale perception guard.
             if (snapshot.TickIndex < _lastProcessedTick)
             {
+                _lastDiagnostics = Diagnostic(
+                    snapshot.TickIndex, _posAI.GetPhase(), PressingGateExit.StaleTick,
+                    hasLatestPass: false, TriggerFlags.None, TriggerFlags.None);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 UnityEngine.Debug.LogWarning(
                     $"[PressingAI] F1 stale tick {snapshot.TickIndex} < last {_lastProcessedTick}; reusing previous directive.");
@@ -128,6 +140,9 @@ namespace TacticalDirector.PressingAI
             {
                 SetAllHoldShape(snapshot);
                 _lastDirective     = PressDirective.Inactive;
+                _lastDiagnostics   = Diagnostic(
+                    snapshot.TickIndex, phase, PressingGateExit.InPossession,
+                    hasLatestPass: false, TriggerFlags.None, TriggerFlags.None);
                 _lastProcessedTick = snapshot.TickIndex;
                 return;
             }
@@ -138,6 +153,9 @@ namespace TacticalDirector.PressingAI
                 _cooldownTicks--;
                 SetAllHoldShape(snapshot);
                 _lastDirective     = PressDirective.Inactive;
+                _lastDiagnostics   = Diagnostic(
+                    snapshot.TickIndex, phase, PressingGateExit.Cooldown,
+                    hasLatestPass: false, TriggerFlags.None, TriggerFlags.None);
                 _lastProcessedTick = snapshot.TickIndex;
                 return;
             }
@@ -145,7 +163,7 @@ namespace TacticalDirector.PressingAI
             // ── Step 1: Evaluate triggers (§3.1–§3.2) ────────────────────────
             bool hasLatestPass = _passRing.TryGetLatest(out PassAttemptEvent latestPass);
             TriggerFlags committed = TriggerEvaluator.Evaluate(
-                snapshot, latestPass, hasLatestPass, ref _triggerState);
+                snapshot, latestPass, hasLatestPass, ref _triggerState, out TriggerFlags raw);
 
             // ── Step 2: Disengage check (§3.8) ───────────────────────────────
             bool disengaged = DisengageResolver.Evaluate(
@@ -156,6 +174,9 @@ namespace TacticalDirector.PressingAI
                 RoleHysteresis.ForceAllHoldShape(_hystState);
                 SetAllHoldShape(snapshot);
                 _lastDirective     = PressDirective.Inactive;
+                _lastDiagnostics   = Diagnostic(
+                    snapshot.TickIndex, phase, PressingGateExit.Disengaged,
+                    hasLatestPass, raw, committed);
                 _lastProcessedTick = snapshot.TickIndex;
                 return;
             }
@@ -165,6 +186,9 @@ namespace TacticalDirector.PressingAI
             {
                 SetAllHoldShape(snapshot);
                 _lastDirective     = PressDirective.Inactive;
+                _lastDiagnostics   = Diagnostic(
+                    snapshot.TickIndex, phase, PressingGateExit.NoCommittedTrigger,
+                    hasLatestPass, raw, committed);
                 _lastProcessedTick = snapshot.TickIndex;
                 return;
             }
@@ -213,6 +237,9 @@ namespace TacticalDirector.PressingAI
                 RoleHysteresis.ForceAllHoldShape(_hystState);
                 SetAllHoldShape(snapshot);
                 _lastDirective     = PressDirective.Inactive;
+                _lastDiagnostics   = new PressingTickDiagnostics(
+                    snapshot.TickIndex, phase, PressingGateExit.InvariantRejected,
+                    hasLatestPass, raw, committed, primaryId, shadowCount);
                 _lastProcessedTick = snapshot.TickIndex;
                 return;
             }
@@ -224,6 +251,9 @@ namespace TacticalDirector.PressingAI
             StaminaAccumulator.ApplyAll(_assignments, _assignmentCount, _pressFatigue, _entityIdCapacity);
 
             _lastDirective     = directive;
+            _lastDiagnostics   = new PressingTickDiagnostics(
+                snapshot.TickIndex, phase, PressingGateExit.Active,
+                hasLatestPass, raw, committed, primaryId, shadowCount);
             _lastProcessedTick = snapshot.TickIndex;
         }
 
@@ -284,6 +314,19 @@ namespace TacticalDirector.PressingAI
         }
 
         // ── Private helpers ───────────────────────────────────────────────────
+
+        private static PressingTickDiagnostics Diagnostic(
+            int tickIndex,
+            Phase phase,
+            PressingGateExit exit,
+            bool hasLatestPass,
+            TriggerFlags raw,
+            TriggerFlags committed)
+        {
+            return new PressingTickDiagnostics(
+                tickIndex, phase, exit, hasLatestPass, raw, committed,
+                primaryPresserId: -1, coverShadowCount: 0);
+        }
 
         /// <summary>
         /// Sets all own-team agents to HoldShape in the assignments buffer.
@@ -416,4 +459,5 @@ namespace TacticalDirector.PressingAI
 // | 1.4     | 2026-07-07 | —      | Cheap-item addition: Step 3 result biased via BlindSideApproach.ApplyBias (new §3.3/§7.12) — nudges the primary presser's target toward the ball carrier's blind side; who is selected as presser is unaffected. |
 // | 1.5     | 2026-07-07 | —      | Redesign after user review: BlindSideApproach.ApplyBias → CoverShadowCurve.ApplyCurve — curves the target toward the nearest cover-shadow lane point instead of an arbitrary blind-side offset, gated by the presser's own PressingAgentSnapshot attributes (looked up by EntityId). |
 // | 1.6     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): RestoreState(in PressingTickState) — the read counterpart to CaptureState; copies role hysteresis + press fatigue into the live containers and assigns the trigger/disengage/cooldown scalars. No behaviour change. |
+// | 1.7     | 2026-09-13 | —      | W12: LastDiagnostics records phase/cooldown/disengage exits, raw and committed trigger flags, invariant rejection, and active press output. Observation only; absent from snapshots and decision inputs. |
 #endregion
