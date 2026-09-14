@@ -22,32 +22,30 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+
           p = Path('src/pressing-ai/PressingAITick.cs')
-          s = p.read_text()
-          old = '''            _lastDirective     = directive;
-            _lastDiagnostics   = new PressingTickDiagnostics(
-                snapshot.TickIndex, phase, PressingGateExit.Active,
-                hasLatestPass, raw, committed, primaryId, shadowCount);
-            _lastProcessedTick = snapshot.TickIndex;
-'''
-          new = '''            _lastDirective     = directive;
-            PressingGateExit finalExit = directive.IsActive
-                ? PressingGateExit.Active
-                : PressingGateExit.NoPrimaryPresser;
-            _lastDiagnostics   = new PressingTickDiagnostics(
-                snapshot.TickIndex, phase, finalExit,
-                hasLatestPass, raw, committed,
-                directive.PrimaryPresserId, directive.CoverShadowCount);
-            _lastProcessedTick = snapshot.TickIndex;
-'''
+          s = p.read_text(encoding='utf-8')
+          old = (
+              "            _lastDirective     = directive;\n"
+              "            _lastDiagnostics   = new PressingTickDiagnostics(\n"
+              "                snapshot.TickIndex, phase, PressingGateExit.Active,\n"
+              "                hasLatestPass, raw, committed, primaryId, shadowCount);\n"
+              "            _lastProcessedTick = snapshot.TickIndex;\n"
+          )
+          new = (
+              "            _lastDirective     = directive;\n"
+              "            PressingGateExit finalExit = directive.IsActive\n"
+              "                ? PressingGateExit.Active\n"
+              "                : PressingGateExit.NoPrimaryPresser;\n"
+              "            _lastDiagnostics   = new PressingTickDiagnostics(\n"
+              "                snapshot.TickIndex, phase, finalExit,\n"
+              "                hasLatestPass, raw, committed,\n"
+              "                directive.PrimaryPresserId, directive.CoverShadowCount);\n"
+              "            _lastProcessedTick = snapshot.TickIndex;\n"
+          )
           if old not in s:
               raise SystemExit('expected active diagnostic block not found')
-          s = s.replace(old, new, 1)
-          s = s.replace(
-              '// | 1.7     | 2026-09-13 | —      | W12: LastDiagnostics records phase/cooldown/disengage exits, raw and committed trigger flags, invariant rejection, and active press output. Observation only; absent from snapshots and decision inputs. |',
-              '// | 1.7     | 2026-09-13 | —      | W12: LastDiagnostics records phase/cooldown/disengage exits, raw and committed trigger flags, invariant rejection, and active press output. Observation only; absent from snapshots and decision inputs. |\n// | 1.8     | 2026-09-13 | —      | Review: final diagnostics derive Active from the post-invariant directive, distinguish no-primary output, and record post-invariant cover-shadow count. |'
-          )
-          p.write_text(s)
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
           PY
           rm -f .github/workflows/w12-review-fix.yml .github/w12-review-fix-trigger
           git config user.name 'github-actions[bot]'
