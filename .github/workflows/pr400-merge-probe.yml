@@ -92,20 +92,20 @@ jobs:
                   raise RuntimeError('unexpected CHANGELOG conflict')
               finance = ours.replace('spec-error-log.md` **v2.57**', 'spec-error-log.md` **v2.58**')
               finance = finance.replace('CHANGELOG-src.md` **v2.136**', 'CHANGELOG-src.md` **v2.137**')
+              finance = finance.replace('match-engine-wiring-backlog.md` **v1.15**', 'match-engine-wiring-backlog.md` **v1.16**')
               w5 = theirs.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
               return finance.rstrip('\n') + '\n\n' + w5
 
           def resolve_manifest(ours, theirs, index):
               if index != 0 or 'match-engine-wiring-backlog.md' not in theirs or 'spec-error-log.md' not in theirs:
                   raise RuntimeError('unexpected file-manifest conflict')
-              merged = theirs.replace(
-                  '`docs/tracking/spec-error-log.md` **v2.42 → v2.43**, since advanced to **v2.57**',
-                  '`docs/tracking/spec-error-log.md` **v2.42 → v2.43**, since advanced to **v2.58**'
-              )
+              merged = theirs.replace('since advanced to **v2.57**', 'since advanced to **v2.58**')
               if 'since advanced to **v1.16**' not in merged:
                   raise RuntimeError('file-manifest lost v1.16 backlog advancement')
               if 'spec-error-log.md` **v2.42 → v2.43**, since advanced to **v2.58**' not in merged:
                   raise RuntimeError('file-manifest did not advance spec-error-log citation to v2.58')
+              if 'since advanced to **v2.57**' in merged:
+                  raise RuntimeError('file-manifest retained stale v2.57 maintained pointer')
               return merged
 
           def resolve_error_log(ours, theirs, index):
@@ -137,6 +137,7 @@ jobs:
           cl = Path('docs/tracking/CHANGELOG.md').read_text(encoding='utf-8')
           assert cl.index('**Last Updated:** September 12, 2026 — **#40 Club Finances T3a') < cl.index('**Last Updated (prior):** September 14, 2026 — **PR #398 W5 + W7')
           assert 'spec-error-log.md` **v2.58**' in cl
+          assert 'match-engine-wiring-backlog.md` **v1.16**' in cl
 
           se = Path('docs/tracking/spec-error-log.md').read_text(encoding='utf-8')
           assert '**Version:** 2.58' in se
