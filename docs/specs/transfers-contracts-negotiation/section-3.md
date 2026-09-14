@@ -204,10 +204,10 @@ not seeded at minimal. A load reconstructs the contracts from the transfers sub-
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 0.1 | 2026-07-23 | — | Initial §3 (valuation, offer evaluation, atomic bid pipeline, the #30 roster re-key, the window model, worked example). Status IN REVIEW. |
-| 0.2 | 2026-07-23 | — | AR-1: explicit counterparty club / direction checks and sell-side scope corrections. |
-| 0.3 | 2026-07-23 | — | AR-3/AR-4: fee-only minimal commit, sell re-key ordering, deep-only club need at the time, contract aging, and career-start seeding. |
-| 0.4 | 2026-07-23 | — | AR-6: seeding scoped to new-career genesis only. |
-| 0.5 | 2026-07-23 | — | AR-8 doc: static-ceiling consequence and ResetWindow calendar semantics. |
+| 0.1 | 2026-07-23 | — | Initial §3 algorithms + worked example; status IN REVIEW. |
+| 0.2 | 2026-07-23 | — | AR-1: §3.3 sell/buy from→to derivation made explicit; buyer on sell is named counterparty; §3.4 roster re-key seam clarified as genuinely new #30 capability. |
+| 0.3 | 2026-07-23 | — | AR-3: §3.3 minimal fee-only finance posts; sell removes contract before re-key; §3.1 drops minimal club-need and moves it to deep; §3.7 contract aging decrement/removal; §3.8 initial contract seeding. |
+| 0.4 | 2026-07-23 | — | AR-6: §3.8 seeding is new-career genesis only; load decodes sub-blob, never reseeds. |
+| 0.5 | 2026-07-23 | — | AR-8 doc: §3.3 static-ceiling consequence spelled out; §3.7 reset re-derives from calendar. |
 | 0.6 | 2026-09-14 | — | T0 football-judgment close-out: Stage-2 counterparty view gains always-on #27 positional scarcity; `EvaluateOffer` gains a deterministic synchronous counter-offer band; malformed terms are validated at the reusable evaluator; §3.3 records no-mutation counter/reject outcomes; §3.4 adds the read-only positional-stock query. |
 #endregion
