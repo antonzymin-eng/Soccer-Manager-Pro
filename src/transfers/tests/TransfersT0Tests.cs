@@ -312,6 +312,28 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
+        public void SubmitBid_SellRosterCommitPreviewMismatch_RetainsLocalContractAndFinance()
+        {
+            FakeRosterPort roster = CreateRosterWithManagedPlayer();
+            roster.CommittedPlayerIdOffset = 1;
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            Contract seeded = new Contract(MANAGED_PLAYER_ID, 2_000L, 2);
+            state.InsertContract(in seeded);
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 20_000L);
+            long valuation = CounterpartyValue(roster, MANAGED_PLAYER_ID);
+            Offer offer = new Offer(MANAGED_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 1_000L, 2, false);
+
+            Assert.Throws<InvalidOperationException>(() => commands.SubmitBid(in offer, 110U, ref finances, state));
+            Assert.AreEqual(5_000_000L, finances.Balance);
+            Assert.AreEqual(20_000L, finances.WageBillAggregate);
+            Assert.AreEqual(0L, state.CommittedSpendThisWindow);
+            Assert.IsTrue(state.TryGetContract(MANAGED_PLAYER_ID, out Contract retained));
+            Assert.AreEqual(MANAGED_PLAYER_ID, retained.PlayerId);
+            Assert.AreEqual(1, roster.CommitCount);
+        }
+
+        [Test]
         public void SubmitBid_OutsideWindow_FailsBeforeValuationOrMutation()
         {
             FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
@@ -532,4 +554,5 @@ namespace TacticalDirector.Transfers.Tests
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 valuation/offer/bid/re-key/window/fail-loud coverage. |
 // | 1.1     | 2026-09-14 | —      | Lock finance alias, Codex term validation, counter-offer band, and positional need. |
 // | 1.2     | 2026-09-14 | —      | Review corrections: golden/fractional valuation, strict age boundaries, typed budget/full outcomes, symmetric need, pre-commit port-breach lock. |
+// | 1.3     | 2026-09-14 | —      | Add sell-direction preview/commit mismatch regression locking retained local contract/finance on a port breach. |
 #endregion
