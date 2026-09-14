@@ -4,13 +4,18 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import io
 import re
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
 
 POST_ARCHIVE = Path("docs/tracking/evidence/w12/pr398-post-w12-34847990460.zip")
+POST_ARCHIVE_SHA256 = "691efe7a3c77ac1017ed86a78dcfea384a12fcd25248ade4090cbb59a48fc73d"
 PRE_ARCHIVE = Path("docs/tracking/evidence/w12/w12-corrected-pre398-34844425733.zip")
+PRE_ARCHIVE_SHA256 = "0d65be3a1b808933a58f785d7e65c321ae5974626089e2c0a49cfe3c00b5231c"
 DOC = Path("docs/tracking/w12-gate-firing-post398-comparison.md")
 CENSUS_START = "<!-- W12_POST_CENSUS_BEGIN -->"
 CENSUS_END = "<!-- W12_POST_CENSUS_END -->"
@@ -36,8 +41,28 @@ def _normalize_newlines(text: str) -> str:
     return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def _read_member(archive: Path, member: str) -> str:
-    with zipfile.ZipFile(archive) as zf:
+def _committed_bytes(repo: Path, path: Path, expected_sha256: str) -> bytes:
+    """Read the committed Git object, not a filtered/normalized worktree copy."""
+    completed = subprocess.run(
+        ["git", "-C", str(repo), "show", f"HEAD:{path.as_posix()}"],
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(
+            f"could not read committed evidence object {path}: "
+            + completed.stderr.decode("utf-8", errors="replace")
+        )
+    data = completed.stdout
+    actual = hashlib.sha256(data).hexdigest()
+    if actual != expected_sha256:
+        raise ValueError(f"{path}: SHA-256 {actual} != expected {expected_sha256}")
+    return data
+
+
+def _read_member(repo: Path, archive: Path, expected_sha256: str, member: str) -> str:
+    data = _committed_bytes(repo, archive, expected_sha256)
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
         return _normalize_newlines(zf.read(member).decode("utf-8"))
 
 
@@ -204,13 +229,11 @@ def validate_table(doc: str, pre: dict[str, int], post: dict[str, int]) -> list[
 
 
 def validate(repo: Path) -> list[str]:
-    post_archive = repo / POST_ARCHIVE
-    pre_archive = repo / PRE_ARCHIVE
     doc_path = repo / DOC
     errors: list[str] = []
 
-    post_census = extract_census(_read_member(post_archive, "instrument-output.txt"))
-    pre_census = extract_census(_read_member(pre_archive, "instrument-output.txt"))
+    post_census = extract_census(_read_member(repo, POST_ARCHIVE, POST_ARCHIVE_SHA256, "instrument-output.txt"))
+    pre_census = extract_census(_read_member(repo, PRE_ARCHIVE, PRE_ARCHIVE_SHA256, "instrument-output.txt"))
     doc = _normalize_newlines(doc_path.read_text(encoding="utf-8"))
     doc_census = extract_doc_census(doc)
 
