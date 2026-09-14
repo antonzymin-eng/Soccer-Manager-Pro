@@ -41,6 +41,10 @@ break it, and do not edit historical entries.
 >
 > Verified in the editor after its restart: `defaultRenderPipeline` and both quality levels report Built-in, `activeInputHandler` is 0, the direct packages are exactly the four above, 71 project assemblies compile through `Assets/Scripts`, and the console shows no errors. `check-meta-integrity.sh` and `check-binaries.sh` pass. No `SNAPSHOT_SCHEMA_VERSION` change; no new RNG stream, domain tag or draw site, and no draw-order change. No source changed, so no scenario tick window or perf baseline can move. **Linux PR gate not runnable on this host:** `tools/run-tests-local.sh --pr` ran its auditors (0 blocking), meta integrity (OK) and project generation (70 csproj, 35 test), then stopped at Restore because only the .NET runtime host is installed, not an SDK. No C# or asmdef changed; CI's `dotnet-compile-test` job runs the gate on push. Unity 6000.4.9f1 editor compile on the pinned host: 0 errors.
 
+> **Last Updated (prior):** September 13, 2026 — **W4 keeper perception is wired on PR #403, completing the consumer half that PR #399 prepared.**
+>
+> Decision Tree `SAVE` now uses current-frame all-body physical LOS through `KeeperPerceptionGate.SaveAvailable`; raw `GkHeadingIntentSource.SaveArmed` deliberately remains the shared threat geometry and the independent W1 rush veto, so being screened never makes charging at a goal-bound ball legal. Collision System now returns one transient per-call fact only when `BallCollisionHandler` actually changes flight; Match Engine consumes it immediately in the same Resolve phase, evaluates the post-deflection trajectory, and, only when that post-deflection save threat is currently visible, restarts the newly threatened keeper through `GoalkeeperMechanics.OnThreatDeflected`. That seam overwrites reaction timing without setting the shot-event latch; `OnThreatArmed` likewise anchors only visible threat episodes, so screened time does not accrue reaction credit. Added applied-vs-overlap collision, reaction-reset, screened-DT-SAVE, and non-vacuous raw-rush-veto regressions. No new serialized latch, snapshot schema, `CollisionEvent` ABI, save format, RNG stream/domain/draw site or draw order. Canonical Perception sent-off asymmetry remains separately tracked by #401. `match-engine-wiring-backlog.md` advances v1.14 → v1.15 and closes sequence item W4; W12 is next. Final PR-head CI #1437 passed; the post-merge main run remains separately authoritative.
+>
 > **Last Updated (prior):** September 13, 2026 — **`.gitignore` now ignores Unity's `.meta` files for the Linux gate's generated `.gen.csproj` projects. Repository hygiene only.**
 >
 > `tools/dotnet-ci` writes a `.gen.csproj` next to every asmdef in `src/`, and those were already ignored. Unity sees `src/` through the `Assets/Scripts` junction, though, and writes a `.meta` for each one, which nothing ignored. After one local gate run, 70 of them sat untracked in `git status`.
@@ -1460,7 +1464,7 @@ break it, and do not edit historical entries.
 > knowingly wrong meanwhile, with the acceptance bands (fouls ≤ 90, yellows ≤ 20, reds ≤ 5) reading
 > green throughout.
 >
-> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.14)* records the consequence none of these three holds could
+> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.15)* records the consequence none of these three holds could
 > see individually: W2's *arming* now gates three separate decisions** — the foul/card calibration,
 > KD-7a's successor distribution, and everything behind the un-isolated `sim_match_engine_inposs_gate`
 > stall whose leading candidate is W6. The path **W4 → W12 → W6** therefore unblocks three decisions,
@@ -1470,7 +1474,7 @@ break it, and do not edit historical entries.
 > FALSE — W2's arming gates **two** held decisions (the foul/card calibration and KD-7a's successor
 > distribution); the third item, the un-isolated `sim_match_engine_inposs_gate` stall, is what BLOCKS
 > arming, not something arming unblocks, so it does not belong beside them. The citation above is
-> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.14)*, whose §5 note carries the corrected
+> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.15)*, whose §5 note carries the corrected
 > two-plus-the-blocker form; the W4 → W12 → W6 path aims to clear the blocker and thereby unblock
 > the two.
 >
