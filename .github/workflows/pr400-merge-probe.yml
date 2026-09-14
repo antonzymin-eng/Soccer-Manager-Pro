@@ -1,0 +1,36 @@
+name: PR400 merge probe
+
+on:
+  push:
+    branches:
+      - openai/spec-40-finance-t3a-daily-accrual
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reproduce merge conflicts
+        shell: bash
+        run: |
+          set +e
+          git fetch origin main
+          git merge --no-commit --no-ff origin/main
+          rc=$?
+          echo "MERGE_RC=$rc"
+          echo "--- STATUS ---"
+          git status --short
+          echo "--- UNMERGED PATHS ---"
+          git diff --name-only --diff-filter=U
+          echo "--- CONFLICT MARKERS ---"
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            echo "===== $f ====="
+            grep -n -B 3 -A 12 '^<<<<<<<\|^=======\|^>>>>>>>' "$f" || true
+          done < <(git diff --name-only --diff-filter=U)
+          exit 0
