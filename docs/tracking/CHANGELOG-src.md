@@ -2630,7 +2630,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 2.137 | 2026-09-14 | W12 evidence repair: exact retained Actions archives, corrected matched post-#398 census, mechanical evidence reconciliation, and normalized W6 preregistration; no production/schema/RNG/`[GT]` change. |
+| 2.137 | 2026-09-14 | — | W12 evidence repair: exact retained Actions archives, corrected matched post-#398 census, mechanical evidence reconciliation, and normalized W6 preregistration; no production/schema/RNG/`[GT]` change. |
 | 2.136 | September 14, 2026 | — | W5/W7 reconciled on W4/W12 mainline: opponent CONTACT pass feed, 60 Hz completed-window + bounded discrete-event dwell, world-frame ring state, snapshot schema 22, kickoff preset before tick 1; W12 observation preserved. |
 | 2.135 | September 13, 2026 | — | W4 keeper perception consumers: LOS-gated DT SAVE, raw SaveArmed rush veto, same-Resolve applied-deflection reaction reset; collision/GK/composed regressions; no schema/RNG/event-ABI change. |
 | 2.134 | September 12, 2026 | — | Unity editor compile fixes (asmdef direct references; NUnit 3.5-compatible assertions) and the owner decision that Unity governs the build, recorded in Verification. |
