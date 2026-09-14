@@ -1,5 +1,6 @@
 // File:     src/pressing-ai/PressingTickDiagnostics.cs
 // Created:  2026-09-13
+// Modified: 2026-09-13 (review: no-primary output is not an active press)
 // Author:   —
 // Spec:     Match-engine wiring backlog §1.1 / W12
 // Purpose:  Observation-only result from one Pressing AI heartbeat. W12 uses this to distinguish
@@ -21,6 +22,7 @@ namespace TacticalDirector.PressingAI
         NoCommittedTrigger = 5,
         InvariantRejected = 6,
         Active = 7,
+        NoPrimaryPresser = 8,
     }
 
     /// <summary>
@@ -59,11 +61,12 @@ namespace TacticalDirector.PressingAI
             CoverShadowCount = coverShadowCount;
         }
 
-        public bool PressActive => Exit == PressingGateExit.Active;
+        public bool PressActive => Exit == PressingGateExit.Active && PrimaryPresserId >= 0;
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-09-13 | —      | W12 observation-only gate/trigger diagnostic record. |
+// | 1.1     | 2026-09-13 | —      | Review: distinguish committed-trigger/no-primary output from an actually-active press. |
 #endregion
