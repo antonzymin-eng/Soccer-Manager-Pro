@@ -1,4 +1,4 @@
-name: PR400 merge probe
+name: PR400 merge resolver
 
 on:
   push:
@@ -6,33 +6,164 @@ on:
       - openai/spec-40-finance-t3a-daily-accrual
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  probe:
+  resolve:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Reproduce merge conflicts
+      - name: Merge current main and resolve tracking conflicts
         shell: bash
         run: |
-          set +e
-          git config user.name "PR400 merge probe"
-          git config user.email "pr400-merge-probe@users.noreply.github.com"
+          set -euo pipefail
+          git config user.name "PR400 merge resolver"
+          git config user.email "pr400-merge-resolver@users.noreply.github.com"
           git fetch origin main
+          FEATURE_SHA="$(git rev-parse HEAD)"
+          MAIN_SHA="$(git rev-parse origin/main)"
+          echo "FEATURE_SHA=$FEATURE_SHA"
+          echo "MAIN_SHA=$MAIN_SHA"
+
+          set +e
           git merge --no-commit --no-ff origin/main
-          rc=$?
-          echo "MERGE_RC=$rc"
-          echo "--- STATUS ---"
-          git status --short
-          echo "--- UNMERGED PATHS ---"
-          git diff --name-only --diff-filter=U
-          echo "--- CONFLICT MARKERS ---"
-          while IFS= read -r f; do
-            [ -n "$f" ] || continue
-            echo "===== $f ====="
-            grep -n -B 3 -A 12 '^<<<<<<<\|^=======\|^>>>>>>>' "$f" || true
-          done < <(git diff --name-only --diff-filter=U)
-          exit 0
+          merge_rc=$?
+          set -e
+          if [ "$merge_rc" -ne 1 ]; then
+            echo "Expected a conflicted merge (rc=1), got rc=$merge_rc" >&2
+            exit 1
+          fi
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          MARK_START = '<<<<<<< HEAD\n'
+          MARK_MID = '=======\n'
+          MARK_END = '>>>>>>> origin/main\n'
+
+          def resolve_file(path, resolver, expected_blocks):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              out = []
+              pos = 0
+              count = 0
+              while True:
+                  start = text.find(MARK_START, pos)
+                  if start < 0:
+                      out.append(text[pos:])
+                      break
+                  out.append(text[pos:start])
+                  ours_start = start + len(MARK_START)
+                  mid = text.find(MARK_MID, ours_start)
+                  end = text.find(MARK_END, mid + len(MARK_MID))
+                  if mid < 0 or end < 0:
+                      raise RuntimeError(f'malformed conflict markers in {path}')
+                  ours = text[ours_start:mid]
+                  theirs = text[mid + len(MARK_MID):end]
+                  out.append(resolver(ours, theirs, count))
+                  count += 1
+                  pos = end + len(MARK_END)
+              if count != expected_blocks:
+                  raise RuntimeError(f'{path}: expected {expected_blocks} conflict blocks, found {count}')
+              merged = ''.join(out)
+              if any(m in merged for m in ('<<<<<<<', '=======', '>>>>>>>')):
+                  raise RuntimeError(f'{path}: conflict marker survived')
+              p.write_text(merged, encoding='utf-8')
+
+          def resolve_changelog_src(ours, theirs, index):
+              if index == 0:
+                  if '#40 Club Finances T3a daily revenue accrual' not in ours or 'W5 + W7 reconciled' not in theirs:
+                      raise RuntimeError('unexpected CHANGELOG-src header conflict')
+                  finance = ours.replace('(v2.136', '(v2.137', 1)
+                  w5 = theirs.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
+                  return finance.rstrip('\n') + '\n>\n' + w5
+              if index == 1:
+                  if '#40 T3a daily revenue accrual' not in ours or 'W5/W7 reconciled' not in theirs:
+                      raise RuntimeError('unexpected CHANGELOG-src version-table conflict')
+                  finance = ours.replace('| 2.136 |', '| 2.137 |', 1)
+                  finance = finance.replace('ClubFinancesCritiqueTests` v1.8', 'ClubFinancesCritiqueTests` v1.9')
+                  return finance + theirs
+              raise RuntimeError('unexpected CHANGELOG-src conflict index')
+
+          def resolve_changelog(ours, theirs, index):
+              if index != 0 or '#40 Club Finances T3a' not in ours or 'PR #398 W5 + W7' not in theirs:
+                  raise RuntimeError('unexpected CHANGELOG conflict')
+              finance = ours.replace('spec-error-log.md` **v2.57**', 'spec-error-log.md` **v2.58**')
+              finance = finance.replace('CHANGELOG-src.md` **v2.136**', 'CHANGELOG-src.md` **v2.137**')
+              w5 = theirs.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
+              return finance.rstrip('\n') + '\n\n' + w5
+
+          def resolve_manifest(ours, theirs, index):
+              if index != 0 or 'match-engine-wiring-backlog.md' not in theirs or 'spec-error-log.md' not in theirs:
+                  raise RuntimeError('unexpected file-manifest conflict')
+              merged = theirs.replace(
+                  '`docs/tracking/spec-error-log.md` **v2.42 → v2.43**, since advanced to **v2.57**',
+                  '`docs/tracking/spec-error-log.md` **v2.42 → v2.43**, since advanced to **v2.58**'
+              )
+              if 'since advanced to **v1.16**' not in merged:
+                  raise RuntimeError('file-manifest lost v1.16 backlog advancement')
+              if 'spec-error-log.md` **v2.42 → v2.43**, since advanced to **v2.58**' not in merged:
+                  raise RuntimeError('file-manifest did not advance spec-error-log citation to v2.58')
+              return merged
+
+          def resolve_error_log(ours, theirs, index):
+              if index != 0 or 'ERR-040-003' not in ours or 'ERR-013-011' not in theirs:
+                  raise RuntimeError('unexpected spec-error-log conflict')
+              finance = ours.replace('(v2.57 —', '(v2.58 —', 1)
+              w5 = theirs.replace('**Updated:**', '**Updated (prior):**', 1)
+              return finance + w5
+
+          resolve_file('docs/tracking/CHANGELOG-src.md', resolve_changelog_src, 2)
+          resolve_file('docs/tracking/CHANGELOG.md', resolve_changelog, 1)
+          resolve_file('docs/tracking/file-manifest.md', resolve_manifest, 1)
+          resolve_file('docs/tracking/spec-error-log.md', resolve_error_log, 1)
+
+          p = Path('docs/tracking/spec-error-log.md')
+          text = p.read_text(encoding='utf-8')
+          old = '**Version:** 2.57'
+          if text.count(old) != 1:
+              raise RuntimeError(f'expected one {old!r}, found {text.count(old)}')
+          p.write_text(text.replace(old, '**Version:** 2.58', 1), encoding='utf-8')
+
+          cs = Path('docs/tracking/CHANGELOG-src.md').read_text(encoding='utf-8')
+          assert '**Last Updated:** September 13, 2026 (v2.137 — **#40 Club Finances T3a' in cs
+          assert '**Last Updated (prior):** September 14, 2026 (v2.136 — **W5 + W7' in cs
+          assert '| 2.137 | September 14, 2026 | Claude | **#40 T3a daily revenue accrual' in cs
+          assert '| 2.136 | September 14, 2026 | — | W5/W7 reconciled' in cs
+          assert 'ClubFinancesCritiqueTests` v1.9' in cs
+
+          cl = Path('docs/tracking/CHANGELOG.md').read_text(encoding='utf-8')
+          assert cl.index('**Last Updated:** September 12, 2026 — **#40 Club Finances T3a') < cl.index('**Last Updated (prior):** September 14, 2026 — **PR #398 W5 + W7')
+          assert 'spec-error-log.md` **v2.58**' in cl
+
+          se = Path('docs/tracking/spec-error-log.md').read_text(encoding='utf-8')
+          assert '**Version:** 2.58' in se
+          assert '**Updated:** September 12, 2026 (v2.58 — **`ERR-040-003`' in se
+          assert '**Updated (prior):** September 12, 2026 (v2.57 — **`ERR-013-011`' in se
+          assert '| ERR-040-003 |' in se and '| ERR-013-011 |' in se
+
+          oi = Path('docs/tracking/open-issues.md').read_text(encoding='utf-8')
+          assert 'Club Finances (#40) — T3a' in oi
+          assert 'W5 + W7' in oi
+          PY
+
+          if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+            echo "Unresolved merge paths remain:" >&2
+            git diff --name-only --diff-filter=U >&2
+            exit 1
+          fi
+
+          rm .github/workflows/pr400-merge-probe.yml
+          git add -A
+          git diff --cached --check
+          python3 tools/doc-consistency-check.py --repo .
+          bash .claude/skills/landing-close-out/scripts/check_drift.sh
+
+          git commit -m "merge: reconcile PR #400 with main after #398"
+          MERGE_SHA="$(git rev-parse HEAD)"
+          TEMP_BRANCH="automation/pr400-resolved-${GITHUB_RUN_ID}"
+          echo "MERGE_SHA=$MERGE_SHA"
+          echo "TEMP_BRANCH=$TEMP_BRANCH"
+          git push origin "HEAD:refs/heads/$TEMP_BRANCH"
