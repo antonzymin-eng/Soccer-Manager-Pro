@@ -1,0 +1,111 @@
+name: W12 corrected pre-398 baseline
+
+on:
+  push:
+    branches:
+      - wiring/w12-gate-firing-diagnostic
+    paths:
+      - '.github/w12-corrected-baseline-trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w12-corrected-pre398-baseline
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    name: Run corrected W12 pre-398 baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve canonical W12 instrument
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/measurement_catalog.py validate --repo .
+          python3 tools/dotnet-ci/measurement_catalog.py resolve \
+            w12-gate-firing --repo . --github-env "$GITHUB_ENV"
+
+      - name: Build gate and run corrected instrument
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/measurements/trx
+          OUT="artifacts/measurements/measurement.txt"
+          MEASURE_OUT="artifacts/measurements/instrument-output.txt"
+          RESULTS="artifacts/measurements/trx"
+          RUNSETTINGS="artifacts/measurements/measurement.runsettings"
+
+          cat > "$RUNSETTINGS" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <RunSettings>
+            <RunConfiguration>
+              <TreatNoTestsAsError>true</TreatNoTestsAsError>
+            </RunConfiguration>
+          </RunSettings>
+          XML
+
+          {
+            echo "# System XI corrected W12 pre-398 measurement"
+            echo "# commit:     $GITHUB_SHA"
+            echo "# ref:        $GITHUB_REF"
+            echo "# run:        $GITHUB_RUN_ID (attempt $GITHUB_RUN_ATTEMPT)"
+            echo "# instrument: $MEASUREMENT_INSTRUMENT"
+            echo "# env:        $MEASUREMENT_ENV"
+            echo "# filter:     $MEASUREMENT_FILTER"
+            echo "# project:    $MEASUREMENT_PROJECT"
+            echo "# reason:     corrected pre-#398 baseline after PR #410 diagnostic review fixes"
+            echo "# taken:      $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+          } > "$OUT"
+
+          set +e
+          env -u "$MEASUREMENT_ENV" bash tools/dotnet-ci/run-gate.sh \
+            --test-filter "$MEASUREMENT_FILTER" 2>&1 | tee -a "$OUT"
+          gate_status="${PIPESTATUS[0]}"
+          set -e
+          if [ "$gate_status" -ne 0 ]; then
+            echo "# build gate exit status: $gate_status" >> "$OUT"
+            exit "$gate_status"
+          fi
+
+          echo >> "$OUT"
+          echo "── Proved measurement run ───────────────────────────────────────────" | tee -a "$OUT"
+
+          set +e
+          env "$MEASUREMENT_ENV=1" dotnet test "$MEASUREMENT_PROJECT" \
+            --no-build --no-restore \
+            --filter "$MEASUREMENT_FILTER" \
+            --settings "$RUNSETTINGS" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=measurement.trx" \
+            --results-directory "$RESULTS" 2>&1 | tee "$MEASURE_OUT" | tee -a "$OUT"
+          measurement_status="${PIPESTATUS[0]}"
+          set -e
+
+          echo >> "$OUT"
+          echo "# dotnet measurement exit status: $measurement_status" >> "$OUT"
+          if [ "$measurement_status" -ne 0 ]; then
+            exit "$measurement_status"
+          fi
+
+          python3 tools/dotnet-ci/measurement_catalog.py verify-run \
+            "$MEASUREMENT_INSTRUMENT" --trx-dir "$RESULTS" --output "$MEASURE_OUT" | tee -a "$OUT"
+          echo "# measurement verification: PASS" >> "$OUT"
+
+      - name: Upload corrected W12 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w12-corrected-pre398-${{ github.run_id }}
+          path: artifacts/measurements/
+          if-no-files-found: warn
+          retention-days: 90
