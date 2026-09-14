@@ -1,8 +1,9 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.5 — AR-8 doc; prior v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.5
+**Last Updated:** September 14, 2026 (v0.6 — T0 football-judgment close-out: positional need + deterministic counter-offer band)
+**Last Updated (prior):** July 23, 2026 (v0.5 — AR-8 doc; prior v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -10,49 +11,69 @@
 All arithmetic is **integer** (currency `long`; valuation/club-need/personality per-mille `int`). No stochastic
 draw occurs at the minimal tier (FR-TX-001/016). `PERMILLE_DENOM = 1000`.
 
-## 3.1 Player valuation — `ValuePlayerPermille` (FR-TX-001/002)
+## 3.1 Player valuation — `ValuePlayerPermille` / counterparty view (FR-TX-001/002)
 
-The Stage-2 counterparty valuation is a pure deterministic integer function over #27's canonical record —
-**attributes + age only** (FR-TX-001). It is the **identity** the deep tier modulates (KD-1):
+Stage 2 keeps the pure #27 **attributes + age** valuation as the reusable identity, then applies one always-on
+situational input: the **valuing club's positional stock**. This discharges the football-judgment finding that
+the shipped baseline otherwise knows nothing about the counterparty's squad until an optional deep system is
+enabled. It stays draw-free and uses only #27 data:
 
 ```
-ValuePlayerPermille(in PlayerAttributes attrs, int age):    # minimal: attributes + age ONLY (FR-TX-001)
+ValuePlayerPermille(in PlayerAttributes attrs, int age):
     rating   := MeanAttributeRating(attrs)                 # int [1,20] mean, the LineupSelector precedent
     base     := rating * VALUE_PER_RATING_POINT            # integer currency, monotone in rating
-    ageMult  := AgeCurvePermille(age)                      # [0,1000+]; peak band ~1000, decline past ~30, young discount
-    value    := base * ageMult / PERMILLE_DENOM            # integer, deterministic
-    return value                                           # NO club-need, NO #33 read, NO #28 CA read (FR-TX-001)
+    ageMult  := AgeCurvePermille(age)                      # peak ~1000; older decline; young discount
+    return base * ageMult / PERMILLE_DENOM                 # pure identity: attrs + age only
+
+ClubNeedMultiplierPermille(int samePositionCount):
+    neutral  := CLUB_SQUAD_SIZE / POSITION_COUNT           # #27-derived neutral coarse-position stock
+    delta    := neutral - samePositionCount                 # scarce => positive; overstocked => negative
+    return 1000 + delta * CLUB_NEED_PER_PLAYER_PERMILLE     # configured so result remains > 0
+
+counterpartyView(playerId, clubId):
+    p        := #27 PlayerRecord(playerId)
+    stock    := #27 CountPlayersAtPosition(clubId, p.Position)
+    identity := ValuePlayerPermille(p.Attributes, p.Age)
+    return identity * ClubNeedMultiplierPermille(stock) / 1000
 ```
 
-`counterpartyView(playerId, clubId)` is the helper that resolves the counterparty's valuation inputs: it looks
-up the `PlayerRecord` for `playerId` in #27 and returns `ValuePlayerPermille(record.Attributes, record.Age)`.
-At minimal it takes no `clubId`-derived need term; `clubId` is threaded only so the deep tier can attach that
-club's need signal without a signature change.
+The `clubId` is the **valuing** club: seller on a manager buy, buyer on a manager sell. That gives the same
+player a higher counterparty value where his coarse position is scarce and a lower value where it is
+oversupplied, without inventing a new position model or using #33/#28.
 
-- `MeanAttributeRating` is the integer mean of the consumed #27 `[1,20]` attribute fields (position-weighted
-  in a deep refinement; unweighted mean at minimal). `AgeCurvePermille` is a fixed `[GT]` table (Appendix A):
-  a neutral peak band, a decline multiplier past ~30, and a discount for the very young (unproven), the master
-  plan §4.3 shape — its exact magnitudes are illustrative pending a Stage-2/3 balance pass (#21 G2 precedent).
-- **Deep tier** multiplies additional identity-`1000‰` terms and optionally swaps `rating` for #28's CA:
-  `value_deep := value * needMult/1000 * personalityMult/1000`, where `needMult` is the **valuing** club's
-  position scarcity (seller on a buy, buyer on a sell) and `personalityMult` is from #33 traits (a
-  loyal/ambitious seller holds out for more). With `deepTransfersEnabled` off, `needMult ≡ personalityMult ≡
-  1000` and `rating` is the #27 mean ⇒ `value_deep == value` **exactly** (FR-TX-002). No replacement path —
-  the deep tier only *scales* the identity.
+- `MeanAttributeRating` is the integer mean of the consumed #27 `[1,20]` fields; WeakFoot remains excluded.
+  `AgeCurvePermille` is the configured Stage-2 shape in Appendix A.
+- **Deep tier** may multiply the Stage-2 counterparty value by personality/staff terms and optionally swap the
+  rating identity for #28 CA. Those additions default to identity when their producers are absent, but the
+  Stage-2 positional-stock term is **not** disabled with them. The deep path refines the same value; it does
+  not replace it.
 
 ## 3.2 Offer evaluation — `EvaluateOffer` (FR-TX-003)
 
+The original exact-value cliff (one currency unit below value = certain reject; at value = certain accept) is
+not football-like enough to ship even at minimal. T0 therefore has a deterministic **counter-offer band**.
+There is still no RNG and no multi-day negotiation state:
+
 ```
-EvaluateOffer(in Offer offer, long counterpartyValuation):     # draw-free at minimal (FR-TX-003)
-    # the counterparty (selling club on a buy, buying club on a sell) accepts iff the fee clears its valuation
-    if offer.IsBuy:  return offer.Fee >= counterpartyValuation ? Accepted : Rejected
-    else:            return offer.Fee <= counterpartyValuation ? Accepted : Rejected   # manager sells; buyer pays <= its value
+EvaluateOffer(in Offer offer, long counterpartyValuation):
+    validate ALL Offer terms (Fee >= 0, WagePerPeriod >= 0, LengthSeasons > 0, ids non-negative) else throw
+    band := max(1, counterpartyValuation * NEGOTIATION_COUNTER_BAND_PERMILLE / 1000)  # if value > 0
+
+    if offer.IsBuy:
+        if offer.Fee >= counterpartyValuation:        return Accepted
+        if offer.Fee >= counterpartyValuation-band:   return CounterOffered
+        return Rejected
+    else:
+        if offer.Fee <= counterpartyValuation:        return Accepted
+        if offer.Fee <= counterpartyValuation+band:   return CounterOffered
+        return Rejected
 ```
 
-`counterpartyValuation` is `counterpartyView(offer.PlayerId, offer.CounterpartyClubId)` — the counterparty's
-attributes+age valuation at minimal (the deep tier attaches its need + personality). The minimal resolution is
-synchronous (no `CounterOffered` — that is the deep-tier multi-day path). Because both inputs are deterministic
-integers, the same offer against the same world state always yields the same outcome.
+`counterpartyValuation` is caller-supplied, so the KD-3 reuse contract remains intact. At #31 T0 the caller
+uses §3.1's `counterpartyView`. `CounterOffered` here means only **"close enough to keep negotiation open"**;
+it causes no mutation and stores no in-flight state. The deep multi-day state machine may later attach terms and
+delay to that same enum outcome. Because the band, value and offer are deterministic integers, the same inputs
+always produce the same outcome.
 
 ## 3.3 The bid pipeline — `SubmitBid` (FR-TX-009/025, atomic)
 
@@ -66,80 +87,67 @@ direction.
 
 ```
 SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, ref TransfersState txState):
-    (fromClub, toClub) := offer.IsBuy ? (offer.CounterpartyClubId, managerClubId)    # buy: from seller to us
-                                      : (managerClubId, offer.CounterpartyClubId)     # sell: from us to buyer
+    (fromClub, toClub) := offer.IsBuy ? (offer.CounterpartyClubId, managerClubId)
+                                      : (managerClubId, offer.CounterpartyClubId)
     # ---- VALIDATE-ALL-FIRST (no mutation) ----
-    require IsWindowOpen(txState.WindowFor(managerClubId), worldDay)                 else throw   # F4
-    require PlayerInClubUniverse(offer.PlayerId) AND ClubOf(offer.PlayerId) == fromClub  else throw   # F6
-    require offer well-formed (Fee >= 0, WagePerPeriod >= 0, LengthSeasons > 0)      else throw   # F6
-    cv := counterpartyView(offer.PlayerId, offer.CounterpartyClubId)                 # the counterparty's attributes+age valuation (§3.1)
-    if EvaluateOffer(offer, cv) != Accepted:  return Rejected                        # no mutation, not a failure
+    require offer well-formed (ids >= 0, Fee >= 0, WagePerPeriod >= 0, LengthSeasons > 0) else throw  # F6
+    require IsWindowOpen(txState.WindowFor(managerClubId), worldDay)                                  else throw  # F4
+    require PlayerInClubUniverse(offer.PlayerId) AND ClubOf(offer.PlayerId) == fromClub               else throw  # F6
+    cv := counterpartyView(offer.PlayerId, offer.CounterpartyClubId)                                  # §3.1
+    outcome := EvaluateOffer(offer, cv)
+    if outcome != Accepted: return outcome                                                             # no mutation
     if offer.IsBuy:
         require offer.Fee <= AvailableTransferBudget(finances)
-                            - txState.CommittedSpend(managerClubId)                  else throw   # F1
-        require DestinationSquadHasFreeSlot(toClub)                                  else throw   # F5
+                            - txState.CommittedSpend(managerClubId)                                   else throw  # F1
+        require DestinationSquadHasFreeSlot(toClub)                                                   else throw  # F5
     else:
-        require DestinationSquadHasFreeSlot(toClub)                                  else throw   # F5 (buyer squad)
-    # ---- COMMIT (atomic block; all gates passed). MINIMAL = fee-only (FR-TX-005); wage posts are deep. ----
+        require DestinationSquadHasFreeSlot(toClub)                                                   else throw  # F5
+    # ---- COMMIT (atomic block; all gates passed). MINIMAL = fee-only (FR-TX-005). ----
     if offer.IsBuy:
-        ApplyTransaction(ref finances, {Debit,  TransferFee, offer.Fee})             # Balance -= (fee only)
+        ApplyTransaction(ref finances, {Debit, TransferFee, offer.Fee})
         txState.AddCommittedSpend(managerClubId, offer.Fee)
-        newId := RequestRosterCommit(fromClub, toClub, offer.PlayerId)               # #30 seam, re-keys (KD-7);
-                                                                                     #   OnPlayerRekeyed is a no-op for #31 (no old managed contract) — FR-TX-023
-        txState.InsertContract(ContractFrom(offer, newId))                           # managed-club contract (wage recorded, NOT posted — FR-TX-005)
-    else:  # SELL — managed club receives the fee; the departing player leaves the managed squad
-        txState.RemoveContract(offer.PlayerId)                                       # remove BEFORE the re-key so OnPlayerRekeyed
-                                                                                     #   has no managed contract to move (FR-TX-023) — no double-handle
-        ApplyTransaction(ref finances, {Credit, TransferFee, offer.Fee})             # Balance += (fee only)
-        RequestRosterCommit(fromClub, toClub, offer.PlayerId)                        # re-keys into the buyer's squad (the AI buyer's contract is untracked at minimal)
+        newId := RequestRosterCommit(fromClub, toClub, offer.PlayerId)
+        txState.InsertContract(ContractFrom(offer, newId))
+    else:
+        txState.RemoveContract(offer.PlayerId)               # before re-key; FR-TX-023
+        ApplyTransaction(ref finances, {Credit, TransferFee, offer.Fee})
+        RequestRosterCommit(fromClub, toClub, offer.PlayerId)
     return Accepted
-    # DEEP adds the PlayerWage posts (buy {Debit,PlayerWage,inWage} / sell {Credit,PlayerWage,outWage}, capturing
-    #   outWage before RemoveContract) + a WageBudget affordability gate, behind deepTransfersEnabled (§7).
 ```
 
-The finance posts and the roster commit are one logical transaction: because every gate cleared first
-(including the destination free-slot check, F5), no individual step can fail mid-commit (`ApplyTransaction`
-magnitudes are pre-validated; a `Credit` cannot fail on affordability), so the club is never debited for a
-player it does not receive, and the sell's `RemoveContract` (before the infallible re-key) never strands a
-half-removed contract.
+The finance posts and roster commit are one logical transaction: because every fallible gate clears first,
+accepted execution cannot fail halfway under the specified #30 preview/commit contract. `Rejected` and
+`CounterOffered` are ordinary no-mutation outcomes.
 
 **Static-ceiling consequence (KD-2).** A sell posts a `Credit` to #40's `Balance` but does **not** touch
-`committedSpendThisWindow` (a **buy-side accumulator only** — the sell branch issues no `AddCommittedSpend`)
-and does **not** raise `AvailableTransferBudget` (the `TransferBudget` ceiling is `SettleFinances`-only,
-FR-FN-003/004). So **sell proceeds do not increase in-window buy headroom** at minimal — this is the faithful
-inheritance of #40's no-net-budget model (KD-2), not an omission. A deep-tier net-budget refinement, if ever
-wanted, is a #40 concern, not a #31 parallel ledger (FR-TX-006).
+`committedSpendThisWindow` (a buy-side accumulator) and does **not** raise `AvailableTransferBudget` (the
+`TransferBudget` ceiling is `SettleFinances`-only, FR-FN-003/004). Sell proceeds therefore do not increase
+in-window buy headroom at minimal.
 
 ## 3.4 The #30 boundary — the roster-commit re-key (KD-7)
 
-`RequestRosterCommit(fromClubId, toClubId, playerId)` is a **genuinely new #30-owned mid-season entry point**
-(§4, §8). #30 owns **no** per-player roster mutation today — its mid-season tick is all null seams + the
-world-day advance, and even the season-boundary roll's roster step (`AdvanceAges`) is itself an inert null
-seam; #27 owns `Squad`/`PlayerRecord`. So this is new capability #30 grows, **orchestrating** a #27 `Squad`
-move (not an extension of boundary churn, which does not exist). #31 declares the seam contract; #30 builds it
-at T2 (ERR-030-005). It:
+`RequestRosterCommit(fromClubId, toClubId, playerId)` is a genuinely new #30-owned mid-season entry point.
+#31 declares the consumer contract; #30 builds it at T2 (ERR-030-005). T0 additionally needs one read-only
+roster query for §3.1: `CountPlayersAtPosition(clubId, PlayerPosition)`. It reads #27 state only and performs no
+allocation or mutation.
 
 ```
-RequestRosterCommit(fromClubId, toClubId, playerId):        # #30-owned orchestration of a #27 Squad move; #31 calls, does not implement
-    freeLocal := AllocateFreeLocalIndex(toClubId)           # F5 fail-loud if the destination Squad is full
-    newId     := toClubId * CLUB_SQUAD_SIZE + freeLocal      # the #27 club-scoped id formula (re-key)
-    MovePlayerRecord(fromClubId, playerId, toClubId, newId)  # the #27-owned Squad move #30 drives
-    DispatchRosterMoveHook(playerId, newId)                 # each per-PlayerId system migrates its own state
+RequestRosterCommit(fromClubId, toClubId, playerId):
+    freeLocal := AllocateFreeLocalIndex(toClubId)
+    newId     := toClubId * CLUB_SQUAD_SIZE + freeLocal
+    MovePlayerRecord(fromClubId, playerId, toClubId, newId)
+    DispatchRosterMoveHook(playerId, newId)
     return newId
 ```
 
-`DispatchRosterMoveHook` calls each subscriber: **#31.`OnPlayerRekeyed(oldId, newId)`**, #28's CA/PA
-migration, #33's morale migration. #28/#33 always **move** their state old→new (it follows the player across
-clubs). #31's `OnPlayerRekeyed` moves its `Contract` old→new **only** for an intra-managed-club re-key (both
-ids in the managed club) — **not reached at minimal**, where every transfer is managed↔AI and `SubmitBid` has
-already Inserted (buy) or Removed (sell) the managed contract, so the hook is a **no-op** for #31 (FR-TX-023 —
-this is what prevents the hook and the sell's `RemoveContract` from double-handling the same contract). #31
-migrates **only** its own `Contract`; it never touches #28/#33 state.
+`DispatchRosterMoveHook` calls each subscriber: #31 `OnPlayerRekeyed`, #28 CA/PA migration, and #33 morale
+migration. #31 moves only its own `Contract` and is a no-op for managed↔external minimal transfers because the
+buy/sell command already creates/removes that managed-club contract at the correct side of the re-key.
 
 ## 3.5 The transfer window — `IsWindowOpen` (FR-TX-019/020)
 
 ```
-DeriveSummerWindow(in SeasonCalendar cal):                 # #31-owned; reads #30's calendar read-only
+DeriveSummerWindow(in SeasonCalendar cal):
     return TransferWindow{ OpenWorldDay  = SEASON_START_WORLD_DAY,
                            CloseWorldDay = SEASON_START_WORLD_DAY + SUMMER_WINDOW_LENGTH_DAYS }
 
@@ -152,72 +160,54 @@ calendar; #31 derives the window from it and never mutates it.
 
 ## 3.6 Worked example (behaviour-neutral minimal)
 
-Season start, no manager action: `RunWorldTickInFixedOrder` reaches the new transfers slot, which — at minimal
-— has no daily work (window open/close is a predicate evaluated at command time), so it is a null seam. No
-`SubmitBid` is issued ⇒ no `ApplyTransaction`, no roster commit, no `Contract` inserted ⇒ the season is
-byte-identical to pre-#31 (FR-TX-024, T-TX-NEU-001). A save→restore here is field-identical (T-TX-DET-001).
-When the manager *does* `SubmitBid` a fair-value buy inside the window, exactly **one** `ApplyTransaction` post
-(the transfer fee — wages are deep, FR-TX-005) + one re-keyed `Contract` land, deterministically and
-atomically. This is the KD-8 identity the deep tier modulates.
+Season start, no manager action: `RunWorldTickInFixedOrder` reaches the transfers slot and does no daily work.
+No `SubmitBid` ⇒ no transaction, roster commit or contract insertion, so the season remains byte-identical to
+pre-#31 (FR-TX-024). With a manager action, suppose §3.1 resolves the counterparty value to `100,000` and the
+configured counter band to `5%`: a buy at `100,000` accepts; `99,999` through `95,000` returns
+`CounterOffered`; `94,999` rejects. Only the accepted path posts one transfer-fee transaction and one roster
+re-key. All three outcomes are draw-free and deterministic.
 
 ## 3.7 Contract aging at the season boundary (FR-TX-028)
 
 `RollToNextSeason` ages the managed club's contracts (durable career state survives the roll):
 
 ```
-AgeContractsAtBoundary(ref TransfersState txState):        # invoked from #30's RollToNextSeason
+AgeContractsAtBoundary(ref TransfersState txState):
     expired := []
-    for each playerId in txState.ManagedContractIds:       # iterate KEYS — no foreach-over-struct copy
+    for each playerId in txState.ManagedContractIds:
         newLen := txState.ContractOf(playerId).LengthSeasons - 1
-        if newLen <= 0:  expired.Add(playerId)             # would reach 0 ⇒ EXPIRED (never stored as 0)
-        else:            txState.SetContractLength(playerId, newLen)   # write the decrement back to the store
-    for each playerId in expired:  txState.RemoveContract(playerId)    # remove AFTER iterating (no modify-during-foreach)
-    txState.ResetWindow(); txState.ResetCommittedSpend()   # season-scoped state resets (FR-TX-007/028)
-    #   ResetWindow RE-DERIVES ActiveWindow from the new season's SeasonCalendar via DeriveSummerWindow (§3.5) —
-    #   the calendar is the source of truth (§3.5); it does not zero the cursor. ResetCommittedSpend sets it 0.
+        if newLen <= 0:  expired.Add(playerId)
+        else:            txState.SetContractLength(playerId, newLen)
+    for each playerId in expired: txState.RemoveContract(playerId)
+    txState.ResetWindow(); txState.ResetCommittedSpend()
 ```
 
-An expired contract is **removed** — the player becomes un-contracted; at minimal it simply leaves #31's
-tracking (roster membership stays #27/#28-owned — an un-contracted player is not auto-removed from the squad).
-Free-agency, auto-renewal, and expiry-warning flows are deep-tier (§7). Because a contract is removed the moment
-it *would* decrement to `0`, a stored `LengthSeasons` is always `> 0`, so the F7 zero-value-trap gate
-(`LengthSeasons = 0` is invalid) never collides with a legitimately-aged contract.
+An expired contract is removed; the player becomes un-contracted. Free-agency, auto-renewal and warnings remain
+deep-tier. `ResetWindow()` re-derives the new window from #30's calendar rather than zeroing the cursor.
 
 ## 3.8 Initial contract population (career start)
 
-At **new-career genesis** (the T0 construction of a fresh career — *not* a load, see below) the managed club's
-#27 squad is seeded with **one `Contract` per rostered player**, so every
-managed player has a contract the sell path (§3.3) and boundary aging (§3.7) can operate on — a career never
-starts with an un-contracted squad, and FR-TX-028's "durable career state" has an initial set to be durable
-across:
+At **new-career genesis only** (never on load) the managed club's #27 squad is seeded with one contract per
+rostered player:
 
 ```
-SeedInitialContracts(managerClubId, in Squad squad, ref TransfersState txState):   # #31-owned; reads #27 read-only
-    for each playerId in squad.PlayerIds:              # the #27 club-scoped ids
+SeedInitialContracts(managerClubId, in Squad squad, ref TransfersState txState):
+    for each playerId in squad.PlayerIds:
         txState.InsertContract(Contract{ PlayerId = playerId,
-                                         WagePerPeriod = DefaultWageFor(squad, playerId),  # [GT], Appendix A
-                                         LengthSeasons = DEFAULT_CONTRACT_SEASONS })         # [GT] > 0 (F7-valid)
+                                         WagePerPeriod = DefaultWageFor(squad, playerId),
+                                         LengthSeasons = DEFAULT_CONTRACT_SEASONS })
 ```
 
-`DefaultWageFor` / `DEFAULT_CONTRACT_SEASONS` are `[GT]` (balance-pass-pinned); each seeded contract satisfies
-F6/F7 (`WagePerPeriod ≥ 0`, `LengthSeasons > 0`). **AI clubs are not seeded** (they hold no #31 contract state
-at minimal, §2.2). Seeding mutates only `TransfersState` and is **not read by the sim** at minimal (no wage
-posting, no autonomous producer), so it does not perturb the byte-identical season advance (FR-TX-024) — it
-only populates the transfers sub-blob that exists because #31 exists.
-
-**Seeding runs once, at new-career genesis ONLY.** A load-from-save reconstructs `TransfersState` from the
-transfers sub-blob (§4.4, F3-gated) and MUST NOT re-seed — re-seeding a loaded career would collide with the
-already-present ids (`InsertContract` throws F7-style) or overwrite the restored, aged/traded contracts, silently
-destroying career progress. The composition root invokes `SeedInitialContracts` at career creation and the
-sub-blob decode on load — **never both** (§4.5). This is why the T-TX-DET-001 / FR-TX-027 round-trip is
-field-identical: the restored contracts come from the sub-blob, not from a re-run of the seeder.
+`DefaultWageFor` / `DEFAULT_CONTRACT_SEASONS` are `[GT]`; every seeded contract is F6/F7-valid. AI clubs are
+not seeded at minimal. A load reconstructs the contracts from the transfers sub-blob and MUST NOT re-seed.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §3 (valuation, offer evaluation, atomic bid pipeline, the #30 roster re-key, the window model, worked example). Status IN REVIEW. |
-| 0.2 | 2026-07-23 | — | AR-1: `SubmitBid` pipeline resolves `fromClub`/`toClub` from the explicit `Offer.CounterpartyClubId` + cross-checks `ClubOf(playerId) == fromClub` (M1); sell branch defines `outgoingWage` + buyer free-slot gate + managed-club-only contract scope (M2/L1). |
-| 0.3 | 2026-07-23 | — | AR-3: commit is fee-only at minimal, wage posts deep (H); sell `RemoveContract` moved BEFORE `RequestRosterCommit` + §3.4 hook made direction-aware/no-op (sell double-handle — M); §3.1 drops club-need to the deep bias + defines `counterpartyView` (M); new §3.7 decrement-and-remove contract aging (F7 — M); §3.4 corrects the "#30 churns rosters" claim + fixes the T2 build cite to ERR-030-005 (L); §3.6 fee-post count corrected to one. AR-4: fixed the `counterpartyView` double-application in §3.3 (regression from §3.1's redefinition), made §3.7 aging struct-safe (iterate keys, remove after the loop), and added §3.8 career-start contract seeding (M — the sell/aging flows previously had no initial contract set). |
-| 0.4 | 2026-07-23 | — | AR-6 (M): §3.8 scopes seeding to **new-career genesis only** — a load reconstructs from the sub-blob and must not re-seed (a re-seed would overwrite/collide with the restored career; the AR-4 §3.8 addition had left this undefined). |
-| 0.5 | 2026-07-23 | — | AR-8 (2L doc, non-gating): §3.3 records the static-ceiling consequence (sell income does not raise in-window buy headroom; `committedSpendThisWindow` is buy-side only — KD-2/FR-FN-003/004); §3.7 pins `ResetWindow()` as re-deriving `ActiveWindow` from the calendar (§3.5), not zeroing. |
+| 0.2 | 2026-07-23 | — | AR-1: explicit counterparty club / direction checks and sell-side scope corrections. |
+| 0.3 | 2026-07-23 | — | AR-3/AR-4: fee-only minimal commit, sell re-key ordering, deep-only club need at the time, contract aging, and career-start seeding. |
+| 0.4 | 2026-07-23 | — | AR-6: seeding scoped to new-career genesis only. |
+| 0.5 | 2026-07-23 | — | AR-8 doc: static-ceiling consequence and ResetWindow calendar semantics. |
+| 0.6 | 2026-09-14 | — | T0 football-judgment close-out: Stage-2 counterparty view gains always-on #27 positional scarcity; `EvaluateOffer` gains a deterministic synchronous counter-offer band; malformed terms are validated at the reusable evaluator; §3.3 records no-mutation counter/reject outcomes; §3.4 adds the read-only positional-stock query. |
 #endregion
