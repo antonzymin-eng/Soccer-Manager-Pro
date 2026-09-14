@@ -32,11 +32,17 @@ break it, and do not edit historical entries.
 >
 > **Third base advance, and the first one that cost nothing:** `main` moved again through **PR #405** (art pipeline AP-03 / G2 acceptance, 17 commits). Only `CHANGELOG.md`'s chain conflicted, additively, and **neither version collision recurred** — `main` still carried `spec-error-log.md` v2.56 and `CHANGELOG-src.md` v2.134, so this landing's v2.57 and v2.135 stood unchanged. Checked explicitly rather than assumed, because the two previous merges both hid a collision behind an ordinary-looking chain conflict. Three base advances in two days is itself the observation worth keeping: on a repository this documentation-heavy, a PR left open overnight will conflict in the tracking chains roughly every time, and the conflict is where the version collisions hide.
 >
+> **Sixth base advance, and the collision class recurred a third time — caught by the pre-check rather than by luck.** `main` moved again through **PR #409** (W4 tracking recovery, 24 commits) and took **`CHANGELOG-src.md` v2.135**, the same number this branch had already used; this landing's `src/` entry renumbers to **v2.136**. That is now three collisions across six merges: the error log's first contested number, then the `src/` chain's next two in succession. The difference this time is procedural: the version comparison was run **before** merging rather than discovered inside a conflict hunk, which is the practice the `open-issues.md` entry recommends and the only reason it was not resolved by accident. `file-manifest.md` also conflicted on a single maintained-pointer line and was **genuinely merged rather than taken from one side** — this branch's `spec-error-log.md` **v2.57** is kept (this landing bumped it; `main` is still at v2.56) while `main`'s `match-engine-wiring-backlog.md` **v1.15** is adopted (W4 advanced it; this landing did not). Taking either side wholesale would have silently reverted the other's pointer.
+>
 > The merged head owns its own gate verdict; `check_drift.sh` and `doc-consistency-check.py` were re-run clean after each resolution. **`recurring-defect-lint.py` reports 4 ERRORs on this head and they are NOT this landing's** — `FR-CS-057` header/version-row date mismatches in `TackleOutcomeResolverTests.cs`, `MatchEngineTackleTests.cs`, `AvailabilityCompositionExtremisTests.cs` and `SeasonLoopDisciplineTests.cs`, all four introduced by **PR #404**, which bumped each file's `// Modified:` line without appending the matching version-history row. Verified pre-existing by running the linter against `origin/main` at `ddd221c` in a scratch worktree: **identical 4 ERRORs, same files, same messages.** The repository's standing bar is 0 ERROR tree-wide (August 8, 2026 hygiene pass), so this is a real regression on `main` — but it is in four files this PR does not touch, and repairing them here would widen a Club Finances landing into someone else's test headers. Not fixed, not silently absorbed: recorded here so the next `src/` landing or a dedicated hygiene pass picks it up.
 >
 >
 >
 >
+>
+> **Last Updated (prior):** September 13, 2026 — **W4 keeper perception is wired on PR #403, completing the consumer half that PR #399 prepared.**
+>
+> Decision Tree `SAVE` now uses current-frame all-body physical LOS through `KeeperPerceptionGate.SaveAvailable`; raw `GkHeadingIntentSource.SaveArmed` deliberately remains the shared threat geometry and the independent W1 rush veto, so being screened never makes charging at a goal-bound ball legal. Collision System now returns one transient per-call fact only when `BallCollisionHandler` actually changes flight; Match Engine consumes it immediately in the same Resolve phase, evaluates the post-deflection trajectory, and, only when that post-deflection save threat is currently visible, restarts the newly threatened keeper through `GoalkeeperMechanics.OnThreatDeflected`. That seam overwrites reaction timing without setting the shot-event latch; `OnThreatArmed` likewise anchors only visible threat episodes, so screened time does not accrue reaction credit. Added applied-vs-overlap collision, reaction-reset, screened-DT-SAVE, and non-vacuous raw-rush-veto regressions. No new serialized latch, snapshot schema, `CollisionEvent` ABI, save format, RNG stream/domain/draw site or draw order. Canonical Perception sent-off asymmetry remains separately tracked by #401. `match-engine-wiring-backlog.md` advances v1.14 → v1.15 and closes sequence item W4; W12 is next. Final PR-head CI #1437 passed; the post-merge main run remains separately authoritative.
 >
 > **Last Updated (prior):** September 13, 2026 — **`.gitignore` now ignores Unity's `.meta` files for the Linux gate's generated `.gen.csproj` projects. Repository hygiene only.**
 >
@@ -1457,7 +1463,7 @@ break it, and do not edit historical entries.
 > knowingly wrong meanwhile, with the acceptance bands (fouls ≤ 90, yellows ≤ 20, reds ≤ 5) reading
 > green throughout.
 >
-> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.14)* records the consequence none of these three holds could
+> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.15)* records the consequence none of these three holds could
 > see individually: W2's *arming* now gates three separate decisions** — the foul/card calibration,
 > KD-7a's successor distribution, and everything behind the un-isolated `sim_match_engine_inposs_gate`
 > stall whose leading candidate is W6. The path **W4 → W12 → W6** therefore unblocks three decisions,
@@ -1467,7 +1473,7 @@ break it, and do not edit historical entries.
 > FALSE — W2's arming gates **two** held decisions (the foul/card calibration and KD-7a's successor
 > distribution); the third item, the un-isolated `sim_match_engine_inposs_gate` stall, is what BLOCKS
 > arming, not something arming unblocks, so it does not belong beside them. The citation above is
-> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.14)*, whose §5 note carries the corrected
+> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.15)*, whose §5 note carries the corrected
 > two-plus-the-blocker form; the W4 → W12 → W6 path aims to clear the blocker and thereby unblock
 > the two.
 >
