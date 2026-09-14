@@ -9662,5 +9662,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | also requires live LOS. RefreshGkAgentIds moved to Resolve entry after |
 // |         |            |        | pending substitutions, removing deflection-conditional ResetSlot timing.|
 // | 1.75    | 2026-09-14 | —      | W5: subscribe to PassAttemptEvent at boot, route CONTACT events to the opposing #13 ring, and append/restore each ring latest event in snapshot v22; no RNG or draw-order change. |
+// | 1.77    | 2026-09-14 | —      | W6: genuine open-play possession enters BallState.Controlled, follows the holder, |
+// |         |            |        | and exits explicitly on non-kick release; restart-taker designation remains       |
+// |         |            |        | Stationary. No snapshot-schema or RNG change.                                     |
 // | 1.76    | 2026-09-14 | —      | ERR-013-011: FillPressingSnapshot carries the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
 #endregion

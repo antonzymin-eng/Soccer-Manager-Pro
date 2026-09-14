@@ -1,7 +1,7 @@
 # W6 Controlled Ball — Wiring Design
 
 **Date:** 2026-09-14  
-**Status:** IMPLEMENTATION / VALIDATION  
+**Status:** WIRED / VALIDATED (PR #412)
 **Scope:** Match-engine wiring backlog W6 only. W2 tackle activation remains a separate post-W6 evidence decision.
 
 ## Problem

@@ -10,7 +10,7 @@
 
 ---
 
-> **UPDATED September 14, 2026 (v1.16):** W4 and W12 are on `main`; PR #398 is reconciled on top with W5 and W7 production wiring preserved. W12 establishes the pre-#398 runtime baseline and the separate unread-serialized-field sweep; W5 is now the required post-baseline comparison, not an assumed-live trigger. Five Class-A wiring items remain: W3, W6, W8, W9, W10. **After the post-#398 W12 comparison passes, W6 is next.**
+> **UPDATED September 14, 2026 (v1.17):** W4, W5, W7, and W12 are on `main`; the post-#398 W12 comparison is GREEN. W6 is now wired on PR #412: genuine open-play possession enters Ball Physics `Controlled`, follows its holder, and exits explicitly on non-kick release, while restart-taker designation remains a placed `Stationary` ball. Four Class-A wiring items remain: W3, W8, W9, W10. **Next: rerun the W2 armed tackle evidence against the W6 state model before any tackle activation, then continue the remaining Class-A items.**
 
 ## 0. Why this document exists, and the rule it establishes
 
@@ -317,15 +317,37 @@ separately tracked by #401. Regression locks: `CollisionDeflectionFeedbackTests`
 **Consequence:** the ring is permanently empty, so #13's BackwardPass press trigger is dead. A
 press that should be sprung by a backward pass never is.
 
-### W6 — `BallStateType.Controlled` has no producer
-**Evidence:** `ball-physics/BallCollision.cs` — `CheckPossession` and `SetBallControlled` both have
-zero production callers. The doc comment describes the intended protocol
-(*"Caller must: record possession in agent system, call SetBallControlled(), drive position"*) and
-no caller implements it.
+### W6 — `BallStateType.Controlled` has no producer — ✅ **WIRED September 14, 2026 (PR #412)**
+**Pre-fix evidence:** `ball-physics/BallCollision.cs` exposed `CheckPossession` and
+`SetBallControlled`, but no production MatchEngine possession grant called the physical-control
+transition. `_possessingAgentId` was only a logical flag, so a claimed ball could move independently
+of its holder.
 
-Already recorded from the other direction in OPEN ISSUES §5.Z.23 item (c): a claimed ball is not
-held at hand height and the keeper cannot carry it, because the parked ball settles under gravity.
-Same root cause. Possession in the engine is a flag, never a kinematic constraint.
+**Resolved:** genuine open-play possession now enters `BallStateType.Controlled` through one
+MatchEngine ownership boundary and the ball is kinematically attached to the live holder at the end
+of Physics. Outfield control uses the canonical ball-rest/foot height; goalkeeper control follows the
+keeper while preserving the actual claim/contact height. First-touch control/interception,
+loose-ball pickup, tackle ball-won, and goalkeeper possession all use this boundary. Existing
+higher-level acquisition mechanics remain authoritative; W6 does not silently shrink their live
+geometry by re-running Ball Physics' narrower `CheckPossession` predicate.
+
+`_possessingAgentId` also designates restart takers, so restart awards deliberately remain a placed
+`Stationary` ball and are excluded from physical control and tackle resolution. Kicks already leave
+`Controlled` through `ApplyKick`; W6 adds an explicit non-kick `ReleaseBallControl` path for
+knocked-loose possession and the six-second goalkeeper release. The forced goalkeeper release drops
+the ball to foot height and preserves the existing re-collect cooldown. No new durable latch,
+snapshot field/schema, RNG stream/domain/draw site, or draw-order change.
+
+**Regression locks:** `MatchEngineControlledBallW6Tests` (pickup/control, holder following, restart
+exception, goalkeeper carry, forced-loose exit, six-second release) and `BallControlStateTests`
+(Controlled entry/release recovery checkpoints). Targeted validation passed: 3 BallPhysics + 47
+MatchEngine affected tests, including first-touch, possession-bootstrap, goalkeeper, and tackle
+coverage. Owner/design record: `docs/tracking/w6-controlled-ball-design.md`.
+
+**W2 remains disabled.** W6 removes the leading carrier/ball-drift blocker but does not change
+`TackleContactRadiusM` from its governed disabled value. The next action is to rerun the armed W2
+corpus/composed-match evidence and make the tackle-activation decision separately; W6 does not smuggle
+in a balance change.
 
 ### W7 — The AI manager never picks a kickoff preset — ✅ **WIRED September 11, 2026 (PR #398)**
 **Pre-fix evidence:** `match-engine/ManagerAdaptation.cs:250` `ApplyKickoff` had no caller. Its own doc says

@@ -337,8 +337,9 @@ namespace TacticalDirector.BallPhysics
         }
 
         /// <summary>
-        /// Transitions ball to Controlled state. Called by agent system after CheckPossession.
-        /// Does NOT record which agent has possession (Option B — agent system owns that).
+        /// Transitions ball to Controlled state after the host possession mechanic adjudicates
+        /// a successful touch. CheckPossession remains available to hosts using Ball Physics'
+        /// own acquisition geometry. Does NOT record which agent has possession (Option B).
         /// </summary>
         public static void SetBallControlled(ref BallState ball)
         {
