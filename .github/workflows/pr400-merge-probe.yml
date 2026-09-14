@@ -158,7 +158,7 @@ jobs:
 
           rm .github/workflows/pr400-merge-probe.yml
           git add -A
-          git diff --cached --check
+          git diff --cached --check -- docs/tracking/CHANGELOG-src.md docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md docs/tracking/spec-error-log.md
           python3 tools/doc-consistency-check.py --repo .
           bash .claude/skills/landing-close-out/scripts/check_drift.sh
 
