@@ -149,6 +149,7 @@ jobs:
           assert 'W5 + W7' in oi
           PY
 
+          git add docs/tracking/CHANGELOG-src.md docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md docs/tracking/spec-error-log.md
           if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
             echo "Unresolved merge paths remain:" >&2
             git diff --name-only --diff-filter=U >&2
