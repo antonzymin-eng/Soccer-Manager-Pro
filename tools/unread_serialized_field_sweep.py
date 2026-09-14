@@ -165,7 +165,6 @@ def brace_delta(line: str) -> int:
 def declarations_in_file(path: Path, repo: Path) -> list[FieldDecl]:
     lines = path.read_text(encoding="utf-8-sig").splitlines()
     result: list[FieldDecl] = []
-    # Stack entries are (type name, brace depth *inside* that type).
     type_stack: list[tuple[str, int]] = []
     pending_type: str | None = None
     depth = 0
@@ -175,7 +174,6 @@ def declarations_in_file(path: Path, repo: Path) -> list[FieldDecl]:
         line = strip_line_comments(raw)
         stripped = line.strip()
 
-        # Close types whose body ended on the previous line.
         while type_stack and depth < type_stack[-1][1]:
             type_stack.pop()
 
@@ -183,10 +181,7 @@ def declarations_in_file(path: Path, repo: Path) -> list[FieldDecl]:
         if tm:
             pending_type = tm.group("name")
 
-        # A conventional type body may open on the declaration line or a later line.
-        opens = line.count("{")
-        if pending_type is not None and opens:
-            # The first opening brace on/after the type declaration begins the type body.
+        if pending_type is not None and "{" in line:
             type_stack.append((pending_type, depth + 1))
             pending_type = None
 
@@ -212,8 +207,6 @@ def declarations_in_file(path: Path, repo: Path) -> list[FieldDecl]:
                 )
             pending_serialize = False
         elif stripped and not ATTRIBUTE_ONLY_RE.match(line):
-            # Any real statement/declaration breaks attribute association, except a
-            # type-opening brace between an attribute and its field (not legal C# anyway).
             if not (pending_serialize and stripped == "{"):
                 pending_serialize = False
 
@@ -242,7 +235,6 @@ def method_names_by_line(lines: Sequence[str]) -> list[str | None]:
         line = strip_line_comments(raw)
         stripped = line.strip()
 
-        # End a method whose closing brace was on the previous line.
         if current is not None and method_depth is not None and depth < method_depth:
             current = None
             method_depth = None
@@ -274,8 +266,6 @@ def is_transport_context(path: str, method: str | None, line: str) -> bool:
         lower_method = method.lower()
         if any(marker in lower_method for marker in TRANSPORT_METHOD_MARKERS):
             return True
-    # Canonical serializer / binary reader-writer calls are transport even when
-    # wrapped in a generically named helper.
     lowered = line.lower()
     return (
         "canonicalserializer" in lowered
@@ -287,38 +277,28 @@ def is_transport_context(path: str, method: str | None, line: str) -> bool:
 
 
 def occurrence_kind(line: str, field_name: str) -> str | None:
-    """Classify one line occurrence as write/read/none.
-
-    Conservative rule: if a line writes and also reads the same field (e.g. x += 1),
-    it counts as a read. Plain assignment/object-initializer/ref-out destinations are
-    writes only.
-    """
+    """Classify one occurrence as a plain write, a read, or no meaningful use."""
     code = strip_line_comments(line)
     if not re.search(IDENT_RE_TEMPLATE.format(re.escape(field_name)), code):
         return None
 
-    # Ignore the field declaration itself.
     if FIELD_RE.match(code) and re.search(
         rf"\b{re.escape(field_name)}\b\s*(?:=|;)", code
     ):
         return None
 
-    # Compound assignments and ++/-- consume the prior value.
     if re.search(rf"\b{re.escape(field_name)}\b\s*(?:\+\+|--|[+\-*/%&|^]=)", code):
         return "read"
 
-    # ref can be both; out is destination-only.
     if re.search(rf"\bref\s+(?:[\w.]+\.)?{re.escape(field_name)}\b", code):
         return "read"
     if re.search(rf"\bout\s+(?:[\w.]+\.)?{re.escape(field_name)}\b", code):
         return "write"
 
-    # Qualified or bare assignment LHS, including object initializers.
     if re.search(
         rf"(?<![=!<>])\b(?:[A-Za-z_]\w*\.)*{re.escape(field_name)}\s*=(?!=)",
         code,
     ):
-        # If the RHS also contains the field name, count consumption.
         lhs_match = re.search(
             rf"\b(?:[A-Za-z_]\w*\.)*{re.escape(field_name)}\s*=(?!=)", code
         )
@@ -337,6 +317,16 @@ def collect_evidence(repo: Path, fields: Sequence[FieldDecl]) -> dict[str, Evide
         by_name.setdefault(decl.name, []).append(decl)
 
     evidence = {decl.key: Evidence() for decl in fields}
+    if not by_name:
+        return evidence
+
+    # One token scan per source line, then detailed classification only for names
+    # actually present on that line. This keeps the repository-wide pass near
+    # O(lines + occurrences), rather than O(fields × lines).
+    ordered_names = sorted(by_name, key=lambda value: (-len(value), value))
+    name_pattern = re.compile(
+        r"\b(?:" + "|".join(re.escape(name) for name in ordered_names) + r")\b"
+    )
 
     for path in iter_cs_files(repo):
         rel = str(path.relative_to(repo)).replace("\\", "/")
@@ -344,21 +334,17 @@ def collect_evidence(repo: Path, fields: Sequence[FieldDecl]) -> dict[str, Evide
         methods = method_names_by_line(lines)
 
         for lineno, (raw, method) in enumerate(zip(lines, methods), start=1):
-            for name, decls in by_name.items():
+            code = strip_line_comments(raw)
+            present = {match.group(0) for match in name_pattern.finditer(code)}
+            for name in present:
+                decls = by_name[name]
                 kind = occurrence_kind(raw, name)
                 if kind is None:
                     continue
                 location = f"{rel}:{lineno}"
+                qualified = bool(re.search(rf"\.\s*{re.escape(name)}\b", code))
                 for decl in decls:
-                    # If the same field name exists on several carrier types this lexical
-                    # sweep cannot type-resolve cross-file accesses. To avoid false proof,
-                    # only propagate unqualified same-file uses to the declaring type;
-                    # qualified cross-file uses conservatively count for every same-name
-                    # candidate. Findings remain candidates, never proof.
                     same_file = rel == decl.path
-                    qualified = bool(re.search(
-                        rf"\.\s*{re.escape(name)}\b", strip_line_comments(raw)
-                    ))
                     if not same_file and not qualified:
                         continue
                     target = evidence[decl.key]
@@ -378,8 +364,6 @@ def find_candidates(repo: Path) -> list[Finding]:
     for decl in fields:
         ev = evidence[decl.key]
         writes = list(ev.writes)
-        # Unity populates [SerializeField] from scene/prefab data, so the attribute is
-        # itself a write-side activation surface even when no C# assignment exists.
         if decl.unity_serialized and not writes:
             writes.append("<Unity serialization>")
         if not writes:
