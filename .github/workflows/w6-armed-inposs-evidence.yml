@@ -1,0 +1,179 @@
+name: W6 armed InPoss evidence
+
+on:
+  push:
+    branches:
+      - tmp/w6-measure-dispatch-20260914
+
+permissions:
+  contents: read
+
+jobs:
+  armed-inposs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout exact W6 production head
+        uses: actions/checkout@v4
+        with:
+          ref: 3ccfbe9cfc978c83d3f482859204a1060ade7c89
+          fetch-depth: 1
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Arm W2 only in the governed InPoss evidence harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/w6-armed-inposs/trx
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/match-engine/tests/MatchEngineInPossGateScenarios.cs')
+          s = p.read_text(encoding='utf-8')
+
+          old = '''        private static void RunInPossGate(ScenarioContext context)
+        {
+            int samples = 0;
+            int homeViewPossession = 0;
+            int awayViewPossession = 0;
+
+            for (int s = 0; s < Seeds.Length; s++)
+            {
+                PlayOne(Seeds[s], ref samples, ref homeViewPossession, ref awayViewPossession);
+            }
+
+            string inv(int v) => v.ToString(CultureInfo.InvariantCulture);
+            string f3(double v) => v.ToString("F3", CultureInfo.InvariantCulture);
+
+            float homeShare = samples > 0 ? (float)homeViewPossession / samples : 0f;
+            float awayShare = samples > 0 ? (float)awayViewPossession / samples : 0f;
+
+            // Non-vacuity: the corpus actually put the ball in a final third often enough to measure.
+            context.Envelope.CheckTrue("final-third-phase-samples-are-taken",
+                samples >= 20000,
+                "samples=" + inv(samples));
+
+            // THE LOCK. A team is in possession while a player is on the ball AND while a ball it
+            // played is travelling to a team-mate (#12 FR-PA-022). Before ERR-012-011 the engine held
+            // no on-ball possessor for the whole flight of every pass — measured, it holds none on
+            // 86% of final-third samples — so §3.0.2 fell through to its ball-velocity branch and
+            // classified a team knocking the ball around as being in TRANSITION.
+            //
+            // Measured pooled over the six-seed corpus: possession-phase share 24.2% pre-fix
+            // (InPoss 7.5% + OutOfPoss 16.7%) against 96.8% post-fix (40.8% + 56.0%), with a
+            // per-seed post-fix minimum of 96%. The 0.70 bound sits in the middle of that gap and
+            // nowhere near either side, so this predicate is not a hair-trigger on corpus noise.
+            context.Envelope.CheckTrue("final-third-play-is-somebodys-possession-home-view",
+                homeShare > 0.70f,
+                "homeShare=" + f3(homeShare) + " (bound 0.70; pre-fix corpus ≈ 0.24)");
+
+            // The same fact read off the AWAY team's mirrored snapshot. Possession is a shared fact,
+            // so this must agree with the line above; if it ever does not, the mirroring is the
+            // defect, not the classifier.
+            context.Envelope.CheckTrue("final-third-play-is-somebodys-possession-away-view",
+                awayShare > 0.70f,
+                "awayShare=" + f3(awayShare) + " (bound 0.70; pre-fix corpus ≈ 0.24)");
+        }
+'''
+          new = '''        private static void RunInPossGate(ScenarioContext context)
+        {
+            string inv(int v) => v.ToString(CultureInfo.InvariantCulture);
+            string f3(double v) => v.ToString("F3", CultureInfo.InvariantCulture);
+            int totalSamples = 0;
+
+            // W6 post-wire evidence only: retain the governed seeds and 0.70 predicate, but evaluate
+            // each seed independently so one healthy trajectory cannot mask a stalled trajectory.
+            for (int s = 0; s < Seeds.Length; s++)
+            {
+                int samples = 0;
+                int homeViewPossession = 0;
+                int awayViewPossession = 0;
+                ulong seed = Seeds[s];
+                PlayOne(seed, ref samples, ref homeViewPossession, ref awayViewPossession);
+                totalSamples += samples;
+
+                float homeShare = samples > 0 ? (float)homeViewPossession / samples : 0f;
+                float awayShare = samples > 0 ? (float)awayViewPossession / samples : 0f;
+                Console.WriteLine(
+                    "W6_ARMED_INPOSS seed=0x" + seed.ToString("X16", CultureInfo.InvariantCulture)
+                    + " samples=" + inv(samples)
+                    + " homeShare=" + f3(homeShare)
+                    + " awayShare=" + f3(awayShare));
+
+                string suffix = "-seed-0x" + seed.ToString("X16", CultureInfo.InvariantCulture);
+                context.Envelope.CheckTrue("final-third-play-is-somebodys-possession-home-view" + suffix,
+                    homeShare > 0.70f,
+                    "homeShare=" + f3(homeShare) + " (bound 0.70)");
+                context.Envelope.CheckTrue("final-third-play-is-somebodys-possession-away-view" + suffix,
+                    awayShare > 0.70f,
+                    "awayShare=" + f3(awayShare) + " (bound 0.70)");
+            }
+
+            // Preserve the existing corpus-level non-vacuity predicate unchanged.
+            context.Envelope.CheckTrue("final-third-phase-samples-are-taken",
+                totalSamples >= 20000,
+                "samples=" + inv(totalSamples));
+        }
+'''
+          if s.count(old) != 1:
+              raise SystemExit(f'expected one governed RunInPossGate block, found {s.count(old)}')
+          s = s.replace(old, new, 1)
+
+          old_arm = '''            var engine = new MatchEngine(seed);
+            engine.ConfigureSquads(BuildSquad(seed, clubId: 1), BuildSquad(seed, clubId: 2));
+
+            for (int tick = 0; tick < NumTicks; tick++)
+'''
+          new_arm = '''            var engine = new MatchEngine(seed);
+            engine.ConfigureSquads(BuildSquad(seed, clubId: 1), BuildSquad(seed, clubId: 2));
+            // Measurement-only seam: production remains shipped at radius 0.
+            engine.TestOnly_ArmTackleChallenge(MatchEngineConstants.LooseBallPickupRadiusM);
+
+            for (int tick = 0; tick < NumTicks; tick++)
+'''
+          if s.count(old_arm) != 1:
+              raise SystemExit(f'expected one PlayOne arming anchor, found {s.count(old_arm)}')
+          s = s.replace(old_arm, new_arm, 1)
+          p.write_text(s, encoding='utf-8', newline='\n')
+          PY
+
+          git diff -- src/match-engine/tests/MatchEngineInPossGateScenarios.cs \
+            > artifacts/w6-armed-inposs/measurement-only.patch
+          cat > artifacts/w6-armed-inposs/provenance.txt <<'EOF'
+          W6 production head: 3ccfbe9cfc978c83d3f482859204a1060ade7c89
+          Shipping TackleContactRadiusM remains 0 in the branch.
+          Measurement-only arm: MatchEngine.TestOnly_ArmTackleChallenge(LooseBallPickupRadiusM = 1.0 m).
+          Governed seeds: 0x0F1E2D3C4B5A6978, 0x1A2B3C4D5E6F7081.
+          Governed bound: each seed, both mirrored views, > 0.70.
+          EOF
+
+      - name: Build and run only governed InPoss scenario
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tools/dotnet-ci/run-gate.sh --fast \
+            --test-filter 'FullyQualifiedName~sim_match_engine_inposs_gate' \
+            2>&1 | tee artifacts/w6-armed-inposs/gate.txt
+
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-build --no-restore \
+            --filter 'FullyQualifiedName~sim_match_engine_inposs_gate' \
+            --logger 'console;verbosity=detailed' \
+            --logger 'trx;LogFileName=w6-armed-inposs.trx' \
+            --results-directory artifacts/w6-armed-inposs/trx \
+            2>&1 | tee artifacts/w6-armed-inposs/instrument-output.txt
+
+          grep -F 'W6_ARMED_INPOSS seed=0x0F1E2D3C4B5A6978' artifacts/w6-armed-inposs/instrument-output.txt
+          grep -F 'W6_ARMED_INPOSS seed=0x1A2B3C4D5E6F7081' artifacts/w6-armed-inposs/instrument-output.txt
+          (cd artifacts/w6-armed-inposs && sha256sum provenance.txt measurement-only.patch gate.txt instrument-output.txt trx/w6-armed-inposs.trx > SHA256SUMS)
+
+      - name: Upload armed W2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w6-armed-inposs-${{ github.run_id }}
+          path: artifacts/w6-armed-inposs/
+          if-no-files-found: warn
+          retention-days: 90
