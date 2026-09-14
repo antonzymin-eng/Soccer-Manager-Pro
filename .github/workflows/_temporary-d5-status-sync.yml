@@ -1,0 +1,142 @@
+name: Temporary D5 status sync
+
+on:
+  push:
+    branches: [codex/d5-transfers-t0]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/d5-transfers-t0
+          fetch-depth: 0
+      - name: Sync D5 current-state records
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def rw(path, fn):
+              p = Path(path)
+              s = p.read_text(encoding='utf-8')
+              n = fn(s)
+              if n == s:
+                  raise SystemExit(f'no change produced for {path}')
+              p.write_text(n, encoding='utf-8')
+
+          # Expanded project reference: update current snapshot only, not historical narratives.
+          def project_reference(s):
+              s = s.replace('**Implementation:** `src/` holds **35 production assemblies**.',
+                            '**Implementation:** `src/` holds **37 production assemblies**.', 1)
+              old = '''**The live gap is now the project's dominant fact.** With the specification phase closed, **19 of the 53
+APPROVED specs have no `src/` assembly at all** — the 9 listed below plus the ten approved on July 27.
+(It was 22 until August 5, 2026, when **#29 Training and #41 Injuries & Medical** landed T0 assemblies
+together, and 20 until August 13, 2026, when **#44 Discipline & Suspensions** landed `src/discipline/`.)
+The specification frontier runs a long way ahead of the implementation, which is a deliberate posture
+(specify before coding), and it makes one habit dangerous: **"the spec is APPROVED" now says nothing
+whatsoever about whether code exists.** It is true of ~36% of the registry.
+
+**The 19 with no assembly:** #31 Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #42 Youth, #43 Competition Structure, #45 Board, #49 Localization — plus the ten approved on July 27: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54. (#44 Discipline was on this list until `src/discipline/` landed on August 13, 2026; the figure and the list are corrected here on September 3, 2026. The authoritative pair is `docs/specs/SPEC_INDEX.md` and `docs/tracking/path-to-playable-roadmap.md`.)'''
+              new = '''**The live gap is now the project's dominant fact.** With the specification phase closed, **17 of the 53
+APPROVED specs have no `src/` assembly at all**. The count fell from 19 after **#40 Club Finances** landed
+`src/club-finances/` on September 6, 2026 and now **#31 Transfers** lands `src/transfers/` in PR #407.
+The specification frontier runs a long way ahead of the implementation, which is a deliberate posture
+(specify before coding), and it makes one habit dangerous: **"the spec is APPROVED" now says nothing
+whatsoever about whether code exists.** It is true of ~32% of the registry.
+
+**The 17 with no assembly:** #32 Scouting, #33 Personalities/Morale, #34 Staff, #42 Youth, #43 Competition Structure, #45 Board, #49 Localization — plus the ten approved on July 27: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54. (#31 and #40 have now left this list; the authoritative pair is `docs/specs/SPEC_INDEX.md` and `docs/tracking/path-to-playable-roadmap.md`.)'''
+              if old not in s:
+                  raise SystemExit('project-reference live-gap anchor missing')
+              s = s.replace(old, new, 1)
+              s = s.replace('├── src/                     ← Implementation (coding began May 19, 2026) — 35 production assemblies',
+                            '├── src/                     ← Implementation (coding began May 19, 2026) — 37 production assemblies', 1)
+              marker = '| `performance-optimization`, `testing-strategy` | #18, #19 | Infrastructure only — no game-loop types |'
+              if marker not in s:
+                  raise SystemExit('project-reference assembly-map anchor missing')
+              if '| `club-finances` | **#40**' not in s:
+                  rows = '''| `club-finances` | **#40** Club Finances & Economy | T0 + T1a/T1b landed; deterministic integer finance state and `FNCE` season-save block. T2 runtime bootstrap/settlement remains deferred. |\n| `transfers` | **#31** Transfers, Contracts & Negotiation | T0 in PR #407: deterministic valuation + positional scarcity, synchronous negotiation band, contract/window state and atomic manager `SubmitBid`; T1 save, T2 production roster/season wiring and T3 deep tier remain deferred. |\n'''
+                  s = s.replace(marker, rows + marker, 1)
+              return s
+          rw('docs/agent-guides/project-reference.md', project_reference)
+
+          # Roadmap: D5 has begun, but is not complete; C6 deferred count falls by #31's two fixes.
+          def roadmap(s):
+              old = '''**Standing consequence for the live backlog.** Six specs carrying itemized findings in the
+football-judgment proxy review have no `src/` assembly — **#31, #34, #36, #43, #46, #54**. Those six
+specs hold **eight** of the review's 29 open findings, and those eight are deferred to their specs'
+T0 landings by this rule; the other 21 are workable today and are that backlog's actual queue.'''
+              new = '''**Standing consequence for the live backlog.** Five specs carrying itemized findings in the
+football-judgment proxy review still have no `src/` assembly — **#34, #36, #43, #46, #54**. They hold
+**six** of the review's **27 open findings**. #31 left this class at its September 14, 2026 T0 landing and
+discharged both of its deferred findings in code + spec + tests. The other **21** findings remain the workable
+queue today.'''
+              if old not in s:
+                  raise SystemExit('roadmap C6 anchor missing')
+              s = s.replace(old, new, 1)
+              old_d5 = '| **D5** | **#31 minimal** — transfer window, offer/response, contracts; the roster re-key + #44 ban migration hygiene. | #31 §7 |'
+              new_d5 = '| **D5** ◑ | **#31 minimal — T0 IMPLEMENTED in PR #407, pending merge.** New `src/transfers/` production/test assemblies provide integer valuation, always-on #27 positional scarcity, deterministic Accepted/CounterOffered/Rejected negotiation, contract/window/spend state and atomic manager `SubmitBid`. The two C6-deferred football-judgment findings are discharged. **REMAINDER:** T1 save composition; T2 #30 roster adapter/tick/genesis/boundary wiring (including roster re-key migration hygiene); T3 personality/CA/staff/wage/multi-day/rival-bid depth. No RNG stream/domain promotion at T0. | #31 §7 |'
+              if old_d5 not in s:
+                  raise SystemExit('roadmap D5 anchor missing')
+              return s.replace(old_d5, new_d5, 1)
+          rw('docs/tracking/path-to-playable-roadmap.md', roadmap)
+
+          # Football proxy review: preserve history; add a new head record and annotate the two #31 findings.
+          def proxy(s):
+              old_head = '> **Updated:** August 24, 2026 (round-2 M/L pass, L6) — **adding the chain entry that commit `9fca357`'
+              if old_head not in s:
+                  raise SystemExit('proxy head anchor missing')
+              new_head = '''> **Updated:** September 14, 2026 — **#31 T0 discharges both C6-deferred transfer findings in PR #407.** The one-unit accept/reject cliff is replaced by a deterministic synchronous `CounterOffered` band, and Stage 2 now carries always-on #27 coarse-position scarcity so disabling/defering #33/#28/#34 refinements does not revert to a context-blind valuation. Both are code + approved-spec back-props + regression locks; no RNG is introduced. Counts move **34 recorded / 5 fixed / 29 open → 34 / 7 / 27**. The assembly-less subset moves **6 specs / 8 findings → 5 / 6** (#34, #36, #43, #46, #54), leaving the workable queue unchanged at **21**.\n> **Updated (prior):** August 24, 2026 (round-2 M/L pass, L6) — **adding the chain entry that commit `9fca357`'''
+              s = s.replace(old_head, new_head, 1)
+              old_class = '''- **Assembly-less class — deferred BY RULE, not by priority** *(added August 21, 2026)*. Six of the
+  specs itemized in §2/§3 have no `src/` assembly at all — **#31, #34, #36, #43, #46, #54** — and they
+  carry **8 of the 29 open findings** (#31 ×2, #34 ×1, #36 ×1, #43 ×1, #46 ×1, #54 ×2). Those fixes do'''
+              new_class = '''- **Assembly-less class — deferred BY RULE, not by priority** *(added August 21, 2026; current count updated September 14).* Five of the
+  specs itemized in §2/§3 still have no `src/` assembly — **#34, #36, #43, #46, #54** — and they carry
+  **6 of the 27 open findings** (#34 ×1, #36 ×1, #43 ×1, #46 ×1, #54 ×2). #31's two findings discharged at T0. Those remaining fixes do'''
+              if old_class not in s:
+                  raise SystemExit('proxy current assembly-less anchor missing')
+              s = s.replace(old_class, new_class, 1)
+              p1 = '''  Pattern (b).\n- **§3.1/KD-1 valuation baseline**'''
+              r1 = '''  Pattern (b). **FIXED September 14, 2026 at #31 T0:** the shipped minimal evaluator now has a deterministic `CounterOffered` band around value; exact value remains the acceptance pivot, and only terms beyond the band reject. Regression coverage proves accepted/counter/rejected buy+sell and no-mutation counter paths.\n- **§3.1/KD-1 valuation baseline**'''
+              if p1 not in s:
+                  raise SystemExit('proxy #31 cliff annotation anchor missing')
+              s = s.replace(p1, r1, 1)
+              p2 = '''  is off" shape as DT #8 §3.2.2.1. Pattern (d).'''
+              r2 = '''  is off" shape as DT #8 §3.2.2.1. Pattern (d). **FIXED September 14, 2026 at #31 T0:** Stage 2 always applies deterministic #27 coarse-position scarcity from the valuing club; #33 personality, #28 CA and #34 staff remain later multiplicative refinements, but their absence no longer removes all situational context. A neutral-stock pivot is locked at `1000‰`.'''
+              if p2 not in s:
+                  raise SystemExit('proxy #31 baseline annotation anchor missing')
+              return s.replace(p2, r2, 1)
+          rw('docs/tracking/football-judgment-proxy-review.md', proxy)
+
+          # Historical design supplement: record the landing without rewriting its promoted design body.
+          def design(s):
+              old = '> **Last Updated:** July 23, 2026 (v0.3 — **PROMOTED**; prior v0.2 AR-1 fix pass 3M+3L).'
+              if old not in s:
+                  raise SystemExit('design head anchor missing')
+              s = s.replace(old, '> **Last Updated:** September 14, 2026 (v0.4 — #31 T0 implementation / C6 finding close-out; section files remain authoritative).\n> **Last Updated (prior):** July 23, 2026 (v0.3 — **PROMOTED**; prior v0.2 AR-1 fix pass 3M+3L).', 1)
+              row = '| v0.3 | July 23, 2026 | PROMOTED — 11-file section set authored + APPROVED (section-file AR-1 3M+1L → AR-2 1L → CONVERGENCE). Notable section-file fixes beyond the supplement: `Offer` gained an explicit `CounterpartyClubId` (buy = the player\'s owning club, sell = a manager-named target buyer); `Contract` collapsed to a **single** contract-end field `LengthSeasons` (dropped the dual `ExpiryWorldDay`/`CONTRACT_NO_EXPIRY`); `TransfersState` scoped to the managed club at minimal (AI clubs are untracked valuation functions); the counterparty valuation\'s need signal is the **valuing** club\'s (seller on a buy, buyer on a sell). Back-prop ERR-030-004 filed. |'
+              if row not in s:
+                  raise SystemExit('design v0.3 row anchor missing')
+              return s.replace(row, row + '\n| v0.4 | September 14, 2026 | T0 implementation record (PR #407): new `TacticalDirector.Transfers` production/test assemblies; #40 fee-only commit path; consumer-owned #30 roster port; C6 close-out moves positional scarcity into always-on Stage 2 and activates a deterministic synchronous `CounterOffered` band. T1/T2/T3 remain deferred. No RNG stream/domain promotion or save-schema change. |', 1)
+          rw('docs/tracking/transfers-contracts-negotiation-design.md', design)
+
+          # UX issue: correct the current implementation-status consequence without rewriting dated F1 evidence.
+          def open_issues(s):
+              start = s.index('**UPDATE September 11, 2026, later — OWNER PRIVACY DECISION RECORDED; F4 IS COMPLETE AND S0 GATE A IS NEXT.**')
+              end = s.find('\n- **', start)
+              if end < 0:
+                  raise SystemExit('UX issue end anchor missing')
+              note = '''\n\n**UPDATE September 14, 2026 — #31 TRANSFERS T0 NOW EXISTS; S2 REMAINS `FUTURE-BLOCKED` AT THE UX LAYER.** The provisional F1/F3 statements above that "transfers (#31) … are implementation-absent" are now superseded for #31: PR #407 adds `src/transfers/` with deterministic valuation/negotiation, contract/window state and the manager `SubmitBid` command seam. This does **not** unblock an S2 transfer screen yet — #31 T2 still owes the production #30 roster/season adapter and #38 has no transfer view-model/dispatcher binding — so the UX classification remains `FUTURE-BLOCKED`, but the reason has moved from "no production assembly" to "core exists; production composition/UI consumer not yet wired." #32 scouting and #34 staff remain assembly-absent. No active/archive count changes; this is a status correction inside the existing UX issue.'''
+              return s[:end] + note + s[end:]
+          rw('docs/tracking/open-issues.md', open_issues)
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/agent-guides/project-reference.md docs/tracking/path-to-playable-roadmap.md docs/tracking/football-judgment-proxy-review.md docs/tracking/transfers-contracts-negotiation-design.md docs/tracking/open-issues.md
+          git diff --cached --check
+          git commit -m 'Sync #31 T0 project status'
+          git push origin HEAD:codex/d5-transfers-t0
