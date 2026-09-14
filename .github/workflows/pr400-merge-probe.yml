@@ -19,6 +19,8 @@ jobs:
         shell: bash
         run: |
           set +e
+          git config user.name "PR400 merge probe"
+          git config user.email "pr400-merge-probe@users.noreply.github.com"
           git fetch origin main
           git merge --no-commit --no-ff origin/main
           rc=$?
