@@ -7,6 +7,8 @@
 // Modified: 2026-07-28 (gk-contact-rate (ERR-011-007/KD-CR5): the frozen reaction window's elapsed anchors at SaveIntent.AttemptCommittedTick (under the held dive the launch is deliberate timing, not reaction); ComputeDiveDirectionLateral delegates its prediction to the shared TryPredictPlaneCrossing)
 // Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: ClearRushIntent + GetState/HasActiveRushIntent observation accessors give CommitRushIntent its first production caller; rushTargetReached ends a rush that ARRIVED — the loose-ball strand. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (W1 AR-2: + ResetSlot — the per-GK arrays are indexed by TEAM, and the agent occupying that slot can change mid-match (dismissal + substitute keeper), so the slot needs a way to be disowned. See docs/tracking/gk-rush-trigger-design.md v1.3)
+// Modified: 2026-09-12 (W4 review closure: OnThreatArmed is explicitly a visible-threat episode anchor; no state/schema change)
+// Modified: 2026-09-11 (W4: OnThreatDeflected restarts reaction timing for a changed live flight without setting the shot-event latch; no new state/schema)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
 // Purpose:  Main 10 Hz + 60 Hz orchestrator. Manages per-GK state, dive kinematics, reaction pipeline,
@@ -300,7 +302,7 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// the fallback anchor for threats that have no <see cref="OnShotExecutedEvent"/> producer
         /// (deflections, rebounds, mis-hit passes driving at the goal). A live stamp always wins:
         /// after the first call of an episode this is a no-op until <see cref="ClearSaveIntent"/>
-        /// or a save resolution clears the stamp, so the caller may invoke it every armed tick with
+        /// or a save resolution clears the stamp, so the caller may invoke it every VISIBLE armed tick with
         /// no edge-detection state of its own — the stamp itself is the latch, and it is already
         /// serialized (v19 GK block). A true shot CONTACT still overwrites via
         /// <see cref="OnShotExecutedEvent"/>: the newest shot is the live threat, and its strike
@@ -319,6 +321,27 @@ namespace TacticalDirector.GoalkeeperMechanics
             }
 
             if (_shotDetectedTickMs[gkIndex] > 0.0f)
+            {
+                return;
+            }
+
+            _attrs[gkIndex] = attrs;
+            _shotDetectedTickMs[gkIndex] =
+                GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(matchTimeMs, attrs);
+            _requiredReactionMs[gkIndex] =
+                GoalkeeperReactionPipeline.ComputeRequiredReactionMs(attrs, ballSpeedMps, _states[gkIndex]);
+        }
+
+        /// <summary>
+        /// W4 new-threat seam: a real body deflection changed the live ball flight during Resolve.
+        /// Unlike <see cref="OnThreatArmed"/>, this deliberately overwrites an already-live detection
+        /// and required-reaction stamp. Unlike <see cref="OnShotExecutedEvent"/>, it does NOT set
+        /// <c>_shotEventPending</c>: a deflection is not a newly struck shot.
+        /// </summary>
+        public void OnThreatDeflected(
+            int gkIndex, float matchTimeMs, float ballSpeedMps, GoalkeeperAgentAttributes attrs)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
             {
                 return;
             }
@@ -1319,4 +1342,9 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |      |            |   | which Set → Rushing then launched him at. Unconditional by design, and    |
 // |      |            |   | so NOT ClearRushIntent/ClearSaveIntent, which refuse to disarm a chain    |
 // |      |            |   | in flight (FR-GK-018): the flight belongs to nobody now.                  |
+// | 1.13 | 2026-09-11 | — | W4: OnThreatDeflected explicitly restarts the detection / required-reaction |
+// |      |            |   | stamp after a real body deflection without setting _shotEventPending. A   |
+// |      |            |   | deflection is a changed threat, not a newly struck shot. No new state.     |
+// | 1.14 | 2026-09-12 | — | W4 review closure: caller contract now states OnThreatArmed anchors a      |
+// |      |            |   | visible threat episode; screened time is deliberately outside the clock.  |
 #endregion

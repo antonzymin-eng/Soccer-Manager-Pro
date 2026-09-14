@@ -12,9 +12,83 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 12, 2026 — **Localization #49 L1 authoritative core landing / PR #397 close-out.**
+> **Last Updated:** September 14, 2026 — **Localization #49 L1 authoritative core landing / PR #397 close-out.**
 >
-> `TacticalDirector.Localization` becomes the 37th production assembly, dependency-free and seated in Code Standards #20 Tier 9. L1 freezes `ILocalizer.Resolve(LocalizationKey)` / `Render(in LocalizedTextRequest)` plus immutable key, locale, template-id, named-slot, typed selector, and request values. Structural tests lock the declared empty asmdef reference list, L1 reverse-reference tripwire, authored public type shape, no sim/RNG/persistence state, exact `ulong` selection draw, defensive-copy immutability and deterministic identity/hash. Follow-up review restores frozen §2/§7 history, states that lower-case `LocaleId.Value` is an internal identity rather than BCP-47 canonical form, records the L3B tripwire narrowing rule, scopes reflection away from compiler/coverage generated types, and restores the source newline. `ERR-049-002` and `ERR-049-004` are RESOLVED in `spec-error-log.md` v2.57; `ERR-049-003` remains OPEN for L3B/T1 and `ERR-049-005` remains OPEN for L2. Audio D49 is narrowed accordingly: L1 exists, captions still require L2 rendering/catalogue plus an approved #49/#51 boundary. No save/snapshot schema, RNG stream/domain/draw site/order, `[GT]`, or simulation wiring changed. **GATE:** the pre-closeout implementation head `3cb999e` was 11/11 green including the Linux functional gate; that evidence is historical only, and current-head CI remains authoritative for merge.
+> `TacticalDirector.Localization` becomes the 37th production assembly, dependency-free and seated in Code Standards #20 Tier 9. L1 freezes `ILocalizer.Resolve(LocalizationKey)` / `Render(in LocalizedTextRequest)` plus immutable key, locale, template-id, named-slot, typed selector, and request values. Structural tests lock the declared empty asmdef reference list, L1 reverse-reference tripwire, authored public type shape, no sim/RNG/persistence state, exact `ulong` selection draw, defensive-copy immutability and deterministic identity/hash. Follow-up review restores frozen §2/§7 history plus the omitted §2 v0.3 header-chain record, states that lower-case `LocaleId.Value` is an internal identity rather than BCP-47 canonical form, records the L3B tripwire narrowing rule, and replaces namespace allow-listing with explicit compiler/Coverlet exclusions so every other assembly-owned runtime type remains covered; RNG/persistence field identifiers and `[Serializable]` regardless of visibility are locked too. `ERR-049-002` and `ERR-049-004` are RESOLVED in `spec-error-log.md` v2.58; `ERR-049-003` remains OPEN for L3B/T1 and `ERR-049-005` remains OPEN for L2. Audio D49 is narrowed accordingly: L1 exists, captions still require L2 rendering/catalogue plus an approved #49/#51 boundary. No save/snapshot schema, RNG stream/domain/draw site/order, `[GT]`, or simulation wiring changed. **GATE:** the pre-closeout implementation head `3cb999e` was 11/11 green including the Linux functional gate; that evidence is historical only, and current-head CI remains authoritative for merge.
+
+> **Last Updated (prior):** September 14, 2026 — **PR #398 W5 + W7 reconciled onto current W4/W12 `main`; post-#398 W12 comparison is the remaining merge gate.** W5 consumes authoritative #5 CONTACT `PassAttemptEvent`s through the opposing team ring. `ERR-013-011` keeps the 60 Hz EventBus clock distinct from the 10 Hz tactical heartbeat: only `[N-AI_PHASE_STRIDE,N)` can start BACKWARD_PASS dwell, and a qualifying one-shot event remains raw only long enough to complete the required two-heartbeat dwell. The retained event stays world-frame; away normalization is read-boundary only. Snapshot schema **21 → 22** persists each ring latest event. W12's raw-trigger diagnostic overload is preserved and now observes those exact W5 semantics. W7 applies kickoff selection after manager configuration and before tick 1. No RNG/draw-order change.
+>
+
+> **Last Updated (prior):** September 13, 2026 — **W4 keeper perception is wired on PR #403, completing the consumer half that PR #399 prepared.**
+>
+> Decision Tree `SAVE` now uses current-frame all-body physical LOS through `KeeperPerceptionGate.SaveAvailable`; raw `GkHeadingIntentSource.SaveArmed` deliberately remains the shared threat geometry and the independent W1 rush veto, so being screened never makes charging at a goal-bound ball legal. Collision System now returns one transient per-call fact only when `BallCollisionHandler` actually changes flight; Match Engine consumes it immediately in the same Resolve phase, evaluates the post-deflection trajectory, and, only when that post-deflection save threat is currently visible, restarts the newly threatened keeper through `GoalkeeperMechanics.OnThreatDeflected`. That seam overwrites reaction timing without setting the shot-event latch; `OnThreatArmed` likewise anchors only visible threat episodes, so screened time does not accrue reaction credit. Added applied-vs-overlap collision, reaction-reset, screened-DT-SAVE, and non-vacuous raw-rush-veto regressions. No new serialized latch, snapshot schema, `CollisionEvent` ABI, save format, RNG stream/domain/draw site or draw order. Canonical Perception sent-off asymmetry remains separately tracked by #401. `match-engine-wiring-backlog.md` advances v1.14 → v1.15 and closes sequence item W4; W12 is next. Final PR-head CI #1437 passed; the post-merge main run remains separately authoritative.
+>
+> **Last Updated (prior):** September 13, 2026 — **`.gitignore` now ignores Unity's `.meta` files for the Linux gate's generated `.gen.csproj` projects. Repository hygiene only.**
+>
+> `tools/dotnet-ci` writes a `.gen.csproj` next to every asmdef in `src/`, and those were already ignored. Unity sees `src/` through the `Assets/Scripts` junction, though, and writes a `.meta` for each one, which nothing ignored. After one local gate run, 70 of them sat untracked in `git status`.
+>
+> They are harmless while untracked. A broad `git add` would commit them, and `check-meta-integrity.sh` would then fail every one as an orphan meta, since its asset is ignored. Deleting them is not a fix: Unity recreates them while the `.gen.csproj` files exist, and the next gate run recreates those.
+>
+> One rule, `*.gen.csproj.meta`, added beside the existing `*.gen.csproj` rule. No tracked file matches it, and ordinary asset metas such as `*.cs.meta` are unaffected. No source, spec or asset change.
+
+> **Last Updated (prior):** September 12, 2026 — **G2 ACCEPTED by the owner: the art pipeline's technical contract is proven. Documentation only.**
+>
+> Before acceptance, the five §G2 conditions were re-verified against the committed tree and the live Unity 6000.4.9f1 editor rather than read off the ledger:
+> 1. fresh resvg exports of the SVG at the import commit and at head matched the committed LFS oids;
+> 2. a forced reimport reported the documented Sprite profile;
+> 3. GUID `24746b6a…` and the whole `.meta` blob are identical at import and head;
+> 4. the path routes to LFS, the head blob is a pointer, and no object is missing on the remote;
+> 5. the font rights/script/fallback path is explicit.
+>
+> The acceptance record is `art-technical-recipe-v1.md` §11a, which states what acceptance does **not** close:
+> - no fallback chain is chosen (only the rules are);
+> - the shipping font binaries, Reserved-Font-Name handling, semi-bold gap, Ukrainian corpus proof and offline packaging stay open;
+> - the import profile is documented, not automated;
+> - the probe is not adopted;
+> - the evidence came from one AI agent session, with an external AI review of PR #405 as the independent check.
+>
+> The art plan and `art-direction-v1.md` status lines record the acceptance. No asset, meta, `.cs`, spec, RNG or schema change.
+
+> **Last Updated (prior):** September 12, 2026, latest — **AP-03: two external-review findings on PR #405 fixed — the LFS evidence named the wrong pointer for the branch head, and the probe's provenance was misclassified. Documentation and metadata only.**
+>
+> **(1) LFS evidence.** The recipe's LFS proof quoted one pointer, `826f667f…` / 2 298 B, as "the committed blob". That is the *initial import* commit `dd0d1ff5`; the replacement commit `abc07f2f` and the branch head carry `0018e255…` / 2 568 B. `art-technical-recipe-v1.md` v0.6 now records both pointers against their commits — verified with `git show <commit>:<path>` — and notes that the `.meta` blob is identical at both.
+>
+> **(2) Provenance.** The probe's `.art.json` said `source_kind: original` while naming an AI agent as its creator. The plan's §7.2 treats AI-assisted work as generated, so the record is now `generated`, with the schema's `generation` block:
+> - Claude Code / claude-opus-5, SVG markup written directly with no image model;
+> - no inputs or third-party references;
+> - no human edits, and the one in-place agent revision recorded;
+> - dates and commits.
+>
+> The rights basis no longer asserts original authorship. It states the probe is not adopted for release, and that the commercial-use basis is for the owner to confirm before any release-ready use. The sidecar passes the schema's required-key, enum, pattern and generation-block checks.
+>
+> Neither finding changes a hash, GUID or Unity result. G2 remains OPEN pending review.
+
+> **Last Updated (prior):** September 12, 2026, later — **AP-03 docs synchronised: the recipe's typography section was still recommending a font G1 had already rejected. Documentation only.**
+>
+> The earlier AP-03 recipe revision still carried IBM Plex Sans Condensed as the proposed display face, two days after the G1 acceptance record (September 10, 2026) had rejected it visually and accepted **PT Sans Narrow** / an equivalent humanist condensed face. v0.5 records the rejection (§8.4) and PT Sans Narrow's upstream evidence from `google/fonts` (§8.4a): SIL OFL 1.1, **with Reserved Font Names "PT Sans" and "ParaType"**, `cyrillic`/`cyrillic-ext` subsets declared, Regular 400 and Bold 700 only.
+>
+> Three consequences are recorded as open, not resolved:
+> - any conversion or subsetting of the font file must be checked against the RFN clause, and whether a TextMeshPro atlas counts as a Modified Version is explicitly left undecided;
+> - there is no semi-bold weight;
+> - the Ukrainian corpus proof on the exact binary is still owed.
+>
+> None of these is a G2 blocker. `art-direction-v1.md` v1.5, `art-pipeline-foundation.md` v0.9 (status header) and `art-source/README.md` now point at the AP-03 evidence. The branch is `art/ap-03-technical-recipe-proof`; the superseded `BLOCKED-art/…` remote branch was deleted after its commits were confirmed ancestors. G2 remains OPEN pending review.
+
+> **Last Updated (prior):** September 12, 2026 — **AP-03: the art pipeline's first real Unity import. G2 is evidence-complete and awaits review; it is not declared passed.**
+>
+> Run in the Unity 6000.4.9f1 editor on the pinned Windows 11 host, driven through the editor API. A deliberately neutral probe (`ui.pipeline.import-probe`) went from `art-source/ui/icons/ap03_import_probe.svg` through **resvg 0.47.0** to `Assets/GameArt/UI/Icons/ap03_import_probe.png`.
+>
+> **Exporter pin.** 0.47.0 is the newest resvg release that ships a Windows binary; 0.48.x ships none. The download matched GitHub's published release digest, and the binary lives outside the repository.
+>
+> **Reproducibility.** Exports are byte-identical across runs, and identical whether the SVG has LF or CRLF line endings. That matters because `*.svg` has no `.gitattributes` rule and this host checks out CRLF.
+>
+> **Importer behaviour — the finding with design consequence.** Five of the candidate settings differ from Unity's first-import defaults: Default type, no sprite mode, mips on, Repeat wrap, alpha-is-transparency off. A PNG dropped into `Assets/GameArt/` does not get the recipe profile unless it is set explicitly. Unity also flipped non-power-of-2 scaling to None on its own when the type became Sprite. Result: DXT5 on Standalone, about 33.7 KB editor-reported.
+>
+> **Replacement proof.** Revising the source in place and force-reimporting left GUID `24746b6a9f9592e41be3206d04b7b96e` and the entire `.meta` byte-identical. A temporary, never-committed `SpriteRenderer` prefab still resolved to the new content, and before/after pixels were measured on both the PNGs and the reimported texture. The PNG is committed as an LFS pointer whose oid is the export's sha256. `check-meta-integrity.sh` passes after both commits (`dd0d1ff5` import, `abc07f2f` replacement).
+>
+> **Recorded, not pinned.** The fallback physics shape and Tight mesh type are Unity defaults, unmeasured at probe scale. DXT5 quality has not been judged on real icon art. `com.unity.ugui` is absent from the manifest, which is why the consumer was a `SpriteRenderer` — P5b will need the package.
+>
+> The recipe ledger is `art-technical-recipe-v1.md` v0.4. No `.cs`, `.asmdef`, spec, RNG, schema or roadmap row changed.
 
 > **Last Updated (prior):** September 12, 2026 — **Unity now governs the build: 22 Unity-editor-only compile errors fixed that the Linux gate could not see. The Linux gate is kept.**
 >
@@ -1368,7 +1442,7 @@ break it, and do not edit historical entries.
 > knowingly wrong meanwhile, with the acceptance bands (fouls ≤ 90, yellows ≤ 20, reds ≤ 5) reading
 > green throughout.
 >
-> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.14)* records the consequence none of these three holds could
+> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.16)* records the consequence none of these three holds could
 > see individually: W2's *arming* now gates three separate decisions** — the foul/card calibration,
 > KD-7a's successor distribution, and everything behind the un-isolated `sim_match_engine_inposs_gate`
 > stall whose leading candidate is W6. The path **W4 → W12 → W6** therefore unblocks three decisions,
@@ -1378,7 +1452,7 @@ break it, and do not edit historical entries.
 > FALSE — W2's arming gates **two** held decisions (the foul/card calibration and KD-7a's successor
 > distribution); the third item, the un-isolated `sim_match_engine_inposs_gate` stall, is what BLOCKS
 > arming, not something arming unblocks, so it does not belong beside them. The citation above is
-> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.14)*, whose §5 note carries the corrected
+> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.16)*, whose §5 note carries the corrected
 > two-plus-the-blocker form; the W4 → W12 → W6 path aims to clear the blocker and thereby unblock
 > the two.
 >

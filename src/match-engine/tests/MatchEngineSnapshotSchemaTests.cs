@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
+// Modified: 2026-09-11 (W5/v22: schema pin + latest press-pass event digest probe)
 // Modified: 2026-07-23
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
@@ -15,6 +16,7 @@ using UnityEngine;
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
 using TacticalDirector.DecisionTree;
+using TacticalDirector.PassMechanics;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -58,9 +60,38 @@ namespace TacticalDirector.MatchEngine
             // in-flight state via their CaptureState seams — making a flag-on engine snapshot-safe).
             // v19 collision contact-onset pair set + the §5.Z.15 six-second-rule state, v20
             // (ERR-012-011) the pass-in-flight receiver latch, v21 (wiring backlog W2 — the tackle)
-            // the per-agent tackle-interrupt flag and per-agent challenge cooldown.
-            Assert.AreEqual(21u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // the per-agent tackle-interrupt flag and per-agent challenge cooldown, v22 (wiring backlog
+            // W5) the optional latest opposing PassAttemptEvent retained by each pressing ring.
+            Assert.AreEqual(22u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void LatestPressPassEvent_FeedsSnapshotDigest()
+        {
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            // Deliberately use an agent id absent from the live snapshot: TriggerEvaluator therefore
+            // returns false and cannot mutate pressing state. Any digest delta is the v22 serialized ring
+            // field itself, not a downstream gameplay consequence of evaluating a real backward pass.
+            PassAttemptEvent pass = new PassAttemptEvent
+            {
+                AgentId = -123,
+                TeamId = 1,
+                TargetPosition = new Vector3(90f, 34f, 0f),
+                FinalVelocity = new Vector3(8f, 0f, 0f),
+                TargetAgentId = -1,
+                Frame = 17,
+                MatchTime = 0.25f,
+            };
+            perturbed.TestOnly_PushPressPassEvent(0, in pass);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A retained W5 pass event left the digest unchanged — v22 is not in the snapshot preimage.");
         }
 
         [Test]
@@ -661,4 +692,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Digest probe (the goalkeeper.mechanics RNG cursor — a v18 field —  |
 // |         |            |        | moves the digest, written unconditionally so the flag need not be  |
 // |         |            |        | on).                                                               |
+// | 1.16     | 2026-09-11 | —      | W5/v22: schema pin moved to 22 and latest pressing-ring PassAttemptEvent gets a single-field digest probe. |
 #endregion

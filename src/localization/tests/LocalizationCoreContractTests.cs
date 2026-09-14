@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/localization/tests/LocalizationCoreContractTests.cs
 // Created:  2026-09-11
-// Modified: 2026-09-12
+// Modified: 2026-09-14
 // Author:   —
 // Specs:    Localization & Accessibility #49 §5, FR-LC-001-005/009/010/012/014/020
 // Purpose:  L1 contract, value-safety, selector-shape and dependency-boundary tests.
@@ -205,7 +205,7 @@ namespace TacticalDirector.Localization.Tests
         {
             Assembly assembly = typeof(ILocalizer).Assembly;
             Type[] publicTypes = assembly.GetExportedTypes()
-                .Where(IsAuthoredLocalizationType)
+                .Where(type => !IsExcludedRuntimeArtifact(type))
                 .ToArray();
 
             foreach (Type type in publicTypes)
@@ -244,7 +244,7 @@ namespace TacticalDirector.Localization.Tests
         {
             Assembly assembly = typeof(ILocalizer).Assembly;
             Type[] authoredTypes = assembly.GetTypes()
-                .Where(IsAuthoredLocalizationType)
+                .Where(type => !IsExcludedRuntimeArtifact(type))
                 .ToArray();
             FieldInfo[] fields = authoredTypes
                 .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
@@ -257,9 +257,9 @@ namespace TacticalDirector.Localization.Tests
             Assert.That(
                 mutableStaticFields,
                 Is.Empty,
-                "Authored L1 localization types must not contain mutable static fields. Compiler-generated and coverage-instrumentation types are not localization-owned state.");
-            Assert.That(fields.Any(field => ContainsForbiddenStateName(field.FieldType)), Is.False);
-            Assert.That(authoredTypes.Where(type => type.IsPublic || type.IsNestedPublic).Any(HasExplicitSerializableAttribute), Is.False);
+                "L1 localization assembly types must not contain mutable static fields. Only compiler-generated and Coverlet instrumentation artifacts are excluded.");
+            Assert.That(fields.Any(ContainsForbiddenState), Is.False);
+            Assert.That(authoredTypes.Any(HasExplicitSerializableAttribute), Is.False);
         }
 
         [Test]
@@ -334,12 +334,25 @@ namespace TacticalDirector.Localization.Tests
             Assert.That(allowed, Is.True, context + " leaked external type " + type.FullName);
         }
 
-        private static bool IsAuthoredLocalizationType(Type type)
+        private static bool IsExcludedRuntimeArtifact(Type type)
         {
-            return type.Namespace != null
-                && (string.Equals(type.Namespace, "TacticalDirector.Localization", StringComparison.Ordinal)
-                    || type.Namespace.StartsWith("TacticalDirector.Localization.", StringComparison.Ordinal))
-                && !type.IsDefined(typeof(CompilerGeneratedAttribute), false);
+            return type.IsDefined(typeof(CompilerGeneratedAttribute), false)
+                || type.Namespace != null
+                    && type.Namespace.StartsWith("Coverlet.Core.Instrumentation.Tracker", StringComparison.Ordinal);
+        }
+
+        private static bool ContainsForbiddenState(FieldInfo field)
+        {
+            return ContainsForbiddenStateName(field.FieldType)
+                || ContainsForbiddenStateIdentifier(field.Name);
+        }
+
+        private static bool ContainsForbiddenStateIdentifier(string name)
+        {
+            return name.IndexOf("Random", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf("Rng", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf("Save", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf("Snapshot", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool ContainsForbiddenStateName(Type type)
@@ -367,4 +380,5 @@ namespace TacticalDirector.Localization.Tests
 // | 1.2     | 2026-09-11 | GPT-5.6 Sol | Scope mutable-static lock to authored types; report exact offenders while excluding compiler-generated delegate/cache artifacts. |
 // | 1.3     | 2026-09-11 | GPT-5.6 Sol | Scope authored-state reflection to localization-owned namespaces so coverage instrumentation is ignored. |
 // | 1.4     | 2026-09-12 | GPT-5.6 Sol | Apply the authored-type scope consistently to public type-shape and serializable-attribute locks; compiler/coverage tracker types are implementation artifacts, not localization-contract types. |
+// | 1.5     | 2026-09-14 | GPT-5.6 Sol | Replace namespace allow-listing with explicit compiler/Coverlet exclusions; inspect every other assembly-owned runtime type, RNG/persistence field identifiers, and `[Serializable]` regardless of visibility. |
 #endregion
