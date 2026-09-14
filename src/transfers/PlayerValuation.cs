@@ -17,8 +17,8 @@ namespace TacticalDirector.Transfers
     /// <summary>Pure minimal-tier valuation functions; no personality, CA/PA, staff input, or RNG.</summary>
     public static class PlayerValuation
     {
-        /// <summary>Returns the integer mean of #27's 31 canonical [1,20] attributes, excluding weak foot.</summary>
-        public static int MeanAttributeRating(in PlayerAttributes attributes)
+        /// <summary>Returns the exact sum of #27's 31 canonical [1,20] attributes, excluding weak foot.</summary>
+        private static long CanonicalAttributeSum(in PlayerAttributes attributes)
         {
             int[] values = attributes.ToArray();
             if (values.Length != PlayerDatabaseConstants.ATTRIBUTE_COUNT)
@@ -38,7 +38,7 @@ namespace TacticalDirector.Transfers
                 sum += value;
             }
 
-            return (int)(sum / PlayerDatabaseConstants.ATTRIBUTE_COUNT);
+            return sum;
         }
 
         /// <summary>Returns the deterministic age-curve multiplier in per-mille units.</summary>
@@ -71,21 +71,22 @@ namespace TacticalDirector.Transfers
         }
 
         /// <summary>
-        /// Returns the valuing club's deterministic positional-scarcity multiplier. A club below the
-        /// neutral stock values the player more; an overstocked club values that position less.
+        /// Returns the valuing club's deterministic positional-scarcity multiplier. The supplied stock count
+        /// excludes the player currently under negotiation so buy/sell direction does not bias the valuation.
         /// </summary>
-        public static int ClubNeedMultiplierPermille(int samePositionCount)
+        public static int ClubNeedMultiplierPermille(int samePositionCountExcludingPlayer)
         {
-            if (samePositionCount < 0 || samePositionCount > PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
+            if (samePositionCountExcludingPlayer < 0
+                || samePositionCountExcludingPlayer > PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
             {
                 throw new ArgumentOutOfRangeException(
-                    nameof(samePositionCount),
-                    samePositionCount,
+                    nameof(samePositionCountExcludingPlayer),
+                    samePositionCountExcludingPlayer,
                     "Position stock must be inside the club squad bounds.");
             }
 
             int neutralCount = PlayerDatabaseConstants.CLUB_SQUAD_SIZE / PlayerDatabaseConstants.POSITION_COUNT;
-            int delta = neutralCount - samePositionCount;
+            int delta = neutralCount - samePositionCountExcludingPlayer;
             int multiplier = TransfersConstants.PERMILLE_DENOM
                 + delta * TransfersConstants.ClubNeedPerPlayerPermille;
             if (multiplier <= 0)
@@ -96,27 +97,37 @@ namespace TacticalDirector.Transfers
             return multiplier;
         }
 
-        /// <summary>Computes the attributes+age valuation identity before valuing-club context is applied.</summary>
-        public static long ValuePlayerPermille(in PlayerAttributes attributes, int age)
+        /// <summary>
+        /// Computes the attributes+age valuation identity in currency units. The attribute mean is carried as
+        /// an exact rational (sum / ATTRIBUTE_COUNT), avoiding the former 20-bucket integer-mean quantisation.
+        /// </summary>
+        public static long ValuePlayer(in PlayerAttributes attributes, int age)
         {
-            int meanRating = MeanAttributeRating(in attributes);
+            long attributeSum = CanonicalAttributeSum(in attributes);
             int ageMultiplier = AgeCurvePermille(age);
 
             checked
             {
-                long baseValue = (long)meanRating * TransfersConstants.ValuePerRatingPoint;
-                return baseValue * ageMultiplier / TransfersConstants.PERMILLE_DENOM;
+                long numerator = attributeSum
+                    * TransfersConstants.ValuePerRatingPoint
+                    * ageMultiplier;
+                long denominator = (long)PlayerDatabaseConstants.ATTRIBUTE_COUNT
+                    * TransfersConstants.PERMILLE_DENOM;
+                return numerator / denominator;
             }
         }
 
-        /// <summary>Computes the T0 counterparty value including always-on positional scarcity.</summary>
-        public static long CounterpartyValuePermille(
+        /// <summary>
+        /// Computes the T0 counterparty value in currency units, including always-on positional scarcity.
+        /// <paramref name="samePositionCountExcludingPlayer"/> is prospective stock without the negotiated player.
+        /// </summary>
+        public static long CounterpartyValue(
             in PlayerAttributes attributes,
             int age,
-            int samePositionCount)
+            int samePositionCountExcludingPlayer)
         {
-            long baseValue = ValuePlayerPermille(in attributes, age);
-            int needMultiplier = ClubNeedMultiplierPermille(samePositionCount);
+            long baseValue = ValuePlayer(in attributes, age);
+            int needMultiplier = ClubNeedMultiplierPermille(samePositionCountExcludingPlayer);
 
             checked
             {
@@ -131,4 +142,5 @@ namespace TacticalDirector.Transfers
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 deterministic integer valuation. |
 // | 1.1     | 2026-09-14 | —      | Discharge proxy-review blind-baseline finding with deterministic positional need. |
+// | 1.2     | 2026-09-14 | —      | Rename currency-returning APIs; remove integer-mean quantisation; define positional stock excluding negotiated player. |
 #endregion

@@ -10,6 +10,8 @@
 
 using System;
 
+using TacticalDirector.PlayerDatabase;
+
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.Transfers
@@ -27,9 +29,15 @@ namespace TacticalDirector.Transfers
 
         #endregion
 
+        #region Derived bounds
+
+        private static readonly int MaxClubNeedPerPlayerPermille = DeriveMaxClubNeedPerPlayerPermille();
+
+        #endregion
+
         #region GT
 
-        /// <summary>[GT] Currency value of one integer mean-rating point. Config key [transfers] ValuePerRatingPoint. Spec #31 Appendix A.</summary>
+        /// <summary>[GT] Currency value of one mean-rating point. Config key [transfers] ValuePerRatingPoint. Spec #31 Appendix A.</summary>
         public static readonly int ValuePerRatingPoint = Positive("ValuePerRatingPoint", 10_000);
 
         /// <summary>[GT] First age in the neutral peak band. Config key [transfers] PeakAgeMin. Spec #31 Appendix A.</summary>
@@ -38,26 +46,30 @@ namespace TacticalDirector.Transfers
         /// <summary>[GT] Last age in the neutral peak band. Config key [transfers] PeakAgeMax. Spec #31 Appendix A.</summary>
         public static readonly int PeakAgeMax = AtLeast("PeakAgeMax", 29, PeakAgeMin);
 
-        /// <summary>[GT] Very-young valuation multiplier. Config key [transfers] YoungDiscountPermille. Spec #31 Appendix A.</summary>
-        public static readonly int YoungDiscountPermille = Permille("YoungDiscountPermille", 800);
+        /// <summary>[GT] Very-young valuation multiplier; must remain below the neutral peak. Spec #31 Appendix A.</summary>
+        public static readonly int YoungDiscountPermille = SubPermille("YoungDiscountPermille", 800);
 
         /// <summary>[GT] Per-year decline after the peak band. Config key [transfers] DeclinePerYearPermille. Spec #31 Appendix A.</summary>
         public static readonly int DeclinePerYearPermille = Positive("DeclinePerYearPermille", 50);
 
-        /// <summary>[GT] Floor for the post-peak age multiplier. Config key [transfers] MinimumAgeMultiplierPermille. Spec #31 Appendix A.</summary>
-        public static readonly int MinimumAgeMultiplierPermille = Permille("MinimumAgeMultiplierPermille", 400);
+        /// <summary>[GT] Floor for the post-peak age multiplier; must remain below the neutral peak. Spec #31 Appendix A.</summary>
+        public static readonly int MinimumAgeMultiplierPermille = SubPermille("MinimumAgeMultiplierPermille", 400);
 
         /// <summary>
         /// [GT] Width of the synchronous counter-offer band around counterparty value, in per-mille.
-        /// Config key [transfers] NegotiationCounterBandPermille. Spec #31 §3.2 / football-judgment finding.
+        /// It is strictly inside (0,1000) so a positive valuation retains both counter and reject regions.
         /// </summary>
-        public static readonly int NegotiationCounterBandPermille = PositivePermille("NegotiationCounterBandPermille", 50);
+        public static readonly int NegotiationCounterBandPermille = PositiveSubPermille("NegotiationCounterBandPermille", 50);
 
         /// <summary>
         /// [GT] Value multiplier step per player above/below the neutral positional-stock count.
-        /// Config key [transfers] ClubNeedPerPlayerPermille. Spec #31 §3.1 / football-judgment finding.
+        /// The upper bound is derived from #27 squad/position cardinalities so every legal stock keeps the
+        /// resulting multiplier strictly positive.
         /// </summary>
-        public static readonly int ClubNeedPerPlayerPermille = BoundedNonNegative("ClubNeedPerPlayerPermille", 20, 40);
+        public static readonly int ClubNeedPerPlayerPermille = BoundedNonNegative(
+            "ClubNeedPerPlayerPermille",
+            20,
+            MaxClubNeedPerPlayerPermille);
 
         /// <summary>[GT] Minimal summer-window length in world days. Config key [transfers] SummerWindowLengthDays. Spec #31 Appendix A.</summary>
         public static readonly int SummerWindowLengthDays = Positive("SummerWindowLengthDays", 45);
@@ -69,6 +81,18 @@ namespace TacticalDirector.Transfers
         public static readonly int DefaultWagePerPeriod = NonNegative("DefaultWagePerPeriod", 1_000);
 
         #endregion
+
+        private static int DeriveMaxClubNeedPerPlayerPermille()
+        {
+            int neutralCount = PlayerDatabaseConstants.CLUB_SQUAD_SIZE / PlayerDatabaseConstants.POSITION_COUNT;
+            int maximumOverstock = PlayerDatabaseConstants.CLUB_SQUAD_SIZE - neutralCount;
+            if (maximumOverstock <= 0)
+            {
+                throw new InvalidOperationException("#27 squad/position cardinalities cannot derive a club-need safety bound.");
+            }
+
+            return (PERMILLE_DENOM - 1) / maximumOverstock;
+        }
 
         private static int Positive(string key, int fallback)
         {
@@ -114,9 +138,20 @@ namespace TacticalDirector.Transfers
             return value;
         }
 
-        private static int PositivePermille(string key, int fallback)
+        private static int SubPermille(string key, int fallback)
         {
             int value = Permille(key, fallback);
+            if (value >= PERMILLE_DENOM)
+            {
+                throw new InvalidOperationException("[transfers] " + key + " must be below 1000.");
+            }
+
+            return value;
+        }
+
+        private static int PositiveSubPermille(string key, int fallback)
+        {
+            int value = SubPermille(key, fallback);
             if (value == 0)
             {
                 throw new InvalidOperationException("[transfers] " + key + " must be positive.");
@@ -143,4 +178,5 @@ namespace TacticalDirector.Transfers
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 fixed/GT constants catalogue with GameplayConfig loading. |
 // | 1.1     | 2026-09-14 | —      | Add deterministic counter-offer band and always-on positional-need tuning. |
+// | 1.2     | 2026-09-14 | —      | Derive club-need safety cap from #27 cardinalities; require real age discounts and sub-1000 negotiation band. |
 #endregion

@@ -28,31 +28,39 @@ namespace TacticalDirector.Transfers.Tests
         private const int COUNTERPARTY_PLAYER_ID = COUNTERPARTY_CLUB_ID * PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
 
         [Test]
-        public void ValuePlayerPermille_IsDeterministic_AndWeakFootIsExcluded()
+        public void ValuePlayer_IsDeterministic_WeakFootExcluded_AndGoldenVectorPinned()
         {
             PlayerAttributes first = PlayerAttributes.CreateDefault();
-            PlayerAttributes second = first;
-            second.WeakFootRating = PlayerDatabaseConstants.WEAK_FOOT_MAX;
+            PlayerAttributes weakFootChangedAttributes = first;
+            weakFootChangedAttributes.WeakFootRating = PlayerDatabaseConstants.WEAK_FOOT_MAX;
 
-            long a = PlayerValuation.ValuePlayerPermille(in first, 25);
-            long b = PlayerValuation.ValuePlayerPermille(in first, 25);
-            long weakFootChanged = PlayerValuation.ValuePlayerPermille(in second, 25);
+            long firstValue = PlayerValuation.ValuePlayer(in first, 25);
+            long repeatedValue = PlayerValuation.ValuePlayer(in first, 25);
+            long weakFootChanged = PlayerValuation.ValuePlayer(in weakFootChangedAttributes, 25);
 
-            Assert.AreEqual(a, b);
-            Assert.AreEqual(a, weakFootChanged);
-            Assert.Greater(a, 0L);
+            Assert.AreEqual(100_000L, firstValue);
+            Assert.AreEqual(firstValue, repeatedValue);
+            Assert.AreEqual(firstValue, weakFootChanged);
+
+            PlayerAttributes onePointHigher = first;
+            onePointHigher.Pace++;
+            Assert.AreEqual(100_322L, PlayerValuation.ValuePlayer(in onePointHigher, 25));
         }
 
         [Test]
-        public void AgeCurvePermille_HasNeutralPeak_YoungDiscount_AndOlderDecline()
+        public void AgeCurvePermille_HasStrictDiscounts_PeakBoundary_AndFloor()
         {
             int young = PlayerValuation.AgeCurvePermille(TransfersConstants.PeakAgeMin - 1);
-            int peak = PlayerValuation.AgeCurvePermille(TransfersConstants.PeakAgeMin);
+            int peakStart = PlayerValuation.AgeCurvePermille(TransfersConstants.PeakAgeMin);
+            int peakEnd = PlayerValuation.AgeCurvePermille(TransfersConstants.PeakAgeMax);
             int old = PlayerValuation.AgeCurvePermille(TransfersConstants.PeakAgeMax + 1);
+            int farOld = PlayerValuation.AgeCurvePermille(TransfersConstants.PeakAgeMax + 10_000);
 
-            Assert.AreEqual(TransfersConstants.PERMILLE_DENOM, peak);
-            Assert.LessOrEqual(young, peak);
-            Assert.LessOrEqual(old, peak);
+            Assert.AreEqual(TransfersConstants.PERMILLE_DENOM, peakStart);
+            Assert.AreEqual(TransfersConstants.PERMILLE_DENOM, peakEnd);
+            Assert.Less(young, peakStart);
+            Assert.Less(old, peakEnd);
+            Assert.AreEqual(TransfersConstants.MinimumAgeMultiplierPermille, farOld);
         }
 
         [Test]
@@ -67,6 +75,8 @@ namespace TacticalDirector.Transfers.Tests
             Assert.AreEqual(TransfersConstants.PERMILLE_DENOM, neutral);
             Assert.Less(overstocked, neutral);
             Assert.Greater(overstocked, 0);
+            Assert.Greater(TransfersConstants.NegotiationCounterBandPermille, 0);
+            Assert.Less(TransfersConstants.NegotiationCounterBandPermille, TransfersConstants.PERMILLE_DENOM);
         }
 
         [Test]
@@ -120,9 +130,9 @@ namespace TacticalDirector.Transfers.Tests
             long valuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
             Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 12_345L, 3, true);
 
-            NegotiationOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
+            TransferSubmissionOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
 
-            Assert.AreEqual(NegotiationOutcome.Accepted, outcome);
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, outcome);
             Assert.AreEqual(5_000_000L - valuation, finances.Balance);
             Assert.AreEqual(1_000_000L, finances.TransferBudget);
             Assert.AreEqual(77_000L, finances.WageBillAggregate);
@@ -144,9 +154,9 @@ namespace TacticalDirector.Transfers.Tests
             long valuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
             Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation - 1L, 1_000L, 3, true);
 
-            NegotiationOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
+            TransferSubmissionOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
 
-            Assert.AreEqual(NegotiationOutcome.CounterOffered, outcome);
+            Assert.AreEqual(TransferSubmissionOutcome.CounterOffered, outcome);
             Assert.AreEqual(5_000_000L, finances.Balance);
             Assert.AreEqual(0L, state.CommittedSpendThisWindow);
             Assert.AreEqual(0, state.ContractCount);
@@ -164,9 +174,9 @@ namespace TacticalDirector.Transfers.Tests
             long band = NegotiationEngine.CounterBandAmount(valuation);
             Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation - band - 1L, 1_000L, 3, true);
 
-            NegotiationOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
+            TransferSubmissionOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
 
-            Assert.AreEqual(NegotiationOutcome.Rejected, outcome);
+            Assert.AreEqual(TransferSubmissionOutcome.Rejected, outcome);
             Assert.AreEqual(5_000_000L, finances.Balance);
             Assert.AreEqual(0L, state.CommittedSpendThisWindow);
             Assert.AreEqual(0, state.ContractCount);
@@ -174,7 +184,7 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
-        public void SubmitBid_SecondBuyOverStaticCeiling_FailsBeforeAnySecondMutation()
+        public void SubmitBid_SecondBuyOverStaticCeiling_ReturnsInsufficientBudgetWithoutSecondMutation()
         {
             FakeRosterPort roster = CreateRosterWithTwoCounterpartyPlayers();
             TransferCommands commands = new TransferCommands(roster);
@@ -186,10 +196,12 @@ namespace TacticalDirector.Transfers.Tests
             Offer first = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, firstValuation, 1_000L, 2, true);
             Offer second = new Offer(COUNTERPARTY_PLAYER_ID + 1, COUNTERPARTY_CLUB_ID, secondValuation, 1_000L, 2, true);
 
-            commands.SubmitBid(in first, 110U, ref finances, state);
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, commands.SubmitBid(in first, 110U, ref finances, state));
             long balanceAfterFirst = finances.Balance;
 
-            Assert.Throws<InvalidOperationException>(() => commands.SubmitBid(in second, 110U, ref finances, state));
+            TransferSubmissionOutcome secondOutcome = commands.SubmitBid(in second, 110U, ref finances, state);
+
+            Assert.AreEqual(TransferSubmissionOutcome.InsufficientBudget, secondOutcome);
             Assert.AreEqual(balanceAfterFirst, finances.Balance);
             Assert.AreEqual(firstValuation, state.CommittedSpendThisWindow);
             Assert.AreEqual(1, roster.CommitCount);
@@ -197,7 +209,7 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
-        public void SubmitBid_FullDestination_FailsWithoutFinanceOrContractMutation()
+        public void SubmitBid_FullDestination_ReturnsSquadFullWithoutFinanceOrContractMutation()
         {
             FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
             roster.HasDestinationCapacity = false;
@@ -207,7 +219,9 @@ namespace TacticalDirector.Transfers.Tests
             long valuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
             Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 1_000L, 2, true);
 
-            Assert.Throws<InvalidOperationException>(() => commands.SubmitBid(in offer, 110U, ref finances, state));
+            TransferSubmissionOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
+
+            Assert.AreEqual(TransferSubmissionOutcome.SquadFull, outcome);
             Assert.AreEqual(5_000_000L, finances.Balance);
             Assert.AreEqual(0L, state.CommittedSpendThisWindow);
             Assert.AreEqual(0, state.ContractCount);
@@ -215,7 +229,7 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
-        public void SubmitBid_Sell_RemovesContractBeforeRekey_AndCreditsFee()
+        public void SubmitBid_Sell_CommitsRosterBeforeRemovingContract_AndCreditsFee()
         {
             FakeRosterPort roster = CreateRosterWithManagedPlayer();
             TransferCommands commands = new TransferCommands(roster);
@@ -225,15 +239,73 @@ namespace TacticalDirector.Transfers.Tests
             ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 20_000L);
             long valuation = CounterpartyValue(roster, MANAGED_PLAYER_ID);
             Offer offer = new Offer(MANAGED_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 1_000L, 2, false);
-            bool absentBeforeCommit = false;
-            roster.BeforeCommit = () => absentBeforeCommit = !state.TryGetContract(MANAGED_PLAYER_ID, out Contract ignored);
+            bool contractPresentAtCommit = false;
+            roster.BeforeCommit = () => contractPresentAtCommit = state.TryGetContract(MANAGED_PLAYER_ID, out Contract ignored);
 
-            NegotiationOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
+            TransferSubmissionOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
 
-            Assert.AreEqual(NegotiationOutcome.Accepted, outcome);
-            Assert.IsTrue(absentBeforeCommit);
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, outcome);
+            Assert.IsTrue(contractPresentAtCommit);
             Assert.AreEqual(5_000_000L + valuation, finances.Balance);
             Assert.AreEqual(20_000L, finances.WageBillAggregate);
+            Assert.AreEqual(0L, state.CommittedSpendThisWindow);
+            Assert.AreEqual(0, state.ContractCount);
+            Assert.AreEqual(1, roster.CommitCount);
+        }
+
+        [Test]
+        public void SubmitBid_PositionalNeedExcludesNegotiatedPlayerSymmetrically()
+        {
+            PlayerAttributes attributes = PlayerAttributes.CreateDefault();
+            long zeroStockValue = PlayerValuation.CounterpartyValue(in attributes, 25, 0);
+
+            FakeRosterPort buyRoster = CreateRosterWithCounterpartyPlayer();
+            TransferCommands buyCommands = new TransferCommands(buyRoster);
+            TransfersState buyState = CreateOpenState();
+            ClubFinancesState buyFinances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            Offer buyNearMiss = new Offer(
+                COUNTERPARTY_PLAYER_ID,
+                COUNTERPARTY_CLUB_ID,
+                zeroStockValue - 1L,
+                1_000L,
+                2,
+                true);
+
+            FakeRosterPort sellRoster = CreateRosterWithManagedPlayer();
+            TransferCommands sellCommands = new TransferCommands(sellRoster);
+            TransfersState sellState = CreateOpenState();
+            Contract seeded = new Contract(MANAGED_PLAYER_ID, 1_000L, 2);
+            sellState.InsertContract(in seeded);
+            ClubFinancesState sellFinances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            Offer sellNearMiss = new Offer(
+                MANAGED_PLAYER_ID,
+                COUNTERPARTY_CLUB_ID,
+                zeroStockValue + 1L,
+                1_000L,
+                2,
+                false);
+
+            Assert.AreEqual(
+                TransferSubmissionOutcome.CounterOffered,
+                buyCommands.SubmitBid(in buyNearMiss, 110U, ref buyFinances, buyState));
+            Assert.AreEqual(
+                TransferSubmissionOutcome.CounterOffered,
+                sellCommands.SubmitBid(in sellNearMiss, 110U, ref sellFinances, sellState));
+        }
+
+        [Test]
+        public void SubmitBid_RosterCommitPreviewMismatch_FailsBeforeLocalStateMutation()
+        {
+            FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
+            roster.CommittedPlayerIdOffset = 1;
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            long valuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
+            Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 1_000L, 2, true);
+
+            Assert.Throws<InvalidOperationException>(() => commands.SubmitBid(in offer, 110U, ref finances, state));
+            Assert.AreEqual(5_000_000L, finances.Balance);
             Assert.AreEqual(0L, state.CommittedSpendThisWindow);
             Assert.AreEqual(0, state.ContractCount);
             Assert.AreEqual(1, roster.CommitCount);
@@ -368,7 +440,13 @@ namespace TacticalDirector.Transfers.Tests
         {
             Assert.IsTrue(roster.TryGetPlayer(playerId, out PlayerRecord player));
             int stock = roster.CountPlayersAtPosition(COUNTERPARTY_CLUB_ID, player.Position);
-            return PlayerValuation.CounterpartyValuePermille(in player.Attributes, player.Age, stock);
+            int ownerClubId = playerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+            if (ownerClubId == COUNTERPARTY_CLUB_ID)
+            {
+                stock--;
+            }
+
+            return PlayerValuation.CounterpartyValue(in player.Attributes, player.Age, stock);
         }
 
         private sealed class FakeRosterPort : ITransferRosterPort
@@ -378,6 +456,8 @@ namespace TacticalDirector.Transfers.Tests
             private int _previewPlayerId;
 
             public bool HasDestinationCapacity { get; set; } = true;
+
+            public int CommittedPlayerIdOffset { get; set; }
 
             public int CommitCount { get; private set; }
 
@@ -440,7 +520,7 @@ namespace TacticalDirector.Transfers.Tests
                 CommitCount++;
                 int localIndex = _previewPlayerId - toClubId * PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
                 _nextLocalIndexByClub[toClubId] = localIndex + 1;
-                return _previewPlayerId;
+                return _previewPlayerId + CommittedPlayerIdOffset;
             }
         }
     }
@@ -451,4 +531,5 @@ namespace TacticalDirector.Transfers.Tests
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 valuation/offer/bid/re-key/window/fail-loud coverage. |
 // | 1.1     | 2026-09-14 | —      | Lock finance alias, Codex term validation, counter-offer band, and positional need. |
+// | 1.2     | 2026-09-14 | —      | Review corrections: golden/fractional valuation, strict age boundaries, typed budget/full outcomes, symmetric need, pre-commit port-breach lock. |
 #endregion
