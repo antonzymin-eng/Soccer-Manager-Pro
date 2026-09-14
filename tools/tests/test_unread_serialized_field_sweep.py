@@ -59,7 +59,10 @@ class UnreadSerializedFieldSweepTests(unittest.TestCase):
             "src/a/DefensiveAgentSnapshot.cs": """
                 namespace X
                 {
-                    public struct DefensiveAgentSnapshot { public bool HasBall; }
+                    public struct DefensiveAgentSnapshot
+                    {
+                        public bool HasBall;
+                    }
                 }
             """,
             "src/b/Host.cs": """
@@ -83,8 +86,14 @@ class UnreadSerializedFieldSweepTests(unittest.TestCase):
             "src/a/DefensiveAgentSnapshot.cs": """
                 namespace X
                 {
-                    public struct DefensiveAgentSnapshot { public bool HasBall; }
-                    public struct RenderSnapshot { public bool HasBall; }
+                    public struct DefensiveAgentSnapshot
+                    {
+                        public bool HasBall;
+                    }
+                    public struct RenderSnapshot
+                    {
+                        public bool HasBall;
+                    }
                 }
             """,
             "src/b/Host.cs": """
@@ -105,13 +114,17 @@ class UnreadSerializedFieldSweepTests(unittest.TestCase):
         })
         findings = {f.declaration.key: f for f in sweep.find_candidates(repo)}
         self.assertIn("DefensiveAgentSnapshot.HasBall", findings)
+        self.assertNotIn("RenderSnapshot.HasBall", findings)
 
     def test_array_member_receiver_type_is_resolved(self) -> None:
         repo = self._repo({
             "src/a/DefensiveAgentSnapshot.cs": """
                 namespace X
                 {
-                    public struct DefensiveAgentSnapshot { public bool HasBall; }
+                    public struct DefensiveAgentSnapshot
+                    {
+                        public bool HasBall;
+                    }
                     public sealed class DefensiveSnapshot
                     {
                         public DefensiveAgentSnapshot[] Agents;
@@ -139,10 +152,16 @@ class UnreadSerializedFieldSweepTests(unittest.TestCase):
             "src/a/FooState.cs": """
                 namespace X
                 {
-                    public struct FooState { public int Dormant; }
+                    public struct FooState
+                    {
+                        public int Dormant;
+                    }
                     public sealed class Runtime
                     {
-                        public FooState Build() { return new FooState { Dormant = 4 }; }
+                        public FooState Build()
+                        {
+                            return new FooState { Dormant = 4 };
+                        }
                     }
                 }
             """,
@@ -151,7 +170,10 @@ class UnreadSerializedFieldSweepTests(unittest.TestCase):
                 {
                     public sealed class FooSerializer
                     {
-                        public void Serialize(FooState value) { Sink(value.Dormant); }
+                        public void Serialize(FooState value)
+                        {
+                            Sink(value.Dormant);
+                        }
                         private void Sink(int value) { }
                     }
                 }
@@ -187,17 +209,26 @@ class UnreadSerializedFieldSweepTests(unittest.TestCase):
             "src/a/FooSnapshot.cs": """
                 namespace X
                 {
-                    public struct FooSnapshot { public int Dormant; }
+                    public struct FooSnapshot
+                    {
+                        public int Dormant;
+                    }
                     public sealed class Runtime
                     {
-                        public FooSnapshot Build() => new FooSnapshot { Dormant = 1 };
+                        public FooSnapshot Build()
+                        {
+                            return new FooSnapshot { Dormant = 1 };
+                        }
                     }
                 }
             """,
             "src/a/Tests/FooTests.cs": """
                 namespace X
                 {
-                    public sealed class FooTests { public int Read(FooSnapshot value) => value.Dormant; }
+                    public sealed class FooTests
+                    {
+                        public int Read(FooSnapshot value) => value.Dormant;
+                    }
                 }
             """,
         })
@@ -212,7 +243,10 @@ class UnreadSerializedFieldSweepTests(unittest.TestCase):
                     public sealed class FooState
                     {
                         public int Count;
-                        public void Step() { Count += 1; }
+                        public void Step()
+                        {
+                            Count += 1;
+                        }
                     }
                 }
             """,
