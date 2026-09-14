@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 14, 2026 — **PR #398 W5 + W7 reconciled onto current W4/W12 `main`; post-#398 W12 comparison is the remaining merge gate.** W5 consumes authoritative #5 CONTACT `PassAttemptEvent`s through the opposing team ring. `ERR-013-011` keeps the 60 Hz EventBus clock distinct from the 10 Hz tactical heartbeat: only `[N-AI_PHASE_STRIDE,N)` can start BACKWARD_PASS dwell, and a qualifying one-shot event remains raw only long enough to complete the required two-heartbeat dwell. The retained event stays world-frame; away normalization is read-boundary only. Snapshot schema **21 → 22** persists each ring latest event. W12's raw-trigger diagnostic overload is preserved and now observes those exact W5 semantics. W7 applies kickoff selection after manager configuration and before tick 1. No RNG/draw-order change.
+> **Last Updated:** September 14, 2026 — **W12 evidence repair closes the post-#398 measurement gate with durable, mechanically reconciled evidence.** The exact Actions archives from runs `34803051927`, `34844425733`, and `34847990460` are committed byte-for-byte with GitHub ZIP digests plus per-extracted-file SHA-256s. The corrected matched three-seed comparison proves W5 producer→consumer wiring: `latestPass` 0 → 141,491 team-heartbeats and BACKWARD_PASS 0 → 1,827 raw / 2,770 committed, while Active 140, InvariantRejected 139,309, NoPrimaryPresser 84, Disengaged 1,890, Cooldown 22,671, and all three scorelines are unchanged. `primaryAssigned +3` / WeakReceiver `−3` is selection-path wiring evidence, not a claimed gate-outcome change. A CI-discovered checker now reconstructs the census from the committed archives, verifies whole-table aggregates and heartbeat accounting, and prevents a transcription-only recurrence. Post-W6 measurement is pre-registered as normalized exit shares with an explicit falsifier. PR #412 remains separate; its MatchEngine `_tackleCooldown` P2 is not the W12 Pressing AI `Cooldown` bucket.
+>
+> **Last Updated (prior):** September 14, 2026 — **PR #398 W5 + W7 reconciled onto current W4/W12 `main`; post-#398 W12 comparison is the remaining merge gate.** W5 consumes authoritative #5 CONTACT `PassAttemptEvent`s through the opposing team ring. `ERR-013-011` keeps the 60 Hz EventBus clock distinct from the 10 Hz tactical heartbeat: only `[N-AI_PHASE_STRIDE,N)` can start BACKWARD_PASS dwell, and a qualifying one-shot event remains raw only long enough to complete the required two-heartbeat dwell. The retained event stays world-frame; away normalization is read-boundary only. Snapshot schema **21 → 22** persists each ring latest event. W12's raw-trigger diagnostic overload is preserved and now observes those exact W5 semantics. W7 applies kickoff selection after manager configuration and before tick 1. No RNG/draw-order change.
 >
 
 > **Last Updated (prior):** September 13, 2026 — **W4 keeper perception is wired on PR #403, completing the consumer half that PR #399 prepared.**
@@ -1438,7 +1440,7 @@ break it, and do not edit historical entries.
 > knowingly wrong meanwhile, with the acceptance bands (fouls ≤ 90, yellows ≤ 20, reds ≤ 5) reading
 > green throughout.
 >
-> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.16)* records the consequence none of these three holds could
+> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.17)* records the consequence none of these three holds could
 > see individually: W2's *arming* now gates three separate decisions** — the foul/card calibration,
 > KD-7a's successor distribution, and everything behind the un-isolated `sim_match_engine_inposs_gate`
 > stall whose leading candidate is W6. The path **W4 → W12 → W6** therefore unblocks three decisions,
@@ -1448,7 +1450,7 @@ break it, and do not edit historical entries.
 > FALSE — W2's arming gates **two** held decisions (the foul/card calibration and KD-7a's successor
 > distribution); the third item, the un-isolated `sim_match_engine_inposs_gate` stall, is what BLOCKS
 > arming, not something arming unblocks, so it does not belong beside them. The citation above is
-> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.16)*, whose §5 note carries the corrected
+> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.17)*, whose §5 note carries the corrected
 > two-plus-the-blocker form; the W4 → W12 → W6 path aims to clear the blocker and thereby unblock
 > the two.
 >
