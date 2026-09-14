@@ -58,6 +58,35 @@ class UnreadSerializedFieldSweepTests(unittest.TestCase):
         self.assertIn("DefensiveAgentSnapshot.HasBall", findings)
         self.assertNotIn("DefensiveAgentSnapshot.Used", findings)
 
+    def test_unique_cross_file_object_initializer_write_is_seen(self) -> None:
+        repo = self._repo(
+            {
+                "src/a/DefensiveAgentSnapshot.cs": """
+                    namespace X
+                    {
+                        public struct DefensiveAgentSnapshot
+                        {
+                            public bool HasBall;
+                        }
+                    }
+                """,
+                "src/b/Host.cs": """
+                    namespace X
+                    {
+                        public sealed class Host
+                        {
+                            public DefensiveAgentSnapshot Build()
+                            {
+                                return new DefensiveAgentSnapshot { HasBall = true };
+                            }
+                        }
+                    }
+                """,
+            }
+        )
+        findings = {f.declaration.key: f for f in sweep.find_candidates(repo)}
+        self.assertIn("DefensiveAgentSnapshot.HasBall", findings)
+
     def test_transport_only_read_does_not_clear_candidate(self) -> None:
         repo = self._repo(
             {
