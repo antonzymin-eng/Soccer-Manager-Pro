@@ -1,0 +1,80 @@
+name: W12 evidence byte repair
+
+on:
+  push:
+    branches:
+      - docs/w12-evidence-repair
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  repair-evidence-bytes:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: docs/w12-evidence-repair
+          fetch-depth: 1
+
+      - name: Download exact GitHub Actions artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/tracking/evidence/w12
+          download_artifact() {
+            local id="$1"
+            local output="$2"
+            curl --fail --silent --show-error --location \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" \
+              --output "${output}"
+          }
+          download_artifact 10332485025 docs/tracking/evidence/w12/w12-static-unread-field-sweep-34803051927.zip
+          download_artifact 10347159738 docs/tracking/evidence/w12/w12-corrected-pre398-34844425733.zip
+          download_artifact 10349033198 docs/tracking/evidence/w12/pr398-post-w12-34847990460.zip
+
+      - name: Verify authoritative ZIP digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s  %s\n' \
+            c1e3526987793b8d736fad3f52e983982a8d10d483215a4ebbcb0f44bdef94f6 \
+            docs/tracking/evidence/w12/w12-static-unread-field-sweep-34803051927.zip \
+            0d65be3a1b808933a58f785d7e65c321ae5974626089e2c0a49cfe3c00b5231c \
+            docs/tracking/evidence/w12/w12-corrected-pre398-34844425733.zip \
+            691efe7a3c77ac1017ed86a78dcfea384a12fcd25248ade4090cbb59a48fc73d \
+            docs/tracking/evidence/w12/pr398-post-w12-34847990460.zip \
+            | sha256sum --check --strict
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+          for path in sorted(Path('docs/tracking/evidence/w12').glob('*.zip')):
+              if not zipfile.is_zipfile(path):
+                  raise SystemExit(f'not a ZIP: {path}')
+              with zipfile.ZipFile(path) as zf:
+                  bad = zf.testzip()
+                  if bad is not None:
+                      raise SystemExit(f'CRC failure in {path}: {bad}')
+          PY
+
+      - name: Commit exact evidence bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/tracking/evidence/w12/*.zip .gitattributes
+          if git diff --cached --quiet; then
+            echo 'Evidence bytes already exact.'
+            exit 0
+          fi
+          git commit -m 'fix(w12): restore exact evidence artifact bytes'
+          git push origin HEAD:docs/w12-evidence-repair
