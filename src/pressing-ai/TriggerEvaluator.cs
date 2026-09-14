@@ -1,7 +1,7 @@
 // File:     src/pressing-ai/TriggerEvaluator.cs
 // Created:  2026-05-29
-// Modified: 2026-09-11 (W5 second review / ERR-013-011: consume only the prior completed 60 Hz stride and latch a qualifying discrete pass only through its required two-heartbeat dwell)
-// Modified: 2026-06-15
+// Modified: 2026-09-14 (W5/W7 reconciliation: ERR-013-011 60 Hz pass-window + bounded discrete-event dwell; W12 raw-trigger observation seam preserved)
+// Modified: 2026-09-13 (W12: observation-only raw-trigger output for gate-firing census)
 // Author:   —
 // Spec:     Pressing AI #13 §3.1–§3.2, Code Standards #20
 // Purpose:  Pure static class: evaluates all four raw press-trigger conditions and
@@ -36,6 +36,22 @@ namespace TacticalDirector.PressingAI
             bool hasLatestPass,
             ref PressTrigger state)
         {
+            return Evaluate(snapshot, latestPass, hasLatestPass, ref state, out _);
+        }
+
+        /// <summary>
+        /// W12 observation overload. <paramref name="raw"/> is the exact four-condition result used
+        /// to update debounce state on this call; exposing it avoids re-evaluating trigger geometry in
+        /// the diagnostic path. The original overload delegates here, so production semantics have one
+        /// implementation and remain unchanged.
+        /// </summary>
+        internal static TriggerFlags Evaluate(
+            PressingSnapshot snapshot,
+            PassAttemptEvent latestPass,
+            bool hasLatestPass,
+            ref PressTrigger state,
+            out TriggerFlags raw)
+        {
             bool rawBadTouch = EvaluateBadTouch(snapshot);
 
             // ERR-013-011: the retained ring event is stamped in the 60 Hz EventBus clock,
@@ -57,7 +73,17 @@ namespace TacticalDirector.PressingAI
             bool rawSidelineTrap = EvaluateSidelineTrap(snapshot);
             bool rawWeakReceiver = EvaluateWeakReceiver(snapshot);
 
-            UpdateCounter(rawBadTouch,     ref state.BadTouchDwell,     ref state.BadTouchRelease);
+            raw = TriggerFlags.None;
+            if (rawBadTouch)
+                raw |= TriggerFlags.BadTouch;
+            if (rawBackwardPass)
+                raw |= TriggerFlags.BackwardPass;
+            if (rawSidelineTrap)
+                raw |= TriggerFlags.SidelineTrap;
+            if (rawWeakReceiver)
+                raw |= TriggerFlags.WeakReceiver;
+
+            UpdateCounter(rawBadTouch,     ref state.BadTouchDwell,      ref state.BadTouchRelease);
             UpdateCounter(rawBackwardPass, ref state.BackwardPassDwell,  ref state.BackwardPassRelease);
             UpdateCounter(rawSidelineTrap, ref state.SidelineTrapDwell,  ref state.SidelineTrapRelease);
             UpdateCounter(rawWeakReceiver, ref state.WeakReceiverDwell,  ref state.WeakReceiverRelease);
@@ -330,7 +356,8 @@ namespace TacticalDirector.PressingAI
 // | 1.1     | 2026-05-29 | —      | AR-1 H-2: fixed unit mismatch in EvaluateBackwardPass (len*len vs len). AR-1 H-1: added IsActive guards in BadTouch, BackwardPass, SidelineTrap, WeakReceiver, ComputeGeometricPressure. |
 // | 1.2     | 2026-06-15 | —      | AR-2 L-1: explicit §3.1.2 F2 NaN suppression — BadTouch (touch/speed), BackwardPass (positions), SidelineTrap (ballY, which previously could fall through to a spurious fire), WeakReceiver (first-touch attribute, likewise). |
 // | 1.3     | 2026-06-15 | —      | AR-3 H (ERR-013-009): BackwardPass now evaluates the possessing team's frame (negated AttackingDirection); a pressing-team passer is ignored. Corrects the home/away inversion class. |
-// | 1.4     | 2026-09-11 | —      | W5 doc alignment: the production ring is opponent-routed; retained the own-team passer guard as defensive validation. |
-// | 1.5     | 2026-09-11 | —      | ERR-013-011 / PR #398 review: require latestPass.Tick == snapshot.TickIndex and normalize the world-frame target only at BackwardPass evaluation, keeping the retained event frame-homogeneous. |
-// | 1.6     | 2026-09-11 | —      | ERR-013-011 second review: replace impossible 60 Hz == 10 Hz equality with [windowStart,physicsTick) acceptance plus bounded discrete-event dwell completion. |
+// | 1.4     | 2026-09-13 | —      | W12: one implementation now also exposes the exact raw trigger flags used by debounce to the runtime diagnostic surface; original public signature remains unchanged. |
+// | 1.5     | 2026-09-11 | —      | W5: production ring is opponent-routed; retained own-team passer guard as defensive validation. |
+// | 1.6     | 2026-09-11 | —      | ERR-013-011 review: normalize the retained world-frame target only at BackwardPass evaluation, keeping serialized event state frame-homogeneous. |
+// | 1.7     | 2026-09-11 | —      | ERR-013-011 second review: accept only [windowStart,physicsTick) to start dwell and carry a qualifying discrete event only through its required two-heartbeat dwell. |
 #endregion
