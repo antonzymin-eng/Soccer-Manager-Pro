@@ -1,0 +1,31 @@
+name: W12 static unread serialized-field sweep
+
+on:
+  push:
+    branches:
+      - wiring/w12-gate-firing-diagnostic
+    paths:
+      - '.github/workflows/w12-static-sweep.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tool regressions
+        run: python3 -m unittest tools.tests.test_unread_serialized_field_sweep
+      - name: Run repository sweep
+        run: |
+          mkdir -p artifacts/w12-static-sweep
+          python3 tools/unread_serialized_field_sweep.py --repo . --format markdown --output artifacts/w12-static-sweep/report.md
+          python3 tools/unread_serialized_field_sweep.py --repo . --format json --output artifacts/w12-static-sweep/report.json
+          cat artifacts/w12-static-sweep/report.md
+      - name: Upload sweep evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: w12-static-unread-field-sweep-${{ github.run_id }}
+          path: artifacts/w12-static-sweep/
+          retention-days: 90
