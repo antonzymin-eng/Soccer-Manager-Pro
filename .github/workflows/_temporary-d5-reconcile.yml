@@ -1,0 +1,38 @@
+name: Temporary D5 reconcile
+
+on:
+  push:
+    branches: [codex/d5-transfers-t0]
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/d5-transfers-t0
+          fetch-depth: 0
+      - name: Reconcile onto current main
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          mkdir -p /tmp/d5-reconcile
+          cp docs/tracking/CHANGELOG.md /tmp/d5-reconcile/CHANGELOG.md
+          cp docs/tracking/CHANGELOG-src.md /tmp/d5-reconcile/CHANGELOG-src.md
+          cp docs/tracking/file-manifest.md /tmp/d5-reconcile/file-manifest.md
+          cp docs/tracking/open-issues.md /tmp/d5-reconcile/open-issues.md
+          git fetch origin main
+          git merge -X theirs --no-commit --no-ff origin/main
+          python3 tools/_temporary_d5_reconcile.py
+          rm -f tools/_temporary_d5_reconcile.py .github/workflows/_temporary-d5-reconcile.yml
+          git add -A
+          git diff --cached --check
+          python3 tools/assembly-tier-check.py --repo .
+          python3 tools/doc-consistency-check.py --repo .
+          python3 -m unittest discover -s tools/tests -p 'test_*.py'
+          git commit -m 'Reconcile #31 T0 onto current main'
+          git push origin HEAD:codex/d5-transfers-t0
