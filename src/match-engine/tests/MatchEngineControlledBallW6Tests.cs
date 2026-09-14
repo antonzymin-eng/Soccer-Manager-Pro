@@ -133,6 +133,23 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void LooseBall_DoesNotFreezeElapsedTackleCooldown()
+        {
+            var engine = new MatchEngine(MatchSeed ^ 0x48UL);
+            const int defender = 4;
+            engine.TestOnly_SetTackleCooldown(defender, remainingStrides: 2);
+
+            engine.TestOnly_ForceBallLoose(
+                new Vector3(52.5f, 34f, MatchEngineConstants.BALL_REST_HEIGHT_M),
+                new Vector3(1f, 0f, 0f));
+
+            engine.TestOnly_RunTackleResolver();
+
+            Assert.AreEqual(1, engine.TestOnly_TackleCooldown(defender),
+                "Tackle cooldown is elapsed AI-stride time; a loose/restart interval must not freeze it.");
+        }
+
+        [Test]
         public void ForcedKeeperRelease_ExitsControlled_AndDropsBallAtFeet()
         {
             var engine = new MatchEngine(MatchSeed ^ 0x50UL);
@@ -182,5 +199,6 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                        |
+// | 1.1     | 2026-09-14 | —      | P2 lock: loose ball still advances elapsed tackle cooldown.   |
 // | 1.0     | 2026-09-14 | —      | W6 composed physical-control and release regression locks.    |
 #endregion

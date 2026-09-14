@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-14 (W6 review P2 — tackle cooldown now ages on every AI stride even without a physical carrier; regression seam only, no schema/RNG change)
 // Modified: 2026-09-14 (W6 controlled ball — physical possession drives BallState.Controlled + carrier attachment; restart taker stays stationary; no schema/RNG change)
 // Modified: 2026-09-14 (W5/W7 reconciliation — W5 CONTACT pass feed + snapshot v22 / ERR-013-011 timing merged on top of W4; no RNG/draw-order change)
 // Modified: 2026-09-12 (W4 review closure — v1.74: reaction timing now begins only on visible save threats; post-deflection reset is visibility-gated; keeper-slot refresh moved to unconditional Resolve entry under the GK flag; no schema/RNG change).
@@ -2438,6 +2439,15 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: this agent's remaining challenge cooldown in AI strides.</summary>
         internal int TestOnly_TackleCooldown(int agentId) => _tackleCooldown[agentId];
 
+        /// <summary>Test-only: stage a remaining tackle cooldown without requiring a stochastic duel.</summary>
+        internal void TestOnly_SetTackleCooldown(int agentId, int remainingStrides)
+        {
+            _tackleCooldown[agentId] = remainingStrides;
+        }
+
+        /// <summary>Test-only: execute the tackle resolver once at an AI-stride boundary.</summary>
+        internal void TestOnly_RunTackleResolver() => TryResolveTackles();
+
         /// <summary>Test-only: this agent's raw tackle-interrupt flag, WITHOUT draining it — the
         /// production accessor clears on read, so a test that used it could not observe the flag twice
         /// and could not tell "never set" from "already drained".</summary>
@@ -3561,19 +3571,22 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void TryResolveTackles()
         {
-            // W6: _possessingAgentId also designates a restart taker while the placed ball remains
-            // Stationary. Only BallState.Controlled denotes a physical carrier that can be challenged.
-            if (_ball.State != BallStateType.Controlled)
-            {
-                return;
-            }
-
+            // Cooldown is elapsed in AI strides, not in carrier-present opportunities. Age it before
+            // any physical-carrier gate so a long pass, loose-ball phase or restart cannot freeze a
+            // defender's remaining tackle cooldown (PR #412 P2).
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 if (_tackleCooldown[i] > 0)
                 {
                     _tackleCooldown[i]--;
                 }
+            }
+
+            // W6: _possessingAgentId also designates a restart taker while the placed ball remains
+            // Stationary. Only BallState.Controlled denotes a physical carrier that can be challenged.
+            if (_ball.State != BallStateType.Controlled)
+            {
+                return;
             }
 
             int carrier = _possessingAgentId;
@@ -9662,6 +9675,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | also requires live LOS. RefreshGkAgentIds moved to Resolve entry after |
 // |         |            |        | pending substitutions, removing deflection-conditional ResetSlot timing.|
 // | 1.75    | 2026-09-14 | —      | W5: subscribe to PassAttemptEvent at boot, route CONTACT events to the opposing #13 ring, and append/restore each ring latest event in snapshot v22; no RNG or draw-order change. |
+// | 1.78    | 2026-09-14 | —      | W6 review P2: tackle cooldown ages before the physical-carrier gate, so loose/restart |
+// |         |            |        | strides cannot freeze elapsed cooldown time; test-only staging/invocation seams added. |
 // | 1.77    | 2026-09-14 | —      | W6: genuine open-play possession enters BallState.Controlled, follows the holder, |
 // |         |            |        | and exits explicitly on non-kick release; restart-taker designation remains       |
 // |         |            |        | Stationary. No snapshot-schema or RNG change.                                     |
