@@ -1,9 +1,9 @@
 # Transfers, Contracts & Negotiation #31 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.5 — PR #407 review correction: tuning bounds + precise valuation example)
-**Last Updated (prior):** September 14, 2026 (v0.4 — T0 football-judgment constants + worked example; prior v0.3 AR-3, v0.2 AR-1, v0.1 initial)
-**Version:** 0.5
+**Last Updated:** September 14, 2026 (v0.6 — require a non-empty young-age band)
+**Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction; prior v0.4 T0 football-judgment constants, v0.3 AR-3, v0.2 AR-1, v0.1 initial)
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -15,7 +15,7 @@
 | `TRANSFERS_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | transfers sub-blob version gate; lands at T1. |
 | `PERMILLE_DENOM` | `[FIXED]` | 1000 | integer per-mille denominator. |
 | `VALUE_PER_RATING_POINT` | `[GT]` | illustrative | integer currency per one full canonical mean-attribute point; base computation keeps `sum/ATTRIBUTE_COUNT` exact until final division. |
-| `PEAK_AGE_MIN` / `PEAK_AGE_MAX` | `[GT]` | illustrative | inclusive neutral-age band. |
+| `PEAK_AGE_MIN` / `PEAK_AGE_MAX` | `[GT]` | illustrative | inclusive neutral-age band; `PEAK_AGE_MIN > 0` and `PEAK_AGE_MAX >= PEAK_AGE_MIN`, preserving a non-empty young-discount region. |
 | `YOUNG_DISCOUNT_PERMILLE` | `[GT]` | illustrative | `[0,1000)`; must be a real discount below the peak. |
 | `DECLINE_PER_YEAR_PERMILLE` | `[GT]` | illustrative | positive annual decline after `PEAK_AGE_MAX`. |
 | `MINIMUM_AGE_MULTIPLIER_PERMILLE` | `[GT]` | illustrative | `[0,1000)` floor for old-age decline. |
@@ -80,4 +80,5 @@ For `cv = 100000` and an illustrative `5%` counter band: a buy at `100000` is `A
 | 0.3 | 2026-07-23 | — | AR-3/AR-4 attributes+age minimal baseline and genesis constants. |
 | 0.4 | 2026-09-14 | — | T0 football-judgment close-out: always-on positional need + deterministic counter band. |
 | 0.5 | 2026-09-14 | — | PR #407 review correction: precise rational-mean valuation example, prospective exclude-player stock, derived club-need safety bound, sub-1000 age/counter bounds, and typed submission outcomes. |
+| 0.6 | 2026-09-14 | — | Require `PEAK_AGE_MIN > 0` so the young-discount region and strict boundary regression are well-defined. |
 #endregion
