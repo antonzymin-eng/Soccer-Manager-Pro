@@ -6,6 +6,7 @@ on:
       - wiring/w12-gate-firing-diagnostic
     paths:
       - '.github/workflows/w12-static-sweep.yml'
+      - 'tools/unread_serialized_field_sweep.py'
 
 permissions:
   contents: read
