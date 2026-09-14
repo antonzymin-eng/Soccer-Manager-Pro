@@ -9,7 +9,6 @@ import tempfile
 import textwrap
 import unittest
 
-
 ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = ROOT / "tools" / "unread_serialized_field_sweep.py"
 SPEC = importlib.util.spec_from_file_location("unread_serialized_field_sweep", MODULE_PATH)
@@ -31,175 +30,193 @@ class UnreadSerializedFieldSweepTests(unittest.TestCase):
         return root
 
     def test_snapshot_write_without_read_is_candidate(self) -> None:
-        repo = self._repo(
-            {
-                "src/a/DefensiveAgentSnapshot.cs": """
-                    namespace X
+        repo = self._repo({
+            "src/a/DefensiveAgentSnapshot.cs": """
+                namespace X
+                {
+                    public struct DefensiveAgentSnapshot
                     {
-                        public struct DefensiveAgentSnapshot
+                        public bool HasBall;
+                        public int Used;
+                    }
+                    public sealed class Host
+                    {
+                        public void Fill()
                         {
-                            public bool HasBall;
-                            public int Used;
-                        }
-
-                        public sealed class Host
-                        {
-                            public void Fill()
-                            {
-                                var x = new DefensiveAgentSnapshot { HasBall = true, Used = 3 };
-                                if (x.Used > 0) { }
-                            }
+                            var x = new DefensiveAgentSnapshot { HasBall = true, Used = 3 };
+                            if (x.Used > 0) { }
                         }
                     }
-                """,
-            }
-        )
+                }
+            """,
+        })
         findings = {f.declaration.key: f for f in sweep.find_candidates(repo)}
         self.assertIn("DefensiveAgentSnapshot.HasBall", findings)
         self.assertNotIn("DefensiveAgentSnapshot.Used", findings)
 
     def test_unique_cross_file_object_initializer_write_is_seen(self) -> None:
-        repo = self._repo(
-            {
-                "src/a/DefensiveAgentSnapshot.cs": """
-                    namespace X
+        repo = self._repo({
+            "src/a/DefensiveAgentSnapshot.cs": """
+                namespace X
+                {
+                    public struct DefensiveAgentSnapshot { public bool HasBall; }
+                }
+            """,
+            "src/b/Host.cs": """
+                namespace X
+                {
+                    public sealed class Host
                     {
-                        public struct DefensiveAgentSnapshot
+                        public DefensiveAgentSnapshot Build()
                         {
-                            public bool HasBall;
+                            return new DefensiveAgentSnapshot { HasBall = true };
                         }
                     }
-                """,
-                "src/b/Host.cs": """
-                    namespace X
+                }
+            """,
+        })
+        findings = {f.declaration.key: f for f in sweep.find_candidates(repo)}
+        self.assertIn("DefensiveAgentSnapshot.HasBall", findings)
+
+    def test_same_name_read_on_other_type_does_not_clear_candidate(self) -> None:
+        repo = self._repo({
+            "src/a/DefensiveAgentSnapshot.cs": """
+                namespace X
+                {
+                    public struct DefensiveAgentSnapshot { public bool HasBall; }
+                    public struct RenderSnapshot { public bool HasBall; }
+                }
+            """,
+            "src/b/Host.cs": """
+                namespace X
+                {
+                    public sealed class Host
                     {
-                        public sealed class Host
+                        public void Step()
                         {
-                            public DefensiveAgentSnapshot Build()
-                            {
-                                return new DefensiveAgentSnapshot { HasBall = true };
-                            }
+                            DefensiveAgentSnapshot defensive = new DefensiveAgentSnapshot();
+                            defensive.HasBall = true;
+                            RenderSnapshot model = new RenderSnapshot();
+                            if (model.HasBall) { }
                         }
                     }
-                """,
-            }
-        )
+                }
+            """,
+        })
+        findings = {f.declaration.key: f for f in sweep.find_candidates(repo)}
+        self.assertIn("DefensiveAgentSnapshot.HasBall", findings)
+
+    def test_array_member_receiver_type_is_resolved(self) -> None:
+        repo = self._repo({
+            "src/a/DefensiveAgentSnapshot.cs": """
+                namespace X
+                {
+                    public struct DefensiveAgentSnapshot { public bool HasBall; }
+                    public sealed class DefensiveSnapshot
+                    {
+                        public DefensiveAgentSnapshot[] Agents;
+                    }
+                }
+            """,
+            "src/b/Host.cs": """
+                namespace X
+                {
+                    public sealed class Host
+                    {
+                        public void Fill(DefensiveSnapshot snapshot)
+                        {
+                            snapshot.Agents[0].HasBall = true;
+                        }
+                    }
+                }
+            """,
+        })
         findings = {f.declaration.key: f for f in sweep.find_candidates(repo)}
         self.assertIn("DefensiveAgentSnapshot.HasBall", findings)
 
     def test_transport_only_read_does_not_clear_candidate(self) -> None:
-        repo = self._repo(
-            {
-                "src/a/FooState.cs": """
-                    namespace X
+        repo = self._repo({
+            "src/a/FooState.cs": """
+                namespace X
+                {
+                    public struct FooState { public int Dormant; }
+                    public sealed class Runtime
                     {
-                        public struct FooState
-                        {
-                            public int Dormant;
-                        }
-
-                        public sealed class Runtime
-                        {
-                            public FooState Build()
-                            {
-                                return new FooState { Dormant = 4 };
-                            }
-                        }
+                        public FooState Build() { return new FooState { Dormant = 4 }; }
                     }
-                """,
-                "src/a/FooSerializer.cs": """
-                    namespace X
+                }
+            """,
+            "src/a/FooSerializer.cs": """
+                namespace X
+                {
+                    public sealed class FooSerializer
                     {
-                        public sealed class FooSerializer
-                        {
-                            public void Serialize(FooState value)
-                            {
-                                Sink(value.Dormant);
-                            }
-
-                            private void Sink(int value) { }
-                        }
+                        public void Serialize(FooState value) { Sink(value.Dormant); }
+                        private void Sink(int value) { }
                     }
-                """,
-            }
-        )
+                }
+            """,
+        })
         findings = {f.declaration.key: f for f in sweep.find_candidates(repo)}
         item = findings["FooState.Dormant"]
         self.assertTrue(item.transport_reads)
         self.assertEqual("transport-only", item.category)
 
     def test_unity_serialize_field_is_in_scope(self) -> None:
-        repo = self._repo(
-            {
-                "src/client/View.cs": """
-                    namespace X
+        repo = self._repo({
+            "src/client/View.cs": """
+                namespace X
+                {
+                    public sealed class View
                     {
-                        public sealed class View
-                        {
-                            [UnityEngine.SerializeField]
-                            private float _unusedScale;
-
-                            [SerializeField]
-                            private float _usedScale;
-
-                            public float Scale() => _usedScale;
-                        }
+                        [UnityEngine.SerializeField]
+                        private float _unusedScale;
+                        [SerializeField]
+                        private float _usedScale;
+                        public float Scale() => _usedScale;
                     }
-                """,
-            }
-        )
+                }
+            """,
+        })
         findings = {f.declaration.key: f for f in sweep.find_candidates(repo)}
         self.assertIn("View._unusedScale", findings)
         self.assertNotIn("View._usedScale", findings)
 
     def test_tests_do_not_count_as_behavioral_read(self) -> None:
-        repo = self._repo(
-            {
-                "src/a/FooSnapshot.cs": """
-                    namespace X
+        repo = self._repo({
+            "src/a/FooSnapshot.cs": """
+                namespace X
+                {
+                    public struct FooSnapshot { public int Dormant; }
+                    public sealed class Runtime
                     {
-                        public struct FooSnapshot
-                        {
-                            public int Dormant;
-                        }
-                        public sealed class Runtime
-                        {
-                            public FooSnapshot Build() => new FooSnapshot { Dormant = 1 };
-                        }
+                        public FooSnapshot Build() => new FooSnapshot { Dormant = 1 };
                     }
-                """,
-                "src/a/Tests/FooTests.cs": """
-                    namespace X
-                    {
-                        public sealed class FooTests
-                        {
-                            public int Read(FooSnapshot value) => value.Dormant;
-                        }
-                    }
-                """,
-            }
-        )
+                }
+            """,
+            "src/a/Tests/FooTests.cs": """
+                namespace X
+                {
+                    public sealed class FooTests { public int Read(FooSnapshot value) => value.Dormant; }
+                }
+            """,
+        })
         findings = {f.declaration.key: f for f in sweep.find_candidates(repo)}
         self.assertIn("FooSnapshot.Dormant", findings)
 
     def test_compound_assignment_is_a_behavioral_read(self) -> None:
-        repo = self._repo(
-            {
-                "src/a/FooState.cs": """
-                    namespace X
+        repo = self._repo({
+            "src/a/FooState.cs": """
+                namespace X
+                {
+                    public sealed class FooState
                     {
-                        public sealed class FooState
-                        {
-                            public int Count;
-                            public void Step()
-                            {
-                                Count += 1;
-                            }
-                        }
+                        public int Count;
+                        public void Step() { Count += 1; }
                     }
-                """,
-            }
-        )
+                }
+            """,
+        })
         findings = {f.declaration.key: f for f in sweep.find_candidates(repo)}
         self.assertNotIn("FooState.Count", findings)
 
