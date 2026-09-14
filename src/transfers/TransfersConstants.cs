@@ -29,12 +29,6 @@ namespace TacticalDirector.Transfers
 
         #endregion
 
-        #region Derived bounds
-
-        private static readonly int MaxClubNeedPerPlayerPermille = DeriveMaxClubNeedPerPlayerPermille();
-
-        #endregion
-
         #region GT
 
         /// <summary>[GT] Currency value of one mean-rating point. Config key [transfers] ValuePerRatingPoint. Spec #31 Appendix A.</summary>
@@ -63,13 +57,13 @@ namespace TacticalDirector.Transfers
 
         /// <summary>
         /// [GT] Value multiplier step per player above/below the neutral positional-stock count.
-        /// The upper bound is derived from #27 squad/position cardinalities so every legal stock keeps the
-        /// resulting multiplier strictly positive.
+        /// The upper bound is derived inline from #27 squad/position cardinalities so every legal stock keeps
+        /// the resulting multiplier strictly positive without depending on static-field declaration order.
         /// </summary>
         public static readonly int ClubNeedPerPlayerPermille = BoundedNonNegative(
             "ClubNeedPerPlayerPermille",
             20,
-            MaxClubNeedPerPlayerPermille);
+            DeriveMaxClubNeedPerPlayerPermille());
 
         /// <summary>[GT] Minimal summer-window length in world days. Config key [transfers] SummerWindowLengthDays. Spec #31 Appendix A.</summary>
         public static readonly int SummerWindowLengthDays = Positive("SummerWindowLengthDays", 45);
@@ -180,4 +174,5 @@ namespace TacticalDirector.Transfers
 // | 1.1     | 2026-09-14 | —      | Add deterministic counter-offer band and always-on positional-need tuning. |
 // | 1.2     | 2026-09-14 | —      | Derive club-need safety cap from #27 cardinalities; require real age discounts and sub-1000 negotiation band. |
 // | 1.3     | 2026-09-14 | —      | Require positive PeakAgeMin so the young-discount region is non-empty and its boundary test is valid. |
+// | 1.4     | 2026-09-14 | —      | Derive club-need cap inline at its consumer so static-field declaration order cannot affect initialization. |
 #endregion
