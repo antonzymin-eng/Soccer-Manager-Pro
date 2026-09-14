@@ -20,7 +20,7 @@ on:
         description: 'Single-line reason for taking this measurement; recorded in the artifact'
         required: true
         type: string
-  # W12 one-shot branch-only trigger. Removed immediately after the pre-#398 artifact is captured.
+  # W12 one-shot branch-only trigger. Removed immediately after the pre-398 artifact is captured.
   push:
     branches:
       - wiring/w12-gate-firing-diagnostic
@@ -50,8 +50,8 @@ jobs:
 
       - name: Resolve canonical instrument
         env:
-          INSTRUMENT: ${{ inputs.instrument || 'w12-gate-firing' }}
-          REASON: ${{ inputs.reason || 'pre-#398 W12 baseline on current main + PR #410 instrumentation' }}
+          INSTRUMENT: "${{ inputs.instrument || 'w12-gate-firing' }}"
+          REASON: "${{ inputs.reason || 'pre-398 W12 baseline on current main plus PR 410 instrumentation' }}"
         run: |
           set -euo pipefail
           if [[ "$REASON" == *$'\n'* || "$REASON" == *$'\r'* ]]; then
@@ -64,7 +64,7 @@ jobs:
 
       - name: Build gate and run instrument
         env:
-          REASON: ${{ inputs.reason || 'pre-#398 W12 baseline on current main + PR #410 instrumentation' }}
+          REASON: "${{ inputs.reason || 'pre-398 W12 baseline on current main plus PR 410 instrumentation' }}"
         run: |
           set -euo pipefail
           mkdir -p artifacts/measurements/trx
