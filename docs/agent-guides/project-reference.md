@@ -54,7 +54,7 @@ Soccer-Manager-Pro/
 │   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 53 folders, all APPROVED
 │   │   └── <spec-folder>/          ← One folder per spec; see SPEC_INDEX.md for the number↔folder map
 │   └── tracking/                   ← Progress, error log, file manifest, roadmaps, design supplements
-├── src/                            ← Implementation (coding began May 19, 2026) — 35 production assemblies
+├── src/                            ← Implementation (coding began May 19, 2026) — 37 production assemblies
 │   ├── CLAUDE.md                   ← Coding guide (read before writing any code)
 │   └── <assembly>/                 ← See the assembly map below
 └── tools/

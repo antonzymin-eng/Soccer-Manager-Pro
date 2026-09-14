@@ -12,7 +12,17 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 12, 2026 — **Unity now governs the build: 22 Unity-editor-only compile errors fixed that the Linux gate could not see. The Linux gate is kept.**
+> **Last Updated:** September 14, 2026 — **D5 / Transfers, Contracts & Negotiation #31 T0 implemented in PR #407; both C6-deferred football-judgment findings and both Codex P2 findings are closed.**
+>
+> New Tier-7 `TacticalDirector.Transfers` production/test assemblies provide the draw-free integer T0 core: attributes+age valuation with always-on #27 coarse-position scarcity; deterministic `Accepted` / `CounterOffered` / `Rejected` negotiation around a configurable near-value band; managed-club contract/window/committed-spend state; and atomic manager `SubmitBid` that consumes #40 only through `AvailableTransferBudget` / `ApplyTransaction` and delegates roster ownership to the #31-owned `ITransferRosterPort` for #30's T2 producer. Wages are recorded on contracts but not posted at T0. No autonomous transfer producer, save composition, season-loop call site or production roster adapter lands here; those remain T1/T2, with personality/CA/staff/wage/multi-day/rival-bid depth at T3.
+>
+> **C6 close-out.** The original one-currency-unit accept/reject cliff now has a synchronous deterministic `CounterOffered` band, and minimal valuation no longer becomes context-blind when deep producers are absent: #27 positional stock is always-on at Stage 2. The football-judgment ledger moves **34 recorded / 5 fixed / 29 open → 34 / 7 / 27**; its assembly-less subset moves **6 specs / 8 findings → 5 / 6**, leaving the workable queue at 21. Codex P2 #1 is closed by shared `Offer.ValidateTerms` plus a direct malformed-evaluator regression; P2 #2 is closed by a complete `src/transfers/` section in the authoritative file manifest.
+>
+> **Governance / verification.** Code Standards §3.5.2 seats all **37/37** production assembly folders with **0 upward references**; the corresponding CI run also passed **279/279 tooling tests**, markdown/YAML/link checks, C# whitespace, Unity meta integrity and asset hygiene. That run's only completed failure was the stale file-manifest maintained pointer to Code Standards v1.13; the pointer is now v1.14. Its long Linux functional job was still running when this record was written, so this entry does **not** promote that preliminary run to a full green gate. The final rebased/squashed PR head owns the merge verdict. Unity 6000.4.9f1 remains the governing compiler and has **not** been run for this #31 landing in this session.
+>
+> **Determinism:** no match snapshot/save schema, season-save format, RNG stream/domain tag, draw site or draw order changes in T0.
+
+> **Last Updated (prior):** September 12, 2026 — **Unity now governs the build: 22 Unity-editor-only compile errors fixed that the Linux gate could not see. The Linux gate is kept.**
 >
 > After a fast-forward of 893 commits, the Unity 6000.4.9f1 editor on the pinned host would not compile `main`. Every error was invisible to `tools/dotnet-ci`. That gate resolves references transitively through MSBuild and compiles tests against NUnit 3.14; Unity requires every referenced assembly in the asmdef itself and bundles NUnit 3.5. Two recompile rounds surfaced them, the first set masking the second.
 >
