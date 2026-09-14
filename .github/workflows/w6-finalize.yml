@@ -18,7 +18,9 @@ jobs:
         with:
           ref: wiring/w6-controlled-ball
       - name: Apply W6 closeout edits
-        run: python3 .github/w6-finalize.py
+        run: |
+          python3 .github/w6-finalize-fix.py
+          python3 .github/w6-finalize.py
       - name: Remove temporary W6 tooling and commit
         shell: bash
         run: |
@@ -32,6 +34,7 @@ jobs:
             .github/w6-controlled-ball-smoke-marker \
             .github/workflows/w6-controlled-ball-smoke.yml \
             .github/w6-finalize.py \
+            .github/w6-finalize-fix.py \
             .github/workflows/w6-finalize.yml \
             .github/w6-finalize-marker
           git diff --check
