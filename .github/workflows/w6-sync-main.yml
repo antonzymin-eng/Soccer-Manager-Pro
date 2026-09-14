@@ -1,0 +1,64 @@
+name: W6 sync repaired main
+
+on:
+  push:
+    branches:
+      - wiring/w6-controlled-ball
+
+permissions:
+  contents: write
+
+jobs:
+  sync-main:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout W6 branch
+        uses: actions/checkout@v4
+        with:
+          ref: wiring/w6-controlled-ball
+          fetch-depth: 0
+
+      - name: Merge repaired main and discard premature W6 tracking closeout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main
+
+          set +e
+          git merge --no-ff --no-commit origin/main
+          rc=$?
+          set -e
+
+          if [ "$rc" -ne 0 ]; then
+            mapfile -t conflicts < <(git diff --name-only --diff-filter=U | sort)
+            expected=(
+              docs/tracking/CHANGELOG-src.md
+              docs/tracking/CHANGELOG.md
+              docs/tracking/file-manifest.md
+              docs/tracking/match-engine-wiring-backlog.md
+              docs/tracking/open-issues.md
+            )
+            mapfile -t expected_sorted < <(printf '%s\n' "${expected[@]}" | sort)
+            if [ "$(printf '%s\n' "${conflicts[@]}")" != "$(printf '%s\n' "${expected_sorted[@]}")" ]; then
+              echo 'Unexpected merge conflict set:' >&2
+              printf '  %s\n' "${conflicts[@]}" >&2
+              exit 1
+            fi
+            # The W6 branch carried premature close-out versions (v2.137/v1.17) that
+            # now collide with the authoritative W12 repair. Keep repaired main here;
+            # W6 close-out will be regenerated after P2 + canonical measurement.
+            git checkout --theirs -- "${expected[@]}"
+            git add "${expected[@]}"
+          fi
+
+          if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+            echo 'Unresolved merge conflicts remain.' >&2
+            git diff --name-only --diff-filter=U >&2
+            exit 1
+          fi
+
+          git commit -m 'merge: sync repaired W12 main into W6'
+          git push origin HEAD:wiring/w6-controlled-ball
