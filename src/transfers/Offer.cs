@@ -1,12 +1,14 @@
 // ============================================================================
 // File:     src/transfers/Offer.cs
 // Created:  2026-09-12
-// Modified: 2026-09-12
+// Modified: 2026-09-14
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
-//           Spec #31 §2.3, §3.3 (counterparty-generic offer seam)
+//           Spec #31 §2.3, §3.2-§3.3 (counterparty-generic offer seam)
 // Purpose:  Declares the immutable manager-initiated transfer offer consumed by #31.
 // ============================================================================
+
+using System;
 
 namespace TacticalDirector.Transfers
 {
@@ -47,6 +49,38 @@ namespace TacticalDirector.Transfers
             LengthSeasons = lengthSeasons;
             IsBuy = isBuy;
         }
+
+        /// <summary>Fail-loud shared validation used by every consuming offer seam.</summary>
+        internal static void ValidateTerms(in Offer offer)
+        {
+            if (offer.PlayerId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(offer), offer.PlayerId, "PlayerId must be non-negative (F6).");
+            }
+
+            if (offer.CounterpartyClubId < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(offer),
+                    offer.CounterpartyClubId,
+                    "CounterpartyClubId must be non-negative (F6).");
+            }
+
+            if (offer.Fee < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(offer), offer.Fee, "Fee must be non-negative (F6).");
+            }
+
+            if (offer.WagePerPeriod < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(offer), offer.WagePerPeriod, "WagePerPeriod must be non-negative (F6).");
+            }
+
+            if (offer.LengthSeasons <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(offer), offer.LengthSeasons, "LengthSeasons must be positive (F6/F7).");
+            }
+        }
     }
 }
 
@@ -54,4 +88,5 @@ namespace TacticalDirector.Transfers
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 offer value. |
+// | 1.1     | 2026-09-14 | —      | Codex P2: centralize fail-loud term validation for every consuming seam. |
 #endregion
