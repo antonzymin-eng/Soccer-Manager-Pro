@@ -1,58 +1,72 @@
-# W12 Gate-Firing Comparison — post-PR #398
+# W12 gate-firing post-#398 comparison — corrected record
 
-**Date:** 2026-09-14  
-**Compared PR:** #398 — W5 pressing triggers / W7 kickoff tactics  
-**Measured commit:** `ed4ce66d40a75d844bb6b4924ce71750df718c23`  
-**W12 mainline parent:** `d7372ed2bb6fc135b2af1ca6f7a4a2b911254152` (PR #410 merged)  
-**Measurement run:** `34847990460`  
-**Artifact:** `pr398-post-w12-34847990460` (`sha256:691efe7a3c77ac1017ed86a78dcfea384a12fcd25248ade4090cbb59a48fc73d`)  
-**Instrument:** `w12-gate-firing` / `TD_W12_GATE_DIAGNOSTIC=1`  
-**Corpus:** the same 3 deterministic seeds × full 90-minute match × both teams as the corrected pre-#398 baseline  
-**Verification:** PASS — the measurement job's whole-tree gate completed successfully with 0 build errors / 0 warnings, the diagnostic TRX recorded a passing W12 test, and the required report sentinel was captured.
+> **Correction, September 14, 2026:** the prior version of this document was not a valid transcription of run `34847990460`. This file is generated from the mechanically parsed census and checked against the committed raw source bytes. Do not hand-edit measurement values; run `python tools/check-w12-evidence.py --write` after an intentional census update.
 
-The authoritative pre-#398 record is `docs/tracking/w12-gate-firing-pre398-baseline.md` (run `34844425733`, artifact digest `sha256:0d65be3a1b808933a58f785d7e65c321ae5974626089e2c0a49cfe3c00b5231c`).
+## Provenance
+
+| Lane | Run | Measured commit / ref | Durable source | Artifact corroboration |
+|---|---:|---|---|---|
+| Corrected pre-#398 | `34844425733` | `c379788c2c96f1f49034c8fdb7dc54f487f9cf5f` / `refs/heads/wiring/w12-gate-firing-diagnostic` | committed `pre/instrument-output.txt` bytes, SHA-256 `66dfe2604e963b3d5569eed5ff10a14d3216cf9042fe182ca86e2e7c8a8adebc` | ZIP SHA-256 `0d65be3a1b808933a58f785d7e65c321ae5974626089e2c0a49cfe3c00b5231c` |
+| Post-#398 | `34847990460` (job `103988507476`) | `0821bfa9ff66b24393014eacf0401904fdc0fb37` / `refs/heads/tmp/pr398-post-w12` | committed `post/instrument-output.txt` bytes, SHA-256 `8c3764765968e74d63cfb232815ed6a72b4b3789bed07de9757327adf1cf8655` | ZIP SHA-256 `691efe7a3c77ac1017ed86a78dcfea384a12fcd25248ade4090cbb59a48fc73d` |
+
+The raw files are losslessly preserved under `docs/tracking/evidence/w12/`; workflow metadata and the GitHub ZIP digests corroborate their origin. `w12-gate-firing-census.json` is a mechanical parse of the first complete census block in each committed raw instrument output.
+
+## Measurement semantics
+
+- `latestPass` counts eligible pressing heartbeats on which `PassEventRing.TryGetLatest` succeeded. It is a retained-ring-availability observation, **not pass throughput or a pass-event count**.
+- `raw BackwardPass` is not a pure event count. The evaluator defines it as `freshBackwardPass || pendingBackwardPassDwell`, so it can remain true on dwell-continuation heartbeats.
+- `committed` means the trigger debounce/dwell state is live; `Active` means the resulting press directive survived downstream gates.
+- Phase/cooldown exits occur before pass lookup and trigger evaluation. The checker enforces `latestPass <= samples - InPossession - Cooldown - StaleTick` for every team row, along with complete exit accounting and aggregate reconstruction.
+
+## Matched three-seed result
+
+Scorelines are identical: **0-3, 2-5, 2-1** pre and post.
+
+| Metric | Pre #398 | Post #398 | Delta |
+|---|---:|---:|---:|
+| latestPass | 0 | 141,491 | +141,491 |
+| primaryAssigned | 21,800 | 21,803 | +3 |
+| coverShadows | 10,664 | 10,664 | +0 |
+| raw BackwardPass | 0 | 1,827 | +1,827 |
+| committed BackwardPass | 0 | 2,770 | +2,770 |
+| raw SidelineTrap | 849 | 849 | +0 |
+| committed SidelineTrap | 979 | 979 | +0 |
+| raw WeakReceiver | 141,379 | 141,376 | -3 |
+| committed WeakReceiver | 141,414 | 141,411 | -3 |
+
+### Gate outcomes — exact equality
+
+| Exit/outcome | Pre #398 | Post #398 | Delta |
+|---|---:|---:|---:|
+| Active | 140 | 140 | +0 |
+| InvariantRejected | 139,309 | 139,309 | +0 |
+| NoPrimaryPresser | 84 | 84 | +0 |
+| Disengaged | 1,890 | 1,890 | +0 |
+| Cooldown | 22,671 | 22,671 | +0 |
+| NoCommittedTrigger | 99 | 99 | +0 |
+| InPossession | 159,801 | 159,801 | +0 |
+
+Every gate-outcome counter is unchanged by exact equality. `primaryAssigned` rises by 3 while `WeakReceiver` falls by 3 on the same team/seed; this is positive wiring evidence that committed `BACKWARD_PASS` reached primary-press selection and perturbed internal selection bookkeeping, without an observed change in gate outcomes in this corpus.
+
+## Per-seed / per-team census
+
+| Lane | Seed | Final | Team | samples | latestPass | active | primaryAssigned | InPoss | NoCommitted | Active exit | NoPrimary | InvariantRejected | Disengaged | Cooldown | raw Bwd | committed Bwd | raw Side | committed Side | raw Weak | committed Weak |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| pre | 0x0F1E2D3C4B5A6978 | 0-3 | 0 | 53999 | 0 | 6 | 4916 | 26504 | 24 | 6 | 3 | 23822 | 280 | 3360 | 0 | 0 | 239 | 264 | 24104 | 24109 |
+| pre | 0x0F1E2D3C4B5A6978 | 0-3 | 1 | 53999 | 0 | 0 | 2740 | 26880 | 40 | 0 | 0 | 22779 | 331 | 3969 | 0 | 0 | 149 | 177 | 23075 | 23107 |
+| pre | 0x00000000D1A6D05E | 2-5 | 0 | 53999 | 0 | 104 | 3760 | 25055 | 1 | 104 | 70 | 23842 | 379 | 4548 | 0 | 0 | 159 | 184 | 24396 | 24395 |
+| pre | 0x00000000D1A6D05E | 2-5 | 1 | 53999 | 0 | 0 | 3191 | 28286 | 18 | 0 | 0 | 22094 | 277 | 3324 | 0 | 0 | 95 | 118 | 22368 | 22369 |
+| pre | 0x5EED000000000003 | 2-1 | 0 | 53999 | 0 | 30 | 4058 | 24464 | 1 | 30 | 11 | 25261 | 326 | 3906 | 0 | 0 | 46 | 58 | 25629 | 25628 |
+| pre | 0x5EED000000000003 | 2-1 | 1 | 53999 | 0 | 0 | 3135 | 28612 | 15 | 0 | 0 | 21511 | 297 | 3564 | 0 | 0 | 161 | 178 | 21807 | 21806 |
+| post | 0x0F1E2D3C4B5A6978 | 0-3 | 0 | 53999 | 24135 | 6 | 4916 | 26504 | 24 | 6 | 3 | 23822 | 280 | 3360 | 275 | 414 | 239 | 264 | 24104 | 24109 |
+| post | 0x0F1E2D3C4B5A6978 | 0-3 | 1 | 53999 | 23139 | 0 | 2743 | 26880 | 40 | 0 | 0 | 22779 | 331 | 3969 | 315 | 478 | 149 | 177 | 23072 | 23104 |
+| post | 0x00000000D1A6D05E | 2-5 | 0 | 53999 | 24395 | 104 | 3760 | 25055 | 1 | 104 | 70 | 23842 | 379 | 4548 | 309 | 473 | 159 | 184 | 24396 | 24395 |
+| post | 0x00000000D1A6D05E | 2-5 | 1 | 53999 | 22383 | 0 | 3191 | 28286 | 18 | 0 | 0 | 22094 | 277 | 3324 | 303 | 458 | 95 | 118 | 22368 | 22369 |
+| post | 0x5EED000000000003 | 2-1 | 0 | 53999 | 25627 | 30 | 4058 | 24464 | 1 | 30 | 11 | 25261 | 326 | 3906 | 334 | 509 | 46 | 58 | 25629 | 25628 |
+| post | 0x5EED000000000003 | 2-1 | 1 | 53999 | 21812 | 0 | 3135 | 28612 | 15 | 0 | 0 | 21511 | 297 | 3564 | 291 | 438 | 161 | 178 | 21807 | 21806 |
 
 ## Verdict
 
-**GREEN for PR #398 / W5.** The exact condition that was dark before W5 is now observably live on every seed and both teams. The pass-event feed is no longer dormant, BACKWARD_PASS is evaluated from real events under the reconciled 60 Hz `[N-AI_PHASE_STRIDE,N)` contract, and the full gate completed without a new runtime failure.
+**W5 producer→consumer wiring is proven.** In the matched three-seed pre/post corpus, every gate-outcome counter is exactly unchanged: Active **140 → 140**, InvariantRejected **139,309 → 139,309**, NoPrimaryPresser **84 → 84**, Disengaged **1,890 → 1,890**, Cooldown **22,671 → 22,671**, and all three scorelines are identical. Meanwhile `latestPass` becomes available on **141,491** eligible heartbeats and BackwardPass becomes observable (**1,827 raw / 2,770 committed**). The `primaryAssigned +3` / `WeakReceiver −3` delta shows that the new trigger reached selection and perturbed internal processing, but produced **no observed change in gate outcomes in this corpus**.
 
-This discharges the recorded post-#398 W12 merge gate. W7 is covered by the same reconciled build/test gate; it does not alter the W12 pass-feed acceptance condition. Per the wiring backlog sequence, **W6 is next after #398 merges.**
-
-## Aggregate comparison
-
-Across **323,994 team-heartbeats** in both runs:
-
-| Surface | Pre-#398 | Post-#398 | Result |
-|---|---:|---:|---|
-| Latest pass visible to Pressing AI | **0** | **158,912** | W5 pass feed live |
-| BACKWARD_PASS raw | **0** | **1,113** | real pass events reach the raw gate |
-| BACKWARD_PASS committed | **0** | **1,926** | bounded discrete-event dwell reaches commitment |
-| BadTouch raw / committed | 0 / 0 | 0 / 0 | independent pre-existing dark signal; unchanged by W5 |
-| SidelineTrap raw / committed | 849 / 979 | 2,183 / 2,861 | live |
-| WeakReceiver raw / committed | 141,379 / 141,414 | 135,334 / 135,294 | live |
-| Active press directive | 140 | 5,698 | live; absolute count allowed to move because #398 changes pressing behaviour |
-| InvariantRejected | 139,309 | 127,622 | still large; remains a W12 follow-up finding, not a W5 blocker |
-| NoPrimaryPresser | 84 | 482 | remains a W12 follow-up finding, not a W5 blocker |
-
-Post-#398 aggregate phase counts: `InPoss=160,162`, `OutOfPoss=160,150`, `TransToAtk=1,841`, `TransToDef=1,841`. Exit counts: `InPossession=160,162`, `Cooldown=27,282`, `Disengaged=1,670`, `NoCommittedTrigger=1,078`, `NoPrimaryPresser=482`, `InvariantRejected=127,622`, `Active=5,698`.
-
-## Per-seed evidence
-
-### Seed `0x0F1E2D3C4B5A6978` — final 0–1
-
-- Team 0: samples 53,999; latestPass 35,574; active 0; primaryAssigned 1,475; coverShadows 782. Phase: InPoss 29,176; OutOfPoss 24,262; TransToAtk 204; TransToDef 357. Exits: InPossession 29,176; NoCommittedTrigger 253; Active 0; NoPrimaryPresser 4; InvariantRejected 20,403; Disengaged 358; Cooldown 3,805. Raw: BadTouch 0; BackwardPass 278; SidelineTrap 119; WeakReceiver 20,721. Committed: BadTouch 0; BackwardPass 254; SidelineTrap 212; WeakReceiver 20,711.
-- Team 1: samples 53,999; latestPass 16,449; active 0; primaryAssigned 618; coverShadows 185. Phase: InPoss 24,264; OutOfPoss 29,174; TransToDef 204; TransToAtk 357. Exits: InPossession 24,264; NoCommittedTrigger 642; Active 0; NoPrimaryPresser 19; InvariantRejected 24,168; Disengaged 449; Cooldown 4,457. Raw: BadTouch 0; BackwardPass 24; SidelineTrap 328; WeakReceiver 24,440. Committed: BadTouch 0; BackwardPass 152; SidelineTrap 569; WeakReceiver 24,434.
-
-### Seed `0x00000000D1A6D05E` — final 5–4
-
-- Team 0: samples 53,999; latestPass 28,033; active 5,659; primaryAssigned 12,251; coverShadows 6,349. Phase: InPoss 27,458; OutOfPoss 25,841; TransToDef 335; TransToAtk 365. Exits: InPossession 27,458; NoCommittedTrigger 15; Active 5,659; NoPrimaryPresser 6; InvariantRejected 16,059; Disengaged 178; Cooldown 4,624. Raw: BadTouch 0; BackwardPass 77; SidelineTrap 663; WeakReceiver 21,922. Committed: BadTouch 0; BackwardPass 496; SidelineTrap 745; WeakReceiver 21,916.
-- Team 1: samples 53,999; latestPass 25,413; active 0; primaryAssigned 2,436; coverShadows 923. Phase: InPoss 25,843; OutOfPoss 27,456; TransToAtk 335; TransToDef 365. Exits: InPossession 25,843; NoCommittedTrigger 14; Active 0; NoPrimaryPresser 73; InvariantRejected 23,358; Disengaged 243; Cooldown 4,468. Raw: BadTouch 0; BackwardPass 503; SidelineTrap 247; WeakReceiver 23,721. Committed: BadTouch 0; BackwardPass 581; SidelineTrap 274; WeakReceiver 23,713.
-
-### Seed `0x5EED000000000003` — final 0–2
-
-- Team 0: samples 53,999; latestPass 26,952; active 4; primaryAssigned 5,064; coverShadows 2,574. Phase: InPoss 26,890; OutOfPoss 26,529; TransToAtk 241; TransToDef 339. Exits: InPossession 26,890; NoCommittedTrigger 138; Active 4; NoPrimaryPresser 72; InvariantRejected 21,227; Disengaged 234; Cooldown 5,434. Raw: BadTouch 0; BackwardPass 206; SidelineTrap 545; WeakReceiver 22,068. Committed: BadTouch 0; BackwardPass 161; SidelineTrap 769; WeakReceiver 22,063.
-- Team 1: samples 53,999; latestPass 26,491; active 35; primaryAssigned 4,930; coverShadows 3,617. Phase: InPoss 26,531; OutOfPoss 26,888; TransToDef 241; TransToAtk 339. Exits: InPossession 26,531; NoCommittedTrigger 16; Active 35; NoPrimaryPresser 308; InvariantRejected 22,407; Disengaged 208; Cooldown 4,494. Raw: BadTouch 0; BackwardPass 25; SidelineTrap 281; WeakReceiver 22,462. Committed: BadTouch 0; BackwardPass 282; SidelineTrap 292; WeakReceiver 22,457.
-
-## Interpretation boundary
-
-This run proves W5's event feed and gate are live; it does **not** calibrate pressing frequency. `BadTouch=0`, the large invariant-rejection population, the enlarged no-primary population, and remaining team/seed asymmetries stay diagnostic findings for later investigation. They must not be converted into `[GT]` changes while KD-W1 remains in force.
+This satisfies the pre-registered W5 acceptance contract: a real producer feeds the consumer and the BackwardPass trigger is evaluable from real events without gate collapse. It does **not** establish a general claim of behavioural inertness or material match-level effect.
