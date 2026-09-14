@@ -1,0 +1,57 @@
+name: W12 review fix runner
+
+on:
+  push:
+    branches:
+      - wiring/w12-gate-firing-diagnostic
+    paths:
+      - '.github/w12-review-fix-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wiring/w12-gate-firing-diagnostic
+      - name: Apply review fixes and remove one-shot runner
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/pressing-ai/PressingAITick.cs')
+          s = p.read_text()
+          old = '''            _lastDirective     = directive;
+            _lastDiagnostics   = new PressingTickDiagnostics(
+                snapshot.TickIndex, phase, PressingGateExit.Active,
+                hasLatestPass, raw, committed, primaryId, shadowCount);
+            _lastProcessedTick = snapshot.TickIndex;
+'''
+          new = '''            _lastDirective     = directive;
+            PressingGateExit finalExit = directive.IsActive
+                ? PressingGateExit.Active
+                : PressingGateExit.NoPrimaryPresser;
+            _lastDiagnostics   = new PressingTickDiagnostics(
+                snapshot.TickIndex, phase, finalExit,
+                hasLatestPass, raw, committed,
+                directive.PrimaryPresserId, directive.CoverShadowCount);
+            _lastProcessedTick = snapshot.TickIndex;
+'''
+          if old not in s:
+              raise SystemExit('expected active diagnostic block not found')
+          s = s.replace(old, new, 1)
+          s = s.replace(
+              '// | 1.7     | 2026-09-13 | —      | W12: LastDiagnostics records phase/cooldown/disengage exits, raw and committed trigger flags, invariant rejection, and active press output. Observation only; absent from snapshots and decision inputs. |',
+              '// | 1.7     | 2026-09-13 | —      | W12: LastDiagnostics records phase/cooldown/disengage exits, raw and committed trigger flags, invariant rejection, and active press output. Observation only; absent from snapshots and decision inputs. |\n// | 1.8     | 2026-09-13 | —      | Review: final diagnostics derive Active from the post-invariant directive, distinguish no-primary output, and record post-invariant cover-shadow count. |'
+          )
+          p.write_text(s)
+          PY
+          rm -f .github/workflows/w12-review-fix.yml .github/w12-review-fix-trigger
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix(w12): align diagnostics with final directive'
+          git push origin HEAD:wiring/w12-gate-firing-diagnostic
