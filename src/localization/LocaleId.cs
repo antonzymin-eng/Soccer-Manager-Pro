@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/localization/LocaleId.cs
 // Created:  2026-09-11
-// Modified: 2026-09-11
+// Modified: 2026-09-14
 // Author:   —
 // Specs:    Localization & Accessibility #49 §4.2, FR-LC-011/018
 // Purpose:  Immutable display-locale identity without expanding locale conformance policy.
@@ -18,7 +18,7 @@ namespace TacticalDirector.Localization
 
         /// <summary>
         /// Creates a locale identity from a non-empty code. L1 does not impose BCP-47 validation; it only
-        /// canonicalizes identity by trimming surrounding whitespace and using invariant lower-case.
+        /// normalizes the internal identity by trimming surrounding whitespace and using invariant lower-case.
         /// </summary>
         public LocaleId(string value)
         {
@@ -30,7 +30,9 @@ namespace TacticalDirector.Localization
             _value = value.Trim().ToLowerInvariant();
         }
 
-        /// <summary>Gets the canonical locale code.</summary>
+        /// <summary>
+        /// Gets the normalized internal locale identity. This value is not guaranteed to be a canonical BCP-47 tag.
+        /// </summary>
         public string Value => _value ?? string.Empty;
 
         /// <summary>Gets whether this value is a constructed locale identity.</summary>
@@ -63,13 +65,13 @@ namespace TacticalDirector.Localization
             return Value;
         }
 
-        /// <summary>Compares two locale identities by canonical value.</summary>
+        /// <summary>Compares two locale identities by normalized internal value.</summary>
         public static bool operator ==(LocaleId left, LocaleId right)
         {
             return left.Equals(right);
         }
 
-        /// <summary>Compares two locale identities by canonical value.</summary>
+        /// <summary>Compares two locale identities by normalized internal value.</summary>
         public static bool operator !=(LocaleId left, LocaleId right)
         {
             return !left.Equals(right);
@@ -82,4 +84,5 @@ namespace TacticalDirector.Localization
 // | --------|------------|--------|--------|
 // | 1.0     | 2026-09-11 | —      | Initial minimal L1 locale identity. |
 // | 1.1     | 2026-09-11 | GPT-5.6 Sol | Freeze trim + invariant-lowercase identity policy and operators. |
+// | 1.2     | 2026-09-14 | GPT-5.6 Sol | Clarify that the lower-case value is an internal normalized identity, not canonical BCP-47 form; no runtime behavior change. |
 #endregion
