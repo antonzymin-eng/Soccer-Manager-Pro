@@ -1,0 +1,108 @@
+name: W4 Final Tracking Accuracy
+
+on:
+  push:
+    branches:
+      - docs/w4-tracking-recovery
+    paths:
+      - .github/w4-final-accuracy-trigger
+
+permissions:
+  contents: write
+
+jobs:
+  correct:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs/w4-tracking-recovery
+          fetch-depth: 0
+
+      - name: Reconcile final merged W4 versions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new, label):
+              p = Path(path)
+              text = p.read_text()
+              n = text.count(old)
+              if n != 1:
+                  raise SystemExit(f'{label}: expected 1 match, found {n}')
+              p.write_text(text.replace(old, new, 1))
+
+          # Source changelog: describe the final reviewed versions that actually
+          # landed in #403, not the pre-review v1.73/v1.13 draft state.
+          replace_once(
+              'docs/tracking/CHANGELOG-src.md',
+              '`MatchEngine.cs` v1.73 gates Decision Tree `SAVE` through live all-body `KeeperPerceptionGate` LOS while preserving raw `SaveArmed` as the W1 rush veto and threat geometry; `CollisionSystem.cs` v1.9 exposes a source-compatible transient `out bool ballDeflected` only when `BallCollisionHandler` actually changes flight; `GoalkeeperMechanics.cs` v1.13 adds `OnThreatDeflected`, overwriting reaction timing without setting the shot-event latch.',
+              '`MatchEngine.cs` v1.74 carries the final W4 wiring/review closure: Decision Tree `SAVE` is gated through live all-body `KeeperPerceptionGate` LOS, raw `SaveArmed` remains the W1 rush veto, screened time accrues no reaction credit, and post-deflection reset is visibility-gated; `CollisionSystem.cs` v1.9 exposes a source-compatible transient `out bool ballDeflected` only when `BallCollisionHandler` actually changes flight; `GoalkeeperMechanics.cs` v1.14 carries `OnThreatDeflected` plus the visible-threat episode contract without setting the shot-event latch.',
+              'source changelog final W4 versions')
+
+          # Project changelog: retain the concise landing account but include the
+          # review-closure visibility semantics that landed before merge.
+          replace_once(
+              'docs/tracking/CHANGELOG.md',
+              'Match Engine consumes it immediately in the same Resolve phase, evaluates the post-deflection trajectory, and restarts only the newly threatened keeper through `GoalkeeperMechanics.OnThreatDeflected`. That seam overwrites reaction timing without setting the shot-event latch.',
+              'Match Engine consumes it immediately in the same Resolve phase, evaluates the post-deflection trajectory, and, only when that post-deflection save threat is currently visible, restarts the newly threatened keeper through `GoalkeeperMechanics.OnThreatDeflected`. That seam overwrites reaction timing without setting the shot-event latch; `OnThreatArmed` likewise anchors only visible threat episodes, so screened time does not accrue reaction credit.',
+              'project changelog W4 review closure')
+
+          # Manifest: final code versions and the actual tracking-version advance
+          # performed by this recovery PR.
+          replace_once(
+              'docs/tracking/file-manifest.md',
+              '`src/goalkeeper-mechanics/GoalkeeperMechanics.cs` v1.12 → v1.13, `src/match-engine/MatchEngine.cs` v1.72 → v1.73.',
+              '`src/goalkeeper-mechanics/GoalkeeperMechanics.cs` v1.12 → v1.14, `src/match-engine/MatchEngine.cs` v1.72 → v1.74.',
+              'manifest final production versions')
+          replace_once(
+              'docs/tracking/file-manifest.md',
+              '`docs/tracking/CHANGELOG-src.md` v2.133 → v2.134,',
+              '`docs/tracking/CHANGELOG-src.md` v2.134 → v2.135,',
+              'manifest source changelog version')
+          replace_once(
+              'docs/tracking/file-manifest.md',
+              'DT SAVE now consumes live all-body LOS; raw `SaveArmed` remains the keeper-rush veto; applied body deflections restart reaction timing in the same Resolve call through a dedicated non-shot seam.',
+              'DT SAVE now consumes live all-body LOS; raw `SaveArmed` remains the keeper-rush veto; screened time accrues no reaction credit; visible post-deflection save threats restart reaction timing in the same Resolve call through a dedicated non-shot seam.',
+              'manifest W4 review semantics')
+
+          # Backlog: use the actual merge date throughout and record the final
+          # visibility-gated deflection/reaction semantics.
+          replace_once(
+              'docs/tracking/match-engine-wiring-backlog.md',
+              '**Resolved September 11, 2026.** PR #399 landed the pure all-body LOS primitive and the explicit',
+              '**Resolved September 13, 2026.** PR #399 landed the pure all-body LOS primitive and the explicit',
+              'backlog resolved date')
+          replace_once(
+              'docs/tracking/match-engine-wiring-backlog.md',
+              '`GoalkeeperMechanics.OnThreatDeflected` only for the newly threatened keeper. That method overwrites\nthe detection / required-reaction stamp without setting `_shotEventPending`, so a deflection is a\nchanged threat rather than a fake new shot.',
+              '`GoalkeeperMechanics.OnThreatDeflected` only for the newly threatened keeper when the post-deflection\nthreat is currently visible. That method overwrites the detection / required-reaction stamp without\nsetting `_shotEventPending`, so a deflection is a changed threat rather than a fake new shot. The\nordinary `OnThreatArmed` path is likewise visibility-owned: a screened raw threat still vetoes RUSH\nbut does not bank reaction time before reveal.',
+              'backlog final review semantics')
+          replace_once(
+              'docs/tracking/match-engine-wiring-backlog.md',
+              '`GoalkeeperMechanics.OnThreatDeflected` overwrites reaction timing without setting the shot-event latch. Added composed screened-SAVE/raw-rush-veto, collision applied-vs-overlap, and GK reaction-reset locks.',
+              '`GoalkeeperMechanics.OnThreatDeflected` overwrites reaction timing for the visible post-deflection threat without setting the shot-event latch; screened raw threats accrue no reaction credit. Added composed screened-SAVE/raw-rush-veto, collision applied-vs-overlap, reveal-timing, and GK reaction-reset locks.',
+              'backlog version-row review semantics')
+          PY
+
+      - name: Verify documentation
+        shell: bash
+        run: |
+          python3 tools/doc-consistency-check.py --repo .
+          git diff --check
+          grep -F '`MatchEngine.cs` v1.74' docs/tracking/CHANGELOG-src.md
+          grep -F '`GoalkeeperMechanics.cs` v1.14' docs/tracking/CHANGELOG-src.md
+          grep -F 'v2.134 → v2.135' docs/tracking/file-manifest.md
+          grep -F '**Resolved September 13, 2026.**' docs/tracking/match-engine-wiring-backlog.md
+
+      - name: Commit and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/w4-final-accuracy.yml .github/w4-final-accuracy-trigger
+          git add docs/tracking/CHANGELOG-src.md docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md docs/tracking/match-engine-wiring-backlog.md
+          git diff --cached --check
+          git commit -m "docs: align W4 recovery with final reviewed merge"
+          git push origin HEAD:docs/w4-tracking-recovery
