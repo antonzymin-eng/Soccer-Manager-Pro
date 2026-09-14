@@ -320,9 +320,6 @@ def collect_evidence(repo: Path, fields: Sequence[FieldDecl]) -> dict[str, Evide
     if not by_name:
         return evidence
 
-    # One token scan per source line, then detailed classification only for names
-    # actually present on that line. This keeps the repository-wide pass near
-    # O(lines + occurrences), rather than O(fields × lines).
     ordered_names = sorted(by_name, key=lambda value: (-len(value), value))
     name_pattern = re.compile(
         r"\b(?:" + "|".join(re.escape(name) for name in ordered_names) + r")\b"
@@ -345,7 +342,11 @@ def collect_evidence(repo: Path, fields: Sequence[FieldDecl]) -> dict[str, Evide
                 qualified = bool(re.search(rf"\.\s*{re.escape(name)}\b", code))
                 for decl in decls:
                     same_file = rel == decl.path
-                    if not same_file and not qualified:
+                    # Unqualified object-initializer/member assignments are common when a
+                    # snapshot is populated outside its declaring file. A globally unique
+                    # field name is safe to associate across files; ambiguous names still
+                    # require qualification to avoid inventing type resolution.
+                    if not same_file and not qualified and len(decls) > 1:
                         continue
                     target = evidence[decl.key]
                     if kind == "write":
