@@ -41,7 +41,7 @@ namespace TacticalDirector.Transfers
         public static readonly int ValuePerRatingPoint = Positive("ValuePerRatingPoint", 10_000);
 
         /// <summary>[GT] First age in the neutral peak band. Config key [transfers] PeakAgeMin. Spec #31 Appendix A.</summary>
-        public static readonly int PeakAgeMin = NonNegative("PeakAgeMin", 23);
+        public static readonly int PeakAgeMin = Positive("PeakAgeMin", 23);
 
         /// <summary>[GT] Last age in the neutral peak band. Config key [transfers] PeakAgeMax. Spec #31 Appendix A.</summary>
         public static readonly int PeakAgeMax = AtLeast("PeakAgeMax", 29, PeakAgeMin);
@@ -179,4 +179,5 @@ namespace TacticalDirector.Transfers
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 fixed/GT constants catalogue with GameplayConfig loading. |
 // | 1.1     | 2026-09-14 | —      | Add deterministic counter-offer band and always-on positional-need tuning. |
 // | 1.2     | 2026-09-14 | —      | Derive club-need safety cap from #27 cardinalities; require real age discounts and sub-1000 negotiation band. |
+// | 1.3     | 2026-09-14 | —      | Require positive PeakAgeMin so the young-discount region is non-empty and its boundary test is valid. |
 #endregion
