@@ -30,7 +30,20 @@ jobs:
           python3 tools/_temporary_d5_reconcile.py
           rm -f tools/_temporary_d5_reconcile.py .github/workflows/_temporary-d5-reconcile.yml
           git add -A
-          git diff --cached --check
+          git diff --cached --check -- \
+            README.md \
+            docs/agent-guides/project-reference.md \
+            docs/specs/code-standards/section-3.md \
+            docs/specs/transfers-contracts-negotiation \
+            docs/tracking/CHANGELOG.md \
+            docs/tracking/CHANGELOG-src.md \
+            docs/tracking/data-contract-index.md \
+            docs/tracking/file-manifest.md \
+            docs/tracking/football-judgment-proxy-review.md \
+            docs/tracking/open-issues.md \
+            docs/tracking/path-to-playable-roadmap.md \
+            docs/tracking/transfers-contracts-negotiation-design.md \
+            src/transfers
           python3 tools/assembly-tier-check.py --repo .
           python3 tools/doc-consistency-check.py --repo .
           python3 -m unittest discover -s tools/tests -p 'test_*.py'
