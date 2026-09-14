@@ -1,9 +1,9 @@
 # Transfers, Contracts & Negotiation #31 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.5 — PR #407 review corrections and stronger valuation/atomicity locks)
-**Last Updated (prior):** September 14, 2026 (v0.4 — T0 football-judgment/Codex regression locks; prior v0.3 AR-6, v0.2 AR-3/AR-4, v0.1 initial)
-**Version:** 0.5
+**Last Updated:** September 14, 2026 (v0.6 — PR #407 residual review cleanup and T2 hook obligation)
+**Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review corrections and stronger valuation/atomicity locks; prior v0.4 T0 football/Codex locks, v0.3 AR-6, v0.2 AR-3/AR-4, v0.1 initial)
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -34,10 +34,13 @@
   not an exception, and leaves finance/spend/roster/contracts unchanged for that attempt.
 - **T-TX-BID-004 (F5)** — full destination returns `TransferSubmissionOutcome.SquadFull`, not an exception, with
   no local mutation.
-- **T-TX-BID-005 (F2)** — if a producer violates the successful-preview contract and returns a different id,
-  `SubmitBid` fails loud **before** staged finance/spend/contract state is applied.
-- **T-TX-BID-006** — counteroffer/reject are ordinary no-mutation `TransferSubmissionOutcome` values.
-- **T-TX-BID-007** — #31 writes no `ClubFinances` field directly and keeps no parallel cash ledger.
+- **T-TX-BID-005 (F2)** — if a producer violates the successful-preview contract and returns a different id on
+  a **buy**, `SubmitBid` fails loud before staged finance/spend/contract state is applied.
+- **T-TX-BID-006 (F2)** — the same producer breach on a **sell** leaves finance unchanged and deliberately retains
+  the old managed contract locally; the external roster may already have moved, which is why T2 must make the
+  production preview→commit contract infallible rather than relying on rollback.
+- **T-TX-BID-007** — counteroffer/reject are ordinary no-mutation `TransferSubmissionOutcome` values.
+- **T-TX-BID-008** — #31 writes no `ClubFinances` field directly and keeps no parallel cash ledger.
 
 ## 5.3 Roster re-key (KD-7)
 
@@ -46,6 +49,10 @@
 - **T-TX-REKEY-002** — the preview/commit id equality is checked before local mutation.
 - **T-TX-REKEY-003** — #31 migrates only its own contract state; #28/#33 state is not referenced.
 - **T-TX-REKEY-004** — positional-stock read is read-only and bounded; an invalid producer count fails loud.
+- **T-TX-REKEY-005 (deferred T2)** — the real #30 `DispatchRosterMoveHook` MUST be observed firing on a
+  managed→external transfer while #31's subscriber is also observed to no-op: the old managed contract remains
+  present during hook dispatch and is removed only by `SubmitBid` after the roster commit returns. The mirror
+  external→managed hook likewise no-ops before `SubmitBid` inserts the destination contract.
 
 ## 5.4 Window (KD-6)
 
@@ -72,8 +79,9 @@
 ## 5.7 Requirement traceability
 
 Every FR-TX-001..028 maps to a T-TX-* test above or a recorded §7 deferral. T0 now locks the reviewed public
-API shape, precise integer valuation, symmetric positional need, typed normal command outcomes, and the roster
-preview/commit boundary.
+API shape, precise integer valuation, symmetric positional need, typed normal command outcomes, and both sides
+of the defensive roster preview/commit breach. T2 additionally owes the production hook-dispatch/no-op lock in
+T-TX-REKEY-005.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -83,4 +91,5 @@ preview/commit boundary.
 | 0.3 | 2026-07-23 | — | AR-6 load-vs-genesis and managed↔AI hook corrections. |
 | 0.4 | 2026-09-14 | — | T0 close-out: positional scarcity, counter band, reusable evaluator validation and no-mutation negotiation coverage. |
 | 0.5 | 2026-09-14 | — | PR #407 review correction: literal golden/fractional valuation vectors, strict age boundaries, symmetric exclude-player need, typed budget/full outcomes, and preview-mismatch-before-local-mutation regression. |
+| 0.6 | 2026-09-14 | — | Residual review cleanup: add sell-direction preview/commit breach coverage and pin the T2 production hook-dispatch plus observable managed↔external #31 no-op regression. |
 #endregion
