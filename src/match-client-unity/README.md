@@ -131,8 +131,8 @@ Every slot, whichever clause it follows:
 - **The agent marker's material must expose the colour property named by the
   `_colorPropertyName` inspector field** (clause 3; default `"_Color"`, the
   Built-in Render Pipeline standard shader's name — URP's Lit/SimpleLit/Unlit
-  shaders expose `"_BaseColor"` instead, and this repo's `GraphicsSettings.asset`
-  / `Packages/manifest.json` do not agree on which pipeline resolves). Checked
+  shaders expose `"_BaseColor"` instead; this project renders with the Built-in
+  pipeline, so keep `"_Color"` unless a deliberate URP migration lands). Checked
   per marker in `BuildAgentObjects`, since only an instantiated prefab's
   material can answer this — `SetColor` against a missing property succeeds
   and changes nothing, so a mismatch would otherwise render both teams, the
