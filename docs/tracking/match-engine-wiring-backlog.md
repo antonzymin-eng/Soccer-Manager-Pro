@@ -10,6 +10,8 @@
 
 ---
 
+> **UPDATED September 14, 2026 (v1.16):** W4 and W12 are on `main`; PR #398 is reconciled on top with W5 and W7 production wiring preserved. W12 establishes the pre-#398 runtime baseline and the separate unread-serialized-field sweep; W5 is now the required post-baseline comparison, not an assumed-live trigger. Five Class-A wiring items remain: W3, W6, W8, W9, W10. **After the post-#398 W12 comparison passes, W6 is next.**
+
 ## 0. Why this document exists, and the rule it establishes
 
 Seven consecutive `§5.Z` match-realism passes fitted `[GT]` constants against the composed engine.
@@ -307,10 +309,10 @@ separately tracked by #401. Regression locks: `CollisionDeflectionFeedbackTests`
 `MatchEngineKeeperPerceptionW4Tests` (screened DT SAVE + non-vacuous raw-rush-veto case).
 
 
-### W5 — The pressing AI's pass-event trigger never fires
-**Evidence:** `pressing-ai/PassEventRing.cs` `Push` has no production caller anywhere.
-`MatchEngine.cs:809` constructs one ring per team and hands it to `PressingAITick`
-(`PressingAITick.cs:76`), which reads it via `TryGetLatest`. Nothing ever writes to it.
+### W5 — The pressing AI's pass-event trigger never fires — ✅ **WIRED September 11, 2026 (PR #398)**
+**Pre-fix evidence:** `PassEventRing.Push` had no production caller; `PressingAITick` read a permanently empty ring.
+
+**Resolved:** `MatchEngine` subscribes to #5 `PassAttemptEvent` at boot and pushes CONTACT only into the opposing ring. The first review correction kept the event world-frame but used an impossible 60 Hz-event-tick == 10 Hz-heartbeat equality. Final `ERR-013-011` carries the 60 Hz current tick and inclusive window start on `PressingSnapshot`; at AI tick `N`, only `[N-AI_PHASE_STRIDE,N)` can start dwell because Resolve/Events follows AI. A qualifying discrete pass latches only until #13's required two-heartbeat dwell commits; the retained event cannot restart a later dwell. Positive EventBus→next-stride→commit coverage proves the accepting path; stale/boundary locks prove recency. v22 byte layout is unchanged.
 
 **Consequence:** the ring is permanently empty, so #13's BackwardPass press trigger is dead. A
 press that should be sprung by a backward pass never is.
@@ -325,10 +327,12 @@ Already recorded from the other direction in OPEN ISSUES §5.Z.23 item (c): a cl
 held at hand height and the keeper cannot carry it, because the parked ball settles under gravity.
 Same root cause. Possession in the engine is a flag, never a kinematic constraint.
 
-### W7 — The AI manager never picks a kickoff preset
-**Evidence:** `match-engine/ManagerAdaptation.cs:250` `ApplyKickoff` has no caller. Its own doc says
+### W7 — The AI manager never picks a kickoff preset — ✅ **WIRED September 11, 2026 (PR #398)**
+**Pre-fix evidence:** `match-engine/ManagerAdaptation.cs:250` `ApplyKickoff` had no caller. Its own doc says
 *"Call BEFORE the first RunTick."* The mid-match half **is** wired
 (`MatchEngine.cs:2510–2514` — `ManagerDecisionGate.DecisionDue` → `RunDecisionPoint`).
+
+**Resolved:** `MatchSession.BootEngine` now calls `ManagerAdaptation.ApplyKickoff` after manager configuration and before tick 1, passing `MatchSetup` team tactics as the human baseline. AI teams therefore select and seed the #26 kickoff preset without a later setup write overwriting it; human teams retain their authored baseline. The AI path is first-tick digest-locked against the explicit reference composition, and the neutral/no-manager path is separately locked byte-identical to the prior two-`SetTeamTactic` boot despite identity player-tactic staging. `SelectKickoffPreset` consumes no RNG, so draw order is unchanged.
 
 **Consequence:** #26's FR-TP-004 boot path is dead. An AI-managed team starts every match on the
 human baseline tactic and can only ladder away from it mid-match.
@@ -545,9 +549,9 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 | 2 | ~~**C1** the `InPoss` gate~~ ✅ **FIXED Aug 8, 2026** (`ERR-012-011`) | Cheap, and the phase label was simply wrong. But the "unblocks #13/#14/#15" rationale was refuted before implementation — see the C1 entry: two of the three consumers are inert for reasons the gate does not touch. Re-measurement is the deliverable, not a creation gain. |
 | 3 | ~~**W2** tackles~~ ✅ **WIRED Aug 12, 2026** | **Four**-link chain, not three. Measured before building: the gate supplied ~4× football's tackle rate, so this was a RESOLUTION problem, not a producer one. Governance question resolved by `ERR-014-006`: new #14 §3.6.5 takes the outcome model back on the W1 precedent, a four-outcome (`MISSED`/`BALL_WON`/`BALL_LOOSE`/`FOUL`) abstract attribute duel, ten new `[GT]` un-calibrated per KD-W1. Surfaced **C9**, **C10**. **GATE PASSED for W2 (August 12, 2026):** whole-tree build 0 errors / 0 warnings, quarantine empty, 32 suites; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** (38 m 2 s). The single failure is `sim_match_engine_close_chance`, the inherited owner-held-red predicate that also fails at the pre-change baseline `4b9271c` — so the branch is at its baseline red state and W2 adds no new failure. Baseline was 451/1/10; the +10 passed are W2 locks and the +1 skipped is the env-gated census instrument. — see the W2 entry above. |
 
-| 4 | ~~**W4** keeper perception~~ ✅ **WIRED Sep 13, 2026** (PR #403) | Live all-body LOS now gates DT `SAVE` without contaminating the W1 raw-`SaveArmed` rush veto; real body deflections restart reaction timing in the same Resolve call through a dedicated non-shot seam. No new serialized state or event ABI. **Next in sequence: W12.** |
-| 5 | **W12** the gate-firing instrument | Before calibration, and before assuming Class B is only four items. |
-| 6 | **W5**, **W7**, **W6** | Small, independent, each self-contained. |
+| 4 | ~~**W4** keeper perception~~ ✅ **WIRED Sep 13, 2026** (PR #403) | Live all-body LOS now gates DT `SAVE` without contaminating the W1 raw-`SaveArmed` rush veto; real body deflections restart reaction timing in the same Resolve call through a dedicated non-shot seam. No new serialized state or event ABI. W12 subsequently landed as sequence row 5. |
+| 5 | ~~**W12** gate-firing instrument~~ ✅ **LANDED Sep 14, 2026** (PR #410) | Pre-#398 runtime census + separate unread-serialized-field sweep are recorded; the pass feed is dark before W5 by measurement, not inference. |
+| 6 | ~~**W5**~~ / ~~**W7**~~ / **W6 NEXT** | W5/W7 are carried by PR #398 and must clear the post-#398 W12 comparison before merge. Then W6 is the recorded next wiring item. |
 | 7 | **W3** + AGENT_BALL fan-out | One dependency, two consumers. The largest single build in this document. |
 | 8 | **W8**, **W9**, **W10** | Fidelity items with working substitutes or a known rebaseline cost. |
 | — | **then** one calibration pass | Against the complete engine, using the §5.Z instruments and seeded-corpus method. |
@@ -642,6 +646,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.16 | 2026-09-14 | — | **W12 LANDED (PR #410) and PR #398 reconciled onto that mainline.** W12 records the pre-#398 gate-firing baseline plus the separate unread-serialized-field sweep; the pre-#398 #13 pass feed is zero by measurement. W5/W7 remain merge-gated on the post-#398 W12 comparison. Sequence advances to W6 after that comparison passes; remaining Class-A items are W3, W6, W8–W10. |
 | 1.15 | 2026-09-13 | — | **W4 WIRED (PR #403).** DT `SAVE` availability is now raw `SaveArmed` plus current-frame all-body physical LOS through `KeeperPerceptionGate`; the W1 rush exclusion intentionally remains raw `SaveArmed`, correcting v1.14 constraint 3 from a too-broad one-predicate rule to the actual shared-geometry invariant. Collision System surfaces only actually-applied AGENT_BALL flight changes as transient per-call feedback; Match Engine consumes it in the same Resolve phase, evaluates post-deflection threat geometry, and `GoalkeeperMechanics.OnThreatDeflected` overwrites reaction timing for the visible post-deflection threat without setting the shot-event latch; screened raw threats accrue no reaction credit. Added composed screened-SAVE/raw-rush-veto, collision applied-vs-overlap, reveal-timing, and GK reaction-reset locks. No new cross-tick state, `CollisionEvent` ABI, snapshot schema, RNG stream or draw order. #401 remains separate. Sequence row 4 is closed; W12 is next. |
 | 1.14 | 2026-09-10 | — | **W4's evidence was factually wrong and is corrected before merge; PR #390 review then narrowed the first correction where it overreached. Documentation only; no sequencing changed.** As filed since v1.0 the entry closed *"The keeper is simply not on that path."* Direct source read refutes it: `MatchEngine.cs:3074` runs `_perception.OnHeartbeat` over the full `SQUAD_SIZE` including both keepers, so no new keeper heartbeat is needed. The first v1.14 draft then called W4 purely a downstream-consumption/tick-order problem; Codex review correctly found two missing upstream/state seams. `OcclusionFilter` is **opponent-only** at Stage 0 and skips same-team agents (OQ-1), so friendly-defender screens are absent from current perception; and `GoalkeeperMechanics.OnThreatArmed` refuses to overwrite a live `_shotDetectedTickMs`, while collision deflections do not produce `OnShotExecutedEvent`, so same-episode deflections cannot restart the reaction window. W4 now carries **five** explicit constraints: (1) `BallVisible` bundles FoV with occlusion while keeper facing is not reliably ball-directed; (2) both `SaveArmed` callers precede the perception heartbeat and would read the previous 100 ms view; (3) both callers must share one predicate; (4) ownership/scope of friendly-screen occlusion must be explicit rather than silently broadening #7 for every agent; (5) deflection/new-threat producer, reaction-stamp overwrite/reset, ordering, snapshot/determinism and tests must be pinned. The §5 row-4 ordering is deliberately **untouched**; a revision of the order (and the W12a/W12b split) is a separate pending decision. No `[GT]` moved, no code changed, no schema/RNG change. |
 | 1.13 | 2026-08-18, later | — | **Reviewed-findings pass, part of one High (H-B), documentation only.** §6's `pointQuality` note corrected: it still framed the parking condition present-tense as W1 changing the contact geometry ("a problem about to change shape"), which published an already-satisfied release condition — W1 landed August 4 and its rush anatomy was measured August 12, 2026. The note now states the surviving condition: parked until the close-range CONVERSION comparison on identical seeds exists (`gk-rush-trigger-design.md` §6's still-owed pre/post pair), per the August 17, 2026 owner decision (KD-CC6a). The same H-B fixed the twin stale framings at `open-issues.md`'s owning record headline and `CLAUDE.md`'s index bullet. |

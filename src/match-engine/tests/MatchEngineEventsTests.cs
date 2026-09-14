@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineEventsTests.cs
 // Created:  2026-06-27
+// Modified: 2026-09-11 (W5 / ERR-013-011 second review: positive EventBus -> next tactical stride -> two-heartbeat BACKWARD_PASS debounce lock)
 // Modified: 2026-06-27 (AR F1 — [TearDown] resets the static bus for test isolation)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5 Phase E, Event System #17 §4.4, Code Standards #20
@@ -14,9 +15,12 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
+using TacticalDirector.AgentMovement;
 using TacticalDirector.DecisionTree;
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
+using TacticalDirector.PassMechanics;
+using TacticalDirector.PressingAI;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -172,6 +176,129 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void PassAttemptEvent_RoutesOnlyToOpposingPressRing()
+        {
+            var engine = new MatchEngine(MatchSeed);
+
+            EventBus.BeginTick(0);
+            EventBus.BeginPhase(PhaseId.Resolve);
+            EventBus.Publish(new PassAttemptEvent
+            {
+                AgentId = 16,
+                TeamId = 1,
+                TargetPosition = new Vector3(90f, 34f, 0f),
+                TargetAgentId = -1,
+            });
+            EventBus.BeginPhase(PhaseId.Events);
+            EventBus.DrainTick();
+            EventBus.OnTickBoundary();
+
+            Assert.IsTrue(engine.TestOnly_TryGetPressPassEvent(0, out PassAttemptEvent routed),
+                "An away-team CONTACT pass must feed the home pressing ring.");
+            Assert.AreEqual(16, routed.AgentId);
+            Assert.AreEqual(1, routed.TeamId);
+            Assert.AreEqual(90f, routed.TargetPosition.x);
+            Assert.IsFalse(engine.TestOnly_TryGetPressPassEvent(1, out _),
+                "A team's own pass must not overwrite its pressing trigger ring.");
+        }
+
+        [Test]
+        public void HomePass_RingPreservesAuthoritativeWorldFrame()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            var worldTarget = new Vector3(20f, 10f, 1.5f);
+            var worldVelocity = new Vector3(12f, -3f, 2f);
+            var worldSpin = new Vector3(0.5f, 1.25f, -0.75f);
+
+            EventBus.BeginTick(7);
+            EventBus.BeginPhase(PhaseId.Resolve);
+            EventBus.Publish(new PassAttemptEvent
+            {
+                AgentId = 4,
+                TeamId = 0,
+                TargetPosition = worldTarget,
+                FinalVelocity = worldVelocity,
+                FinalSpin = worldSpin,
+                TargetAgentId = -1,
+            });
+            EventBus.BeginPhase(PhaseId.Events);
+            EventBus.DrainTick();
+            EventBus.OnTickBoundary();
+
+            Assert.IsTrue(engine.TestOnly_TryGetPressPassEvent(1, out PassAttemptEvent routed),
+                "A home-team CONTACT pass must feed the away pressing ring.");
+            Assert.AreEqual(worldTarget, routed.TargetPosition,
+                "The ring must retain the authoritative world-frame target; #13 normalizes only at read time.");
+            Assert.AreEqual(worldVelocity, routed.FinalVelocity,
+                "Velocity must remain in the same authoritative world frame as the retained event.");
+            Assert.AreEqual(worldSpin, routed.FinalSpin,
+                "Spin must remain unchanged; the retained PassAttemptEvent may not become a hybrid frame.");
+            Assert.AreEqual(7u, routed.Tick,
+                "The authoritative EventBus header tick is the recency key consumed by ERR-013-011.");
+            Assert.IsFalse(engine.TestOnly_TryGetPressPassEvent(0, out _),
+                "The passing team's own ring must remain untouched.");
+        }
+
+        [Test]
+        public void PassAttemptEvent_FromCompletedPhysicsWindow_ReachesPressingDebounce()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            const int awayPasser = 16;
+            var passerPos = new Vector2(50f, 34f);
+            var passerState = AgentState.CreateAtPosition(passerPos, new Vector2(-1f, 0f));
+
+            // Positioning AI seeds InPoss and requires three 10 Hz observations before committing
+            // OutOfPoss. Warm that real production phase gate first (AI strides 6, 12, 18); otherwise
+            // PressingAITick correctly returns before trigger evaluation on the first away-possession stride.
+            for (int tick = 1; tick <= 18; tick++)
+            {
+                engine.TestOnly_SetAgent(awayPasser, passerState);
+                engine.TestOnly_SetPossession(awayPasser);
+                engine.RunTick();
+            }
+            Assert.AreEqual(18UL, engine.CurrentTick);
+
+            // Publish after tick 18's AI read. At the next tactical evaluation (physics tick 24),
+            // ERR-013-011 makes the completed visible interval [18,24), so the lower-bound event
+            // must be accepted. Keeping the passer at a fixed point isolates the #13 geometry.
+            EventBus.BeginTick(18);
+            EventBus.BeginPhase(PhaseId.Resolve);
+            EventBus.Publish(new PassAttemptEvent
+            {
+                AgentId = awayPasser,
+                TeamId = 1,
+                TargetPosition = new Vector3(56f, 34f, 0f),
+                TargetAgentId = -1,
+            });
+            EventBus.BeginPhase(PhaseId.Events);
+            EventBus.DrainTick();
+            EventBus.OnTickBoundary();
+
+            for (int tick = 19; tick <= 24; tick++)
+            {
+                engine.TestOnly_SetAgent(awayPasser, passerState);
+                engine.TestOnly_SetPossession(awayPasser);
+                engine.RunTick();
+            }
+
+            Assert.AreEqual(24UL, engine.CurrentTick);
+            Assert.AreEqual(1, engine.TestOnly_PressingState(0).Trigger.BackwardPassDwell,
+                "A lower-bound EventBus pass delivered after the prior AI read must start dwell on the next stride.");
+
+            for (int tick = 25; tick <= 30; tick++)
+            {
+                engine.TestOnly_SetAgent(awayPasser, passerState);
+                engine.TestOnly_SetPossession(awayPasser);
+                engine.RunTick();
+            }
+
+            Assert.AreEqual(30UL, engine.CurrentTick);
+            Assert.AreEqual(PressingAIConstants.TriggerDwellTicks,
+                engine.TestOnly_PressingState(0).Trigger.BackwardPassDwell,
+                "The EventBus-fed discrete pass must complete #13's two-heartbeat debounce after the event leaves the fresh window.");
+        }
+
+        [Test]
         public void TierA_Subscribe_AfterBootPhase_Throws()
         {
             // Locks the E2 ordering contract: the host MUST subscribe its Tier A consumer during the boot
@@ -198,4 +325,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | boot-phase-guard test cannot leave a live Tier A subscriber +   |
 // |         |            |        | BootPhaseComplete set for a later (cross-fixture) test —        |
 // |         |            |        | closes the static-bus order-dependence hazard.                 |
+// | 1.2     | 2026-09-11 | —      | W5: added production EventBus routing lock for PassAttemptEvent -> opposing pressing ring. |
+// | 1.3     | 2026-09-11 | —      | W5 review correction: ring retains the full authoritative world-frame event (including header Tick); #13 normalizes TargetPosition only at evaluation. |
+// | 1.4     | 2026-09-11 | —      | ERR-013-011: positive EventBus tick-5 pass starts dwell at AI tick 6 and completes bounded event dwell at tick 12. |
 #endregion
