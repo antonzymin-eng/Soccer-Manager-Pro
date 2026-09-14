@@ -12,7 +12,24 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 13, 2026 — **Unity project configuration reconciled with the editor: Built-in renderer, a coherent manifest/lock pair, and a Unity CI job that actually imports `src/`. Configuration and CI only; no source change.**
+> **Last Updated:** September 13, 2026 — **The Unity match client runs on the pinned host for the first time: `Scene.unity` is wired to prefabs built to the binding's contract. Roadmap B8 host verification is PARTIAL.**
+>
+> This lands findings #1, #4 and #7 of the same review. `EditorBuildSettings` enabled a `SampleScene.unity` that exists nowhere, and two config objects pointed at no asset once AI Inference and the Input System package were gone. The build list now holds only `Assets/Scenes/Scene.unity`, and the config-object map is empty.
+>
+> `MatchClientBehaviour` had compiled in the editor on September 12 but had never run in a scene: no scene or prefab was tracked. The owner's untracked `Scene.unity` held a bare `MatchClient` GameObject next to hand-placed stand-ins that broke the README §1 prefab contract in three ways the runtime checks reject: a volumetric capsule marker, 90°-rotated quad roots, and a Y-squashed cylinder root. Eight prefabs are now authored to the contract under `Assets/Prefabs/MatchClient/`. The flat slots use unit disc, ring and rectangle meshes with zero Y extent under neutral roots. The two stroked rings use the M26 fractions, 0.022 and 0.10, with the outer edge at unit radius. The ball is a ×2 child of the 0.5-radius built-in sphere, and every material is Standard with `_Color` exposed. A 125 m × 88 m pitch plane sits at Y = −0.01, per README §5. The stand-ins are removed, and all nine of the component's references are assigned.
+>
+> **Measured on the pinned host (6000.4.9f1 editor, Play mode):** `MatchClientBehaviour` stayed enabled, so no `RejectWiring` fired. It built 22 agent markers, 22 possession rings, the ball, its shadow and 27 marking drawables. Players spread across the pitch, the ball was in play and the camera followed it. Frame 35,005 arrived at 156.6 s, about 220 FPS in the editor. There were no project errors; the only error-text logs were AI Assistant subscription notices. A Game-view capture showed every IFAB marking and both team palettes.
+>
+> **What this does not show:**
+> - Click-to-select. `HandleClick` only logs the resolved ground point until P5b routes it to a command, so no manager input was exercised.
+> - The budgeted cert-host render-loop capture. An editor frame rate is not FR-PO-052-class evidence.
+> - A player build.
+>
+> B8 stays open, and B9b and B10 are untouched. The prefabs are placeholders, not art-pipeline assets. One contract gap is recorded in `interactive-unity-client-design.md` v0.23: README §1 does not say whether a stroke is centred on the unit radius or lies inside it.
+>
+> Also updated: the roadmap B8 row; the Unity-client open-issues entry, in place, with counts unchanged at 24/54; design supplement v0.23 and the two documents citing it; and `Assets/README.md`. No `SNAPSHOT_SCHEMA_VERSION` change; no new RNG stream, domain tag or draw site; no draw-order change; no source changed. **The Linux PR gate is not runnable on this host** (no .NET SDK; see the prior entry). `check-meta-integrity.sh`, `check-binaries.sh` and `doc-consistency-check.py` pass.
+
+> **Last Updated (prior):** September 13, 2026 — **Unity project configuration reconciled with the editor: Built-in renderer, a coherent manifest/lock pair, and a Unity CI job that actually imports `src/`. Configuration and CI only; no source change.**
 >
 > This lands findings #2, #3, #5, #6 and #8 of an external 50-finding review of `4d200323`. The next commit lands #1, #4 and #7 (the scene host). Each finding was checked against the tree and the running 6000.4.9f1 editor before anything changed. Owner decisions from that review: Built-in rather than URP, keep AI Assistant, drop AI Inference and the Input System package, keep the legacy Input Manager.
 >
