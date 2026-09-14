@@ -21,6 +21,14 @@ class Instrument:
 
 
 INSTRUMENTS = {
+    "w12-gate-firing": Instrument(
+        "w12-gate-firing",
+        "TD_W12_GATE_DIAGNOSTIC",
+        "src/match-engine/tests/W12GateFiringDiagnosticTests.cs",
+        "src/match-engine/tests/match-engine-tests.gen.csproj",
+        "FullyQualifiedName~W12GateFiringDiagnostic",
+        "=== W12 gate-firing census ===",
+    ),
     "tackle-intent": Instrument(
         "tackle-intent",
         "TD_TACKLE_DIAGNOSTIC",
