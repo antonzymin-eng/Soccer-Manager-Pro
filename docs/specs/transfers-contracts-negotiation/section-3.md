@@ -1,9 +1,9 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.7 — PR #407 review correction: precise valuation, symmetric need, typed submission outcomes)
-**Last Updated (prior):** September 14, 2026 (v0.6 — T0 football-judgment close-out; prior v0.5 AR-8, v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.7
+**Last Updated:** September 14, 2026 (v0.8 — PR #407 residual review cleanup: budget invariant + T2 hook lock)
+**Last Updated (prior):** September 14, 2026 (v0.7 — PR #407 review correction: precise valuation, symmetric need, typed submission outcomes; prior v0.6 T0 football close-out, v0.5 AR-8, v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -92,9 +92,12 @@ SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, re
     stagedFinances := finances
     ApplyTransaction(ref stagedFinances, txn)               # canonical #40 mutation on staged copy
 
-    if offer.IsBuy AND offer.Fee > AvailableTransferBudget(finances)
-                                  - txState.CommittedSpend(managerClubId):
-        return InsufficientBudget                            # F1; no mutation
+    if offer.IsBuy:
+        budget := AvailableTransferBudget(finances)
+        committed := txState.CommittedSpend(managerClubId)
+        require 0 <= committed <= budget                    else throw  # corrupted/invariant-breaking state
+        if offer.Fee > budget - committed:
+            return InsufficientBudget                       # F1; no mutation
 
     if !offer.IsBuy:
         require valid managed Contract(offer.PlayerId)       else throw
@@ -124,6 +127,11 @@ That removes the previous defensive check-after-mutation ordering. Because `OnPl
 no-op for every minimal managed↔external move, a sell may retain its old managed contract during the roster
 commit and remove it immediately afterward without double-handling.
 
+A preview/commit id mismatch is an integration defect after the external port has already mutated. T0 therefore
+can guarantee only that local #31/#40 state is untouched; it cannot roll the producer back. The regression suite
+locks both directions: on a buy no contract/spend/finance is applied, and on a sell the old managed contract and
+finance remain. T2's production adapter MUST make the successful-preview→commit contract genuinely infallible.
+
 **Static-ceiling consequence (KD-2).** A sell posts a `Credit` to #40's `Balance` but does **not** touch
 `committedSpendThisWindow` and does **not** raise `AvailableTransferBudget`; sell proceeds therefore do not
 increase in-window buy headroom at minimal.
@@ -151,7 +159,11 @@ RequestRosterCommit(fromClubId, toClubId, playerId):
 ```
 
 `DispatchRosterMoveHook` calls each subscriber. #31 moves only its own contract state and does nothing for the
-minimal managed↔external hook because `SubmitBid` owns the explicit insert/remove.
+minimal managed↔external hook because `SubmitBid` owns the explicit insert/remove. At T2 this becomes a required
+production integration regression: a real managed→external commit MUST dispatch the hook, and observing #31's
+subscriber during that dispatch MUST prove it is a no-op (the old managed contract remains present until
+`SubmitBid` removes it after the commit returns). The mirror external→managed hook is likewise a #31 no-op until
+`SubmitBid` inserts the destination contract.
 
 ## 3.5 The transfer window — `IsWindowOpen` (FR-TX-019/020)
 
@@ -220,4 +232,5 @@ not seeded at minimal. A load reconstructs contracts from the transfers sub-blob
 | 0.5 | 2026-07-23 | — | AR-8: static-ceiling consequence and boundary reset clarified. |
 | 0.6 | 2026-09-14 | — | T0 football-judgment close-out: always-on #27 positional scarcity, deterministic counter band, evaluator validation and no-mutation negotiation results. |
 | 0.7 | 2026-09-14 | — | PR #407 review correction: currency APIs renamed; attribute mean no longer truncates to 20 buckets; positional stock excludes the negotiated player symmetrically; `SubmitBid` gains typed budget/full outcomes and applies local state only after matching roster commit. |
+| 0.8 | 2026-09-14 | — | Residual review cleanup: budget subtraction now explicitly requires `0 <= committed <= budget`; preview/commit mismatch limits are stated for both directions; T2 must lock real hook dispatch plus observable managed↔external #31 no-op behavior. |
 #endregion
