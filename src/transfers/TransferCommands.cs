@@ -1,10 +1,10 @@
 // ============================================================================
 // File:     src/transfers/TransferCommands.cs
 // Created:  2026-09-12
-// Modified: 2026-09-12
+// Modified: 2026-09-14
 // Author:   —
 // Specs:    Spec #20 §3.5/§3.6.2 (constructor injection, style/docs)
-//           Spec #31 §3.3-§3.4, FR-TX-004..010/020..025 (atomic SubmitBid pipeline)
+//           Spec #31 §3.1-§3.4, FR-TX-001..010/020..025 (atomic SubmitBid pipeline)
 // Purpose:  Implements the explicit manager transfer command with validate-all-first atomic semantics.
 // ============================================================================
 
@@ -12,6 +12,8 @@ using System;
 
 using TacticalDirector.ClubFinances;
 using TacticalDirector.PlayerDatabase;
+
+using ClubFinancesState = TacticalDirector.ClubFinances.ClubFinances;
 
 namespace TacticalDirector.Transfers
 {
@@ -28,12 +30,12 @@ namespace TacticalDirector.Transfers
 
         /// <summary>
         /// Evaluates and, when accepted, atomically commits one buy or sell after all fallible gates pass.
-        /// Rejection is a normal no-mutation result; invalid state/terms fail loud.
+        /// Rejection/counter-offer is a normal no-mutation result; invalid state/terms fail loud.
         /// </summary>
         public NegotiationOutcome SubmitBid(
             in Offer offer,
             uint worldDay,
-            ref ClubFinances finances,
+            ref ClubFinancesState finances,
             TransfersState state)
         {
             if (state == null)
@@ -61,7 +63,16 @@ namespace TacticalDirector.Transfers
                 throw new InvalidOperationException("Offer direction does not match the player's current club ownership (F6).");
             }
 
-            long counterpartyValue = PlayerValuation.ValuePlayerPermille(in player.Attributes, player.Age);
+            int samePositionCount = _roster.CountPlayersAtPosition(offer.CounterpartyClubId, player.Position);
+            if (samePositionCount < 0 || samePositionCount > PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
+            {
+                throw new InvalidOperationException("Roster port returned an invalid positional-stock count.");
+            }
+
+            long counterpartyValue = PlayerValuation.CounterpartyValuePermille(
+                in player.Attributes,
+                player.Age,
+                samePositionCount);
             NegotiationOutcome outcome = NegotiationEngine.EvaluateOffer(in offer, counterpartyValue);
             if (outcome != NegotiationOutcome.Accepted)
             {
@@ -74,7 +85,7 @@ namespace TacticalDirector.Transfers
                 offer.Fee);
 
             // Validate the canonical #40 mutation on a copy before any real #31/#40/#30 state changes.
-            ClubFinances stagedFinances = finances;
+            ClubFinancesState stagedFinances = finances;
             FinanceLedger.ApplyTransaction(ref stagedFinances, in transaction);
 
             if (offer.IsBuy)
@@ -124,7 +135,7 @@ namespace TacticalDirector.Transfers
             int fromClubId,
             int toClubId,
             int previewPlayerId,
-            ref ClubFinances finances,
+            ref ClubFinancesState finances,
             TransfersState state,
             in FinanceTransaction transaction)
         {
@@ -142,7 +153,7 @@ namespace TacticalDirector.Transfers
             int fromClubId,
             int toClubId,
             int previewPlayerId,
-            ref ClubFinances finances,
+            ref ClubFinancesState finances,
             TransfersState state,
             in FinanceTransaction transaction)
         {
@@ -155,32 +166,13 @@ namespace TacticalDirector.Transfers
 
         private static void ValidateOffer(in Offer offer, int managedClubId)
         {
-            if (offer.PlayerId < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(offer), offer.PlayerId, "PlayerId must be non-negative (F6).");
-            }
-
-            if (offer.CounterpartyClubId < 0 || offer.CounterpartyClubId == managedClubId)
+            Offer.ValidateTerms(in offer);
+            if (offer.CounterpartyClubId == managedClubId)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(offer),
                     offer.CounterpartyClubId,
-                    "CounterpartyClubId must name a different non-negative club (F6).");
-            }
-
-            if (offer.Fee < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(offer), offer.Fee, "Fee must be non-negative (F6).");
-            }
-
-            if (offer.WagePerPeriod < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(offer), offer.WagePerPeriod, "WagePerPeriod must be non-negative (F6).");
-            }
-
-            if (offer.LengthSeasons <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(offer), offer.LengthSeasons, "LengthSeasons must be positive (F6/F7).");
+                    "CounterpartyClubId must name a different club (F6).");
             }
         }
 
@@ -207,4 +199,5 @@ namespace TacticalDirector.Transfers
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 atomic SubmitBid command pipeline. |
+// | 1.1     | 2026-09-14 | —      | Fix finance type alias; share offer validation; apply always-on counterparty positional need. |
 #endregion
