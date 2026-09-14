@@ -14,7 +14,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** September 14, 2026 (v2.137 — **W6 controlled-ball wiring (PR #412).** Genuine open-play possession now enters `BallStateType.Controlled` and follows its holder; restart-taker designation remains a placed `Stationary` ball; tackle-won, first-touch/interception, loose pickup, and goalkeeper possession share the physical-control boundary; non-kick release explicitly exits `Controlled`. New composed W6 and Ball Physics regression suites; no snapshot-schema or RNG change. W2 remains disabled pending post-W6 armed evidence.)
+> **Last Updated:** September 14, 2026 (v2.137 — **W12 evidence repair / PR #413.** The exact static-sweep, corrected-pre-#398, and post-#398 Actions ZIPs are now durable repo evidence with reproducible ZIP and extracted-file SHA-256s. The post-#398 record is corrected to the matched 0–3 / 2–5 / 2–1 corpus: `latestPass` 0 → 141,491, BACKWARD_PASS 0 → 1,827 raw / 2,770 committed, all gate-outcome counters exactly unchanged, and `primaryAssigned +3` / WeakReceiver `−3` limited to selection-path evidence. New reconciliation tooling mechanically checks the committed census, aggregate table, scorelines, and heartbeat accounting. W6 measurement is pre-registered in normalized shares with an explicit falsifier. No production, snapshot, save, RNG, or `[GT]` change.)
 >
 > **Last Updated (prior):** September 14, 2026 (v2.136 — **W5 + W7 reconciled onto the W4/W12 mainline.** W5 routes CONTACT `PassAttemptEvent`s into the opposing #13 ring, evaluates BACKWARD_PASS only from the completed 60 Hz `[N-AI_PHASE_STRIDE,N)` interval, and carries a qualifying discrete pass only through its required two-heartbeat dwell. The ring/snapshot retain the authoritative world-frame event; target normalization occurs only at the evaluator read boundary. Snapshot schema **21 → 22** persists each ring latest event; W12 raw-trigger observation remains intact. W7 applies the manager kickoff preset after manager configuration and before tick 1. No new RNG stream/domain/draw site/order. Post-#398 W12 comparison remains required before merge.)
 >
@@ -2630,7 +2630,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 2.137   | 2026-09-14 | W6 controlled-ball wiring: physical open-play control + explicit release; PR #412. |
+| 2.137 | 2026-09-14 | — | W12 evidence repair: exact retained Actions archives, corrected matched post-#398 census, mechanical evidence reconciliation, and normalized W6 preregistration; no production/schema/RNG/`[GT]` change. |
 | 2.136 | September 14, 2026 | — | W5/W7 reconciled on W4/W12 mainline: opponent CONTACT pass feed, 60 Hz completed-window + bounded discrete-event dwell, world-frame ring state, snapshot schema 22, kickoff preset before tick 1; W12 observation preserved. |
 | 2.135 | September 13, 2026 | — | W4 keeper perception consumers: LOS-gated DT SAVE, raw SaveArmed rush veto, same-Resolve applied-deflection reaction reset; collision/GK/composed regressions; no schema/RNG/event-ABI change. |
 | 2.134 | September 12, 2026 | — | Unity editor compile fixes (asmdef direct references; NUnit 3.5-compatible assertions) and the owner decision that Unity governs the build, recorded in Verification. |

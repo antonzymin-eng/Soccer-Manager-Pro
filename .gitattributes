@@ -37,6 +37,7 @@
 *.py        text eol=lf
 *.yml       text eol=lf
 *.yaml      text eol=lf
+*.zip       -text
 
 # ---- Binary game assets: Git LFS (also marked binary so git never merges them) ----
 # Textures
