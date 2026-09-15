@@ -103,4 +103,12 @@ jobs:
           git diff --check
           git diff -- src/goalkeeper-mechanics/GoalkeeperMechanics.cs
       - name: Verify exact keeper-claim scenario
-        run: bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'Name=sim_match_engine_keeper_claim'
+        shell: bash
+        run: |
+          set +e
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'Name=sim_match_engine_keeper_claim' > /tmp/w6-keeper-claim.log 2>&1
+          status=$?
+          set -e
+          echo '--- keeper-claim diagnostic tail ---'
+          grep -B5 -A40 'Error Message:' /tmp/w6-keeper-claim.log || tail -n 200 /tmp/w6-keeper-claim.log
+          exit "$status"
