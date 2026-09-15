@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/ClubFinances.cs
 // Created:  2026-09-04
-// Modified: 2026-09-08
+// Modified: 2026-09-11 (#40 T3a review — current-season revenue coherence)
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §2.2 (per-club finance state)
@@ -27,7 +27,7 @@ namespace TacticalDirector.ClubFinances
         /// <summary>Non-negative current wage-liability aggregate.</summary>
         public long WageBillAggregate;
 
-        /// <summary>Deep-tier revenue accumulator; zero and untouched at T0.</summary>
+        /// <summary>Non-negative current-season deep-tier revenue accumulator; zero at initial state and reset by settlement.</summary>
         public long SeasonRevenueAccrued;
 
         /// <summary>Deep-tier FFP accumulator; zero and untouched at T0.</summary>
@@ -65,6 +65,11 @@ namespace TacticalDirector.ClubFinances
             {
                 throw new ArgumentOutOfRangeException(nameof(finances), finances.WageBillAggregate, "WageBillAggregate must be non-negative (F1).");
             }
+
+            if (finances.SeasonRevenueAccrued < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(finances), finances.SeasonRevenueAccrued, "SeasonRevenueAccrued must be non-negative current-season revenue (F1).");
+            }
         }
     }
 }
@@ -75,4 +80,5 @@ namespace TacticalDirector.ClubFinances
 // | 1.0     | 2026-09-04 | —      | Initial #40 T0 per-club finance state. |
 // | 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder. |
 // | 1.3     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
+// | 1.4     | 2026-09-11 | OpenAI | T3a review: SeasonRevenueAccrued is non-negative coherent state, including restore validation. |
 #endregion
