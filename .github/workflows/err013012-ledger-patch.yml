@@ -1,0 +1,62 @@
+name: ERR-013-012 ledger patch
+
+on:
+  push:
+    branches:
+      - codex/err-013-012-section2-sync
+
+permissions:
+  contents: write
+
+jobs:
+  patch-ledger:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/err-013-012-section2-sync
+          fetch-depth: 1
+
+      - name: Patch canonical specification error ledger
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('docs/tracking/spec-error-log.md')
+          text = path.read_text(encoding='utf-8')
+
+          old_header = '''**Version:** 2.57
+          **Updated:** September 12, 2026 (v2.57 — **`ERR-013-011` filed and RESOLVED after second PR #398 review.** The first remediation compared the 60 Hz EventBus-stamped pass tick directly to the 10 Hz tactical heartbeat and dead-wired BACKWARD_PASS; review also exposed that a one-window event pulse cannot satisfy the generic two-heartbeat debounce without bounded event semantics. #13 §§3/4/5 now define `[N-AI_PHASE_STRIDE,N)` acceptance at AI physics tick `N`, keep the event wholly world-frame, and latch a qualifying discrete pass only until its already-started dwell reaches threshold. Positive EventBus→next-stride→commit coverage proves the accepting arm; stale-window locks prove the rejection arm. v22 bytes are unchanged because the new timing fields are ephemeral PressingSnapshot inputs. No RNG or draw-order change. Prior update below.)'''
+          new_header = '''**Version:** 2.58
+          **Updated:** September 14, 2026 (v2.58 — **`ERR-013-012` filed and RESOLVED.** Pressing AI #13 §2 was omitted from the June `ERR-013-009` backward-pass frame correction and the September `ERR-013-011` EventBus recency correction: FR-PR-010 still used the pressing team's `attackingDirection`, lacked the own-team-passer guard, and stated no `[N-AI_PHASE_STRIDE,N)` event window. §2 v0.4 now matches §3.1.2; the #5 input/failure surfaces are synchronized; `ERR-013-009` is annotated in place to point at this residual. Spec/docs only; no runtime/schema/digest/RNG change. Prior update below.)
+          **Updated (prior):** September 12, 2026 (v2.57 — **`ERR-013-011` filed and RESOLVED after second PR #398 review.** The first remediation compared the 60 Hz EventBus-stamped pass tick directly to the 10 Hz tactical heartbeat and dead-wired BACKWARD_PASS; review also exposed that a one-window event pulse cannot satisfy the generic two-heartbeat debounce without bounded event semantics. #13 §§3/4/5 now define `[N-AI_PHASE_STRIDE,N)` acceptance at AI physics tick `N`, keep the event wholly world-frame, and latch a qualifying discrete pass only until its already-started dwell reaches threshold. Positive EventBus→next-stride→commit coverage proves the accepting arm; stale-window locks prove the rejection arm. v22 bytes are unchanged because the new timing fields are ephemeral PressingSnapshot inputs. No RNG or draw-order change. Prior update below.)'''
+
+          row_009 = '''| ERR-013-009 | Pressing AI #13 §3.1.2 `BACKWARD_PASS` dotted the pass direction against `attackingDirection` (the **pressing** team's), but "backward" is backward for the team **in possession**, which attacks the opposite goal. The trigger therefore fired on the possessing team's *forward* pass (home/away inversion class — AR-3 implementation review). It also did not exclude a pressing-team passer. | High | 2 | ✅ **Resolved June 15, 2026** — `pressing-ai/section-3.md` v0.4 §3.1.2: pseudocode + worked example use `-attackingDirection` (possessing team's forward) and add an own-team-passer guard; implementation `TriggerEvaluator.cs` v1.3 matches; tests T-U-002 re-derived + new own-team-passer guard test. |'''
+          row_009_annotated = row_009[:-2] + ''' *[Annotation, September 14, 2026 — §2 FR-PR-010 was not part of this June resolution and remained stale; that residual synchronization is tracked and resolved separately by `ERR-013-012`. Original resolution text preserved.]* |'''
+
+          row_010 = '''| ERR-013-010 | Pressing AI #13 §3.4 `receiverProgressionGain` dotted against `attackingDirection` (the **pressing** team's), rewarding receivers retreating toward their own goal as most threatening — same inversion as ERR-013-009. | High | 2 | ✅ **Resolved June 15, 2026** — `pressing-ai/section-3.md` v0.4 §3.4: formula + worked example use `-attackingDirection`; implementation `CoverShadowSelector.cs` v1.3 matches; T-U-031 fixture re-derived in the corrected frame. Zone/third frames (§3.8/§3.9) unchanged — those correctly use the pressing team's direction. |'''
+          row_012 = '''| ERR-013-012 | Pressing AI #13 §2 remained stale after two later corrections: MUST-level FR-PR-010 still evaluated `BACKWARD_PASS` against the pressing team's `attackingDirection` and omitted the pressing-team-passer exclusion fixed by ERR-013-009, while §2's `PassAttemptEvent` contract omitted the `[N-AI_PHASE_STRIDE,N)` recency bound fixed by ERR-013-011 in §§3–5. An implementer following §2 could therefore reintroduce both the June frame inversion and the September stale-event acceptance defect despite both predecessor ERRs being marked resolved. | High | 2 | ✅ **Resolved September 14, 2026** — `pressing-ai/section-2.md` v0.4 synchronizes FR-PR-010, the #5 input row, and §2.4 stale-event rejection with §3.1.2 / ERR-013-009 / ERR-013-011; `ERR-013-009` receives a dated residual-pointer annotation. Spec/docs only; no runtime code, serialized state, schema, digest, RNG, or draw-order change. |'''
+
+          replacements = [
+              (old_header, new_header, 'header/version'),
+              (row_009, row_009_annotated, 'ERR-013-009 annotation'),
+              (row_010, row_010 + '\n' + row_012, 'ERR-013-012 row'),
+          ]
+          for old, new, label in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly 1 match, found {count}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit ledger and remove temporary workflow
+        shell: bash
+        run: |
+          rm .github/workflows/err013012-ledger-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/tracking/spec-error-log.md .github/workflows/err013012-ledger-patch.yml
+          git commit -m "docs: file ERR-013-012 ledger"
+          git push origin HEAD:codex/err-013-012-section2-sync
