@@ -26,6 +26,7 @@ The W6 regression set proves:
 6. The six-second goalkeeper backstop exits `Controlled`, drops the ball to foot height, and arms the re-collect cooldown.
 7. Ball Physics' direct Controlled entry/non-kick release transition preserves recovery checkpoints.
 8. Loose/restart intervals do not freeze elapsed tackle cooldown.
+9. The composed keeper-claim scenario still proves a claim arrests the incoming ball and now proves the held `Controlled` ball remains attached to the claiming keeper.
 
 The two test-only tackle-cooldown seams added for item 8 are retained deliberately as durable regression support. They are not production state and are not temporary measurement scaffolding.
 
@@ -34,6 +35,14 @@ The two test-only tackle-cooldown seams added for item 8 are retained deliberate
 The Codex review correctly identified that the physical-carrier early return could occur before `_tackleCooldown` aging, freezing an elapsed-AI-stride cooldown while the ball was loose, airborne, or placed for a restart.
 
 Commit `f927e115b5e61771b5cf0fd7c07e93514759b1b6` moved cooldown aging before the physical-carrier gate and added `LooseBall_DoesNotFreezeElapsedTackleCooldown`. The PR review thread is resolved. This tackle cooldown is distinct from the W12 Pressing-AI `Cooldown` exit driven by `DisengageResolver` / `_cooldownTicks`.
+
+## Keeper-claim acceptance compatibility — closed
+
+The final functional gate exposed one deterministic failure in `sim_match_engine_keeper_claim`: its historical third predicate, `held-ball-does-not-enter-own-net`, observed two goals while a keeper was still recorded as holding the ball. The incoming ball was still arrested correctly.
+
+That predicate was written before genuine `Controlled` carry existed. The conversion-at-contact design deliberately parked a claim without keeper carry; under that model a goal while the keeper remained holder was a valid proxy for the old ERR-011-008 defect where the claimed shot kept travelling independently. W6 intentionally changes that premise: a controlled goalkeeper ball follows live keeper locomotion, so a keeper-carried goal-line crossing no longer demonstrates stale incoming-shot travel.
+
+The acceptance was therefore tightened around the invariant that still distinguishes the original defect: claims must be arrested at contact, and while the claiming keeper remains holder the ball must remain `Controlled` and attached to that keeper in x/y. The old historical predicate was not converted into a gameplay rule preventing keeper carry.
 
 ## Pre-registration carried forward before measurement
 
@@ -53,7 +62,7 @@ This sequencing change affects procedure only. It does not retroactively alter e
 
 ## Scaffolding disposition
 
-No temporary W6 measurement workflow, evidence corpus, or ad-hoc instrumentation file remains in the PR #412 diff. The final diff is limited to the production wiring, durable regression tests, this closeout, and the pre-registration carried forward for the next measurement step.
+No temporary W6 measurement workflow, evidence corpus, diagnostic workflow, or ad-hoc instrumentation file remains in the final PR #412 diff. The final diff is limited to the production wiring, durable regression tests, this closeout, and the pre-registration carried forward for the next measurement step.
 
 ## W2 boundary
 
