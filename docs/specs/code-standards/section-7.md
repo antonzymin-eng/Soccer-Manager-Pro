@@ -5,8 +5,8 @@
 begins, Stage 5+ rule extensions, permanent exclusions (style debates this spec refuses to
 relitigate), and the deferred-decisions tracker (D1–D5).
 **Created:** May 8, 2026
-**Modified:** September 2, 2026
-**Version:** 1.3
+**Modified:** September 14, 2026
+**Version:** 1.4
 **Status:** AMENDMENT DRAFT (A3.1b; approved v1.2 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 7; `outline-mid.md` v1.2, §7.1–§7.5
@@ -60,30 +60,38 @@ command; failure at that gate blocks the corresponding action.
 | PR | Every pull-request open or push-to-PR | `dotnet build /p:TreatWarningsAsErrors=true` with Roslyn analyzer ruleset active | PR blocked; all Error-level Spec #20 diagnostics must be resolved before merge is permitted |
 | Merge | Merge to `main` | Zero-allocation profiler test on game-loop assemblies (Unity batch-mode, managed-heap snapshot) | Merge blocked; any non-zero allocation in the 60 Hz physics path (FR-CS-066) must be eliminated before merge |
 
-**Status (rewritten August 18, 2026 — the Stage 0 paragraph here claimed `src/` was
-empty and the toolchain unconfigured, both long false):** `src/` holds 35 production
-assemblies and 947 `.cs` files, and `.github/workflows/ci.yml` activates the first two
-gates in substance, with variations from the table above. The format check runs
-`dotnet format whitespace --verify-no-changes` on every push to `main` and every PR targeting `main`, over a synthetic project
-(not as a pre-commit hook, and advisory — a failure emits a warning and exits 0,
-"non-blocking until repo opts in"). Each such push/PR also runs `tools/dotnet-ci/run-gate.sh`,
-which compiles the entire tree and runs every NUnit suite (blocking; a non-certifying
-Linux shim, not the pinned Unity host, and `/p:TreatWarningsAsErrors` is not the gate's
-posture). Still missing: the **Roslyn analyzer ruleset half of the PR gate** — no
-analyzer project, no `BannedSymbols.txt`, and no `.editorconfig` exist anywhere in the
-repository — and the whole **zero-allocation profiler merge gate**, which needs the
-pinned host. The command column above stays the normative target for the missing
-pieces.
+**Current verification model (`ERR-020-008`; owner decision September 12, 2026):** the
+**Unity 6000.4.9f1 editor on the pinned host is the governing compiler for code
+conformance. A green Linux `tools/dotnet-ci/run-gate.sh` result is necessary supplemental
+evidence, but it is not sufficient to establish that the code compiles.** The Linux shim
+uses MSBuild project references, which are transitive; Unity compilation requires every
+assembly whose types a source file names to be listed directly in that source assembly's
+`.asmdef`. A missing direct reference can therefore remain green in the Linux gate and
+fail the governing Unity compile with errors such as CS0012/CS0234. FR-CS-055's rule is
+unchanged; this paragraph records the verification instrument that can actually expose
+that class of violation.
+
+`.github/workflows/ci.yml` currently runs `dotnet format whitespace --verify-no-changes`
+on every push to `main` and every PR targeting `main`, over a synthetic project (advisory
+— a failure emits a warning and exits 0). Each such push/PR also runs
+`tools/dotnet-ci/run-gate.sh`, which compiles the whole synthetic tree and runs the NUnit
+suites (blocking, non-certifying, and supplemental to Unity). **GitHub Actions does not
+currently run the pinned-host Unity editor compile**, so the governing compile is an
+operator/host verification requirement until a verified workflow wires it. Still missing
+from the original Stage 1 target are the Roslyn analyzer ruleset half of the PR gate — no
+analyzer project, `BannedSymbols.txt`, or `.editorconfig` exists — and the automated
+zero-allocation profiler merge gate. The command column above remains the normative target
+for those missing pieces.
 
 **Pre-commit hook setup note:** The pre-commit gate requires a Git pre-commit hook or
 Husky configuration pointing at `dotnet format --verify-no-changes`. The exact hook
 installation command is deferred to `src/CLAUDE.md` (D5-artifact, §7.1).
 
-**Merge gate dependency:** The zero-allocation merge gate depends on the host platform
-being pinned in `docs/tracking/certification-platform.md`. Until that document is fully
-populated (see CLAUDE.md Open Issues — "Stage 0 host platform pin"), the merge gate cannot
-produce a reproducible baseline. The gate MUST NOT be marked active until the platform pin
-resolves (see also FR-CS-008 — INACTIVE status in §2.2.1).
+**Merge gate dependency:** the certification host is now pinned; host pinning is no
+longer the reason the zero-allocation merge gate is inactive. The remaining work is to
+wire and verify the pinned-host profiler execution as a blocking merge gate. Until that
+workflow/evidence path exists, the profiler requirement remains normative but is not an
+automated GitHub merge check.
 
 ### Architecture-governance activation boundary (A3 → A4 → later enforcement)
 
@@ -204,6 +212,7 @@ statement, the trigger that allows (or requires) the decision to be made, and th
 | 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H5.** Two sites asserted `src/` is empty / no source code exists, fifteen months after coding began (May 19, 2026). §7.2's "Stage 0 status" paragraph rewritten against the live tree and CI, every figure re-derived August 18, 2026 (35 assemblies via `ls -d src/*/ | wc -l`, 947 `.cs` files via `find src -name '*.cs' | wc -l`; `.github/workflows/ci.yml` runs the advisory `dotnet format whitespace` check and the blocking `tools/dotnet-ci/run-gate.sh` on every push) — and precise about what remains missing: the Roslyn analyzer ruleset, `BannedSymbols.txt`, `.editorconfig`, and the zero-allocation profiler merge gate. §7.5's D1 row premise ("no source code exists at Stage 0") corrected to the surviving half of its own argument: code exists, a profiled baseline does not, so D1 stays deferred on grounds that are still true. | — |
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H3.** §7.2's "on every push" corrected to `ci.yml`'s real triggers (`branches: [main]`, `push` and `pull_request`). Same correction as `section-4.md` v1.2 and `section-5.md` v1.2; the v1.1 row above is left as written per the history convention. | — |
 | 1.3 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Adds the explicit A3→A4→activation boundary for FR-CS-074–081: reapproval, compiler-backed resolver/discovery proof, and enforcement activation are separate gates; Spec #19 retains proof/gate ownership. Also fixes the live §7.2 "Every push" residue to the already-stated main-push/PR trigger scope. | PENDING — A3.4 |
+| 1.4 | September 14, 2026 | Codex | **`ERR-020-008` — verification-model drift after the September 12 owner decision.** §7.2 now records Unity 6000.4.9f1 on the pinned host as the governing compiler, makes explicit that a green Linux shim is supplemental but insufficient, and explains the MSBuild-transitive-vs-Unity-direct `.asmdef` blind spot behind the editor-only CS0012/CS0234 failures. It also states honestly that GitHub Actions does not yet run the governing Unity compile and corrects the stale merge-gate dependency: the host is pinned; automated pinned-host profiler wiring is what remains. No FR-CS-055 rule text or architecture rule changed. | — |
 
 ---
 
