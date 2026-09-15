@@ -8,9 +8,25 @@ permissions:
   contents: read
 
 jobs:
-  match-engine-diagnostic:
-    name: W6 MatchEngine diagnostic (temporary)
+  affected-fixtures:
+    name: W6 diagnostic — ${{ matrix.shard }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: possession-core
+            filter: 'FullyQualifiedName~MatchEngineMatchContextTests|FullyQualifiedName~MatchEngineResolveTests|FullyQualifiedName~MatchEnginePossessionBootstrapTests|FullyQualifiedName~MatchEngineFirstTouchTests'
+          - shard: pass-restart-events
+            filter: 'FullyQualifiedName~MatchEngineEventsTests|FullyQualifiedName~MatchEngineGoalTests|FullyQualifiedName~PassInFlightPossessionTests|FullyQualifiedName~MatchEngineRestartTests'
+          - shard: tactics-mechanics-tackle
+            filter: 'FullyQualifiedName~MatchEngineTacticTests|FullyQualifiedName~MatchEngineMechanicsTests|FullyQualifiedName~MatchEngineTackleTests'
+          - shard: goalkeeper
+            filter: 'FullyQualifiedName~MatchEngineGkHeadingTests'
+          - shard: snapshots
+            filter: 'FullyQualifiedName~MatchEngineSnapshotRestoreTests|FullyQualifiedName~MatchEngineSnapshotSchemaTests'
+          - shard: w6-new
+            filter: 'FullyQualifiedName~MatchEngineControlledBallW6Tests'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -18,28 +34,24 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Generate projects
         run: python3 tools/dotnet-ci/generate_projects.py
-      - name: Restore generated solution
-        run: dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
-      - name: Build generated solution
-        run: dotnet build tools/dotnet-ci/TacticalDirector.gen.sln --no-restore -clp:ErrorsOnly -m
-      - name: Run MatchEngine suite with TRX
+      - name: Restore MatchEngine test project
+        run: dotnet restore src/match-engine/tests/match-engine-tests.gen.csproj
+      - name: Build MatchEngine test project
+        run: dotnet build src/match-engine/tests/match-engine-tests.gen.csproj --no-restore -clp:ErrorsOnly
+      - name: Run affected fixture shard with TRX
         shell: bash
         run: |
           set -euo pipefail
-          project="src/match-engine/tests/match-engine-tests.gen.csproj"
-          if [ ! -f "$project" ]; then
-            echo "::error::Generated MatchEngine test project not found: $project"
-            exit 2
-          fi
-          mkdir -p artifacts/w6-match-engine-diagnostic
-          dotnet test "$project" --no-build --no-restore \
-            --filter 'Name!=sim_match_engine_close_chance' \
-            --logger 'trx;LogFileName=w6-match-engine.trx' \
-            --results-directory artifacts/w6-match-engine-diagnostic
-      - name: Upload MatchEngine TRX
+          out="artifacts/w6-diagnostic/${{ matrix.shard }}"
+          mkdir -p "$out"
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-build --no-restore \
+            --filter "${{ matrix.filter }}" \
+            --logger "trx;LogFileName=${{ matrix.shard }}.trx" \
+            --results-directory "$out"
+      - name: Upload shard TRX
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: w6-match-engine-diagnostic
-          path: artifacts/w6-match-engine-diagnostic/**/*.trx
+          name: w6-diagnostic-${{ matrix.shard }}
+          path: artifacts/w6-diagnostic/${{ matrix.shard }}/*.trx
           if-no-files-found: error
