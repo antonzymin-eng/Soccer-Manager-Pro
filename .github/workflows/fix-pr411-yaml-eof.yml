@@ -1,0 +1,40 @@
+name: Fix PR 411 YAML EOF
+
+on:
+  push:
+    branches:
+      - fix/clean-clone-unity-project
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/clean-clone-unity-project
+      - name: Restore ci.yml final newline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/ci.yml')
+          data = path.read_bytes()
+          if data.endswith(b'\n'):
+              raise SystemExit('ci.yml already has a final newline; refusing unrelated commit')
+          path.write_bytes(data + b'\n')
+          PY
+          rm .github/workflows/fix-pr411-yaml-eof.yml
+          git add -A
+          git diff --cached --check
+          git diff --cached --name-only | grep -Fx '.github/workflows/ci.yml'
+          test "$(git diff --cached --name-only | wc -l)" -eq 2
+          git commit -m "ci: restore workflow trailing newline"
+          git push origin HEAD:fix/clean-clone-unity-project
