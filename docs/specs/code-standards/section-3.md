@@ -206,7 +206,7 @@ public sealed class BallStateSystem
 
     public BallStateSystem(MatchClock clock) { … }
     public void Update(ref BallState state) { … }
-    private static void ApplyDrag(…) { … }
+    private static void ApplyDrag(ref BallState state, float dt) { … }
 }
 
 // VIOLATION — implicit private (no access modifier on field and method)
@@ -219,7 +219,7 @@ sealed class BallStateSystem           // implicit internal on the type
 
 ---
 
-### 3.2 Constant Declaration & Tagging (FR-CS-016 … FR-CS-025)
+## 3.2 Constant Declaration & Tagging (FR-CS-016 … FR-CS-025)
 
 *Implements:* FR-CS-016–025. See §2.2.2 for rule statements and conformance levels.
 
