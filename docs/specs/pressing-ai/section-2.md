@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 17, 2026
-**Last Updated:** May 18, 2026 (v0.3 — FAIL-4 fix (A-03): FR-PR-005 `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; ERR-013-005 resolved.)
-**Version:** 0.3
+**Last Updated:** September 14, 2026 (v0.4 — ERR-013-012: FR-PR-010 synchronized with §3.1.2 / ERR-013-009 and ERR-013-011: possessing-team direction, own-team-passer exclusion, and 60 Hz `PassAttemptEvent` recency.)
+**Version:** 0.4
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -26,7 +26,7 @@ either a KD in §1.5 or a downstream section in this spec.
 | FR-PR-007 | All constants live in a single catalogue file `PressingAIConstants.cs`. | MUST | #20 FR-CS-025 / KD-15 |
 | FR-PR-008 | Fatigue input convention is `0 = rested`, `1 = fatigued`. | MUST | CLAUDE.md / KD-1 |
 | FR-PR-009 | Trigger `BAD_TOUCH` fires when #4-derived first-touch quality scalar is below `BAD_TOUCH_THRESHOLD [GT]` AND post-touch ball-velocity escape exceeds `BAD_TOUCH_VELOCITY_M_S [GT]`. | MUST | KD-7 / §3.1.1 |
-| FR-PR-010 | Trigger `BACKWARD_PASS` fires when a `PassAttemptEvent` (#5 §2 FR-10) satisfies `dot(normalize((e.TargetPosition − passerPosition).xy), attackingDirection) < BACKWARD_PASS_THRESHOLD [GT]`, where `passerPosition = perception.agents[e.AgentID].position`. | MUST | KD-7 / §3.1.2 |
+| FR-PR-010 | Trigger `BACKWARD_PASS` fires only for a `PassAttemptEvent` (#5 §2 FR-10) whose passer is not on the pressing team, whose `FrameNumber` lies in the current EventBus recency window `[N-AI_PHASE_STRIDE,N)` at AI physics tick `N`, and whose pass direction satisfies `dot(normalize((e.TargetPosition − passerPosition).xy), -attackingDirection) < BACKWARD_PASS_THRESHOLD [GT]`, where `passerPosition = perception.agents[e.AgentID].position` and `attackingDirection` is the pressing team's forward vector. | MUST | KD-7 / §3.1.2 |
 | FR-PR-011 | Trigger `SIDELINE_TRAP` fires when the ball is within `SIDELINE_TRAP_DISTANCE_M [GT]` of either touchline AND the ball-carrier's facing has a positive component toward that sideline. | MUST | KD-7 / §3.1.3 |
 | FR-PR-012 | Trigger `WEAK_RECEIVER` fires when a candidate receiver's `FirstTouch` attribute is below `WEAK_RECEIVER_THRESHOLD [GT]` AND the receiver's perceived local pressure ≥ `WEAK_RECEIVER_PRESSURE [GT]`. | MUST | KD-7 / §3.1.4 |
 | FR-PR-013 | Triggers debounce via dwell-time hysteresis (`TRIGGER_DWELL_TICKS [EST]` to fire, `TRIGGER_RELEASE_TICKS [EST]` to clear). | MUST | KD-9 / §3.2 |
@@ -151,11 +151,11 @@ or field is published at Stage 0.
 | #7 Perception §3.10 | per-agent `isActive` | `bool` | substituted / red-carded excluded |
 | #7 Perception §3.7–3.10 | per-agent `FirstTouch` attribute | `float` | `WEAK_RECEIVER` source |
 | #4 First Touch (perception-propagated) | first-touch quality `q ∈ [0,1]` | `float` | `BAD_TOUCH` source (see Q2 note below) |
-| #5 Pass Mechanics §2 FR-10 | `PassAttemptEvent` ring | events | `BACKWARD_PASS` source; payload: `AgentID`, `PassType`, `TargetPosition`, `FrameNumber`; #13 derives pass direction from `perception.agents[e.AgentID].position → e.TargetPosition` |
+| #5 Pass Mechanics §2 FR-10 | `PassAttemptEvent` ring | events | `BACKWARD_PASS` source; payload: `AgentID`, `PassType`, `TargetPosition`, `FrameNumber`; eligible only when `FrameNumber ∈ [N-AI_PHASE_STRIDE,N)` at AI physics tick `N`; stale events are rejected; #13 derives pass direction from `perception.agents[e.AgentID].position → e.TargetPosition`. |
 | #12 Positioning AI (read-only accessor) | baseline `formationSlot[id]` | `Vector2` | composition source for `HOLD_SHAPE` |
 | #12 Positioning AI (read-only accessor) | local phase enum | `Phase` | KD-11 phase gating |
 | #12 Positioning AI (read-only accessor) | line membership | `LineMembership` | KD-16 backline floor |
-| Orchestrator | own-team attacking direction | `Vector2` (unit) | `BACKWARD_PASS` dot-product |
+| Orchestrator | own-team attacking direction | `Vector2` (unit) | Pressing-team forward vector; `BACKWARD_PASS` evaluates the possessing team's forward as its negation (`-attackingDirection`) per §3.1.2. |
 | #13-internal | prior `RoleHysteresisState` | struct | from previous tick |
 | #13-internal | prior `PressTrigger` | struct | from previous tick |
 
@@ -182,6 +182,7 @@ perception-propagated per outline KD-7 / §1.3.
 | F4 | Empty cover-shadow candidate set | `candidates.Count == 0` after §3.4 filtering | Demote unfilled slot to `HOLD_SHAPE`; do NOT escalate other agents | §5.2 unit |
 | F5 | Anti-chaos invariant violation at publication | KD-16 check fails after §3.9 enforcement | Fall back to all-`HOLD_SHAPE` for this tick; emit `PRESSING_INVARIANT_FALLBACK` warning | §5.2 unit; §5.6 KD-16 corpus |
 | F6 | #12 baseline slot unavailable (sentinel) | `PositioningAI.IsSentinel(slot)` for an agent | Skip override for that agent; preserve its last `PressAssignment` (typically `HOLD_SHAPE`) | §5.2 unit |
+| F7 | Stale `PassAttemptEvent` outside the current AI-owned EventBus window | `e.FrameNumber ∉ [N-AI_PHASE_STRIDE,N)` at AI physics tick `N` | Reject the event for `BACKWARD_PASS`; it contributes no discrete dwell on this heartbeat. | T-U-010a |
 
 Substituted and red-carded agents are filtered upstream of trigger
 evaluation; their `PressAssignment` is preserved at its
@@ -195,3 +196,4 @@ pre-substitution value (consistent with #12's
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. 44 FRs enumerated. |
 | 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H1: FR-08 → FR-10 citation in FR-PR-010. AR-S1-H2: FR-PR-010 rewritten to use `TargetPosition - passerPosition` direction instead of `passVelocity`; §2.3 inputs row for #5 updated; F2 failure mode updated. AR-S1-H5: FR-PR-023 rewritten to describe threat-score selection; removed category-error "not already pressed by primary" clause. AR-S1-M5: typo `PRessAssignment` → `PressAssignment` in FR-PR-040. |
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): FR-PR-005 `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; ERR-013-005 resolved. |
+| 0.4 | September 14, 2026 | OpenAI | ERR-013-012: synchronized FR-PR-010, the #5 input contract and the stale-event failure arm with §3.1.2 / ERR-013-009 / ERR-013-011 — `BACKWARD_PASS` now uses the possessing-team frame (`-attackingDirection`), rejects pressing-team passers and accepts `PassAttemptEvent` only in `[N-AI_PHASE_STRIDE,N)`. No runtime/schema/RNG change. |
