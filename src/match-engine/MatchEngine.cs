@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-15 (W6 review closure — Controlled goalkeeper carriers are constrained at their defended goal plane in the MatchEngine attachment funnel; no schema/RNG change)
 // Modified: 2026-09-14 (W6 review P2 — tackle cooldown now ages on every AI stride even without a physical carrier; regression seam only, no schema/RNG change)
 // Modified: 2026-09-14 (W6 controlled ball — physical possession drives BallState.Controlled + carrier attachment; restart taker stays stationary; no schema/RNG change)
 // Modified: 2026-09-14 (W5/W7 reconciliation — W5 CONTACT pass feed + snapshot v22 / ERR-013-011 timing merged on top of W4; no RNG/draw-order change)
@@ -8208,7 +8209,42 @@ namespace TacticalDirector.MatchEngine
                 return;
             }
 
-            Vector2 holderPos = _agents[holder].Position;
+            AgentState carrier = _agents[holder];
+
+            // W6 review closure: Agent Movement deliberately permits a small exterior safety buffer,
+            // but a goalkeeper physically controlling the ball may not carry that attached ball through
+            // the goal plane he defends. Enforce the composition invariant at the sole Controlled-ball
+            // attachment funnel so every acquisition path is covered before Resolve adjudicates a goal.
+            if (_isGoalkeeper[holder])
+            {
+                int teamId = _teamIds[holder];
+                float ownGoalX = teamId == 0 ? 0.0f : MatchEngineConstants.PITCH_LENGTH_M;
+                bool behindOwnGoalLine = teamId == 0
+                    ? carrier.Position.x < ownGoalX
+                    : carrier.Position.x > ownGoalX;
+
+                if (behindOwnGoalLine)
+                {
+                    carrier.Position = new Vector2(ownGoalX, carrier.Position.y);
+
+                    bool movingFurtherOut = teamId == 0
+                        ? carrier.Velocity.x < 0.0f
+                        : carrier.Velocity.x > 0.0f;
+                    if (movingFurtherOut)
+                    {
+                        carrier.Velocity = new Vector2(0.0f, carrier.Velocity.y);
+                    }
+
+                    // Keep Agent Movement recovery coherent with this host-owned correction;
+                    // otherwise a later safety recovery could restore the illegal pre-clamp state.
+                    carrier.Speed = carrier.Velocity.magnitude;
+                    carrier.LastValidPosition = carrier.Position;
+                    carrier.LastValidVelocity = carrier.Velocity;
+                    _agents[holder] = carrier;
+                }
+            }
+
+            Vector2 holderPos = carrier.Position;
             float z = _isGoalkeeper[holder]
                 ? Mathf.Max(_ball.Position.z, MatchEngineConstants.BALL_REST_HEIGHT_M)
                 : MatchEngineConstants.BALL_REST_HEIGHT_M;
@@ -9675,6 +9711,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | also requires live LOS. RefreshGkAgentIds moved to Resolve entry after |
 // |         |            |        | pending substitutions, removing deflection-conditional ResetSlot timing.|
 // | 1.75    | 2026-09-14 | —      | W5: subscribe to PassAttemptEvent at boot, route CONTACT events to the opposing #13 ring, and append/restore each ring latest event in snapshot v22; no RNG or draw-order change. |
+// | 1.79    | 2026-09-15 | —      | W6 review closure: the Controlled attachment funnel constrains goalkeeper carriers |
+// |         |            |        | at their defended goal plane before ball attachment / Resolve; no schema/RNG change. |
 // | 1.78    | 2026-09-14 | —      | W6 review P2: tackle cooldown ages before the physical-carrier gate, so loose/restart |
 // |         |            |        | strides cannot freeze elapsed cooldown time; test-only staging/invocation seams added. |
 // | 1.77    | 2026-09-14 | —      | W6: genuine open-play possession enters BallState.Controlled, follows the holder, |
