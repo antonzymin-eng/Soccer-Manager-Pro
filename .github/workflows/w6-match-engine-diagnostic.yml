@@ -15,18 +15,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - shard: possession-core
-            filter: 'FullyQualifiedName~MatchEngineMatchContextTests|FullyQualifiedName~MatchEngineResolveTests|FullyQualifiedName~MatchEnginePossessionBootstrapTests|FullyQualifiedName~MatchEngineFirstTouchTests'
-          - shard: pass-restart-events
-            filter: 'FullyQualifiedName~MatchEngineEventsTests|FullyQualifiedName~MatchEngineGoalTests|FullyQualifiedName~PassInFlightPossessionTests|FullyQualifiedName~MatchEngineRestartTests'
-          - shard: tactics-mechanics-tackle
-            filter: 'FullyQualifiedName~MatchEngineTacticTests|FullyQualifiedName~MatchEngineMechanicsTests|FullyQualifiedName~MatchEngineTackleTests'
-          - shard: goalkeeper
-            filter: 'FullyQualifiedName~MatchEngineGkHeadingTests'
-          - shard: snapshots
-            filter: 'FullyQualifiedName~MatchEngineSnapshotRestoreTests|FullyQualifiedName~MatchEngineSnapshotSchemaTests'
-          - shard: w6-new
-            filter: 'FullyQualifiedName~MatchEngineControlledBallW6Tests'
+          - shard: tactics
+            filter: 'FullyQualifiedName~MatchEngineTacticTests'
+          - shard: mechanics
+            filter: 'FullyQualifiedName~MatchEngineMechanicsTests'
+          - shard: tackle
+            filter: 'FullyQualifiedName~MatchEngineTackleTests'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
