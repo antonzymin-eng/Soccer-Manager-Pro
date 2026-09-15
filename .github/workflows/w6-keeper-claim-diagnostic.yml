@@ -1,0 +1,38 @@
+name: W6 Keeper Claim Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  keeper-claim:
+    name: W6 diagnostic — keeper claim
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects
+        run: python3 tools/dotnet-ci/generate_projects.py
+      - name: Restore MatchEngine test project
+        run: dotnet restore src/match-engine/tests/match-engine-tests.gen.csproj
+      - name: Build MatchEngine test project
+        run: dotnet build src/match-engine/tests/match-engine-tests.gen.csproj --no-restore -clp:ErrorsOnly
+      - name: Run keeper-claim fixture with TRX
+        run: |
+          mkdir -p artifacts/w6-keeper-claim
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-build --no-restore \
+            --filter "FullyQualifiedName~MatchEngineKeeperClaimTests" \
+            --logger "trx;LogFileName=keeper-claim.trx" \
+            --results-directory artifacts/w6-keeper-claim
+      - name: Upload keeper-claim TRX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w6-keeper-claim-diagnostic
+          path: artifacts/w6-keeper-claim/*.trx
+          if-no-files-found: error
