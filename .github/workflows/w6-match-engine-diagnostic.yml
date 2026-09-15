@@ -1,0 +1,45 @@
+name: W6 MatchEngine Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  match-engine-diagnostic:
+    name: W6 MatchEngine diagnostic (temporary)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects
+        run: python3 tools/dotnet-ci/generate_projects.py
+      - name: Restore generated solution
+        run: dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Build generated solution
+        run: dotnet build tools/dotnet-ci/TacticalDirector.gen.sln --no-restore -clp:ErrorsOnly -m
+      - name: Run MatchEngine suite with TRX
+        shell: bash
+        run: |
+          set -euo pipefail
+          project="$(find tools/dotnet-ci -name 'TacticalDirector.MatchEngine.Tests.csproj' -print -quit)"
+          if [ -z "$project" ]; then
+            echo "::error::Generated MatchEngine test project not found."
+            exit 2
+          fi
+          mkdir -p artifacts/w6-match-engine-diagnostic
+          dotnet test "$project" --no-build --no-restore \
+            --filter 'Name!=sim_match_engine_close_chance' \
+            --logger 'trx;LogFileName=w6-match-engine.trx' \
+            --results-directory artifacts/w6-match-engine-diagnostic
+      - name: Upload MatchEngine TRX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w6-match-engine-diagnostic
+          path: artifacts/w6-match-engine-diagnostic/**/*.trx
+          if-no-files-found: error
