@@ -8,8 +8,8 @@ does not restate them. Appendix D is the single source of truth for banned/requi
 API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
-**Modified:** September 7, 2026
-**Version:** 1.13
+**Modified:** September 14, 2026
+**Version:** 1.14
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.8 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
@@ -115,21 +115,28 @@ generated artefacts or when the Unity editor requires it.
 
 ### 3.1.3 Language Version and Feature Gating
 
-**Language version pin** (FR-CS-008): The project targets the C# version shipped by
-the Unity LTS revision recorded in `docs/tracking/certification-platform.md`. This FR
-is currently inactive (the platform document is a placeholder — see root `CLAUDE.md`
-open issue "Stage 0 host platform pin"). Once the platform is pinned, the language
-version becomes a hard constraint enforced by the `.csproj` `<LangVersion>` element.
+**Language version pin** (FR-CS-008; `ERR-020-008`): the certified Stage 0 host is
+Unity **6000.4.9f1**, whose supported language surface for this project is **C# 9.0**.
+FR-CS-008 is therefore active. Production code **MUST** stay within C# 9.0 even when a
+supplemental compiler or synthetic `.csproj` accepts newer syntax; the governing Unity
+editor compile is the compatibility authority. The synthetic Linux projects mirror this
+constraint with `<LangVersion>9.0</LangVersion>` but do not supersede Unity.
 
-**Allowed features** (FR-CS-009):
+**Allowed features** (FR-CS-009), subject to the C# 9.0 ceiling and the narrower project
+rules below:
 
 | Feature | Condition |
 |---|---|
-| Records | DTOs only (data-transfer structs with no behaviour). |
-| Pattern matching (`is`, `switch` expressions) | No restriction. |
+| Records | DTOs only (data-transfer types with no behaviour). |
+| Pattern matching (`is`, `switch` expressions) | C# 9.0 forms only. |
 | Expression-bodied members (`=>`) | Simple single-expression members only; not for multi-step logic. |
 | `readonly struct` | Strongly preferred for all immutable value types. |
-| Default interface methods | Only if the pinned Unity LTS C# version supports them. |
+| `init`-only setters | Permitted where the DTO/value-object rules otherwise permit the type. |
+| Default interface methods | Permitted only within the C# 9.0/Unity 6000.4.9f1 surface and subject to §3.5 interface rules. |
+| File-scoped namespaces | **Prohibited** — C# 10 feature; outside the pin. |
+| `required` members | **Prohibited** — C# 11 feature; outside the pin. |
+| Primary constructors | **Prohibited** — C# 12 feature; outside the pin. |
+| Top-level statements | **Prohibited by project policy** even though C# 9.0 supports them; production files follow the explicit type/file layout in §3.1.2. |
 
 **Banned in game-logic code** (FR-CS-010):
 
@@ -191,7 +198,7 @@ public sealed class BallStateSystem
 
     public BallStateSystem(MatchClock clock) { … }
     public void Update(ref BallState state) { … }
-    private static void ApplyDrag(ref BallState state, float dt) { … }
+    private static void ApplyDrag(…) { … }
 }
 
 // VIOLATION — implicit private (no access modifier on field and method)
@@ -1327,6 +1334,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.11 | September 2, 2026 | Codex | **A3.1a automated-review correction.** Defines the exact binding vocabulary and resolution targets for every ownership/path string, and states the frozen schema-v1/reference-semantics-v2.1 boundary honestly: shape acceptance is not cross-registry resolution and cannot support a Machine blocker before A4. Defines `not-applicable` plus the exact `na_fields` pairing rules so absent lifecycle/testhost phases are representable without using prose placeholders. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
 | 1.12 | September 2, 2026 | Codex | **A3.1a lifecycle-binding clarification.** Removes the undefined “lifecycle `surface_id`” and “lifecycle-owner `surface_id`” qualifiers. A non-N/A activation/update/teardown value now resolves first as an exact runtime-surface `surface_id`, then as the same dependency-graph identifier with `kind: lifecycle`; the two registries' roles are explicit and mechanically testable. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
 | 1.13 | September 7, 2026 | Codex | **D4/#40 T0/T1a seating, review-corrected in place before merge.** Adds `club-finances` (#40) to Tier 7 Management in the same landing as its production `.asmdef`. The `player-database` current Management-consumer note remains five consumers while the denominator moves six→seven because `club-finances` deliberately defers its #27 edge to T2; current non-consumers are `living-world` and `club-finances`. No dependency-direction rule or A3.1a governance semantics change. | — |
+| 1.14 | September 14, 2026 | Codex | **`ERR-020-008` — language-version mechanics activated.** §3.1.3 no longer treats the certified platform as a placeholder: Unity 6000.4.9f1 governs a C# 9.0 ceiling, the synthetic Linux projects may mirror but not widen it, and post-C#-9 syntax is explicitly excluded. This erratum is effective immediately against the approved Code Standards baseline; A3.1a remains independently pending A3.4. | — |
 
 ---
 
