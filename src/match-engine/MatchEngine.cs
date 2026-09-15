@@ -1,5 +1,8 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-15 (W6 review closure — Controlled goalkeeper carriers are constrained at their defended goal plane in the MatchEngine attachment funnel; no schema/RNG change)
+// Modified: 2026-09-14 (W6 review P2 — tackle cooldown now ages on every AI stride even without a physical carrier; regression seam only, no schema/RNG change)
+// Modified: 2026-09-14 (W6 controlled ball — physical possession drives BallState.Controlled + carrier attachment; restart taker stays stationary; no schema/RNG change)
 // Modified: 2026-09-14 (W5/W7 reconciliation — W5 CONTACT pass feed + snapshot v22 / ERR-013-011 timing merged on top of W4; no RNG/draw-order change)
 // Modified: 2026-09-12 (W4 review closure — v1.74: reaction timing now begins only on visible save threats; post-deflection reset is visibility-gated; keeper-slot refresh moved to unconditional Resolve entry under the GK flag; no schema/RNG change).
 // Modified: 2026-09-11 (W4 keeper perception — v1.73: DT SAVE uses live all-body LOS; same-Resolve applied deflections restart the threatened keeper's reaction timing; raw SaveArmed remains the W1 rush veto; no schema/RNG change).
@@ -2437,6 +2440,15 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: this agent's remaining challenge cooldown in AI strides.</summary>
         internal int TestOnly_TackleCooldown(int agentId) => _tackleCooldown[agentId];
 
+        /// <summary>Test-only: stage a remaining tackle cooldown without requiring a stochastic duel.</summary>
+        internal void TestOnly_SetTackleCooldown(int agentId, int remainingStrides)
+        {
+            _tackleCooldown[agentId] = remainingStrides;
+        }
+
+        /// <summary>Test-only: execute the tackle resolver once at an AI-stride boundary.</summary>
+        internal void TestOnly_RunTackleResolver() => TryResolveTackles();
+
         /// <summary>Test-only: this agent's raw tackle-interrupt flag, WITHOUT draining it — the
         /// production accessor clears on read, so a test that used it could not observe the flag twice
         /// and could not tell "never set" from "already drained".</summary>
@@ -2546,7 +2558,12 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         internal void TestOnly_SetPossession(int agentId)
         {
-            _possessingAgentId = agentId;
+            if (agentId == MatchEngineConstants.NO_POSSESSION)
+            {
+                ReleaseControlledPossession(placeAtGround: false);
+                return;
+            }
+            TakeControlledPossession(agentId);
         }
 
         /// <summary>Test-only: the current authoritative possessing agent index (NO_POSSESSION = loose).</summary>
@@ -2881,7 +2898,9 @@ namespace TacticalDirector.MatchEngine
         internal void TestOnly_ForceBallLoose(Vector3 position, Vector3 velocity)
         {
             _ball.Position = position;
-            _ball.Velocity = velocity;
+            BallCollision.ApplyKick(
+                ref _ball, velocity, Vector3.zero,
+                MatchEngineConstants.NO_POSSESSION, _clock.CurrentMatchTimeSeconds, logger: null);
             _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
             ClearPassInFlight();   // ERR-012-011 — "loose" means loose; do not leave a latch behind
         }
@@ -3444,10 +3463,8 @@ namespace TacticalDirector.MatchEngine
 
             Vector2 carrierPos = _agents[carrier].Position;
 
-            // Possession is a FLAG, not a kinematic constraint — nothing holds the ball at the carrier's
-            // feet (wiring backlog W6). Record how far the two readings drift, because a contact gate
-            // calibrated against carrier separation while the mechanism measures ball separation would be
-            // calibrated against the wrong distance.
+            // W6 turns physical possession into a kinematic constraint. Keep this observation as a
+            // regression detector: a material carrier/ball gap now means the Controlled attachment drifted.
             float carrierBallGap =
                 (new Vector2(_ball.Position.x, _ball.Position.y) - carrierPos).magnitude;
             if (carrierBallGap > TackleIntentCensus.CarrierBallGapThresholdM)
@@ -3555,12 +3572,22 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void TryResolveTackles()
         {
+            // Cooldown is elapsed in AI strides, not in carrier-present opportunities. Age it before
+            // any physical-carrier gate so a long pass, loose-ball phase or restart cannot freeze a
+            // defender's remaining tackle cooldown (PR #412 P2).
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 if (_tackleCooldown[i] > 0)
                 {
                     _tackleCooldown[i]--;
                 }
+            }
+
+            // W6: _possessingAgentId also designates a restart taker while the placed ball remains
+            // Stationary. Only BallState.Controlled denotes a physical carrier that can be challenged.
+            if (_ball.State != BallStateType.Controlled)
+            {
+                return;
             }
 
             int carrier = _possessingAgentId;
@@ -3733,7 +3760,7 @@ namespace TacticalDirector.MatchEngine
             switch (outcome)
             {
                 case TackleOutcome.BallWon:
-                    _possessingAgentId = tackler;
+                    TakeControlledPossession(tackler);
                     ClearPassInFlight();
                     _tackleFlag[carrier] = true;
                     _tackleWonCount++;
@@ -3744,7 +3771,7 @@ namespace TacticalDirector.MatchEngine
                     // ordinary loose-ball paths (first touch while it moves, pickup once it settles)
                     // decide who gets it — which is what makes this a 50-50 rather than a slower way of
                     // awarding possession to the tackler.
-                    _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+                    ReleaseControlledPossession(placeAtGround: false);
                     ClearPassInFlight();
                     _tackleFlag[carrier] = true;
                     _tackleLooseCount++;
@@ -4724,6 +4751,12 @@ namespace TacticalDirector.MatchEngine
             // before the Resolve-phase goal check (a committed save/header can deflect the ball first).
             // No-op unless _gkHeadingEnabled (KD-11 — the default engine is byte-identical).
             DriveGkHeadingPhysics();
+
+            // W6: Controlled is externally managed by design. After every agent (including GK) has
+            // moved — and after #11 had its same-Physics opportunity to claim — attach a physically
+            // controlled ball to the recorded holder. Restart-taker designation is Stationary, so it
+            // deliberately does not enter this path.
+            DriveControlledBallToPossessor();
         }
 
         /// <summary>
@@ -5188,7 +5221,7 @@ namespace TacticalDirector.MatchEngine
                 return;
             }
 
-            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+            ReleaseControlledPossession(placeAtGround: true);
             _gkHoldTicks = 0;
             _gkReleasedAgentId = holder;
             _gkReleaseCooldownRemaining = MatchEngineConstants.GkReleaseCooldownTicks;
@@ -5761,7 +5794,7 @@ namespace TacticalDirector.MatchEngine
                             break;
                         }
 
-                        _possessingAgentId = newHolder;
+                        TakeControlledPossession(newHolder);
                         break;
                     }
                 case TouchResult.Interception:
@@ -5774,9 +5807,14 @@ namespace TacticalDirector.MatchEngine
                         // opponent (§3.4.5), to be re-received on a later tick. A Stage-1 in-range
                         // interceptor id is taken as-is.
                         int interceptor = result.InterceptingAgentID;
-                        _possessingAgentId = interceptor >= 0 && interceptor < MatchEngineConstants.SQUAD_SIZE
-                            ? interceptor
-                            : MatchEngineConstants.NO_POSSESSION;
+                        if (interceptor >= 0 && interceptor < MatchEngineConstants.SQUAD_SIZE)
+                        {
+                            TakeControlledPossession(interceptor);
+                        }
+                        else
+                        {
+                            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+                        }
                         break;
                     }
                 default:
@@ -5858,7 +5896,7 @@ namespace TacticalDirector.MatchEngine
 
             if (claimer != MatchEngineConstants.NO_POSSESSION)
             {
-                _possessingAgentId = claimer;
+                TakeControlledPossession(claimer);
             }
         }
 
@@ -8127,6 +8165,99 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// W6 physical-possession entry. MatchEngine remains the Option-B owner of WHO possesses the ball;
+        /// Ball Physics owns the Controlled transition. Acquisition geometry remains the host's first-touch,
+        /// loose-pickup, tackle, or goalkeeper decision rather than re-running Ball Physics' narrower 0.5 m
+        /// CheckPossession predicate after that mechanic already adjudicated the touch.
+        /// </summary>
+        private void TakeControlledPossession(int agentId)
+        {
+            _possessingAgentId = agentId;
+            BallCollision.SetBallControlled(ref _ball);
+            DriveControlledBallToPossessor();
+        }
+
+        /// <summary>
+        /// W6 explicit non-kick release. A restart-taker award may have a possessor id with a Stationary
+        /// placed ball; ReleaseBallControl is therefore intentionally conditional on physical control.
+        /// </summary>
+        private void ReleaseControlledPossession(bool placeAtGround)
+        {
+            if (_ball.State == BallStateType.Controlled)
+            {
+                if (placeAtGround)
+                {
+                    _ball.Position = new Vector3(
+                        _ball.Position.x, _ball.Position.y, MatchEngineConstants.BALL_REST_HEIGHT_M);
+                }
+                BallCollision.ReleaseBallControl(ref _ball);
+            }
+            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+        }
+
+        /// <summary>
+        /// W6 external kinematic constraint for BallState.Controlled. Outfield control is at foot/ground
+        /// height. A goalkeeper carry preserves claim/contact height rather than inventing a new hand-height
+        /// tuning constant; x/y follow the live keeper. Existing BallState + holder state is sufficient.
+        /// </summary>
+        private void DriveControlledBallToPossessor()
+        {
+            int holder = _possessingAgentId;
+            if (_ball.State != BallStateType.Controlled
+                || holder < 0 || holder >= MatchEngineConstants.SQUAD_SIZE)
+            {
+                return;
+            }
+
+            AgentState carrier = _agents[holder];
+
+            // W6 review closure: Agent Movement deliberately permits a small exterior safety buffer,
+            // but a goalkeeper physically controlling the ball may not carry that attached ball through
+            // the goal plane he defends. Enforce the composition invariant at the sole Controlled-ball
+            // attachment funnel so every acquisition path is covered before Resolve adjudicates a goal.
+            if (_isGoalkeeper[holder])
+            {
+                int teamId = _teamIds[holder];
+                float ownGoalX = teamId == 0 ? 0.0f : MatchEngineConstants.PITCH_LENGTH_M;
+                bool behindOwnGoalLine = teamId == 0
+                    ? carrier.Position.x < ownGoalX
+                    : carrier.Position.x > ownGoalX;
+
+                if (behindOwnGoalLine)
+                {
+                    carrier.Position = new Vector2(ownGoalX, carrier.Position.y);
+
+                    bool movingFurtherOut = teamId == 0
+                        ? carrier.Velocity.x < 0.0f
+                        : carrier.Velocity.x > 0.0f;
+                    if (movingFurtherOut)
+                    {
+                        carrier.Velocity = new Vector2(0.0f, carrier.Velocity.y);
+                    }
+
+                    // Keep Agent Movement recovery coherent with this host-owned correction;
+                    // otherwise a later safety recovery could restore the illegal pre-clamp state.
+                    carrier.Speed = carrier.Velocity.magnitude;
+                    carrier.LastValidPosition = carrier.Position;
+                    carrier.LastValidVelocity = carrier.Velocity;
+                    _agents[holder] = carrier;
+                }
+            }
+
+            Vector2 holderPos = carrier.Position;
+            float z = _isGoalkeeper[holder]
+                ? Mathf.Max(_ball.Position.z, MatchEngineConstants.BALL_REST_HEIGHT_M)
+                : MatchEngineConstants.BALL_REST_HEIGHT_M;
+
+            _ball.Position = new Vector3(holderPos.x, holderPos.y, z);
+            _ball.Velocity = Vector3.zero;
+            _ball.AngularVelocity = Vector3.zero;
+            BallPhysicsCore.ValidatePhysicsState(ref _ball);
+            _ball.LastValidPosition = _ball.Position;
+            _ball.LastValidVelocity = Vector3.zero;
+        }
+
+        /// <summary>
         /// Releases possession from <paramref name="agentId"/> when it kicks the ball (Option B: the ball
         /// leaves Controlled at ApplyKick). Authoritative possession transitions are finalized at C4; this
         /// keeps the executor adapters' IsBallPossessedBy honest so a re-entrant CONTACT cannot re-kick.
@@ -8388,6 +8519,7 @@ namespace TacticalDirector.MatchEngine
             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTime)
             {
                 BallCollision.ApplyKick(ref _engine._ball, velocity, spin, agentId, matchTime, logger: null);
+                _engine.ReleasePossessionOnKick(agentId);
 
                 // ERR-012-011 — the same general rule: any agent striking the ball ends the previous
                 // pass. This adapter carries #10's headers and #11's parry / deflect / spill, and a
@@ -8396,7 +8528,7 @@ namespace TacticalDirector.MatchEngine
                 _engine.ClearPassInFlight();
             }
 
-            public void SetPossessor(int agentId) => _engine._possessingAgentId = agentId;
+            public void SetPossessor(int agentId) => _engine.TakeControlledPossession(agentId);
 
             /// <summary>ERR-011-008 — the ball-side half of #11 §3.5.2's claim. Writes only
             /// <c>_ball</c> (already serialized); no ball-state-machine transition, no RNG draw, no
@@ -9579,5 +9711,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | also requires live LOS. RefreshGkAgentIds moved to Resolve entry after |
 // |         |            |        | pending substitutions, removing deflection-conditional ResetSlot timing.|
 // | 1.75    | 2026-09-14 | —      | W5: subscribe to PassAttemptEvent at boot, route CONTACT events to the opposing #13 ring, and append/restore each ring latest event in snapshot v22; no RNG or draw-order change. |
+// | 1.79    | 2026-09-15 | —      | W6 review closure: the Controlled attachment funnel constrains goalkeeper carriers |
+// |         |            |        | at their defended goal plane before ball attachment / Resolve; no schema/RNG change. |
+// | 1.78    | 2026-09-14 | —      | W6 review P2: tackle cooldown ages before the physical-carrier gate, so loose/restart |
+// |         |            |        | strides cannot freeze elapsed cooldown time; test-only staging/invocation seams added. |
+// | 1.77    | 2026-09-14 | —      | W6: genuine open-play possession enters BallState.Controlled, follows the holder, |
+// |         |            |        | and exits explicitly on non-kick release; restart-taker designation remains       |
+// |         |            |        | Stationary. No snapshot-schema or RNG change.                                     |
 // | 1.76    | 2026-09-14 | —      | ERR-013-011: FillPressingSnapshot carries the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
 #endregion
