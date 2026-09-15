@@ -1,0 +1,53 @@
+name: Fix PR407 project-reference reconciliation
+
+on:
+  push:
+    branches:
+      - codex/d5-transfers-t0
+    paths:
+      - .github/workflows/fix-pr407-project-reference.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore post-PR400 issue-count paragraph
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+
+          path = Path("docs/agent-guides/project-reference.md")
+          cur = path.read_text()
+          main = subprocess.check_output(
+              ["git", "show", "origin/main:docs/agent-guides/project-reference.md"],
+              text=True,
+          )
+
+          cur_start = cur.index("**24 active** / **54 archived**.")
+          cur_end = cur.index("\n\n- **`check_drift.sh`", cur_start)
+          main_start = main.index("**25 active** / **54 archived**.")
+          main_end = main.index("\n\n- **`check_drift.sh`", main_start)
+
+          path.write_text(cur[:cur_start] + main[main_start:main_end] + cur[cur_end:])
+          PY
+
+          rm .github/workflows/fix-pr407-project-reference.yml
+          git add -A
+          python3 tools/doc-consistency-check.py --repo .
+          python3 tools/assembly-tier-check.py --repo .
+          git commit -m "docs: preserve PR400 project-reference status"
+          git push origin HEAD:codex/d5-transfers-t0
