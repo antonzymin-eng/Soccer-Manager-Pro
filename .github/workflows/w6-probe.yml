@@ -31,71 +31,50 @@ jobs:
                   raise SystemExit('header anchor count != 1')
               text = text.replace(created, created + header, 1)
 
-          old = '''            Vector2 holderPos = _agents[holder].Position;
-            float z = _isGoalkeeper[holder]
-                ? Mathf.Max(_ball.Position.z, MatchEngineConstants.BALL_REST_HEIGHT_M)
-                : MatchEngineConstants.BALL_REST_HEIGHT_M;
-
-            _ball.Position = new Vector3(holderPos.x, holderPos.y, z);
-            _ball.Velocity = Vector3.zero;
-            _ball.AngularVelocity = Vector3.zero;
-            BallPhysicsCore.ValidatePhysicsState(ref _ball);
-            _ball.LastValidPosition = _ball.Position;
-            _ball.LastValidVelocity = Vector3.zero;
-'''
-          new = '''            AgentState carrier = _agents[holder];
-
-            // W6 review closure: Agent Movement deliberately permits a small exterior safety buffer,
-            // but a goalkeeper physically controlling the ball may not carry that attached ball through
-            // the goal plane he defends. Enforce the composition invariant at the sole Controlled-ball
-            // attachment funnel so every acquisition path is covered before Resolve adjudicates a goal.
-            if (_isGoalkeeper[holder])
-            {
-                int teamId = _teamIds[holder];
-                float ownGoalX = teamId == 0 ? 0.0f : MatchEngineConstants.PITCH_LENGTH_M;
-                bool behindOwnGoalLine = teamId == 0
-                    ? carrier.Position.x < ownGoalX
-                    : carrier.Position.x > ownGoalX;
-
-                if (behindOwnGoalLine)
-                {
-                    carrier.Position = new Vector2(ownGoalX, carrier.Position.y);
-
-                    bool movingFurtherOut = teamId == 0
-                        ? carrier.Velocity.x < 0.0f
-                        : carrier.Velocity.x > 0.0f;
-                    if (movingFurtherOut)
-                    {
-                        carrier.Velocity = new Vector2(0.0f, carrier.Velocity.y);
-                    }
-
-                    // Keep Agent Movement's recovery checkpoint coherent with this host-owned correction;
-                    // otherwise a later safety recovery could restore the illegal pre-clamp position.
-                    carrier.Speed = carrier.Velocity.magnitude;
-                    carrier.LastValidPosition = carrier.Position;
-                    carrier.LastValidVelocity = carrier.Velocity;
-                    _agents[holder] = carrier;
-                }
-            }
-
-            Vector2 holderPos = carrier.Position;
-            float z = _isGoalkeeper[holder]
-                ? Mathf.Max(_ball.Position.z, MatchEngineConstants.BALL_REST_HEIGHT_M)
-                : MatchEngineConstants.BALL_REST_HEIGHT_M;
-
-            _ball.Position = new Vector3(holderPos.x, holderPos.y, z);
-            _ball.Velocity = Vector3.zero;
-            _ball.AngularVelocity = Vector3.zero;
-            BallPhysicsCore.ValidatePhysicsState(ref _ball);
-            _ball.LastValidPosition = _ball.Position;
-            _ball.LastValidVelocity = Vector3.zero;
-'''
-          if old in text:
-              if text.count(old) != 1:
+          anchor = '            Vector2 holderPos = _agents[holder].Position;\n'
+          replacement = (
+              '            AgentState carrier = _agents[holder];\n'
+              '\n'
+              '            // W6 review closure: Agent Movement deliberately permits a small exterior safety buffer,\n'
+              '            // but a goalkeeper physically controlling the ball may not carry that attached ball through\n'
+              '            // the goal plane he defends. Enforce the composition invariant at the sole Controlled-ball\n'
+              '            // attachment funnel so every acquisition path is covered before Resolve adjudicates a goal.\n'
+              '            if (_isGoalkeeper[holder])\n'
+              '            {\n'
+              '                int teamId = _teamIds[holder];\n'
+              '                float ownGoalX = teamId == 0 ? 0.0f : MatchEngineConstants.PITCH_LENGTH_M;\n'
+              '                bool behindOwnGoalLine = teamId == 0\n'
+              '                    ? carrier.Position.x < ownGoalX\n'
+              '                    : carrier.Position.x > ownGoalX;\n'
+              '\n'
+              '                if (behindOwnGoalLine)\n'
+              '                {\n'
+              '                    carrier.Position = new Vector2(ownGoalX, carrier.Position.y);\n'
+              '\n'
+              '                    bool movingFurtherOut = teamId == 0\n'
+              '                        ? carrier.Velocity.x < 0.0f\n'
+              '                        : carrier.Velocity.x > 0.0f;\n'
+              '                    if (movingFurtherOut)\n'
+              '                    {\n'
+              '                        carrier.Velocity = new Vector2(0.0f, carrier.Velocity.y);\n'
+              '                    }\n'
+              '\n'
+              '                    // Keep Agent Movement recovery coherent with this host-owned correction;\n'
+              '                    // otherwise a later safety recovery could restore the illegal pre-clamp state.\n'
+              '                    carrier.Speed = carrier.Velocity.magnitude;\n'
+              '                    carrier.LastValidPosition = carrier.Position;\n'
+              '                    carrier.LastValidVelocity = carrier.Velocity;\n'
+              '                    _agents[holder] = carrier;\n'
+              '                }\n'
+              '            }\n'
+              '\n'
+              '            Vector2 holderPos = carrier.Position;\n'
+          )
+          repaired_marker = 'bool behindOwnGoalLine = teamId == 0'
+          if repaired_marker not in text:
+              if text.count(anchor) != 1:
                   raise SystemExit('attachment seam anchor count != 1')
-              text = text.replace(old, new, 1)
-          elif 'AgentState carrier = _agents[holder];' not in text or 'bool behindOwnGoalLine = teamId == 0' not in text:
-              raise SystemExit('attachment seam is neither original nor already repaired')
+              text = text.replace(anchor, replacement, 1)
 
           version_anchor = '// | 1.78    | 2026-09-14 | —      | W6 review P2: tackle cooldown ages before the physical-carrier gate, so loose/restart |\n'
           version = (
