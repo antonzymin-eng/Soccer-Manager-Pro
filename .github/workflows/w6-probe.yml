@@ -32,7 +32,7 @@ jobs:
           state_anchor = '''                // ── Reset dive launch frame when no longer in dive states ─────────────
                 GoalkeeperState newState = _states[gkIndex];
                 if (newState != GoalkeeperState.Diving && newState != GoalkeeperState.Airborne)
-'''
+          '''
           state_replacement = '''                // ── Reset dive launch frame when no longer in dive states ─────────────
                 GoalkeeperState newState = _states[gkIndex];
 
@@ -50,58 +50,56 @@ jobs:
                 }
 
                 if (newState != GoalkeeperState.Diving && newState != GoalkeeperState.Airborne)
-'''
+          '''
+          state_anchor = state_anchor[:-10]
+          state_replacement = state_replacement[:-10]
           if 'ConstrainHandsOnBallToOwnGoalPlane(ref heldState, gkIndex);' not in text:
               if state_anchor not in text:
                   raise SystemExit('state-transition anchor missing')
               text = text.replace(state_anchor, state_replacement, 1)
 
-          helper_anchor = '''        // Lateral dive axis is Y (touchline-to-touchline): the goal mouth spans Y, so the keeper
-'''
-          helper = '''        /// <summary>
-        /// Constrains only a keeper whose resolved physics state is HandsOnBall to the goal plane he
-        /// defends. The general Agent Movement exterior buffer remains unchanged; loose/kicked-ball
-        /// goal adjudication remains unchanged. Keeper index is team id (KD-1): 0 defends x=0, 1 x=L.
-        /// </summary>
-        private static void ConstrainHandsOnBallToOwnGoalPlane(ref AgentState agentState, int gkIndex)
-        {
-            float ownGoalX = gkIndex == 0 ? 0.0f : GoalkeeperConstants.PitchLengthM;
-            bool behindOwnGoalLine = gkIndex == 0
-                ? agentState.Position.x < ownGoalX
-                : agentState.Position.x > ownGoalX;
-
-            if (!behindOwnGoalLine)
-            {
-                return;
-            }
-
-            agentState.Position = new Vector2(ownGoalX, agentState.Position.y);
-
-            bool movingFurtherOut = gkIndex == 0
-                ? agentState.Velocity.x < 0.0f
-                : agentState.Velocity.x > 0.0f;
-            if (movingFurtherOut)
-            {
-                agentState.Velocity = new Vector2(0.0f, agentState.Velocity.y);
-            }
-
-            agentState.Speed = agentState.Velocity.magnitude;
-            agentState.LastValidPosition = agentState.Position;
-            agentState.LastValidVelocity = agentState.Velocity;
-        }
-
-'''
+          helper_anchor = '        // Lateral dive axis is Y (touchline-to-touchline): the goal mouth spans Y, so the keeper\n'
+          helper = (
+              '        /// <summary>\n'
+              '        /// Constrains only a keeper whose resolved physics state is HandsOnBall to the goal plane he\n'
+              '        /// defends. The general Agent Movement exterior buffer remains unchanged; loose/kicked-ball\n'
+              '        /// goal adjudication remains unchanged. Keeper index is team id (KD-1): 0 defends x=0, 1 x=L.\n'
+              '        /// </summary>\n'
+              '        private static void ConstrainHandsOnBallToOwnGoalPlane(ref AgentState agentState, int gkIndex)\n'
+              '        {\n'
+              '            float ownGoalX = gkIndex == 0 ? 0.0f : GoalkeeperConstants.PitchLengthM;\n'
+              '            bool behindOwnGoalLine = gkIndex == 0\n'
+              '                ? agentState.Position.x < ownGoalX\n'
+              '                : agentState.Position.x > ownGoalX;\n\n'
+              '            if (!behindOwnGoalLine)\n'
+              '            {\n'
+              '                return;\n'
+              '            }\n\n'
+              '            agentState.Position = new Vector2(ownGoalX, agentState.Position.y);\n\n'
+              '            bool movingFurtherOut = gkIndex == 0\n'
+              '                ? agentState.Velocity.x < 0.0f\n'
+              '                : agentState.Velocity.x > 0.0f;\n'
+              '            if (movingFurtherOut)\n'
+              '            {\n'
+              '                agentState.Velocity = new Vector2(0.0f, agentState.Velocity.y);\n'
+              '            }\n\n'
+              '            agentState.Speed = agentState.Velocity.magnitude;\n'
+              '            agentState.LastValidPosition = agentState.Position;\n'
+              '            agentState.LastValidVelocity = agentState.Velocity;\n'
+              '        }\n\n'
+          )
           if 'private static void ConstrainHandsOnBallToOwnGoalPlane' not in text:
               if helper_anchor not in text:
                   raise SystemExit('helper anchor missing')
               text = text.replace(helper_anchor, helper + helper_anchor, 1)
 
           version_anchor = '// | 1.14 | 2026-09-12 | — | W4 review closure: caller contract now states OnThreatArmed anchors a      |\n'
-          version = '''// | 1.15 | 2026-09-15 | — | W6 review closure: after each 60 Hz physics transition, HandsOnBall keepers |
-// |      |            |   | are constrained at the defended goal plane before MatchEngine attaches the  |
-// |      |            |   | Controlled ball. General movement buffer / goal adjudication unchanged; no   |
-// |      |            |   | new state, tuning, schema or RNG surface.                                    |
-'''
+          version = (
+              '// | 1.15 | 2026-09-15 | — | W6 review closure: after each 60 Hz physics transition, HandsOnBall keepers |\n'
+              '// |      |            |   | are constrained at the defended goal plane before MatchEngine attaches the  |\n'
+              '// |      |            |   | Controlled ball. General movement buffer / goal adjudication unchanged; no   |\n'
+              '// |      |            |   | new state, tuning, schema or RNG surface.                                    |\n'
+          )
           if '// | 1.15 | 2026-09-15' not in text:
               if version_anchor not in text:
                   raise SystemExit('version-history anchor missing')
