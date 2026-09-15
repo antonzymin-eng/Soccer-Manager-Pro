@@ -97,7 +97,8 @@ the rendered pitch. Author the two stroked slots as a ring/annulus mesh, or a ho
 M26: **a stroked slot's stroke thickness is authored as a FRACTION of the prefab's unit radius, and
 is therefore multiplied by that slot's actual metre radius at runtime.** `FlatGroundScale` assigns a
 UNIFORM scale on both ground axes, so nothing in the prefab keeps a stroke at a fixed metre width —
-scale the whole prefab and the stroke scales with it. Author against these fractions:
+scale the whole prefab and the stroke scales with it. **For both stroked slots, the unit radius is the
+OUTER radius: author the stroke inward, with its outer edge at radius 1.0.** Author against these fractions:
 
 | Stroked slot | Fraction of unit radius | Working |
 |---|---|---|
@@ -131,8 +132,8 @@ Every slot, whichever clause it follows:
 - **The agent marker's material must expose the colour property named by the
   `_colorPropertyName` inspector field** (clause 3; default `"_Color"`, the
   Built-in Render Pipeline standard shader's name — URP's Lit/SimpleLit/Unlit
-  shaders expose `"_BaseColor"` instead, and this repo's `GraphicsSettings.asset`
-  / `Packages/manifest.json` do not agree on which pipeline resolves). Checked
+  shaders expose `"_BaseColor"` instead; this project renders with the Built-in
+  pipeline, so keep `"_Color"` unless a deliberate URP migration lands). Checked
   per marker in `BuildAgentObjects`, since only an instantiated prefab's
   material can answer this — `SetColor` against a missing property succeeds
   and changes nothing, so a mismatch would otherwise render both teams, the

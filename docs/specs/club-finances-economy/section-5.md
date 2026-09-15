@@ -1,11 +1,14 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.6 — ERR-030-051/T2b: boundary atomicity contract corrected and live lifecycle evidence named)
+**Last Updated:** September 11, 2026 (v0.9 — ERR-040-003 review: traceability IDs, gate-order lock, and negative-revenue restore coherence)
+**Last Updated (prior):** September 11, 2026 (v0.8 — T3a lifecycle acceptance: settlement resets current-season revenue and carries FFP window)
+**Last Updated (prior):** September 11, 2026 (v0.7 — T3a daily-revenue identity, mutation-isolation and overflow acceptance locks)
+**Last Updated (prior):** September 11, 2026 (v0.6 — ERR-030-051/T2b: boundary atomicity contract corrected and live lifecycle evidence named)
 **Last Updated (prior):** September 11, 2026 (v0.5 — T-FN-LIFE-001 coverage split recorded across T2a/T2b)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board-scaling coverage)
 **Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board failure coverage)
-**Version:** 0.6
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -28,7 +31,8 @@ Tests land at T-phase; this is the acceptance contract.
   one world seed produces byte-identical `ClubFinances` for every club on both runs.
 - **T-FN-DET-004** — No RNG stream registered at minimal: the serialized finance block contains no
   `RngCursor`/`actionOrdinal` field (grep/schema-shape assertion), and `_RESERVED_0x29_`/91 is not consumed
-  by any draw (KD-2/FR-FN-008/009).
+  by any draw (KD-2/FR-FN-008/009). T3a remains covered by this same lock because its daily accounting
+  primitive is still draw-free; promotion waits for the first stochastic sponsorship-variance consumer.
 - **T-FN-DET-005** — `SettleFinances` purity: called twice with identical inputs (`prior`,
   `finalTablePosition`, `clubCount`, `board`) yields byte-identical output `ClubFinances` (no hidden state,
   no clock read).
@@ -55,6 +59,12 @@ Tests land at T-phase; this is the acceptance contract.
   minimal) leaves every existing stream's cursor byte-identical across a full season run with and without
   #40 active (stream independence) — trivially true at Stage 2 since no stream exists yet, the same test
   class as #41's `T-MD-NEU-003`.
+- **T-FN-NEU-004** — For a **coherent prior finance value**, T3a
+  `AccrueDailyRevenue(..., deepRevenueEnabled:false)` returns the complete `ClubFinances` value
+  field-identically and does not interpret deep-only revenue amounts; even negative placeholder amounts on
+  the disabled path cannot change state or throw. Canonical prior-state coherence is validated **before**
+  the gate, so an incoherent prior (e.g. negative `TransferBudget`) still fails loud with the feature off
+  (KD-8 / §3.4.1 / ERR-040-003).
 
 ## 5.4 Season-boundary ordering (KD-6)
 
@@ -79,7 +89,7 @@ Tests land at T-phase; this is the acceptance contract.
   `WageBillAggregate` only; a season's worth of `ApplyTransaction` calls leaves both ceilings exactly as
   `SettleFinances` last set them — FR-FN-004/016.
 
-## 5.6 Ledger correctness & integer currency
+## 5.6 Ledger correctness, T3a revenue & integer currency
 
 - **T-FN-LEDGER-001** — `ApplyTransaction(Debit, TransferFee)` decreases `Balance` by `Amount` and leaves
   `WageBillAggregate` unchanged.
@@ -91,14 +101,28 @@ Tests land at T-phase; this is the acceptance contract.
   throw (FR-FN-011's integer posture does not imply a non-negativity constraint on `Balance`).
 - **T-FN-LEDGER-004** — A Credit wage-reversal larger than the current `WageBillAggregate` fails loud (F1)
   rather than driving the aggregate negative (FR-FN-016).
+- **T-FN-REV-001** — Enabled T3a `AccrueDailyRevenue` adds `sponsorshipRevenue + matchdayRevenue` exactly
+  once to both `Balance` and `SeasonRevenueAccrued`, while `TransferBudget`, `WageBudget`,
+  `WageBillAggregate`, and `FfpBalanceWindow` remain field-identical (FR-FN-003 / §3.4.1).
+- **T-FN-REV-002** — With T3a enabled, a negative sponsorship or matchday component fails loud (F8) rather
+  than turning the revenue path into an implicit expenditure channel.
+- **T-FN-REV-003** — `SettleFinances` given a non-zero `prior.SeasonRevenueAccrued` MUST return
+  `SeasonRevenueAccrued = 0`, while carrying `WageBillAggregate` and `FfpBalanceWindow` field-identically.
+  This closes the current-season accumulator at the boundary without inventing the future FFP-window rule;
+  the Stage-2 zero-accumulator case remains exactly behaviour-neutral (FR-FN-005 / §3.1).
 - **T-FN-INT-001** — Every `ClubFinances`/`FinanceTransaction`/`BoardModifier` field is an integer type; no
-  accounting formula (`PrizeMoneyForPosition`, the budget-ceiling projection, `ApplyTransaction`) introduces
-  a float — a static/reflection-level assertion mirroring #41's integer posture (FR-FN-011).
+  accounting formula (`PrizeMoneyForPosition`, the budget-ceiling projection, `ApplyTransaction`,
+  `AccrueDailyRevenue`) introduces a float — a static/reflection-level assertion mirroring #41's integer
+  posture (FR-FN-011).
 - **T-FN-INT-002** — Board scaling MUST not overflow before the upper budget cap can apply. A base ceiling
   derived from accepted signed-Int32 tuning extremes and a positive non-identity board multiplier that would
   overflow a direct `baseCeiling * multiplier` MUST return `CLUB_FINANCES_BUDGET_CEILING_MAX` without an
   `OverflowException`; a representative below-cap case MUST retain the exact integer-floor result from
   `baseCeiling * multiplier / PERMILLE_DENOM` (FR-FN-011, §3.1).
+- **T-FN-INT-003** — T3a independently locks every checked-arithmetic failure site: overflow while summing
+  the two revenue components, overflow adding a safe daily total to `Balance`, and overflow adding a safe
+  daily total to `SeasonRevenueAccrued` each MUST throw `OverflowException` without exposing partial state
+  (F9 / FR-FN-011 / §3.4.1).
 
 ## 5.7 FFP/board seam & fail-loud
 
@@ -109,8 +133,10 @@ Tests land at T-phase; this is the acceptance contract.
   FR-FN-018/F4. The clamp is not used to legitimize an invalid board multiplier.
 - **T-FN-FAIL-001** — Bad `FINANCE_SAVE_FORMAT_VERSION` → fail loud (F3).
 - **T-FN-FAIL-002** — Out-of-bounds length prefix / trailing bytes → fail loud (F5).
-- **T-FN-FAIL-003** — `TransferBudget` or `WageBudget` negative reaching a consuming seam (e.g. a corrupted
-  restore) → fail loud (F1).
+- **T-FN-FAIL-003** — `TransferBudget`, `WageBudget`, `WageBillAggregate`, or T3a
+  `SeasonRevenueAccrued` negative reaching a consuming/restore seam → fail loud (F1). The save-codec
+  regression mutates an otherwise-canonical finance block to a negative current-season revenue value and
+  proves restore rejects it.
 - **T-FN-FAIL-004** — `ApplyTransaction` with a negative `Amount`, or an out-of-contract `Kind`/`LineItem`
   byte on restore, → fail loud (F2).
 - **T-FN-FAIL-005** — `finalTablePosition` outside `[1, clubCount]` passed to `SettleFinances` → fail loud
@@ -124,33 +150,33 @@ Tests land at T-phase; this is the acceptance contract.
 | FR | Covering test(s) |
 |---|---|
 | FR-FN-001 | T-FN-ORD-003 |
-| FR-FN-002 | T-FN-DET-001, T-FN-LIFE-001 |
-| FR-FN-003 | T-FN-BOUND-001, T-FN-BOUND-003 |
+| FR-FN-002 | T-FN-DET-001, T-FN-LIFE-001, T-FN-FAIL-003 |
+| FR-FN-003 | T-FN-BOUND-003, T-FN-REV-001 |
 | FR-FN-004 | T-FN-BOUND-003 |
-| FR-FN-005 | (worked-example locked, §3.5) |
+| FR-FN-005 | T-FN-REV-003, worked-example lock (§3.5) |
 | FR-FN-006 | T-FN-NEU-001 |
 | FR-FN-007 | T-FN-FAIL-005 |
 | FR-FN-008 | T-FN-DET-004, T-FN-DET-005 |
 | FR-FN-009 | T-FN-DET-004 |
-| FR-FN-010 | (deferred to T3 — recorded in §7) |
-| FR-FN-011 | T-FN-INT-001, T-FN-INT-002 |
+| FR-FN-010 | (deferred to stochastic T3 slice — recorded in §7) |
+| FR-FN-011 | T-FN-INT-001, T-FN-INT-002, T-FN-INT-003 |
 | FR-FN-012 | T-FN-BOUND-001 |
 | FR-FN-013 | T-FN-BOUND-002 |
 | FR-FN-014 | T-FN-FAIL-004 |
 | FR-FN-015 | T-FN-NEU-002 |
 | FR-FN-016 | T-FN-LEDGER-002, T-FN-LEDGER-004 |
-| FR-FN-017 | (deferred to T3 — recorded in §7) |
+| FR-FN-017 | (deferred to later T3 FFP slice — recorded in §7) |
 | FR-FN-018 | T-FN-MOD-001, T-FN-FAIL-BOARD-001 |
 | FR-FN-019 | (structural — no #45 interface exists to test against; asserted by assembly-reference absence, T-FN-BOUND-002-class) |
 | FR-FN-020 | T-FN-FAIL-001 |
-| FR-FN-021 | T-FN-DET-001 |
-| FR-FN-022 | T-FN-FAIL-001, T-FN-FAIL-002 |
+| FR-FN-021 | T-FN-DET-001, T-FN-FAIL-003 |
+| FR-FN-022 | T-FN-FAIL-001, T-FN-FAIL-002, T-FN-FAIL-003 |
 | FR-FN-023 | T-FN-ORD-001 |
 | FR-FN-024 | T-FN-DET-002 |
 | FR-FN-025 | T-FN-LIFE-001, T-FN-FAIL-CLUB-001 |
 | FR-FN-026 | T-FN-NEU-002 (`FinancesViewModel` shape locked alongside the identity state) |
 | FR-FN-027 | T-FN-BOUND-002 |
-| FR-FN-028 | T-FN-NEU-001, T-FN-NEU-002, T-FN-NEU-003 |
+| FR-FN-028 | T-FN-NEU-001, T-FN-NEU-002, T-FN-NEU-003, T-FN-NEU-004 |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -161,4 +187,7 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.4 | 2026-09-07 | — | **PR #363 Codex correction.** Adds T-FN-INT-002 to lock overflow-safe pre-cap board scaling and exact below-cap integer-floor semantics. |
 | 0.5 | 2026-09-11 | — | **PR #392 review follow-up.** T-FN-LIFE-001 remains one acceptance id, but its executable evidence is phase-split: T2a covers canonical bootstrap/universe coherence; T2b must cover unchanged entry cardinality across season rolls after live #30 wiring exists. |
 | 0.6 | 2026-09-11 | — | **ERR-030-051 / T2b executable-contract correction.** T-FN-DET-002 removes the unsupported mid-call save premise and instead locks synchronous all-or-nothing boundary semantics; T-FN-LIFE-001 names the live across-roll regression evidence. |
+| 0.7 | 2026-09-11 | OpenAI | **T3a acceptance back-prop.** Adds identity-off, revenue-field isolation, negative-component and all three overflow-site locks; updates FR-FN-003/011/028 traceability while keeping stochastic FR-FN-010 and FFP FR-FN-017 deferred. |
+| 0.8 | 2026-09-11 | OpenAI | **T3a lifecycle acceptance.** Adds T-FN-REV-003 for boundary reset of current-season revenue while carrying the future FFP window; FR-FN-005 traceability now includes that executable lock. |
+| 0.9 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Every new T3a acceptance ID is now cited by executable test summaries; T-FN-NEU-004 pins coherence-before-gate ordering, and T-FN-FAIL-003 expands to reject negative restored `SeasonRevenueAccrued`. |
 #endregion
