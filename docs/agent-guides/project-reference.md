@@ -16,17 +16,16 @@
 
 **Specifications:** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved.** The APPROVED set is the Stage-0 twenty (all APPROVED May 18, 2026) plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, #40–#45, #49). The last ten — #53, #35, #46, #36, #54, #47, #48, #50, #51, #39 — were promoted **and approved** on July 27, 2026, emptying the pre-promotion backlog and closing the specification phase entirely. The only candidate without a spec is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration. **Approval approves the forward design, not an implementation** — see the live gap below, which is now the project's dominant fact.
 
-**Implementation:** `src/` holds **35 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`; no engine wiring yet), giving it a `src/` assembly for the first time.
+**Implementation:** `src/` holds **37 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`; no engine wiring yet), giving it a `src/` assembly for the first time.
 
-**The live gap is now the project's dominant fact.** With the specification phase closed, **19 of the 53
-APPROVED specs have no `src/` assembly at all** — the 9 listed below plus the ten approved on July 27.
-(It was 22 until August 5, 2026, when **#29 Training and #41 Injuries & Medical** landed T0 assemblies
-together, and 20 until August 13, 2026, when **#44 Discipline & Suspensions** landed `src/discipline/`.)
+**The live gap is now the project's dominant fact.** With the specification phase closed, **17 of the 53
+APPROVED specs have no `src/` assembly at all**. The count fell from 19 after **#40 Club Finances** landed
+`src/club-finances/` on September 6, 2026 and now **#31 Transfers** lands `src/transfers/` in PR #407.
 The specification frontier runs a long way ahead of the implementation, which is a deliberate posture
 (specify before coding), and it makes one habit dangerous: **"the spec is APPROVED" now says nothing
-whatsoever about whether code exists.** It is true of ~36% of the registry.
+whatsoever about whether code exists.** It is true of ~32% of the registry.
 
-**The 19 with no assembly:** #31 Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #42 Youth, #43 Competition Structure, #45 Board, #49 Localization — plus the ten approved on July 27: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54. (#44 Discipline was on this list until `src/discipline/` landed on August 13, 2026; the figure and the list are corrected here on September 3, 2026. The authoritative pair is `docs/specs/SPEC_INDEX.md` and `docs/tracking/path-to-playable-roadmap.md`.)
+**The 17 with no assembly:** #32 Scouting, #33 Personalities/Morale, #34 Staff, #42 Youth, #43 Competition Structure, #45 Board, #49 Localization — plus the ten approved on July 27: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54. (#31 and #40 have now left this list; the authoritative pair is `docs/specs/SPEC_INDEX.md` and `docs/tracking/path-to-playable-roadmap.md`.)
 
 Sequencing for closing the gap is in `docs/tracking/path-to-playable-roadmap.md`, which is now the
 project's live critical path. **Check `src/` before assuming a consumer is available** — the assembly map
@@ -55,7 +54,7 @@ Soccer-Manager-Pro/
 │   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 53 folders, all APPROVED
 │   │   └── <spec-folder>/          ← One folder per spec; see SPEC_INDEX.md for the number↔folder map
 │   └── tracking/                   ← Progress, error log, file manifest, roadmaps, design supplements
-├── src/                            ← Implementation (coding began May 19, 2026) — 35 production assemblies
+├── src/                            ← Implementation (coding began May 19, 2026) — 37 production assemblies
 │   ├── CLAUDE.md                   ← Coding guide (read before writing any code)
 │   └── <assembly>/                 ← See the assembly map below
 └── tools/
@@ -84,6 +83,8 @@ Do not infer the mapping from the folder name:
 | `match-analytics` | **#37** Match Analytics & Statistics | T0 only — value types + `XgLocationModel`; no engine wiring, no aggregator. Presentation-layer derivation: **no sim assembly may reference it** (guarded mechanically) |
 | `ui-framework` | **#38** UI / Client Framework | T0 substrate only; no screens, no UGUI binding |
 | `discipline` | **#44** Discipline / Suspensions | C1+C2 (Aug 13, 2026) — the 35th production assembly: per-player card ledger, live suspension enforcement in selection. #44 T3 (the #30 quick-sim card synthesis) remains open |
+| `club-finances` | **#40** Club Finances & Economy | T0 + T1a/T1b landed; deterministic integer finance state and `FNCE` season-save block. T2 runtime bootstrap/settlement remains deferred. |
+| `transfers` | **#31** Transfers, Contracts & Negotiation | T0 in PR #407: deterministic valuation + positional scarcity, synchronous negotiation band, contract/window state and atomic manager `SubmitBid`; T1 save, T2 production roster/season wiring and T3 deep tier remain deferred. |
 | `performance-optimization`, `testing-strategy` | #18, #19 | Infrastructure only — no game-loop types |
 | `project-constants` | — | Shared `[GT]` config; read-only by all |
 | `match-engine` | — | **Composition root.** Not a numbered spec; governed by `docs/tracking/match-engine-design.md` |

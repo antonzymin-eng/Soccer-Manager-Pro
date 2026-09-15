@@ -1,88 +1,74 @@
 # Transfers, Contracts & Negotiation #31 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** September 14, 2026 (v0.6 — PR #407 residual review cleanup: T2 hook regression pinned)
+**Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction to T0 public API and valuation contract; prior v0.4 T0 review close-out, v0.3 T0 authored, v0.2 AR-3, v0.1 initial)
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
 
 ## 7.1 T-phase implementation plan (post-APPROVED)
 
-- **T0** — `TacticalDirector.Transfers` assembly: value types (`Contract`, `Offer`, `NegotiationOutcome`,
-  `TransferWindow`, `ClubTransferState`, `TransfersState`), the deterministic `ValuePlayerPermille` /
-  `EvaluateOffer` / `IsWindowOpen`, `SubmitBid` (the atomic validate-all-first pipeline), `TransfersConstants`.
-  Behaviour-neutral by construction (KD-8 — no autonomous producer; a bid is a manager command).
-- **T1** — `TransfersSaveCodec` (`TRANSFERS_SAVE_FORMAT_VERSION` = 1) + composition into #30's season save
-  (the `SeasonSaveCodec` sub-blob; #30's outer `SEASON_SAVE_FORMAT_VERSION` bump coordinated here — exact
-  version TBD, §4.4). Fail-loud gates (F3).
-- **T2** — Wire the world-tick step at #30's **new transfers slot** (ERR-030-004, declared at approval — §8);
-  **build the #30 mid-season `RequestRosterCommit` entry point + `DispatchRosterMoveHook`** (KD-7 — a new #30
-  capability; #28/#33 subscribe their own keyed migration; recorded ERR-030-005/T2 in #30). Expose the
-  read-only transfer/contract accessors later consumers need. **No RNG stream registered (draw-free).**
-- **T3** — Deep tier (each defaulting to its Stage-2 identity via `deepTransfersEnabled`): the **club-need
-  signal** (`needMult`, positional scarcity — the first deep multiplicative bias on the identity); the **#33
-  personality-modulated valuation** (`personalityMult` — requires a #33 back-prop for the trait read surface,
-  §7.3); the **#28 CA/PA valuation refinement**; the **wage-bill producer** (the deferred
-  `{Debit/Credit,PlayerWage,…}` posts + a `WageBudget` affordability gate, landing with a #40 back-prop relaxing
-  FR-FN-015); **clauses / loans / wage-structures** (appended `Contract` fields); **multi-day in-flight
-  negotiation** (the tick-order slot fills here); **stochastic rival-AI-club bidding** (the first draw site —
-  promotes `DOMAIN_TAG_TRANSFERS = 0x23` / `SubsystemOrdinals.Transfers = 85`, spec-text-first, ERR-016, keyed
-  on `(clubId, playerId, worldDay, purpose)`); and the **#34 staff-influence seam** (a non-identity `staffMult`
-  producer).
+- **T0 — IMPLEMENTED IN PR #407, pending merge.** `TacticalDirector.Transfers` production/test assemblies;
+  value types (`Contract`, `Offer`, `NegotiationOutcome`, `TransferSubmissionOutcome`, `TransferWindow`,
+  `ClubTransferState`, `TransfersState`); deterministic currency-returning `ValuePlayer`/`CounterpartyValue`;
+  always-on #27 positional stock measured prospectively with the negotiated player excluded; synchronous
+  accepted/counter/rejected negotiation; typed `InsufficientBudget`/`SquadFull` command results; inclusive
+  `IsWindowOpen`; and `SubmitBid` with validate/preflight-first semantics. `ITransferRosterPort` remains the
+  consumer-owned read/preflight/commit seam for the already-specified #30 T2 producer. T0 tests cover both buy
+  and sell producer preview/commit mismatch residuals while keeping local #31/#40 state untouched. No autonomous
+  producer, RNG stream, save codec, season-loop invocation, or production roster adapter lands in T0.
+- **T1** — `TransfersSaveCodec` (`TRANSFERS_SAVE_FORMAT_VERSION = 1`) + composition into #30's season save;
+  coordinate the outer `SEASON_SAVE_FORMAT_VERSION` bump and F3 gates.
+- **T2** — wire #30's transfers world-tick slot (ERR-030-004); build the production #30 adapter behind
+  `ITransferRosterPort` + `DispatchRosterMoveHook` (ERR-030-005); add genesis contract seeding,
+  season-boundary aging/reset, calendar-derived summer window, and production composition. The production
+  adapter MUST prove successful preview→commit is infallible and add the §5 T-TX-REKEY-005 integration lock:
+  hook dispatch occurs on managed↔external moves while #31's subscriber is observably a no-op during dispatch,
+  leaving explicit contract insert/remove to `SubmitBid`. No RNG stream.
+- **T3** — deep tier: #33 personality-modulated valuation, #28 CA/PA refinement, wage-bill producer and
+  `WageBudget` gate with #40 back-prop, clauses/loans/wage structures, multi-day negotiation, stochastic rival
+  bidding (first #31 draw site), and #34 staff influence.
 
 ## 7.2 Deferred (recorded, not built)
 
-- **Autonomous AI-club bidding.** Minimal is manager-initiated only; AI clubs proactively bidding without a
-  prompt needs the daily tick + stochastic target selection — the deep-tier first draw (KD-5). The tick-order
-  slot is declared now (reserve-ahead) but empty until this lands.
-- **Wage-bill economy.** Minimal posts **only** the transfer fee (FR-TX-005); the `PlayerWage` posts + a
-  `WageBudget` affordability gate are deep-tier, landing with a #40 back-prop relaxing FR-FN-015
-  (`WageBillAggregate ≡ 0` at Stage 2, "no #31 producer yet"). The negotiated wage is recorded on the
-  `Contract` meanwhile — durable, just not yet reflected in #40's wage liability.
-- **Club-need signal.** Minimal valuation is attributes+age only; `needMult` (positional scarcity) is a deep
-  multiplicative bias on the identity, defaulting to `1000‰` (KD-1).
-- **Contract free-agency / renewal / expiry warnings.** §3.7 removes an expired contract (the player becomes
-  un-contracted); re-signing, free-agency, and expiry-warning flows are deep.
-- **Agents / clauses / loans / wage structures.** Contracts carry wage + length at minimal; these are appended
-  `Contract` fields behind `deepTransfersEnabled` (FR-TX-015).
-- **The #33 personality-modulated valuation.** Minimal valuation is #27-attributes-only; personality is a
-  multiplicative bias added when #33's read accessors are consumed (KD-1). #33 §7.3 already names #31 a
-  read-only consumer.
-- **CA/PA-from-#28 valuation refinement.** Minimal rates on the #27 attribute mean; swapping in #28's CA is a
-  deep-tier input change on the same identity (no minimal #28 dependency).
-- **The #34 staff influence.** A `staffMult` routing seam defaulting to `1000‰` until #34 produces a value.
-- **Indexed/cached player search.** Minimal search is a linear scan; an index is a deep-tier performance
-  extension.
+- Autonomous AI-club bidding and stochastic target selection.
+- Wage-bill economics / `WageBudget` gating.
+- Contract free-agency, renewal and expiry-warning sequel flows.
+- Agents, clauses, loans and wage structures.
+- #33 personality and #28 CA/PA valuation refinements.
+- #34 staff influence.
+- Multi-day counter negotiation; T0 `CounterOffered` remains synchronous/no-state.
+- Indexed/cached player search.
+- `CommittedSpendThisWindow` reset/next-window mechanics, owned by T2 season-boundary/window wiring.
+- Production proof that #30 hook dispatch and #31 managed↔external no-op semantics coexist exactly as specified;
+  T0 can only test the #31 subscriber and fake-port contract separately.
 
 ## 7.3 Seam contracts recorded for downstream authors
 
-- **#40 (Club Finances):** #31 reads `AvailableTransferBudget` (`→ long`, the static `TransferBudget` field)
-  read-only and posts **only** through `ApplyTransaction`; it MUST NOT write `ClubFinances` fields or hold a
-  parallel cash ledger, and MUST own its own `committedSpendThisWindow` (FR-FN-004 gives #40 no such concept).
-  At minimal #31 posts **only** the `TransferFee` — it is **not** a wage producer, so #40's FR-FN-015
-  (`WageBillAggregate ≡ 0` at Stage 2) is preserved verbatim and **no #40 back-prop is needed at approval**.
-  The deep-tier `PlayerWage` producer + a `WageBudget` affordability gate (which #40 exposes as a read for
-  #31/#34 but wires no gate for) land together with a #40 back-prop relaxing FR-FN-015.
-- **#30 (season loop):** owns the world-tick slot timing, the season-save composition, and the **new
-  mid-season `RequestRosterCommit` entry point + roster-move hook** (KD-7). #30 stays producer-only for #22
-  (FR-SN-017). #31 MUST NOT reference #30.
-- **#27 (squad/player data):** `Squad.ClubId` / `PlayerId = clubId*CLUB_SQUAD_SIZE+localIndex` is the
-  authoritative identity; a transfer **re-keys** through #30's roster owner, never by #31 mutating #27
-  directly. #31 MUST NOT gain a competing identity notion.
-- **#32 (scouting, future) / #34 (staff, future):** consume the KD-3 offer/response seam with their own
-  counterparty-valuation inputs; #31 builds no interface for them (FR-LW-031). #34 additionally becomes the
-  `staffMult` producer.
-- **#33 (personalities, future):** the deep-tier valuation reads #33 **read-only** (never writes #33 state).
-  Today #33 §7.3 exposes only `MoraleOf` to #31; the personality-**trait** read surface (`PersonalityProfile`
-  loyalty/ambition) the deep `personalityMult` needs is **not yet granted** — it requires a #33 back-prop at
-  #31 T3 (recorded, not built). #33 is a producer #31 consumes, not the reverse.
-- **#38 (UI, future):** drives the transfer-action command APIs (`SubmitBid` etc.); MUST NOT mutate #31 state
-  directly (the `SetTeamTactic` command discipline).
+- **#40:** #31 reads `AvailableTransferBudget` and applies accepted fee transactions only through
+  `ApplyTransaction`; T0 stages the value-struct result before the roster commit and publishes it only after
+  the commit matches its preview.
+- **#30:** owns world-tick timing, save composition, and the production roster adapter/move hook at T2. A full
+  destination is surfaced by preview as `false` and maps to `TransferSubmissionOutcome.SquadFull`; a successful
+  preview fixes the exact id the commit MUST return. The T2 adapter must dispatch `DispatchRosterMoveHook` and
+  simultaneously demonstrate that #31's managed↔external subscriber does nothing during that callback, because
+  `SubmitBid` owns the explicit managed contract insert/remove immediately after the commit returns.
+- **#27:** authoritative player identity and coarse `PlayerPosition`. Positional need uses the valuing club's
+  current same-position count converted to **stock excluding the negotiated player** before valuation.
+- **#32 / #34:** may consume `Offer` + `NegotiationOutcome` + `EvaluateOffer`; they do not consume the manager
+  command's `TransferSubmissionOutcome` unless they intentionally call that command layer.
+- **#33:** deep personality refinement remains read-only.
+- **#38:** drives `SubmitBid`; ordinary budget/squad-capacity conditions are typed outcomes, not exceptions.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 0.1 | 2026-07-23 | — | Initial T-phase plan (T0–T3) + deferred extensions + downstream seam contracts. Status IN REVIEW. |
-| 0.2 | 2026-07-23 | — | AR-3: T3/§7.2 add the deferred wage-bill producer + `WageBudget` gate + #40 FR-FN-015 back-prop (H), the deep club-need signal, and contract free-agency; §7.3 #40 seam corrected (minimal is fee-only, no back-prop at approval) + #33 seam notes only `MoraleOf` is granted, `PersonalityProfile` needs a T3 back-prop (L). |
+| 0.1 | 2026-07-23 | — | Initial T-phase plan; status IN REVIEW. |
+| 0.2 | 2026-07-23 | — | AR-3 deep wage/need/free-agency clarifications. |
+| 0.3 | 2026-09-12 | — | T0 implementation authored. |
+| 0.4 | 2026-09-14 | — | T0 football-judgment close-out: positional scarcity + synchronous deterministic counter band. |
+| 0.5 | 2026-09-14 | — | PR #407 review correction: currency API names, exact-rational attribute mean, exclude-player positional stock, separate submission outcomes, and preview/commit-before-local-mutation contract. |
+| 0.6 | 2026-09-14 | — | Residual review cleanup: T0 covers both preview/commit breach directions; T2 explicitly owes successful-preview infallibility plus real hook-dispatch and observable managed↔external #31 no-op integration coverage. |
 #endregion
