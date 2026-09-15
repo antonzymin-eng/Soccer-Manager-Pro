@@ -24,6 +24,20 @@ Unity walks the junction and compiles every `src/**` file (and its `.asmdef`),
 which is why compiler errors report `Assets\Scripts\...` paths — that is expected
 junction behaviour, not a misconfiguration.
 
+## Project configuration
+
+- **Client scene:** `Assets/Scenes/Scene.unity`, the only scene in Build Settings. It hosts
+  `MatchClientBehaviour`; its setup contract is `src/match-client-unity/README.md`.
+- **Renderer:** the Built-in Render Pipeline. No URP package or pipeline asset is part of the
+  project; moving to URP is a deliberate migration, not a setting to flip.
+- **Input:** Active Input Handling is "Input Manager (Old)". `MatchClientBehaviour` reads the legacy
+  `UnityEngine.Input` API, and the Input System package is not installed.
+- **Packages:** `Packages/manifest.json` and `Packages/packages-lock.json` are committed as a pair.
+  Change packages in the Unity editor so it regenerates the lock, and commit both files together.
+  `com.unity.ai.assistant` **2.19.0-pre.2 is development-only editor tooling**, pinned because the
+  current host workflow uses it for the Unity MCP relay. Game/runtime assemblies must not depend on
+  it; replace the pre-release pin only after the replacement version is validated on the pinned host.
+
 Open **this repository folder** as the Unity project (Unity Hub → Add → select the
 repo root). Unity will generate `Library/`, `Temp/`, `Logs/`, `.meta` files, and
 fill out `ProjectSettings/` on first open; commit the generated `src/**/*.meta`
