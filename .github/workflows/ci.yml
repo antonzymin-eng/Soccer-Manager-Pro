@@ -303,9 +303,14 @@ jobs:
           lfs: true
       # Unity compiles only what lives under Assets/. src/ reaches it through Assets/Scripts, a link
       # that is deliberately untracked (Assets/README.md), so a fresh checkout has none. Without this
-      # step the runner imports no project assembly at all. nightly.yml creates the same link.
+      # step the runner imports no project assembly at all. nightly.yml creates the equivalent Windows junction.
       - name: Link src/ into Assets/Scripts
-        run: ln -s ../src Assets/Scripts
+        run: |
+          if [ -e Assets/Scripts ] || [ -L Assets/Scripts ]; then
+            echo "::error::Assets/Scripts already exists; expected a clean checkout because this link is deliberately untracked."
+            exit 1
+          fi
+          ln -s ../src Assets/Scripts
       - uses: actions/cache@v4
         with:
           path: Library
