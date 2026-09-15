@@ -1,7 +1,7 @@
 # W6 Controlled Ball — Wiring Closeout
 
 **Date:** 2026-09-15  
-**Status:** IMPLEMENTED / REGRESSION-LOCKED; merge readiness depends on final PR #412 gates  
+**Status:** IMPLEMENTED; REVIEW CLOSURE BLOCKED on keeper-held carry correction + post-fix evidence  
 **Scope:** Match-engine wiring backlog W6 only. W2 tackle activation remains a separate post-W6 evidence decision.
 
 ## Closed implementation boundary
@@ -12,11 +12,11 @@ The production grant paths are first-touch control/interception, loose-ball pick
 
 Non-kick physical release now exits `Controlled` explicitly. Kicks already leave control through `BallCollision.ApplyKick`; tackle-loose and the six-second goalkeeper release use the explicit release transition. Restart pseudo-possession is not tackleable because the tackle resolver requires a physically `Controlled` ball.
 
-No new durable field, latch, schema version, RNG stream, reservation, or draw order was introduced.
+No new durable field, latch, schema version, RNG stream, reservation, or draw order was introduced by the W6 wiring itself.
 
 ## Regression locks retained
 
-The W6 regression set proves:
+The W6 regression set proves or, where noted, deliberately exposes:
 
 1. Real loose-ball pickup enters `Controlled` and anchors the ball to the holder.
 2. A controlled outfield ball follows the holder during Physics.
@@ -26,7 +26,8 @@ The W6 regression set proves:
 6. The six-second goalkeeper backstop exits `Controlled`, drops the ball to foot height, and arms the re-collect cooldown.
 7. Ball Physics' direct Controlled entry/non-kick release transition preserves recovery checkpoints.
 8. Loose/restart intervals do not freeze elapsed tackle cooldown.
-9. The composed keeper-claim scenario still proves a claim arrests the incoming ball and now proves the held `Controlled` ball remains attached to the claiming keeper.
+9. The composed keeper-claim scenario proves a claim arrests the incoming ball and the held `Controlled` ball remains attached to the claiming keeper.
+10. The composed keeper-claim scenario again asserts the football consequence that an observably held claim does not end in an own goal. This predicate is intentionally red on the pre-closure W6 behavior described below until the production carry defect is corrected.
 
 The two test-only tackle-cooldown seams added for item 8 are retained deliberately as durable regression support. They are not production state and are not temporary measurement scaffolding.
 
@@ -36,13 +37,21 @@ The Codex review correctly identified that the physical-carrier early return cou
 
 Commit `f927e115b5e61771b5cf0fd7c07e93514759b1b6` moved cooldown aging before the physical-carrier gate and added `LooseBall_DoesNotFreezeElapsedTackleCooldown`. The PR review thread is resolved. This tackle cooldown is distinct from the W12 Pressing-AI `Cooldown` exit driven by `DisengageResolver` / `_cooldownTicks`.
 
-## Keeper-claim acceptance compatibility — closed
+## Keeper-held carry defect — BLOCKING REVIEW CLOSURE
 
-The final functional gate exposed one deterministic failure in `sim_match_engine_keeper_claim`: its historical third predicate, `held-ball-does-not-enter-own-net`, observed two goals while a keeper was still recorded as holding the ball. The incoming ball was still arrested correctly.
+The earlier keeper-claim compatibility pass reached an incomplete conclusion. It correctly established that W6 turns physical possession into a kinematic constraint, so a held ball follows live keeper locomotion rather than continuing the incoming shot independently. It was also correct that Law 10 adjudication awards a goal when the ball crosses the line.
 
-That predicate was written before genuine `Controlled` carry existed. The conversion-at-contact design deliberately parked a claim without keeper carry; under that model a goal while the keeper remained holder was a valid proxy for the old ERR-011-008 defect where the claimed shot kept travelling independently. W6 intentionally changes that premise: a controlled goalkeeper ball follows live keeper locomotion, so a keeper-carried goal-line crossing no longer demonstrates stale incoming-shot travel.
+What it missed was the football consequence of that new coupling. The deterministic keeper-claim corpus measured **2 of 17 claims** ending with the holding keeper carrying the attached `Controlled` ball through his own goal line. The score path is therefore not the defect; the defect is keeper locomotion while holding, combined with Agent Movement's general 5 m exterior safety buffer. Treating that measured rate as intended behavior would encode a football-implausible result into the W6 closeout.
 
-The acceptance was therefore tightened around the invariant that still distinguishes the original defect: claims must be arrested at contact, and while the claiming keeper remains holder the ball must remain `Controlled` and attached to that keeper in x/y. The old historical predicate was not converted into a gameplay rule preventing keeper carry.
+The attachment predicate remains useful and is retained. The independent consequence predicate `held-claim-does-not-concede-own-goal` has also been restored. Its attribution reads score changes before holder-based claim-window closure because a goal restart clears possession within the same `RunTick`; reversing that order would make the consequence structurally unreachable on the scoring tick.
+
+The required production closure is deliberately narrow: constrain only a goalkeeper whose post-physics state is `HandsOnBall` at the goal plane it defends, after keeper locomotion and before the MatchEngine W6 attachment step. The general Agent Movement pitch buffer and legitimate goal adjudication must remain unchanged. No new `[GT]`, RNG surface, durable field, or snapshot schema is justified by this correction.
+
+## Owner-held RED observation — PENDING POST-FIX REMEASUREMENT
+
+On pre-closure W6 head `4dd62477f381f4cb3fe285e972d43f9d6acc7e86`, the ordinary MatchEngine suite completed **499 passed / 0 failed / 12 skipped**, while the separately executed owner-held `sim_match_engine_close_chance` unexpectedly passed. The testing-policy verifier correctly blocked on that unexpected green.
+
+That result is **not** a retirement or rebaseline decision. The standing ledger remains `meanCosine=-0.165` / `goalwardShare=0.407`, and W6 changes carrier/ball position coupling while the measured pre-closure state also contains the keeper-held carry defect above. The exact close-chance scenario must therefore be rerun after the carry correction. Do not change its expected diagnostics or thresholds from this provisional run; any retirement of the owner-held RED is a later owner decision based on post-fix evidence.
 
 ## Pre-registration carried forward before measurement
 
@@ -54,7 +63,7 @@ For the later W12 rejection-wall measurement, `w6-controlled-ball-preregistratio
 
 ## Owner sequence after this closeout
 
-1. Merge PR #412 once its final gates are green.
+1. Finish PR #412 review closure: correct keeper-held carry, rerun the keeper corpus and exact close-chance scenario, sync landing records, merge current `main`, and require final gates green.
 2. Run the post-W6 W2 measurement, record the activation/non-activation decision, and remove the temporary dispatch branch.
 3. Salvage `wiring/w12-evidence-repair` onto fresh `main`; port additive evidence/checker/CI material and re-derive the post-#398 comparison against current `main` rather than cherry-picking the stale comparison modification.
 
@@ -62,8 +71,8 @@ This sequencing change affects procedure only. It does not retroactively alter e
 
 ## Scaffolding disposition
 
-No temporary W6 measurement workflow, evidence corpus, diagnostic workflow, or ad-hoc instrumentation file remains in the final PR #412 diff. The final diff is limited to the production wiring, durable regression tests, this closeout, and the pre-registration carried forward for the next measurement step.
+No temporary W6 measurement workflow, evidence corpus, diagnostic workflow, or ad-hoc instrumentation file remains in the PR #412 diff. The earlier one-shot CI experiments used during review closure were removed without modifying production source and are not part of the final changed-file set.
 
 ## W2 boundary
 
-W6 does **not** activate W2 or change the governed shipping value of `TackleContactRadiusM`. The next step is evidence: rerun the armed tackle corpus/composed-match measurement and make the W2 activation decision separately. A state-model correctness fix must not smuggle in an unmeasured balance change.
+W6 does **not** activate W2 or change the governed shipping value of `TackleContactRadiusM`. The next step after PR #412 is evidence: rerun the armed tackle corpus/composed-match measurement and make the W2 activation decision separately. A state-model correctness fix must not smuggle in an unmeasured balance change.
