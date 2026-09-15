@@ -1,0 +1,167 @@
+name: Reconcile PR407 with main
+
+on:
+  push:
+    branches:
+      - codex/d5-transfers-t0
+    paths:
+      - .github/workflows/reconcile-pr407-main.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge current main and resolve documentation chains
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          mkdir -p /tmp/pr407-ours
+          cp docs/agent-guides/project-reference.md /tmp/pr407-ours/project-reference.md
+          cp docs/tracking/CHANGELOG-src.md /tmp/pr407-ours/CHANGELOG-src.md
+          cp docs/tracking/CHANGELOG.md /tmp/pr407-ours/CHANGELOG.md
+          cp docs/tracking/file-manifest.md /tmp/pr407-ours/file-manifest.md
+          cp docs/tracking/open-issues.md /tmp/pr407-ours/open-issues.md
+
+          git merge --no-commit --no-ff origin/main || true
+
+          python3 - <<'PY'
+          import re
+          import subprocess
+          from pathlib import Path
+
+          def main_text(path: str) -> str:
+              return subprocess.check_output(
+                  ["git", "show", f"origin/main:{path}"], text=True
+              )
+
+          def ours_text(name: str) -> str:
+              return Path("/tmp/pr407-ours", name).read_text()
+
+          def extract_top_chain_block(text: str) -> str:
+              start = text.index("> **Last Updated:**")
+              end = text.index("> **Last Updated (prior):**", start)
+              return text[start:end].rstrip() + "\n>\n\n"
+
+          def prepend_chain(main: str, block: str) -> str:
+              start = main.index("> **Last Updated:**")
+              tail = main[start:]
+              tail = tail.replace("> **Last Updated:**", "> **Last Updated (prior):**", 1)
+              return main[:start] + block + tail
+
+          # project-reference: #407 deliberately supersedes main's one-line
+          # assembly-count update by accounting for both #40 and #31.
+          Path("docs/agent-guides/project-reference.md").write_text(
+              ours_text("project-reference.md")
+          )
+
+          # Full changelog: preserve main's complete current chain and prepend
+          # only #407's newest transfer landing record.
+          ours = ours_text("CHANGELOG.md")
+          current = main_text("docs/tracking/CHANGELOG.md")
+          merged = prepend_chain(current, extract_top_chain_block(ours))
+          Path("docs/tracking/CHANGELOG.md").write_text(merged)
+
+          # Source changelog: same additive merge, but allocate the next free
+          # version after main's current head and mirror it into the table row.
+          ours = ours_text("CHANGELOG-src.md")
+          current = main_text("docs/tracking/CHANGELOG-src.md")
+          head_match = re.search(r"> \*\*Last Updated:\*\*.*?\(v(\d+)\.(\d+)\b", current)
+          if not head_match:
+              raise SystemExit("cannot parse main CHANGELOG-src head version")
+          major, minor = map(int, head_match.groups())
+          new_version = f"{major}.{minor + 1}"
+          ours_block = extract_top_chain_block(ours)
+          old_version_match = re.search(r"\(v(\d+\.\d+)\b", ours_block)
+          if not old_version_match:
+              raise SystemExit("cannot parse #407 CHANGELOG-src version")
+          old_version = old_version_match.group(1)
+          ours_block = ours_block.replace(f"v{old_version}", f"v{new_version}", 1)
+          merged = prepend_chain(current, ours_block)
+          row_match = re.search(rf"^\| {re.escape(old_version)} \|.*$", ours, re.M)
+          if not row_match:
+              raise SystemExit("cannot find #407 CHANGELOG-src history row")
+          row = row_match.group(0).replace(f"| {old_version} |", f"| {new_version} |", 1)
+          table_header = "|---|---|---|---|\n"
+          if table_header not in merged:
+              raise SystemExit("cannot find CHANGELOG-src history table")
+          merged = merged.replace(table_header, table_header + row + "\n", 1)
+          Path("docs/tracking/CHANGELOG-src.md").write_text(merged)
+
+          # File manifest: main owns all newly-landed finance/W12 inventory;
+          # layer #407's head record, #31 status, transfers inventory, and the
+          # already-reviewed Code Standards v1.14 correction onto it.
+          ours = ours_text("file-manifest.md")
+          current = main_text("docs/tracking/file-manifest.md")
+          top_start = ours.index("**Last Updated:**")
+          top_end = ours.index("**Last Updated (prior):**", top_start)
+          top_block = ours[top_start:top_end].rstrip() + "\n\n"
+          current_start = current.index("**Last Updated:**")
+          current_tail = current[current_start:]
+          current_tail = current_tail.replace("**Last Updated:**", "**Last Updated (prior):**", 1)
+          merged = current[:current_start] + top_block + current_tail
+
+          ours_row = next(line for line in ours.splitlines() if line.startswith("| 31 |"))
+          merged, count = re.subn(r"^\| 31 \|.*$", ours_row, merged, count=1, flags=re.M)
+          if count != 1:
+              raise SystemExit("could not replace #31 manifest status row")
+
+          section_start = ours.index("### Transfers / Contracts / Negotiation (`src/transfers/`)")
+          club_marker = "### Club Finances (`src/club-finances/`)"
+          section_end = ours.index(club_marker, section_start)
+          transfers_section = ours[section_start:section_end].rstrip() + "\n\n"
+          if "### Transfers / Contracts / Negotiation (`src/transfers/`)" not in merged:
+              marker_index = merged.index(club_marker)
+              merged = merged[:marker_index] + transfers_section + merged[marker_index:]
+
+          merged = merged.replace(
+              "`docs/specs/code-standards/section-3.md` **v1.0.1 → v1.1**, since advanced to **v1.13**",
+              "`docs/specs/code-standards/section-3.md` **v1.0.1 → v1.1**, since advanced to **v1.14**",
+          )
+          Path("docs/tracking/file-manifest.md").write_text(merged)
+
+          # Open issues: retain main's new finance issue/count and insert the
+          # #31 UX-status correction into the existing UX record.
+          ours = ours_text("open-issues.md")
+          merged = main_text("docs/tracking/open-issues.md")
+          update_start = ours.index("**UPDATE September 14, 2026 — #31 TRANSFERS T0 NOW EXISTS")
+          branding_marker = "- **Repository-wide branding-only edits"
+          update_end = ours.index(branding_marker, update_start)
+          update_block = ours[update_start:update_end].strip() + "\n"
+          if "#31 TRANSFERS T0 NOW EXISTS" not in merged:
+              insert_at = merged.index(branding_marker)
+              merged = merged[:insert_at] + update_block + merged[insert_at:]
+          Path("docs/tracking/open-issues.md").write_text(merged)
+          PY
+
+          git add docs/agent-guides/project-reference.md \
+                  docs/tracking/CHANGELOG-src.md \
+                  docs/tracking/CHANGELOG.md \
+                  docs/tracking/file-manifest.md \
+                  docs/tracking/open-issues.md
+
+          unresolved="$(git diff --name-only --diff-filter=U)"
+          if [ -n "$unresolved" ]; then
+            echo "Unresolved merge paths:"
+            echo "$unresolved"
+            exit 1
+          fi
+
+          rm .github/workflows/reconcile-pr407-main.yml
+          git add -A
+
+          python3 tools/doc-consistency-check.py --repo .
+          python3 tools/assembly-tier-check.py --repo .
+
+          git commit -m "merge: reconcile PR #407 docs with post-#400 main"
+          git push origin HEAD:codex/d5-transfers-t0
