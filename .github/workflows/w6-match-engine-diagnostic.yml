@@ -26,9 +26,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          project="$(find tools/dotnet-ci -name 'TacticalDirector.MatchEngine.Tests.csproj' -print -quit)"
-          if [ -z "$project" ]; then
-            echo "::error::Generated MatchEngine test project not found."
+          project="src/match-engine/tests/match-engine-tests.gen.csproj"
+          if [ ! -f "$project" ]; then
+            echo "::error::Generated MatchEngine test project not found: $project"
             exit 2
           fi
           mkdir -p artifacts/w6-match-engine-diagnostic
