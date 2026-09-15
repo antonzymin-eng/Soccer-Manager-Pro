@@ -18,8 +18,9 @@
 //
 //           W6 makes genuine possession a kinematic constraint: a goalkeeper can now carry a
 //           Controlled ball with his live locomotion. The acceptance therefore distinguishes the
-//           original defect by checking that a held claim is arrested and remains attached to its
-//           holder, rather than forbidding every own-goal crossing while the keeper is still holder.
+//           original defect by checking that an observably held claim is arrested and remains
+//           attached to its holder, rather than forbidding every own-goal crossing while the keeper
+//           is still holder.
 
 using System;
 
@@ -102,11 +103,17 @@ namespace TacticalDirector.MatchEngine
         {
             int claims = 0;
             int travellingAfterClaim = 0;
+            int heldClaimsObserved = 0;
             int detachedWhileHeld = 0;
 
             for (int s = 0; s < Seeds.Length; s++)
             {
-                PlayOne(Seeds[s], ref claims, ref travellingAfterClaim, ref detachedWhileHeld);
+                PlayOne(
+                    Seeds[s],
+                    ref claims,
+                    ref travellingAfterClaim,
+                    ref heldClaimsObserved,
+                    ref detachedWhileHeld);
             }
 
             string inv(int v) => v.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -130,15 +137,23 @@ namespace TacticalDirector.MatchEngine
             // valid consequence probe for ERR-011-008 because a held ball never followed keeper
             // locomotion. W6 intentionally changes that model. A keeper can now carry the attached
             // ball across his own goal line; that is holder motion, not the stale incoming shot.
-            // The invariant that still discriminates the original bug is that the held ball cannot
-            // travel independently of the recorded holder.
+            // The invariant that still discriminates the original bug is that an OBSERVABLY held
+            // ball cannot travel independently of the recorded holder. Claims whose possession both
+            // begins and ends inside one RunTick have no held-state observation boundary and are not
+            // misclassified as detachments; the observed-held count makes that exclusion non-vacuous.
             context.Envelope.CheckTrue("claimed-ball-remains-attached-while-held",
-                detachedWhileHeld == 0,
-                "detachedWhileHeld=" + inv(detachedWhileHeld) + " of " + inv(claims));
+                heldClaimsObserved >= 3 && detachedWhileHeld == 0,
+                "heldClaimsObserved=" + inv(heldClaimsObserved)
+                + " detachedWhileHeld=" + inv(detachedWhileHeld)
+                + " claims=" + inv(claims));
         }
 
         private static void PlayOne(
-            ulong seed, ref int claims, ref int travellingAfterClaim, ref int detachedWhileHeld)
+            ulong seed,
+            ref int claims,
+            ref int travellingAfterClaim,
+            ref int heldClaimsObserved,
+            ref int detachedWhileHeld)
         {
             var engine = new MatchEngine(seed);
             engine.ConfigureSquads(BuildSquad(seed, clubId: 1), BuildSquad(seed, clubId: 2));
@@ -183,6 +198,7 @@ namespace TacticalDirector.MatchEngine
                         continue;
                     }
 
+                    heldClaimsObserved++;
                     if (!IsControlledAtHolder(engine, claimingAgent[t]))
                     {
                         detachedWhileHeld++;
@@ -208,19 +224,33 @@ namespace TacticalDirector.MatchEngine
                     {
                         claims++;
                         int agentId = GkAgentId(engine, t);
-                        claimTick[t] = tick;
-                        claimingAgent[t] = agentId;
 
                         if (ballSpeed > ArrestedSpeedMps)
                         {
                             travellingAfterClaim++;
                         }
 
-                        // Check the claim tick itself; the loop above only observes claims that were
-                        // already active when this tick began.
-                        if (agentId < 0 || holder != agentId || !IsControlledAtHolder(engine, agentId))
+                        // The claim may already have ended later in this same RunTick (for example,
+                        // a restart clears possession before the scenario can observe the tick). Such
+                        // a claim has no held-state observation to test. Open the W6 attachment window
+                        // only when the keeper is still the holder at this observation boundary.
+                        if (agentId >= 0 && holder == agentId)
                         {
-                            detachedWhileHeld++;
+                            heldClaimsObserved++;
+                            if (!IsControlledAtHolder(engine, agentId))
+                            {
+                                detachedWhileHeld++;
+                                claimingAgent[t] = -1;
+                                claimTick[t] = int.MinValue;
+                            }
+                            else
+                            {
+                                claimingAgent[t] = agentId;
+                                claimTick[t] = tick;
+                            }
+                        }
+                        else
+                        {
                             claimingAgent[t] = -1;
                             claimTick[t] = int.MinValue;
                         }
@@ -279,6 +309,9 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
+// | 1.2     | 2026-09-15 | —      | W6 probe observes attachment only at held-state tick boundaries;   |
+// |         |            |        | same-tick claim+release/restart transitions are excluded and the   |
+// |         |            |        | observed-held population is non-vacuity gated.                     |
 // | 1.1     | 2026-09-15 | —      | W6 compatibility: predicate 3 now asserts Controlled attachment   |
 // |         |            |        | while held; keeper-carried goal-line crossing is no longer        |
 // |         |            |        | misclassified as independent stale-shot travel.                   |
