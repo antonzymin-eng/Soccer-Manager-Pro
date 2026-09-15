@@ -1,11 +1,13 @@
 // File:     src/match-engine/tests/MatchEngineControlledBallW6Tests.cs
 // Created:  2026-09-14
+// Modified: 2026-09-15 (W6 review closure — direct lock for the Controlled keeper own-goal-plane invariant)
 // Modified: 2026-09-14
 // Author:   —
 // Spec:     Match-engine wiring backlog W6; Ball Physics #1 §3.1.11; Code Standards #20
 // Purpose:  Composed W6 locks: genuine possession enters BallState.Controlled and follows the holder,
-//           restart-taker designation remains a placed Stationary ball, and non-kick release exits
-//           physical control without introducing new cross-tick state.
+//           restart-taker designation remains a placed Stationary ball, keeper control cannot carry the
+//           attached ball through the defended goal plane, and non-kick release exits physical control
+//           without introducing new cross-tick state.
 
 using NUnit.Framework;
 using UnityEngine;
@@ -111,6 +113,52 @@ namespace TacticalDirector.MatchEngine
                 "Keeper carry preserves the actual claim/contact height while x/y follow the keeper.");
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        public void GoalkeeperControl_ClampsAtDefendedGoalPlane_AndKeepsRecoveryCoherent(int team)
+        {
+            var engine = new MatchEngine(MatchSeed ^ 0x38UL ^ (ulong)team);
+            int keeper = FindKeeper(engine, team);
+            Assert.GreaterOrEqual(keeper, 0);
+
+            float ownGoalX = team == 0 ? 0.0f : MatchEngineConstants.PITCH_LENGTH_M;
+            float exteriorX = team == 0 ? -1.25f : MatchEngineConstants.PITCH_LENGTH_M + 1.25f;
+            float outwardVelocityX = team == 0 ? -2.0f : 2.0f;
+            const float lateralVelocity = 0.75f;
+            const float claimHeight = 1.6f;
+
+            var carrier = AgentState.CreateAtPosition(
+                new Vector2(exteriorX, MatchEngineConstants.KickoffBallYM),
+                team == 0 ? Vector2.left : Vector2.right);
+            carrier.Velocity = new Vector2(outwardVelocityX, lateralVelocity);
+            carrier.Speed = carrier.Velocity.magnitude;
+            carrier.LastValidPosition = carrier.Position;
+            carrier.LastValidVelocity = carrier.Velocity;
+            engine.TestOnly_SetAgent(keeper, carrier);
+            engine.TestOnly_SetBall(BallState.CreateAtPosition(new Vector3(
+                carrier.Position.x, carrier.Position.y, claimHeight)));
+
+            engine.TestOnly_SetPossession(keeper);
+
+            AgentState clamped = engine.AgentView(keeper);
+            Assert.AreEqual(ownGoalX, clamped.Position.x, 1e-6f,
+                "A physically controlling goalkeeper must not remain behind the goal plane he defends.");
+            Assert.AreEqual(0.0f, clamped.Velocity.x, 1e-6f,
+                "Outward velocity must be removed when the host clamps a controlled keeper at his own goal plane.");
+            Assert.AreEqual(lateralVelocity, clamped.Velocity.y, 1e-6f,
+                "The W6 host correction must not erase legal lateral keeper motion.");
+            Assert.AreEqual(clamped.Velocity.magnitude, clamped.Speed, 1e-6f,
+                "AgentState.Speed must remain coherent with the host-corrected velocity.");
+            Assert.AreEqual(clamped.Position, clamped.LastValidPosition,
+                "Safety recovery must not retain the illegal pre-clamp position.");
+            Assert.AreEqual(clamped.Velocity, clamped.LastValidVelocity,
+                "Safety recovery must not retain the illegal outward pre-clamp velocity.");
+            Assert.AreEqual(BallStateType.Controlled, engine.BallView.State);
+            AssertBallXYAtHolder(engine, keeper);
+            Assert.AreEqual(claimHeight, engine.BallView.Position.z, 1e-6f,
+                "Goal-plane correction must preserve the keeper's actual claim/contact height.");
+        }
+
         [Test]
         public void ForceBallLoose_ExitsControlledState()
         {
@@ -199,6 +247,8 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                        |
+// | 1.2     | 2026-09-15 | —      | Review closure: direct two-goal-plane keeper-control lock,    |
+// |         |            |        | including AgentState recovery-checkpoint coherence.           |
 // | 1.1     | 2026-09-14 | —      | P2 lock: loose ball still advances elapsed tackle cooldown.   |
 // | 1.0     | 2026-09-14 | —      | W6 composed physical-control and release regression locks.    |
 #endregion
