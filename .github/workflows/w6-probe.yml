@@ -2,6 +2,8 @@ name: W6 keeper carry repair
 on:
   push:
     branches: [wiring/w6-controlled-ball]
+permissions:
+  contents: write
 jobs:
   repair:
     runs-on: ubuntu-latest
@@ -13,87 +15,94 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Apply keeper-held goal-plane correction in workspace
+      - name: Land keeper-held goal-plane correction at W6 attachment seam
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path('src/goalkeeper-mechanics/GoalkeeperMechanics.cs')
+          path = Path('src/match-engine/MatchEngine.cs')
           text = path.read_text()
 
-          header = '// Modified: 2026-09-15 (W6 review closure: HandsOnBall keeper locomotion is constrained at the defended goal plane before Controlled attachment; no schema/RNG/GT change)\n'
+          header = '// Modified: 2026-09-15 (W6 review closure — Controlled goalkeeper carriers are constrained at their defended goal plane in the MatchEngine attachment funnel; no schema/RNG change)\n'
           if header not in text:
-              created = '// Created:  2026-05-28\n'
+              created = '// Created:  2026-06-16\n'
               if text.count(created) != 1:
                   raise SystemExit('header anchor count != 1')
               text = text.replace(created, created + header, 1)
 
-          new_state_line = '                GoalkeeperState newState = _states[gkIndex];\n'
-          insertion = (
-              new_state_line +
-              '\n'
-              '                // W6 review closure: generic Agent Movement intentionally permits a 5 m exterior\n'
-              '                // safety buffer, but a keeper physically holding the ball must not carry the attached\n'
-              '                // Controlled ball through the goal plane he defends. Apply this AFTER the physics\n'
-              '                // transition so the same frame that resolves Airborne/Smothered -> HandsOnBall is\n'
-              '                // corrected before MatchEngine re-attaches the ball and before Resolve adjudicates a goal.\n'
-              '                if (newState == GoalkeeperState.HandsOnBall)\n'
-              '                {\n'
-              '                    AgentState heldState = agentStates[agentId];\n'
-              '                    ConstrainHandsOnBallToOwnGoalPlane(ref heldState, gkIndex);\n'
-              '                    agentStates[agentId] = heldState;\n'
-              '                    agentState = heldState;\n'
-              '                }\n'
-          )
-          if 'ConstrainHandsOnBallToOwnGoalPlane(ref heldState, gkIndex);' not in text:
-              if text.count(new_state_line) != 1:
-                  raise SystemExit('newState anchor count != 1')
-              text = text.replace(new_state_line, insertion, 1)
+          old = '''            Vector2 holderPos = _agents[holder].Position;
+            float z = _isGoalkeeper[holder]
+                ? Mathf.Max(_ball.Position.z, MatchEngineConstants.BALL_REST_HEIGHT_M)
+                : MatchEngineConstants.BALL_REST_HEIGHT_M;
 
-          helper_anchor = '        // Lateral dive axis is Y (touchline-to-touchline): the goal mouth spans Y, so the keeper\n'
-          helper = (
-              '        /// <summary>\n'
-              '        /// Constrains only a keeper whose resolved physics state is HandsOnBall to the goal plane he\n'
-              '        /// defends. The general Agent Movement exterior buffer remains unchanged; loose/kicked-ball\n'
-              '        /// goal adjudication remains unchanged. Keeper index is team id (KD-1): 0 defends x=0, 1 x=L.\n'
-              '        /// </summary>\n'
-              '        private static void ConstrainHandsOnBallToOwnGoalPlane(ref AgentState agentState, int gkIndex)\n'
-              '        {\n'
-              '            float ownGoalX = gkIndex == 0 ? 0.0f : GoalkeeperConstants.PitchLengthM;\n'
-              '            bool behindOwnGoalLine = gkIndex == 0\n'
-              '                ? agentState.Position.x < ownGoalX\n'
-              '                : agentState.Position.x > ownGoalX;\n\n'
-              '            if (!behindOwnGoalLine)\n'
-              '            {\n'
-              '                return;\n'
-              '            }\n\n'
-              '            agentState.Position = new Vector2(ownGoalX, agentState.Position.y);\n\n'
-              '            bool movingFurtherOut = gkIndex == 0\n'
-              '                ? agentState.Velocity.x < 0.0f\n'
-              '                : agentState.Velocity.x > 0.0f;\n'
-              '            if (movingFurtherOut)\n'
-              '            {\n'
-              '                agentState.Velocity = new Vector2(0.0f, agentState.Velocity.y);\n'
-              '            }\n\n'
-              '            agentState.Speed = agentState.Velocity.magnitude;\n'
-              '            agentState.LastValidPosition = agentState.Position;\n'
-              '            agentState.LastValidVelocity = agentState.Velocity;\n'
-              '        }\n\n'
-          )
-          if 'private static void ConstrainHandsOnBallToOwnGoalPlane' not in text:
-              if text.count(helper_anchor) != 1:
-                  raise SystemExit('helper anchor count != 1')
-              text = text.replace(helper_anchor, helper + helper_anchor, 1)
+            _ball.Position = new Vector3(holderPos.x, holderPos.y, z);
+            _ball.Velocity = Vector3.zero;
+            _ball.AngularVelocity = Vector3.zero;
+            BallPhysicsCore.ValidatePhysicsState(ref _ball);
+            _ball.LastValidPosition = _ball.Position;
+            _ball.LastValidVelocity = Vector3.zero;
+'''
+          new = '''            AgentState carrier = _agents[holder];
 
-          version_anchor = '// | 1.14 | 2026-09-12 | — | W4 review closure: caller contract now states OnThreatArmed anchors a      |\n'
+            // W6 review closure: Agent Movement deliberately permits a small exterior safety buffer,
+            // but a goalkeeper physically controlling the ball may not carry that attached ball through
+            // the goal plane he defends. Enforce the composition invariant at the sole Controlled-ball
+            // attachment funnel so every acquisition path is covered before Resolve adjudicates a goal.
+            if (_isGoalkeeper[holder])
+            {
+                int teamId = _teamIds[holder];
+                float ownGoalX = teamId == 0 ? 0.0f : MatchEngineConstants.PITCH_LENGTH_M;
+                bool behindOwnGoalLine = teamId == 0
+                    ? carrier.Position.x < ownGoalX
+                    : carrier.Position.x > ownGoalX;
+
+                if (behindOwnGoalLine)
+                {
+                    carrier.Position = new Vector2(ownGoalX, carrier.Position.y);
+
+                    bool movingFurtherOut = teamId == 0
+                        ? carrier.Velocity.x < 0.0f
+                        : carrier.Velocity.x > 0.0f;
+                    if (movingFurtherOut)
+                    {
+                        carrier.Velocity = new Vector2(0.0f, carrier.Velocity.y);
+                    }
+
+                    // Keep Agent Movement's recovery checkpoint coherent with this host-owned correction;
+                    // otherwise a later safety recovery could restore the illegal pre-clamp position.
+                    carrier.Speed = carrier.Velocity.magnitude;
+                    carrier.LastValidPosition = carrier.Position;
+                    carrier.LastValidVelocity = carrier.Velocity;
+                    _agents[holder] = carrier;
+                }
+            }
+
+            Vector2 holderPos = carrier.Position;
+            float z = _isGoalkeeper[holder]
+                ? Mathf.Max(_ball.Position.z, MatchEngineConstants.BALL_REST_HEIGHT_M)
+                : MatchEngineConstants.BALL_REST_HEIGHT_M;
+
+            _ball.Position = new Vector3(holderPos.x, holderPos.y, z);
+            _ball.Velocity = Vector3.zero;
+            _ball.AngularVelocity = Vector3.zero;
+            BallPhysicsCore.ValidatePhysicsState(ref _ball);
+            _ball.LastValidPosition = _ball.Position;
+            _ball.LastValidVelocity = Vector3.zero;
+'''
+          if old in text:
+              if text.count(old) != 1:
+                  raise SystemExit('attachment seam anchor count != 1')
+              text = text.replace(old, new, 1)
+          elif 'AgentState carrier = _agents[holder];' not in text or 'bool behindOwnGoalLine = teamId == 0' not in text:
+              raise SystemExit('attachment seam is neither original nor already repaired')
+
+          version_anchor = '// | 1.78    | 2026-09-14 | —      | W6 review P2: tackle cooldown ages before the physical-carrier gate, so loose/restart |\n'
           version = (
-              '// | 1.15 | 2026-09-15 | — | W6 review closure: after each 60 Hz physics transition, HandsOnBall keepers |\n'
-              '// |      |            |   | are constrained at the defended goal plane before MatchEngine attaches the  |\n'
-              '// |      |            |   | Controlled ball. General movement buffer / goal adjudication unchanged; no   |\n'
-              '// |      |            |   | new state, tuning, schema or RNG surface.                                    |\n'
+              '// | 1.79    | 2026-09-15 | —      | W6 review closure: the Controlled attachment funnel constrains goalkeeper carriers |\n'
+              '// |         |            |        | at their defended goal plane before ball attachment / Resolve; no schema/RNG change. |\n'
           )
-          if '// | 1.15 | 2026-09-15' not in text:
+          if '// | 1.79    | 2026-09-15' not in text:
               if text.count(version_anchor) != 1:
                   raise SystemExit('version anchor count != 1')
               text = text.replace(version_anchor, version + version_anchor, 1)
@@ -101,7 +110,14 @@ jobs:
           path.write_text(text)
           PY
           git diff --check
-          git diff -- src/goalkeeper-mechanics/GoalkeeperMechanics.cs
+          git diff -- src/match-engine/MatchEngine.cs
+          if ! git diff --quiet -- src/match-engine/MatchEngine.cs; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add src/match-engine/MatchEngine.cs
+            git commit -m 'fix(match-engine): constrain controlled keeper at own goal plane'
+            git push origin HEAD:wiring/w6-controlled-ball
+          fi
       - name: Verify exact keeper-claim scenario
         shell: bash
         run: |
