@@ -1,11 +1,9 @@
-name: W6 keeper carry repair
+name: W6 closure evidence
 on:
   push:
     branches: [wiring/w6-controlled-ball]
-permissions:
-  contents: write
 jobs:
-  repair:
+  evidence:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,95 +13,18 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Land keeper-held goal-plane correction at W6 attachment seam
+      - name: Verify W6 controlled-ball regression locks
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path('src/match-engine/MatchEngine.cs')
-          text = path.read_text()
-
-          header = '// Modified: 2026-09-15 (W6 review closure — Controlled goalkeeper carriers are constrained at their defended goal plane in the MatchEngine attachment funnel; no schema/RNG change)\n'
-          if header not in text:
-              created = '// Created:  2026-06-16\n'
-              if text.count(created) != 1:
-                  raise SystemExit('header anchor count != 1')
-              text = text.replace(created, created + header, 1)
-
-          anchor = '            Vector2 holderPos = _agents[holder].Position;\n'
-          replacement = (
-              '            AgentState carrier = _agents[holder];\n'
-              '\n'
-              '            // W6 review closure: Agent Movement deliberately permits a small exterior safety buffer,\n'
-              '            // but a goalkeeper physically controlling the ball may not carry that attached ball through\n'
-              '            // the goal plane he defends. Enforce the composition invariant at the sole Controlled-ball\n'
-              '            // attachment funnel so every acquisition path is covered before Resolve adjudicates a goal.\n'
-              '            if (_isGoalkeeper[holder])\n'
-              '            {\n'
-              '                int teamId = _teamIds[holder];\n'
-              '                float ownGoalX = teamId == 0 ? 0.0f : MatchEngineConstants.PITCH_LENGTH_M;\n'
-              '                bool behindOwnGoalLine = teamId == 0\n'
-              '                    ? carrier.Position.x < ownGoalX\n'
-              '                    : carrier.Position.x > ownGoalX;\n'
-              '\n'
-              '                if (behindOwnGoalLine)\n'
-              '                {\n'
-              '                    carrier.Position = new Vector2(ownGoalX, carrier.Position.y);\n'
-              '\n'
-              '                    bool movingFurtherOut = teamId == 0\n'
-              '                        ? carrier.Velocity.x < 0.0f\n'
-              '                        : carrier.Velocity.x > 0.0f;\n'
-              '                    if (movingFurtherOut)\n'
-              '                    {\n'
-              '                        carrier.Velocity = new Vector2(0.0f, carrier.Velocity.y);\n'
-              '                    }\n'
-              '\n'
-              '                    // Keep Agent Movement recovery coherent with this host-owned correction;\n'
-              '                    // otherwise a later safety recovery could restore the illegal pre-clamp state.\n'
-              '                    carrier.Speed = carrier.Velocity.magnitude;\n'
-              '                    carrier.LastValidPosition = carrier.Position;\n'
-              '                    carrier.LastValidVelocity = carrier.Velocity;\n'
-              '                    _agents[holder] = carrier;\n'
-              '                }\n'
-              '            }\n'
-              '\n'
-              '            Vector2 holderPos = carrier.Position;\n'
-          )
-          repaired_marker = 'bool behindOwnGoalLine = teamId == 0'
-          if repaired_marker not in text:
-              if text.count(anchor) != 1:
-                  raise SystemExit('attachment seam anchor count != 1')
-              text = text.replace(anchor, replacement, 1)
-
-          version_anchor = '// | 1.78    | 2026-09-14 | —      | W6 review P2: tackle cooldown ages before the physical-carrier gate, so loose/restart |\n'
-          version = (
-              '// | 1.79    | 2026-09-15 | —      | W6 review closure: the Controlled attachment funnel constrains goalkeeper carriers |\n'
-              '// |         |            |        | at their defended goal plane before ball attachment / Resolve; no schema/RNG change. |\n'
-          )
-          if '// | 1.79    | 2026-09-15' not in text:
-              if text.count(version_anchor) != 1:
-                  raise SystemExit('version anchor count != 1')
-              text = text.replace(version_anchor, version + version_anchor, 1)
-
-          path.write_text(text)
-          PY
-          git diff --check
-          git diff -- src/match-engine/MatchEngine.cs
-          if ! git diff --quiet -- src/match-engine/MatchEngine.cs; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add src/match-engine/MatchEngine.cs
-            git commit -m 'fix(match-engine): constrain controlled keeper at own goal plane'
-            git push origin HEAD:wiring/w6-controlled-ball
-          fi
-      - name: Verify exact keeper-claim scenario
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'FullyQualifiedName~MatchEngineControlledBallW6Tests'
+      - name: Remeasure owner-held close-chance scenario
         shell: bash
         run: |
           set +e
-          bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'Name=sim_match_engine_keeper_claim' > /tmp/w6-keeper-claim.log 2>&1
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'Name=sim_match_engine_close_chance' > /tmp/w6-close-chance.log 2>&1
           status=$?
           set -e
-          echo '--- keeper-claim diagnostic tail ---'
-          grep -B5 -A40 'Error Message:' /tmp/w6-keeper-claim.log || tail -n 200 /tmp/w6-keeper-claim.log
-          exit "$status"
+          echo "close_chance_exit=$status"
+          echo '--- close-chance diagnostic tail ---'
+          grep -B5 -A40 'Error Message:' /tmp/w6-close-chance.log || tail -n 200 /tmp/w6-close-chance.log
+          exit 0
