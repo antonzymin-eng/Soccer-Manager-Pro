@@ -40,16 +40,24 @@ whitespace --verify-no-changes` runs on every push to `main` and every PR target
 a failure emits a warning and exits 0, "non-blocking until repo opts in"). Alongside it,
 `tools/dotnet-ci/run-gate.sh` compiles the entire synthetic tree and runs every NUnit
 suite (blocking; non-certifying Linux shim). **Per the owner decision of September 12,
-2026 (`ERR-020-008`), that Linux gate is supplemental compile/test evidence, not the
-governing compiler: code conformance requires a successful compile in the Unity
+2026 (`ERR-020-008`), that Linux gate is required supplemental compile/test evidence,
+not the governing compiler: code conformance requires a successful compile in the Unity
 6000.4.9f1 editor on the pinned host. A green Linux result alone is insufficient.**
 This distinction is mechanically important for FR-CS-055: the synthetic MSBuild path
 resolves project references transitively, while Unity requires every assembly whose
 types a file names to appear directly in that source assembly's `.asmdef`; a missing
 direct reference can therefore stay green on Linux and fail in Unity with CS0012 or
-CS0234. GitHub Actions does not currently run that pinned-host editor compile, so the
-governing compile remains an operator/host verification requirement until a verified
-workflow wires it.
+CS0234.
+
+GitHub Actions does contain a pinned-host Unity lane:
+`.github/workflows/nightly.yml` defines the conditional self-hosted Windows job
+`nightly-determinism-certified`, verifies Unity 6000.4.9f1, and invokes that editor in
+batch mode. It is **not** the PR/merge conformance gate: it runs only when
+`DETERMINISM_CERTIFIED_RUNNER_ENABLED == 'true'`, is scheduled/manual rather than
+per-PR, and filters execution to `TacticalDirector.DeterministicSim.Tests`. Current
+enablement of that repository variable is not established by this spec correction.
+Accordingly the existing lane is useful pinned-host evidence and the obvious automation
+seam, but it does not replace the required governing Unity compile for each code landing.
 
 The **custom Spec #20 Roslyn analyzer set, `.editorconfig`, and `BannedSymbols.txt` from
 §5.2's tool table remain unbuilt** — none exists anywhere in the repository — so for
@@ -66,21 +74,27 @@ compile where compilation/assembly visibility is the verifying instrument.
 3. Items marked N/A must carry a brief justification (e.g., "no game-loop methods in
    this file", "editor-only code — §3.9.3 carve-out applies").
 4. The completed checklist is preserved in the PR review trail for audit purposes.
-5. A Linux-green result MUST NOT be cited as compile conformance without the governing
-   Unity editor compile on the pinned host.
+5. A Linux-green result **MUST NOT** be cited as compile conformance without the
+   governing Unity editor compile on the pinned host. This is a new verification-process
+   requirement introduced by `ERR-020-008`; it does not alter FR-CS-055's rule text.
 
 **Tooling status.** The Stage 0 absence of tooling was intentional (KD-4 in §1.3):
 empirical lint baselines cannot be established against non-existent code, and
 committing to configuration files then would have produced arbitrary thresholds. The
 Stage 0+1 transition (§5.2) — the designated moment to activate tooling — has since
-arrived: the format check and the supplemental Linux whole-tree compile/test gate are
-wired (see above), while the governing Unity compile is host-operated rather than a
-GitHub Actions gate, the analyzer-backed remainder of §5.2's tool table is still owed,
+arrived: the format check and the required supplemental Linux whole-tree compile/test
+gate are wired (see above), a conditional pinned-host Unity nightly lane exists, while
+the per-landing governing Unity compile remains host-operated rather than a PR/merge
+GitHub Actions gate. The analyzer-backed remainder of §5.2's tool table is still owed,
 and the D1 numeric thresholds remain deferred (§7.5) pending a profiled baseline.
+
+**Erratum force.** The `ERR-020-008` verification/platform corrections in this revision
+are effective immediately against the approved Code Standards baseline. They do not
+approve the separate A3.1a/A3.1b architecture amendment, which remains pending A3.4.
 
 **Scope of manual review:** All MUST and MUST NOT FRs are subject to review. SHOULD
 FRs are reviewed with the understanding that documented deviation is acceptable
-(§2.1). MAY and inactive FRs are not subject to review.
+(§2.1). MAY FRs are not subject to pass/fail review.
 
 **Reviewer qualification:** Any team member familiar with §3 mechanics may serve as
 reviewer. For determinism FRs (FR-CS-036–045, FR-CS-071–073), the reviewer must
@@ -197,8 +211,11 @@ constants-only file) are marked N/A.
 [ ] 7. Access modifiers — Explicit on every declaration; internal not used
         for cross-assembly surface? (FR-CS-014–015)
 
-Note: FR-CS-008 (language version pin) is INACTIVE until certification-platform.md
-resolves. FR-CS-009 is MAY-level; no pass/fail check required.
+[ ] 8. Language version — Source stays within the C# 9.0 language surface fixed by
+        Unity 6000.4.9f1; no C# 10+ syntax accepted only by a supplemental compiler?
+        (FR-CS-008; ERR-020-008)
+
+FR-CS-009 is MAY-level; no pass/fail check required.
 ```
 
 ---
@@ -327,8 +344,10 @@ resolves. FR-CS-009 is MAY-level; no pass/fail check required.
         mutable singleton, or generic DI container in game-loop code?
         (FR-CS-051–054)
 
-[ ] 7. .asmdef references — All cross-assembly dependencies declared
-        explicitly in .asmdef; no implicit namespace-based coupling? (FR-CS-055)
+[ ] 7. .asmdef references — For every external assembly whose types this source
+        assembly names, is that assembly listed DIRECTLY in this source assembly's
+        own `.asmdef` references? Transitive project/assembly references do not count;
+        no implicit namespace-based coupling? (FR-CS-055; ERR-020-008)
 ```
 
 ---
@@ -403,7 +422,7 @@ Stage 1 columns are placeholders (intentional — baselines are deferred to D1; 
 §5.3). Analyzer IDs use the reserved prefixes from §5.2; concrete IDs assigned at
 Stage 0+1 transition.
 
-Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyzer-enforced.
+Legend: **E** = Error (blocks build/conformance) · **W** = Warning · **–** = Not analyzer-enforced. For FR-CS-055 specifically, `E` includes failure of the governing Unity compile; it does not claim the planned `CS20-DEP-007` analyzer already exists.
 
 | FR-CS-### | Stage 0 verification (§5.4 category) | Stage 1 analyzer ID (placeholder) | Stage 1 severity |
 |---|---|---|---|
@@ -414,7 +433,7 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-005 | Style — §5.4.1 item 2 | `CS20-STYLE-001` | E |
 | FR-CS-006 | Style — §5.4.1 item 3 | `.editorconfig` using-order | W |
 | FR-CS-007 | Style — §5.4.1 item 4 | `CS20-STYLE-002` | E |
-| FR-CS-008 | **INACTIVE** — deferred until `certification-platform.md` resolves | Activated on platform pin | E (when active) |
+| FR-CS-008 | Style — §5.4.1 item 8 | Governing Unity 6000.4.9f1 / C# 9.0 compile boundary; synthetic projects mirror `<LangVersion>9.0</LangVersion>` | E |
 | FR-CS-009 | MAY — no pass/fail check | N/A | – |
 | FR-CS-010 | Style — §5.4.1 item 5 | `BannedSymbols.txt` (`dynamic`); `CS20-STYLE-003` | E |
 | FR-CS-011 | Style — §5.4.1 item 6 | `.editorconfig` `indent_size = 4` | E |
@@ -491,15 +510,7 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-080 | Architecture — §5.4.8 item 6 | A4 static-initialization discovery / lifecycle edges | – (report-only until A4/A8 activation) |
 | FR-CS-081 | Architecture — §5.4.8 item 7 | A4 typed-record resolution + Spec #19 proof freshness | – (report-only until A4/A8 activation) |
 
-**Traceability coverage:** All 81 numbered FRs have a review path, as do the two sub-numbered clauses FR-CS-046a and FR-CS-046b — 83 rows in total. The sub-clauses are listed for traceability and are **outside the 81-FR count** (§2.2.10's partition Count column reports numbered FR IDs, not traceability rows). FR-CS-074–081 are deliberately report-only in the Stage 1/mechanical columns until A4 supplies the resolver/discovery evidence and the later activation stage enables verified checks; this table does not manufacture enforcement from declarations. FR-CS-008 is
-marked INACTIVE with a defined activation condition. FR-CS-009, FR-CS-024, and
-FR-CS-035 are MAY-level; no enforcement row is needed. FR-CS-045 and FR-CS-063 are
-verified by manual review because their correctness depends on cross-document matching
-(Python tooling, spec ID validity) that cannot be automated without custom tooling
-beyond the C# analyzer scope. FR-CS-045 and FR-CS-063 carry severity **W (manual)** —
-the rules are MUST-level but enforcement is by reviewer eyes per PR; "W" signals
-"required-but-manual" rather than the bare "–" which previously read as "no
-enforcement."
+**Traceability coverage:** All 81 numbered FRs have a review path, as do the two sub-numbered clauses FR-CS-046a and FR-CS-046b — 83 rows in total. The sub-clauses are listed for traceability and are **outside the 81-FR count** (§2.2.10's partition Count column reports numbered FR IDs, not traceability rows). FR-CS-074–081 are deliberately report-only in the Stage 1/mechanical columns until A4 supplies the resolver/discovery evidence and the later activation stage enables verified checks; this table does not manufacture enforcement from declarations. FR-CS-008 is active at C# 9.0 under the certified Unity 6000.4.9f1 host. FR-CS-009, FR-CS-024, and FR-CS-035 are MAY-level; no enforcement row is needed. FR-CS-045 and FR-CS-063 are verified by manual review because their correctness depends on cross-document matching (Python tooling, spec ID validity) that cannot be automated without custom tooling beyond the C# analyzer scope. FR-CS-045 and FR-CS-063 carry severity **W (manual)** — the rules are MUST-level but enforcement is by reviewer eyes per PR; "W" signals "required-but-manual" rather than the bare "–" which previously read as "no enforcement."
 
 ---
 
@@ -540,7 +551,7 @@ belongs to Spec #16 and Spec #19.
 | 1.5 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** §5.4 gains the eighth Architecture Integration & Activation checklist category; §5.5 gains FR-CS-074–081, making 81 numbered FRs / 83 traceability rows including 046a/046b. Pending A4 cross-registry/discovery facts are explicitly report-only and Spec #19 retains proof/gate ownership. | PENDING — A3.4 |
 | 1.6 | September 2, 2026 | Codex | **A3.1b post-merge Codex-review correction.** Corrects the live §5.4 category count to eight and aligns FR-CS-074/075 review coverage with §2.2.9: FR-CS-074 now checks explicit integration owner, exact integration point and orthogonal activation state (while retaining durable identity/selector checks); FR-CS-075 now requires every production host/composition root in the approved discovery universe to be classified and mechanically accounted for. §5.5 routes those FRs to the corrected checklist items/A4 evidence. | PENDING — A3.4 |
 | 1.7 | September 3, 2026 | Claude Code | **Post-merge review finding — FR-CS-074 verification mechanism restored.** v1.6 replaced that row's "A4 canonical-selector / identity resolver" with the owner/point/state resolver rather than adding to it, while §5.4.8 item 1 still requires stable `component_id`, canonical selector, rename preservation and selector history, and §3.5.6 makes those identity mechanics mandatory with cross-registry selector resolution itself deferred to A4. Following the row as written would have left ambiguous selectors and identity-breaking renames with no planned verification path. Both resolvers are now named. Severity stays report-only until A4/A8 activation; no checklist item, FR text or count changed. | PENDING — A3.4 |
-| 1.8 | September 14, 2026 | Codex | **`ERR-020-008` — verification-model drift after the September 12 owner decision.** §5.1 now states that the Unity 6000.4.9f1 editor on the pinned host is the governing compiler and that a green Linux shim is supplemental but insufficient; it records the transitive-MSBuild/direct-Unity-`.asmdef` blind spot that exposed editor-only CS0012/CS0234 failures. §5.5's FR-CS-055 row now names the governing Unity compile while retaining the planned `CS20-DEP-007` audit. FR-CS-055's normative rule text is unchanged. No schema, RNG stream/domain/draw site, or draw order changes. | — |
+| 1.8 | September 14, 2026 | Codex | **`ERR-020-008` — verification/platform drift corrected.** The September 12 owner decision is made explicit: Unity 6000.4.9f1 on the pinned host is the governing compiler; the Linux synthetic gate is required supplemental evidence and cannot by itself establish compile conformance. The existing conditional `nightly-determinism-certified` Windows/Unity lane is recorded accurately as scheduled/manual, variable-gated and determinism-filtered rather than a PR/merge conformance gate. §5.4.1 activates the C# 9.0 check for FR-CS-008; §5.4.5 item 7 now requires a **direct** `.asmdef` reference for every external assembly whose types are named, so transitive MSBuild resolution cannot satisfy the review. §5.5 updates FR-CS-008/055 verification and clarifies that `E` on FR-CS-055 includes a failed governing Unity compile while `CS20-DEP-007` remains planned. Process step 5 is a new normative verification rule: Linux-green MUST NOT be cited as compile conformance without the governing Unity compile. FR-CS-055's normative rule text itself is unchanged. These errata are effective immediately; A3.1b remains pending A3.4. No schema, RNG stream/domain/draw site, or draw order changes. | — |
 
 ---
 
