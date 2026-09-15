@@ -1,0 +1,102 @@
+name: Resolve PR 411 tracking conflicts
+
+on:
+  push:
+    branches:
+      - fix/clean-clone-unity-project
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/clean-clone-unity-project
+
+      - name: Merge main and resolve only the two tracking chains
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          # Preserve the PR-side ledgers before starting the merge. The two Unity
+          # entries are extracted from these exact versions and inserted into the
+          # current main-side ledgers; no historical entry is rewritten.
+          git show HEAD:docs/tracking/CHANGELOG.md > /tmp/pr-changelog.md
+          git show HEAD:docs/tracking/file-manifest.md > /tmp/pr-file-manifest.md
+          git show origin/main:docs/tracking/CHANGELOG.md > /tmp/main-changelog.md
+          git show origin/main:docs/tracking/file-manifest.md > /tmp/main-file-manifest.md
+
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_rc=$?
+          set -e
+          if [ "$merge_rc" -ne 0 ] && [ "$merge_rc" -ne 1 ]; then
+            exit "$merge_rc"
+          fi
+
+          mapfile -t conflicts < <(git diff --name-only --diff-filter=U | sort)
+          expected=("docs/tracking/CHANGELOG.md" "docs/tracking/file-manifest.md")
+          if [ "${#conflicts[@]}" -ne 2 ] || [ "${conflicts[0]:-}" != "${expected[0]}" ] || [ "${conflicts[1]:-}" != "${expected[1]}" ]; then
+            printf 'Unexpected conflict set:\n%s\n' "${conflicts[*]:-<none>}"
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          pr_change = Path('/tmp/pr-changelog.md').read_text()
+          main_change = Path('/tmp/main-changelog.md').read_text()
+          pr_manifest = Path('/tmp/pr-file-manifest.md').read_text()
+          main_manifest = Path('/tmp/main-file-manifest.md').read_text()
+
+          c_start_marker = '> **Last Updated:** September 13, 2026 — **The Unity match client runs on the pinned host for the first time:'
+          c_shared_marker = '> **Last Updated (prior):** September 13, 2026 — **W4 keeper perception is wired on PR #403'
+          c_start = pr_change.index(c_start_marker)
+          c_end = pr_change.index(c_shared_marker, c_start)
+          c_block = pr_change[c_start:c_end]
+          c_block = c_block.replace('> **Last Updated:** September 13, 2026 — **The Unity match client',
+                                    '> **Last Updated (prior):** September 13, 2026 — **The Unity match client', 1)
+          if main_change.count(c_shared_marker) != 1:
+              raise SystemExit('CHANGELOG shared-history marker is not unique on main')
+          resolved_change = main_change.replace(c_shared_marker, c_block + c_shared_marker, 1)
+          Path('docs/tracking/CHANGELOG.md').write_text(resolved_change)
+
+          m_start_marker = '**Last Updated:** September 13, 2026 — **Unity match client scene wired and run on the pinned host'
+          m_shared_marker = '**Last Updated (prior):** September 13, 2026 — **W4 keeper perception consumer wiring / PR #403 close-out.**'
+          m_start = pr_manifest.index(m_start_marker)
+          m_end = pr_manifest.index(m_shared_marker, m_start)
+          m_block = pr_manifest[m_start:m_end]
+          m_block = m_block.replace('**Last Updated:** September 13, 2026 — **Unity match client scene wired',
+                                    '**Last Updated (prior):** September 13, 2026 — **Unity match client scene wired', 1)
+          if main_manifest.count(m_shared_marker) != 1:
+              raise SystemExit('file-manifest shared-history marker is not unique on main')
+          resolved_manifest = main_manifest.replace(m_shared_marker, m_block + m_shared_marker, 1)
+          Path('docs/tracking/file-manifest.md').write_text(resolved_manifest)
+          PY
+
+          git add docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md
+          if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+            echo "Unresolved merge conflicts remain."
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+
+          # This workflow is only a transport for the conflict resolution; remove
+          # it from the resulting merge tree so PR #411 gains no persistent CI surface.
+          rm .github/workflows/resolve-pr411-conflicts.yml
+          git add -A
+
+          python3 tools/doc-consistency-check.py --repo .
+          bash .claude/skills/landing-close-out/scripts/check_drift.sh
+          git diff --check
+
+          git commit -m "Merge latest main and resolve tracking chains"
+          git push origin HEAD:fix/clean-clone-unity-project
