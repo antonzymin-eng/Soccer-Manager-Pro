@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Apply keeper-held goal-plane correction
+      - name: Apply keeper-held goal-plane correction in workspace
         shell: bash
         run: |
           python3 - <<'PY'
@@ -25,38 +25,31 @@ jobs:
           header = '// Modified: 2026-09-15 (W6 review closure: HandsOnBall keeper locomotion is constrained at the defended goal plane before Controlled attachment; no schema/RNG/GT change)\n'
           if header not in text:
               created = '// Created:  2026-05-28\n'
-              if created not in text:
-                  raise SystemExit('header anchor missing')
+              if text.count(created) != 1:
+                  raise SystemExit('header anchor count != 1')
               text = text.replace(created, created + header, 1)
 
-          state_anchor = '''                // ── Reset dive launch frame when no longer in dive states ─────────────
-                GoalkeeperState newState = _states[gkIndex];
-                if (newState != GoalkeeperState.Diving && newState != GoalkeeperState.Airborne)
-          '''
-          state_replacement = '''                // ── Reset dive launch frame when no longer in dive states ─────────────
-                GoalkeeperState newState = _states[gkIndex];
-
-                // W6 review closure: generic Agent Movement intentionally permits a 5 m exterior
-                // safety buffer, but a keeper physically holding the ball must not carry the attached
-                // Controlled ball through the goal plane he defends. Apply this AFTER the physics
-                // transition so the same frame that resolves Airborne/Smothered -> HandsOnBall is
-                // corrected before MatchEngine re-attaches the ball and before Resolve adjudicates a goal.
-                if (newState == GoalkeeperState.HandsOnBall)
-                {
-                    AgentState heldState = agentStates[agentId];
-                    ConstrainHandsOnBallToOwnGoalPlane(ref heldState, gkIndex);
-                    agentStates[agentId] = heldState;
-                    agentState = heldState;
-                }
-
-                if (newState != GoalkeeperState.Diving && newState != GoalkeeperState.Airborne)
-          '''
-          state_anchor = state_anchor[:-10]
-          state_replacement = state_replacement[:-10]
+          new_state_line = '                GoalkeeperState newState = _states[gkIndex];\n'
+          insertion = (
+              new_state_line +
+              '\n'
+              '                // W6 review closure: generic Agent Movement intentionally permits a 5 m exterior\n'
+              '                // safety buffer, but a keeper physically holding the ball must not carry the attached\n'
+              '                // Controlled ball through the goal plane he defends. Apply this AFTER the physics\n'
+              '                // transition so the same frame that resolves Airborne/Smothered -> HandsOnBall is\n'
+              '                // corrected before MatchEngine re-attaches the ball and before Resolve adjudicates a goal.\n'
+              '                if (newState == GoalkeeperState.HandsOnBall)\n'
+              '                {\n'
+              '                    AgentState heldState = agentStates[agentId];\n'
+              '                    ConstrainHandsOnBallToOwnGoalPlane(ref heldState, gkIndex);\n'
+              '                    agentStates[agentId] = heldState;\n'
+              '                    agentState = heldState;\n'
+              '                }\n'
+          )
           if 'ConstrainHandsOnBallToOwnGoalPlane(ref heldState, gkIndex);' not in text:
-              if state_anchor not in text:
-                  raise SystemExit('state-transition anchor missing')
-              text = text.replace(state_anchor, state_replacement, 1)
+              if text.count(new_state_line) != 1:
+                  raise SystemExit('newState anchor count != 1')
+              text = text.replace(new_state_line, insertion, 1)
 
           helper_anchor = '        // Lateral dive axis is Y (touchline-to-touchline): the goal mouth spans Y, so the keeper\n'
           helper = (
@@ -89,8 +82,8 @@ jobs:
               '        }\n\n'
           )
           if 'private static void ConstrainHandsOnBallToOwnGoalPlane' not in text:
-              if helper_anchor not in text:
-                  raise SystemExit('helper anchor missing')
+              if text.count(helper_anchor) != 1:
+                  raise SystemExit('helper anchor count != 1')
               text = text.replace(helper_anchor, helper + helper_anchor, 1)
 
           version_anchor = '// | 1.14 | 2026-09-12 | — | W4 review closure: caller contract now states OnThreatArmed anchors a      |\n'
@@ -101,20 +94,13 @@ jobs:
               '// |      |            |   | new state, tuning, schema or RNG surface.                                    |\n'
           )
           if '// | 1.15 | 2026-09-15' not in text:
-              if version_anchor not in text:
-                  raise SystemExit('version-history anchor missing')
+              if text.count(version_anchor) != 1:
+                  raise SystemExit('version anchor count != 1')
               text = text.replace(version_anchor, version + version_anchor, 1)
 
           path.write_text(text)
           PY
+          git diff --check
+          git diff -- src/goalkeeper-mechanics/GoalkeeperMechanics.cs
       - name: Verify exact keeper-claim scenario
         run: bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'Name=sim_match_engine_keeper_claim'
-      - name: Commit verified repair and remove helper workflow
-        shell: bash
-        run: |
-          git rm .github/workflows/w6-probe.yml
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/goalkeeper-mechanics/GoalkeeperMechanics.cs
-          git commit -m 'fix(w6): constrain held keeper at own goal plane'
-          git push origin HEAD:wiring/w6-controlled-ball
