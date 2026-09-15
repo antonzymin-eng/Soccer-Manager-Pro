@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   repair:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,19 +24,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
-          def replace_once(path, old, new):
-              p = Path(path)
-              s = p.read_text()
-              if old not in s:
-                  raise SystemExit(f"expected text not found in {path}")
-              s2 = s.replace(old, new, 1)
-              p.write_text(s2)
-
-          # Production: when a physically Controlled goalkeeper has moved through the
-          # goal plane, correct the holder itself (and its safety checkpoint) back to
-          # the plane before attaching the ball. Goal adjudication stays untouched.
           p = Path('src/match-engine/MatchEngine.cs')
           s = p.read_text()
           header = '// Modified: 2026-09-15 (W6 review closure — a goalkeeper physically holding Controlled possession is constrained at his own goal plane; consequence guard restored; no schema/RNG/GT change)\n'
@@ -99,19 +86,23 @@ jobs:
                   + version_anchor, 1)
           p.write_text(s)
 
-          # Scenario: keep the W6 attachment lock and restore a consequence lock that
-          # directly detects the measured 2/17 held-ball own-goal-plane crossings.
           p = Path('src/match-engine/tests/MatchEngineKeeperClaimScenarios.cs')
           s = p.read_text()
           hdr = '// Modified: 2026-09-15 (W6 review closure — retain Controlled attachment lock and restore held-ball own-goal-plane consequence guard)\n'
           if hdr not in s:
               s = s.replace('// Created:  2026-08-03\n', '// Created:  2026-08-03\n' + hdr, 1)
-          s = s.replace('''            int heldClaimsObserved = 0;
-            int detachedWhileHeld = 0;''', '''            int heldClaimsObserved = 0;
+          old = '''            int heldClaimsObserved = 0;
+            int detachedWhileHeld = 0;'''
+          if old not in s:
+              raise SystemExit('keeper counters anchor not found')
+          s = s.replace(old, '''            int heldClaimsObserved = 0;
             int detachedWhileHeld = 0;
             int heldOwnGoalCrossings = 0;''', 1)
-          s = s.replace('''                    ref heldClaimsObserved,
-                    ref detachedWhileHeld);''', '''                    ref heldClaimsObserved,
+          old = '''                    ref heldClaimsObserved,
+                    ref detachedWhileHeld);'''
+          if old not in s:
+              raise SystemExit('keeper call anchor not found')
+          s = s.replace(old, '''                    ref heldClaimsObserved,
                     ref detachedWhileHeld,
                     ref heldOwnGoalCrossings);''', 1)
           anchor = '''            context.Envelope.CheckTrue("claimed-ball-remains-attached-while-held",
@@ -119,32 +110,35 @@ jobs:
                 "heldClaimsObserved=" + inv(heldClaimsObserved)
                 + " detachedWhileHeld=" + inv(detachedWhileHeld)
                 + " claims=" + inv(claims));'''
-          addition = anchor + '''
+          if anchor not in s:
+              raise SystemExit('keeper assertion anchor not found')
+          s = s.replace(anchor, anchor + '''
 
-            // Football consequence, not merely composition structure: while the claim is still held,
-            // the attached ball must not be carried through the claiming keeper's own goal plane.
-            // The pre-closure W6 corpus measured 2 crossings in 17 claims; this predicate fails on
-            // that behavior and remains independent of the attachment predicate above.
             context.Envelope.CheckTrue("held-ball-does-not-cross-own-goal-line",
                 heldOwnGoalCrossings == 0,
-                "heldOwnGoalCrossings=" + inv(heldOwnGoalCrossings) + " of " + inv(claims));'''
-          if anchor not in s:
-              raise SystemExit('keeper scenario assertion anchor not found')
-          s = s.replace(anchor, addition, 1)
-          s = s.replace('''            ref int heldClaimsObserved,
-            ref int detachedWhileHeld)''', '''            ref int heldClaimsObserved,
+                "heldOwnGoalCrossings=" + inv(heldOwnGoalCrossings) + " of " + inv(claims));''', 1)
+          old = '''            ref int heldClaimsObserved,
+            ref int detachedWhileHeld)'''
+          if old not in s:
+              raise SystemExit('keeper signature anchor not found')
+          s = s.replace(old, '''            ref int heldClaimsObserved,
             ref int detachedWhileHeld,
             ref int heldOwnGoalCrossings)''', 1)
-          # Count at every observed held-state boundary, before attachment evaluation.
-          s = s.replace('''                    heldClaimsObserved++;
-                    if (!IsControlledAtHolder(engine, claimingAgent[t]))''', '''                    heldClaimsObserved++;
+          old = '''                    heldClaimsObserved++;
+                    if (!IsControlledAtHolder(engine, claimingAgent[t]))'''
+          if old not in s:
+              raise SystemExit('keeper held observation anchor not found')
+          s = s.replace(old, '''                    heldClaimsObserved++;
                     if (HasHeldBallCrossedOwnGoalLine(engine, claimingAgent[t]))
                     {
                         heldOwnGoalCrossings++;
                     }
                     if (!IsControlledAtHolder(engine, claimingAgent[t]))''', 1)
-          s = s.replace('''                            heldClaimsObserved++;
-                            if (!IsControlledAtHolder(engine, agentId))''', '''                            heldClaimsObserved++;
+          old = '''                            heldClaimsObserved++;
+                            if (!IsControlledAtHolder(engine, agentId))'''
+          if old not in s:
+              raise SystemExit('keeper initial observation anchor not found')
+          s = s.replace(old, '''                            heldClaimsObserved++;
                             if (HasHeldBallCrossedOwnGoalLine(engine, agentId))
                             {
                                 heldOwnGoalCrossings++;
@@ -152,17 +146,16 @@ jobs:
                             if (!IsControlledAtHolder(engine, agentId))''', 1)
           helper_anchor = '''        private static bool IsControlledAtHolder(MatchEngine engine, int agentId)
         {'''
-          helper = '''        private static bool HasHeldBallCrossedOwnGoalLine(MatchEngine engine, int agentId)
+          if helper_anchor not in s:
+              raise SystemExit('keeper helper anchor not found')
+          s = s.replace(helper_anchor, '''        private static bool HasHeldBallCrossedOwnGoalLine(MatchEngine engine, int agentId)
         {
             int team = engine.AgentTeamId(agentId);
             float x = engine.BallView.Position.x;
             return team == 0 ? x < 0f : x > MatchEngineConstants.PITCH_LENGTH_M;
         }
 
-''' + helper_anchor
-          if helper_anchor not in s:
-              raise SystemExit('keeper scenario helper anchor not found')
-          s = s.replace(helper_anchor, helper, 1)
+''' + helper_anchor, 1)
           vh = '// | 1.2     | 2026-09-15 | —      | W6 probe observes attachment only at held-state tick boundaries;'
           if '// | 1.3     | 2026-09-15' not in s:
               s = s.replace(vh,
@@ -172,7 +165,6 @@ jobs:
                   + vh, 1)
           p.write_text(s)
 
-          # Closeout: supersede the earlier mistaken "compatibility" conclusion.
           p = Path('docs/tracking/w6-controlled-ball-closeout.md')
           s = p.read_text()
           start = s.index('## Keeper-claim acceptance compatibility — closed')
