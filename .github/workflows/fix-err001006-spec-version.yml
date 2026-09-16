@@ -1,0 +1,32 @@
+name: Correct ERR-001-006 spec revision
+
+on:
+  push:
+    branches:
+      - fix/w6-elevated-stationary-ball
+    paths:
+      - .github/workflows/fix-err001006-spec-version.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/w6-elevated-stationary-ball
+          fetch-depth: 0
+      - name: Correct split-spec version and history
+        run: python3 tools/fix_err001006_spec_version.py
+      - name: Commit correction and remove one-shot helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/fix-err001006-spec-version.yml tools/fix_err001006_spec_version.py
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/specs/ball-physics/section-3-1.md docs/specs/ball-physics/section-3-1-8-to-3-1-14.md
+          git commit -m "docs(ball-physics): record ERR-001-006 as v2.10"
+          git push origin HEAD:fix/w6-elevated-stationary-ball
