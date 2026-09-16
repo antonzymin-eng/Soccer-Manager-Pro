@@ -315,11 +315,9 @@ namespace TacticalDirector.MatchEngine
             byte[] blob = MatchSaveManager.Encode(engine);
             MatchEngine restored = MatchSaveManager.Restore(blob, new TwoClubProvider(seed));
 
-            // The arming seam is a TEST seam and is deliberately not serialized — a restored engine
-            // comes back on the shipped default, which is DISABLED. Re-arm it to the same reach, or
-            // this case compares an armed run against a disabled one and reports it as a restore
-            // defect (which is exactly what it did first time round).
-            restored.TestOnly_ArmTackleChallenge(ArmedRadiusM);
+            // The contact reach is configuration, not snapshot state. Both engines therefore use the
+            // same active shipping default after restore; the test-only arming seam must not participate
+            // in this production-path restore lock.
 
             for (int a = 0; a < MatchEngineConstants.SQUAD_SIZE; a++)
             {
