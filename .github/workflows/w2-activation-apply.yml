@@ -1,0 +1,84 @@
+name: W2 activation one-shot
+
+on:
+  push:
+    branches:
+      - wiring/w2-production-activation
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wiring/w2-production-activation
+          fetch-depth: 0
+      - name: Apply activation patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new, count=1):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'expected text not found in {path}: {old[:120]!r}')
+              p.write_text(text.replace(old, new, count), encoding='utf-8')
+
+          # Production default: active at the safe reclaim reach, without hard-coding 1.0 m.
+          replace(
+              'src/match-engine/MatchEngineConstants.cs',
+              '// Created:  2026-06-16\n',
+              '// Created:  2026-06-16\n// Modified: 2026-09-16 (W2 production activation — TackleContactRadiusM now defaults to LooseBallPickupRadiusM after paired post-W6 evidence; the durable <= reclaim-radius invariant is unchanged)\n')
+          replace(
+              'src/match-engine/MatchEngineConstants.cs',
+              '        /// <para>Measured to the ball rather than to the carrier because possession at Stage 0 is a flag\n        /// and not a kinematic constraint (backlog W6): the W2 census found carrier and ball more than a\n        /// metre apart in 12% of defending episodes.</para>\n',
+              '        /// <para>Measured to the ball rather than to the carrier because contact is with the ball.\n        /// Before W6, the W2 census also found carrier and ball more than a metre apart in 12% of\n        /// defending episodes; W6 subsequently made controlled possession a kinematic constraint.</para>\n')
+          replace(
+              'src/match-engine/MatchEngineConstants.cs',
+              '        /// <para><b>SHIPPED AT 0 — THE CHALLENGE IS DISABLED BY DEFAULT</b>, pending backlog W6. Not\n        /// caution and not a tuning choice: with the challenge live, <c>sim_match_engine_inposs_gate</c>\n        /// collapses on one scenario seed (0.501 pooled against a 0.70 bound) after as few as THREE\n        /// decisive tackles — a stall, not a rate effect. The wedge is not isolated; the leading\n        /// candidate is W6, where possession is a flag and the ball is unattached, so the two reclaim\n        /// paths are mutually exclusive and a ball between them is reclaimed by nobody. A tackle is the\n        /// first mechanic that deliberately creates a contested loose ball, so it is the first thing to\n        /// fall into that gap.\n        ///\n        /// <para>Disabled rather than held red because this predicate is the ONLY detector of the\n        /// 0.24-class possession collapse, and W4/W12 land on top of this branch: a predicate held red\n        /// on an un-isolated cause can no longer catch a NEW regression of the same class, which is the\n        /// ERR-030-014 failure mode. Arming is this one constant, or\n        /// <c>MatchEngine.TestOnly_ArmTackleChallenge</c> for a test. Everything downstream of the\n        /// challenge is live and locked — the #41 FR-MD-027 posture exactly.</para>\n',
+              '        /// <para><b>ACTIVATED 2026-09-16 AFTER THE POST-W6 PAIRED CONTROL.</b> The prior\n        /// zero default was a correctness quarantine for the pre-W6 possession stall, not a tuning\n        /// choice. On exact production head <c>e4335f7f</c>, the governed same-head/same-seed run\n        /// <c>35096793576</c> measured the armed leg at 0.983/0.983 and 0.985/0.985, while the\n        /// disarmed control reproduced the blocker on one seed at 0.530/0.530. The historical wedge\n        /// is therefore closed at the intended current reach. This activates the mechanism; it does\n        /// not calibrate its outcome probabilities or cooldown.</para>\n        ///\n        /// <para>The default inherits <see cref="LooseBallPickupRadiusM"/> rather than embedding the\n        /// current 1.0 m value as a second literal. Config may still override the contact radius, and\n        /// the consuming path continues to fail loudly if it exceeds the reclaim radius.\n        /// <c>MatchEngine.TestOnly_ArmTackleChallenge</c> remains a measurement/test seam, not the\n        /// production activation path.</para>\n')
+          replace(
+              'src/match-engine/MatchEngineConstants.cs',
+              '            Config.GetFloat("match-engine", "TackleContactRadiusM", 0.0f);',
+              '            Config.GetFloat("match-engine", "TackleContactRadiusM", LooseBallPickupRadiusM);')
+
+          # Composed locks now exercise the shipping production value directly.
+          replace(
+              'src/match-engine/tests/MatchEngineTackleTests.cs',
+              '// Modified: 2026-09-12\n',
+              '// Modified: 2026-09-16 (W2 production activation — composed locks now run on the shipping default; active/safe-radius invariants replace the disabled-default lock)\n')
+          replace(
+              'src/match-engine/tests/MatchEngineTackleTests.cs',
+              '        /// <summary>The reach these locks arm the challenge at — the value the catalogue would carry\n        /// if W6 were closed, pinned to <c>LooseBallPickupRadiusM</c> so a knocked-loose ball is always\n        /// reachable by the challenge that produced it.</summary>\n        private const float ArmedRadiusM = 1.0f;\n\n',
+              '')
+          replace(
+              'src/match-engine/tests/MatchEngineTackleTests.cs',
+              '            // The challenge ships DISABLED (TackleContactRadiusM = 0, pending backlog W6), so every\n            // lock in this file arms it explicitly. Same shape as #41\'s suite driving its disarmed\n            // occurrence model: the dial being off must not make the mechanism untested.\n            engine.TestOnly_ArmTackleChallenge(ArmedRadiusM);\n            return engine;\n',
+              '            // W2 is active in production. Do not use the test-only arm seam here: these composed\n            // locks must exercise the exact shipping default so a regression back to radius 0 is visible.\n            return engine;\n')
+          replace(
+              'src/match-engine/tests/MatchEngineTackleTests.cs',
+              '        [Test]\n        public void TheChallengeIsDisabledOnTheShippedDefault()\n        {\n            // The other half of the FR-MD-027 posture: a dial that ships off must be locked OFF as\n            // well as on, or "disabled" is a claim rather than a property. This is the only case in\n            // the file that does NOT arm the challenge.\n            var engine = new MatchEngine(Seeds[0]);\n            engine.ConfigureSquads(BuildSquad(Seeds[0], clubId: 1), BuildSquad(Seeds[0], clubId: 2));\n\n            for (int t = 0; t < 40_000; t++)\n            {\n                engine.RunTick();\n            }\n\n            var oc = engine.TestOnly_TackleOutcomeCounts;\n            Assert.That(oc.Won + oc.Loose + oc.Foul + oc.Missed, Is.Zero,\n                "the shipped TackleContactRadiusM is 0, so no challenge may resolve at all");\n            Assert.That(MatchEngineConstants.TackleContactRadiusM, Is.Zero,\n                "this lock is meaningless if the catalogue default is no longer 0 — arm it deliberately");\n        }\n',
+              '        [Test]\n        public void ShippedTackleReachIsActiveAndCannotOutreachLooseBallReclaim()\n        {\n            // Activation has two durable correctness properties. The first prevents a silent return to\n            // behaviorally-unwired W2; the second prevents BALL_LOOSE from being created beyond the\n            // ordinary stationary-ball reclaim reach. The current shared default happens to be 1.0 m,\n            // but the relationship — not that literal — is the contract.\n            Assert.That(MatchEngineConstants.TackleContactRadiusM, Is.GreaterThan(0f),\n                "W2 production activation regressed to a non-positive contact radius");\n            Assert.That(\n                MatchEngineConstants.TackleContactRadiusM,\n                Is.LessThanOrEqualTo(MatchEngineConstants.LooseBallPickupRadiusM),\n                "a tackle must not knock a stationary loose ball beyond the ordinary reclaim reach");\n        }\n')
+
+          # Keep the discipline source comment truthful without calibrating anything in this change.
+          replace(
+              'src/discipline/DisciplineConstants.cs',
+              '    /// wired engine, and the foul population #44 reads is pre-tackle (<c>defensive-ai</c>\'s challenge\n    /// ships at <c>TackleContactRadiusM = 0</c>, W2) and 4× football on red cards.\n',
+              '    /// wired engine. The #44 calibration quoted here was measured pre-tackle, when W2 still shipped\n    /// at <c>TackleContactRadiusM = 0</c>; W2 activation intentionally does not retune these values, so the\n    /// post-W2 foul/card calibration remains a separate required pass. The measured red-card rate was 4× football.\n')
+
+          # Remove this one-shot workflow from the branch before committing the durable patch.
+          Path('.github/workflows/w2-activation-apply.yml').unlink()
+          PY
+
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Activate W2 tackle challenge in production"
+          git push origin HEAD:wiring/w2-production-activation
