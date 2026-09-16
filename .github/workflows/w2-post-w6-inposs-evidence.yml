@@ -1,0 +1,104 @@
+name: W2 post-W6 paired InPoss evidence
+
+on:
+  push:
+    branches:
+      - wiring/w2-post-w6-closeout
+    paths:
+      - .github/workflows/w2-post-w6-inposs-evidence.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inposs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [armed, disarmed]
+
+    steps:
+      - name: Checkout measurement driver
+        uses: actions/checkout@v4
+        with:
+          ref: wiring/w2-post-w6-closeout
+          path: driver
+          fetch-depth: 1
+
+      - name: Checkout exact post-W6 production head
+        uses: actions/checkout@v4
+        with:
+          ref: e4335f7ff059deb483b1aaa534f2190fd3762008
+          path: repo
+          fetch-depth: 1
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Apply paired evidence transform
+        shell: bash
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          OUT="repo/artifacts/w2-post-w6-${MODE}"
+          mkdir -p "${OUT}/trx"
+          python3 driver/tools/w2_post_w6_inposs_apply.py repo "${MODE}"
+          git -C repo diff -- src/match-engine/tests/MatchEngineInPossGateScenarios.cs > "${OUT}/measurement-only.patch"
+          cat > "${OUT}/provenance.txt" <<EOF
+          Post-W6 production head: e4335f7ff059deb483b1aaa534f2190fd3762008
+          Mode: ${MODE}
+          Shipping TackleContactRadiusM remains 0 on merged main.
+          Armed mode only: TestOnly_ArmTackleChallenge(LooseBallPickupRadiusM = 1.0 m).
+          Disarmed mode: no tackle-arm seam; production default remains in force.
+          Governed seeds: 0x0F1E2D3C4B5A6978, 0x1A2B3C4D5E6F7081.
+          Governed predicate: every seed, both mirrored views, > 0.70.
+          Both modes use the same per-seed reporting/assertion transform.
+          EOF
+
+      - name: Capture governed InPoss scenario
+        working-directory: repo
+        shell: bash
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          set -uo pipefail
+          OUT="artifacts/w2-post-w6-${MODE}"
+          LABEL="W2_POST_W6_${MODE^^}_INPOSS"
+          set +e
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'FullyQualifiedName~sim_match_engine_inposs_gate' 2>&1 | tee "${OUT}/gate.txt"
+          gate_rc=${PIPESTATUS[0]}
+
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-build --no-restore --filter 'FullyQualifiedName~sim_match_engine_inposs_gate' --logger 'console;verbosity=detailed' --logger "trx;LogFileName=w2-post-w6-${MODE}.trx" --results-directory "${OUT}/trx" 2>&1 | tee "${OUT}/instrument-output.txt"
+          test_rc=${PIPESTATUS[0]}
+          set -e
+
+          grep -F "${LABEL} seed=0x0F1E2D3C4B5A6978" "${OUT}/instrument-output.txt"
+          grep -F "${LABEL} seed=0x1A2B3C4D5E6F7081" "${OUT}/instrument-output.txt"
+          printf 'gate_rc=%s\ntest_rc=%s\n' "$gate_rc" "$test_rc" > "${OUT}/exit-status.txt"
+          cd "${OUT}"
+          sha256sum provenance.txt measurement-only.patch gate.txt instrument-output.txt exit-status.txt "trx/w2-post-w6-${MODE}.trx" > SHA256SUMS
+
+      - name: Upload paired evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w2-post-w6-${{ matrix.mode }}-${{ github.run_id }}
+          path: repo/artifacts/w2-post-w6-${{ matrix.mode }}/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce governed scenario result
+        if: always()
+        working-directory: repo
+        shell: bash
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          source <(sed 's/^/export /' "artifacts/w2-post-w6-${MODE}/exit-status.txt")
+          test "$gate_rc" -eq 0
+          test "$test_rc" -eq 0
