@@ -10,7 +10,7 @@
 
 ---
 
-> **UPDATED September 15, 2026 (v1.18):** W4, W5, W6, W7, and W12 are wired. W6 gives genuine open-play possession a physical `BallStateType.Controlled` producer/attachment/release path and closes the keeper-held carry defect at the central MatchEngine attachment seam; its focused locks and composed keeper claim are green. Four Class-A items remain: W3, W8, W9, W10. W2 remains built but shipping-disabled: the W6 prerequisite is now landed, and the owner-sequenced post-W6 W2 measurement is the next step before any activation decision. The owner-held close-chance RED is unchanged and remains a separate realism/calibration item.
+> **UPDATED September 16, 2026 (v1.21):** W2 is now **ACTIVE IN PRODUCTION** after the completed post-W6 paired-control obligation. `TackleContactRadiusM` defaults relationally to `LooseBallPickupRadiusM` (currently 1.0 m), with a durable contract `> 0` and `<= LooseBallPickupRadiusM`; 1.0 m is not an eternal invariant. The production path fails loud on a non-positive catalogue value and retains the existing upper guard; explicit zero remains only as a test/measurement negative control. Four Class-A items remain: W3, W8, W9, W10. The ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain uncalibrated, foul/card calibration remains separate, T-DA-DET-005 remains deferred with no W2 credit, and the owner-held close-chance RED is unchanged.
 
 ## 0. Why this document exists, and the rule it establishes
 
@@ -114,7 +114,7 @@ Only the trigger condition is missing.
 to dive. This was the single most likely contributor to the conversion gap, and the cheapest to
 close. Whether closing it moved the conversion gap is **unmeasured** — see above.
 
-### W2 — No player has ever made a tackle — ⚙️ **BUILT August 12, 2026; SHIPS DISABLED pending post-W6 measurement**
+### W2 — No player had ever made a tackle — **ACTIVE IN PRODUCTION September 16, 2026; P-W6-1 STALL BLOCKER CLEARED**
 **Evidence:** three independent dormant links in one chain — **four**, on re-verification.
 - `defensive-ai/DefensiveAITick.cs:358` — `GetTackleIntentRequests` is populated every tick and read
   by nobody. The class doc says so outright: *"all output surfaces are populated at Stage 0 but
@@ -136,6 +136,10 @@ turnover mechanisms — the carrier kicks it and a team-mate fails to receive, a
 mechanism rather than a churn imbalance, and it is the real content of W2.
 
 **⚙️ BUILT AND SHIPPING DISABLED — owner decision, August 12, 2026.** The mechanism is complete and locked; `TackleContactRadiusM` ships at **0**, so no challenge resolves. **Why:** with the challenge live, `sim_match_engine_inposs_gate` collapsed to 0.501 against its 0.70 bound — it passed at baseline. Measured: tackles OFF gives 0.975/0.966 on the two scenario seeds; tackles ON collapses ONE of them, and which one moves with the contact radius. The collapsing run had **three** decisive tackles, so it is a **stall**, not a rate effect. Root cause NOT isolated; the leading candidate is **W6** — possession is a flag and the ball is unattached, so the two reclaim paths are mutually exclusive and a ball between them is reclaimed by nobody, which a tackle is the first mechanic to deliberately create. **Disabled rather than held red** because this predicate is the only detector of the 0.24-class collapse and W4/W12 land on this branch: held red on an un-isolated cause it could no longer catch a NEW regression of the same class (ERR-030-014 one layer up). Recorded as overridden: KD-7a's tripwire waits on the tackle being WIRED and radius-0 is behaviourally unwired, so the next dispersion capture stays pre-tackle. **Arming is one constant** once the wedge is closed, at `LooseBallPickupRadiusM` so a knocked-loose ball is always reachable by the challenge that produced it. Everything downstream is live and locked BOTH ways (#41 FR-MD-027 posture). Full attribution in `tackle-wiring-design.md` §3.4/§3.4.1.
+
+**POST-W6 P-W6-1 MEASUREMENT — stall blocker cleared September 15, 2026; production remains disabled.** Actions run `35047291977`, job `104639783769`, checked out exact merged W6 head `e4335f7ff059deb483b1aaa534f2190fd3762008` and armed the challenge only through the test seam at `LooseBallPickupRadiusM` (1.0 m). The two governed seeds were evaluated independently in both mirrored views: `0x0F1E2D3C4B5A6978` = **0.983 / 0.983** over 14,751 samples; `0x1A2B3C4D5E6F7081` = **0.985 / 0.985** over 14,203 samples. All four shares satisfy the unchanged strict predicate `> 0.70`. The strongest like-for-like comparison is the pre-W6 1.0 m run in `tackle-wiring-design.md` §3.4: **0.369 / 0.963**. W6 therefore removes the known tackle-created possession stall at the intended activation radius under the governed corpus. This clears **P-W6-1 only**; it is not a release-calibration verdict, does not calibrate the ten tackle-outcome `[GT]`s, and does not satisfy the separate W12 material-effect hypothesis. The required same-head/same-seed control is now complete in run `35096793576`: armed repeats `0.983/0.983` and `0.985/0.985` with `0/0` exits, while disarmed records `0.530/0.530` and `0.979/0.979` with expected `1/1` exits. The exact paired artifacts and their hashes are archived under `docs/tracking/evidence/w2/`.
+
+**PRODUCTION ACTIVATION — September 16, 2026.** The shipping fallback is now `LooseBallPickupRadiusM` rather than `0`, and the composed suite exercises that production value directly. The durable contract is relational (`> 0`, `<= LooseBallPickupRadiusM`), with both violations fail-loud on the production catalogue path; explicit zero remains only for test/measurement negative controls. No tackle outcome/cooldown `[GT]` was calibrated, foul/card calibration remains separate, and no T-DA-DET-005 credit is claimed.
 
 **W2 NOW GATES THE FOUL/CARD CALIBRATION — owner sequencing decision, August 15, 2026.** The open foul/card entry (`open-issues.md`) measured **fouls 35.0 / yellows 5.0 / reds 1.00 per 90** on August 13 against football's ~22 / ~3.5 / ~0.25 — fouls and yellows both ~67% above their own July-26 post-balance-pass figures, drifted by C1's phase reclassification. The decision is **arm W2 first, then calibrate once**, rather than fitting `FoulCallProbability` to today's numbers. The reason is this item: today's foul population is **pre-tackle**, and arming the challenge routes ~47 challenges per team per 90 into the same single foul-candidate slot, so a fit landed now would be re-fitted immediately while its intermediate value sat in the tree looking calibrated. That is KD-W1 read literally — do not land a `[GT]` governing an unwired subsystem — and the July-26 pass is the counter-example that makes it concrete: it fitted correctly against the contact stream of its day, C1 moved that stream, and nobody re-measured for four months. **What this makes W2, in sequencing terms:** it is no longer only the next wiring item, it is the precondition for the most load-bearing open realism item in the project, since #44 now turns cards into suspensions and a 4× red rate is a 4× suspension rate. The `sim_match_engine_inposs_gate` wedge above (leading candidate: W6) is therefore in the way of a calibration pass as well as of the tackle itself.
 
@@ -187,8 +191,8 @@ for the first time, and routes a tackle foul through the **existing single foul-
 KD-F4 strongest-wins (`ApplyFoulIfCaptured` does not re-judge it; #14 §3.6.5 already priced the challenge).
 `SNAPSHOT_SCHEMA_VERSION` **20 → 21** (per-agent tackle flag + challenge cooldown; the four outcome
 counters are excluded, proof at the write site). `DOMAIN_TAG_DEFENSIVE_AI` (0x1A) gets its **first draw
-site anywhere in `src/`** — the tackle draw is keyed, not reserved, un-blocking #14's own T-DA-DET-005 —
-and the `match-flow.card-severity` draw order **MOVES by design** (the foul branch now draws on ticks that
+site anywhere in `src/`** — the tackle draw is keyed, not reserved. **Correction (September 16): this does NOT satisfy or unblock T-DA-DET-005**; that deferred #14 test requires `DefensiveAITick`'s own `DeterministicRngService` path, whereas W2 derives its keyed draw in `MatchEngine`. The
+`match-flow.card-severity` draw order **MOVES by design** (the foul branch now draws on ticks that
 previously had none). **No digest invariance is claimed anywhere in this landing.** `Tackling` gains its
 first consumer anywhere in the tree; `Marking` still has none. Surfaced and fixed in the same commit:
 FM-08's CONTACT-time possession-loss log was `LogError`("Race condition") — accurate only while an
@@ -323,7 +327,7 @@ separately tracked by #401. Regression locks: `CollisionDeflectionFeedbackTests`
 
 **Review closure:** the recovered `_tackleCooldown` P2 ages elapsed cooldown before the physical-carrier gate. W6 also exposed a keeper-carry consequence: the review corpus recorded 2/17 held claims carried through the keeper's own goal line. `0c065b38` constrains only a Controlled goalkeeper at the defended goal plane before ball attachment, preserving Agent Movement's general exterior buffer and ordinary loose/kicked-ball goal adjudication; `3e00cd4c` locks both goal planes and recovery kinematics. Focused W6 tests are 9/9 green and the composed keeper-claim scenario is 1/1 green.
 
-**Downstream boundary:** W6 does **not** arm W2. `TackleContactRadiusM` remains at its governed shipping-disabled value pending the separately pre-registered post-W6 W2 measurement. The owner-held `sim_match_engine_close_chance` also remains unchanged: W6 moves its sampled trajectory population but does not change the DRIBBLE direction scorer, so that calibration/disposition stays outside this wiring landing.
+**Downstream boundary:** W6 did **not** arm W2. The separately pre-registered post-W6 P-W6-1 measurement has now run and clears the historical stall blocker, but `TackleContactRadiusM` remains at its governed shipping-disabled value until the separate activation change lands. The owner-held `sim_match_engine_close_chance` also remains unchanged: W6 moves its sampled trajectory population but does not change the DRIBBLE direction scorer, so that calibration/disposition stays outside this wiring landing.
 
 ### W7 — The AI manager never picks a kickoff preset — ✅ **WIRED September 11, 2026 (PR #398)**
 **Pre-fix evidence:** `match-engine/ManagerAdaptation.cs:250` `ApplyKickoff` had no caller. Its own doc says
@@ -549,7 +553,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 
 | 4 | ~~**W4** keeper perception~~ ✅ **WIRED Sep 13, 2026** (PR #403) | Live all-body LOS now gates DT `SAVE` without contaminating the W1 raw-`SaveArmed` rush veto; real body deflections restart reaction timing in the same Resolve call through a dedicated non-shot seam. No new serialized state or event ABI. W12 subsequently landed as sequence row 5. |
 | 5 | ~~**W12** gate-firing instrument~~ ✅ **LANDED Sep 14, 2026** (PR #410) | Pre-#398 runtime census + separate unread-serialized-field sweep are recorded; the pass feed is dark before W5 by measurement, not inference. |
-| 6 | ~~**W5**~~ / ~~**W7**~~ / ~~**W6**~~ ✅ **WIRED Sep 15, 2026** | W5/W7 are landed and W6 now gives open-play possession a physical Controlled carrier/attachment/release path. W6 itself does not arm W2; the separately pre-registered post-W6 W2 measurement is the next owner-sequenced step. |
+| 6 | ~~**W5**~~ / ~~**W7**~~ / ~~**W6**~~ ✅ **WIRED Sep 15, 2026** | W5/W7 are landed and W6 now gives open-play possession a physical Controlled carrier/attachment/release path. W6 itself did not arm W2. The separately pre-registered P-W6-1 run and same-head/same-seed disarmed control are complete and clear the historical stall blocker; only the separate production activation change remains before the post-W2 calibration pass. |
 | 7 | **W3** + AGENT_BALL fan-out | One dependency, two consumers. The largest single build in this document. |
 | 8 | **W8**, **W9**, **W10** | Fidelity items with working substitutes or a known rebaseline cost. |
 | — | **then** one calibration pass | Against the complete engine, using the §5.Z instruments and seeded-corpus method. |
@@ -566,13 +570,15 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 >    4 requires a **post-arming** capture, because the second moment of scorelines is exactly the
 >    statistic tackle wiring moves. Held August 17; neither adopted nor rejected.
 >
-> **What blocks arming itself:** the historical armed run collapsed `sim_match_engine_inposs_gate`
-> to 0.501 against its 0.70 bound — a stall, not a rate effect. W6 was the leading candidate and is
-> now wired. The next owner-sequenced step is the pre-registered post-W6 W2 measurement, which must
-> determine whether that stall survives before `TackleContactRadiusM` can move from 0.
+> **The historical arming blocker is now cleared under P-W6-1.** Before W6, arming at the intended
+> 1.0 m radius collapsed one governed seed to 0.369. Against exact post-W6 head `e4335f7f`, the same
+> measurement-only arm produces 0.983/0.983 and 0.985/0.985 by seed, all above the unchanged `> 0.70`
+> predicate. That evidence clears the known stall blocker; it does not itself calibrate the live tackle
+> population or the ten un-calibrated tackle-outcome `[GT]`s.
 >
-> Read together, W4 → W12 → W6 is now complete. The unresolved question is empirical rather than a
-> missing wiring prerequisite: rerun W2 armed against the W6 state, then decide activation separately.
+> Read together, W4 → W12 → W6 → P-W6-1 is complete. Before production activation, retain a like-for-like
+> post-W6 disarmed control on the same head/seeds, then land activation as a separate reviewed change.
+> The already-recorded sequence remains **arm W2 first, then calibrate fouls/cards once**.
 
 C2/C3/C4 are folded into whichever item touches their assembly; C4 in particular is the recorded
 next lever on close-chance creation and is large enough to want its own pass.
@@ -643,6 +649,9 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.21 | 2026-09-16 | — | **W2 production activation.** Shipping fallback `0` → `LooseBallPickupRadiusM`; production contract `> 0` / `<= reclaim radius` is fail-loud; shipping-default composed locks replace the disabled-default posture. Outcome `[GT]`s/cooldown unchanged; foul/card calibration remains separate; no T-DA-DET-005 credit. |
+| 1.20 | 2026-09-16 | — | **Post-W6 paired-control closeout.** Same-head/same-seed run `35096793576` validates armed `0.983/0.983`, `0.985/0.985` with clean exits against a disarmed negative control `0.530/0.530`, `0.979/0.979` with expected non-zero exits; exact artifacts and hashes are archived under `docs/tracking/evidence/w2/`. Production W2 remains disabled pending the separate activation change; ten tackle-outcome `[GT]`s remain uncalibrated; T-DA-DET-005 remains inactive. |
+| 1.19 | 2026-09-15 | — | **Post-W6 P-W6-1 stall blocker cleared; W2 still ships disabled.** Exact W6 head `e4335f7f` with measurement-only 1.0 m arming yields per-seed mirrored shares `0.983/0.983` and `0.985/0.985`, all above unchanged `> 0.70`; the pre-W6 same-radius comparison was `0.369/0.963`. Production activation is deliberately separate and awaits the like-for-like post-W6 disarmed control. The foul/card sequence remains arm first, calibrate once. |
 | 1.18 | 2026-09-15 | — | **W6 WIRED (PR #412).** Genuine open-play possession now produces physical `BallStateType.Controlled`, follows the carrier, and releases explicitly; restart pseudo-possession remains stationary. Keeper-held goal-plane carry defect closed at the central attachment seam with two-plane regression coverage. Recovered tackle-cooldown P2 closed. Four Class-A items remain: W3, W8–W10. W2 remains shipping-disabled pending the pre-registered post-W6 measurement; owner-held close-chance RED unchanged. |
 | 1.17 | 2026-09-14 | — | **W12 post-#398 evidence repaired and closed.** Exact retained Actions archives plus a mechanical reconciliation checker replace the bad transcription; matched gate outcomes and scorelines are unchanged while the W5 pass feed and BACKWARD_PASS are live. W5 stale “ring permanently empty” consequence corrected in place. W6 post-wire measurement pre-registered on normalized exit shares/falsifiers; PR #412 tackle-cooldown P2 explicitly separated from Pressing AI `Cooldown`. W6 remains next. |
 | 1.16 | 2026-09-14 | — | **W12 LANDED (PR #410) and PR #398 reconciled onto that mainline.** W12 records the pre-#398 gate-firing baseline plus the separate unread-serialized-field sweep; the pre-#398 #13 pass feed is zero by measurement. W5/W7 remain merge-gated on the post-#398 W12 comparison. Sequence advances to W6 after that comparison passes; remaining Class-A items are W3, W6, W8–W10. |

@@ -282,7 +282,9 @@ a way to find the right *shape* cheaply, never the final value.
    yellows at 20 and reds at 5, so reds could quintuple and the gate would read green. That is correct
    as a plausibility floor and worthless as a calibration signal.
 
-   **✅ OWNER DECISION, August 17, 2026: hold the drift. Arm W2 first, then calibrate ONCE.** No interim
+   **CURRENT STATUS, September 16, 2026:** W2 is now active in production, satisfying the sequencing prerequisite below. This activation does **not** retune foul/card values; the post-W2 measurement and calibration remain a separate pass. The August 17 paragraph is retained as the historical owner decision that established that order.
+
+**✅ OWNER DECISION, August 17, 2026: hold the drift. Arm W2 first, then calibrate ONCE.** No interim
    fit is landed. The reasoning, and the accepted cost, both recorded because this is knowingly shipping
    a wrong number: today's figures measure a **pre-tackle** contact stream — `defensive-ai`'s tackle
    challenge ships at `TackleContactRadiusM = 0` (wiring backlog W2), and arming it routes ~47

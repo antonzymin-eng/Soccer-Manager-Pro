@@ -13,6 +13,12 @@
 
 ---
 
+## Current activation status — September 16, 2026
+
+W2 is **ACTIVE IN PRODUCTION**. `TackleContactRadiusM` defaults to `LooseBallPickupRadiusM` (currently 1.0 m); the durable contract is relational: positive reach, never beyond ordinary loose-ball reclaim reach. Production fails loudly on either violation. Zero remains only as an explicit test/measurement negative control, and 1.0 m is not a permanent conceptual ceiling.
+
+The activation rests on the already-durable paired evidence in `docs/tracking/evidence/w2/`; it does not reinterpret that evidence. The ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain unchanged and uncalibrated. T-DA-DET-005 still requires `DefensiveAITick`'s own `DeterministicRngService` path and receives no W2 credit. Foul/card calibration is a separate subsequent pass. Everything below is the chronological August investigation/landing record and is intentionally preserved as history.
+
 ## 0. This is a wiring task, not a realism pass
 
 `match-engine-wiring-backlog.md` §0 and the gate at the top of the `match-realism-pass` skill both
@@ -273,10 +279,7 @@ un-calibrated by design** — they are the calibration pass's input.
    `FROM_BEHIND` regardless of cause. `FoulCommittedEvent.FoulKind` is meaningful for the first time.
 3. **`Tackling` gains its first consumer anywhere in the tree.** It and `Marking` are canonical #27
    attributes — loaded, defaulted, serialized, and read by no formula. `Marking` still has none.
-4. **`DOMAIN_TAG_DEFENSIVE_AI` (0x1A) gains its first draw site**, which un-blocks #14's own
-   T-DA-DET-005 — `Assert.Ignore`d since May with the message *"activate when DOMAIN_TAG_DEFENSIVE_AI
-   RNG draws are live"*. Wiring it was not in this pass's scope; the test is now unblocked, not
-   un-ignored.
+4. **`DOMAIN_TAG_DEFENSIVE_AI` (0x1A) gains its first draw site, but this does NOT unblock #14's T-DA-DET-005.** The historical note quoted only the second half of the actual ignore reason. The live test requires #16 `DeterministicRngService` wired into **`DefensiveAITick`**, then adds "activate when DOMAIN_TAG_DEFENSIVE_AI (0x1A) RNG draws are live." W2 added its draw in MatchEngine's tackle-resolution path, not in `DefensiveAITick`, so the first condition remains unsatisfied. Spec #14 defines the procedure/pass criterion but does not claim the test is active; this is a design-supplement tracking correction, **not** a spec defect, and no ERR is filed.
 5. **The FR-CS-057 recurrence happened in the landing that cites it.** Five new files shipped without
    a `// Modified:` header field and were caught by `tools/recurring-defect-lint.py` before the commit.
    Sixth consecutive occurrence of this class; the lint is what stopped it this time.
@@ -467,13 +470,7 @@ this class.
 
 ### 5.1 Two council unknowns, resolved by grep
 
-- **`DOMAIN_TAG_DEFENSIVE_AI = 0x1A` has no draw site anywhere in `src/`.** The tag is allocated
-  (`DeterministicSimConstants.cs:105`) and already `[CROSS]`-mirrored into #14's own catalogue
-  (`DefensiveAIConstants.cs:54` `DomainTagDefensiveAI`), and #14's own determinism test T-DA-DET-005 is
-  `Assert.Ignore`d pending exactly this (*"activate when `DOMAIN_TAG_DEFENSIVE_AI` (0x1A) RNG draws are
-  live"*). So a tackle draw would be its **first** draw site — legitimate, requiring no new allocation,
-  and it un-ignores a test that has been waiting for it. Per the ERR-041-002 posture, do **not** also
-  allocate a subsystem ordinal.
+- **`DOMAIN_TAG_DEFENSIVE_AI = 0x1A` had no draw site anywhere in `src/` before W2.** The tag was already allocated and `[CROSS]`-mirrored, so the tackle draw was a legitimate first use requiring no new allocation. The earlier conclusion that this would un-ignore T-DA-DET-005 was wrong: the actual test requires `DeterministicRngService` wired into **`DefensiveAITick`**, while W2's draw site lives in MatchEngine's tackle-resolution path. The test therefore remains correctly ignored. No spec correction is required because #14 defines the test procedure without claiming active implementation. Per the ERR-041-002 posture, do **not** also allocate a subsystem ordinal.
 - **`TackleIntentRequest` is not in the per-tick digest, and #14 says it must be.** Before this
   landing the type had **zero** references anywhere in `src/match-engine/` or `src/deterministic-sim/`,
   while #14 §4.6 / XC-014-020 / XC-014-024 declare it digest-load-bearing. That is a pre-existing
@@ -550,6 +547,7 @@ only. A proposed id is never a reservation — the July 27 wave consumed three.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.6 | 2026-09-15 | — | **Tracking correction, no ERR:** W2 did give `DOMAIN_TAG_DEFENSIVE_AI` its first draw site, but in MatchEngine, not `DefensiveAITick`. T-DA-DET-005 remains `Assert.Ignore` because its first unsatisfied condition is #16 `DeterministicRngService` wired into `DefensiveAITick`; the older prose quoted only the second clause of the ignore reason and incorrectly called the test unblocked. Spec #14 itself is unchanged and correct. |
 | 1.5 | 2026-08-12 | — | **Gate re-confirmed after AR pass 1 part 2**, on the full tree at the v1.4 state: `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped**, `DefensiveAI.Tests` **78 passed / 28 skipped** (carrying the reworked resolver locks), quarantine empty, 32 suites, build 0 errors / 0 warnings. Identical counts to the v1.3 verdict, and the single failure is again the inherited owner-held-red `sim_match_engine_close_chance`, which also fails at the pre-change baseline `4b9271c`. The test rework — three tautologies replaced, a plateau lock added, the continuity walk widened — changed no production behaviour, which is what identical counts across the two runs establishes. |
 | 1.4 | 2026-08-12 | — | **AR pass 1's remaining Mediums and Lows, and the mutation run that caught my own inadequate fix.** §3.6.5.7's second worked example was arithmetically wrong — raising Tackling lowers the FOUL share too and the example recomputed only the clean share (foulShare 0.127 not 0.142, w 0.6921 not 0.6868, threshold u < 0.1853 not 0.189); the conclusion survives, which is why it was worth catching, and the lock now covers the second tackler as well. **Three resolver tests were tautologies and my first replacement for two of them was ALSO tautological** — a mutation run (delete the foul-share ceiling clamp AND the uniform clamp) left all twelve green. Both clamps are provably unreachable at the shipped `[GT]`s, so no test on the resolver's output can detect their removal; the suite now asserts the HEADROOM and fails the moment a retune makes either guard live, and §7 item 8 records that the clamps must not be read as tested. Three behavioural mutants (commitment term, edge term, won/loose swap) ARE killed, 3/4/3 failures. **`CleanShare`'s plateau is filed as a §6 P1/P2 violation, RECORDED NOT FIXED** (§7 item 9): against a maxed dribbler, raw Tackling 1–10 are indistinguishable and all score zero — the fix is a no-plateau ramp, which is a `[GT]` shape and therefore the calibration pass's business under KD-W1. The continuity walk is extended to `FoulShare`/`CleanShare` and its tolerance tightened from ~12x the true step to 4x the mean. Also: the draw key folds SEQUENTIALLY (the XOR form had overlapping term domains and four reachable collisions per match); the challenge-count ceiling's "catches a cooldown regression" claim is withdrawn as arithmetically false; `HeadingMechanics.CancelIntent` and the height-blind reach test are explicitly recorded as not covered. |
 | 1.3 | 2026-08-12 | — | **The gate failed, the failure was W2's, and the owner's call is to ship the challenge DISABLED** (§3.4.1). `sim_match_engine_inposs_gate` regressed 0.97 → 0.501 against a 0.70 bound; measured attribution shows one scenario seed collapsing after as few as THREE decisive tackles, and WHICH seed collapses moves with the contact radius — a stall, not a rate effect. Root cause NOT isolated; leading candidate is backlog W6. Decided on the argument that this predicate is the ONLY detector of the 0.24-class collapse and W4/W12 land on this branch, so holding it red would blind it to a NEW regression of the same class (the ERR-030-014 shape one layer up). Overridden and recorded: KD-7a's tripwire waits on the tackle being WIRED, and radius-0 is behaviourally unwired. `TackleContactRadiusM` ships at 0 with an explicit `radius <= 0` exit; locks arm it through `TestOnly_ArmTackleChallenge` (#41 FR-MD-027 posture) and it is locked BOTH ways. Also fixed en route: the contact reach was briefly 2.5 m against a 1.0 m `LooseBallPickupRadiusM`, so a challenge could knock the ball free from beyond any reclaim path — now guarded fail-loud at the resolution site. |
