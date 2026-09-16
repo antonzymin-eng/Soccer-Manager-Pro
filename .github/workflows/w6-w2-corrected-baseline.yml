@@ -1,0 +1,27 @@
+name: W6 W2 corrected baseline capture
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w6-w2-baseline-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  corrected-baseline:
+    name: Corrected two-seed InPoss baseline
+    if: github.head_ref == 'fix/w6-elevated-stationary-ball'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run only sim_match_engine_inposs_gate
+        run: >-
+          bash tools/dotnet-ci/run-gate.sh --fast
+          --test-filter "Name=sim_match_engine_inposs_gate"
