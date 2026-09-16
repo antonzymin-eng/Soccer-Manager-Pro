@@ -1,0 +1,34 @@
+name: Apply W6 elevated-stationary fix
+
+on:
+  push:
+    branches:
+      - fix/w6-elevated-stationary-ball
+    paths:
+      - .github/workflows/apply-w6-elevated-stationary-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/w6-elevated-stationary-ball
+          fetch-depth: 0
+
+      - name: Apply ERR-001-006 fix
+        run: python3 tools/apply_w6_elevated_stationary_fix.py
+
+      - name: Remove one-shot helpers and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/apply-w6-elevated-stationary-fix.yml tools/apply_w6_elevated_stationary_fix.py
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/ball-physics/BallCollision.cs src/ball-physics/BallStateMachine.cs src/ball-physics/BallPhysicsCore.cs src/ball-physics/tests/BallControlStateTests.cs src/ball-physics/tests/BallStateMachineTests.cs docs/specs/ball-physics/section-3-1.md docs/specs/ball-physics/section-3-1-8-to-3-1-14.md docs/tracking/w6-elevated-stationary-ball-fix.md
+          git commit -m "fix(ball-physics): prevent elevated stationary deadlock"
+          git push origin HEAD:fix/w6-elevated-stationary-ball
