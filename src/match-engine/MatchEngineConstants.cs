@@ -671,7 +671,7 @@ namespace TacticalDirector.MatchEngine
         /// Before W6, the W2 census also found carrier and ball more than a metre apart in 12% of
         /// defending episodes; W6 subsequently made controlled possession a kinematic constraint.</para>
         ///
-        /// <para><b>It MUST NOT exceed <see cref="LooseBallPickupRadiusM"/>, and that is a correctness
+        /// <para><b>It MUST be greater than zero and MUST NOT exceed <see cref="LooseBallPickupRadiusM"/>, and those are correctness
         /// constraint rather than a taste.</b> A <c>BALL_LOOSE</c> outcome leaves the ball where it lies
         /// and expects the ordinary loose-ball paths to contest it — but <c>RunLooseBallPickup</c> needs
         /// someone within <c>LooseBallPickupRadiusM</c> and <c>RunFirstTouch</c> needs the ball MOVING
@@ -1075,4 +1075,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | site was open — MatchEngine.cs:5286 reads this constant. No code  |
 // |         |            |        | change in this file.                                              |
 // | 1.36     | 2026-09-11 | —      | W5: SNAPSHOT_SCHEMA_VERSION 21 -> 22; append latest opposing PassAttemptEvent per pressing team so the newly-live backward-pass trigger survives save/restore. |
+// | 1.37    | 2026-09-16 | —      | W2 production activation: TackleContactRadiusM fallback now inherits LooseBallPickupRadiusM; durable contract is > 0 and <= reclaim radius; outcome/cooldown GTs unchanged. |
 #endregion

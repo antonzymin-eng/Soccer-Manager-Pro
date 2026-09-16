@@ -1,1 +1,0 @@
-One-shot trigger for connector-owned W2 activation finalizer. Remove before merge.

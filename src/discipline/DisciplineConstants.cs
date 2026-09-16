@@ -292,4 +292,5 @@ namespace TacticalDirector.Discipline
 // |         |            |        | including a test file, on the identical rule. All 11 src/ files   |
 // |         |            |        | referencing the old name updated. #44 Appendix A's own ALL_CAPS   |
 // |         |            |        | row is unchanged (docs/ is not this pass's tree) and is reported. |
+// | 1.6     | 2026-09-16 | —      | W2 is active; the cited foul/card calibration remains pre-tackle and must be re-measured before any separate retuning pass. |
 #endregion

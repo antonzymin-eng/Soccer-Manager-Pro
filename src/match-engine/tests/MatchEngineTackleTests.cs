@@ -369,4 +369,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | was unsatisfiable before this landing, plus a CEILING as well as  |
 // |         |            |        | a floor, the cooldown arming on a miss, the foul not being        |
 // |         |            |        | judged twice, and the v21 latches surviving save/restore.         |
+// | 1.1     | 2026-09-16 | —      | W2 activation: composed locks exercise the shipping default; disabled-default lock becomes >0 / <= reclaim invariants; restore no longer arms the test seam. |
 #endregion

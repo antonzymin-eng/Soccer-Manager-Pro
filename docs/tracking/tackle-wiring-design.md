@@ -13,6 +13,12 @@
 
 ---
 
+## Current activation status — September 16, 2026
+
+W2 is **ACTIVE IN PRODUCTION**. `TackleContactRadiusM` defaults to `LooseBallPickupRadiusM` (currently 1.0 m); the durable contract is relational: positive reach, never beyond ordinary loose-ball reclaim reach. Production fails loudly on either violation. Zero remains only as an explicit test/measurement negative control, and 1.0 m is not a permanent conceptual ceiling.
+
+The activation rests on the already-durable paired evidence in `docs/tracking/evidence/w2/`; it does not reinterpret that evidence. The ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain unchanged and uncalibrated. T-DA-DET-005 still requires `DefensiveAITick`'s own `DeterministicRngService` path and receives no W2 credit. Foul/card calibration is a separate subsequent pass. Everything below is the chronological August investigation/landing record and is intentionally preserved as history.
+
 ## 0. This is a wiring task, not a realism pass
 
 `match-engine-wiring-backlog.md` §0 and the gate at the top of the `match-realism-pass` skill both
