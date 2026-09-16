@@ -620,7 +620,8 @@ public void SetBallControlled(ref BallState ball)
 /// POST-CONDITIONS:
 ///   - ball.Velocity = velocity parameter (kick impulse applied instantly)
 ///   - ball.AngularVelocity = spin parameter
-///   - ball.State = AIRBORNE if velocity.z > 0, else ROLLING if horizontal, else STATIONARY
+///   - ERR-001-006: ball.State = AIRBORNE if current height exceeds AIRBORNE_ENTER_THRESHOLD
+///     OR velocity.z > 0; otherwise ROLLING if horizontal speed exceeds MIN_VELOCITY; else STATIONARY
 ///   - ball.LastValidPosition and ball.LastValidVelocity updated
 ///   - Kick event logged to logger (if logger is non-null)
 ///   - Agent system MUST observe the state transition and update possession on its side
@@ -690,14 +691,12 @@ public void ApplyKick(
     // system observes to release possession on its side. No PossessingAgentId
     // field exists in BallState — the agent system owns that data.
     //
-    // State selection:
-    //   velocity.z > 0          → ball is kicked upward → AIRBORNE
-    //   velocity.z <= 0 AND
-    //   horizontal speed > MIN  → ball stays on ground  → ROLLING
-    //   otherwise               → kick was essentially zero → STATIONARY
+    // State selection (ERR-001-006): current height is authoritative first.
+    // An already-elevated ball must remain AIRBORNE even for a zero, horizontal,
+    // or downward kick so gravity remains active.
     float horizontalSpeed = new Vector2(velocity.x, velocity.y).magnitude;
 
-    if (velocity.z > 0f)
+    if (ball.Position.z > BallPhysicsConstants.State.AIRBORNE_ENTER_THRESHOLD || velocity.z > 0f)
     {
         ball.State = BallStateType.AIRBORNE;
     }
