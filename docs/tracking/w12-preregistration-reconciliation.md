@@ -39,3 +39,12 @@ If the strict material-effect conditions fail, the repository must not claim tha
 The canonical measurement remains the existing W12 gate-firing lane and its governed census/accounting fields. The armed/disarmed W2 `sim_match_engine_inposs_gate` evidence is a separate measurement and cannot be substituted for W12 exit-distribution evidence.
 
 This reconciliation must land before the canonical post-W6 W12 measurement is interpreted.
+
+## Procedure deviation recorded before interpretation
+
+`w6-post-wiring-measurement-preregistration.md` §5 recorded an intended sequence in which the W12 evidence repair would land before PR #412 was rebased/accepted and the post-W6 measurements were interpreted. The executed sequence differed: PR #412 merged first, and the stale `wiring/w12-evidence-repair` branch was audited afterward.
+
+That audit found the branch superseded rather than missing: current `main` already retains the exact pre/post Actions ZIPs, `tools/dotnet-ci/check_w12_evidence.py`, regression coverage under `tools/tests/test_w12_evidence.py`, and enforcement through the required `Spec hygiene checks` context. The stale branch's Base64 reconstruction workflow and checker were therefore redundant, and its modified comparison document was deliberately not cherry-picked.
+
+This is a **procedure deviation**, not a threshold change. It is recorded here before the canonical post-W6 W12 result is interpreted. Neither historical pre-registration is rewritten, and none of the support/falsifier bands is altered because the execution order differed.
+
