@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
+// Modified: 2026-09-16 (W2 production activation — TackleContactRadiusM now defaults to LooseBallPickupRadiusM after paired post-W6 evidence; the durable <= reclaim-radius invariant is unchanged)
 // Modified: 2026-09-11 (wiring backlog W5 — SNAPSHOT_SCHEMA_VERSION 21 -> 22 for the per-team latest opposing-pass trigger event)
 // Modified: 2026-08-15, later still (reviewed findings pass, L1 — corrected the L3 entry directly below:
 //           MatchEngine.cs's card-issuing call site (MatchEngine.cs:5286) WAS repointed onto
@@ -666,32 +667,30 @@ namespace TacticalDirector.MatchEngine
         /// — "close enough to think about tackling him" — where this is a CONTACT distance: close
         /// enough to get a foot on the ball.
         ///
-        /// <para>Measured to the ball rather than to the carrier because possession at Stage 0 is a flag
-        /// and not a kinematic constraint (backlog W6): the W2 census found carrier and ball more than a
-        /// metre apart in 12% of defending episodes.</para>
+        /// <para>Measured to the ball rather than to the carrier because contact is with the ball.
+        /// Before W6, the W2 census also found carrier and ball more than a metre apart in 12% of
+        /// defending episodes; W6 subsequently made controlled possession a kinematic constraint.</para>
         ///
-        /// <para><b>It MUST NOT exceed <see cref="LooseBallPickupRadiusM"/>, and that is a correctness
+        /// <para><b>It MUST be greater than zero and MUST NOT exceed <see cref="LooseBallPickupRadiusM"/>, and those are correctness
         /// constraint rather than a taste.</b> A <c>BALL_LOOSE</c> outcome leaves the ball where it lies
         /// and expects the ordinary loose-ball paths to contest it — but <c>RunLooseBallPickup</c> needs
         /// someone within <c>LooseBallPickupRadiusM</c> and <c>RunFirstTouch</c> needs the ball MOVING
         /// and approaching a receiver. A stationary ball with nobody inside the pickup radius satisfies
         /// neither, so it simply sits there.</para>
         ///
-        /// <para><b>SHIPPED AT 0 — THE CHALLENGE IS DISABLED BY DEFAULT</b>, pending backlog W6. Not
-        /// caution and not a tuning choice: with the challenge live, <c>sim_match_engine_inposs_gate</c>
-        /// collapses on one scenario seed (0.501 pooled against a 0.70 bound) after as few as THREE
-        /// decisive tackles — a stall, not a rate effect. The wedge is not isolated; the leading
-        /// candidate is W6, where possession is a flag and the ball is unattached, so the two reclaim
-        /// paths are mutually exclusive and a ball between them is reclaimed by nobody. A tackle is the
-        /// first mechanic that deliberately creates a contested loose ball, so it is the first thing to
-        /// fall into that gap.
+        /// <para><b>ACTIVATED 2026-09-16 AFTER THE POST-W6 PAIRED CONTROL.</b> The prior
+        /// zero default was a correctness quarantine for the pre-W6 possession stall, not a tuning
+        /// choice. On exact production head <c>e4335f7f</c>, the governed same-head/same-seed run
+        /// <c>35096793576</c> measured the armed leg at 0.983/0.983 and 0.985/0.985, while the
+        /// disarmed control reproduced the blocker on one seed at 0.530/0.530. The historical wedge
+        /// is therefore closed at the intended current reach. This activates the mechanism; it does
+        /// not calibrate its outcome probabilities or cooldown.</para>
         ///
-        /// <para>Disabled rather than held red because this predicate is the ONLY detector of the
-        /// 0.24-class possession collapse, and W4/W12 land on top of this branch: a predicate held red
-        /// on an un-isolated cause can no longer catch a NEW regression of the same class, which is the
-        /// ERR-030-014 failure mode. Arming is this one constant, or
-        /// <c>MatchEngine.TestOnly_ArmTackleChallenge</c> for a test. Everything downstream of the
-        /// challenge is live and locked — the #41 FR-MD-027 posture exactly.</para>
+        /// <para>The default inherits <see cref="LooseBallPickupRadiusM"/> rather than embedding the
+        /// current 1.0 m value as a second literal. Config may still override the contact radius, and
+        /// the consuming path continues to fail loudly if it exceeds the reclaim radius.
+        /// <c>MatchEngine.TestOnly_ArmTackleChallenge</c> remains a measurement/test seam, not the
+        /// production activation path.</para>
         ///
         /// <para><b>This shipped wrong once and the gate caught it.</b> The value was briefly 2.5 m,
         /// re-derived from #14 §3.6.1 defining COMMIT as a *lunge*. That reasoning conflated how far a
@@ -706,7 +705,7 @@ namespace TacticalDirector.MatchEngine
         /// Config key [match-engine] TackleContactRadiusM. UN-CALIBRATED.
         /// </summary>
         public static readonly float TackleContactRadiusM =
-            Config.GetFloat("match-engine", "TackleContactRadiusM", 0.0f);
+            Config.GetFloat("match-engine", "TackleContactRadiusM", LooseBallPickupRadiusM);
 
         /// <summary>
         /// [GT] AI strides (10 Hz) a player waits after making a challenge before he can make another.
@@ -1076,4 +1075,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | site was open — MatchEngine.cs:5286 reads this constant. No code  |
 // |         |            |        | change in this file.                                              |
 // | 1.36     | 2026-09-11 | —      | W5: SNAPSHOT_SCHEMA_VERSION 21 -> 22; append latest opposing PassAttemptEvent per pressing team so the newly-live backward-pass trigger survives save/restore. |
+// | 1.37    | 2026-09-16 | —      | W2 production activation: TackleContactRadiusM fallback now inherits LooseBallPickupRadiusM; durable contract is > 0 and <= reclaim radius; outcome/cooldown GTs unchanged. |
 #endregion

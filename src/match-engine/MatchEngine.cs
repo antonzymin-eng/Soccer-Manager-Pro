@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-16 (W2 production activation — active tackle reach must be > 0 and <= loose-ball reclaim reach; zero remains only as a test/measurement negative-control override; no schema/RNG change)
 // Modified: 2026-09-15 (W6 review closure — Controlled goalkeeper carriers are constrained at their defended goal plane in the MatchEngine attachment funnel; no schema/RNG change)
 // Modified: 2026-09-14 (W6 review P2 — tackle cooldown now ages on every AI stride even without a physical carrier; regression seam only, no schema/RNG change)
 // Modified: 2026-09-14 (W6 controlled ball — physical possession drives BallState.Controlled + carrier attachment; restart taker stays stationary; no schema/RNG change)
@@ -366,10 +367,9 @@ namespace TacticalDirector.MatchEngine
         // standing geometric condition into discrete challenges.
         private readonly int[] _tackleCooldown = new int[MatchEngineConstants.SQUAD_SIZE];
 
-        // The challenge's effective reach. Negative means "use the catalogue", which ships at 0 —
-        // DISABLED, pending backlog W6 (see TackleContactRadiusM's own remarks). A test arms it
-        // through TestOnly_ArmTackleChallenge rather than by binding config, because GameplayConfig
-        // binding is one-shot per process and would leak across every other suite in the run.
+        // The challenge's effective reach. Negative means use the active production catalogue;
+        // zero is retained only as an explicit test/measurement negative control. GameplayConfig
+        // binding is one-shot per process, so tests use the override instead of rebinding config.
         private float _tackleContactRadiusOverrideM = -1f;
 
         // Diagnostic observation (the _woodworkStrikes class): challenges resolved this match, by
@@ -2424,10 +2424,9 @@ namespace TacticalDirector.MatchEngine
              _tackleGateInRadiusStrides,
              _tackleGateNearestSamples > 0 ? _tackleGateNearestSumM / _tackleGateNearestSamples : 0f);
 
-        /// <summary>Test-only: arms the W2 challenge at <paramref name="radiusM"/> metres of reach.
-        /// The shipped catalogue value is 0 — DISABLED pending backlog W6 — so every lock on the
-        /// tackle's behaviour goes through this seam, exactly as #41's suite drives its disarmed
-        /// occurrence model. Pass a negative value to fall back to the catalogue.</summary>
+        /// <summary>Test-only/measurement seam: overrides the active W2 challenge reach.
+        /// Zero is the explicit disarmed negative control; a negative value restores the
+        /// production catalogue path. This override is not serialized.</summary>
         internal void TestOnly_ArmTackleChallenge(float radiusM) => _tackleContactRadiusOverrideM = radiusM;
 
         /// <summary>Test-only: challenges this team resolved (AR-1 M-4 — the pooled counters cannot
@@ -3635,11 +3634,17 @@ namespace TacticalDirector.MatchEngine
                 ? _tackleContactRadiusOverrideM
                 : MatchEngineConstants.TackleContactRadiusM;
 
-            // DISABLED is disabled, not "reachable only at exactly zero separation". Shipping the
-            // constant at 0 must mean no challenge is ever resolved, and an explicit exit says so
-            // where a >= comparison on a zero radius would merely make it vanishingly unlikely.
+            // W2 is active in production. A non-positive catalogue value is a configuration
+            // violation and fails loudly; explicit zero remains available only through the
+            // test/measurement override as a negative control.
             if (radius <= 0f)
             {
+                if (_tackleContactRadiusOverrideM < 0f)
+                {
+                    throw new InvalidOperationException(
+                        "MatchEngine.TryResolveTackles: production TackleContactRadiusM must be > 0 when W2 is active.");
+                }
+
                 return;
             }
 
@@ -9719,4 +9724,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | and exits explicitly on non-kick release; restart-taker designation remains       |
 // |         |            |        | Stationary. No snapshot-schema or RNG change.                                     |
 // | 1.76    | 2026-09-14 | —      | ERR-013-011: FillPressingSnapshot carries the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
+// | 1.80    | 2026-09-16 | —      | W2 production activation: non-positive catalogue reach now fails loud; zero remains only for the explicit test/measurement override. Existing <= LooseBallPickupRadiusM guard unchanged; no schema/RNG change. |
 #endregion
