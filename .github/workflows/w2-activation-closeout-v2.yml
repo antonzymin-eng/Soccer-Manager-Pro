@@ -1,0 +1,136 @@
+name: W2 activation closeout v2
+
+on:
+  push:
+    branches:
+      - wiring/w2-production-activation
+
+permissions:
+  contents: write
+
+jobs:
+  closeout:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wiring/w2-production-activation
+          fetch-depth: 0
+      - name: Apply durable closeout and verify
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def load(path):
+              return Path(path).read_text(encoding='utf-8')
+
+          def save(path, text):
+              Path(path).write_text(text, encoding='utf-8')
+
+          def once(path, old, new):
+              text = load(path)
+              n = text.count(old)
+              if n != 1:
+                  raise SystemExit(f'{path}: expected 1 occurrence, found {n}: {old[:100]!r}')
+              save(path, text.replace(old, new, 1))
+
+          def append_version_row(path, row):
+              text = load(path)
+              idx = text.rfind('#endregion')
+              if idx < 0:
+                  raise SystemExit(f'{path}: final #endregion not found')
+              save(path, text[:idx] + row + text[idx:])
+
+          once('src/discipline/DisciplineConstants.cs', '// Modified: 2026-08-13\n', '// Modified: 2026-09-16 (W2 activation boundary — pre-tackle calibration is historical; post-W2 calibration remains separate)\n')
+          append_version_row('src/discipline/DisciplineConstants.cs', '// | 1.6     | 2026-09-16 | —      | W2 is active; the cited #44 foul/card calibration remains pre-tackle and must be re-measured before retuning. |\n')
+          append_version_row('src/match-engine/MatchEngineConstants.cs', '// | 1.37    | 2026-09-16 | —      | W2 production activation: TackleContactRadiusM fallback now inherits LooseBallPickupRadiusM after paired post-W6 control; outcome/cooldown GTs unchanged. |\n')
+          append_version_row('src/match-engine/tests/MatchEngineTackleTests.cs', '// | 1.1     | 2026-09-16 | —      | W2 activation: composed locks exercise shipping default; disabled lock replaced by >0 / <= reclaim invariants; restore no longer uses arm seam. |\n')
+
+          changelog = 'docs/tracking/CHANGELOG.md'
+          text = load(changelog)
+          head = '# Changelog\n\n'
+          current = '**Last Updated:** September 16, 2026 — W2 post-W6 paired-control closeout'
+          if not text.startswith(head + current):
+              raise SystemExit('CHANGELOG head moved')
+          text = text.replace(current, '**Last Updated (prior):** September 16, 2026 — W2 post-W6 paired-control closeout', 1)
+          entry = '**Last Updated:** September 16, 2026 — **W2 tackle challenge ACTIVATED in production after the governed post-W6 paired control.** `TackleContactRadiusM` now defaults to `LooseBallPickupRadiusM` (currently 1.0 m) rather than `0`; durable locks are relational: `TackleContactRadiusM > 0` and `TackleContactRadiusM <= LooseBallPickupRadiusM`. The composed tackle suite exercises the shipping default directly. Focused run `35122576991` built the full tree with 0 errors and passed 12/12 selected MatchEngine tests including `sim_match_engine_inposs_gate`, production tackle locks/save-restore, and the capstone selection. Separate real-capstone run `35123092565` passed 1/1 on Linux; this is non-certifying execution evidence, not a certified performance claim. No RNG stream/domain/draw site, snapshot field, or schema was added. W2 receives **no T-DA-DET-005 credit**. The ten tackle-outcome `[GT]`s and `TackleCooldownStrides` remain uncalibrated and unchanged. The August 13 foul/card figures remain pre-tackle evidence; **post-W2 foul/card calibration is now the next separate pass**. The owner-held `sim_match_engine_close_chance` RED remains unchanged and non-required.\n\n'
+          save(changelog, head + entry + text[len(head):])
+
+          manifest = 'docs/tracking/file-manifest.md'
+          text = load(manifest)
+          head = '# File Manifest (Post-Migration Baseline)\n\n'
+          current = '**Last Updated:** September 16, 2026 — **W2 post-W6 paired evidence closeout'
+          if not text.startswith(head + current):
+              raise SystemExit('file-manifest head moved')
+          text = text.replace(current, '**Last Updated (prior):** September 16, 2026 — **W2 post-W6 paired evidence closeout', 1)
+          entry = '**Last Updated:** September 16, 2026 — **W2 production activation / PR #418.** Modified production/source: `src/match-engine/MatchEngineConstants.cs` (shipping fallback `0` → `LooseBallPickupRadiusM`) and `src/discipline/DisciplineConstants.cs` (comment/version record only; no discipline value change). Modified test: `src/match-engine/tests/MatchEngineTackleTests.cs` (shipping default exercised directly; `> 0` / `<= LooseBallPickupRadiusM` locks; restore no longer re-arms test seam). Tracking: backlog v1.20 → v1.21, tackle design, open issues, foul-discipline design, CHANGELOG, and manifest. Focused run `35122576991`: full-tree build 0 errors, 12/12 selected tests green. Capstone run `35123092565`: 1/1 green on Linux, non-certifying. No assembly edge, durable field, snapshot/save schema, new RNG stream/domain/draw site, or `[GT]` value changed. No T-DA-DET-005 credit. Ten outcome `[GT]`s plus `TackleCooldownStrides` remain uncalibrated; post-W2 foul/card calibration is next.\n\n'
+          save(manifest, head + entry + text[len(head):])
+
+          backlog = 'docs/tracking/match-engine-wiring-backlog.md'
+          text = load(backlog)
+          start = text.index('> **UPDATED September 16, 2026 (v1.20):**')
+          end = text.index('\n\n## 0. Why this document exists', start)
+          current = '> **UPDATED September 16, 2026 (v1.21):** W2 is now **ACTIVE IN PRODUCTION** after the completed post-W6 paired-control obligation. `TackleContactRadiusM` defaults to `LooseBallPickupRadiusM` (currently 1.0 m), with durable locks `> 0` and `<= LooseBallPickupRadiusM`; 1.0 m is not an eternal invariant. Focused run `35122576991` built the full tree with 0 errors and passed 12/12 selected activation tests including the governed InPoss gate and production-default tackle locks; capstone run `35123092565` passed 1/1 on Linux and is non-certifying. Four Class-A items remain: W3, W8, W9, W10. The ten tackle-outcome `[GT]`s and `TackleCooldownStrides` remain uncalibrated; post-W2 foul/card calibration is next. No T-DA-DET-005 credit is claimed, and the owner-held close-chance RED remains unchanged.'
+          text = text[:start] + current + text[end:]
+          old = '### W2 — No player has ever made a tackle — ⚙️ **BUILT August 12, 2026; SHIPS DISABLED; P-W6-1 STALL BLOCKER CLEARED September 15, 2026**'
+          new = '### W2 — No player had ever made a tackle — ✅ **ACTIVE IN PRODUCTION September 16, 2026; P-W6-1 STALL BLOCKER CLEARED**'
+          if text.count(old) != 1:
+              raise SystemExit('W2 heading moved')
+          text = text.replace(old, new, 1)
+          marker = '**W2 NOW GATES THE FOUL/CARD CALIBRATION — owner sequencing decision, August 15, 2026.**'
+          note = '**PRODUCTION ACTIVATION — September 16, 2026.** The shipping fallback is now `LooseBallPickupRadiusM` rather than `0`. The composed suite exercises that value directly and locks `TackleContactRadiusM > 0` and `TackleContactRadiusM <= LooseBallPickupRadiusM`. The paired evidence in `docs/tracking/evidence/w2/` is the activation prerequisite; focused run `35122576991` is the post-change execution proof. No tackle outcome/cooldown `[GT]` was calibrated, and no T-DA-DET-005 credit is claimed.\n\n'
+          if text.count(marker) != 1:
+              raise SystemExit('W2 foul/card marker moved')
+          text = text.replace(marker, note + marker, 1)
+          vh = '|---|---|---|---|\n| 1.20 | 2026-09-16 | — |'
+          if text.count(vh) != 1:
+              raise SystemExit('backlog version head moved')
+          text = text.replace(vh, '|---|---|---|---|\n| 1.21 | 2026-09-16 | — | **W2 production activation.** Shipping fallback `0` → `LooseBallPickupRadiusM`; production locks enforce `>0` / `<= reclaim radius`; focused run `35122576991` 12/12 green and capstone run `35123092565` 1/1 non-certifying green. Outcome `[GT]`s/cooldown unchanged; foul/card calibration follows; no T-DA-DET-005 credit. |\n| 1.20 | 2026-09-16 | — |', 1)
+          save(backlog, text)
+
+          design = 'docs/tracking/tackle-wiring-design.md'
+          text = load(design)
+          marker = '\n---\n\n## 0. This is a wiring task, not a realism pass\n'
+          if text.count(marker) != 1:
+              raise SystemExit('tackle design opening moved')
+          overlay = '\n---\n\n## Current activation status — September 16, 2026\n\nW2 is **ACTIVE IN PRODUCTION**. `TackleContactRadiusM` defaults to `LooseBallPickupRadiusM` (currently 1.0 m), and production locks require positive reach that cannot exceed ordinary loose-ball reclaim reach. This activates the already-landed mechanism; it does not calibrate the ten tackle-outcome `[GT]`s or `TackleCooldownStrides`, which remain unchanged.\n\nRelease basis: immutable paired evidence in `docs/tracking/evidence/w2/` (Actions `35096793576`). Post-change focused proof: `35122576991` (full-tree build 0 errors; 12/12 selected tests green including `sim_match_engine_inposs_gate` and production tackle locks). Real capstone harness: `35123092565`, 1/1 green on Linux, non-certifying. No new snapshot state/schema or RNG stream/domain/draw site; **no T-DA-DET-005 credit**. Next separate work is foul/card calibration on the active contact stream.\n\nEverything below is the chronological August investigation/landing record and is intentionally not rewritten.\n\n## 0. This is a wiring task, not a realism pass\n'
+          save(design, text.replace(marker, overlay, 1))
+
+          issues = 'docs/tracking/open-issues.md'
+          text = load(issues)
+          old = '**Match-engine wiring backlog — W1/C1/W4/W5/W6/W7/W12 wired and W2 BUILT-BUT-DISABLED; 4 remaining Class-A wiring items (W3, W8–W10) still need production wiring/integration, and the `[GT]` freeze (KD-W1) that follows**'
+          new = '**Match-engine wiring backlog — W1/C1/W2/W4/W5/W6/W7/W12 wired/active; 4 remaining Class-A wiring items (W3, W8–W10) still need production wiring/integration, and the `[GT]` freeze (KD-W1) that follows**'
+          if text.count(old) != 1:
+              raise SystemExit('open-issues wiring title moved')
+          text = text.replace(old, new, 1)
+          pointer = 'Full inventory, evidence and wire-order: `docs/tracking/match-engine-wiring-backlog.md` v1.0, now v1.20.'
+          if text.count(pointer) != 1:
+              raise SystemExit('open-issues backlog pointer moved')
+          text = text.replace(pointer, 'Full inventory, evidence and wire-order: `docs/tracking/match-engine-wiring-backlog.md` v1.0, now v1.21. **UPDATE September 16, 2026:** W2 is active at the safe reclaim-relative default; paired stall evidence and production locks are closed, while outcome `[GT]`s/cooldown remain uncalibrated. Post-W2 foul/card calibration is next.', 1)
+          old = '**Not fixed here, by KD-W1**:'
+          if text.count(old) != 1:
+              raise SystemExit('foul/card historical marker moved')
+          text = text.replace(old, '**UPDATE September 16, 2026 — W2 prerequisite SATISFIED; calibration is now next.** The August 13 `35.0 / 5.0 / 1.00` figures remain pre-tackle evidence and are not a post-activation measurement. No discipline `[GT]` is changed by W2 activation. **Historical pre-activation disposition:**', 1)
+          save(issues, text)
+
+          foul = 'docs/tracking/foul-discipline-balance-design.md'
+          text = load(foul)
+          marker = '   **✅ OWNER DECISION, August 17, 2026: hold the drift. Arm W2 first, then calibrate ONCE.**'
+          if text.count(marker) != 1:
+              raise SystemExit('foul design owner marker moved')
+          text = text.replace(marker, marker + '\n   **UPDATE September 16, 2026:** W2 is now active in production; the next action is the single post-W2 foul/card re-measurement and calibration pass. The August measurements remain historical pre-tackle evidence.', 1)
+          save(foul, text)
+          PY
+
+          git diff --check
+          python3 tools/doc-consistency-check.py --repo .
+          if [ -x .claude/skills/landing-close-out/scripts/check_drift.sh ]; then
+            bash .claude/skills/landing-close-out/scripts/check_drift.sh
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/discipline/DisciplineConstants.cs src/match-engine/MatchEngineConstants.cs src/match-engine/tests/MatchEngineTackleTests.cs docs/tracking/CHANGELOG.md docs/tracking/file-manifest.md docs/tracking/match-engine-wiring-backlog.md docs/tracking/tackle-wiring-design.md docs/tracking/open-issues.md docs/tracking/foul-discipline-balance-design.md
+          git commit -m "Close W2 production activation tracking"
+          git push origin HEAD:wiring/w2-production-activation
