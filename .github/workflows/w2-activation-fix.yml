@@ -1,0 +1,51 @@
+name: W2 activation restore-test fix
+
+on:
+  push:
+    branches:
+      - wiring/w2-production-activation
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wiring/w2-production-activation
+      - name: Remove obsolete restore re-arm
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/match-engine/tests/MatchEngineTackleTests.cs')
+          text = p.read_text(encoding='utf-8')
+          old = '''            // The arming seam is a TEST seam and is deliberately not serialized — a restored engine
+            // comes back on the shipped default, which is DISABLED. Re-arm it to the same reach, or
+            // this case compares an armed run against a disabled one and reports it as a restore
+            // defect (which is exactly what it did first time round).
+            restored.TestOnly_ArmTackleChallenge(ArmedRadiusM);
+
+'''
+          new = '''            // The contact reach is configuration, not snapshot state. Both engines therefore use the
+            // same active shipping default after restore; the test-only arming seam must not participate
+            // in this production-path restore lock.
+
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one obsolete restore re-arm block, found {text.count(old)}')
+          text = text.replace(old, new)
+          if 'ArmedRadiusM' in text:
+              raise SystemExit('stale ArmedRadiusM reference remains')
+          p.write_text(text, encoding='utf-8')
+          Path('.github/workflows/w2-activation-fix.yml').unlink()
+          PY
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix W2 restore test for active default"
+          git push origin HEAD:wiring/w2-production-activation
