@@ -52,6 +52,8 @@ jobs:
               ('*(since **v1.18**)*', '*(since **v1.20**)*'),
               ('(since v1.18)', '(since v1.20)'),
               ('(since **v1.18**)', '(since **v1.20**)'),
+              ('the close-out is recorded in the current `match-engine-wiring-backlog.md` v1.18.',
+               'the close-out is recorded in the current `match-engine-wiring-backlog.md` v1.20.'),
           )
           for path in paths:
               lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
