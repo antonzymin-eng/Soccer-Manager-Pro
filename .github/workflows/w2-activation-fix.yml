@@ -41,6 +41,7 @@ jobs:
           if 'ArmedRadiusM' in text:
               raise SystemExit('stale ArmedRadiusM reference remains')
           p.write_text(text, encoding='utf-8')
+          Path('.w2-activation-fix-trigger').unlink(missing_ok=True)
           Path('.github/workflows/w2-activation-fix.yml').unlink()
           PY
           git diff --check
