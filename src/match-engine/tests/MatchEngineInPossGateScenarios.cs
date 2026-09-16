@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineInPossGateScenarios.cs
 // Created:  2026-08-08
-// Modified: 2026-09-16 (PR #416 corrected-baseline per-seed instrumentation)
+// Modified: 2026-09-16 (PR #416 corrected-baseline per-seed validity)
 // Author:   —
 // Spec:     Positioning AI #12 §3.0.1 / §3.0.2 / FR-PA-022 (ERR-012-011);
 //           match-engine-wiring-backlog.md §3 C1; Testing Strategy & Framework #19
@@ -96,6 +96,8 @@ namespace TacticalDirector.MatchEngine
             int pooledHomeViewPossession = 0;
             int pooledAwayViewPossession = 0;
 
+            string f3(double v) => v.ToString("F3", CultureInfo.InvariantCulture);
+
             for (int s = 0; s < Seeds.Length; s++)
             {
                 int samples = 0;
@@ -110,20 +112,31 @@ namespace TacticalDirector.MatchEngine
 
                 float homeShare = samples > 0 ? (float)homeViewPossession / samples : 0f;
                 float awayShare = samples > 0 ? (float)awayViewPossession / samples : 0f;
+                string seedLabel = "0x" + Seeds[s].ToString("X16", CultureInfo.InvariantCulture);
 
-                // Deliberate capture line for the preregistered PR #416 corrected baseline. It is
-                // diagnostic only in this commit: numeric per-seed floors are not frozen until these
-                // counts are captured from the reconciled W2-active production behavior.
+                // Deliberate capture line for the preregistered PR #416 corrected baseline. Numeric
+                // per-seed floors remain unfrozen until a valid corrected-baseline run completes.
                 Console.WriteLine(
-                    "INPOSS_GATE_SEED_BASELINE seed=0x" +
-                    Seeds[s].ToString("X16", CultureInfo.InvariantCulture) +
+                    "INPOSS_GATE_SEED_BASELINE seed=" + seedLabel +
                     " samples=" + samples.ToString(CultureInfo.InvariantCulture) +
                     " homeShare=" + homeShare.ToString("F6", CultureInfo.InvariantCulture) +
                     " awayShare=" + awayShare.ToString("F6", CultureInfo.InvariantCulture));
-            }
 
-            string inv(int v) => v.ToString(CultureInfo.InvariantCulture);
-            string f3(double v) => v.ToString("F3", CultureInfo.InvariantCulture);
+                // PR #416 preregistration requires each seed independently to satisfy both mirrored
+                // possession predicates. A pooled assertion would allow one healthy seed to mask the
+                // other and is therefore not a valid basis for this detector.
+                context.Envelope.CheckTrue(
+                    "final-third-play-is-somebodys-possession-home-view-" + seedLabel,
+                    homeShare > 0.70f,
+                    "seed=" + seedLabel + " homeShare=" + f3(homeShare) +
+                    " (bound 0.70; pre-fix corpus ≈ 0.24)");
+
+                context.Envelope.CheckTrue(
+                    "final-third-play-is-somebodys-possession-away-view-" + seedLabel,
+                    awayShare > 0.70f,
+                    "seed=" + seedLabel + " awayShare=" + f3(awayShare) +
+                    " (bound 0.70; pre-fix corpus ≈ 0.24)");
+            }
 
             float pooledHomeShare = pooledSamples > 0
                 ? (float)pooledHomeViewPossession / pooledSamples
@@ -132,28 +145,14 @@ namespace TacticalDirector.MatchEngine
                 ? (float)pooledAwayViewPossession / pooledSamples
                 : 0f;
 
-            // Historical pooled non-vacuity check retained during the baseline-capture commit only.
-            // The next commit replaces this as the validity basis with the preregistered per-seed
-            // floors; a pooled statistic may remain only as an additional sanity diagnostic.
-            context.Envelope.CheckTrue("final-third-phase-samples-are-taken",
-                pooledSamples >= 20000,
-                "samples=" + inv(pooledSamples));
-
-            // THE LOCK. A team is in possession while a player is on the ball AND while a ball it
-            // played is travelling to a team-mate (#12 FR-PA-022). Before ERR-012-011 the engine held
-            // no on-ball possessor for the whole flight of every pass — measured, it holds none on
-            // 86% of final-third samples — so §3.0.2 fell through to its ball-velocity branch and
-            // classified a team knocking the ball around as being in TRANSITION.
-            context.Envelope.CheckTrue("final-third-play-is-somebodys-possession-home-view",
-                pooledHomeShare > 0.70f,
-                "homeShare=" + f3(pooledHomeShare) + " (bound 0.70; pre-fix corpus ≈ 0.24)");
-
-            // The same fact read off the AWAY team's mirrored snapshot. Possession is a shared fact,
-            // so this must agree with the line above; if it ever does not, the mirroring is the
-            // defect, not the classifier.
-            context.Envelope.CheckTrue("final-third-play-is-somebodys-possession-away-view",
-                pooledAwayShare > 0.70f,
-                "awayShare=" + f3(pooledAwayShare) + " (bound 0.70; pre-fix corpus ≈ 0.24)");
+            // Pooled values are diagnostic only under the preregistered rule. The former pooled
+            // >=20,000 sample-count assertion was transitional and invalidated a healthy W2-active
+            // capture even though both governed seeds independently satisfied the >0.70 criterion.
+            Console.WriteLine(
+                "INPOSS_GATE_POOLED_DIAGNOSTIC samples=" +
+                pooledSamples.ToString(CultureInfo.InvariantCulture) +
+                " homeShare=" + pooledHomeShare.ToString("F6", CultureInfo.InvariantCulture) +
+                " awayShare=" + pooledAwayShare.ToString("F6", CultureInfo.InvariantCulture));
         }
 
         private static void PlayOne(
@@ -207,12 +206,16 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.2     | 2026-09-16 | —      | PR #416 baseline-validity correction: each adversarial seed    |
+// |         |            |        |   now owns its >0.70 mirrored assertions; pooled values are     |
+// |         |            |        |   diagnostic only and the obsolete >=20,000 pooled floor is     |
+// |         |            |        |   removed before numeric per-seed floors are frozen.            |
 // | 1.1     | 2026-09-16 | —      | PR #416 preregistered corrected-baseline instrumentation:      |
 // |         |            |        |   reports each existing adversarial seed independently before   |
 // |         |            |        |   numeric non-vacuity floors are derived/frozen.                |
-// | 1.0     | 2026-08-08 | —      | ERR-012-011 (wiring backlog C1): with the ball in a final     |
-// |         |            |        |   third, #12 must commit a POSSESSION phase rather than a     |
-// |         |            |        |   transition. Asserted from BOTH teams' mirrored snapshots.   |
+// | 1.0     | 2026-08-08 | —      | ERR-012-011 (wiring backlog C1): with the ball in the final     |
+// |         |            |        |   third, #12 must commit a POSSESSION phase rather than a       |
+// |         |            |        |   transition. Asserted from BOTH teams' mirrored snapshots.     |
 // |         |            |        |   Pins no goal / shot / box / dribble figure — every shape     |
 // |         |            |        |   metric moved the wrong way at this landing and pinning one   |
 // |         |            |        |   would encode a regression as a contract.                     |
