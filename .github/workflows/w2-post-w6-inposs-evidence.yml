@@ -6,6 +6,7 @@ on:
       - wiring/w2-post-w6-closeout
     paths:
       - .github/workflows/w2-post-w6-inposs-evidence.yml
+      - tools/w2_post_w6_inposs_apply.py
 
 permissions:
   contents: read
@@ -23,7 +24,7 @@ jobs:
       - name: Checkout measurement driver
         uses: actions/checkout@v4
         with:
-          ref: wiring/w2-post-w6-closeout
+          ref: ${{ github.sha }}
           path: driver
           fetch-depth: 1
 
@@ -48,7 +49,10 @@ jobs:
           mkdir -p "${OUT}/trx"
           python3 driver/tools/w2_post_w6_inposs_apply.py repo "${MODE}"
           git -C repo diff -- src/match-engine/tests/MatchEngineInPossGateScenarios.cs > "${OUT}/measurement-only.patch"
+          cp driver/tools/w2_post_w6_inposs_apply.py "${OUT}/w2_post_w6_inposs_apply.py"
+          cp driver/.github/workflows/w2-post-w6-inposs-evidence.yml "${OUT}/w2-post-w6-inposs-evidence.yml"
           cat > "${OUT}/provenance.txt" <<EOF
+          Measurement driver head: ${GITHUB_SHA}
           Post-W6 production head: e4335f7ff059deb483b1aaa534f2190fd3762008
           Mode: ${MODE}
           Shipping TackleContactRadiusM remains 0 on merged main.
@@ -80,7 +84,9 @@ jobs:
           grep -F "${LABEL} seed=0x1A2B3C4D5E6F7081" "${OUT}/instrument-output.txt"
           printf 'gate_rc=%s\ntest_rc=%s\n' "$gate_rc" "$test_rc" > "${OUT}/exit-status.txt"
           cd "${OUT}"
-          sha256sum provenance.txt measurement-only.patch gate.txt instrument-output.txt exit-status.txt "trx/w2-post-w6-${MODE}.trx" > SHA256SUMS
+          sha256sum provenance.txt measurement-only.patch gate.txt instrument-output.txt exit-status.txt \
+            w2_post_w6_inposs_apply.py w2-post-w6-inposs-evidence.yml \
+            "trx/w2-post-w6-${MODE}.trx" > SHA256SUMS
 
       - name: Upload paired evidence
         if: always()
@@ -91,7 +97,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Enforce governed scenario result
+      - name: Enforce paired measurement semantics
         if: always()
         working-directory: repo
         shell: bash
@@ -100,5 +106,41 @@ jobs:
         run: |
           set -euo pipefail
           source <(sed 's/^/export /' "artifacts/w2-post-w6-${MODE}/exit-status.txt")
-          test "$gate_rc" -eq 0
-          test "$test_rc" -eq 0
+
+          python3 - "$MODE" "artifacts/w2-post-w6-${MODE}/instrument-output.txt" "$gate_rc" "$test_rc" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          mode, output_path, gate_rc, test_rc = sys.argv[1], Path(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
+          label = f"W2_POST_W6_{mode.upper()}_INPOSS"
+          expected_seeds = {"0x0F1E2D3C4B5A6978", "0x1A2B3C4D5E6F7081"}
+          rows = {}
+          pattern = re.compile(
+              rf"^{label} seed=(0x[0-9A-F]{{16}}) samples=(\d+) homeShare=([0-9.]+) awayShare=([0-9.]+)$"
+          )
+          for raw in output_path.read_text(encoding="utf-8", errors="replace").splitlines():
+              match = pattern.match(raw.strip())
+              if match:
+                  seed = match.group(1)
+                  rows[seed] = (int(match.group(2)), float(match.group(3)), float(match.group(4)))
+
+          if set(rows) != expected_seeds:
+              raise SystemExit(f"{mode}: expected exactly governed seeds {sorted(expected_seeds)}, got {sorted(rows)}")
+          if any(samples <= 0 for samples, _, _ in rows.values()):
+              raise SystemExit(f"{mode}: governed sample count must be positive: {rows}")
+
+          satisfies_armed_predicate = all(home > 0.70 and away > 0.70 for _, home, away in rows.values())
+          if mode == "armed":
+              if gate_rc != 0 or test_rc != 0:
+                  raise SystemExit(f"armed: expected clean exits, got gate_rc={gate_rc}, test_rc={test_rc}")
+              if not satisfies_armed_predicate:
+                  raise SystemExit(f"armed: governed predicate not satisfied: {rows}")
+          else:
+              if gate_rc == 0 or test_rc == 0:
+                  raise SystemExit(f"disarmed: negative control unexpectedly exited cleanly: gate_rc={gate_rc}, test_rc={test_rc}")
+              if satisfies_armed_predicate:
+                  raise SystemExit(f"disarmed: negative control unexpectedly satisfies armed predicate: {rows}")
+
+          print(f"{mode}: paired measurement semantics validated: {rows}")
+          PY
