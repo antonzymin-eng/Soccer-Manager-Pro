@@ -10,7 +10,7 @@
 
 ---
 
-> **UPDATED September 14, 2026 (v1.17):** W4, W5, W7, and W12 are on `main`; the repaired post-#398 W12 comparison is GREEN and mechanically reconciled to durable raw evidence. W5 producer→consumer wiring is proven in the matched corpus: `latestPass` 0 → 141,491 and BACKWARD_PASS 0 → 1,827 raw / 2,770 committed, while every gate-outcome counter and all three scorelines are unchanged; the `primaryAssigned +3` / WeakReceiver `−3` delta is bounded to selection-path evidence. Five Class-A items remain until W6 lands: W3, W6, W8, W9, W10. **W6 is next; PR #412 stays separate until this evidence repair lands and its recovered tackle-cooldown P2 is fixed.**
+> **UPDATED September 15, 2026 (v1.18):** W4, W5, W6, W7, and W12 are wired. W6 gives genuine open-play possession a physical `BallStateType.Controlled` producer/attachment/release path and closes the keeper-held carry defect at the central MatchEngine attachment seam; its focused locks and composed keeper claim are green. Four Class-A items remain: W3, W8, W9, W10. W2 remains built but shipping-disabled: the W6 prerequisite is now landed, and the owner-sequenced post-W6 W2 measurement is the next step before any activation decision. The owner-held close-chance RED is unchanged and remains a separate realism/calibration item.
 
 ## 0. Why this document exists, and the rule it establishes
 
@@ -114,7 +114,7 @@ Only the trigger condition is missing.
 to dive. This was the single most likely contributor to the conversion gap, and the cheapest to
 close. Whether closing it moved the conversion gap is **unmeasured** — see above.
 
-### W2 — No player has ever made a tackle — ⚙️ **BUILT August 12, 2026; SHIPS DISABLED pending W6**
+### W2 — No player has ever made a tackle — ⚙️ **BUILT August 12, 2026; SHIPS DISABLED pending post-W6 measurement**
 **Evidence:** three independent dormant links in one chain — **four**, on re-verification.
 - `defensive-ai/DefensiveAITick.cs:358` — `GetTackleIntentRequests` is populated every tick and read
   by nobody. The class doc says so outright: *"all output surfaces are populated at Stage 0 but
@@ -316,17 +316,14 @@ separately tracked by #401. Regression locks: `CollisionDeflectionFeedbackTests`
 
 **Measured post-#398 consequence:** the ring is no longer empty. In the matched three-seed corpus, `latestPass` rises **0 → 141,491 team-heartbeats** and BACKWARD_PASS rises **0 → 1,827 raw / 2,770 committed**. Active (140), InvariantRejected (139,309), NoPrimaryPresser (84), Disengaged (1,890), Pressing-AI Cooldown (22,671), and all three scorelines are exactly unchanged. `primaryAssigned` **21,800 → 21,803** while WeakReceiver raw/committed moves **141,379/141,414 → 141,376/141,411**: the +3/−3 shift is positive selection-path wiring evidence, not an observed gate-outcome change. `latestPass` counts heartbeats with a retained ring event, not discrete passes; raw BACKWARD_PASS may also include pending dwell continuation.
 
-### W6 — `BallStateType.Controlled` has no producer
-**Evidence:** `ball-physics/BallCollision.cs` — `CheckPossession` and `SetBallControlled` both have
-zero production callers. The doc comment describes the intended protocol
-(*"Caller must: record possession in agent system, call SetBallControlled(), drive position"*) and
-no caller implements it.
+### W6 — `BallStateType.Controlled` production possession — ✅ **WIRED September 15, 2026 (PR #412)**
+**Pre-fix evidence:** `BallCollision.SetBallControlled` had no production caller and MatchEngine possession was a flag rather than a kinematic constraint; a claimed ball could settle independently of its keeper and tackle-created loose-ball recovery could stall.
 
-Already recorded from the other direction in OPEN ISSUES §5.Z.23 item (c): a claimed ball is not
-held at hand height and the keeper cannot carry it, because the parked ball settles under gravity.
-Same root cause. Possession in the engine is a flag, never a kinematic constraint.
+**Resolved:** genuine open-play possession now enters `BallStateType.Controlled` through first-touch/interception, loose-ball pickup, tackle ball-won, and goalkeeper possession. `MatchEngine.DriveControlledBallToPossessor()` is the single attachment funnel after locomotion/keeper/heading physics; outfield carriers use ball-rest height while goalkeeper control preserves claim/contact height. Non-kick releases leave Controlled explicitly; restart-taker designation remains a stationary placed ball and therefore is not treated as a physical tackleable carrier.
 
-**PR #412 review note:** the recovered P2 around MatchEngine `_tackleCooldown` is a separate mechanism from W12 Pressing AI's `Cooldown` exit bucket. The W12 baseline share (22,671 / 164,193 non-`InPossession` heartbeats = 13.8%) is **not evidence for that tackle-cooldown defect** and must not be used to justify it. PR #412 must decrement tackle cooldown by elapsed AI stride even while the ball lacks a physical carrier, with its own regression lock.
+**Review closure:** the recovered `_tackleCooldown` P2 ages elapsed cooldown before the physical-carrier gate. W6 also exposed a keeper-carry consequence: the review corpus recorded 2/17 held claims carried through the keeper's own goal line. `0c065b38` constrains only a Controlled goalkeeper at the defended goal plane before ball attachment, preserving Agent Movement's general exterior buffer and ordinary loose/kicked-ball goal adjudication; `3e00cd4c` locks both goal planes and recovery kinematics. Focused W6 tests are 9/9 green and the composed keeper-claim scenario is 1/1 green.
+
+**Downstream boundary:** W6 does **not** arm W2. `TackleContactRadiusM` remains at its governed shipping-disabled value pending the separately pre-registered post-W6 W2 measurement. The owner-held `sim_match_engine_close_chance` also remains unchanged: W6 moves its sampled trajectory population but does not change the DRIBBLE direction scorer, so that calibration/disposition stays outside this wiring landing.
 
 ### W7 — The AI manager never picks a kickoff preset — ✅ **WIRED September 11, 2026 (PR #398)**
 **Pre-fix evidence:** `match-engine/ManagerAdaptation.cs:250` `ApplyKickoff` had no caller. Its own doc says
@@ -552,7 +549,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 
 | 4 | ~~**W4** keeper perception~~ ✅ **WIRED Sep 13, 2026** (PR #403) | Live all-body LOS now gates DT `SAVE` without contaminating the W1 raw-`SaveArmed` rush veto; real body deflections restart reaction timing in the same Resolve call through a dedicated non-shot seam. No new serialized state or event ABI. W12 subsequently landed as sequence row 5. |
 | 5 | ~~**W12** gate-firing instrument~~ ✅ **LANDED Sep 14, 2026** (PR #410) | Pre-#398 runtime census + separate unread-serialized-field sweep are recorded; the pass feed is dark before W5 by measurement, not inference. |
-| 6 | ~~**W5**~~ / ~~**W7**~~ / **W6 NEXT** | Post-#398 W12 is GREEN on durable, mechanically reconciled evidence. W5/W7 are landed; W6 is the recorded next wiring item. Its post-wire measurement is pre-registered in normalized exit shares because W6 changes possession semantics and trajectory matching is not expected. |
+| 6 | ~~**W5**~~ / ~~**W7**~~ / ~~**W6**~~ ✅ **WIRED Sep 15, 2026** | W5/W7 are landed and W6 now gives open-play possession a physical Controlled carrier/attachment/release path. W6 itself does not arm W2; the separately pre-registered post-W6 W2 measurement is the next owner-sequenced step. |
 | 7 | **W3** + AGENT_BALL fan-out | One dependency, two consumers. The largest single build in this document. |
 | 8 | **W8**, **W9**, **W10** | Fidelity items with working substitutes or a known rebaseline cost. |
 | — | **then** one calibration pass | Against the complete engine, using the §5.Z instruments and seeded-corpus method. |
@@ -569,14 +566,13 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 >    4 requires a **post-arming** capture, because the second moment of scorelines is exactly the
 >    statistic tackle wiring moves. Held August 17; neither adopted nor rejected.
 >
-> **What blocks arming itself:** armed, `sim_match_engine_inposs_gate` collapses to 0.501 against its
-> 0.70 bound — a stall, not a rate effect, and not isolated. The leading candidate is **W6**, which
-> currently sits at sequence position 6. Until W6 (or whatever the real cause turns out to be) is
-> found and fixed, `TackleContactRadiusM` ships at 0 and neither held decision above can be measured.
+> **What blocks arming itself:** the historical armed run collapsed `sim_match_engine_inposs_gate`
+> to 0.501 against its 0.70 bound — a stall, not a rate effect. W6 was the leading candidate and is
+> now wired. The next owner-sequenced step is the pre-registered post-W6 W2 measurement, which must
+> determine whether that stall survives before `TackleContactRadiusM` can move from 0.
 >
-> Read together, the practical consequence is that **W4 → W12 → W6 is the path to unblocking both held
-> decisions**, not just to the next wired subsystem — and that `TackleContactRadiusM = 0` is doing more
-> holding-back than its one-constant footprint suggests.
+> Read together, W4 → W12 → W6 is now complete. The unresolved question is empirical rather than a
+> missing wiring prerequisite: rerun W2 armed against the W6 state, then decide activation separately.
 
 C2/C3/C4 are folded into whichever item touches their assembly; C4 in particular is the recorded
 next lever on close-chance creation and is large enough to want its own pass.
@@ -647,6 +643,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.18 | 2026-09-15 | — | **W6 WIRED (PR #412).** Genuine open-play possession now produces physical `BallStateType.Controlled`, follows the carrier, and releases explicitly; restart pseudo-possession remains stationary. Keeper-held goal-plane carry defect closed at the central attachment seam with two-plane regression coverage. Recovered tackle-cooldown P2 closed. Four Class-A items remain: W3, W8–W10. W2 remains shipping-disabled pending the pre-registered post-W6 measurement; owner-held close-chance RED unchanged. |
 | 1.17 | 2026-09-14 | — | **W12 post-#398 evidence repaired and closed.** Exact retained Actions archives plus a mechanical reconciliation checker replace the bad transcription; matched gate outcomes and scorelines are unchanged while the W5 pass feed and BACKWARD_PASS are live. W5 stale “ring permanently empty” consequence corrected in place. W6 post-wire measurement pre-registered on normalized exit shares/falsifiers; PR #412 tackle-cooldown P2 explicitly separated from Pressing AI `Cooldown`. W6 remains next. |
 | 1.16 | 2026-09-14 | — | **W12 LANDED (PR #410) and PR #398 reconciled onto that mainline.** W12 records the pre-#398 gate-firing baseline plus the separate unread-serialized-field sweep; the pre-#398 #13 pass feed is zero by measurement. W5/W7 remain merge-gated on the post-#398 W12 comparison. Sequence advances to W6 after that comparison passes; remaining Class-A items are W3, W6, W8–W10. |
 | 1.15 | 2026-09-13 | — | **W4 WIRED (PR #403).** DT `SAVE` availability is now raw `SaveArmed` plus current-frame all-body physical LOS through `KeeperPerceptionGate`; the W1 rush exclusion intentionally remains raw `SaveArmed`, correcting v1.14 constraint 3 from a too-broad one-predicate rule to the actual shared-geometry invariant. Collision System surfaces only actually-applied AGENT_BALL flight changes as transient per-call feedback; Match Engine consumes it in the same Resolve phase, evaluates post-deflection threat geometry, and `GoalkeeperMechanics.OnThreatDeflected` overwrites reaction timing for the visible post-deflection threat without setting the shot-event latch; screened raw threats accrue no reaction credit. Added composed screened-SAVE/raw-rush-veto, collision applied-vs-overlap, reveal-timing, and GK reaction-reset locks. No new cross-tick state, `CollisionEvent` ABI, snapshot schema, RNG stream or draw order. #401 remains separate. Sequence row 4 is closed; W12 is next. |
