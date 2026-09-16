@@ -1,0 +1,38 @@
+name: Validate ERR-001-006 core recovery lock
+
+on:
+  push:
+    branches:
+      - fix/w6-elevated-stationary-ball
+    paths:
+      - .github/workflows/err001006-core-lock.yml
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/w6-elevated-stationary-ball
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Apply direct core recovery lock
+        run: python3 tools/add_err001006_core_test.py
+      - name: Run focused core test
+        run: bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'FullyQualifiedName~UpdateBallPhysics_ElevatedStationaryState_RecoversToAirborneAndFalls'
+      - name: Commit lock and remove one-shot helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/err001006-core-lock.yml tools/add_err001006_core_test.py
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/ball-physics/tests/BallPhysicsCoreTests.cs
+          git commit -m "test(ball-physics): lock elevated state recovery"
+          git push origin HEAD:fix/w6-elevated-stationary-ball
