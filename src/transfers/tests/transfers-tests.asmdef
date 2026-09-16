@@ -1,0 +1,24 @@
+{
+    "name": "TacticalDirector.Transfers.Tests",
+    "rootNamespace": "TacticalDirector.Transfers.Tests",
+    "references": [
+        "TacticalDirector.Transfers",
+        "TacticalDirector.ClubFinances",
+        "TacticalDirector.PlayerDatabase",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
