@@ -18,10 +18,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Measurement provenance must name the exact PR head, not GitHub's
+          # synthetic pull-request merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Record provenance
+        shell: bash
+        run: |
+          mkdir -p artifacts/w6-w2-corrected-baseline
+          {
+            echo "head_sha=${{ github.event.pull_request.head.sha }}"
+            echo "base_sha=${{ github.event.pull_request.base.sha }}"
+            echo "run_id=${{ github.run_id }}"
+            echo "run_attempt=${{ github.run_attempt }}"
+            echo "scenario=sim_match_engine_inposs_gate"
+            echo "ticks_per_seed=324000"
+            echo "sample_stride_ticks=6"
+            echo "seeds=0x0F1E2D3C4B5A6978,0x1A2B3C4D5E6F7081"
+          } > artifacts/w6-w2-corrected-baseline/provenance.txt
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
       - name: Run only sim_match_engine_inposs_gate
-        run: >-
-          bash tools/dotnet-ci/run-gate.sh --fast
-          --test-filter "Name=sim_match_engine_inposs_gate"
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet test tools/dotnet-ci/TacticalDirector.gen.sln \
+            --no-restore \
+            --filter "Name=sim_match_engine_inposs_gate" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=w6-w2-corrected-baseline.trx" \
+            --results-directory artifacts/w6-w2-corrected-baseline \
+            2>&1 | tee artifacts/w6-w2-corrected-baseline/console.log
+      - name: Upload corrected-baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w6-w2-corrected-baseline-${{ github.run_id }}
+          path: artifacts/w6-w2-corrected-baseline/
+          if-no-files-found: error
