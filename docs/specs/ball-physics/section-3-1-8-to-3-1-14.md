@@ -1102,6 +1102,7 @@ public void Validation_DetectsNaN_AndRecovers()
 | 2.7 | Apr 20, 2026 | AI | H-04-C: Added Step 4.5 — ROLLING spin decay via UpdateRollingSpinDecay(); C-02: Added defensive comment to default: case clarifying Velocity is not cleared for OUT_OF_PLAY |
 | 2.8 | Jun 9, 2026 | AI | ERR-001-001: §3.1.8.1 bounce normal Vector3.up (Unity +Y) → new Vector3(0,0,1) — pseudocode contradicted the §1.2 Z-up coordinate system and Appendix B's "vertical" v_n definition. ERR-001-002: J_t_required gains the rotational-coupling divisor (1 + m·r²/I = 2.5). Both errors were faithfully implemented in src/ball-physics and fixed there in the same commit (AR-7 H-1 / M-1). |
 | 2.9 | Jul 28, 2026 | AI | ERR-001-005 (shot-speed & woodwork design KD-4/KD-5): §3.1.10.3 goal-line adjudication moves to the segment's interpolated crossing of the out-plane (the detected position is up to ~0.42 m past the plane at shot speeds); §3.1.10.2 gains the swept frame detection paragraph — `ApplySweptGoalFrameCollision`, the six-cylinder segment test that finally calls `ApplyGoalPostCollision` in production (a discrete test tunnels a 0.12 m post at shot speeds). |
+| 2.10 | Sep 15, 2026 | AI | ERR-001-006: elevated uncontrolled `STATIONARY`/`ROLLING` states are invalid; altitude takes precedence over the low-speed stop rule, `ApplyKick` includes current height in state selection, and elevated controlled release remains `AIRBORNE` so gravity cannot be disabled by a force-free mid-air state. |
 
 ---
 

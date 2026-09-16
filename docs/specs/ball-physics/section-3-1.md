@@ -3,10 +3,10 @@
 **Document:** Ball Physics Specification  
 **Section:** 3.1 Core Formulas  
 **Created:** February 2, 2026, 10:45 PM PST  
-**Version:** 2.8  
+**Version:** 2.10  
 **Status:** READY FOR IMPLEMENTATION — ERR-006 resolved (AM-001-001 applied)
 
-**Changes from v2.7:**
+**Changes from v2.9:**
 - **ERR-001-006:** an uncontrolled ball above `AIRBORNE_ENTER_THRESHOLD` cannot be `STATIONARY` or remain `ROLLING`; altitude takes precedence over the low-speed stop rule so gravity cannot be disabled for an elevated ball.
 - §3.1.3 `STATIONARY` now recovers to `AIRBORNE` when elevated, and `ROLLING` checks airborne height before `MIN_VELOCITY`.
 - §3.1.11.2 `ApplyKick` is amended in the continuation file so current height participates in post-kick state selection.
