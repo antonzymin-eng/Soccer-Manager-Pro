@@ -17,194 +17,172 @@ jobs:
         with:
           ref: wiring/w2-production-activation
           fetch-depth: 0
-      - name: Finalize W2 activation and remove helper
+      - name: Finalize W2 activation and remove temporary scaffolding
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          def load(path):
-              return Path(path).read_text(encoding='utf-8')
-
-          def save(path, text):
-              Path(path).write_text(text, encoding='utf-8')
-
-          def once(path, old, new):
-              text = load(path)
-              n = text.count(old)
+          def read(p): return Path(p).read_text(encoding='utf-8')
+          def write(p, s): Path(p).write_text(s, encoding='utf-8')
+          def replace1(p, old, new):
+              s = read(p)
+              if s.count(old) != 1:
+                  raise SystemExit(f'{p}: expected one occurrence: {old[:100]!r}; found {s.count(old)}')
+              write(p, s.replace(old, new, 1))
+          def sub1(p, pattern, repl, flags=0):
+              s = read(p)
+              out, n = re.subn(pattern, repl, s, count=1, flags=flags)
               if n != 1:
-                  raise SystemExit(f'{path}: expected exactly one occurrence, found {n}: {old[:120]!r}')
-              save(path, text.replace(old, new, 1))
+                  raise SystemExit(f'{p}: expected one regex match: {pattern!r}; found {n}')
+              write(p, out)
+          def add_before_last_endregion(p, row, token):
+              s = read(p)
+              if token in s: return
+              i = s.rfind('#endregion')
+              if i < 0: raise SystemExit(f'{p}: final #endregion missing')
+              write(p, s[:i] + row + s[i:])
 
-          def insert_once(path, marker, insertion):
-              text = load(path)
-              n = text.count(marker)
-              if n != 1:
-                  raise SystemExit(f'{path}: expected exactly one marker, found {n}: {marker[:120]!r}')
-              save(path, text.replace(marker, insertion + marker, 1))
-
-          def append_before_final_region(path, row, version_token):
-              text = load(path)
-              if version_token in text:
-                  return
-              idx = text.rfind('#endregion')
-              if idx < 0:
-                  raise SystemExit(f'{path}: final #endregion not found')
-              save(path, text[:idx] + row + text[idx:])
-
-          # Production: keep the relational default, enforce the lower invariant on the production
-          # catalogue path, preserve zero only for the explicit test/measurement override, and keep
-          # the pre-existing upper fail-loud guard unchanged.
-          me = 'src/match-engine/MatchEngine.cs'
-          once(me,
-              '// Created:  2026-06-16\n',
+          # Production lower-bound lock. The existing > LooseBallPickupRadiusM guard remains untouched.
+          p = 'src/match-engine/MatchEngine.cs'
+          replace1(p, '// Created:  2026-06-16\n',
               '// Created:  2026-06-16\n// Modified: 2026-09-16 (W2 production activation — active tackle reach must be > 0 and <= loose-ball reclaim reach; zero remains only as a test/measurement negative-control override; no schema/RNG change)\n')
-          once(me,
+          replace1(p,
               '            // DISABLED is disabled, not "reachable only at exactly zero separation". Shipping the\n            // constant at 0 must mean no challenge is ever resolved, and an explicit exit says so\n            // where a >= comparison on a zero radius would merely make it vanishingly unlikely.\n            if (radius <= 0f)\n            {\n                return;\n            }',
-              '            // W2 is active in production: a non-positive catalogue value is a configuration\n            // violation and must fail loudly rather than silently restoring the old shipping-disabled\n            // state. An explicit zero test/measurement override remains the negative-control seam.\n            if (radius <= 0f)\n            {\n                if (_tackleContactRadiusOverrideM < 0f)\n                {\n                    throw new InvalidOperationException(\n                        "MatchEngine.TryResolveTackles: production TackleContactRadiusM must be > 0 when W2 is active.");\n                }\n\n                return;\n            }')
-          once(me,
-              '        /// <summary>Test seam: arms the W2 tackle challenge at an explicit reach without changing\n        /// the shipping catalogue, which remains zero (disabled) pending W6. A negative value restores the\n        /// catalogue path. Not serialized: this is a measurement/test override, never durable match state.</summary>',
-              '        /// <summary>Test/measurement seam: overrides W2 tackle reach without changing the active\n        /// shipping catalogue. Zero provides an explicit disarmed negative control; a negative value restores\n        /// the catalogue path. Not serialized: this override is never durable match state.</summary>')
-          once(me,
-              '        // W2 challenge contact reach. Negative => use MatchEngineConstants.TackleContactRadiusM.\n        // The catalogue ships at zero (disabled) pending W6; tests/measurement may arm it explicitly.\n        // Test-only configuration — deliberately excluded from snapshot state.',
-              '        // W2 challenge contact reach. Negative => use the active catalogue value. Zero is retained\n        // only for an explicit test/measurement negative control; production catalogue values must be > 0.\n        // Test-only configuration — deliberately excluded from snapshot state.')
-          append_before_final_region(me,
-              '// | 1.80    | 2026-09-16 | —      | W2 production activation: non-positive catalogue reach now fails loud; zero remains only for the explicit test/measurement override. Upper <= LooseBallPickupRadiusM guard unchanged; no schema/RNG change. |\n',
+              '            // W2 is active in production. A non-positive catalogue value is a configuration\n            // violation and fails loudly; explicit zero remains available only through the\n            // test/measurement override as a negative control.\n            if (radius <= 0f)\n            {\n                if (_tackleContactRadiusOverrideM < 0f)\n                {\n                    throw new InvalidOperationException(\n                        "MatchEngine.TryResolveTackles: production TackleContactRadiusM must be > 0 when W2 is active.");\n                }\n\n                return;\n            }')
+          s = read(p)
+          sig = '        internal void TestOnly_ArmTackleChallenge(float radiusM) => _tackleContactRadiusOverrideM = radiusM;'
+          i = s.index(sig)
+          start = s.rfind('        /// <summary>', max(0, i - 1200), i)
+          if start < 0: raise SystemExit('MatchEngine.cs: tackle override XML summary not found')
+          newdoc = ('        /// <summary>Test-only/measurement seam: overrides the active W2 challenge reach.\n'
+                    '        /// Zero is the explicit disarmed negative control; a negative value restores the\n'
+                    '        /// production catalogue path. This override is not serialized.</summary>\n')
+          write(p, s[:start] + newdoc + s[i:])
+          s = read(p)
+          field = '        private float _tackleContactRadiusOverrideM = -1f;'
+          i = s.index(field)
+          start = s.rfind('        // The challenge\'s effective reach.', max(0, i - 900), i)
+          if start < 0: raise SystemExit('MatchEngine.cs: tackle override field comment not found')
+          fielddoc = ('        // The challenge\'s effective reach. Negative means use the active production catalogue;\n'
+                      '        // zero is retained only as an explicit test/measurement negative control. GameplayConfig\n'
+                      '        // binding is one-shot per process, so tests use the override instead of rebinding config.\n')
+          write(p, s[:start] + fielddoc + s[i:])
+          add_before_last_endregion(p,
+              '// | 1.80    | 2026-09-16 | —      | W2 production activation: non-positive catalogue reach now fails loud; zero remains only for the explicit test/measurement override. Existing <= LooseBallPickupRadiusM guard unchanged; no schema/RNG change. |\n',
               '// | 1.80    |')
 
-          mec = 'src/match-engine/MatchEngineConstants.cs'
-          once(mec,
+          p = 'src/match-engine/MatchEngineConstants.cs'
+          replace1(p,
               '        /// <para><b>It MUST NOT exceed <see cref="LooseBallPickupRadiusM"/>, and that is a correctness\n',
               '        /// <para><b>It MUST be greater than zero and MUST NOT exceed <see cref="LooseBallPickupRadiusM"/>, and those are correctness\n')
-          append_before_final_region(mec,
-              '// | 1.37    | 2026-09-16 | —      | W2 production activation: TackleContactRadiusM fallback now inherits LooseBallPickupRadiusM after paired post-W6 control; durable contract is > 0 and <= reclaim radius; outcome/cooldown GTs unchanged. |\n',
+          add_before_last_endregion(p,
+              '// | 1.37    | 2026-09-16 | —      | W2 production activation: TackleContactRadiusM fallback now inherits LooseBallPickupRadiusM; durable contract is > 0 and <= reclaim radius; outcome/cooldown GTs unchanged. |\n',
               '// | 1.37    |')
 
-          test = 'src/match-engine/tests/MatchEngineTackleTests.cs'
-          append_before_final_region(test,
-              '// | 1.1     | 2026-09-16 | —      | W2 activation: composed locks exercise shipping default; disabled lock replaced by >0 / <= reclaim invariants; restore no longer uses arm seam. |\n',
+          add_before_last_endregion('src/match-engine/tests/MatchEngineTackleTests.cs',
+              '// | 1.1     | 2026-09-16 | —      | W2 activation: composed locks exercise the shipping default; disabled-default lock becomes >0 / <= reclaim invariants; restore no longer arms the test seam. |\n',
               '// | 1.1     | 2026-09-16 |')
-
-          disc = 'src/discipline/DisciplineConstants.cs'
-          text = load(disc)
-          if '// Modified: 2026-09-16 (W2 activation boundary' not in text:
-              text = text.replace('// Modified: 2026-08-13\n', '// Modified: 2026-09-16 (W2 activation boundary — pre-tackle calibration is historical; post-W2 calibration remains separate)\n// Modified: 2026-08-13\n', 1)
-              save(disc, text)
-          append_before_final_region(disc,
-              '// | 1.6     | 2026-09-16 | —      | W2 is active; the cited #44 foul/card calibration remains pre-tackle and must be re-measured before any separate retuning pass. |\n',
+          p = 'src/discipline/DisciplineConstants.cs'
+          s = read(p)
+          if '// Modified: 2026-09-16 (W2 activation boundary' not in s:
+              if '// Modified: 2026-08-13\n' not in s: raise SystemExit('DisciplineConstants header anchor missing')
+              s = s.replace('// Modified: 2026-08-13\n', '// Modified: 2026-09-16 (W2 activation boundary — pre-tackle calibration is historical; post-W2 calibration remains separate)\n// Modified: 2026-08-13\n', 1)
+              write(p, s)
+          add_before_last_endregion(p,
+              '// | 1.6     | 2026-09-16 | —      | W2 is active; the cited foul/card calibration remains pre-tackle and must be re-measured before any separate retuning pass. |\n',
               '// | 1.6     |')
 
-          # Durable tracking — no activation-branch commit SHA is recorded, avoiding a new squash-reachability dependency.
-          changelog = 'docs/tracking/CHANGELOG.md'
-          text = load(changelog)
+          # Tracking. Do not record activation-branch commit SHAs: final-head CI/PR identity is enough.
+          p = 'docs/tracking/CHANGELOG.md'
           current = '> **Last Updated:** September 16, 2026 — **W2 post-W6 paired-control closeout is durable and activation may proceed as a separate change.**'
-          if text.count(current) != 1:
-              raise SystemExit('CHANGELOG current W2 closeout entry moved')
-          text = text.replace(current, '> **Last Updated (prior):** September 16, 2026 — **W2 post-W6 paired-control closeout is durable and activation may proceed as a separate change.**', 1)
-          marker = '> **Last Updated (prior):** September 16, 2026 — **W2 post-W6 paired-control closeout is durable and activation may proceed as a separate change.**'
-          entry = '> **Last Updated:** September 16, 2026 — **W2 tackle resolution is ACTIVE IN PRODUCTION.** `TackleContactRadiusM` now defaults relationally to `LooseBallPickupRadiusM` rather than `0`; the production contract is `TackleContactRadiusM > 0` and `TackleContactRadiusM <= LooseBallPickupRadiusM`, with the existing upper fail-loud guard preserved and the lower production path now fail-loud as well. The current 1.0 m fallback is therefore not an eternal ceiling. Composed W2 locks run against the shipping default rather than arming through the test seam. Pre-change activation validation run `35122576991` (source-equivalent to this PR apart from temporary workflow files) succeeded, and capstone run `35123092565` succeeded on Linux as non-certifying execution evidence; final-head PR CI remains the merge authority. No tackle-outcome `[GT]`, `TackleCooldownStrides`, discipline `[GT]`, RNG stream/domain/draw site, durable field, snapshot schema, or save format changed. **T-DA-DET-005 remains deferred and receives no W2 credit.** The ten tackle-outcome `[GT]` values remain accepted uncalibrated debt, and foul/card calibration remains the next separate pass. The owner-held `sim_match_engine_close_chance` RED remains unchanged and non-required.\n>\n'
-          text = text.replace(marker, entry + marker, 1)
-          save(changelog, text)
+          prior = current.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
+          replace1(p, current, prior)
+          s = read(p)
+          entry = ('> **Last Updated:** September 16, 2026 — **W2 tackle resolution is ACTIVE IN PRODUCTION.** '
+                   '`TackleContactRadiusM` now defaults relationally to `LooseBallPickupRadiusM` rather than `0`; the production contract is `> 0` and `<= LooseBallPickupRadiusM`, with both violations fail-loud on the production catalogue path. Explicit zero remains only as a test/measurement negative control, so the current 1.0 m fallback is not an eternal ceiling. Composed W2 locks now run against the shipping default. Pre-final focused activation validation run `35122576991` and non-certifying Linux capstone run `35123092565` succeeded before the final lower-bound hardening; final-head PR CI owns the merge verdict. No tackle-outcome `[GT]`, `TackleCooldownStrides`, discipline `[GT]`, RNG stream/domain/draw site, durable field, snapshot schema, or save format changed. **T-DA-DET-005 remains deferred and receives no W2 credit.** The ten tackle-outcome `[GT]` values remain accepted uncalibrated debt, foul/card calibration remains a separate next pass, and the owner-held `sim_match_engine_close_chance` RED is unchanged.\n>\n')
+          write(p, s.replace(prior, entry + prior, 1))
 
-          srcchg = 'docs/tracking/CHANGELOG-src.md'
-          text = load(srcchg)
+          p = 'docs/tracking/CHANGELOG-src.md'
           old = '> **Last Updated:** September 15, 2026 (v2.139 — **W6 Controlled Ball wiring / PR #412 review closure.**'
-          if text.count(old) != 1:
-              raise SystemExit('CHANGELOG-src current header moved')
-          text = text.replace(old, '> **Last Updated (prior):** September 15, 2026 (v2.139 — **W6 Controlled Ball wiring / PR #412 review closure.**', 1)
-          marker = '> **Last Updated (prior):** September 15, 2026 (v2.139 — **W6 Controlled Ball wiring / PR #412 review closure.**'
-          entry = '> **Last Updated:** September 16, 2026 (v2.140 — **W2 production activation.** `MatchEngineConstants.TackleContactRadiusM` now defaults to `LooseBallPickupRadiusM` instead of `0`; `MatchEngine.TryResolveTackles` fails loud on a non-positive production catalogue value and retains the existing fail-loud upper bound, while explicit zero remains available only through the test/measurement override for negative controls. `MatchEngineTackleTests` exercises the active shipping default and locks `> 0` / `<= LooseBallPickupRadiusM`; save/restore no longer re-arms a test seam. `DisciplineConstants` changes comments/version only: its existing values are deliberately not retuned here. Ten tackle-outcome `[GT]` values and `TackleCooldownStrides` are unchanged; T-DA-DET-005 remains deferred; no schema/RNG/draw-site/save-format change. Full account: `docs/tracking/CHANGELOG.md`.)\n>\n'
-          text = text.replace(marker, entry + marker, 1)
-          if re.search(r'^\| 2\.140\s+\|', text, re.M) is None:
-              m = re.search(r'^\| 2\.139\s+\|', text, re.M)
-              if m is None:
-                  raise SystemExit('CHANGELOG-src v2.139 table row not found')
-              row = '| 2.140   | 2026-09-16 | —      | W2 production activation: active relational tackle reach; lower/upper fail-loud contract; shipping-default composed locks; no GT/schema/RNG retune. |\n'
-              text = text[:m.start()] + row + text[m.start():]
-          save(srcchg, text)
+          prior = old.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
+          replace1(p, old, prior)
+          s = read(p)
+          entry = ('> **Last Updated:** September 16, 2026 (v2.140 — **W2 production activation.** '
+                   '`MatchEngineConstants.TackleContactRadiusM` now defaults to `LooseBallPickupRadiusM`; `MatchEngine.TryResolveTackles` fails loud on a non-positive production catalogue value and retains the existing upper fail-loud bound, while explicit zero remains only through the test/measurement override. `MatchEngineTackleTests` exercises the active shipping default and locks `> 0` / `<= LooseBallPickupRadiusM`; save/restore no longer re-arms a test seam. `DisciplineConstants` changes comments/version only. Ten tackle-outcome `[GT]` values and `TackleCooldownStrides` are unchanged; T-DA-DET-005 remains deferred; no schema/RNG/draw-site/save-format change. Full account: `docs/tracking/CHANGELOG.md`.)\n>\n')
+          s = s.replace(prior, entry + prior, 1)
+          if not re.search(r'^\| 2\.140\s+\|', s, re.M):
+              m = re.search(r'^\| 2\.139\s+\|', s, re.M)
+              if not m: raise SystemExit('CHANGELOG-src v2.139 table row missing')
+              s = s[:m.start()] + '| 2.140   | 2026-09-16 | —      | W2 production activation: active relational tackle reach; lower/upper fail-loud contract; shipping-default composed locks; no GT/schema/RNG retune. |\n' + s[m.start():]
+          write(p, s)
 
-          manifest = 'docs/tracking/file-manifest.md'
-          text = load(manifest)
-          old = '**Last Updated:** September 16, 2026 — **W2 post-W6 paired evidence closeout; documentation/evidence only.**'
-          if text.count(old) != 1:
-              raise SystemExit('file-manifest current W2 closeout entry moved')
-          text = text.replace(old, '**Last Updated (prior):** September 16, 2026 — **W2 post-W6 paired evidence closeout; documentation/evidence only.**', 1)
-          marker = '**Last Updated (prior):** September 16, 2026 — **W2 post-W6 paired evidence closeout; documentation/evidence only.**'
-          entry = '**Last Updated:** September 16, 2026 — **W2 production activation / PR #418.** **Modified production/source (3):** `src/match-engine/MatchEngineConstants.cs` (shipping fallback `0` → `LooseBallPickupRadiusM`; relational `> 0` / `<= reclaim` contract), `src/match-engine/MatchEngine.cs` (non-positive production catalogue reach now fails loud; test-only zero negative control retained; existing upper guard preserved), and `src/discipline/DisciplineConstants.cs` (comment/version only, no discipline value change). **Modified test (1):** `src/match-engine/tests/MatchEngineTackleTests.cs` (shipping default exercised directly; active/reclaim invariants locked; restore no longer re-arms). **Tracking:** both changelogs, backlog v1.20 → v1.21, tackle design, foul-discipline design, open issues, and this manifest. Source-equivalent pre-change validation `35122576991` and non-certifying Linux capstone `35123092565` both succeeded; final-head PR CI is authoritative. No assembly edge, durable field, snapshot/save schema, RNG stream/domain/draw site, or `[GT]` value changed. T-DA-DET-005 remains deferred; ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain uncalibrated; foul/card calibration remains separate.\n\n'
-          text = text.replace(marker, entry + marker, 1)
-          save(manifest, text)
+          p = 'docs/tracking/file-manifest.md'
+          current = '**Last Updated:** September 16, 2026 — **W2 post-W6 paired evidence closeout; documentation/evidence only.**'
+          prior = current.replace('**Last Updated:**', '**Last Updated (prior):**', 1)
+          replace1(p, current, prior)
+          s = read(p)
+          entry = ('**Last Updated:** September 16, 2026 — **W2 production activation / PR #418.** **Modified production/source (3):** `src/match-engine/MatchEngineConstants.cs` (shipping fallback `0` → `LooseBallPickupRadiusM`; relational `> 0` / `<= reclaim` contract), `src/match-engine/MatchEngine.cs` (non-positive production catalogue reach now fails loud; test-only zero negative control retained; existing upper guard preserved), and `src/discipline/DisciplineConstants.cs` (comment/version only, no discipline value change). **Modified test (1):** `src/match-engine/tests/MatchEngineTackleTests.cs` (shipping default exercised directly; active/reclaim invariants locked; restore no longer re-arms). **Tracking:** both changelogs, backlog v1.20 → v1.21, tackle design, foul-discipline design, open issues, and this manifest. No assembly edge, durable field, snapshot/save schema, RNG stream/domain/draw site, or `[GT]` value changed. T-DA-DET-005 remains deferred; ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain uncalibrated; foul/card calibration remains separate.\n\n')
+          write(p, s.replace(prior, entry + prior, 1))
 
-          backlog = 'docs/tracking/match-engine-wiring-backlog.md'
-          text = load(backlog)
-          start = text.index('> **UPDATED September 16, 2026 (v1.20):**')
-          end = text.index('\n\n## 0. Why this document exists', start)
-          current = '> **UPDATED September 16, 2026 (v1.21):** W2 is now **ACTIVE IN PRODUCTION** after the completed post-W6 paired-control obligation. `TackleContactRadiusM` defaults relationally to `LooseBallPickupRadiusM` (currently 1.0 m), with a durable contract `> 0` and `<= LooseBallPickupRadiusM`; 1.0 m is not an eternal invariant. The production path fails loud on a non-positive catalogue value and retains the existing fail-loud upper guard; explicit zero remains only as a test/measurement negative control. Four Class-A items remain: W3, W8, W9, W10. The ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain uncalibrated, post-W2 foul/card calibration remains separate, T-DA-DET-005 remains deferred with no W2 credit, and the owner-held close-chance RED is unchanged.'
-          text = text[:start] + current + text[end:]
-          old = '### W2 — No player has ever made a tackle — ⚙️ **BUILT August 12, 2026; SHIPS DISABLED; P-W6-1 STALL BLOCKER CLEARED September 15, 2026**'
-          new = '### W2 — No player had ever made a tackle — ✅ **ACTIVE IN PRODUCTION September 16, 2026; P-W6-1 STALL BLOCKER CLEARED**'
-          if text.count(old) != 1:
-              raise SystemExit('W2 backlog heading moved')
-          text = text.replace(old, new, 1)
-          marker = '**W2 NOW GATES THE FOUL/CARD CALIBRATION — owner sequencing decision, August 15, 2026.**'
-          note = '**PRODUCTION ACTIVATION — September 16, 2026.** The shipping fallback is now `LooseBallPickupRadiusM` rather than `0`, and the composed suite exercises that production value directly. The durable contract is relational (`> 0`, `<= LooseBallPickupRadiusM`), with both violations fail-loud on the production path; explicit zero remains only for test/measurement negative controls. No tackle outcome/cooldown `[GT]` was calibrated, foul/card calibration remains separate, and no T-DA-DET-005 credit is claimed.\n\n'
-          if text.count(marker) != 1:
-              raise SystemExit('W2 foul/card marker moved')
-          text = text.replace(marker, note + marker, 1)
-          row_marker = '| 1.20 | 2026-09-16 | — | **Post-W6 paired-control closeout.**'
-          if row_marker not in text:
-              raise SystemExit('backlog v1.20 row not found')
-          text = text.replace(row_marker, '| 1.21 | 2026-09-16 | — | **W2 production activation.** Shipping fallback `0` → `LooseBallPickupRadiusM`; production contract `> 0` / `<= reclaim radius` is fail-loud; shipping-default composed locks replace the disabled-default posture. Outcome `[GT]`s/cooldown unchanged; foul/card calibration remains separate; no T-DA-DET-005 credit. |\n' + row_marker, 1)
-          save(backlog, text)
+          p = 'docs/tracking/match-engine-wiring-backlog.md'
+          s = read(p)
+          s, n = re.subn(r'> \*\*UPDATED September 16, 2026 \(v1\.20\):\*\*.*?(?=\n\n## 0\.)',
+              '> **UPDATED September 16, 2026 (v1.21):** W2 is now **ACTIVE IN PRODUCTION** after the completed post-W6 paired-control obligation. `TackleContactRadiusM` defaults relationally to `LooseBallPickupRadiusM` (currently 1.0 m), with a durable contract `> 0` and `<= LooseBallPickupRadiusM`; 1.0 m is not an eternal invariant. The production path fails loud on a non-positive catalogue value and retains the existing upper guard; explicit zero remains only as a test/measurement negative control. Four Class-A items remain: W3, W8, W9, W10. The ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain uncalibrated, foul/card calibration remains separate, T-DA-DET-005 remains deferred with no W2 credit, and the owner-held close-chance RED is unchanged.',
+              s, count=1, flags=re.S)
+          if n != 1: raise SystemExit('backlog current status block missing')
+          s, n = re.subn(r'^### W2 — .*$', '### W2 — No player had ever made a tackle — **ACTIVE IN PRODUCTION September 16, 2026; P-W6-1 STALL BLOCKER CLEARED**', s, count=1, flags=re.M)
+          if n != 1: raise SystemExit('backlog W2 heading missing')
+          owner = '**W2 NOW GATES THE FOUL/CARD CALIBRATION — owner sequencing decision, August 15, 2026.**'
+          if owner not in s: raise SystemExit('backlog W2 owner-sequence anchor missing')
+          note = ('**PRODUCTION ACTIVATION — September 16, 2026.** The shipping fallback is now `LooseBallPickupRadiusM` rather than `0`, and the composed suite exercises that production value directly. The durable contract is relational (`> 0`, `<= LooseBallPickupRadiusM`), with both violations fail-loud on the production catalogue path; explicit zero remains only for test/measurement negative controls. No tackle outcome/cooldown `[GT]` was calibrated, foul/card calibration remains separate, and no T-DA-DET-005 credit is claimed.\n\n')
+          s = s.replace(owner, note + owner, 1)
+          if not re.search(r'^\| 1\.21 \|', s, re.M):
+              m = re.search(r'^\| 1\.20 \|', s, re.M)
+              if not m: raise SystemExit('backlog v1.20 version row missing')
+              s = s[:m.start()] + '| 1.21 | 2026-09-16 | — | **W2 production activation.** Shipping fallback `0` → `LooseBallPickupRadiusM`; production contract `> 0` / `<= reclaim radius` is fail-loud; shipping-default composed locks replace the disabled-default posture. Outcome `[GT]`s/cooldown unchanged; foul/card calibration remains separate; no T-DA-DET-005 credit. |\n' + s[m.start():]
+          write(p, s)
 
-          design = 'docs/tracking/tackle-wiring-design.md'
-          text = load(design)
-          marker = '\n---\n\n## 0. This is a wiring task, not a realism pass\n'
-          if text.count(marker) != 1:
-              raise SystemExit('tackle design opening moved')
-          overlay = '\n---\n\n## Current activation status — September 16, 2026\n\nW2 is **ACTIVE IN PRODUCTION**. `TackleContactRadiusM` defaults to `LooseBallPickupRadiusM` (currently 1.0 m); the durable contract is relational: positive reach, never beyond ordinary loose-ball reclaim reach. Production fails loudly on either violation. Zero remains only as an explicit test/measurement negative control. The current 1.0 m fallback is not a permanent conceptual ceiling.\n\nThe activation rests on the already-durable paired evidence in `docs/tracking/evidence/w2/`; it does not reinterpret that evidence. The ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain unchanged and uncalibrated. T-DA-DET-005 still requires `DefensiveAITick`\'s own `DeterministicRngService` path and receives no W2 credit. Foul/card calibration is the next separate pass. Everything below is the chronological August investigation/landing record and is intentionally preserved as history.\n\n## 0. This is a wiring task, not a realism pass\n'
-          text = text.replace(marker, overlay, 1)
-          save(design, text)
+          p = 'docs/tracking/tackle-wiring-design.md'
+          s = read(p)
+          heading = '## 0. This is a wiring task, not a realism pass'
+          if s.count(heading) != 1: raise SystemExit('tackle design section 0 anchor missing')
+          overlay = ('## Current activation status — September 16, 2026\n\nW2 is **ACTIVE IN PRODUCTION**. `TackleContactRadiusM` defaults to `LooseBallPickupRadiusM` (currently 1.0 m); the durable contract is relational: positive reach, never beyond ordinary loose-ball reclaim reach. Production fails loudly on either violation. Zero remains only as an explicit test/measurement negative control, and 1.0 m is not a permanent conceptual ceiling.\n\nThe activation rests on the already-durable paired evidence in `docs/tracking/evidence/w2/`; it does not reinterpret that evidence. The ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain unchanged and uncalibrated. T-DA-DET-005 still requires `DefensiveAITick`\'s own `DeterministicRngService` path and receives no W2 credit. Foul/card calibration is a separate subsequent pass. Everything below is the chronological August investigation/landing record and is intentionally preserved as history.\n\n')
+          write(p, s.replace(heading, overlay + heading, 1))
 
-          issues = 'docs/tracking/open-issues.md'
-          text = load(issues)
-          old = '**Match-engine wiring backlog — W1/C1/W4/W5/W6/W7/W12 wired and W2 BUILT-BUT-DISABLED; 4 remaining Class-A wiring items (W3, W8–W10) still need production wiring/integration, and the `[GT]` freeze (KD-W1) that follows**'
-          new = '**Match-engine wiring backlog — W1/C1/W2/W4/W5/W6/W7/W12 wired/active; 4 remaining Class-A wiring items (W3, W8–W10) still need production wiring/integration, and the `[GT]` freeze (KD-W1) that follows**'
-          if text.count(old) != 1:
-              raise SystemExit('open-issues W2 heading moved')
-          text = text.replace(old, new, 1)
-          text = text.replace('`docs/tracking/match-engine-wiring-backlog.md` v1.0, now v1.20.', '`docs/tracking/match-engine-wiring-backlog.md` v1.0, now v1.21.', 1)
-          activation_sentence = ' **W2 production activation landed September 16, 2026: the shipping reach is positive and bounded by `LooseBallPickupRadiusM`; tackle outcome/cooldown `[GT]` calibration, T-DA-DET-005, and foul/card calibration remain separate work.**'
+          p = 'docs/tracking/open-issues.md'
+          s = read(p)
+          pattern = r'\*\*Match-engine wiring backlog — W1/C1/W4/W5/W6/W7/W12 wired and W2 BUILT-BUT-DISABLED; 4 remaining Class-A wiring items \(W3, W8–W10\) still need production wiring/integration, and the `\[GT\]` freeze \(KD-W1\) that follows\*\*'
+          repl = '**Match-engine wiring backlog — W1/C1/W2/W4/W5/W6/W7/W12 wired/active; 4 remaining Class-A wiring items (W3, W8–W10) still need production wiring/integration, and the `[GT]` freeze (KD-W1) that follows**'
+          s, n = re.subn(pattern, repl, s, count=1)
+          if n != 1: raise SystemExit('open-issues W2 backlog heading missing')
+          s = s.replace('`docs/tracking/match-engine-wiring-backlog.md` v1.0, now v1.20.', '`docs/tracking/match-engine-wiring-backlog.md` v1.0, now v1.21.', 1)
           anchor = 'Full inventory, evidence and wire-order: `docs/tracking/match-engine-wiring-backlog.md` v1.0, now v1.21.'
-          if anchor not in text:
-              raise SystemExit('open-issues backlog pointer missing')
-          text = text.replace(anchor, anchor + activation_sentence, 1)
-          save(issues, text)
+          if anchor not in s: raise SystemExit('open-issues backlog pointer missing')
+          s = s.replace(anchor, anchor + ' **W2 production activation landed September 16, 2026: shipping reach is positive and bounded by `LooseBallPickupRadiusM`; tackle outcome/cooldown `[GT]` calibration, T-DA-DET-005, and foul/card calibration remain separate work.**', 1)
+          write(p, s)
 
-          foul = 'docs/tracking/foul-discipline-balance-design.md'
-          text = load(foul)
-          marker = '   **✅ OWNER DECISION, August 17, 2026: hold the drift. Arm W2 first, then calibrate ONCE.**'
-          if text.count(marker) != 1:
-              raise SystemExit('foul-discipline W2 owner-decision marker moved')
-          status = '   **CURRENT STATUS, September 16, 2026:** W2 is now active in production, satisfying the sequencing prerequisite below. This activation does **not** retune foul/card values; the post-W2 measurement and calibration remain a separate pass. The August 17 paragraph is retained as the historical owner decision that established that order.\n\n'
-          text = text.replace(marker, status + marker, 1)
-          save(foul, text)
+          p = 'docs/tracking/foul-discipline-balance-design.md'
+          s = read(p)
+          owner = '**✅ OWNER DECISION, August 17, 2026: hold the drift. Arm W2 first, then calibrate ONCE.**'
+          if owner not in s: raise SystemExit('foul-discipline owner decision anchor missing')
+          status = '**CURRENT STATUS, September 16, 2026:** W2 is now active in production, satisfying the sequencing prerequisite below. This activation does **not** retune foul/card values; the post-W2 measurement and calibration remain a separate pass. The August 17 paragraph is retained as the historical owner decision that established that order.\n\n'
+          write(p, s.replace(owner, status + owner, 1))
 
-          # Sanity: no durable activation record depends on an intermediate PR SHA; deferred boundaries stay explicit.
-          required = {
+          # Boundaries must remain explicit.
+          checks = {
               'docs/tracking/match-engine-wiring-backlog.md': ['ACTIVE IN PRODUCTION', 'T-DA-DET-005', 'uncalibrated'],
               'docs/tracking/tackle-wiring-design.md': ['ACTIVE IN PRODUCTION', 'T-DA-DET-005', 'Foul/card calibration'],
-              'docs/tracking/CHANGELOG.md': ['W2 tackle resolution is ACTIVE IN PRODUCTION', 'hold red; do not rebaseline a third time' if False else 'owner-held `sim_match_engine_close_chance` RED'],
+              'docs/tracking/CHANGELOG.md': ['W2 tackle resolution is ACTIVE IN PRODUCTION', 'owner-held `sim_match_engine_close_chance` RED'],
           }
-          for path, needles in required.items():
-              body = load(path)
+          for path, needles in checks.items():
+              body = read(path)
               for needle in needles:
-                  if needle not in body:
-                      raise SystemExit(f'{path}: required closeout text missing: {needle}')
+                  if needle not in body: raise SystemExit(f'{path}: missing required closeout text {needle!r}')
           PY
 
-          rm -f .github/workflows/w2-activation-closeout-v4.yml
-
+          rm -f .github/workflows/w2-activation-closeout-v4.yml .github/w2-activation-trigger.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
