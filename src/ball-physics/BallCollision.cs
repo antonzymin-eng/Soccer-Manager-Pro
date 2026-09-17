@@ -437,7 +437,7 @@ namespace TacticalDirector.BallPhysics
             // ERR-001-006: height is authoritative for an already-elevated ball. A zero,
             // horizontal, or downward kick cannot turn an elevated ball into a force-free
             // Stationary/Rolling state; it must remain Airborne so gravity can act.
-            if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold || velocity.z > 0f)
+            if (velocity.z > 0f)
                 ball.State = BallStateType.Airborne;
             else if (horizontalSpeed > BallPhysicsConstants.State.MinVelocity)
                 ball.State = BallStateType.Rolling;
