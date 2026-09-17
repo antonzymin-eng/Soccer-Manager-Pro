@@ -1,6 +1,6 @@
 // File:     src/perception-system/Tests/PerceptionSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-12
+// Modified: 2026-09-17
 // Author:   —
 // Spec:     Perception System #7 §5, Code Standards #20
 // Purpose:  Unit tests for Perception System. FOV, OCC, LR, SC, BP test groups.
@@ -1142,6 +1142,41 @@ namespace TacticalDirector.PerceptionSystem.Tests
                     $"BP-006: PerceivedPosition Y must remain (20) at invisible tick {tick}");
             }
         }
+
+        // ── BP-007 — Co-located ball has no FoV bearing ─────────────────────────
+
+        /// <summary>
+        /// BP-007: Ball at the observer's exact XY is visible regardless of facing direction.
+        /// The zero displacement has no geometric bearing and must not be interpreted as world-East.
+        /// </summary>
+        [Test]
+        public void BP007_CoLocatedBall_IsVisibleRegardlessOfFacing()
+        {
+            Vector2 observerPos = new Vector2(10.0f, 20.0f);
+            Vector2 facingDir   = new Vector2(-1.0f, 0.0f); // West; atan2(0,0) would invent East.
+            float halfAngle     = 80.0f;
+
+            BallState ballState = BallState.CreateAtPosition(
+                new Vector3(observerPos.x, observerPos.y, 0.11f));
+            AgentState[] agentStates = BuildEmptyAgentStates();
+            PerceptionAgentAttributes[] agentAttrs = BuildAgentAttrs();
+
+            BallPerceptionEvaluator.Evaluate(
+                observerPos, facingDir, 0, halfAngle,
+                ballState, agentStates, agentAttrs,
+                new int[0], 0,
+                new Vector2(30.0f, 40.0f), 7,
+                out bool ballVisible,
+                out Vector2 perceivedPos,
+                out int staleness);
+
+            Assert.IsTrue(ballVisible,
+                "BP-007: a co-located ball has no FoV bearing and must be visible");
+            Assert.AreEqual(observerPos.x, perceivedPos.x, 0.001f);
+            Assert.AreEqual(observerPos.y, perceivedPos.y, 0.001f);
+            Assert.AreEqual(0, staleness,
+                "BP-007: co-located visibility must reset ball staleness");
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -1385,4 +1420,5 @@ namespace TacticalDirector.PerceptionSystem.Tests
 // | 1.0     | 2026-05-31 | —      | Initial implementation. FOV-001..008, OCC-001..007+009, LR-001..008, SC-002..005+008, BP-001..006, SNAP-006+010 + constants. 31 tests total. |
 // | 1.1     | 2026-06-01 | —      | Add §5.11 integration test stubs IT-AM-001..004, IT-BP-001..002, IT-CS-001..003, IT-FULL-001..006 (15 stubs; Stage 0+1 Assert.Ignore). |
 // | 1.2     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (both TEST-DEFECT): OCC-005 expectation 11.31° was arctan(0.2) — spec §A.4/App-B mandate arcsin(0.4/2) = 11.537° (production correct); LR-001 variant asserted first-call confirmation unconditionally, ignoring the §3.3.4 additive noise term (0/+1) — rewritten to derive L_rec_final via ComputeLRec and assert confirmation exactly at the L_rec-th tick. |
+// | 1.3     | 2026-09-17 | —      | BP-007 locks co-located-ball visibility so a zero displacement cannot acquire an artificial FoV bearing. |
 #endregion
