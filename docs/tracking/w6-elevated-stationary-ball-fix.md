@@ -1,8 +1,191 @@
 # W6 Elevated Stationary Ball Fix — ERR-001-006
 
-**Date:** September 15–16, 2026
-**Status:** RECONCILED ON W2-ACTIVE MAIN; CORRECTED-BASELINE CAPTURE PENDING
+**Date:** September 15–17, 2026
+**Status:** REGRESSION DIAGNOSED; MINIMAL COMPOSITION FIX FOCUSED-VALIDATED; NORMAL CI PENDING
 **Scope:** Ball Physics #1 state invariant exposed by W6 physical Controlled possession, plus permanent hardening of the existing two-seed `sim_match_engine_inposs_gate` after W2 production activation.
+
+## September 17 post-reconciliation MatchEngine regression diagnosis
+
+After reconciliation onto W2-active main, normal CI exposed three #416-specific MatchEngine regressions:
+`AControlledCarrierIsActuallyDispossessed`,
+`BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose`, and
+`sim_match_engine_shot_outcomes`. Diagnosis was performed against exact #416 head
+`07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad` and pinned main
+`1bad655f5826070d1e29f54a845cdf2c549f66bc` before changing production again.
+
+### Corrected project-scoped oracle and the historical 513 count
+
+Project-scoped discovery on pinned main and #416 returns 516 test-case lines and 514 unique display
+names, with identical discovered sets. The two duplicate display names are
+`Apply_NullArguments_Throw` and `TwoSameSeedRuns_ProduceIdenticalDigestChains`.
+
+The historical normal-CI total of 513 is not a contradictory discovery count. Run
+`35157097577`, job `104999039293`, invoked VSTest with
+`Name!=sim_match_engine_close_chance` and reported 498 passed + 12 skipped + 3 failed = 513
+executed cases. The 513 number is therefore the normal-CI execution total under that explicit
+one-name exclusion; it is not the project-scoped discovery cardinality.
+
+### Shared tackle corpus and baseline correction
+
+The four `MatchEngineTackleTests` assertions share one `[OneTimeSetUp]` simulation corpus:
+two deterministic seeds, 150,000 ticks per seed, with every assertion reading the same pooled
+counters. On #416 before the final correction the pooled census was:
+
+`won=0, loose=2, foul=0, missed=23, dispossessions=0`.
+
+That single corpus explains why `TacklesHappenInComposedPlay` passed while the two outcome /
+dispossession assertions failed. The foul-share test did not pass: its exact result was
+`NotExecuted` / `Skipped` because `Assume.That(connected, Is.GreaterThan(30))` was not
+satisfied.
+
+Live pinned-main evidence corrects an earlier diagnosis assumption here. Main run
+`35133104970`, job `104918684391`, also reports the foul-share test as `Skipped`, not
+`Passed`. The exact two-seed main census measured below has only seven connected challenges.
+Consequently a strict-`Passed` requirement for this foul-share assertion is not a #416
+regression criterion; satisfying it would require separate tackle/foul test-corpus work, which is
+outside ERR-001-006.
+
+### Production-delta lattice
+
+A complete production-union revert, parented directly from `07dcc67`, is commit
+`6d18442420ae77da0bfbcb26bacc9ec9ba1587d3`; workflow commit
+`e28239b25bea5df190a38aefc099a2e029d47bfa`, run `35270645862`. Reverting the complete
+five-clause ERR-001-006 production delta to pinned-main behavior makes all three original target
+tests pass. This proves that the branch regressions are triggered by the ERR-001-006 production
+delta rather than solely by test/helper churn.
+
+Valid focused arms established the following lattice:
+
+| Arm | Run | Result |
+| --- | --- | --- |
+| ApplyKick-height clause ablated from #416 | `35182220948` | all three original targets remain red; tackle census remains `0/2/0/23/0` |
+| Pre-force normalization ablated from #416 | `35182424557` | all three original targets remain red; tackle census remains `0/2/0/23/0` |
+| ReleaseBallControl clause ablated from #416 | `35278313267` | tackle outcome/dispossession targets red, shot target red, foul-share `NotExecuted`; census remains `0/2/0/23/0` |
+| Stationary-promotion clause ablated from #416 | `35272599047` | all three original targets remain red; census remains `0/2/0/23/0` |
+| Rolling-order clause ablated from #416 | `35272651902` | all three original targets remain red; census remains `0/2/0/23/0` |
+| Stationary-promotion clause alone on main-like behavior | `35272069065` | all three original targets pass |
+| Rolling-order clause alone on main-like behavior | `35271049186` | tackle targets pass; shot target fails |
+| Exact StateMachine pair alone on main-like behavior | `35272495848` | tackle targets pass; shot target fails |
+
+Thus no one-clause removal from full #416 restores the branch. Rolling reorder is sufficient to
+expose the shot failure by itself, but it is not sufficient to produce the tackle regression.
+No valid pair-removal result exists. The attempted StateMachine-pair removal run
+`35283014828` failed its `Verify pair-removal diff` guard before target execution; its
+separate residency job did not apply the ablation. That run is void as pair-removal evidence.
+Once the composition mechanism below restored all three targets without reverting any
+ERR-001-006 clause, further pair-removal search was no longer justified.
+
+Harness failures excluded from causal evidence are:
+
+- `35278057546`: invalid workflow configuration; no jobs.
+- `35278200848`: runtime patch failed before tests.
+- `35283014828`: pair-removal diff verification failed before focused tests; residency job was
+  unablated.
+- `35285015171`: invalid co-location-probe workflow configuration; no jobs.
+- `35285075938`: co-location runtime patch guard failed before tests.
+
+Run `35285144898` did apply the co-location diagnostic correction and emitted usable census
+values, but its synthetic measurement test later failed Unity-shim LogAssert verification on
+`[ShotExecutor] FM-03`. It is not used as strict target evidence; strict target results come
+from `35285560809` and final committed-head validation from `35286222621`.
+
+### Controlled residency and per-seed tackle evidence
+
+Controlled-state residency run `35278109980` used the same two tackle seeds and 150,000-tick
+horizon on pinned main (job `105393487824`) and #416 (job `105393488091`):
+
+| Seed | Main Controlled share | #416 Controlled share |
+| --- | ---: | ---: |
+| `0x0F1E2D3C4B5A6978` | 7.386% | 68.240% |
+| `0x00000000D1A6D05E` | 8.360% | 8.337% |
+| pooled | 7.873% | 38.288% |
+
+The tackle regression is therefore not caused by rarely reaching `BallStateType.Controlled`.
+Seed A instead spends far too long under controlled possession.
+
+Mechanism-census run `35284452456` then measured each seed independently.
+
+Pinned main:
+
+- Seed A: `won=0, loose=1, foul=0, missed=18, dispossessions=0`;
+  `gateEligible=105`, `gateInRadius=19`.
+- Seed B: `won=1, loose=4, foul=1, missed=20, dispossessions=1`;
+  `gateEligible=88`, `gateInRadius=26`.
+- Pooled connected challenges: 7.
+
+#416:
+
+- Seed A: `won=0, loose=0, foul=0, missed=2, dispossessions=0`;
+  `gateEligible=12794`, `gateInRadius=2`.
+- Seed B: `won=0, loose=2, foul=0, missed=21, dispossessions=0`;
+  `gateEligible=79`, `gateInRadius=23`.
+
+Seed A entered a terminal 97,682-tick `Controlled` run from tick 52,319 through tick 150,000.
+The holder was outfield agent 19, not a goalkeeper. Holder and ball remained fixed at
+`(52.962357, 4.660061)`, with ball `z=0.110000`. Across 16,281 AI heartbeats the selected
+action was `HOLD` every time; pass and shot executors were idle.
+
+Seed B also regressed independently despite essentially unchanged Controlled residency. Main
+seed B supplies six connected challenges; #416 supplies only two. The branch-wide tackle failure
+therefore cannot be attributed only to seed A, although seed A contains the obvious absorbing
+state.
+
+### Final mechanism
+
+Outfield controlled-ball driving attaches the ball to the holder at exactly the same XY
+coordinate. Ball perception nevertheless passed that zero displacement into the ordinary FoV
+bearing calculation. `atan2(0,0)` then supplies an artificial world-East bearing. When the
+carrier faces sufficiently far from East, the carrier can have authoritative possession while
+`BallVisible=false`.
+
+That state has a concrete decision-tree consequence: SHOOT and DRIBBLE require visible ball
+state, while HOLD remains available. In #416 seed A it becomes absorbing: agent 19 repeatedly
+selects HOLD, stays fixed, and challengers almost never reach tackle radius. The altered
+ERR-001-006 trajectories expose this pre-existing zero-distance perception defect; the complete
+ERR production delta is the trigger, but no ERR-001-006 invariant clause itself needs to be
+retracted.
+
+The smallest semantically correct correction is therefore in ball perception: if observer and
+ball are exactly co-located, the ball has no meaningful bearing and is treated as inside FoV.
+Ordinary non-zero-distance range, FoV, and occlusion behavior is unchanged. Production commit
+`3a4a228495b73057684c727a55973c5072d7fdc1` implements that rule; test commit
+`f92305b58cd8a8dc69d9b95e94d2bda04aa56201` adds BP-007, which faces away from world-East
+while observer and ball share the same XY.
+
+### Final focused validation
+
+The runtime semantic probe `35285560809` first established that the co-location correction
+restores the shot and tackle behavior on #416 while preserving comparable healthy behavior on
+pinned main.
+
+The committed PR-head validation is evidence branch `evidence/pr416-final-validation`, workflow
+commit `b2ea41e78ba9d77b339b76c7fb24f41f8df0d0d2`, run `35286222621`, job
+`105419040400`, checking out exact production/test head
+`f92305b58cd8a8dc69d9b95e94d2bda04aa56201`.
+
+Results:
+
+- every `TacticalDirector.BallPhysics.Tests` test passed, including the ERR-001-006 locks
+  `ApplyKick_ZeroVelocityWhileElevated_RemainsAirborne`,
+  `ReleaseBallControl_FromElevatedControlledBall_TransitionsToAirborneWithoutTeleporting`,
+  `Rolling_AboveEnterThreshold_BelowMinVelocity_StillTransitionsToAirborne`,
+  `Stationary_AboveEnterThreshold_TransitionsToAirborne`, and
+  `UpdateBallPhysics_ElevatedStationaryState_RecoversToAirborneAndFalls`;
+- BP-007 `BP007_CoLocatedBall_IsVisibleRegardlessOfFacing` passed;
+- `sim_match_engine_shot_outcomes` passed;
+- `AControlledCarrierIsActuallyDispossessed` passed;
+- `BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose` passed;
+- `TacklesHappenInComposedPlay` passed;
+- final shared tackle census is
+  `won=3, loose=6, foul=0, missed=20, dispossessions=3`, restoring meaningful challenge volume,
+  clean wins, both connected outcomes, and actual dispossessions;
+- `ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice` remains `Skipped` /
+  `NotExecuted` because only nine challenges connect. Pinned main and pinned main plus the same
+  perception correction also skip this assumption-gated test, so this is inherited baseline
+  behavior rather than a #416 regression.
+
+No KD-W1 calibration, foul/card calibration, `[GT]` tuning, T-DA-DET-005 work, detector-floor
+tuning, six-seed expansion, or PR #419 work was performed as part of this diagnosis.
 
 ## September 16 reconciliation and detector preregistration
 
