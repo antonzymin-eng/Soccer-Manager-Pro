@@ -1,6 +1,6 @@
 // File:     src/perception-system/BallPerceptionEvaluator.cs
 // Created:  2026-05-28
-// Modified: 2026-05-29
+// Modified: 2026-09-17
 // Author:   —
 // Spec:     Perception System #7 §3.5, Code Standards #20
 // Purpose:  Evaluates ball visibility: range check, FoV test, occlusion test (§3.5.1).
@@ -65,8 +65,16 @@ namespace TacticalDirector.PerceptionSystem
             bool inRange = (ballPos2D - observerPos).sqrMagnitude
                 <= PerceptionConstants.MaxPerceptionRange * PerceptionConstants.MaxPerceptionRange;
 
+            // A co-located ball has no meaningful bearing. In particular, a Controlled ball is
+            // attached to its holder at the same XY coordinate; feeding that zero vector through
+            // atan2 would invent a world-East bearing and can make the holder "lose sight" of the
+            // ball solely because of facing direction.
+            bool isCoLocated = (ballPos2D - observerPos).sqrMagnitude == 0.0f;
+
             // FoV test
-            bool inFoV = inRange && FovCalculator.IsInFoV(observerPos, facingDir, ballPos2D, effectiveFoVHalfAngleDeg);
+            bool inFoV = inRange && (isCoLocated
+                || FovCalculator.IsInFoV(
+                    observerPos, facingDir, ballPos2D, effectiveFoVHalfAngleDeg));
 
             // Occlusion test (ball uses entity ID -1 per SpatialHashConstants.BALL_ENTITY_ID)
             bool notOccluded = inFoV && !OcclusionFilter.IsOccluded(
@@ -95,4 +103,5 @@ namespace TacticalDirector.PerceptionSystem
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                               |
 // | 1.1     | 2026-05-28 | —      | AR-1 fix L-4: removed dead-code ternary in invisible-ball else branch.  |
 // | 1.2     | 2026-05-29 | —      | AR-2 fix L-1: removed unused prevBallVisible parameter (dead after L-4). |
+// | 1.3     | 2026-09-17 | —      | Co-located ball has no bearing: bypass FoV angle so Controlled holders cannot lose sight of their attached ball. |
 #endregion
