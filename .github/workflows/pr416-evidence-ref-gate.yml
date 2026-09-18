@@ -1,0 +1,47 @@
+name: PR416 evidence-ref deletion gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/dotnet-ci/check_pr416_evidence_refs.py'
+      - '.github/workflows/pr416-evidence-ref-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/dotnet-ci/check_pr416_evidence_refs.py'
+      - '.github/workflows/pr416-evidence-ref-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-ref-gate:
+    name: PR416 evidence-ref deletion gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch live PR416 evidence refs
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin \
+            '+refs/heads/main:refs/remotes/origin/main' \
+            '+refs/heads/evidence/pr416-*:refs/remotes/origin/evidence/pr416-*'
+
+      - name: Gate A - live-ref full-history completeness
+        run: |
+          python3 tools/dotnet-ci/check_pr416_evidence_refs.py \
+            --repo . \
+            --mode live \
+            --main-ref refs/remotes/origin/main
+
+      - name: Gate B - archive integrity and reconstruction
+        run: |
+          python3 tools/dotnet-ci/check_pr416_evidence_refs.py \
+            --repo . \
+            --mode archive \
+            --main-ref refs/remotes/origin/main
