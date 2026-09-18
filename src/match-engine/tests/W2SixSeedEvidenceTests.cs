@@ -102,7 +102,7 @@ namespace TacticalDirector.MatchEngine
         {
             var rng = new DeterministicRngService(seed ^ (ulong)clubId);
             int stream = rng.RegisterStream(
-                "w2-six-seed-evidence.roster",
+                "scenario.roster",
                 SubsystemOrdinals.PlayerDatabase,
                 entityId: clubId,
                 streamVersion: 1);
