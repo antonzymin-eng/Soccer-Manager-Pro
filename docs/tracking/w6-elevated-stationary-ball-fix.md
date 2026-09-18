@@ -10,11 +10,13 @@
 Final code/spec/test CI run `35307891032` executed on exact head
 `b6a21d2d303baae108e77953719130a440f8f686`. The six recorded branch-protection contexts —
 Markdown lint, YAML lint, Markdown link check, Spec hygiene checks, File manifest sanity, and C#
-format check — all succeeded. Current live PR head
-`c61c7d780e4365cb9029de81a756583caaa84ef7` is documentation-only atop that validated code
-state. GitHub reports `mergeable=true` and `mergeable_state=unstable`: there is no merge
-conflict, while the non-required functional verifier remains red on the owner-held
-unexpected-green policy. These are distinct facts.
+format check — all succeeded. At reviewed pre-correction head
+`c61c7d780e4365cb9029de81a756583caaa84ef7`, which was documentation-only atop that validated
+code state, GitHub reported `mergeable=true` and `mergeable_state=unstable`: there was no merge
+conflict, while the non-required functional verifier was red on the owner-held unexpected-green
+policy. Those are distinct facts. Merge-state labels are intentionally recorded against that exact
+head rather than described as timeless current state, because a later documentation commit
+re-triggers status evaluation.
 
 The non-certifying Linux functional job's ordinary blocking sweep is also green:
 `TacticalDirector.MatchEngine.Tests` completed **501 passed / 0 failed / 12 skipped**. The job's
