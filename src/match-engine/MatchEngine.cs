@@ -349,6 +349,16 @@ namespace TacticalDirector.MatchEngine
         private float _v210ElevatedRollingMaxSpeed;
         private bool _v210ElevatedRollingPrevious;
 
+        // Step-3.3 supplement: exact before/after-Physics transition census. The first
+        // characterization run proved the boundary-residency probe cannot see v2.10's same-tick
+        // Rolling -> Airborne normalization because the state is removed before the next boundary.
+        private int _v210RollingPhysicsEntries;
+        private int _v210RollingHeightCrosses;
+        private int _v210MovingRollingHeightCrosses;
+        private int _v210MovingCrossPostAirborne;
+        private int _v210MovingCrossPostRolling;
+        private int _v210MovingCrossPostOther;
+
         // Diagnostic observation (the _woodworkStrikes class): genuine #6 shot CONTACTs this
         // match. NOT serialized; feeds no gameplay path.
         private int _shotContacts;
@@ -2670,6 +2680,12 @@ namespace TacticalDirector.MatchEngine
         internal float TestOnly_V210ElevatedRollingSpeedSum => _v210ElevatedRollingSpeedSum;
         internal float TestOnly_V210ElevatedRollingMaxHeight => _v210ElevatedRollingMaxHeight;
         internal float TestOnly_V210ElevatedRollingMaxSpeed => _v210ElevatedRollingMaxSpeed;
+        internal int TestOnly_V210RollingPhysicsEntries => _v210RollingPhysicsEntries;
+        internal int TestOnly_V210RollingHeightCrosses => _v210RollingHeightCrosses;
+        internal int TestOnly_V210MovingRollingHeightCrosses => _v210MovingRollingHeightCrosses;
+        internal int TestOnly_V210MovingCrossPostAirborne => _v210MovingCrossPostAirborne;
+        internal int TestOnly_V210MovingCrossPostRolling => _v210MovingCrossPostRolling;
+        internal int TestOnly_V210MovingCrossPostOther => _v210MovingCrossPostOther;
 
         /// <summary>Test-only: whether the agent's routed TacticalContext designates it this team's
         /// loose-ball collector (§5.Z Phase H KD-H5 / ERR-008-014).</summary>
@@ -4728,9 +4744,13 @@ namespace TacticalDirector.MatchEngine
             // TEMPORARY EVIDENCE INSTRUMENT (Step 3.3): observe the raw state immediately before
             // Ball Physics chooses a force model. The v2.10 / narrow-counterfactual difference is
             // specifically whether a MOVING elevated Rolling state is reclassified here.
+            bool v210StartedRolling = _ball.State == BallStateType.Rolling;
+            float v210PrePhysicsZ = _ball.Position.z;
+            if (v210StartedRolling) _v210RollingPhysicsEntries++;
+
             bool v210ElevatedRolling =
-                _ball.State == BallStateType.Rolling
-                && _ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold;
+                v210StartedRolling
+                && v210PrePhysicsZ > BallPhysicsConstants.State.AirborneEnterThreshold;
             if (v210ElevatedRolling)
             {
                 float v210Speed = _ball.Velocity.magnitude;
@@ -4765,6 +4785,23 @@ namespace TacticalDirector.MatchEngine
                 if (_ball.State == BallStateType.Airborne) _v210ElevatedRollingPostAirborne++;
                 else if (_ball.State == BallStateType.Rolling) _v210ElevatedRollingPostRolling++;
                 else _v210ElevatedRollingPostOther++;
+            }
+
+            // Supplementary exact transition census. A moving Rolling state that starts at/below
+            // the enter threshold and finishes this Physics update above it is the same-tick
+            // population the original pre-Physics boundary probe cannot observe on v2.10.
+            if (v210StartedRolling
+                && v210PrePhysicsZ <= BallPhysicsConstants.State.AirborneEnterThreshold
+                && _ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
+            {
+                _v210RollingHeightCrosses++;
+                if (_ball.Velocity.magnitude >= BallPhysicsConstants.State.MinVelocity)
+                {
+                    _v210MovingRollingHeightCrosses++;
+                    if (_ball.State == BallStateType.Airborne) _v210MovingCrossPostAirborne++;
+                    else if (_ball.State == BallStateType.Rolling) _v210MovingCrossPostRolling++;
+                    else _v210MovingCrossPostOther++;
+                }
             }
 
             // ERR-001-005 / KD-4 — the goal frame is physical: a ball whose movement segment meets

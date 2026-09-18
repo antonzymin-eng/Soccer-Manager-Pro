@@ -154,6 +154,12 @@ namespace TacticalDirector.MatchEngine
                 + "\t" + engine.TestOnly_V210ElevatedRollingPostAirborne
                 + "\t" + engine.TestOnly_V210ElevatedRollingPostRolling
                 + "\t" + engine.TestOnly_V210ElevatedRollingPostOther
+                + "\t" + engine.TestOnly_V210RollingPhysicsEntries
+                + "\t" + engine.TestOnly_V210RollingHeightCrosses
+                + "\t" + engine.TestOnly_V210MovingRollingHeightCrosses
+                + "\t" + engine.TestOnly_V210MovingCrossPostAirborne
+                + "\t" + engine.TestOnly_V210MovingCrossPostRolling
+                + "\t" + engine.TestOnly_V210MovingCrossPostOther
                 + "\t" + erMeanZ.ToString("F6", CultureInfo.InvariantCulture)
                 + "\t" + erMeanSpeed.ToString("F6", CultureInfo.InvariantCulture)
                 + "\t" + engine.TestOnly_V210ElevatedRollingMaxHeight.ToString("F6", CultureInfo.InvariantCulture)

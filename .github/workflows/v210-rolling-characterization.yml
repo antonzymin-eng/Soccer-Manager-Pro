@@ -157,8 +157,8 @@ jobs:
           if len(unique) != 1:
               raise SystemExit(f"ERROR: expected one unique result row, observed {rows!r}")
           parts = unique[0].split("\t")
-          if len(parts) != 41:
-              raise SystemExit(f"ERROR: expected 41 result columns including prefix, observed {len(parts)}")
+          if len(parts) != 47:
+              raise SystemExit(f"ERROR: expected 47 result columns including prefix, observed {len(parts)}")
           if parts[1] != target_mode or parts[2] != target_seed:
               raise SystemExit(
                   f"ERROR: result identity mismatch: expected {(target_mode, target_seed)!r}, "
@@ -221,7 +221,7 @@ jobs:
           rows = {}
           for path in root.glob("*.tsv"):
               parts = path.read_text(encoding="utf-8").strip().split("\t")
-              if len(parts) != 40:
+              if len(parts) != 46:
                   raise SystemExit(f"ERROR: malformed row {path}: {len(parts)} columns")
               key = (parts[0], parts[1])
               if key in rows:
@@ -235,6 +235,8 @@ jobs:
           header = [
               "mode","seed","erEpisodes","erTicks","erMovingEpisodes","erSlowEpisodes",
               "erMovingTicks","erSlowTicks","erPostAirborne","erPostRolling","erPostOther",
+              "rollingPhysicsEntries","rollingHeightCrosses","movingRollingHeightCrosses",
+              "movingCrossPostAirborne","movingCrossPostRolling","movingCrossPostOther",
               "erMeanZ","erMeanSpeed","erMaxZ","erMaxSpeed","distanceProxyM","meanZ","maxZ",
               "meanSpeed","maxSpeed","stateStationary","stateRolling","stateAirborne",
               "stateBouncing","stateControlled","stateOut","finalThirdTicks","possessedTicks",
@@ -262,19 +264,19 @@ jobs:
               # Numeric indices in row without prefix: see header above.
               f = lambda row, idx: float(row[idx])
               i = lambda row, idx: int(row[idx])
-              action_start = 31
+              action_start = 37
               deltas = [i(b, action_start+k) - i(a, action_start+k) for k in range(8)]
               delta_lines.append([
                   seed,
-                  str(a[39] == b[39]).lower(),
+                  str(a[45] == b[45]).lower(),
                   a[2],
                   a[4],
                   a[6],
-                  f"{f(b,15)-f(a,15):.6f}",
-                  f"{f(b,16)-f(a,16):.6f}",
-                  f"{f(b,18)-f(a,18):.6f}",
-                  str(i(b,28)-i(a,28)),
-                  str((i(b,29)+i(b,30))-(i(a,29)+i(a,30))),
+                  f"{f(b,21)-f(a,21):.6f}",
+                  f"{f(b,22)-f(a,22):.6f}",
+                  f"{f(b,24)-f(a,24):.6f}",
+                  str(i(b,34)-i(a,34)),
+                  str((i(b,35)+i(b,36))-(i(a,35)+i(a,36))),
                   *map(str,deltas),
               ])
           Path("artifacts/v210-rolling-aggregate/final/deltas.tsv").write_text(
