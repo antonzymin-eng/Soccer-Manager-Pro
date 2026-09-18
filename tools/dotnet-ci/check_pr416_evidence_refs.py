@@ -54,7 +54,12 @@ def read_tsv(path: Path) -> list[dict[str, str]]:
 
 
 def normalize_git_date(value: str) -> str:
-    return value[:-6] + "Z" if value.endswith("+00:00") else value
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return (
+        parsed.astimezone(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z")
+    )
 
 
 def commit_meta(repo: Path, sha: str) -> tuple[str, str]:
