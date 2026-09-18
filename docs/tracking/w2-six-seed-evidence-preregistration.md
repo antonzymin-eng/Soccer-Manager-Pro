@@ -1,113 +1,105 @@
 # W2 six-seed evidence pre-registration
 
 **Date:** 2026-09-18  
-**Status:** 1B-DESIGN PHASE 1 — BASELINE CAPTURE PRE-REGISTERED; SIX-SEED POSSESSION RESULT NOT YET OBSERVED  
+**Status:** 1B-DESIGN PHASE 2 FROZEN — RESULT-BEARING RUN NOT YET OBSERVED  
 **Production base:** `e8207f4c6f4d9d301872da869e3796163b8b26ad` (merged PR #416 mainline state)  
 **Scope:** broader post-#416 W2 evidence only. The permanent PR gate remains the existing two adversarial seeds.
 
 ## Purpose
 
-Revalidate the production W2 activation over a broader six-seed corpus without expanding normal PR CI or reusing the superseded pre-#416 W2 interpretation.
+Revalidate production W2 over a broader six-seed corpus without expanding normal PR CI or reusing
+the superseded pre-#416 W2 interpretation.
 
-This evidence uses the same final-third population and squad-construction recipe as
-`MatchEngineInPossGateScenarios`. The six seed identities are frozen from the pre-existing six-seed
-same-population final-third diagnostic corpus. Only the seed identities are reused; no close-chance
-metric, ranking, threshold, or conclusion is imported into this W2 evidence.
+The evidence uses the permanent `MatchEngineInPossGateScenarios` final-third population, mirrored
+phase test, run length, sample cadence, and `scenario.roster` squad recipe. The six seed identities
+are frozen from the pre-existing six-seed same-population final-third diagnostic corpus. Only those
+identities are reused; no close-chance metric, ranking, threshold, or conclusion is imported.
 
-## Frozen corpus
+## Frozen corpus and floors
 
 Full match per seed: **324,000 ticks**.  
 Sampling cadence: **every 6 ticks**.  
-Population: samples where the ball is in either team's attacking final third, exactly as in
-`MatchEngineInPossGateScenarios`.
+Possession criterion: **strictly > 0.70**, independently in home and away mirrored views.  
+Non-vacuity rule: **`floor(0.80 × corrected_baseline_samples(seed))`**, independently per seed.
 
-| Seed |
-|---|
-| `0x0F1E2D3C4B5A6978` |
-| `0x00000000D1A6D05E` |
-| `0x5EED000000000003` |
-| `0x5EED000000000004` |
-| `0x00000000D1A6D05F` |
-| `0x1A2B3C4D5E6F7081` |
+| Seed | Corrected baseline samples | Frozen floor |
+|---|---:|---:|
+| `0x0F1E2D3C4B5A6978` | 15,830 | 12,664 |
+| `0x00000000D1A6D05E` | 18,909 | 15,127 |
+| `0x5EED000000000003` | 15,671 | 12,536 |
+| `0x5EED000000000004` | 15,550 | 12,440 |
+| `0x00000000D1A6D05F` | 18,162 | 14,529 |
+| `0x1A2B3C4D5E6F7081` | 16,423 | 13,138 |
 
-The first and last seeds are the two permanent-gate adversarial seeds. The other four broaden
-evidence only; they do not enter the shipped gate.
+The first and last seeds are the two permanent-gate adversarial seeds. Their baseline counts exactly
+reproduce the permanent detector's previously frozen **15,830 / 16,423**, an independent alignment
+check on this evidence driver's population and roster recipe. The other four seeds broaden evidence
+only; they do not enter the shipped gate.
 
-## Pre-result correction record
+## Phase 1 — governing baseline evidence
 
-The first evidence-driver commit (`3afe6baf7eb2c832371df2d06436a8f32e02788f`) named its
-roster RNG registration site `w2-six-seed-evidence.roster` rather than the permanent InPoss
-scenario's `scenario.roster`. Although the current RNG key calculation does not include the site
-label, that driver did not literally satisfy this preregistration's same-recipe requirement. Its
-Actions run `35388265274` is therefore **superseded and must not supply baseline counts or floors**.
-Commit `6adfd90e60cce00be6614f165392db4f12d62ecb` corrected the driver before any six-seed
-possession-share result was observed.
+Governing run: **`35389373818`**, attempt 1.  
+Governing Phase-1 head: **`a1f105c9baf2205877fc6f9852331576daa97b6e`**.  
+Aggregate artifact: **`w2-six-seed-baseline-aggregate-35389373818`**, artifact id **10565680830**.
 
-Only the baseline run from the final Phase-1 preregistration head, with exact six-seed identity/sequence validation enabled, is governing. Earlier branch runs are setup evidence only and must not be used to derive floors.
+The aggregate artifact contains:
 
-The matrix run on `656b9300a43530d598b7ddbe1a42dfdad074f652` exposed a validator-only defect:
-the detailed console logger repeats an identical `TestContext` output line in its summary, so the
-parser saw two identical rows after the test itself passed. The validator now accepts repeated
-identical rows but rejects zero rows or more than one **distinct** row. The aggregate verifier also
-compares the exact seed set independently of artifact filename sort order, then emits rows in the
-frozen preregistration order. Neither correction changes a seed, sample rule, run length, production
-configuration, or the pre-frozen 0.80 derivation.
+- `baseline-counts-and-floors.tsv` — SHA-256
+  `976248616ac69ada2e3ffbc6c3eb2693a305e677f0193fd59234bafb91b307c4`;
+- `provenance.txt` — SHA-256
+  `4f50f7edc7380d6806e4c78f14897b6f367983a07abc8897e858cd6fb807626e`;
+- `SHA256SUMS`, verified against both files after download.
 
-## Phase 1 — corrected-baseline denominator capture
+All six matrix jobs and the aggregate verifier completed successfully. Phase 1 emitted sample counts
+only; no six-seed possession-share result was used to derive or alter these floors.
 
-The governing Phase-1 workflow executes the six frozen seeds as independent matrix jobs and then
-aggregates them mechanically. Parallel execution changes no simulation input: every job uses the
-same exact production base, full-match tick count, sampling cadence, roster recipe, and production
-W2 configuration. The aggregate job rejects a missing/duplicate/malformed seed row and computes
-`floor80` by integer `(samples * 80) // 100`.
+### Pre-result correction record
 
+The first driver commit (`3afe6baf7eb2c832371df2d06436a8f32e02788f`) used a different
+roster registration-site label. Although the RNG key does not include that label, the driver did not
+literally match the permanent scenario recipe and run `35388265274` is superseded.
 
-Before observing any six-seed possession-share result:
+The first matrix validator at `656b9300a43530d598b7ddbe1a42dfdad074f652` rejected the detailed
+console logger's duplicate echo of an otherwise identical `TestContext` row. The test itself passed.
+The parser was corrected to accept repeated identical rows while still rejecting conflicting rows;
+the aggregate seed-set check was also made order-independent. Neither correction altered a seed,
+run length, sampling rule, production configuration, threshold, or the already-frozen 0.80 rule.
 
-1. run all six seeds on the exact production base above with production W2 active;
-2. emit **sample counts only** for each seed — the baseline driver deliberately does not print
-   home/away possession shares;
-3. derive one floor per seed as
-   `floor(0.80 × corrected_baseline_samples(seed))`;
-4. freeze those six numeric floors in a follow-up commit before enabling the result-bearing run.
+Only run `35389373818` supplies the six governing baseline counts above.
 
-The **0.80** fraction, mathematical floor rounding, full-match run length, sampling cadence, corpus,
-and per-seed treatment are inherited unchanged from PR #416's pre-registered detector-hardening rule.
+## Phase 2 — activation revalidation frozen before result
 
-## Phase 2 — activation revalidation, frozen before result
+This section, the six numeric floors above, the result driver, and the result workflow are frozen in
+the same commit **before** the result-bearing workflow executes.
 
-After Phase 1 floors are frozen, the evidence run will evaluate every seed independently.
+### Production arm — decisive leg
 
-### Production arm
+Production W2 is evaluated with:
 
-Production W2 is the decisive activation leg:
-
-- no tackle-radius test override;
-- current production fallback: `TackleContactRadiusM = LooseBallPickupRadiusM = 1.0 m` on this
-  production base;
-- durable production relationship: `TackleContactRadiusM > 0` and
+- no tackle-radius override;
+- production `TackleContactRadiusM = LooseBallPickupRadiusM = 1.0 m` on the pinned base;
+- durable relationship `TackleContactRadiusM > 0` and
   `TackleContactRadiusM <= LooseBallPickupRadiusM`.
 
 For every seed independently:
 
-- `samples < seed_floor` → **INSUFFICIENT EVIDENCE**;
-- `samples >= seed_floor` and both mirrored shares are strictly `> 0.70` → **PASS**;
-- `samples >= seed_floor` and either mirrored share is `<= 0.70` → **LOCALIZE CAUSE**.
+- `samples < frozen_floor` → **INSUFFICIENT**;
+- sufficiently populated and both mirrored shares strictly `> 0.70` → **PASS**;
+- sufficiently populated but either mirrored share `<= 0.70` → **LOCALIZE**.
 
-Home and away mirrored views are separate predicates. Pooled values, if printed, are diagnostic only.
+Production is broadly revalidated only if all six seeds are `PASS`. A non-PASS seed does not by
+itself authorize disabling W2; it triggers the causal localization rule below.
 
-### Disarmed causal control
+### Disarmed causal-control arm
 
-The same six seeds/run length may also run with the existing measurement seam
+The exact same six seeds, full-match run length, sample cadence, and frozen floors also execute with
 `TestOnly_ArmTackleChallenge(0f)`.
 
-That is an explicit negative-control arm only. It does not mutate the production catalogue and does
-not by itself decide whether W2 remains active. It exists to distinguish a W2-caused collapse from
-an independent engine trajectory defect if localization is required.
+This is a measurement-only negative control. The driver additionally requires **zero resolved tackle
+outcomes** in this arm, proving that the control is actually disarmed. Its possession classification
+is diagnostic and does not independently decide the production W2 state.
 
-## Failure classification
-
-A single failing seed does **not** automatically prove W2 should be disabled.
+### Failure classification
 
 If a sufficiently populated production seed violates the `> 0.70` mirrored criterion:
 
@@ -117,20 +109,32 @@ If a sufficiently populated production seed violates the `> 0.70` mirrored crite
    preregistered corpus;
 4. do not lower the share threshold, sample floors, run length, or corpus after observing results.
 
-## Evidence retention
+A seed below its floor is insufficient evidence and likewise does not authorize post-hoc threshold
+or corpus changes.
 
-Preserve for each phase/run:
+## Result evidence contract
 
-- exact production base SHA and evidence-branch SHA;
-- exact workflow and driver;
+The twelve result legs (six production + six disarmed) execute independently. Each retains:
+
+- exact production/base/baseline/result SHAs and run ids;
+- detailed console output;
 - TRX;
-- complete detailed-console output;
-- runner/test exit status;
-- SHA-256 digests for retained evidence files.
+- test exit status;
+- parsed machine-readable result row;
+- SHA-256 manifest.
 
-The result-bearing run must be interpreted from retained artifacts, not workflow-green status alone.
+An aggregate job runs even if a production predicate fails. It requires all twelve identity/floor
+rows and retains:
+
+- ordered `w2-six-seed-results.tsv`;
+- `summary.txt` with `production_all_pass`, `localization_required`, and
+  `disarmed_control_integrity`;
+- aggregate provenance;
+- SHA-256 manifest.
+
+The aggregate is evidence. Workflow green/red alone is not the W2 interpretation.
 
 ## Sequencing boundary
 
-This work blocks the later foul/card calibration pass. It does not block unrelated post-#416
-workstreams, including gate-integrity or Ball Physics v2.10 characterization.
+This work blocks the later foul/card calibration pass. It does not block gate-integrity or Ball
+Physics v2.10 characterization.

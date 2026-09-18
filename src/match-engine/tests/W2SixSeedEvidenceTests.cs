@@ -1,9 +1,9 @@
 // File:     src/match-engine/tests/W2SixSeedEvidenceTests.cs
 // Created:  2026-09-18
 // Author:   —
-// Purpose:  Temporary dedicated Step-1b denominator capture for the broader six-seed W2 evidence.
-//           Phase 1 deliberately emits sample counts only. Possession shares remain unobserved until
-//           seed-specific floors are frozen in a later commit.
+// Purpose:  Temporary dedicated Step-1b result driver for the broader six-seed W2 evidence.
+//           The six sample floors below were frozen from run 35389373818 before this driver emitted
+//           any six-seed possession-share result. This file is evidence scaffolding, not a PR gate.
 
 using System;
 using System.Globalization;
@@ -21,6 +21,7 @@ namespace TacticalDirector.MatchEngine
         private const int NumTicks = 324000;
         private const int SampleStrideTicks = 6;
         private const float ExpectedProductionRadiusM = 1.0f;
+        private const float PossessionShareThreshold = 0.70f;
         private const float FinalThirdDepthM = MatchEngineConstants.PITCH_LENGTH_M / 3.0f;
 
         private static readonly ulong[] Seeds =
@@ -33,13 +34,36 @@ namespace TacticalDirector.MatchEngine
             0x1A2B3C4D5E6F7081UL,
         };
 
+        private static readonly int[] MinimumSamplesBySeed =
+        {
+            12_664,
+            15_127,
+            12_536,
+            12_440,
+            14_529,
+            13_138,
+        };
+
+        private struct Observation
+        {
+            public int Samples;
+            public int HomeViewPossession;
+            public int AwayViewPossession;
+            public int Won;
+            public int Loose;
+            public int Foul;
+            public int Missed;
+        }
+
         [Test]
         [Category("Calibration")]
-        public void BaselineCapture_ReportsOnlySelectedSeedFinalThirdSampleCount()
+        public void Revalidation_ReportsSelectedSeedProductionOrDisarmedResult()
         {
             string mode = Environment.GetEnvironmentVariable("TD_W2_SIX_SEED_MODE") ?? string.Empty;
-            Assert.That(mode, Is.EqualTo("baseline"),
-                "Phase-1 driver is baseline-only until numeric seed floors are frozen.");
+            Assert.That(
+                mode == "production" || mode == "disarmed",
+                Is.True,
+                "TD_W2_SIX_SEED_MODE must be production or disarmed.");
 
             string seedText =
                 Environment.GetEnvironmentVariable("TD_W2_SIX_SEED_HEX") ?? string.Empty;
@@ -49,8 +73,24 @@ namespace TacticalDirector.MatchEngine
                 seedText.Substring(2),
                 NumberStyles.AllowHexSpecifier,
                 CultureInfo.InvariantCulture);
-            Assert.That(Array.IndexOf(Seeds, seed), Is.GreaterThanOrEqualTo(0),
+            int seedIndex = Array.IndexOf(Seeds, seed);
+            Assert.That(seedIndex, Is.GreaterThanOrEqualTo(0),
                 "workflow selected a seed outside the preregistered six-seed corpus");
+
+            string floorText =
+                Environment.GetEnvironmentVariable("TD_W2_SIX_SEED_FLOOR") ?? string.Empty;
+            int workflowFloor;
+            Assert.That(
+                int.TryParse(
+                    floorText,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out workflowFloor),
+                Is.True,
+                "TD_W2_SIX_SEED_FLOOR must be a canonical non-negative integer.");
+            int frozenFloor = MinimumSamplesBySeed[seedIndex];
+            Assert.That(workflowFloor, Is.EqualTo(frozenFloor),
+                "workflow floor drifted from the preregistered driver floor");
 
             Assert.That(MatchEngineConstants.TackleContactRadiusM,
                 Is.EqualTo(ExpectedProductionRadiusM).Within(0.000001f),
@@ -63,27 +103,78 @@ namespace TacticalDirector.MatchEngine
                 MatchEngineConstants.TackleContactRadiusM,
                 Is.LessThanOrEqualTo(MatchEngineConstants.LooseBallPickupRadiusM));
 
+            bool disarmed = mode == "disarmed";
+            Observation observation;
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             try
             {
-                int samples = CountFinalThirdSamples(seed);
-                TestContext.WriteLine(
-                    "W2_SIX_SEED_BASELINE seed=0x"
-                    + seed.ToString("X16", CultureInfo.InvariantCulture)
-                    + " samples=" + samples.ToString(CultureInfo.InvariantCulture));
+                observation = RunOne(seed, disarmed);
             }
             finally
             {
                 UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
             }
+
+            float homeShare = observation.Samples > 0
+                ? (float)observation.HomeViewPossession / observation.Samples
+                : 0f;
+            float awayShare = observation.Samples > 0
+                ? (float)observation.AwayViewPossession / observation.Samples
+                : 0f;
+            string classification = observation.Samples < frozenFloor
+                ? "INSUFFICIENT"
+                : homeShare > PossessionShareThreshold && awayShare > PossessionShareThreshold
+                    ? "PASS"
+                    : "LOCALIZE";
+
+            TestContext.WriteLine(
+                "W2_SIX_SEED_RESULT"
+                + " mode=" + mode
+                + " seed=0x" + seed.ToString("X16", CultureInfo.InvariantCulture)
+                + " samples=" + observation.Samples.ToString(CultureInfo.InvariantCulture)
+                + " floor=" + frozenFloor.ToString(CultureInfo.InvariantCulture)
+                + " homeShare=" + homeShare.ToString("F6", CultureInfo.InvariantCulture)
+                + " awayShare=" + awayShare.ToString("F6", CultureInfo.InvariantCulture)
+                + " classification=" + classification
+                + " won=" + observation.Won.ToString(CultureInfo.InvariantCulture)
+                + " loose=" + observation.Loose.ToString(CultureInfo.InvariantCulture)
+                + " foul=" + observation.Foul.ToString(CultureInfo.InvariantCulture)
+                + " missed=" + observation.Missed.ToString(CultureInfo.InvariantCulture));
+
+            int resolved =
+                observation.Won + observation.Loose + observation.Foul + observation.Missed;
+
+            if (disarmed)
+            {
+                Assert.That(resolved, Is.EqualTo(0),
+                    "disarmed causal-control arm resolved a tackle despite zero override");
+                return;
+            }
+
+            Assert.That(
+                observation.Samples,
+                Is.GreaterThanOrEqualTo(frozenFloor),
+                "production seed is below its preregistered non-vacuity floor");
+            Assert.That(
+                homeShare,
+                Is.GreaterThan(PossessionShareThreshold),
+                "production seed failed the preregistered home-view possession criterion");
+            Assert.That(
+                awayShare,
+                Is.GreaterThan(PossessionShareThreshold),
+                "production seed failed the preregistered away-view possession criterion");
         }
 
-        private static int CountFinalThirdSamples(ulong seed)
+        private static Observation RunOne(ulong seed, bool disarmed)
         {
             var engine = new MatchEngine(seed);
             engine.ConfigureSquads(BuildSquad(seed, clubId: 1), BuildSquad(seed, clubId: 2));
+            if (disarmed)
+            {
+                engine.TestOnly_ArmTackleChallenge(0f);
+            }
 
-            int samples = 0;
+            var observation = new Observation();
             for (int tick = 0; tick < NumTicks; tick++)
             {
                 engine.RunTick();
@@ -100,11 +191,27 @@ namespace TacticalDirector.MatchEngine
                     continue;
                 }
 
-                samples++;
+                observation.Samples++;
+                if (IsPossessionPhase(engine.TestOnly_PositioningPhase(0)))
+                {
+                    observation.HomeViewPossession++;
+                }
+                if (IsPossessionPhase(engine.TestOnly_PositioningPhase(1)))
+                {
+                    observation.AwayViewPossession++;
+                }
             }
 
-            return samples;
+            var outcomes = engine.TestOnly_TackleOutcomeCounts;
+            observation.Won = outcomes.Won;
+            observation.Loose = outcomes.Loose;
+            observation.Foul = outcomes.Foul;
+            observation.Missed = outcomes.Missed;
+            return observation;
         }
+
+        private static bool IsPossessionPhase(PositioningAI.Phase phase) =>
+            phase == PositioningAI.Phase.InPoss || phase == PositioningAI.Phase.OutOfPoss;
 
         private static Squad BuildSquad(ulong seed, int clubId)
         {
