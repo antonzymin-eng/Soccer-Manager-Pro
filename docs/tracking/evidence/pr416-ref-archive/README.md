@@ -17,9 +17,15 @@ C#, workflow YAML, scripts, and Markdown therefore remain auditable without ente
 Actions, YAML, Python, or Markdown discovery.
 
 `MANIFEST.tsv` is the snapshot byte/provenance authority. Its `kind` values are `current`, `run`,
-and `history`. `run-heads.tsv` separately records the authoritative GitHub Actions metadata for
-**all 31 workflow run ids cited** across the durable PR #416 provenance and diagnosis: run id,
-head branch, exact `head_sha`, event, conclusion, and workflow name.
+and `history`. Each row now also preserves the selected source commit's subject and Git committer
+date so those two context fields remain available even if the source ref later disappears.
+
+`run-heads.tsv` separately records the authoritative GitHub Actions metadata for **all 31 workflow
+run ids cited** across the durable PR #416 provenance and diagnosis: run id, head branch, exact
+`head_sha`, commit subject/date, event, conclusion, and workflow name.
+
+A `source_head` is exact provenance for that archived row, but it is not asserted to be the first or
+only commit that ever contained the blob. Identical blob content can appear at multiple commits.
 
 ## Why the original tip-only audit was insufficient
 
@@ -74,19 +80,22 @@ For every ref proposed for deletion:
 This gate must fail closed on any missing ref, commit, path, blob, or run mapping. It cannot be
 reconstructed from `main` alone after the refs are deleted.
 
-### B. Mainline archive integrity — after this archive lands
+### B. Mainline archive integrity and interpretive reconstruction — after this archive lands
 
 From `main` alone, verify that:
 
 1. every `MANIFEST.tsv` archive path exists;
 2. every archived file hashes to its recorded Git blob SHA;
-3. every disposition row and every run-head row is present and parseable;
+3. every disposition row and every run-head row is present and parseable, including preserved
+   commit subject/date fields;
 4. the causal/result interpretation remains recoverable from
    `pr416-evidence-provenance.md` and `w6-elevated-stationary-ball-fix.md`;
 5. the three policy-retained refs remain excluded from deletion unless an explicit later policy
    decision changes them.
 
-This second gate proves archive integrity and reconstruction. It does **not** prove historical
-completeness; only the live-ref gate can do that.
+This second gate proves archive integrity and enough preserved context for **interpretive**
+reconstruction. It does **not** reconstruct full Git commit identity such as author, parentage, or
+complete co-change topology, and it does **not** prove historical completeness; only the live-ref
+gate can do that.
 
 Only a ref that passes both gates and is still classified `deletable` may be deletion-authorized.
