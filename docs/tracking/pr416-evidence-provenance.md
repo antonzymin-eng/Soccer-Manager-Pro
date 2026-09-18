@@ -164,7 +164,7 @@ blobs are byte-identical to their pinned-main `1bad655f…` counterparts.
 | Co-location perception runtime probe | `evidence/pr416-colocated-ball-visible` | current branch head `a23683568206423275c80e639f54ea0c80d2d36f` | runtime target refs `1bad655f…` and `07dcc670…` | `35285144898`, strict target confirmation `35285560809` | Temporary patch bypassed FoV angle only for exact XY co-location. First run emitted usable census but failed later on unrelated FM-03 log policing; second supplies strict target evidence. Production form later landed at `3a4a228495b73057684c727a55973c5072d7fdc1`. |
 | Rolling + pre-force pair ablation | `evidence/pr416-mechanism-census` | `8784eb235757e9707aaa1b69872cb20324bc6633` | runtime base `07dcc670…`; workflow sources `evidence/pr416-no-rolling-focused` and `evidence/pr416-pre-force-normalization-ablation` | `35293636125` | Runtime composition was `BallStateMachine.cs` blob `3297dd5a90c8881c510fa1869d34821d395f2a7f` + `BallPhysicsCore.cs` blob `5fbdb6b44b4f623311e122f72a1b4ccf20e4b228` + `BallCollision.cs` blob `d58e69016875df3ba360b1364bf5d5a85e9b5766`. Mechanism census passed; focused regression failed the strict five-target TRX outcome enforcement, so this pair did not restore the required target set. |
 | Narrow Rolling candidate | `evidence/pr416-narrow-rolling-candidate` | `bb501a2128f9efbef5e98bffadb0d98214493e78` | rooted at `07dcc670…` | `35300926450` | Branch tree is `BallStateMachine.cs` blob `e739a3061c1b74faa7ac71a67da8b20d3690fed8` + `BallPhysicsCore.cs` blob `ce945b5736125f9ea9264632442617155e6b5af4` + `BallCollision.cs` blob `d58e69016875df3ba360b1364bf5d5a85e9b5766`: elevated Rolling promotion/pre-force recovery is narrowed to the low-speed stop path. Ball-physics, widened-corpus, and corrected-baseline-detector jobs passed; focused regression failed main-relative target enforcement. The workflow also locked the known broad high-speed Rolling contract conflict as an expected failure. |
-| State-only pre-force candidate | `evidence/pr416-state-only-preforce-candidate` | `6c89365da2abdd2d3ff697da34a55751edeb571f` | rooted at `07dcc670…` | `35301715589` | Branch tree is `BallStateMachine.cs` blob `4511b1cbace009175308b7ce32ec22a93d2b6375` + `BallPhysicsCore.cs` blob `b51e772bc4c9e8dd3f414d2ae372a6591294e7eb` + `BallCollision.cs` blob `d58e69016875df3ba360b1364bf5d5a85e9b5766`. Core pre-force recovery is Stationary-only while the state machine prevents a low-speed elevated Rolling ball from becoming Stationary. Focused-regression, ball-physics, widened-corpus, and corrected-baseline-detector jobs all passed. |
+| State-only pre-force candidate | `evidence/pr416-state-only-preforce-candidate` | `6c89365da2abdd2d3ff697da34a55751edeb571f` | rooted at `07dcc670…` | `35301715589` | Branch tree is `BallStateMachine.cs` blob `4511b1cbace009175308b7ce32ec22a93d2b6375` + `BallPhysicsCore.cs` blob `b51e772bc4c9e8dd3f414d2ae372a6591294e7eb` + `BallCollision.cs` blob `d58e69016875df3ba360b1364bf5d5a85e9b5766`. Core pre-force recovery is Stationary-only while the state machine prevents a low-speed elevated Rolling ball from becoming Stationary. Focused-regression, ball-physics, widened-corpus, and corrected-baseline-detector jobs all passed. The `ball-physics` job is green because it explicitly requires the broad high-speed `Rolling_AboveEnterThreshold_TransitionsToAirborne` lock to fail as the known contract conflict; this candidate restores the focused targets while narrowing elevated-Rolling semantics rather than satisfying that broad lock. |
 | Low-speed Rolling isolation | `evidence/pr416-state-only-preforce-candidate` | `efa2f8946a9a6a8852946b97a8e4c7d55013b0bf` | candidate lineage through `6c89365d…`; runtime StateMachine sourced from `evidence/pr416-no-rolling-focused` | `35302289613` | Workflow replaced the branch StateMachine with blob `3297dd5a90c8881c510fa1869d34821d395f2a7f` while retaining `BallPhysicsCore.cs` blob `b51e772bc4c9e8dd3f414d2ae372a6591294e7eb` and `BallCollision.cs` blob `d58e69016875df3ba360b1364bf5d5a85e9b5766`. Isolation job passed; D1A6 longest Controlled spell was 1,064 ticks. |
 | Committed perception-fix focused validation | `evidence/pr416-final-validation` | `b2ea41e78ba9d77b339b76c7fb24f41f8df0d0d2` | production/test correction through `f92305b58cd8a8dc69d9b95e94d2bda04aa56201` | `35286222621` | Focused validation green; job `105419040400`. |
 | Live-head closure | helper surfaces on `fix/w6-elevated-stationary-ball`; `evidence/pr416-current-head-validation` remains as a wrapper branch | wrapper branch current head `9a7755f9422c07c04207d543512c3e5c32098ed9`; tested ref `a7f2b77af61c1d0b7138bfdfce21cd1772c91f26` | `a7f2b77…` | `35305911122` | Focused targets and save/restore assertions passed; three-seed spell/census values are durable in the diagnosis file. |
@@ -178,20 +178,21 @@ The two candidate refs
 `evidence/pr416-close-chance-retirement`, are intentionally retained after this record is landed.
 This provenance record does not authorize their deletion.
 
-## 5. Failed or non-certifying attempts
+## 5. Failed, void, or non-certifying attempts
 
-These runs are preserved because excluding failed harnesses is part of the causal record:
+This section distinguishes harness failures/void attempts from valid experiments that produced
+negative target results. Both matter to the causal record, but they are not the same class.
 
-| Run | Disposition |
-| --- | --- |
-| `35278057546` | Invalid workflow configuration; no jobs. |
-| `35278200848` | Runtime patch failed before tests. |
-| `35283014828` | Pair-removal diff guard failed before focused tests; residency leg was unablated. |
-| `35293636125` | Rolling + pre-force pair ablation: mechanism census passed, but focused regression failed strict five-target TRX outcome enforcement; non-certifying for target restoration. |
-| `35300926450` | Narrow Rolling candidate: ball-physics, widened-corpus, and corrected-baseline-detector jobs passed, but focused regression failed main-relative target enforcement; candidate did not restore the required focused target set. |
-| `35285015171` | Invalid co-location-probe workflow configuration; no jobs. |
-| `35285075938` | Co-location runtime patch guard failed before tests. |
-| `35285144898` | Co-location patch and census were usable, but the synthetic measurement test later failed unrelated FM-03 LogAssert teardown; not strict target evidence. |
+| Run | Class | Disposition |
+| --- | --- | --- |
+| `35278057546` | Harness failure | Invalid workflow configuration; no jobs. |
+| `35278200848` | Harness failure | Runtime patch failed before tests. |
+| `35283014828` | Void arm | Pair-removal diff guard failed before focused tests; residency leg was unablated. |
+| `35285015171` | Harness failure | Invalid co-location-probe workflow configuration; no jobs. |
+| `35285075938` | Harness failure | Co-location runtime patch guard failed before tests. |
+| `35285144898` | Partially usable / non-certifying | Co-location patch and census were usable, but the synthetic measurement test later failed unrelated FM-03 LogAssert teardown; not strict target evidence. |
+| `35293636125` | Valid negative-result arm | Rolling + pre-force pair ablation: mechanism census passed, but focused regression failed strict five-target TRX outcome enforcement; non-certifying for target restoration. |
+| `35300926450` | Valid negative-result arm | Narrow Rolling candidate: ball-physics, widened-corpus, and corrected-baseline-detector jobs passed, but focused regression failed main-relative target enforcement; candidate did not restore the required focused target set. |
 
 ## 6. Full current evidence-ref inventory
 
