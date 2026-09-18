@@ -9,18 +9,35 @@ permissions:
   contents: read
 
 concurrency:
-  # Evidence commits are immutable measurement definitions. Do not let a superseded
-  # earlier capture serialize or cancel the corrected exact-head run.
   group: w2-six-seed-evidence-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
   baseline:
-    name: Capture six-seed corrected-baseline denominators
+    name: Capture baseline — ${{ matrix.seed }}
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - seed: '0x0F1E2D3C4B5A6978'
+            label: '0F1E2D3C4B5A6978'
+          - seed: '0x00000000D1A6D05E'
+            label: '00000000D1A6D05E'
+          - seed: '0x5EED000000000003'
+            label: '5EED000000000003'
+          - seed: '0x5EED000000000004'
+            label: '5EED000000000004'
+          - seed: '0x00000000D1A6D05F'
+            label: '00000000D1A6D05F'
+          - seed: '0x1A2B3C4D5E6F7081'
+            label: '1A2B3C4D5E6F7081'
     env:
       TD_W2_SIX_SEED_MODE: baseline
+      TD_W2_SIX_SEED_HEX: ${{ matrix.seed }}
+      SEED_LABEL: ${{ matrix.label }}
       PRODUCTION_BASE_SHA: e8207f4c6f4d9d301872da869e3796163b8b26ad
     steps:
       - name: Checkout evidence branch
@@ -36,7 +53,8 @@ jobs:
       - name: Record provenance
         run: |
           set -euo pipefail
-          mkdir -p artifacts/w2-six-seed
+          ROOT="artifacts/w2-six-seed/$SEED_LABEL"
+          mkdir -p "$ROOT"
           {
             echo "production_base_sha=$PRODUCTION_BASE_SHA"
             echo "evidence_head_sha=$GITHUB_SHA"
@@ -44,9 +62,10 @@ jobs:
             echo "run_id=$GITHUB_RUN_ID"
             echo "run_attempt=$GITHUB_RUN_ATTEMPT"
             echo "mode=$TD_W2_SIX_SEED_MODE"
+            echo "seed=$TD_W2_SIX_SEED_HEX"
             echo "changed_paths_from_production_base:"
             git diff --name-only "$PRODUCTION_BASE_SHA...HEAD"
-          } > artifacts/w2-six-seed/provenance.txt
+          } > "$ROOT/provenance.txt"
 
       - name: Generate projects and restore
         run: |
@@ -54,13 +73,14 @@ jobs:
           python3 tools/dotnet-ci/generate_projects.py
           dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
 
-      - name: Run six-seed baseline capture
+      - name: Run selected-seed baseline capture
         run: |
           set -euo pipefail
-          mkdir -p artifacts/w2-six-seed/trx
-          OUT=artifacts/w2-six-seed/baseline-output.txt
-          STATUS=artifacts/w2-six-seed/exit-status.txt
-          RUNSETTINGS=artifacts/w2-six-seed/evidence.runsettings
+          ROOT="artifacts/w2-six-seed/$SEED_LABEL"
+          mkdir -p "$ROOT/trx"
+          OUT="$ROOT/baseline-output.txt"
+          STATUS="$ROOT/exit-status.txt"
+          RUNSETTINGS="$ROOT/evidence.runsettings"
 
           cat > "$RUNSETTINGS" <<'XML'
           <?xml version="1.0" encoding="utf-8"?>
@@ -72,7 +92,13 @@ jobs:
           XML
 
           set +e
-          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "FullyQualifiedName~W2SixSeedEvidenceTests"             --settings "$RUNSETTINGS"             --logger "console;verbosity=detailed"             --logger "trx;LogFileName=w2-six-seed-baseline.trx"             --results-directory artifacts/w2-six-seed/trx 2>&1 | tee "$OUT"
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "FullyQualifiedName~W2SixSeedEvidenceTests" \
+            --settings "$RUNSETTINGS" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=w2-six-seed-baseline.trx" \
+            --results-directory "$ROOT/trx" 2>&1 | tee "$OUT"
           test_status="${PIPESTATUS[0]}"
           set -e
           echo "dotnet_test_exit=$test_status" > "$STATUS"
@@ -80,9 +106,69 @@ jobs:
             exit "$test_status"
           fi
 
-          python3 - "$OUT" artifacts/w2-six-seed/baseline-counts.tsv <<'PY'
+          python3 - "$OUT" "$ROOT/$SEED_LABEL.tsv" "$TD_W2_SIX_SEED_HEX" <<'PY'
           import re
           import sys
+          from pathlib import Path
+
+          output_path = Path(sys.argv[1])
+          tsv_path = Path(sys.argv[2])
+          expected_seed = sys.argv[3]
+          text = output_path.read_text(encoding="utf-8")
+          pattern = re.compile(
+              r"^\s*W2_SIX_SEED_BASELINE seed=(0x[0-9A-F]{16}) samples=([0-9]+)\s*$",
+              re.MULTILINE,
+          )
+          rows = pattern.findall(text)
+          if len(rows) != 1:
+              raise SystemExit(
+                  f"ERROR: expected exactly one baseline row for {expected_seed}, observed {rows!r}"
+              )
+          seed, raw_samples = rows[0]
+          samples = int(raw_samples)
+          if seed != expected_seed or samples <= 0:
+              raise SystemExit(
+                  f"ERROR: invalid baseline row; expected_seed={expected_seed} observed={rows[0]!r}"
+              )
+          tsv_path.write_text(f"{seed}\t{samples}\n", encoding="utf-8")
+          PY
+
+      - name: Hash retained seed evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          ROOT="artifacts/w2-six-seed/$SEED_LABEL"
+          cd "$ROOT"
+          find . -type f ! -name SHA256SUMS -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > SHA256SUMS
+
+      - name: Upload selected-seed evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w2-six-seed-baseline-${{ matrix.label }}-${{ github.run_id }}
+          path: artifacts/w2-six-seed/${{ matrix.label }}/
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    name: Verify and aggregate six-seed denominators
+    needs: baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all six baseline artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: w2-six-seed-baseline-*-${{ github.run_id }}
+          path: artifacts/w2-six-seed-aggregate/input
+          merge-multiple: true
+
+      - name: Verify exact corpus and derive 80-percent floors
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/w2-six-seed-aggregate/final
+          python3 - <<'PY'
           from pathlib import Path
 
           expected = [
@@ -93,40 +179,55 @@ jobs:
               "0x00000000D1A6D05F",
               "0x1A2B3C4D5E6F7081",
           ]
-          text = Path(sys.argv[1]).read_text(encoding="utf-8")
-          pattern = re.compile(
-              r"^\s*W2_SIX_SEED_BASELINE seed=(0x[0-9A-F]{16}) samples=([0-9]+)\s*$",
-              re.MULTILINE,
-          )
-          rows = pattern.findall(text)
-          names = [name for name, _ in rows]
-          if names != expected:
+          root = Path("artifacts/w2-six-seed-aggregate/input")
+          rows = {}
+          for path in sorted(root.glob("*.tsv")):
+              parts = path.read_text(encoding="utf-8").strip().split("\t")
+              if len(parts) != 2:
+                  raise SystemExit(f"ERROR: malformed baseline TSV {path}: {parts!r}")
+              seed, raw_samples = parts
+              if seed in rows:
+                  raise SystemExit(f"ERROR: duplicate baseline seed {seed}")
+              rows[seed] = int(raw_samples)
+
+          if list(rows) != expected:
               raise SystemExit(
-                  "ERROR: baseline capture seed sequence mismatch; "
-                  f"expected={expected!r} observed={names!r}"
+                  f"ERROR: aggregate seed sequence mismatch; expected={expected!r} observed={list(rows)!r}"
               )
-          counts = [int(value) for _, value in rows]
-          if any(value <= 0 for value in counts):
-              raise SystemExit(f"ERROR: baseline capture contains non-positive sample count: {counts!r}")
-          Path(sys.argv[2]).write_text(
-              "seed\tsamples\n"
-              + "".join(f"{name}\t{value}\n" for name, value in zip(names, counts)),
+          if any(rows[seed] <= 0 for seed in expected):
+              raise SystemExit(f"ERROR: non-positive baseline sample count: {rows!r}")
+
+          output = Path("artifacts/w2-six-seed-aggregate/final/baseline-counts-and-floors.tsv")
+          output.write_text(
+              "seed\tsamples\tfloor80\n"
+              + "".join(
+                  f"{seed}\t{rows[seed]}\t{(rows[seed] * 80) // 100}\n"
+                  for seed in expected
+              ),
               encoding="utf-8",
           )
           PY
 
-      - name: Hash retained evidence
-        if: always()
+      - name: Record aggregate provenance and hashes
         run: |
           set -euo pipefail
-          cd artifacts/w2-six-seed
-          find . -type f ! -name SHA256SUMS -print0             | sort -z             | xargs -0 sha256sum > SHA256SUMS
+          ROOT=artifacts/w2-six-seed-aggregate/final
+          {
+            echo "production_base_sha=e8207f4c6f4d9d301872da869e3796163b8b26ad"
+            echo "evidence_head_sha=$GITHUB_SHA"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "derivation=floor(0.80 * samples), implemented as integer (samples * 80) // 100"
+          } > "$ROOT/provenance.txt"
+          cd "$ROOT"
+          find . -type f ! -name SHA256SUMS -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > SHA256SUMS
 
-      - name: Upload six-seed baseline evidence
-        if: always()
+      - name: Upload governing aggregate baseline
         uses: actions/upload-artifact@v4
         with:
-          name: w2-six-seed-baseline-${{ github.run_id }}
-          path: artifacts/w2-six-seed/
+          name: w2-six-seed-baseline-aggregate-${{ github.run_id }}
+          path: artifacts/w2-six-seed-aggregate/final/
           if-no-files-found: error
           retention-days: 90

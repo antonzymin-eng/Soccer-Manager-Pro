@@ -35,11 +35,22 @@ namespace TacticalDirector.MatchEngine
 
         [Test]
         [Category("Calibration")]
-        public void BaselineCapture_ReportsOnlyPerSeedFinalThirdSampleCounts()
+        public void BaselineCapture_ReportsOnlySelectedSeedFinalThirdSampleCount()
         {
             string mode = Environment.GetEnvironmentVariable("TD_W2_SIX_SEED_MODE") ?? string.Empty;
             Assert.That(mode, Is.EqualTo("baseline"),
                 "Phase-1 driver is baseline-only until numeric seed floors are frozen.");
+
+            string seedText =
+                Environment.GetEnvironmentVariable("TD_W2_SIX_SEED_HEX") ?? string.Empty;
+            Assert.That(seedText, Does.Match("^0x[0-9A-F]{16}$"),
+                "TD_W2_SIX_SEED_HEX must be a canonical preregistered seed.");
+            ulong seed = ulong.Parse(
+                seedText.Substring(2),
+                NumberStyles.AllowHexSpecifier,
+                CultureInfo.InvariantCulture);
+            Assert.That(Array.IndexOf(Seeds, seed), Is.GreaterThanOrEqualTo(0),
+                "workflow selected a seed outside the preregistered six-seed corpus");
 
             Assert.That(MatchEngineConstants.TackleContactRadiusM,
                 Is.EqualTo(ExpectedProductionRadiusM).Within(0.000001f),
@@ -55,14 +66,11 @@ namespace TacticalDirector.MatchEngine
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             try
             {
-                foreach (ulong seed in Seeds)
-                {
-                    int samples = CountFinalThirdSamples(seed);
-                    TestContext.WriteLine(
-                        "W2_SIX_SEED_BASELINE seed=0x"
-                        + seed.ToString("X16", CultureInfo.InvariantCulture)
-                        + " samples=" + samples.ToString(CultureInfo.InvariantCulture));
-                }
+                int samples = CountFinalThirdSamples(seed);
+                TestContext.WriteLine(
+                    "W2_SIX_SEED_BASELINE seed=0x"
+                    + seed.ToString("X16", CultureInfo.InvariantCulture)
+                    + " samples=" + samples.ToString(CultureInfo.InvariantCulture));
             }
             finally
             {

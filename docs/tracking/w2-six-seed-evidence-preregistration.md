@@ -47,6 +47,13 @@ Only the baseline run from the final Phase-1 preregistration head, with exact si
 
 ## Phase 1 — corrected-baseline denominator capture
 
+The governing Phase-1 workflow executes the six frozen seeds as independent matrix jobs and then
+aggregates them mechanically. Parallel execution changes no simulation input: every job uses the
+same exact production base, full-match tick count, sampling cadence, roster recipe, and production
+W2 configuration. The aggregate job rejects a missing/duplicate/malformed seed row and computes
+`floor80` by integer `(samples * 80) // 100`.
+
+
 Before observing any six-seed possession-share result:
 
 1. run all six seeds on the exact production base above with production W2 active;
