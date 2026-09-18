@@ -94,21 +94,38 @@ def live_evidence_refs(repo: Path) -> set[str]:
 
 
 def changed_blob_instances(repo: Path, ref: str, main_ref: str) -> list[BlobInstance]:
+    """Return every historical state of every path changed in the ref-exclusive history.
+
+    This deliberately evaluates the full changed-path set at every exclusive commit,
+    not only the path(s) modified by that individual commit. That makes intermediate
+    tree states explicit and prevents a later commit from hiding an earlier state.
+    """
     remote = remote_ref(ref)
     merge_base = git(repo, "merge-base", main_ref, remote).stdout.strip()
     commits = git(repo, "rev-list", "--reverse", f"{merge_base}..{remote}").stdout.splitlines()
-    instances: list[BlobInstance] = []
+    changed_paths: set[str] = set()
 
     for commit in commits:
         parent_line = git(repo, "rev-list", "--parents", "-n", "1", commit).stdout.split()
         if len(parent_line) <= 1:
-            changed = git(repo, "ls-tree", "-r", "--name-only", commit).stdout.splitlines()
+            changed_paths.update(
+                git(repo, "ls-tree", "-r", "--name-only", commit).stdout.splitlines()
+            )
         else:
-            changed = git(
-                repo, "diff", "--name-only", parent_line[1], commit
-            ).stdout.splitlines()
+            changed_paths.update(
+                git(
+                    repo,
+                    "diff",
+                    "--no-renames",
+                    "--name-only",
+                    parent_line[1],
+                    commit,
+                ).stdout.splitlines()
+            )
 
-        for path in changed:
+    instances: list[BlobInstance] = []
+    for commit in commits:
+        for path in sorted(changed_paths):
             blob = resolve(repo, f"{commit}:{path}")
             if blob is None:
                 continue
