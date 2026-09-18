@@ -33,6 +33,16 @@ Population: samples where the ball is in either team's attacking final third, ex
 The first and last seeds are the two permanent-gate adversarial seeds. The other four broaden
 evidence only; they do not enter the shipped gate.
 
+## Pre-result correction record
+
+The first evidence-driver commit (`3afe6baf7eb2c832371df2d06436a8f32e02788f`) named its
+roster RNG registration site `w2-six-seed-evidence.roster` rather than the permanent InPoss
+scenario's `scenario.roster`. Although the current RNG key calculation does not include the site
+label, that driver did not literally satisfy this preregistration's same-recipe requirement. Its
+Actions run `35388265274` is therefore **superseded and must not supply baseline counts or floors**.
+Commit `6adfd90e60cce00be6614f165392db4f12d62ecb` corrected the driver before any six-seed
+possession-share result was observed.
+
 ## Phase 1 — corrected-baseline denominator capture
 
 Before observing any six-seed possession-share result:

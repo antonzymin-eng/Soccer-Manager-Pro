@@ -9,7 +9,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: w2-six-seed-evidence
+  # Evidence commits are immutable measurement definitions. Do not let a superseded
+  # earlier capture serialize or cancel the corrected exact-head run.
+  group: w2-six-seed-evidence-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
