@@ -97,6 +97,11 @@ namespace TacticalDirector.MatchEngine
             float meanCosine = dribbles > 0 ? (float)(cosineSum / dribbles) : 0f;
             float goalwardShare = dribbles > 0 ? (float)goalwardDribbles / dribbles : 0f;
 
+            Console.WriteLine(
+                "PR416_CLOSE_CHANCE_CURRENT dribbles=" + inv(dribbles) +
+                " meanCosine=" + f3(meanCosine) +
+                " goalwardShare=" + f3(goalwardShare));
+
             // Non-vacuity: the corpus actually produced carrier dribbles in the attacking third.
             // A reachability predicate that reads zero on a legitimately-fixed engine means the
             // window is too short, not that the mechanism is absent.
