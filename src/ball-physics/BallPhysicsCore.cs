@@ -51,9 +51,11 @@ namespace TacticalDirector.BallPhysics
                 ball.LastValidVelocity = ball.Velocity;
             }
 
-            // ERR-001-006: choose the force model from a physically valid height/state pair.
-            // This also recovers legacy/restored state that already contains the invalid combination.
-            if ((ball.State == BallStateType.Stationary || ball.State == BallStateType.Rolling)
+            // ERR-001-006: Stationary is force-free and therefore cannot be valid while
+            // elevated. Recover it before force selection so gravity acts in this same tick.
+            // Rolling is handled by the state machine's stop transition instead of being
+            // reclassified here, preserving moving-Rolling trajectories.
+            if (ball.State == BallStateType.Stationary
                 && ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
             {
                 ball.State = BallStateType.Airborne;
