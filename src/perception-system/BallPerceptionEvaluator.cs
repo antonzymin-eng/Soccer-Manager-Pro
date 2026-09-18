@@ -17,7 +17,8 @@ namespace TacticalDirector.PerceptionSystem
 {
     /// <summary>
     /// Evaluates ball visibility and manages ball staleness tracking.
-    /// Ball is treated as a special entity: no L_rec, but same FoV and occlusion tests (OQ-2).
+    /// Ball is treated as a special entity: no L_rec; zero displacement has no FoV bearing
+    /// (ERR-007-004); ordinary FoV and occlusion rules otherwise apply (OQ-2).
     /// Perception System #7 §3.5.
     /// </summary>
     public static class BallPerceptionEvaluator
@@ -65,7 +66,7 @@ namespace TacticalDirector.PerceptionSystem
             bool inRange = (ballPos2D - observerPos).sqrMagnitude
                 <= PerceptionConstants.MaxPerceptionRange * PerceptionConstants.MaxPerceptionRange;
 
-            // A co-located ball has no meaningful bearing. In particular, a Controlled ball is
+            // ERR-007-004: A co-located ball has no meaningful bearing. In particular, a Controlled ball is
             // attached to its holder at the same XY coordinate; feeding that zero vector through
             // atan2 would invent a world-East bearing and can make the holder "lose sight" of the
             // ball solely because of facing direction.
@@ -104,4 +105,5 @@ namespace TacticalDirector.PerceptionSystem
 // | 1.1     | 2026-05-28 | —      | AR-1 fix L-4: removed dead-code ternary in invisible-ball else branch.  |
 // | 1.2     | 2026-05-29 | —      | AR-2 fix L-1: removed unused prevBallVisible parameter (dead after L-4). |
 // | 1.3     | 2026-09-17 | —      | Co-located ball has no bearing: bypass FoV angle so Controlled holders cannot lose sight of their attached ball. |
+// | 1.4     | 2026-09-17 | —      | ERR-007-004 back-prop citation; behavior unchanged from v1.3. |
 #endregion

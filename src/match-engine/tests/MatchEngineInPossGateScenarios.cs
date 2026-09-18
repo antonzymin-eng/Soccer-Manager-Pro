@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineInPossGateScenarios.cs
 // Created:  2026-08-08
-// Modified: 2026-09-16 (PR #416 corrected-baseline per-seed validity)
+// Modified: 2026-09-17 (PR #416 corrected-baseline floors frozen from exact post-fix head)
 // Author:   —
 // Spec:     Positioning AI #12 §3.0.1 / §3.0.2 / FR-PA-022 (ERR-012-011);
 //           match-engine-wiring-backlog.md §3 C1; Testing Strategy & Framework #19
@@ -60,6 +60,16 @@ namespace TacticalDirector.MatchEngine
         {
             InPossGateSeed,
             0x1A2B3C4D5E6F7081UL,
+        };
+
+        // PR #416 preregistered rule: floor(0.80 × corrected-baseline samples), per seed.
+        // Exact post-perception-fix capture: run 35286928656 on head a7f2b77…
+        // 15,830 -> 12,664; 16,423 -> 13,138. Population-stability guards, not
+        // football-realism targets; pooled population remains diagnostic only.
+        private static readonly int[] MinimumSamplesBySeed =
+        {
+            12_664,
+            13_138,
         };
 
         /// <summary>Final-third depth from the defended goal line (m) — PITCH_LENGTH / 3.</summary>
@@ -122,9 +132,17 @@ namespace TacticalDirector.MatchEngine
                     " homeShare=" + homeShare.ToString("F6", CultureInfo.InvariantCulture) +
                     " awayShare=" + awayShare.ToString("F6", CultureInfo.InvariantCulture));
 
-                // PR #416 preregistration requires each seed independently to satisfy both mirrored
-                // possession predicates. A pooled assertion would allow one healthy seed to mask the
-                // other and is therefore not a valid basis for this detector.
+                // PR #416 preregistration requires each seed independently to retain a meaningful
+                // final-third population as well as satisfy both mirrored possession predicates.
+                // A pooled assertion would allow one healthy seed to mask starvation of the other.
+                context.Envelope.CheckTrue(
+                    "final-third-sample-population-" + seedLabel,
+                    samples >= MinimumSamplesBySeed[s],
+                    "seed=" + seedLabel + " samples=" +
+                    samples.ToString(CultureInfo.InvariantCulture) +
+                    " (minimum " + MinimumSamplesBySeed[s].ToString(CultureInfo.InvariantCulture) +
+                    "; 80% of corrected baseline)");
+
                 context.Envelope.CheckTrue(
                     "final-third-play-is-somebodys-possession-home-view-" + seedLabel,
                     homeShare > 0.70f,
@@ -206,6 +224,9 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.3     | 2026-09-17 | —      | PR #416 post-fix capture frozen: per-seed sample floors 12,664 |
+// |         |            |        |   / 13,138 derived before freezing from 15,830 / 16,423 at 80%;|
+// |         |            |        |   mirrored >0.70 checks remain independent; pooled diagnostic. |
 // | 1.2     | 2026-09-16 | —      | PR #416 baseline-validity correction: each adversarial seed    |
 // |         |            |        |   now owns its >0.70 mirrored assertions; pooled values are     |
 // |         |            |        |   diagnostic only and the obsolete >=20,000 pooled floor is     |

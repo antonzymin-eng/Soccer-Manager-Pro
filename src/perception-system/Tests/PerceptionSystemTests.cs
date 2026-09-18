@@ -1146,7 +1146,7 @@ namespace TacticalDirector.PerceptionSystem.Tests
         // ── BP-007 — Co-located ball has no FoV bearing ─────────────────────────
 
         /// <summary>
-        /// BP-007: Ball at the observer's exact XY is visible regardless of facing direction.
+        /// BP-007 / ERR-007-004: Ball at the observer's exact XY is visible regardless of facing direction.
         /// The zero displacement has no geometric bearing and must not be interpreted as world-East.
         /// </summary>
         [Test]
@@ -1421,4 +1421,5 @@ namespace TacticalDirector.PerceptionSystem.Tests
 // | 1.1     | 2026-06-01 | —      | Add §5.11 integration test stubs IT-AM-001..004, IT-BP-001..002, IT-CS-001..003, IT-FULL-001..006 (15 stubs; Stage 0+1 Assert.Ignore). |
 // | 1.2     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (both TEST-DEFECT): OCC-005 expectation 11.31° was arctan(0.2) — spec §A.4/App-B mandate arcsin(0.4/2) = 11.537° (production correct); LR-001 variant asserted first-call confirmation unconditionally, ignoring the §3.3.4 additive noise term (0/+1) — rewritten to derive L_rec_final via ComputeLRec and assert confirmation exactly at the L_rec-th tick. |
 // | 1.3     | 2026-09-17 | —      | BP-007 locks co-located-ball visibility so a zero displacement cannot acquire an artificial FoV bearing. |
+// | 1.4     | 2026-09-17 | —      | ERR-007-004 citation added after §3.5 back-propagation; test behavior unchanged. |
 #endregion

@@ -1,8 +1,64 @@
 # W6 Elevated Stationary Ball Fix — ERR-001-006
 
 **Date:** September 15–17, 2026
-**Status:** REGRESSION DIAGNOSED; MINIMAL COMPOSITION FIX FOCUSED-VALIDATED; NORMAL CI PENDING
+**Status:** MINIMAL COMPOSITION FIX VALIDATED; PERMANENT DETECTOR FLOORS FROZEN; NORMAL CI RERUN PENDING
 **Scope:** Ball Physics #1 state invariant exposed by W6 physical Controlled possession, plus permanent hardening of the existing two-seed `sim_match_engine_inposs_gate` after W2 production activation.
+
+
+## September 17 live-head closure — supersedes the earlier Ball-Physics branch-point language below
+
+Live GitHub advanced from diagnostic head `07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad` to
+PR head `a7f2b77af61c1d0b7138bfdfce21cd1772c91f26` before the final correction was chosen.
+That intervening production delta is the co-located-ball perception correction
+(`3a4a228495b73057684c727a55973c5072d7fdc1`) plus its BP-007 lock
+(`f92305b58cd8a8dc69d9b95e94d2bda04aa56201`).
+
+Subsequent pair-ablation work on the older head remains useful causal evidence but does **not**
+justify retracting any ERR-001-006 Ball Physics invariant. A Rolling+pre-force ablation removed the
+old seed-A lock, but a narrower Ball Physics candidate still produced a 90,549-tick terminal HOLD
+spell on seed `0x00000000D1A6D05E`. The exact pinned-main full-match baseline already contains the
+same pre-existing attractor shape at 85,987 ticks, while restoring the old Rolling order drops that
+deterministic trajectory to 1,064 ticks. Those results show trajectory sensitivity; they do not
+identify a Ball Physics contract defect requiring v2.11.
+
+The live perception correction provides the stronger mechanism closure. Exact-head validation run
+`35305911122` on `a7f2b77…` reports, across the preregistered three full-match tackle seeds:
+
+- longest Controlled spells **1,096 / 1,236 / 1,256 ticks**;
+- pooled clean wins / observed dispossessions **5 / 5**;
+- `sim_match_engine_shot_outcomes`, `AControlledCarrierIsActuallyDispossessed`,
+  `BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose`, and
+  `TacklesHappenInComposedPlay` all **Passed**;
+- `ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice` remains **NotExecuted**, matching
+  pinned main's assumption-gated outcome.
+
+The census job itself ended red only because its synthetic diagnostic intentionally did not suppress
+unrelated composed-play error logs; its emitted measurements above completed before teardown. The
+same run separately proved both `SaveAndRestoreCarryTheTackleLatches` seeds pass every latch and
+replay assertion when unrelated composed-play `ShotExecutor FM-03` logging is excluded from that
+test's oracle. The permanent test now scopes `LogAssert.ignoreFailingMessages` to that one
+save/restore lock; no Shot Mechanics log level is changed.
+
+Perception #7 §3.5.1 is the owning defective contract and is back-propagated under
+`ERR-007-004`: exact projected co-location has no meaningful bearing and therefore satisfies the
+FoV-angle predicate regardless of facing, while range and occlusion remain unchanged. The earlier
+Ball Physics v2.11 candidate is **not** landed.
+
+### Corrected-baseline freeze after the final production correction
+
+The valid post-perception corrected-baseline capture is Actions run `35286928656`, exact PR head
+`a7f2b77…`:
+
+| Seed | Baseline samples | Home / away share | Frozen 80% floor |
+| --- | ---: | ---: | ---: |
+| `0x0F1E2D3C4B5A6978` | 15,830 | 0.970815 / 0.970815 | **12,664** |
+| `0x1A2B3C4D5E6F7081` | 16,423 | 0.964379 / 0.964379 | **13,138** |
+
+The permanent scenario now enforces those floors per seed alongside the existing independent
+`> 0.70` mirrored possession predicates. Pooled population remains diagnostic only. Because the
+close-out commit changes tests/spec/tracking but no production behavior, this exact-head capture is
+not invalidated again. The temporary one-shot corrected-baseline workflow is retired in the same
+landing.
 
 ## September 17 post-reconciliation MatchEngine regression diagnosis
 
