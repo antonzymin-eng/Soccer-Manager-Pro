@@ -138,8 +138,86 @@ case BallStateType.Rolling:
         return BallStateType.Stationary;
 ```
 
-The one-clause and clause-alone variants are therefore reconstructable exactly from the blob hashes
-in §2, without relying on branch names.
+Blob SHAs in this record identify the historical Git objects; they are not the durability
+mechanism and are not assumed to remain dereferenceable after evidence refs are deleted. The
+material one-clause variants are therefore preserved below as executable switch fragments.
+
+**Stationary-promotion removed from full #416** — blob
+`ecf326ecab55459b25c2b7fd29220887aabb40bf`:
+
+```csharp
+case BallStateType.Stationary:
+    return BallStateType.Stationary;
+
+case BallStateType.Rolling:
+    if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
+        return BallStateType.Airborne;
+    if (ball.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity)
+        return BallStateType.Stationary;
+    if (IsOutOfBounds(ball.Position))
+        return BallStateType.OutOfPlay;
+    return BallStateType.Rolling;
+```
+
+**Rolling-order removed from full #416** — blob
+`3297dd5a90c8881c510fa1869d34821d395f2a7f`:
+
+```csharp
+case BallStateType.Stationary:
+    if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
+        return BallStateType.Airborne;
+    return BallStateType.Stationary;
+
+case BallStateType.Rolling:
+    if (ball.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity)
+        return BallStateType.Stationary;
+    if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
+        return BallStateType.Airborne;
+    if (IsOutOfBounds(ball.Position))
+        return BallStateType.OutOfPlay;
+    return BallStateType.Rolling;
+```
+
+**Stationary-promotion alone on main-like behavior** — blob
+`0d9e049cdcd6d86f6ed2945ad04e3eca2577ede3`:
+
+```csharp
+case BallStateType.Stationary:
+    if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
+        return BallStateType.Airborne;
+    return BallStateType.Stationary;
+
+case BallStateType.Rolling:
+    if (ball.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity)
+        return BallStateType.Stationary;
+    if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
+        return BallStateType.Airborne;
+    if (IsOutOfBounds(ball.Position))
+        return BallStateType.OutOfPlay;
+    return BallStateType.Rolling;
+```
+
+**Rolling-order alone on main-like behavior** — blob
+`57fd2284335784eb09870fb94047612012c1cf2e`:
+
+```csharp
+case BallStateType.Stationary:
+    return BallStateType.Stationary;
+
+case BallStateType.Rolling:
+    if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
+        return BallStateType.Airborne;
+    if (ball.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity)
+        return BallStateType.Stationary;
+    if (IsOutOfBounds(ball.Position))
+        return BallStateType.OutOfPlay;
+    return BallStateType.Rolling;
+```
+
+The pair-alone arm uses the full-#416 switch fragment above (blob
+`8aa64f36f3f48e4be2d4a9377086e7dca82ca13d`). These embedded fragments, together with the
+parent/reference identities in §2, preserve the materially significant source differences without
+depending on future reachability of the evidence refs.
 
 ### 3.5 Complete union revert
 
@@ -242,3 +320,9 @@ For PR #416, the causal measurements and failed-harness dispositions are already
 `docs/tracking/w6-elevated-stationary-ball-fix.md`. This file adds the provenance that previously
 depended on live refs or console output: exact evidence heads, exact target/reference SHAs, exact
 workflow run IDs, relevant source blob identities, and the materially significant defining deltas.
+
+The SHA and blob fields are historical identities, not a promise that GitHub will retain unreachable
+objects after ref deletion. Material source deltas needed to interpret the disposable causal arms are
+embedded in §3. The three candidate/retirement refs explicitly retained in §4 remain live by policy.
+If cleanup would remove a unique workflow or evidence detail not represented in this record or the
+owning diagnosis, §7 forbids that deletion until the detail is captured durably.
