@@ -326,3 +326,32 @@ objects after ref deletion. Material source deltas needed to interpret the dispo
 embedded in §3. The three candidate/retirement refs explicitly retained in §4 remain live by policy.
 If cleanup would remove a unique workflow or evidence detail not represented in this record or the
 owning diagnosis, §7 forbids that deletion until the detail is captured durably.
+
+## 8. Step 5 evidence-ref archival and disposition audit
+
+Step 5 re-derived each live evidence ref's own file delta directionally from its merge base to the
+ref. The audit deliberately did **not** use a current-`main` → old-ref diff as the uniqueness test,
+because that comparison mixes later mainline changes into the evidence side.
+
+The resulting archive is
+`docs/tracking/evidence/pr416-ref-archive/`:
+
+- `MANIFEST.tsv` records **85 exact Git blob snapshots**: 72 current-tip files across all 24 refs
+  and 13 historical run-time files for six branch heads that later advanced;
+- all evidence snapshots carry a terminal `.txt` quarantine suffix while retaining the original
+  blob bytes, so archived C#/YAML/Markdown cannot enter ordinary source/workflow/document discovery;
+- `ref-disposition.tsv` is the 24-ref disposition authority;
+- `README.md` defines the main-only deletion verification procedure.
+
+The matrix classifies **21 refs as `deletable`**, **0 as `retain`**, and the existing three
+explicitly preserved refs as **`policy-retained`**:
+`evidence/pr416-close-chance-retirement`,
+`evidence/pr416-narrow-rolling-candidate`, and
+`evidence/pr416-state-only-preforce-candidate`.
+
+This classification is not deletion authorization. Every row is staged with `delete_now=false`.
+A `deletable` ref may be removed only after this archive is on `main` and its archived current-tip
+file/blob coverage, any required historical run snapshot, causal interpretation, and absence of a
+retention policy are all re-verified from `main` alone. The three `policy-retained` refs remain
+excluded from deletion unless a later explicit policy decision changes their status.
+
