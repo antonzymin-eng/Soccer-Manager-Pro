@@ -14,9 +14,11 @@ format check — all succeeded. At reviewed pre-correction head
 `c61c7d780e4365cb9029de81a756583caaa84ef7`, which was documentation-only atop that validated
 code state, GitHub reported `mergeable=true` and `mergeable_state=unstable`: there was no merge
 conflict, while the non-required functional verifier was red on the owner-held unexpected-green
-policy. Those are distinct facts. Merge-state labels are intentionally recorded against that exact
-head rather than described as timeless current state, because a later documentation commit
-re-triggers status evaluation.
+policy. Those are distinct facts. This `c61c7d78…` observation is **historical and non-terminal**:
+it is pinned only to that exact head and is superseded by the final PR head's own completed
+CI/mergeability result. It must not be read as #416's terminal merge state. Later documentation
+commits re-trigger status evaluation, which is why no transient later label is promoted into this
+head-pinned observation.
 
 The non-certifying Linux functional job's ordinary blocking sweep is also green:
 `TacticalDirector.MatchEngine.Tests` completed **501 passed / 0 failed / 12 skipped**. The job's
@@ -119,9 +121,14 @@ additional pass. Because project-scoped discovery on pinned main and #416 alread
 identical discovered sets (516 case lines / 514 unique display names), and #416 does not change
 `MatchEngineCloseChanceTests.cs`, the 514-vs-513 execution delta is not evidence that the branch
 lost a test. The unresolved fact is that the pinned-main ordinary sweep did not reduce to the
-expected one-name-excluded cardinality. That testing-pipeline selection anomaly is now recorded in
-`open-issues.md`; no #416 production or test-semantic change is justified to manufacture count
-parity.
+expected one-name-excluded cardinality. A direct repository compare from pinned main
+`1bad655f5826070d1e29f54a845cdf2c549f66bc` to PR head
+`dded4c708cb4a1a171beeeb6be2789fd25cdfac8` shows **no changed path under `.github/` or
+`tools/`**, independently ruling out workflow/tooling configuration drift. The stronger residual
+is therefore gate integrity: owner-held RED isolation was observed not to take effect under one
+execution even though the repository configuration was the same. That issue is recorded in
+`open-issues.md` as an isolation-verification defect, not a cosmetic cardinality discrepancy; no
+#416 production or test-semantic change is justified to manufacture count parity.
 
 ### Shared tackle corpus and baseline correction
 
