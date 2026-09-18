@@ -1,0 +1,373 @@
+name: PR416 co-located ball visibility probe
+
+on:
+  push:
+    branches:
+      - evidence/pr416-colocated-ball-visible
+    paths:
+      - .github/workflows/pr416-mechanism-census.yml
+
+permissions:
+  contents: read
+
+jobs:
+  mechanism-census:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: pinned-main-patch
+            ref: 1bad655f5826070d1e29f54a845cdf2c549f66bc
+          - label: pr416-patch
+            ref: 07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Apply co-located ball visibility correction
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("src/perception-system/BallPerceptionEvaluator.cs")
+          s = p.read_text()
+          lines = s.splitlines(keepends=True)
+          target = "bool inFoV = inRange && FovCalculator.IsInFoV(observerPos, facingDir, ballPos2D, effectiveFoVHalfAngleDeg);"
+          matches = [i for i, line in enumerate(lines) if line.strip() == target]
+          if len(matches) != 1:
+              raise SystemExit(f"expected one FoV assignment, found {len(matches)}")
+          i = matches[0]
+          indent = lines[i][:len(lines[i]) - len(lines[i].lstrip())]
+          lines[i:i+1] = [
+              indent + "bool isCoLocated = (ballPos2D - observerPos).sqrMagnitude == 0f;\n",
+              indent + "bool inFoV = inRange && (isCoLocated\n",
+              indent + "    || FovCalculator.IsInFoV(observerPos, facingDir, ballPos2D, effectiveFoVHalfAngleDeg));\n",
+          ]
+          p.write_text("".join(lines))
+          PY
+          git diff --check
+          git diff -- src/perception-system/BallPerceptionEvaluator.cs
+
+      - name: Add temporary mechanism census
+        shell: bash
+        run: |
+          cat > src/match-engine/tests/Pr416MechanismCensusTests.cs <<'CS'
+          using System;
+          using System.Collections.Generic;
+          using System.Globalization;
+          using NUnit.Framework;
+          using TacticalDirector.BallPhysics;
+          using TacticalDirector.DefensiveAI;
+          using TacticalDirector.DeterministicSim;
+          using TacticalDirector.PlayerDatabase;
+
+          namespace TacticalDirector.MatchEngine
+          {
+              [TestFixture]
+              internal sealed class Pr416MechanismCensusTests
+              {
+                  private const int Ticks = 150_000;
+                  private const int AiStride = 6;
+
+                  private static readonly ulong[] Seeds =
+                  {
+                      0x0F1E2D3C4B5A6978UL,
+                      0x00000000D1A6D05EUL,
+                  };
+
+                  private sealed class RunRecord
+                  {
+                      public int Length;
+                      public int StartTick;
+                      public int EndTick;
+                      public int Holder;
+                      public bool IsGoalkeeper;
+                      public float StartHolderX;
+                      public float StartHolderY;
+                      public float EndHolderX;
+                      public float EndHolderY;
+                      public float StartBallX;
+                      public float StartBallY;
+                      public float StartBallZ;
+                      public float EndBallX;
+                      public float EndBallY;
+                      public float EndBallZ;
+                      public float MinBallZ;
+                      public float MaxBallZ;
+                      public int PassBusyHeartbeats;
+                      public int ShotBusyHeartbeats;
+                      public readonly SortedDictionary<string, int> Actions = new SortedDictionary<string, int>();
+                  }
+
+                  private static Squad BuildSquad(ulong seed, int clubId)
+                  {
+                      var rng = new DeterministicRngService(seed ^ (ulong)clubId);
+                      int stream = rng.RegisterStream(
+                          "tackle.roster", SubsystemOrdinals.PlayerDatabase, entityId: clubId, streamVersion: 1);
+
+                      var template = new PlayerPosition[PlayerDatabaseConstants.CLUB_SQUAD_SIZE];
+                      int i = 0;
+                      for (int k = 0; k < 3; k++) template[i++] = PlayerPosition.Goalkeeper;
+                      for (int k = 0; k < 8; k++) template[i++] = PlayerPosition.Defender;
+                      for (int k = 0; k < 8; k++) template[i++] = PlayerPosition.Midfielder;
+                      while (i < template.Length) template[i++] = PlayerPosition.Forward;
+
+                      return RosterGenerator.Generate(rng, stream, clubId, template);
+                  }
+
+                  private static MatchEngine Booted(ulong seed)
+                  {
+                      var engine = new MatchEngine(seed);
+                      engine.ConfigureSquads(BuildSquad(seed, 1), BuildSquad(seed, 2));
+                      return engine;
+                  }
+
+                  private static string F(float value) =>
+                      value.ToString("F6", CultureInfo.InvariantCulture);
+
+                  private static string ActionSummary(SortedDictionary<string, int> actions)
+                  {
+                      if (actions.Count == 0) return "none";
+                      var parts = new List<string>(actions.Count);
+                      foreach (KeyValuePair<string, int> pair in actions)
+                      {
+                          parts.Add(pair.Key + ":" + pair.Value.ToString(CultureInfo.InvariantCulture));
+                      }
+                      return string.Join(",", parts);
+                  }
+
+                  [Test]
+                  public void MeasurePr416MechanismCensus()
+                  {
+                      foreach (ulong seed in Seeds)
+                      {
+                          MatchEngine engine = Booted(seed);
+                          var before = engine.TestOnly_TackleOutcomeCounts;
+                          int previousHolder = MatchEngineConstants.NO_POSSESSION;
+                          int dispossessions = 0;
+                          int controlledToNonControlled = 0;
+                          int controlledHolderChanges = 0;
+                          bool previousWasControlled = false;
+
+                          long[] controlledTicksByHolder = new long[MatchEngineConstants.SQUAD_SIZE];
+
+                          RunRecord current = null;
+                          RunRecord longest = null;
+
+                          for (int t = 0; t < Ticks; t++)
+                          {
+                              engine.RunTick();
+
+                              var ball = engine.TestOnly_BallSnapshot;
+                              int holder = engine.PossessingAgentId;
+                              bool controlled =
+                                  ball.State == BallStateType.Controlled
+                                  && holder >= 0
+                                  && holder < MatchEngineConstants.SQUAD_SIZE;
+
+                              var now = engine.TestOnly_TackleOutcomeCounts;
+                              bool landed = (now.Won + now.Loose) > (before.Won + before.Loose);
+                              if (landed && previousHolder >= 0 && holder != previousHolder)
+                              {
+                                  dispossessions++;
+                              }
+
+                              if (previousWasControlled && !controlled)
+                              {
+                                  controlledToNonControlled++;
+                              }
+
+                              if (controlled)
+                              {
+                                  controlledTicksByHolder[holder]++;
+
+                                  if (current == null || current.Holder != holder)
+                                  {
+                                      if (current != null)
+                                      {
+                                          current.EndTick = t;
+                                          if (longest == null || current.Length > longest.Length)
+                                          {
+                                              longest = current;
+                                          }
+                                          controlledHolderChanges++;
+                                      }
+
+                                      var agent = engine.TestOnly_AgentSnapshot(holder);
+                                      current = new RunRecord
+                                      {
+                                          Length = 0,
+                                          StartTick = t + 1,
+                                          EndTick = t + 1,
+                                          Holder = holder,
+                                          IsGoalkeeper = engine.TestOnly_IsGoalkeeper(holder),
+                                          StartHolderX = agent.Position.x,
+                                          StartHolderY = agent.Position.y,
+                                          EndHolderX = agent.Position.x,
+                                          EndHolderY = agent.Position.y,
+                                          StartBallX = ball.Position.x,
+                                          StartBallY = ball.Position.y,
+                                          StartBallZ = ball.Position.z,
+                                          EndBallX = ball.Position.x,
+                                          EndBallY = ball.Position.y,
+                                          EndBallZ = ball.Position.z,
+                                          MinBallZ = ball.Position.z,
+                                          MaxBallZ = ball.Position.z,
+                                      };
+                                  }
+
+                                  current.Length++;
+                                  current.EndTick = t + 1;
+                                  var currentAgent = engine.TestOnly_AgentSnapshot(holder);
+                                  current.EndHolderX = currentAgent.Position.x;
+                                  current.EndHolderY = currentAgent.Position.y;
+                                  current.EndBallX = ball.Position.x;
+                                  current.EndBallY = ball.Position.y;
+                                  current.EndBallZ = ball.Position.z;
+                                  if (ball.Position.z < current.MinBallZ) current.MinBallZ = ball.Position.z;
+                                  if (ball.Position.z > current.MaxBallZ) current.MaxBallZ = ball.Position.z;
+
+                                  if (((t + 1) % AiStride) == 0)
+                                  {
+                                      string action = engine.TestOnly_DtHasDispatched(holder)
+                                          ? engine.TestOnly_DtLastActionType(holder).ToString()
+                                          : "UNDISPATCHED";
+                                      int count;
+                                      current.Actions.TryGetValue(action, out count);
+                                      current.Actions[action] = count + 1;
+
+                                      if (!engine.TestOnly_PassExecutorIdle(holder)) current.PassBusyHeartbeats++;
+                                      if (!engine.TestOnly_ShotExecutorIdle(holder)) current.ShotBusyHeartbeats++;
+                                  }
+                              }
+                              else if (current != null)
+                              {
+                                  current.EndTick = t;
+                                  if (longest == null || current.Length > longest.Length)
+                                  {
+                                      longest = current;
+                                  }
+                                  current = null;
+                              }
+
+                              before = now;
+                              previousHolder = holder;
+                              previousWasControlled = controlled;
+                          }
+
+                          if (current != null)
+                          {
+                              current.EndTick = Ticks;
+                              if (longest == null || current.Length > longest.Length)
+                              {
+                                  longest = current;
+                              }
+                          }
+
+                          var counts = engine.TestOnly_TackleOutcomeCounts;
+                          var gate = engine.TestOnly_TackleGateAnatomy;
+
+                          var holderParts = new List<string>();
+                          for (int i = 0; i < controlledTicksByHolder.Length; i++)
+                          {
+                              if (controlledTicksByHolder[i] > 0)
+                              {
+                                  holderParts.Add(
+                                      i.ToString(CultureInfo.InvariantCulture) + ":"
+                                      + controlledTicksByHolder[i].ToString(CultureInfo.InvariantCulture)
+                                      + (engine.TestOnly_IsGoalkeeper(i) ? "(GK)" : ""));
+                              }
+                          }
+
+                          TestContext.WriteLine(
+                              "PR416_TACKLE_CENSUS seed=0x" + seed.ToString("X16", CultureInfo.InvariantCulture)
+                              + " won=" + counts.Won
+                              + " loose=" + counts.Loose
+                              + " foul=" + counts.Foul
+                              + " missed=" + counts.Missed
+                              + " dispossessions=" + dispossessions
+                              + " gateEligible=" + gate.Eligible
+                              + " gateInRadius=" + gate.InRadius
+                              + " gateMeanNearestM=" + F(gate.MeanNearestM));
+
+                          TestContext.WriteLine(
+                              "PR416_CONTROLLED_HOLDERS seed=0x" + seed.ToString("X16", CultureInfo.InvariantCulture)
+                              + " ticksByHolder=" + string.Join(",", holderParts)
+                              + " controlledToNonControlled=" + controlledToNonControlled
+                              + " controlledHolderChanges=" + controlledHolderChanges);
+
+                          if (longest != null)
+                          {
+                              TestContext.WriteLine(
+                                  "PR416_LONGEST_CONTROLLED seed=0x" + seed.ToString("X16", CultureInfo.InvariantCulture)
+                                  + " lengthTicks=" + longest.Length
+                                  + " startTick=" + longest.StartTick
+                                  + " endTick=" + longest.EndTick
+                                  + " holder=" + longest.Holder
+                                  + " isGoalkeeper=" + longest.IsGoalkeeper
+                                  + " holderStart=(" + F(longest.StartHolderX) + "," + F(longest.StartHolderY) + ")"
+                                  + " holderEnd=(" + F(longest.EndHolderX) + "," + F(longest.EndHolderY) + ")"
+                                  + " ballStart=(" + F(longest.StartBallX) + "," + F(longest.StartBallY) + "," + F(longest.StartBallZ) + ")"
+                                  + " ballEnd=(" + F(longest.EndBallX) + "," + F(longest.EndBallY) + "," + F(longest.EndBallZ) + ")"
+                                  + " ballZRange=(" + F(longest.MinBallZ) + "," + F(longest.MaxBallZ) + ")"
+                                  + " actions=" + ActionSummary(longest.Actions)
+                                  + " passBusyHeartbeats=" + longest.PassBusyHeartbeats
+                                  + " shotBusyHeartbeats=" + longest.ShotBusyHeartbeats);
+                          }
+                      }
+
+                      Assert.Pass("measurement complete");
+                  }
+              }
+          }
+          CS
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run mechanism census
+        if: ${{ false }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-mechanism-${{ matrix.label }}
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "Name=MeasurePr416MechanismCensus"             --logger "console;verbosity=detailed"             --logger "trx;LogFileName=pr416-mechanism-${{ matrix.label }}.trx"             --results-directory artifacts/pr416-mechanism-${{ matrix.label }}             2>&1 | tee artifacts/pr416-mechanism-${{ matrix.label }}/console.log
+
+      - name: Run strict regression targets with visibility correction
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-strict-${{ matrix.label }}
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=AControlledCarrierIsActuallyDispossessed|Name=BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose|Name=TacklesHappenInComposedPlay|Name=ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice|Name=sim_match_engine_shot_outcomes" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=pr416-strict-${{ matrix.label }}.trx" \
+            --results-directory artifacts/pr416-strict-${{ matrix.label }} \
+            2>&1 | tee artifacts/pr416-strict-${{ matrix.label }}/console.log
+
+      - name: Upload strict target evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-strict-${{ matrix.label }}-${{ github.run_id }}
+          path: artifacts/pr416-strict-${{ matrix.label }}/
+          if-no-files-found: error
+
+      - name: Upload mechanism evidence
+        if: ${{ false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-mechanism-${{ matrix.label }}-${{ github.run_id }}
+          path: artifacts/pr416-mechanism-${{ matrix.label }}/
+          if-no-files-found: error

@@ -1,0 +1,33 @@
+name: PR416 close-chance retirement evidence
+
+on:
+  push:
+    branches:
+      - evidence/pr416-close-chance-retirement
+    paths:
+      - .github/workflows/pr416-close-chance-retirement.yml
+
+permissions:
+  contents: read
+
+jobs:
+  close-chance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-close-chance-retirement
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run exact close-chance predicate
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "Name=sim_match_engine_close_chance"             --logger "console;verbosity=detailed"

@@ -326,3 +326,37 @@ objects after ref deletion. Material source deltas needed to interpret the dispo
 embedded in §3. The three candidate/retirement refs explicitly retained in §4 remain live by policy.
 If cleanup would remove a unique workflow or evidence detail not represented in this record or the
 owning diagnosis, §7 forbids that deletion until the detail is captured durably.
+
+## 8. Step 5 evidence-ref archival and disposition audit
+
+Step 5 first re-derived each live evidence ref's tip delta directionally from its merge base to the
+ref. That tip inventory was exact, but review identified a separate deletion-risk dimension:
+intermediate branch-exclusive file states can disappear before the tip and therefore are invisible
+to a tip-only audit.
+
+The corrected archive is `docs/tracking/evidence/pr416-ref-archive/`:
+
+- **72** current-tip snapshot paths cover all 24 refs;
+- **13** run-time snapshot paths preserve six cited run heads that later advanced;
+- **15** intermediate-history paths preserve **13 previously unarchived blob identities**, including
+  two revisions of `MatchEngineTackleTests.cs`, one revision of `ShotExecutorStateTests.cs`,
+  historical workflow revisions, and the ApplyKick ablation generator/workflow;
+- all snapshots are byte-identical Git blobs quarantined with a terminal `.txt` suffix;
+- `MANIFEST.tsv` records all current/run/history snapshot provenance;
+- `run-heads.tsv` records authoritative GitHub Actions metadata for all **31** run ids cited by the
+  durable provenance/diagnosis;
+- `ref-disposition.tsv` remains **21 `deletable` / 0 `retain` / 3
+  `policy-retained`**, but every row remains `delete_now=false`.
+
+The earlier statement that archive completeness could be verified from `main` alone is withdrawn.
+Main-only checks can verify byte integrity and reconstructability after landing; they cannot prove
+that a live ref carried no unarchived intermediate history. Deletion therefore requires two gates:
+(1) a **live-ref full-history reconciliation while the refs still exist**, covering every
+branch-exclusive commit and changed-path blob state against the durable post-deletion set; and
+(2) a **mainline archive-integrity/reconstruction check** after the archive lands.
+
+The three policy-retained refs remain `evidence/pr416-close-chance-retirement`,
+`evidence/pr416-narrow-rolling-candidate`, and
+`evidence/pr416-state-only-preforce-candidate`. Archival does not revoke that policy. No evidence
+ref is deletion-authorized by this PR.
+
