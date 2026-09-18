@@ -138,12 +138,12 @@ Therefore:
 
 Durable repository evidence:
 
-- `original-results.tsv` — exact 12 rows from original successful run `35395955770`;
+- `original-aggregate-artifact-10567792073.zip` — exact GitHub Actions aggregate ZIP from original successful run `35395955770` / artifact `10567792073` (SHA-256 `9a5e54b8af2aa5237d3e2c655bb7355190055ace3d5f2e92f29e50d3bc82b84e`);\n- `original-results.tsv` — exact 12 rows from original successful run `35395955770`;
 - `all-results.tsv` — exact 12-row aggregate from supplementary run `35396676058`;
 - `observer-neutrality.tsv` — per-row SHA-256/equality proof that removing the six added census columns reproduces the original 12 rows;
 - `deltas.tsv` — mechanically derived v2.10→narrow comparison;
 - `provenance.txt` — run/head/artifact identities;
-- `SHA256SUMS` — hashes of all four durable TSVs.
+- `SHA256SUMS` — hashes of the four durable TSVs plus the committed original aggregate ZIP.
 
 The original successful aggregate artifact is `10567792073`; the supplementary aggregate artifact
 is `10567717931`. Per-arm TRX/detailed logs remain GitHub Actions artifacts with the workflow's
