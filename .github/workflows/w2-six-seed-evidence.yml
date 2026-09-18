@@ -1,0 +1,102 @@
+name: W2 six-seed baseline evidence
+
+on:
+  push:
+    branches:
+      - evidence/w2-six-seed-revalidation
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w2-six-seed-evidence
+  cancel-in-progress: false
+
+jobs:
+  baseline:
+    name: Capture six-seed corrected-baseline denominators
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      TD_W2_SIX_SEED_MODE: baseline
+      PRODUCTION_BASE_SHA: e8207f4c6f4d9d301872da869e3796163b8b26ad
+    steps:
+      - name: Checkout evidence branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Record provenance
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/w2-six-seed
+          {
+            echo "production_base_sha=$PRODUCTION_BASE_SHA"
+            echo "evidence_head_sha=$GITHUB_SHA"
+            echo "ref=$GITHUB_REF"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "mode=$TD_W2_SIX_SEED_MODE"
+            echo "changed_paths_from_production_base:"
+            git diff --name-only "$PRODUCTION_BASE_SHA...HEAD"
+          } > artifacts/w2-six-seed/provenance.txt
+
+      - name: Generate projects and restore
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run six-seed baseline capture
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/w2-six-seed/trx
+          OUT=artifacts/w2-six-seed/baseline-output.txt
+          STATUS=artifacts/w2-six-seed/exit-status.txt
+          RUNSETTINGS=artifacts/w2-six-seed/evidence.runsettings
+
+          cat > "$RUNSETTINGS" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <RunSettings>
+            <RunConfiguration>
+              <TreatNoTestsAsError>true</TreatNoTestsAsError>
+            </RunConfiguration>
+          </RunSettings>
+          XML
+
+          set +e
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "FullyQualifiedName~W2SixSeedEvidenceTests"             --settings "$RUNSETTINGS"             --logger "console;verbosity=detailed"             --logger "trx;LogFileName=w2-six-seed-baseline.trx"             --results-directory artifacts/w2-six-seed/trx 2>&1 | tee "$OUT"
+          test_status="${PIPESTATUS[0]}"
+          set -e
+          echo "dotnet_test_exit=$test_status" > "$STATUS"
+          if [ "$test_status" -ne 0 ]; then
+            exit "$test_status"
+          fi
+
+          expected=6
+          observed="$(grep -c '^ *W2_SIX_SEED_BASELINE seed=' "$OUT" || true)"
+          if [ "$observed" -ne "$expected" ]; then
+            echo "ERROR: expected $expected baseline seed lines, observed $observed" >&2
+            exit 2
+          fi
+
+      - name: Hash retained evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          cd artifacts/w2-six-seed
+          find . -type f ! -name SHA256SUMS -print0             | sort -z             | xargs -0 sha256sum > SHA256SUMS
+
+      - name: Upload six-seed baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w2-six-seed-baseline-${{ github.run_id }}
+          path: artifacts/w2-six-seed/
+          if-no-files-found: error
+          retention-days: 90
