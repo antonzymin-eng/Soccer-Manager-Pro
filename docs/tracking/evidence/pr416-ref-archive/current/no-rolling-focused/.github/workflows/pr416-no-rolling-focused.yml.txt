@@ -1,0 +1,31 @@
+name: PR416 no-Rolling focused
+on:
+  push:
+    branches: [evidence/pr416-no-rolling-focused]
+permissions:
+  contents: read
+jobs:
+  focused-regression:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test_name: [AControlledCarrierIsActuallyDispossessed, BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose, sim_match_engine_shot_outcomes]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - run: |
+          set -o pipefail
+          mkdir -p artifacts/${{ matrix.test_name }}
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-restore --filter "Name=${{ matrix.test_name }}" --logger "console;verbosity=detailed" --logger "trx;LogFileName=${{ matrix.test_name }}.trx" --results-directory artifacts/${{ matrix.test_name }} 2>&1 | tee artifacts/${{ matrix.test_name }}/console.log
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-no-rolling-${{ matrix.test_name }}-${{ github.run_id }}
+          path: artifacts/${{ matrix.test_name }}/
+          if-no-files-found: error
