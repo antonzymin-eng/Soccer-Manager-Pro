@@ -1,0 +1,51 @@
+name: PR416 pre-force normalization focused matrix
+
+on:
+  push:
+    branches:
+      - evidence/pr416-pre-force-normalization-ablation
+    paths:
+      - .github/workflows/pr416-pre-force-focused-matrix.yml
+
+permissions:
+  contents: read
+
+jobs:
+  focused-regression:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test_name:
+          - AControlledCarrierIsActuallyDispossessed
+          - BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose
+          - sim_match_engine_shot_outcomes
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run focused regression
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-pre-force-${{ matrix.test_name }}
+          dotnet test tools/dotnet-ci/TacticalDirector.gen.sln \
+            --no-restore \
+            --filter "Name=${{ matrix.test_name }}" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=${{ matrix.test_name }}.trx" \
+            --results-directory artifacts/pr416-pre-force-${{ matrix.test_name }} \
+            2>&1 | tee artifacts/pr416-pre-force-${{ matrix.test_name }}/console.log
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-pre-force-${{ matrix.test_name }}-${{ github.run_id }}
+          path: artifacts/pr416-pre-force-${{ matrix.test_name }}/
+          if-no-files-found: error
