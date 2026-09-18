@@ -80,12 +80,40 @@ jobs:
             exit "$test_status"
           fi
 
-          expected=6
-          observed="$(grep -c '^ *W2_SIX_SEED_BASELINE seed=' "$OUT" || true)"
-          if [ "$observed" -ne "$expected" ]; then
-            echo "ERROR: expected $expected baseline seed lines, observed $observed" >&2
-            exit 2
-          fi
+          python3 - "$OUT" artifacts/w2-six-seed/baseline-counts.tsv <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          expected = [
+              "0x0F1E2D3C4B5A6978",
+              "0x00000000D1A6D05E",
+              "0x5EED000000000003",
+              "0x5EED000000000004",
+              "0x00000000D1A6D05F",
+              "0x1A2B3C4D5E6F7081",
+          ]
+          text = Path(sys.argv[1]).read_text(encoding="utf-8")
+          pattern = re.compile(
+              r"^\s*W2_SIX_SEED_BASELINE seed=(0x[0-9A-F]{16}) samples=([0-9]+)\s*$",
+              re.MULTILINE,
+          )
+          rows = pattern.findall(text)
+          names = [name for name, _ in rows]
+          if names != expected:
+              raise SystemExit(
+                  "ERROR: baseline capture seed sequence mismatch; "
+                  f"expected={expected!r} observed={names!r}"
+              )
+          counts = [int(value) for _, value in rows]
+          if any(value <= 0 for value in counts):
+              raise SystemExit(f"ERROR: baseline capture contains non-positive sample count: {counts!r}")
+          Path(sys.argv[2]).write_text(
+              "seed\tsamples\n"
+              + "".join(f"{name}\t{value}\n" for name, value in zip(names, counts)),
+              encoding="utf-8",
+          )
+          PY
 
       - name: Hash retained evidence
         if: always()

@@ -43,6 +43,8 @@ Actions run `35388265274` is therefore **superseded and must not supply baseline
 Commit `6adfd90e60cce00be6614f165392db4f12d62ecb` corrected the driver before any six-seed
 possession-share result was observed.
 
+Only the baseline run from the final Phase-1 preregistration head, with exact six-seed identity/sequence validation enabled, is governing. Earlier branch runs are setup evidence only and must not be used to derive floors.
+
 ## Phase 1 — corrected-baseline denominator capture
 
 Before observing any six-seed possession-share result:
