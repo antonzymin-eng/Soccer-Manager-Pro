@@ -244,6 +244,15 @@ jobs:
           # only to make actual non-approved -> APPROVED transitions blocking.
           TD_APPROVAL_BASE_REF: ${{ github.event.pull_request.base.sha }}
         run: bash tools/run-tests-local.sh --pr
+      - name: Upload executed-test topology
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-functional-executed-tests
+          path: |
+            artifacts/coverage/**/*.trx
+            artifacts/owner-held-red/**/*.trx
+          if-no-files-found: error
 
   unity-meta-integrity:
     name: Unity .meta integrity

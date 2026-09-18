@@ -104,6 +104,15 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 "sim_match_engine_close_chance|meanCosine=-0.165|goalwardShare=0.407\n",
                 encoding="utf-8",
             )
+            ordinary = tmp / "ordinary"
+            ordinary.mkdir()
+            (ordinary / "ordinary.trx").write_text(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                "<TestRun xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\"><Results>\n"
+                "<UnitTestResult testName=\"TacticalDirector.MatchEngine.OtherTests.ordinary_test\" outcome=\"Passed\" />\n"
+                "</Results></TestRun>\n",
+                encoding="utf-8",
+            )
             results = tmp / "results"
             results.mkdir()
             trx = results / "result.trx"
@@ -120,6 +129,7 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 return self.run_cmd(
                     "python3", str(verifier),
                     "--ledger", str(ledger),
+                    "--ordinary-results", str(ordinary),
                     "--results", str(results),
                     "--dotnet-exit", str(dotnet_exit),
                 )
@@ -167,6 +177,19 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout)
         self.assertIn("owner_held_include=Name=sim_match_engine_close_chance", proc.stdout)
         self.assertIn("Name!=sim_match_engine_close_chance", proc.stdout)
+
+        grouped = self.run_cmd(
+            "bash", str(gate),
+            "--test-filter", "Name=alpha|Name=beta",
+            "--owner-held-red", "report-only",
+            env={"TD_GATE_DRY_RUN": "1"},
+        )
+        self.assertEqual(grouped.returncode, 0, grouped.stdout)
+        self.assertIn(
+            "blocking_filter=(Name=alpha|Name=beta)&(Name!=sim_match_engine_close_chance)",
+            grouped.stdout,
+        )
+
         quarantine = (ROOT / "tools" / "dotnet-ci" / "known-failures.txt").read_text(encoding="utf-8")
         self.assertNotIn("sim_match_engine_close_chance", quarantine)
 

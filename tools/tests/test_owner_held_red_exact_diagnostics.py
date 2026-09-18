@@ -11,12 +11,25 @@ VERIFIER = ROOT / "tools" / "dotnet-ci" / "verify-owner-held-red.py"
 
 
 class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
-    def verify(self, message: str) -> subprocess.CompletedProcess[str]:
+    def verify(
+        self,
+        message: str,
+        ordinary_name: str = "TacticalDirector.MatchEngine.OtherTests.ordinary_test",
+    ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)
             ledger = tmp / "ledger.txt"
             ledger.write_text(
                 "sim_match_engine_close_chance|meanCosine=-0.165|goalwardShare=0.407\n",
+                encoding="utf-8",
+            )
+            ordinary = tmp / "ordinary"
+            ordinary.mkdir()
+            (ordinary / "ordinary.trx").write_text(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                "<TestRun xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\"><Results>\n"
+                f"<UnitTestResult testName=\"{ordinary_name}\" outcome=\"Passed\" />\n"
+                "</Results></TestRun>\n",
                 encoding="utf-8",
             )
             results = tmp / "results"
@@ -33,6 +46,7 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
                 [
                     "python3", str(VERIFIER),
                     "--ledger", str(ledger),
+                    "--ordinary-results", str(ordinary),
                     "--results", str(results),
                     "--dotnet-exit", "1",
                 ],
@@ -70,6 +84,17 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
     def test_unicode_minus_normalizes_but_value_must_remain_exact(self) -> None:
         proc = self.verify("meanCosine=−0.165 goalwardShare=0.407")
         self.assertEqual(proc.returncode, 0, proc.stdout)
+
+    def test_owner_held_name_in_ordinary_capture_fails_isolation(self) -> None:
+        proc = self.verify(
+            "meanCosine=-0.165 goalwardShare=0.407",
+            ordinary_name=(
+                "TacticalDirector.MatchEngine.MatchEngineCloseChanceTests."
+                "sim_match_engine_close_chance"
+            ),
+        )
+        self.assertEqual(proc.returncode, 1, proc.stdout)
+        self.assertIn("leaked into ordinary sweep", proc.stdout)
 
 
 if __name__ == "__main__":
