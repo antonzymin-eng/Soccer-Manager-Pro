@@ -5,7 +5,7 @@ on:
     branches:
       - evidence/pr416-state-only-preforce-candidate
     paths:
-      - .github/workflows/pr416-narrow-rolling-candidate.yml
+      - .github/workflows/pr416-state-only-preforce-candidate.yml
 
 permissions:
   contents: read
