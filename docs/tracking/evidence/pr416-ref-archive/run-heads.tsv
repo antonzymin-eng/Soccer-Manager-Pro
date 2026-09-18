@@ -1,0 +1,32 @@
+run_id	head_branch	head_sha	event	conclusion	workflow_name
+35057791634	fix/w6-elevated-stationary-ball	fd88503026f97e5e21d84f14f7b0aa62c65b6ad7	push	failure	Validate W6 elevated-stationary fix
+35133104970	main	1bad655f5826070d1e29f54a845cdf2c549f66bc	push	failure	CI
+35157097577	fix/w6-elevated-stationary-ball	07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad	pull_request	failure	CI
+35182220948	evidence/pr416-applykick-height-focused	1e1cc40223e375d18f18ca0cacce559c1ea7145a	push	failure	PR416 ApplyKick focused matrix
+35182424557	evidence/pr416-pre-force-normalization-ablation	2df4121f1ba23c13cd1c7372cdb84b1bba4f4806	push	failure	PR416 pre-force normalization focused matrix
+35224582571	evidence/pr416-main-focused-census	83a699f9424e81ed98e603698a20f5c348030721	push	success	PR416 main focused census
+35270645862	evidence/pr416-production-union-revert	e28239b25bea5df190a38aefc099a2e029d47bfa	push	success	PR416 production union focused
+35271049186	evidence/pr416-rolling-order-focused	ce5bb0f1eb66e3b55af82c65e8c1800250c168f4	push	failure	PR416 Rolling-order focused
+35272069065	evidence/pr416-stationary-state-focused	3d4854517ef5b128516f21acdc981564f2ab57c9	push	success	PR416 Stationary-state focused
+35272495848	evidence/pr416-state-machine-pair-focused	1875a6cffc25cb68ef9df577898e9e3ce8701c5d	push	failure	PR416 state-machine pair focused
+35272599047	evidence/pr416-no-stationary-focused	7f5f47fdc1a33d905257c7d23c15cf8385472cc8	push	failure	PR416 no-Stationary focused
+35272651902	evidence/pr416-no-rolling-focused	9902a8a4a8dde13666a2997fa36decf6abeb3eb1	push	failure	PR416 no-Rolling focused
+35278057546	evidence/pr416-no-release-control-focused	465dc775bddc6e1c7f1994cbdd3c596a0d2f9a64	push	failure	.github/workflows/pr416-no-release-control-focused.yml
+35278109980	evidence/pr416-controlled-residency	33f3cbb530d42196300a84ad9f59b85abcdee1c6	push	success	PR416 Controlled-state residency
+35278200848	evidence/pr416-no-release-control-focused	f98e412453a4cac513da11f0217cd8a09967c5a8	push	failure	PR416 no-ReleaseBallControl focused
+35278313267	evidence/pr416-no-release-control-focused	7c7f5bd63835600ddd9999388ed161e62f569ee4	push	failure	PR416 no-ReleaseBallControl focused
+35283014828	evidence/pr416-no-state-machine-pair	48d19ceb40216a78479f3fbf7c71856c6f0f128c	push	failure	PR416 no-StateMachine-pair focused
+35284452456	evidence/pr416-mechanism-census	3cc0ae946d9b4f1ea69833d56a19ae2c03bea16d	push	success	PR416 mechanism census
+35285015171	evidence/pr416-colocated-ball-visible	d7cd41f8358e70ac6fb527d6f1f87ecf089d10ac	push	failure	.github/workflows/pr416-mechanism-census.yml
+35285075938	evidence/pr416-colocated-ball-visible	6ec36ce6e178000ba87ec37da596ac1092822961	push	failure	PR416 co-located ball visibility probe
+35285144898	evidence/pr416-colocated-ball-visible	4882b0ef79b98a3787d6f83e8d04b046e3efbcc1	push	failure	PR416 co-located ball visibility probe
+35285560809	evidence/pr416-colocated-ball-visible	a23683568206423275c80e639f54ea0c80d2d36f	push	success	PR416 co-located ball visibility probe
+35286222621	evidence/pr416-final-validation	b2ea41e78ba9d77b339b76c7fb24f41f8df0d0d2	push	success	PR416 final focused validation
+35286928656	fix/w6-elevated-stationary-ball	a7f2b77af61c1d0b7138bfdfce21cd1772c91f26	pull_request	success	W6 W2 corrected baseline capture
+35293636125	evidence/pr416-mechanism-census	8784eb235757e9707aaa1b69872cb20324bc6633	push	failure	PR416 rolling + pre-force pair ablation
+35300926450	evidence/pr416-narrow-rolling-candidate	bb501a2128f9efbef5e98bffadb0d98214493e78	push	failure	PR416 narrow rolling candidate
+35301715589	evidence/pr416-state-only-preforce-candidate	6c89365da2abdd2d3ff697da34a55751edeb571f	push	success	PR416 state-only preforce candidate
+35302289613	evidence/pr416-state-only-preforce-candidate	efa2f8946a9a6a8852946b97a8e4c7d55013b0bf	push	success	PR416 low-speed Rolling isolation
+35305911122	evidence/pr416-current-head-validation	790a5ac251a780e0bd3c1778b6b5d03ae8aedea5	push	failure	PR416 current-head validation
+35307891032	fix/w6-elevated-stationary-ball	b6a21d2d303baae108e77953719130a440f8f686	pull_request	failure	CI
+35344056248	evidence/pr416-close-chance-retirement	adcf21bf36c07273f082053d3778693f4075bf2a	push	success	PR416 close-chance retirement evidence

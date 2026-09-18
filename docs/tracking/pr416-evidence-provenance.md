@@ -329,29 +329,34 @@ owning diagnosis, §7 forbids that deletion until the detail is captured durably
 
 ## 8. Step 5 evidence-ref archival and disposition audit
 
-Step 5 re-derived each live evidence ref's own file delta directionally from its merge base to the
-ref. The audit deliberately did **not** use a current-`main` → old-ref diff as the uniqueness test,
-because that comparison mixes later mainline changes into the evidence side.
+Step 5 first re-derived each live evidence ref's tip delta directionally from its merge base to the
+ref. That tip inventory was exact, but review identified a separate deletion-risk dimension:
+intermediate branch-exclusive file states can disappear before the tip and therefore are invisible
+to a tip-only audit.
 
-The resulting archive is
-`docs/tracking/evidence/pr416-ref-archive/`:
+The corrected archive is `docs/tracking/evidence/pr416-ref-archive/`:
 
-- `MANIFEST.tsv` records **85 exact Git blob snapshots**: 72 current-tip files across all 24 refs
-  and 13 historical run-time files for six branch heads that later advanced;
-- all evidence snapshots carry a terminal `.txt` quarantine suffix while retaining the original
-  blob bytes, so archived C#/YAML/Markdown cannot enter ordinary source/workflow/document discovery;
-- `ref-disposition.tsv` is the 24-ref disposition authority;
-- `README.md` defines the main-only deletion verification procedure.
+- **72** current-tip snapshot paths cover all 24 refs;
+- **13** run-time snapshot paths preserve six cited run heads that later advanced;
+- **15** intermediate-history paths preserve **13 previously unarchived blob identities**, including
+  two revisions of `MatchEngineTackleTests.cs`, one revision of `ShotExecutorStateTests.cs`,
+  historical workflow revisions, and the ApplyKick ablation generator/workflow;
+- all snapshots are byte-identical Git blobs quarantined with a terminal `.txt` suffix;
+- `MANIFEST.tsv` records all current/run/history snapshot provenance;
+- `run-heads.tsv` records authoritative GitHub Actions metadata for all **31** run ids cited by the
+  durable provenance/diagnosis;
+- `ref-disposition.tsv` remains **21 `deletable` / 0 `retain` / 3
+  `policy-retained`**, but every row remains `delete_now=false`.
 
-The matrix classifies **21 refs as `deletable`**, **0 as `retain`**, and the existing three
-explicitly preserved refs as **`policy-retained`**:
-`evidence/pr416-close-chance-retirement`,
+The earlier statement that archive completeness could be verified from `main` alone is withdrawn.
+Main-only checks can verify byte integrity and reconstructability after landing; they cannot prove
+that a live ref carried no unarchived intermediate history. Deletion therefore requires two gates:
+(1) a **live-ref full-history reconciliation while the refs still exist**, covering every
+branch-exclusive commit and changed-path blob state against the durable post-deletion set; and
+(2) a **mainline archive-integrity/reconstruction check** after the archive lands.
+
+The three policy-retained refs remain `evidence/pr416-close-chance-retirement`,
 `evidence/pr416-narrow-rolling-candidate`, and
-`evidence/pr416-state-only-preforce-candidate`.
-
-This classification is not deletion authorization. Every row is staged with `delete_now=false`.
-A `deletable` ref may be removed only after this archive is on `main` and its archived current-tip
-file/blob coverage, any required historical run snapshot, causal interpretation, and absence of a
-retention policy are all re-verified from `main` alone. The three `policy-retained` refs remain
-excluded from deletion unless a later explicit policy decision changes their status.
+`evidence/pr416-state-only-preforce-candidate`. Archival does not revoke that policy. No evidence
+ref is deletion-authorized by this PR.
 

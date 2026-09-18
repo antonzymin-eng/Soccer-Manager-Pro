@@ -1,78 +1,92 @@
 # PR #416 Evidence-Ref Archive
 
 > **Created:** September 18, 2026
-> **Purpose:** Make the branch-only evidence carried by the 24 `evidence/pr416-*` refs durable on
-> `main` before any disposable ref is deleted.
-> **Status:** Step 5 archival candidate. This archive does **not** itself authorize ref deletion.
+> **Purpose:** Preserve branch-only PR #416 evidence before any disposable `evidence/pr416-*` ref is deleted.
+> **Status:** Step 5 archival candidate. This archive does **not** by itself authorize ref deletion.
 
-## What is archived
+## Archived material
 
-The archive contains **85 exact Git blob snapshots**:
+The archive contains **100 quarantined snapshot paths**:
 
-- **72 current-tip files** covering the directional branch-side file set for all **24/24** evidence refs;
-- **13 historical run-time files** for six runs whose evidence branch later advanced:
-  `35224582571`, `35284452456`, `35285144898`, `35293636125`,
-  `35301715589`, and `35305911122`.
+- **72 current-tip files** covering the directional merge-base→tip file set for all **24/24** evidence refs;
+- **13 run-time files** for six cited runs whose evidence branch later advanced;
+- **15 intermediate-history paths**, representing **13 previously unarchived blob identities**, recovered from branch-exclusive commits that were no longer visible at ref tips.
 
-Every snapshot is stored beneath this directory with its original repository path preserved beneath
-the ref/run directory and a terminal `.txt` suffix. The suffix is quarantine only: the stored blob
-bytes are unchanged. This prevents archived C#, workflow YAML, and historical Markdown from entering
-normal source, Actions, YAML, or Markdown discovery.
+Every snapshot carries a terminal `.txt` suffix but preserves the original Git blob bytes. Historical
+C#, workflow YAML, scripts, and Markdown therefore remain auditable without entering ordinary source,
+Actions, YAML, Python, or Markdown discovery.
 
-`MANIFEST.tsv` is the byte-identity authority. It records the source ref, exact source head,
-historical run id where applicable, original path, archive path, and Git blob SHA for every snapshot.
+`MANIFEST.tsv` is the snapshot byte/provenance authority. Its `kind` values are `current`, `run`,
+and `history`. `run-heads.tsv` separately records the authoritative GitHub Actions metadata for
+**all 31 workflow run ids cited** across the durable PR #416 provenance and diagnosis: run id,
+head branch, exact `head_sha`, event, conclusion, and workflow name.
 
-## Inventory method
+## Why the original tip-only audit was insufficient
 
-The uniqueness audit is directional. For each live evidence ref, the branch-side file set was derived
-from **merge-base → evidence ref**, not from `main → evidence ref`. Comparing current `main` directly
-to an old evidence ref mixes later mainline changes into the result and can falsely attribute those
-changes to the evidence branch.
+A merge-base→tip diff is correct for the **tip file set**, but it is not a complete deletion audit.
+An evidence branch can create or modify a file on an intermediate commit and later replace or remove
+that state before the tip. Deleting the ref can then make that intermediate blob unreachable even
+though a tip-only manifest is perfect.
 
-The current-tip archive therefore preserves every file in that directional branch-side set, including
-workflow wrappers, injected evidence helpers, preregistration records, experimental source forms,
-historical spec/test/source states, and result-enforcement logic. Where a branch had advanced after a
-cited evidence run, the relevant run-time files are additionally captured under `runs/<run-id>/`.
-
-This archive complements, rather than replaces,
-`docs/tracking/pr416-evidence-provenance.md`, which records the causal interpretation, run outcomes,
-material embedded deltas, and the three pre-existing policy-retained refs.
+The corrected audit therefore treats tip coverage and history coverage as separate properties.
+The 13 newly recovered blob identities include intermediate test-source revisions, workflow revisions,
+and the ApplyKick ablation generator/workflow that were absent from the original tip inventory.
 
 ## 24-ref disposition
 
-The machine-readable authority is `ref-disposition.tsv`.
+`ref-disposition.tsv` remains the machine-readable disposition authority:
 
 | Disposition | Count | Meaning |
 | --- | ---: | --- |
-| `deletable` | 21 | No unique branch-only file evidence remains after this archive is on `main`; deletion still waits for the main-only verification step. |
-| `retain` | 0 | No ref requires ordinary retention solely because archival is incomplete. |
-| `policy-retained` | 3 | Existing provenance explicitly retains the ref; copying its bytes does not silently revoke that policy. |
+| `deletable` | 21 | Candidate for deletion only after both verification stages below pass. |
+| `retain` | 0 | No ref is presently retained solely because known archival work remains incomplete. |
+| `policy-retained` | 3 | Existing provenance explicitly retains the ref; archival does not override that policy. |
 
-The three `policy-retained` refs are:
+The three policy-retained refs remain:
 
 - `evidence/pr416-close-chance-retirement`
 - `evidence/pr416-narrow-rolling-candidate`
 - `evidence/pr416-state-only-preforce-candidate`
 
-The other 21 refs are classified `deletable` **subject to Step 5 main-only verification after this
-archive lands**. In particular, every row currently has `delete_now=false`.
+Every row still has `delete_now=false`.
 
-## Main-only deletion verification
+## Verification before deletion
 
-After this archive is merged, the deletion verifier must use `main` plus this directory and the
-durable provenance/diagnosis only. For every `deletable` row it must establish:
+Deletion has **two different gates**. They prove different things and neither substitutes for the other.
 
-1. the row exists in `ref-disposition.tsv`;
-2. all current-tip files attributed to that ref exist in `MANIFEST.tsv`;
-3. each archived file's Git blob SHA matches the manifest;
-4. any separately required historical run-time snapshot for an advanced ref exists and matches;
-5. the causal/result interpretation remains recoverable from
-   `pr416-evidence-provenance.md` / `w6-elevated-stationary-ball-fix.md`;
-6. no policy record still marks that ref retained.
+### A. Live-ref completeness — must run while the refs still exist
 
-Only after all six are true from `main` alone is deletion authorized for that individual
-`deletable` ref. A failed or ambiguous check leaves the ref intact.
+For every ref proposed for deletion:
 
-The three `policy-retained` refs are excluded from deletion even if all byte/archive checks pass.
-Changing that disposition requires an explicit later policy decision, not inference from the existence
-of this archive.
+1. derive its merge base against current `main`;
+2. enumerate every branch-exclusive commit from merge base through the ref tip;
+3. enumerate every changed-path blob state introduced by that history, including states later replaced
+   or removed before the tip;
+4. compare those blob identities against the durable set that will survive deletion: current `main`,
+   this archive, and refs explicitly classified `policy-retained`;
+5. require every blob that would otherwise become deletion-set-only to have an exact archived blob
+   entry in `MANIFEST.tsv`;
+6. require the current-tip directional file set to match the `current` manifest rows exactly;
+7. require all cited workflow runs for that ref to resolve to the exact `head_sha` recorded in
+   `run-heads.tsv`, with any run-specific state needed for interpretation represented by the archive
+   or durable mainline records.
+
+This gate must fail closed on any missing ref, commit, path, blob, or run mapping. It cannot be
+reconstructed from `main` alone after the refs are deleted.
+
+### B. Mainline archive integrity — after this archive lands
+
+From `main` alone, verify that:
+
+1. every `MANIFEST.tsv` archive path exists;
+2. every archived file hashes to its recorded Git blob SHA;
+3. every disposition row and every run-head row is present and parseable;
+4. the causal/result interpretation remains recoverable from
+   `pr416-evidence-provenance.md` and `w6-elevated-stationary-ball-fix.md`;
+5. the three policy-retained refs remain excluded from deletion unless an explicit later policy
+   decision changes them.
+
+This second gate proves archive integrity and reconstruction. It does **not** prove historical
+completeness; only the live-ref gate can do that.
+
+Only a ref that passes both gates and is still classified `deletable` may be deletion-authorized.
