@@ -120,11 +120,13 @@ jobs:
               re.MULTILINE,
           )
           rows = pattern.findall(text)
-          if len(rows) != 1:
+          unique_rows = list(dict.fromkeys(rows))
+          if len(unique_rows) != 1:
               raise SystemExit(
-                  f"ERROR: expected exactly one baseline row for {expected_seed}, observed {rows!r}"
+                  "ERROR: expected one unique baseline row "
+                  f"for {expected_seed}, observed {rows!r}"
               )
-          seed, raw_samples = rows[0]
+          seed, raw_samples = unique_rows[0]
           samples = int(raw_samples)
           if seed != expected_seed or samples <= 0:
               raise SystemExit(
@@ -190,9 +192,9 @@ jobs:
                   raise SystemExit(f"ERROR: duplicate baseline seed {seed}")
               rows[seed] = int(raw_samples)
 
-          if list(rows) != expected:
+          if set(rows) != set(expected) or len(rows) != len(expected):
               raise SystemExit(
-                  f"ERROR: aggregate seed sequence mismatch; expected={expected!r} observed={list(rows)!r}"
+                  f"ERROR: aggregate seed set mismatch; expected={expected!r} observed={sorted(rows)!r}"
               )
           if any(rows[seed] <= 0 for seed in expected):
               raise SystemExit(f"ERROR: non-positive baseline sample count: {rows!r}")

@@ -45,6 +45,14 @@ possession-share result was observed.
 
 Only the baseline run from the final Phase-1 preregistration head, with exact six-seed identity/sequence validation enabled, is governing. Earlier branch runs are setup evidence only and must not be used to derive floors.
 
+The matrix run on `656b9300a43530d598b7ddbe1a42dfdad074f652` exposed a validator-only defect:
+the detailed console logger repeats an identical `TestContext` output line in its summary, so the
+parser saw two identical rows after the test itself passed. The validator now accepts repeated
+identical rows but rejects zero rows or more than one **distinct** row. The aggregate verifier also
+compares the exact seed set independently of artifact filename sort order, then emits rows in the
+frozen preregistration order. Neither correction changes a seed, sample rule, run length, production
+configuration, or the pre-frozen 0.80 derivation.
+
 ## Phase 1 — corrected-baseline denominator capture
 
 The governing Phase-1 workflow executes the six frozen seeds as independent matrix jobs and then
