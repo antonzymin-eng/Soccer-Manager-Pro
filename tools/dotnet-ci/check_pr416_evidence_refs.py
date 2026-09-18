@@ -124,13 +124,19 @@ def changed_blob_instances(repo: Path, ref: str, main_ref: str) -> list[BlobInst
             )
 
     instances: list[BlobInstance] = []
+    seen_states: set[tuple[str, str]] = set()
     for commit in commits:
         for path in sorted(changed_paths):
             blob = resolve(repo, f"{commit}:{path}")
             if blob is None:
                 continue
-            if git(repo, "cat-file", "-t", blob).stdout.strip() == "blob":
-                instances.append(BlobInstance(ref, commit, path, blob))
+            if git(repo, "cat-file", "-t", blob).stdout.strip() != "blob":
+                continue
+            state = (path, blob)
+            if state in seen_states:
+                continue
+            seen_states.add(state)
+            instances.append(BlobInstance(ref, commit, path, blob))
 
     return instances
 
