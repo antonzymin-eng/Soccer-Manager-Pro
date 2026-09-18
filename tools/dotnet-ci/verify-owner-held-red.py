@@ -153,9 +153,13 @@ def main() -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
+    # This is a TRX-record count across all outcomes (Passed/Failed/Skipped/etc.),
+    # not the console's passed-test cardinality. Isolation is established only by
+    # the exact-name multiplicity checks below.
     print(
-        f"EXECUTED-NAME CAPTURE: ordinary={len(ordinary_results)} "
-        f"owner-held={len(results)}"
+        f"TRX RESULT RECORDS (all outcomes; not pass cardinality): "
+        f"ordinary_records={len(ordinary_results)} "
+        f"owner_held_records={len(results)}"
     )
 
     matched_indexes: set[int] = set()

@@ -252,7 +252,10 @@ jobs:
           path: |
             artifacts/coverage/**/*.trx
             artifacts/owner-held-red/**/*.trx
-          if-no-files-found: error
+          # The verifier is the fail-closed authority for required topology evidence.
+          # A build/restore failure before TRX creation is already a real gate failure;
+          # artifact retention must not stack a second, misleading failure on top.
+          if-no-files-found: warn
 
   unity-meta-integrity:
     name: Unity .meta integrity

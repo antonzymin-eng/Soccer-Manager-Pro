@@ -60,6 +60,14 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
     def test_exact_recorded_values_pass(self) -> None:
         proc = self.verify("meanCosine=-0.165 goalwardShare=0.407")
         self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertIn(
+            "TRX RESULT RECORDS (all outcomes; not pass cardinality):",
+            proc.stdout,
+        )
+        self.assertIn(
+            "OWNER-HELD ISOLATION: sim_match_engine_close_chance ordinary=0 dedicated=1",
+            proc.stdout,
+        )
 
     def test_recorded_values_as_prefixes_of_drifted_values_fail(self) -> None:
         proc = self.verify("meanCosine=-0.1659 goalwardShare=0.4078")
@@ -95,6 +103,28 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 1, proc.stdout)
         self.assertIn("leaked into ordinary sweep", proc.stdout)
+
+    def test_empty_ledger_fails_closed_in_verifier(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            ledger = tmp / "ledger.txt"
+            ledger.write_text("# no owner-held rows\n", encoding="utf-8")
+            proc = subprocess.run(
+                [
+                    "python3", str(VERIFIER),
+                    "--ledger", str(ledger),
+                    "--ordinary-results", str(tmp / "ordinary"),
+                    "--results", str(tmp / "results"),
+                    "--dotnet-exit", "1",
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+                timeout=15,
+            )
+            self.assertEqual(proc.returncode, 2, proc.stdout)
+            self.assertIn("owner-held RED ledger is empty", proc.stdout)
 
     def test_missing_ordinary_capture_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as td:
