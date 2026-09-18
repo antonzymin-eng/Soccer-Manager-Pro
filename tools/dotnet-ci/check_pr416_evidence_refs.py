@@ -124,19 +124,13 @@ def changed_blob_instances(repo: Path, ref: str, main_ref: str) -> list[BlobInst
             )
 
     instances: list[BlobInstance] = []
-    seen_states: set[tuple[str, str]] = set()
     for commit in commits:
         for path in sorted(changed_paths):
             blob = resolve(repo, f"{commit}:{path}")
             if blob is None:
                 continue
-            if git(repo, "cat-file", "-t", blob).stdout.strip() != "blob":
-                continue
-            state = (path, blob)
-            if state in seen_states:
-                continue
-            seen_states.add(state)
-            instances.append(BlobInstance(ref, commit, path, blob))
+            if git(repo, "cat-file", "-t", blob).stdout.strip() == "blob":
+                instances.append(BlobInstance(ref, commit, path, blob))
 
     return instances
 
@@ -429,6 +423,7 @@ def validate_live(repo: Path, main_ref: str) -> list[str]:
     durable_blobs.update(row["blob_sha"] for row in manifest)
 
     all_instances: list[BlobInstance] = []
+    candidate_instances: list[BlobInstance] = []
     uncovered: list[BlobInstance] = []
 
     for row in dispositions:
@@ -437,6 +432,7 @@ def validate_live(repo: Path, main_ref: str) -> list[str]:
         all_instances.extend(instances)
         if row["disposition"] != "deletable":
             continue
+        candidate_instances.extend(instances)
         for instance in instances:
             if instance.blob not in durable_blobs:
                 uncovered.append(instance)
@@ -453,6 +449,7 @@ def validate_live(repo: Path, main_ref: str) -> list[str]:
         f"candidates={sum(row['disposition'] == 'deletable' for row in dispositions)} "
         f"policy={sum(row['disposition'] == 'policy-retained' for row in dispositions)} "
         f"branch_exclusive_blob_instances={len(all_instances)} "
+        f"deletion_candidate_blob_instances={len(candidate_instances)} "
         f"uncovered={len(uncovered)}"
     )
     return errors
