@@ -51,10 +51,14 @@ namespace TacticalDirector.BallPhysics
                 ball.LastValidVelocity = ball.Velocity;
             }
 
-            // ERR-001-006: choose the force model from a physically valid height/state pair.
-            // This also recovers legacy/restored state that already contains the invalid combination.
-            if ((ball.State == BallStateType.Stationary || ball.State == BallStateType.Rolling)
-                && ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
+            // ERR-001-006: recover only states that would otherwise disable gravity indefinitely.
+            // Elevated Stationary is always invalid. Elevated Rolling needs pre-force recovery only
+            // when it is already below the stop threshold; moving Rolling preserves the existing
+            // trajectory and the state machine prevents it from stopping while elevated.
+            bool elevated = ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold;
+            bool rollingWouldStop = ball.State == BallStateType.Rolling
+                                 && ball.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity;
+            if (elevated && (ball.State == BallStateType.Stationary || rollingWouldStop))
             {
                 ball.State = BallStateType.Airborne;
             }
