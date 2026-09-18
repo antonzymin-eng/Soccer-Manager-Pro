@@ -33,12 +33,15 @@ namespace TacticalDirector.BallPhysics
                     return BallStateType.Stationary;
 
                 case BallStateType.Rolling:
-                    // Height wins over speed. The old order could turn a slow elevated Rolling
-                    // ball into Stationary before noticing that it was airborne.
-                    if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
-                        return BallStateType.Airborne;
+                    // ERR-001-006 is a stop-rule invariant, not a blanket reclassification of
+                    // every moving Rolling state. A slow elevated Rolling ball must never become
+                    // force-free Stationary; moving Rolling preserves the pre-existing trajectory.
                     if (ball.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity)
-                        return BallStateType.Stationary;
+                    {
+                        return ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold
+                            ? BallStateType.Airborne
+                            : BallStateType.Stationary;
+                    }
                     if (IsOutOfBounds(ball.Position))
                         return BallStateType.OutOfPlay;
                     return BallStateType.Rolling;
