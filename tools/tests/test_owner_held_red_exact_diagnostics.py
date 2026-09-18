@@ -96,6 +96,81 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 1, proc.stdout)
         self.assertIn("leaked into ordinary sweep", proc.stdout)
 
+    def test_missing_ordinary_capture_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            ledger = tmp / "ledger.txt"
+            ledger.write_text(
+                "sim_match_engine_close_chance|meanCosine=-0.165|goalwardShare=0.407\n",
+                encoding="utf-8",
+            )
+            ordinary = tmp / "ordinary"
+            ordinary.mkdir()
+            results = tmp / "results"
+            results.mkdir()
+            (results / "result.trx").write_text(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                "<TestRun xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\"><Results>\n"
+                "<UnitTestResult testName=\"TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance\" outcome=\"Failed\">\n"
+                "<Output><ErrorInfo><Message>meanCosine=-0.165 goalwardShare=0.407</Message></ErrorInfo></Output>\n"
+                "</UnitTestResult></Results></TestRun>\n",
+                encoding="utf-8",
+            )
+            proc = subprocess.run(
+                [
+                    "python3", str(VERIFIER),
+                    "--ledger", str(ledger),
+                    "--ordinary-results", str(ordinary),
+                    "--results", str(results),
+                    "--dotnet-exit", "1",
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+                timeout=15,
+            )
+            self.assertEqual(proc.returncode, 2, proc.stdout)
+            self.assertIn("ordinary sweep capture has no TRX files", proc.stdout)
+
+    def test_malformed_ordinary_trx_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            ledger = tmp / "ledger.txt"
+            ledger.write_text(
+                "sim_match_engine_close_chance|meanCosine=-0.165|goalwardShare=0.407\n",
+                encoding="utf-8",
+            )
+            ordinary = tmp / "ordinary"
+            ordinary.mkdir()
+            (ordinary / "ordinary.trx").write_text("<not-closed>", encoding="utf-8")
+            results = tmp / "results"
+            results.mkdir()
+            (results / "result.trx").write_text(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                "<TestRun xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\"><Results>\n"
+                "<UnitTestResult testName=\"TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance\" outcome=\"Failed\">\n"
+                "<Output><ErrorInfo><Message>meanCosine=-0.165 goalwardShare=0.407</Message></ErrorInfo></Output>\n"
+                "</UnitTestResult></Results></TestRun>\n",
+                encoding="utf-8",
+            )
+            proc = subprocess.run(
+                [
+                    "python3", str(VERIFIER),
+                    "--ledger", str(ledger),
+                    "--ordinary-results", str(ordinary),
+                    "--results", str(results),
+                    "--dotnet-exit", "1",
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+                timeout=15,
+            )
+            self.assertEqual(proc.returncode, 2, proc.stdout)
+            self.assertIn("malformed TRX", proc.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

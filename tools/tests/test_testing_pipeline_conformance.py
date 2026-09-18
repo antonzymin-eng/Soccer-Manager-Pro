@@ -193,6 +193,24 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         quarantine = (ROOT / "tools" / "dotnet-ci" / "known-failures.txt").read_text(encoding="utf-8")
         self.assertNotIn("sim_match_engine_close_chance", quarantine)
 
+    def test_owner_held_mode_fails_closed_when_ledger_derives_no_test(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            gate_dir = root / "tools" / "dotnet-ci"
+            gate_dir.mkdir(parents=True)
+            shutil.copy2(ROOT / "tools" / "dotnet-ci" / "run-gate.sh", gate_dir / "run-gate.sh")
+            (gate_dir / "known-failures.txt").write_text("# empty quarantine\n", encoding="utf-8")
+            (gate_dir / "owner-held-red.txt").write_text("# empty owner ledger\n", encoding="utf-8")
+
+            proc = self.run_cmd(
+                "bash", str(gate_dir / "run-gate.sh"),
+                "--owner-held-red", "report-only",
+                cwd=root,
+                env={"TD_GATE_DRY_RUN": "1"},
+            )
+            self.assertEqual(proc.returncode, 2, proc.stdout)
+            self.assertIn("owner-held RED ledger produced no executable selection", proc.stdout)
+
     def test_hook_uses_staged_snapshot_and_preserves_untracked_cache(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td) / "repo"
