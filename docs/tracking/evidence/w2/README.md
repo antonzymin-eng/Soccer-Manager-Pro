@@ -4,13 +4,19 @@
 **Measurement run:** GitHub Actions `35096793576`  
 **Measurement-driver head:** `682e7af9ed8cf5eed64d78defe7358e9e7bd81a6`  
 **Production head under test:** `e4335f7ff059deb483b1aaa534f2190fd3762008` (merged W6 / PR #412)  
-**Status:** paired control validated; production remained shipping-disabled during measurement.
+**Status:** historical paired-control artifact preserved; the `0.530 / 0.530` disarmed-control interpretation is superseded by `ERR-001-006` / PR #416.
 
-## Purpose
+## September 16, 2026 supersession note
 
-This archive closes the W2 post-W6 control obligation before any production activation. Both matrix legs use the same production head, the same two governed seeds, and the same reporting/assertion transform. The only intended behavioral difference is whether the test-only tackle arm seam is applied at `LooseBallPickupRadiusM` (currently 1.0 m).
+This archive is immutable historical evidence and its measured values remain exactly as captured. However, PR #416 later localized seed `0x0F1E2D3C4B5A6978`'s disarmed **0.530 / 0.530** result to a persistent elevated-ball `Stationary` deadlock exposed by W6. It therefore was **not** a valid behavioral expectation for a healthy disarmed-W2 engine.
 
-The unchanged governed predicate is strict `> 0.70` for both mirrored views of every governed seed.
+The original interpretation below is retained to preserve chronology, but is superseded for current reasoning. None of these pre-#418 sample counts may be reused as the governing non-vacuity baseline for the W2-active engine. PR #416 preregisters a fresh per-seed baseline/floor derivation on the reconciled production behavior.
+
+## Purpose — historical intent at capture time
+
+This archive closed the then-required W2 post-W6 paired-control obligation before production activation. Both matrix legs used the same production head, the same two governed seeds, and the same reporting/assertion transform. The only intended behavioral difference was whether the test-only tackle arm seam was applied at `LooseBallPickupRadiusM` (then 1.0 m).
+
+The governed possession predicate was strict `> 0.70` for both mirrored views of every governed seed.
 
 ## Results
 
@@ -21,9 +27,9 @@ The unchanged governed predicate is strict `> 0.70` for both mirrored views of e
 | disarmed | `0x0F1E2D3C4B5A6978` | 22,413 | 0.530 | 0.530 | 1 / 1 |
 | disarmed | `0x1A2B3C4D5E6F7081` | 14,507 | 0.979 | 0.979 | 1 / 1 |
 
-The armed leg satisfies all four strict bounds. The disarmed negative control does not: seed `0x0F1E2D3C4B5A6978` is 0.530 in both mirrored views, and both the gate and direct test return non-zero. The corrected workflow treats that expected negative-control result as valid evidence while still failing if the control unexpectedly satisfies the armed predicate.
+**Historical interpretation at capture time — SUPERSEDED by PR #416:** the armed leg satisfied all four strict bounds; seed `0x0F1E2D3C4B5A6978` at 0.530 in both mirrored views was treated as an expected disarmed negative control, and the workflow treated that negative-control failure as valid evidence. PR #416 demonstrates that the 0.530 result was instead caused by `ERR-001-006`, an elevated-ball deadlock. The raw measurement remains valid; that causal interpretation does not.
 
-This supports the narrow activation conclusion: on exact post-W6 production head `e4335f7f`, arming W2 at the intended current reach removes the preregistered InPoss blocker. It is **not** tackle-outcome calibration and does not establish a W12 material-effect claim.
+The narrow activation conclusion recorded at the time was that, on exact post-W6 production head `e4335f7f`, arming W2 at the intended reach removed the observed InPoss blocker. That historical conclusion did not calibrate tackle outcomes or establish a W12 material-effect claim. Current W2-active evidence must be evaluated on the post-#418 engine after the Ball Physics correction.
 
 ## Immutable archives
 
@@ -41,9 +47,9 @@ The parameterized driver and workflow are identical across both archives:
 
 Additional internal evidence hashes are preserved inside each ZIP's `SHA256SUMS`.
 
-## Governance boundaries
+## Governance boundaries at capture time
 
-- Production `TackleContactRadiusM` was still `0` for this measurement; only the armed leg used the test seam.
-- The current activation value may be 1.0 m because that is the current `LooseBallPickupRadiusM` fallback. The durable correctness rule is `TackleContactRadiusM > 0` and `TackleContactRadiusM <= LooseBallPickupRadiusM`; 1.0 m is not an eternal invariant.
-- The existing ten tackle-outcome `[GT]` constants remain explicitly **uncalibrated**. W2 activation accepts that technical debt unchanged; foul/card and tackle-outcome calibration follow activation.
+- Production `TackleContactRadiusM` was still `0` for this measurement; only the armed leg used the test seam. Production has since been activated by #418; this bullet is historical context, not current state.
+- The activation value may be 1.0 m because that is the current `LooseBallPickupRadiusM` fallback. The durable correctness rule is `TackleContactRadiusM > 0` and `TackleContactRadiusM <= LooseBallPickupRadiusM`; 1.0 m is not an eternal invariant.
+- The existing ten tackle-outcome `[GT]` constants remain explicitly **uncalibrated**. Foul/card and tackle-outcome calibration remain separate work.
 - W2 receives **no T-DA-DET-005 credit**. That deferred #14 test requires `DefensiveAITick`'s own `DeterministicRngService` path; W2's keyed draw in `MatchEngine` does not satisfy that obligation.

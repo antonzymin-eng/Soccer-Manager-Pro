@@ -1,6 +1,7 @@
 // File:     src/ball-physics/BallPhysicsCore.cs
 // Created:  2026-05-24
 // Modified: 2026-06-12
+// Modified: 2026-09-15 (ERR-001-006: normalize elevated ground states before force selection)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Main physics update loop and force calculations for the ball.
@@ -48,6 +49,14 @@ namespace TacticalDirector.BallPhysics
             {
                 ball.LastValidPosition = ball.Position;
                 ball.LastValidVelocity = ball.Velocity;
+            }
+
+            // ERR-001-006: choose the force model from a physically valid height/state pair.
+            // This also recovers legacy/restored state that already contains the invalid combination.
+            if ((ball.State == BallStateType.Stationary || ball.State == BallStateType.Rolling)
+                && ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
+            {
+                ball.State = BallStateType.Airborne;
             }
 
             // Bouncing: apply impulse first, then continue to integration.
