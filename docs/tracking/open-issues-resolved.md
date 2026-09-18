@@ -10,12 +10,14 @@
 
 > **[RESOLVED and ARCHIVED September 18, 2026 — Step 3.3 characterization.]**
 > Six full-match seeds on v2.10 plus the preregistered preserved narrow counterfactual now quantify
-> the previously uncharacterized population effect. The supplementary exact-transition census
-> measures 1,302–1,603 moving Rolling height-crosses per v2.10 match, all reclassified to Airborne
-> on the same update; all six downstream trajectory fingerprints differ under the narrow arm, with
-> substantial and seed-dependent action resampling. No v2.10 contract defect was found. The narrow
-> arm instead accumulates 61,053–71,768 elevated-Rolling boundary ticks per match under the Rolling
-> force model. v2.10 is preserved; no v2.11 rollback/narrowing and no new ERR. Governing evidence:
+> the previously uncharacterized upward-cross/ejection population and downstream trajectory/action
+> resampling. v2.10 records 1,302–1,603 moving Rolling height-crosses per match, all reclassified to
+> Airborne on the same update; the tested narrow arm instead accumulates 61,053–71,768 elevated-
+> Rolling boundary ticks per match. This establishes material distribution sensitivity and makes the
+> tested `bb501a2…` narrow semantics non-viable as a replacement. It does **not** rule out every
+> future narrowing or every possible v2.10 defect class: transitions into Rolling were not counted,
+> so threshold-band chatter was outside this instrument's power. v2.10 is preserved as the current
+> contract baseline; no new ERR is opened from this characterized evidence. Governing evidence:
 > `docs/tracking/evidence/v210-rolling/README.md`.
 
 - **Ball Physics v2.10 elevated-`Rolling` semantics are contract-correct for PR #416 but remain trajectory-sensitive and not distributionally characterized. RECORDED, NOT FIXED.** *Opened September 18, 2026 (PR #416 closeout review).* The #416 ablation lattice established that restoring the old `Rolling` ordering can materially change deterministic normal-play trajectories and can suppress or expose very long HOLD attractor shapes on particular seeds. The final mechanism diagnosis does **not** make that a Ball Physics defect: the shipped regression root was Perception #7's zero-distance FoV-bearing bug, the co-location correction removes the absorbing HOLD pathology, and no v2.11 rollback is justified. The remaining debt is narrower: v2.10's broadened elevated-`Rolling` behavior has not been characterized as a population/distribution change across representative matches. **Next action:** before a future Ball Physics trajectory change or calibration relies on this path, measure elevated `Rolling` transition frequency plus representative multi-seed downstream trajectory/action deltas and compare them against the v2.10 baseline. Preserve v2.10 unless that evidence identifies an actual contract defect. Owning diagnosis: `docs/tracking/w6-elevated-stationary-ball-fix.md`. Active count **25 → 26**.

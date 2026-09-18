@@ -6,7 +6,7 @@
 **Supplementary transition census:** run `35396676058` at `38cb052a664fca3dae34d88009b0b0f775965721`  
 **Counterfactual provenance:** preserved `evidence/pr416-narrow-rolling-candidate` head
 `bb501a2128f9efbef5e98bffadb0d98214493e78`  
-**Status:** Step 3.3 complete. The distributional debt is characterized; no v2.10 contract defect was found.
+**Status:** Step 3.3 complete. The requested distributional surface is characterized; no contract defect of the characterized class was established. This instrument did not count transitions **into** `Rolling`, so it does not settle every possible v2.10 failure mode.
 
 > The original preregistration and the supplementary transition-census preregistration remain
 > frozen verbatim in their owning files. This README is post-result interpretation only.
@@ -62,6 +62,16 @@ The two arms diverge after the semantic difference, so their later event counts 
 counterfactual events. The frequency rows describe each deterministic arm's own resulting
 population.
 
+Two measurement-boundary cautions travel with this table. First, the original residency probe's
+"moving" split reads velocity **before** `UpdateBallPhysics`, while `movingRollingHeightCrosses`
+uses the **post-update** speed. They share `State.MinVelocity` but are observations at different
+instants and must not be treated as interchangeable populations. Second, `rollingPhysicsEntries`
+is residency (updates beginning in `Rolling`), not a count of transitions **into** `Rolling`.
+The census therefore establishes the characterized upward-cross/ejection behavior but cannot by
+itself distinguish trajectory-driven recrossing from possible v2.10 chatter in the 0.17/0.13 m
+height hysteresis band. The 1,302–1,603 v2.10 moving crosses are evidence that this surface is
+frequent, not proof of why that frequency is high.
+
 ## Downstream trajectory effect
 
 Every seed has a different one-second-sampled trajectory fingerprint between v2.10 and the narrow
@@ -75,15 +85,22 @@ Relative to v2.10, the narrow arm shows:
 - possession-change count: **7 to 251 fewer** per match;
 - total-goal delta: **−6 to +5**, with no stable direction.
 
-These are deterministic resampling effects, not quality scores. The goal sign instability is
-especially strong evidence against treating one arm as globally "better" from this characterization.
+These are deterministic resampling effects, not quality scores. With only six single-match seeds,
+the −6 to +5 goal deltas are too sparse and directionally unstable to support a comparative-quality
+claim for either arm.
 
 ## Downstream action-selection effect
 
-All six Decision Tree action vectors change. The direction is seed-dependent, but some counts move
-substantially:
+All six Decision Tree action vectors change, but the dimensionality should not be overstated.
+Total selected actions are nearly conserved across all 12 arms (**1,184,132–1,184,570**). On every
+seed, the dominant change is a **MOVE_TO_POSITION ↔ PRESS reallocation**: those two counts move in
+opposite directions and account for most of the raw-count delta. Relative to v2.10,
+MOVE_TO_POSITION changes by at most **2.8%**, while PRESS changes by as much as **27.4%**. The other
+action categories move on much smaller absolute bases.
 
-- PASS delta: −162 to +27;
+For completeness, raw narrow-minus-v2.10 ranges are:
+
+- PASS: −162 to +27;
 - SHOOT: −8 to +9;
 - DRIBBLE: −620 to +203;
 - HOLD: −87 to +236;
@@ -92,24 +109,27 @@ substantially:
 - INTERCEPT: −1,277 to +840;
 - SAVE: −41 to +194.
 
-This establishes the open issue's requested downstream-action sensitivity. It does not attribute
-those changes to a defect in Decision Tree, Positioning, Pressing, or any other downstream system:
-once the ball trajectory changes, the deterministic match is a different trajectory.
+This establishes downstream action-selection resampling, chiefly along the MOVE/PRESS axis. It does
+not establish eight independent tactical effects or attribute the redistribution to a defect in
+Decision Tree, Positioning, Pressing, or any other downstream subsystem.
 
 ## Decision
 
 **Preserve Ball Physics v2.10.**
 
 The evidence confirms the #416 ablation warning: elevated-`Rolling` ordering materially resamples
-normal-play trajectories. It does not identify an actual v2.10 contract defect. Instead, the narrow
-counterfactual produces substantial cumulative residency in an elevated `Rolling` state while the
-`Rolling` ground-contact force model is active—the state/force pairing v2.10's height-first rule was
-designed to prevent.
+normal-play trajectories. It does not establish a contract defect in the **characterized
+upward-cross/ejection class**. The instrument did not count transitions into `Rolling`, so it does
+not close every conceivable v2.10 concern, including threshold-band chatter. The tested narrow
+counterfactual, however, produces substantial cumulative residency in an elevated `Rolling` state
+while the `Rolling` ground-contact force model is active—the state/force pairing v2.10's
+height-first rule was designed to prevent.
 
 Therefore:
 
-- no v2.11 rollback or narrowing is justified;
-- no new Ball Physics ERR is opened;
+- the **tested** `bb501a2…` narrow semantics is not a viable replacement for v2.10;
+- this characterization does **not** rule out every possible future narrowing or v2.11 design;
+- no new Ball Physics ERR is opened from the characterized evidence;
 - future trajectory calibration must treat v2.10 as the baseline rather than inheriting pre-v2.10
   deterministic trajectories;
 - this evidence does not set gameplay tuning targets or acceptance bands.
@@ -118,10 +138,12 @@ Therefore:
 
 Durable repository evidence:
 
+- `original-results.tsv` — exact 12 rows from original successful run `35395955770`;
 - `all-results.tsv` — exact 12-row aggregate from supplementary run `35396676058`;
+- `observer-neutrality.tsv` — per-row SHA-256/equality proof that removing the six added census columns reproduces the original 12 rows;
 - `deltas.tsv` — mechanically derived v2.10→narrow comparison;
 - `provenance.txt` — run/head/artifact identities;
-- `SHA256SUMS` — hashes of the two durable TSVs.
+- `SHA256SUMS` — hashes of all four durable TSVs.
 
 The original successful aggregate artifact is `10567792073`; the supplementary aggregate artifact
 is `10567717931`. Per-arm TRX/detailed logs remain GitHub Actions artifacts with the workflow's
