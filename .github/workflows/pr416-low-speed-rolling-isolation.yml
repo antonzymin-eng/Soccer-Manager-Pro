@@ -1,0 +1,65 @@
+name: PR416 low-speed Rolling isolation
+
+on:
+  push:
+    branches:
+      - evidence/pr416-state-only-preforce-candidate
+    paths:
+      - .github/workflows/pr416-low-speed-rolling-isolation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  isolate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-state-only-preforce-candidate
+          fetch-depth: 0
+
+      - name: Keep Stationary pre-force recovery but restore old Rolling order
+        shell: bash
+        run: |
+          git fetch origin evidence/pr416-no-rolling-focused evidence/pr416-mechanism-census
+          git checkout origin/evidence/pr416-no-rolling-focused -- src/ball-physics/BallStateMachine.cs
+          test "$(git hash-object src/ball-physics/BallStateMachine.cs)" = "3297dd5a90c8881c510fa1869d34821d395f2a7f"
+          test "$(git hash-object src/ball-physics/BallPhysicsCore.cs)" = "b51e772bc4c9e8dd3f414d2ae372a6591294e7eb"
+
+      - name: Install one-seed full-match census
+        shell: bash
+        run: |
+          git show origin/evidence/pr416-mechanism-census:.github/evidence/Pr416MechanismCensusTests.cs > src/match-engine/tests/Pr416MechanismCensusTests.cs
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path("src/match-engine/tests/Pr416MechanismCensusTests.cs")
+          s = p.read_text()
+          s, ticks_n = re.subn(
+              r"private const int Ticks\s*=\s*150_000;",
+              "private const int Ticks = 324_000;", s, count=1)
+          s, seed_n = re.subn(
+              r"private static readonly ulong\[\] Seeds\s*=\s*\{.*?\};",
+              "private static readonly ulong[] Seeds =\n        {\n            0x00000000D1A6D05EUL,\n        };",
+              s, count=1, flags=re.S)
+          if ticks_n != 1 or seed_n != 1:
+              raise SystemExit(f"helper rewrite mismatch ticks={ticks_n} seeds={seed_n}")
+          p.write_text(s)
+          PY
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run isolation census
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "Name=MeasurePr416MechanismCensus"             --logger "console;verbosity=detailed"
