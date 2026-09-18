@@ -1,5 +1,9 @@
 # W2 post-#416 six-seed evidence
 
+> **Frozen preregistration:** `docs/tracking/w2-six-seed-evidence-preregistration.md` is restored
+> to the exact pre-result content from result head `dbd3053ad191e06f587ce84fce280ebe74e4bec7`.
+> Post-result interpretation and closeout live only in this README.
+
 **Captured:** September 18, 2026  
 **Production base:** `e8207f4c6f4d9d301872da869e3796163b8b26ad` (merged PR #416)  
 **Baseline run:** `35389373818` at `a1f105c9baf2205877fc6f9852331576daa97b6e`  
@@ -8,19 +12,30 @@
 
 ## What the measured predicate actually is
 
-The driver reuses `MatchEngineInPossGateScenarios`:
+The result driver at frozen result head
+`dbd3053ad191e06f587ce84fce280ebe74e4bec7` reuses
+`MatchEngineInPossGateScenarios`:
 
 `IsPossessionPhase(phase) => phase == InPoss || phase == OutOfPoss`.
 
-`PhaseClassifier` returns those two values when the positioning snapshot says
-`HasTeamPossession`; it uses transition phases when no team possession is present. The reported
-"homeShare"/"awayShare" therefore measure the share of sampled final-third ticks for which the
-positioning snapshot says **some team has possession**, seen through the two mirrored team snapshots.
+This is a **latched committed-phase occupancy**, not an instantaneous possession share.
+`PhaseClassifier.ComputeCandidate` chooses `InPoss` / `OutOfPoss` when
+`snap.HasTeamPossession` is true. When no team possession is present, ball velocity above
+`+4.0 m/s` selects `TransToAtk`, below `-4.0 m/s` selects `TransToDef`, and the
+`[-4.0,+4.0]` band returns the last committed phase. A new phase then needs
+`PHASE_HYSTERESIS_TICKS = 3` consecutive candidate ticks before it becomes the committed phase.
+The driver samples that committed phase through `TestOnly_PositioningPhase`.
+
+The reported "homeShare"/"awayShare" therefore measure the share of sampled final-third ticks in
+which each mirrored positioning snapshot's **committed phase is non-transition**. That quantity is
+strongly related to team-possession-present state but can remain latched across no-possession ticks
+and deliberately carries hysteresis.
 
 They are not per-team possession shares and are not two independent estimates. Their equality is
 expected when mirrored snapshot construction is coherent. They also are not a direct
 `BallStateType.Controlled` measure because team possession can remain defined across an in-flight
-pass.
+pass. The latch further reduces sensitivity to a mechanism that resolves only tens of challenges per
+match, reinforcing the low-discrimination conclusion below.
 
 ## Governing results
 
@@ -94,15 +109,26 @@ Step 3.2's historical stall prerequisite is satisfied. The **ten tackle-outcome 
 
 This corpus does **not** authorize fitting foul/card or tackle-outcome constants from the five observed
 tackle fouls. A later foul/card pass must begin with a sample-bearing measurement of the complete
-post-W2 foul/card stream; tackle-outcome calibration remains a separate governed task and needs an
-instrument sized to its own outcome rates.
+post-W2 foul/card stream. The existing `FoulRateDiagnosticTests` / `TD_FOUL_DIAGNOSTIC=1`
+instrument is the appropriate starting surface because it measures the complete foul stream rather
+than only W2-sourced tackle fouls. Tackle-outcome calibration remains a separate governed task and
+needs an instrument sized to its own outcome rates.
 
-## Durable files
+## Durable files and retention boundary
+
+The following repository files are durable:
 
 - `baseline-counts-and-floors.tsv` — exact aggregate from run `35389373818`
 - `w2-six-seed-results.tsv` — exact aggregate from run `35389986678`
 - `provenance.txt` — governing run/head/artifact ids
 - `artifact-SHA256SUMS` — hashes of the two archived aggregate TSV files
 
-The original Actions artifacts retain per-arm TRX, detailed logs, exit status, parsed rows and
-per-artifact SHA-256 manifests.
+The **per-arm** TRX, detailed logs, exit status, parsed rows and per-artifact SHA-256 manifests remain
+in GitHub Actions artifacts only. The evidence workflow set `retention-days: 90`; absent a GitHub
+retention-policy change or manual preservation, those artifacts are expected to expire around
+**2026-12-17**. The warning-channel observations above are therefore time-bounded by that retention.
+
+The result driver and workflow are reproducible from frozen result head
+`dbd3053ad191e06f587ce84fce280ebe74e4bec7`. They were intentionally removed by closeout commit
+`f5296a815d2eb761e9bdcd94494e3387ec55ed7c` so the env-dependent diagnostic does not enter normal
+CI.
