@@ -1,8 +1,32 @@
 # W6 Elevated Stationary Ball Fix — ERR-001-006
 
-**Date:** September 15–17, 2026
-**Status:** MINIMAL COMPOSITION FIX VALIDATED; PERMANENT DETECTOR FLOORS FROZEN; NORMAL CI RERUN PENDING
+**Date:** September 15–18, 2026
+**Status:** CLOSED FOR PR #416; REQUIRED CI GREEN; OWNER-HELD CLOSE-CHANCE DISPOSITION UNCHANGED
 **Scope:** Ball Physics #1 state invariant exposed by W6 physical Controlled possession, plus permanent hardening of the existing two-seed `sim_match_engine_inposs_gate` after W2 production activation.
+
+
+## September 18 final CI disposition
+
+Final PR-head CI run `35307891032` executed on exact head
+`b6a21d2d303baae108e77953719130a440f8f686`. The six recorded branch-protection contexts —
+Markdown lint, YAML lint, Markdown link check, Spec hygiene checks, File manifest sanity, and C#
+format check — all succeeded. GitHub reports the PR mergeable at this head.
+
+The non-certifying Linux functional job's ordinary blocking sweep is also green:
+`TacticalDirector.MatchEngine.Tests` completed **501 passed / 0 failed / 12 skipped**. The job's
+overall conclusion is red only because the separately executed owner-held
+`sim_match_engine_close_chance` unexpectedly passed, which the owner-held verifier is designed to
+treat as blocking until its disposition is reviewed.
+
+That disposition remains unchanged. Evidence-only run `35344056248`, based on exact production
+head `b6a21d2d…` and adding only a diagnostic print, measured **2,494** final-third dribbles,
+**meanCosine = -0.038**, and **goalwardShare = 0.496**; the unchanged scenario bounds are
+`>-0.16` and `>0.42`. PR #416 does not change the DRIBBLE direction scorer or either bound. This
+is the same class of trajectory/population-induced unexpected green already measured and explicitly
+left owner-held in the W6 PR #412 closeout. Therefore the August 11 owner decision — **hold red; do
+not rebaseline a third time** — still governs: the owner-held ledger is not changed, no `[GT]` is
+retuned, and no KD-W1 / close-chance calibration is pulled into this correctness landing. The
+non-required functional verifier may remain red solely on that unexpected-green policy.
 
 
 ## September 17 live-head closure — supersedes the earlier Ball-Physics branch-point language below
