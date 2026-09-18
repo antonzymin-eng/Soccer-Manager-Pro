@@ -7,10 +7,14 @@
 
 ## September 18 final CI disposition
 
-Final PR-head CI run `35307891032` executed on exact head
+Final code/spec/test CI run `35307891032` executed on exact head
 `b6a21d2d303baae108e77953719130a440f8f686`. The six recorded branch-protection contexts —
 Markdown lint, YAML lint, Markdown link check, Spec hygiene checks, File manifest sanity, and C#
-format check — all succeeded. GitHub reports the PR mergeable at this head.
+format check — all succeeded. Current live PR head
+`c61c7d780e4365cb9029de81a756583caaa84ef7` is documentation-only atop that validated code
+state. GitHub reports `mergeable=true` and `mergeable_state=unstable`: there is no merge
+conflict, while the non-required functional verifier remains red on the owner-held
+unexpected-green policy. These are distinct facts.
 
 The non-certifying Linux functional job's ordinary blocking sweep is also green:
 `TacticalDirector.MatchEngine.Tests` completed **501 passed / 0 failed / 12 skipped**. The job's
@@ -104,6 +108,18 @@ The historical normal-CI total of 513 is not a contradictory discovery count. Ru
 `Name!=sim_match_engine_close_chance` and reported 498 passed + 12 skipped + 3 failed = 513
 executed cases. The 513 number is therefore the normal-CI execution total under that explicit
 one-name exclusion; it is not the project-scoped discovery cardinality.
+
+One pinned-main run exposes a separate selection/accounting anomaly rather than a missing #416
+test. Run `35133104970`, job `104918684391`, logs the same
+`Name!=sim_match_engine_close_chance` ordinary-sweep filter but reports **502 passed + 12 skipped
+= 514** MatchEngine executions, then executes the exact owner-held name separately and reports one
+additional pass. Because project-scoped discovery on pinned main and #416 already established
+identical discovered sets (516 case lines / 514 unique display names), and #416 does not change
+`MatchEngineCloseChanceTests.cs`, the 514-vs-513 execution delta is not evidence that the branch
+lost a test. The unresolved fact is that the pinned-main ordinary sweep did not reduce to the
+expected one-name-excluded cardinality. That testing-pipeline selection anomaly is now recorded in
+`open-issues.md`; no #416 production or test-semantic change is justified to manufacture count
+parity.
 
 ### Shared tackle corpus and baseline correction
 
