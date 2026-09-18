@@ -1,0 +1,226 @@
+name: PR416 state-only preforce candidate
+
+on:
+  push:
+    branches:
+      - evidence/pr416-state-only-preforce-candidate
+    paths:
+      - .github/workflows/pr416-narrow-rolling-candidate.yml
+
+permissions:
+  contents: read
+
+jobs:
+  ball-physics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-state-only-preforce-candidate
+          fetch-depth: 0
+
+      - name: Install candidate contract locks
+        shell: bash
+        run: |
+          cp .github/evidence/Pr416StateOnlyPreforceCandidateTests.cs src/ball-physics/tests/Pr416StateOnlyPreforceCandidateTests.cs
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run preserved ERR-001-006 locks
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet test src/ball-physics/tests/ball-physics-tests.gen.csproj             --no-restore             --filter "Name=Stationary_AboveEnterThreshold_TransitionsToAirborne|Name=Rolling_AboveEnterThreshold_BelowMinVelocity_StillTransitionsToAirborne|FullyQualifiedName~Pr416StateOnlyPreforceCandidateTests"             --logger "console;verbosity=detailed"
+
+      - name: Characterize broad high-speed Rolling lock
+        id: broad
+        continue-on-error: true
+        shell: bash
+        run: |
+          dotnet test src/ball-physics/tests/ball-physics-tests.gen.csproj             --no-restore             --filter "Name=Rolling_AboveEnterThreshold_TransitionsToAirborne"             --logger "console;verbosity=detailed"
+
+      - name: Require only the known contract conflict
+        shell: bash
+        run: |
+          test "${{ steps.broad.outcome }}" = "failure"
+
+  focused-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-state-only-preforce-candidate
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run current five-target fixture
+        id: tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-stateonly-focused
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "Name=AControlledCarrierIsActuallyDispossessed|Name=BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose|Name=TacklesHappenInComposedPlay|Name=ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice|Name=sim_match_engine_shot_outcomes"             --logger "console;verbosity=detailed"             --logger "trx;LogFileName=pr416-stateonly-focused.trx"             --results-directory artifacts/pr416-stateonly-focused             2>&1 | tee artifacts/pr416-stateonly-focused/console.log
+
+      - name: Enforce main-relative target outcomes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          required_pass = {
+              "AControlledCarrierIsActuallyDispossessed",
+              "BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose",
+              "TacklesHappenInComposedPlay",
+              "sim_match_engine_shot_outcomes",
+          }
+          foul = "ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice"
+          files = glob.glob("artifacts/pr416-stateonly-focused/*.trx")
+          if len(files) != 1:
+              raise SystemExit(f"expected one TRX, found {files}")
+          root = ET.parse(files[0]).getroot()
+          seen = {}
+          for elem in root.iter():
+              if elem.tag.endswith("UnitTestResult"):
+                  name = elem.attrib.get("testName")
+                  if name in required_pass or name == foul:
+                      seen[name] = elem.attrib.get("outcome")
+          print("MAIN_RELATIVE_TARGET_OUTCOMES", seen)
+          missing = (required_pass | {foul}) - seen.keys()
+          bad = {n: seen.get(n) for n in required_pass if seen.get(n) != "Passed"}
+          if missing or bad:
+              raise SystemExit(f"target failure missing={sorted(missing)} bad={bad}")
+          if seen[foul] not in {"Passed", "NotExecuted"}:
+              raise SystemExit(f"foul test worse than main: {seen[foul]}")
+          PY
+
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-stateonly-focused-${{ github.run_id }}
+          path: artifacts/pr416-stateonly-focused/
+          if-no-files-found: error
+
+  widened-corpus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-state-only-preforce-candidate
+          fetch-depth: 0
+
+      - name: Install preregistered widened census helper
+        shell: bash
+        run: |
+          git fetch origin evidence/pr416-mechanism-census
+          git show origin/evidence/pr416-mechanism-census:.github/evidence/Pr416MechanismCensusTests.cs > src/match-engine/tests/Pr416MechanismCensusTests.cs
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path("src/match-engine/tests/Pr416MechanismCensusTests.cs")
+          s = p.read_text()
+          s, ticks_n = re.subn(
+              r"private const int Ticks\s*=\s*150_000;",
+              "private const int Ticks = 324_000;", s, count=1)
+          s, seed_n = re.subn(
+              r"(0x0F1E2D3C4B5A6978UL,\s*\r?\n\s*0x00000000D1A6D05EUL,)",
+              r"\1\n            0x5EED000000000003UL,", s, count=1)
+          if ticks_n != 1 or seed_n != 1:
+              raise SystemExit(f"helper rewrite mismatch ticks={ticks_n} seeds={seed_n}")
+          p.write_text(s)
+          PY
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run preregistered widened corpus
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-stateonly-widened
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "Name=MeasurePr416MechanismCensus"             --logger "console;verbosity=detailed"             --logger "trx;LogFileName=pr416-stateonly-widened.trx"             --results-directory artifacts/pr416-stateonly-widened             2>&1 | tee artifacts/pr416-stateonly-widened/console.log
+
+      - name: Enforce preregistered evidence sufficiency
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("artifacts/pr416-stateonly-widened/console.log").read_text()
+          rows = re.findall(
+              r"PR416_TACKLE_CENSUS seed=0x[0-9A-F]+ won=(\d+) loose=(\d+) foul=(\d+) missed=(\d+) dispossessions=(\d+)",
+              text)
+          if len(rows) < 3:
+              raise SystemExit(f"expected >=3 census rows, got {len(rows)}")
+          rows = rows[:3]
+          wins = sum(int(r[0]) for r in rows)
+          dispos = sum(int(r[4]) for r in rows)
+          print(f"WIDENED_SUFFICIENCY wins={wins} dispossessions={dispos}")
+          if wins < 3 or dispos < 3:
+              raise SystemExit("preregistered sufficiency floor not met")
+          PY
+
+      - name: Upload widened evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-stateonly-widened-${{ github.run_id }}
+          path: artifacts/pr416-stateonly-widened/
+          if-no-files-found: error
+
+  corrected-baseline-detector:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-state-only-preforce-candidate
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run current in-possession detector as diagnostic
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-stateonly-inposs
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "Name=sim_match_engine_inposs_gate"             --logger "console;verbosity=detailed"             --logger "trx;LogFileName=pr416-stateonly-inposs.trx"             --results-directory artifacts/pr416-stateonly-inposs             2>&1 | tee artifacts/pr416-stateonly-inposs/console.log
+
+      - name: Upload detector evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-stateonly-inposs-${{ github.run_id }}
+          path: artifacts/pr416-stateonly-inposs/
+          if-no-files-found: error
