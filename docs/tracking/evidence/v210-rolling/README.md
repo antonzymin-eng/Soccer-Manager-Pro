@@ -28,6 +28,13 @@ the first run after deleting only the six inserted census columns. Every row was
 including all 12 trajectory fingerprints. The supplementary observation counters are therefore
 observer-neutral for the previously frozen metrics.
 
+The verbatim original aggregate ZIP supplies an independent pre-census cross-check. Its original-run
+`deltas.tsv` shares 15 comparable delta fields with the supplementary `deltas.tsv`; all **6 × 15**
+shared values match exactly. Its original v2.10 `erEpisodes`, moving-episode, and moving-tick
+columns are also zero on all six seeds. Because that file was emitted by run `35395955770` before
+the transition census existed, it independently corroborates both the observer-neutral downstream
+results and the zero boundary-residency finding that motivated the supplement.
+
 The failed setup run `35395886287` is non-governing: its simulations emitted rows but a parser
 expected 42 columns where the schema contained 41. No measurement definition changed in response.
 
