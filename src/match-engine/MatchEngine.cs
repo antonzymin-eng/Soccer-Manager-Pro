@@ -331,6 +331,24 @@ namespace TacticalDirector.MatchEngine
         // the shot-outcome diagnostic; a restored match restarts the count at zero by design.
         private int _woodworkStrikes;
 
+        // TEMPORARY EVIDENCE INSTRUMENT (Step 3.3, Ball Physics v2.10 characterization).
+        // Observation only: captures the raw ball state at the exact Physics-phase boundary before
+        // BallPhysicsCore can normalize it. Not serialized, not digest-load-bearing, no gameplay read.
+        private int _v210ElevatedRollingTicks;
+        private int _v210ElevatedRollingEpisodes;
+        private int _v210ElevatedRollingMovingTicks;
+        private int _v210ElevatedRollingSlowTicks;
+        private int _v210ElevatedRollingMovingEpisodes;
+        private int _v210ElevatedRollingSlowEpisodes;
+        private int _v210ElevatedRollingPostAirborne;
+        private int _v210ElevatedRollingPostRolling;
+        private int _v210ElevatedRollingPostOther;
+        private float _v210ElevatedRollingHeightSum;
+        private float _v210ElevatedRollingSpeedSum;
+        private float _v210ElevatedRollingMaxHeight;
+        private float _v210ElevatedRollingMaxSpeed;
+        private bool _v210ElevatedRollingPrevious;
+
         // Diagnostic observation (the _woodworkStrikes class): genuine #6 shot CONTACTs this
         // match. NOT serialized; feeds no gameplay path.
         private int _shotContacts;
@@ -2638,6 +2656,21 @@ namespace TacticalDirector.MatchEngine
         /// progressive pass from a square one, or a goalward dribble from a retreating one.</summary>
         internal AgentAction TestOnly_DtLastAction(int agentId) => _decisionTrees[agentId].LastAction;
 
+        // TEMPORARY Step-3.3 observation seams. Removed by the evidence closeout.
+        internal int TestOnly_V210ElevatedRollingTicks => _v210ElevatedRollingTicks;
+        internal int TestOnly_V210ElevatedRollingEpisodes => _v210ElevatedRollingEpisodes;
+        internal int TestOnly_V210ElevatedRollingMovingTicks => _v210ElevatedRollingMovingTicks;
+        internal int TestOnly_V210ElevatedRollingSlowTicks => _v210ElevatedRollingSlowTicks;
+        internal int TestOnly_V210ElevatedRollingMovingEpisodes => _v210ElevatedRollingMovingEpisodes;
+        internal int TestOnly_V210ElevatedRollingSlowEpisodes => _v210ElevatedRollingSlowEpisodes;
+        internal int TestOnly_V210ElevatedRollingPostAirborne => _v210ElevatedRollingPostAirborne;
+        internal int TestOnly_V210ElevatedRollingPostRolling => _v210ElevatedRollingPostRolling;
+        internal int TestOnly_V210ElevatedRollingPostOther => _v210ElevatedRollingPostOther;
+        internal float TestOnly_V210ElevatedRollingHeightSum => _v210ElevatedRollingHeightSum;
+        internal float TestOnly_V210ElevatedRollingSpeedSum => _v210ElevatedRollingSpeedSum;
+        internal float TestOnly_V210ElevatedRollingMaxHeight => _v210ElevatedRollingMaxHeight;
+        internal float TestOnly_V210ElevatedRollingMaxSpeed => _v210ElevatedRollingMaxSpeed;
+
         /// <summary>Test-only: whether the agent's routed TacticalContext designates it this team's
         /// loose-ball collector (§5.Z Phase H KD-H5 / ERR-008-014).</summary>
         internal bool TestOnly_LooseBallCollector(int agentId) =>
@@ -4692,10 +4725,47 @@ namespace TacticalDirector.MatchEngine
             // serialized and needs no exclusion-proof entry beyond this note.
             _prevTickBallPosition = _ball.Position;
 
+            // TEMPORARY EVIDENCE INSTRUMENT (Step 3.3): observe the raw state immediately before
+            // Ball Physics chooses a force model. The v2.10 / narrow-counterfactual difference is
+            // specifically whether a MOVING elevated Rolling state is reclassified here.
+            bool v210ElevatedRolling =
+                _ball.State == BallStateType.Rolling
+                && _ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold;
+            if (v210ElevatedRolling)
+            {
+                float v210Speed = _ball.Velocity.magnitude;
+                bool v210Slow = v210Speed < BallPhysicsConstants.State.MinVelocity;
+                _v210ElevatedRollingTicks++;
+                _v210ElevatedRollingHeightSum += _ball.Position.z;
+                _v210ElevatedRollingSpeedSum += v210Speed;
+                if (_ball.Position.z > _v210ElevatedRollingMaxHeight)
+                    _v210ElevatedRollingMaxHeight = _ball.Position.z;
+                if (v210Speed > _v210ElevatedRollingMaxSpeed)
+                    _v210ElevatedRollingMaxSpeed = v210Speed;
+
+                if (v210Slow) _v210ElevatedRollingSlowTicks++;
+                else _v210ElevatedRollingMovingTicks++;
+
+                if (!_v210ElevatedRollingPrevious)
+                {
+                    _v210ElevatedRollingEpisodes++;
+                    if (v210Slow) _v210ElevatedRollingSlowEpisodes++;
+                    else _v210ElevatedRollingMovingEpisodes++;
+                }
+            }
+            _v210ElevatedRollingPrevious = v210ElevatedRolling;
+
             // Ball: a null logger drops matchTime (the logger is its sole consumer — design note B2),
             // so no allocation and no non-load-bearing time enters the digest. No wind at Stage 0.
             BallPhysicsCore.UpdateBallPhysics(
                 ref _ball, dt, SurfaceType.GrassDry, Vector3.zero, logger: null, matchTime: 0f);
+
+            if (v210ElevatedRolling)
+            {
+                if (_ball.State == BallStateType.Airborne) _v210ElevatedRollingPostAirborne++;
+                else if (_ball.State == BallStateType.Rolling) _v210ElevatedRollingPostRolling++;
+                else _v210ElevatedRollingPostOther++;
+            }
 
             // ERR-001-005 / KD-4 — the goal frame is physical: a ball whose movement segment meets
             // a post or the crossbar rebounds (restitution + spin retention) instead of flying
