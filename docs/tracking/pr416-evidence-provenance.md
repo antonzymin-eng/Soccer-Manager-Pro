@@ -45,9 +45,9 @@ patch, the exact target SHA and patch identity are recorded instead.
 | Complete five-clause production union reverted to pinned-main behavior | `evidence/pr416-production-union-revert` | code commit `6d18442420ae77da0bfbcb26bacc9ec9ba1587d3`; workflow head `e28239b25bea5df190a38aefc099a2e029d47bfa` | `07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad`, with production semantics restored to `1bad655f5826070d1e29f54a845cdf2c549f66bc` | `35270645862` | All three original targets passed. This is the corrected union control; the three production files are the defining delta. |
 | Attempted StateMachine-pair removal from #416 | `evidence/pr416-no-state-machine-pair` | `48d19ceb40216a78479f3fbf7c71856c6f0f128c` | #416 `07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad`; intended equality target `1bad655f5826070d1e29f54a845cdf2c549f66bc` | `35283014828` | **VOID.** `Verify pair-removal diff` failed before focused tests; the separate residency job did not apply the ablation. |
 
-The first nine valid perturbation rows are the production-delta lattice. They establish the negative
-result already recorded in `w6-elevated-stationary-ball-fix.md`: no one-clause removal from full
-#416 restored the three-regression set; the complete union revert did.
+The nine valid perturbation rows (rows 2–10) are the production-delta lattice. They establish the
+negative result already recorded in `w6-elevated-stationary-ball-fix.md`: no one-clause removal
+from full #416 restored the three-regression set; the complete union revert did.
 
 ## 3. Exact defining production deltas
 
@@ -66,7 +66,8 @@ Full #416 control, `BallCollision.cs` blob
     ball.State = BallStateType.Airborne;
 ```
 
-The ablation arm restores the left-hand form. Pinned-main `BallCollision.cs` blob is
+The ablation arm restores the left-hand form. Its resulting `BallCollision.cs` blob is
+`9d990db8463cb6fb800633cd777d529fbad9b63c`; pinned-main `BallCollision.cs` blob is
 `18e2ae28e59b0523a34dcfdbe26dc673ab4bcc57`.
 
 ### 3.2 Pre-force normalization clause
@@ -151,7 +152,8 @@ delta to pinned-main behavior across:
 - `src/ball-physics/BallStateMachine.cs`.
 
 This arm is not shorthand for “undo some Ball Physics changes”; those three files, the code commit,
-and pinned-main reference above define the exact patch.
+and pinned-main reference above define the exact patch. At `6d184424…`, all three resulting source
+blobs are byte-identical to their pinned-main `1bad655f…` counterparts.
 
 ## 4. Measurement, mechanism, and candidate arms
 
@@ -160,8 +162,10 @@ and pinned-main reference above define the exact patch.
 | Controlled residency main vs #416 | `evidence/pr416-controlled-residency` | `33f3cbb530d42196300a84ad9f59b85abcdee1c6` | matrix refs `1bad655f…` and `07dcc670…` | `35278109980` | 150,000-tick two-seed residency; jobs `105393487824` / `105393488091`. Exact shares are already durable in the diagnosis file. |
 | Mechanism census main vs #416 | `evidence/pr416-mechanism-census` | branch later evolved to `b2079876c8daec0a90b29a837e3285d170ad093b`; run checked out exact matrix refs | matrix refs `1bad655f…` and `07dcc670…` | `35284452456` | Per-seed tackle census plus longest Controlled spell. Exact 97,682-tick HOLD record is already durable in the diagnosis file. |
 | Co-location perception runtime probe | `evidence/pr416-colocated-ball-visible` | current branch head `a23683568206423275c80e639f54ea0c80d2d36f` | runtime target refs `1bad655f…` and `07dcc670…` | `35285144898`, strict target confirmation `35285560809` | Temporary patch bypassed FoV angle only for exact XY co-location. First run emitted usable census but failed later on unrelated FM-03 log policing; second supplies strict target evidence. Production form later landed at `3a4a228495b73057684c727a55973c5072d7fdc1`. |
-| Rolling + pre-force candidate | `evidence/pr416-narrow-rolling-candidate` | `bb501a2128f9efbef5e98bffadb0d98214493e78` current head | rooted at `07dcc670…` | `35293636125` | Workflow composed `BallStateMachine.cs` blob `3297dd5a90c8881c510fa1869d34821d395f2a7f` + `BallPhysicsCore.cs` blob `5fbdb6b44b4f623311e122f72a1b4ccf20e4b228` while retaining `BallCollision.cs` blob `d58e69016875df3ba360b1364bf5d5a85e9b5766`. |
-| State-only pre-force candidate / low-speed Rolling isolation | `evidence/pr416-state-only-preforce-candidate` | `efa2f8946a9a6a8852946b97a8e4c7d55013b0bf` | rooted at `07dcc670…` | `35302289613` | Run explicitly checked out StateMachine blob `3297dd5a90c8881c510fa1869d34821d395f2a7f` while retaining BallPhysicsCore blob `b51e772bc4c9e8dd3f414d2ae372a6591294e7eb`. D1A6 longest Controlled spell was 1,064 ticks. |
+| Rolling + pre-force pair ablation | `evidence/pr416-mechanism-census` | `8784eb235757e9707aaa1b69872cb20324bc6633` | runtime base `07dcc670…`; workflow sources `evidence/pr416-no-rolling-focused` and `evidence/pr416-pre-force-normalization-ablation` | `35293636125` | Runtime composition was `BallStateMachine.cs` blob `3297dd5a90c8881c510fa1869d34821d395f2a7f` + `BallPhysicsCore.cs` blob `5fbdb6b44b4f623311e122f72a1b4ccf20e4b228` + `BallCollision.cs` blob `d58e69016875df3ba360b1364bf5d5a85e9b5766`. Mechanism census passed; focused regression failed the strict five-target TRX outcome enforcement, so this pair did not restore the required target set. |
+| Narrow Rolling candidate | `evidence/pr416-narrow-rolling-candidate` | `bb501a2128f9efbef5e98bffadb0d98214493e78` | rooted at `07dcc670…` | `35300926450` | Branch tree is `BallStateMachine.cs` blob `e739a3061c1b74faa7ac71a67da8b20d3690fed8` + `BallPhysicsCore.cs` blob `ce945b5736125f9ea9264632442617155e6b5af4` + `BallCollision.cs` blob `d58e69016875df3ba360b1364bf5d5a85e9b5766`: elevated Rolling promotion/pre-force recovery is narrowed to the low-speed stop path. Ball-physics, widened-corpus, and corrected-baseline-detector jobs passed; focused regression failed main-relative target enforcement. The workflow also locked the known broad high-speed Rolling contract conflict as an expected failure. |
+| State-only pre-force candidate | `evidence/pr416-state-only-preforce-candidate` | `6c89365da2abdd2d3ff697da34a55751edeb571f` | rooted at `07dcc670…` | `35301715589` | Branch tree is `BallStateMachine.cs` blob `4511b1cbace009175308b7ce32ec22a93d2b6375` + `BallPhysicsCore.cs` blob `b51e772bc4c9e8dd3f414d2ae372a6591294e7eb` + `BallCollision.cs` blob `d58e69016875df3ba360b1364bf5d5a85e9b5766`. Core pre-force recovery is Stationary-only while the state machine prevents a low-speed elevated Rolling ball from becoming Stationary. Focused-regression, ball-physics, widened-corpus, and corrected-baseline-detector jobs all passed. |
+| Low-speed Rolling isolation | `evidence/pr416-state-only-preforce-candidate` | `efa2f8946a9a6a8852946b97a8e4c7d55013b0bf` | candidate lineage through `6c89365d…`; runtime StateMachine sourced from `evidence/pr416-no-rolling-focused` | `35302289613` | Workflow replaced the branch StateMachine with blob `3297dd5a90c8881c510fa1869d34821d395f2a7f` while retaining `BallPhysicsCore.cs` blob `b51e772bc4c9e8dd3f414d2ae372a6591294e7eb` and `BallCollision.cs` blob `d58e69016875df3ba360b1364bf5d5a85e9b5766`. Isolation job passed; D1A6 longest Controlled spell was 1,064 ticks. |
 | Committed perception-fix focused validation | `evidence/pr416-final-validation` | `b2ea41e78ba9d77b339b76c7fb24f41f8df0d0d2` | production/test correction through `f92305b58cd8a8dc69d9b95e94d2bda04aa56201` | `35286222621` | Focused validation green; job `105419040400`. |
 | Live-head closure | helper surfaces on `fix/w6-elevated-stationary-ball`; `evidence/pr416-current-head-validation` remains as a wrapper branch | wrapper branch current head `9a7755f9422c07c04207d543512c3e5c32098ed9`; tested ref `a7f2b77af61c1d0b7138bfdfce21cd1772c91f26` | `a7f2b77…` | `35305911122` | Focused targets and save/restore assertions passed; three-seed spell/census values are durable in the diagnosis file. |
 | Corrected InPoss baseline | one-shot workflow subsequently retired from #416 | tested ref `a7f2b77af61c1d0b7138bfdfce21cd1772c91f26` | `a7f2b77…` | `35286928656` | 15,830 / 16,423 samples, shares 0.970815 / 0.964379, frozen 80% floors 12,664 / 13,138; values already durable in source comments and diagnosis. |
@@ -183,6 +187,8 @@ These runs are preserved because excluding failed harnesses is part of the causa
 | `35278057546` | Invalid workflow configuration; no jobs. |
 | `35278200848` | Runtime patch failed before tests. |
 | `35283014828` | Pair-removal diff guard failed before focused tests; residency leg was unablated. |
+| `35293636125` | Rolling + pre-force pair ablation: mechanism census passed, but focused regression failed strict five-target TRX outcome enforcement; non-certifying for target restoration. |
+| `35300926450` | Narrow Rolling candidate: ball-physics, widened-corpus, and corrected-baseline-detector jobs passed, but focused regression failed main-relative target enforcement; candidate did not restore the required focused target set. |
 | `35285015171` | Invalid co-location-probe workflow configuration; no jobs. |
 | `35285075938` | Co-location runtime patch guard failed before tests. |
 | `35285144898` | Co-location patch and census were usable, but the synthetic measurement test later failed unrelated FM-03 LogAssert teardown; not strict target evidence. |
@@ -205,8 +211,8 @@ conclusion is represented by the arm/run named above.
 | `evidence/pr416-final-head-7cc` | `4943cc84a850e5fa986989257f60c13232d6d083` | Intermediate exact-head focused-validation wrapper; superseded by committed-fix/live-head validation. |
 | `evidence/pr416-final-validation` | `b2ea41e78ba9d77b339b76c7fb24f41f8df0d0d2` | Committed perception-fix focused validation; run `35286222621`. |
 | `evidence/pr416-main-focused-census` | `53a8928d3a73fdf66ec3deac663ce541734dd390` | Main control helper; run `35224582571` executed earlier head `83a699f9…`. |
-| `evidence/pr416-mechanism-census` | `b2079876c8daec0a90b29a837e3285d170ad093b` | Mechanism/census helper lineage; primary run `35284452456`; later used by candidate workflows. |
-| `evidence/pr416-narrow-rolling-candidate` | `bb501a2128f9efbef5e98bffadb0d98214493e78` | Preserved Rolling+pre-force candidate; run `35293636125`. |
+| `evidence/pr416-mechanism-census` | `b2079876c8daec0a90b29a837e3285d170ad093b` | Mechanism/census helper lineage; primary run `35284452456`. Historical head `8784eb235757e9707aaa1b69872cb20324bc6633` drove rolling + pre-force pair-ablation run `35293636125`. |
+| `evidence/pr416-narrow-rolling-candidate` | `bb501a2128f9efbef5e98bffadb0d98214493e78` | Preserved narrow Rolling candidate; its own run is `35300926450`. The distinct pair-ablation run `35293636125` belongs to `mechanism-census@8784eb23…`. |
 | `evidence/pr416-no-release-control-focused` | `7c7f5bd63835600ddd9999388ed161e62f569ee4` | ReleaseBallControl ablation; run `35278313267`. |
 | `evidence/pr416-no-rolling-focused` | `9902a8a4a8dde13666a2997fa36decf6abeb3eb1` | Rolling-order removal; run `35272651902`; source blob `3297dd5a…`. |
 | `evidence/pr416-no-state-machine-pair` | `48d19ceb40216a78479f3fbf7c71856c6f0f128c` | Failed pair-removal arm; run `35283014828` is void. |
@@ -217,7 +223,7 @@ conclusion is represented by the arm/run named above.
 | `evidence/pr416-rolling-order-focused` | `ce5bb0f1eb66e3b55af82c65e8c1800250c168f4` | Rolling-order clause alone; run `35271049186`. |
 | `evidence/pr416-shot-fm03-severity` | `d06e9b067bd9936d246dd42a4312a5d6ac9444f9` | Diagnostic/helper lineage for FM-03 and widened tackle census; no separate production conclusion retained. |
 | `evidence/pr416-state-machine-pair-focused` | `1875a6cffc25cb68ef9df577898e9e3ce8701c5d` | Exact StateMachine pair alone; run `35272495848`. |
-| `evidence/pr416-state-only-preforce-candidate` | `efa2f8946a9a6a8852946b97a8e4c7d55013b0bf` | Preserved low-speed Rolling isolation arm; run `35302289613`. |
+| `evidence/pr416-state-only-preforce-candidate` | `efa2f8946a9a6a8852946b97a8e4c7d55013b0bf` | Preserved candidate lineage: state-only pre-force candidate `6c89365d…` / blob `4511b1cb…` / run `35301715589`, followed by low-speed Rolling isolation run `35302289613` at the current head. |
 | `evidence/pr416-stationary-state-focused` | `3d4854517ef5b128516f21acdc981564f2ab57c9` | Stationary-promotion clause alone; run `35272069065`. |
 
 ## 7. Actions-log retention rule
