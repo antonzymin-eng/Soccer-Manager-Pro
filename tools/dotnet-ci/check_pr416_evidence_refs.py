@@ -28,6 +28,13 @@ CITED_DOCS = (
 EXPECTED_MANIFEST_ROWS = 100
 EXPECTED_DISPOSITION_ROWS = 24
 EXPECTED_RUN_ROWS = 31
+EXPECTED_KIND_COUNTS = {"current": 72, "run": 13, "history": 15}
+EXPECTED_POLICY_REFS = {
+    "evidence/pr416-close-chance-retirement",
+    "evidence/pr416-narrow-rolling-candidate",
+    "evidence/pr416-state-only-preforce-candidate",
+}
+EXPECTED_BRANCH_EXCLUSIVE_BLOB_INSTANCES = 266
 EXPECTED_DISPOSITIONS = {"deletable": 21, "retain": 0, "policy-retained": 3}
 
 
@@ -98,38 +105,29 @@ def live_evidence_refs(repo: Path) -> set[str]:
 
 
 def changed_blob_instances(repo: Path, ref: str, main_ref: str) -> list[BlobInstance]:
-    """Return every historical state of every path changed in the ref-exclusive history.
+    """Return branch-differing blob states at every ref-exclusive commit.
 
-    This deliberately evaluates the full changed-path set at every exclusive commit,
-    not only the path(s) modified by that individual commit. That makes intermediate
-    tree states explicit and prevents a later commit from hiding an earlier state.
+    Each exclusive commit is compared directly to the branch merge base. A path
+    therefore contributes an instance exactly while its blob state differs from
+    the merge-base tree. This retains intermediate branch-only states without
+    counting paths before they change or after they revert to the base state.
     """
     remote = remote_ref(ref)
     merge_base = git(repo, "merge-base", main_ref, remote).stdout.strip()
     commits = git(repo, "rev-list", "--reverse", f"{merge_base}..{remote}").stdout.splitlines()
-    changed_paths: set[str] = set()
-
-    for commit in commits:
-        parent_line = git(repo, "rev-list", "--parents", "-n", "1", commit).stdout.split()
-        if len(parent_line) <= 1:
-            changed_paths.update(
-                git(repo, "ls-tree", "-r", "--name-only", commit).stdout.splitlines()
-            )
-        else:
-            changed_paths.update(
-                git(
-                    repo,
-                    "diff",
-                    "--no-renames",
-                    "--name-only",
-                    parent_line[1],
-                    commit,
-                ).stdout.splitlines()
-            )
 
     instances: list[BlobInstance] = []
     for commit in commits:
-        for path in sorted(changed_paths):
+        paths = git(
+            repo,
+            "diff",
+            "--no-renames",
+            "--name-only",
+            merge_base,
+            commit,
+            "--",
+        ).stdout.splitlines()
+        for path in sorted(set(paths)):
             blob = resolve(repo, f"{commit}:{path}")
             if blob is None:
                 continue
@@ -137,7 +135,6 @@ def changed_blob_instances(repo: Path, ref: str, main_ref: str) -> list[BlobInst
                 instances.append(BlobInstance(ref, commit, path, blob))
 
     return instances
-
 
 def reachable_blobs(repo: Path, refs: list[str]) -> set[str]:
     object_lines = git(repo, "rev-list", "--objects", *refs).stdout.splitlines()
