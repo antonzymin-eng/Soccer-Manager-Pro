@@ -192,7 +192,7 @@ def _validate_archive_path(path: str) -> None:
         raise CheckError(f"invalid archive path shape: {path}")
 
 
-def normalized_disposition_counts(
+def _normalize_disposition_counts(
     rows: list[dict[str, str]],
 ) -> tuple[dict[str, int], list[str]]:
     counts = Counter(row["disposition"] for row in rows)
@@ -253,12 +253,10 @@ def gate_b(
             f"disposition rows={len(disposition)} expected={EXPECTED_DISPOSITION_ROWS}"
         )
     disposition_counts = Counter(row["disposition"] for row in disposition)
-    normalized_disposition_counts, unknown_dispositions = normalized_disposition_counts(
-        disposition
-    )
-    if normalized_disposition_counts != EXPECTED_DISPOSITION_COUNTS or unknown_dispositions:
+    normalized_counts, unknown_dispositions = _normalize_disposition_counts(disposition)
+    if normalized_counts != EXPECTED_DISPOSITION_COUNTS or unknown_dispositions:
         errors.append(
-            f"disposition counts={normalized_disposition_counts} "
+            f"disposition counts={normalized_counts} "
             f"unknown={unknown_dispositions} expected={EXPECTED_DISPOSITION_COUNTS}"
         )
     policy_refs = {
