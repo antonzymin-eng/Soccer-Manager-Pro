@@ -2,7 +2,7 @@
 
 > **Created:** September 18, 2026
 > **Purpose:** Preserve branch-only PR #416 evidence before any disposable `evidence/pr416-*` ref is deleted.
-> **Status:** Step 5 archival candidate. This archive does **not** by itself authorize ref deletion.
+> **Status:** Step 5 post-deletion verification candidate. The 21 refs classified `deletable` have now been removed from the live remote by an external deletion action; this PR did not perform that deletion. The three policy-retained refs remain live at their recorded heads. This revision must land so the repository's durable gate understands and enforces that three-ref post-delete topology.
 
 ## Archived material
 
@@ -54,7 +54,7 @@ The three policy-retained refs remain:
 - `evidence/pr416-narrow-rolling-candidate`
 - `evidence/pr416-state-only-preforce-candidate`
 
-Every row still has `delete_now=false`.
+All **21** `deletable` rows are `delete_now=true`; the **3** `policy-retained` rows remain `false`. Mixed or partial authorization is invalid.
 
 ## Verification before deletion
 
@@ -80,6 +80,12 @@ For every ref proposed for deletion:
 This gate must fail closed on any missing ref, commit, path, blob, or run mapping. It cannot be
 reconstructed from `main` alone after the refs are deleted.
 
+The checker has two explicit live topologies. Before deletion, all 24 recorded refs must exist at
+their recorded heads. After deletion is authorized and completed, exactly the three
+`policy-retained` refs must remain; any partial 4–23-ref state fails closed. CI invokes Gate A with
+`--require-authorized`, so a later rollback of the 21 `delete_now=true` rows to `false` is a gate
+failure rather than a valid steady state.
+
 ### B. Mainline archive integrity and interpretive reconstruction — after this archive lands
 
 From `main` alone, verify that:
@@ -98,4 +104,10 @@ reconstruction. It does **not** reconstruct full Git commit identity such as aut
 complete co-change topology, and it does **not** prove historical completeness; only the live-ref
 gate can do that.
 
-Only a ref that passes both gates and is still classified `deletable` may be deletion-authorized.
+Only a ref that passes both gates, remains classified `deletable`, and has `delete_now=true` may be deleted. The 21 deletion candidates transition as one atomic authorization set; partial authorization is invalid.
+
+The live 21-ref deletion has already occurred outside this PR after the earlier exact-head Gate A
+proof. The current post-delete gate now verifies that exactly the three policy-retained refs remain
+at their recorded heads; any candidate ref reappearing, any retained ref disappearing, or any
+partial topology fails closed. For any future analogous deletion, re-run pre-delete Gate A immediately
+before deletion and protect each remote delete with its recorded expected-head lease.
