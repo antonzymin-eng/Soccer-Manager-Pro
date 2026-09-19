@@ -241,6 +241,18 @@ def common_checks(
     if len(runs) != EXPECTED_RUN_ROWS:
         errors.append(f"run-head rows {len(runs)} != {EXPECTED_RUN_ROWS}")
 
+    kind_counts: dict[str, int] = defaultdict(int)
+    for row in manifest:
+        kind_counts[row.get("kind", "")] += 1
+    for kind, expected in EXPECTED_KIND_COUNTS.items():
+        if kind_counts.get(kind, 0) != expected:
+            errors.append(
+                f"manifest kind {kind}: {kind_counts.get(kind, 0)} != {expected}"
+            )
+    unexpected_kinds = set(kind_counts) - set(EXPECTED_KIND_COUNTS)
+    if unexpected_kinds:
+        errors.append(f"unexpected manifest kind values: {sorted(unexpected_kinds)}")
+
     counts: dict[str, int] = defaultdict(int)
     refs_seen: set[str] = set()
     for row in dispositions:
@@ -260,6 +272,17 @@ def common_checks(
     unexpected = set(counts) - set(EXPECTED_DISPOSITIONS)
     if unexpected:
         errors.append(f"unexpected disposition values: {sorted(unexpected)}")
+
+    policy_refs = {
+        row["ref"]
+        for row in dispositions
+        if row.get("disposition") == "policy-retained"
+    }
+    if policy_refs != EXPECTED_POLICY_REFS:
+        errors.append(
+            f"policy-retained refs {sorted(policy_refs)} != "
+            f"{sorted(EXPECTED_POLICY_REFS)}"
+        )
 
     archive_paths: set[str] = set()
     for row in manifest:
@@ -320,11 +343,17 @@ def common_checks(
         run_row = run_by_id.get(run_id)
         if run_row is None:
             errors.append(f"run snapshot {run_id}: no run-head row")
-        elif run_row.get("head_sha") != row.get("source_head"):
-            errors.append(
-                f"run snapshot {run_id}: source_head {row.get('source_head')} "
-                f"!= run head {run_row.get('head_sha')}"
-            )
+        else:
+            if run_row.get("head_sha") != row.get("source_head"):
+                errors.append(
+                    f"run snapshot {run_id}: source_head {row.get('source_head')} "
+                    f"!= run head {run_row.get('head_sha')}"
+                )
+            if run_row.get("head_branch") != row.get("source_ref"):
+                errors.append(
+                    f"run snapshot {run_id}: source_ref {row.get('source_ref')} "
+                    f"!= run branch {run_row.get('head_branch')}"
+                )
 
     return errors, manifest, dispositions, runs
 
