@@ -14,6 +14,9 @@ on:
     paths:
       - 'tools/dotnet-ci/check_pr416_evidence_refs.py'
       - '.github/workflows/pr416-evidence-ref-gate.yml'
+      - 'docs/tracking/evidence/pr416-ref-archive/**'
+      - 'docs/tracking/pr416-evidence-provenance.md'
+      - 'docs/tracking/w6-elevated-stationary-ball-fix.md'
   workflow_dispatch:
 
 permissions:
