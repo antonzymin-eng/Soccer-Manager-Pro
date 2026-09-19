@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +13,7 @@ SCRIPT = ROOT / "tools" / "dotnet-ci" / "check_pr416_evidence_refs.py"
 _spec = importlib.util.spec_from_file_location("check_pr416_evidence_refs", SCRIPT)
 assert _spec and _spec.loader
 checker = importlib.util.module_from_spec(_spec)
+sys.modules[_spec.name] = checker
 _spec.loader.exec_module(checker)
 
 
