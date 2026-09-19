@@ -5,8 +5,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
+import os
 import re
 import subprocess
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from collections import defaultdict
 from dataclasses import dataclass
@@ -164,6 +168,54 @@ def reachable_blobs(repo: Path, refs: list[str]) -> set[str]:
     }
 
 
+
+def verify_actions_metadata(runs: list[dict[str, str]]) -> list[str]:
+    """Cross-check the durable run ledger against authoritative GitHub Actions metadata."""
+    errors: list[str] = []
+    token = os.environ.get("GITHUB_TOKEN", "")
+    repository = os.environ.get("GITHUB_REPOSITORY", "")
+    api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+    if not token or not repository:
+        return ["Actions metadata verification requires GITHUB_TOKEN and GITHUB_REPOSITORY"]
+
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "pr416-evidence-ref-gate",
+    }
+    fields = (
+        ("head_branch", "head_branch"),
+        ("head_sha", "head_sha"),
+        ("event", "event"),
+        ("conclusion", "conclusion"),
+        ("workflow_name", "name"),
+    )
+
+    for row in runs:
+        run_id = row["run_id"]
+        request = urllib.request.Request(
+            f"{api_url}/repos/{repository}/actions/runs/{run_id}",
+            headers=headers,
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                payload = json.load(response)
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as exc:
+            errors.append(f"run {run_id}: Actions API lookup failed: {exc}")
+            continue
+
+        for ledger_key, api_key in fields:
+            expected = row.get(ledger_key, "")
+            actual_value = payload.get(api_key)
+            actual = "" if actual_value is None else str(actual_value)
+            if actual != expected:
+                errors.append(
+                    f"run {run_id}: Actions {api_key} {actual!r} != ledger {expected!r}"
+                )
+
+    return errors
+
 def cited_run_ids(repo: Path) -> set[str]:
     pattern = re.compile(r"\b35\d{9}\b")
     ids: set[str] = set()
@@ -289,7 +341,9 @@ def validate_archive(repo: Path) -> list[str]:
     return errors
 
 
-def validate_live(repo: Path, main_ref: str) -> list[str]:
+def validate_live(
+    repo: Path, main_ref: str, verify_actions_api: bool = False
+) -> list[str]:
     errors, manifest, dispositions, runs = common_checks(repo)
     if errors:
         return errors
@@ -414,6 +468,9 @@ def validate_live(repo: Path, main_ref: str) -> list[str]:
                     f"run {row['run_id']}: {sha} is not an ancestor of {main_ref}"
                 )
 
+    if verify_actions_api:
+        errors.extend(verify_actions_metadata(runs))
+
     policy_refs = [
         remote_ref(row["ref"])
         for row in dispositions
@@ -475,6 +532,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repo", default=".", help="repository root")
     parser.add_argument("--mode", choices=("live", "archive", "all"), default="all")
     parser.add_argument("--main-ref", default="refs/remotes/origin/main")
+    parser.add_argument(
+        "--verify-actions-api",
+        action="store_true",
+        help="cross-check run-heads.tsv against GitHub Actions API metadata",
+    )
     args = parser.parse_args(argv)
 
     repo = Path(args.repo).resolve()
@@ -484,7 +546,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.mode in ("archive", "all"):
             errors.extend(validate_archive(repo))
         if args.mode in ("live", "all"):
-            errors.extend(validate_live(repo, args.main_ref))
+            errors.extend(
+                validate_live(repo, args.main_ref, args.verify_actions_api)
+            )
     except (OSError, RuntimeError, ValueError, KeyError) as exc:
         errors.append(str(exc))
 
