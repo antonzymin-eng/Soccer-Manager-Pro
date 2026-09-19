@@ -2,7 +2,7 @@
 
 > **Created:** September 18, 2026
 > **Purpose:** Preserve branch-only PR #416 evidence before any disposable `evidence/pr416-*` ref is deleted.
-> **Status:** Step 5 deletion authorization candidate. The 21 refs classified `deletable` are marked `delete_now=true` as one atomic set; the three policy-retained refs remain `false`. This transition becomes effective only after this exact revision passes both deletion gates and lands.
+> **Status:** Step 5 post-deletion verification candidate. The 21 refs classified `deletable` have now been removed from the live remote by an external deletion action; this PR did not perform that deletion. The three policy-retained refs remain live at their recorded heads. This revision must land so the repository's durable gate understands and enforces that three-ref post-delete topology.
 
 ## Archived material
 
@@ -106,10 +106,8 @@ gate can do that.
 
 Only a ref that passes both gates, remains classified `deletable`, and has `delete_now=true` may be deleted. The 21 deletion candidates transition as one atomic authorization set; partial authorization is invalid.
 
-Immediately before deletion, re-run Gate A with `--live-state pre-delete --require-authorized` so
-all 21 candidate heads are revalidated against the recorded `current_head` values. Delete each
-remote ref with an expected-head lease rather than an unconditional delete (for Git, use
-`--force-with-lease=refs/heads/<ref>:<current_head>` with the deletion refspec). This makes a ref
-move between authorization and deletion fail rather than silently deleting a new head. After the
-batch, run Gate A with `--live-state post-delete --require-authorized`; exactly the three
-policy-retained refs must remain.
+The live 21-ref deletion has already occurred outside this PR after the earlier exact-head Gate A
+proof. The current post-delete gate now verifies that exactly the three policy-retained refs remain
+at their recorded heads; any candidate ref reappearing, any retained ref disappearing, or any
+partial topology fails closed. For any future analogous deletion, re-run pre-delete Gate A immediately
+before deletion and protect each remote delete with its recorded expected-head lease.
