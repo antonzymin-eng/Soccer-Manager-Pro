@@ -3,6 +3,7 @@
 **Date:** September 15–18, 2026
 **Status:** CLOSED FOR PR #416; REQUIRED CI GREEN; OWNER-HELD CLOSE-CHANCE DISPOSITION UNCHANGED
 **Scope:** Ball Physics #1 state invariant exposed by W6 physical Controlled possession, plus permanent hardening of the existing two-seed `sim_match_engine_inposs_gate` after W2 production activation.
+**Durable evidence provenance:** `docs/tracking/pr416-evidence-provenance.md` records the exact post-merge arm/ref/run/patch provenance for this investigation and must be consulted before deleting disposable `evidence/pr416-*` refs.
 
 
 ## September 18 final CI disposition

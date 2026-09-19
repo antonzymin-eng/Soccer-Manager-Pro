@@ -1,0 +1,181 @@
+name: PR416 no-StateMachine-pair focused
+
+on:
+  push:
+    branches:
+      - evidence/pr416-no-state-machine-pair
+    paths:
+      - .github/workflows/pr416-no-state-machine-pair.yml
+
+permissions:
+  contents: read
+
+jobs:
+  focused-regression:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test_name:
+          - AControlledCarrierIsActuallyDispossessed
+          - BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose
+          - TacklesHappenInComposedPlay
+          - ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice
+          - sim_match_engine_shot_outcomes
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Verify pair-removal diff
+        run: |
+          git diff --check 07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad -- src/ball-physics/BallStateMachine.cs
+          git diff --exit-code 1bad655f5826070d1e29f54a845cdf2c549f66bc -- src/ball-physics/BallStateMachine.cs || {
+            echo 'BallStateMachine differs textually from pinned main; checking semantic diff excluding line endings'
+            python3 - <<'PY'
+          import subprocess
+          current = open('src/ball-physics/BallStateMachine.cs', newline=None).read()
+          main = subprocess.check_output(['git','show','1bad655f5826070d1e29f54a845cdf2c549f66bc:src/ball-physics/BallStateMachine.cs']).decode().replace('\r\n','\n')
+          assert current.replace('\r\n','\n') == main, 'pair-removal file is not pinned-main BallStateMachine semantics'
+          PY
+          }
+      - name: Generate projects and restore
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run focused MatchEngine target
+        shell: bash
+        run: |
+          set +e
+          out="artifacts/pr416-no-state-machine-pair-${{ matrix.test_name }}"
+          mkdir -p "$out"
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=${{ matrix.test_name }}" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=${{ matrix.test_name }}.trx" \
+            --results-directory "$out" \
+            2>&1 | tee "$out/console.log"
+          dotnet_status=${PIPESTATUS[0]}
+          python3 - "$out/${{ matrix.test_name }}.trx" "${{ matrix.test_name }}" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          path, name = sys.argv[1:]
+          root = ET.parse(path).getroot()
+          rows = [e for e in root.iter() if e.tag.endswith('UnitTestResult') and e.attrib.get('testName', '').endswith(name)]
+          if len(rows) != 1:
+              print(f'TARGET_RESULT {name} AMBIGUOUS count={len(rows)}')
+              sys.exit(2)
+          outcome = rows[0].attrib.get('outcome', '<missing>')
+          print(f'TARGET_RESULT {name} {outcome}')
+          if outcome != 'Passed':
+              sys.exit(1)
+          PY
+          trx_status=$?
+          if [ "$dotnet_status" -ne 0 ] || [ "$trx_status" -ne 0 ]; then
+            exit 1
+          fi
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-no-state-machine-pair-${{ matrix.test_name }}-${{ github.run_id }}
+          path: artifacts/pr416-no-state-machine-pair-${{ matrix.test_name }}/
+          if-no-files-found: error
+
+  controlled-residency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Add temporary Controlled-residency measurement
+        run: |
+          cat > src/match-engine/tests/Pr416ControlledResidencyEvidenceTests.cs <<'CS'
+          using NUnit.Framework;
+          using TacticalDirector.BallPhysics;
+          using TacticalDirector.DefensiveAI;
+          using TacticalDirector.DeterministicSim;
+          using TacticalDirector.PlayerDatabase;
+
+          namespace TacticalDirector.MatchEngine
+          {
+              [TestFixture]
+              internal sealed class Pr416ControlledResidencyEvidenceTests
+              {
+                  private const int Ticks = 150_000;
+                  private static readonly ulong[] Seeds =
+                  {
+                      0x0F1E2D3C4B5A6978UL,
+                      0x00000000D1A6D05EUL,
+                  };
+
+                  private static Squad BuildSquad(ulong seed, int clubId)
+                  {
+                      var rng = new DeterministicRngService(seed ^ (ulong)clubId);
+                      int stream = rng.RegisterStream("tackle.roster", SubsystemOrdinals.PlayerDatabase, entityId: clubId, streamVersion: 1);
+                      var template = new PlayerPosition[PlayerDatabaseConstants.CLUB_SQUAD_SIZE];
+                      int i = 0;
+                      for (int k = 0; k < 3; k++) template[i++] = PlayerPosition.Goalkeeper;
+                      for (int k = 0; k < 8; k++) template[i++] = PlayerPosition.Defender;
+                      for (int k = 0; k < 8; k++) template[i++] = PlayerPosition.Midfielder;
+                      while (i < template.Length) template[i++] = PlayerPosition.Forward;
+                      return RosterGenerator.Generate(rng, stream, clubId, template);
+                  }
+
+                  private static MatchEngine Booted(ulong seed)
+                  {
+                      var engine = new MatchEngine(seed);
+                      engine.ConfigureSquads(BuildSquad(seed, 1), BuildSquad(seed, 2));
+                      return engine;
+                  }
+
+                  [Test]
+                  public void MeasureControlledResidency()
+                  {
+                      long pooledControlled = 0, pooledHolder = 0, pooledBoth = 0, pooledTicks = 0;
+                      foreach (ulong seed in Seeds)
+                      {
+                          MatchEngine engine = Booted(seed);
+                          long controlled = 0, holder = 0, both = 0;
+                          for (int t = 0; t < Ticks; t++)
+                          {
+                              engine.RunTick();
+                              bool isControlled = engine.TestOnly_BallSnapshot.State == BallStateType.Controlled;
+                              bool hasHolder = engine.PossessingAgentId != MatchEngineConstants.NO_POSSESSION;
+                              if (isControlled) controlled++;
+                              if (hasHolder) holder++;
+                              if (isControlled && hasHolder) both++;
+                          }
+                          pooledControlled += controlled; pooledHolder += holder; pooledBoth += both; pooledTicks += Ticks;
+                          TestContext.WriteLine($"CONTROLLED_RESIDENCY seed=0x{seed:X16} ticks={Ticks} controlled={controlled} controlledShare={(double)controlled / Ticks:F9} holder={holder} holderShare={(double)holder / Ticks:F9} controlledWithHolder={both} controlledWithHolderShare={(double)both / Ticks:F9}");
+                      }
+                      TestContext.WriteLine($"CONTROLLED_RESIDENCY pooled ticks={pooledTicks} controlled={pooledControlled} controlledShare={(double)pooledControlled / pooledTicks:F9} holder={pooledHolder} holderShare={(double)pooledHolder / pooledTicks:F9} controlledWithHolder={pooledBoth} controlledWithHolderShare={(double)pooledBoth / pooledTicks:F9}");
+                      Assert.Pass("measurement complete");
+                  }
+              }
+          }
+          CS
+      - name: Generate projects and restore
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run residency measurement
+        run: |
+          set -o pipefail
+          out=artifacts/pr416-no-state-machine-pair-residency
+          mkdir -p "$out"
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=MeasureControlledResidency" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=controlled-residency.trx" \
+            --results-directory "$out" \
+            2>&1 | tee "$out/console.log"
+      - name: Upload residency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-no-state-machine-pair-residency-${{ github.run_id }}
+          path: artifacts/pr416-no-state-machine-pair-residency/
+          if-no-files-found: error
