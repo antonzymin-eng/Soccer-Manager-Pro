@@ -6,6 +6,9 @@ on:
     paths:
       - 'tools/dotnet-ci/check_pr416_evidence_refs.py'
       - '.github/workflows/pr416-evidence-ref-gate.yml'
+      - 'docs/tracking/evidence/pr416-ref-archive/**'
+      - 'docs/tracking/pr416-evidence-provenance.md'
+      - 'docs/tracking/w6-elevated-stationary-ball-fix.md'
   push:
     branches: [main]
     paths:
@@ -14,6 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -33,11 +37,14 @@ jobs:
             '+refs/heads/evidence/pr416-*:refs/remotes/origin/evidence/pr416-*'
 
       - name: Gate A - live-ref full-history completeness
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           python3 tools/dotnet-ci/check_pr416_evidence_refs.py \
             --repo . \
             --mode live \
-            --main-ref refs/remotes/origin/main
+            --main-ref refs/remotes/origin/main \
+            --verify-actions-api
 
       - name: Gate B - archive integrity and reconstruction
         run: |
