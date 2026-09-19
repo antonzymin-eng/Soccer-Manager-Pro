@@ -58,4 +58,6 @@ jobs:
             --repo . \
             --mode live \
             --main-ref refs/remotes/origin/main \
+            --live-state auto \
+            --require-authorized \
             --verify-actions-api
