@@ -260,9 +260,18 @@ def common_checks(
         if not ref or ref in refs_seen:
             errors.append(f"duplicate/empty disposition ref: {ref!r}")
         refs_seen.add(ref)
-        counts[row.get("disposition", "")] += 1
-        if row.get("delete_now") != "false":
-            errors.append(f"{ref}: delete_now must remain false before deletion authorization")
+        disposition = row.get("disposition", "")
+        counts[disposition] += 1
+        delete_now = row.get("delete_now", "")
+        if disposition == "deletable":
+            if delete_now not in {"false", "true"}:
+                errors.append(
+                    f"{ref}: deletable delete_now must be exactly true or false"
+                )
+        elif delete_now != "false":
+            errors.append(
+                f"{ref}: only refs classified deletable may be deletion-authorized"
+            )
 
     for disposition, expected in EXPECTED_DISPOSITIONS.items():
         if counts.get(disposition, 0) != expected:
@@ -272,6 +281,17 @@ def common_checks(
     unexpected = set(counts) - set(EXPECTED_DISPOSITIONS)
     if unexpected:
         errors.append(f"unexpected disposition values: {sorted(unexpected)}")
+
+    deletable_delete_states = {
+        row.get("delete_now", "")
+        for row in dispositions
+        if row.get("disposition") == "deletable"
+    }
+    if deletable_delete_states != {"false"} and deletable_delete_states != {"true"}:
+        errors.append(
+            "deletable refs must transition delete_now atomically; "
+            f"states={sorted(deletable_delete_states)}"
+        )
 
     policy_refs = {
         row["ref"]
