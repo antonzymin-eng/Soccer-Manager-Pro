@@ -368,5 +368,5 @@ state fails closed. CI requires the 21 `delete_now=true` values, so reverting au
 in pre-delete mode; each remote deletion must be protected by its recorded head SHA (for Git,
 `--force-with-lease=refs/heads/<ref>:<current_head>`) so a moved ref is rejected rather than
 silently deleted. After the batch, post-delete mode must pass with exactly the three policy refs.
-The cleanup issue remains open until that deletion and post-delete verification complete.
+The 21 disposable refs were subsequently removed by an external deletion action while this authorization PR remained open. On the revised PR head, Gate A resolved the live state as post-delete and passed with exactly **3 refs / 21 deleted / 3 policy / authorized=True**; all three retained refs matched their recorded heads. This PR did not perform the deletion. The cleanup issue remains open only until this post-delete-capable gate and durable record land on `main`.
 
