@@ -1,0 +1,61 @@
+name: PR416 evidence-ref deletion gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/dotnet-ci/check_pr416_evidence_refs.py'
+      - '.github/workflows/pr416-evidence-ref-gate.yml'
+      - 'docs/tracking/evidence/pr416-ref-archive/**'
+      - 'docs/tracking/pr416-evidence-provenance.md'
+      - 'docs/tracking/w6-elevated-stationary-ball-fix.md'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/dotnet-ci/check_pr416_evidence_refs.py'
+      - '.github/workflows/pr416-evidence-ref-gate.yml'
+      - 'docs/tracking/evidence/pr416-ref-archive/**'
+      - 'docs/tracking/pr416-evidence-provenance.md'
+      - 'docs/tracking/w6-elevated-stationary-ball-fix.md'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  evidence-ref-gate:
+    name: PR416 evidence-ref deletion gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch live PR416 evidence refs
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin \
+            '+refs/heads/main:refs/remotes/origin/main' \
+            '+refs/heads/evidence/pr416-*:refs/remotes/origin/evidence/pr416-*'
+
+      - name: Gate B - durable-main archive integrity and reconstruction
+        run: |
+          set -euo pipefail
+          main_worktree="$RUNNER_TEMP/pr416-step5-main"
+          rm -rf "$main_worktree"
+          git worktree add --detach "$main_worktree" refs/remotes/origin/main
+          python3 tools/dotnet-ci/check_pr416_evidence_refs.py \
+            --repo "$main_worktree" \
+            --mode archive \
+            --main-ref refs/remotes/origin/main
+
+      - name: Gate A - live-ref full-history completeness
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/dotnet-ci/check_pr416_evidence_refs.py \
+            --repo . \
+            --mode live \
+            --main-ref refs/remotes/origin/main \
+            --verify-actions-api
