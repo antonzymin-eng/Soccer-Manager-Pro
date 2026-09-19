@@ -16,6 +16,7 @@ FIELD_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.-]*")
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--ledger", type=Path, required=True)
+    parser.add_argument("--ordinary-results", type=Path, required=True)
     parser.add_argument("--results", type=Path, required=True)
     parser.add_argument("--dotnet-exit", type=int, required=True)
     return parser.parse_args()
@@ -62,18 +63,30 @@ def load_ledger(path: Path) -> dict[str, tuple[tuple[str, str], ...]]:
     return entries
 
 
-def collect_results(results_dir: Path) -> list[tuple[str, str, str]]:
+def collect_results(results_dir: Path, label: str) -> list[tuple[str, str, str]]:
+    trx_files = sorted(results_dir.rglob("*.trx"))
+    if not trx_files:
+        raise ValueError(f"{label} capture has no TRX files: {results_dir}")
+
     found: list[tuple[str, str, str]] = []
-    for trx in sorted(results_dir.rglob("*.trx")):
-        root = ET.parse(trx).getroot()
+    for trx in trx_files:
+        try:
+            root = ET.parse(trx).getroot()
+        except (ET.ParseError, OSError) as exc:
+            raise ValueError(f"{label} capture contains malformed TRX {trx}: {exc}") from exc
         for elem in root.iter():
             if not elem.tag.endswith("UnitTestResult"):
                 continue
             name = elem.attrib.get("testName", "")
             outcome = elem.attrib.get("outcome", "")
+            if not name or not outcome:
+                raise ValueError(
+                    f"{label} capture contains UnitTestResult without testName/outcome: {trx}"
+                )
             body = normalize(" ".join(elem.itertext()))
-            if name:
-                found.append((name, outcome, body))
+            found.append((name, outcome, body))
+    if not found:
+        raise ValueError(f"{label} capture contains no executed test results: {results_dir}")
     return found
 
 
@@ -83,15 +96,22 @@ def method_leaf(test_name: str) -> str:
     return without_args.rsplit(".", 1)[-1]
 
 
-def find_result(
+def matching_results(
     expected_name: str,
     results: list[tuple[str, str, str]],
-) -> tuple[int, str, str] | None:
-    matches = [
+) -> list[tuple[int, str, str]]:
+    return [
         (index, outcome, body)
         for index, (actual_name, outcome, body) in enumerate(results)
         if actual_name == expected_name or method_leaf(actual_name) == expected_name
     ]
+
+
+def find_result(
+    expected_name: str,
+    results: list[tuple[str, str, str]],
+) -> tuple[int, str, str] | None:
+    matches = matching_results(expected_name, results)
     if len(matches) == 1:
         return matches[0]
     return None
@@ -122,20 +142,49 @@ def main() -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
-    results = collect_results(args.results)
     if not ledger:
-        print("Owner-held RED ledger empty.")
-        return 0
+        print("ERROR: owner-held RED ledger is empty.", file=sys.stderr)
+        return 2
+
+    try:
+        ordinary_results = collect_results(args.ordinary_results, "ordinary sweep")
+        results = collect_results(args.results, "owner-held")
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+
+    # This is a TRX-record count across all outcomes (Passed/Failed/Skipped/etc.),
+    # not the console's passed-test cardinality. Isolation is established only by
+    # the exact-name multiplicity checks below.
+    print(
+        f"TRX RESULT RECORDS (all outcomes; not pass cardinality): "
+        f"ordinary_records={len(ordinary_results)} "
+        f"owner_held_records={len(results)}"
+    )
 
     matched_indexes: set[int] = set()
     failed_expected = 0
     for name, expectations in ledger.items():
-        result = find_result(name, results)
-        if result is None:
-            print(f"ERROR: owner-held RED result missing or ambiguous: {name}", file=sys.stderr)
+        ordinary_matches = matching_results(name, ordinary_results)
+        if ordinary_matches:
+            print(
+                f"ERROR: owner-held RED leaked into ordinary sweep: {name} "
+                f"occurred {len(ordinary_matches)} time(s).",
+                file=sys.stderr,
+            )
             return 1
-        index, outcome, body = result
+
+        dedicated_matches = matching_results(name, results)
+        if len(dedicated_matches) != 1:
+            print(
+                f"ERROR: owner-held RED result missing or ambiguous: {name}; "
+                f"dedicated occurrences={len(dedicated_matches)}",
+                file=sys.stderr,
+            )
+            return 1
+        index, outcome, body = dedicated_matches[0]
         matched_indexes.add(index)
+        print(f"OWNER-HELD ISOLATION: {name} ordinary=0 dedicated=1")
         if outcome == "Passed":
             print(
                 f"ERROR: owner-held RED unexpectedly passed: {name}; remove/review the exception before merge.",
