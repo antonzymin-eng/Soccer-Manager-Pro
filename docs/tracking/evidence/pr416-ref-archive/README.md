@@ -60,6 +60,18 @@ Every row still has `delete_now=false`.
 
 Deletion has **two different gates**. They prove different things and neither substitutes for the other.
 
+The reusable mechanical checker is `tools/dotnet-ci/check_pr416_evidence_refs.py`. The
+`.github/workflows/pr416-step5-evidence-cleanup.yml` workflow runs Gate B against the fetched
+durable `origin/main` tree, then runs Gate A on pull requests after fetching all live
+`evidence/pr416-*` refs. The Gate A workflow also verifies the 31 recorded Actions runs against
+GitHub's authoritative run metadata and requires the independently established **266**
+branch-exclusive changed-path blob instances. Any mismatch fails closed.
+
+A passing checker records the two prerequisite proofs; it does not itself delete a ref or change
+`ref-disposition.tsv`. Deletion authorization remains an explicit later ledger change after the
+passing Gate A output has been recorded while all refs still exist and Gate B has passed from
+durable `main`.
+
 ### A. Live-ref completeness — must run while the refs still exist
 
 For every ref proposed for deletion:
