@@ -388,25 +388,69 @@ def validate_archive(repo: Path) -> list[str]:
 
 
 def validate_live(
-    repo: Path, main_ref: str, verify_actions_api: bool = False
+    repo: Path,
+    main_ref: str,
+    verify_actions_api: bool = False,
+    require_authorized: bool = False,
+    live_state: str = "auto",
 ) -> list[str]:
     errors, manifest, dispositions, runs = common_checks(repo)
     if errors:
         return errors
 
-    expected_refs = {row["ref"] for row in dispositions}
+    all_refs = {row["ref"] for row in dispositions}
+    policy_ref_names = {
+        row["ref"] for row in dispositions if row["disposition"] == "policy-retained"
+    }
+    deletable_rows = [
+        row for row in dispositions if row["disposition"] == "deletable"
+    ]
+    authorized = bool(deletable_rows) and all(
+        row.get("delete_now") == "true" for row in deletable_rows
+    )
+    if require_authorized and not authorized:
+        errors.append(
+            "deletion authorization required: all 21 deletable refs must have delete_now=true"
+        )
+        return errors
+
     actual_refs = live_evidence_refs(repo)
-    if actual_refs != expected_refs:
+    if live_state == "pre-delete":
+        expected_live_refs = all_refs
+        resolved_state = "pre-delete"
+    elif live_state == "post-delete":
+        if not authorized:
+            errors.append("post-delete state requires all 21 deletable refs to be authorized")
+            return errors
+        expected_live_refs = policy_ref_names
+        resolved_state = "post-delete"
+    elif actual_refs == all_refs:
+        expected_live_refs = all_refs
+        resolved_state = "pre-delete"
+    elif authorized and actual_refs == policy_ref_names:
+        expected_live_refs = policy_ref_names
+        resolved_state = "post-delete"
+    else:
+        allowed = [sorted(all_refs)]
+        if authorized:
+            allowed.append(sorted(policy_ref_names))
         errors.append(
             "live evidence-ref set mismatch: "
-            f"missing={sorted(expected_refs - actual_refs)} "
-            f"extras={sorted(actual_refs - expected_refs)}"
+            f"actual={sorted(actual_refs)} allowed={allowed}"
+        )
+        return errors
+
+    if actual_refs != expected_live_refs:
+        errors.append(
+            f"{resolved_state} evidence-ref set mismatch: "
+            f"missing={sorted(expected_live_refs - actual_refs)} "
+            f"extras={sorted(actual_refs - expected_live_refs)}"
         )
         return errors
 
     disposition_by_ref = {row["ref"]: row for row in dispositions}
 
-    for ref in sorted(expected_refs):
+    for ref in sorted(actual_refs):
         remote = remote_ref(ref)
         actual_head = resolve(repo, remote)
         expected_head = disposition_by_ref[ref]["current_head"]
@@ -451,6 +495,16 @@ def validate_live(
                     f"tip blob {blob} != archived {row['blob_sha']}"
                 )
 
+    if resolved_state == "post-delete":
+        if verify_actions_api:
+            errors.extend(verify_actions_metadata(runs))
+        print(
+            "Gate A post-delete state: "
+            f"refs={len(actual_refs)} deleted={len(all_refs - actual_refs)} "
+            f"policy={len(policy_ref_names)} authorized={authorized}"
+        )
+        return errors
+
     for row in manifest:
         source_head = row["source_head"]
         source_blob = resolve(repo, f"{source_head}:{row['original_path']}")
@@ -487,7 +541,7 @@ def validate_live(
             )
 
         branch = row["head_branch"]
-        if branch in expected_refs:
+        if branch in all_refs:
             ancestor = git(
                 repo,
                 "merge-base",
@@ -517,11 +571,7 @@ def validate_live(
     if verify_actions_api:
         errors.extend(verify_actions_metadata(runs))
 
-    policy_refs = [
-        remote_ref(row["ref"])
-        for row in dispositions
-        if row["disposition"] == "policy-retained"
-    ]
+    policy_refs = [remote_ref(ref) for ref in sorted(policy_ref_names)]
     candidate_refs = [
         remote_ref(row["ref"])
         for row in dispositions
@@ -572,7 +622,7 @@ def validate_live(
     history_violations = len(uncovered) + len(delete_only_blobs)
 
     print(
-        "Gate A live-ref history: "
+        "Gate A pre-delete live-ref history: "
         f"refs={len(dispositions)} "
         f"candidates={sum(row['disposition'] == 'deletable' for row in dispositions)} "
         f"policy={sum(row['disposition'] == 'policy-retained' for row in dispositions)} "
@@ -591,6 +641,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mode", choices=("live", "archive", "all"), default="all")
     parser.add_argument("--main-ref", default="refs/remotes/origin/main")
     parser.add_argument(
+        "--live-state",
+        choices=("auto", "pre-delete", "post-delete"),
+        default="auto",
+        help="expected live evidence-ref topology; auto accepts only complete pre- or post-delete states",
+    )
+    parser.add_argument(
+        "--require-authorized",
+        action="store_true",
+        help="require all 21 deletable rows to carry delete_now=true",
+    )
+    parser.add_argument(
         "--verify-actions-api",
         action="store_true",
         help="cross-check run-heads.tsv against GitHub Actions API metadata",
@@ -605,7 +666,13 @@ def main(argv: list[str] | None = None) -> int:
             errors.extend(validate_archive(repo))
         if args.mode in ("live", "all"):
             errors.extend(
-                validate_live(repo, args.main_ref, args.verify_actions_api)
+                validate_live(
+                    repo,
+                    args.main_ref,
+                    args.verify_actions_api,
+                    args.require_authorized,
+                    args.live_state,
+                )
             )
     except (OSError, RuntimeError, ValueError, KeyError) as exc:
         errors.append(str(exc))
