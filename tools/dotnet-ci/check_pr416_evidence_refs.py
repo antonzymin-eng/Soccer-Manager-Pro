@@ -540,15 +540,27 @@ def validate_live(
             f"{item.ref} {item.commit} {item.path} blob={item.blob}"
         )
 
+    if len(all_instances) != EXPECTED_BRANCH_EXCLUSIVE_BLOB_INSTANCES:
+        errors.append(
+            "branch-exclusive blob-instance census drift: "
+            f"{len(all_instances)} != {EXPECTED_BRANCH_EXCLUSIVE_BLOB_INSTANCES}"
+        )
+
+    covered_instances = sum(
+        1 for instance in all_instances if instance.blob in durable_blobs
+    )
+    history_violations = len(uncovered) + len(delete_only_blobs)
+
     print(
         "Gate A live-ref history: "
         f"refs={len(dispositions)} "
         f"candidates={sum(row['disposition'] == 'deletable' for row in dispositions)} "
         f"policy={sum(row['disposition'] == 'policy-retained' for row in dispositions)} "
         f"branch_exclusive_blob_instances={len(all_instances)} "
+        f"covered={covered_instances} "
         f"deletion_candidate_blob_instances={len(candidate_instances)} "
         f"delete_only_blob_objects={len(delete_only_blobs)} "
-        f"uncovered={len(uncovered)}"
+        f"uncovered={len(uncovered)} violations={history_violations}"
     )
     return errors
 
