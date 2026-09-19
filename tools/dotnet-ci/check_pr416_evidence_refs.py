@@ -192,6 +192,17 @@ def _validate_archive_path(path: str) -> None:
         raise CheckError(f"invalid archive path shape: {path}")
 
 
+def normalized_disposition_counts(
+    rows: list[dict[str, str]],
+) -> tuple[dict[str, int], list[str]]:
+    counts = Counter(row["disposition"] for row in rows)
+    normalized = {
+        key: counts.get(key, 0) for key in EXPECTED_DISPOSITION_COUNTS
+    }
+    unknown = sorted(set(counts) - set(EXPECTED_DISPOSITION_COUNTS))
+    return normalized, unknown
+
+
 def cited_run_ids(repo: Path, main_ref: str) -> set[str]:
     ids: set[str] = set()
     for path in (PROVENANCE_DOC, DIAGNOSIS_DOC):
@@ -242,11 +253,8 @@ def gate_b(
             f"disposition rows={len(disposition)} expected={EXPECTED_DISPOSITION_ROWS}"
         )
     disposition_counts = Counter(row["disposition"] for row in disposition)
-    normalized_disposition_counts = {
-        key: disposition_counts.get(key, 0) for key in EXPECTED_DISPOSITION_COUNTS
-    }
-    unknown_dispositions = sorted(
-        set(disposition_counts) - set(EXPECTED_DISPOSITION_COUNTS)
+    normalized_disposition_counts, unknown_dispositions = normalized_disposition_counts(
+        disposition
     )
     if normalized_disposition_counts != EXPECTED_DISPOSITION_COUNTS or unknown_dispositions:
         errors.append(
