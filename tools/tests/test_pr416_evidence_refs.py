@@ -28,6 +28,15 @@ class Pr416EvidenceRefCheckerTests(unittest.TestCase):
         with self.assertRaises(checker.CheckError):
             checker.parse_tsv("b\ta\n2\t1\n", ["a", "b"], "fixture.tsv")
 
+    def test_zero_retain_disposition_is_counted_explicitly(self) -> None:
+        rows = (
+            [{"disposition": "deletable"}] * 21
+            + [{"disposition": "policy-retained"}] * 3
+        )
+        counts, unknown = checker._normalize_disposition_counts(rows)
+        self.assertEqual(checker.EXPECTED_DISPOSITION_COUNTS, counts)
+        self.assertEqual([], unknown)
+
     def test_archive_path_shape_fails_closed(self) -> None:
         checker._validate_archive_path(
             "docs/tracking/evidence/pr416-ref-archive/current/x/file.cs.txt"
