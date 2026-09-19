@@ -419,8 +419,22 @@ def validate_live(repo: Path, main_ref: str) -> list[str]:
         for row in dispositions
         if row["disposition"] == "policy-retained"
     ]
+    candidate_refs = [
+        remote_ref(row["ref"])
+        for row in dispositions
+        if row["disposition"] == "deletable"
+    ]
     durable_blobs = reachable_blobs(repo, [main_ref, *policy_refs])
     durable_blobs.update(row["blob_sha"] for row in manifest)
+
+    candidate_reachable_blobs = reachable_blobs(repo, candidate_refs)
+    delete_only_blobs = candidate_reachable_blobs - durable_blobs
+    if delete_only_blobs:
+        sample = sorted(delete_only_blobs)[:20]
+        errors.append(
+            "blob objects would become unreachable after deleting the 21 candidate refs: "
+            f"count={len(delete_only_blobs)} sample={sample}"
+        )
 
     all_instances: list[BlobInstance] = []
     candidate_instances: list[BlobInstance] = []
@@ -450,6 +464,7 @@ def validate_live(repo: Path, main_ref: str) -> list[str]:
         f"policy={sum(row['disposition'] == 'policy-retained' for row in dispositions)} "
         f"branch_exclusive_blob_instances={len(all_instances)} "
         f"deletion_candidate_blob_instances={len(candidate_instances)} "
+        f"delete_only_blob_objects={len(delete_only_blobs)} "
         f"uncovered={len(uncovered)}"
     )
     return errors
