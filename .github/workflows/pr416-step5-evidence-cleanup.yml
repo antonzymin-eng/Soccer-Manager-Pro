@@ -1,0 +1,59 @@
+name: PR416 Step 5 evidence cleanup gates
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - tools/dotnet-ci/check_pr416_evidence_refs.py
+      - .github/workflows/pr416-step5-evidence-cleanup.yml
+  push:
+    branches: [main]
+    paths:
+      - tools/dotnet-ci/check_pr416_evidence_refs.py
+      - .github/workflows/pr416-step5-evidence-cleanup.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  gate-b:
+    name: PR416 Step 5 Gate B (main archive)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch durable main
+        run: git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+      - name: Verify mainline archive integrity
+        run: |
+          python3 tools/dotnet-ci/check_pr416_evidence_refs.py \
+            --repo . \
+            --main-ref refs/remotes/origin/main \
+            --gate-b
+
+  gate-a:
+    name: PR416 Step 5 Gate A (live refs)
+    if: github.event_name == 'pull_request'
+    needs: gate-b
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch durable main and all PR416 evidence refs
+        run: |
+          git fetch --no-tags origin \
+            '+refs/heads/main:refs/remotes/origin/main' \
+            '+refs/heads/evidence/pr416-*:refs/remotes/origin/evidence/pr416-*'
+      - name: Verify live-ref deletion completeness
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 tools/dotnet-ci/check_pr416_evidence_refs.py \
+            --repo . \
+            --main-ref refs/remotes/origin/main \
+            --gate-a \
+            --verify-runs-online \
+            --expected-instances 266
