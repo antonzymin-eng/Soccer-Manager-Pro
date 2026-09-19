@@ -80,6 +80,12 @@ For every ref proposed for deletion:
 This gate must fail closed on any missing ref, commit, path, blob, or run mapping. It cannot be
 reconstructed from `main` alone after the refs are deleted.
 
+The checker has two explicit live topologies. Before deletion, all 24 recorded refs must exist at
+their recorded heads. After deletion is authorized and completed, exactly the three
+`policy-retained` refs must remain; any partial 4–23-ref state fails closed. CI invokes Gate A with
+`--require-authorized`, so a later rollback of the 21 `delete_now=true` rows to `false` is a gate
+failure rather than a valid steady state.
+
 ### B. Mainline archive integrity and interpretive reconstruction — after this archive lands
 
 From `main` alone, verify that:
@@ -99,3 +105,11 @@ complete co-change topology, and it does **not** prove historical completeness; 
 gate can do that.
 
 Only a ref that passes both gates, remains classified `deletable`, and has `delete_now=true` may be deleted. The 21 deletion candidates transition as one atomic authorization set; partial authorization is invalid.
+
+Immediately before deletion, re-run Gate A with `--live-state pre-delete --require-authorized` so
+all 21 candidate heads are revalidated against the recorded `current_head` values. Delete each
+remote ref with an expected-head lease rather than an unconditional delete (for Git, use
+`--force-with-lease=refs/heads/<ref>:<current_head>` with the deletion refspec). This makes a ref
+move between authorization and deletion fail rather than silently deleting a new head. After the
+batch, run Gate A with `--live-state post-delete --require-authorized`; exactly the three
+policy-retained refs must remain.
