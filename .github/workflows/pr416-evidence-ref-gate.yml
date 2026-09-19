@@ -39,6 +39,17 @@ jobs:
             '+refs/heads/main:refs/remotes/origin/main' \
             '+refs/heads/evidence/pr416-*:refs/remotes/origin/evidence/pr416-*'
 
+      - name: Gate B - durable-main archive integrity and reconstruction
+        run: |
+          set -euo pipefail
+          main_worktree="$RUNNER_TEMP/pr416-step5-main"
+          rm -rf "$main_worktree"
+          git worktree add --detach "$main_worktree" refs/remotes/origin/main
+          python3 tools/dotnet-ci/check_pr416_evidence_refs.py \
+            --repo "$main_worktree" \
+            --mode archive \
+            --main-ref refs/remotes/origin/main
+
       - name: Gate A - live-ref full-history completeness
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -48,10 +59,3 @@ jobs:
             --mode live \
             --main-ref refs/remotes/origin/main \
             --verify-actions-api
-
-      - name: Gate B - archive integrity and reconstruction
-        run: |
-          python3 tools/dotnet-ci/check_pr416_evidence_refs.py \
-            --repo . \
-            --mode archive \
-            --main-ref refs/remotes/origin/main
