@@ -15,6 +15,7 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
         self,
         message: str,
         ordinary_name: str = "TacticalDirector.MatchEngine.OtherTests.ordinary_test",
+        dedicated_count: int = 1,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)
@@ -34,12 +35,19 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
             )
             results = tmp / "results"
             results.mkdir()
+            dedicated_rows = "".join(
+                (
+                    "<UnitTestResult testName=\"TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance\" outcome=\"Failed\">\n"
+                    f"<Output><ErrorInfo><Message>{message}</Message></ErrorInfo></Output>\n"
+                    "</UnitTestResult>\n"
+                )
+                for _ in range(dedicated_count)
+            )
             (results / "result.trx").write_text(
                 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
                 "<TestRun xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\"><Results>\n"
-                "<UnitTestResult testName=\"TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance\" outcome=\"Failed\">\n"
-                f"<Output><ErrorInfo><Message>{message}</Message></ErrorInfo></Output>\n"
-                "</UnitTestResult></Results></TestRun>\n",
+                f"{dedicated_rows}"
+                "</Results></TestRun>\n",
                 encoding="utf-8",
             )
             return subprocess.run(
@@ -104,7 +112,15 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 1, proc.stdout)
         self.assertIn("leaked into ordinary sweep", proc.stdout)
 
-    def test_empty_ledger_fails_closed_in_verifier(self) -> None:
+    def test_duplicate_dedicated_result_fails_isolation(self) -> None:
+        proc = self.verify(
+            "meanCosine=-0.165 goalwardShare=0.407",
+            dedicated_count=2,
+        )
+        self.assertEqual(proc.returncode, 1, proc.stdout)
+        self.assertIn("dedicated occurrences=2", proc.stdout)
+
+    def test_empty_ledger_requires_no_dedicated_verification(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)
             ledger = tmp / "ledger.txt"
@@ -115,7 +131,7 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
                     "--ledger", str(ledger),
                     "--ordinary-results", str(tmp / "ordinary"),
                     "--results", str(tmp / "results"),
-                    "--dotnet-exit", "1",
+                    "--dotnet-exit", "0",
                 ],
                 text=True,
                 stdout=subprocess.PIPE,
@@ -123,8 +139,8 @@ class OwnerHeldRedExactDiagnosticsTests(unittest.TestCase):
                 check=False,
                 timeout=15,
             )
-            self.assertEqual(proc.returncode, 2, proc.stdout)
-            self.assertIn("owner-held RED ledger is empty", proc.stdout)
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertIn("no dedicated verification is required", proc.stdout)
 
     def test_missing_ordinary_capture_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as td:
