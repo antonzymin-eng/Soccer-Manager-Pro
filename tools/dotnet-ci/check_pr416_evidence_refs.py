@@ -242,10 +242,16 @@ def gate_b(
             f"disposition rows={len(disposition)} expected={EXPECTED_DISPOSITION_ROWS}"
         )
     disposition_counts = Counter(row["disposition"] for row in disposition)
-    if dict(disposition_counts) != EXPECTED_DISPOSITION_COUNTS:
+    normalized_disposition_counts = {
+        key: disposition_counts.get(key, 0) for key in EXPECTED_DISPOSITION_COUNTS
+    }
+    unknown_dispositions = sorted(
+        set(disposition_counts) - set(EXPECTED_DISPOSITION_COUNTS)
+    )
+    if normalized_disposition_counts != EXPECTED_DISPOSITION_COUNTS or unknown_dispositions:
         errors.append(
-            f"disposition counts={dict(disposition_counts)} "
-            f"expected={EXPECTED_DISPOSITION_COUNTS}"
+            f"disposition counts={normalized_disposition_counts} "
+            f"unknown={unknown_dispositions} expected={EXPECTED_DISPOSITION_COUNTS}"
         )
     policy_refs = {
         row["ref"] for row in disposition if row["disposition"] == "policy-retained"
