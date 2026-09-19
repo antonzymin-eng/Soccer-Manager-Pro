@@ -2,7 +2,7 @@
 
 > **Created:** September 18, 2026
 > **Purpose:** Preserve branch-only PR #416 evidence before any disposable `evidence/pr416-*` ref is deleted.
-> **Status:** Step 5 archival candidate. This archive does **not** by itself authorize ref deletion.
+> **Status:** Step 5 deletion authorization candidate. The 21 refs classified `deletable` are marked `delete_now=true` as one atomic set; the three policy-retained refs remain `false`. This transition becomes effective only after this exact revision passes both deletion gates and lands.
 
 ## Archived material
 
@@ -54,7 +54,7 @@ The three policy-retained refs remain:
 - `evidence/pr416-narrow-rolling-candidate`
 - `evidence/pr416-state-only-preforce-candidate`
 
-Every row still has `delete_now=false`.
+All **21** `deletable` rows are `delete_now=true`; the **3** `policy-retained` rows remain `false`. Mixed or partial authorization is invalid.
 
 ## Verification before deletion
 
@@ -98,4 +98,4 @@ reconstruction. It does **not** reconstruct full Git commit identity such as aut
 complete co-change topology, and it does **not** prove historical completeness; only the live-ref
 gate can do that.
 
-Only a ref that passes both gates and is still classified `deletable` may be deletion-authorized.
+Only a ref that passes both gates, remains classified `deletable`, and has `delete_now=true` may be deleted. The 21 deletion candidates transition as one atomic authorization set; partial authorization is invalid.
