@@ -346,7 +346,8 @@ The corrected archive is `docs/tracking/evidence/pr416-ref-archive/`:
 - `run-heads.tsv` records authoritative GitHub Actions metadata for all **31** run ids cited by the
   durable provenance/diagnosis;
 - `ref-disposition.tsv` remains **21 `deletable` / 0 `retain` / 3
-  `policy-retained`**, but every row remains `delete_now=false`.
+  `policy-retained`**; all 21 `deletable` rows are now `delete_now=true` as one atomic
+  authorization set, while the three `policy-retained` rows remain `false`.
 
 The earlier statement that archive completeness could be verified from `main` alone is withdrawn.
 Main-only checks can verify byte integrity and reconstructability after landing; they cannot prove
@@ -357,6 +358,15 @@ branch-exclusive commit and changed-path blob state against the durable post-del
 
 The three policy-retained refs remain `evidence/pr416-close-chance-retirement`,
 `evidence/pr416-narrow-rolling-candidate`, and
-`evidence/pr416-state-only-preforce-candidate`. Archival does not revoke that policy. No evidence
-ref is deletion-authorized by this PR.
+`evidence/pr416-state-only-preforce-candidate`. Archival does not revoke that policy.
+
+The Step 5 authorization revision adds a post-deletion gate before any ref is removed. Gate A accepts
+only two complete topologies: all 24 recorded refs at their pinned heads before deletion, or exactly
+the three policy-retained refs after the authorized 21-ref batch is removed. Any partial 4–23-ref
+state fails closed. CI requires the 21 `delete_now=true` values, so reverting authorization to
+`false` is not a valid steady state. Immediately before deletion, Gate A must be re-run explicitly
+in pre-delete mode; each remote deletion must be protected by its recorded head SHA (for Git,
+`--force-with-lease=refs/heads/<ref>:<current_head>`) so a moved ref is rejected rather than
+silently deleted. After the batch, post-delete mode must pass with exactly the three policy refs.
+The cleanup issue remains open until that deletion and post-delete verification complete.
 
