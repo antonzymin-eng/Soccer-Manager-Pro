@@ -28,12 +28,14 @@ the first run after deleting only the six inserted census columns. Every row was
 including all 12 trajectory fingerprints. The supplementary observation counters are therefore
 observer-neutral for the previously frozen metrics.
 
-The verbatim original aggregate ZIP supplies an independent pre-census cross-check. Its original-run
-`deltas.tsv` shares 15 comparable delta fields with the supplementary `deltas.tsv`; all **6 × 15**
-shared values match exactly. Its original v2.10 `erEpisodes`, moving-episode, and moving-tick
-columns are also zero on all six seeds. Because that file was emitted by run `35395955770` before
-the transition census existed, it independently corroborates both the observer-neutral downstream
-results and the zero boundary-residency finding that motivated the supplement.
+The verbatim original aggregate ZIP preserves the pre-census run bytes as durable redundancy. Its
+original-run `deltas.tsv` shares 15 comparable columns with the supplementary `deltas.tsv`: 13
+derived delta columns plus the `seed` key and `trajectoryHashEqual` flag. All **6 × 15** shared
+cells match exactly. That equality is a consistency check mechanically entailed by the
+byte-identical projected source rows, not a second measurement. The ZIP's original v2.10
+`erEpisodes`, moving-episode, and moving-tick columns are also zero on all six seeds, but those are
+the same run `35395955770` values already committed in `original-results.tsv`; the ZIP preserves
+them durably rather than independently confirming zero boundary residency.
 
 The failed setup run `35395886287` is non-governing: its simulations emitted rows but a parser
 expected 42 columns where the schema contained 41. No measurement definition changed in response.
@@ -151,7 +153,7 @@ Durable repository evidence:
 - `observer-neutrality.tsv` — per-row SHA-256/equality proof that removing the six added census columns reproduces the original 12 rows;
 - `deltas.tsv` — mechanically derived v2.10→narrow comparison;
 - `provenance.txt` — run/head/artifact identities;
-- `SHA256SUMS` — hashes of the four durable TSVs plus the committed original aggregate ZIP.
+- `SHA256SUMS` — hashes of all seven non-manifest durable evidence files in this directory: README, provenance, four TSVs, and the committed original aggregate ZIP.
 
 The original successful aggregate artifact `10567792073` is committed here verbatim as
 `original-aggregate-artifact-10567792073.zip`, so its archive bytes, internal manifest, provenance,
