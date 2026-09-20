@@ -24,7 +24,7 @@ Usage: bash tools/dotnet-ci/run-gate.sh [options]
 Options:
   --test-filter <vstest-filter>    Restrict the blocking test set with an explicit VSTest filter.
   --settings <runsettings>         Apply an explicit .runsettings file (used by pre-commit for anchored NUnit selection).
-  --owner-held-red report-only     Exclude the owner-held RED from the blocking pass, then execute and value-verify it separately.
+  --owner-held-red report-only     Exclude configured owner-held REDs from the blocking pass, then execute and value-verify them separately. An empty ledger means there are no held REDs.
   --coverage                       Collect XPlat Code Coverage.
   --coverage-settings <runsettings>  Override the coverage runsettings file for an explicit policy caller.
   --fast                           Skip the separate whole-tree meta/build pass. `dotnet test` still builds the generated solution once, incrementally.
@@ -110,6 +110,10 @@ if [ "$COLLECT_COVERAGE" -eq 1 ] && [ ! -f "$COVERAGE_SETTINGS" ]; then
     echo "ERROR: coverage runsettings file does not exist: $COVERAGE_SETTINGS" >&2
     exit 2
 fi
+if [ "$OWNER_MODE" = "report-only" ] && [ ! -f "$OWNER_HELD_RED" ]; then
+    echo "ERROR: owner-held RED ledger file does not exist: $OWNER_HELD_RED" >&2
+    exit 2
+fi
 
 ledger_names() {
     local ledger="$1"
@@ -153,8 +157,10 @@ OWNER_INCLUDE=""
 if [ "$OWNER_MODE" = "report-only" ]; then
     OWNER_EXCLUSION="$(owner_exclusion_filter "$OWNER_HELD_RED")"
     OWNER_INCLUDE="$(owner_include_filter "$OWNER_HELD_RED")"
-    if [ -z "$OWNER_EXCLUSION" ] || [ -z "$OWNER_INCLUDE" ]; then
-        echo "ERROR: owner-held RED ledger produced no executable selection." >&2
+    if [ -z "$OWNER_EXCLUSION" ] && [ -z "$OWNER_INCLUDE" ]; then
+        echo "Owner-held RED ledger empty; ordinary sweep runs without owner-held exclusions."
+    elif [ -z "$OWNER_EXCLUSION" ] || [ -z "$OWNER_INCLUDE" ]; then
+        echo "ERROR: owner-held RED ledger produced an inconsistent executable selection." >&2
         exit 2
     fi
 fi
@@ -264,7 +270,7 @@ if [ "$OWNER_MODE" = "report-only" ] && [ -n "$OWNER_INCLUDE" ]; then
         --ledger "$OWNER_HELD_RED" \
         --ordinary-results "$ORDINARY_RESULTS" \
         --results "$OWNER_RESULTS" \
-        --dotnet-exit "$owner_dotnet_exit"
+        --dotnet-exit "$owner_dotnet_exit" 2>&1
 fi
 
 echo "── Gate PASSED ──────────────────────────────────────────────────────"

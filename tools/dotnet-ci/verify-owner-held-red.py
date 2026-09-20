@@ -107,16 +107,6 @@ def matching_results(
     ]
 
 
-def find_result(
-    expected_name: str,
-    results: list[tuple[str, str, str]],
-) -> tuple[int, str, str] | None:
-    matches = matching_results(expected_name, results)
-    if len(matches) == 1:
-        return matches[0]
-    return None
-
-
 def diagnostic_field_values(body: str, field: str) -> list[str]:
     """Return complete numeric values assigned to an exact diagnostic field."""
     normalized_body = normalize(body)
@@ -143,8 +133,8 @@ def main() -> int:
         return 2
 
     if not ledger:
-        print("ERROR: owner-held RED ledger is empty.", file=sys.stderr)
-        return 2
+        print("Owner-held RED ledger empty; no dedicated verification is required.", flush=True)
+        return 0
 
     try:
         ordinary_results = collect_results(args.ordinary_results, "ordinary sweep")
@@ -159,7 +149,8 @@ def main() -> int:
     print(
         f"TRX RESULT RECORDS (all outcomes; not pass cardinality): "
         f"ordinary_records={len(ordinary_results)} "
-        f"owner_held_records={len(results)}"
+        f"owner_held_records={len(results)}",
+        flush=True,
     )
 
     matched_indexes: set[int] = set()
@@ -184,7 +175,11 @@ def main() -> int:
             return 1
         index, outcome, body = dedicated_matches[0]
         matched_indexes.add(index)
-        print(f"OWNER-HELD ISOLATION: {name} ordinary=0 dedicated=1")
+        print(
+            f"OWNER-HELD ISOLATION: {name} "
+            f"ordinary={len(ordinary_matches)} dedicated={len(dedicated_matches)}",
+            flush=True,
+        )
         if outcome == "Passed":
             print(
                 f"ERROR: owner-held RED unexpectedly passed: {name}; remove/review the exception before merge.",
