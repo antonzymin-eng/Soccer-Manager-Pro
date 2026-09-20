@@ -1,3 +1,18 @@
+# W2 evidence index
+
+## September 18, 2026 — post-#416 six-seed revalidation
+
+The broader Step-3.2 corpus is archived at
+`docs/tracking/evidence/w2-six-seed/README.md`.
+
+Its conclusion is deliberately narrow: all six production seeds avoid the historical
+settled-possession collapse on post-#416 behavior, but the disarmed control is also healthy, so the
+corpus does **not** establish W2 efficacy or tackle-outcome calibration. Production W2 resolves
+25–37 challenges per full match with 0–3 clean wins and 0–2 tackle-outcome fouls; the existing
+outcome `[GT]`s remain uncalibrated.
+
+---
+
 # W2 post-W6 paired evidence
 
 **Captured:** September 16, 2026  
