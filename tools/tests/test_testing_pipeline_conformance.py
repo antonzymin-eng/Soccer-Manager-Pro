@@ -18,9 +18,12 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         *args: str,
         cwd: Path | None = None,
         env: dict[str, str] | None = None,
+        unset_env: tuple[str, ...] = (),
         timeout: int = 15,
     ) -> subprocess.CompletedProcess[str]:
         merged = os.environ.copy()
+        for key in unset_env:
+            merged.pop(key, None)
         if env:
             merged.update(env)
         return subprocess.run(
@@ -104,6 +107,15 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 "sim_match_engine_close_chance|meanCosine=-0.165|goalwardShare=0.407\n",
                 encoding="utf-8",
             )
+            ordinary = tmp / "ordinary"
+            ordinary.mkdir()
+            (ordinary / "ordinary.trx").write_text(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                "<TestRun xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\"><Results>\n"
+                "<UnitTestResult testName=\"TacticalDirector.MatchEngine.OtherTests.ordinary_test\" outcome=\"Passed\" />\n"
+                "</Results></TestRun>\n",
+                encoding="utf-8",
+            )
             results = tmp / "results"
             results.mkdir()
             trx = results / "result.trx"
@@ -120,8 +132,10 @@ class TestingPipelineConformanceTests(unittest.TestCase):
                 return self.run_cmd(
                     "python3", str(verifier),
                     "--ledger", str(ledger),
+                    "--ordinary-results", str(ordinary),
                     "--results", str(results),
                     "--dotnet-exit", str(dotnet_exit),
+                    unset_env=("PYTHONUNBUFFERED",),
                 )
 
             good = verify(base, 1)
@@ -144,6 +158,11 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             green = verify(base.replace('outcome="Failed"', 'outcome="Passed"'), 0)
             self.assertEqual(green.returncode, 1, green.stdout)
             self.assertIn("unexpectedly passed", green.stdout)
+            trx_pos = green.stdout.index("TRX RESULT RECORDS")
+            isolation_pos = green.stdout.index("OWNER-HELD ISOLATION")
+            disposition_pos = green.stdout.index("ERROR: owner-held RED unexpectedly passed")
+            self.assertLess(trx_pos, isolation_pos, green.stdout)
+            self.assertLess(isolation_pos, disposition_pos, green.stdout)
 
             ambiguous = base.replace(
                 "</Results>",
@@ -167,8 +186,58 @@ class TestingPipelineConformanceTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout)
         self.assertIn("owner_held_include=Name=sim_match_engine_close_chance", proc.stdout)
         self.assertIn("Name!=sim_match_engine_close_chance", proc.stdout)
+
+        grouped = self.run_cmd(
+            "bash", str(gate),
+            "--test-filter", "Name=alpha|Name=beta",
+            "--owner-held-red", "report-only",
+            env={"TD_GATE_DRY_RUN": "1"},
+        )
+        self.assertEqual(grouped.returncode, 0, grouped.stdout)
+        self.assertIn(
+            "blocking_filter=(Name=alpha|Name=beta)&(Name!=sim_match_engine_close_chance)",
+            grouped.stdout,
+        )
+
         quarantine = (ROOT / "tools" / "dotnet-ci" / "known-failures.txt").read_text(encoding="utf-8")
         self.assertNotIn("sim_match_engine_close_chance", quarantine)
+
+    def test_owner_held_mode_allows_empty_ledger_without_exclusion(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            gate_dir = root / "tools" / "dotnet-ci"
+            gate_dir.mkdir(parents=True)
+            shutil.copy2(ROOT / "tools" / "dotnet-ci" / "run-gate.sh", gate_dir / "run-gate.sh")
+            (gate_dir / "known-failures.txt").write_text("# empty quarantine\n", encoding="utf-8")
+            (gate_dir / "owner-held-red.txt").write_text("# empty owner ledger\n", encoding="utf-8")
+
+            proc = self.run_cmd(
+                "bash", str(gate_dir / "run-gate.sh"),
+                "--owner-held-red", "report-only",
+                cwd=root,
+                env={"TD_GATE_DRY_RUN": "1"},
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertIn("ordinary sweep runs without owner-held exclusions", proc.stdout)
+            self.assertIn("blocking_filter=<none>", proc.stdout)
+            self.assertIn("owner_held_include=<none>", proc.stdout)
+
+    def test_owner_held_mode_missing_ledger_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            gate_dir = root / "tools" / "dotnet-ci"
+            gate_dir.mkdir(parents=True)
+            shutil.copy2(ROOT / "tools" / "dotnet-ci" / "run-gate.sh", gate_dir / "run-gate.sh")
+            (gate_dir / "known-failures.txt").write_text("# empty quarantine\n", encoding="utf-8")
+
+            proc = self.run_cmd(
+                "bash", str(gate_dir / "run-gate.sh"),
+                "--owner-held-red", "report-only",
+                cwd=root,
+                env={"TD_GATE_DRY_RUN": "1"},
+            )
+            self.assertEqual(proc.returncode, 2, proc.stdout)
+            self.assertIn("owner-held RED ledger file does not exist", proc.stdout)
 
     def test_hook_uses_staged_snapshot_and_preserves_untracked_cache(self) -> None:
         with tempfile.TemporaryDirectory() as td:
