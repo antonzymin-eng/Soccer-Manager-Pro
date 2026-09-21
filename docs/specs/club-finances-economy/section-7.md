@@ -1,14 +1,16 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v1.3 — T2b review correction: Restore-only migration of the legacy empty T1b finance block; generic composition does not silently initialize)
+**Last Updated:** September 11, 2026 (v1.5 — ERR-040-003 review: bounded unconsumed T3a API, #40-owned gate, and wire-first T3b sequencing)
+**Last Updated (prior):** September 11, 2026 (v1.4 — T3a foundation: pure daily-revenue accounting + season accumulator lifecycle; live producers/tick/RNG remain T3b+)
+**Last Updated (prior):** September 11, 2026 (v1.3 — T2b review correction: Restore-only migration of the legacy empty T1b finance block; generic composition does not silently initialize)
 **Last Updated (prior):** September 11, 2026 (v1.2 — T2b implemented: #30 bootstrap invocation, live boundary settlement, and finance command/read surfaces; ERR-030-051 atomicity correction)
 **Last Updated (prior):** September 11, 2026 (v1.1 — PR #392 formalizes T2a/T2b: T2a is the #27-backed bootstrap factory/reference activation; T2b is #30 invocation + settlement wiring)
 **Last Updated (prior):** September 10, 2026 (v1.0 — ERR-030-050 review correction: T1b includes the resume carrier/coherence guard; T2 remains runtime production. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v0.9 — T1b landed: #30 season-save composition + frame bump, ERR-030-049)
 **Last Updated (prior):** September 7, 2026 (v0.8 — PR #363 Codex arithmetic correction)
 **Last Updated (prior):** September 7, 2026 (v0.7 — PR #363 follow-up review correction)
-**Version:** 1.3
+**Version:** 1.5
 **Status:** APPROVED
 
 ---
@@ -59,28 +61,55 @@
   from the restored `SeasonState.ClubIds`. The generic constructor may still represent legacy/unwired
   emptiness for low-level compatibility, but every finance read/command and season settlement fails loud
   on that state; a forgotten finance argument therefore cannot grant a club starting cash silently.
-  T3 is now the next #40 phase.
-- **T3** — Deep tier: per-day revenue accrual (matchday/sponsorship, a new daily #30 tick-order slot — the
-  #41 pattern), the stochastic sponsorship-variance draw (promotes `DOMAIN_TAG_CLUB_FINANCES = 0x29` /
-  `SubsystemOrdinals.ClubFinances = 91`, keyed on `(clubId, seasonNumber, purpose)`), the FFP soft-penalty
-  modulating the next season's projected budget, non-identity `BoardModifier` consumption when #45 lands, and
-  non-identity wage-ledger producers when #31/#34 land — all defaulting to their Stage-2 identities via a
-  config dial (one code path, KD-4/KD-8).
+- **T3a** *(this slice)* — Build the deep-tier **accounting foundation only** without fabricating tuning or
+  upstream producers: `FinanceStep.AccrueDailyRevenue` atomically adds already-derived non-negative
+  sponsorship + matchday revenue to `Balance` and `SeasonRevenueAccrued`, with a coherent-prior identity-off
+  path and checked arithmetic. `SettleFinances` captures the completed season's revenue before closing
+  `SeasonRevenueAccrued` to zero so the current-season accumulator cannot bleed across seasons;
+  `FfpBalanceWindow` carries until the FFP slice. This slice adds no #30 daily invocation, no revenue `[GT]`
+  magnitudes/formula, no draw, no namespace promotion, no new save field/version, and no assembly edge.
+  Stage-2 behavior remains exact because the deep accrual gate is off and the accumulator is already zero
+  (KD-8). **The public primitive is deliberately unconsumed at T3a and is bounded to T3b1 below; it MUST NOT
+  become a second long-lived dormant production surface.** ERR-040-003 records the corrected mutation rule.
+- **T3b1 — wire-first identity invocation.** Before tuning or introducing any non-zero revenue formula,
+  compose `AccrueDailyRevenue` into #30's daily world-step at the reserved finance position using identity
+  inputs (`sponsorshipRevenue = 0`, `matchdayRevenue = 0`, gate disabled by default). This proves lifecycle,
+  ordering, save/restore, and invocation ownership without calibrating an unproven path (KD-W1 posture).
+  T3b1 is the consuming slice that closes T3a's bounded public-API prerequisite.
+- **T3b2 — deterministic amount model + gate ownership.** Only after T3b1 is live, define the deterministic
+  sponsorship/matchday formulas and their `[GT]` catalogue, then feed those #40-owned results through the
+  already-proven #30 invocation. The `deepRevenueEnabled` value MUST have exactly one #40-owned/config-owned
+  producer; #30 merely receives/forwards that value and MUST NOT invent a second finance feature flag or
+  choose finance tuning. T3b2 stays draw-free unless a stochastic consumer is separately approved.
+- **T3c+** — Add the stochastic sponsorship-variance draw only when its genuine consumer exists, atomically
+  promoting `DOMAIN_TAG_CLUB_FINANCES = 0x29` / `SubsystemOrdinals.ClubFinances = 91` keyed on
+  `(clubId, seasonNumber, purpose)`; add the FFP soft-penalty that consumes the named completed-season
+  revenue handoff before T3a's accumulator reset; consume non-identity `BoardModifier` when #45 lands; and
+  accept non-identity wage-ledger producers when #31/#34 land. All remain identity-defaulted until their
+  producer/config contract is real (KD-4/KD-8).
 
-## 7.2 Deferred (recorded, not built)
+## 7.2 Deferred after T3a
 
-- **Per-day revenue accrual.** Stage-2 settles once per season; a Stage-3 daily accrual (matchday attendance
-  revenue, sponsorship instalments) would need a new daily #30 tick-order slot analogous to #41's
-  `AdvanceMedicalDay` insertion — not built here (KD-1).
+- **Live per-day invocation (T3b1).** The pure T3a accounting mutation exists but has no production caller.
+  The next slice is intentionally **wiring-only**: #30 invokes it with zero amounts and the disabled default
+  gate. This closes the dormant prerequisite without deciding economic magnitudes. The formulas/tuning MUST
+  NOT be bundled into that same wiring slice.
+- **Deterministic revenue production (T3b2).** Sponsorship/matchday formulas and their `[GT]` values remain
+  unspecified. They land only after identity-zero invocation proves the lifecycle path. Their values and the
+  single `deepRevenueEnabled` producer are #40-owned; #30 is composition/timing only.
 - **Periodic wage cash-out.** Stage-2 `ApplyTransaction` records a wage as a change to the liability
   `WageBillAggregate` only (never `Balance`, §3.2/FR-FN-016). The periodic (weekly/monthly) *payment* of that
   wage bill — the step that actually debits `Balance` from `WageBillAggregate` — is a deep-tier accrual on
   the same future daily slot as revenue accrual; not built here, so at Stage 2 the wage bill is a liability
   figure that never drains cash.
 - **Stochastic sponsorship/revenue variance.** The genuine first draw site on the reserved
-  `_RESERVED_0x29_`/91 namespace slot; promotes the tag only when this lands (KD-2).
-- **FFP soft-penalty.** A deep-tier adjustment to the *next* season's projected budget, composing
-  multiplicatively with `BoardModifier`; defaults to "no penalty" at Stage 2 (KD-4).
+  `_RESERVED_0x29_`/91 namespace slot; promotes the tag only when this lands (KD-2). T3a intentionally leaves
+  the namespace reserved because it performs no draw.
+- **FFP soft-penalty/window update.** A deep-tier adjustment to the *next* season's projected budget,
+  composing multiplicatively with `BoardModifier`; defaults to "no penalty" at Stage 2 (KD-4). T3a defines
+  only the lifecycle prerequisite: `SettleFinances` captures the completed season's revenue into the named
+  handoff before its returned `SeasonRevenueAccrued` is reset to zero. The formula and `FfpBalanceWindow`
+  update semantics remain deferred.
 - **Non-identity `BoardModifier` (#45).** #45 becomes the producer of a real board-driven multiplier
   (takeover windfalls, confidence-linked budget adjustments); no #45 interface is built ahead of that
   (FR-LW-031).
@@ -110,11 +139,13 @@
   the post-promotion division/`finalTablePosition` #40's step (b') already reads — no #40-side change is
   needed (the KD-6 ordering rationale is written to anticipate this); #43 MUST NOT itself call
   `SettleFinances` or otherwise reach into #40.
-- **#30 (season loop):** owns `SettleFinances` invocation timing (KD-6) and the one-time production
-  bootstrap invocation per club. T2a's `CreateInitialForSquads(Squad[])` is a pure transform over the
-  canonical squads #30 supplies; its presence in #40 does **not** make #40 a lifecycle/composition owner.
-  #40 MUST NOT reference #30, discover clubs independently, or invoke that factory on its own (the one-way
-  composition, FR-FN-027).
+- **#30 (season loop):** owns `SettleFinances` invocation timing (KD-6), the one-time production bootstrap
+  invocation per club, and T3b1's future daily invocation timing. T2a's
+  `CreateInitialForSquads(Squad[])` and T3a's `AccrueDailyRevenue` are pure #40 transforms; their presence in
+  #40 does **not** make #40 a lifecycle/composition owner. #30 MUST pass T3b1's identity-zero inputs and,
+  later, T3b2's already-derived #40 values; it MUST NOT invent revenue formulas, tuning, or an independent
+  enable flag. #40 MUST NOT reference #30, discover clubs independently, or invoke either lifecycle path on
+  its own (the one-way composition, FR-FN-027).
 - **#27 (squad/player data):** at T2a, the `Squad.ClubId` enumeration #40 reads becomes the authoritative
   club-identity source and the `PlayerDatabase` asmdef reference becomes live in the same landing. #40 MUST
   NOT gain a second, competing club-identity notion.
@@ -192,4 +223,6 @@ otherwise have to re-derive them:
 | 1.1 | 2026-09-11 | — | **PR #392 T2 split back-prop.** T2a owns only the pure #27-backed bootstrap factory and activation of the consumed `PlayerDatabase` edge; T2b owns #30's production invocation plus step-(b') settlement wiring. §7.3 explicitly keeps lifecycle/composition ownership in #30 so the factory is not a second bootstrap authority. |
 | 1.2 | 2026-09-11 | — | **T2b implementation / ERR-030-051.** Records `League.CreateLoop` as #30's one-time bootstrap owner, the live staged settlement at (b'), post-commit finance installation preserving refused-roll atomicity, and the public observer/query/command surfaces. T3 becomes the next phase. |
 | 1.3 | 2026-09-11 | — | **T2b review correction.** Legacy empty T1b state is migrated only through `SeasonLoop.Restore`/`NormalizeLegacyRestore`; ordinary normalization remains validation-only, and generic legacy/unwired empty composition fails loud on finance use rather than silently receiving starting cash. |
+| 1.4 | 2026-09-11 | OpenAI | **T3a foundation.** Splits the deep tier into a mergeable draw-free accounting/lifecycle foundation versus future live producers/invocation/RNG/FFP work; records the new pure accrual primitive, current-season revenue reset, unchanged FFP window, and unchanged dependency/save/RNG shape. |
+| 1.5 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Records T3a's public `AccrueDailyRevenue` as a bounded unconsumed prerequisite, makes T3b1 an identity-zero #30 wiring slice that closes it before economic tuning, moves deterministic formulas/`[GT]` values to T3b2, and assigns the single future `deepRevenueEnabled` producer to #40/config ownership rather than #30. |
 #endregion

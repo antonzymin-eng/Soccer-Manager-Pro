@@ -1,9 +1,10 @@
 # Club Finances & Economy #40 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated:** September 11, 2026 (v0.3 — ERR-040-003: §1.2's mutation-path scope line reconciled with FR-FN-003's externally-commanded/autonomous split)
+**Last Updated (prior):** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -22,7 +23,9 @@ its own right rather than a transfer side-effect (the design supplement's own fr
 
 **In scope:** the per-club `ClubFinances` record (balance, transfer/wage budget ceilings, wage-ledger
 aggregate, deep-tier revenue/FFP accumulators); the season-boundary `SettleFinances` step (budget projection
-from the final table); the single ledger-mutation entry point `ApplyTransaction`; a read-only
+from the final table); the single **externally-commanded** ledger-mutation entry point `ApplyTransaction`;
+the #40-owned **autonomous** deep-tier accrual surface (`AccrueDailyRevenue`, T3a — see FR-FN-003 and §3.4.1),
+which mutates only `Balance` + `SeasonRevenueAccrued` and is not a second caller-command ledger; a read-only
 `AvailableTransferBudget` constraint query (#31/#34/#42 read); a read-only `FinancesViewModel` observer for
 #38; the persistent finance sub-blob under #30's season save; and the **reserved, not promoted**
 `_RESERVED_0x29_` / `SubsystemOrdinals` 91 namespace slot.
@@ -175,4 +178,5 @@ data-structure sketch and no-contradiction with any KD:
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial. Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | **ERR-040-002** (at #53's approval): a new out-of-scope row records that **#53 owns facility state** and #40's role is **funding** via the existing `ApplyTransaction` path. Filed because **four approved specs pointed at #40 for a facility model its own scope excludes** — the gap that caused #53 to be opened. Names #53's `Stadium` capacity as the input for §7.2's deferred matchday accrual. **No #40 code, constraint, ledger or requirement change.** |
+| 0.3 | 2026-09-11 | Claude | **ERR-040-003 back-prop.** §1.2 still called `ApplyTransaction` *the* single ledger-mutation entry point after FR-FN-003 (§2 v0.5) split externally-commanded mutation from #40-owned autonomous accrual, so the two APPROVED section files gave downstream implementers contradictory ownership guidance. The scope line now carries the `externally-commanded` qualifier and names the T3a `AccrueDailyRevenue` surface with its `Balance` + `SeasonRevenueAccrued` bound. **No requirement, constraint or code change** — §1 is brought into line with §2/§3, which already stated the split. |
 #endregion

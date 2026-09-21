@@ -1,0 +1,146 @@
+name: PR416 Controlled-state residency
+
+on:
+  push:
+    branches:
+      - evidence/pr416-controlled-residency
+    paths:
+      - .github/workflows/pr416-controlled-residency.yml
+
+permissions:
+  contents: read
+
+jobs:
+  residency:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: pinned-main
+            ref: 1bad655f5826070d1e29f54a845cdf2c549f66bc
+          - label: pr416-control
+            ref: 07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Add temporary Controlled-residency measurement
+        run: |
+          cat > src/match-engine/tests/Pr416ControlledResidencyEvidenceTests.cs <<'CS'
+          using NUnit.Framework;
+          using TacticalDirector.BallPhysics;
+          using TacticalDirector.DefensiveAI;
+          using TacticalDirector.DeterministicSim;
+          using TacticalDirector.PlayerDatabase;
+
+          namespace TacticalDirector.MatchEngine
+          {
+              [TestFixture]
+              internal sealed class Pr416ControlledResidencyEvidenceTests
+              {
+                  private const int Ticks = 150_000;
+                  private static readonly ulong[] Seeds =
+                  {
+                      0x0F1E2D3C4B5A6978UL,
+                      0x00000000D1A6D05EUL,
+                  };
+
+                  private static Squad BuildSquad(ulong seed, int clubId)
+                  {
+                      var rng = new DeterministicRngService(seed ^ (ulong)clubId);
+                      int stream = rng.RegisterStream(
+                          "tackle.roster", SubsystemOrdinals.PlayerDatabase, entityId: clubId, streamVersion: 1);
+
+                      var template = new PlayerPosition[PlayerDatabaseConstants.CLUB_SQUAD_SIZE];
+                      int i = 0;
+                      for (int k = 0; k < 3; k++) template[i++] = PlayerPosition.Goalkeeper;
+                      for (int k = 0; k < 8; k++) template[i++] = PlayerPosition.Defender;
+                      for (int k = 0; k < 8; k++) template[i++] = PlayerPosition.Midfielder;
+                      while (i < template.Length) template[i++] = PlayerPosition.Forward;
+
+                      return RosterGenerator.Generate(rng, stream, clubId, template);
+                  }
+
+                  private static MatchEngine Booted(ulong seed)
+                  {
+                      var engine = new MatchEngine(seed);
+                      engine.ConfigureSquads(BuildSquad(seed, 1), BuildSquad(seed, 2));
+                      return engine;
+                  }
+
+                  [Test]
+                  public void MeasureControlledResidency()
+                  {
+                      long pooledControlled = 0;
+                      long pooledHolder = 0;
+                      long pooledControlledWithHolder = 0;
+                      long pooledTicks = 0;
+
+                      foreach (ulong seed in Seeds)
+                      {
+                          MatchEngine engine = Booted(seed);
+                          long controlled = 0;
+                          long holder = 0;
+                          long controlledWithHolder = 0;
+
+                          for (int t = 0; t < Ticks; t++)
+                          {
+                              engine.RunTick();
+                              bool isControlled = engine.TestOnly_BallSnapshot.State == BallStateType.Controlled;
+                              bool hasHolder = engine.PossessingAgentId != MatchEngineConstants.NO_POSSESSION;
+                              if (isControlled) controlled++;
+                              if (hasHolder) holder++;
+                              if (isControlled && hasHolder) controlledWithHolder++;
+                          }
+
+                          pooledControlled += controlled;
+                          pooledHolder += holder;
+                          pooledControlledWithHolder += controlledWithHolder;
+                          pooledTicks += Ticks;
+
+                          TestContext.WriteLine(
+                              $"CONTROLLED_RESIDENCY seed=0x{seed:X16} ticks={Ticks} " +
+                              $"controlled={controlled} controlledShare={(double)controlled / Ticks:F9} " +
+                              $"holder={holder} holderShare={(double)holder / Ticks:F9} " +
+                              $"controlledWithHolder={controlledWithHolder} " +
+                              $"controlledWithHolderShare={(double)controlledWithHolder / Ticks:F9}");
+                      }
+
+                      TestContext.WriteLine(
+                          $"CONTROLLED_RESIDENCY pooled ticks={pooledTicks} " +
+                          $"controlled={pooledControlled} controlledShare={(double)pooledControlled / pooledTicks:F9} " +
+                          $"holder={pooledHolder} holderShare={(double)pooledHolder / pooledTicks:F9} " +
+                          $"controlledWithHolder={pooledControlledWithHolder} " +
+                          $"controlledWithHolderShare={(double)pooledControlledWithHolder / pooledTicks:F9}");
+
+                      Assert.Pass("measurement complete");
+                  }
+              }
+          }
+          CS
+      - name: Generate projects and restore
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run residency measurement
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-residency-${{ matrix.label }}
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=MeasureControlledResidency" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=controlled-residency-${{ matrix.label }}.trx" \
+            --results-directory artifacts/pr416-residency-${{ matrix.label }} \
+            2>&1 | tee artifacts/pr416-residency-${{ matrix.label }}/console.log
+      - name: Upload residency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-residency-${{ matrix.label }}-${{ github.run_id }}
+          path: artifacts/pr416-residency-${{ matrix.label }}/
+          if-no-files-found: error
