@@ -32,7 +32,7 @@ EXPECTED_SWEEP_MEMBERS = {
         "size": 53109,
     },
     "report.md": {
-        "sha256": "50fafdcd92459cc89401c42345c2fc6c2bb57f82bffda37aec25295bd",
+        "sha256": "50fafdcd92459cc89408de89401c42345c2fc6c2bb57f82bffda37aec25295bd",
         "size": 48401,
     },
 }
@@ -205,6 +205,7 @@ def aggregate(records: list[dict[str, object]]) -> dict[str, int]:
         for name in names:
             result[f"{group}.{name}"] = sum(_value(record, f"{group}.{name}") for record in records)
     return result
+
 
 def _record_for_census(record: dict[str, object]) -> dict[str, object]:
     return {
