@@ -371,8 +371,8 @@ def _validate_prereg_baseline(
     except OSError as exc:
         return [f"{consumer}: required census consumer is missing/unreadable: {exc}"]
 
-    baseline_line = f"**Baseline source:** `{CENSUS_JSON.as_posix()}`  "
-    if baseline_line not in text:
+    baseline_line = f"**Baseline source:** `{CENSUS_JSON.as_posix()}`"
+    if not any(line.rstrip() == baseline_line for line in text.splitlines()):
         errors.append(
             f"{consumer}: baseline source must point to {CENSUS_JSON.as_posix()}"
         )
