@@ -118,33 +118,7 @@ scanning. Filesystem scanning is used only for non-Git temporary fixtures.
 To regenerate a complete manifest from tracked files, run from the manifest directory:
 
 ```bash
-git ls-files -z -- . \
-  | grep -zv '^SHA256SUMS
-The scheduled Linux job is non-certifying. `.github/workflows/nightly.yml` also defines the authoritative Windows/Unity Spec #16 job, but it is disabled until repository variable `DETERMINISM_CERTIFIED_RUNNER_ENABLED=true` is set after a matching self-hosted runner is actually registered/configured. Until a successful certified-host run exists, FR-TS-075's determinism leg remains operationally open.
-
-## Running in remote Linux authoring environments
-
-Where .NET 8 is already available, the policy runner can execute normally. Historical remote-container measurements established that Ubuntu-hosted .NET can run the generated gate, but those measurements remain non-certifying and do not substitute for the current PR/certified-host evidence.
-
-## Shim fidelity rules
-
-- Shim members replicate Unity semantics only where this codebase depends on them; never add a fake member merely to make broken code compile.
-- The shim must stay Unity-shaped. A compile error that Unity would also produce is a valid gate failure.
-- When .NET and Unity's supported BCL surface disagree, the production-compatible surface wins.
-
-## Version History
-
-| Version | Date | Author | Notes |
-|---|---|---|---|
-| Governance addendum | 2026-09-21 | — | Adds the evidence-integrity contract registry/checker and the shallow-history ancestry guard; records tracked-file scope, explicit external-verifier boundaries, fail-closed Git-scope behavior, and ancestry exit-code semantics. |
-| Policy addendum (retirement) | 2026-09-20 | — | Owner decision retires the final configured owner-held row, `sim_match_engine_close_chance`, without changing its predicate or bounds. Documents the already-unit-tested empty-ledger terminal state: ordinary sweep unfiltered, dedicated stage skipped. |
-| Policy addendum | 2026-09-04 | — | **Testing Strategy pipeline correction.** Makes `tools/run-tests-local.sh` the canonical developer/CI policy entry point; records exact owner-held RED handling, anchored NUnit pre-commit selection, persistent staged-index build cache, coverage settings, and the gated certified-host nightly boundary. This operational correction intentionally does not advance the historical gate-document version key, because live open-issue records cite the Aug-7 v1.2 revision as dated evidence. |
-| 1.2 | 2026-08-07 | — | Recorded that the full generated Linux gate can run in the Claude remote Ubuntu environment; still non-certifying. |
-| 1.1 | 2026-07-13 | — | Certification-pin citations updated to the Unity 6000.4.9f1 target tuple; gate remained non-certifying. |
-| 1.0 | 2026-06-12 | — | Initial gate: shim + generator + runner + quarantine; first full suite execution exposed multiple previously uncompiled defects. |
- \
-  | sort -z \
-  | xargs -0 sha256sum > SHA256SUMS
+git ls-files -z -- . | grep -zv '^SHA256SUMS$' | sort -z | xargs -0 sha256sum > SHA256SUMS
 ```
 
 The manifest grammar is intentionally strict: lowercase SHA-256, two spaces, then the relative path.
@@ -152,8 +126,7 @@ The manifest grammar is intentionally strict: lowercase SHA-256, two spaces, the
 `check_branch_ancestry.py` is the local branch-cleanup guard:
 
 ```bash
-python3 tools/dotnet-ci/check_branch_ancestry.py \
-  --repo . --ancestor <branch-or-tip> --descendant main
+python3 tools/dotnet-ci/check_branch_ancestry.py --repo . --ancestor <branch-or-tip> --descendant main
 ```
 
 It checks `git rev-parse --is-shallow-repository` **before** resolving or comparing refs. A shallow
@@ -181,6 +154,7 @@ Where .NET 8 is already available, the policy runner can execute normally. Histo
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| Governance addendum | 2026-09-21 | — | Adds the evidence-integrity contract registry/checker and the shallow-history ancestry guard; records tracked-file scope, explicit external-verifier boundaries, fail-closed Git-scope behavior, and ancestry exit-code semantics. |
 | Policy addendum (retirement) | 2026-09-20 | — | Owner decision retires the final configured owner-held row, `sim_match_engine_close_chance`, without changing its predicate or bounds. Documents the already-unit-tested empty-ledger terminal state: ordinary sweep unfiltered, dedicated stage skipped. |
 | Policy addendum | 2026-09-04 | — | **Testing Strategy pipeline correction.** Makes `tools/run-tests-local.sh` the canonical developer/CI policy entry point; records exact owner-held RED handling, anchored NUnit pre-commit selection, persistent staged-index build cache, coverage settings, and the gated certified-host nightly boundary. This operational correction intentionally does not advance the historical gate-document version key, because live open-issue records cite the Aug-7 v1.2 revision as dated evidence. |
 | 1.2 | 2026-08-07 | — | Recorded that the full generated Linux gate can run in the Claude remote Ubuntu environment; still non-certifying. |
