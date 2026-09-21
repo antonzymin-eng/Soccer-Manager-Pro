@@ -1,6 +1,6 @@
 // File:     src/positioning-ai/RotationController.cs
 // Created:  2026-07-11
-// Modified: 2026-07-11
+// Modified: 2026-09-21
 // Author:   —
 // Spec:     Positional Rotations #25 §3.1–§3.4 (FM-RO-01/02), §4.2, FR-RO-001..018, Code Standards #20
 // Purpose:  Per-team rotation controller: evaluates the organic-exchange trigger against the
@@ -291,7 +291,10 @@ namespace TacticalDirector.PositioningAI
                     position:     a.Position,
                     isActive:     a.IsActive,
                     role:         formation[boundSlot].Role,
-                    isGoalkeeper: a.IsGoalkeeper);
+                    isGoalkeeper: a.IsGoalkeeper,
+                    duty:         a.Duty,
+                    positioningFreedom: a.PositioningFreedom,
+                    tacticalRole: a.TacticalRole);
             }
         }
 
@@ -406,4 +409,5 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        |   revert/hold, §3.3 atomic swap + partner lock, §3.4 phase-exit   |
 // |         |            |        |   freeze, F2/F5/F6 validating seams. Identity binding leaves the  |
 // |         |            |        |   snapshot untouched (byte-identical default).                    |
+// | 1.1     | 2026-09-21 | —      | Row rebinding preserves Duty, PositioningFreedom, and PlayerRole. |
 #endregion

@@ -1,6 +1,6 @@
 // File: src/positioning-ai/SlotComposer.cs
 // Created: 2026-05-29
-// Modified: 2026-07-22
+// Modified: 2026-09-21
 // Author: —
 // Spec: #12 Positioning AI §3.7 (§3.7.1 as amended by ERR-012-007/008); Build-Up #24 §3.2 (FM-BU-02);
 //       Dismarking #23 §3.3 (FM-DM-02)
@@ -104,8 +104,10 @@ namespace TacticalDirector.PositioningAI
                 }
 
                 Vector2 anchor   = AnchorCalculator.ComputeAnchor(formation[idx]);
+                anchor.x += TacticTranslation.DutyForeOffset(agent.Duty);
                 Vector2 offset   = AnchorCalculator.ComputeBallRelativeOffset(
                                        snapshot.BallPosition, agent.Role, phase);
+                offset *= TacticTranslation.PositioningFreedomScalar(agent.PositioningFreedom);
                 Vector2 baseSlot = anchor + offset;
 
                 // FR-PA-044 / F3: NaN guard — replace with raw anchor.
@@ -234,4 +236,5 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        | GK slot instead of being skipped. Skipping left outSlots[idx] at the stale carried buffer value,   |
 // |         |            |        | which is not serialized, so forward replay from a restore diverged. GK at slot 0 (every realistic  |
 // |         |            |        | case) is unaffected — byte-identical default pipeline.                                              |
+// | 1.4     | 2026-09-21 | —      | Applies #21 Duty fore/aft offsets and PositioningFreedom ball-offset scaling.                        |
 #endregion

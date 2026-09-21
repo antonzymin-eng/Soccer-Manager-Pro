@@ -1,11 +1,13 @@
 // File: src/positioning-ai/AgentPositioningData.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-09-21
 // Author:   —
 // Spec: #12 Positioning AI §4.3
 // Purpose: Per-agent input consumed from the perception snapshot each positioning tick.
 
 using UnityEngine;
+
+using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.PositioningAI
 {
@@ -34,9 +36,21 @@ namespace TacticalDirector.PositioningAI
         /// <summary>True only for the goalkeeper slot (index 0). GK slot computed via dedicated formula §3.3.3.</summary>
         public readonly bool IsGoalkeeper;
 
+        /// <summary>Per-agent duty controlling the tactical fore/aft anchor offset.</summary>
+        public readonly Duty Duty;
+
+        /// <summary>Per-agent positional-freedom bias controlling ball-relative movement.</summary>
+        public readonly InstrBias PositioningFreedom;
+
+        /// <summary>Behavioural player role from #21; distinct from the formation slot's geometric <see cref="Role"/>.</summary>
+        public readonly PlayerRole TacticalRole;
+
         public AgentPositioningData(
             int entityId, int slotIndex, Vector2 position,
-            bool isActive, RoleId role, bool isGoalkeeper)
+            bool isActive, RoleId role, bool isGoalkeeper,
+            Duty duty = Duty.Support,
+            InstrBias positioningFreedom = InstrBias.Default,
+            PlayerRole tacticalRole = PlayerRole.Default)
         {
             EntityId    = entityId;
             SlotIndex   = slotIndex;
@@ -44,6 +58,9 @@ namespace TacticalDirector.PositioningAI
             IsActive    = isActive;
             Role        = role;
             IsGoalkeeper = isGoalkeeper;
+            Duty = duty;
+            PositioningFreedom = positioningFreedom;
+            TacticalRole = tacticalRole;
         }
     }
 }
@@ -51,4 +68,5 @@ namespace TacticalDirector.PositioningAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-09-21 | —      | Added #21 Duty, PositioningFreedom, and distinct PlayerRole routing fields. |
 #endregion

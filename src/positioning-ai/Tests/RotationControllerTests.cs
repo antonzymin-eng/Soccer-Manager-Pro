@@ -1,6 +1,6 @@
 // File:     src/positioning-ai/Tests/RotationControllerTests.cs
 // Created:  2026-07-11
-// Modified: 2026-07-11
+// Modified: 2026-09-21
 // Author:   —
 // Spec:     Positional Rotations #25 §3.1–§3.4 (T-RO-U-001..008, T-RO-U-012 gates), FR-RO-004..013
 // Purpose:  Unit tests for the RotationController: trigger predicate + dwell commit, hold/revert,
@@ -58,7 +58,10 @@ namespace TacticalDirector.PositioningAI.Tests
                     if (agent == i) pos = p;
                 }
                 snap.Agents[i] = new AgentPositioningData(
-                    i, i, pos, isActive: true, F[i].Role, F[i].IsGoalkeeper);
+                    i, i, pos, isActive: true, F[i].Role, F[i].IsGoalkeeper,
+                    duty: i == 1 ? Duty.Attack : Duty.Support,
+                    positioningFreedom: i == 1 ? InstrBias.More : InstrBias.Default,
+                    tacticalRole: i == 1 ? PlayerRole.Poacher : PlayerRole.Default);
             }
             return snap;
         }
@@ -115,6 +118,11 @@ namespace TacticalDirector.PositioningAI.Tests
             Assert.AreEqual(1, rot.GetSlotOfAgent(5), "LM agent bound to LB slot");
             Assert.AreEqual(5, snap.Agents[1].SlotIndex, "snapshot row rebound (agent 1 → slot 5)");
             Assert.AreEqual(F[5].Role, snap.Agents[1].Role, "role re-derived from the bound slot");
+            Assert.AreEqual(Duty.Attack, snap.Agents[1].Duty, "player duty survives row reconstruction");
+            Assert.AreEqual(InstrBias.More, snap.Agents[1].PositioningFreedom,
+                "positioning freedom survives row reconstruction");
+            Assert.AreEqual(PlayerRole.Poacher, snap.Agents[1].TacticalRole,
+                "behavioural player role survives row reconstruction");
             Assert.AreEqual(1, snap.Agents[5].SlotIndex, "snapshot row rebound (agent 5 → slot 1)");
             Assert.AreEqual(0, snap.Agents[0].SlotIndex, "GK binding always identity (FR-RO-003)");
         }
@@ -400,4 +408,5 @@ namespace TacticalDirector.PositioningAI.Tests
 // | 1.0     | 2026-07-11 | —      | Initial implementation: FM-RO-01/02 trigger/dwell/commit/revert, |
 // |         |            |        |   partner lock, commit cap, phase freeze, Off identity, F2/F5/F6 |
 // |         |            |        |   validating seams.                                              |
+// | 1.1     | 2026-09-21 | —      | Locks per-player tactical state preservation across row rebinding. |
 #endregion

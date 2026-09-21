@@ -1,6 +1,6 @@
 // File: src/positioning-ai/PositioningAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-07-20
+// Modified: 2026-09-21
 // Author:   —
 // Spec: #12 Positioning AI §3.7 (§3.7.1 as amended by ERR-012-009), §3.11, §4.3, FR-PA-001..006,
 //       new §3.5/§7.13; Positional Rotations #25 §4.2
@@ -35,7 +35,7 @@ namespace TacticalDirector.PositioningAI
 
         // ── Persistent state ──────────────────────────────────────────────────
         private readonly HysteresisState _hyst;
-        private readonly FormationFamily _archetype;
+        private FormationFamily _archetype;
 
         // ── Per-tick output buffer (pre-allocated, reused each tick) ──────────
         private readonly Vector2[] _slots;        // length = SQUAD_SIZE; index = SlotIndex
@@ -54,18 +54,27 @@ namespace TacticalDirector.PositioningAI
         private bool _lastRestDefenseSufficient = true;
 
         // ── #25 rotation controller (§4.2: phase → rotations → compose) ────────
-        private readonly RotationController _rotation;
+        private readonly RotationController[] _rotations;
+        private RotationController _rotation;
 
         public PositioningAITick(FormationFamily archetype, int maxEntityId = 64)
         {
-            _archetype        = archetype;
+            _archetype        = archetype == FormationFamily.F433 || archetype == FormationFamily.F4231
+                ? archetype
+                : FormationFamily.F442;
             _hyst             = new HysteresisState(PositioningAIConstants.SQUAD_SIZE);
             _slots            = new Vector2[PositioningAIConstants.SQUAD_SIZE];
             _anchorBuf        = new Vector2[PositioningAIConstants.SQUAD_SIZE];
             _entityIdArr      = new int[PositioningAIConstants.SQUAD_SIZE];
             _entityIdCapacity = maxEntityId + 1;
             _entityToSlotIndex = new int[_entityIdCapacity];
-            _rotation         = new RotationController(archetype, PositioningAIConstants.SQUAD_SIZE);
+            _rotations       = new RotationController[3]
+            {
+                new RotationController(FormationFamily.F442, PositioningAIConstants.SQUAD_SIZE),
+                new RotationController(FormationFamily.F433, PositioningAIConstants.SQUAD_SIZE),
+                new RotationController(FormationFamily.F4231, PositioningAIConstants.SQUAD_SIZE)
+            };
+            _rotation         = _rotations[(int)_archetype];
 
             for (int i = 0; i < _entityIdCapacity; i++) _entityToSlotIndex[i] = -1;
 
@@ -114,6 +123,27 @@ namespace TacticalDirector.PositioningAI
             // seeded anchor slots) so the first heartbeat's predicate has finite targets.
             _rotation.WriteBackComposedTargets(_slots);
         }
+
+        /// <summary>
+        /// Applies a newly activated formation at a tactical-stride boundary. Runtime changes reseed
+        /// formation-dependent state; restore callers may retain already-deserialized hysteresis.
+        /// </summary>
+        public void SetFormation(
+            FormationFamily formation,
+            PositioningPerceptionSnapshot snapshot,
+            bool reseedHysteresis = true)
+        {
+            if (_archetype == formation) return;
+
+            _archetype = formation;
+            _rotation = _rotations[(int)formation];
+            _rotation.ResetToIdentity();
+            if (reseedHysteresis)
+                SeedFromFormation(snapshot);
+        }
+
+        /// <summary>Returns the currently selected formation family.</summary>
+        public FormationFamily GetFormationFamily() => _archetype;
 
         // ── Per-tick entry point ───────────────────────────────────────────────
 
@@ -280,6 +310,7 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        |   LastComposedTarget cache write-back; SeedFromFormation resets the      |
 // |         |            |        |   controller + boot-seeds the cache. CaptureRotationState() seam.        |
 // | 1.4     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): RestoreState(HysteresisState) — the |
+// | 1.5     | 2026-09-21 | —      | Formation changes now reconfigure the family and rotation catalogue at a tactical stride. |
 // |         |            |        |   read counterpart to CaptureState; copies phase + per-agent line/lane    |
 // |         |            |        |   membership into the live _hyst. Rotation restores via the existing      |
 // |         |            |        |   RotationController.Restore* seams. No behaviour change.                 |

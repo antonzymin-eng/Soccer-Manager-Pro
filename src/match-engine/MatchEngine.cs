@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-21 (Positioning AI data-flow fixes: live score, formation/role, active-outfield count, duty, and positioning freedom)
 // Modified: 2026-09-16 (W2 production activation — active tackle reach must be > 0 and <= loose-ball reclaim reach; zero remains only as a test/measurement negative-control override; no schema/RNG change)
 // Modified: 2026-09-15 (W6 review closure — Controlled goalkeeper carriers are constrained at their defended goal plane in the MatchEngine attachment funnel; no schema/RNG change)
 // Modified: 2026-09-14 (W6 review P2 — tackle cooldown now ages on every AI stride even without a physical carrier; regression seam only, no schema/RNG change)
@@ -2753,6 +2754,20 @@ namespace TacticalDirector.MatchEngine
         internal TacticalDirector.TacticalInstructions.TacticWidth TestOnly_PositioningWidth(int teamId) => _posModifiers[teamId].Width;
         internal TacticalDirector.TacticalInstructions.TacticDefWidth TestOnly_PositioningDefWidth(int teamId) => _posModifiers[teamId].DefensiveWidth;
 
+        /// <summary>Test-only: the own-minus-opponent goal differential routed into team
+        /// <paramref name="teamId"/>'s Positioning AI (#12) modifier input at the last AI tick.</summary>
+        internal int TestOnly_PositioningScoreDiff(int teamId) => _posModifiers[teamId].ScoreDiff;
+
+        /// <summary>Test-only: the active formation family consumed by team <paramref name="teamId"/>'s Positioning AI.</summary>
+        internal FormationFamily TestOnly_PositioningFormation(int teamId) => _positioning[teamId].GetFormationFamily();
+
+        /// <summary>Test-only: the role and active-outfield count routed through the latest #12 snapshot.</summary>
+        internal RoleId TestOnly_PositioningRole(int teamId, int localIndex) => _posSnapshots[teamId].Agents[localIndex].Role;
+        internal int TestOnly_PositioningActiveOutfieldCount(int teamId) => _posSnapshots[teamId].ActiveOutfieldCount;
+        internal Duty TestOnly_PositioningDuty(int teamId, int localIndex) => _posSnapshots[teamId].Agents[localIndex].Duty;
+        internal InstrBias TestOnly_PositioningFreedom(int teamId, int localIndex) => _posSnapshots[teamId].Agents[localIndex].PositioningFreedom;
+        internal PlayerRole TestOnly_PositioningPlayerRole(int teamId, int localIndex) => _posSnapshots[teamId].Agents[localIndex].TacticalRole;
+
         /// <summary>#23 routing seam: the DismarkIntensity routed into this agent's TacticalContext (FR-DM-015).</summary>
         internal DismarkIntensity TestOnly_DismarkIntensity(int agentId) => _tacticalContexts[agentId].DismarkIntensity;
 
@@ -3246,8 +3261,14 @@ namespace TacticalDirector.MatchEngine
                 // (the 5-arg ctor with both Standard equals the 3-arg identity-seeding ctor). This is the
                 // #12 analogue of the #13 FillPressingSnapshot single-writer.
                 FillPositioningSnapshot(t, tacticalTick);
+                _positioning[t].SetFormation(
+                    TacticalDirector.PositioningAI.TacticTranslation.FormationFamily(_activeTeamTactics[t].Formation),
+                    _posSnapshots[t]);
                 ContextModifierInputs modifiers = new ContextModifierInputs(
-                    scoreDiff: 0,
+                    // #12 FR-PA-017: ContextModifierInputs is team-relative (own − opponent).
+                    // _goals is stored in absolute home/away team order, so derive the sign inside
+                    // this per-team loop rather than forwarding a shared home-relative value.
+                    scoreDiff: _goals[t] - _goals[1 - t],
                     teamMeanFatigue: ComputeTeamMeanFatigue(t),
                     tacticalIntensity: MatchEngineConstants.STAGE0_TACTICAL_INTENSITY,
                     width: _activeTeamTactics[t].Width,
@@ -3892,8 +3913,9 @@ namespace TacticalDirector.MatchEngine
         private void FillPositioningSnapshot(int team, int tickIndex)
         {
             PositioningPerceptionSnapshot snap = _posSnapshots[team];
-            FormationSlotRecord[] formation =
-                PositioningAIConstants.GetFormationSlots(MatchEngineConstants.STAGE0_FORMATION);
+            FormationFamily formationFamily =
+                TacticalDirector.PositioningAI.TacticTranslation.FormationFamily(_activeTeamTactics[team].Formation);
+            FormationSlotRecord[] formation = PositioningAIConstants.GetFormationSlots(formationFamily);
 
             snap.TickIndex = tickIndex;
             snap.BallPosition = MirrorPitchIfAway(team, _ball.Position);
@@ -3930,6 +3952,7 @@ namespace TacticalDirector.MatchEngine
             {
                 int i = team * MatchEngineConstants.PLAYERS_PER_TEAM + k;
                 bool isGk = _isGoalkeeper[i];
+                PlayerTactic playerTactic = _activePlayerTactics[i];
 
                 snap.Agents[k] = new AgentPositioningData(
                     entityId: i,
@@ -3937,9 +3960,12 @@ namespace TacticalDirector.MatchEngine
                     position: MirrorPitchIfAway(team, _agents[i].Position),
                     isActive: !_isSentOff[i],       // match-flow completion: red-carded agents excluded
                     role: formation[k].Role,
-                    isGoalkeeper: isGk);
+                    isGoalkeeper: isGk,
+                    duty: playerTactic.Duty,
+                    positioningFreedom: playerTactic.Instructions.PositioningFreedom,
+                    tacticalRole: playerTactic.Role);
 
-                if (!isGk) activeOutfield++;
+                if (!isGk && !_isSentOff[i]) activeOutfield++;
 
                 // #23 §3.2/§4.4: the per-agent dismark carriers — the nearest qualifying marker +
                 // the UNGATED proximity × dwell pressure — computed from this agent's FilteredView.
@@ -6607,6 +6633,17 @@ namespace TacticalDirector.MatchEngine
             {
                 _activePlayerTactics[i] = ReadPlayerTactic(buf, ref o);
                 _pendingPlayerTactics[i] = ReadPlayerTactic(buf, ref o);
+            }
+
+            // Formation is serialized inside the active tactic rather than in #12's state block.
+            // Select the matching family before restoring the formation-specific rotation state;
+            // retain the already-restored hysteresis rather than treating load as a tactic change.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _positioning[t].SetFormation(
+                    TacticalDirector.PositioningAI.TacticTranslation.FormationFamily(_activeTeamTactics[t].Formation),
+                    _posSnapshots[t],
+                    reseedHysteresis: false);
             }
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
@@ -9725,4 +9762,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Stationary. No snapshot-schema or RNG change.                                     |
 // | 1.76    | 2026-09-14 | —      | ERR-013-011: FillPressingSnapshot carries the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
 // | 1.80    | 2026-09-16 | —      | W2 production activation: non-positive catalogue reach now fails loud; zero remains only for the explicit test/measurement override. Existing <= LooseBallPickupRadiusM guard unchanged; no schema/RNG change. |
+// | 1.81    | 2026-09-21 | —      | #12 score context: RunMechanicsAI now routes each team's live own-minus-opponent goal differential into ContextModifierInputs instead of the constant zero placeholder. No schema/RNG change. |
+// | 1.82    | 2026-09-21 | —      | #12 formation flow: active TeamTactic.Formation selects the PositioningAITick family and snapshot role table; ActiveOutfieldCount now excludes sent-off players. No schema/RNG change. |
+// | 1.83    | 2026-09-21 | —      | #12 player flow: active PlayerTactic Duty and PositioningFreedom now reach each AgentPositioningData row and affect fore/aft anchors and ball-relative movement. No schema/RNG change. |
+// | 1.84    | 2026-09-21 | —      | #12 rotation flow: Duty, PositioningFreedom, and the distinct PlayerRole survive slot-rebinding row reconstruction. No schema/RNG change. |
 #endregion
