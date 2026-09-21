@@ -5,6 +5,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -130,6 +131,62 @@ class W12EvidenceTests(unittest.TestCase):
         )
         self.assertTrue(
             any("provenance.post.measurement_sha256" in error for error in errors),
+            errors,
+        )
+
+    def test_unrecognized_root_key_fails_closed(self) -> None:
+        checker = _load_checker()
+        census = _census(checker)
+        census["notes"] = "fabricated claim"
+        errors = checker.validate_census_payload(
+            ROOT, census, *_governed_inputs(checker)
+        )
+        self.assertTrue(
+            any("root keys" in error and "notes" in error for error in errors),
+            errors,
+        )
+
+    def test_governance_free_text_is_pinned(self) -> None:
+        checker = _load_checker()
+        census = _census(checker)
+        census["generated_from"] = "rewritten provenance claim"
+        census["salvaged_from"]["branch"] = "fabricated/branch"
+        errors = checker.validate_census_payload(
+            ROOT, census, *_governed_inputs(checker)
+        )
+        self.assertTrue(any("generated_from" in error for error in errors), errors)
+        self.assertTrue(any("salvaged_from" in error for error in errors), errors)
+
+    def test_missing_declared_consumer_fails_closed(self) -> None:
+        checker = _load_checker()
+        pre_records, pre_scores, _, _ = _governed_inputs(checker)
+        aggregate = checker._aggregate_for_census(pre_records, pre_scores)
+        with tempfile.TemporaryDirectory() as tmp:
+            errors = checker._validate_prereg_baseline(Path(tmp), aggregate)
+        self.assertTrue(
+            any("required census consumer is missing" in error for error in errors),
+            errors,
+        )
+
+    def test_prereg_locked_baseline_is_bound_to_raw_pre_aggregate(self) -> None:
+        checker = _load_checker()
+        pre_records, pre_scores, _, _ = _governed_inputs(checker)
+        aggregate = checker._aggregate_for_census(pre_records, pre_scores)
+        source = (ROOT / checker.CENSUS_CONSUMERS[0]).read_text(encoding="utf-8")
+        corrupted = source.replace(
+            "| InvariantRejected | 139,309 | 84.845% |",
+            "| InvariantRejected | 139,308 | 84.845% |",
+            1,
+        )
+        self.assertNotEqual(source, corrupted)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            consumer = root / checker.CENSUS_CONSUMERS[0]
+            consumer.parent.mkdir(parents=True)
+            consumer.write_text(corrupted, encoding="utf-8")
+            errors = checker._validate_prereg_baseline(root, aggregate)
+        self.assertTrue(
+            any("baseline row 'InvariantRejected'" in error for error in errors),
             errors,
         )
 
