@@ -23,6 +23,30 @@ SWEEP_ARCHIVE = Path("docs/tracking/evidence/w12/w12-static-unread-field-sweep-3
 SWEEP_ARCHIVE_SHA256 = "c1e3526987793b8d736fad3f52e983982a8d10d483215a4ebbcb0f44bdef94f6"
 CENSUS_START = "<!-- W12_POST_CENSUS_BEGIN -->"
 CENSUS_END = "<!-- W12_POST_CENSUS_END -->"
+MANIFEST = Path("docs/tracking/evidence/w12/README.md")
+CENSUS_CONSUMERS = ["docs/tracking/w6-controlled-ball-preregistration.md"]
+
+EXPECTED_SWEEP_MEMBERS = {
+    "report.json": {
+        "sha256": "c542a5f4b8596bc8c62120e39c709e3d9e766038527092e0cb21e8f9097a4859",
+        "size": 53109,
+    },
+    "report.md": {
+        "sha256": "50fafdcd92459cc89401c42345c2fc6c2bb57f82bffda37aec25295bd",
+        "size": 48401,
+    },
+}
+
+EXPECTED_ARCHIVE_MEMBERS = {
+    "pre": {
+        "instrument-output.txt": "66dfe2604e963b3d5569eed5ff10a14d3216cf9042fe182ca86e2e7c8a8adebc",
+        "measurement.txt": "0ad04132db4e707f65332d318c0be12e7220a8a143b3a6530d5bb096fb630f15",
+    },
+    "post": {
+        "instrument-output.txt": "8c3764765968e74d63cfb232815ed6a72b4b3789bed07de9757327adf1cf8655",
+        "measurement.txt": "9e8c5bc8ae2698a3989cf6e2b750e489069396872d6c6ba3a95ce40928ef7ab1",
+    },
+}
 
 EXPECTED_ROWS = {
     "hasLatestPass team-heartbeats": ("latestPass",),
@@ -164,23 +188,23 @@ def _value(record: dict[str, object], path: str) -> int:
 
 
 def aggregate(records: list[dict[str, object]]) -> dict[str, int]:
-    keys = {
-        "samples",
-        "latestPass",
-        "active",
-        "primaryAssigned",
-        "coverShadows",
-        *{f"phase.{k}" for k in ("InPoss", "OutOfPoss", "TransToAtk", "TransToDef")},
-        *{f"exits.{k}" for k in (
-            "InPossession", "NoCommittedTrigger", "Active", "NoPrimaryPresser",
-            "InvariantRejected", "Disengaged", "Cooldown", "StaleTick"
-        )},
-        *{f"raw.{k}" for k in ("BadTouch", "BackwardPass", "SidelineTrap", "WeakReceiver")},
-        *{f"committed.{k}" for k in ("BadTouch", "BackwardPass", "SidelineTrap", "WeakReceiver")},
-    }
-    return {key: sum(_value(record, key) for record in records) for key in keys}
-
-
+    scalar_keys = ("samples", "latestPass", "active", "primaryAssigned", "coverShadows")
+    result = {key: sum(_value(record, key) for record in records) for key in scalar_keys}
+    for group in ("phase", "exits", "raw", "committed"):
+        names = sorted(
+            {
+                name
+                for record in records
+                for name in (
+                    record.get(group, {}).keys()
+                    if isinstance(record.get(group, {}), dict)
+                    else ()
+                )
+            }
+        )
+        for name in names:
+            result[f"{group}.{name}"] = sum(_value(record, f"{group}.{name}") for record in records)
+    return result
 
 def _record_for_census(record: dict[str, object]) -> dict[str, object]:
     return {
@@ -199,58 +223,169 @@ def _record_for_census(record: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _group_aggregate(
+    values: dict[str, int], records: list[dict[str, object]], group: str
+) -> dict[str, int]:
+    names = sorted(
+        {
+            name
+            for record in records
+            for name in (
+                record.get(group, {}).keys()
+                if isinstance(record.get(group, {}), dict)
+                else ()
+            )
+        }
+    )
+    return {name: values[f"{group}.{name}"] for name in names}
+
+
 def _aggregate_for_census(
     records: list[dict[str, object]], scorelines: list[str]
 ) -> dict[str, object]:
     values = aggregate(records)
-    exit_names = (
-        "Active",
-        "Cooldown",
-        "Disengaged",
-        "InPossession",
-        "InvariantRejected",
-        "NoCommittedTrigger",
-        "NoPrimaryPresser",
-    )
-    trigger_names = ("BackwardPass", "BadTouch", "SidelineTrap", "WeakReceiver")
+    exits = _group_aggregate(values, records, "exits")
     return {
         "active": values["active"],
-        "committed": {name: values[f"committed.{name}"] for name in trigger_names},
+        "committed": _group_aggregate(values, records, "committed"),
         "coverShadows": values["coverShadows"],
-        "exits": {name: values[f"exits.{name}"] for name in exit_names},
+        "exits": exits,
         "latestPass": values["latestPass"],
-        "nonInPossession": values["samples"] - values["exits.InPossession"],
+        "nonInPossession": values["samples"] - exits.get("InPossession", 0),
+        "phase": _group_aggregate(values, records, "phase"),
         "primaryAssigned": values["primaryAssigned"],
-        "raw": {name: values[f"raw.{name}"] for name in trigger_names},
+        "raw": _group_aggregate(values, records, "raw"),
         "samples": values["samples"],
         "scorelines": scorelines,
     }
 
 
-def validate_census_json(
+def _first_difference(
+    expected: object, actual: object, path: str = ""
+) -> tuple[str, object, object] | None:
+    if type(expected) is not type(actual):
+        return path or "<root>", expected, actual
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        expected_keys = set(expected)
+        actual_keys = set(actual)
+        missing = sorted(expected_keys - actual_keys)
+        if missing:
+            key = missing[0]
+            return f"{path}.{key}".lstrip("."), expected[key], "<missing>"
+        extra = sorted(actual_keys - expected_keys)
+        if extra:
+            key = extra[0]
+            return f"{path}.{key}".lstrip("."), "<absent>", actual[key]
+        for key in sorted(expected):
+            diff = _first_difference(
+                expected[key],
+                actual[key],
+                f"{path}.{key}".lstrip("."),
+            )
+            if diff is not None:
+                return diff
+        return None
+    if isinstance(expected, list):
+        assert isinstance(actual, list)
+        if len(expected) != len(actual):
+            return f"{path}.length".lstrip("."), len(expected), len(actual)
+        for index, expected_item in enumerate(expected):
+            diff = _first_difference(
+                expected_item,
+                actual[index],
+                f"{path}[{index}]",
+            )
+            if diff is not None:
+                return diff
+        return None
+    if expected != actual:
+        return path or "<root>", expected, actual
+    return None
+
+
+def _append_difference(
+    errors: list[str], label: str, expected: object, actual: object
+) -> None:
+    diff = _first_difference(expected, actual)
+    if diff is None:
+        return
+    path, expected_value, actual_value = diff
+    errors.append(
+        f"{CENSUS_JSON}: {label}.{path}: expected {expected_value!r}, got {actual_value!r}"
+    )
+
+
+def _archive_member_hashes(
+    repo: Path, archive: Path, expected_archive_sha256: str
+) -> tuple[dict[str, str], set[str]]:
+    data = _committed_bytes(repo, archive, expected_archive_sha256)
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        names = set(zf.namelist())
+        hashes = {
+            member: hashlib.sha256(zf.read(member)).hexdigest()
+            for member in names
+            if not member.endswith("/")
+        }
+    return hashes, names
+
+
+def _validate_manifest_hash_rows(
+    repo: Path, archive_hashes: dict[str, dict[str, str]]
+) -> list[str]:
+    errors: list[str] = []
+    try:
+        manifest = (repo / MANIFEST).read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"{MANIFEST}: could not read manifest: {exc}"]
+    for lane, members in archive_hashes.items():
+        for member in ("instrument-output.txt", "measurement.txt"):
+            digest = members.get(member)
+            if digest is None:
+                errors.append(f"{lane} archive missing required member {member}")
+                continue
+            expected_row = f"| `{member}` | `{digest}` |"
+            if expected_row not in manifest:
+                errors.append(
+                    f"{MANIFEST}: missing {lane} extracted-hash row for {member} ({digest})"
+                )
+    return errors
+
+
+def validate_census_payload(
     repo: Path,
+    census: object,
     pre_records: list[dict[str, object]],
     pre_scores: list[str],
     post_records: list[dict[str, object]],
     post_scores: list[str],
 ) -> list[str]:
     errors: list[str] = []
-    try:
-        census = json.loads((repo / CENSUS_JSON).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return [f"{CENSUS_JSON}: could not load census JSON: {exc}"]
+    if not isinstance(census, dict):
+        return [f"{CENSUS_JSON}: root must be an object"]
 
     if census.get("schema_version") != 2:
         errors.append(f"{CENSUS_JSON}: schema_version must be 2")
+    if census.get("consumers") != CENSUS_CONSUMERS:
+        errors.append(
+            f"{CENSUS_JSON}: consumers must equal {CENSUS_CONSUMERS!r}"
+        )
 
-    durable = census.get("durable_evidence", {})
+    durable = census.get("durable_evidence")
+    if not isinstance(durable, dict):
+        errors.append(f"{CENSUS_JSON}: durable_evidence must be an object")
+        durable = {}
+
     expected_archives = {
         "pre_zip": (PRE_ARCHIVE.as_posix(), PRE_ARCHIVE_SHA256),
         "post_zip": (POST_ARCHIVE.as_posix(), POST_ARCHIVE_SHA256),
         "sweep_zip": (SWEEP_ARCHIVE.as_posix(), SWEEP_ARCHIVE_SHA256),
     }
     for key, (expected_path, expected_sha) in expected_archives.items():
-        entry = durable.get(key, {})
+        entry = durable.get(key)
+        if not isinstance(entry, dict):
+            errors.append(f"{CENSUS_JSON}: durable_evidence.{key} must be an object")
+            continue
         if entry.get("path") != expected_path:
             errors.append(
                 f"{CENSUS_JSON}: durable_evidence.{key}.path "
@@ -262,48 +397,178 @@ def validate_census_json(
                 f"{entry.get('sha256')!r} != {expected_sha!r}"
             )
 
+    sweep_members = durable.get("sweep_members")
+    if not isinstance(sweep_members, dict):
+        errors.append(f"{CENSUS_JSON}: durable_evidence.sweep_members must be an object")
+        sweep_members = {}
+    recorded_sweep_names = set(sweep_members)
+    expected_sweep_names = set(EXPECTED_SWEEP_MEMBERS)
+    if recorded_sweep_names != expected_sweep_names:
+        errors.append(
+            f"{CENSUS_JSON}: durable_evidence.sweep_members names "
+            f"{sorted(recorded_sweep_names)!r} != expected {sorted(expected_sweep_names)!r}"
+        )
+    for member, expected in EXPECTED_SWEEP_MEMBERS.items():
+        entry = sweep_members.get(member)
+        if not isinstance(entry, dict):
+            errors.append(
+                f"{CENSUS_JSON}: durable_evidence.sweep_members.{member} must be an object"
+            )
+            continue
+        _append_difference(
+            errors,
+            f"durable_evidence.sweep_members.{member}",
+            expected,
+            entry,
+        )
+
     expected_lanes = {
         "pre": (pre_records, pre_scores),
         "post": (post_records, post_scores),
     }
     for lane, (records, scorelines) in expected_lanes.items():
-        actual = census.get(lane, {})
+        actual = census.get(lane)
+        if not isinstance(actual, dict):
+            errors.append(f"{CENSUS_JSON}: {lane} must be an object")
+            continue
         expected_rows = [_record_for_census(record) for record in records]
-        expected_aggregate = _aggregate_for_census(records, scorelines)
-        if actual.get("rows") != expected_rows:
-            errors.append(f"{CENSUS_JSON}: {lane}.rows differ from committed archive census")
-        if actual.get("aggregate") != expected_aggregate:
+        actual_rows = actual.get("rows")
+        if not isinstance(actual_rows, list):
+            errors.append(f"{CENSUS_JSON}: {lane}.rows must be an array")
+        elif len(actual_rows) != len(expected_rows):
             errors.append(
-                f"{CENSUS_JSON}: {lane}.aggregate differs from committed archive census"
+                f"{CENSUS_JSON}: {lane}.rows length: expected {len(expected_rows)}, "
+                f"got {len(actual_rows)}"
+            )
+        else:
+            for index, expected_row in enumerate(expected_rows):
+                actual_row = actual_rows[index]
+                ident = f"{expected_row['seed']} team {expected_row['team']}"
+                if not isinstance(actual_row, dict):
+                    errors.append(
+                        f"{CENSUS_JSON}: {lane}.rows[{index}] {ident}: expected object, "
+                        f"got {type(actual_row).__name__}"
+                    )
+                    continue
+                diff = _first_difference(expected_row, actual_row)
+                if diff is not None:
+                    field, expected_value, actual_value = diff
+                    errors.append(
+                        f"{CENSUS_JSON}: {lane}.rows[{index}] {ident} {field}: "
+                        f"expected {expected_value!r}, got {actual_value!r}"
+                    )
+                    break
+
+        expected_aggregate = _aggregate_for_census(records, scorelines)
+        actual_aggregate = actual.get("aggregate")
+        if not isinstance(actual_aggregate, dict):
+            errors.append(f"{CENSUS_JSON}: {lane}.aggregate must be an object")
+        else:
+            _append_difference(
+                errors,
+                f"{lane}.aggregate",
+                expected_aggregate,
+                actual_aggregate,
             )
 
-    provenance = census.get("provenance", {})
-    if provenance.get("pre", {}).get("artifact_zip_sha256") != PRE_ARCHIVE_SHA256:
-        errors.append(f"{CENSUS_JSON}: pre provenance ZIP hash is stale")
-    if provenance.get("post", {}).get("artifact_zip_sha256") != POST_ARCHIVE_SHA256:
-        errors.append(f"{CENSUS_JSON}: post provenance ZIP hash is stale")
+    provenance = census.get("provenance")
+    if not isinstance(provenance, dict):
+        errors.append(f"{CENSUS_JSON}: provenance must be an object")
+        provenance = {}
+
+    archive_specs = {
+        "pre": (PRE_ARCHIVE, PRE_ARCHIVE_SHA256),
+        "post": (POST_ARCHIVE, POST_ARCHIVE_SHA256),
+    }
+    archive_hashes: dict[str, dict[str, str]] = {}
+    for lane, (archive, archive_sha) in archive_specs.items():
+        lane_provenance = provenance.get(lane)
+        if not isinstance(lane_provenance, dict):
+            errors.append(f"{CENSUS_JSON}: provenance.{lane} must be an object")
+            lane_provenance = {}
+        if lane_provenance.get("artifact_zip_sha256") != archive_sha:
+            errors.append(f"{CENSUS_JSON}: {lane} provenance ZIP hash is stale")
+        try:
+            member_hashes, _ = _archive_member_hashes(repo, archive, archive_sha)
+            archive_hashes[lane] = member_hashes
+            for field, member in (
+                ("instrument_output_sha256", "instrument-output.txt"),
+                ("measurement_sha256", "measurement.txt"),
+            ):
+                actual_digest = member_hashes.get(member)
+                if actual_digest is None:
+                    errors.append(f"{archive}: missing required member {member}")
+                elif lane_provenance.get(field) != actual_digest:
+                    errors.append(
+                        f"{CENSUS_JSON}: provenance.{lane}.{field} "
+                        f"{lane_provenance.get(field)!r} != archive {actual_digest!r}"
+                    )
+                expected_digest = EXPECTED_ARCHIVE_MEMBERS[lane][member]
+                if actual_digest is not None and actual_digest != expected_digest:
+                    errors.append(
+                        f"{archive}:{member}: SHA-256 {actual_digest} "
+                        f"!= expected {expected_digest}"
+                    )
+        except (KeyError, OSError, RuntimeError, ValueError, zipfile.BadZipFile) as exc:
+            errors.append(f"{archive}: archive validation failed: {exc}")
+
+    errors.extend(_validate_manifest_hash_rows(repo, archive_hashes))
 
     try:
         sweep_data = _committed_bytes(repo, SWEEP_ARCHIVE, SWEEP_ARCHIVE_SHA256)
         with zipfile.ZipFile(io.BytesIO(sweep_data)) as zf:
-            for member, expected in durable.get("sweep_members", {}).items():
+            archive_names = {name for name in zf.namelist() if not name.endswith("/")}
+            if archive_names != recorded_sweep_names:
+                errors.append(
+                    f"{SWEEP_ARCHIVE}: member names {sorted(archive_names)!r} "
+                    f"!= census {sorted(recorded_sweep_names)!r}"
+                )
+            if archive_names != expected_sweep_names:
+                errors.append(
+                    f"{SWEEP_ARCHIVE}: member names {sorted(archive_names)!r} "
+                    f"!= expected {sorted(expected_sweep_names)!r}"
+                )
+            for member in sorted(archive_names & expected_sweep_names):
                 data = zf.read(member)
                 actual_sha = hashlib.sha256(data).hexdigest()
                 actual_size = len(data)
-                if actual_sha != expected.get("sha256"):
+                expected = EXPECTED_SWEEP_MEMBERS[member]
+                if actual_sha != expected["sha256"]:
                     errors.append(
                         f"{SWEEP_ARCHIVE}:{member}: SHA-256 {actual_sha} "
-                        f"!= {expected.get('sha256')}"
+                        f"!= expected {expected['sha256']}"
                     )
-                if actual_size != expected.get("size"):
+                if actual_size != expected["size"]:
                     errors.append(
                         f"{SWEEP_ARCHIVE}:{member}: size {actual_size} "
-                        f"!= {expected.get('size')}"
+                        f"!= expected {expected['size']}"
                     )
-    except (KeyError, OSError, RuntimeError, ValueError, zipfile.BadZipFile) as exc:
+    except (KeyError, OSError, RuntimeError, TypeError, ValueError, zipfile.BadZipFile) as exc:
         errors.append(f"{SWEEP_ARCHIVE}: static sweep validation failed: {exc}")
 
     return errors
+
+
+def validate_census_json(
+    repo: Path,
+    pre_records: list[dict[str, object]],
+    pre_scores: list[str],
+    post_records: list[dict[str, object]],
+    post_scores: list[str],
+) -> list[str]:
+    try:
+        census = json.loads((repo / CENSUS_JSON).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"{CENSUS_JSON}: could not load census JSON: {exc}"]
+    return validate_census_payload(
+        repo,
+        census,
+        pre_records,
+        pre_scores,
+        post_records,
+        post_scores,
+    )
+
 
 def validate_accounting(records: list[dict[str, object]]) -> list[str]:
     errors: list[str] = []
