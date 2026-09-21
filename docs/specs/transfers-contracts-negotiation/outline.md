@@ -1,8 +1,9 @@
 # Transfers, Contracts & Negotiation #31 — Outline
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** September 21, 2026 (v0.3 — ERR-031-001 approved-spec valuation-decision reconciliation)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -32,9 +33,10 @@ agents/clauses/loans/wage-structures/rival bidding on one code path.
 
 ## Governing decisions (see §1)
 
-- **KD-1** — the Stage-2 valuation is a pure deterministic integer function over #27 attributes + age;
-  club-need, #33 personality, and #28 CA all enter the deep tier as multiplicative bias, never a replacement
-  path (each defaulting to `1000‰` / the #27 mean identity with `deepTransfersEnabled` off).
+- **KD-1** — the Stage-2 **base valuation identity** is a pure deterministic integer function over #27
+  attributes + age; the minimal counterparty view then applies an **always-on #27 positional-scarcity**
+  multiplier. #33 personality, #28 CA/PA and #34 staff remain deep-tier multiplicative refinements; disabling
+  those deep producers does not remove the minimal positional-need term (`ERR-031-001`).
 - **KD-2** — #40 boundary: read `AvailableTransferBudget`; commit via `ApplyTransaction`; #31 owns a
   `committedSpendThisWindow` counter (FR-FN-004 gives #40 no such concept); no parallel cash ledger; validate
   all gates before any mutation (atomic commit).
@@ -52,6 +54,8 @@ agents/clauses/loans/wage-structures/rival bidding on one code path.
 
 - **At approval:** one — the #30 transfers tick-order null-seam slot (ERR-030-004, proposed). `0x23`/85 stays
   reserved (draw-free); #40/#33/#27/#16 unchanged.
+- **T0 correction:** `ERR-031-001` reconciles KD-1/G4 with the already-normative always-on positional
+  scarcity; `ERR-031-002` moves the ordinary affordability gate ahead of checked finance staging.
 - **At T-phase:** the #30 outer `SEASON_SAVE_FORMAT_VERSION` bump + roster-commit/re-key seam; the #16
   `0x23` promotion at the deep-tier first draw.
 
@@ -60,4 +64,5 @@ agents/clauses/loans/wage-structures/rival bidding on one code path.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial outline from design supplement v0.2. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-3: KD-1 folds club-need into the deep multiplicative bias (minimal = attributes+age). |
+| 0.3 | 2026-09-21 | — | ERR-031-001: reconcile KD-1 with FR-TX-002/§3.1 and shipped T0 — attributes+age remains the base identity, while #27 positional scarcity is always-on at minimal; personality/CA/staff remain deep refinements. |
 #endregion

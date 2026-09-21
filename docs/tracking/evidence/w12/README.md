@@ -64,6 +64,30 @@ Extracted file SHA-256:
 | `measurement.runsettings` | `879ed0b251e93f41612861a56d087307a1e6f2cc6299b03cd8c9bebad6a709ec` |
 | `trx/measurement.trx` | `6bea0eb6a357ab20f7e505fb5a62e232d3036b4ad0ee7034c2f725aed4bad7a5` |
 
+## Machine-readable census and enforcement
+
+`w12-gate-firing-census.json` is the machine-readable pre/post census salvaged from
+`wiring/w12-evidence-repair` and reconciled to the exact ZIP archives above. It has
+a named repository consumer: `docs/tracking/w6-controlled-ball-preregistration.md`
+uses this file as the locked W12 baseline source for the post-W6 hypothesis. The
+census is therefore retained rather than regenerated only on demand.
+
+`tools/dotnet-ci/check_w12_evidence.py` verifies the census rows and aggregates
+against the committed ZIPs, requires the static-sweep member set to match the ZIP
+namelist, checks recorded pre/post member digests, and cross-checks the extracted-hash
+rows in this manifest. Negative fixtures live in
+`tools/tests/test_w12_evidence.py`.
+
+Enforcement remains in the repository's required `Spec hygiene checks` context:
+`.github/workflows/ci.yml` discovers `tools/tests/test_w12_evidence.py` on every PR
+and push to `main`. A separate path-filtered W12 workflow was considered during
+salvage review and deliberately dropped as redundant; making such a path-filtered
+check required would leave unrelated PRs without a reported status.
+
+The obsolete Base64-split raw bundle and duplicate root-level checker from the stale
+branch are not restored because the exact GitHub artifact ZIPs and the migrated checker
+on current `main` supersede them.
+
 ## Provenance boundary
 
 The corrected post-#398 comparison is derived from the committed post-run archive above. The workflow run and job log corroborate that archive and its GitHub digest. The temporary workflow branch is not itself treated as the durable evidence source.

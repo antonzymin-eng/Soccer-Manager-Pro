@@ -1,8 +1,9 @@
 # Transfers, Contracts & Negotiation #31 — Section 1: Introduction
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** September 21, 2026 (v0.3 — ERR-031-001/002 T0 approved-spec back-propagation)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -57,17 +58,18 @@ Reference DAG: `compositionRoot → {#30, #31}`, `#31 → {#40, #27, #16}`. **Ac
 
 ## 1.4 Key decisions
 
-- **KD-1 (valuation as the identity the deep tier modulates).** The Stage-2 counterparty valuation is a **pure
-  deterministic integer function** over #27 attributes + age (§3.1). **Club-need, #33 personality, and #28 CA
-  all** enter the **deep tier as a multiplicative bias** on this identity, **never a replacement path**; with
-  `deepTransfersEnabled` off every bias is exactly `1000‰` (`needMult`, `personalityMult`, CA-swap off), so the
-  negotiation reproduces the attributes+age valuation exactly.
+- **KD-1 (valuation identity + minimal positional context).** The Stage-2 **base valuation identity** is a
+  pure deterministic integer function over #27 attributes + age (§3.1). The minimal counterparty view then
+  applies the **always-on #27 positional-scarcity multiplier** required by FR-TX-002. #33 personality, #28
+  CA/PA and #34 staff remain deep-tier multiplicative refinements, never replacement paths; disabling those
+  deep producers leaves the positional-need term active (`ERR-031-001`).
 - **KD-2 (the #40 boundary — read + commit + own the spend counter + atomic commit).** #31 reads
   `AvailableTransferBudget` (returns the static `TransferBudget` ceiling) and posts accepted deals via
   `ApplyTransaction`. Because `ApplyTransaction` never decrements the ceiling and **FR-FN-004 gives #40 no
   "remaining budget net of committed" concept**, #31 keeps its own `committedSpendThisWindow` counter for the
   affordability gate. Every gate is validated **before any mutation** (atomic commit — no half-written deal).
-  Wage posting to #40's `WageBillAggregate` is **deferred to the deep tier** — minimal posts only the
+  In particular, ordinary buy affordability is decided before staged `ApplyTransaction` validation, so checked
+  arithmetic on a coherent signed debt balance cannot preempt `InsufficientBudget` (`ERR-031-002`). Wage posting to #40's `WageBillAggregate` is **deferred to the deep tier** — minimal posts only the
   `TransferFee`, so #40 FR-FN-015 (`WageBillAggregate ≡ 0` at Stage 2, "no #31/#34 producer exists yet") is
   preserved verbatim; the deep-tier wage producer lands with a #40 back-prop relaxing FR-FN-015 + a `WageBudget`
   affordability gate (§7).
@@ -102,4 +104,5 @@ slot; minimal is draw-free (KD-5). This is the #40/#41/#28 off-pitch integer + w
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §1 (scope, out-of-scope seams, dependencies, KD-1..KD-8, determinism posture). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-3 (H): wage posting deferred to the deep tier (minimal fee-only, preserves #40 FR-FN-015) — §1.1/KD-2; KD-1 folds club-need into the deep multiplicative bias (minimal = attributes+age). |
+| 0.3 | 2026-09-21 | — | ERR-031-001/002: KD-1 now matches FR-TX-002's always-on minimal positional scarcity, and KD-2 explicitly orders affordability before staged #40 mutation validation. |
 #endregion
