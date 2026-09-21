@@ -199,6 +199,144 @@ class EvidenceManifestTests(unittest.TestCase):
             errors,
         )
 
+    def test_lowercase_sha256sum_style_name_fails_closed(self) -> None:
+        checker = _load_checker()
+        checker.DIRECTORY_CONTRACTS = {"case": ("external", "owner.py")}
+        checker.ROOT_FILE_ALLOWLIST = set()
+        checker.AUXILIARY_SHA_MANIFEST_ALLOWLIST = set()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "owner.py").write_text("# owner\n", encoding="utf-8")
+            evidence = root / checker.EVIDENCE_ROOT / "case"
+            evidence.mkdir(parents=True)
+            (evidence / "sha256sums.txt").write_text("claim\n", encoding="utf-8")
+            errors = _errors(checker, root)
+        self.assertTrue(
+            any("unrecognized SHA256SUMS-style manifest name" in e for e in errors),
+            errors,
+        )
+
+    def test_full_manifest_rejects_symlink_target(self) -> None:
+        checker = _load_checker()
+        _register(checker, "case", checker.FULL_MANIFEST)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence = root / checker.EVIDENCE_ROOT / "case"
+            evidence.mkdir(parents=True)
+            payload = b"payload"
+            (evidence / "payload.txt").write_bytes(payload)
+            (evidence / "link.txt").symlink_to("payload.txt")
+            (evidence / checker.FULL_MANIFEST).write_text(
+                f"{_digest(payload)}  payload.txt\n"
+                f"{_digest(payload)}  link.txt\n",
+                encoding="utf-8",
+            )
+            errors = _errors(checker, root)
+        self.assertTrue(
+            any("symlink targets are not allowed: link.txt" in e for e in errors),
+            errors,
+        )
+
+    def test_registered_root_file_is_accepted(self) -> None:
+        checker = _load_checker()
+        checker.DIRECTORY_CONTRACTS = {}
+        checker.ROOT_FILE_ALLOWLIST = {"note.md"}
+        checker.AUXILIARY_SHA_MANIFEST_ALLOWLIST = set()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence = root / checker.EVIDENCE_ROOT
+            evidence.mkdir(parents=True)
+            (evidence / "note.md").write_text("registered\n", encoding="utf-8")
+            errors = _errors(checker, root)
+        self.assertEqual([], errors)
+
+    def test_missing_external_verifier_fails_closed(self) -> None:
+        checker = _load_checker()
+        checker.DIRECTORY_CONTRACTS = {"case": ("external", "missing-owner.py")}
+        checker.ROOT_FILE_ALLOWLIST = set()
+        checker.AUXILIARY_SHA_MANIFEST_ALLOWLIST = set()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence = root / checker.EVIDENCE_ROOT / "case"
+            evidence.mkdir(parents=True)
+            (evidence / "payload.txt").write_text("evidence\n", encoding="utf-8")
+            errors = _errors(checker, root)
+        self.assertTrue(
+            any("external integrity verifier is missing" in e for e in errors),
+            errors,
+        )
+
+    def test_unknown_contract_kind_fails_closed(self) -> None:
+        checker = _load_checker()
+        checker.DIRECTORY_CONTRACTS = {"case": ("mystery", "owner")}
+        checker.ROOT_FILE_ALLOWLIST = set()
+        checker.AUXILIARY_SHA_MANIFEST_ALLOWLIST = set()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence = root / checker.EVIDENCE_ROOT / "case"
+            evidence.mkdir(parents=True)
+            (evidence / "payload.txt").write_text("evidence\n", encoding="utf-8")
+            errors = _errors(checker, root)
+        self.assertTrue(
+            any("unknown integrity contract kind 'mystery'" in e for e in errors),
+            errors,
+        )
+
+    def test_stale_registered_directory_fails_closed(self) -> None:
+        checker = _load_checker()
+        checker.DIRECTORY_CONTRACTS = {
+            "case": ("external", "owner.py"),
+            "ghost": ("external", "owner.py"),
+        }
+        checker.ROOT_FILE_ALLOWLIST = set()
+        checker.AUXILIARY_SHA_MANIFEST_ALLOWLIST = set()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "owner.py").write_text("# owner\n", encoding="utf-8")
+            evidence = root / checker.EVIDENCE_ROOT / "case"
+            evidence.mkdir(parents=True)
+            (evidence / "payload.txt").write_text("evidence\n", encoding="utf-8")
+            errors = _errors(checker, root)
+        self.assertTrue(
+            any("registered integrity contracts have no tracked directory" in e
+                and "ghost" in e for e in errors),
+            errors,
+        )
+
+    def test_git_scope_failure_does_not_fall_back_to_disk(self) -> None:
+        checker = _load_checker()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence = root / checker.EVIDENCE_ROOT / "case"
+            evidence.mkdir(parents=True)
+            (evidence / "payload.txt").write_text("local\n", encoding="utf-8")
+
+            calls = 0
+            original_git = checker._git
+
+            def failing_git(repo, *args):
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    return subprocess.CompletedProcess(
+                        ["git"], 0, stdout=b"true\n", stderr=b""
+                    )
+                return subprocess.CompletedProcess(
+                    ["git"], 128, stdout=b"", stderr=b"simulated ls-files failure"
+                )
+
+            checker._git = failing_git
+            try:
+                _, errors = checker.validate(root)
+            finally:
+                checker._git = original_git
+
+        self.assertTrue(
+            any("git ls-files failed" in e
+                and "simulated ls-files failure" in e for e in errors),
+            errors,
+        )
+
     def test_empty_evidence_tree_is_not_itself_an_error(self) -> None:
         checker = _load_checker()
         checker.DIRECTORY_CONTRACTS = {}
