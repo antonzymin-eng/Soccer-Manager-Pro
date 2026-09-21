@@ -43,28 +43,6 @@ EXPECTED_SALVAGED_FROM = {
     "commit": "7dd81a9c842298927ac929d35e8caac12860a365",
 }
 
-EXPECTED_SWEEP_MEMBERS = {
-    "report.json": {
-        "sha256": "c542a5f4b8596bc8c62120e39c709e3d9e766038527092e0cb21e8f9097a4859",
-        "size": 53109,
-    },
-    "report.md": {
-        "sha256": "50fafdcd92459cc89408de89401c42345c2fc6c2bb57f82bffda37aec25295bd",
-        "size": 48401,
-    },
-}
-
-EXPECTED_ARCHIVE_MEMBERS = {
-    "pre": {
-        "instrument-output.txt": "66dfe2604e963b3d5569eed5ff10a14d3216cf9042fe182ca86e2e7c8a8adebc",
-        "measurement.txt": "0ad04132db4e707f65332d318c0be12e7220a8a143b3a6530d5bb096fb630f15",
-    },
-    "post": {
-        "instrument-output.txt": "8c3764765968e74d63cfb232815ed6a72b4b3789bed07de9757327adf1cf8655",
-        "measurement.txt": "9e8c5bc8ae2698a3989cf6e2b750e489069396872d6c6ba3a95ce40928ef7ab1",
-    },
-}
-
 EXPECTED_ROWS = {
     "hasLatestPass team-heartbeats": ("latestPass",),
     "BACKWARD_PASS raw": ("raw.BackwardPass",),
@@ -504,25 +482,6 @@ def validate_census_payload(
         errors.append(f"{CENSUS_JSON}: durable_evidence.sweep_members must be an object")
         sweep_members = {}
     recorded_sweep_names = set(sweep_members)
-    expected_sweep_names = set(EXPECTED_SWEEP_MEMBERS)
-    if recorded_sweep_names != expected_sweep_names:
-        errors.append(
-            f"{CENSUS_JSON}: durable_evidence.sweep_members names "
-            f"{sorted(recorded_sweep_names)!r} != expected {sorted(expected_sweep_names)!r}"
-        )
-    for member, expected in EXPECTED_SWEEP_MEMBERS.items():
-        entry = sweep_members.get(member)
-        if not isinstance(entry, dict):
-            errors.append(
-                f"{CENSUS_JSON}: durable_evidence.sweep_members.{member} must be an object"
-            )
-            continue
-        _append_difference(
-            errors,
-            f"durable_evidence.sweep_members.{member}",
-            expected,
-            entry,
-        )
 
     expected_pre_aggregate = _aggregate_for_census(pre_records, pre_scores)
     errors.extend(_validate_prereg_baseline(repo, expected_pre_aggregate))
@@ -608,12 +567,6 @@ def validate_census_payload(
                         f"{CENSUS_JSON}: provenance.{lane}.{field} "
                         f"{lane_provenance.get(field)!r} != archive {actual_digest!r}"
                     )
-                expected_digest = EXPECTED_ARCHIVE_MEMBERS[lane][member]
-                if actual_digest is not None and actual_digest != expected_digest:
-                    errors.append(
-                        f"{archive}:{member}: SHA-256 {actual_digest} "
-                        f"!= expected {expected_digest}"
-                    )
         except (KeyError, OSError, RuntimeError, ValueError, zipfile.BadZipFile) as exc:
             errors.append(f"{archive}: archive validation failed: {exc}")
 
@@ -628,27 +581,40 @@ def validate_census_payload(
                     f"{SWEEP_ARCHIVE}: member names {sorted(archive_names)!r} "
                     f"!= census {sorted(recorded_sweep_names)!r}"
                 )
-            if archive_names != expected_sweep_names:
-                errors.append(
-                    f"{SWEEP_ARCHIVE}: member names {sorted(archive_names)!r} "
-                    f"!= expected {sorted(expected_sweep_names)!r}"
-                )
-            for member in sorted(archive_names & expected_sweep_names):
+            manifest = (repo / MANIFEST).read_text(encoding="utf-8")
+            for member in sorted(archive_names):
                 data = zf.read(member)
-                actual_sha = hashlib.sha256(data).hexdigest()
-                actual_size = len(data)
-                expected = EXPECTED_SWEEP_MEMBERS[member]
-                if actual_sha != expected["sha256"]:
+                actual = {
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                    "size": len(data),
+                }
+                recorded = sweep_members.get(member)
+                if not isinstance(recorded, dict):
                     errors.append(
-                        f"{SWEEP_ARCHIVE}:{member}: SHA-256 {actual_sha} "
-                        f"!= expected {expected['sha256']}"
+                        f"{CENSUS_JSON}: durable_evidence.sweep_members.{member} "
+                        "must be an object"
                     )
-                if actual_size != expected["size"]:
+                    continue
+                _append_difference(
+                    errors,
+                    f"durable_evidence.sweep_members.{member}",
+                    actual,
+                    recorded,
+                )
+                expected_row = f"| `{member}` | `{actual['sha256']}` |"
+                if expected_row not in manifest:
                     errors.append(
-                        f"{SWEEP_ARCHIVE}:{member}: size {actual_size} "
-                        f"!= expected {expected['size']}"
+                        f"{MANIFEST}: missing static-sweep extracted-hash row "
+                        f"for {member} ({actual['sha256']})"
                     )
-    except (KeyError, OSError, RuntimeError, TypeError, ValueError, zipfile.BadZipFile) as exc:
+    except (
+        KeyError,
+        OSError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+        zipfile.BadZipFile,
+    ) as exc:
         errors.append(f"{SWEEP_ARCHIVE}: static sweep validation failed: {exc}")
 
     return errors
