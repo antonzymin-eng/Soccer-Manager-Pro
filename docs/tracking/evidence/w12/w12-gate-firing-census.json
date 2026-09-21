@@ -57,7 +57,13 @@
         "0-3",
         "2-5",
         "2-1"
-      ]
+      ],
+      "phase": {
+        "InPoss": 159801,
+        "OutOfPoss": 159789,
+        "TransToAtk": 2202,
+        "TransToDef": 2202
+      }
     },
     "rows": [
       {
@@ -311,7 +317,13 @@
         "0-3",
         "2-5",
         "2-1"
-      ]
+      ],
+      "phase": {
+        "InPoss": 159801,
+        "OutOfPoss": 159789,
+        "TransToAtk": 2202,
+        "TransToDef": 2202
+      }
     },
     "rows": [
       {
@@ -555,5 +567,8 @@
   "salvaged_from": {
     "branch": "wiring/w12-evidence-repair",
     "commit": "7dd81a9c842298927ac929d35e8caac12860a365"
-  }
+  },
+  "consumers": [
+    "docs/tracking/w6-controlled-ball-preregistration.md"
+  ]
 }
