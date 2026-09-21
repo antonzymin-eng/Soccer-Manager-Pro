@@ -68,6 +68,53 @@ class BranchAncestryTests(unittest.TestCase):
             result, _, _ = checker.check_ancestry(repo, side, main)
         self.assertFalse(result)
 
+    def test_replacement_refs_do_not_rewrite_ancestry_result(self) -> None:
+        checker = _load_checker()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, first, _ = _make_repo(Path(tmp))
+            _git(repo, "checkout", "--orphan", "unrelated")
+            for child in repo.iterdir():
+                if child.name == ".git":
+                    continue
+                if child.is_file() or child.is_symlink():
+                    child.unlink()
+            (repo / "other.txt").write_text("other\n", encoding="utf-8")
+            _git(repo, "add", "-A")
+            _git(repo, "commit", "-m", "unrelated")
+            unrelated = _git(repo, "rev-parse", "HEAD")
+            main = _git(repo, "rev-parse", "main")
+
+            raw_before = subprocess.run(
+                ["git", "-C", str(repo), "merge-base", "--is-ancestor", unrelated, main],
+                check=False,
+            )
+            self.assertEqual(1, raw_before.returncode)
+
+            _git(repo, "replace", "--graft", main, unrelated)
+            raw_after = subprocess.run(
+                ["git", "-C", str(repo), "merge-base", "--is-ancestor", unrelated, main],
+                check=False,
+            )
+            self.assertEqual(0, raw_after.returncode)
+
+            result, _, _ = checker.check_ancestry(repo, unrelated, main)
+
+        self.assertFalse(result)
+
+    def test_legacy_grafts_fail_closed(self) -> None:
+        checker = _load_checker()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, first, second = _make_repo(Path(tmp))
+            git_dir = Path(_git(repo, "rev-parse", "--absolute-git-dir"))
+            info = git_dir / "info"
+            info.mkdir(parents=True, exist_ok=True)
+            (info / "grafts").write_text(f"{second} {first}\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                checker.GitCheckError,
+                "legacy Git grafts are configured",
+            ):
+                checker.check_ancestry(repo, first, second)
+
     def test_cli_uses_distinct_exit_for_guard_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
