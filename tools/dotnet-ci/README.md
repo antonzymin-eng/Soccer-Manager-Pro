@@ -23,6 +23,8 @@ It is deliberately **non-certifying**. Determinism certification remains owned b
 | `coverage.runsettings` | Coverlet/XPlat coverage configuration used by PR/nightly policy modes. |
 | `precommit.runsettings` | NUnit pre-commit selection. Excludes taxonomy prefixes only when they occur at the start of the **method name** (`^int_`, `^sim_`, `^e2e_`), avoiding `FullyQualifiedName` substring over-exclusion. |
 | `run-gate.sh` | Lower-level generated-project executor. Accepts explicit arguments only; inherited filter/owner/coverage environment controls are rejected. |
+| `check_evidence_manifests.py` | Verifies the evidence-integrity contract registry and canonical SHA-256 manifests under `docs/tracking/evidence/`. |
+| `check_branch_ancestry.py` | Local branch-cleanup ancestry guard. Refuses ancestry claims from shallow history; full local history or authoritative remote/API comparison is required. |
 
 ## Normal developer commands
 
@@ -77,6 +79,69 @@ With a comments-only ledger, no exclusion is applied and the dedicated owner-hel
 
 The diagnostic contract is proven only when the real PR gate executes successfully; a unit fixture proves verifier behavior, not the live test message format.
 
+## Evidence/governance utilities
+
+Two repository-governance utilities live here because their failure modes affect whether retained
+evidence can be trusted or deleted safely.
+
+`check_evidence_manifests.py` owns the repository's **evidence-integrity contract registry** under
+`docs/tracking/evidence/`. Every tracked top-level evidence directory must be registered as exactly one
+of:
+
+- `SHA256SUMS`: a **complete tracked-file manifest**. Every Git-tracked regular file recursively below
+  the manifest directory, except the manifest itself, must be listed exactly once and match its
+  SHA-256 digest. Ignored/untracked files are intentionally outside this contract, so local
+  `.DS_Store`, extracted archives, and other scratch material cannot make required CI red. Symlinks
+  are not permitted in a full-manifest directory.
+- `artifact-SHA256SUMS`: an **artifact-scoped manifest**. Every listed file must exist and match its
+  digest, but unrelated sibling documentation is deliberately outside that manifest's digest claim.
+- an explicitly registered **external verifier**. Current examples are W12
+  (`check_w12_evidence.py`) and the PR #416 ref archive (`check_pr416_evidence_refs.py`). This
+  registry verifies that the named owner still exists; it does not claim those external contracts
+  have identical enforcement strength or duplicate their semantics.
+
+A new tracked evidence directory with no registered integrity contract fails closed. A
+`*SHA256SUMS*`-style file, case-insensitively, also fails unless it uses a canonical contract name or
+is explicitly allowlisted; the current `TRX-SHA256SUMS` exception is owned by
+`pr420-evidence.py` because its rows describe members inside the committed archive rather than
+filesystem coverage. The current standalone root evidence note is likewise explicitly registered.
+
+This does **not** mean every evidence byte is covered by a SHA-256 manifest. The repository-wide
+property is registration of the owning integrity mechanism; digest coverage depends on each
+directory's declared contract. The tooling unit suite executes this registry and all canonical
+SHA-256 manifests against the committed repository inside required `Spec hygiene checks`.
+
+Complete-manifest scope comes from `git ls-files`. When invoked inside a Git worktree, failure to
+obtain the tracked-file set is an error; the checker does not silently fall back to filesystem
+scanning. Filesystem scanning is used only for non-Git temporary fixtures.
+
+To regenerate a complete manifest from tracked files, run from the manifest directory:
+
+```bash
+git ls-files -z -- . | grep -zv '^SHA256SUMS$' | sort -z | xargs -0 sha256sum > SHA256SUMS
+```
+
+The manifest grammar is intentionally strict: lowercase SHA-256, two spaces, then the relative path.
+
+`check_branch_ancestry.py` is the local branch-cleanup guard:
+
+```bash
+python3 tools/dotnet-ci/check_branch_ancestry.py --repo . --ancestor <branch-or-tip> --descendant refs/remotes/origin/main
+```
+
+It checks `git rev-parse --is-shallow-repository` **before** resolving or comparing refs. A shallow
+checkout exits **3** with a guard error and makes no merged/unmerged/deletable claim; exit **2** remains
+reserved for command-line usage errors. Git replacement refs are disabled for every probe/comparison,
+and legacy `.git/info/grafts` state is rejected, so the result is based on the stored commit graph
+rather than a locally rewritten parent graph.
+
+For **remote branch deletion**, fetch first and compare against a freshly updated remote-tracking ref
+(such as `refs/remotes/origin/main`) or an authoritative remote OID/API result. A local `main` ref is
+acceptable only for a local-branch cleanup decision; full local history alone does not prove that a
+local-only merge has reached the remote. Fetching refs without removing a shallow boundary is still
+insufficient. This is a procedural guard, not a server-side branch-deletion control; the owning
+tracking issue therefore remains NARROWED rather than closed.
+
 ## Certified-host boundary
 
 The scheduled Linux job is non-certifying. `.github/workflows/nightly.yml` also defines the authoritative Windows/Unity Spec #16 job, but it is disabled until repository variable `DETERMINISM_CERTIFIED_RUNNER_ENABLED=true` is set after a matching self-hosted runner is actually registered/configured. Until a successful certified-host run exists, FR-TS-075's determinism leg remains operationally open.
@@ -95,6 +160,7 @@ Where .NET 8 is already available, the policy runner can execute normally. Histo
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| Governance addendum | 2026-09-21 | — | Adds the evidence-integrity contract registry/checker and shallow-history ancestry guard; records tracked-file scope, explicit external-verifier boundaries, fail-closed Git-scope behavior, stored-graph semantics with replacement refs disabled / legacy grafts rejected, remote-authoritative descendant requirements for remote deletion, and ancestry exit-code semantics. |
 | Policy addendum (retirement) | 2026-09-20 | — | Owner decision retires the final configured owner-held row, `sim_match_engine_close_chance`, without changing its predicate or bounds. Documents the already-unit-tested empty-ledger terminal state: ordinary sweep unfiltered, dedicated stage skipped. |
 | Policy addendum | 2026-09-04 | — | **Testing Strategy pipeline correction.** Makes `tools/run-tests-local.sh` the canonical developer/CI policy entry point; records exact owner-held RED handling, anchored NUnit pre-commit selection, persistent staged-index build cache, coverage settings, and the gated certified-host nightly boundary. This operational correction intentionally does not advance the historical gate-document version key, because live open-issue records cite the Aug-7 v1.2 revision as dated evidence. |
 | 1.2 | 2026-08-07 | — | Recorded that the full generated Linux gate can run in the Claude remote Ubuntu environment; still non-certifying. |
