@@ -1,0 +1,30 @@
+name: W12 evidence consistency
+
+on:
+  pull_request:
+    paths:
+      - 'docs/tracking/evidence/w12/**'
+      - 'docs/tracking/w12-gate-firing-post398-comparison.md'
+      - 'tools/dotnet-ci/check_w12_evidence.py'
+      - '.github/workflows/w12-evidence-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/tracking/evidence/w12/**'
+      - 'docs/tracking/w12-gate-firing-post398-comparison.md'
+      - 'tools/dotnet-ci/check_w12_evidence.py'
+      - '.github/workflows/w12-evidence-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify W12 durable evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 tools/dotnet-ci/check_w12_evidence.py --repo .
