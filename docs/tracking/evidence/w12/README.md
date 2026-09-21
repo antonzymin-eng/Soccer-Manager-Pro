@@ -67,15 +67,26 @@ Extracted file SHA-256:
 ## Machine-readable census and enforcement
 
 `w12-gate-firing-census.json` is the machine-readable pre/post census salvaged from
-`wiring/w12-evidence-repair` and reconciled to the exact ZIP archives above. Its rows,
-aggregates, archive hashes, and static-sweep member hashes are verified by
-`tools/dotnet-ci/check_w12_evidence.py`.
+`wiring/w12-evidence-repair` and reconciled to the exact ZIP archives above. It has
+a named repository consumer: `docs/tracking/w6-controlled-ball-preregistration.md`
+uses this file as the locked W12 baseline source for the post-W6 hypothesis. The
+census is therefore retained rather than regenerated only on demand.
 
-The dedicated `.github/workflows/w12-evidence-check.yml` runs that verifier whenever
-the W12 evidence, comparison document, checker, or workflow changes. The obsolete
-Base64-split raw bundle and duplicate root-level checker from the stale branch are not
-restored because the exact GitHub artifact ZIPs and the migrated checker on current
-`main` supersede them.
+`tools/dotnet-ci/check_w12_evidence.py` verifies the census rows and aggregates
+against the committed ZIPs, requires the static-sweep member set to match the ZIP
+namelist, checks recorded pre/post member digests, and cross-checks the extracted-hash
+rows in this manifest. Negative fixtures live in
+`tools/tests/test_w12_evidence.py`.
+
+Enforcement remains in the repository's required `Spec hygiene checks` context:
+`.github/workflows/ci.yml` discovers `tools/tests/test_w12_evidence.py` on every PR
+and push to `main`. A separate path-filtered W12 workflow was considered during
+salvage review and deliberately dropped as redundant; making such a path-filtered
+check required would leave unrelated PRs without a reported status.
+
+The obsolete Base64-split raw bundle and duplicate root-level checker from the stale
+branch are not restored because the exact GitHub artifact ZIPs and the migrated checker
+on current `main` supersede them.
 
 ## Provenance boundary
 
