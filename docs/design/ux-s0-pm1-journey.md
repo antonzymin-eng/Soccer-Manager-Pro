@@ -2,7 +2,7 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** September 21, 2026  
-**Version:** 0.2  
+**Version:** 0.3  
 **Status:** S0 GATE A COMPLETE — GATE B NEXT  
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.5 §5–§6  
 **Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.8  
@@ -97,7 +97,7 @@ semantics rather than a visually convenient alternative.
 |---|---|---|---|---|---|
 | A-09 | Home/away match configuration | `MatchSetup` owns squads, initial team tactics, manager modes/profiles and GK-heading boot flag | immutable boot value exists; no Tactics-Setup-specific view model/builder | `DESIGNABLE / UNWIRED` | S0 prototype may expose only fields backed by the actual setup/tactic types |
 | A-10 | Formation / team tactic choice | `TeamTactic` is the initial tactic carried by `MatchSetup`; F1 semantic audit already verified Formation/Mentality and the supported team-tactic axes | no P5b pre-match adapter/control | `DESIGNABLE / UNWIRED` | Gate B chooses the smallest understandable verified tactic choice; no speculative FM-style semantics |
-| A-11 | Player Role/Duty/Instructions | `PlayerTactic` vocabulary is implemented and bounded by the F1 semantic audit | no P5b pre-match adapter/control | `DESIGNABLE / UNWIRED` | retain only exact implemented values; no arbitrary instruction lists |
+| A-11 | Player Role/Duty/Instructions | `PlayerTactic` vocabulary exists, and live mutation exists through `ILiveMatchMutations.SetPlayerTactic` / `MatchTacticsDispatcher`; **`MatchSetup` carries no per-player tactic state/builder** | no pre-match state holder and no P5b pre-match adapter/control | `FUTURE-BLOCKED` pre-match | Gate B must not present Role/Duty/Instructions as pre-match-editable; a setup persistence/handoff contract must land first. A later live-match control may use the existing live dispatcher without implying a boot seam. |
 | A-12 | Construct current match session | `MatchSessionLifecycle.CreateSession(MatchSetup)` installs a fresh, not-yet-started `MatchSession` and stops a prior current session before replacement | host-free lifecycle landed September 11; concrete Unity consumer intentionally absent | `DESIGNABLE / UNWIRED` | lifecycle stays unconsumed by production Unity code until Gate I; prototype may model the transition but must not wire it |
 | A-13 | Start paced playback after attachment | `MatchSession` / live streamer own playback start | shipping attach/start ordering belongs to P5b | `FUTURE-BLOCKED` at binding | construction, host attachment and playback start remain separate; Gate I must preserve that order |
 
@@ -228,6 +228,19 @@ own contract says the sim-side match-ended guard remains authoritative.
 **Disposition:** S0-D must show locked controls and a reason at full time; implementation may not remove or replace
 the sim-side guard because the UI also checks the frame.
 
+### S0-A-009 — pre-match per-player tactics have vocabulary but no setup handoff
+
+**Finding:** `PlayerTactic` defines Role, Duty and Instructions, and the live command path can stage a
+`SetPlayerTactic` mutation after a session exists. But `MatchSetup` carries only team tactics plus the other
+boot configuration; it has no per-player tactic collection/builder, and `MatchSession.BootEngine` therefore has
+no pre-match per-player tactic state to apply. Treating the value type alone as a Tactics Setup seam would make
+Gate B invent persistence or command timing.
+
+**Disposition:** classify Role/Duty/Instructions as `FUTURE-BLOCKED` **for pre-match editing** until a concrete
+setup persistence/handoff contract exists. Gate B may use the verified team-tactic choice for Tactics Setup and
+may separately use the existing live dispatcher for an in-match per-player tactic change; neither substitutes
+for the missing boot seam.
+
 ---
 
 # 5. Gate A verdict
@@ -250,7 +263,7 @@ It means S0 can proceed to Gate B without inventing product behavior.
 Gate B must now define one coherent S0 task flow using only the audited surfaces above. It must include:
 
 1. launch/root state and PM-1/demo match entry;
-2. Tactics Setup entry, one clear verified pre-match choice, cancel/re-entry, and start;
+2. Tactics Setup entry, one clear verified **team-tactic** pre-match choice, cancel/re-entry, and start; per-player Role/Duty/Instructions remain excluded until a setup handoff exists;
 3. Match View pre-first-frame, live and full-time states;
 4. visible score, readable match time/state and explicit selected playback speed;
 5. playback change, one tactical change and a substitution path;
@@ -270,3 +283,4 @@ command, statistic, setting or production capability not present in this Gate-A 
 |---|---|---|
 | 0.1 | September 12, 2026 | Created S0 UX-D packet and completed Gate A against `main` `ddd221c9`; revalidated PR #404 Unity compile evidence, P5b absence, repeated-match lifecycle ownership, live/control/stat seams and cross-stream constraints. Gate B next. |
 | 0.2 | September 21, 2026 | Reconciled PR #406 onto current `main` `ad7e0d75` after #407. Re-ran the Gate-A current-state claims: P5b remains absent; the four-screen/five-edge client graph, lifecycle, match projection/dispatch, playback/control and #37 analytics ownership remain valid; P4b advances from compiler-only evidence to partial host verification (tracked-scene Play-mode boot/render smoke) without overstating click/perf/Gate-J acceptance. Gate A remains PASS; Gate B is next. |
+| 0.3 | September 21, 2026 | Review correction: A-11 no longer treats the `PlayerTactic` value type as proof of a pre-match action/state seam. `MatchSetup` has no per-player tactic holder/builder and `MatchSession.BootEngine` applies no per-player setup state, so Role/Duty/Instructions are explicitly `FUTURE-BLOCKED` for pre-match editing until a setup persistence/handoff contract exists. The existing live `SetPlayerTactic` dispatcher remains valid for in-match intervention. This converts an overstated seam into a named blocker; the Gate-A PASS and zero-`UNKNOWN` result remain valid, and Gate B is constrained to a verified team-tactic pre-match choice. |
