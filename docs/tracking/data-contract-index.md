@@ -76,6 +76,9 @@ file inventory. This file adds only the entity → (spec §, assembly) hop those
 | Board objective & job security | #30 §2.2 | `season-save` | `BoardObjective`, `BoardState` (job security becomes a derived read over #45 at its T2) |
 | Club finance state and read model | #40 §2.2, §3 | `club-finances` | `ClubFinances`, `FinancesViewModel` |
 | Club finance transaction seam | #40 §2.2, §3.2 | `club-finances` | `FinanceTransaction`, `FinanceLedger` |
+| Managed transfer state | #31 §2.2, §3 | `transfers` | `Contract`, `TransferWindow`, `ClubTransferState`, `TransfersState` |
+| Transfer negotiation / manager command seam | #31 §2.2, §3.2–§3.3 | `transfers` | `Offer`, `NegotiationOutcome`, `TransferCommands` |
+| Transfer roster consumer port | #31 §4.5 | `transfers` | `ITransferRosterPort` |
 | Match outcome payload | #30 §2.2 | `season-save` | `MatchResult` |
 | Season state (serialized surface) | #30 §2.2, Appendix B | `season-save` | `SeasonState` |
 | Season composition root | #30 §2.2 | `season-save` | `SeasonLoop` |
