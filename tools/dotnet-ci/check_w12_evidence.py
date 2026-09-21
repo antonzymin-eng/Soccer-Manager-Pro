@@ -25,6 +25,23 @@ CENSUS_START = "<!-- W12_POST_CENSUS_BEGIN -->"
 CENSUS_END = "<!-- W12_POST_CENSUS_END -->"
 MANIFEST = Path("docs/tracking/evidence/w12/README.md")
 CENSUS_CONSUMERS = ["docs/tracking/w6-controlled-ball-preregistration.md"]
+EXPECTED_CENSUS_ROOT_KEYS = {
+    "consumers",
+    "durable_evidence",
+    "generated_from",
+    "post",
+    "pre",
+    "provenance",
+    "salvaged_from",
+    "schema_version",
+}
+EXPECTED_GENERATED_FROM = (
+    "first complete W12 census block in the committed pre/post GitHub artifact ZIPs"
+)
+EXPECTED_SALVAGED_FROM = {
+    "branch": "wiring/w12-evidence-repair",
+    "commit": "7dd81a9c842298927ac929d35e8caac12860a365",
+}
 
 EXPECTED_SWEEP_MEMBERS = {
     "report.json": {
@@ -353,6 +370,74 @@ def _validate_manifest_hash_rows(
     return errors
 
 
+def _table_rows(text: str) -> dict[str, tuple[str, str]]:
+    rows: dict[str, tuple[str, str]] = {}
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) != 3 or cells[0] in {"Exit / outcome", "---"}:
+            continue
+        rows[cells[0]] = (cells[1], cells[2])
+    return rows
+
+
+def _validate_prereg_baseline(
+    repo: Path, expected_pre_aggregate: dict[str, object]
+) -> list[str]:
+    errors: list[str] = []
+    consumer = Path(CENSUS_CONSUMERS[0])
+    consumer_path = repo / consumer
+    try:
+        text = consumer_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"{consumer}: required census consumer is missing/unreadable: {exc}"]
+
+    baseline_line = f"**Baseline source:** `{CENSUS_JSON.as_posix()}`  "
+    if baseline_line not in text:
+        errors.append(
+            f"{consumer}: baseline source must point to {CENSUS_JSON.as_posix()}"
+        )
+
+    non_in_possession = int(expected_pre_aggregate["nonInPossession"])
+    expected_population = (
+        f"Non-`InPossession` population: **{non_in_possession:,} heartbeats**."
+    )
+    if expected_population not in text:
+        errors.append(
+            f"{consumer}: locked non-InPossession baseline does not match "
+            f"{non_in_possession:,}"
+        )
+
+    exits = expected_pre_aggregate.get("exits")
+    if not isinstance(exits, dict):
+        return errors + ["pre aggregate exits must be an object"]
+
+    combined = sum(
+        int(exits.get(name, 0))
+        for name in ("InvariantRejected", "Cooldown", "NoPrimaryPresser", "Disengaged")
+    )
+    expected_rows = {
+        "InvariantRejected": int(exits.get("InvariantRejected", 0)),
+        "Cooldown (Pressing AI / `DisengageResolver`)": int(exits.get("Cooldown", 0)),
+        "Active": int(exits.get("Active", 0)),
+        "NoPrimaryPresser": int(exits.get("NoPrimaryPresser", 0)),
+        "Disengaged": int(exits.get("Disengaged", 0)),
+        "NoCommittedTrigger": int(exits.get("NoCommittedTrigger", 0)),
+        "Combined suppression mass¹": combined,
+    }
+    rows = _table_rows(text)
+    for label, count in expected_rows.items():
+        expected_share = f"{(count / non_in_possession) * 100:.3f}%"
+        actual = rows.get(label)
+        expected = (f"{count:,}", expected_share)
+        if actual != expected:
+            errors.append(
+                f"{consumer}: baseline row {label!r} expected {expected!r}, got {actual!r}"
+            )
+    return errors
+
+
 def validate_census_payload(
     repo: Path,
     census: object,
@@ -365,8 +450,24 @@ def validate_census_payload(
     if not isinstance(census, dict):
         return [f"{CENSUS_JSON}: root must be an object"]
 
+    actual_root_keys = set(census)
+    if actual_root_keys != EXPECTED_CENSUS_ROOT_KEYS:
+        errors.append(
+            f"{CENSUS_JSON}: root keys {sorted(actual_root_keys)!r} "
+            f"!= expected {sorted(EXPECTED_CENSUS_ROOT_KEYS)!r}"
+        )
     if census.get("schema_version") != 2:
         errors.append(f"{CENSUS_JSON}: schema_version must be 2")
+    if census.get("generated_from") != EXPECTED_GENERATED_FROM:
+        errors.append(
+            f"{CENSUS_JSON}: generated_from {census.get('generated_from')!r} "
+            f"!= expected {EXPECTED_GENERATED_FROM!r}"
+        )
+    if census.get("salvaged_from") != EXPECTED_SALVAGED_FROM:
+        errors.append(
+            f"{CENSUS_JSON}: salvaged_from {census.get('salvaged_from')!r} "
+            f"!= expected {EXPECTED_SALVAGED_FROM!r}"
+        )
     if census.get("consumers") != CENSUS_CONSUMERS:
         errors.append(
             f"{CENSUS_JSON}: consumers must equal {CENSUS_CONSUMERS!r}"
@@ -422,6 +523,9 @@ def validate_census_payload(
             expected,
             entry,
         )
+
+    expected_pre_aggregate = _aggregate_for_census(pre_records, pre_scores)
+    errors.extend(_validate_prereg_baseline(repo, expected_pre_aggregate))
 
     expected_lanes = {
         "pre": (pre_records, pre_scores),
