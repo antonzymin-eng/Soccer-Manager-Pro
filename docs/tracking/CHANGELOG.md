@@ -12,7 +12,15 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 21, 2026 — **D5 / Transfers, Contracts & Negotiation #31 T0 reconciled in PR #407 onto current main.**
+> **Last Updated:** September 21, 2026 — **PR #407 closeout resolves `ERR-031-001` and `ERR-031-002` before merge.**
+>
+> `ERR-031-001` closes a governance contradiction in APPROVED #31: FR-TX-002/§3.1 and shipped T0 make #27 positional scarcity always-on, while outline KD-1, §1 KD-1 and approval gate G4 still said club need was deep-only. Outline **v0.3**, §1 **v0.3** and §9 **v0.6** now distinguish the pure attributes+age base identity from the always-on minimal scarcity term; personality/CA/staff remain deep refinements. Runtime behavior is unchanged for this ERR.
+>
+> `ERR-031-002` closes the executable half: §3.3 **v0.9** staged checked #40 `ApplyTransaction` before testing the ordinary affordability outcome. On the old ordering a coherent debt balance at `long.MinValue + fee - 1` could underflow before returning `InsufficientBudget`. `TransferCommands.cs` **v1.3** now resolves affordability first; `TransfersT0Tests.cs` **v1.4** adds the exact extreme-debt regression and proves no finance/spend/contract/roster mutation. `data-contract-index.md` **v1.4** also removes #31 from its stale no-assembly table, and the README's single status snapshot is redated September 21 without changing its 37-assembly count.
+>
+> `spec-error-log.md` advances **v2.60 → v2.61**, Error Index **241 → 243**. The owning design supplement advances **v0.4 → v0.5**. No new file, assembly edge, save/snapshot schema, RNG stream/domain/draw site/order, or gameplay `[GT]` change. Pre-closeout reconciled head `b283084…` passed CI run `35624379742`, including the Linux functional gate; Unity tests were skipped, so that run remains non-certifying. This corrective head requires its own CI before merge.
+>
+> **Last Updated (prior):** September 21, 2026 — **D5 / Transfers, Contracts & Negotiation #31 T0 reconciled in PR #407 onto current main.**
 >
 > The original 53-commit T0 branch is preserved as merge ancestry rather than replayed or squashed. Its merge base was PR #400 at `59b102e5…`; current reconciliation base is `f5caabca…`, 224 commits later. The reconciliation preserves intervening W6/W2/#416/#415, gate-integrity, evidence, owner-held-retirement and #40 T2 history while resolving the overlapping governance/tracking state.
 >

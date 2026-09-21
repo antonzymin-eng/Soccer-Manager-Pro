@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT0Tests.cs
 // Created:  2026-09-12
-// Modified: 2026-09-14
+// Modified: 2026-09-21
 // Author:   —
 // Specs:    Spec #31 §5.1-§5.6 (T0 valuation, offer, bid, re-key, window, fail-loud tests)
 // Purpose:  Locks the first D5 implementation slice against the approved minimal-tier transfer contract.
@@ -208,6 +208,34 @@ namespace TacticalDirector.Transfers.Tests
             Assert.AreEqual(1, state.ContractCount);
         }
 
+        [Test]
+        public void SubmitBid_OverBudgetBuyWithExtremeDebt_ReturnsInsufficientBudgetBeforeFinanceStaging()
+        {
+            FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            long valuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
+            ClubFinancesState finances = CreateFinances(
+                valuation - 1L,
+                long.MinValue + valuation - 1L,
+                0L);
+            Offer offer = new Offer(
+                COUNTERPARTY_PLAYER_ID,
+                COUNTERPARTY_CLUB_ID,
+                valuation,
+                1_000L,
+                2,
+                true);
+            long balanceBefore = finances.Balance;
+
+            TransferSubmissionOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
+
+            Assert.AreEqual(TransferSubmissionOutcome.InsufficientBudget, outcome);
+            Assert.AreEqual(balanceBefore, finances.Balance);
+            Assert.AreEqual(0L, state.CommittedSpendThisWindow);
+            Assert.AreEqual(0, state.ContractCount);
+            Assert.AreEqual(0, roster.CommitCount);
+        }
         [Test]
         public void SubmitBid_FullDestination_ReturnsSquadFullWithoutFinanceOrContractMutation()
         {
@@ -555,4 +583,5 @@ namespace TacticalDirector.Transfers.Tests
 // | 1.1     | 2026-09-14 | —      | Lock finance alias, Codex term validation, counter-offer band, and positional need. |
 // | 1.2     | 2026-09-14 | —      | Review corrections: golden/fractional valuation, strict age boundaries, typed budget/full outcomes, symmetric need, pre-commit port-breach lock. |
 // | 1.3     | 2026-09-14 | —      | Add sell-direction preview/commit mismatch regression locking retained local contract/finance on a port breach. |
+// | 1.4     | 2026-09-21 | —      | ERR-031-002: lock extreme coherent debt + over-budget buy returning InsufficientBudget before checked finance staging, with no mutation/roster commit. |
 #endregion

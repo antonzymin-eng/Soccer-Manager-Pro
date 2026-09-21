@@ -1,9 +1,10 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.8 — PR #407 residual review cleanup: budget invariant + T2 hook lock)
+**Last Updated:** September 21, 2026 (v0.9 — ERR-031-002 affordability-before-staging correction)
+**Last Updated (prior):** September 14, 2026 (v0.8 — PR #407 residual review cleanup: budget invariant + T2 hook lock)
 **Last Updated (prior):** September 14, 2026 (v0.7 — PR #407 review correction: precise valuation, symmetric need, typed submission outcomes; prior v0.6 T0 football close-out, v0.5 AR-8, v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.8
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -88,19 +89,19 @@ SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, re
     if negotiation == Rejected:       return TransferSubmissionOutcome.Rejected
     if negotiation == CounterOffered: return TransferSubmissionOutcome.CounterOffered
 
-    txn := offer.IsBuy ? {Debit,TransferFee,offer.Fee} : {Credit,TransferFee,offer.Fee}
-    stagedFinances := finances
-    ApplyTransaction(ref stagedFinances, txn)               # canonical #40 mutation on staged copy
-
     if offer.IsBuy:
         budget := AvailableTransferBudget(finances)
         committed := txState.CommittedSpend(managerClubId)
         require 0 <= committed <= budget                    else throw  # corrupted/invariant-breaking state
         if offer.Fee > budget - committed:
             return InsufficientBudget                       # F1; no mutation
-
-    if !offer.IsBuy:
+        # ERR-031-002: decide the ordinary affordability outcome before checked finance staging.
+    else:
         require valid managed Contract(offer.PlayerId)       else throw
+
+    txn := offer.IsBuy ? {Debit,TransferFee,offer.Fee} : {Credit,TransferFee,offer.Fee}
+    stagedFinances := finances
+    ApplyTransaction(ref stagedFinances, txn)               # canonical #40 mutation on staged copy
 
     if !TryPreviewRosterCommit(fromClub, toClub, offer.PlayerId, out previewId):
         return SquadFull                                     # F5; no mutation
@@ -122,7 +123,10 @@ SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, re
     return Accepted
 ```
 
-All local #31/#40 writes occur only **after** the preflighted roster commit returns its promised preview id.
+The buy affordability result is resolved **before** staged #40 mutation validation. This ordering is normative:
+a coherent signed `Balance` may be near `long.MinValue`, and checked debit staging must not throw before the
+player-reachable `InsufficientBudget` result (`ERR-031-002`). All local #31/#40 writes occur only **after**
+the preflighted roster commit returns its promised preview id.
 That removes the previous defensive check-after-mutation ordering. Because `OnPlayerRekeyed` is a specified
 no-op for every minimal managed↔external move, a sell may retain its old managed contract during the roster
 commit and remove it immediately afterward without double-handling.
@@ -233,4 +237,5 @@ not seeded at minimal. A load reconstructs contracts from the transfers sub-blob
 | 0.6 | 2026-09-14 | — | T0 football-judgment close-out: always-on #27 positional scarcity, deterministic counter band, evaluator validation and no-mutation negotiation results. |
 | 0.7 | 2026-09-14 | — | PR #407 review correction: currency APIs renamed; attribute mean no longer truncates to 20 buckets; positional stock excludes the negotiated player symmetrically; `SubmitBid` gains typed budget/full outcomes and applies local state only after matching roster commit. |
 | 0.8 | 2026-09-14 | — | Residual review cleanup: budget subtraction now explicitly requires `0 <= committed <= budget`; preview/commit mismatch limits are stated for both directions; T2 must lock real hook dispatch plus observable managed↔external #31 no-op behavior. |
+| 0.9 | 2026-09-21 | — | ERR-031-002: move the ordinary buy-affordability decision ahead of checked staged `ApplyTransaction`, preventing coherent extreme debt from throwing before `InsufficientBudget`; runtime regression lands with the spec. |
 #endregion

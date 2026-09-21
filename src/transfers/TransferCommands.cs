@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransferCommands.cs
 // Created:  2026-09-12
-// Modified: 2026-09-14
+// Modified: 2026-09-21
 // Author:   —
 // Specs:    Spec #20 §3.5/§3.6.2 (constructor injection, style/docs)
 //           Spec #31 §3.1-§3.4, FR-TX-001..010/020..025 (atomic SubmitBid pipeline)
@@ -93,15 +93,6 @@ namespace TacticalDirector.Transfers
                 return ToSubmissionOutcome(negotiation);
             }
 
-            FinanceTransaction transaction = new FinanceTransaction(
-                offer.IsBuy ? FinanceTransactionKind.Debit : FinanceTransactionKind.Credit,
-                FinanceLineItem.TransferFee,
-                offer.Fee);
-
-            // Validate the canonical #40 mutation on a copy before any real #31/#40/#30 state changes.
-            ClubFinancesState stagedFinances = finances;
-            FinanceLedger.ApplyTransaction(ref stagedFinances, in transaction);
-
             if (offer.IsBuy)
             {
                 long budget = FinanceLedger.AvailableTransferBudget(in finances);
@@ -111,6 +102,7 @@ namespace TacticalDirector.Transfers
                     throw new InvalidOperationException("Committed transfer spend is outside the #40 budget invariant.");
                 }
 
+                // ERR-031-002: affordability is an ordinary result and must precede checked finance staging.
                 if (offer.Fee > budget - committed)
                 {
                     return TransferSubmissionOutcome.InsufficientBudget;
@@ -124,6 +116,15 @@ namespace TacticalDirector.Transfers
             {
                 Contract.Validate(in existingContract);
             }
+
+            FinanceTransaction transaction = new FinanceTransaction(
+                offer.IsBuy ? FinanceTransactionKind.Debit : FinanceTransactionKind.Credit,
+                FinanceLineItem.TransferFee,
+                offer.Fee);
+
+            // Validate the canonical #40 mutation on a copy before any real #31/#40/#30 state changes.
+            ClubFinancesState stagedFinances = finances;
+            FinanceLedger.ApplyTransaction(ref stagedFinances, in transaction);
 
             if (!_roster.TryPreviewRosterCommit(fromClubId, toClubId, offer.PlayerId, out int newPlayerId))
             {
@@ -251,4 +252,5 @@ namespace TacticalDirector.Transfers
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 atomic SubmitBid command pipeline. |
 // | 1.1     | 2026-09-14 | —      | Fix finance type alias; share offer validation; apply always-on counterparty positional need. |
 // | 1.2     | 2026-09-14 | —      | Type normal budget/full-squad outcomes; exclude negotiated player from need; commit staged finance and move port check ahead of local mutation. |
+// | 1.3     | 2026-09-21 | —      | ERR-031-002: resolve buy affordability before checked staged finance validation so extreme coherent debt returns InsufficientBudget instead of overflowing. |
 #endregion
