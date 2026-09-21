@@ -12,7 +12,15 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 21, 2026 — **PR #432 W12 evidence/tooling salvage corrected after repository review.**
+> **Last Updated:** September 21, 2026 — **PR #433 evidence/governance closure: evidence-manifest integrity + shallow-ancestry guard.**
+>
+> Two post-W12 governance remainders are closed mechanically rather than by procedure alone. New `tools/dotnet-ci/check_evidence_manifests.py` scans committed evidence manifests: `SHA256SUMS` means complete recursive directory coverage and therefore fails on digest drift, missing/stale rows, uncovered files, malformed/duplicate rows, missing targets or path escape; `artifact-SHA256SUMS` remains an explicitly partial artifact contract but every listed file is digest-checked. New tooling tests run this verifier against the committed repository and mutation fixtures, so the v2.10 evidence manifest can no longer silently stale after an ordinary evidence/README edit.
+>
+> New `tools/dotnet-ci/check_branch_ancestry.py` makes local branch-cleanup ancestry fail closed: it queries `git rev-parse --is-shallow-repository` before resolving or comparing refs and refuses to report merged/unmerged/deletable status from incomplete history. Its tests prove a true ancestor, a non-ancestor, and a depth-1 `file://` clone refusal. Full local history or an authoritative remote/API compare remain the only accepted bases for branch-deletion/reachability decisions.
+>
+> The two owning live entries move verbatim to `open-issues-resolved.md`; active/archive counts advance **28 / 57 → 26 / 59** and `project-reference.md` is synchronized. The historical owner-held pinned-main leakage/cardinality anomaly remains open: this closure does not manufacture a cause or erase the historical excluded-run inconsistency. **Blast radius:** tooling/tests/tracking only; no `src/`, APPROVED spec, SPEC_INDEX, gameplay behavior, save/snapshot schema, RNG surface, `[GT]`, calibration threshold or ERR change. Current-head CI is the landing gate.
+>
+> **Last Updated (prior):** September 21, 2026 — **PR #432 W12 evidence/tooling salvage corrected after repository review.**
 >
 > The stale `wiring/w12-evidence-repair` branch was 11 commits ahead / 356 behind when salvage began, but current `main` already contained most of its durable intent: the exact pre/post W12 Actions ZIPs, static-sweep ZIP, W6 pre-registration, corrected comparison, migrated checker, and test-suite enforcement. The salvage therefore keeps stale history out of the branch and restores only the missing machine-readable census plus stronger validation around the current evidence model.
 >
