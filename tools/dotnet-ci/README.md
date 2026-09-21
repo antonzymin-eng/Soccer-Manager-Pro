@@ -23,6 +23,8 @@ It is deliberately **non-certifying**. Determinism certification remains owned b
 | `coverage.runsettings` | Coverlet/XPlat coverage configuration used by PR/nightly policy modes. |
 | `precommit.runsettings` | NUnit pre-commit selection. Excludes taxonomy prefixes only when they occur at the start of the **method name** (`^int_`, `^sim_`, `^e2e_`), avoiding `FullyQualifiedName` substring over-exclusion. |
 | `run-gate.sh` | Lower-level generated-project executor. Accepts explicit arguments only; inherited filter/owner/coverage environment controls are rejected. |
+| `check_evidence_manifests.py` | Verifies committed evidence SHA-256 manifests. `SHA256SUMS` means complete recursive directory coverage; `artifact-SHA256SUMS` verifies only the explicitly listed artifact subset. |
+| `check_branch_ancestry.py` | Local branch-cleanup ancestry check. Refuses to make an ancestry claim from a shallow clone; use full local history or an authoritative remote/API compare. |
 
 ## Normal developer commands
 
@@ -76,6 +78,35 @@ PR/nightly policy modes, when one or more rows are configured:
 With a comments-only ledger, no exclusion is applied and the dedicated owner-held stage is skipped; the ordinary sweep owns every result.
 
 The diagnostic contract is proven only when the real PR gate executes successfully; a unit fixture proves verifier behavior, not the live test message format.
+
+## Evidence/governance utilities
+
+Two repository-governance checks live here because their failure modes affect whether retained evidence
+can be trusted or deleted safely.
+
+`check_evidence_manifests.py` scans `docs/tracking/evidence/` for two manifest contracts:
+
+- `SHA256SUMS` is a **complete-directory manifest**. Every regular file recursively below the manifest's
+  directory, except the manifest itself, must be listed exactly once and match its SHA-256 digest.
+  Missing/stale entries, uncovered files, missing targets, duplicate rows, malformed rows and path
+  escapes fail closed.
+- `artifact-SHA256SUMS` is an **artifact-scoped manifest**. Every listed file must exist and match its
+  digest, but unrelated sibling documentation is deliberately outside that manifest's coverage claim.
+
+The tooling unit suite executes the verifier against the committed repository, so a later evidence or
+README edit cannot silently stale a complete manifest.
+
+`check_branch_ancestry.py` is the local branch-cleanup guard:
+
+```bash
+python3 tools/dotnet-ci/check_branch_ancestry.py \
+  --repo . --ancestor <branch-or-tip> --descendant main
+```
+
+It checks `git rev-parse --is-shallow-repository` **before** resolving or comparing refs. A shallow
+checkout exits with an error and makes no merged/unmerged/deletable claim. The safe alternatives are
+to unshallow/obtain complete local history or to use an authoritative remote/API comparison. Fetching
+all branch refs without removing the shallow boundary is not sufficient.
 
 ## Certified-host boundary
 
