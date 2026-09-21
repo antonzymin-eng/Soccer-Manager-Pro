@@ -10,7 +10,7 @@
 
 ---
 
-> **UPDATED September 20, 2026 (v1.22):** W2 remains **ACTIVE IN PRODUCTION**, and the post-#416 six-seed stall/non-vacuity revalidation is now durable. All six production seeds satisfy the frozen population/share checks; the disarmed control is also healthy, so this corpus does **not** establish W2 efficacy and does not calibrate tackle outcomes. Evidence and frozen preregistration are under `docs/tracking/evidence/w2-six-seed/` and `docs/tracking/w2-six-seed-evidence-preregistration.md`. `TackleContactRadiusM` still defaults relationally to `LooseBallPickupRadiusM` with the durable `> 0` / `<= LooseBallPickupRadiusM` contract. Four Class-A items remain: W3, W8, W9, W10. The ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain uncalibrated, foul/card calibration remains separate, T-DA-DET-005 remains deferred with no W2 credit, and the owner-held close-chance disposition is unchanged.
+> **UPDATED September 20, 2026 (v1.23):** W2 remains **ACTIVE IN PRODUCTION** and the post-#416 six-seed stall/non-vacuity revalidation remains durable. The September 20 owner decision now retires the `sim_match_engine_close_chance` owner-held exception: its seeds and floors stay unchanged, but the test returns to the ordinary blocking sweep. Exact retirement evidence measured `meanCosine=-0.038` / `goalwardShare=0.496` against floors −0.16 / 0.42; the modest margin is recorded as a future trajectory-sensitivity, not a calibration result. Four Class-A items remain W3, W8, W9, W10. The ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain uncalibrated, foul/card calibration remains separate, and T-DA-DET-005 remains deferred with no W2 credit.
 
 ## 0. Why this document exists, and the rule it establishes
 
@@ -329,7 +329,7 @@ separately tracked by #401. Regression locks: `CollisionDeflectionFeedbackTests`
 
 **Review closure:** the recovered `_tackleCooldown` P2 ages elapsed cooldown before the physical-carrier gate. W6 also exposed a keeper-carry consequence: the review corpus recorded 2/17 held claims carried through the keeper's own goal line. `0c065b38` constrains only a Controlled goalkeeper at the defended goal plane before ball attachment, preserving Agent Movement's general exterior buffer and ordinary loose/kicked-ball goal adjudication; `3e00cd4c` locks both goal planes and recovery kinematics. Focused W6 tests are 9/9 green and the composed keeper-claim scenario is 1/1 green.
 
-**Downstream boundary:** W6 did **not** arm W2. The separately pre-registered post-W6 P-W6-1 measurement has now run and clears the historical stall blocker, but `TackleContactRadiusM` remains at its governed shipping-disabled value until the separate activation change lands. The owner-held `sim_match_engine_close_chance` also remains unchanged: W6 moves its sampled trajectory population but does not change the DRIBBLE direction scorer, so that calibration/disposition stays outside this wiring landing.
+**Downstream boundary (historical W6 landing):** W6 itself did **not** change the close-chance disposition: it moved the sampled trajectory population but did not change the DRIBBLE direction scorer. That September 15 statement is now superseded only as policy by the September 20 owner retirement of the held-red exception. The W6 attribution remains historical evidence; no close-chance seed, floor, or scorer changed in the retirement.
 
 ### W7 — The AI manager never picks a kickoff preset — ✅ **WIRED September 11, 2026 (PR #398)**
 **Pre-fix evidence:** `match-engine/ManagerAdaptation.cs:250` `ApplyKickoff` had no caller. Its own doc says
@@ -424,11 +424,12 @@ dormancy than anything in Class A.
   bit-identical on all 18. That is the "further from goal, not nearer" prediction above, measured.
   For contrast the -021/-022/-023 shot-lane chain — the suspect the Acceptance-3 row named — moves
   the same metric by **−0.027 ± 0.039 (t = −0.70, 8 up / 10 down)**, i.e. not at all directionally.
-  **So `sim_match_engine_close_chance` is failing on C1's mechanism, not on a bound-tuning
-  question**, which is the same conclusion §10.9 reached from the post-C1 side and the owner
-  confirmed at v1.6 below — reached independently, from the opposite direction. Currency: the sweep
-  predates the W2 tackle wiring (`ERR-014-006`), so the attributions stand but the absolute figures
-  are not today's `main`.
+  **The historical close-chance failure was attributable to C1's mechanism, not to bound tuning.**
+  That causal result still stands: the sweep predates W2 and explains the old regression, not today's
+  absolute value. Exact September 20 retirement evidence now passes at meanCosine −0.038 /
+  goalwardShare 0.496 with the original floors unchanged, and the owner has retired the held-red
+  exception. A future trajectory-moving failure must be investigated anew rather than assumed to be
+  either C1 recurrence or a reason to rebaseline.
 - **C2 — #15's TRANSITION branch never republishes per-agent intents**, so `GetIntent` serves stale
   ones for the whole transition window.
 - **C5 — `TacticalContext.HasAttackIntent` has no production consumer** (found at C1, Aug 8, 2026).
@@ -651,6 +652,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.23 | 2026-09-20 | — | **Owner retires the close-chance held-red exception.** Exact retirement evidence run `35344056248` passes at meanCosine −0.038 / goalwardShare 0.496 against unchanged floors −0.16 / 0.42. The test returns to the ordinary sweep; no seed, predicate, bound, `[GT]`, W2 behavior, or calibration changes. Historical C1/W6 attribution remains evidence, while future trajectory-moving failures are treated as fresh sensitivity. |
 | 1.22 | 2026-09-20 | — | **Post-#416 W2 six-seed revalidation closeout.** Frozen six-seed production and disarmed-control evidence is now durable; all production seeds clear the preregistered stall/non-vacuity checks, but the healthy disarmed arm prevents an efficacy claim. Production activation remains unchanged; tackle-outcome/cooldown `[GT]`s, T-DA-DET-005, and foul/card calibration remain separate. |
 | 1.21 | 2026-09-16 | — | **W2 production activation.** Shipping fallback `0` → `LooseBallPickupRadiusM`; production contract `> 0` / `<= reclaim radius` is fail-loud; shipping-default composed locks replace the disabled-default posture. Outcome `[GT]`s/cooldown unchanged; foul/card calibration remains separate; no T-DA-DET-005 credit. |
 | 1.20 | 2026-09-16 | — | **Post-W6 paired-control closeout.** Same-head/same-seed run `35096793576` validates armed `0.983/0.983`, `0.985/0.985` with clean exits against a disarmed negative control `0.530/0.530`, `0.979/0.979` with expected non-zero exits; exact artifacts and hashes are archived under `docs/tracking/evidence/w2/`. Production W2 remains disabled pending the separate activation change; ten tackle-outcome `[GT]`s remain uncalibrated; T-DA-DET-005 remains inactive. |

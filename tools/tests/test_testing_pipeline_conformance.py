@@ -178,29 +178,41 @@ class TestingPipelineConformanceTests(unittest.TestCase):
             self.assertIn("unexpected additional test result", extra_proc.stdout)
 
     def test_owner_held_red_is_not_quarantine_and_is_selected_by_exact_name(self) -> None:
-        gate = ROOT / "tools" / "dotnet-ci" / "run-gate.sh"
-        proc = self.run_cmd(
-            "bash", str(gate), "--owner-held-red", "report-only",
-            env={"TD_GATE_DRY_RUN": "1"},
-        )
-        self.assertEqual(proc.returncode, 0, proc.stdout)
-        self.assertIn("owner_held_include=Name=sim_match_engine_close_chance", proc.stdout)
-        self.assertIn("Name!=sim_match_engine_close_chance", proc.stdout)
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            gate_dir = root / "tools" / "dotnet-ci"
+            gate_dir.mkdir(parents=True)
+            shutil.copy2(ROOT / "tools" / "dotnet-ci" / "run-gate.sh", gate_dir / "run-gate.sh")
+            (gate_dir / "known-failures.txt").write_text("# empty quarantine\n", encoding="utf-8")
+            (gate_dir / "owner-held-red.txt").write_text(
+                "sim_match_engine_close_chance|meanCosine=-0.165|goalwardShare=0.407\n",
+                encoding="utf-8",
+            )
 
-        grouped = self.run_cmd(
-            "bash", str(gate),
-            "--test-filter", "Name=alpha|Name=beta",
-            "--owner-held-red", "report-only",
-            env={"TD_GATE_DRY_RUN": "1"},
-        )
-        self.assertEqual(grouped.returncode, 0, grouped.stdout)
-        self.assertIn(
-            "blocking_filter=(Name=alpha|Name=beta)&(Name!=sim_match_engine_close_chance)",
-            grouped.stdout,
-        )
+            proc = self.run_cmd(
+                "bash", str(gate_dir / "run-gate.sh"), "--owner-held-red", "report-only",
+                cwd=root,
+                env={"TD_GATE_DRY_RUN": "1"},
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout)
+            self.assertIn("owner_held_include=Name=sim_match_engine_close_chance", proc.stdout)
+            self.assertIn("Name!=sim_match_engine_close_chance", proc.stdout)
 
-        quarantine = (ROOT / "tools" / "dotnet-ci" / "known-failures.txt").read_text(encoding="utf-8")
-        self.assertNotIn("sim_match_engine_close_chance", quarantine)
+            grouped = self.run_cmd(
+                "bash", str(gate_dir / "run-gate.sh"),
+                "--test-filter", "Name=alpha|Name=beta",
+                "--owner-held-red", "report-only",
+                cwd=root,
+                env={"TD_GATE_DRY_RUN": "1"},
+            )
+            self.assertEqual(grouped.returncode, 0, grouped.stdout)
+            self.assertIn(
+                "blocking_filter=(Name=alpha|Name=beta)&(Name!=sim_match_engine_close_chance)",
+                grouped.stdout,
+            )
+
+            quarantine = (gate_dir / "known-failures.txt").read_text(encoding="utf-8")
+            self.assertNotIn("sim_match_engine_close_chance", quarantine)
 
     def test_owner_held_mode_allows_empty_ledger_without_exclusion(self) -> None:
         with tempfile.TemporaryDirectory() as td:

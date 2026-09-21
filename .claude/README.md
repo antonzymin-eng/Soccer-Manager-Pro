@@ -143,8 +143,8 @@ holds: every refusal observed was a stop-and-report, and the one wrong refusal e
 files and **zero** `.cs` / `.asmdef` / `tools/dotnet-ci` files, so neither failure originates here:
 
 - `sim_match_engine_close_chance` — the failure root `CLAUDE.md` already records as **owner-held RED
-  by decision** (August 11, 2026). Expected red; noted here only because it is enforced by the gate
-  rather than quarantined, so every gate run on every branch inherits it. **Confirmed red on `main`
+  by decision** (August 11, 2026). Expected red at the time; noted here only because it was enforced by the gate
+  rather than quarantined, so every gate run then inherited it. **Superseded September 20, 2026:** the owner retired this exception; the unchanged predicate now runs in the ordinary blocking sweep. **Confirmed red on `main`
   itself**: CI run 476 on `2092c8a` reports `MatchEngine.Tests` Failed 1 / Passed 472 / Skipped 11 /
   Total 484 — identical to the local run, so this one is demonstrably not any branch's doing.
 - `GrowthProjection_DeclineIsUnbounded_ANeverRemovedVeteranReachesEveryAttributeAtMinimum`

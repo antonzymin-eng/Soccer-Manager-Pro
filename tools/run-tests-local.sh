@@ -57,9 +57,9 @@ measurement, not inferred from the timeout itself.
 PR/nightly use the Linux shim gate for non-certifying functional evidence. Nightly
 also enables the existing full-match ShotOutcomeDiagnosticTests soak. Platform
 determinism certification is a separate certified Windows/Unity job in nightly.yml.
-The recorded owner-held RED is executed separately and verified against its pinned
-diagnostic values; it is not quarantine and a changed failure or unexpected pass
-is blocking.
+Configured owner-held REDs, if any, are executed separately and verified against their pinned
+diagnostic values; they are not quarantine, and a changed failure or unexpected pass
+is blocking. A comments-only owner-held ledger means no exception is configured.
 USAGE
 }
 
