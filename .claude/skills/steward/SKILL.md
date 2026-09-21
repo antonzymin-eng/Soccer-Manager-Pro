@@ -48,9 +48,9 @@ Three CI-reading rules remain important:
 
 ## Owner-held RED is not quarantine
 
-`sim_match_engine_close_chance` remains **owner-held RED by decision** (`docs/tracking/close-chance-creation-design.md` §10.9 item 6). Never rebaseline it just to get green.
+The owner retired `sim_match_engine_close_chance` from owner-held RED on September 20, 2026 (`docs/tracking/close-chance-creation-design.md` §10.9 item 7). Its seeds and floors remain unchanged; never rebaseline it merely to get green. No held rows are currently configured.
 
-The policy runner no longer makes the whole Linux job red merely because this one owner-held predicate remains at its approved RED state. Instead it:
+When owner-held rows are configured, the policy runner keeps them out of the ordinary sweep and verifies them separately. It:
 
 1. excludes that exact test `Name` from the ordinary blocking pass;
 2. executes the exact test separately;

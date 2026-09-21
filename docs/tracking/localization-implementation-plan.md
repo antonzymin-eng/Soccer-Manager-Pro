@@ -1,7 +1,7 @@
 # Localization #49 — End-to-End Implementation Plan
 
 **Created:** September 6, 2026
-**Version:** 2.5
+**Version:** 2.6
 **Status:** READY FOR IMPLEMENTATION
 **Baseline:** `main` at `67f2343c34e767ba02a4dc13816c91090b3bf3d9` — the L3A merge commit (PR #370, September 9, 2026). v2.0–v2.2 were authored against `9fbd7533`; the historical review records below keep that value and are not rewritten.
 **Scope:** the APPROVED #49 seam/T0+T1 implementation first; Wave-8 locale/a11y content remains a later, separately approved tier.
@@ -34,7 +34,7 @@ The provisional `codex/localization-infrastructure-t0` branch remains non-author
 | M3 — ProducerTag back-prop inventory/pair uniqueness missing | **Accepted** | Inventory every symbolic `ProducerTag.*` consumer before T1 and lock uniqueness of the **pair** `(ProducerTag, LocalOrdinal)`, not only tag values. |
 | M4 — external JSON had no CI-path loader | **Accepted; design removed** | No external locale file is part of seam T0/T1. Base English remains compiled host-free content so the Linux policy gate exercises the exact shipped T0/T1 content. External content files/loaders are a Wave-8 decision. |
 | Roadmap framing | **Accepted** | #49 content is explicitly deferred past PM-3. Seam T0 is parallel work, not critical-path work. |
-| Second review M-a — “full Linux gate green” conflicts with owner-held RED | **Accepted as an ambiguity; factual premise updated** | Current `main` makes `tools/run-tests-local.sh --pr` the canonical policy composition. It excludes the exact owner-held RED from the ordinary blocking pass and verifies that RED separately. Every runtime exit now requires that canonical PR composition to pass, with no new failures and the owner-held RED verifier accepting the recorded baseline. A bare `run-gate.sh` result is not the acceptance proof. |
+| Second review M-a — “full Linux gate green” conflicts with owner-held RED | **Accepted; current policy advanced again September 20** | `tools/run-tests-local.sh --pr` remains the canonical policy composition. Owner-held rows, when configured, are excluded from the ordinary pass and verified separately; the current ledger is comments-only after the owner retired `sim_match_engine_close_chance`, so no exclusion/dedicated stage applies today. Every runtime exit requires the canonical PR composition to pass. A bare `run-gate.sh` result is not the acceptance proof. |
 | Second review M-b — same-commit lists omit checker/close-out surfaces | **Accepted** | L0R/L1/L3B now explicitly include landing-close-out and every checker-tracked cardinality they change: assembly counts, assembly-less spec counts, ERR counts, active/archive issue counts where applicable, changelog chains, `src/CLAUDE.md`/`CHANGELOG-src.md`, file manifest, and the dated README snapshot when its facts move. |
 | Second review M-c — ERR-049-002 discharge split is ambiguous | **Accepted** | ERR-049-002 is discharged **wholly in L1**. L1's executable layer proof is sufficient to correct the already-approved KD-6 wording, including its reference to the boundary topology. |
 | Second review lows — deferred ERR skill timing, base-content placement, dev marker, soft corpus exit | **Accepted** | L0R explicitly uses the ERR skill's named-stage deferral because C6 forbids the normal immediate back-prop; #49-owned base English is pinned to `TacticalDirector.Localization`; T0 omits the optional dev marker; L3B requires complete removal of human-readable corpus ownership from `living-world`. |
@@ -342,8 +342,8 @@ This executable layer proof is the evidence used to discharge ERR-049-002 in ful
 - active architecture-governance and document-consistency checks green;
 - localization unit tests green;
 - canonical PR-equivalent Linux policy composition `bash tools/run-tests-local.sh --pr` passes;
-- no new test failure exists, and the separate owner-held RED verifier accepts the exact recorded `sim_match_engine_close_chance` baseline (an unexpected pass or diagnostic drift is a failure);
-- if the lower-level raw generated-project executor is also run for investigation, its owner-held RED result is recorded as baseline evidence rather than incorrectly required to be whole-tree green;
+- no new test failure exists; configured owner-held RED rows, if any, must pass their separate verifier. With the current comments-only ledger there is no held-row verifier obligation and `sim_match_engine_close_chance` belongs to the ordinary blocking sweep;
+- if the lower-level raw generated-project executor is also run for investigation, do not substitute its status for the canonical policy-runner verdict; configured held rows, if any, are interpreted under the owner-held policy rather than as quarantine;
 - all assembly/spec/ERR/open-issue cardinalities changed by L1 are current;
 - ERR-049-002 is `✅ RESOLVED` with executable evidence;
 - ERR-049-004 is `✅ RESOLVED` with executable evidence that is **runnable in L1**: the §5.3 structural locks prove the core seam now carries a locale-neutral typed selector operand, and FR-LC-006 is re-proven — no locale-dependent state is persisted and the operand does not enter serialized bytes. That is the whole of this ERR: the recorded defect is that the seam supplies *no* operand, and it is discharged when the operand exists with the right properties. **The behavioral half is L2's and is not required here** — proving the operand actually drives `one/few/many/other` selection needs the renderer and catalogue, which §6 builds; requiring it in L1 would pull L2 forward. §6.6 carries that proof as FR-LC-009 conformance, not as this ERR's discharge;
@@ -426,7 +426,7 @@ Explicitly absent from L2:
 - missing-base coverage mutant killed;
 - modulo/variant-order tests green;
 - no file/Unity dependency introduced;
-- canonical `bash tools/run-tests-local.sh --pr` passes with no new failures and the owner-held RED verifier accepting its recorded baseline;
+- canonical `bash tools/run-tests-local.sh --pr` passes with no new failures; any configured owner-held rows must satisfy their verifier, while a comments-only ledger adds no separate held-row obligation;
 - normal landing-close-out/document-consistency surfaces are current;
 - **FR-LC-009 selector behavior is proven here, on the operand L1 delivered** (§3.3, §5.3): a synthetic non-English catalogue selects a non-`other` plural category through the real renderer, and base-locale English still takes the identity path. This is FR-LC-009 conformance, not ERR-049-004's discharge — that entry closed in L1 on the structural locks;
 - ERR-049-005 is `✅ RESOLVED` with executable evidence, unless §3.4's L1 decision already discharged it there: a static `LocalizationKey` absent from **both** the selected and the base catalogue has one defined, production-safe terminal result, proven by a test asserting that exact result and asserting no throw and no state mutation (FR-LC-011). If the resolution was to extend construction coverage to static keys instead, the proof is a killed mutant: a catalogue omitting one admitted static key must fail construction.
@@ -535,7 +535,7 @@ Against L3A, prove:
 - **no human-readable `InteractionTextCorpus` template/clause ownership remains sim-side**;
 - ERR-049-003 is `✅ RESOLVED` and all downstream spec back-props are consistent;
 - every changed assembly/ERR/open-issue/current-state cardinality is current;
-- canonical `bash tools/run-tests-local.sh --pr` passes with no new failures and the owner-held RED verifier accepting the exact recorded baseline;
+- canonical `bash tools/run-tests-local.sh --pr` passes with no new failures; any configured owner-held rows must satisfy their verifier, while the current comments-only ledger leaves all tests in the ordinary sweep;
 - the same canonical gate log must contain `PR coverage assemblies:` followed by one or more real, non-sentinel production assembly names. Either exact output below is an L3B acceptance failure even if the generic PR job itself is green:
   - `PR coverage assemblies: none (scope ceiling fallback)`
   - `PR coverage assemblies: none (no shim-coverable changed production/test-owned src assembly)`
@@ -643,7 +643,7 @@ Minimum:
 - `python3 tools/assembly-tier-check.py --repo .` when any production asmdef/tier surface changes;
 - current document consistency / recurring-defect / governance checks required by repo instructions;
 - **canonical PR-equivalent Linux policy:** `bash tools/run-tests-local.sh --pr`;
-- verify the separate owner-held RED step accepts exactly the recorded `sim_match_engine_close_chance` failure identity/diagnostics; unexpected green, drift, ambiguity or extra failures block;
+- verify any configured owner-held RED rows through the separate exact-name/diagnostic/multiplicity step; with the current comments-only ledger confirm that no owner-held exclusion or dedicated stage is applied;
 - if `tools/dotnet-ci/run-gate.sh` is run directly for debugging, do not substitute its raw whole-tree status for the policy-runner verdict;
 - landing-close-out drift check plus explicit inspection of its output;
 - `git diff --check`/equivalent hygiene.
@@ -741,7 +741,7 @@ Accepted:
 
 Corrected against current `main` rather than blindly adopting the review:
 
-- `sim_match_engine_close_chance` remains owner-held RED, but current PR/nightly policy **does not require the raw full tree to turn green**. `tools/run-tests-local.sh --pr` excludes that exact test from the ordinary blocking pass, executes it separately, and blocks on any unexpected pass or diagnostic drift. The plan therefore requires the canonical policy composition to pass and the owner-held verifier to accept its baseline; a bare low-level `run-gate.sh` is not the acceptance criterion.
+- **September 20, 2026 successor:** `sim_match_engine_close_chance` is no longer owner-held RED. The owner retired the exception without changing the test's seeds or floors, so the current comments-only ledger applies no owner-held exclusion and the test runs in the ordinary blocking sweep. `tools/run-tests-local.sh --pr` remains the acceptance criterion; any future configured held rows would still be verified separately. A bare low-level `run-gate.sh` is not the acceptance criterion.
 
 ## v2.2 third external review corrections
 
@@ -800,4 +800,5 @@ Review of v2.4 found that the two new records had been added without following t
 | 2.3 | 2026-09-09 | — | L3A landing reconciliation: resolved `<L3A_MERGE_COMMIT>` to the PR #370 merge commit `67f2343` in §7.7 and §12 (naming the merged branch tip as the wrong value and recording the frozen blob hash as informational corroboration), advanced the header baseline to that commit, discharged the v2.2 hold on L1 with the CI and negative-control run ids, and carried forward the narrowed end-to-end citation-clause evidence limitation. No requirement added or relaxed. |
 | 2.4 | 2026-09-09 | — | Recorded two further pre-T0 defects found by review of the v2.3 landing: §3.3 proposed ERR-049-004 (FR-LC-009 mandates a plural/gender selector for which §2.2 supplies no typed operand) and §3.4 proposed ERR-049-005 (FR-LC-011's base-locale-identity fallback is circular for a static key outside FR-LC-008a/F5's procedural-roster-only coverage). L0R grows from two recorded entries to four across §3.5, §3.6, §11 row 0 and §14 criterion 6; ERR-049-004 assigned to **L1** because the operand lands on a core seam type frozen there, with §3.4's signature question settled before L1 rather than at L2; executable exit evidence named in §5.5 and §6.6. No normative fix chosen and no FR/KD wording altered. |
 | 2.5 | 2026-09-09 | — | Followed the v2.4 four-defect scope through the places it had not reached, and fixed one mis-sliced proof. §5.2 no longer hard-codes the pre-fix `ILocalizer`/`NamedSlotSet`/`LocalizedTextRequest` shapes that §3.3/§3.4 require L1 to change — the three bullets are marked subject to those decisions. ERR-049-004's exit evidence split at the slice boundary: L1 proves the operand exists with the required type/locale-neutrality/immutability/no-persisted-state properties (§5.3, §5.5) and closes the ERR there; L2 proves it drives plural selection (§6.6) as FR-LC-009 conformance, since the renderer and catalogue are L2. §2 H1 and the §3 preamble updated from two known defects to four. No new defect recorded, no normative fix chosen, no FR/KD wording altered. |
+| 2.6 | 2026-09-20 | — | Synchronized gate acceptance wording with the owner retirement of the final held-red row. The canonical `tools/run-tests-local.sh --pr` contract is unchanged; owner-held verification is now conditional on configured rows, and the comments-only current ledger means no exclusion/dedicated stage while `sim_match_engine_close_chance` runs in the ordinary sweep. Historical v2.1 and L3A gate evidence remain historical and are not rewritten. |
 #endregion

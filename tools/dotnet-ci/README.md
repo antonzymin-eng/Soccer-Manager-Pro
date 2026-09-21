@@ -18,7 +18,7 @@ It is deliberately **non-certifying**. Determinism certification remains owned b
 | `UnityShim/` | Minimal Unity API shim needed by host-free code. |
 | `UnityShim.TestTools/` | Test-framework shims used by generated projects. |
 | `known-failures.txt` | Functional flake quarantine ledger. Shrinking-only; currently comments-only. |
-| `owner-held-red.txt` | Owner-held failing acceptance predicates. **Not quarantine.** Each is executed separately and must still fail at the recorded diagnostic baseline. |
+| `owner-held-red.txt` | Optional owner-held failing acceptance predicates. **Not quarantine.** A comments-only file means no exception is configured; configured rows execute separately and must still fail at their recorded diagnostic baseline. |
 | `verify-owner-held-red.py` | Requires one exact test identity, failed outcome, recorded diagnostic tokens, no extra results, and expected runner exit. Unexpected green/drift/ambiguity blocks. |
 | `coverage.runsettings` | Coverlet/XPlat coverage configuration used by PR/nightly policy modes. |
 | `precommit.runsettings` | NUnit pre-commit selection. Excludes taxonomy prefixes only when they occur at the start of the **method name** (`^int_`, `^sim_`, `^e2e_`), avoiding `FullyQualifiedName` substring over-exclusion. |
@@ -63,15 +63,17 @@ This design removes the prior cold-restore/34-sequential-project construction de
 
 ## Owner-held RED policy
 
-`sim_match_engine_close_chance` is currently owner-held RED by explicit project decision. It is not placed in `known-failures.txt` and is not treated as a flake.
+No owner-held RED is currently configured. On September 20, 2026 the owner retired `sim_match_engine_close_chance` from this ledger after the predicate became green; it now runs in the ordinary blocking sweep. This retirement does not turn owner-held RED into quarantine or remove the generic mechanism.
 
-PR/nightly policy modes:
+PR/nightly policy modes, when one or more rows are configured:
 
-1. exclude that exact `Name` from the ordinary blocking pass;
-2. run the exact owner-held `Name` separately;
+1. exclude each configured exact `Name` from the ordinary blocking pass;
+2. run the configured owner-held `Name` set separately;
 3. parse its TRX;
-4. require exactly one matching result and the recorded diagnostic tokens;
-5. fail if it passes, drifts, is missing/ambiguous, returns extra tests, or exits abnormally.
+4. require exactly one matching result per configured row and the recorded diagnostic tokens;
+5. fail if a configured row passes, drifts, is missing/ambiguous, returns extra tests, or exits abnormally.
+
+With a comments-only ledger, no exclusion is applied and the dedicated owner-held stage is skipped; the ordinary sweep owns every result.
 
 The diagnostic contract is proven only when the real PR gate executes successfully; a unit fixture proves verifier behavior, not the live test message format.
 
@@ -93,6 +95,7 @@ Where .NET 8 is already available, the policy runner can execute normally. Histo
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| Policy addendum (retirement) | 2026-09-20 | — | Owner decision retires the final configured owner-held row, `sim_match_engine_close_chance`, without changing its predicate or bounds. Documents the already-unit-tested empty-ledger terminal state: ordinary sweep unfiltered, dedicated stage skipped. |
 | Policy addendum | 2026-09-04 | — | **Testing Strategy pipeline correction.** Makes `tools/run-tests-local.sh` the canonical developer/CI policy entry point; records exact owner-held RED handling, anchored NUnit pre-commit selection, persistent staged-index build cache, coverage settings, and the gated certified-host nightly boundary. This operational correction intentionally does not advance the historical gate-document version key, because live open-issue records cite the Aug-7 v1.2 revision as dated evidence. |
 | 1.2 | 2026-08-07 | — | Recorded that the full generated Linux gate can run in the Claude remote Ubuntu environment; still non-certifying. |
 | 1.1 | 2026-07-13 | — | Certification-pin citations updated to the Unity 6000.4.9f1 target tuple; gate remained non-certifying. |
