@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** September 21, 2026  
-**Version:** 0.3  
+**Version:** 0.4  
 **Status:** S0 GATE A COMPLETE — GATE B NEXT  
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.5 §5–§6  
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.8  
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.8 §5–§6  
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.11  
 **Evidence snapshot:** `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base)
 
 ---
@@ -250,8 +250,13 @@ for the missing boot seam.
 There are **zero `UNKNOWN` capability dependencies** supporting the S0 design premise. Every S0 task/control is
 one of:
 
-- backed by an implemented owner/read/action/navigation contract and therefore `DESIGNABLE`; or
-- explicitly `FUTURE-BLOCKED`/`UNWIRED` at the production presentation/binding layer.
+- backed by an implemented owner/read/action/navigation contract and therefore `DESIGNABLE`;
+- `UNWIRED` when that product contract exists but the production presentation/binding is not yet connected; or
+- `FUTURE-BLOCKED` when the required product contract/state/runtime capability itself is absent (for example,
+  A-07's missing Match View abandon edge and A-11's missing pre-match per-player tactic setup handoff).
+
+`UNWIRED` and `FUTURE-BLOCKED` are therefore not interchangeable: a later gate may not relabel a missing contract
+as merely a P5b binding gap.
 
 The pass does **not** mean P5b, full P4b host acceptance, on-host P6, #48, #49 or #51 runtime work is complete.
 It means S0 can proceed to Gate B without inventing product behavior.
@@ -284,3 +289,4 @@ command, statistic, setting or production capability not present in this Gate-A 
 | 0.1 | September 12, 2026 | Created S0 UX-D packet and completed Gate A against `main` `ddd221c9`; revalidated PR #404 Unity compile evidence, P5b absence, repeated-match lifecycle ownership, live/control/stat seams and cross-stream constraints. Gate B next. |
 | 0.2 | September 21, 2026 | Reconciled PR #406 onto current `main` `ad7e0d75` after #407. Re-ran the Gate-A current-state claims: P5b remains absent; the four-screen/five-edge client graph, lifecycle, match projection/dispatch, playback/control and #37 analytics ownership remain valid; P4b advances from compiler-only evidence to partial host verification (tracked-scene Play-mode boot/render smoke) without overstating click/perf/Gate-J acceptance. Gate A remains PASS; Gate B is next. |
 | 0.3 | September 21, 2026 | Review correction: A-11 no longer treats the `PlayerTactic` value type as proof of a pre-match action/state seam. `MatchSetup` has no per-player tactic holder/builder and `MatchSession.BootEngine` applies no per-player setup state, so Role/Duty/Instructions are explicitly `FUTURE-BLOCKED` for pre-match editing until a setup persistence/handoff contract exists. The existing live `SetPlayerTactic` dispatcher remains valid for in-match intervention. This converts an overstated seam into a named blocker; the Gate-A PASS and zero-`UNKNOWN` result remain valid, and Gate B is constrained to a verified team-tactic pre-match choice. |
+| 0.4 | September 21, 2026 | Review closeout: repins the maintained execution/validation authority headers to `ux-detailed-plan.md` v1.8 / `ux-validation-protocol.md` v0.11 and makes the Gate-A verdict taxonomy explicit. `UNWIRED` means an existing contract lacks production presentation/binding; `FUTURE-BLOCKED` means the required contract/state/runtime capability itself is absent. This prevents the A-07/A-11 contract gaps from being laundered later as P5b-only binding work. Gate A remains PASS; Gate B remains next. |

@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 21, 2026  
-**Version:** 0.10\
+**Version:** 0.11\
 **Status:** F4 + S0 GATE A COMPLETE — Gate B next; anonymous participant requirements unchanged\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.7 §F4 and Gates E–G\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.8 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4  
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -494,3 +494,4 @@ Gate F, and Gate G remains unavailable until two distinct independent participan
 | 0.8 | September 11, 2026 | Codex/review correction: makes the already-required independence evidence mechanically recordable. §4.1 now has an explicit per-slot independence/distinctness attestation, §7.1 carries it into each anonymous session record, and §9 requires both session records to match those attestations before Gate G can pass. Also repins the shared interaction baseline to `ux-shared-system.md` v0.4 after that artifact's status-authority correction and clarifies that pre-Gate-F availability is a separate v1.5 timing relaxation, not a consequence of anonymity. |
 | 0.9 | September 21, 2026 | Status/pointer reconciliation after S0 Gate A completed in `ux-s0-pm1-journey.md` v0.2. Execution authority advances to `ux-detailed-plan.md` v1.6 and the next UX action is Gate B. Validation mechanics, anonymous participant evidence, pre-Gate-F availability, and the two-independent-participant Gate-G requirement are unchanged. |
 | 0.10 | September 21, 2026 | Pointer-only review sync after the Gate-A packet and execution authority advance to `ux-s0-pm1-journey.md` v0.3 / `ux-detailed-plan.md` v1.7. No validation task, participant rule, Gate-E/G evidence requirement, severity rule or pass/fail policy changes. |
+| 0.11 | September 21, 2026 | Review closeout pointer sync to `ux-detailed-plan.md` v1.8 / `ux-s0-pm1-journey.md` v0.4. Validation tasks, participant rules, Gate-E/G evidence requirements, severity and pass/fail policy remain unchanged. |
