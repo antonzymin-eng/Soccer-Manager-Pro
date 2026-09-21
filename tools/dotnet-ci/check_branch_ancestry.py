@@ -14,7 +14,7 @@ class GitCheckError(RuntimeError):
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["git", "-C", str(repo), *args],
+        ["git", "--no-replace-objects", "-C", str(repo), *args],
         check=False,
         capture_output=True,
         text=True,
@@ -35,6 +35,26 @@ def is_shallow(repo: Path) -> bool:
     raise GitCheckError(f"unexpected --is-shallow-repository output: {value!r}")
 
 
+def reject_legacy_grafts(repo: Path) -> None:
+    completed = _git(repo, "rev-parse", "--git-path", "info/grafts")
+    if completed.returncode != 0:
+        raise GitCheckError(
+            "could not locate legacy graft file: " + completed.stderr.strip()
+        )
+    graft_path = Path(completed.stdout.strip())
+    if not graft_path.is_absolute():
+        graft_path = repo / graft_path
+    try:
+        if graft_path.is_file() and graft_path.read_text(encoding="utf-8").strip():
+            raise GitCheckError(
+                "legacy Git grafts are configured; ancestry would not represent "
+                "the stored commit graph. Remove/disable info/grafts before making "
+                "a branch deletion/reachability decision."
+            )
+    except OSError as exc:
+        raise GitCheckError(f"could not inspect legacy graft file: {exc}") from exc
+
+
 def resolve_commit(repo: Path, ref: str) -> str:
     completed = _git(repo, "rev-parse", "--verify", f"{ref}^{{commit}}")
     if completed.returncode != 0:
@@ -49,6 +69,10 @@ def check_ancestry(repo: Path, ancestor: str, descendant: str) -> tuple[bool, st
             "Run 'git fetch --unshallow' (or otherwise obtain full history), or use an "
             "authoritative remote/API compare before making a branch deletion/reachability decision."
         )
+
+    # Replacement refs are disabled globally by _git(). Legacy grafts have no
+    # equivalent command-line disable switch, so refuse them explicitly.
+    reject_legacy_grafts(repo)
 
     ancestor_sha = resolve_commit(repo, ancestor)
     descendant_sha = resolve_commit(repo, descendant)
@@ -66,7 +90,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", default=".", help="repository root")
     parser.add_argument("--ancestor", required=True, help="candidate branch tip / ancestor ref")
-    parser.add_argument("--descendant", required=True, help="target ref, normally main")
+    parser.add_argument(
+        "--descendant",
+        required=True,
+        help=(
+            "target ref; for remote-branch deletion use a freshly fetched "
+            "remote-tracking ref such as refs/remotes/origin/main or an "
+            "authoritative remote OID, not local main"
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
