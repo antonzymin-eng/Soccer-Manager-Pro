@@ -43,6 +43,10 @@ AUXILIARY_SHA_MANIFEST_ALLOWLIST = {
 }
 
 
+class EvidenceScopeError(RuntimeError):
+    pass
+
+
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
         ["git", "-C", str(repo), *args],
@@ -52,15 +56,28 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
 
 
 def _tracked_paths(repo: Path, scope: Path) -> list[Path] | None:
-    """Return tracked paths below scope, or None when repo is not a Git worktree."""
+    """Return tracked paths, or None only when repo is genuinely outside Git."""
     probe = _git(repo, "rev-parse", "--is-inside-work-tree")
-    if probe.returncode != 0 or probe.stdout.strip() != b"true":
-        return None
+    if probe.returncode != 0:
+        stderr = probe.stderr.decode("utf-8", errors="replace").strip()
+        if "not a git repository" in stderr.lower():
+            return None
+        raise EvidenceScopeError(
+            "git worktree probe failed: " + (stderr or f"exit {probe.returncode}")
+        )
+    if probe.stdout.strip() != b"true":
+        raise EvidenceScopeError(
+            "repository is not a normal Git worktree; refusing filesystem scope fallback"
+        )
 
     scope_text = scope.as_posix()
     completed = _git(repo, "ls-files", "-z", "--", scope_text)
     if completed.returncode != 0:
-        return None
+        stderr = completed.stderr.decode("utf-8", errors="replace").strip()
+        raise EvidenceScopeError(
+            f"git ls-files failed for {scope_text!r}: "
+            + (stderr or f"exit {completed.returncode}")
+        )
     return [
         Path(raw.decode("utf-8", errors="strict"))
         for raw in completed.stdout.split(b"\0")
@@ -219,7 +236,7 @@ def _validate_repository_scope(repo: Path, evidence_paths: list[Path]) -> list[s
         else:
             directories.add(relative_parts[0])
 
-        if "SHA256SUMS" in path.name and path.name not in MANIFEST_NAMES:
+        if "SHA256SUMS" in path.name.upper() and path.name not in MANIFEST_NAMES:
             relative = Path(*relative_parts).as_posix()
             if relative not in AUXILIARY_SHA_MANIFEST_ALLOWLIST:
                 errors.append(
@@ -240,6 +257,14 @@ def _validate_repository_scope(repo: Path, evidence_paths: list[Path]) -> list[s
             f"{EVIDENCE_ROOT}: tracked root evidence files are not registered: "
             f"{unknown_root_files!r}"
         )
+
+    if evidence_paths:
+        stale_contracts = sorted(set(DIRECTORY_CONTRACTS) - directories)
+        if stale_contracts:
+            errors.append(
+                f"{EVIDENCE_ROOT}: registered integrity contracts have no tracked "
+                f"directory: {stale_contracts!r}"
+            )
 
     for directory in sorted(directories & set(DIRECTORY_CONTRACTS)):
         kind, contract = DIRECTORY_CONTRACTS[directory]
@@ -264,13 +289,20 @@ def _validate_repository_scope(repo: Path, evidence_paths: list[Path]) -> list[s
 
 
 def validate(repo: Path) -> tuple[list[Path], list[str]]:
-    evidence_paths = _evidence_paths(repo)
+    try:
+        evidence_paths = _evidence_paths(repo)
+    except EvidenceScopeError as exc:
+        return [], [f"{EVIDENCE_ROOT}: {exc}"]
+
     manifests = sorted(
         repo / path for path in evidence_paths if path.name in MANIFEST_NAMES
     )
     errors = _validate_repository_scope(repo, evidence_paths)
     for manifest in manifests:
-        errors.extend(verify_manifest(repo, manifest))
+        try:
+            errors.extend(verify_manifest(repo, manifest))
+        except EvidenceScopeError as exc:
+            errors.append(f"{manifest}: {exc}")
     return manifests, errors
 
 
