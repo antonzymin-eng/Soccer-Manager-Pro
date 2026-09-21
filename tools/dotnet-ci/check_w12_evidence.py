@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import io
+import json
 import re
 import subprocess
 import sys
@@ -17,6 +18,9 @@ POST_ARCHIVE_SHA256 = "691efe7a3c77ac1017ed86a78dcfea384a12fcd25248ade4090cbb59a
 PRE_ARCHIVE = Path("docs/tracking/evidence/w12/w12-corrected-pre398-34844425733.zip")
 PRE_ARCHIVE_SHA256 = "0d65be3a1b808933a58f785d7e65c321ae5974626089e2c0a49cfe3c00b5231c"
 DOC = Path("docs/tracking/w12-gate-firing-post398-comparison.md")
+CENSUS_JSON = Path("docs/tracking/evidence/w12/w12-gate-firing-census.json")
+SWEEP_ARCHIVE = Path("docs/tracking/evidence/w12/w12-static-unread-field-sweep-34803051927.zip")
+SWEEP_ARCHIVE_SHA256 = "c1e3526987793b8d736fad3f52e983982a8d10d483215a4ebbcb0f44bdef94f6"
 CENSUS_START = "<!-- W12_POST_CENSUS_BEGIN -->"
 CENSUS_END = "<!-- W12_POST_CENSUS_END -->"
 
@@ -177,6 +181,130 @@ def aggregate(records: list[dict[str, object]]) -> dict[str, int]:
     return {key: sum(_value(record, key) for record in records) for key in keys}
 
 
+
+def _record_for_census(record: dict[str, object]) -> dict[str, object]:
+    return {
+        "seed": record["seed"],
+        "final": record["scoreline"],
+        "team": record["team"],
+        "samples": record["samples"],
+        "latestPass": record["latestPass"],
+        "active": record["active"],
+        "primaryAssigned": record["primaryAssigned"],
+        "coverShadows": record["coverShadows"],
+        "phase": record["phase"],
+        "exits": record["exits"],
+        "raw": record["raw"],
+        "committed": record["committed"],
+    }
+
+
+def _aggregate_for_census(
+    records: list[dict[str, object]], scorelines: list[str]
+) -> dict[str, object]:
+    values = aggregate(records)
+    exit_names = (
+        "Active",
+        "Cooldown",
+        "Disengaged",
+        "InPossession",
+        "InvariantRejected",
+        "NoCommittedTrigger",
+        "NoPrimaryPresser",
+    )
+    trigger_names = ("BackwardPass", "BadTouch", "SidelineTrap", "WeakReceiver")
+    return {
+        "active": values["active"],
+        "committed": {name: values[f"committed.{name}"] for name in trigger_names},
+        "coverShadows": values["coverShadows"],
+        "exits": {name: values[f"exits.{name}"] for name in exit_names},
+        "latestPass": values["latestPass"],
+        "nonInPossession": values["samples"] - values["exits.InPossession"],
+        "primaryAssigned": values["primaryAssigned"],
+        "raw": {name: values[f"raw.{name}"] for name in trigger_names},
+        "samples": values["samples"],
+        "scorelines": scorelines,
+    }
+
+
+def validate_census_json(
+    repo: Path,
+    pre_records: list[dict[str, object]],
+    pre_scores: list[str],
+    post_records: list[dict[str, object]],
+    post_scores: list[str],
+) -> list[str]:
+    errors: list[str] = []
+    try:
+        census = json.loads((repo / CENSUS_JSON).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"{CENSUS_JSON}: could not load census JSON: {exc}"]
+
+    if census.get("schema_version") != 2:
+        errors.append(f"{CENSUS_JSON}: schema_version must be 2")
+
+    durable = census.get("durable_evidence", {})
+    expected_archives = {
+        "pre_zip": (PRE_ARCHIVE.as_posix(), PRE_ARCHIVE_SHA256),
+        "post_zip": (POST_ARCHIVE.as_posix(), POST_ARCHIVE_SHA256),
+        "sweep_zip": (SWEEP_ARCHIVE.as_posix(), SWEEP_ARCHIVE_SHA256),
+    }
+    for key, (expected_path, expected_sha) in expected_archives.items():
+        entry = durable.get(key, {})
+        if entry.get("path") != expected_path:
+            errors.append(
+                f"{CENSUS_JSON}: durable_evidence.{key}.path "
+                f"{entry.get('path')!r} != {expected_path!r}"
+            )
+        if entry.get("sha256") != expected_sha:
+            errors.append(
+                f"{CENSUS_JSON}: durable_evidence.{key}.sha256 "
+                f"{entry.get('sha256')!r} != {expected_sha!r}"
+            )
+
+    expected_lanes = {
+        "pre": (pre_records, pre_scores),
+        "post": (post_records, post_scores),
+    }
+    for lane, (records, scorelines) in expected_lanes.items():
+        actual = census.get(lane, {})
+        expected_rows = [_record_for_census(record) for record in records]
+        expected_aggregate = _aggregate_for_census(records, scorelines)
+        if actual.get("rows") != expected_rows:
+            errors.append(f"{CENSUS_JSON}: {lane}.rows differ from committed archive census")
+        if actual.get("aggregate") != expected_aggregate:
+            errors.append(
+                f"{CENSUS_JSON}: {lane}.aggregate differs from committed archive census"
+            )
+
+    provenance = census.get("provenance", {})
+    if provenance.get("pre", {}).get("artifact_zip_sha256") != PRE_ARCHIVE_SHA256:
+        errors.append(f"{CENSUS_JSON}: pre provenance ZIP hash is stale")
+    if provenance.get("post", {}).get("artifact_zip_sha256") != POST_ARCHIVE_SHA256:
+        errors.append(f"{CENSUS_JSON}: post provenance ZIP hash is stale")
+
+    try:
+        sweep_data = _committed_bytes(repo, SWEEP_ARCHIVE, SWEEP_ARCHIVE_SHA256)
+        with zipfile.ZipFile(io.BytesIO(sweep_data)) as zf:
+            for member, expected in durable.get("sweep_members", {}).items():
+                data = zf.read(member)
+                actual_sha = hashlib.sha256(data).hexdigest()
+                actual_size = len(data)
+                if actual_sha != expected.get("sha256"):
+                    errors.append(
+                        f"{SWEEP_ARCHIVE}:{member}: SHA-256 {actual_sha} "
+                        f"!= {expected.get('sha256')}"
+                    )
+                if actual_size != expected.get("size"):
+                    errors.append(
+                        f"{SWEEP_ARCHIVE}:{member}: size {actual_size} "
+                        f"!= {expected.get('size')}"
+                    )
+    except (KeyError, OSError, RuntimeError, ValueError, zipfile.BadZipFile) as exc:
+        errors.append(f"{SWEEP_ARCHIVE}: static sweep validation failed: {exc}")
+
+    return errors
+
 def validate_accounting(records: list[dict[str, object]]) -> list[str]:
     errors: list[str] = []
     for record in records:
@@ -244,6 +372,7 @@ def validate(repo: Path) -> list[str]:
     pre_records, pre_scores = parse_census(pre_census)
     errors.extend(validate_accounting(post_records))
     errors.extend(validate_accounting(pre_records))
+    errors.extend(validate_census_json(repo, pre_records, pre_scores, post_records, post_scores))
 
     if pre_scores != post_scores:
         errors.append(f"pre/post scorelines differ: {pre_scores!r} != {post_scores!r}")
