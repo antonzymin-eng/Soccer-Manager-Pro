@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 21, 2026 — **PR #415 / `ERR-013-012` Pressing AI §2 reconciliation closeout; documentation/specification only.** **Modified docs/tracking (4):** `docs/specs/pressing-ai/section-2.md` **v0.3 → v0.4**; `docs/tracking/spec-error-log.md` **v2.59 → v2.60**; `docs/tracking/CHANGELOG.md`; and this manifest. The existing two historical `spec-error-log.md` citations retain their original **v2.42 → v2.43** landing fact and advance only their maintained `since advanced to` pointer **v2.59 → v2.60**. §2 now matches §3.1.2 / ERR-013-009 / ERR-013-011 on possessing-team direction, own-team-passer rejection, EventBus-stamped `Tick` recency, bounded discrete-event dwell completion, explicit commit at `TRIGGER_DWELL_TICKS`, and stale-event no-restart semantics; F7 cites `T-U-010 / T-U-010a`. `ERR-013-012` is filed and resolved in this landing; no live open-issue entry is created. **4 files total; no new files.** Pre-closeout head `567a3526…` passed CI run `35561104128`; this final documentation-only closeout receives its own CI run. No runtime/source semantics, test behavior, APPROVED spec status, assembly edge, serialized state, snapshot/save schema, digest, RNG behavior, or `[GT]` value changes.
+**Last Updated:** September 21, 2026 — **D5 / Transfers, Contracts & Negotiation #31 T0 reconciliation in PR #407.** New Tier-7 `TacticalDirector.Transfers` production/test assemblies provide deterministic valuation, always-on #27 positional scarcity, synchronous Accepted/CounterOffered/Rejected negotiation, typed budget/full-squad outcomes, atomic staged-finance `SubmitBid`, transfer-window/contract/committed-spend state, and the #31-owned roster read/preflight/commit seam. The original 53-commit branch lineage is preserved on current main `f5caabca…`; overlapping governance/tracking files are reconciled without dropping intervening W6/W2/#416/#415, #40 T2, or gate/evidence history. Code Standards §3 advances v1.14 → v1.15 for #40's live PlayerDatabase edge; Transfers §7 advances v0.6 → v0.7 to finalize T0 status. **No save/snapshot schema change, RNG stream/domain/draw site/order change, or gameplay `[GT]` retune.** T1 save composition, T2 production season/roster wiring and T3 deep negotiation remain deferred. Reconciled-head CI and Unity 6000.4.9f1 host compile are required before merge.
+
+**Last Updated (prior):** September 21, 2026 — **PR #415 / `ERR-013-012` Pressing AI §2 reconciliation closeout; documentation/specification only.** **Modified docs/tracking (4):** `docs/specs/pressing-ai/section-2.md` **v0.3 → v0.4**; `docs/tracking/spec-error-log.md` **v2.59 → v2.60**; `docs/tracking/CHANGELOG.md`; and this manifest. The existing two historical `spec-error-log.md` citations retain their original **v2.42 → v2.43** landing fact and advance only their maintained `since advanced to` pointer **v2.59 → v2.60**. §2 now matches §3.1.2 / ERR-013-009 / ERR-013-011 on possessing-team direction, own-team-passer rejection, EventBus-stamped `Tick` recency, bounded discrete-event dwell completion, explicit commit at `TRIGGER_DWELL_TICKS`, and stale-event no-restart semantics; F7 cites `T-U-010 / T-U-010a`. `ERR-013-012` is filed and resolved in this landing; no live open-issue entry is created. **4 files total; no new files.** Pre-closeout head `567a3526…` passed CI run `35561104128`; this final documentation-only closeout receives its own CI run. No runtime/source semantics, test behavior, APPROVED spec status, assembly edge, serialized state, snapshot/save schema, digest, RNG behavior, or `[GT]` value changes.
 
 **Last Updated (prior):** September 20, 2026 — **Close-chance owner-held retirement; policy/tooling/tracking only.** Owner decision supersedes the August 11 held-red disposition while keeping the exact `sim_match_engine_close_chance` seeds, predicates and floors unchanged. `tools/dotnet-ci/owner-held-red.txt` becomes comments-only; the ordinary sweep therefore owns the test and the dedicated owner-held stage is skipped. Expected unchanged-corpus transition: **3,730 ordinary / 1 dedicated → 3,731 / 0** records and MatchEngine **501 passed / 12 skipped / 513 total → 502 / 12 / 514**. The historical pinned-main leakage issue remains open because its 514-case census occurred while the exclusion was still configured. Exact retirement evidence run `35344056248` measured `meanCosine=-0.038` / `goalwardShare=0.496`; its scenario delta is only an observation-only `Console.WriteLine` after calculation. **Modified policy/tooling/tests/agent guidance (7):** `tools/dotnet-ci/owner-held-red.txt`, `tools/dotnet-ci/README.md`, `tools/run-tests-local.sh`, `tools/tests/test_testing_pipeline_conformance.py`, `.claude/skills/dotnet-gate/SKILL.md`, `.claude/skills/steward/SKILL.md`, `.claude/README.md`. **Modified planning/tracking/guidance (11):** `docs/tracking/close-chance-creation-design.md` **v2.3 → v2.4**, `docs/tracking/match-engine-wiring-backlog.md` **v1.22 → v1.23**, `docs/tracking/ERR-019-001-status.md`, `docs/agent-guides/project-reference.md`, `docs/planning/project-architecture-governance-integration-plan.md` **v0.45 → v0.46**, `docs/planning/testing-strategy-a3.3-conformance-correction.md`, `docs/tracking/localization-implementation-plan.md` **v2.5 → v2.6**, `docs/tracking/open-issues.md`, `docs/tracking/open-issues-resolved.md` (maintained current-version pointer only), `docs/tracking/CHANGELOG.md`, and this manifest. **18 files total; no new files.** The conformance fixture now uses its own temporary populated owner-held ledger so generic exact-name/exclusion behavior is tested independently of the intentionally empty live ledger. Active/archive counts remain **28 / 57**. No production/gameplay semantics, test predicate/seed/floor, APPROVED spec, assembly edge, save/snapshot schema, RNG behavior, or `[GT]` value changes. The specific steady-red obstacle to requiring the non-certifying functional context is removed, but required-status promotion remains a separate governance decision.
 
@@ -3516,7 +3518,7 @@ here. Status reflects authoritative classification in `SPEC_INDEX.md`.
 | 28 | `docs/specs/player-progression-lifecycle/` | APPROVED (Jul 23, 2026) — implemented at `src/player-progression/` (T0 only) |
 | 29 | `docs/specs/training-system/` | APPROVED (Jul 23, 2026) — no assembly |
 | 30 | `docs/specs/season-competition-loop/` | APPROVED (Jul 22, 2026) — implemented at `src/season-save/` (T0–T3; also hosts the league bootstrap + unified season save-file root) |
-| 31 | `docs/specs/transfers-contracts-negotiation/` | APPROVED (Jul 23, 2026) — no assembly |
+| 31 | `docs/specs/transfers-contracts-negotiation/` | APPROVED (Jul 23, 2026) — T0 implemented at `src/transfers/` in PR #407; T1 save, T2 production season/roster wiring, T3 deep tier deferred |
 | 32 | `docs/specs/scouting-player-knowledge/` | APPROVED (Jul 24, 2026) — no assembly |
 | 33 | `docs/specs/personalities-morale-dynamics/` | APPROVED (Jul 23, 2026) — no assembly |
 | 34 | `docs/specs/staff-backroom/` | APPROVED (Jul 23, 2026) — no assembly |
@@ -3563,6 +3565,29 @@ Examples:
 - `section-9-approval-checklist.md`
 - `appendix-a.md`
 - `audit-report.md`
+
+---
+
+### Transfers / Contracts / Negotiation (`src/transfers/`)
+
+#31 T0 is hosted here. All listed Unity-managed source/assembly files have companion `.meta` files; T1/T2/T3 remain deferred by #31 §7.
+
+| Path | Role |
+|---|---|
+| `src/transfers/transfers.asmdef` | Production `TacticalDirector.Transfers` assembly; Tier 7 Management; references #27 PlayerDatabase, #40 ClubFinances and ProjectConstants only. |
+| `src/transfers/Contract.cs` | Durable managed-club contract value; fail-loud wage/length validation. |
+| `src/transfers/Offer.cs` | Immutable transfer terms + shared fail-loud validation for every consuming seam. |
+| `src/transfers/NegotiationOutcome.cs` | Accepted / CounterOffered / Rejected closed outcome set. |
+| `src/transfers/TransferWindow.cs` | Inclusive open/close transfer-window value/predicate. |
+| `src/transfers/ClubTransferState.cs` | Season-scoped active window + committed-spend accumulator. |
+| `src/transfers/PlayerValuation.cs` | Integer attributes+age identity plus always-on coarse positional-scarcity multiplier. |
+| `src/transfers/NegotiationEngine.cs` | Draw-free synchronous negotiation with configured counter-offer band. |
+| `src/transfers/TransfersState.cs` | Managed-contract store, spend/window state and #31-owned re-key handling. |
+| `src/transfers/ITransferRosterPort.cs` | Consumer-owned read/position-stock/preflight/commit seam for the #30 T2 producer. |
+| `src/transfers/TransferCommands.cs` | Atomic manager `SubmitBid`; #40 fee posting + #30 roster-port coordination. |
+| `src/transfers/TransfersConstants.cs` | `[FIXED]` identities + `GameplayConfig`-loaded `[GT]` catalogue. |
+| `src/transfers/tests/transfers-tests.asmdef` | NUnit test assembly for #31 T0. |
+| `src/transfers/tests/TransfersT0Tests.cs` | Valuation, positional need, negotiation band, malformed-term, atomicity, budget, re-key, window and integer-state locks. |
 
 ---
 

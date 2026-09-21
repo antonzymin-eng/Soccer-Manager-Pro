@@ -1,16 +1,17 @@
 # Transfers, Contracts & Negotiation #31 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.6 — PR #407 residual review cleanup: T2 hook regression pinned)
+**Last Updated:** September 21, 2026 (v0.7 — PR #407 current-main reconciliation: T0 landing status finalized; no T-phase scope change)
+**Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup: T2 hook regression pinned)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction to T0 public API and valuation contract; prior v0.4 T0 review close-out, v0.3 T0 authored, v0.2 AR-3, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
 
 ## 7.1 T-phase implementation plan (post-APPROVED)
 
-- **T0 — IMPLEMENTED IN PR #407, pending merge.** `TacticalDirector.Transfers` production/test assemblies;
+- **T0 — IMPLEMENTED BY PR #407.** `TacticalDirector.Transfers` production/test assemblies;
   value types (`Contract`, `Offer`, `NegotiationOutcome`, `TransferSubmissionOutcome`, `TransferWindow`,
   `ClubTransferState`, `TransfersState`); deterministic currency-returning `ValuePlayer`/`CounterpartyValue`;
   always-on #27 positional stock measured prospectively with the negotiated player excluded; synchronous
@@ -71,4 +72,5 @@
 | 0.4 | 2026-09-14 | — | T0 football-judgment close-out: positional scarcity + synchronous deterministic counter band. |
 | 0.5 | 2026-09-14 | — | PR #407 review correction: currency API names, exact-rational attribute mean, exclude-player positional stock, separate submission outcomes, and preview/commit-before-local-mutation contract. |
 | 0.6 | 2026-09-14 | — | Residual review cleanup: T0 covers both preview/commit breach directions; T2 explicitly owes successful-preview infallibility plus real hook-dispatch and observable managed↔external #31 no-op integration coverage. |
+| 0.7 | 2026-09-21 | — | PR #407 current-main reconciliation: finalizes T0 landing status after preserving the original branch lineage; T1/T2/T3 scope is unchanged. |
 #endregion
