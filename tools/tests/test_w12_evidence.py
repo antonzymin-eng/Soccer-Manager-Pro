@@ -190,6 +190,25 @@ class W12EvidenceTests(unittest.TestCase):
             errors,
         )
 
+    def test_prereg_baseline_source_ignores_trailing_markdown_whitespace(self) -> None:
+        checker = _load_checker()
+        pre_records, pre_scores, _, _ = _governed_inputs(checker)
+        aggregate = checker._aggregate_for_census(pre_records, pre_scores)
+        source = (ROOT / checker.CENSUS_CONSUMERS[0]).read_text(encoding="utf-8")
+        trimmed = source.replace(
+            f"**Baseline source:** `{checker.CENSUS_JSON.as_posix()}`  \n",
+            f"**Baseline source:** `{checker.CENSUS_JSON.as_posix()}`\n",
+            1,
+        )
+        self.assertNotEqual(source, trimmed)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            consumer = root / checker.CENSUS_CONSUMERS[0]
+            consumer.parent.mkdir(parents=True)
+            consumer.write_text(trimmed, encoding="utf-8")
+            errors = checker._validate_prereg_baseline(root, aggregate)
+        self.assertEqual([], errors)
+
     def test_aggregate_keeps_phase_and_future_exit_keys(self) -> None:
         checker = _load_checker()
         pre_records, pre_scores, _, _ = _governed_inputs(checker)
