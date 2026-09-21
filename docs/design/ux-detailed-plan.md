@@ -1,9 +1,9 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** September 11, 2026\
-**Version:** 1.5\
-**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 COMPLETE; S0 GATE A NEXT\
+**Last Updated:** September 21, 2026\
+**Version:** 1.6\
+**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 GATE A COMPLETE; S0 GATE B NEXT\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -54,7 +54,7 @@ The detailed plan went through three internal critique/revision rounds before v1
 
 Two review claims were stale against the current tree:
 
-- **P4b is landed as code.** `src/match-client-unity/README.md` records `MatchClientBehaviour.cs` as LANDED after five AR rounds. The real gap is that this assembly is excluded from the shim and the P4b binding has never compiled/run on the pinned Unity host; P5b and on-host P6 remain open.
+- **P4b is landed and partially host-verified.** `src/match-client-unity/README.md` records `MatchClientBehaviour.cs` as LANDED after five AR rounds. September 12 proved pinned-editor compilation; September 13 added tracked-scene Play-mode boot/render smoke evidence. Full host acceptance is still open on click-to-command and the cert-host render-loop/performance capture; P5b and on-host P6 remain open.
 - **#30 is implemented.** Its implementation is in `src/season-save/`: `SeasonLoop`, season save state, league bootstrap and T2 round/day progression exist, including `AdvanceAndPlayNextRound`. The meaningful S1 question is which player-facing projection, dispatcher, screen and navigation surfaces exist.
 
 The revised plan below incorporates the structural concerns while using the verified current state.
@@ -570,7 +570,7 @@ Against the real implementation:
 
 Known before F1:
 
-- P4b Unity render/camera/click binding code is landed but host-unverified;
+- P4b Unity render/camera/click binding code is landed and remains `HOST-UNVERIFIED`, but current evidence includes pinned-editor compilation plus tracked-scene Play-mode boot/render smoke; click-to-command and cert-host performance acceptance remain open;
 - P5b UGUI shell is open;
 - on-host P6 is open;
 - therefore the shipping Unity PM-1 client cannot currently be launched;
@@ -959,8 +959,8 @@ No additional polished screen comes next.
 4. **F2 — record the existing `ClientScreenFlow`; produce separate future career-shell map.**
 5. **F3 — audit only S0-required component/state/a11y/localization/fallback primitives.**
 6. **F4 — write scripts, severity ledger and privacy-safe participant mechanism; define two anonymous S0 slots.**
-7. **S0 Gate A — full PM-1 dependency/control audit.**
-8. **S0 Gate B — complete task flow.**
+7. **S0 Gate A — COMPLETE September 21, 2026.** The reconciled dependency/control audit is `ux-s0-pm1-journey.md` v0.2.
+8. **S0 Gate B — NEXT.** Complete task flow.
 9. **S0 Gate C — low-fidelity wireframes.**
 10. Continue through D–G; no high fidelity before Gate G passes.
 
@@ -1040,3 +1040,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.3 | September 7, 2026 | F1, F2 and F3 complete; status advanced to *F0–F3 COMPLETE; F4 NEXT*. Outputs: `ux-baseline-evidence.md` v0.3 (F1), `ux-experience-architecture.md` v0.1 (F2), `ux-shared-system.md` v0.3 (F3). **Also corrects a header/version-history desync introduced at v1.2:** that revision appended its history row and edited the status line but left `**Version:**` at 1.1 and `**Last Updated:**` at September 4, so the file's own header contradicted the manifest, changelog and open-issues entries that all cited it as v1.2. Both fields are re-derived here. |
 | 1.4 | September 9, 2026 | **Owner acceptance of the UX planning package, recorded September 9, 2026**, discharging the condition `open-issues.md` had held open since F0. New **§17** states the scope of that acceptance and, more importantly, its limits: Gates A–J are unchanged and unpassed, Gate G still binds at two independent participants, S0 Gate J is still unreachable without B8/B9b/B10 host evidence, the §10.1 role owner and Gate-G participants are still F4 outputs, and §8.1's `FUTURE-BLOCKED` S2 rows are unmoved. Status line advanced accordingly; F4 remains the next work package. Landed alongside `ux-high-level-plan.md` v1.2, which reconciled its §8 F1 band to §10.2's 3–4 working days. |
 | 1.5 | September 11, 2026 | Records the project owner's privacy decision: participant names/contact details are omitted from repository evidence and stable anonymous slots are used instead. Separately, this revision deliberately relaxes F4 exit timing from v1.4: participant availability is now owner-attested before Gate F rather than required at F4 exit. Gate G itself is unchanged — two independent completions remain mandatory, with no bypass to H/I. Status advances to **F0–F4 COMPLETE; S0 GATE A NEXT** under that revised timing rule. |
+| 1.6 | September 21, 2026 | S0 Gate A closes through reconciled PR #406 / `ux-s0-pm1-journey.md` v0.2 and the execution sequence advances to Gate B. The reconciliation also corrects the plan's current P4b evidence from “never compiled/run” to the September 12 compile plus September 13 tracked-scene Play-mode boot/render smoke result; full host acceptance still waits on click-to-command and cert-host render-loop/performance evidence. No Gate E–J rule, participant requirement, P5b release gate or S1/S2 scope changes. |

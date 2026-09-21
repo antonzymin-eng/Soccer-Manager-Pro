@@ -1,10 +1,10 @@
 # System XI UX Validation Protocol
 
 **Created:** September 11, 2026  
-**Last Updated:** September 11, 2026  
-**Version:** 0.8\
-**Status:** F4 COMPLETE — anonymous participant slots defined; S0 Gate A next\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.5 §F4 and Gates E–G\
+**Last Updated:** September 21, 2026  
+**Version:** 0.9\
+**Status:** F4 + S0 GATE A COMPLETE — Gate B next; anonymous participant requirements unchanged\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.6 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4  
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -474,9 +474,9 @@ semantics and evidence-backed interaction states.
 | Privacy-safe S0 participant slot 2 defined | **READY** | §4.1 defines anonymous S0-P2, profile, channel and pre-Gate-F attestation field |
 
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
-the privacy-safe participant mechanism is defined. **S0 Gate A is next.** F4 completion does not pass
-Gate E, F or G: both S0 availability attestations are still due before Gate F, and Gate G remains
-unavailable until two distinct independent participants complete the entire round.
+the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.**
+Neither F4 nor Gate A passes Gate E, F or G: both S0 availability attestations are still due before
+Gate F, and Gate G remains unavailable until two distinct independent participants complete the entire round.
 
 ---
 
@@ -492,3 +492,4 @@ unavailable until two distinct independent participants complete the entire roun
 | 0.6 | September 11, 2026 | Records the project owner's assignment of **Anton Zymin** as the §10.1 UX-workstream accountable owner. The two S0 participant slots remain unassigned because no participant selection was made; F4 therefore remains NOT COMPLETE, Gate G remains unavailable, and no later gate or P5b implementation is released by this assignment. |
 | 0.7 | September 11, 2026 | Records the project owner's direction to omit participant names. Replaces public identity fields with stable anonymous slot IDs and privacy-safe availability/independence attestations; closes F4 and advances the workstream to S0 Gate A. Gate G is unchanged: two distinct real independent participants must complete the round, and neither anonymity nor F4 completion bypasses Gate F/G or releases P5b before Gate I. |
 | 0.8 | September 11, 2026 | Codex/review correction: makes the already-required independence evidence mechanically recordable. §4.1 now has an explicit per-slot independence/distinctness attestation, §7.1 carries it into each anonymous session record, and §9 requires both session records to match those attestations before Gate G can pass. Also repins the shared interaction baseline to `ux-shared-system.md` v0.4 after that artifact's status-authority correction and clarifies that pre-Gate-F availability is a separate v1.5 timing relaxation, not a consequence of anonymity. |
+| 0.9 | September 21, 2026 | Status/pointer reconciliation after S0 Gate A completed in `ux-s0-pm1-journey.md` v0.2. Execution authority advances to `ux-detailed-plan.md` v1.6 and the next UX action is Gate B. Validation mechanics, anonymous participant evidence, pre-Gate-F availability, and the two-independent-participant Gate-G requirement are unchanged. |

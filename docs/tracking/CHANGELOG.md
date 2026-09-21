@@ -12,7 +12,17 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 21, 2026 — **PR #407 closeout resolves `ERR-031-001` and `ERR-031-002` before merge.**
+> **Last Updated:** September 21, 2026 — **PR #406 reconciled onto current main; UX S0 Gate A COMPLETE, Gate B NEXT.**
+>
+> The original one-commit Gate-A branch was 456 commits behind current `main` when reconciliation began. Its lineage is preserved through a true two-parent reconciliation commit rather than replay/squash. `docs/design/ux-s0-pm1-journey.md` advances **v0.1 → v0.2** and re-runs the current-state claims against `ad7e0d75`: the four-screen/five-edge graph, repeated-match lifecycle, match read/intent/playback seams and #37 statistics owner remain valid; P5b remains the dominant missing shipping layer; there are still zero `UNKNOWN` Gate-A dependencies.
+>
+> The material evidence correction is P4b: the old #406 snapshot stopped at pinned-editor compilation. Current main also carries the September 13 tracked-scene Play-mode boot/render smoke result (22 markers, 22 possession rings, ball + shadow, 27 marking drawables, follow camera; ~220 FPS observed in-editor). That is recorded as **partial host verification only** — click-to-command and the cert-host render-loop/performance capture remain open, so Gate J is not promoted.
+>
+> UX authority/status sync: `ux-high-level-plan.md` **v1.2 → v1.3**, `ux-detailed-plan.md` **v1.5 → v1.6**, and `ux-validation-protocol.md` **v0.8 → v0.9**; `open-issues.md`, `project-reference.md` and `file-manifest.md` advance the live pointer to **Gate B next**. The journey packet is newly inventoried. Root `CLAUDE.md`, README, source history, APPROVED specs, SPEC_INDEX and roadmap rows are unchanged because their owned facts did not move.
+>
+> **Determinism/blast radius:** documentation only. No production/source or test semantics, assembly edge, save/snapshot schema, digest, RNG stream/domain/draw site/order, gameplay `[GT]`, calibration corpus or ERR changes. **Gate:** no source gate is owed for this Markdown-only reconciliation; the current-head GitHub documentation checks are required before merge.
+>
+> **Last Updated (prior):** September 21, 2026 — **PR #407 closeout resolves `ERR-031-001` and `ERR-031-002` before merge.**
 >
 > `ERR-031-001` closes a governance contradiction in APPROVED #31: FR-TX-002/§3.1 and shipped T0 make #27 positional scarcity always-on, while outline KD-1, §1 KD-1 and approval gate G4 still said club need was deep-only. Outline **v0.3**, §1 **v0.3** and §9 **v0.6** now distinguish the pure attributes+age base identity from the always-on minimal scarcity term; personality/CA/staff remain deep refinements. Runtime behavior is unchanged for this ERR.
 >
