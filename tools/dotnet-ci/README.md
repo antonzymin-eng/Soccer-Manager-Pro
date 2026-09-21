@@ -126,15 +126,21 @@ The manifest grammar is intentionally strict: lowercase SHA-256, two spaces, the
 `check_branch_ancestry.py` is the local branch-cleanup guard:
 
 ```bash
-python3 tools/dotnet-ci/check_branch_ancestry.py --repo . --ancestor <branch-or-tip> --descendant main
+python3 tools/dotnet-ci/check_branch_ancestry.py --repo . --ancestor <branch-or-tip> --descendant refs/remotes/origin/main
 ```
 
 It checks `git rev-parse --is-shallow-repository` **before** resolving or comparing refs. A shallow
 checkout exits **3** with a guard error and makes no merged/unmerged/deletable claim; exit **2** remains
-reserved for command-line usage errors. The safe alternatives are to unshallow/obtain complete local
-history or to use an authoritative remote/API comparison. Fetching all branch refs without removing
-the shallow boundary is not sufficient. This is a procedural guard, not a server-side branch-deletion
-control; the owning tracking issue therefore remains NARROWED rather than closed.
+reserved for command-line usage errors. Git replacement refs are disabled for every probe/comparison,
+and legacy `.git/info/grafts` state is rejected, so the result is based on the stored commit graph
+rather than a locally rewritten parent graph.
+
+For **remote branch deletion**, fetch first and compare against a freshly updated remote-tracking ref
+(such as `refs/remotes/origin/main`) or an authoritative remote OID/API result. A local `main` ref is
+acceptable only for a local-branch cleanup decision; full local history alone does not prove that a
+local-only merge has reached the remote. Fetching refs without removing a shallow boundary is still
+insufficient. This is a procedural guard, not a server-side branch-deletion control; the owning
+tracking issue therefore remains NARROWED rather than closed.
 
 ## Certified-host boundary
 
@@ -154,7 +160,7 @@ Where .NET 8 is already available, the policy runner can execute normally. Histo
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| Governance addendum | 2026-09-21 | — | Adds the evidence-integrity contract registry/checker and the shallow-history ancestry guard; records tracked-file scope, explicit external-verifier boundaries, fail-closed Git-scope behavior, and ancestry exit-code semantics. |
+| Governance addendum | 2026-09-21 | — | Adds the evidence-integrity contract registry/checker and shallow-history ancestry guard; records tracked-file scope, explicit external-verifier boundaries, fail-closed Git-scope behavior, stored-graph semantics with replacement refs disabled / legacy grafts rejected, remote-authoritative descendant requirements for remote deletion, and ancestry exit-code semantics. |
 | Policy addendum (retirement) | 2026-09-20 | — | Owner decision retires the final configured owner-held row, `sim_match_engine_close_chance`, without changing its predicate or bounds. Documents the already-unit-tested empty-ledger terminal state: ordinary sweep unfiltered, dedicated stage skipped. |
 | Policy addendum | 2026-09-04 | — | **Testing Strategy pipeline correction.** Makes `tools/run-tests-local.sh` the canonical developer/CI policy entry point; records exact owner-held RED handling, anchored NUnit pre-commit selection, persistent staged-index build cache, coverage settings, and the gated certified-host nightly boundary. This operational correction intentionally does not advance the historical gate-document version key, because live open-issue records cite the Aug-7 v1.2 revision as dated evidence. |
 | 1.2 | 2026-08-07 | — | Recorded that the full generated Linux gate can run in the Claude remote Ubuntu environment; still non-certifying. |
