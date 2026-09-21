@@ -68,6 +68,43 @@ class BranchAncestryTests(unittest.TestCase):
             result, _, _ = checker.check_ancestry(repo, side, main)
         self.assertFalse(result)
 
+    def test_cli_uses_distinct_exit_for_guard_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, _, _ = _make_repo(root)
+            shallow = root / "shallow"
+            subprocess.run(
+                [
+                    "git",
+                    "clone",
+                    "--depth",
+                    "1",
+                    "--branch",
+                    "main",
+                    f"file://{source}",
+                    str(shallow),
+                ],
+                check=True,
+                capture_output=True,
+            )
+            completed = subprocess.run(
+                [
+                    "python3",
+                    str(SCRIPT),
+                    "--repo",
+                    str(shallow),
+                    "--ancestor",
+                    "HEAD",
+                    "--descendant",
+                    "HEAD",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(3, completed.returncode, completed.stdout + completed.stderr)
+        self.assertIn("history is shallow", completed.stdout)
+
     def test_shallow_clone_fails_closed_before_ancestry_claim(self) -> None:
         checker = _load_checker()
         with tempfile.TemporaryDirectory() as tmp:
