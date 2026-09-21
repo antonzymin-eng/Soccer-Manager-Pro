@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Verify committed SHA-256 evidence manifests and their declared coverage."""
+"""Verify committed evidence-integrity contracts and SHA-256 manifests."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import re
+import subprocess
 from pathlib import Path
 
 EVIDENCE_ROOT = Path("docs/tracking/evidence")
@@ -13,6 +14,58 @@ FULL_MANIFEST = "SHA256SUMS"
 PARTIAL_MANIFEST = "artifact-SHA256SUMS"
 MANIFEST_NAMES = {FULL_MANIFEST, PARTIAL_MANIFEST}
 LINE_RE = re.compile(r"^([0-9a-f]{64})  (.+)$")
+
+# Every tracked top-level evidence directory must declare one integrity contract.
+# "manifest" contracts are verified by this tool. "external" contracts are owned
+# by the named repository verifier and are deliberately not reimplemented here.
+DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
+    "v210-rolling": ("manifest", FULL_MANIFEST),
+    "pr420-owner-held-isolation": ("manifest", FULL_MANIFEST),
+    "w2-six-seed": ("manifest", PARTIAL_MANIFEST),
+    "w2": ("manifest", PARTIAL_MANIFEST),
+    "w12": ("external", "tools/dotnet-ci/check_w12_evidence.py"),
+    "pr416-ref-archive": (
+        "external",
+        "tools/dotnet-ci/check_pr416_evidence_refs.py",
+    ),
+}
+
+# Standalone root metadata is outside a directory-manifest contract but must be
+# explicitly registered so new root-level evidence cannot appear silently.
+ROOT_FILE_ALLOWLIST = {
+    "pr420-owner-held-isolation.md",
+}
+
+# This is a sha256sum-format ledger for members inside the committed tar.xz, not
+# a filesystem coverage manifest. tools/dotnet-ci/pr420-evidence.py owns it.
+AUXILIARY_SHA_MANIFEST_ALLOWLIST = {
+    "pr420-owner-held-isolation/TRX-SHA256SUMS",
+}
+
+
+def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=False,
+        capture_output=True,
+    )
+
+
+def _tracked_paths(repo: Path, scope: Path) -> list[Path] | None:
+    """Return tracked paths below scope, or None when repo is not a Git worktree."""
+    probe = _git(repo, "rev-parse", "--is-inside-work-tree")
+    if probe.returncode != 0 or probe.stdout.strip() != b"true":
+        return None
+
+    scope_text = scope.as_posix()
+    completed = _git(repo, "ls-files", "-z", "--", scope_text)
+    if completed.returncode != 0:
+        return None
+    return [
+        Path(raw.decode("utf-8", errors="strict"))
+        for raw in completed.stdout.split(b"\0")
+        if raw
+    ]
 
 
 def _sha256(path: Path) -> str:
@@ -71,7 +124,27 @@ def _parse_manifest(manifest: Path) -> tuple[dict[str, str], list[str]]:
     return entries, errors
 
 
-def _full_scope_files(manifest: Path) -> set[str]:
+def _full_scope_files(repo: Path, manifest: Path) -> set[str]:
+    """Full manifests cover tracked files only; temp-fixture repos fall back to disk."""
+    try:
+        directory_rel = manifest.parent.relative_to(repo)
+    except ValueError:
+        directory_rel = Path(".")
+
+    tracked = _tracked_paths(repo, directory_rel)
+    if tracked is not None:
+        prefix = directory_rel.parts
+        names: set[str] = set()
+        for path in tracked:
+            if path == manifest.relative_to(repo):
+                continue
+            if path.parts[: len(prefix)] != prefix:
+                continue
+            relative = Path(*path.parts[len(prefix) :])
+            if relative.parts:
+                names.add(relative.as_posix())
+        return names
+
     return {
         path.relative_to(manifest.parent).as_posix()
         for path in manifest.parent.rglob("*")
@@ -79,26 +152,24 @@ def _full_scope_files(manifest: Path) -> set[str]:
     }
 
 
-def verify_manifest(manifest: Path) -> list[str]:
+def verify_manifest(repo: Path, manifest: Path) -> list[str]:
     entries, errors = _parse_manifest(manifest)
     recorded = set(entries)
 
     if manifest.name == FULL_MANIFEST:
-        expected = _full_scope_files(manifest)
+        expected = _full_scope_files(repo, manifest)
         missing = sorted(expected - recorded)
         extra = sorted(recorded - expected)
         if missing:
-            errors.append(f"{manifest}: uncovered in-scope files: {missing!r}")
+            errors.append(f"{manifest}: uncovered tracked in-scope files: {missing!r}")
         if extra:
-            errors.append(f"{manifest}: entries without in-scope files: {extra!r}")
+            errors.append(f"{manifest}: entries without tracked in-scope files: {extra!r}")
 
     for name, expected_digest in entries.items():
-        target, path_error = _safe_relative_target(manifest, name)
-        if path_error:
-            if path_error not in errors:
-                errors.append(path_error)
+        target = manifest.parent / Path(name)
+        if target.is_symlink():
+            errors.append(f"{manifest}: symlink targets are not allowed: {name}")
             continue
-        assert target is not None
         if not target.is_file():
             errors.append(f"{manifest}: listed file is missing: {name}")
             continue
@@ -111,25 +182,96 @@ def verify_manifest(manifest: Path) -> list[str]:
     return errors
 
 
-def discover_manifests(repo: Path) -> list[Path]:
+def _evidence_paths(repo: Path) -> list[Path]:
+    tracked = _tracked_paths(repo, EVIDENCE_ROOT)
+    if tracked is not None:
+        return tracked
     root = repo / EVIDENCE_ROOT
     if not root.is_dir():
         return []
     return sorted(
-        path
+        path.relative_to(repo)
         for path in root.rglob("*")
-        if path.is_file() and path.name in MANIFEST_NAMES
+        if path.is_file() or path.is_symlink()
     )
 
 
-def validate(repo: Path) -> list[str]:
-    manifests = discover_manifests(repo)
-    if not manifests:
-        return [f"{EVIDENCE_ROOT}: no evidence manifests found"]
+def discover_manifests(repo: Path) -> list[Path]:
+    return sorted(
+        repo / path
+        for path in _evidence_paths(repo)
+        if path.name in MANIFEST_NAMES
+    )
+
+
+def _validate_repository_scope(repo: Path, evidence_paths: list[Path]) -> list[str]:
     errors: list[str] = []
-    for manifest in manifests:
-        errors.extend(verify_manifest(manifest))
+    prefix_len = len(EVIDENCE_ROOT.parts)
+    directories: set[str] = set()
+    root_files: set[str] = set()
+
+    for path in evidence_paths:
+        relative_parts = path.parts[prefix_len:]
+        if not relative_parts:
+            continue
+        if len(relative_parts) == 1:
+            root_files.add(relative_parts[0])
+        else:
+            directories.add(relative_parts[0])
+
+        if "SHA256SUMS" in path.name and path.name not in MANIFEST_NAMES:
+            relative = Path(*relative_parts).as_posix()
+            if relative not in AUXILIARY_SHA_MANIFEST_ALLOWLIST:
+                errors.append(
+                    f"{EVIDENCE_ROOT}/{relative}: unrecognized SHA256SUMS-style "
+                    "manifest name; register an explicit contract or use a canonical name"
+                )
+
+    unknown_dirs = sorted(directories - set(DIRECTORY_CONTRACTS))
+    if unknown_dirs:
+        errors.append(
+            f"{EVIDENCE_ROOT}: tracked evidence directories lack an integrity "
+            f"contract: {unknown_dirs!r}"
+        )
+
+    unknown_root_files = sorted(root_files - ROOT_FILE_ALLOWLIST)
+    if unknown_root_files:
+        errors.append(
+            f"{EVIDENCE_ROOT}: tracked root evidence files are not registered: "
+            f"{unknown_root_files!r}"
+        )
+
+    for directory in sorted(directories & set(DIRECTORY_CONTRACTS)):
+        kind, contract = DIRECTORY_CONTRACTS[directory]
+        if kind == "manifest":
+            manifest_path = EVIDENCE_ROOT / directory / contract
+            if manifest_path not in evidence_paths:
+                errors.append(
+                    f"{EVIDENCE_ROOT / directory}: required integrity manifest "
+                    f"{contract!r} is missing"
+                )
+        elif kind == "external":
+            if not (repo / contract).is_file():
+                errors.append(
+                    f"{EVIDENCE_ROOT / directory}: external integrity verifier "
+                    f"is missing: {contract}"
+                )
+        else:
+            errors.append(
+                f"{EVIDENCE_ROOT / directory}: unknown integrity contract kind {kind!r}"
+            )
     return errors
+
+
+def validate(repo: Path) -> tuple[list[Path], list[str]]:
+    evidence_paths = _evidence_paths(repo)
+    manifests = sorted(
+        repo / path for path in evidence_paths if path.name in MANIFEST_NAMES
+    )
+    errors = _validate_repository_scope(repo, evidence_paths)
+    for manifest in manifests:
+        errors.extend(verify_manifest(repo, manifest))
+    return manifests, errors
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -137,8 +279,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repo", default=".", help="repository root")
     args = parser.parse_args(argv)
     repo = Path(args.repo).resolve()
-    manifests = discover_manifests(repo)
-    errors = validate(repo)
+    manifests, errors = validate(repo)
     if errors:
         for error in errors:
             print(f"ERROR: {error}")
@@ -146,8 +287,9 @@ def main(argv: list[str] | None = None) -> int:
     full = sum(path.name == FULL_MANIFEST for path in manifests)
     partial = sum(path.name == PARTIAL_MANIFEST for path in manifests)
     print(
-        "Evidence SHA-256 manifests: PASS "
-        f"({len(manifests)} manifests; {full} full-coverage, {partial} artifact-scoped)"
+        "Evidence integrity contracts: PASS "
+        f"({len(manifests)} SHA-256 manifests; {full} full-coverage, "
+        f"{partial} artifact-scoped; {len(DIRECTORY_CONTRACTS)} registered directories)"
     )
     return 0
 
