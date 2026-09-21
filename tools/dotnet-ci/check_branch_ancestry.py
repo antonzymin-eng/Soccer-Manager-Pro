@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     except GitCheckError as exc:
         print(f"ERROR: {exc}")
-        return 2
+        return 3
 
     if result:
         print(
