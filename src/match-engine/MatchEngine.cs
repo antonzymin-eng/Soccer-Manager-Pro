@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-22 (W3 review correction: read-only AGENT_BALL candidate publication runs in Physics after movement; full Collision #3 response, W4 applied deflection, foul capture and next-tick movement feedback remain Resolve-owned; Heading #10 geometry remains authoritative; no schema/RNG change)
 // Modified: 2026-09-16 (W2 production activation — active tackle reach must be > 0 and <= loose-ball reclaim reach; zero remains only as a test/measurement negative-control override; no schema/RNG change)
 // Modified: 2026-09-15 (W6 review closure — Controlled goalkeeper carriers are constrained at their defended goal plane in the MatchEngine attachment funnel; no schema/RNG change)
 // Modified: 2026-09-14 (W6 review P2 — tackle cooldown now ages on every AI stride even without a physical carrier; regression seam only, no schema/RNG change)
@@ -9757,4 +9758,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Stationary. No snapshot-schema or RNG change.                                     |
 // | 1.76    | 2026-09-14 | —      | ERR-013-011: FillPressingSnapshot carries the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
 // | 1.80    | 2026-09-16 | —      | W2 production activation: non-positive catalogue reach now fails loud; zero remains only for the explicit test/measurement override. Existing <= LooseBallPickupRadiusM guard unchanged; no schema/RNG change. |
+// | 1.81    | 2026-09-22 | —      | W3 review correction: add a read-only Physics AGENT_BALL candidate feed after movement; keep full Collision #3 response, W4 deflection and foul capture in Resolve; Heading own geometry still owns header eligibility. No cross-tick state/schema/RNG change. |
 #endregion
