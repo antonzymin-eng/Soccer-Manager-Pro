@@ -810,7 +810,6 @@ namespace TacticalDirector.MatchEngine
                 _strongestCollisionParticipantsActiveThisTick = participantsActive;
             }
         }
-        }
     }
 }
 
