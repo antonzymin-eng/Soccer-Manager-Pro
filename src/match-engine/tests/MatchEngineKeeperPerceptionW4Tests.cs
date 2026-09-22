@@ -227,12 +227,12 @@ namespace TacticalDirector.MatchEngine
 
         [TestCase(HomeTeam)]
         [TestCase(AwayTeam)]
-        public void AppliedBodyDeflection_ResetsOnlyPostDeflectionThreatenedKeeper_InSameResolve(int keeperTeam)
+        public void AppliedBodyDeflection_ResetsOnlyPostDeflectionThreatenedKeeper_InSamePhysics(int keeperTeam)
         {
             var engine = new MatchEngine(MatchSeed ^ (ulong)(0x500 + keeperTeam));
             engine.EnableGkHeading();
 
-            // TestOnly_RunResolvePhase bypasses the normal tick-clock advance, so prime one ordinary
+            // TestOnly_RunPhysicsPhase bypasses the normal tick-clock advance, so prime one ordinary
             // tick past frame zero. Keep the ball high and unclaimable while doing so: the previous
             // fixture primed with the normal kickoff ball, which First Touch could leave in
             // BallStateType.Controlled; TestOnly_ForceBallLoose clears possession but intentionally
@@ -270,9 +270,13 @@ namespace TacticalDirector.MatchEngine
             // while Stage-0 First Touch is ground-only through 0.50 m. Stage this shot-speed contact
             // just above that height so First Touch cannot claim it before collision. Torso retention
             // (0.55) leaves a 20 m/s reflection near 11 m/s, still save-eligible after reversal.
-            Vector3 preDeflectionPosition = ThreatPosition(keeperTeam, z: 0.60f);
+            Vector3 contactPosition = ThreatPosition(keeperTeam, z: 0.60f);
             Vector3 preDeflectionVelocity =
                 new Vector3(AwayFromOwnGoalX(keeperTeam, DeflectionSpeedMps), 0f, 0f);
+            // W3 moved Collision into Physics after BallPhysics integration. Stage one dt upstream so
+            // the integrated ball reaches the same contact point the pre-W3 Resolve-only fixture used.
+            Vector3 preDeflectionPosition =
+                contactPosition - preDeflectionVelocity * DeterministicSimConstants.FrameSeconds;
             Assert.IsFalse(GkHeadingIntentSource.SaveArmed(
                 keeperTeam, preDeflectionPosition, preDeflectionVelocity, ballLoose: true),
                 "Precondition: before contact, this flight is moving away from the tested keeper's goal.");
@@ -280,13 +284,13 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(0f, engine.TestOnly_GoalkeeperState.ShotDetectedTickMs[OtherTeam(keeperTeam)], 1e-6f);
 
             engine.TestOnly_ForceBallLoose(preDeflectionPosition, preDeflectionVelocity);
-            engine.TestOnly_RunResolvePhase();
+            engine.TestOnly_RunPhysicsPhase();
 
             Assert.IsTrue(GkHeadingIntentSource.SaveArmed(
                 keeperTeam, engine.BallView.Position, engine.BallView.Velocity, ballLoose: true),
                 $"W4 fixture must produce a post-deflection raw save threat; pos={engine.BallView.Position} vel={engine.BallView.Velocity}.");
             Assert.Greater(engine.TestOnly_GoalkeeperState.ShotDetectedTickMs[keeperTeam], 0f,
-                "W4 wire: CollisionSystem's applied-deflection output must reach the keeper reaction reset in the same Resolve.");
+                "W4 wire: CollisionSystem's applied-deflection output must reach the keeper reaction reset in the same Physics phase.");
             Assert.Greater(engine.TestOnly_GoalkeeperState.RequiredReactionMs[keeperTeam], 0f,
                 "W4 wire: the post-deflection keeper must receive a full new reaction episode.");
             Assert.AreEqual(0f, engine.TestOnly_GoalkeeperState.ShotDetectedTickMs[OtherTeam(keeperTeam)], 1e-6f,
