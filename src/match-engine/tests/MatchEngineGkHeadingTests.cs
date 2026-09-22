@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGkHeadingTests.cs
 // Created:  2026-07-22
+// Modified: 2026-09-22 (W3: mirrored home/away claim lifecycle + composed real Hand-contact tests)
 // Modified: 2026-07-23
 // Author:   —
 // Spec:     GK/Heading engine-integration design supplement
@@ -19,6 +20,7 @@ using TacticalDirector.DeterministicSim;
 using TacticalDirector.CollisionSystem;
 using TacticalDirector.BallPhysics;
 using TacticalDirector.GoalkeeperMechanics;
+using TacticalDirector.EventSystem;
 using TacticalDirector.AgentMovement;
 using TacticalDirector.PlayerDatabase;
 
@@ -98,6 +100,20 @@ namespace TacticalDirector.MatchEngine
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 if (!engine.AgentIsGoalkeeper(i))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        private static int GoalkeeperForTeam(MatchEngine engine, int teamId)
+        {
+            int start = teamId * MatchEngineConstants.PLAYERS_PER_TEAM;
+            int end = start + MatchEngineConstants.PLAYERS_PER_TEAM;
+            for (int i = start; i < end; i++)
+            {
+                if (engine.AgentIsGoalkeeper(i))
                 {
                     return i;
                 }
@@ -211,24 +227,16 @@ namespace TacticalDirector.MatchEngine
                 "Read-only publication must not apply a collision impulse; full response remains Resolve-owned.");
         }
 
-        [Test]
-        public void W3_ClaimProducer_CommitsSerializedIntent_AndExposesOwnedReachEnvelope()
+        [TestCase(0)]
+        [TestCase(1)]
+        public void W3_ClaimProducer_CommitsSerializedIntent_AndExposesOwnedReachEnvelope(int teamId)
         {
             var engine = new MatchEngine(MatchSeed);
             engine.EnableGkHeading();
 
-            int keeper = -1;
-            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
-            {
-                if (engine.AgentIsGoalkeeper(i))
-                {
-                    keeper = i;
-                    break;
-                }
-            }
+            int keeper = GoalkeeperForTeam(engine, teamId);
             Assert.GreaterOrEqual(keeper, 0);
 
-            int teamId = keeper < MatchEngineConstants.PLAYERS_PER_TEAM ? 0 : 1;
             Vector2 gkXY = engine.AgentView(keeper).Position;
             Vector3 ball = new Vector3(
                 gkXY.x,
@@ -240,7 +248,7 @@ namespace TacticalDirector.MatchEngine
 
             var state = engine.TestOnly_GoalkeeperState;
             Assert.IsTrue(state.ClaimIntentActive[teamId],
-                "The W3 high-ball producer must arm #11's own serialized claim latch.");
+                "The W3 high-ball producer must arm #11's own serialized claim latch for either team.");
             Assert.AreEqual(ball.x, state.ClaimIntents[teamId].TargetContactPoint.x, 1e-6f);
             Assert.AreEqual(ball.y, state.ClaimIntents[teamId].TargetContactPoint.y, 1e-6f);
             Assert.AreEqual(ball.z, state.ClaimIntents[teamId].TargetContactPoint.z, 1e-6f);
@@ -262,24 +270,15 @@ namespace TacticalDirector.MatchEngine
                 "The tactical target must not be returned verbatim as a synthetic hand collider.");
         }
 
-        [Test]
-        public void W3_ActiveClaim_SurvivesTriggerLapse_WhileBallDescendsIntoHandHeight()
+        [TestCase(0)]
+        [TestCase(1)]
+        public void W3_ActiveClaim_SurvivesTriggerLapse_WhileBallDescendsIntoHandHeight(int teamId)
         {
             var engine = new MatchEngine(MatchSeed);
             engine.EnableGkHeading();
 
-            int keeper = -1;
-            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
-            {
-                if (engine.AgentIsGoalkeeper(i))
-                {
-                    keeper = i;
-                    break;
-                }
-            }
+            int keeper = GoalkeeperForTeam(engine, teamId);
             Assert.GreaterOrEqual(keeper, 0);
-
-            int teamId = keeper < MatchEngineConstants.PLAYERS_PER_TEAM ? 0 : 1;
             Vector2 gkXY = engine.AgentView(keeper).Position;
 
             // Arm above the W1 rush ceiling, then re-run the 10 Hz producer after the same loose ball
@@ -297,11 +296,56 @@ namespace TacticalDirector.MatchEngine
 
             var state = engine.TestOnly_GoalkeeperState;
             Assert.IsTrue(state.ClaimIntentActive[teamId],
-                "A descending loose cross must keep the bounded claim episode alive.");
+                "A descending loose cross must keep the bounded claim episode alive for either team.");
             Assert.AreEqual(committed.TargetContactPoint, state.ClaimIntents[teamId].TargetContactPoint,
                 "The claim target stays locked for the episode; a later tactical stride must not retarget it.");
             Assert.AreEqual(committed.ReachDirectionLateral, state.ClaimIntents[teamId].ReachDirectionLateral, 0f,
                 "The reach side stays locked for the episode.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void W3_ComposedCross_ProducesRealHandContact_ForEitherTeam(int teamId)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            int keeper = GoalkeeperForTeam(engine, teamId);
+            Assert.GreaterOrEqual(keeper, 0);
+            Vector2 gkXY = engine.AgentView(keeper).Position;
+
+            // First create the production ClaimIntent episode from a high loose cross.
+            engine.TestOnly_ForceBallLoose(
+                new Vector3(gkXY.x, gkXY.y + 0.5f, MatchEngineConstants.GkRushMaxBallHeightM + 0.1f),
+                Vector3.zero);
+            engine.TestOnly_DriveGkHeadingTactical();
+            Assert.IsTrue(engine.TestOnly_GoalkeeperState.ClaimIntentActive[teamId]);
+
+            // Then place the same loose cross at #11's actual live reach centre and run the production
+            // 60 Hz composition boundary. The arbiter must classify Hand from geometry, not from intent
+            // or the coarse Collision #3 feed.
+            Assert.IsTrue(engine.TestOnly_TryGetGoalkeeperHandReachEnvelope(
+                teamId, out Vector3 reachCenter, out float reachRadius));
+            Assert.Greater(reachRadius, 0f);
+            engine.TestOnly_ForceBallLoose(reachCenter, new Vector3(0f, 0f, -1f));
+
+            EventBus.BeginTick(0);
+            EventBus.BeginPhase(PhaseId.Physics);
+            engine.TestOnly_DriveGkHeadingPhysics();
+
+            var state = engine.TestOnly_GoalkeeperState;
+            Assert.AreEqual(1, engine.TestOnly_W3LastParticipantCount,
+                "An uncontested real Hand contact is still a one-participant W3 resolution.");
+            Assert.AreEqual(keeper, engine.TestOnly_W3LastWinnerAgentId);
+            Assert.AreEqual(BodyPartEnum.Hand, engine.TestOnly_W3LastWinnerBodyPart);
+            Assert.IsFalse(state.ClaimIntentActive[teamId],
+                "The Hand terminal route must consume the bounded ClaimIntent episode.");
+            Assert.GreaterOrEqual(state.ContactStates[teamId].ActualContactFrame, 0,
+                "The composed route must record a real #11 contact frame.");
+            Assert.That(
+                state.States[teamId],
+                Is.EqualTo(GoalkeeperState.HandsOnBall).Or.EqualTo(GoalkeeperState.Recovering),
+                "A real Hand contact must terminate through #11 handling, not leave the keeper in Set/Anticipate.");
         }
 
         // ── flag semantics ──────────────────────────────────────────────────────────
@@ -719,4 +763,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.5     | 2026-09-22 | —      | W3 / ERR-011-012: claim reach side locks at commit; a descending  |
 // |         |            |        | loose cross keeps the bounded claim episode alive across a later   |
 // |         |            |        | tactical producer pass instead of cancelling on the old height gate.| 
+// | 1.6     | 2026-09-22 | —      | W3: claim producer/lifetime locks now run for both teams; added a composed production-path Hand contact for each keeper using #11's live reach envelope and W3 winner observation. |
 #endregion
