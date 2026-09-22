@@ -61,8 +61,9 @@ namespace TacticalDirector.MatchEngine
             // v19 collision contact-onset pair set + the §5.Z.15 six-second-rule state, v20
             // (ERR-012-011) the pass-in-flight receiver latch, v21 (wiring backlog W2 — the tackle)
             // the per-agent tackle-interrupt flag and per-agent challenge cooldown, v22 (wiring backlog
-            // W5) the optional latest opposing PassAttemptEvent retained by each pressing ring.
-            Assert.AreEqual(22u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // W5) the optional latest opposing PassAttemptEvent retained by each pressing ring, v23
+            // (wiring backlog W3) the per-GK ClaimIntent payload + active latch.
+            Assert.AreEqual(23u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 
@@ -693,4 +694,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | moves the digest, written unconditionally so the flag need not be  |
 // |         |            |        | on).                                                               |
 // | 1.16     | 2026-09-11 | —      | W5/v22: schema pin moved to 22 and latest pressing-ring PassAttemptEvent gets a single-field digest probe. |
+// | 1.17     | 2026-09-22 | —      | W3/v23: ClaimIntent payload + active latch enter the serialized GK block. |
 #endregion
