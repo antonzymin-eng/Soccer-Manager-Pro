@@ -206,6 +206,8 @@ namespace TacticalDirector.MatchEngine
                         + Invariant($"straightReds={probe.StraightReds} ")
                         + Invariant($"secondYellowDismissals={probe.SecondYellowDismissals} ")
                         + Invariant($"totalDismissals={probe.TotalDismissals} playedTicks={probe.PlayedTicks}"));
+                    report.AppendLine("  qualifyingContactForce distribution (N):");
+                    AppendDistribution(report, "    ", probe.QualifyingContactForces);
                 }
 
                 report.AppendLine();
@@ -234,7 +236,7 @@ namespace TacticalDirector.MatchEngine
 
                 report.AppendLine();
                 report.AppendLine("--- qualifyingContactForce distribution (FROM_BEHIND, N) ---");
-                report.AppendLine(DescribeDistribution(qualifyingContactForces));
+                AppendDistribution(report, "  ", qualifyingContactForces);
                 report.AppendLine();
 
                 report.AppendLine("--- fouls per 90 minutes, collision gate replayed offline ---");
@@ -433,32 +435,39 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
-        private static string DescribeDistribution(List<float> qualifyingContactForces)
+        private static void AppendDistribution(
+            StringBuilder output,
+            string indent,
+            List<float> qualifyingContactForces)
         {
             if (qualifyingContactForces.Count == 0)
             {
-                return "  (no production-threshold FROM_BEHIND candidates observed)";
+                output.AppendLine(indent + "(no production-threshold FROM_BEHIND candidates observed)");
+                return;
             }
 
             float[] forces = qualifyingContactForces.ToArray();
             Array.Sort(forces);
 
-            var sb = new StringBuilder();
-            sb.AppendLine(Invariant($"  candidates={forces.Length}"));
-            AppendPercentile(sb, forces, "p50", 0.50f);
-            AppendPercentile(sb, forces, "p75", 0.75f);
-            AppendPercentile(sb, forces, "p90", 0.90f);
-            AppendPercentile(sb, forces, "p95", 0.95f);
-            AppendPercentile(sb, forces, "p99", 0.99f);
-            AppendPercentile(sb, forces, "p99.9", 0.999f);
-            sb.AppendLine(Invariant($"  max   = {forces[forces.Length - 1],12:F0} N"));
-            return sb.ToString().TrimEnd();
+            output.AppendLine(indent + Invariant($"candidates={forces.Length}"));
+            AppendPercentile(output, indent, forces, "p50", 0.50f);
+            AppendPercentile(output, indent, forces, "p75", 0.75f);
+            AppendPercentile(output, indent, forces, "p90", 0.90f);
+            AppendPercentile(output, indent, forces, "p95", 0.95f);
+            AppendPercentile(output, indent, forces, "p99", 0.99f);
+            AppendPercentile(output, indent, forces, "p99.9", 0.999f);
+            output.AppendLine(indent + Invariant($"max   = {forces[forces.Length - 1],12:F0} N"));
         }
 
-        private static void AppendPercentile(StringBuilder sb, float[] sorted, string label, float quantile)
+        private static void AppendPercentile(
+            StringBuilder output,
+            string indent,
+            float[] sorted,
+            string label,
+            float quantile)
         {
             int index = Math.Min(sorted.Length - 1, (int)(quantile * (sorted.Length - 1)));
-            sb.AppendLine(Invariant($"  {label,-5} = {sorted[index],12:F0} N"));
+            output.AppendLine(indent + Invariant($"{label,-5} = {sorted[index],12:F0} N"));
         }
 
         private static float PerMatch(int countOverRun) =>
