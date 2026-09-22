@@ -117,14 +117,15 @@ namespace TacticalDirector.CollisionSystem
         }
 
         /// <summary>
-        /// W3 read-only AGENT_BALL publication pass. Evaluates Collision #3's existing coarse
+        /// W3 read-only AGENT_BALL observation pass. Evaluates Collision #3's existing coarse
         /// agent-ball overlap against the current world snapshot and publishes matching events
         /// without applying collision response, changing contact-onset state, touching the full
         /// collision event buffer, or mutating the ball/agents.
         ///
-        /// This is a candidate feed only. Its Stage-0 cylinder / AgentReachHeight geometry is NOT
-        /// authoritative for Heading #10 head-contact eligibility or Goalkeeper #11 hand/head
-        /// body-part classification.
+        /// This is an observation feed only. Its Stage-0 cylinder / AgentReachHeight geometry is NOT
+        /// W3 contest membership and is NOT authoritative for Heading #10 head-contact eligibility or
+        /// Goalkeeper #11 hand/head body-part classification. High aerials may correctly publish zero
+        /// records while #10/#11 mechanic-owned geometry still forms a W3 contest.
         /// </summary>
         public void PublishAgentBallContacts(
             AgentState[] agentStates,
@@ -166,12 +167,18 @@ namespace TacticalDirector.CollisionSystem
                     continue;
                 }
 
+                // Match the full Resolve event contract: entity ids are canonicalized low -> high.
+                // The read-only observation path must not invent a second ordering convention.
+                int lo = SpatialHashConstants.BALL_ENTITY_ID <= agentId
+                    ? SpatialHashConstants.BALL_ENTITY_ID : agentId;
+                int hi = SpatialHashConstants.BALL_ENTITY_ID <= agentId
+                    ? agentId : SpatialHashConstants.BALL_ENTITY_ID;
                 var evt = new CollisionEvent
                 {
                     MatchTime = matchTime,
                     Type = CollisionType.AGENT_BALL,
-                    Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
-                    Entity2ID = agentId,
+                    Entity1ID = lo,
+                    Entity2ID = hi,
                     ContactPoint = contactPoint,
                     ImpactForce = 0f,
                     FoulData = default
@@ -653,4 +660,5 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | per call; CollisionEvent and cross-tick state remain unchanged.           |
 // | 1.10    | 2026-09-22 | —      | W3: + PublishAgentBallContacts read-only candidate feed for same-frame    |
 // |         |            |        | consumers. No response/contact-state mutation; full collision stays in Resolve. |
+// | 1.9     | 2026-09-22 | —      | W3 review: read-only observation events now use the same canonical min/max entity ordering as Resolve; feed is explicitly non-authoritative for W3 membership. |
 #endregion
