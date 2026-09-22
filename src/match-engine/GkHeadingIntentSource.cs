@@ -48,6 +48,25 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// W3 cross/aerial claim trigger. A loose ball above the existing rush/claim height boundary and
+        /// inside #11's existing cross-claim contest radius arms a ClaimIntent. This method selects WHEN
+        /// to commit only; it does not define a hand position or decide contact.
+        /// </summary>
+        public static bool ClaimArmed(in Vector3 gkPosition, in Vector3 ballPosition, bool ballLoose)
+        {
+            if (!ballLoose || ballPosition.z <= MatchEngineConstants.GkRushMaxBallHeightM)
+            {
+                return false;
+            }
+
+            float dx = ballPosition.x - gkPosition.x;
+            float dy = ballPosition.y - gkPosition.y;
+            float radius =
+                TacticalDirector.GoalkeeperMechanics.GoalkeeperConstants.CrossClaimVolumeRadiusM;
+            return dx * dx + dy * dy <= radius * radius;
+        }
+
+        /// <summary>
         /// §4.4 (gk-rush-trigger-design.md): true when this keeper should leave his line, and the
         /// world-space point he should be committed to. Pure geometry — the caller owns the latch, the
         /// projection, the save-priority exclusion and the commit.
