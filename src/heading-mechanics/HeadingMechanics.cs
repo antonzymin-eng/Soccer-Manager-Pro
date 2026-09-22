@@ -85,6 +85,9 @@ namespace TacticalDirector.HeadingMechanics
         /// </summary>
         public ICollisionEventConsumer CollisionConsumer => _duelResolution;
 
+        /// <summary>Current-frame AGENT_BALL candidate count. Observation-only W3 diagnostic.</summary>
+        public int BufferedCollisionContactCount => _duelResolution.ContactCount;
+
         /// <summary>
         /// Starts the current 60 Hz collision-consumption window. The composition root calls this
         /// immediately before Collision System #3 publishes the frame's AGENT_BALL contacts.
