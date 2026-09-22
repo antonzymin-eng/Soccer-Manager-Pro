@@ -43,9 +43,6 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Physics ticks per second (Ball Physics #1 / Deterministic Sim #16: 60 Hz).</summary>
         private const float TicksPerSecond = 60.0f;
 
-        /// <summary>Ticks in a full 90-minute match — the denominator every reported rate scales to.</summary>
-        private const int TicksPerMatch = 324000;
-
         private static readonly ulong[] Seeds =
         {
             0x0F1E2D3C4B5A6978UL,
@@ -93,8 +90,6 @@ namespace TacticalDirector.MatchEngine
             try
             {
                 var report = new StringBuilder();
-                // Keep the measurement-lane catalog sentinel stable; the next line names the expanded contract.
-                report.AppendLine("=== §5.Z.9 foul-rate measurement ===");
                 report.AppendLine("=== #435 §2.1 source-complete foul/card measurement ===");
                 report.AppendLine(
                     Invariant($"seeds={Seeds.Length} ticksPerSeed={TicksPerSeed} ")
@@ -107,18 +102,25 @@ namespace TacticalDirector.MatchEngine
                 var peakForcePerTick = new float[Seeds.Length * TicksPerSeed];
                 int writeCursor = 0;
 
-                // #435 §2.1's force distribution is a different population: every FROM_BEHIND contact
-                // that clears type/force/team/participation at the live production threshold.
+                // Keep both force populations. Raw qualifying contacts describe the collision stream;
+                // priced candidate forces are the at-most-one-per-tick winners that actually reach
+                // ComputeFoulCallProbability and therefore govern any future FoulCallProbability fit.
                 var qualifyingContactForces = new List<float>();
+                var pricedCandidateForces = new List<float>();
 
                 int totalAgentAgentContacts = 0;
+                int totalQualifyingFromBehindContacts = 0;
                 int totalFromBehindCandidates = 0;
+                int totalFromBehindDroppedByStrongerSameTick = 0;
+                int totalFromBehindSentOffSlotConsumptions = 0;
+                int totalFromBehindWavedOn = 0;
                 int totalFromBehindCalled = 0;
                 int totalSlideTackleCandidates = 0;
                 int totalSlideTackleCalled = 0;
                 int totalCandidateDisplacedByDecided = 0;
                 int totalCooldownSuppressionsFromBehind = 0;
                 int totalSlideTackleCallsDuringCooldown = 0;
+                int totalSlideTackleAppliedDuringCooldown = 0;
                 int totalFouls = 0;
                 int totalYellowCards = 0;
                 int totalStraightReds = 0;
@@ -146,15 +148,21 @@ namespace TacticalDirector.MatchEngine
                     Array.Copy(probe.PeakForcePerTick, 0, peakForcePerTick, writeCursor, TicksPerSeed);
                     writeCursor += TicksPerSeed;
                     qualifyingContactForces.AddRange(probe.QualifyingContactForces);
+                    pricedCandidateForces.AddRange(probe.PricedCandidateForces);
 
                     totalAgentAgentContacts += probe.AgentAgentContacts;
+                    totalQualifyingFromBehindContacts += probe.QualifyingFromBehindContacts;
                     totalFromBehindCandidates += probe.FromBehindCandidates;
+                    totalFromBehindDroppedByStrongerSameTick += probe.FromBehindCandidatesDroppedByStrongerSameTick;
+                    totalFromBehindSentOffSlotConsumptions += probe.FromBehindSentOffSlotConsumptions;
+                    totalFromBehindWavedOn += probe.FromBehindWavedOn;
                     totalFromBehindCalled += probe.FromBehindCalled;
                     totalSlideTackleCandidates += probe.SlideTackleCandidates;
                     totalSlideTackleCalled += probe.SlideTackleCalled;
                     totalCandidateDisplacedByDecided += probe.CandidateDisplacedByDecided;
                     totalCooldownSuppressionsFromBehind += probe.FoulCooldownSuppressionsFromBehind;
                     totalSlideTackleCallsDuringCooldown += probe.SlideTackleCallsDuringFoulCooldown;
+                    totalSlideTackleAppliedDuringCooldown += probe.SlideTackleAppliedDuringFoulCooldown;
                     totalFouls += probe.TotalFouls;
                     totalYellowCards += probe.YellowCards;
                     totalStraightReds += probe.StraightReds;
@@ -162,6 +170,27 @@ namespace TacticalDirector.MatchEngine
                     totalDismissals += probe.TotalDismissals;
                     totalPlayedTicks += probe.PlayedTicks;
 
+                    if (probe.QualifyingFromBehindContacts
+                        != probe.FoulCooldownSuppressionsFromBehind
+                            + probe.CandidateDisplacedByDecided
+                            + probe.FromBehindCandidatesDroppedByStrongerSameTick
+                            + probe.FromBehindCandidates)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: collision funnel failed: ")
+                            + Invariant($"qualifying={probe.QualifyingFromBehindContacts} != ")
+                            + Invariant($"cooldown={probe.FoulCooldownSuppressionsFromBehind} + ")
+                            + Invariant($"decided={probe.CandidateDisplacedByDecided} + ")
+                            + Invariant($"stronger={probe.FromBehindCandidatesDroppedByStrongerSameTick} + ")
+                            + Invariant($"priced={probe.FromBehindCandidates}."));
+                    }
+                    if (probe.FromBehindCandidates != probe.FromBehindCalled + probe.FromBehindWavedOn)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: KD-F1 priced-candidate identity failed: ")
+                            + Invariant($"candidates={probe.FromBehindCandidates} != called={probe.FromBehindCalled} + ")
+                            + Invariant($"wavedOn={probe.FromBehindWavedOn}."));
+                    }
                     if (probe.FromBehindCalled + probe.SlideTackleCalled != probe.TotalFouls)
                     {
                         structuralFindings.Add(
@@ -190,37 +219,57 @@ namespace TacticalDirector.MatchEngine
                             Invariant($"seed 0x{seed:X16}: live SLIDE_TACKLE counter ")
                             + Invariant($"{engine.TestOnly_TackleSlideTackleFouls} != ledger count {probe.SlideTackleCalled}."));
                     }
+                    if (engine.CurrentPeriod != MatchPeriod.FullTime || engine.CurrentTick != (ulong)TicksPerSeed)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: full-match execution did not close at the frozen boundary: ")
+                            + Invariant($"period={engine.CurrentPeriod}, currentTick={engine.CurrentTick}, expectedTick={TicksPerSeed}."));
+                    }
 
                     report.AppendLine(Invariant($"seed 0x{seed:X16}:"));
                     report.AppendLine(
-                        Invariant($"  fromBehindCandidates={probe.FromBehindCandidates} ")
+                        Invariant($"  qualifyingFromBehindContacts={probe.QualifyingFromBehindContacts} ")
+                        + Invariant($"fromBehindCandidates={probe.FromBehindCandidates} ")
                         + Invariant($"fromBehindCalled={probe.FromBehindCalled} ")
-                        + Invariant($"slideTackleCandidates={probe.SlideTackleCandidates} ")
-                        + Invariant($"slideTackleCalled={probe.SlideTackleCalled}"));
+                        + Invariant($"fromBehindWavedOn={probe.FromBehindWavedOn}"));
                     report.AppendLine(
-                        Invariant($"  candidateDisplacedByDecided={probe.CandidateDisplacedByDecided} ")
-                        + Invariant($"foulCooldownSuppressionsFromBehind={probe.FoulCooldownSuppressionsFromBehind} ")
-                        + Invariant($"slideTackleCallsDuringFoulCooldown={probe.SlideTackleCallsDuringFoulCooldown}"));
+                        Invariant($"  fromBehindCandidatesDroppedByStrongerSameTick={probe.FromBehindCandidatesDroppedByStrongerSameTick} ")
+                        + Invariant($"fromBehindSentOffSlotConsumptions={probe.FromBehindSentOffSlotConsumptions} ")
+                        + Invariant($"candidateDisplacedByDecided={probe.CandidateDisplacedByDecided} ")
+                        + Invariant($"foulCooldownSuppressionsFromBehind={probe.FoulCooldownSuppressionsFromBehind}"));
+                    report.AppendLine(
+                        Invariant($"  slideTackleCandidates={probe.SlideTackleCandidates} ")
+                        + Invariant($"slideTackleCalled={probe.SlideTackleCalled} ")
+                        + Invariant($"slideTackleCallsDuringFoulCooldown={probe.SlideTackleCallsDuringFoulCooldown} ")
+                        + Invariant($"slideTackleAppliedDuringFoulCooldown={probe.SlideTackleAppliedDuringFoulCooldown}"));
                     report.AppendLine(
                         Invariant($"  totalFouls={probe.TotalFouls} yellowCards={probe.YellowCards} ")
                         + Invariant($"straightReds={probe.StraightReds} ")
                         + Invariant($"secondYellowDismissals={probe.SecondYellowDismissals} ")
                         + Invariant($"totalDismissals={probe.TotalDismissals} playedTicks={probe.PlayedTicks}"));
-                    report.AppendLine("  qualifyingContactForce distribution (N):");
+                    report.AppendLine("  qualifyingContactForce distribution — raw valid contacts (N):");
                     AppendDistribution(report, "    ", probe.QualifyingContactForces);
+                    report.AppendLine("  pricedCandidateForce distribution — per-tick KD-F1 winners (N):");
+                    AppendDistribution(report, "    ", probe.PricedCandidateForces);
                 }
 
                 report.AppendLine();
                 report.AppendLine("--- aggregate #435 §2.1 discipline stream ---");
                 report.AppendLine(
-                    Invariant($"fromBehindCandidates={totalFromBehindCandidates} ")
+                    Invariant($"qualifyingFromBehindContacts={totalQualifyingFromBehindContacts} ")
+                    + Invariant($"fromBehindCandidates={totalFromBehindCandidates} ")
                     + Invariant($"fromBehindCalled={totalFromBehindCalled} ")
-                    + Invariant($"slideTackleCandidates={totalSlideTackleCandidates} ")
-                    + Invariant($"slideTackleCalled={totalSlideTackleCalled}"));
+                    + Invariant($"fromBehindWavedOn={totalFromBehindWavedOn}"));
                 report.AppendLine(
-                    Invariant($"candidateDisplacedByDecided={totalCandidateDisplacedByDecided} ")
-                    + Invariant($"foulCooldownSuppressionsFromBehind={totalCooldownSuppressionsFromBehind} ")
-                    + Invariant($"slideTackleCallsDuringFoulCooldown={totalSlideTackleCallsDuringCooldown}"));
+                    Invariant($"fromBehindCandidatesDroppedByStrongerSameTick={totalFromBehindDroppedByStrongerSameTick} ")
+                    + Invariant($"fromBehindSentOffSlotConsumptions={totalFromBehindSentOffSlotConsumptions} ")
+                    + Invariant($"candidateDisplacedByDecided={totalCandidateDisplacedByDecided} ")
+                    + Invariant($"foulCooldownSuppressionsFromBehind={totalCooldownSuppressionsFromBehind}"));
+                report.AppendLine(
+                    Invariant($"slideTackleCandidates={totalSlideTackleCandidates} ")
+                    + Invariant($"slideTackleCalled={totalSlideTackleCalled} ")
+                    + Invariant($"slideTackleCallsDuringFoulCooldown={totalSlideTackleCallsDuringCooldown} ")
+                    + Invariant($"slideTackleAppliedDuringFoulCooldown={totalSlideTackleAppliedDuringCooldown}"));
                 report.AppendLine(
                     Invariant($"totalFouls={totalFouls} yellowCards={totalYellowCards} ")
                     + Invariant($"straightReds={totalStraightReds} ")
@@ -235,8 +284,11 @@ namespace TacticalDirector.MatchEngine
                     + Invariant($"totalDismissals={PerMatch(totalDismissals):F3}"));
 
                 report.AppendLine();
-                report.AppendLine("--- qualifyingContactForce distribution (FROM_BEHIND, N) ---");
+                report.AppendLine("--- qualifyingContactForce distribution — raw valid FROM_BEHIND contacts (N) ---");
                 AppendDistribution(report, "  ", qualifyingContactForces);
+                report.AppendLine();
+                report.AppendLine("--- pricedCandidateForce distribution — per-tick KD-F1 winners (N) ---");
+                AppendDistribution(report, "  ", pricedCandidateForces);
                 report.AppendLine();
 
                 report.AppendLine("--- fouls per 90 minutes, collision gate replayed offline ---");
@@ -287,6 +339,25 @@ namespace TacticalDirector.MatchEngine
 
                 // These are reconciliation/shape checks from #435 §2.1, not rate assertions. A failure
                 // means the measurement taxonomy no longer describes production and calibration must stop.
+                if (totalQualifyingFromBehindContacts
+                    != totalCooldownSuppressionsFromBehind
+                        + totalCandidateDisplacedByDecided
+                        + totalFromBehindDroppedByStrongerSameTick
+                        + totalFromBehindCandidates)
+                {
+                    structuralFindings.Add(
+                        Invariant($"aggregate collision funnel failed: qualifying={totalQualifyingFromBehindContacts} != ")
+                        + Invariant($"cooldown={totalCooldownSuppressionsFromBehind} + ")
+                        + Invariant($"decided={totalCandidateDisplacedByDecided} + ")
+                        + Invariant($"stronger={totalFromBehindDroppedByStrongerSameTick} + ")
+                        + Invariant($"priced={totalFromBehindCandidates}."));
+                }
+                if (totalFromBehindCandidates != totalFromBehindCalled + totalFromBehindWavedOn)
+                {
+                    structuralFindings.Add(
+                        Invariant($"aggregate KD-F1 identity failed: candidates={totalFromBehindCandidates} != ")
+                        + Invariant($"called={totalFromBehindCalled} + wavedOn={totalFromBehindWavedOn}."));
+                }
                 if (totalFromBehindCalled + totalSlideTackleCalled != totalFouls)
                 {
                     structuralFindings.Add(
@@ -299,13 +370,6 @@ namespace TacticalDirector.MatchEngine
                         Invariant($"aggregate dismissal identity failed: {totalDismissals} != ")
                         + Invariant($"{totalStraightReds} + {totalSecondYellowDismissals}."));
                 }
-                if (totalPlayedTicks != Seeds.Length * TicksPerSeed)
-                {
-                    structuralFindings.Add(
-                        Invariant($"playedTicks={totalPlayedTicks} != frozen denominator ")
-                        + Invariant($"{Seeds.Length * TicksPerSeed}."));
-                }
-
                 if (structuralFindings.Count != 0)
                 {
                     Assert.Fail(
@@ -471,19 +535,20 @@ namespace TacticalDirector.MatchEngine
         }
 
         private static float PerMatch(int countOverRun) =>
-            countOverRun * (float)TicksPerMatch / (Seeds.Length * (float)TicksPerSeed);
+            countOverRun / (float)Seeds.Length;
 
         private static string Invariant(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
 
         /// <summary>
-        /// #435 §2.1 measurement probe. The collision callback mirrors the production foul consumer's
-        /// type/force/team gates and the application site's participation gate, while the end-of-tick
-        /// ledger tap records what production actually applied. It never writes engine state.
+        /// #435 §2.1 measurement probe. The observer receives collision events BEFORE every production
+        /// gate, so it mirrors the live consumer in event order without writing engine state. The end-of-
+        /// tick ledger then supplies authoritative applied foul/card outcomes.
         ///
-        /// <para>The probe deliberately keeps two force populations. <see cref="PeakForcePerTick"/> is
-        /// threshold-free so the historical offline threshold replay remains usable.
-        /// <see cref="QualifyingContactForces"/> contains only live-threshold FROM_BEHIND candidates and
-        /// is the preregistered p50/p75/p90/p95/p99/p99.9/max population.</para>
+        /// <para>Three collision populations are deliberately distinct: raw valid contacts
+        /// (<see cref="QualifyingContactForces"/>), the final per-tick strongest winner that survives
+        /// cooldown/decided-slot/participation and actually reaches KD-F1
+        /// (<see cref="PricedCandidateForces"/>), and the threshold-free per-tick peak used only by the
+        /// historical descriptive replay (<see cref="PeakForcePerTick"/>).</para>
         /// </summary>
         private sealed class FoulCandidateProbe : ICollisionEventConsumer
         {
@@ -491,26 +556,43 @@ namespace TacticalDirector.MatchEngine
             private int _tick;
             private int _cooldownAtTickStart;
             private int _tackleFoulsAtTickStart;
-            private int _previousTackleFouls;
+
+            // Per-tick mirror of MatchFlowCollisionConsumer's strongest-wins slot after cooldown and
+            // decided-candidate gates. Production includes sent-off participants here and rejects them
+            // only at ApplyFoulIfCaptured, so the probe must do the same to see slot shadowing exactly.
+            private int _openValidContactsThisTick;
+            private bool _strongestCollisionFoundThisTick;
+            private float _strongestCollisionForceThisTick;
+            private int _strongestCollisionOffenderThisTick;
+            private int _strongestCollisionVictimThisTick;
+            private bool _pricedCollisionCandidateThisTick;
+            private bool _fromBehindCalledThisTick;
 
             public FoulCandidateProbe(MatchEngine engine, int tickCapacity)
             {
                 _engine = engine;
                 PeakForcePerTick = new float[tickCapacity];
-                QualifyingContactForces = new List<float>(tickCapacity);
+                QualifyingContactForces = new List<float>();
+                PricedCandidateForces = new List<float>();
             }
 
             public float[] PeakForcePerTick { get; }
             public List<float> QualifyingContactForces { get; }
+            public List<float> PricedCandidateForces { get; }
 
             public int AgentAgentContacts { get; private set; }
+            public int QualifyingFromBehindContacts { get; private set; }
             public int FromBehindCandidates { get; private set; }
+            public int FromBehindCandidatesDroppedByStrongerSameTick { get; private set; }
+            public int FromBehindSentOffSlotConsumptions { get; private set; }
             public int FromBehindCalled { get; private set; }
+            public int FromBehindWavedOn { get; private set; }
             public int SlideTackleCandidates { get; private set; }
             public int SlideTackleCalled { get; private set; }
             public int CandidateDisplacedByDecided { get; private set; }
             public int FoulCooldownSuppressionsFromBehind { get; private set; }
             public int SlideTackleCallsDuringFoulCooldown { get; private set; }
+            public int SlideTackleAppliedDuringFoulCooldown { get; private set; }
             public int TotalFouls { get; private set; }
             public int YellowCards { get; private set; }
             public int StraightReds { get; private set; }
@@ -523,17 +605,21 @@ namespace TacticalDirector.MatchEngine
             public void BeginTick(int tick)
             {
                 _tick = tick;
-                // TryResolveTackles runs in AI before Resolve decrements the foul cooldown. Capturing the
-                // pre-tick value therefore tells us whether a decided tackle foul was RAISED through the
-                // current production bypass while the collision source was still under cooldown.
                 _cooldownAtTickStart = _engine.TestOnly_FoulCooldownRemaining;
                 _tackleFoulsAtTickStart = _engine.TestOnly_TackleOutcomeCounts.Foul;
+                _openValidContactsThisTick = 0;
+                _strongestCollisionFoundThisTick = false;
+                _strongestCollisionForceThisTick = 0f;
+                _strongestCollisionOffenderThisTick = MatchEngineConstants.NO_POSSESSION;
+                _strongestCollisionVictimThisTick = MatchEngineConstants.NO_POSSESSION;
+                _pricedCollisionCandidateThisTick = false;
+                _fromBehindCalledThisTick = false;
             }
 
             public void EndTick()
             {
                 var outcomes = _engine.TestOnly_TackleOutcomeCounts;
-                int newTackleCandidates = outcomes.Foul - _previousTackleFouls;
+                int newTackleCandidates = outcomes.Foul - _tackleFoulsAtTickStart;
                 if (newTackleCandidates < 0)
                 {
                     throw new InvalidOperationException(
@@ -541,10 +627,38 @@ namespace TacticalDirector.MatchEngine
                 }
 
                 SlideTackleCandidates += newTackleCandidates;
-                _previousTackleFouls = outcomes.Foul;
+                if (_cooldownAtTickStart > 0)
+                {
+                    // Raised at the AI decision site — this is the actual bypass population, including a
+                    // decided candidate later overwritten or discarded before an event can be published.
+                    SlideTackleCallsDuringFoulCooldown += newTackleCandidates;
+                }
 
-                // TickLedgerSnapshot is captured after Resolve and before EventBus resets the tick, so it
-                // is the exact production event stream without process-static subscription leakage.
+                // Finalize strongest-wins after every collision callback has run. Every valid contact that
+                // did not become the final valid winner was lost to the single-slot competition.
+                if (_strongestCollisionFoundThisTick)
+                {
+                    bool strongestSentOff =
+                        _engine.TestOnly_IsSentOff(_strongestCollisionOffenderThisTick)
+                        || _engine.TestOnly_IsSentOff(_strongestCollisionVictimThisTick);
+
+                    int validWinner = strongestSentOff ? 0 : 1;
+                    FromBehindCandidatesDroppedByStrongerSameTick +=
+                        _openValidContactsThisTick - validWinner;
+
+                    if (strongestSentOff)
+                    {
+                        FromBehindSentOffSlotConsumptions++;
+                    }
+                    else
+                    {
+                        FromBehindCandidates++;
+                        PricedCandidateForces.Add(_strongestCollisionForceThisTick);
+                        _pricedCollisionCandidateThisTick = true;
+                    }
+                }
+
+                // TickLedgerSnapshot is captured after Resolve and before EventBus resets the tick.
                 int records = _engine.TickLedgerCount;
                 for (int i = 0; i < records; i++)
                 {
@@ -557,17 +671,14 @@ namespace TacticalDirector.MatchEngine
                         if (foul.FoulKind == (byte)ContactType.FROM_BEHIND)
                         {
                             FromBehindCalled++;
+                            _fromBehindCalledThisTick = true;
                         }
                         else if (foul.FoulKind == (byte)ContactType.SLIDE_TACKLE)
                         {
                             SlideTackleCalled++;
-
-                            // The tackle decision was made in AI, before Resolve's cooldown decrement.
-                            // This is the preregistered bypass count even when a pre-tick value of 1
-                            // reaches 0 before ApplyFoulIfCaptured later in the same tick.
                             if (_cooldownAtTickStart > 0)
                             {
-                                SlideTackleCallsDuringFoulCooldown++;
+                                SlideTackleAppliedDuringFoulCooldown++;
                             }
                         }
                         else
@@ -595,9 +706,6 @@ namespace TacticalDirector.MatchEngine
                     }
                     else if (card.CardKind == MatchEngineConstants.CardKindSecondYellow)
                     {
-                        // #435 freezes the existing scenario semantics: the second caution is one
-                        // additional yellow AND one dismissal, even though production publishes one
-                        // CARD_KIND_SECOND_YELLOW event rather than yellow-then-red.
                         YellowCards++;
                         SecondYellowDismissals++;
                         TotalDismissals++;
@@ -608,7 +716,17 @@ namespace TacticalDirector.MatchEngine
                     }
                 }
 
-                PlayedTicks++;
+                if (_pricedCollisionCandidateThisTick && !_fromBehindCalledThisTick)
+                {
+                    FromBehindWavedOn++;
+                }
+
+                // MatchEnded is latched in Input before AI/Physics/Resolve. Sampling after RunTick means
+                // the full-time boundary tick itself is correctly excluded from played/contact opportunity.
+                if (!_engine.MatchEnded)
+                {
+                    PlayedTicks++;
+                }
             }
 
             public void OnCollisionEvent(in CollisionEvent evt)
@@ -629,46 +747,74 @@ namespace TacticalDirector.MatchEngine
                 {
                     return;
                 }
-                if (_engine.TestOnly_IsSentOff(foul.InstigatorAgentID)
-                    || _engine.TestOnly_IsSentOff(foul.VictimAgentID))
-                {
-                    return;
-                }
 
-                // Threshold-free per-tick peak for the legacy descriptive threshold replay.
-                if (_tick >= 0 && _tick < PeakForcePerTick.Length
+                bool participantsActive =
+                    !_engine.TestOnly_IsSentOff(foul.InstigatorAgentID)
+                    && !_engine.TestOnly_IsSentOff(foul.VictimAgentID);
+
+                // Threshold-free legacy replay population retains the historical active-participant shape.
+                if (participantsActive
+                    && _tick >= 0 && _tick < PeakForcePerTick.Length
                     && foul.ForceMagnitude > PeakForcePerTick[_tick])
                 {
                     PeakForcePerTick[_tick] = foul.ForceMagnitude;
                 }
 
-                // Everything below is the source-complete production candidate population.
                 if (foul.ForceMagnitude < MatchEngineConstants.FoulImpactForceThresholdN)
                 {
                     return;
                 }
 
-                FromBehindCandidates++;
-                QualifyingContactForces.Add(foul.ForceMagnitude);
+                // This is the preregistered raw contact population: type/force/team/participation all pass,
+                // before cooldown, same-tick slot competition, and the KD-F1 probability decision.
+                if (participantsActive)
+                {
+                    QualifyingFromBehindContacts++;
+                    QualifyingContactForces.Add(foul.ForceMagnitude);
+                }
 
-                // MatchFlowCollisionConsumer checks cooldown BEFORE it checks the single-slot decided
-                // candidate. If both conditions are true, production suppresses at the cooldown site,
-                // so the categories stay mutually faithful to the current control-flow order.
+                // Production checks cooldown before any collision qualification. For the source-complete
+                // funnel we count only contacts that would otherwise survive the later participation gate.
                 if (_engine.TestOnly_FoulCooldownRemaining > 0)
                 {
-                    FoulCooldownSuppressionsFromBehind++;
+                    if (participantsActive)
+                    {
+                        FoulCooldownSuppressionsFromBehind++;
+                    }
                     return;
                 }
 
-                // AI precedes Physics/Resolve. If #14's cumulative foul outcome advanced since
-                // BeginTick, RaiseDecidedFoulCandidate has already seated a decided tackle candidate
-                // in the one per-tick slot. The consumer's next early return is therefore the exact
-                // #435 §2.1 same-tick displacement site.
+                // A decided W2 foul was raised in AI before collisions. Production returns here before
+                // strongest-wins; only otherwise-valid collision candidates enter this displacement count.
                 if (_engine.TestOnly_TackleOutcomeCounts.Foul > _tackleFoulsAtTickStart)
                 {
-                    CandidateDisplacedByDecided++;
+                    if (participantsActive)
+                    {
+                        CandidateDisplacedByDecided++;
+                    }
+                    return;
                 }
+
+                // Mirror KD-F4 exactly, INCLUDING sent-off contacts: participation is deliberately deferred
+                // to ApplyFoulIfCaptured, so an invalid strongest contact can consume the one slot and shadow
+                // a weaker genuine foul. Strictly-greater preserves the earlier equal-force winner.
+                if (participantsActive)
+                {
+                    _openValidContactsThisTick++;
+                }
+
+                if (_strongestCollisionFoundThisTick
+                    && foul.ForceMagnitude <= _strongestCollisionForceThisTick)
+                {
+                    return;
+                }
+
+                _strongestCollisionFoundThisTick = true;
+                _strongestCollisionForceThisTick = foul.ForceMagnitude;
+                _strongestCollisionOffenderThisTick = foul.InstigatorAgentID;
+                _strongestCollisionVictimThisTick = foul.VictimAgentID;
             }
+        }
         }
     }
 }
@@ -685,4 +831,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | decomposes card events (yellow/straight-red/second-yellow), reports the |
 // |         |            |        | qualifying-force quantiles, and adds live cooldown 180 to the replay.   |
 // |         |            |        | Measurement-only: no gameplay [GT] or production behaviour changed.     |
+// | 1.2     | 2026-09-21 | —      | Review closure: closes the collision candidate→call funnel by separating |
+// |         |            |        | raw contacts from per-tick strongest KD-F1 candidates; measures stronger-|
+// |         |            |        | same-tick loss, sent-off slot consumption and wave-ons; tackle cooldown |
+// |         |            |        | bypass is counted at raise time with applied subset; playedTicks derives |
+// |         |            |        | from the engine full-time freeze.                                       |
 #endregion
