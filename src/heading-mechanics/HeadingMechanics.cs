@@ -82,6 +82,15 @@ namespace TacticalDirector.HeadingMechanics
         public ICollisionEventConsumer CollisionConsumer => _duelResolution;
 
         /// <summary>
+        /// Starts the current 60 Hz collision-consumption window. The composition root calls this
+        /// immediately before Collision System #3 publishes the frame's AGENT_BALL contacts.
+        /// </summary>
+        public void BeginPhysicsFrame()
+        {
+            _duelResolution.ClearFrameBuffer();
+        }
+
+        /// <summary>
         /// Commits a HeaderIntent for an agent (called from the 10 Hz tactical loop).
         /// targetIntent is clamped to the pitch bounding box per FR-HE-029.
         /// contactPointIntent is clamped to the head-local envelope per FR-HE-030.
@@ -177,7 +186,8 @@ namespace TacticalDirector.HeadingMechanics
         {
             using var _ = s_updateMarker.Auto();
 
-            _duelResolution.ClearFrameBuffer();
+            // W3: the frame buffer is cleared by BeginPhysicsFrame BEFORE Collision System publishes.
+            // Clearing here would erase the same-frame AGENT_BALL feed before §3.7 can consume it.
 
             // Pass 1: per-agent eligibility check, jump kinematics, contact-frame detection.
             // Agents are iterated in index order (deterministic per #16 §3.2 entity ordering).
@@ -320,9 +330,15 @@ namespace TacticalDirector.HeadingMechanics
                     contactState.ContactPointError = contactPointError;
                     contactState.ContactQualityScalar = qualityScalar;
 
-                    // Register with duel resolution (always; uncontested agents will be solo-resolved).
-                    float baseScore = HeadingDuelResolution.ComputeBaseScore(attrs);
-                    _duelResolution.RegisterDuelCandidate(agentId, currentMatchTime, baseScore);
+                    // W3: Collision #3 owns the shared multi-agent contact population. Keep the
+                    // existing Heading geometry as the actual head-contact authority, but only register
+                    // this agent into a CONTESTED duel when the same frame's AGENT_BALL feed contains it.
+                    // A geometry-only single header remains valid below (no duel membership required).
+                    if (_duelResolution.HasAgentBallContact(agentId, currentMatchTime))
+                    {
+                        float baseScore = HeadingDuelResolution.ComputeBaseScore(attrs);
+                        _duelResolution.RegisterDuelCandidate(agentId, currentMatchTime, baseScore);
+                    }
                 }
 
                 // Do not update PrevFrameFacingDirection on the contact frame; Pass 2 needs the
