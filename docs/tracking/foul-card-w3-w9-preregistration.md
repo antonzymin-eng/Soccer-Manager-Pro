@@ -251,19 +251,38 @@ The existing `MatchEngineDisciplineScenarios` bands (3-90 fouls, 0-20 yellows, 0
 The final calibration landing MUST add a separate executable calibration regression over the frozen
 six-full-match corpus. Before any result is observed, its coarse target-relative envelope is fixed as:
 
-| Quantity | Required aggregate per-90 envelope | Purpose |
+| Quantity | Frozen six-match decision rule | Purpose |
 |---|---:|---|
-| Fouls | **15 to 30** | rejects both silence and the known 35+/90 drift while leaving trajectory variance |
-| Cautions/yellows | **1.5 to 6.0** | keeps the caution level in the neighborhood of the 3.5 target; includes second cautions per §2.1 |
-| Total dismissals | **< 0.50** | rare-event ceiling over straight reds + second-yellow dismissals; deliberately fails at 0.50/90 |
-| Cautions / fouls | **0.08 to 0.30** | catches a severity mix detached from the roughly 3.5/22 caution target without double-counting dismissals |
+| Fouls | **15 to 30 per 90** | rejects both silence and the known 35+/90 drift while leaving trajectory variance |
+| Cautions/yellows | **1.5 to 6.0 per 90** | keeps the caution level in the neighborhood of the 3.5 target; includes second cautions per §2.1 |
+| Total dismissals | **0-2 = PASS; 3 = INCONCLUSIVE; >=4 = FAIL** over six matches | rare-event rule centered on the 0.50/90 neighborhood without turning an exactly-three count into a source-model failure |
+| Cautions / fouls | **0.08 to 0.30** | new calibration-only caution ratio tied to the roughly 3.5/22 target; does not add dismissals a second time |
 
-All four predicates are conjunctive; a run must satisfy their intersection. The point objective
-remains ~22 fouls / ~3.5 cautions / ~0.25 total dismissals. Passing these bands is necessary but does
-not replace the source-complete report or justify a value chosen for another reason.
+All four predicates are conjunctive, except that the total-dismissal rule has the explicit
+**INCONCLUSIVE** boundary above. The point objective remains ~22 fouls / ~3.5 cautions /
+~0.25 total dismissals.
 
-**No-widen rule:** if a post-wiring production head fails one of these frozen calibration bands, the
-next action is to remeasure/localize the changed source. Do not widen the band to restore green.
+For the frozen six-match corpus, three dismissals is exactly 0.50 per 90 and is a predeclared
+rare-event tie, not a failure. If the aggregate is **exactly 3**, do **not** widen a band, diagnose a
+source change from that count alone, or fit `RedCardProbability` from it. The foul/yellow/source
+characterization may continue, but card-severity closure remains blocked until a separately
+preregistered larger rare-event corpus resolves the dismissal rate. Counts **0-2** satisfy the
+rare-dismissal guard; counts **4+** fail it.
+
+`Cautions / fouls` is intentionally **not** the existing
+`MatchEngineDisciplineScenarios.card-rate-is-a-minority-of-fouls` quantity. That legacy plausibility
+predicate uses cautions plus dismissals in its numerator and therefore counts a second-yellow
+dismissal again after its second caution was already counted. The new calibration ratio is cautions
+only, divided by fouls, so it is comparable to the ~3.5/22 caution target rather than a tightening of
+the legacy predicate.
+
+Passing these rules is necessary but does not replace the source-complete report or justify a value
+chosen for another reason.
+
+**No-widen rule:** if a post-wiring production head fails one of the frozen non-rare predicates, or
+records **4+ total dismissals**, the next action is to remeasure/localize the changed source. Do not
+widen the band to restore green. The exactly-3 dismissal tie follows the preregistered inconclusive
+path above instead of being treated as a failure.
 
 ---
 
@@ -372,7 +391,10 @@ observed values.
 ## 10. Next actions after this preregistration lands
 
 1. Extend `FoulRateDiagnosticTests` (or add a narrowly-owned companion instrument) to satisfy §2.1,
-   with **no gameplay `[GT]` change**.
+   with **no gameplay `[GT]` change**. New counters follow the existing
+   `_tackleSlideTackleFouls` / `TestOnly_TackleSlideTackleFouls` diagnostic precedent: ephemeral
+   observation state only, not serialized gameplay state, so the instrument landing does not create a
+   snapshot-schema obligation.
 2. Execute the frozen six-full-match **characterization** on the current post-W2 production head.
    It is a baseline/source census, not the final KD-W1 calibration fit.
 3. Complete the remaining Class-A wiring in the authoritative backlog order, collecting the W3/W9
