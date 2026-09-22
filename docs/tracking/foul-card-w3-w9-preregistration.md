@@ -51,14 +51,19 @@ It is no longer sufficient as the sole calibration instrument:
 - it enters the engine's existing single foul-candidate slot as `ContactType.SLIDE_TACKLE`;
 - `ApplyFoulIfCaptured` deliberately **does not** apply `FoulCallProbability` a second time to that
   source;
-- every applied foul from either source re-arms the same global `FoulCooldownTicks = 180` debounce,
-  suppressing later opportunities from both sources;
+- every applied foul from either source re-arms `FoulCooldownTicks = 180`, but the production gate
+  is **asymmetric** after W2: `MatchFlowCollisionConsumer` suppresses `FROM_BEHIND` candidates while
+  the cooldown is active, whereas `RaiseDecidedFoulCandidate` does not consult the cooldown and a
+  decided tackle foul can still be raised/applied while it is nonzero;
 - a decided W2 tackle candidate outranks an ordinary collision candidate in the same tick under
   KD-F4's single-slot rule, so a qualifying collision can be displaced before application;
 - every applied foul also creates a restart, changing later played time/contact opportunity.
 
 Therefore collision fouls and tackle fouls **cannot be calibrated by summing two independently
-measured rates**. The sources compete before application as well as feeding back after application.
+measured rates**. The interaction is one-way in two places: a tackle foul can re-arm the cooldown
+that suppresses later collision candidates while itself bypassing that gate, and a decided tackle
+candidate can displace a collision candidate in the same tick. Restarts then feed back into both
+sources' later opportunity populations.
 
 The first implementation step after this preregistration lands is a **measurement-only** extension
 that reports the complete live discipline stream and the competition between its sources. No
@@ -75,8 +80,8 @@ For every seed, and in aggregate, the instrument MUST report at least:
 | `slideTackleCandidates` | already-adjudicated W2 tackle-foul candidates presented to the discipline path |
 | `slideTackleCalled` | applied `SLIDE_TACKLE` fouls |
 | `candidateDisplacedByDecided` | qualifying collision candidates that lose the single same-tick slot because a decided W2 tackle foul already owns it |
-| `foulCooldownSuppressionsFromBehind` | otherwise-qualifying collision/referee candidates suppressed by the shared live foul cooldown |
-| `foulCooldownSuppressionsSlideTackle` | already-adjudicated tackle-foul opportunities suppressed by the shared live foul cooldown |
+| `foulCooldownSuppressionsFromBehind` | otherwise-qualifying collision/referee candidates suppressed because `_foulCooldownRemaining > 0` |
+| `slideTackleCallsDuringFoulCooldown` | decided W2 tackle fouls raised/applied while `_foulCooldownRemaining > 0`; this measures the current production bypass rather than pretending those fouls are suppressed |
 | `totalFouls` | live production total; this is the rate target's numerator |
 | `yellowCards` | total cautions, including the second caution that promotes an offender to dismissal; same convention as `MatchEngineDisciplineScenarios` |
 | `straightReds` | direct `CARD_KIND_RED` dismissals |
@@ -95,11 +100,20 @@ ordinals.
 The applied-foul identity
 `fromBehindCalled + slideTackleCalled == totalFouls` MUST hold unless a third production foul source
 is found. It is only a reconciliation check, not evidence that the sources are independent; the
-mandatory displacement and cooldown-suppression counters above expose their competition. A third
+mandatory displacement, collision-suppression, and tackle-during-cooldown counters above expose the
+current asymmetric interaction. A third
 source is a **stop-and-localize finding**, not a bucket to silently fold into either existing source.
 
 The instrument remains assertion-free on the measured rates. Its job is to make a zero, a drift, or
 a source interaction arrive with its cause attached.
+
+**Known pre-result structural finding — W2 cooldown bypass.** This preregistration does not silently
+normalize the current asymmetry and does not change runtime behavior. The characterization MUST
+measure `slideTackleCallsDuringFoulCooldown`. Before any final discipline `[GT]` fit is proposed,
+the owner must decide whether the bypass is intended semantics or a defect to correct in a separately
+reviewed runtime slice. If corrected, that landing is an §8 invalidation trigger and the frozen corpus
+must be rerun. If retained, the final calibration must model the bypass explicitly; it may not call
+`FoulCooldownTicks` a symmetric/global source suppressor.
 
 ---
 
@@ -177,12 +191,15 @@ The first candidate pass holds these constants at their current production value
 - `FoulCooldownTicks = 180`.
 
 They are not jointly optimized with the foul rate. The July pass already established that the force
-threshold is a candidate-quality gate and the cooldown is a temporal de-duplication rule; using them
-as extra degrees of freedom to hit 22 would hide a changed contact model.
+threshold is a candidate-quality gate and the cooldown is a temporal de-duplication rule for the
+collision/referee source. Post-W2 production is already known to bypass that cooldown for decided
+tackle fouls, so the characterization measures the bypass rather than assuming symmetry. Using either
+structural constant as an extra degree of freedom to hit 22 would hide a changed contact/source model.
 
-If the source-complete force/cooldown report shows that either structural premise no longer holds,
-the calibration **stops** and files/localizes the model change. It does not search a wider threshold
-or cooldown ladder until that revised model is preregistered.
+If the source-complete force/cooldown report falsifies the collision-source premise, or if the owner
+decides the known tackle-bypass semantics must change, the calibration **stops** and files/localizes
+the model change. It does not search a wider threshold or cooldown ladder until that revised model is
+preregistered.
 
 ### 4.2 `FoulCallProbability` is the collision-source rate lever
 
@@ -205,9 +222,9 @@ already-adjudicated tackle fouls, the referee probability has no valid solution.
 **source-model finding**. Tackle `[GT]` values are not retuned inside this foul/card pass to make the
 number fit.
 
-Offline replay may bracket candidate probabilities, but it is never final evidence: the shared
-cooldown, same-tick candidate displacement, and restart feedback make the live composed run
-authoritative.
+Offline replay may bracket candidate probabilities, but it is never final evidence: the one-way
+cooldown interaction (both sources re-arm it, only the collision source consults it), same-tick
+candidate displacement, and restart feedback make the live composed run authoritative.
 
 ### 4.3 Card severity is outcome-constrained, not ratio-substituted
 
@@ -317,7 +334,8 @@ The following changes invalidate any earlier foul/card measurement as a **final 
 2. landing W3 cross-claim wiring;
 3. landing W9 DT-emitted HEADER wiring;
 4. landing W8 or W10;
-5. changing W2 tackle production reach/outcome semantics;
+5. changing W2 tackle production reach/outcome semantics, including whether decided tackle fouls
+   bypass or obey `FoulCooldownTicks`;
 6. changing **collision-event emission granularity or contact episode semantics** — explicitly named
    because the July 27 §5.Z.13 one-event-per-contact change already invalidated this exact fit;
 7. changing collision classification, possession attachment/release, restart duration/flow, or any
