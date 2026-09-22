@@ -5,22 +5,16 @@
 // Spec:     foul-card-w3-w9-preregistration.md §2.1 / §3;
 //           Match Engine design note (docs/tracking/match-engine-design.md) §5.Z.7 item 1 / §5.Z.9;
 //           Tactical Instructions #21 §5.6 (the balance-pass precedent); Code Standards #20
-// Purpose:  The MEASUREMENT half of the §5.Z.9 foul-rate balance pass. Phase H left the foul heuristic
-//           issuing ~7 red cards per 9 minutes — every player on the pitch dismissed inside a full match —
-//           and recorded that fixing it needs "a foul-rate target and a measurement pass, not a guess
-//           folded into a correctness fix". This driver is that measurement.
+// Purpose:  Source-complete foul/card measurement required by #435 §2.1. Runs the frozen six
+//           full-match seeds and reports both live discipline sources (collision FROM_BEHIND and
+//           already-adjudicated W2 SLIDE_TACKLE), their cooldown/single-slot interaction, exact
+//           applied foul/card events, and the qualifying collision-force distribution.
 //
-//           It runs real composed matches with an observer attached to every collision event, records
-//           per tick the strongest cross-team FROM_BEHIND contact, and then replays the foul gate
-//           OFFLINE over a ladder of (threshold, cooldown) pairs. One match run therefore yields the
-//           whole rate-vs-threshold curve rather than one point, which is what makes the pass tractable:
-//           the constants are `static readonly` bound at static-init, so an in-process sweep of the
-//           real gate is impossible.
+//           The historical offline (threshold, cooldown) collision replay is retained as descriptive
+//           bracketing only; it is not the live source-complete numerator and does not propose a [GT].
 //
-//           Env-gated: a run is minutes of composed match time across several seeds. It is a
-//           DIAGNOSTIC, not a lock — it asserts nothing about the foul rate, because pinning the
-//           measured behaviour is the acceptance scenario's job (MatchEngineDisciplineScenarios),
-//           not the measuring instrument's.
+//           Env-gated because the corpus is six composed 90-minute matches. It is a DIAGNOSTIC, not
+//           a rate lock: only taxonomy/identity reconciliation is asserted; measured rates are not.
 //
 //             TD_FOUL_DIAGNOSTIC=1 dotnet test -c Release --filter FoulRateDiagnostic
 
@@ -328,7 +322,7 @@ namespace TacticalDirector.MatchEngine
         /// expired and this tick carried a qualifying contact at or above <paramref name="thresholdN"/>,
         /// count a foul and re-arm the cooldown. This is exactly <c>MatchFlowCollisionConsumer</c> +
         /// <c>ApplyFoulIfCaptured</c>'s temporal behaviour, which is why a plain histogram would
-        /// overcount: the 1 s debounce discards most of a burst.
+        /// overcount: the configured debounce discards most of a burst.
         ///
         /// The approximation: the recorded trajectory was produced under the SHIPPED threshold, so a
         /// different threshold would have awarded different free kicks and the match would have unfolded
