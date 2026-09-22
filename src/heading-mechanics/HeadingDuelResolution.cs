@@ -6,6 +6,8 @@
 //           FR-HE-026, FR-HE-027, Code Standards #20
 // Purpose:  ICollisionEventConsumer implementation, per-frame buffer, and duel-score resolution.
 
+using System;
+
 using UnityEngine;
 using Unity.Profiling;
 
@@ -76,10 +78,13 @@ namespace TacticalDirector.HeadingMechanics
                 return;
             }
 
-            if (_contactBufferCount < _contactBuffer.Length)
+            if (_contactBufferCount >= _contactBuffer.Length)
             {
-                _contactBuffer[_contactBufferCount++] = evt;
+                throw new InvalidOperationException(
+                    $"Heading AGENT_BALL contact buffer overflow: capacity={_contactBuffer.Length}.");
             }
+
+            _contactBuffer[_contactBufferCount++] = evt;
         }
 
         // ── Frame lifecycle ──────────────────────────────────────────────────────────
@@ -89,6 +94,16 @@ namespace TacticalDirector.HeadingMechanics
         {
             _contactBufferCount = 0;
             _duelCount          = 0;
+        }
+
+        /// <summary>
+        /// Clears only duel-registration state while preserving the AGENT_BALL contacts already
+        /// published for this physics frame. W3 uses this after the read-only feed and before
+        /// Heading registers geometry-qualified duel candidates.
+        /// </summary>
+        public void ClearDuelBuffer()
+        {
+            _duelCount = 0;
         }
 
         // ── Duel API ─────────────────────────────────────────────────────────────────
