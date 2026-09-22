@@ -563,8 +563,7 @@ namespace TacticalDirector.MatchEngine
             private int _openValidContactsThisTick;
             private bool _strongestCollisionFoundThisTick;
             private float _strongestCollisionForceThisTick;
-            private int _strongestCollisionOffenderThisTick;
-            private int _strongestCollisionVictimThisTick;
+            private bool _strongestCollisionParticipantsActiveThisTick;
             private bool _pricedCollisionCandidateThisTick;
             private bool _fromBehindCalledThisTick;
 
@@ -610,8 +609,7 @@ namespace TacticalDirector.MatchEngine
                 _openValidContactsThisTick = 0;
                 _strongestCollisionFoundThisTick = false;
                 _strongestCollisionForceThisTick = 0f;
-                _strongestCollisionOffenderThisTick = MatchEngineConstants.NO_POSSESSION;
-                _strongestCollisionVictimThisTick = MatchEngineConstants.NO_POSSESSION;
+                _strongestCollisionParticipantsActiveThisTick = false;
                 _pricedCollisionCandidateThisTick = false;
                 _fromBehindCalledThisTick = false;
             }
@@ -638,9 +636,7 @@ namespace TacticalDirector.MatchEngine
                 // did not become the final valid winner was lost to the single-slot competition.
                 if (_strongestCollisionFoundThisTick)
                 {
-                    bool strongestSentOff =
-                        _engine.TestOnly_IsSentOff(_strongestCollisionOffenderThisTick)
-                        || _engine.TestOnly_IsSentOff(_strongestCollisionVictimThisTick);
+                    bool strongestSentOff = !_strongestCollisionParticipantsActiveThisTick;
 
                     int validWinner = strongestSentOff ? 0 : 1;
                     FromBehindCandidatesDroppedByStrongerSameTick +=
@@ -811,8 +807,7 @@ namespace TacticalDirector.MatchEngine
 
                 _strongestCollisionFoundThisTick = true;
                 _strongestCollisionForceThisTick = foul.ForceMagnitude;
-                _strongestCollisionOffenderThisTick = foul.InstigatorAgentID;
-                _strongestCollisionVictimThisTick = foul.VictimAgentID;
+                _strongestCollisionParticipantsActiveThisTick = participantsActive;
             }
         }
         }
