@@ -2897,6 +2897,29 @@ namespace TacticalDirector.MatchEngine
         internal TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState TestOnly_GoalkeeperState =>
             _goalkeeper.CaptureState();
 
+        /// <summary>Test-only W3 seam: query the same #11-owned hand envelope production arbitration uses.</summary>
+        internal bool TestOnly_TryGetGoalkeeperHandReachEnvelope(
+            int teamId, out Vector3 reachCenter, out float reachRadius)
+        {
+            reachCenter = default;
+            reachRadius = 0.0f;
+            if ((uint)teamId >= (uint)_gkAgentIds.Length)
+            {
+                return false;
+            }
+
+            RefreshGkAgentIds();
+            int agentId = _gkAgentIds[teamId];
+            if (agentId < 0 || _isSentOff[agentId])
+            {
+                return false;
+            }
+
+            Vector3 gkPos = new Vector3(_agents[agentId].Position.x, _agents[agentId].Position.y, 0f);
+            return _goalkeeper.TryGetHandReachEnvelope(
+                teamId, (int)_clock.CurrentTick, gkPos, out reachCenter, out reachRadius);
+        }
+
         /// <summary>Test-only (§7): force the ball into a loose, given position/velocity so a §4 trigger's
         /// world-state gate can be exercised deterministically without a full match developing the geometry
         /// naturally. Clears possession (loose ball).</summary>
@@ -4491,6 +4514,9 @@ namespace TacticalDirector.MatchEngine
             // the two sit on either side of this call.
             TryCommitRushIntents();
             _goalkeeper.TacticalTick((int)_clock.CurrentTick, _agents, _ball, _gkAgentIds);
+            // W3 claim intent is consumed by 60 Hz contact arbitration, like the header intent, so it is
+            // committed AFTER this tick's state transition rather than driving a tactical-state row.
+            TryCommitClaimIntents();
             TryCommitHeaderIntents();
         }
 
@@ -4515,6 +4541,65 @@ namespace TacticalDirector.MatchEngine
         /// shape that produced ERR-011-002's dive-at-nothing on the save side. Hence no
         /// SNAPSHOT_SCHEMA_VERSION change.</para>
         /// </summary>
+        /// <summary>
+        /// W3 production producer for #11 <see cref="ClaimIntent"/>. The current Decision Tree action
+        /// protocol cannot encode another action after SAVE=7 (the same constraint documented for W1
+        /// rush), so Stage 0 follows the established composition-root producer pattern. SAVE has priority.
+        ///
+        /// <para>The target is a tactical aim point only. It never becomes contact geometry: #11 owns the
+        /// hand envelope through <c>TryGetHandReachEnvelope</c>, and W3 must still test the current ball
+        /// against that returned envelope before classifying a Hand participant.</para>
+        /// </summary>
+        private void TryCommitClaimIntents()
+        {
+            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                int agentId = _gkAgentIds[k];
+                if (agentId < 0 || _isSentOff[agentId])
+                {
+                    _goalkeeper.ClearClaimIntent(k);
+                    continue;
+                }
+
+                bool saveArmed = GkHeadingIntentSource.SaveArmed(
+                    k, in _ball.Position, in _ball.Velocity, loose);
+
+                Vector3 gkPos = new Vector3(
+                    _agents[agentId].Position.x, _agents[agentId].Position.y, 0f);
+                bool armed = !saveArmed
+                    && GkHeadingIntentSource.ClaimArmed(in gkPos, in _ball.Position, loose);
+
+                if (!armed)
+                {
+                    _goalkeeper.ClearClaimIntent(k);
+                    continue;
+                }
+
+                if (_goalkeeper.HasActiveClaimIntent(k))
+                {
+                    continue;
+                }
+
+                GoalkeeperState gkState = _goalkeeper.GetState(k);
+                if (gkState != GoalkeeperState.Set && gkState != GoalkeeperState.Anticipate)
+                {
+                    continue;
+                }
+
+                GoalkeeperAgentAttributes attrs = PlayerAttributeProjection.ToGoalkeeper(
+                    in _canonicalAttrs[agentId], k, fatigue: 0f);
+                var intent = new ClaimIntent
+                {
+                    TargetContactPoint = _ball.Position,
+                    ClutchFirmness = attrs.HandlingNorm,
+                    AttemptCommittedTick = (int)_clock.CurrentTacticalTick,
+                };
+                _goalkeeper.CommitClaimIntent(k, intent, attrs);
+            }
+        }
+
         private void TryCommitRushIntents()
         {
             bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
@@ -7740,6 +7825,14 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, si.AttemptCommittedTick);
                 CanonicalSerializer.WriteBool(buf, ref o, s.SaveIntentActive[i]);
 
+                ClaimIntent ci = s.ClaimIntents[i];
+                CanonicalSerializer.WriteF32(buf, ref o, ci.TargetContactPoint.x);
+                CanonicalSerializer.WriteF32(buf, ref o, ci.TargetContactPoint.y);
+                CanonicalSerializer.WriteF32(buf, ref o, ci.TargetContactPoint.z);
+                CanonicalSerializer.WriteF32(buf, ref o, ci.ClutchFirmness);
+                CanonicalSerializer.WriteI32(buf, ref o, ci.AttemptCommittedTick);
+                CanonicalSerializer.WriteBool(buf, ref o, s.ClaimIntentActive[i]);
+
                 RushIntent ri = s.RushIntents[i];
                 CanonicalSerializer.WriteF32(buf, ref o, ri.RushTarget.x);
                 CanonicalSerializer.WriteF32(buf, ref o, ri.RushTarget.y);
@@ -7800,6 +7893,8 @@ namespace TacticalDirector.MatchEngine
             var contactStates = new GkContactState[cap];
             var saveIntents = new SaveIntent[cap];
             var saveIntentActive = new bool[cap];
+            var claimIntents = new ClaimIntent[cap];
+            var claimIntentActive = new bool[cap];
             var rushIntents = new RushIntent[cap];
             var rushIntentActive = new bool[cap];
             var distributeIntents = new DistributeIntent[cap];
@@ -7858,6 +7953,16 @@ namespace TacticalDirector.MatchEngine
                 saveIntents[i] = si;
                 saveIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
 
+                ClaimIntent ci = default;
+                ci.TargetContactPoint = new Vector3(
+                    CanonicalSerializer.ReadF32(buf, ref o),
+                    CanonicalSerializer.ReadF32(buf, ref o),
+                    CanonicalSerializer.ReadF32(buf, ref o));
+                ci.ClutchFirmness = CanonicalSerializer.ReadF32(buf, ref o);
+                ci.AttemptCommittedTick = CanonicalSerializer.ReadI32(buf, ref o);
+                claimIntents[i] = ci;
+                claimIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
+
                 RushIntent ri = default;
                 ri.RushTarget = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
                 ri.CommitmentLevel = CanonicalSerializer.ReadF32(buf, ref o);
@@ -7899,6 +8004,8 @@ namespace TacticalDirector.MatchEngine
                 contactStates: contactStates,
                 saveIntents: saveIntents,
                 saveIntentActive: saveIntentActive,
+                claimIntents: claimIntents,
+                claimIntentActive: claimIntentActive,
                 rushIntents: rushIntents,
                 rushIntentActive: rushIntentActive,
                 distributeIntents: distributeIntents,
