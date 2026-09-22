@@ -4941,6 +4941,21 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         internal void TestOnly_RunPhysicsPhase() => RunPhysicsPhase();
 
+        /// <summary>W3 observation-only seam that executes only the read-only Collision #3 publication
+        /// and its two consumers. No ball integration, movement, GK/Heading update, or Resolve response
+        /// runs, so tests can assert byte-for-byte world-state non-mutation by the feed itself.</summary>
+        internal void TestOnly_PublishAgentBallContactsOnly()
+        {
+            _heading.BeginPhysicsFrame();
+            _crossClaimCandidates.BeginFrame();
+            _collisionSystem.PublishAgentBallContacts(
+                _agents,
+                _attrs,
+                in _ball,
+                _clock.CurrentMatchTimeSeconds,
+                _agentBallConsumer);
+        }
+
         /// <summary>W3 observation-only seam: current-frame coarse cross-claim candidate count.</summary>
         internal int TestOnly_CrossClaimCandidateCount => _crossClaimCandidates.Count;
 
