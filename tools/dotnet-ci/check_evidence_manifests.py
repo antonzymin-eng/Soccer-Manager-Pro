@@ -21,6 +21,7 @@ LINE_RE = re.compile(r"^([0-9a-f]{64})  (.+)$")
 DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "v210-rolling": ("manifest", FULL_MANIFEST),
     "pr420-owner-held-isolation": ("manifest", FULL_MANIFEST),
+    "foul-card-six-seed": ("manifest", FULL_MANIFEST),
     "w2-six-seed": ("manifest", PARTIAL_MANIFEST),
     "w2": ("manifest", PARTIAL_MANIFEST),
     "w12": ("external", "tools/dotnet-ci/check_w12_evidence.py"),
