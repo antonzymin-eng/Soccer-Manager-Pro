@@ -93,6 +93,8 @@ namespace TacticalDirector.MatchEngine
             try
             {
                 var report = new StringBuilder();
+                // Keep the measurement-lane catalog sentinel stable; the next line names the expanded contract.
+                report.AppendLine("=== §5.Z.9 foul-rate measurement ===");
                 report.AppendLine("=== #435 §2.1 source-complete foul/card measurement ===");
                 report.AppendLine(
                     Invariant($"seeds={Seeds.Length} ticksPerSeed={TicksPerSeed} ")
