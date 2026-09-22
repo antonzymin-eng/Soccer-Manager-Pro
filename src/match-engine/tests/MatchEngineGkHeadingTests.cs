@@ -16,6 +16,8 @@ using NUnit.Framework;
 using UnityEngine;
 
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.CollisionSystem;
+using TacticalDirector.AgentMovement;
 using TacticalDirector.PlayerDatabase;
 
 namespace TacticalDirector.MatchEngine
@@ -26,6 +28,26 @@ namespace TacticalDirector.MatchEngine
     {
         private const ulong MatchSeed = 0x0BADF00DDEADBEEFUL;
         private const int   TickCount = 120;
+
+        private sealed class OrderedCollisionProbe : ICollisionEventConsumer
+        {
+            private readonly string _name;
+            private readonly List<string> _order;
+
+            internal OrderedCollisionProbe(string name, List<string> order)
+            {
+                _name = name;
+                _order = order;
+            }
+
+            internal int Count { get; private set; }
+
+            public void OnCollisionEvent(in CollisionEvent evt)
+            {
+                Count++;
+                _order.Add(_name + ":" + evt.Entity2ID.ToString());
+            }
+        }
 
         private static int RequiredCount =>
             MatchEngineConstants.PLAYERS_PER_TEAM + MatchEngineConstants.SUBSTITUTES_PER_TEAM;
@@ -79,6 +101,103 @@ namespace TacticalDirector.MatchEngine
                 }
             }
             return -1;
+        }
+
+        // ── W3 shared AGENT_BALL feed ───────────────────────────────────────────────
+
+        [Test]
+        public void W3_Fanout_ForwardsOnlyAgentBall_ExactlyOnce_InFixedConsumerOrder()
+        {
+            var order = new List<string>();
+            var heading = new OrderedCollisionProbe("heading", order);
+            var crossClaim = new OrderedCollisionProbe("cross", order);
+            var fanout = new MatchEngine.AgentBallFanout(heading, crossClaim);
+
+            var agentAgent = new CollisionEvent
+            {
+                Type = CollisionType.AGENT_AGENT,
+                Entity1ID = 2,
+                Entity2ID = 3
+            };
+            fanout.OnCollisionEvent(in agentAgent);
+
+            var agentBall = new CollisionEvent
+            {
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                Entity2ID = 7
+            };
+            fanout.OnCollisionEvent(in agentBall);
+
+            Assert.AreEqual(1, heading.Count);
+            Assert.AreEqual(1, crossClaim.Count);
+            CollectionAssert.AreEqual(
+                new[] { "heading:7", "cross:7" },
+                order,
+                "W3 generic fan-out must deliver one AGENT_BALL candidate to each consumer exactly once "
+                + "and preserve the fixed Heading-before-cross-claim consumer order.");
+        }
+
+        [Test]
+        public void W3_CrossClaimCandidateCollector_ResetsEachFrame_AndFailsClosedOnOverflow()
+        {
+            var collector = new MatchEngine.CrossClaimCandidateCollector(capacity: 2);
+            var evt = new CollisionEvent
+            {
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                Entity2ID = 1
+            };
+
+            collector.OnCollisionEvent(in evt);
+            evt.Entity2ID = 2;
+            collector.OnCollisionEvent(in evt);
+            Assert.AreEqual(2, collector.Count);
+            Assert.AreEqual(1, collector.EventAt(0).Entity2ID);
+            Assert.AreEqual(2, collector.EventAt(1).Entity2ID);
+
+            evt.Entity2ID = 3;
+            Assert.Throws<System.InvalidOperationException>(() => collector.OnCollisionEvent(in evt),
+                "W3 candidate overflow must fail closed rather than silently truncate.");
+
+            collector.BeginFrame();
+            Assert.AreEqual(0, collector.Count,
+                "Cross-claim candidates are frame-local and must not survive into the next Physics pass.");
+        }
+
+        [Test]
+        public void W3_PhysicsPrefeed_ReachesBothConsumers_WithoutReplacingResolveCollision()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            int target = FirstOutfieldAgent(engine);
+            Assert.GreaterOrEqual(target, 0);
+            var ballXY = new Vector2(52f, 34f);
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                Vector2 p = i == target
+                    ? ballXY
+                    : new Vector2(5f + (i % 10) * 9f, 8f + (i / 10) * 20f);
+                if (i != target && Vector2.Distance(p, ballXY) < 2f)
+                {
+                    p.y = 60f;
+                }
+
+                engine.TestOnly_SetAgent(i, AgentState.CreateAtPosition(p, Vector2.right));
+                engine.TestOnly_SetCommand(i, MovementCommand.Stop(p));
+            }
+
+            engine.TestOnly_ForceBallLoose(new Vector3(ballXY.x, ballXY.y, 0.6f), Vector3.zero);
+            engine.TestOnly_RunPhysicsPhase();
+
+            Assert.AreEqual(1, engine.TestOnly_CrossClaimCandidateCount,
+                "The read-only Physics prefeed should identify only the staged target.");
+            Assert.AreEqual(1, engine.TestOnly_HeadingCollisionCandidateCount,
+                "The same candidate must reach Heading in the same Physics frame.");
+            Assert.AreEqual(target, engine.AgentView(target).Position == ballXY ? target : -1,
+                "The prefeed must not displace the staged target; full physical collision remains Resolve-owned.");
         }
 
         // ── flag semantics ──────────────────────────────────────────────────────────
@@ -484,6 +603,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | save-commit tests drive through the natural RunTick DT path    |
 // |         |            |        | (DriveUntilSaveCommitted); + SaveDecision_SurvivesAdversarial-  |
 // |         |            |        | Tactic (the AR-4 sole-option missed-save regression lock).     |
+// | 1.4     | 2026-09-22 | —      | W3: shared AGENT_BALL fan-out exact-once/order; frame-local cross- |
+// |         |            |        | claim collector reset/overflow; composed Physics prefeed reaches  |
+// |         |            |        | both consumers while physical response remains Resolve-owned.    |
 // | 1.3     | 2026-07-23 | —      | + SaveEpisode_ReArmsAfterBallResolves_CommitsAgain (AR follow- |
 // |         |            |        | up): locks the per-episode latch clear → re-commit path (SAVE  |
 // |         |            |        | is continuous, so the latch is the sole re-commit guard). Uses |
