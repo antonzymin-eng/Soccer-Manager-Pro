@@ -120,7 +120,7 @@ namespace TacticalDirector.MatchEngine
                 int totalCandidateDisplacedByDecided = 0;
                 int totalCooldownSuppressionsFromBehind = 0;
                 int totalSlideTackleCallsDuringCooldown = 0;
-                int totalSlideTackleAppliedDuringCooldown = 0;
+                int totalSlideTackleRaisedDuringCooldownApplied = 0;
                 int totalFouls = 0;
                 int totalYellowCards = 0;
                 int totalStraightReds = 0;
@@ -162,7 +162,7 @@ namespace TacticalDirector.MatchEngine
                     totalCandidateDisplacedByDecided += probe.CandidateDisplacedByDecided;
                     totalCooldownSuppressionsFromBehind += probe.FoulCooldownSuppressionsFromBehind;
                     totalSlideTackleCallsDuringCooldown += probe.SlideTackleCallsDuringFoulCooldown;
-                    totalSlideTackleAppliedDuringCooldown += probe.SlideTackleAppliedDuringFoulCooldown;
+                    totalSlideTackleRaisedDuringCooldownApplied += probe.SlideTackleRaisedDuringCooldownApplied;
                     totalFouls += probe.TotalFouls;
                     totalYellowCards += probe.YellowCards;
                     totalStraightReds += probe.StraightReds;
@@ -190,6 +190,13 @@ namespace TacticalDirector.MatchEngine
                             Invariant($"seed 0x{seed:X16}: KD-F1 priced-candidate identity failed: ")
                             + Invariant($"priced={probe.FromBehindPricedCandidates} != called={probe.FromBehindCalled} + ")
                             + Invariant($"wavedOn={probe.FromBehindWavedOn}."));
+                    }
+                    if (probe.SlideTackleRaisedDuringCooldownApplied > probe.SlideTackleCallsDuringFoulCooldown)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: tackle cooldown-bypass subset failed: ")
+                            + Invariant($"applied={probe.SlideTackleRaisedDuringCooldownApplied} > ")
+                            + Invariant($"raised={probe.SlideTackleCallsDuringFoulCooldown}."));
                     }
                     if (probe.FromBehindCalled + probe.SlideTackleCalled != probe.TotalFouls)
                     {
@@ -241,7 +248,7 @@ namespace TacticalDirector.MatchEngine
                         Invariant($"  slideTackleCandidates={probe.SlideTackleCandidates} ")
                         + Invariant($"slideTackleCalled={probe.SlideTackleCalled} ")
                         + Invariant($"slideTackleCallsDuringFoulCooldown={probe.SlideTackleCallsDuringFoulCooldown} ")
-                        + Invariant($"slideTackleAppliedDuringFoulCooldown={probe.SlideTackleAppliedDuringFoulCooldown}"));
+                        + Invariant($"slideTackleRaisedDuringCooldownApplied={probe.SlideTackleRaisedDuringCooldownApplied}"));
                     report.AppendLine(
                         Invariant($"  totalFouls={probe.TotalFouls} yellowCards={probe.YellowCards} ")
                         + Invariant($"straightReds={probe.StraightReds} ")
@@ -269,7 +276,7 @@ namespace TacticalDirector.MatchEngine
                     Invariant($"slideTackleCandidates={totalSlideTackleCandidates} ")
                     + Invariant($"slideTackleCalled={totalSlideTackleCalled} ")
                     + Invariant($"slideTackleCallsDuringFoulCooldown={totalSlideTackleCallsDuringCooldown} ")
-                    + Invariant($"slideTackleAppliedDuringFoulCooldown={totalSlideTackleAppliedDuringCooldown}"));
+                    + Invariant($"slideTackleRaisedDuringCooldownApplied={totalSlideTackleRaisedDuringCooldownApplied}"));
                 report.AppendLine(
                     Invariant($"totalFouls={totalFouls} yellowCards={totalYellowCards} ")
                     + Invariant($"straightReds={totalStraightReds} ")
@@ -357,6 +364,13 @@ namespace TacticalDirector.MatchEngine
                     structuralFindings.Add(
                         Invariant($"aggregate KD-F1 identity failed: priced={totalFromBehindPricedCandidates} != ")
                         + Invariant($"called={totalFromBehindCalled} + wavedOn={totalFromBehindWavedOn}."));
+                }
+                if (totalSlideTackleRaisedDuringCooldownApplied > totalSlideTackleCallsDuringCooldown)
+                {
+                    structuralFindings.Add(
+                        Invariant($"aggregate tackle cooldown-bypass subset failed: applied=")
+                        + Invariant($"{totalSlideTackleRaisedDuringCooldownApplied} > ")
+                        + Invariant($"raised={totalSlideTackleCallsDuringCooldown}."));
                 }
                 if (totalFromBehindCalled + totalSlideTackleCalled != totalFouls)
                 {
@@ -591,7 +605,7 @@ namespace TacticalDirector.MatchEngine
             public int CandidateDisplacedByDecided { get; private set; }
             public int FoulCooldownSuppressionsFromBehind { get; private set; }
             public int SlideTackleCallsDuringFoulCooldown { get; private set; }
-            public int SlideTackleAppliedDuringFoulCooldown { get; private set; }
+            public int SlideTackleRaisedDuringCooldownApplied { get; private set; }
             public int TotalFouls { get; private set; }
             public int YellowCards { get; private set; }
             public int StraightReds { get; private set; }
@@ -674,7 +688,7 @@ namespace TacticalDirector.MatchEngine
                             SlideTackleCalled++;
                             if (_cooldownAtTickStart > 0)
                             {
-                                SlideTackleAppliedDuringFoulCooldown++;
+                                SlideTackleRaisedDuringCooldownApplied++;
                             }
                         }
                         else
