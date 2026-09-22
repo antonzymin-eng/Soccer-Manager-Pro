@@ -1,11 +1,13 @@
 // File: src/positioning-ai/AgentPositioningData.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-09-21
 // Author:   —
 // Spec: #12 Positioning AI §4.3
 // Purpose: Per-agent input consumed from the perception snapshot each positioning tick.
 
 using UnityEngine;
+
+using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.PositioningAI
 {
@@ -34,9 +36,13 @@ namespace TacticalDirector.PositioningAI
         /// <summary>True only for the goalkeeper slot (index 0). GK slot computed via dedicated formula §3.3.3.</summary>
         public readonly bool IsGoalkeeper;
 
+        /// <summary>Per-agent duty controlling the tactical fore/aft anchor offset.</summary>
+        public readonly Duty Duty;
+
         public AgentPositioningData(
             int entityId, int slotIndex, Vector2 position,
-            bool isActive, RoleId role, bool isGoalkeeper)
+            bool isActive, RoleId role, bool isGoalkeeper,
+            Duty duty = Duty.Support)
         {
             EntityId    = entityId;
             SlotIndex   = slotIndex;
@@ -44,6 +50,7 @@ namespace TacticalDirector.PositioningAI
             IsActive    = isActive;
             Role        = role;
             IsGoalkeeper = isGoalkeeper;
+            Duty = duty;
         }
     }
 }
@@ -51,4 +58,7 @@ namespace TacticalDirector.PositioningAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-09-21 | —      | Added #21 Duty, PositioningFreedom, and distinct PlayerRole routing fields. |
+// | 1.2     | 2026-09-21 | —      | PR #434 review correction: #12 carries Duty only. PositioningFreedom stays |
+// |         |            |        | a #8 MOVE_TO_POSITION bias; PlayerRole positioning awaits an approved table. |
 #endregion

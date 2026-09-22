@@ -1,8 +1,8 @@
 // File: src/positioning-ai/SlotComposer.cs
 // Created: 2026-05-29
-// Modified: 2026-07-22
+// Modified: 2026-09-21
 // Author: —
-// Spec: #12 Positioning AI §3.7 (§3.7.1 as amended by ERR-012-007/008); Build-Up #24 §3.2 (FM-BU-02);
+// Spec: #12 Positioning AI §3.7 (§3.7.1 as amended by ERR-012-007/008/012); Build-Up #24 §3.2 (FM-BU-02);
 //       Dismarking #23 §3.3 (FM-DM-02)
 // Purpose: Orchestrates the per-agent slot composition pipeline, including the #24 build-up
 //          overlay and #23 dismark offset stages.
@@ -16,8 +16,8 @@ namespace TacticalDirector.PositioningAI
 {
     /// <summary>
     /// Composes per-agent formation slots through the pipeline (§3.7 / §3.7.1 as amended by
-    /// ERR-012-007/008 — the combined #23/#24 stage order pinned in #24 §4.2):
-    ///   1. Compute anchor (§3.1)
+    /// ERR-012-007/008/012 — the combined #23/#24 stage order pinned in #24 §4.2):
+    ///   1. Compute anchor (§3.1) + #21 Duty fore/aft adjustment (ERR-012-012)
     ///   2. Add ball-relative offset (§3.2)
     ///   3. Apply context modifiers (§3.5) — operates on (baseSlot − centroid)
     ///   3b. Build-up overlay (#24 §3.2, FM-BU-02) — additive per-slot displacement, BEFORE spacing
@@ -104,6 +104,7 @@ namespace TacticalDirector.PositioningAI
                 }
 
                 Vector2 anchor   = AnchorCalculator.ComputeAnchor(formation[idx]);
+                anchor.x += TacticTranslation.DutyForeOffset(agent.Duty);
                 Vector2 offset   = AnchorCalculator.ComputeBallRelativeOffset(
                                        snapshot.BallPosition, agent.Role, phase);
                 Vector2 baseSlot = anchor + offset;
@@ -225,7 +226,7 @@ namespace TacticalDirector.PositioningAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                                            |
 // | 1.1     | 2026-06-13 | —      | ERR-012-004 / FR-PA-044: GK composed slot now NaN-guarded to the raw GK formation anchor. The F3   |
 // |         |            |        | guard previously covered only outfield agents, so a NaN ball position emitted a NaN GK slot.       |
-// | 1.2     | 2026-07-11 | —      | #23/#24 stage insertions (ERR-012-007/008; the #24 §4.2 combined order): Step 3b build-up overlay  |
+// | 1.2     | 2026-07-11 | —      | #23/#24 stage insertions (ERR-012-007/008/012; the #24 §4.2 combined order): Step 3b build-up overlay  |
 // |         |            |        | (FM-BU-02, after ContextModifier / before spacing) + Step 4b dismark offset (FM-DM-02, after       |
 // |         |            |        | spacing / before the pitch clamp). Both exact no-ops at the zero-value dials — byte-identical      |
 // |         |            |        | default pipeline.                                                                                  |
@@ -234,4 +235,7 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        | GK slot instead of being skipped. Skipping left outSlots[idx] at the stale carried buffer value,   |
 // |         |            |        | which is not serialized, so forward replay from a restore diverged. GK at slot 0 (every realistic  |
 // |         |            |        | case) is unaffected — byte-identical default pipeline.                                              |
+// | 1.4     | 2026-09-21 | —      | Applies #21 Duty fore/aft offsets and PositioningFreedom ball-offset scaling.                        |
+// | 1.5     | 2026-09-21 | —      | PR #434 review / ERR-012-012: keep the approved Duty fore/aft offset; remove the unapproved          |
+// |         |            |        | #12 PositioningFreedom multiplier (that bias remains owned by #8 MOVE_TO_POSITION).                  |
 #endregion

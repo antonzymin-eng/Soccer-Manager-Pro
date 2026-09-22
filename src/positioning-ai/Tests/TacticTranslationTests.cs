@@ -1,6 +1,6 @@
 // File:     src/positioning-ai/Tests/TacticTranslationTests.cs
 // Created:  2026-06-29
-// Modified: 2026-08-08
+// Modified: 2026-09-21
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.4, FR-TI-016 / FR-TI-031; Positioning AI #12 §3.5; Code Standards #20
 // Purpose:  Locks the #21 → #12 T2 consumer seam: TacticWidth / TacticDefWidth → lateral-
@@ -87,6 +87,14 @@ namespace TacticalDirector.PositioningAI.Tests
             Assert.AreEqual(TacticTranslation.DefWidthCompactnessScalar(TacticDefWidth.Wide),
                             TacticTranslation.DefWidthCompactnessScalar((TacticDefWidth)99));
         }
+
+        [Test]
+        public void DutyForeOffset_MapsToPinnedCatalogueValues()
+        {
+            Assert.AreEqual(-3f, TacticTranslation.DutyForeOffset(Duty.Defend));
+            Assert.AreEqual(0f, TacticTranslation.DutyForeOffset(Duty.Support));
+            Assert.AreEqual(3f, TacticTranslation.DutyForeOffset(Duty.Attack));
+        }
     }
 }
 
@@ -94,4 +102,6 @@ namespace TacticalDirector.PositioningAI.Tests
 // | Version | Date       | Author       | Notes                                                     |
 // | 1.0     | 2026-06-29 | —            | Initial file. |
 // | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+// | 1.2     | 2026-09-21 | —            | Added Duty and PositioningFreedom translation coverage. |
+// | 1.3     | 2026-09-21 | —            | PR #434 review / ERR-012-012: retain Duty coverage only. |
 #endregion

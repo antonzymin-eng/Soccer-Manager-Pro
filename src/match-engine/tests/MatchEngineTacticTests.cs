@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineTacticTests.cs
 // Created:  2026-06-28
-// Modified: 2026-07-11
+// Modified: 2026-09-21
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.1/§3.2/§3.4/§4.6 (FR-TI-017/027/031/033); Match Engine design note §5; Code Standards #20
 // Purpose:  #21 T2 runtime-activation tests — SetTeamTactic routes a live TeamTactic into each
@@ -250,6 +250,61 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(TacticDefWidth.Standard, engine.TestOnly_PositioningDefWidth(0));
             Assert.AreEqual(TacticWidth.Standard,    engine.TestOnly_PositioningWidth(1));
             Assert.AreEqual(TacticDefWidth.Standard, engine.TestOnly_PositioningDefWidth(1));
+        }
+
+        [Test]
+        public void ScoreDifferential_RoutesFromEachTeamsPerspective()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.TestOnly_SetGoals(homeGoals: 4, awayGoals: 1);
+            TickToFirstStride(engine);
+
+            Assert.AreEqual(3, engine.TestOnly_PositioningScoreDiff(0),
+                "Home Positioning AI must receive home minus away goals.");
+            Assert.AreEqual(-3, engine.TestOnly_PositioningScoreDiff(1),
+                "Away Positioning AI must receive away minus home goals, not the home-relative value.");
+        }
+
+        [Test]
+        public void Formation_RoutesToPositioningFamilyAndAgentRoles()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            TeamTactic home = TeamTactic.Balanced;
+            engine.SetTeamTactic(0, new TeamTactic(
+                home.Mentality, TacticFormation.F433, home.Tempo, home.Width, home.Passing,
+                home.Pressing, home.LineOfEngagement, home.DefensiveLine, home.DefensiveWidth,
+                home.TransitionWon, home.TransitionLost, home.OffsideTrap, home.TriggerPressMask,
+                home.FocusPlay, home.GkDistribution, home.TimeWasting));
+            TickToFirstStride(engine);
+
+            Assert.AreEqual(FormationFamily.F433, engine.TestOnly_PositioningFormation(0));
+            Assert.AreEqual(RoleId.DM, engine.TestOnly_PositioningRole(0, 5),
+                "The 4-3-3 snapshot must use its DM role row, not the hard-coded 4-4-2 LM row.");
+            Assert.AreEqual(FormationFamily.F442, engine.TestOnly_PositioningFormation(1));
+            Assert.AreEqual(RoleId.LM, engine.TestOnly_PositioningRole(1, 5));
+        }
+
+        [Test]
+        public void ActiveOutfieldCount_ExcludesSentOffPlayers()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.TestOnly_SetIsSentOff(agentId: 1, isSentOff: true);
+            TickToFirstStride(engine);
+
+            Assert.AreEqual(9, engine.TestOnly_PositioningActiveOutfieldCount(0));
+            Assert.AreEqual(10, engine.TestOnly_PositioningActiveOutfieldCount(1));
+        }
+
+        [Test]
+        public void PlayerDuty_RoutesToPositioningSnapshot()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.SetPlayerTactic(1,
+                new PlayerTactic(PlayerRole.Poacher, Duty.Attack, PlayerInstructions.Default));
+            TickToFirstStride(engine);
+
+            Assert.AreEqual(Duty.Attack, engine.TestOnly_PositioningDuty(0, 1));
+            Assert.AreEqual(Duty.Support, engine.TestOnly_PositioningDuty(1, 1));
         }
 
         [Test]
@@ -639,4 +694,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | defaults + identity bindings, FM-BU-03 team-regain arming (first-settle / counter- |
 // |         |            |        | attack / hold-shape / per-heartbeat decrement), marking-dwell coherence, and the   |
 // |         |            |        | non-identity-dial determinism chain.                                               |
+// | 1.6     | 2026-09-21 | —      | Locks the live score → per-team Positioning AI ContextModifierInputs flow, including the mirrored away-team sign. |
+// | 1.7     | 2026-09-21 | —      | Locks formation-family/role routing and active-outfield eligibility. |
+// | 1.8     | 2026-09-21 | —      | Locks per-agent Duty, PositioningFreedom, and PlayerRole routing into #12. |
+// | 1.9     | 2026-09-21 | —      | PR #434 review: narrow #12 player routing to approved Duty only;             |
+// |         |            |        | PositioningFreedom remains #8-owned and PlayerRole positioning stays deferred. |
 #endregion
