@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/FoulRateDiagnosticTests.cs
 // Created:  2026-07-26
-// Modified: 2026-09-21 (#435 §2.1 source-complete foul/card measurement instrument; measurement-only)
+// Modified: 2026-09-22 (#435 §2.1 source-complete foul/card measurement instrument; measurement-only)
 // Author:   —
 // Spec:     foul-card-w3-w9-preregistration.md §2.1 / §3;
 //           Match Engine design note (docs/tracking/match-engine-design.md) §5.Z.7 item 1 / §5.Z.9;
@@ -112,7 +112,9 @@ namespace TacticalDirector.MatchEngine
                 int totalFromBehindCandidates = 0;
                 int totalFromBehindPricedCandidates = 0;
                 int totalFromBehindDroppedByStrongerSameTick = 0;
-                int totalFromBehindSentOffSlotConsumptions = 0;
+                int totalFromBehindSentOffSlotOccupancies = 0;
+                int totalFromBehindShadowedBySentOffWinner = 0;
+                int totalPricedCandidateIdentityMismatches = 0;
                 int totalFromBehindWavedOn = 0;
                 int totalFromBehindCalled = 0;
                 int totalSlideTackleCandidates = 0;
@@ -154,7 +156,9 @@ namespace TacticalDirector.MatchEngine
                     totalFromBehindCandidates += probe.FromBehindCandidates;
                     totalFromBehindPricedCandidates += probe.FromBehindPricedCandidates;
                     totalFromBehindDroppedByStrongerSameTick += probe.FromBehindCandidatesDroppedByStrongerSameTick;
-                    totalFromBehindSentOffSlotConsumptions += probe.FromBehindSentOffSlotConsumptions;
+                    totalFromBehindSentOffSlotOccupancies += probe.FromBehindSentOffSlotOccupancies;
+                    totalFromBehindShadowedBySentOffWinner += probe.FromBehindCandidatesShadowedBySentOffWinner;
+                    totalPricedCandidateIdentityMismatches += probe.PricedCandidateIdentityMismatches;
                     totalFromBehindWavedOn += probe.FromBehindWavedOn;
                     totalFromBehindCalled += probe.FromBehindCalled;
                     totalSlideTackleCandidates += probe.SlideTackleCandidates;
@@ -174,15 +178,23 @@ namespace TacticalDirector.MatchEngine
                         != probe.FoulCooldownSuppressionsFromBehind
                             + probe.CandidateDisplacedByDecided
                             + probe.FromBehindCandidatesDroppedByStrongerSameTick
+                            + probe.FromBehindCandidatesShadowedBySentOffWinner
                             + probe.FromBehindPricedCandidates)
                     {
                         structuralFindings.Add(
-                            Invariant($"seed 0x{seed:X16}: collision funnel failed: ")
+                            Invariant($"seed 0x{seed:X16}: probe collision partition failed: ")
                             + Invariant($"candidates={probe.FromBehindCandidates} != ")
                             + Invariant($"cooldown={probe.FoulCooldownSuppressionsFromBehind} + ")
                             + Invariant($"decided={probe.CandidateDisplacedByDecided} + ")
                             + Invariant($"stronger={probe.FromBehindCandidatesDroppedByStrongerSameTick} + ")
+                            + Invariant($"sentOffShadow={probe.FromBehindCandidatesShadowedBySentOffWinner} + ")
                             + Invariant($"priced={probe.FromBehindPricedCandidates}."));
+                    }
+                    if (probe.PricedCandidateIdentityMismatches != 0)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: priced collision winner identity mismatched ")
+                            + Invariant($"{probe.PricedCandidateIdentityMismatches} published FROM_BEHIND foul(s)."));
                     }
                     if (probe.FromBehindPricedCandidates != probe.FromBehindCalled + probe.FromBehindWavedOn)
                     {
@@ -241,9 +253,12 @@ namespace TacticalDirector.MatchEngine
                         + Invariant($"fromBehindWavedOn={probe.FromBehindWavedOn}"));
                     report.AppendLine(
                         Invariant($"  fromBehindCandidatesDroppedByStrongerSameTick={probe.FromBehindCandidatesDroppedByStrongerSameTick} ")
-                        + Invariant($"fromBehindSentOffSlotConsumptions={probe.FromBehindSentOffSlotConsumptions} ")
-                        + Invariant($"candidateDisplacedByDecided={probe.CandidateDisplacedByDecided} ")
-                        + Invariant($"foulCooldownSuppressionsFromBehind={probe.FoulCooldownSuppressionsFromBehind}"));
+                        + Invariant($"fromBehindSentOffSlotOccupancies={probe.FromBehindSentOffSlotOccupancies} ")
+                        + Invariant($"fromBehindCandidatesShadowedBySentOffWinner={probe.FromBehindCandidatesShadowedBySentOffWinner}"));
+                    report.AppendLine(
+                        Invariant($"  candidateDisplacedByDecided={probe.CandidateDisplacedByDecided} ")
+                        + Invariant($"foulCooldownSuppressionsFromBehind={probe.FoulCooldownSuppressionsFromBehind} ")
+                        + Invariant($"pricedCandidateIdentityMismatches={probe.PricedCandidateIdentityMismatches}"));
                     report.AppendLine(
                         Invariant($"  slideTackleCandidates={probe.SlideTackleCandidates} ")
                         + Invariant($"slideTackleCalled={probe.SlideTackleCalled} ")
@@ -269,9 +284,12 @@ namespace TacticalDirector.MatchEngine
                     + Invariant($"fromBehindWavedOn={totalFromBehindWavedOn}"));
                 report.AppendLine(
                     Invariant($"fromBehindCandidatesDroppedByStrongerSameTick={totalFromBehindDroppedByStrongerSameTick} ")
-                    + Invariant($"fromBehindSentOffSlotConsumptions={totalFromBehindSentOffSlotConsumptions} ")
-                    + Invariant($"candidateDisplacedByDecided={totalCandidateDisplacedByDecided} ")
-                    + Invariant($"foulCooldownSuppressionsFromBehind={totalCooldownSuppressionsFromBehind}"));
+                    + Invariant($"fromBehindSentOffSlotOccupancies={totalFromBehindSentOffSlotOccupancies} ")
+                    + Invariant($"fromBehindCandidatesShadowedBySentOffWinner={totalFromBehindShadowedBySentOffWinner}"));
+                report.AppendLine(
+                    Invariant($"candidateDisplacedByDecided={totalCandidateDisplacedByDecided} ")
+                    + Invariant($"foulCooldownSuppressionsFromBehind={totalCooldownSuppressionsFromBehind} ")
+                    + Invariant($"pricedCandidateIdentityMismatches={totalPricedCandidateIdentityMismatches}"));
                 report.AppendLine(
                     Invariant($"slideTackleCandidates={totalSlideTackleCandidates} ")
                     + Invariant($"slideTackleCalled={totalSlideTackleCalled} ")
@@ -350,14 +368,22 @@ namespace TacticalDirector.MatchEngine
                     != totalCooldownSuppressionsFromBehind
                         + totalCandidateDisplacedByDecided
                         + totalFromBehindDroppedByStrongerSameTick
+                        + totalFromBehindShadowedBySentOffWinner
                         + totalFromBehindPricedCandidates)
                 {
                     structuralFindings.Add(
-                        Invariant($"aggregate collision funnel failed: candidates={totalFromBehindCandidates} != ")
+                        Invariant($"aggregate probe collision partition failed: candidates={totalFromBehindCandidates} != ")
                         + Invariant($"cooldown={totalCooldownSuppressionsFromBehind} + ")
                         + Invariant($"decided={totalCandidateDisplacedByDecided} + ")
                         + Invariant($"stronger={totalFromBehindDroppedByStrongerSameTick} + ")
+                        + Invariant($"sentOffShadow={totalFromBehindShadowedBySentOffWinner} + ")
                         + Invariant($"priced={totalFromBehindPricedCandidates}."));
+                }
+                if (totalPricedCandidateIdentityMismatches != 0)
+                {
+                    structuralFindings.Add(
+                        Invariant($"aggregate priced collision winner identity mismatches=")
+                        + Invariant($"{totalPricedCandidateIdentityMismatches}."));
                 }
                 if (totalFromBehindPricedCandidates != totalFromBehindCalled + totalFromBehindWavedOn)
                 {
@@ -520,7 +546,7 @@ namespace TacticalDirector.MatchEngine
         {
             if (qualifyingContactForces.Count == 0)
             {
-                output.AppendLine(indent + "(no production-threshold FROM_BEHIND candidates observed)");
+                output.AppendLine(indent + "(no observations)");
                 return;
             }
 
@@ -578,6 +604,8 @@ namespace TacticalDirector.MatchEngine
             private bool _strongestCollisionFoundThisTick;
             private float _strongestCollisionForceThisTick;
             private bool _strongestCollisionParticipantsActiveThisTick;
+            private int _strongestCollisionOffenderThisTick;
+            private int _strongestCollisionVictimThisTick;
             private bool _pricedCollisionCandidateThisTick;
             private bool _fromBehindCalledThisTick;
 
@@ -597,7 +625,9 @@ namespace TacticalDirector.MatchEngine
             public int FromBehindCandidates { get; private set; }
             public int FromBehindPricedCandidates { get; private set; }
             public int FromBehindCandidatesDroppedByStrongerSameTick { get; private set; }
-            public int FromBehindSentOffSlotConsumptions { get; private set; }
+            public int FromBehindSentOffSlotOccupancies { get; private set; }
+            public int FromBehindCandidatesShadowedBySentOffWinner { get; private set; }
+            public int PricedCandidateIdentityMismatches { get; private set; }
             public int FromBehindCalled { get; private set; }
             public int FromBehindWavedOn { get; private set; }
             public int SlideTackleCandidates { get; private set; }
@@ -624,6 +654,8 @@ namespace TacticalDirector.MatchEngine
                 _strongestCollisionFoundThisTick = false;
                 _strongestCollisionForceThisTick = 0f;
                 _strongestCollisionParticipantsActiveThisTick = false;
+                _strongestCollisionOffenderThisTick = MatchEngineConstants.NO_POSSESSION;
+                _strongestCollisionVictimThisTick = MatchEngineConstants.NO_POSSESSION;
                 _pricedCollisionCandidateThisTick = false;
                 _fromBehindCalledThisTick = false;
             }
@@ -652,16 +684,14 @@ namespace TacticalDirector.MatchEngine
                 {
                     bool strongestSentOff = !_strongestCollisionParticipantsActiveThisTick;
 
-                    int validWinner = strongestSentOff ? 0 : 1;
-                    FromBehindCandidatesDroppedByStrongerSameTick +=
-                        _openValidContactsThisTick - validWinner;
-
                     if (strongestSentOff)
                     {
-                        FromBehindSentOffSlotConsumptions++;
+                        FromBehindSentOffSlotOccupancies++;
+                        FromBehindCandidatesShadowedBySentOffWinner += _openValidContactsThisTick;
                     }
                     else
                     {
+                        FromBehindCandidatesDroppedByStrongerSameTick += _openValidContactsThisTick - 1;
                         FromBehindPricedCandidates++;
                         PricedCandidateForces.Add(_strongestCollisionForceThisTick);
                         _pricedCollisionCandidateThisTick = true;
@@ -682,6 +712,16 @@ namespace TacticalDirector.MatchEngine
                         {
                             FromBehindCalled++;
                             _fromBehindCalledThisTick = true;
+
+                            // Cross-check the observer mirror against production identity, not just count.
+                            // If the mirror picked a different same-tick winner, the force distribution is
+                            // not trustworthy even when priced == called + waved-on still balances.
+                            if (!_pricedCollisionCandidateThisTick
+                                || foul.Offender != _strongestCollisionOffenderThisTick
+                                || foul.Victim != _strongestCollisionVictimThisTick)
+                            {
+                                PricedCandidateIdentityMismatches++;
+                            }
                         }
                         else if (foul.FoulKind == (byte)ContactType.SLIDE_TACKLE)
                         {
@@ -822,6 +862,8 @@ namespace TacticalDirector.MatchEngine
                 _strongestCollisionFoundThisTick = true;
                 _strongestCollisionForceThisTick = foul.ForceMagnitude;
                 _strongestCollisionParticipantsActiveThisTick = participantsActive;
+                _strongestCollisionOffenderThisTick = foul.InstigatorAgentID;
+                _strongestCollisionVictimThisTick = foul.VictimAgentID;
             }
         }
     }
@@ -844,4 +886,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | same-tick loss, sent-off slot consumption and wave-ons; tackle cooldown |
 // |         |            |        | bypass is counted at raise time with applied subset; playedTicks derives |
 // |         |            |        | from the engine full-time freeze.                                       |
+// | 1.3     | 2026-09-22 | —      | Reconciles each priced collision winner against the published offender/ |
+// |         |            |        | victim identity; splits genuine stronger-contact attrition from valid    |
+// |         |            |        | candidates shadowed by a sent-off slot winner. Measurement-only.         |
 #endregion
