@@ -84,10 +84,12 @@ namespace TacticalDirector.CollisionSystem.Tests
             system.PublishAgentBallContacts(agents, attrs, in ball, 1.25f, probe);
 
             Assert.AreEqual(2, probe.Count, "W3 read-only feed must publish both coarse overlaps.");
-            Assert.AreEqual(SpatialHashConstants.BALL_ENTITY_ID, probe.EventAt(0).Entity1ID);
-            Assert.AreEqual(0, probe.EventAt(0).Entity2ID);
-            Assert.AreEqual(1, probe.EventAt(1).Entity2ID,
-                "W3 feed must preserve canonical agent/entity iteration order.");
+            int ballId = SpatialHashConstants.BALL_ENTITY_ID;
+            Assert.AreEqual(Mathf.Min(ballId, 0), probe.EventAt(0).Entity1ID);
+            Assert.AreEqual(Mathf.Max(ballId, 0), probe.EventAt(0).Entity2ID);
+            Assert.AreEqual(Mathf.Min(ballId, 1), probe.EventAt(1).Entity1ID);
+            Assert.AreEqual(Mathf.Max(ballId, 1), probe.EventAt(1).Entity2ID,
+                "W3 observation feed must use the same canonical min/max entity ordering as Resolve.");
             Assert.AreEqual(a0, agents[0].Position);
             Assert.AreEqual(a1, agents[1].Position);
             Assert.AreEqual(ballPos, ball.Position);
@@ -138,4 +140,5 @@ namespace TacticalDirector.CollisionSystem.Tests
 // | Version | Date       | Author | Notes                                                        |
 // | 1.0     | 2026-09-11 | —      | W4: applied-vs-overlap collision feedback regression locks. |
 // | 1.1     | 2026-09-12 | —      | Review: unchanged-flight case now locks all velocity terms. |
+// | 1.2     | 2026-09-22 | —      | W3 review: read-only feed locks canonical min/max entity ordering. |
 #endregion
