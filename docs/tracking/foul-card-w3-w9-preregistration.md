@@ -51,12 +51,18 @@ It is no longer sufficient as the sole calibration instrument:
 - it enters the engine's existing single foul-candidate slot as `ContactType.SLIDE_TACKLE`;
 - `ApplyFoulIfCaptured` deliberately **does not** apply `FoulCallProbability` a second time to that
   source;
-- more fouls create more restarts and therefore change played time/contact opportunity, so collision
-  fouls and tackle fouls **cannot be calibrated by summing two independently measured rates**.
+- every applied foul from either source re-arms the same global `FoulCooldownTicks = 180` debounce,
+  suppressing later opportunities from both sources;
+- a decided W2 tackle candidate outranks an ordinary collision candidate in the same tick under
+  KD-F4's single-slot rule, so a qualifying collision can be displaced before application;
+- every applied foul also creates a restart, changing later played time/contact opportunity.
 
-Therefore the first implementation step after this preregistration lands is a **measurement-only**
-extension that reports the complete live discipline stream by source. No discipline `[GT]` moves in
-that instrument landing.
+Therefore collision fouls and tackle fouls **cannot be calibrated by summing two independently
+measured rates**. The sources compete before application as well as feeding back after application.
+
+The first implementation step after this preregistration lands is a **measurement-only** extension
+that reports the complete live discipline stream and the competition between its sources. No
+discipline `[GT]` moves in that instrument landing.
 
 ### 2.1 Required source-complete report
 
@@ -64,23 +70,36 @@ For every seed, and in aggregate, the instrument MUST report at least:
 
 | Field | Meaning |
 |---|---|
-| `fromBehindCandidates` | collision/referee candidates before the KD-F1 probability decision |
+| `fromBehindCandidates` | collision/referee candidates that clear type/force/team/participation gates before the KD-F1 probability decision |
 | `fromBehindCalled` | applied fouls whose source is `FROM_BEHIND` |
-| `slideTackleCandidates` | already-adjudicated W2 tackle-foul candidates entering the discipline slot |
+| `slideTackleCandidates` | already-adjudicated W2 tackle-foul candidates presented to the discipline path |
 | `slideTackleCalled` | applied `SLIDE_TACKLE` fouls |
+| `candidateDisplacedByDecided` | qualifying collision candidates that lose the single same-tick slot because a decided W2 tackle foul already owns it |
+| `foulCooldownSuppressionsFromBehind` | otherwise-qualifying collision/referee candidates suppressed by the shared live foul cooldown |
+| `foulCooldownSuppressionsSlideTackle` | already-adjudicated tackle-foul opportunities suppressed by the shared live foul cooldown |
 | `totalFouls` | live production total; this is the rate target's numerator |
-| `yellowCards` | total yellow cards issued |
-| `redCards` | total dismissals/red-card outcomes; if straight-red vs second-yellow is observable without new gameplay state, report both as subfields |
+| `yellowCards` | total cautions, including the second caution that promotes an offender to dismissal; same convention as `MatchEngineDisciplineScenarios` |
+| `straightReds` | direct `CARD_KIND_RED` dismissals |
+| `secondYellowDismissals` | `CARD_KIND_SECOND_YELLOW` dismissals |
+| `totalDismissals` | all sent-off outcomes; MUST equal `straightReds + secondYellowDismissals` |
 | `qualifyingContactForce` distribution | p50/p75/p90/p95/p99/p99.9/max for `FROM_BEHIND` collision candidates |
-| `foulCooldownSuppressions` | candidates suppressed by the live foul cooldown, split by source if the source is observable |
 | `playedTicks` | exact denominator actually run for the seed |
 
-The report MUST reconcile `fromBehindCalled + slideTackleCalled == totalFouls` unless a third
-production foul source is found. A third source is a **stop-and-localize finding**, not a bucket to
-silently fold into either existing source.
+The card-counting convention is frozen to the existing scenario's state semantics: a second-yellow
+dismissal contributes **one additional caution** to `yellowCards` and **one dismissal** to
+`totalDismissals`. The instrument also reports the two dismissal subtypes separately, so the
+straight-red band is never inferred from total dismissals. Do not reconstruct these buckets from a
+two-way event-kind test; `CardIssuedEvent` has distinct yellow, straight-red and second-yellow
+ordinals.
 
-The instrument remains assertion-free on the measured rates. Its job is to make a zero or a drift
-arrive with its source attached.
+The applied-foul identity
+`fromBehindCalled + slideTackleCalled == totalFouls` MUST hold unless a third production foul source
+is found. It is only a reconciliation check, not evidence that the sources are independent; the
+mandatory displacement and cooldown-suppression counters above expose their competition. A third
+source is a **stop-and-localize finding**, not a bucket to silently fold into either existing source.
+
+The instrument remains assertion-free on the measured rates. Its job is to make a zero, a drift, or
+a source interaction arrive with its cause attached.
 
 ---
 
@@ -102,27 +121,49 @@ Each seed runs **324,000 physics ticks = one full 90-minute match**. The aggrega
 six match-equivalents, rather than the old one-match-equivalent diagnostic. This is large enough to
 fit the common foul/yellow rates without treating one 90-minute trajectory as a calibration sample.
 
-The football anchors remain the already-governed KD-F5 targets:
+The full-length source-complete run uses the same force replay population if offline bracketing is
+retained. The measurement-only instrument change MUST add the live production cooldown
+`180` to the existing `{60, 300, 600}` diagnostic ladder; the structural cooldown itself remains
+frozen under §4.1 and the ladder is descriptive, not a search over candidate cooldown values.
+
+The football anchors remain the already-governed KD-F5 outcome targets:
 
 - fouls: approximately **22 per 90**;
-- yellows: approximately **3.5 per 90**;
-- reds: approximately **0.25 per 90**.
+- cautions/yellows: approximately **3.5 per 90**;
+- **total dismissals**: approximately **0.25 per 90**.
 
+The red-card anchor is explicitly a target for **all dismissals**, not for the straight-red draw band.
 No new external target is introduced by this preregistration.
 
-### 3.1 Rare-red rule
+### 3.1 Rare-dismissal rule and the corrected straight-red derivation
 
-At 0.25 reds per match, six matches contain only 1.5 expected reds. That is too sparse to estimate a
-new red probability from the observed count without fitting noise.
+At 0.25 total dismissals per match, six matches contain only 1.5 expected dismissals. The corpus is
+therefore unsuitable for fitting a straight-red probability directly from the aggregate dismissal
+count.
+
+More importantly, the old analytic derivation `RedCardProbability ~= 0.25 / 22` is **invalid** for
+this engine. `RedCardProbability` controls only the direct straight-red band, while
+`ApplyCardAndCheckSentOff` also dismisses an offender on a second yellow. The historical KD-F5
+statement that second-yellow promotion was negligible is contradicted by the live engine semantics
+and the later measured dismissal rate.
 
 Therefore:
 
-- `RedCardProbability` is **not** fitted to the observed six-match red count;
-- its KD-F5 starting value remains the analytic conditional ratio `0.25 / 22` unless a later,
-  separately preregistered larger corpus is approved;
-- the six-match red count is a validation/non-regression observation, not an optimizer input;
-- second-yellow promotions, if material, are reported rather than compensated by silently lowering
-  `RedCardProbability`.
+- the current production `RedCardProbability = 0.011` is recorded as a **historical/provisional
+  value**, not as an analytically justified starting ratio;
+- this preregistration does **not** fit or authorize a new `RedCardProbability`;
+- every governed run MUST decompose `totalDismissals` into `straightReds` and
+  `secondYellowDismissals` using §2.1's convention;
+- the total-dismissal outcome is judged against §5's frozen rare-event ceiling;
+- if the dismissal ceiling fails, the calibration stops. Before any straight-red candidate value is
+  executed, a separate pre-result amendment must freeze how the measured second-yellow contribution
+  is converted into the remaining straight-red budget. A larger corpus may improve that estimator,
+  but corpus size does not repair the derivation by itself.
+
+The stale `MatchEngineConstants.RedCardProbability` doc comment still describes the historical
+`0.25 / 22` conflation. This preregistration treats that comment as non-authoritative and records
+its correction as part of the eventual card-severity landing; no runtime value or source file moves
+in this pre-result PR.
 
 ---
 
@@ -145,11 +186,17 @@ or cooldown ladder until that revised model is preregistered.
 
 ### 4.2 `FoulCallProbability` is the collision-source rate lever
 
+The current production starting value is **`FoulCallProbability = 0.030`**. It was already
+recalibrated once after §5.Z.9: on July 27 (§5.Z.13) collision emission changed from one event per
+tick of sustained overlap to one event per contact, cross-team from-behind opportunity rate moved
+from roughly 58/s to 0.5/s, and the old 0.015 value produced roughly 0.4 fouls per 90. That history
+is itself an invalidation precedent for §8.
+
 Only the `FROM_BEHIND` source is governed by KD-F1's call probability. The final live fit therefore:
 
 1. keeps the W2 tackle resolver constants unchanged;
 2. measures **total live fouls**, not a sum of offline source estimates;
-3. varies only `FoulCallProbability` for the first rate fit;
+3. begins from `0.030` and varies only `FoulCallProbability` for the first rate fit;
 4. selects against the ~22-fouls-per-90 anchor on the same six full-match seeds;
 5. re-runs the chosen value live on the same corpus before it can be proposed for production.
 
@@ -158,30 +205,31 @@ already-adjudicated tackle fouls, the referee probability has no valid solution.
 **source-model finding**. Tackle `[GT]` values are not retuned inside this foul/card pass to make the
 number fit.
 
-Offline replay may bracket candidate probabilities, but it is never final evidence: restart
-feedback makes the live composed run authoritative.
+Offline replay may bracket candidate probabilities, but it is never final evidence: the shared
+cooldown, same-tick candidate displacement, and restart feedback make the live composed run
+authoritative.
 
-### 4.3 Card severity stays target-ratio based unless falsified
+### 4.3 Card severity is outcome-constrained, not ratio-substituted
 
-The starting conditional ratios remain KD-F5:
+The yellow/caution target still supplies a useful starting ratio:
+`3.5 / 22 ~= 0.159`, consistent with the current `YellowCardProbability = 0.16`.
 
-- yellow: `3.5 / 22 ~= 0.159`;
-- straight red: `0.25 / 22 ~= 0.0114`.
+There is **no corresponding direct `0.25 / 22` straight-red ratio**. The 0.25 target governs total
+dismissals, while the engine reaches that outcome through both straight reds and second-yellow
+promotions. The current `RedCardProbability = 0.011` is held unchanged during characterization
+only because this preregistration does not yet authorize a corrected card-severity fit.
 
-The current values (`0.16`, `0.011`) are therefore treated as analytic starting values, not as
-numbers to chase from one sparse trajectory. After the foul-rate fit, the six-match live run checks
-whether the yellow/card mix remains compatible with those target ratios and whether second-yellow
-promotion materially changes the red outcome.
-
-A card-severity change, if the live evidence requires one, must be preregistered as an amendment
-**before** candidate values are executed. No post-result value is inserted directly into production.
+After the foul-rate fit, the six-match live run checks the caution rate, straight-red count,
+second-yellow dismissal count, and total-dismissal rate separately. If card severity requires a
+change, the straight-red estimator/value is preregistered in an amendment **before** candidate values
+are executed. No post-result value is inserted directly into production.
 
 ---
 
 ## 5. Frozen acceptance posture
 
-The existing `MatchEngineDisciplineScenarios` bands (3-90 fouls, 0-20 yellows, 0-5 reds per 90) are
-abandonment/plausibility guards. They are intentionally too broad to certify a calibration.
+The existing `MatchEngineDisciplineScenarios` bands (3-90 fouls, 0-20 yellows, 0-5 dismissals per
+90) are abandonment/plausibility guards. They are intentionally too broad to certify a calibration.
 
 The final calibration landing MUST add a separate executable calibration regression over the frozen
 six-full-match corpus. Before any result is observed, its coarse target-relative envelope is fixed as:
@@ -189,12 +237,13 @@ six-full-match corpus. Before any result is observed, its coarse target-relative
 | Quantity | Required aggregate per-90 envelope | Purpose |
 |---|---:|---|
 | Fouls | **15 to 30** | rejects both silence and the known 35+/90 drift while leaving trajectory variance |
-| Yellows | **1.5 to 6.0** | keeps booking level in the neighborhood of the 3.5 target |
-| Reds | **< 0.75** | rare-event ceiling only; not a point estimator |
-| All cards / fouls | **0.08 to 0.30** | catches a severity mix detached from the roughly one-in-six target |
+| Cautions/yellows | **1.5 to 6.0** | keeps the caution level in the neighborhood of the 3.5 target; includes second cautions per §2.1 |
+| Total dismissals | **< 0.50** | rare-event ceiling over straight reds + second-yellow dismissals; deliberately fails at 0.50/90 |
+| Cautions / fouls | **0.08 to 0.30** | catches a severity mix detached from the roughly 3.5/22 caution target without double-counting dismissals |
 
-The point objective remains ~22 / ~3.5 / ~0.25. Passing these bands is necessary but does not replace
-the source-complete report or justify a value chosen for another reason.
+All four predicates are conjunctive; a run must satisfy their intersection. The point objective
+remains ~22 fouls / ~3.5 cautions / ~0.25 total dismissals. Passing these bands is necessary but does
+not replace the source-complete report or justify a value chosen for another reason.
 
 **No-widen rule:** if a post-wiring production head fails one of these frozen calibration bands, the
 next action is to remeasure/localize the changed source. Do not widen the band to restore green.
@@ -269,7 +318,9 @@ The following changes invalidate any earlier foul/card measurement as a **final 
 3. landing W9 DT-emitted HEADER wiring;
 4. landing W8 or W10;
 5. changing W2 tackle production reach/outcome semantics;
-6. changing collision classification, possession attachment/release, restart duration/flow, or any
+6. changing **collision-event emission granularity or contact episode semantics** — explicitly named
+   because the July 27 §5.Z.13 one-event-per-contact change already invalidated this exact fit;
+7. changing collision classification, possession attachment/release, restart duration/flow, or any
    other mechanism shown to alter the foul opportunity population.
 
 When any trigger occurs, rerun the **same frozen corpus and source-complete report**. Do not replace
@@ -283,7 +334,8 @@ The final `[GT]` proposal is based only on the last post-trigger production head
 
 Every governed run must retain enough material to reconstruct what was measured:
 
-- preregistration commit SHA;
+- the **landed preregistration commit/merge SHA**, recorded by the first governed run after this PR
+  reaches `main` (it cannot be self-recorded in a pre-merge document);
 - production/result head SHA;
 - workflow run ID and job ID;
 - exact command/environment gate;
