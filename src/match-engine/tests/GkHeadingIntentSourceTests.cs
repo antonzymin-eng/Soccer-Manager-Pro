@@ -76,6 +76,36 @@ namespace TacticalDirector.MatchEngine
             Assert.IsFalse(armed, "Beyond the goal-line range must not arm.");
         }
 
+        // ── W3 ClaimArmed ─────────────────────────────────────────────────────────────
+
+        [Test]
+        public void ClaimArmed_LooseHighBallInsideExistingContestRadius_Arms()
+        {
+            var gk = new Vector3(2f, 34f, 0f);
+            var ball = new Vector3(2.5f, 34.5f, MatchEngineConstants.GkRushMaxBallHeightM + 0.1f);
+            Assert.IsTrue(GkHeadingIntentSource.ClaimArmed(in gk, in ball, ballLoose: true));
+        }
+
+        [Test]
+        public void ClaimArmed_PossessedOrBelowClaimHeight_DoesNotArm()
+        {
+            var gk = new Vector3(2f, 34f, 0f);
+            var high = new Vector3(2.5f, 34.5f, MatchEngineConstants.GkRushMaxBallHeightM + 0.1f);
+            var low = new Vector3(2.5f, 34.5f, MatchEngineConstants.GkRushMaxBallHeightM);
+
+            Assert.IsFalse(GkHeadingIntentSource.ClaimArmed(in gk, in high, ballLoose: false));
+            Assert.IsFalse(GkHeadingIntentSource.ClaimArmed(in gk, in low, ballLoose: true));
+        }
+
+        [Test]
+        public void ClaimArmed_OutsideExistingContestRadius_DoesNotArm()
+        {
+            var gk = new Vector3(2f, 34f, 0f);
+            float r = TacticalDirector.GoalkeeperMechanics.GoalkeeperConstants.CrossClaimVolumeRadiusM;
+            var ball = new Vector3(2f + r + 0.01f, 34f, MatchEngineConstants.GkRushMaxBallHeightM + 0.1f);
+            Assert.IsFalse(GkHeadingIntentSource.ClaimArmed(in gk, in ball, ballLoose: true));
+        }
+
         // ── §4.2 NearestHeaderCandidate ───────────────────────────────────────────────
 
         private static AgentState AgentAt(float x, float y)
