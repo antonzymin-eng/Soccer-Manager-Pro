@@ -1,5 +1,6 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperCrossClaimDuel.cs
 // Created:  2026-05-28
+// Modified: 2026-09-22 (W3: narrow participant attributes, live RNG-owned resolution, symmetric near-tie correction)
 // Modified: 2026-06-12
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.6, KD-14, Code Standards #20
@@ -12,9 +13,28 @@ using Unity.Profiling;
 namespace TacticalDirector.GoalkeeperMechanics
 {
     /// <summary>
+    /// W3 narrow participant projection for the shared cross-claim score. This is deliberately not a
+    /// <see cref="GoalkeeperAgentAttributes"/>: outfield players participate with the three canonical
+    /// score inputs only and are never disguised as goalkeeper records.
+    /// </summary>
+    public readonly struct CrossClaimParticipantAttributes
+    {
+        public readonly float BalanceNorm;
+        public readonly float StrengthNorm;
+        public readonly float AerialNorm;
+
+        public CrossClaimParticipantAttributes(float balanceNorm, float strengthNorm, float aerialNorm)
+        {
+            BalanceNorm = Mathf.Clamp01(balanceNorm);
+            StrengthNorm = Mathf.Clamp01(strengthNorm);
+            AerialNorm = Mathf.Clamp01(aerialNorm);
+        }
+    }
+
+    /// <summary>
     /// Cross-claim and aerial duel resolution per §3.6 / KD-14.
     /// Mirrors Heading #10 HeadingDuelResolution for algorithm consistency.
-    /// Body-part determination uses physical geometry (capsule/sphere intersection), not intent (FR-GK-022).
+    /// Body-part determination uses mechanic-owned physical geometry, not intent (FR-GK-022).
     /// Participants are iterated in #16 §3.2 entity order (deterministic).
     /// Zero heap allocation: caller pre-allocates all participant buffers.
     /// Goalkeeper Mechanics #11 §3.6.
@@ -70,16 +90,16 @@ namespace TacticalDirector.GoalkeeperMechanics
         // ── Body-part determination (§3.6.1) ────────────────────────────────────────
 
         /// <summary>
-        /// Determines the contact body part for one agent using capsule/sphere intersection priority.
+        /// Determines the contact body part for one agent using mechanic-owned envelope intersection priority.
         /// Priority: both hit → closest Z to ball centre wins; hand only → Hand; head only → Head; none → treated as Body.
         /// FR-GK-022: body part determined by physical geometry, NOT intent.
         /// §3.6.1. Goalkeeper Mechanics #11 §3.6.
         /// </summary>
         /// <param name="ballPosition">Ball world-space position. §3.6.1.</param>
-        /// <param name="handCapsuleCenter">Centre of the agent's hand capsule collider. §3.6.1.</param>
-        /// <param name="headSphereCenter">Centre of the agent's head sphere collider. §3.6.1.</param>
-        /// <param name="handCapsuleRadius">Radius of the hand capsule (m). §3.6.1.</param>
-        /// <param name="headSphereRadius">Radius of the head sphere (m). §3.6.1.</param>
+        /// <param name="handCenter">Centre of the agent's hand/reach envelope. §3.6.1.</param>
+        /// <param name="headCenter">Centre of the agent's head contact volume. §3.6.1.</param>
+        /// <param name="handRadius">Radius of the hand capsule (m). §3.6.1.</param>
+        /// <param name="headRadius">Radius of the head sphere (m). §3.6.1.</param>
         /// <returns>BodyPartEnum: Hand if hand capsule intersects ball; Head if head sphere intersects; Body if neither.</returns>
         public static BodyPartEnum DetermineBodyPart(
             Vector3 ballPosition,
@@ -117,7 +137,7 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// </summary>
         public bool RegisterParticipant(
             int agentId,
-            GoalkeeperAgentAttributes attrs,
+            CrossClaimParticipantAttributes attrs,
             BodyPartEnum bodyPart,
             int currentFrame)
         {
@@ -160,6 +180,24 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <param name="gaussianSample">Pre-drawn Gaussian sample for near-tie tiebreak (draw-site: CROSS_CLAIM_TIEBREAK). §3.6.3 / KD-7.</param>
         public void ResolveHandContactDuel(float gaussianSample)
         {
+            ResolveHandContactDuelCore(gaussianSample, hasSample: true, rng: null);
+        }
+
+        /// <summary>
+        /// Production resolver. The goalkeeper subsystem owns its registered RNG stream and draws the
+        /// CROSS_CLAIM_TIEBREAK Gaussian only when the top two base scores are inside the specified
+        /// near-tie epsilon. The generic MatchEngine composition layer never draws on #11's behalf.
+        /// </summary>
+        public void ResolveHandContactDuel(IGoalkeeperRngService rng)
+        {
+            ResolveHandContactDuelCore(0.0f, hasSample: false, rng: rng);
+        }
+
+        private void ResolveHandContactDuelCore(
+            float gaussianSample,
+            bool hasSample,
+            IGoalkeeperRngService rng)
+        {
             using var _ = s_resolveMarker.Auto();
 
             if (_duelCount == 0)
@@ -176,61 +214,65 @@ namespace TacticalDirector.GoalkeeperMechanics
                 {
                     duel.WinnerAgentId = _participantAgentIds[0];
                     _participantDisturbanceFactors[0] = 0.0f;
+                    duel.ContactBodyPart = _participantBodyParts[0];
                 }
                 return;
             }
 
-            // Near-tie tiebreak (§3.6.3): applied ONLY when top-2 scores are close
-            float topScore    = _participantBaseScores[0];
-            int   topSlot     = 0;
-            float secondScore = float.MinValue;
-
-            for (int i = 1; i < count; i++)
+            int topSlot = 0;
+            int secondSlot = 1;
+            if (_participantBaseScores[1] > _participantBaseScores[0])
             {
-                if (_participantBaseScores[i] > topScore)
+                topSlot = 1;
+                secondSlot = 0;
+            }
+
+            for (int i = 2; i < count; i++)
+            {
+                float score = _participantBaseScores[i];
+                if (score > _participantBaseScores[topSlot])
                 {
-                    secondScore = topScore;
-                    topScore    = _participantBaseScores[i];
-                    topSlot     = i;
+                    secondSlot = topSlot;
+                    topSlot = i;
                 }
-                else if (_participantBaseScores[i] > secondScore)
+                else if (score > _participantBaseScores[secondSlot])
                 {
-                    secondScore = _participantBaseScores[i];
+                    secondSlot = i;
                 }
             }
 
-            float gap = topScore - secondScore;
+            float gap = _participantBaseScores[topSlot] - _participantBaseScores[secondSlot];
             if (gap < GoalkeeperConstants.CrossClaimTiebreakEpsilon)
             {
-                float perturbation = GoalkeeperConstants.CrossClaimTiebreakNoiseAmplitude * gaussianSample;
+                float sample = hasSample
+                    ? gaussianSample
+                    : rng.NextGaussian(
+                        GoalkeeperConstants.DrawSiteCrossClaimTiebreak,
+                        GoalkeeperConstants.DomainTagGoalkeeper);
+                float perturbation = GoalkeeperConstants.CrossClaimTiebreakNoiseAmplitude * sample;
+
+                // §3.6.3 is symmetric: reward the provisional top and penalise the runner-up.
                 _participantBaseScores[topSlot] += perturbation;
-                // Re-find winner after perturbation
-                topScore = float.MinValue;
-                topSlot  = 0;
-                for (int i = 0; i < count; i++)
+                _participantBaseScores[secondSlot] -= perturbation;
+
+                topSlot = 0;
+                float topScore = _participantBaseScores[0];
+                for (int i = 1; i < count; i++)
                 {
                     if (_participantBaseScores[i] > topScore)
                     {
                         topScore = _participantBaseScores[i];
-                        topSlot  = i;
+                        topSlot = i;
                     }
                 }
             }
 
             duel.WinnerAgentId = _participantAgentIds[topSlot];
-            _participantDisturbanceFactors[topSlot] = 0.0f;
-
-            // Update ContactBodyPart on the duel context to reflect winner's body part
             duel.ContactBodyPart = _participantBodyParts[topSlot];
 
             for (int i = 0; i < count; i++)
             {
-                if (i == topSlot)
-                {
-                    continue;
-                }
-
-                _participantDisturbanceFactors[i] = 0.0f; // losers in cross-claim: no disturbance factor (DisturbedInDuel FailureCause emitted instead)
+                _participantDisturbanceFactors[i] = 0.0f;
             }
         }
 
@@ -261,7 +303,7 @@ namespace TacticalDirector.GoalkeeperMechanics
         ///        + CROSS_CLAIM_DUEL_AERIAL_W × Aerial_norm.
         /// Weights sum to 1.0. §3.6.3. Goalkeeper Mechanics #11 §3.6.
         /// </summary>
-        public static float ComputeBaseScore(GoalkeeperAgentAttributes attrs)
+        public static float ComputeBaseScore(CrossClaimParticipantAttributes attrs)
         {
             return GoalkeeperConstants.CrossClaimDuelBalanceW  * attrs.BalanceNorm
                  + GoalkeeperConstants.CrossClaimDuelStrengthW * attrs.StrengthNorm
@@ -287,4 +329,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | could not have compiled |
 // |         |            |        | in-engine. No           |
 // |         |            |        | functional change.      |
+// | 1.2     | 2026-09-22 | —      | W3: narrow CrossClaimParticipantAttributes replaces GK-only participant scoring; production tiebreak draw stays owned by #11 and the top/second perturbation is symmetric as §3.6.3 specifies. |
 #endregion
