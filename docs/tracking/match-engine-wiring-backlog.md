@@ -10,7 +10,7 @@
 
 ---
 
-> **UPDATED September 20, 2026 (v1.23):** W2 remains **ACTIVE IN PRODUCTION** and the post-#416 six-seed stall/non-vacuity revalidation remains durable. The September 20 owner decision now retires the `sim_match_engine_close_chance` owner-held exception: its seeds and floors stay unchanged, but the test returns to the ordinary blocking sweep. Exact retirement evidence measured `meanCosine=-0.038` / `goalwardShare=0.496` against floors −0.16 / 0.42; the modest margin is recorded as a future trajectory-sensitivity, not a calibration result. Four Class-A items remain W3, W8, W9, W10. The ten tackle-outcome `[GT]` values and `TackleCooldownStrides` remain uncalibrated, foul/card calibration remains separate, and T-DA-DET-005 remains deferred with no W2 credit.
+> **UPDATED September 21, 2026 (v1.24):** Post-PR #433 sequencing advances into the foul/card calibration phase by **freezing the measurement contract first** at `docs/tracking/foul-card-w3-w9-preregistration.md`. No result-bearing calibration run has been observed and no gameplay `[GT]` moved. The preregistration makes the post-W2 diagnostic source-complete (collision/referee vs already-adjudicated W2 tackle fouls), freezes six full-match seeds, and requires the same foul/card census across W3/W9 plus their shared `AGENT_BALL` contact-feed effects. KD-W1 remains unchanged: W3, W8, W9 and W10 are still unwired, so current-head measurement may characterize the stream but the final constant fit waits for the complete engine; after a listed invalidation trigger the rule is **remeasure, do not widen**.
 
 ## 0. Why this document exists, and the rule it establishes
 
@@ -652,6 +652,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.24 | 2026-09-21 | — | **Foul/card + W3/W9 preregistration frozen before results.** New `foul-card-w3-w9-preregistration.md` fixes the six-full-match corpus, source-complete live discipline accounting, W3/W9 before/after evidence and invalidation/remeasurement rules. No result observed, no `[GT]` moved, no KD-W1 exception; final calibration still follows the remaining Class-A wiring. |
 | 1.23 | 2026-09-20 | — | **Owner retires the close-chance held-red exception.** Exact retirement evidence run `35344056248` passes at meanCosine −0.038 / goalwardShare 0.496 against unchanged floors −0.16 / 0.42. The test returns to the ordinary sweep; no seed, predicate, bound, `[GT]`, W2 behavior, or calibration changes. Historical C1/W6 attribution remains evidence, while future trajectory-moving failures are treated as fresh sensitivity. |
 | 1.22 | 2026-09-20 | — | **Post-#416 W2 six-seed revalidation closeout.** Frozen six-seed production and disarmed-control evidence is now durable; all production seeds clear the preregistered stall/non-vacuity checks, but the healthy disarmed arm prevents an efficacy claim. Production activation remains unchanged; tackle-outcome/cooldown `[GT]`s, T-DA-DET-005, and foul/card calibration remain separate. |
 | 1.21 | 2026-09-16 | — | **W2 production activation.** Shipping fallback `0` → `LooseBallPickupRadiusM`; production contract `> 0` / `<= reclaim radius` is fail-loud; shipping-default composed locks replace the disabled-default posture. Outcome `[GT]`s/cooldown unchanged; foul/card calibration remains separate; no T-DA-DET-005 credit. |
