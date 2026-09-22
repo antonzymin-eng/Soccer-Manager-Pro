@@ -10,6 +10,8 @@ using NUnit.Framework;
 using UnityEngine;
 
 using TacticalDirector.CollisionSystem;
+using TacticalDirector.AgentMovement;
+using TacticalDirector.BallPhysics;
 
 namespace TacticalDirector.HeadingMechanics.Tests
 {
@@ -879,6 +881,34 @@ namespace TacticalDirector.HeadingMechanics.Tests
 
             duel.ClearFrameBuffer();
             Assert.AreEqual(0, duel.DuelCount, "Duel count after ClearFrameBuffer must be 0.");
+        }
+
+        [Test]
+        public void HeadingMechanics_DirectUpdate_DoesNotCarryStaleCollisionFrame()
+        {
+            var heading = new HeadingMechanics(ballSystem: null, rng: null);
+            var agents = new AgentState[HeadingMechanicsConstants.MaxAgents];
+            var ball = new BallState();
+            var evt = new CollisionEvent
+            {
+                MatchTime = 1f,
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                Entity2ID = 2,
+                ContactPoint = new Vector3(10f, 20f, 1f)
+            };
+
+            heading.BeginPhysicsFrame();
+            heading.CollisionConsumer.OnCollisionEvent(in evt);
+            Assert.AreEqual(1, heading.BufferedCollisionContactCount);
+
+            heading.Update(agents, ball, currentFrame: 1, currentMatchTime: 1f);
+            Assert.AreEqual(1, heading.BufferedCollisionContactCount,
+                "Prepared same-frame contacts must survive into the corresponding Update.");
+
+            heading.Update(agents, ball, currentFrame: 2, currentMatchTime: 2f);
+            Assert.AreEqual(0, heading.BufferedCollisionContactCount,
+                "A direct Update without BeginPhysicsFrame must self-clear stale prior-frame contacts.");
         }
 
         [Test]
