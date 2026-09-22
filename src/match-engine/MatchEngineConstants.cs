@@ -301,7 +301,12 @@ namespace TacticalDirector.MatchEngine
         /// is retained exactly. Without this block, a save
         /// between pass CONTACT and the next 10 Hz pressing stride would restore an empty ring and
         /// silently suppress the BACKWARD_PASS trigger.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 22;
+        /// <para>v23 (wiring backlog W3 — goalkeeper cross claims) appends the per-GK
+        /// <c>ClaimIntent</c> payload plus its active latch to the existing goalkeeper block. The claim
+        /// is committed at 10 Hz but its reach envelope remains authoritative across intervening 60 Hz
+        /// frames; serializing the latch + locked target is therefore required for mid-episode restore
+        /// determinism.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 23;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
