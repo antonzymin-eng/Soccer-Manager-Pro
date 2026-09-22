@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
+// Modified: 2026-09-21 (foul/card preregistration review — RedCardProbability documentation corrected: the ~0.25/90 target is total dismissals, not a direct straight-red-band 0.25/22 ratio; value unchanged)
 // Modified: 2026-09-16 (W2 production activation — TackleContactRadiusM now defaults to LooseBallPickupRadiusM after paired post-W6 evidence; the durable <= reclaim-radius invariant is unchanged)
 // Modified: 2026-09-11 (wiring backlog W5 — SNAPSHOT_SCHEMA_VERSION 21 -> 22 for the per-team latest opposing-pass trigger event)
 // Modified: 2026-08-15, later still (reviewed findings pass, L1 — corrected the L3 entry directly below:
@@ -757,7 +758,10 @@ namespace TacticalDirector.MatchEngine
         /// [GT] Probability band width [0,1) for a straight red card on a WHISTLED foul (design note §3).
         /// Read from the rescaled remainder of the single <c>match-flow.card-severity</c> draw that also
         /// decided the call (KD-F2): <c>[0, Red)</c> = straight red, <c>[Red, Red+Yellow)</c> = yellow,
-        /// else no card. Set from the real-football ratio ~0.25 reds per ~22 fouls (KD-F5).
+        /// else no card. The football ~0.25-per-90 target governs TOTAL dismissals, which also include
+        /// second-yellow promotions; it is therefore not a direct `0.25 / 22` derivation for this
+        /// straight-red-only band. The current 0.011 value is retained pending the source-complete
+        /// foul/card recalibration (foul-card-w3-w9-preregistration.md §3.1 / KD-F5 v1.3).
         /// Config key [match-engine] RedCardProbability.
         /// </summary>
         public static readonly float RedCardProbability = Config.GetFloat("match-engine", "RedCardProbability", 0.011f);
@@ -1076,4 +1080,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | change in this file.                                              |
 // | 1.36     | 2026-09-11 | —      | W5: SNAPSHOT_SCHEMA_VERSION 21 -> 22; append latest opposing PassAttemptEvent per pressing team so the newly-live backward-pass trigger survives save/restore. |
 // | 1.37    | 2026-09-16 | —      | W2 production activation: TackleContactRadiusM fallback now inherits LooseBallPickupRadiusM; durable contract is > 0 and <= reclaim radius; outcome/cooldown GTs unchanged. |
+// | 1.38    | 2026-09-21 | —      | Foul/card preregistration review, documentation only: corrected   |
+// |         |            |        | RedCardProbability's stale 0.25/22 rationale. The football 0.25/90|
+// |         |            |        | target is total dismissals; this constant is the straight-red-only |
+// |         |            |        | band and second-yellow promotions contribute separately. Value     |
+// |         |            |        | remains 0.011; no runtime/schema/RNG/GT behavior change.            |
 #endregion
