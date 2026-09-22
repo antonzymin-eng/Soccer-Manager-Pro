@@ -83,7 +83,7 @@ INSTRUMENTS = {
         "src/match-engine/tests/FoulRateDiagnosticTests.cs",
         "src/match-engine/tests/match-engine-tests.gen.csproj",
         "FullyQualifiedName~FoulRateDiagnostic",
-        "=== §5.Z.9 foul-rate measurement ===",
+        "=== #435 §2.1 source-complete foul/card measurement ===",
     ),
     "close-chance": Instrument(
         "close-chance",
