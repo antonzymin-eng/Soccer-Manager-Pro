@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
+// Modified: 2026-09-21 (foul/card preregistration review — FoulCooldownTicks documentation corrected for post-W2 asymmetry: collision candidates obey the gate; decided tackle fouls bypass it but re-arm it; value unchanged)
 // Modified: 2026-09-21 (foul/card preregistration review — RedCardProbability documentation corrected: the ~0.25/90 target is total dismissals, not a direct straight-red-band 0.25/22 ratio; value unchanged)
 // Modified: 2026-09-16 (W2 production activation — TackleContactRadiusM now defaults to LooseBallPickupRadiusM after paired post-W6 evidence; the durable <= reclaim-radius invariant is unchanged)
 // Modified: 2026-09-11 (wiring backlog W5 — SNAPSHOT_SCHEMA_VERSION 21 -> 22 for the per-team latest opposing-pass trigger event)
@@ -774,11 +775,13 @@ namespace TacticalDirector.MatchEngine
         public static readonly float YellowCardProbability = Config.GetFloat("match-engine", "YellowCardProbability", 0.16f);
 
         /// <summary>
-        /// [GT] Ticks a WHISTLED foul suppresses further foul detection (design note §3) — a global
-        /// debounce so one sustained tangle cannot be given twice. 180 ticks = 3 s at 60 Hz, which is
-        /// about how long the restart itself takes with the players still gathered; the previous 1 s was
-        /// thin. A waved-on candidate arms nothing (KD-F3), so this never suppresses a genuine foul that
-        /// follows a no-call. Config key [match-engine] FoulCooldownTicks.
+        /// [GT] Collision/referee-source foul debounce in ticks (design note §3). Any APPLIED foul
+        /// arms/re-arms the 180-tick value, but post-W2 production is asymmetric: the collision
+        /// <c>FROM_BEHIND</c> consumer checks the remaining cooldown while an already-decided tackle
+        /// foul does not, so this is not a global foul suppressor. It prevents repeated collision-source
+        /// calls from one sustained tangle; decided W2 tackle fouls may still be applied during the
+        /// interval and then re-arm it. A waved-on collision candidate arms nothing (KD-F3).
+        /// Config key [match-engine] FoulCooldownTicks.
         /// </summary>
         public static readonly int FoulCooldownTicks = Config.GetInt("match-engine", "FoulCooldownTicks", 180);
 
@@ -1085,4 +1088,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | target is total dismissals; this constant is the straight-red-only |
 // |         |            |        | band and second-yellow promotions contribute separately. Value     |
 // |         |            |        | remains 0.011; no runtime/schema/RNG/GT behavior change.            |
+// | 1.39    | 2026-09-21 | —      | Foul/card preregistration review, documentation only: corrected   |
+// |         |            |        | FoulCooldownTicks' stale "global debounce" description for W2.    |
+// |         |            |        | Collision FROM_BEHIND candidates obey the cooldown; decided tackle |
+// |         |            |        | fouls bypass the gate but re-arm it. Value remains 180; no runtime, |
+// |         |            |        | schema, RNG, or gameplay-[GT] behavior change.                      |
 #endregion
