@@ -4956,7 +4956,8 @@ namespace TacticalDirector.MatchEngine
                 _agentBallConsumer);
         }
 
-        /// <summary>W3 observation-only seam: current-frame coarse cross-claim candidate count.</summary>
+        /// <summary>W3 observation-only seam: current-frame coarse Collision #3 observation count.
+        /// This count is not W3 contest membership.</summary>
         internal int TestOnly_CrossClaimCandidateCount => _crossClaimCandidates.Count;
 
         /// <summary>W3 observation-only seam: current-frame Heading AGENT_BALL feed count.</summary>
@@ -8761,9 +8762,12 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>
         /// W3 frame-local second consumer for the shared AGENT_BALL dependency. It records coarse
-        /// Collision #3 candidates only; ERR-011-011 forbids treating these records as Hand/Head truth.
-        /// The buffer is reset before each Physics publication pass and never crosses a tick/snapshot.
-        /// Capacity is the squad size because PublishAgentBallContacts emits at most one event per agent.
+        /// Collision #3 observations only. ERR-011-011/ERR-011-012 forbid treating these records as
+        /// Hand/Head truth OR as W3 contest membership: high aerials can legitimately produce zero
+        /// records while #10 prepared head geometry or #11 live hand geometry still participates.
+        /// The buffer is therefore a fan-out/diagnostic consumer, not an arbitration gate. It is reset
+        /// before each Physics publication pass and never crosses a tick/snapshot. Capacity is the squad
+        /// size because PublishAgentBallContacts emits at most one event per agent.
         /// </summary>
         internal sealed class CrossClaimCandidateCollector : ICollisionEventConsumer
         {
