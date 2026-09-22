@@ -8,6 +8,7 @@
 // Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: ClearRushIntent + GetState/HasActiveRushIntent observation accessors give CommitRushIntent its first production caller; rushTargetReached ends a rush that ARRIVED — the loose-ball strand. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (W1 AR-2: + ResetSlot — the per-GK arrays are indexed by TEAM, and the agent occupying that slot can change mid-match (dismissal + substitute keeper), so the slot needs a way to be disowned. See docs/tracking/gk-rush-trigger-design.md v1.3)
 // Modified: 2026-09-12 (W4 review closure: OnThreatArmed is explicitly a visible-threat episode anchor; no state/schema change)
+// Modified: 2026-09-22 (W3 / ERR-011-012: claim reach side is locked at commit; claim episode is bounded by existing dive duration and hard-cancelled only by composition policy, not by a re-evaluated height/radius trigger)
 // Modified: 2026-09-11 (W4: OnThreatDeflected restarts reaction timing for a changed live flight without setting the shot-event latch; no new state/schema)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
@@ -446,7 +447,9 @@ namespace TacticalDirector.GoalkeeperMechanics
             _attrs[gkIndex] = attrs;
         }
 
-        /// <summary>Disarms an unconsumed claim episode when its 10 Hz arming geometry lapses.</summary>
+        /// <summary>Hard-cancels a live claim episode. W3 / ERR-011-012: ordinary trigger geometry
+        /// lapsing does not call this; once committed, the claim remains locked until its bounded reach
+        /// duration expires unless the composition root cancels it for possession, SAVE priority, or slot loss.</summary>
         public void ClearClaimIntent(int gkIndex)
         {
             if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
@@ -460,8 +463,8 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>
         /// Returns #11's live hand/reach envelope for the current physics frame. A save dive reuses the
         /// already-launched dive scratch. A cross/aerial claim reuses the SAME
-        /// <see cref="GoalkeeperDiveKinematics"/> reach path, anchored at the claim commit frame and aimed
-        /// laterally at <see cref="ClaimIntent.TargetContactPoint"/>. The intent never acts as a hand
+        /// <see cref="GoalkeeperDiveKinematics"/> reach path, anchored at the claim commit frame with the
+        /// lateral side locked in <see cref="ClaimIntent.ReachDirectionLateral"/>. The target never acts as a hand
         /// collider: callers still decide contact by testing the ball against the returned envelope.
         ///
         /// Claim reach deliberately supplies zero timing jitter. <c>DrawSiteDiveTimingJitter</c> is the
@@ -507,7 +510,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                 }
 
                 peakHandZ = GoalkeeperDiveKinematics.ComputePeakHandZ(_attrs[gkIndex], diveTimingJitterMs: 0.0f);
-                directionLateral = Sign(intent.TargetContactPoint.y - gkPosition.y);
+                directionLateral = intent.ReachDirectionLateral;
             }
             else
             {
@@ -766,9 +769,10 @@ namespace TacticalDirector.GoalkeeperMechanics
                     continue;
                 }
 
-                // A ClaimIntent owns a bounded Stage-0 reach episode. Once its reuse of the #11 dive
-                // envelope has run its full duration, expire the authoritative latch; if the cross is
-                // still claimable the next 10 Hz producer pass may commit a fresh locked target.
+                // W3 / ERR-011-012: ClaimIntent owns one bounded Stage-0 reach episode. Its target and
+                // lateral side stay locked for the whole existing dive-duration window; current ball
+                // height/radius do NOT re-arm or cancel it. At expiry the 10 Hz producer may start a
+                // fresh episode if the ordinary loose-ball/local-volume trigger is true.
                 if (_claimIntentActive[gkIndex])
                 {
                     int claimLaunchFrame =
@@ -1490,4 +1494,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.15 | 2026-09-22 | — | W3: ClaimIntent receives a real production lifecycle plus a read-only      |
 // |      |            |   | TryGetHandReachEnvelope surface. Claims reuse #11's existing dive/reach   |
 // |      |            |   | kinematics with zero save-only timing jitter; no hand collider invented.  |
+// | 1.16 | 2026-09-22 | — | W3 / ERR-011-012: claim reach side is frozen in ClaimIntent at commit,    |
+// |      |            |   | removing the live-position side flip; the existing dive-duration remains  |
+// |      |            |   | the sole bounded episode lifetime. No new GT or RNG draw site.             |
 #endregion
