@@ -1,8 +1,9 @@
 // File:     src/match-engine/tests/FoulRateDiagnosticTests.cs
 // Created:  2026-07-26
-// Modified: 2026-07-26
+// Modified: 2026-09-21 (#435 §2.1 source-complete foul/card measurement instrument; measurement-only)
 // Author:   —
-// Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5.Z.7 item 1 / §5.Z.9;
+// Spec:     foul-card-w3-w9-preregistration.md §2.1 / §3;
+//           Match Engine design note (docs/tracking/match-engine-design.md) §5.Z.7 item 1 / §5.Z.9;
 //           Tactical Instructions #21 §5.6 (the balance-pass precedent); Code Standards #20
 // Purpose:  The MEASUREMENT half of the §5.Z.9 foul-rate balance pass. Phase H left the foul heuristic
 //           issuing ~7 red cards per 9 minutes — every player on the pitch dismissed inside a full match —
@@ -24,12 +25,14 @@
 //             TD_FOUL_DIAGNOSTIC=1 dotnet test -c Release --filter FoulRateDiagnostic
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
 using NUnit.Framework;
 
 using TacticalDirector.CollisionSystem;
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -37,12 +40,11 @@ namespace TacticalDirector.MatchEngine
     internal class FoulRateDiagnosticTests
     {
         /// <summary>
-        /// Ticks per seed. 54 000 = 15 minutes of match time at 60 Hz; six seeds therefore total one
-        /// full match-equivalent of play. Sample size is the binding constraint here rather than run
-        /// length: at the target rate a 90-minute match contains only ~22 fouls, so a shorter corpus
-        /// cannot separate a correct rate from a wrong one.
+        /// Frozen #435 §3 corpus: every seed runs one complete 90-minute match at 60 Hz. Six seeds
+        /// therefore produce six match-equivalents; no seed is added, removed, or shortened after
+        /// results are observed.
         /// </summary>
-        private const int TicksPerSeed = 54000;
+        private const int TicksPerSeed = 324000;
 
         /// <summary>Physics ticks per second (Ball Physics #1 / Deterministic Sim #16: 60 Hz).</summary>
         private const float TicksPerSecond = 60.0f;
@@ -70,8 +72,14 @@ namespace TacticalDirector.MatchEngine
             600f, 1200f, 2000f, 3000f, 4000f, 5000f, 6000f, 8000f, 10000f, 14000f, 20000f, 30000f, 50000f,
         };
 
-        /// <summary>Candidate global foul-detection cooldowns, in ticks (60 = 1 s, the shipped value).</summary>
-        private static readonly int[] CooldownLadderTicks = { 60, 300, 600 };
+        /// <summary>
+        /// Descriptive cooldown replay ladder. #435 §3 requires the live production value (180) beside
+        /// the historical 60/300/600 points; this is not a search over candidate gameplay constants.
+        /// </summary>
+        private static readonly int[] CooldownLadderTicks = { 60, 180, 300, 600 };
+
+        private static readonly byte FoulCommittedOrdinal = EventRegistry.GetOrdinal<FoulCommittedEvent>();
+        private static readonly byte CardIssuedOrdinal = EventRegistry.GetOrdinal<CardIssuedEvent>();
 
         [Test]
         [Category("Calibration")]
@@ -80,139 +88,239 @@ namespace TacticalDirector.MatchEngine
             if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TD_FOUL_DIAGNOSTIC")))
             {
                 Assert.Ignore(
-                    "Set TD_FOUL_DIAGNOSTIC=1 to run the §5.Z.9 foul-rate measurement (several composed matches).");
+                    "Set TD_FOUL_DIAGNOSTIC=1 to run the #435 §2.1 source-complete foul/card measurement.");
             }
 
             // Live play emits #5's FM-08 "lost possession before CONTACT" at Error level whenever a
-            // restart is awarded against a passer mid-windup — an ordinary match event since Phase H,
-            // and a frequent one here because fouls award restarts. §5.Z.7 item 3 records that the log
-            // LEVEL is the stale part, not the cancel path; the composed runs declare it meanwhile.
+            // restart is awarded against a passer mid-windup — an ordinary match event since Phase H.
+            // The diagnostic declares that known log noise while preserving all gameplay behaviour.
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
 
-            var report = new StringBuilder();
-            report.AppendLine("=== §5.Z.9 foul-rate measurement ===");
-            report.AppendLine(
-                Invariant($"seeds={Seeds.Length} ticksPerSeed={TicksPerSeed} ")
-                + Invariant($"({TicksPerSeed / TicksPerSecond / 60f:F1} match-minutes each)"));
-            report.AppendLine();
-
-            // Per-tick peak qualifying force, accumulated across every seed end-to-end. Replaying the
-            // gate over the concatenation is exact for every threshold except at the four seed seams,
-            // where a cooldown could carry across — negligible against 4 x 32 400 ticks.
-            var peakForcePerTick = new float[Seeds.Length * TicksPerSeed];
-            int writeCursor = 0;
-
-            int totalObservedFouls = 0;
-            int totalObservedYellows = 0;
-            int totalObservedReds = 0;
-            int totalAgentAgentContacts = 0;
-            int totalQualifyingContacts = 0;
-
-            foreach (ulong seed in Seeds)
+            try
             {
-                var engine = new MatchEngine(seed);
-                var probe = new FoulCandidateProbe(engine, TicksPerSeed);
-                engine.TestOnly_SetCollisionObserver(probe);
-
-                for (int t = 0; t < TicksPerSeed; t++)
-                {
-                    probe.BeginTick(t);
-                    engine.RunTick();
-                    probe.EndTick();
-                }
-
-                engine.TestOnly_SetCollisionObserver(null);
-
-                Array.Copy(probe.PeakForcePerTick, 0, peakForcePerTick, writeCursor, TicksPerSeed);
-                writeCursor += TicksPerSeed;
-
-                totalAgentAgentContacts += probe.AgentAgentContacts;
-                totalQualifyingContacts += probe.QualifyingContacts;
-
-                int yellows = 0;
-                int reds = 0;
-                for (int a = 0; a < MatchEngineConstants.SQUAD_SIZE; a++)
-                {
-                    yellows += engine.TestOnly_YellowCards(a);
-                    if (engine.TestOnly_IsSentOff(a))
-                    {
-                        reds++;
-                    }
-                }
-
-                totalObservedYellows += yellows;
-                totalObservedReds += reds;
-                totalObservedFouls += probe.FoulsApplied;
-
+                var report = new StringBuilder();
+                report.AppendLine("=== #435 §2.1 source-complete foul/card measurement ===");
                 report.AppendLine(
-                    Invariant($"seed 0x{seed:X16}: agentAgentContacts={probe.AgentAgentContacts} ")
-                    + Invariant($"qualifyingFromBehind={probe.QualifyingContacts} ")
-                    + Invariant($"foulsApplied={probe.FoulsApplied} yellows={yellows} sentOff={reds}"));
-            }
+                    Invariant($"seeds={Seeds.Length} ticksPerSeed={TicksPerSeed} ")
+                    + Invariant($"({TicksPerSeed / TicksPerSecond / 60f:F1} match-minutes each)"));
+                report.AppendLine();
 
-            report.AppendLine();
-            report.AppendLine(
-                Invariant($"TOTALS over {Seeds.Length} seeds: contacts={totalAgentAgentContacts} ")
-                + Invariant($"qualifying={totalQualifyingContacts} fouls={totalObservedFouls} ")
-                + Invariant($"yellows={totalObservedYellows} reds={totalObservedReds}"));
-            report.AppendLine(
-                Invariant($"SHIPPED per-90-min rates: fouls={PerMatch(totalObservedFouls):F1} ")
-                + Invariant($"yellows={PerMatch(totalObservedYellows):F1} ")
-                + Invariant($"reds={PerMatch(totalObservedReds):F2}"));
-            report.AppendLine();
+                // Preserve the original offline replay population: the strongest cross-team FROM_BEHIND
+                // force per tick before the production force threshold/cooldown. Concatenating seeds is
+                // approximate at the five seed seams because replay cooldown state is not reset there.
+                var peakForcePerTick = new float[Seeds.Length * TicksPerSeed];
+                int writeCursor = 0;
 
-            report.AppendLine("--- force distribution of cross-team FROM_BEHIND contacts (N) ---");
-            report.AppendLine(DescribeDistribution(peakForcePerTick));
-            report.AppendLine();
+                // #435 §2.1's force distribution is a different population: every FROM_BEHIND contact
+                // that clears type/force/team/participation at the live production threshold.
+                var qualifyingContactForces = new List<float>();
 
-            report.AppendLine("--- fouls per 90 minutes, gate replayed offline ---");
-            report.AppendLine("threshold(N)  " + string.Join("  ", Array.ConvertAll(
-                CooldownLadderTicks, c => Invariant($"cd={c,4}"))));
-            foreach (float threshold in ThresholdLadderN)
-            {
-                var row = new StringBuilder(Invariant($"{threshold,11:F0}  "));
-                foreach (int cooldown in CooldownLadderTicks)
+                int totalAgentAgentContacts = 0;
+                int totalFromBehindCandidates = 0;
+                int totalFromBehindCalled = 0;
+                int totalSlideTackleCandidates = 0;
+                int totalSlideTackleCalled = 0;
+                int totalCandidateDisplacedByDecided = 0;
+                int totalCooldownSuppressionsFromBehind = 0;
+                int totalSlideTackleCallsDuringCooldown = 0;
+                int totalFouls = 0;
+                int totalYellowCards = 0;
+                int totalStraightReds = 0;
+                int totalSecondYellowDismissals = 0;
+                int totalDismissals = 0;
+                int totalPlayedTicks = 0;
+
+                var structuralFindings = new List<string>();
+
+                foreach (ulong seed in Seeds)
                 {
-                    int fouls = ReplayGate(peakForcePerTick, threshold, cooldown);
-                    row.Append(Invariant($"{PerMatch(fouls),8:F1}  "));
-                }
-                report.AppendLine(row.ToString());
-            }
+                    var engine = new MatchEngine(seed);
+                    var probe = new FoulCandidateProbe(engine, TicksPerSeed);
+                    engine.TestOnly_SetCollisionObserver(probe);
 
-            report.AppendLine();
-            report.AppendLine("--- CANDIDATE MODEL: force-scaled call probability (§5.Z.9) ---");
-            report.AppendLine("A qualifying contact is WHISTLED with probability");
-            report.AppendLine("  p(F) = min(1, callProbability * F / threshold)");
-            report.AppendLine("so the harder the challenge the likelier it is given, but a hard contact is");
-            report.AppendLine("never automatically a foul. A no-call arms no cooldown.");
-            report.AppendLine("Rates are per 90 minutes.");
-            report.AppendLine();
-            report.AppendLine("  thr(N)   callP   cd     fouls  yellows   reds");
-            foreach (float threshold in new[] { 900f, 1200f, 1500f })
-            {
-                foreach (float callP in new[] { 0.01f, 0.02f, 0.03f, 0.04f, 0.06f, 0.10f })
-                {
-                    foreach (int cooldown in new[] { 60, 180 })
+                    for (int t = 0; t < TicksPerSeed; t++)
                     {
-                        ReplayScaled(
-                            peakForcePerTick, threshold, callP, cooldown,
-                            out int fouls, out int yellows, out int reds);
+                        probe.BeginTick(t);
+                        engine.RunTick();
+                        probe.EndTick();
+                    }
 
-                        report.AppendLine(
-                            Invariant($"  {threshold,6:F0}  {callP,5:F3}  {cooldown,4}  ")
-                            + Invariant($"{PerMatch(fouls),7:F1}  {PerMatch(yellows),7:F1}  ")
-                            + Invariant($"{PerMatch(reds),6:F2}"));
+                    engine.TestOnly_SetCollisionObserver(null);
+
+                    Array.Copy(probe.PeakForcePerTick, 0, peakForcePerTick, writeCursor, TicksPerSeed);
+                    writeCursor += TicksPerSeed;
+                    qualifyingContactForces.AddRange(probe.QualifyingContactForces);
+
+                    totalAgentAgentContacts += probe.AgentAgentContacts;
+                    totalFromBehindCandidates += probe.FromBehindCandidates;
+                    totalFromBehindCalled += probe.FromBehindCalled;
+                    totalSlideTackleCandidates += probe.SlideTackleCandidates;
+                    totalSlideTackleCalled += probe.SlideTackleCalled;
+                    totalCandidateDisplacedByDecided += probe.CandidateDisplacedByDecided;
+                    totalCooldownSuppressionsFromBehind += probe.FoulCooldownSuppressionsFromBehind;
+                    totalSlideTackleCallsDuringCooldown += probe.SlideTackleCallsDuringFoulCooldown;
+                    totalFouls += probe.TotalFouls;
+                    totalYellowCards += probe.YellowCards;
+                    totalStraightReds += probe.StraightReds;
+                    totalSecondYellowDismissals += probe.SecondYellowDismissals;
+                    totalDismissals += probe.TotalDismissals;
+                    totalPlayedTicks += probe.PlayedTicks;
+
+                    if (probe.FromBehindCalled + probe.SlideTackleCalled != probe.TotalFouls)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: applied-foul identity failed: ")
+                            + Invariant($"fromBehindCalled={probe.FromBehindCalled} + ")
+                            + Invariant($"slideTackleCalled={probe.SlideTackleCalled} != totalFouls={probe.TotalFouls}; ")
+                            + "stop and localize a third production foul source.");
+                    }
+                    if (probe.TotalDismissals != probe.StraightReds + probe.SecondYellowDismissals)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: dismissal identity failed: ")
+                            + Invariant($"totalDismissals={probe.TotalDismissals}, straightReds={probe.StraightReds}, ")
+                            + Invariant($"secondYellowDismissals={probe.SecondYellowDismissals}."));
+                    }
+                    if (probe.UnknownFoulSources != 0 || probe.UnknownCardKinds != 0)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: unknown discipline ordinals: ")
+                            + Invariant($"foulSources={probe.UnknownFoulSources}, cardKinds={probe.UnknownCardKinds}; ")
+                            + "stop and localize before calibration.");
+                    }
+                    if (engine.TestOnly_TackleSlideTackleFouls != probe.SlideTackleCalled)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: live SLIDE_TACKLE counter ")
+                            + Invariant($"{engine.TestOnly_TackleSlideTackleFouls} != ledger count {probe.SlideTackleCalled}."));
+                    }
+
+                    report.AppendLine(Invariant($"seed 0x{seed:X16}:"));
+                    report.AppendLine(
+                        Invariant($"  fromBehindCandidates={probe.FromBehindCandidates} ")
+                        + Invariant($"fromBehindCalled={probe.FromBehindCalled} ")
+                        + Invariant($"slideTackleCandidates={probe.SlideTackleCandidates} ")
+                        + Invariant($"slideTackleCalled={probe.SlideTackleCalled}"));
+                    report.AppendLine(
+                        Invariant($"  candidateDisplacedByDecided={probe.CandidateDisplacedByDecided} ")
+                        + Invariant($"foulCooldownSuppressionsFromBehind={probe.FoulCooldownSuppressionsFromBehind} ")
+                        + Invariant($"slideTackleCallsDuringFoulCooldown={probe.SlideTackleCallsDuringFoulCooldown}"));
+                    report.AppendLine(
+                        Invariant($"  totalFouls={probe.TotalFouls} yellowCards={probe.YellowCards} ")
+                        + Invariant($"straightReds={probe.StraightReds} ")
+                        + Invariant($"secondYellowDismissals={probe.SecondYellowDismissals} ")
+                        + Invariant($"totalDismissals={probe.TotalDismissals} playedTicks={probe.PlayedTicks}"));
+                }
+
+                report.AppendLine();
+                report.AppendLine("--- aggregate #435 §2.1 discipline stream ---");
+                report.AppendLine(
+                    Invariant($"fromBehindCandidates={totalFromBehindCandidates} ")
+                    + Invariant($"fromBehindCalled={totalFromBehindCalled} ")
+                    + Invariant($"slideTackleCandidates={totalSlideTackleCandidates} ")
+                    + Invariant($"slideTackleCalled={totalSlideTackleCalled}"));
+                report.AppendLine(
+                    Invariant($"candidateDisplacedByDecided={totalCandidateDisplacedByDecided} ")
+                    + Invariant($"foulCooldownSuppressionsFromBehind={totalCooldownSuppressionsFromBehind} ")
+                    + Invariant($"slideTackleCallsDuringFoulCooldown={totalSlideTackleCallsDuringCooldown}"));
+                report.AppendLine(
+                    Invariant($"totalFouls={totalFouls} yellowCards={totalYellowCards} ")
+                    + Invariant($"straightReds={totalStraightReds} ")
+                    + Invariant($"secondYellowDismissals={totalSecondYellowDismissals} ")
+                    + Invariant($"totalDismissals={totalDismissals} playedTicks={totalPlayedTicks} ")
+                    + Invariant($"agentAgentContacts={totalAgentAgentContacts}"));
+                report.AppendLine(
+                    Invariant($"SHIPPED per-90-min rates: fouls={PerMatch(totalFouls):F2} ")
+                    + Invariant($"yellows={PerMatch(totalYellowCards):F2} ")
+                    + Invariant($"straightReds={PerMatch(totalStraightReds):F3} ")
+                    + Invariant($"secondYellowDismissals={PerMatch(totalSecondYellowDismissals):F3} ")
+                    + Invariant($"totalDismissals={PerMatch(totalDismissals):F3}"));
+
+                report.AppendLine();
+                report.AppendLine("--- qualifyingContactForce distribution (FROM_BEHIND, N) ---");
+                report.AppendLine(DescribeDistribution(qualifyingContactForces));
+                report.AppendLine();
+
+                report.AppendLine("--- fouls per 90 minutes, collision gate replayed offline ---");
+                report.AppendLine("threshold(N)  " + string.Join("  ", Array.ConvertAll(
+                    CooldownLadderTicks, cooldown => Invariant($"cd={cooldown,4}"))));
+                foreach (float threshold in ThresholdLadderN)
+                {
+                    var row = new StringBuilder(Invariant($"{threshold,11:F0}  "));
+                    foreach (int cooldown in CooldownLadderTicks)
+                    {
+                        int fouls = ReplayGate(peakForcePerTick, threshold, cooldown);
+                        row.Append(Invariant($"{PerMatch(fouls),8:F1}  "));
+                    }
+                    report.AppendLine(row.ToString());
+                }
+
+                report.AppendLine();
+                report.AppendLine("--- CANDIDATE MODEL: force-scaled collision call probability (§5.Z.9) ---");
+                report.AppendLine("A qualifying collision contact is WHISTLED with probability");
+                report.AppendLine("  p(F) = min(1, callProbability * F / threshold)");
+                report.AppendLine("The replay is collision-only; the live source-complete counts above are authoritative");
+                report.AppendLine("for W2 tackle interaction, cooldown bypass, restarts, and card decomposition.");
+                report.AppendLine("Rates are per 90 minutes.");
+                report.AppendLine();
+                report.AppendLine("  thr(N)   callP   cd     fouls  yellows   reds");
+                foreach (float threshold in new[] { 900f, 1200f, 1500f })
+                {
+                    foreach (float callP in new[] { 0.01f, 0.02f, 0.03f, 0.04f, 0.06f, 0.10f })
+                    {
+                        foreach (int cooldown in new[] { 60, 180 })
+                        {
+                            ReplayScaled(
+                                peakForcePerTick, threshold, callP, cooldown,
+                                out int fouls, out int yellows, out int reds);
+
+                            report.AppendLine(
+                                Invariant($"  {threshold,6:F0}  {callP,5:F3}  {cooldown,4}  ")
+                                + Invariant($"{PerMatch(fouls),7:F1}  {PerMatch(yellows),7:F1}  ")
+                                + Invariant($"{PerMatch(reds),6:F2}"));
+                        }
                     }
                 }
+
+                report.AppendLine();
+                report.AppendLine("Real-football reference: ~22 fouls, ~3.5 yellows, ~0.25 reds per match.");
+
+                TestContext.WriteLine(report.ToString());
+
+                // These are reconciliation/shape checks from #435 §2.1, not rate assertions. A failure
+                // means the measurement taxonomy no longer describes production and calibration must stop.
+                if (totalFromBehindCalled + totalSlideTackleCalled != totalFouls)
+                {
+                    structuralFindings.Add(
+                        Invariant($"aggregate applied-foul identity failed: {totalFromBehindCalled} + ")
+                        + Invariant($"{totalSlideTackleCalled} != {totalFouls}."));
+                }
+                if (totalDismissals != totalStraightReds + totalSecondYellowDismissals)
+                {
+                    structuralFindings.Add(
+                        Invariant($"aggregate dismissal identity failed: {totalDismissals} != ")
+                        + Invariant($"{totalStraightReds} + {totalSecondYellowDismissals}."));
+                }
+                if (totalPlayedTicks != Seeds.Length * TicksPerSeed)
+                {
+                    structuralFindings.Add(
+                        Invariant($"playedTicks={totalPlayedTicks} != frozen denominator ")
+                        + Invariant($"{Seeds.Length * TicksPerSeed}."));
+                }
+
+                if (structuralFindings.Count != 0)
+                {
+                    Assert.Fail(
+                        "Source-complete measurement contract no longer reconciles production:\n"
+                        + string.Join("\n", structuralFindings));
+                }
+
+                Assert.Pass("Diagnostic only — measured rates are intentionally assertion-free; see run output.");
             }
-
-            report.AppendLine();
-            report.AppendLine("Real-football reference: ~22 fouls, ~3.5 yellows, ~0.25 reds per match.");
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
-
-            TestContext.WriteLine(report.ToString());
-            Assert.Pass("Diagnostic only — see the run output.");
+            finally
+            {
+                UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
+            }
         }
 
         /// <summary>
@@ -329,43 +437,32 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
-        private static string DescribeDistribution(float[] peakForcePerTick)
+        private static string DescribeDistribution(List<float> qualifyingContactForces)
         {
-            int nonZero = 0;
-            for (int i = 0; i < peakForcePerTick.Length; i++)
+            if (qualifyingContactForces.Count == 0)
             {
-                if (peakForcePerTick[i] > 0f)
-                {
-                    nonZero++;
-                }
+                return "  (no production-threshold FROM_BEHIND candidates observed)";
             }
 
-            if (nonZero == 0)
-            {
-                return "  (no cross-team FROM_BEHIND contacts observed)";
-            }
-
-            var forces = new float[nonZero];
-            int w = 0;
-            for (int i = 0; i < peakForcePerTick.Length; i++)
-            {
-                if (peakForcePerTick[i] > 0f)
-                {
-                    forces[w++] = peakForcePerTick[i];
-                }
-            }
+            float[] forces = qualifyingContactForces.ToArray();
             Array.Sort(forces);
 
             var sb = new StringBuilder();
-            sb.AppendLine(
-                Invariant($"  ticks with a qualifying contact: {nonZero} of {peakForcePerTick.Length} ")
-                + Invariant($"({100f * nonZero / peakForcePerTick.Length:F2}%)"));
-            foreach (float q in new[] { 0.50f, 0.75f, 0.90f, 0.95f, 0.99f, 0.999f, 1.0f })
-            {
-                int idx = Math.Min(forces.Length - 1, (int)(q * (forces.Length - 1)));
-                sb.AppendLine(Invariant($"  p{q * 100f,6:F1} = {forces[idx],12:F0} N"));
-            }
+            sb.AppendLine(Invariant($"  candidates={forces.Length}"));
+            AppendPercentile(sb, forces, "p50", 0.50f);
+            AppendPercentile(sb, forces, "p75", 0.75f);
+            AppendPercentile(sb, forces, "p90", 0.90f);
+            AppendPercentile(sb, forces, "p95", 0.95f);
+            AppendPercentile(sb, forces, "p99", 0.99f);
+            AppendPercentile(sb, forces, "p99.9", 0.999f);
+            sb.AppendLine(Invariant($"  max   = {forces[forces.Length - 1],12:F0} N"));
             return sb.ToString().TrimEnd();
+        }
+
+        private static void AppendPercentile(StringBuilder sb, float[] sorted, string label, float quantile)
+        {
+            int index = Math.Min(sorted.Length - 1, (int)(quantile * (sorted.Length - 1)));
+            sb.AppendLine(Invariant($"  {label,-5} = {sorted[index],12:F0} N"));
         }
 
         private static float PerMatch(int countOverRun) =>
@@ -374,48 +471,139 @@ namespace TacticalDirector.MatchEngine
         private static string Invariant(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
 
         /// <summary>
-        /// Records, per tick, the largest <c>ForceMagnitude</c> among cross-team FROM_BEHIND agent-agent
-        /// contacts whose participants are both still on the pitch — the exact predicate
-        /// <see cref="MatchEngine"/>'s foul consumer + application site jointly apply, minus the force
-        /// threshold and the cooldown, which is what the offline replay sweeps.
+        /// #435 §2.1 measurement probe. The collision callback mirrors the production foul consumer's
+        /// type/force/team gates and the application site's participation gate, while the end-of-tick
+        /// ledger tap records what production actually applied. It never writes engine state.
+        ///
+        /// <para>The probe deliberately keeps two force populations. <see cref="PeakForcePerTick"/> is
+        /// threshold-free so the historical offline threshold replay remains usable.
+        /// <see cref="QualifyingContactForces"/> contains only live-threshold FROM_BEHIND candidates and
+        /// is the preregistered p50/p75/p90/p95/p99/p99.9/max population.</para>
         /// </summary>
         private sealed class FoulCandidateProbe : ICollisionEventConsumer
         {
             private readonly MatchEngine _engine;
             private int _tick;
+            private int _cooldownAtTickStart;
+            private int _tackleFoulsAtTickStart;
+            private int _previousTackleFouls;
 
             public FoulCandidateProbe(MatchEngine engine, int tickCapacity)
             {
                 _engine = engine;
                 PeakForcePerTick = new float[tickCapacity];
+                QualifyingContactForces = new List<float>(tickCapacity);
             }
 
             public float[] PeakForcePerTick { get; }
+            public List<float> QualifyingContactForces { get; }
+
             public int AgentAgentContacts { get; private set; }
-            public int QualifyingContacts { get; private set; }
+            public int FromBehindCandidates { get; private set; }
+            public int FromBehindCalled { get; private set; }
+            public int SlideTackleCandidates { get; private set; }
+            public int SlideTackleCalled { get; private set; }
+            public int CandidateDisplacedByDecided { get; private set; }
+            public int FoulCooldownSuppressionsFromBehind { get; private set; }
+            public int SlideTackleCallsDuringFoulCooldown { get; private set; }
+            public int TotalFouls { get; private set; }
+            public int YellowCards { get; private set; }
+            public int StraightReds { get; private set; }
+            public int SecondYellowDismissals { get; private set; }
+            public int TotalDismissals { get; private set; }
+            public int PlayedTicks { get; private set; }
+            public int UnknownFoulSources { get; private set; }
+            public int UnknownCardKinds { get; private set; }
 
-            /// <summary>Fouls the production gate actually applied, inferred from the cooldown re-arming.</summary>
-            public int FoulsApplied { get; private set; }
+            public void BeginTick(int tick)
+            {
+                _tick = tick;
+                // TryResolveTackles runs in AI before Resolve decrements the foul cooldown. Capturing the
+                // pre-tick value therefore tells us whether a decided tackle foul was RAISED through the
+                // current production bypass while the collision source was still under cooldown.
+                _cooldownAtTickStart = _engine.TestOnly_FoulCooldownRemaining;
+                _tackleFoulsAtTickStart = _engine.TestOnly_TackleOutcomeCounts.Foul;
+            }
 
-            private int _lastCooldownSeen;
-
-            public void BeginTick(int tick) => _tick = tick;
-
-            /// <summary>
-            /// Counts applied fouls. The cooldown is re-armed only by <c>ApplyFoulIfCaptured</c> and
-            /// decremented by one per tick, so an INCREASE across a tick is exactly one applied foul.
-            /// Sampled AFTER the tick, not before: sampling first would miss a foul given on the run's
-            /// final tick, and the acceptance scenario counts the same way — a measuring instrument that
-            /// disagrees with the thing it calibrates is worse than no instrument.
-            /// </summary>
             public void EndTick()
             {
-                int cooldown = _engine.TestOnly_FoulCooldownRemaining;
-                if (cooldown > _lastCooldownSeen)
+                var outcomes = _engine.TestOnly_TackleOutcomeCounts;
+                int newTackleCandidates = outcomes.Foul - _previousTackleFouls;
+                if (newTackleCandidates < 0)
                 {
-                    FoulsApplied++;
+                    throw new InvalidOperationException(
+                        "FoulRateDiagnostic: tackle foul counter moved backwards inside one engine run.");
                 }
-                _lastCooldownSeen = cooldown;
+
+                SlideTackleCandidates += newTackleCandidates;
+                _previousTackleFouls = outcomes.Foul;
+
+                // TickLedgerSnapshot is captured after Resolve and before EventBus resets the tick, so it
+                // is the exact production event stream without process-static subscription leakage.
+                int records = _engine.TickLedgerCount;
+                for (int i = 0; i < records; i++)
+                {
+                    byte ordinal = _engine.TickLedgerOrdinal(i);
+                    if (ordinal == FoulCommittedOrdinal)
+                    {
+                        FoulCommittedEvent foul = _engine.TickLedgerRecord<FoulCommittedEvent>(i);
+                        TotalFouls++;
+
+                        if (foul.FoulKind == (byte)ContactType.FROM_BEHIND)
+                        {
+                            FromBehindCalled++;
+                        }
+                        else if (foul.FoulKind == (byte)ContactType.SLIDE_TACKLE)
+                        {
+                            SlideTackleCalled++;
+
+                            // The tackle decision was made in AI, before Resolve's cooldown decrement.
+                            // This is the preregistered bypass count even when a pre-tick value of 1
+                            // reaches 0 before ApplyFoulIfCaptured later in the same tick.
+                            if (_cooldownAtTickStart > 0)
+                            {
+                                SlideTackleCallsDuringFoulCooldown++;
+                            }
+                        }
+                        else
+                        {
+                            UnknownFoulSources++;
+                        }
+
+                        continue;
+                    }
+
+                    if (ordinal != CardIssuedOrdinal)
+                    {
+                        continue;
+                    }
+
+                    CardIssuedEvent card = _engine.TickLedgerRecord<CardIssuedEvent>(i);
+                    if (card.CardKind == MatchEngineConstants.CardKindYellow)
+                    {
+                        YellowCards++;
+                    }
+                    else if (card.CardKind == MatchEngineConstants.CardKindRed)
+                    {
+                        StraightReds++;
+                        TotalDismissals++;
+                    }
+                    else if (card.CardKind == MatchEngineConstants.CardKindSecondYellow)
+                    {
+                        // #435 freezes the existing scenario semantics: the second caution is one
+                        // additional yellow AND one dismissal, even though production publishes one
+                        // CARD_KIND_SECOND_YELLOW event rather than yellow-then-red.
+                        YellowCards++;
+                        SecondYellowDismissals++;
+                        TotalDismissals++;
+                    }
+                    else
+                    {
+                        UnknownCardKinds++;
+                    }
+                }
+
+                PlayedTicks++;
             }
 
             public void OnCollisionEvent(in CollisionEvent evt)
@@ -442,12 +630,38 @@ namespace TacticalDirector.MatchEngine
                     return;
                 }
 
-                QualifyingContacts++;
-
+                // Threshold-free per-tick peak for the legacy descriptive threshold replay.
                 if (_tick >= 0 && _tick < PeakForcePerTick.Length
                     && foul.ForceMagnitude > PeakForcePerTick[_tick])
                 {
                     PeakForcePerTick[_tick] = foul.ForceMagnitude;
+                }
+
+                // Everything below is the source-complete production candidate population.
+                if (foul.ForceMagnitude < MatchEngineConstants.FoulImpactForceThresholdN)
+                {
+                    return;
+                }
+
+                FromBehindCandidates++;
+                QualifyingContactForces.Add(foul.ForceMagnitude);
+
+                // MatchFlowCollisionConsumer checks cooldown BEFORE it checks the single-slot decided
+                // candidate. If both conditions are true, production suppresses at the cooldown site,
+                // so the categories stay mutually faithful to the current control-flow order.
+                if (_engine.TestOnly_FoulCooldownRemaining > 0)
+                {
+                    FoulCooldownSuppressionsFromBehind++;
+                    return;
+                }
+
+                // AI precedes Physics/Resolve. If #14's cumulative foul outcome advanced since
+                // BeginTick, RaiseDecidedFoulCandidate has already seated a decided tackle candidate
+                // in the one per-tick slot. The consumer's next early return is therefore the exact
+                // #435 §2.1 same-tick displacement site.
+                if (_engine.TestOnly_TackleOutcomeCounts.Foul > _tackleFoulsAtTickStart)
+                {
+                    CandidateDisplacedByDecided++;
                 }
             }
         }
@@ -460,4 +674,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | nothing about the rate — it measures the force distribution and replays |
 // |         |            |        | the gate offline across a (threshold, cooldown) ladder so one composed  |
 // |         |            |        | run yields the whole curve.                                             |
+// | 1.1     | 2026-09-21 | —      | #435 §2.1/§3: source-complete live discipline census over the frozen     |
+// |         |            |        | six full-match corpus. Splits collision/tackle candidates + applied     |
+// |         |            |        | calls, measures cooldown suppression/bypass and same-tick displacement, |
+// |         |            |        | decomposes card events (yellow/straight-red/second-yellow), reports the |
+// |         |            |        | qualifying-force quantiles, and adds live cooldown 180 to the replay.   |
+// |         |            |        | Measurement-only: no gameplay [GT] or production behaviour changed.     |
 #endregion
