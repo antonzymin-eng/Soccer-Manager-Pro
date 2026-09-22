@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 21, 2026 — **PR #433 evidence/governance closure: manifest integrity closed; shallow ancestry narrowed.**
+> **Last Updated:** September 21, 2026 — **Foul/card calibration + W3/W9 preregistration frozen before result-bearing measurement.**
+>
+> Post-PR #433 sequencing advances into the next football-engine phase without crossing KD-W1. New `docs/tracking/foul-card-w3-w9-preregistration.md` freezes the existing six foul-diagnostic seeds at full 90-minute length, requires source-complete live accounting for collision/referee vs already-adjudicated W2 tackle fouls, forbids summing independent source rates, preserves KD-F5's ~22 / ~3.5 / ~0.25 anchors, treats the sparse red count as validation rather than a fit target, and freezes a sharper calibration-regression envelope plus the rule **remeasure, do not widen**.
+>
+> W3/W9 are preregistered as trajectory/contact-stream invalidators on the same corpus. W3 must first define the shared multi-agent `AGENT_BALL` feed owner/slices/ordering/evidence/estimate; W9 retains its ActionType ordinal-8/3-bit rebaseline problem. Their before/after reports carry cross/header/contact metrics and the complete foul/card census. `match-engine-wiring-backlog.md` advances **v1.23 → v1.24** and `foul-discipline-balance-design.md` **v1.2 → v1.3** to point at the frozen contract; `open-issues.md` advances the live pointer/status. **No source/test behavior, gameplay `[GT]`, calibration result, acceptance result, spec, SPEC_INDEX row, assembly edge, snapshot/save schema, digest, RNG stream/domain/draw site/order or ERR changes.** The preregistration must land before the source-complete characterization is run.
+>
+> **Last Updated (prior):** September 21, 2026 — **PR #433 evidence/governance closure: manifest integrity closed; shallow ancestry narrowed.**
 >
 > The PR #424 SHA-256 remainder is mechanically closed. New `tools/dotnet-ci/check_evidence_manifests.py` uses the Git index—not arbitrary working-tree files—for complete `SHA256SUMS` scope, so ignored/untracked files cannot turn required CI red. Every tracked top-level evidence directory must register an integrity contract: full SHA manifest, artifact-scoped SHA manifest, or named external verifier. New unregistered directories and unrecognized `*SHA256SUMS*` names fail closed; the PR420 `TRX-SHA256SUMS` ledger is explicitly allowlisted under its existing `pr420-evidence.py` owner. The tooling suite exercises the committed repository and negative fixtures inside required `Spec hygiene checks`.
 >
