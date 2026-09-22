@@ -277,7 +277,11 @@ that type-I rate is why the boundary is not treated as a fail. If the aggregate 
 from it. The foul/yellow/source characterization may continue, but card-severity closure remains
 blocked until a separately preregistered larger rare-event corpus resolves the dismissal rate.
 Counts **0-2** satisfy the rare-dismissal guard; counts **4+** fail it (Poisson tail about **6.6%** at
-the same anchor).
+the same anchor). **PASS here is only a coarse non-regression/plausibility result, not validation of
+the red-card fit or evidence that a twofold dismissal overshoot has been excluded**: under the same
+Poisson reference, a true 0.50/90 rate (six-match mean `lambda = 3.0`) still lands in the 0-2 PASS
+bucket about **42.3%** of the time. Card-severity closure therefore still requires the separately
+preregistered rare-event estimator/corpus before any `RedCardProbability` fit can be accepted.
 
 `Cautions / fouls` is intentionally **not** the existing
 `MatchEngineDisciplineScenarios.card-rate-is-a-minority-of-fouls` quantity. That legacy plausibility
