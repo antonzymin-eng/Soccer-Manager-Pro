@@ -87,14 +87,16 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
-        public void ClaimArmed_PossessedOrBelowClaimHeight_DoesNotArm()
+        public void ClaimArmed_PossessedBallDoesNotArm_ButReachableLowBallMay()
         {
             var gk = new Vector3(2f, 34f, 0f);
             var high = new Vector3(2.5f, 34.5f, MatchEngineConstants.GkRushMaxBallHeightM + 0.1f);
-            var low = new Vector3(2.5f, 34.5f, MatchEngineConstants.GkRushMaxBallHeightM);
+            var low = new Vector3(2.5f, 34.5f, 1.8f);
 
             Assert.IsFalse(GkHeadingIntentSource.ClaimArmed(in gk, in high, ballLoose: false));
-            Assert.IsFalse(GkHeadingIntentSource.ClaimArmed(in gk, in low, ballLoose: true));
+            Assert.IsTrue(
+                GkHeadingIntentSource.ClaimArmed(in gk, in low, ballLoose: true),
+                "ERR-011-012: the W1 2.5 m rush ceiling is not a W3 claim floor; #11 reach geometry decides height.");
         }
 
         [Test]
@@ -272,4 +274,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | ERR-008-002 home/away lock exercised team-AGNOSTIC code at     |
 // |         |            |        | TeamId = 0 on both sides. The mirror lock now lives here,      |
 // |         |            |        | where the team branch is.                                      |
+// | 1.5     | 2026-09-22 | —      | W3 / ERR-011-012: ClaimArmed regression locks no vertical arming floor; possessed ball still refuses. |
 #endregion
