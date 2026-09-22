@@ -14,6 +14,7 @@ using UnityEngine;
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.CollisionSystem;
 using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.HeadingMechanics.Tests
@@ -41,6 +42,7 @@ namespace TacticalDirector.HeadingMechanics.Tests
     public sealed class HeadingAimCompositionTests
     {
         private const int HeaderAgentId = 3;
+        private const int OtherHeaderAgentId = 4;
         private const int StartFrame = 0;
 
         /// <summary>
@@ -221,6 +223,75 @@ namespace TacticalDirector.HeadingMechanics.Tests
             Assert.That(float.IsFinite(outgoing.x) && float.IsFinite(outgoing.y) && float.IsFinite(outgoing.z));
         }
 
+        [Test]
+        public void HighAerial_TwoPlayerContact_RemainsContestedWithoutCollisionCylinderGate()
+        {
+            Vector3 incoming = new Vector3(9.0f, 0.0f, -3.0f);
+            BallState start = BuildArrivingBall(incoming, out Vector3 contactPoint);
+            Assert.That(contactPoint.z, Is.GreaterThan(CollisionPhysicsConstants.AgentReachHeight),
+                "Precondition: the header must be above Collision #3's Stage-0 AGENT_BALL reach cap.");
+
+            var ballSystem = new CapturingBallSystem(start);
+            var heading = new HeadingMechanics(ballSystem, new FixedRng());
+            AgentState[] agents = BuildAgents();
+
+            // Two opponents meet the same aerial ball from opposite sides of its Y line. Both remain
+            // inside #10's 0.18 m head-contact radius, while the contact is deliberately above #3's
+            // 2.0 m generic body cylinder. This is the PR #439 regression arm: a #3-gated duel would
+            // become uncontested even though #10 says both heads made the ball.
+            agents[HeaderAgentId].Position = new Vector2(52f, 33.95f);
+            agents[OtherHeaderAgentId].Position = new Vector2(52f, 34.05f);
+            agents[OtherHeaderAgentId].CurrentState = AgentMovementState.JOGGING;
+
+            HeaderIntent intent = new HeaderIntent
+            {
+                PowerIntent = 0.7f,
+                ContactPointIntent = Vector2.zero,
+                TargetIntent = new Vector3(90f, 34f, 0f),
+                AttemptCommittedTick = 0,
+                SetPieceContext = SetPieceContext.OpenPlay
+            };
+
+            HeadingAgentAttributes home = Attrs();
+            HeadingAgentAttributes away = Attrs();
+            away.TeamId = 1;
+            heading.CommitIntent(HeaderAgentId, intent, home, start, StartFrame);
+            heading.CommitIntent(OtherHeaderAgentId, intent, away, start, StartFrame);
+
+            int executed = 0;
+            int contested = 0;
+            float highestIncomingZ = float.MinValue;
+            EventBus.Subscribe<HeaderExecutedEvent>((in HeaderExecutedEvent evt) =>
+            {
+                executed++;
+                if (evt.ContestedDuelId != HeaderExecutedEvent.UncontestedDuelId)
+                {
+                    contested++;
+                }
+                if (evt.IncomingBallState.Position.z > highestIncomingZ)
+                {
+                    highestIncomingZ = evt.IncomingBallState.Position.z;
+                }
+            });
+
+            int landing = HeadingJumpKinematics.ComputeLandingFrame(StartFrame);
+            for (int frame = StartFrame; frame <= landing; frame++)
+            {
+                BallState now = BallAt(in start, frame - StartFrame);
+                ballSystem.Current = now;
+                heading.Update(agents, now, frame, frame * HeadingMechanicsConstants.FrameMs);
+            }
+
+            EventBus.BeginPhase(PhaseId.Events);
+            EventBus.DrainTick();
+
+            Assert.That(executed, Is.GreaterThanOrEqualTo(1),
+                "Both-player fixture must reach the real HeaderExecutedEvent path.");
+            Assert.That(contested, Is.GreaterThanOrEqualTo(1),
+                "A >2.0 m two-player aerial accepted by #10 must remain a contested heading duel.");
+            Assert.That(highestIncomingZ, Is.GreaterThan(CollisionPhysicsConstants.AgentReachHeight));
+        }
+
         /// <summary>
         /// THE lock AR pass 2 asked for. Identical agent, identical ball, identical attributes,
         /// identical frame sequence — only <c>TargetIntent</c> differs, and it differs across the
@@ -304,6 +375,9 @@ namespace TacticalDirector.HeadingMechanics.Tests
 // |         |            |        |   deliberately publish-free) and asserts on the velocity handed   |
 // |         |            |        |   to Ball Physics: two targets, one geometry, materially          |
 // |         |            |        |   different outgoing vectors, plus the descending-ball lift.      |
+// | 1.2     | 2026-09-22 | —      | W3 / PR #439 regression: two opponents contact the same aerial above |
+// |         |            |        | Collision #3's 2.0 m Stage-0 body cap and must still produce a      |
+// |         |            |        | contested HeaderExecutedEvent under #10's own head geometry.        |
 // | 1.1     | 2026-08-09 | —      | AR pass 3 (doc-only, no test logic changed). L-3: the descending- |
 // |         |            |        |   ball test's doc claimed to be "the vertical half of the same    |
 // |         |            |        |   claim" as the two-target lock. Executing both mutants proves it |
