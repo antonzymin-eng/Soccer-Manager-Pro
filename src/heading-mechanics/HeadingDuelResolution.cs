@@ -173,34 +173,6 @@ namespace TacticalDirector.HeadingMechanics
         public int ContactCount => _contactBufferCount;
 
         /// <summary>
-        /// Returns true when Collision System #3 reported an AGENT_BALL contact for <paramref name="agentId"/>
-        /// in the current physics-frame window. This is the W3 bridge that makes the §4.2.1 push buffer
-        /// load-bearing for contested-duel membership without replacing Heading's own head-contact geometry.
-        /// </summary>
-        public bool HasAgentBallContact(int agentId, float contactFrameMatchTime)
-        {
-            for (int i = 0; i < _contactBufferCount; i++)
-            {
-                CollisionEvent evt = _contactBuffer[i];
-                if (Mathf.Abs(evt.MatchTime - contactFrameMatchTime)
-                    >= HeadingMechanicsConstants.DuelFrameMatchToleranceS)
-                {
-                    continue;
-                }
-
-                int contactAgentId = evt.Entity1ID == SpatialHashConstants.BALL_ENTITY_ID
-                    ? evt.Entity2ID
-                    : evt.Entity1ID;
-                if (contactAgentId == agentId)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
         /// Returns the disturbance factor for a given duel and participant slot offset.
         /// Slot offset is relative to ContestedDuelContext.BufferStartIndex.
         /// </summary>
