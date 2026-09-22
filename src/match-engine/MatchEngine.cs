@@ -80,6 +80,7 @@
 // Modified: 2026-07-28 (keeper-contact pass: + TestOnly_LastShotStrikePosition/Velocity — the strike-TIME ball state, captured beside the _shotContacts increment (the WoodworkStrikes diagnostic class, not serialized), so instruments no longer sample end-of-tick BallView a same-tick touch may already have reversed. No schema change. See docs/tracking/gk-contact-rate-design.md)
 // Modified: 2026-08-03 (conversion-at-contact pass (ERR-011-008): GkHeadingWorldAdapter.ParkBall() — the ball-side half of #11 §3.5.2's claim, which had no seam (ApplyKick is a kick). Zeroes _ball.Velocity/AngularVelocity; no ball-state-machine transition, no RNG draw, no cross-tick state, so no SNAPSHOT_SCHEMA_VERSION change. A claimed shot previously kept its velocity and entered the net. See docs/tracking/gk-conversion-at-contact-design.md)
 // Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: TryCommitRushIntents gives GoalkeeperMechanics.CommitRushIntent its FIRST production caller — pure GkHeadingIntentSource.RushArmed/HasGoalSideCover geometry + #11 §3.7.0's attribute-driven commit distance (ERR-011-010) + the ClearRushIntent disarm, gated behind SaveArmed so a shot is still a dive. Deliberately NOT a DecisionTree action: ActionType ordinal 8 overflows the 3-bit composure-noise field (the W9 deferral reason). No new engine state ⇒ no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/gk-rush-trigger-design.md)
+// Modified: 2026-09-22 (W3 runtime: composition arbiter combines #10 prepared Head geometry with #11 active-claim Hand reach before either path mutates the ball; mixed participants use ToCrossClaim only)
 // Modified: 2026-08-04 (W1 AR-1: RefreshGkAgentIds filters _isSentOff so a keeper sent off mid-rush stops; + TestOnly_DriveGkHeadingPhysics. See docs/tracking/gk-rush-trigger-design.md v1.2)
 // Modified: 2026-08-04 (W1 AR-2: RefreshGkAgentIds detects a CHANGE of keeper-slot occupant and calls GoalkeeperMechanics.ResetSlot — a substitute keeper was inheriting the dismissed keeper's locked RushIntent. No new state, no schema change. See docs/tracking/gk-rush-trigger-design.md v1.3)
 // Modified: 2026-08-06 (#29 T2 match-boot fatigue seam: a four-argument ConfigureSquads overload taking each squad's per-local-index match-entry fatigue (#29 §3.3 / KD-1), seeded onto each starter's AerobicPool as 1 − fatigue. The reservoir is already the engine's live-fatigue quantity and already serialized, so no schema change; null ⇒ rested ⇒ byte-identical to the two-argument form.)
@@ -482,6 +483,7 @@ namespace TacticalDirector.MatchEngine
         // projection design flagged. The interfaces / intent / attribute types are uniquely named.
         private readonly TacticalDirector.HeadingMechanics.HeadingMechanics _heading;
         private readonly TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics _goalkeeper;
+        private readonly W3CrossClaimArbiter _w3CrossClaimArbiter;
         private readonly int _headingStreamIndex;
         private readonly int _goalkeeperStreamIndex;
         private readonly int[] _gkAgentIds;      // [MaxGkAgents] — agentId of each keeper (keeper index → agentId)
@@ -912,6 +914,7 @@ namespace TacticalDirector.MatchEngine
                 "goalkeeper.mechanics", SubsystemOrdinals.GoalkeeperMechanics, entityId: -1, streamVersion: 1);
             _heading = new TacticalDirector.HeadingMechanics.HeadingMechanics(gkHeadingWorld, gkHeadingWorld);
             _goalkeeper = new TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics(gkHeadingWorld, gkHeadingWorld);
+            _w3CrossClaimArbiter = new W3CrossClaimArbiter(this);
             _agentBallConsumer = new AgentBallFanout(_heading.CollisionConsumer, _crossClaimCandidates);
 
             // Keeper roster: GoalkeeperConstants.MaxGkAgents == TEAM_COUNT == 2, so keeper index == team id
@@ -2898,6 +2901,10 @@ namespace TacticalDirector.MatchEngine
         internal TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState TestOnly_GoalkeeperState =>
             _goalkeeper.CaptureState();
 
+        internal int TestOnly_W3LastParticipantCount => _w3CrossClaimArbiter.LastParticipantCount;
+        internal int TestOnly_W3LastWinnerAgentId => _w3CrossClaimArbiter.LastWinnerAgentId;
+        internal BodyPartEnum TestOnly_W3LastWinnerBodyPart => _w3CrossClaimArbiter.LastWinnerBodyPart;
+
         /// <summary>Test-only W3 seam: commit only the #11 ClaimIntent block while preserving the
         /// slot's existing projected attributes. Used by the v23 single-field digest and restore locks.</summary>
         internal void TestOnly_CommitGoalkeeperClaimIntent(int teamId, ClaimIntent intent)
@@ -4730,7 +4737,7 @@ namespace TacticalDirector.MatchEngine
             int frameNumber = (int)_clock.CurrentTick;
             float matchTimeS = _clock.CurrentMatchTimeSeconds;
             float matchTimeMs = _clock.CurrentMatchTimeMs;
-            _heading.Update(_agents, _ball, frameNumber, matchTimeS);
+            _heading.Update(_agents, _ball, frameNumber, matchTimeS, _w3CrossClaimArbiter);
             _goalkeeper.Update(frameNumber, matchTimeMs, _agents, _ball, _gkAgentIds);
         }
 
@@ -8729,6 +8736,262 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// W3 production arbitration boundary. #10 calls this after it has prepared real current-frame
+        /// Head contacts and before it resolves/applies them. This host adds only #11 active-claim Hand
+        /// contacts whose live reach envelope intersects the ball, registers the mixed set in canonical
+        /// entity order, resolves through #11's own duel/RNG surface, and suppresses losing Head contacts.
+        /// Collision #3's coarse observation feed is deliberately absent from membership.
+        /// </summary>
+        internal sealed class W3CrossClaimArbiter : IHeadingPreparedFrameArbiter
+        {
+            private readonly MatchEngine _engine;
+
+            internal W3CrossClaimArbiter(MatchEngine engine)
+            {
+                _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+                LastWinnerAgentId = MatchEngineConstants.NO_POSSESSION;
+                LastWinnerBodyPart = BodyPartEnum.Body;
+            }
+
+            internal int LastParticipantCount { get; private set; }
+            internal int LastWinnerAgentId { get; private set; }
+            internal BodyPartEnum LastWinnerBodyPart { get; private set; }
+
+            public void ArbitratePreparedHeadContacts(
+                TacticalDirector.HeadingMechanics.HeadingMechanics heading,
+                AgentState[] agentStates,
+                BallState currentBall,
+                int currentFrame,
+                float currentMatchTime)
+            {
+                LastParticipantCount = 0;
+                LastWinnerAgentId = MatchEngineConstants.NO_POSSESSION;
+                LastWinnerBodyPart = BodyPartEnum.Body;
+
+                _engine._goalkeeper.BeginCrossClaimFrame();
+
+                bool anyHandContact = false;
+                for (int k = 0; k < _engine._gkAgentIds.Length; k++)
+                {
+                    int gkAgentId = _engine._gkAgentIds[k];
+                    if (gkAgentId < 0
+                        || _engine._isSentOff[gkAgentId]
+                        || !_engine._goalkeeper.HasActiveClaimIntent(k))
+                    {
+                        continue;
+                    }
+
+                    Vector3 gkPosition = new Vector3(
+                        agentStates[gkAgentId].Position.x,
+                        agentStates[gkAgentId].Position.y,
+                        0.0f);
+                    if (_engine._goalkeeper.TryGetHandReachEnvelope(
+                            k, currentFrame, gkPosition, out Vector3 handCenter, out float handRadius)
+                        && (currentBall.Position - handCenter).sqrMagnitude <= handRadius * handRadius)
+                    {
+                        anyHandContact = true;
+                        break;
+                    }
+                }
+
+                // No Hand contact means ordinary #10 behaviour remains untouched, including multi-head duels.
+                if (!anyHandContact)
+                {
+                    return;
+                }
+
+                // Canonical registration is by entity id, independent of which mechanic discovered a
+                // participant first. A production keeper is not a header-intent candidate, but the
+                // both-geometry branch remains defined for restored/test state and uses §3.6.1 priority.
+                for (int agentId = 0; agentId < MatchEngineConstants.SQUAD_SIZE; agentId++)
+                {
+                    int preparedHeadIndex = FindPreparedHeadIndex(heading, agentId);
+                    bool headHit = preparedHeadIndex >= 0;
+                    Vector3 headCenter = headHit
+                        ? heading.GetPreparedHeadCenter(preparedHeadIndex)
+                        : default;
+
+                    int gkIndex = FindGoalkeeperIndex(agentId);
+                    bool handHit = false;
+                    Vector3 handCenter = default;
+                    float handRadius = 0.0f;
+                    if (gkIndex >= 0
+                        && !_engine._isSentOff[agentId]
+                        && _engine._goalkeeper.HasActiveClaimIntent(gkIndex))
+                    {
+                        Vector3 gkPosition = new Vector3(
+                            agentStates[agentId].Position.x,
+                            agentStates[agentId].Position.y,
+                            0.0f);
+                        handHit = _engine._goalkeeper.TryGetHandReachEnvelope(
+                                gkIndex, currentFrame, gkPosition, out handCenter, out handRadius)
+                            && (currentBall.Position - handCenter).sqrMagnitude <= handRadius * handRadius;
+                    }
+
+                    if (!headHit && !handHit)
+                    {
+                        continue;
+                    }
+
+                    BodyPartEnum bodyPart;
+                    if (headHit && handHit)
+                    {
+                        bodyPart = GoalkeeperCrossClaimDuel.DetermineBodyPart(
+                            currentBall.Position,
+                            handCenter,
+                            headCenter,
+                            handRadius,
+                            HeadingMechanicsConstants.HeadContactVolumeRadiusM);
+                    }
+                    else
+                    {
+                        bodyPart = handHit ? BodyPartEnum.Hand : BodyPartEnum.Head;
+                    }
+
+                    CrossClaimParticipantAttributes attrs =
+                        PlayerAttributeProjection.ToCrossClaim(in _engine._canonicalAttrs[agentId]);
+                    if (!_engine._goalkeeper.RegisterCrossClaimParticipant(
+                            agentId, attrs, bodyPart, currentFrame))
+                    {
+                        throw new InvalidOperationException(
+                            "W3 cross-claim participant buffer overflow while registering agent " +
+                            agentId.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
+                    }
+                }
+
+                if (_engine._goalkeeper.CrossClaimDuelCount == 0)
+                {
+                    throw new InvalidOperationException(
+                        "W3 detected a live Hand contact but registered no cross-claim participant.");
+                }
+
+                _engine._goalkeeper.ResolveCrossClaimDuel();
+                CrossClaimDuelContext duel = _engine._goalkeeper.GetCrossClaimDuel(0);
+                LastParticipantCount = duel.ParticipantCount;
+                LastWinnerAgentId = duel.WinnerAgentId;
+                LastWinnerBodyPart = duel.ContactBodyPart;
+
+                // Every losing Hand claim terminates as DisturbedInDuel before #10 is allowed to mutate
+                // the ball. Re-querying the envelope is pure and returns the same frame geometry.
+                for (int p = 0; p < duel.ParticipantCount; p++)
+                {
+                    int participantAgentId = _engine._goalkeeper.GetCrossClaimParticipantAgentId(p);
+                    if (_engine._goalkeeper.GetCrossClaimParticipantBodyPart(p) != BodyPartEnum.Hand
+                        || participantAgentId == duel.WinnerAgentId)
+                    {
+                        continue;
+                    }
+
+                    int loserGkIndex = FindGoalkeeperIndex(participantAgentId);
+                    if (loserGkIndex < 0)
+                    {
+                        throw new InvalidOperationException(
+                            "W3 registered a Hand participant that is not a current goalkeeper.");
+                    }
+
+                    Vector3 loserPosition = new Vector3(
+                        agentStates[participantAgentId].Position.x,
+                        agentStates[participantAgentId].Position.y,
+                        0.0f);
+                    if (!_engine._goalkeeper.TryGetHandReachEnvelope(
+                            loserGkIndex, currentFrame, loserPosition,
+                            out Vector3 loserReachCenter, out float unusedLoserRadius))
+                    {
+                        throw new InvalidOperationException(
+                            "W3 Hand loser lost its #11 reach envelope within the same arbitration frame.");
+                    }
+
+                    _engine._goalkeeper.ResolveClaimDuelLoss(
+                        loserGkIndex,
+                        participantAgentId,
+                        currentFrame,
+                        _engine._clock.CurrentMatchTimeMs,
+                        currentBall,
+                        loserReachCenter,
+                        duel.DuelId);
+                }
+
+                if (duel.ContactBodyPart == BodyPartEnum.Hand)
+                {
+                    int winnerGkIndex = FindGoalkeeperIndex(duel.WinnerAgentId);
+                    if (winnerGkIndex < 0)
+                    {
+                        throw new InvalidOperationException(
+                            "W3 resolved a Hand winner that is not a current goalkeeper.");
+                    }
+
+                    Vector3 winnerPosition = new Vector3(
+                        agentStates[duel.WinnerAgentId].Position.x,
+                        agentStates[duel.WinnerAgentId].Position.y,
+                        0.0f);
+                    if (!_engine._goalkeeper.TryGetHandReachEnvelope(
+                            winnerGkIndex, currentFrame, winnerPosition,
+                            out Vector3 winnerReachCenter, out float unusedWinnerRadius))
+                    {
+                        throw new InvalidOperationException(
+                            "W3 Hand winner lost its #11 reach envelope within the same arbitration frame.");
+                    }
+
+                    if (!_engine._goalkeeper.ResolveClaimHandContact(
+                            winnerGkIndex,
+                            duel.WinnerAgentId,
+                            currentFrame,
+                            _engine._clock.CurrentMatchTimeMs,
+                            currentBall,
+                            winnerReachCenter,
+                            duel.DuelId))
+                    {
+                        throw new InvalidOperationException(
+                            "W3 Hand winner no longer had an active ClaimIntent at terminal routing.");
+                    }
+
+                    for (int h = 0; h < heading.PreparedHeadContactCount; h++)
+                    {
+                        heading.SuppressPreparedHeadContact(heading.GetPreparedHeadContactAgentId(h));
+                    }
+                    return;
+                }
+
+                // A Head winner is the only prepared Head allowed into #10's ordinary duel/application
+                // pass. All Hand participants have already terminated as duel losses above.
+                for (int h = 0; h < heading.PreparedHeadContactCount; h++)
+                {
+                    int headAgentId = heading.GetPreparedHeadContactAgentId(h);
+                    if (headAgentId != duel.WinnerAgentId)
+                    {
+                        heading.SuppressPreparedHeadContact(headAgentId);
+                    }
+                }
+            }
+
+            private int FindGoalkeeperIndex(int agentId)
+            {
+                for (int k = 0; k < _engine._gkAgentIds.Length; k++)
+                {
+                    if (_engine._gkAgentIds[k] == agentId)
+                    {
+                        return k;
+                    }
+                }
+                return -1;
+            }
+
+            private static int FindPreparedHeadIndex(
+                TacticalDirector.HeadingMechanics.HeadingMechanics heading,
+                int agentId)
+            {
+                for (int i = 0; i < heading.PreparedHeadContactCount; i++)
+                {
+                    if (heading.GetPreparedHeadContactAgentId(i) == agentId)
+                    {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+        }
+
+        /// <summary>
         /// W3 read-only AGENT_BALL fan-out. Generic delivery only: every AGENT_BALL candidate reaches
         /// Heading #10 and the frame-local cross-claim collector exactly once, in that fixed consumer
         /// order. No body-part policy, RNG or world mutation is permitted here.
@@ -9988,4 +10251,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.81    | 2026-09-22 | —      | W3 review correction: add a read-only Physics AGENT_BALL candidate feed after movement; keep full Collision #3 response, W4 deflection and foul capture in Resolve; Heading own geometry still owns header eligibility. No cross-tick state/schema/RNG change. |
 // | 1.82    | 2026-09-22 | —      | W3 shared feed now has both consumers: Heading + a frame-local, fail-closed cross-claim candidate collector. Candidate-only per ERR-011-011; no policy, RNG or snapshot field. |
 // | 1.81    | 2026-09-22 | —      | W3 / ERR-011-012: ClaimIntent is a bounded episode, not a per-stride height gate. Possession/SAVE hard-cancel; ordinary geometry lapse does not. Reach side locks at commit and joins the v23 payload. W1 rush cannot steal an active claim. Test hand-envelope observation no longer Refreshes/ResetSlots. |
+// | 1.82    | 2026-09-22 | —      | W3 runtime arbitration boundary: Heading #10 exposes prepared Head contacts before mutation; MatchEngine combines them with active #11 Hand reach in canonical entity order, scores mixed participants through ToCrossClaim, routes Hand wins/losses through #11, and suppresses losing Heads before #10 applies a header. Collision #3 remains observation-only. |
 #endregion
