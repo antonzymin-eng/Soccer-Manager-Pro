@@ -189,15 +189,24 @@ namespace TacticalDirector.MatchEngine
                 engine.TestOnly_SetCommand(i, MovementCommand.Stop(p));
             }
 
-            engine.TestOnly_ForceBallLoose(new Vector3(ballXY.x, ballXY.y, 0.6f), Vector3.zero);
-            engine.TestOnly_RunPhysicsPhase();
+            Vector3 stagedBallPosition = new Vector3(ballXY.x, ballXY.y, 0.6f);
+            Vector3 stagedBallVelocity = new Vector3(0.25f, -0.5f, 0.75f);
+            engine.TestOnly_ForceBallLoose(stagedBallPosition, stagedBallVelocity);
+            Vector2 agentBefore = engine.AgentView(target).Position;
+            BallState ballBefore = engine.BallView;
+
+            engine.TestOnly_PublishAgentBallContactsOnly();
 
             Assert.AreEqual(1, engine.TestOnly_CrossClaimCandidateCount,
                 "The read-only Physics prefeed should identify only the staged target.");
             Assert.AreEqual(1, engine.TestOnly_HeadingCollisionCandidateCount,
                 "The same candidate must reach Heading in the same Physics frame.");
-            Assert.AreEqual(target, engine.AgentView(target).Position == ballXY ? target : -1,
-                "The prefeed must not displace the staged target; full physical collision remains Resolve-owned.");
+            Assert.AreEqual(agentBefore, engine.AgentView(target).Position,
+                "Read-only publication must not displace the staged target.");
+            Assert.AreEqual(ballBefore.Position, engine.BallView.Position,
+                "Read-only publication must not move the ball.");
+            Assert.AreEqual(ballBefore.Velocity, engine.BallView.Velocity,
+                "Read-only publication must not apply a collision impulse; full response remains Resolve-owned.");
         }
 
         [Test]
@@ -235,6 +244,8 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(ball.z, state.ClaimIntents[teamId].TargetContactPoint.z, 1e-6f);
             Assert.AreEqual(state.Attrs[teamId].HandlingNorm, state.ClaimIntents[teamId].ClutchFirmness, 1e-6f,
                 "Claim handling input should reuse the keeper's normalized Handling, not add a W3 tuning dial.");
+            Assert.AreEqual(1f, state.ClaimIntents[teamId].ReachDirectionLateral, 0f,
+                "The +Y reach side must lock at commit; it must not be recomputed from the keeper's later live position.");
 
             Assert.IsTrue(engine.TestOnly_TryGetGoalkeeperHandReachEnvelope(
                     teamId, out Vector3 reachCenter, out float reachRadius),
@@ -247,6 +258,48 @@ namespace TacticalDirector.MatchEngine
                 "W3 must consume #11's existing reach-radius formula rather than inventing hand geometry.");
             Assert.AreNotEqual(ball, reachCenter,
                 "The tactical target must not be returned verbatim as a synthetic hand collider.");
+        }
+
+        [Test]
+        public void W3_ActiveClaim_SurvivesTriggerLapse_WhileBallDescendsIntoHandHeight()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            int keeper = -1;
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (engine.AgentIsGoalkeeper(i))
+                {
+                    keeper = i;
+                    break;
+                }
+            }
+            Assert.GreaterOrEqual(keeper, 0);
+
+            int teamId = keeper < MatchEngineConstants.PLAYERS_PER_TEAM ? 0 : 1;
+            Vector2 gkXY = engine.AgentView(keeper).Position;
+
+            // Arm above the W1 rush ceiling, then re-run the 10 Hz producer after the same loose ball
+            // has dropped into a physically reachable cross height. ERR-011-012 requires the original
+            // claim episode to remain active instead of being cancelled by a re-evaluated height gate.
+            engine.TestOnly_ForceBallLoose(
+                new Vector3(gkXY.x, gkXY.y + 0.5f, MatchEngineConstants.GkRushMaxBallHeightM + 0.1f),
+                Vector3.zero);
+            engine.TestOnly_DriveGkHeadingTactical();
+            ClaimIntent committed = engine.TestOnly_GoalkeeperState.ClaimIntents[teamId];
+            Assert.IsTrue(engine.TestOnly_GoalkeeperState.ClaimIntentActive[teamId]);
+
+            engine.TestOnly_ForceBallLoose(new Vector3(gkXY.x, gkXY.y + 0.5f, 1.8f), Vector3.zero);
+            engine.TestOnly_DriveGkHeadingTactical();
+
+            var state = engine.TestOnly_GoalkeeperState;
+            Assert.IsTrue(state.ClaimIntentActive[teamId],
+                "A descending loose cross must keep the bounded claim episode alive.");
+            Assert.AreEqual(committed.TargetContactPoint, state.ClaimIntents[teamId].TargetContactPoint,
+                "The claim target stays locked for the episode; a later tactical stride must not retarget it.");
+            Assert.AreEqual(committed.ReachDirectionLateral, state.ClaimIntents[teamId].ReachDirectionLateral, 0f,
+                "The reach side stays locked for the episode.");
         }
 
         // ── flag semantics ──────────────────────────────────────────────────────────
@@ -652,13 +705,16 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | save-commit tests drive through the natural RunTick DT path    |
 // |         |            |        | (DriveUntilSaveCommitted); + SaveDecision_SurvivesAdversarial-  |
 // |         |            |        | Tactic (the AR-4 sole-option missed-save regression lock).     |
-// | 1.4     | 2026-09-22 | —      | W3: shared AGENT_BALL fan-out exact-once/order; frame-local cross- |
-// |         |            |        | claim collector reset/overflow; composed Physics prefeed reaches  |
-// |         |            |        | both consumers while physical response remains Resolve-owned.    |
 // | 1.3     | 2026-07-23 | —      | + SaveEpisode_ReArmsAfterBallResolves_CommitsAgain (AR follow- |
 // |         |            |        | up): locks the per-episode latch clear → re-commit path (SAVE  |
 // |         |            |        | is continuous, so the latch is the sole re-commit guard). Uses |
 // |         |            |        | the new TestOnly_SaveCommittedForGk latch seam via the false → |
 // |         |            |        | true edge (the sticky LastCommittedSaveAttrs cannot distinguish|
 // |         |            |        | a second commit).                                              |
+// | 1.4     | 2026-09-22 | —      | W3: shared AGENT_BALL fan-out exact-once/order; frame-local cross- |
+// |         |            |        | claim collector reset/overflow; read-only publication reaches both |
+// |         |            |        | consumers without changing agent or ball position/velocity.       |
+// | 1.5     | 2026-09-22 | —      | W3 / ERR-011-012: claim reach side locks at commit; a descending  |
+// |         |            |        | loose cross keeps the bounded claim episode alive across a later   |
+// |         |            |        | tactical producer pass instead of cancelling on the old height gate.| 
 #endregion
