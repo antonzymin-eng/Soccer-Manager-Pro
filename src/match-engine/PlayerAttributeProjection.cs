@@ -1,5 +1,6 @@
 // File:     src/match-engine/PlayerAttributeProjection.cs
 // Created:  2026-07-17
+// Modified: 2026-09-22 (W3: ToCrossClaim narrow Balance/Strength/Aerial projection; no outfielder ToGoalkeeper misuse)
 // Modified: 2026-07-22 (GK/Heading engine integration — ToGoalkeeper/ToHeading added, KD-P8 phantom bar lifted)
 // Author:   —
 // Spec:     Player-attribute projection design supplement (docs/tracking/player-attribute-projection-design.md)
@@ -180,6 +181,20 @@ namespace TacticalDirector.MatchEngine
                 Fatigue  = fatigue,
                 TeamId   = teamId
             };
+        }
+
+        /// <summary>
+        /// W3 narrow projection for the shared goalkeeper/head cross-claim duel. Only the three
+        /// normalized score inputs defined by #11 §3.6 are carried; outfield players must not be
+        /// projected through <see cref="GoalkeeperAgentAttributes"/>.
+        /// </summary>
+        public static CrossClaimParticipantAttributes ToCrossClaim(
+            in TacticalDirector.PlayerDatabase.PlayerAttributes c)
+        {
+            return new CrossClaimParticipantAttributes(
+                ToNormalized(c.Balance),
+                ToNormalized(c.Strength),
+                ToNormalized(c.Aerial));
         }
 
         /// <summary>
