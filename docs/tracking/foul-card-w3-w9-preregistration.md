@@ -160,10 +160,10 @@ Therefore:
   is converted into the remaining straight-red budget. A larger corpus may improve that estimator,
   but corpus size does not repair the derivation by itself.
 
-The stale `MatchEngineConstants.RedCardProbability` doc comment still describes the historical
-`0.25 / 22` conflation. This preregistration treats that comment as non-authoritative and records
-its correction as part of the eventual card-severity landing; no runtime value or source file moves
-in this pre-result PR.
+The stale `MatchEngineConstants.RedCardProbability` doc comment is corrected in this same
+pre-result landing so source guidance no longer preserves the withdrawn `0.25 / 22` conflation.
+The correction is comment-only: `RedCardProbability` remains `0.011`; no runtime behavior or
+gameplay `[GT]` value moves.
 
 ---
 
