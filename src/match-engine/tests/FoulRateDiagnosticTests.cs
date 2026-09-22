@@ -8,7 +8,7 @@
 // Purpose:  Source-complete foul/card measurement required by #435 §2.1. Runs the frozen six
 //           full-match seeds and reports both live discipline sources (collision FROM_BEHIND and
 //           already-adjudicated W2 SLIDE_TACKLE), their cooldown/single-slot interaction, exact
-//           applied foul/card events, and the qualifying collision-force distribution.
+//           applied foul/card events, and the raw/priced/sent-off-shadowed collision-force distributions.
 //
 //           The historical offline (threshold, cooldown) collision replay is retained as descriptive
 //           bracketing only; it is not the live source-complete numerator and does not propose a [GT].
@@ -124,6 +124,8 @@ namespace TacticalDirector.MatchEngine
                 int totalCooldownSuppressionsFromBehind = 0;
                 int totalSlideTackleCallsDuringCooldown = 0;
                 int totalSlideTackleRaisedDuringCooldownApplied = 0;
+                int totalSlideTackleCallsDuringCollisionSuppressionWindow = 0;
+                int totalSlideTackleRaisedDuringCollisionSuppressionApplied = 0;
                 int totalFouls = 0;
                 int totalYellowCards = 0;
                 int totalStraightReds = 0;
@@ -169,6 +171,10 @@ namespace TacticalDirector.MatchEngine
                     totalCooldownSuppressionsFromBehind += probe.FoulCooldownSuppressionsFromBehind;
                     totalSlideTackleCallsDuringCooldown += probe.SlideTackleCallsDuringFoulCooldown;
                     totalSlideTackleRaisedDuringCooldownApplied += probe.SlideTackleRaisedDuringCooldownApplied;
+                    totalSlideTackleCallsDuringCollisionSuppressionWindow +=
+                        probe.SlideTackleCallsDuringCollisionSuppressionWindow;
+                    totalSlideTackleRaisedDuringCollisionSuppressionApplied +=
+                        probe.SlideTackleRaisedDuringCollisionSuppressionApplied;
                     totalFouls += probe.TotalFouls;
                     totalYellowCards += probe.YellowCards;
                     totalStraightReds += probe.StraightReds;
@@ -201,16 +207,24 @@ namespace TacticalDirector.MatchEngine
                     if (probe.FromBehindPricedCandidates != probe.FromBehindCalled + probe.FromBehindWavedOn)
                     {
                         structuralFindings.Add(
-                            Invariant($"seed 0x{seed:X16}: KD-F1 priced-candidate identity failed: ")
+                            Invariant($"seed 0x{seed:X16}: probe KD-F1 accounting partition failed: ")
                             + Invariant($"priced={probe.FromBehindPricedCandidates} != called={probe.FromBehindCalled} + ")
-                            + Invariant($"wavedOn={probe.FromBehindWavedOn}."));
+                            + Invariant($"inferredWavedOn={probe.FromBehindWavedOn}."));
                     }
                     if (probe.SlideTackleRaisedDuringCooldownApplied > probe.SlideTackleCallsDuringFoulCooldown)
                     {
                         structuralFindings.Add(
-                            Invariant($"seed 0x{seed:X16}: tackle cooldown-bypass subset failed: ")
+                            Invariant($"seed 0x{seed:X16}: tackle tick-start-cooldown subset failed: ")
                             + Invariant($"applied={probe.SlideTackleRaisedDuringCooldownApplied} > ")
                             + Invariant($"raised={probe.SlideTackleCallsDuringFoulCooldown}."));
+                    }
+                    if (probe.SlideTackleRaisedDuringCollisionSuppressionApplied
+                        > probe.SlideTackleCallsDuringCollisionSuppressionWindow)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: tackle collision-suppression-window subset failed: ")
+                            + Invariant($"applied={probe.SlideTackleRaisedDuringCollisionSuppressionApplied} > ")
+                            + Invariant($"raised={probe.SlideTackleCallsDuringCollisionSuppressionWindow}."));
                     }
                     if (probe.FromBehindCalled + probe.SlideTackleCalled != probe.TotalFouls)
                     {
@@ -268,6 +282,10 @@ namespace TacticalDirector.MatchEngine
                         + Invariant($"slideTackleCallsDuringFoulCooldown={probe.SlideTackleCallsDuringFoulCooldown} ")
                         + Invariant($"slideTackleRaisedDuringCooldownApplied={probe.SlideTackleRaisedDuringCooldownApplied}"));
                     report.AppendLine(
+                        Invariant($"  cooldownBasis=tick-start-before-Resolve-decrement ")
+                        + Invariant($"slideTackleCallsDuringCollisionSuppressionWindow={probe.SlideTackleCallsDuringCollisionSuppressionWindow} ")
+                        + Invariant($"slideTackleRaisedDuringCollisionSuppressionApplied={probe.SlideTackleRaisedDuringCollisionSuppressionApplied}"));
+                    report.AppendLine(
                         Invariant($"  totalFouls={probe.TotalFouls} yellowCards={probe.YellowCards} ")
                         + Invariant($"straightReds={probe.StraightReds} ")
                         + Invariant($"secondYellowDismissals={probe.SecondYellowDismissals} ")
@@ -301,6 +319,10 @@ namespace TacticalDirector.MatchEngine
                     + Invariant($"slideTackleCalled={totalSlideTackleCalled} ")
                     + Invariant($"slideTackleCallsDuringFoulCooldown={totalSlideTackleCallsDuringCooldown} ")
                     + Invariant($"slideTackleRaisedDuringCooldownApplied={totalSlideTackleRaisedDuringCooldownApplied}"));
+                report.AppendLine(
+                    Invariant($"cooldownBasis=tick-start-before-Resolve-decrement ")
+                    + Invariant($"slideTackleCallsDuringCollisionSuppressionWindow={totalSlideTackleCallsDuringCollisionSuppressionWindow} ")
+                    + Invariant($"slideTackleRaisedDuringCollisionSuppressionApplied={totalSlideTackleRaisedDuringCollisionSuppressionApplied}"));
                 report.AppendLine(
                     Invariant($"totalFouls={totalFouls} yellowCards={totalYellowCards} ")
                     + Invariant($"straightReds={totalStraightReds} ")
@@ -397,15 +419,23 @@ namespace TacticalDirector.MatchEngine
                 if (totalFromBehindPricedCandidates != totalFromBehindCalled + totalFromBehindWavedOn)
                 {
                     structuralFindings.Add(
-                        Invariant($"aggregate KD-F1 identity failed: priced={totalFromBehindPricedCandidates} != ")
-                        + Invariant($"called={totalFromBehindCalled} + wavedOn={totalFromBehindWavedOn}."));
+                        Invariant($"aggregate probe KD-F1 accounting partition failed: priced={totalFromBehindPricedCandidates} != ")
+                        + Invariant($"called={totalFromBehindCalled} + inferredWavedOn={totalFromBehindWavedOn}."));
                 }
                 if (totalSlideTackleRaisedDuringCooldownApplied > totalSlideTackleCallsDuringCooldown)
                 {
                     structuralFindings.Add(
-                        Invariant($"aggregate tackle cooldown-bypass subset failed: applied=")
+                        Invariant($"aggregate tackle tick-start-cooldown subset failed: applied=")
                         + Invariant($"{totalSlideTackleRaisedDuringCooldownApplied} > ")
                         + Invariant($"raised={totalSlideTackleCallsDuringCooldown}."));
+                }
+                if (totalSlideTackleRaisedDuringCollisionSuppressionApplied
+                    > totalSlideTackleCallsDuringCollisionSuppressionWindow)
+                {
+                    structuralFindings.Add(
+                        Invariant($"aggregate tackle collision-suppression-window subset failed: applied=")
+                        + Invariant($"{totalSlideTackleRaisedDuringCollisionSuppressionApplied} > ")
+                        + Invariant($"raised={totalSlideTackleCallsDuringCollisionSuppressionWindow}."));
                 }
                 if (totalFromBehindCalled + totalSlideTackleCalled != totalFouls)
                 {
@@ -551,15 +581,15 @@ namespace TacticalDirector.MatchEngine
         private static void AppendDistribution(
             StringBuilder output,
             string indent,
-            List<float> qualifyingContactForces)
+            List<float> observations)
         {
-            if (qualifyingContactForces.Count == 0)
+            if (observations.Count == 0)
             {
                 output.AppendLine(indent + "(no observations)");
                 return;
             }
 
-            float[] forces = qualifyingContactForces.ToArray();
+            float[] forces = observations.ToArray();
             Array.Sort(forces);
 
             output.AppendLine(indent + Invariant($"candidates={forces.Length}"));
@@ -593,14 +623,18 @@ namespace TacticalDirector.MatchEngine
         /// gate, so it mirrors the live consumer in event order without writing engine state. The end-of-
         /// tick ledger then supplies authoritative applied foul/card outcomes.
         ///
-        /// <para>Three collision populations are deliberately distinct: raw valid contacts
+        /// <para>Four collision populations are deliberately distinct: raw valid contacts
         /// (<see cref="QualifyingContactForces"/>), the final per-tick strongest winner that survives
         /// cooldown/decided-slot/participation and actually reaches KD-F1
-        /// (<see cref="PricedCandidateForces"/>), and the threshold-free per-tick peak used only by the
-        /// historical descriptive replay (<see cref="PeakForcePerTick"/>).</para>
+        /// (<see cref="PricedCandidateForces"/>), the strongest valid contact specifically shadowed by
+        /// an invalid sent-off overall winner (<see cref="SentOffShadowedCandidateForces"/>), and the
+        /// threshold-free per-tick peak used only by the historical descriptive replay
+        /// (<see cref="PeakForcePerTick"/>).</para>
         /// </summary>
         private sealed class FoulCandidateProbe : ICollisionEventConsumer
         {
+            private const int NoAgent = -1;
+
             private readonly MatchEngine _engine;
             private int _tick;
             private int _cooldownAtTickStart;
@@ -649,6 +683,8 @@ namespace TacticalDirector.MatchEngine
             public int FoulCooldownSuppressionsFromBehind { get; private set; }
             public int SlideTackleCallsDuringFoulCooldown { get; private set; }
             public int SlideTackleRaisedDuringCooldownApplied { get; private set; }
+            public int SlideTackleCallsDuringCollisionSuppressionWindow { get; private set; }
+            public int SlideTackleRaisedDuringCollisionSuppressionApplied { get; private set; }
             public int TotalFouls { get; private set; }
             public int YellowCards { get; private set; }
             public int StraightReds { get; private set; }
@@ -667,6 +703,8 @@ namespace TacticalDirector.MatchEngine
                 _strongestCollisionFoundThisTick = false;
                 _strongestCollisionForceThisTick = 0f;
                 _strongestCollisionParticipantsActiveThisTick = false;
+                _strongestCollisionOffenderThisTick = NoAgent;
+                _strongestCollisionVictimThisTick = NoAgent;
                 _strongestValidCollisionFoundThisTick = false;
                 _strongestValidCollisionForceThisTick = 0f;
                 // Offender/victim need no absent-agent sentinel: they are read only when the priced
@@ -688,9 +726,16 @@ namespace TacticalDirector.MatchEngine
                 SlideTackleCandidates += newTackleCandidates;
                 if (_cooldownAtTickStart > 0)
                 {
-                    // Raised at the AI decision site — this is the actual bypass population, including a
-                    // decided candidate later overwritten or discarded before an event can be published.
+                    // Frozen #435 field: the tackle is raised in AI while the live cooldown is nonzero.
+                    // Resolve decrements once before collision consumption, so this tick-start definition
+                    // intentionally includes the boundary value 1.
                     SlideTackleCallsDuringFoulCooldown += newTackleCandidates;
+                }
+                if (_cooldownAtTickStart > 1)
+                {
+                    // Counterfactual source comparison: after Resolve's one-tick decrement, a collision
+                    // candidate in this tick would still be suppressed by the live cooldown gate.
+                    SlideTackleCallsDuringCollisionSuppressionWindow += newTackleCandidates;
                 }
 
                 // Finalize strongest-wins after every collision callback has run. Every valid contact that
@@ -755,6 +800,10 @@ namespace TacticalDirector.MatchEngine
                             if (_cooldownAtTickStart > 0)
                             {
                                 SlideTackleRaisedDuringCooldownApplied++;
+                            }
+                            if (_cooldownAtTickStart > 1)
+                            {
+                                SlideTackleRaisedDuringCollisionSuppressionApplied++;
                             }
                         }
                         else
@@ -925,4 +974,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | separately, so exactly one candidate can be shadowed by an invalid       |
 // |         |            |        | winner and remaining valid contacts stay KD-F4 attrition; reports the    |
 // |         |            |        | denied force and makes called-only identity coverage explicit.           |
+// | 1.5     | 2026-09-22 | —      | Clarifies frozen tackle-cooldown measurement as literal AI tick-start    |
+// |         |            |        | nonzero state and adds the separate >1 collision-suppression-window      |
+// |         |            |        | comparison; relabels inferred wave-on accounting and refreshes comments. |
 #endregion
