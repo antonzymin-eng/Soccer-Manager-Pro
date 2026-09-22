@@ -107,6 +107,7 @@ namespace TacticalDirector.MatchEngine
                 // ComputeFoulCallProbability and therefore govern any future FoulCallProbability fit.
                 var qualifyingContactForces = new List<float>();
                 var pricedCandidateForces = new List<float>();
+                var sentOffShadowedCandidateForces = new List<float>();
 
                 int totalAgentAgentContacts = 0;
                 int totalFromBehindCandidates = 0;
@@ -151,6 +152,7 @@ namespace TacticalDirector.MatchEngine
                     writeCursor += TicksPerSeed;
                     qualifyingContactForces.AddRange(probe.QualifyingContactForces);
                     pricedCandidateForces.AddRange(probe.PricedCandidateForces);
+                    sentOffShadowedCandidateForces.AddRange(probe.SentOffShadowedCandidateForces);
 
                     totalAgentAgentContacts += probe.AgentAgentContacts;
                     totalFromBehindCandidates += probe.FromBehindCandidates;
@@ -258,6 +260,7 @@ namespace TacticalDirector.MatchEngine
                     report.AppendLine(
                         Invariant($"  candidateDisplacedByDecided={probe.CandidateDisplacedByDecided} ")
                         + Invariant($"foulCooldownSuppressionsFromBehind={probe.FoulCooldownSuppressionsFromBehind} ")
+                        + Invariant($"pricedCandidateIdentityChecks={probe.FromBehindCalled} ")
                         + Invariant($"pricedCandidateIdentityMismatches={probe.PricedCandidateIdentityMismatches}"));
                     report.AppendLine(
                         Invariant($"  slideTackleCandidates={probe.SlideTackleCandidates} ")
@@ -273,6 +276,8 @@ namespace TacticalDirector.MatchEngine
                     AppendDistribution(report, "    ", probe.QualifyingContactForces);
                     report.AppendLine("  pricedCandidateForce distribution — per-tick KD-F1 winners (N):");
                     AppendDistribution(report, "    ", probe.PricedCandidateForces);
+                    report.AppendLine("  sentOffShadowedCandidateForce distribution — strongest valid contact denied pricing (N):");
+                    AppendDistribution(report, "    ", probe.SentOffShadowedCandidateForces);
                 }
 
                 report.AppendLine();
@@ -289,6 +294,7 @@ namespace TacticalDirector.MatchEngine
                 report.AppendLine(
                     Invariant($"candidateDisplacedByDecided={totalCandidateDisplacedByDecided} ")
                     + Invariant($"foulCooldownSuppressionsFromBehind={totalCooldownSuppressionsFromBehind} ")
+                    + Invariant($"pricedCandidateIdentityChecks={totalFromBehindCalled} ")
                     + Invariant($"pricedCandidateIdentityMismatches={totalPricedCandidateIdentityMismatches}"));
                 report.AppendLine(
                     Invariant($"slideTackleCandidates={totalSlideTackleCandidates} ")
@@ -314,6 +320,9 @@ namespace TacticalDirector.MatchEngine
                 report.AppendLine();
                 report.AppendLine("--- pricedCandidateForce distribution — per-tick KD-F1 winners (N) ---");
                 AppendDistribution(report, "  ", pricedCandidateForces);
+                report.AppendLine();
+                report.AppendLine("--- sentOffShadowedCandidateForce distribution — strongest valid contact denied pricing (N) ---");
+                AppendDistribution(report, "  ", sentOffShadowedCandidateForces);
                 report.AppendLine();
 
                 report.AppendLine("--- fouls per 90 minutes, collision gate replayed offline ---");
@@ -606,6 +615,8 @@ namespace TacticalDirector.MatchEngine
             private bool _strongestCollisionParticipantsActiveThisTick;
             private int _strongestCollisionOffenderThisTick;
             private int _strongestCollisionVictimThisTick;
+            private bool _strongestValidCollisionFoundThisTick;
+            private float _strongestValidCollisionForceThisTick;
             private bool _pricedCollisionCandidateThisTick;
             private bool _fromBehindCalledThisTick;
 
@@ -615,11 +626,13 @@ namespace TacticalDirector.MatchEngine
                 PeakForcePerTick = new float[tickCapacity];
                 QualifyingContactForces = new List<float>();
                 PricedCandidateForces = new List<float>();
+                SentOffShadowedCandidateForces = new List<float>();
             }
 
             public float[] PeakForcePerTick { get; }
             public List<float> QualifyingContactForces { get; }
             public List<float> PricedCandidateForces { get; }
+            public List<float> SentOffShadowedCandidateForces { get; }
 
             public int AgentAgentContacts { get; private set; }
             public int FromBehindCandidates { get; private set; }
@@ -654,8 +667,10 @@ namespace TacticalDirector.MatchEngine
                 _strongestCollisionFoundThisTick = false;
                 _strongestCollisionForceThisTick = 0f;
                 _strongestCollisionParticipantsActiveThisTick = false;
-                _strongestCollisionOffenderThisTick = MatchEngineConstants.NO_POSSESSION;
-                _strongestCollisionVictimThisTick = MatchEngineConstants.NO_POSSESSION;
+                _strongestValidCollisionFoundThisTick = false;
+                _strongestValidCollisionForceThisTick = 0f;
+                // Offender/victim need no absent-agent sentinel: they are read only when the priced
+                // candidate guard is true, which guarantees this tick wrote a real collision identity.
                 _pricedCollisionCandidateThisTick = false;
                 _fromBehindCalledThisTick = false;
             }
@@ -687,7 +702,16 @@ namespace TacticalDirector.MatchEngine
                     if (strongestSentOff)
                     {
                         FromBehindSentOffSlotOccupancies++;
-                        FromBehindCandidatesShadowedBySentOffWinner += _openValidContactsThisTick;
+
+                        if (_strongestValidCollisionFoundThisTick)
+                        {
+                            // Without the invalid overall winner, exactly this one strongest valid
+                            // contact would have taken the slot and reached KD-F1. Any remaining valid
+                            // contacts still lose ordinary KD-F4 strongest-wins competition.
+                            FromBehindCandidatesShadowedBySentOffWinner++;
+                            SentOffShadowedCandidateForces.Add(_strongestValidCollisionForceThisTick);
+                            FromBehindCandidatesDroppedByStrongerSameTick += _openValidContactsThisTick - 1;
+                        }
                     }
                     else
                     {
@@ -714,7 +738,9 @@ namespace TacticalDirector.MatchEngine
                             _fromBehindCalledThisTick = true;
 
                             // Cross-check the observer mirror against production identity, not just count.
-                            // If the mirror picked a different same-tick winner, the force distribution is
+                            // This can cover only CALLED collision candidates: KD-F1 wave-ons deliberately
+                            // publish no event, so there is no production identity record to compare.
+                            // If the mirror picked a different called winner, the force distribution is
                             // not trustworthy even when priced == called + waved-on still balances.
                             if (!_pricedCollisionCandidateThisTick
                                 || foul.Offender != _strongestCollisionOffenderThisTick
@@ -851,6 +877,12 @@ namespace TacticalDirector.MatchEngine
                 if (participantsActive)
                 {
                     _openValidContactsThisTick++;
+                    if (!_strongestValidCollisionFoundThisTick
+                        || foul.ForceMagnitude > _strongestValidCollisionForceThisTick)
+                    {
+                        _strongestValidCollisionFoundThisTick = true;
+                        _strongestValidCollisionForceThisTick = foul.ForceMagnitude;
+                    }
                 }
 
                 if (_strongestCollisionFoundThisTick
@@ -889,4 +921,8 @@ namespace TacticalDirector.MatchEngine
 // | 1.3     | 2026-09-22 | —      | Reconciles each priced collision winner against the published offender/ |
 // |         |            |        | victim identity; splits genuine stronger-contact attrition from valid    |
 // |         |            |        | candidates shadowed by a sent-off slot winner. Measurement-only.         |
+// | 1.4     | 2026-09-22 | —      | Sent-off decomposition closure: tracks the strongest valid contact       |
+// |         |            |        | separately, so exactly one candidate can be shadowed by an invalid       |
+// |         |            |        | winner and remaining valid contacts stay KD-F4 attrition; reports the    |
+// |         |            |        | denied force and makes called-only identity coverage explicit.           |
 #endregion
