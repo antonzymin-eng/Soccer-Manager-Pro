@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs
 // Created:  2026-07-20
+// Modified: 2026-09-22 (W3/v23: active ClaimIntent field-for-field restore + continuation chain)
 // Modified: 2026-09-11 (W5/v22: non-default pressing pass-ring save/restore round-trip)
 // Modified: 2026-07-23
 // Author:   —
@@ -146,6 +147,61 @@ namespace TacticalDirector.MatchEngine
                     new UnityEngine.Vector3(5f, 34f, 0.11f), new UnityEngine.Vector3(-10f, 0f, 0f)),
                 midRunTick: 60);
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
+        }
+
+        [Test]
+        public void RoundTrip_ActiveClaimIntent_RestoresFieldsAndContinuation()
+        {
+            // W3/v23: save DURING a bounded claim episode rather than merely inspecting CaptureState.
+            // This catches both writer/reader order mistakes and fields that never enter the payload.
+            var a = new MatchEngine(MatchSeed);
+            a.EnableGkHeading();
+
+            var claim = new TacticalDirector.GoalkeeperMechanics.ClaimIntent
+            {
+                TargetContactPoint = new UnityEngine.Vector3(1.75f, 33.25f, 1.90f),
+                ClutchFirmness = 0.61f,
+                ReachDirectionLateral = -1.0f,
+                AttemptCommittedTick = 0,
+            };
+            a.TestOnly_CommitGoalkeeperClaimIntent(0, claim);
+            a.RunTick();
+
+            TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState savedState =
+                a.TestOnly_GoalkeeperState;
+            Assert.IsTrue(savedState.ClaimIntentActive[0],
+                "Staging failed: the W3 claim must still be active at the save point.");
+
+            SnapshotHeader header = a.CaptureDurableHeader();
+            SnapshotPayload payload = a.CaptureDurablePayload();
+
+            const int continuationTicks = 12;
+            var reference = new List<byte[]>(continuationTicks);
+            for (int i = 0; i < continuationTicks; i++)
+            {
+                a.RunTick();
+                reference.Add(a.CurrentSnapshotDigest);
+            }
+
+            MatchEngine c = MatchEngine.RestoreFromSnapshot(header, payload, MatchSeed);
+            TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState restored =
+                c.TestOnly_GoalkeeperState;
+
+            Assert.IsTrue(restored.ClaimIntentActive[0],
+                "v23 restore dropped the active ClaimIntent latch.");
+            Assert.AreEqual(claim.TargetContactPoint, restored.ClaimIntents[0].TargetContactPoint);
+            Assert.AreEqual(claim.ClutchFirmness, restored.ClaimIntents[0].ClutchFirmness, 0f);
+            Assert.AreEqual(claim.ReachDirectionLateral, restored.ClaimIntents[0].ReachDirectionLateral, 0f,
+                "The locked claim reach side must survive a mid-episode restore.");
+            Assert.AreEqual(claim.AttemptCommittedTick, restored.ClaimIntents[0].AttemptCommittedTick);
+
+            for (int i = 0; i < continuationTicks; i++)
+            {
+                c.RunTick();
+                CollectionAssert.AreEqual(
+                    reference[i], c.CurrentSnapshotDigest,
+                    $"Active-claim round-trip diverged at continuation tick {i + 1}.");
+            }
         }
 
         [Test]
@@ -496,4 +552,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | latches + GkContactState arrays) restores and continues the    |
 // |         |            |        | chain byte-for-byte.                                            |
 // | 1.3     | 2026-09-11 | —      | W5/v22: round-trip lock saves with a non-default latest opposing pass retained in the home pressing ring. |
+// | 1.12    | 2026-09-22 | —      | W3/v23 active ClaimIntent round-trip: field-for-field restore plus post-save digest continuation, including locked reach side. |
 #endregion
