@@ -430,10 +430,6 @@ namespace TacticalDirector.GoalkeeperMechanics
         }
 
         /// <summary>
-        /// Commits a RushIntent for the specified GK from the 10 Hz Decision Tree output.
-        /// §3.7 / §4.6.1.
-        /// </summary>
-        /// <summary>
         /// Commits a cross/aerial <see cref="ClaimIntent"/> from the 10 Hz producer. The intent is a
         /// tactical target and handling input only; it does not manufacture contact geometry. Physics
         /// asks <see cref="TryGetHandReachEnvelope"/> for #11's existing Stage-0 reach envelope.
@@ -510,7 +506,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                     return false;
                 }
 
-                peakHandZ = GoalkeeperDiveKinematics.ComputePeakHandZ(_attrs[gkIndex], timingJitterMs: 0.0f);
+                peakHandZ = GoalkeeperDiveKinematics.ComputePeakHandZ(_attrs[gkIndex], diveTimingJitterMs: 0.0f);
                 directionLateral = Sign(intent.TargetContactPoint.y - gkPosition.y);
             }
             else
@@ -532,6 +528,10 @@ namespace TacticalDirector.GoalkeeperMechanics
             return true;
         }
 
+        /// <summary>
+        /// Commits a RushIntent for the specified GK from the 10 Hz producer.
+        /// §3.7 / §4.6.1.
+        /// </summary>
         public void CommitRushIntent(int gkIndex, RushIntent intent, GoalkeeperAgentAttributes attrs)
         {
             if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
