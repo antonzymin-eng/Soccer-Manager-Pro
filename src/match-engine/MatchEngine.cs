@@ -175,7 +175,7 @@ namespace TacticalDirector.MatchEngine
         // backs all 22 instances (the adapter methods take agentId). DecisionTree stays Phase D.
 
         private readonly CollisionSubsystem _collisionSystem;
-        private readonly ICollisionEventConsumer _eventConsumer;   // MatchFlowCollisionConsumer (design note §3) — captures at most one foul candidate per tick
+        private readonly ICollisionEventConsumer _eventConsumer;   // W3 MatchCollisionFanout — match-flow always; AGENT_BALL also reaches Heading / shared-contact consumers
         private readonly PassExecutor[] _passExecutors;   // [SQUAD_SIZE]
         private readonly ShotExecutor[] _shotExecutors;   // [SQUAD_SIZE]
         private readonly bool[] _stumbleScratch;  // UpdateCollisions stumbleOut sink (discarded — not a Stage-0 movement input, B4)
@@ -730,7 +730,7 @@ namespace TacticalDirector.MatchEngine
             _passInFlightReceiverId = MatchEngineConstants.NO_POSSESSION; // ERR-012-011 — nothing in flight at boot
             _prevPossessingAgentId = MatchEngineConstants.NO_POSSESSION; // Phase E — no transition at boot
             _collisionSystem = new CollisionSubsystem(MatchEngineConstants.SQUAD_SIZE);
-            _eventConsumer = new MatchFlowCollisionConsumer(this);
+            _eventConsumer = new MatchCollisionFanout(this);
             _stumbleScratch = new bool[MatchEngineConstants.SQUAD_SIZE];
 
             // Match-flow completion (design note §3) — the first host-owned RNG draw site. Registered
@@ -4751,6 +4751,47 @@ namespace TacticalDirector.MatchEngine
                     _isCollisionKnockdown[i], _collisionForces[i]);
             }
 
+            // W3 + shared AGENT_BALL fan-out: Collision #3's own scheduling contract requires
+            // one sweep after Ball Physics and all Agent Movement positions are finalized. Running it
+            // here also gives Heading #10 its published same-frame collision-consumer window instead
+            // of publishing in Resolve after Heading had already run and then clearing the buffer next tick.
+            //
+            // The movement feedback arrays are still consumed on tick N+1 because every movement update
+            // above has already completed. Foul candidates remain within-tick: collision captures here,
+            // ApplyFoulIfCaptured consumes in Resolve later this same tick.
+            if (_gkHeadingEnabled)
+            {
+                RefreshGkAgentIds();
+                _heading.BeginPhysicsFrame();
+            }
+
+            // Preserve the pre-W3 cooldown ordering exactly: decrement once after AI and before collision.
+            if (_foulCooldownRemaining > 0)
+            {
+                _foulCooldownRemaining--;
+            }
+
+            int collisionFrameNumber = (int)_clock.CurrentTick;
+            float collisionMatchTime = _clock.CurrentMatchTimeSeconds;
+            _collisionSystem.UpdateCollisions(
+                _agents, _attrs, _teamIds, _isGoalkeeper,
+                knockdownOut: _isCollisionKnockdown,
+                knockdownForceOut: _collisionForces,
+                stumbleOut: _stumbleScratch,
+                ball: ref _ball,
+                matchSeed: _matchSeed,
+                frameNumber: collisionFrameNumber,
+                matchTime: collisionMatchTime,
+                eventConsumer: _eventConsumer,
+                ballDeflected: out bool ballDeflected);
+
+            // W4 moves atomically with the collision producer. The post-deflection flight is now visible
+            // to GK/Heading before their same-Physics update rather than after it in Resolve.
+            if (_gkHeadingEnabled && ballDeflected)
+            {
+                ResetKeeperReactionAfterDeflection();
+            }
+
             // GK (#11) / Heading (#10) 60 Hz drive (design §3.4). After the ball + agents are integrated so
             // the orchestrators see the current world, and — since this is the Physics phase — strictly
             // before the Resolve-phase goal check (a committed save/header can deflect the ball first).
@@ -4765,7 +4806,7 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// W4 same-Resolve deflection consumer. A changed flight restarts reaction timing only for
+        /// W4 same-Physics deflection consumer. A changed flight restarts reaction timing only for
         /// the keeper who can currently SEE the POST-deflection raw save threat. A hidden deflection does
         /// not bank reaction credit; the ordinary 10 Hz visibility gate will seed the episode if/when the
         /// ball emerges from the screen.
@@ -4800,10 +4841,12 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Test-only composition seam for a single Resolve phase. W4 uses this to prove that the
-        /// CollisionSystem applied-deflection result reaches the goalkeeper reaction consumer inside
-        /// the same Resolve call without unrelated Physics/AI setup mutating the staged collision first.
+        /// Test-only composition seam for a single Physics phase. W3/W4 use this to prove collision
+        /// production, fan-out and keeper deflection feedback occur before GK/Heading consumption.
         /// </summary>
+        internal void TestOnly_RunPhysicsPhase() => RunPhysicsPhase();
+
+        /// <summary>Test-only composition seam for a single Resolve phase.</summary>
         internal void TestOnly_RunResolvePhase() => RunResolvePhase();
 
         /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor
@@ -4828,62 +4871,11 @@ namespace TacticalDirector.MatchEngine
             // since the last tick — CurrentPhase is now Resolve, the registered producer phase.
             PublishPendingSubstitutions();
 
-            // W4 review closure: a substitution published at Resolve entry can change which agent owns
-            // a keeper slot. Refresh unconditionally under the GK flag here, before collision/deflection
-            // and shot-notification consumers, rather than making ResetSlot timing depend on whether a
-            // body deflection happened later in this phase.
-            if (_gkHeadingEnabled)
-            {
-                RefreshGkAgentIds();
-            }
-
             int frameNumber = (int)_clock.CurrentTick;          // narrows safely at Stage 0 (~414 days @ 60 Hz)
             float matchTime = _clock.CurrentMatchTimeSeconds;
 
-            // Match-flow completion (design note §3): the global foul-detection cooldown decrements
-            // once per tick, before the collision step that would otherwise re-arm a foul this tick.
-            if (_foulCooldownRemaining > 0)
-            {
-                _foulCooldownRemaining--;
-            }
-
-            // C2 — collision first. Reuses _attrs (PlayerAttributes[]); writes _isCollisionKnockdown /
-            // _collisionForces (consumed by movement at tick N+1). stumbleOut is discarded (B4 — not a
-            // Stage-0 movement input). Self-seeds its own RNG from _matchSeed ^ frameNumber internally.
-            // NOTE: UpdateCollisions processes ALL 22 agents incl. goalkeepers, whereas Physics-phase
-            // UpdateAllAgents skips GKs (Stage 0 — GK locomotion is #11). A GK can therefore be
-            // displaced by a collision that movement never re-integrates; benign at Stage 0 (kickoff
-            // spread admits no GK collisions) and inherent to the two seams, recorded here for Phase D.
-            // _foulCandidateFound needs no reset here: ApplyFoulIfCaptured (called every tick, right
-            // below) always clears it when true, so it is already false entering UpdateCollisions —
-            // an invariant a TestOnly-injected candidate can rely on too (design note §3 test plan).
-            //
-            // AMENDED at W2 (AR-1 L-3): "already false entering UpdateCollisions" is no longer true.
-            // The AI phase runs BEFORE Physics, and TryResolveTackles can leave a DECIDED candidate
-            // standing in the slot — which is the whole premise of the KD-F4 decided-outranks-candidate
-            // rule in MatchFlowCollisionConsumer. What survives is the property that actually matters
-            // here: the slot is always empty by the END of a tick, because ApplyFoulIfCaptured clears
-            // it on every path including the wave-on and the sent-off discard. It is a per-tick slot,
-            // not a per-phase one.
-            _collisionSystem.UpdateCollisions(
-                _agents, _attrs, _teamIds, _isGoalkeeper,
-                knockdownOut: _isCollisionKnockdown,
-                knockdownForceOut: _collisionForces,
-                stumbleOut: _stumbleScratch,
-                ball: ref _ball,
-                matchSeed: _matchSeed,
-                frameNumber: frameNumber,
-                matchTime: matchTime,
-                eventConsumer: _eventConsumer,
-                ballDeflected: out bool ballDeflected);
-
-            // W4: consume an APPLIED flight change immediately in this Resolve phase. No pending
-            // deflection latch survives the tick; existing GK reaction fields remain the only state.
-            if (_gkHeadingEnabled && ballDeflected)
-            {
-                ResetKeeperReactionAfterDeflection();
-            }
-
+            // W3: Collision System now ran in Physics after movement and before GK/Heading. Consume
+            // the same-tick foul candidate here so EventBus/card/restart work remains in Resolve.
             // Match-flow completion (design note §3): apply the (at most one) foul candidate the
             // consumer just captured — RNG-drawn severity, card issuance, sent-off, and a free kick.
             ApplyFoulIfCaptured();
@@ -8560,14 +8552,42 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Collision-event consumer (design note §3): captures AT MOST ONE foul candidate per Resolve
+        /// W3 composition-root fan-out for Collision #3's single consumer slot.
+        /// Delivery order is producer order. Match-flow receives every collision exactly once;
+        /// Heading receives AGENT_BALL only while the GK/Heading feature is enabled. The fan-out
+        /// contains no football policy, RNG or ball mutation.
+        /// </summary>
+        private sealed class MatchCollisionFanout : ICollisionEventConsumer
+        {
+            private readonly MatchEngine _engine;
+            private readonly MatchFlowCollisionConsumer _matchFlow;
+
+            public MatchCollisionFanout(MatchEngine engine)
+            {
+                _engine = engine;
+                _matchFlow = new MatchFlowCollisionConsumer(engine);
+            }
+
+            public void OnCollisionEvent(in CollisionEvent evt)
+            {
+                _matchFlow.OnCollisionEvent(in evt);
+
+                if (_engine._gkHeadingEnabled && evt.Type == CollisionType.AGENT_BALL)
+                {
+                    _engine._heading.CollisionConsumer.OnCollisionEvent(in evt);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Match-flow collision consumer (design note §3): captures AT MOST ONE foul candidate per
         /// tick into scalar fields on the host — no buffer, since only the first qualifying collision
         /// is ever acted on (cards are rare). Qualification: AGENT_AGENT, ContactType.FROM_BEHIND,
         /// ForceMagnitude ≥ FoulImpactForceThresholdN, opposite teams, and the host's foul cooldown is
         /// closed. Sent-off participation is deliberately NOT checked here — that gate lives at the
         /// application site (<see cref="MatchEngine.ApplyFoulIfCaptured"/>, AR-9 M-1), which also
-        /// covers the test-injection seam. <see cref="MatchEngine.ApplyFoulIfCaptured"/> reads +
-        /// resets this state immediately after <c>UpdateCollisions</c> returns.
+        /// covers the test-injection seam. W3 publishes collisions in Physics; Resolve later in the
+        /// same tick reads + resets this state through <see cref="MatchEngine.ApplyFoulIfCaptured"/>.
         /// </summary>
         private sealed class MatchFlowCollisionConsumer : ICollisionEventConsumer
         {
