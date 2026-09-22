@@ -200,6 +200,55 @@ namespace TacticalDirector.MatchEngine
                 "The prefeed must not displace the staged target; full physical collision remains Resolve-owned.");
         }
 
+        [Test]
+        public void W3_ClaimProducer_CommitsSerializedIntent_AndExposesOwnedReachEnvelope()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            int keeper = -1;
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (engine.AgentIsGoalkeeper(i))
+                {
+                    keeper = i;
+                    break;
+                }
+            }
+            Assert.GreaterOrEqual(keeper, 0);
+
+            int teamId = keeper < MatchEngineConstants.PLAYERS_PER_TEAM ? 0 : 1;
+            Vector2 gkXY = engine.AgentView(keeper).Position;
+            Vector3 ball = new Vector3(
+                gkXY.x,
+                gkXY.y + 0.5f,
+                MatchEngineConstants.GkRushMaxBallHeightM + 0.1f);
+
+            engine.TestOnly_ForceBallLoose(ball, Vector3.zero);
+            engine.TestOnly_DriveGkHeadingTactical();
+
+            var state = engine.TestOnly_GoalkeeperState;
+            Assert.IsTrue(state.ClaimIntentActive[teamId],
+                "The W3 high-ball producer must arm #11's own serialized claim latch.");
+            Assert.AreEqual(ball.x, state.ClaimIntents[teamId].TargetContactPoint.x, 1e-6f);
+            Assert.AreEqual(ball.y, state.ClaimIntents[teamId].TargetContactPoint.y, 1e-6f);
+            Assert.AreEqual(ball.z, state.ClaimIntents[teamId].TargetContactPoint.z, 1e-6f);
+            Assert.AreEqual(state.Attrs[teamId].HandlingNorm, state.ClaimIntents[teamId].ClutchFirmness, 1e-6f,
+                "Claim handling input should reuse the keeper's normalized Handling, not add a W3 tuning dial.");
+
+            Assert.IsTrue(engine.TestOnly_TryGetGoalkeeperHandReachEnvelope(
+                    teamId, out Vector3 reachCenter, out float reachRadius),
+                "An active production ClaimIntent must expose #11's live hand/reach envelope.");
+            Assert.Greater(reachRadius, 0f);
+            Assert.AreEqual(
+                TacticalDirector.GoalkeeperMechanics.GoalkeeperDiveKinematics.ComputeReachRadius(
+                    state.Attrs[teamId]),
+                reachRadius, 1e-6f,
+                "W3 must consume #11's existing reach-radius formula rather than inventing hand geometry.");
+            Assert.AreNotEqual(ball, reachCenter,
+                "The tactical target must not be returned verbatim as a synthetic hand collider.");
+        }
+
         // ── flag semantics ──────────────────────────────────────────────────────────
 
         [Test]
