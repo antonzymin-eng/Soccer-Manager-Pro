@@ -1,7 +1,7 @@
 # W3 — shared AGENT_BALL fan-out and goalkeeper cross-claim wiring
 
 > **Created:** September 22, 2026
-> **Status:** ACTIVE DRAFT / PREREGISTRATION AMENDMENT — implementation is in progress on PR #439; v0.2 records the review-corrected architecture before goalkeeper arbitration lands.
+> **Status:** ACTIVE DRAFT / PREREGISTRATION AMENDMENT — implementation is in progress on PR #439; v0.4 records the geometry-owned arbitration and serialized ClaimIntent corrections before acceptance evidence.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W3**.
 > **Companion preregistration:** `docs/tracking/foul-card-w3-w9-preregistration.md`.
 > **Baseline:** `main` at `876a3343319050187c2a5505b18cb32fc3d0f89d`; post-merge CI run
@@ -24,7 +24,7 @@ That pass uses the existing Stage-0 AGENT_BALL overlap test and mutates neither 
 The Physics candidate feed fans out deterministically to:
 
 1. Heading #10's existing `ICollisionEventConsumer` surface; and
-2. the W3 cross-claim collector used by goalkeeper/heading arbitration.
+2. the W3 frame-local AGENT_BALL observation collector.
 
 The existing `MatchFlowCollisionConsumer` remains attached to the full
 `CollisionSystem.UpdateCollisions(...)` call in **Resolve**, exactly where foul capture, W4 torso
@@ -36,10 +36,11 @@ In particular, Collision #3's coarse Stage-0 cylinder is **candidate discovery o
 own head geometry remains authoritative for header eligibility, including aerial contacts above
 Collision #3's 2.0 m reach cap.
 
-No cross-tick collision-event queue is introduced. W3 candidate buffers are cleared, populated and
-consumed inside one 60 Hz Physics phase. Physical collision response retains its pre-W3 Resolve
-ordering, so W3 does not introduce the unreviewed "torso bounce before header/save" behavior found in
-PR #439 review. The feed itself introduces no snapshot field or schema bump.
+No cross-tick collision-event queue is introduced. The Collision #3 observation buffers and #10 prepared-Head
+scratch are cleared, populated and consumed inside one 60 Hz Physics phase. Physical collision response retains
+its pre-W3 Resolve ordering, so W3 does not introduce the unreviewed "torso bounce before header/save" behavior
+found in PR #439 review. Separately, W3 makes #11 `ClaimIntent` a live bounded cross-tick episode; that intent plus
+its active latch is authoritative gameplay state and is serialized in MatchEngine snapshot schema **v23**.
 
 No `[GT]` values are calibrated in W3. The frozen six-seed corpus is rerun after the wiring as
 required by the companion preregistration.
@@ -89,9 +90,10 @@ Heading's own geometry. PR #439's first implementation incorrectly made Collisio
 a prerequisite for heading duel membership; review showed that would reject high aerials above 2.0 m
 and likely suppress contested headers.
 
-W3 therefore keeps Heading geometry authoritative. The shared feed becomes load-bearing at the
-**cross-system arbitration boundary**, where it identifies coarse current-frame candidates for
-keeper/head classification without replacing #10's own contact test.
+W3 therefore keeps Heading geometry authoritative. The shared Collision #3 feed is **not load-bearing for
+contest membership or body-part classification**. It is a required second consumer/diagnostic fan-out proving
+the shared dependency is live. The cross-system arbitration boundary instead combines #10's prepared
+current-frame Head geometry with #11's live active-claim Hand reach geometry.
 
 ### 1.3 Detection may run in Physics; physical response stays in Resolve
 
@@ -147,9 +149,14 @@ RunPhysicsPhase
        -> AgentBallFanout
           -> Heading collision consumer
           -> W3 cross-claim collector
-  8. build W3 hand/head arbitration from candidate feed + owning mechanic geometry
-  9. Heading.Update / Goalkeeper.Update
- 10. controlled-ball attachment
+  8. Heading.Update Pass 1 prepares #10 geometry-qualified Head contacts
+  9. W3 composition arbitration combines prepared #10 Heads + live #11 active-claim Hand reach
+       -> canonical mixed-participant registration
+       -> #11 cross-claim score/tiebreak
+       -> suppress losing Heads before #10 ball mutation
+       -> route Hand winner/loss through #11 handling/failure path
+ 10. Heading.Update Pass 2 applies the surviving Head path; Goalkeeper.Update advances #11 state
+ 11. controlled-ball attachment
 
 RunResolvePhase
   1. publish pending substitutions + refresh keeper-slot ids
@@ -185,14 +192,18 @@ The generic layer may inspect `CollisionType` only to avoid sending irrelevant e
 
 This keeps #3's event surface generic and avoids making Collision System the owner of football policy.
 
-### 3.2 W3 collector owns contest membership
+### 3.2 Mechanic-owned geometry owns contest membership
 
-After the read-only candidate pass has completed, W3 considers a cross-system contest only when at
-least two distinct agents are inside #11's contest volume and the owning mechanic confirms a relevant
-contact geometry. The coarse Collision #3 candidate is neither Head nor Hand truth by itself.
-Registration is canonicalized to #16 entity order; callback arrival order must not decide a winner.
+The read-only Collision #3 collector is diagnostic only and may contain **zero** records for a valid high aerial.
+W3 contest membership comes only from the owning mechanics in the same Physics frame:
 
-The `CROSS_CLAIM_VOLUME_RADIUS_M` gate remains owned by #11 and is not retuned here.
+- #10 contributes agents that have reached its real geometry-qualified prepared Head-contact point;
+- #11 contributes goalkeepers with an active bounded `ClaimIntent` whose live hand/reach envelope intersects the ball.
+
+An uncontested Hand contact is a valid one-participant #11 resolution; a mixed contest exists when additional
+Hand/Head participants are present. Registration is canonicalized to #16 entity order, independent of callback
+or mechanic discovery order. The tactical arming radius remains `CROSS_CLAIM_VOLUME_RADIUS_M`; it is not retuned
+and is not substituted for the live contact geometry.
 
 ### 3.3 Body-part classification is consumer-owned Stage-0 geometry
 
@@ -226,21 +237,25 @@ quality formulas and event types.
 
 ## 4. Determinism, snapshot, and RNG consequences
 
-### 4.1 No new cross-tick hidden state
+### 4.1 Frame-local arbitration scratch; ClaimIntent is serialized cross-tick state
 
-All new feed buffers are frame-local and consumed before Physics exits. No pending collision event
-survives into Snapshot, so no new serialized field is justified.
+The Collision #3 observation collector, Heading prepared-Head list, suppression mask, and #11 duel buffer are
+frame-local and consumed before Physics exits. No pending collision/arbitration event survives into Snapshot.
 
-If implementation discovers that an event must survive the phase boundary, this design is invalid:
-stop, amend this note, add the state to canonical snapshot/restore, and bump the schema before
-continuing. Silently carrying an unserialized pending contact is forbidden.
+`ClaimIntent` is different: W3 requires a high cross to arm once and remain locked while the ball descends into
+reachable Hand height. Its target, clutch input, locked lateral reach side, commit tick and active latch therefore
+survive tactical/physics strides and are authoritative cross-tick gameplay state. MatchEngine schema **22 → 23**
+serializes/restores that complete state. Digest and mid-claim save/restore tests lock the requirement.
+
+Any future arbitration scratch that must survive a phase/tick boundary requires the same treatment; silently
+carrying an unserialized pending contact remains forbidden.
 
 ### 4.2 Digest trajectory may change only from newly-live W3 gameplay
 
-The read-only candidate feed itself is behavior-neutral: physical collision response ordering is
-unchanged and Heading eligibility is unchanged. Once goalkeeper/head arbitration becomes live, that
-new gameplay may alter ball state, mechanic RNG consumption, events and subsequent decisions. W3 must
-therefore not claim pre/post digest equality for the completed landing.
+The read-only candidate feed itself is behavior-neutral: physical collision response ordering is unchanged and
+Heading eligibility is unchanged. The live ClaimIntent and goalkeeper/head arbitration may alter ball state,
+mechanic RNG consumption, events and subsequent decisions. W3 must therefore not claim pre/post digest equality
+for the completed landing.
 
 The determinism locks are instead:
 
@@ -318,9 +333,10 @@ spec back-prop, and composed tests. This is a size estimate, not a calibration a
 Recommended atomic sequence on this branch:
 
 1. **plan only** — this file;
-2. **spec/back-prop + structural types/tests** — correct the #11 phantom dependency and add the
-   narrow cross-claim participant contract;
-3. **runtime atom** — read-only Physics candidate feed + fan-out + W3 arbitration, while full physical collision response remains in Resolve;
+2. **spec/back-prop + structural types/tests** — correct the #11 phantom dependency, record the serialized
+   ClaimIntent episode, and add the narrow cross-claim participant contract;
+3. **runtime atom** — read-only Physics observation feed + fan-out plus #10-prepared/#11-live geometry arbitration,
+   while full physical Collision #3 response remains in Resolve;
 4. **tests/adversarial corrections**;
 5. **frozen-corpus evidence + closeout text**.
 
@@ -350,6 +366,7 @@ be fixed atomically.
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.4 | 2026-09-22 | Review correction / ERR-011-012: Collision #3 fan-out is observation-only, never W3 membership; #10 prepared Head geometry + #11 active-claim Hand reach form the live contest before ball mutation. ClaimIntent is now a bounded locked episode and its full payload + active latch is serialized in MatchEngine schema v23. |
 | 0.3 | 2026-09-22 | `ERR-011-011` filed/resolved atomically with #11 §3.6.1: remove phantom #3 hand/head colliders; #3 is candidate-only, #10 owns head geometry, #11 owns live hand reach, and ordinary Hand claims remain blocked until W3 wires a real claim producer. |
 | 0.2 | 2026-09-22 | PR #439 review correction: reject the full Resolve→Physics collision move and the Collision-cylinder Heading gate. W3 now uses a read-only Physics AGENT_BALL candidate pass; full response/W4/fouls stay in Resolve; #10 geometry remains authoritative; direct Heading lifecycle and overflow fail-closed requirements are explicit. |
 | 0.1 | 2026-09-22 | Pre-implementation W3 / shared AGENT_BALL landing plan. Records the single-consumer composition constraint, proposed phase ordering, #11 phantom collider citation, generic-feed/policy boundary, determinism/snapshot posture, required tests, and frozen-corpus rerun. |
