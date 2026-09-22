@@ -277,12 +277,13 @@ namespace TacticalDirector.MatchEngine
                         + Invariant($"pricedCandidateIdentityChecks={probe.FromBehindCalled} ")
                         + Invariant($"pricedCandidateIdentityMismatches={probe.PricedCandidateIdentityMismatches}"));
                     report.AppendLine(
-                        Invariant($"  slideTackleCandidates={probe.SlideTackleCandidates} ")
+                        Invariant($"  cooldownBasis=tick-start-nonzero-before-Resolve-decrement ")
+                        + Invariant($"slideTackleCandidates={probe.SlideTackleCandidates} ")
                         + Invariant($"slideTackleCalled={probe.SlideTackleCalled} ")
                         + Invariant($"slideTackleCallsDuringFoulCooldown={probe.SlideTackleCallsDuringFoulCooldown} ")
                         + Invariant($"slideTackleRaisedDuringCooldownApplied={probe.SlideTackleRaisedDuringCooldownApplied}"));
                     report.AppendLine(
-                        Invariant($"  cooldownBasis=tick-start-before-Resolve-decrement ")
+                        Invariant($"  collisionSuppressionBasis=post-Resolve-decrement-nonzero ")
                         + Invariant($"slideTackleCallsDuringCollisionSuppressionWindow={probe.SlideTackleCallsDuringCollisionSuppressionWindow} ")
                         + Invariant($"slideTackleRaisedDuringCollisionSuppressionApplied={probe.SlideTackleRaisedDuringCollisionSuppressionApplied}"));
                     report.AppendLine(
@@ -315,12 +316,13 @@ namespace TacticalDirector.MatchEngine
                     + Invariant($"pricedCandidateIdentityChecks={totalFromBehindCalled} ")
                     + Invariant($"pricedCandidateIdentityMismatches={totalPricedCandidateIdentityMismatches}"));
                 report.AppendLine(
-                    Invariant($"slideTackleCandidates={totalSlideTackleCandidates} ")
+                    Invariant($"cooldownBasis=tick-start-nonzero-before-Resolve-decrement ")
+                    + Invariant($"slideTackleCandidates={totalSlideTackleCandidates} ")
                     + Invariant($"slideTackleCalled={totalSlideTackleCalled} ")
                     + Invariant($"slideTackleCallsDuringFoulCooldown={totalSlideTackleCallsDuringCooldown} ")
                     + Invariant($"slideTackleRaisedDuringCooldownApplied={totalSlideTackleRaisedDuringCooldownApplied}"));
                 report.AppendLine(
-                    Invariant($"cooldownBasis=tick-start-before-Resolve-decrement ")
+                    Invariant($"collisionSuppressionBasis=post-Resolve-decrement-nonzero ")
                     + Invariant($"slideTackleCallsDuringCollisionSuppressionWindow={totalSlideTackleCallsDuringCollisionSuppressionWindow} ")
                     + Invariant($"slideTackleRaisedDuringCollisionSuppressionApplied={totalSlideTackleRaisedDuringCollisionSuppressionApplied}"));
                 report.AppendLine(
@@ -707,8 +709,8 @@ namespace TacticalDirector.MatchEngine
                 _strongestCollisionVictimThisTick = NoAgent;
                 _strongestValidCollisionFoundThisTick = false;
                 _strongestValidCollisionForceThisTick = 0f;
-                // Offender/victim need no absent-agent sentinel: they are read only when the priced
-                // candidate guard is true, which guarantees this tick wrote a real collision identity.
+                // Reset the identity sentinels every tick. They are read only when the priced-candidate
+                // guard is true, which guarantees a real collision identity replaced these values.
                 _pricedCollisionCandidateThisTick = false;
                 _fromBehindCalledThisTick = false;
             }
