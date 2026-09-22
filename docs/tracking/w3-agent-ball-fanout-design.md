@@ -114,10 +114,10 @@ classification is a generic agent volume and `AgentBallCollisionData.BodyPart` i
 to `Torso`; #3's own staged design defers aerial / goalkeeper special cases.
 
 This is a #11 cross-spec citation defect, not permission for W3 to invent an undocumented #3 API.
-Before the runtime policy lands, #11 must be back-propagated to the actual Stage-0 physical geometry
-available to the consumers. The next #11 error id was grep-free at plan time
-(`ERR-011-011`), but it must be rechecked immediately before filing; the design note does not reserve
-an id.
+It is filed and resolved as **`ERR-011-011`** after a repo-wide recheck on September 22. #11 §3.6.1
+now treats #3 as candidate discovery only, keeps #10 as head-geometry owner, and keeps #11's live
+hand/reach envelope as hand-geometry owner. A goalkeeper without a live hand envelope is not a Hand
+participant; W3 must wire the dormant claim producer before ordinary cross claims can use Hand.
 
 ### 1.5 Do not project outfielders through the goalkeeper attribute contract
 
@@ -350,5 +350,6 @@ be fixed atomically.
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.3 | 2026-09-22 | `ERR-011-011` filed/resolved atomically with #11 §3.6.1: remove phantom #3 hand/head colliders; #3 is candidate-only, #10 owns head geometry, #11 owns live hand reach, and ordinary Hand claims remain blocked until W3 wires a real claim producer. |
 | 0.2 | 2026-09-22 | PR #439 review correction: reject the full Resolve→Physics collision move and the Collision-cylinder Heading gate. W3 now uses a read-only Physics AGENT_BALL candidate pass; full response/W4/fouls stay in Resolve; #10 geometry remains authoritative; direct Heading lifecycle and overflow fail-closed requirements are explicit. |
 | 0.1 | 2026-09-22 | Pre-implementation W3 / shared AGENT_BALL landing plan. Records the single-consumer composition constraint, proposed phase ordering, #11 phantom collider citation, generic-feed/policy boundary, determinism/snapshot posture, required tests, and frozen-corpus rerun. |
