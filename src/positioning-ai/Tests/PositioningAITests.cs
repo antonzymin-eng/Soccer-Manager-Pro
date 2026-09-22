@@ -151,6 +151,48 @@ namespace TacticalDirector.PositioningAI.Tests
         }
 
         // ──────────────────────────────────────────────────────────────────────
+        // PR #434 regression: formation reseed must not reset phase hysteresis
+        // ──────────────────────────────────────────────────────────────────────
+        [Test]
+        public void SetFormation_PreservesCommittedPhaseCandidateAndDwell()
+        {
+            var snap = MakeSnapshot(possOwner: 3, possIsOwn: false);
+            var tick = new PositioningAITick(FormationFamily.F442);
+            tick.SeedFromFormation(snap);
+
+            for (int t = 0; t < PositioningAIConstants.PHASE_HYSTERESIS_TICKS; t++)
+            {
+                snap.TickIndex = t;
+                tick.Tick(snap, NeutralModifiers());
+            }
+            Assert.AreEqual(Phase.OutOfPoss, tick.GetPhase());
+
+            snap.PossessionOwnerEntityId = -1;
+            snap.PossessionOwnerIsOwnTeam = false;
+            snap.HasTeamPossession = false;
+            snap.TeamPossessionIsOwnTeam = false;
+            snap.BallVxFiltered = PositioningAIConstants.PHASE_LOOSE_VELOCITY_THRESHOLD + 1f;
+            snap.TickIndex++;
+            tick.Tick(snap, NeutralModifiers());
+
+            HysteresisState before = tick.CaptureState();
+            Assert.AreEqual(Phase.OutOfPoss, before.CurrentPhase);
+            Assert.AreEqual(Phase.TransToAtk, before.CandidatePhase);
+            Assert.AreEqual(1, before.PhaseDwellCount);
+
+            tick.SetFormation(FormationFamily.F433, snap);
+
+            HysteresisState after = tick.CaptureState();
+            Assert.AreEqual(FormationFamily.F433, tick.GetFormationFamily());
+            Assert.AreEqual(Phase.OutOfPoss, after.CurrentPhase,
+                "formation switch must not manufacture InPoss");
+            Assert.AreEqual(Phase.TransToAtk, after.CandidatePhase,
+                "formation switch must preserve the pending phase candidate");
+            Assert.AreEqual(1, after.PhaseDwellCount,
+                "formation switch must preserve phase dwell progress");
+        }
+
+        // ──────────────────────────────────────────────────────────────────────
         // T-U-006: TransToDef — loose ball moving toward own goal
         // ──────────────────────────────────────────────────────────────────────
         [Test]
@@ -1640,4 +1682,5 @@ namespace TacticalDirector.PositioningAI.Tests
 // | 1.2     | 2026-06-13 | —      | ERR-012-003 dotnet-CI quarantine: T-U-060 ContextModifier_ScoreDiff_ExpandsLateralSpread inverted |
 // |         |            |        | the spec direction (§3.5.3 / §5 T-U-063: a goal lead TIGHTENS the lateral spread). Renamed to     |
 // |         |            |        | ContextModifier_ScoreDiff_TightensLateralSpread; assertion flipped (>)→(<) to match spec.         |
+// | 1.3     | 2026-09-21 | —      | PR #434 regression: formation changes preserve CurrentPhase, CandidatePhase, and PhaseDwellCount. |
 #endregion

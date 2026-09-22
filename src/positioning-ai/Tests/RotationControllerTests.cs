@@ -59,9 +59,7 @@ namespace TacticalDirector.PositioningAI.Tests
                 }
                 snap.Agents[i] = new AgentPositioningData(
                     i, i, pos, isActive: true, F[i].Role, F[i].IsGoalkeeper,
-                    duty: i == 1 ? Duty.Attack : Duty.Support,
-                    positioningFreedom: i == 1 ? InstrBias.More : InstrBias.Default,
-                    tacticalRole: i == 1 ? PlayerRole.Poacher : PlayerRole.Default);
+                    duty: i == 1 ? Duty.Attack : Duty.Support);
             }
             return snap;
         }
@@ -119,10 +117,6 @@ namespace TacticalDirector.PositioningAI.Tests
             Assert.AreEqual(5, snap.Agents[1].SlotIndex, "snapshot row rebound (agent 1 → slot 5)");
             Assert.AreEqual(F[5].Role, snap.Agents[1].Role, "role re-derived from the bound slot");
             Assert.AreEqual(Duty.Attack, snap.Agents[1].Duty, "player duty survives row reconstruction");
-            Assert.AreEqual(InstrBias.More, snap.Agents[1].PositioningFreedom,
-                "positioning freedom survives row reconstruction");
-            Assert.AreEqual(PlayerRole.Poacher, snap.Agents[1].TacticalRole,
-                "behavioural player role survives row reconstruction");
             Assert.AreEqual(1, snap.Agents[5].SlotIndex, "snapshot row rebound (agent 5 → slot 1)");
             Assert.AreEqual(0, snap.Agents[0].SlotIndex, "GK binding always identity (FR-RO-003)");
         }
@@ -409,4 +403,5 @@ namespace TacticalDirector.PositioningAI.Tests
 // |         |            |        |   partner lock, commit cap, phase freeze, Off identity, F2/F5/F6 |
 // |         |            |        |   validating seams.                                              |
 // | 1.1     | 2026-09-21 | —      | Locks per-player tactical state preservation across row rebinding. |
+// | 1.2     | 2026-09-21 | —      | PR #434 review correction: rebind lock narrowed to approved #12 Duty. |
 #endregion

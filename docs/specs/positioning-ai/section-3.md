@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 15, 2026
-**Last Updated:** August 8, 2026 (v0.8 — ERR-012-011: §3.0 now classifies phase from the orchestrator-supplied TEAM in possession rather than #7's on-ball carrier. A team keeps the ball while a pass it played travels to a team-mate; the carrier is absent for the whole flight of every pass, which committed `InPoss` on 7.5% of final-third samples and read a passing team as being in transition. New §3.0.5 worked example covers a pass flight. The V0 velocity branch, `PHASE_HYSTERESIS_TICKS` and every constant are unchanged. See `match-engine-wiring-backlog.md` C1.)
-**Version:** 0.8
+**Last Updated:** September 21, 2026 (v0.9 — ERR-012-012: §3.7.1 records Tactical Instructions #21 FR-TI-013's approved Duty fore/aft positioning amendment. Duty shifts the baseline anchor longitudinally by the pinned {-3,0,+3} m catalogue before the ball-relative offset; Support is identity. PositioningFreedom remains #8's MOVE_TO_POSITION bias under FR-TI-014, and PlayerRole positioning remains deferred until its #12 offset table has approved values. No new constant, schema, or RNG surface.)
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -560,22 +560,30 @@ step 1 and receive the `SENTINEL_NO_SLOT` value (§2.4 / AR-S1-07).
 No Stage 0 step performs #13 Press, #14 Mark, or #15 Run override.
 KD-13: those compositor slots are declared in §7 only.
 
-### 3.7.1 Stage-1 pipeline amendments (back-props ERR-012-007/008/009, July 10, 2026)
+### 3.7.1 Stage-1 pipeline amendments (back-props ERR-012-007/008/009/012)
 
-Dismarking AI #23, Build-Up Structures #24, and Positional Rotations #25 (all `APPROVED`
-July 10, 2026) amend this pipeline at their implementation stage. The amendments are recorded
-here as the #12-side contract; formulas, constants, state, and tests stay in the owning specs.
-Every inserted stage is a **no-op at its dial's zero-value identity** (`Off`/`None`), so a default
-match remains byte-identical to the Stage-0 pipeline above.
+Dismarking AI #23, Build-Up Structures #24, Positional Rotations #25, and Tactical Instructions #21
+amend this pipeline at their implementation stage. The amendments are recorded here as the #12-side
+contract; formulas, constants, state, and tests stay in the owning specs. Every inserted effect is a
+**no-op at its identity** (`Duty.Support` / `Off` / `None`), so a default match remains
+byte-identical to the Stage-0 pipeline above.
 
+- **ERR-012-012 (#21):** after computing the baseline formation anchor and before adding the §3.2
+  ball-relative offset, add `DutyForeOffsetM[(int)Duty]` to the active outfielder's longitudinal
+  anchor coordinate. The approved/pinned values are Defend −3.0 m, Support 0.0 m, Attack +3.0 m
+  (#21 §3.4 / Appendix A); Support therefore preserves the pre-#21 slot exactly. This amendment
+  activates only the already-normative FR-TI-013 positioning effect. `PositioningFreedom` remains
+  the #8 `MOVE_TO_POSITION` instruction bias defined by FR-TI-014, and no #12 PlayerRole offset is
+  activated until the role-offset table named by XC-021-005 has approved numerical rows.
 - **ERR-012-008 (#24):** a **build-up overlay** stage is inserted between step 3
   (`ContextModifier`) and step 4 (spacing) — the structure proposes a shape, spacing resolves
   conflicts inside it (#24 §3.2/§4.2). Adds per-team `BuildUpZoneState` (classifier + hysteresis,
   #24 §2.2.2) to this assembly.
 - **ERR-012-007 (#23):** a **dismark offset** stage is inserted between step 4 (spacing) and
   step 5 (pitch clamp), so composed targets remain on-pitch (#23 §3.3, order pinned by
-  FR-DM-008). The combined order — `anchor → offset → ContextModifier → build-up overlay →
-  spacing → dismark offset → pitch clamp → lines → lanes` — is the contract pinned jointly in
+  FR-DM-008). The combined order — `anchor → Duty fore/aft offset → ball-relative offset →
+  ContextModifier → build-up overlay → spacing → dismark offset → pitch clamp → lines → lanes` —
+  is the contract pinned jointly in
   #23 §4.2 / #24 §4.2; whichever implements second adds the shared stage-order test.
 - **ERR-012-009 (#25):** the `RotationController` runs **before** slot composition (after phase
   classification), reading the previous heartbeat's composed targets from its own serialized
@@ -720,3 +728,4 @@ that agent (§4.4.3).
 | 0.6 | July 10, 2026 | AI agent | Back-props ERR-012-007/008/009 (#23/#24/#25 `APPROVED` same day): new §3.7.1 records the Stage-1 pipeline amendments — build-up overlay stage (between ContextModifier and spacing), dismark offset stage (between spacing and pitch clamp, FR-DM-008), `RotationController` pre-composition position, and the `AgentPositioningData.SlotIndex` single-writer contract amendment (no longer immutable after `SeedFromFormation`; `RotationController` sole post-seed writer). All stages identity-no-op at zero-value dials; owning specs hold formulas/constants/tests. |
 | 0.7 | July 28, 2026 | AI agent (gk-contact-rate pass) | ERR-012-010: §3.3.3 GK slot lateral term corrected from the pitch-anchored `GK_LATERAL_FACTOR × basisY` form to the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M`); the superseded form is preserved in-place with the measured rationale. See `gk-contact-rate-design.md` §1.2/KD-CR3/KD-CR4. |
 | 0.8 | August 8, 2026 | AI agent (wiring-backlog C1) | ERR-012-011: §3.0.1/§3.0.2 reclassify phase from the orchestrator-supplied TEAM in possession instead of #7's on-ball carrier, with the football definition of team possession stated normatively and the reason #7 cannot own the input recorded. New §3.0.5 worked example walks a pass between team-mates tick by tick and contrasts it with the loose-ball and shot cases — the settled-possession-with-a-moving-ball case the section previously had no example of, which is how the defect survived. Measured: `InPoss` on 7.5% of final-third samples pre-fix. V0, the velocity branch, `PHASE_HYSTERESIS_TICKS` and every constant unchanged; §6.1 untouched (no new constant). |
+| 0.9 | September 21, 2026 | AI agent (PR #434 review correction) | ERR-012-012: §3.7.1 back-props #21 FR-TI-013 into #12's canonical pipeline: apply the pinned Duty fore/aft anchor offset before the ball-relative offset; Support is exact identity. Explicitly refuses the PR's unapproved #12 PositioningFreedom multiplier and defers PlayerRole positioning until XC-021-005 has approved offset rows. No new `[GT]`, schema, RNG stream/domain/draw site, or draw-order change. |

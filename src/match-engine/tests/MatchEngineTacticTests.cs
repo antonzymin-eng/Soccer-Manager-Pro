@@ -296,22 +296,15 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
-        public void PlayerDutyAndPositioningFreedom_RouteToPositioningSnapshot()
+        public void PlayerDuty_RoutesToPositioningSnapshot()
         {
             var engine = new MatchEngine(MatchSeed);
-            PlayerInstructions instructions = new PlayerInstructions(
-                InstrBias.Default, InstrBias.Default, InstrBias.Default, InstrBias.Default,
-                InstrBias.More, InstrBias.Default, false,
-                TacticalInstructionsConstants.MARK_TARGET_NONE, SetPieceDutyFlags.None);
-            engine.SetPlayerTactic(1, new PlayerTactic(PlayerRole.Poacher, Duty.Attack, instructions));
+            engine.SetPlayerTactic(1,
+                new PlayerTactic(PlayerRole.Poacher, Duty.Attack, PlayerInstructions.Default));
             TickToFirstStride(engine);
 
             Assert.AreEqual(Duty.Attack, engine.TestOnly_PositioningDuty(0, 1));
-            Assert.AreEqual(InstrBias.More, engine.TestOnly_PositioningFreedom(0, 1));
-            Assert.AreEqual(PlayerRole.Poacher, engine.TestOnly_PositioningPlayerRole(0, 1));
             Assert.AreEqual(Duty.Support, engine.TestOnly_PositioningDuty(1, 1));
-            Assert.AreEqual(InstrBias.Default, engine.TestOnly_PositioningFreedom(1, 1));
-            Assert.AreEqual(PlayerRole.Default, engine.TestOnly_PositioningPlayerRole(1, 1));
         }
 
         [Test]
@@ -704,4 +697,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.6     | 2026-09-21 | —      | Locks the live score → per-team Positioning AI ContextModifierInputs flow, including the mirrored away-team sign. |
 // | 1.7     | 2026-09-21 | —      | Locks formation-family/role routing and active-outfield eligibility. |
 // | 1.8     | 2026-09-21 | —      | Locks per-agent Duty, PositioningFreedom, and PlayerRole routing into #12. |
+// | 1.9     | 2026-09-21 | —      | PR #434 review: narrow #12 player routing to approved Duty only;             |
+// |         |            |        | PositioningFreedom remains #8-owned and PlayerRole positioning stays deferred. |
 #endregion

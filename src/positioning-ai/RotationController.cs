@@ -292,9 +292,7 @@ namespace TacticalDirector.PositioningAI
                     isActive:     a.IsActive,
                     role:         formation[boundSlot].Role,
                     isGoalkeeper: a.IsGoalkeeper,
-                    duty:         a.Duty,
-                    positioningFreedom: a.PositioningFreedom,
-                    tacticalRole: a.TacticalRole);
+                    duty:         a.Duty);
             }
         }
 
@@ -410,4 +408,5 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        |   freeze, F2/F5/F6 validating seams. Identity binding leaves the  |
 // |         |            |        |   snapshot untouched (byte-identical default).                    |
 // | 1.1     | 2026-09-21 | —      | Row rebinding preserves Duty, PositioningFreedom, and PlayerRole. |
+// | 1.2     | 2026-09-21 | —      | PR #434 review correction: only the approved #12 Duty carrier remains. |
 #endregion

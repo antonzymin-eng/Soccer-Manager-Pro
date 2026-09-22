@@ -39,18 +39,10 @@ namespace TacticalDirector.PositioningAI
         /// <summary>Per-agent duty controlling the tactical fore/aft anchor offset.</summary>
         public readonly Duty Duty;
 
-        /// <summary>Per-agent positional-freedom bias controlling ball-relative movement.</summary>
-        public readonly InstrBias PositioningFreedom;
-
-        /// <summary>Behavioural player role from #21; distinct from the formation slot's geometric <see cref="Role"/>.</summary>
-        public readonly PlayerRole TacticalRole;
-
         public AgentPositioningData(
             int entityId, int slotIndex, Vector2 position,
             bool isActive, RoleId role, bool isGoalkeeper,
-            Duty duty = Duty.Support,
-            InstrBias positioningFreedom = InstrBias.Default,
-            PlayerRole tacticalRole = PlayerRole.Default)
+            Duty duty = Duty.Support)
         {
             EntityId    = entityId;
             SlotIndex   = slotIndex;
@@ -59,8 +51,6 @@ namespace TacticalDirector.PositioningAI
             Role        = role;
             IsGoalkeeper = isGoalkeeper;
             Duty = duty;
-            PositioningFreedom = positioningFreedom;
-            TacticalRole = tacticalRole;
         }
     }
 }
@@ -69,4 +59,6 @@ namespace TacticalDirector.PositioningAI
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-09-21 | —      | Added #21 Duty, PositioningFreedom, and distinct PlayerRole routing fields. |
+// | 1.2     | 2026-09-21 | —      | PR #434 review correction: #12 carries Duty only. PositioningFreedom stays |
+// |         |            |        | a #8 MOVE_TO_POSITION bias; PlayerRole positioning awaits an approved table. |
 #endregion

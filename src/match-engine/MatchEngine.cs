@@ -2761,12 +2761,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: the active formation family consumed by team <paramref name="teamId"/>'s Positioning AI.</summary>
         internal FormationFamily TestOnly_PositioningFormation(int teamId) => _positioning[teamId].GetFormationFamily();
 
-        /// <summary>Test-only: the role and active-outfield count routed through the latest #12 snapshot.</summary>
+        /// <summary>Test-only: the slot role, active-outfield count, and approved #21 Duty carrier routed through the latest #12 snapshot.</summary>
         internal RoleId TestOnly_PositioningRole(int teamId, int localIndex) => _posSnapshots[teamId].Agents[localIndex].Role;
         internal int TestOnly_PositioningActiveOutfieldCount(int teamId) => _posSnapshots[teamId].ActiveOutfieldCount;
         internal Duty TestOnly_PositioningDuty(int teamId, int localIndex) => _posSnapshots[teamId].Agents[localIndex].Duty;
-        internal InstrBias TestOnly_PositioningFreedom(int teamId, int localIndex) => _posSnapshots[teamId].Agents[localIndex].PositioningFreedom;
-        internal PlayerRole TestOnly_PositioningPlayerRole(int teamId, int localIndex) => _posSnapshots[teamId].Agents[localIndex].TacticalRole;
 
         /// <summary>#23 routing seam: the DismarkIntensity routed into this agent's TacticalContext (FR-DM-015).</summary>
         internal DismarkIntensity TestOnly_DismarkIntensity(int agentId) => _tacticalContexts[agentId].DismarkIntensity;
@@ -3961,9 +3959,7 @@ namespace TacticalDirector.MatchEngine
                     isActive: !_isSentOff[i],       // match-flow completion: red-carded agents excluded
                     role: formation[k].Role,
                     isGoalkeeper: isGk,
-                    duty: playerTactic.Duty,
-                    positioningFreedom: playerTactic.Instructions.PositioningFreedom,
-                    tacticalRole: playerTactic.Role);
+                    duty: playerTactic.Duty);
 
                 if (!isGk && !_isSentOff[i]) activeOutfield++;
 
@@ -9766,4 +9762,7 @@ namespace TacticalDirector.MatchEngine
 // | 1.82    | 2026-09-21 | —      | #12 formation flow: active TeamTactic.Formation selects the PositioningAITick family and snapshot role table; ActiveOutfieldCount now excludes sent-off players. No schema/RNG change. |
 // | 1.83    | 2026-09-21 | —      | #12 player flow: active PlayerTactic Duty and PositioningFreedom now reach each AgentPositioningData row and affect fore/aft anchors and ball-relative movement. No schema/RNG change. |
 // | 1.84    | 2026-09-21 | —      | #12 rotation flow: Duty, PositioningFreedom, and the distinct PlayerRole survive slot-rebinding row reconstruction. No schema/RNG change. |
+// | 1.85    | 2026-09-21 | —      | PR #434 review correction: #12 retains only the approved Duty carrier/effect; PositioningFreedom   |
+// |         |            |        | remains the #8 MOVE_TO_POSITION bias and PlayerRole positioning stays deferred pending its table. |
+// |         |            |        | Formation changes also preserve #12 phase hysteresis. No schema/RNG change.                       |
 #endregion

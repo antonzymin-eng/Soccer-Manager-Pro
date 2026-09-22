@@ -89,14 +89,11 @@ namespace TacticalDirector.PositioningAI.Tests
         }
 
         [Test]
-        public void PlayerPositioningInstructions_MapToCatalogueValues()
+        public void DutyForeOffset_MapsToPinnedCatalogueValues()
         {
             Assert.AreEqual(-3f, TacticTranslation.DutyForeOffset(Duty.Defend));
             Assert.AreEqual(0f, TacticTranslation.DutyForeOffset(Duty.Support));
             Assert.AreEqual(3f, TacticTranslation.DutyForeOffset(Duty.Attack));
-            Assert.AreEqual(0.85f, TacticTranslation.PositioningFreedomScalar(InstrBias.Less));
-            Assert.AreEqual(1f, TacticTranslation.PositioningFreedomScalar(InstrBias.Default));
-            Assert.AreEqual(1.15f, TacticTranslation.PositioningFreedomScalar(InstrBias.More));
         }
     }
 }
@@ -106,4 +103,5 @@ namespace TacticalDirector.PositioningAI.Tests
 // | 1.0     | 2026-06-29 | —            | Initial file. |
 // | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
 // | 1.2     | 2026-09-21 | —            | Added Duty and PositioningFreedom translation coverage. |
+// | 1.3     | 2026-09-21 | —            | PR #434 review / ERR-012-012: retain Duty coverage only. |
 #endregion

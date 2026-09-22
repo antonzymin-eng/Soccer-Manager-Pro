@@ -137,9 +137,29 @@ namespace TacticalDirector.PositioningAI
 
             _archetype = formation;
             _rotation = _rotations[(int)formation];
-            _rotation.ResetToIdentity();
+
             if (reseedHysteresis)
+            {
+                // Formation changes reseed formation-dependent membership/binding state, but phase
+                // classification is independent of formation. Preserve an in-progress phase candidate
+                // and its dwell so a tactical formation switch cannot manufacture InPoss for up to
+                // PHASE_HYSTERESIS_TICKS heartbeats.
+                Phase currentPhase = _hyst.CurrentPhase;
+                Phase candidatePhase = _hyst.CandidatePhase;
+                int phaseDwellCount = _hyst.PhaseDwellCount;
+
                 SeedFromFormation(snapshot);
+
+                _hyst.CurrentPhase = currentPhase;
+                _hyst.CandidatePhase = candidatePhase;
+                _hyst.PhaseDwellCount = phaseDwellCount;
+            }
+            else
+            {
+                // Restore selects the formation-specific controller before loading its serialized
+                // binding/cache/pair state; do not seed hysteresis from the live snapshot.
+                _rotation.ResetToIdentity();
+            }
         }
 
         /// <summary>Returns the currently selected formation family.</summary>
@@ -311,6 +331,8 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        |   controller + boot-seeds the cache. CaptureRotationState() seam.        |
 // | 1.4     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): RestoreState(HysteresisState) — the |
 // | 1.5     | 2026-09-21 | —      | Formation changes now reconfigure the family and rotation catalogue at a tactical stride. |
+// | 1.6     | 2026-09-21 | —      | PR #434 review: runtime formation reseed preserves phase candidate/dwell; |
+// |         |            |        | restore still selects the family without reseeding hysteresis.          |
 // |         |            |        |   read counterpart to CaptureState; copies phase + per-agent line/lane    |
 // |         |            |        |   membership into the live _hyst. Rotation restores via the existing      |
 // |         |            |        |   RotationController.Restore* seams. No behaviour change.                 |
