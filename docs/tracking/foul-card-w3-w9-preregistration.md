@@ -270,11 +270,14 @@ All four predicates are conjunctive, except that the total-dismissal rule has th
 ~0.25 total dismissals.
 
 For the frozen six-match corpus, three dismissals is exactly 0.50 per 90 and is a predeclared
-rare-event tie, not a failure. If the aggregate is **exactly 3**, do **not** widen a band, diagnose a
-source change from that count alone, or fit `RedCardProbability` from it. The foul/yellow/source
-characterization may continue, but card-severity closure remains blocked until a separately
-preregistered larger rare-event corpus resolves the dismissal rate. Counts **0-2** satisfy the
-rare-dismissal guard; counts **4+** fail it.
+rare-event tie, not a failure. Under a Poisson reference at the 0.25/90 anchor (six-match mean
+`lambda = 1.5`), a strict `< 0.50` rule would reject `>= 3` with probability about **19.1%**;
+that type-I rate is why the boundary is not treated as a fail. If the aggregate is **exactly 3**, do
+**not** widen a band, diagnose a source change from that count alone, or fit `RedCardProbability`
+from it. The foul/yellow/source characterization may continue, but card-severity closure remains
+blocked until a separately preregistered larger rare-event corpus resolves the dismissal rate.
+Counts **0-2** satisfy the rare-dismissal guard; counts **4+** fail it (Poisson tail about **6.6%** at
+the same anchor).
 
 `Cautions / fouls` is intentionally **not** the existing
 `MatchEngineDisciplineScenarios.card-rate-is-a-minority-of-fouls` quantity. That legacy plausibility
