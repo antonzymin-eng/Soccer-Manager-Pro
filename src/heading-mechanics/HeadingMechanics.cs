@@ -45,6 +45,10 @@ namespace TacticalDirector.HeadingMechanics
         private readonly int[]               _ballSnapshotFrames;
         private readonly HeadingAgentAttributes[] _agentAttrs;
 
+        // W3 same-frame feed lifecycle. True only between BeginPhysicsFrame and Update; never
+        // survives a completed physics tick and therefore is not cross-tick snapshot state.
+        private bool _collisionFramePrepared;
+
         // ── Profiler Markers ─────────────────────────────────────────────────────────
 
         private static readonly ProfilerMarker s_updateMarker =
@@ -88,6 +92,7 @@ namespace TacticalDirector.HeadingMechanics
         public void BeginPhysicsFrame()
         {
             _duelResolution.ClearFrameBuffer();
+            _collisionFramePrepared = true;
         }
 
         /// <summary>
@@ -186,8 +191,19 @@ namespace TacticalDirector.HeadingMechanics
         {
             using var _ = s_updateMarker.Auto();
 
-            // W3: the frame buffer is cleared by BeginPhysicsFrame BEFORE Collision System publishes.
-            // Clearing here would erase the same-frame AGENT_BALL feed before §3.7 can consume it.
+            // W3 lifecycle: composition callers that want the same-frame AGENT_BALL candidate feed
+            // call BeginPhysicsFrame, publish contacts, then Update. Direct/unit callers that invoke
+            // Update alone retain the pre-W3 self-contained lifecycle and cannot accumulate stale
+            // contacts/duels across calls.
+            if (_collisionFramePrepared)
+            {
+                _duelResolution.ClearDuelBuffer();
+            }
+            else
+            {
+                _duelResolution.ClearFrameBuffer();
+            }
+            _collisionFramePrepared = false;
 
             // Pass 1: per-agent eligibility check, jump kinematics, contact-frame detection.
             // Agents are iterated in index order (deterministic per #16 §3.2 entity ordering).
@@ -330,15 +346,13 @@ namespace TacticalDirector.HeadingMechanics
                     contactState.ContactPointError = contactPointError;
                     contactState.ContactQualityScalar = qualityScalar;
 
-                    // W3: Collision #3 owns the shared multi-agent contact population. Keep the
-                    // existing Heading geometry as the actual head-contact authority, but only register
-                    // this agent into a CONTESTED duel when the same frame's AGENT_BALL feed contains it.
-                    // A geometry-only single header remains valid below (no duel membership required).
-                    if (_duelResolution.HasAgentBallContact(agentId, currentMatchTime))
-                    {
-                        float baseScore = HeadingDuelResolution.ComputeBaseScore(attrs);
-                        _duelResolution.RegisterDuelCandidate(agentId, currentMatchTime, baseScore);
-                    }
+                    // Heading #10 remains the authoritative head-contact geometry. The W3 coarse
+                    // Collision #3 candidate feed must never exclude an otherwise valid high aerial
+                    // header (Collision #3 Stage-0 reach is capped at 2.0 m). Register every geometry-
+                    // qualified heading contact exactly as before W3; shared hand-vs-head arbitration
+                    // will consume the candidate feed separately at the composition boundary.
+                    float baseScore = HeadingDuelResolution.ComputeBaseScore(attrs);
+                    _duelResolution.RegisterDuelCandidate(agentId, currentMatchTime, baseScore);
                 }
 
                 // Do not update PrevFrameFacingDirection on the contact frame; Pass 2 needs the
