@@ -9,6 +9,8 @@ using NUnit.Framework;
 
 using UnityEngine;
 
+using TacticalDirector.CollisionSystem;
+
 namespace TacticalDirector.HeadingMechanics.Tests
 {
     // ── Zero-noise RNG stub ──────────────────────────────────────────────────────
@@ -877,6 +879,54 @@ namespace TacticalDirector.HeadingMechanics.Tests
 
             duel.ClearFrameBuffer();
             Assert.AreEqual(0, duel.DuelCount, "Duel count after ClearFrameBuffer must be 0.");
+        }
+
+        [Test]
+        public void ClearDuelBuffer_PreservesSameFrameCollisionContacts()
+        {
+            var duel = new HeadingDuelResolution();
+            var evt = new CollisionEvent
+            {
+                MatchTime = 1f,
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                Entity2ID = 3,
+                ContactPoint = new Vector3(10f, 20f, 1f)
+            };
+
+            duel.OnCollisionEvent(in evt);
+            duel.RegisterDuelCandidate(agentId: 3, contactFrameMatchTime: 1f, baseScore: 0.5f);
+            Assert.AreEqual(1, duel.ContactCount);
+            Assert.AreEqual(1, duel.DuelCount);
+
+            duel.ClearDuelBuffer();
+
+            Assert.AreEqual(1, duel.ContactCount,
+                "W3 lifecycle: duel reset must not erase contacts already published for this frame.");
+            Assert.AreEqual(0, duel.DuelCount);
+        }
+
+        [Test]
+        public void CollisionContactBuffer_OverflowFailsClosed()
+        {
+            var duel = new HeadingDuelResolution();
+            var evt = new CollisionEvent
+            {
+                MatchTime = 1f,
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                ContactPoint = new Vector3(10f, 20f, 1f)
+            };
+
+            for (int i = 0; i < HeadingMechanicsConstants.HeadingContactBufferCapacity; i++)
+            {
+                evt.Entity2ID = i;
+                duel.OnCollisionEvent(in evt);
+            }
+
+            evt.Entity2ID = HeadingMechanicsConstants.HeadingContactBufferCapacity;
+            Assert.Throws<System.InvalidOperationException>(() => duel.OnCollisionEvent(in evt),
+                "W3 must fail closed rather than silently truncate AGENT_BALL contacts.");
         }
 
         [Test]
