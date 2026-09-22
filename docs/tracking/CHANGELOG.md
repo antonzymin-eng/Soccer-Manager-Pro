@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 21, 2026 — **Foul/card calibration + W3/W9 preregistration frozen before result-bearing measurement.**
+> **Last Updated:** September 22, 2026 — **PR #436 builds the #435 source-complete foul/card measurement instrument; no calibration result or gameplay tuning lands.**
+>
+> The env-gated `FoulRateDiagnosticTests` now implements the frozen six-seed × 324,000-tick measurement contract without changing production behavior. It separates collision `FROM_BEHIND` and already-adjudicated W2 `SLIDE_TACKLE` sources; records collision cooldown suppression, decided-tackle displacement, strongest-wins attrition, sent-off slot occupancy/exact one-candidate shadowing, KD-F1-priced winners and inferred wave-ons; reconciles called collision winners against ledger offender/victim identity; decomposes cautions, straight reds, second-yellow dismissals and total dismissals; derives played ticks from full-time state; and reports raw, priced and sent-off-shadowed force distributions. The frozen preregistered `slideTackleCallsDuringFoulCooldown` definition remains literal AI tick-start `_foulCooldownRemaining > 0`; the instrument additionally reports the narrower `> 1` population for ticks where collision candidates would still be suppressed after Resolve decrements cooldown. Wave-on equality is explicitly probe bookkeeping rather than independent engine evidence.
+>
+> Review also closes stale diagnostic text and adds the source-history entry required for the `src/` test change. The measurement catalog sentinel and file manifest are synchronized. **No production gameplay file, gameplay `[GT]`, assembly edge, save/snapshot schema, digest, RNG stream/domain/draw site/order or acceptance band changes. The frozen result-bearing corpus has not been run in this landing; it remains the next calibration evidence step after the instrument lands.**
+>
+> **Last Updated (prior):** September 21, 2026 — **Foul/card calibration + W3/W9 preregistration frozen before result-bearing measurement.**
 >
 > Post-PR #433 sequencing advances into the next football-engine phase without crossing KD-W1. New `docs/tracking/foul-card-w3-w9-preregistration.md` freezes the existing six foul-diagnostic seeds at full 90-minute length, requires source-complete live accounting for collision/referee vs already-adjudicated W2 tackle fouls, forbids summing independent source rates, and freezes the rule **remeasure, do not widen**. Review corrected the red model before any result was observed: KD-F5's ~0.25/90 target is **total dismissals**, while `RedCardProbability` controls straight reds only; second-yellow dismissals are now mandatory separate evidence, the historical `0.25/22` derivation is withdrawn, and the current `0.011` value remains unchanged/provisional.
 >
