@@ -22,6 +22,7 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "v210-rolling": ("manifest", FULL_MANIFEST),
     "pr420-owner-held-isolation": ("manifest", FULL_MANIFEST),
     "w2-six-seed": ("manifest", PARTIAL_MANIFEST),
+    "foul-card-six-seed-20260922": ("manifest", FULL_MANIFEST),
     "w2": ("manifest", PARTIAL_MANIFEST),
     "w12": ("external", "tools/dotnet-ci/check_w12_evidence.py"),
     "pr416-ref-archive": (

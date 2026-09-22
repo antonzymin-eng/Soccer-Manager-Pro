@@ -9,12 +9,16 @@
 > **Purpose:** Bring the match engine's foul and card rates from "every player dismissed inside a
 > match" to football-plausible, and record *why the lever the finding named turned out not to exist*.
 >
-> **Current calibration phase (September 21, 2026):** W2 is active in production. The next pass is
-> preregistered at `docs/tracking/foul-card-w3-w9-preregistration.md`; that document freezes the
-> source-complete post-W2 measurement, W3/W9 invalidation evidence, corpus and no-widen rules before
-> results. Post-W2 production also has a known cooldown asymmetry: collision `FROM_BEHIND` candidates
-> obey `FoulCooldownTicks`, while decided tackle fouls bypass that gate and re-arm it. No governed
-> `[GT]` change is authorized until KD-W1's complete-engine condition is met.
+> **Current calibration phase (September 22, 2026):** W2 is active in production and the frozen
+> source-complete six-full-match characterization has run on landed `main` `c56e5e1a…`; durable
+> evidence is under `docs/tracking/evidence/foul-card-six-seed-20260922/`. It observed 50 fouls,
+> 5 cautions, 1 straight red and 0 second-yellow dismissals, split 42 collision calls + 8 W2 tackle
+> calls, with 42 priced-candidate identity checks / 0 mismatches. Both tackle-during-cooldown counters
+> were zero, but eight tackle fouls provide insufficient exposure to disposition the known one-way
+> cooldown asymmetry, so that owner decision remains open. This result is characterization only:
+> §5's eventual calibration envelope is not an acceptance verdict here, no governed `[GT]` change
+> is authorized until KD-W1's complete-engine condition is met, and listed invalidators still require
+> **remeasure, do not widen**.
 
 ---
 
@@ -374,6 +378,7 @@ injection seam defaults to the certainty force.
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.4 | 2026-09-22 | — | Frozen #435 source-complete six-full-match characterization captured durably: 50 fouls / 5 cautions / 1 straight red / 0 second-yellow dismissals; 42 collision + 8 tackle calls; 42 priced-candidate identity checks / 0 mismatches. Zero tackle/cooldown overlap is non-dispositive with only eight tackle fouls. Characterization only; no `[GT]` move; KD-W1 and remeasure-don't-widen unchanged. |
 | 0.1 | 2026-07-26 | — | Initial: the measurement result, the refutation of the threshold framing, KD-F1..KD-F5, the constant table, and the acceptance scenario. |
 | 1.0 | 2026-07-26 | — | LANDED. §5 filled with the measured pre/post per-predicate margins (9 of 10 predicates fail pre-fix); §6 with the verification numbers (480 → 21 fouls, 147 → 3.0 yellows, 75 → 1.0 reds per 90 min) and the finding that calibration needed a live run because giving fewer fouls raises the contact rate; §9 with the code-review pass (0H+3M). |
 | 1.1 | 2026-08-17 | — | **§7 item 2's tripwire recorded as FIRED, and the owner's sequencing decision taken: hold the drift, arm W2 first, calibrate once.** No `[GT]` moved and no measurement redone here — the August-13 re-measurement (35.0 fouls / 5.0 yellows / 1.00 reds per 90, against this note's post-fix 21.0 / 3.0 / 1.0) is recorded as new item 2a together with its cause (C1's August-8 phase-classification change, upstream of the contact stream), the acceptance bands' blindness to it, the accepted cost of holding, and the condition that un-holds it. |

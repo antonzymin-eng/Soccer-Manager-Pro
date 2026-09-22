@@ -12,7 +12,15 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 22, 2026 — **PR #436 builds the #435 source-complete foul/card measurement instrument; no calibration result or gameplay tuning lands.**
+> **Last Updated:** September 22, 2026 — **Frozen #435 foul/card six-seed characterization captured durably; no gameplay calibration or `[GT]` move.**
+>
+> Result-bearing Actions run `35765635130` / job `106874328764` used the one-shot harness preserved at `docs/tracking/evidence/foul-card-six-seed-20260922/harness-50d6229.yml`. The harness event ran from `50d6229…` but explicitly checked out and verified landed `main` SHA `c56e5e1adff4e240b54c9abbb5ebea9c0290f65e` before the build/measurement path. The durable package retains the exact TRX losslessly compressed, the verbatim instrument report, machine-derived per-seed + aggregate TSV/JSON, runsettings, provenance, SHA-256 coverage, and the failed first attempt `35765454797` as non-result-bearing.
+>
+> The source-complete result is **50 fouls / 5 yellows / 1 straight red / 0 second-yellow dismissals over six full matches**, with **42 called collision candidates + 8 W2 tackle fouls = 50 total fouls** and **42 priced-candidate identity checks / 0 mismatches**. Both preregistered tackle-during-cooldown counters observed zero, but only eight tackle fouls occurred; this evidence therefore does **not** disposition the owner decision on the one-way cooldown bypass. §5's eventual calibration envelope is descriptive here only: this is characterization evidence, not the final KD-W1 calibration regression. The harness gate built the full generated tree but ran the filtered foul-rate diagnostic, so it is **not** a full-suite pass claim.
+>
+> KD-W1 remains unchanged: W3, W8, W9 and W10 are still unwired, the listed invalidators still require **remeasure, do not widen**, and no `FoulCallProbability`, force threshold, cooldown, yellow/red probability, tackle outcome or other gameplay `[GT]` changes in this closeout.
+>
+> **Last Updated (prior):** September 22, 2026 — **PR #436 builds the #435 source-complete foul/card measurement instrument; no calibration result or gameplay tuning lands.**
 >
 > The env-gated `FoulRateDiagnosticTests` now implements the frozen six-seed × 324,000-tick measurement contract without changing production behavior. It separates collision `FROM_BEHIND` and already-adjudicated W2 `SLIDE_TACKLE` sources; records collision cooldown suppression, decided-tackle displacement, strongest-wins attrition, sent-off slot occupancy/exact one-candidate shadowing, KD-F1-priced winners and inferred wave-ons; reconciles called collision winners against ledger offender/victim identity; decomposes cautions, straight reds, second-yellow dismissals and total dismissals; derives played ticks from full-time state; and reports raw, priced and sent-off-shadowed force distributions. The frozen preregistered `slideTackleCallsDuringFoulCooldown` definition remains literal AI tick-start `_foulCooldownRemaining > 0`; the instrument additionally reports the narrower `> 1` population for ticks where collision candidates would still be suppressed after Resolve decrements cooldown. Wave-on equality is explicitly probe bookkeeping rather than independent engine evidence.
 >
