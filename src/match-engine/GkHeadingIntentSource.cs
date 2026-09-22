@@ -48,13 +48,15 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// W3 cross/aerial claim trigger. A loose ball above the existing rush/claim height boundary and
-        /// inside #11's existing cross-claim contest radius arms a ClaimIntent. This method selects WHEN
-        /// to commit only; it does not define a hand position or decide contact.
+        /// W3 / ERR-011-012 cross/aerial claim trigger. A loose ball inside #11's existing cross-claim
+        /// contest radius may arm a ClaimIntent at any height. There is deliberately no vertical gate:
+        /// the 2.5 m <c>GkRushMaxBallHeightM</c> remains a rush-only routing guard, while #11's physical
+        /// hand-reach envelope is the sole authority on whether a claim can actually contact the ball.
+        /// This method selects WHEN to commit only; it does not define a hand position or decide contact.
         /// </summary>
         public static bool ClaimArmed(in Vector3 gkPosition, in Vector3 ballPosition, bool ballLoose)
         {
-            if (!ballLoose || ballPosition.z <= MatchEngineConstants.GkRushMaxBallHeightM)
+            if (!ballLoose)
             {
                 return false;
             }
@@ -486,4 +488,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Commit d93e0c8 had already replaced that with the dz-dependent    |
 // |         |            |        | angle tan(theta) = v / sqrt(v^2 - 2*g*dz); 45° holds only at      |
 // |         |            |        | dz = 0, which a header never sees. No logic change.                |
+// | 1.5     | 2026-09-22 | —      | W3 / ERR-011-012: ClaimArmed no longer reuses the 2.5 m rush max as a claim floor. Loose + inside #11's contest radius arms; #11 reach geometry alone decides contact height. |
 #endregion
