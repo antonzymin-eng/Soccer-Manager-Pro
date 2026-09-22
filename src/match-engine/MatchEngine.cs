@@ -1,7 +1,8 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-22 (W3 / ERR-011-012: claim arming/lifetime corrected; claim reach side locked+serialized in the still-unmerged v23 block; observation seam made state-pure)
 // Modified: 2026-09-22 (W3 shared-feed continuation: AgentBallFanout now has the required two consumers — Heading + frame-local CrossClaimCandidateCollector; collector is candidate-only under ERR-011-011, fail-closed, nonserialized)
- // Modified: 2026-09-22 (W3 review correction: read-only AGENT_BALL candidate publication runs in Physics after movement; full Collision #3 response, W4 applied deflection, foul capture and next-tick movement feedback remain Resolve-owned; Heading #10 geometry remains authoritative; no schema/RNG change)
+// Modified: 2026-09-22 (W3 review correction: read-only AGENT_BALL candidate publication runs in Physics after movement; full Collision #3 response, W4 applied deflection, foul capture and next-tick movement feedback remain Resolve-owned; Heading #10 geometry remains authoritative; no schema/RNG change)
 // Modified: 2026-09-16 (W2 production activation — active tackle reach must be > 0 and <= loose-ball reclaim reach; zero remains only as a test/measurement negative-control override; no schema/RNG change)
 // Modified: 2026-09-15 (W6 review closure — Controlled goalkeeper carriers are constrained at their defended goal plane in the MatchEngine attachment funnel; no schema/RNG change)
 // Modified: 2026-09-14 (W6 review P2 — tackle cooldown now ages on every AI stride even without a physical carrier; regression seam only, no schema/RNG change)
@@ -2897,7 +2898,21 @@ namespace TacticalDirector.MatchEngine
         internal TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState TestOnly_GoalkeeperState =>
             _goalkeeper.CaptureState();
 
-        /// <summary>Test-only W3 seam: query the same #11-owned hand envelope production arbitration uses.</summary>
+        /// <summary>Test-only W3 seam: commit only the #11 ClaimIntent block while preserving the
+        /// slot's existing projected attributes. Used by the v23 single-field digest and restore locks.</summary>
+        internal void TestOnly_CommitGoalkeeperClaimIntent(int teamId, ClaimIntent intent)
+        {
+            if ((uint)teamId >= (uint)_gkAgentIds.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(teamId));
+            }
+
+            GoalkeeperTickState state = _goalkeeper.CaptureState();
+            _goalkeeper.CommitClaimIntent(teamId, intent, state.Attrs[teamId]);
+        }
+
+        /// <summary>Test-only W3 seam: query the same #11-owned hand envelope production arbitration uses.
+        /// Observation-only: it deliberately does not refresh keeper ids or reset subsystem state.</summary>
         internal bool TestOnly_TryGetGoalkeeperHandReachEnvelope(
             int teamId, out Vector3 reachCenter, out float reachRadius)
         {
@@ -2908,7 +2923,6 @@ namespace TacticalDirector.MatchEngine
                 return false;
             }
 
-            RefreshGkAgentIds();
             int agentId = _gkAgentIds[teamId];
             if (agentId < 0 || _isSentOff[agentId])
             {
@@ -4521,27 +4535,6 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Wiring backlog W1 (gk-rush-trigger-design.md §2) — the first production caller of
-        /// <c>GoalkeeperMechanics.CommitRushIntent</c>. Fires the §4.4 rush trigger for each keeper:
-        /// pure geometry in <see cref="GkHeadingIntentSource.RushArmed"/>, the latch and projection here.
-        ///
-        /// <para><b>Why this is not a Decision Tree action like SAVE.</b> <c>ActionType.SAVE = 7</c> is
-        /// the last ordinal that fits the 3-bit composure-noise field in
-        /// <c>ActionSelector.ComputeOptionNoise</c>; an eighth action overflows it and forces a
-        /// composure-noise digest rebaseline — exactly why the DT-emitted HEADER (backlog W9) is
-        /// deferred. Paying that cost here would turn the cheapest large realism lever on the board into
-        /// the most expensive item on it. So the rush follows the HEADER trigger's shape instead: a pure
-        /// predicate plus a composition-root commit, the <c>MatchFlowCollisionConsumer</c> heuristic-foul
-        /// precedent that GK/Heading design §4.3 already accepted. When W9 takes the rebaseline, RUSH
-        /// folds into the same DT surface as SAVE and this becomes the fallback, not a rival authority.</para>
-        ///
-        /// <para><b>No new engine state.</b> #11's own <c>_rushIntentActive</c> is the per-episode latch
-        /// and it is already serialized in the v18 GK block, so this reads it through
-        /// <c>HasActiveRushIntent</c> rather than keeping a second latch with a different lifetime — the
-        /// shape that produced ERR-011-002's dive-at-nothing on the save side. Hence no
-        /// SNAPSHOT_SCHEMA_VERSION change.</para>
-        /// </summary>
-        /// <summary>
         /// W3 production producer for #11 <see cref="ClaimIntent"/>. The current Decision Tree action
         /// protocol cannot encode another action after SAVE=7 (the same constraint documented for W1
         /// rush), so Stage 0 follows the established composition-root producer pattern. SAVE has priority.
@@ -4566,12 +4559,10 @@ namespace TacticalDirector.MatchEngine
                 bool saveArmed = GkHeadingIntentSource.SaveArmed(
                     k, in _ball.Position, in _ball.Velocity, loose);
 
-                Vector3 gkPos = new Vector3(
-                    _agents[agentId].Position.x, _agents[agentId].Position.y, 0f);
-                bool armed = !saveArmed
-                    && GkHeadingIntentSource.ClaimArmed(in gkPos, in _ball.Position, loose);
-
-                if (!armed)
+                // ERR-011-012: possession and SAVE priority are hard cancellations. Ordinary claim
+                // trigger geometry is NOT: once committed, the target and reach side stay locked for
+                // the existing bounded #11 reach episode so a descending cross can enter hand height.
+                if (!loose || saveArmed)
                 {
                     _goalkeeper.ClearClaimIntent(k);
                     continue;
@@ -4588,18 +4579,46 @@ namespace TacticalDirector.MatchEngine
                     continue;
                 }
 
+                Vector3 gkPos = new Vector3(
+                    _agents[agentId].Position.x, _agents[agentId].Position.y, 0f);
+                if (!GkHeadingIntentSource.ClaimArmed(in gkPos, in _ball.Position, loose))
+                {
+                    continue;
+                }
+
                 GoalkeeperAgentAttributes attrs = PlayerAttributeProjection.ToGoalkeeper(
                     in _canonicalAttrs[agentId], k, fatigue: 0f);
+                float reachDirectionLateral = _ball.Position.y > gkPos.y
+                    ? 1.0f
+                    : _ball.Position.y < gkPos.y ? -1.0f : 0.0f;
                 var intent = new ClaimIntent
                 {
                     TargetContactPoint = _ball.Position,
                     ClutchFirmness = attrs.HandlingNorm,
+                    ReachDirectionLateral = reachDirectionLateral,
                     AttemptCommittedTick = (int)_clock.CurrentTacticalTick,
                 };
                 _goalkeeper.CommitClaimIntent(k, intent, attrs);
             }
         }
 
+        /// <summary>
+        /// Wiring backlog W1 (gk-rush-trigger-design.md §2) — the first production caller of
+        /// <c>GoalkeeperMechanics.CommitRushIntent</c>. Fires the §4.4 rush trigger for each keeper:
+        /// pure geometry in <see cref="GkHeadingIntentSource.RushArmed"/>, the latch and projection here.
+        ///
+        /// <para><b>Why this is not a Decision Tree action like SAVE.</b> <c>ActionType.SAVE = 7</c> is
+        /// the last ordinal that fits the 3-bit composure-noise field in
+        /// <c>ActionSelector.ComputeOptionNoise</c>; an eighth action overflows it and forces a
+        /// composure-noise digest rebaseline — exactly why the DT-emitted HEADER (backlog W9) is
+        /// deferred. Paying that cost here would turn the cheapest large realism lever on the board into
+        /// the most expensive item on it. So the rush follows the HEADER trigger's shape instead: a pure
+        /// predicate plus a composition-root commit, the <c>MatchFlowCollisionConsumer</c> heuristic-foul
+        /// precedent that GK/Heading design §4.3 already accepted.</para>
+        ///
+        /// <para><b>No new engine state.</b> #11's own <c>_rushIntentActive</c> is the per-episode latch
+        /// and it is already serialized in the v18 GK block.</para>
+        /// </summary>
         private void TryCommitRushIntents()
         {
             bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
@@ -4621,6 +4640,14 @@ namespace TacticalDirector.MatchEngine
                 // here would let an unsighted keeper rush at a goal-bound ball.
                 bool saveArmed = GkHeadingIntentSource.SaveArmed(
                     k, in _ball.Position, in _ball.Velocity, loose);
+
+                // ERR-011-012: a committed cross claim owns its bounded reach episode. The rush
+                // producer must not take over merely because the same ball descends below the W1
+                // rush height guard; SAVE remains the higher-priority path and is handled above.
+                if (!saveArmed && _goalkeeper.HasActiveClaimIntent(k))
+                {
+                    continue;
+                }
 
                 bool armed = false;
                 Vector3 rushTarget = Vector3.zero;
@@ -7830,6 +7857,7 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteF32(buf, ref o, ci.TargetContactPoint.y);
                 CanonicalSerializer.WriteF32(buf, ref o, ci.TargetContactPoint.z);
                 CanonicalSerializer.WriteF32(buf, ref o, ci.ClutchFirmness);
+                CanonicalSerializer.WriteF32(buf, ref o, ci.ReachDirectionLateral);
                 CanonicalSerializer.WriteI32(buf, ref o, ci.AttemptCommittedTick);
                 CanonicalSerializer.WriteBool(buf, ref o, s.ClaimIntentActive[i]);
 
@@ -7959,6 +7987,7 @@ namespace TacticalDirector.MatchEngine
                     CanonicalSerializer.ReadF32(buf, ref o),
                     CanonicalSerializer.ReadF32(buf, ref o));
                 ci.ClutchFirmness = CanonicalSerializer.ReadF32(buf, ref o);
+                ci.ReachDirectionLateral = CanonicalSerializer.ReadF32(buf, ref o);
                 ci.AttemptCommittedTick = CanonicalSerializer.ReadI32(buf, ref o);
                 claimIntents[i] = ci;
                 claimIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
@@ -9939,4 +9968,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.80    | 2026-09-16 | —      | W2 production activation: non-positive catalogue reach now fails loud; zero remains only for the explicit test/measurement override. Existing <= LooseBallPickupRadiusM guard unchanged; no schema/RNG change. |
 // | 1.81    | 2026-09-22 | —      | W3 review correction: add a read-only Physics AGENT_BALL candidate feed after movement; keep full Collision #3 response, W4 deflection and foul capture in Resolve; Heading own geometry still owns header eligibility. No cross-tick state/schema/RNG change. |
 // | 1.82    | 2026-09-22 | —      | W3 shared feed now has both consumers: Heading + a frame-local, fail-closed cross-claim candidate collector. Candidate-only per ERR-011-011; no policy, RNG or snapshot field. |
+// | 1.81    | 2026-09-22 | —      | W3 / ERR-011-012: ClaimIntent is a bounded episode, not a per-stride height gate. Possession/SAVE hard-cancel; ordinary geometry lapse does not. Reach side locks at commit and joins the v23 payload. W1 rush cannot steal an active claim. Test hand-envelope observation no longer Refreshes/ResetSlots. |
 #endregion
