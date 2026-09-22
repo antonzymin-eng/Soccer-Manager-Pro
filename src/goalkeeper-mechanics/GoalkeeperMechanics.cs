@@ -47,6 +47,8 @@ namespace TacticalDirector.GoalkeeperMechanics
         private readonly GkContactState[] _contactStates;
         private readonly SaveIntent[] _saveIntents;
         private readonly bool[] _saveIntentActive;
+        private readonly ClaimIntent[] _claimIntents;
+        private readonly bool[] _claimIntentActive;
         private readonly RushIntent[] _rushIntents;
         private readonly bool[] _rushIntentActive;
         private readonly DistributeIntent[] _distributeIntents;
@@ -102,6 +104,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             _contactStates = new GkContactState[maxGks];
             _saveIntents = new SaveIntent[maxGks];
             _saveIntentActive = new bool[maxGks];
+            _claimIntents = new ClaimIntent[maxGks];
+            _claimIntentActive = new bool[maxGks];
             _rushIntents = new RushIntent[maxGks];
             _rushIntentActive = new bool[maxGks];
             _distributeIntents = new DistributeIntent[maxGks];
@@ -251,6 +255,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             _contactStates[gkIndex] = GkContactState.CreateNew();
             _saveIntents[gkIndex] = default;
             _saveIntentActive[gkIndex] = false;
+            _claimIntents[gkIndex] = default;
+            _claimIntentActive[gkIndex] = false;
             _rushIntents[gkIndex] = default;
             _rushIntentActive[gkIndex] = false;
             _distributeIntents[gkIndex] = default;
@@ -296,6 +302,24 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <param name="gkIndex">Keeper index (== team id; KD-1).</param>
         public bool HasActiveRushIntent(int gkIndex) =>
             (uint)gkIndex < (uint)GoalkeeperConstants.MaxGkAgents && _rushIntentActive[gkIndex];
+
+        /// <summary>True while a committed cross/aerial <see cref="ClaimIntent"/> still owns a live
+        /// Stage-0 reach episode. This is the authoritative per-episode latch; callers must not mirror it.</summary>
+        public bool HasActiveClaimIntent(int gkIndex) =>
+            (uint)gkIndex < (uint)GoalkeeperConstants.MaxGkAgents && _claimIntentActive[gkIndex];
+
+        /// <summary>Returns the locked claim payload when the claim episode is active.</summary>
+        public bool TryGetActiveClaimIntent(int gkIndex, out ClaimIntent intent)
+        {
+            intent = default;
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents || !_claimIntentActive[gkIndex])
+            {
+                return false;
+            }
+
+            intent = _claimIntents[gkIndex];
+            return true;
+        }
 
         /// <summary>
         /// Seeds the §3.2 detection stamp at the ONSET of a save episode when no stamp is live —
@@ -409,6 +433,105 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// Commits a RushIntent for the specified GK from the 10 Hz Decision Tree output.
         /// §3.7 / §4.6.1.
         /// </summary>
+        /// <summary>
+        /// Commits a cross/aerial <see cref="ClaimIntent"/> from the 10 Hz producer. The intent is a
+        /// tactical target and handling input only; it does not manufacture contact geometry. Physics
+        /// asks <see cref="TryGetHandReachEnvelope"/> for #11's existing Stage-0 reach envelope.
+        /// </summary>
+        public void CommitClaimIntent(int gkIndex, ClaimIntent intent, GoalkeeperAgentAttributes attrs)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return;
+            }
+
+            _claimIntents[gkIndex] = intent;
+            _claimIntentActive[gkIndex] = true;
+            _attrs[gkIndex] = attrs;
+        }
+
+        /// <summary>Disarms an unconsumed claim episode when its 10 Hz arming geometry lapses.</summary>
+        public void ClearClaimIntent(int gkIndex)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return;
+            }
+
+            _claimIntentActive[gkIndex] = false;
+        }
+
+        /// <summary>
+        /// Returns #11's live hand/reach envelope for the current physics frame. A save dive reuses the
+        /// already-launched dive scratch. A cross/aerial claim reuses the SAME
+        /// <see cref="GoalkeeperDiveKinematics"/> reach path, anchored at the claim commit frame and aimed
+        /// laterally at <see cref="ClaimIntent.TargetContactPoint"/>. The intent never acts as a hand
+        /// collider: callers still decide contact by testing the ball against the returned envelope.
+        ///
+        /// Claim reach deliberately supplies zero timing jitter. <c>DrawSiteDiveTimingJitter</c> is the
+        /// save-dive draw site; consuming it from claims would silently change its single-purpose draw
+        /// contract and RNG cursor. This keeps W3 geometry parameter-free while preserving #11 ownership.
+        /// </summary>
+        public bool TryGetHandReachEnvelope(
+            int gkIndex,
+            int currentFrame,
+            Vector3 gkPosition,
+            out Vector3 reachCenter,
+            out float reachRadius)
+        {
+            reachCenter = default;
+            reachRadius = 0.0f;
+
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return false;
+            }
+
+            int launchFrame;
+            int durationFrames;
+            float peakHandZ;
+            float directionLateral;
+
+            if (_states[gkIndex] == GoalkeeperState.Airborne && _diveLaunchFrames[gkIndex] >= 0)
+            {
+                launchFrame = _diveLaunchFrames[gkIndex];
+                durationFrames = _diveDurationFrames[gkIndex];
+                peakHandZ = _divePeakHandZ[gkIndex];
+                directionLateral = _diveDirectionLateral[gkIndex];
+            }
+            else if (_claimIntentActive[gkIndex])
+            {
+                ClaimIntent intent = _claimIntents[gkIndex];
+                launchFrame = intent.AttemptCommittedTick * GoalkeeperConstants.FramesPerTacticalTick;
+                durationFrames = GoalkeeperDiveKinematics.ComputeDiveDurationFrames();
+
+                if (currentFrame < launchFrame || currentFrame - launchFrame >= durationFrames)
+                {
+                    return false;
+                }
+
+                peakHandZ = GoalkeeperDiveKinematics.ComputePeakHandZ(_attrs[gkIndex], timingJitterMs: 0.0f);
+                directionLateral = Sign(intent.TargetContactPoint.y - gkPosition.y);
+            }
+            else
+            {
+                return false;
+            }
+
+            int frameOffset = currentFrame - launchFrame;
+            if (frameOffset < 0 || frameOffset >= durationFrames)
+            {
+                return false;
+            }
+
+            float handZ = GoalkeeperDiveKinematics.ComputeHandPathZ(
+                currentFrame, launchFrame, durationFrames, peakHandZ);
+            reachCenter = GoalkeeperDiveKinematics.ComputeReachCenter(
+                gkPosition, currentFrame, launchFrame, durationFrames, directionLateral, handZ);
+            reachRadius = GoalkeeperDiveKinematics.ComputeReachRadius(_attrs[gkIndex]);
+            return true;
+        }
+
         public void CommitRushIntent(int gkIndex, RushIntent intent, GoalkeeperAgentAttributes attrs)
         {
             if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
@@ -453,6 +576,7 @@ namespace TacticalDirector.GoalkeeperMechanics
             new GoalkeeperTickState(
                 _states, _attrs, _contactStates,
                 _saveIntents, _saveIntentActive,
+                _claimIntents, _claimIntentActive,
                 _rushIntents, _rushIntentActive,
                 _distributeIntents, _distributeIntentActive,
                 _positioningContracts,
@@ -477,6 +601,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             Array.Copy(state.ContactStates, _contactStates, _contactStates.Length);
             Array.Copy(state.SaveIntents, _saveIntents, _saveIntents.Length);
             Array.Copy(state.SaveIntentActive, _saveIntentActive, _saveIntentActive.Length);
+            Array.Copy(state.ClaimIntents, _claimIntents, _claimIntents.Length);
+            Array.Copy(state.ClaimIntentActive, _claimIntentActive, _claimIntentActive.Length);
             Array.Copy(state.RushIntents, _rushIntents, _rushIntents.Length);
             Array.Copy(state.RushIntentActive, _rushIntentActive, _rushIntentActive.Length);
             Array.Copy(state.DistributeIntents, _distributeIntents, _distributeIntents.Length);
@@ -638,6 +764,20 @@ namespace TacticalDirector.GoalkeeperMechanics
                 if ((uint)agentId >= (uint)agentStates.Length)
                 {
                     continue;
+                }
+
+                // A ClaimIntent owns a bounded Stage-0 reach episode. Once its reuse of the #11 dive
+                // envelope has run its full duration, expire the authoritative latch; if the cross is
+                // still claimable the next 10 Hz producer pass may commit a fresh locked target.
+                if (_claimIntentActive[gkIndex])
+                {
+                    int claimLaunchFrame =
+                        _claimIntents[gkIndex].AttemptCommittedTick * GoalkeeperConstants.FramesPerTacticalTick;
+                    int claimDurationFrames = GoalkeeperDiveKinematics.ComputeDiveDurationFrames();
+                    if (currentFrame - claimLaunchFrame >= claimDurationFrames)
+                    {
+                        _claimIntentActive[gkIndex] = false;
+                    }
                 }
 
                 AgentState agentState = agentStates[agentId];
@@ -1347,4 +1487,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |      |            |   | deflection is a changed threat, not a newly struck shot. No new state.     |
 // | 1.14 | 2026-09-12 | — | W4 review closure: caller contract now states OnThreatArmed anchors a      |
 // |      |            |   | visible threat episode; screened time is deliberately outside the clock.  |
+// | 1.15 | 2026-09-22 | — | W3: ClaimIntent receives a real production lifecycle plus a read-only      |
+// |      |            |   | TryGetHandReachEnvelope surface. Claims reuse #11's existing dive/reach   |
+// |      |            |   | kinematics with zero save-only timing jitter; no hand collider invented.  |
 #endregion
