@@ -162,9 +162,17 @@ keep the earlier one).
 | Yellow cards | ~3.5 | ditto |
 | Red cards | ~0.25 | ditto (roughly one every four matches) |
 
-Cards follow from fouls by ratio: `YellowCardProbability ≈ 3.5/22 ≈ 0.16`,
-`RedCardProbability ≈ 0.25/22 ≈ 0.011`. The second-yellow promotion adds a negligible further red
-rate at 3.5 bookings spread across 22 players.
+The caution ratio remains a useful card-band anchor:
+`YellowCardProbability ≈ 3.5/22 ≈ 0.16`.
+
+**Corrected September 21, 2026 (v1.3): the red derivation above was conceptually wrong.** The
+~0.25/90 football target is a target for **total dismissals**, while `RedCardProbability` controls
+only the straight-red draw band. The engine also dismisses on a second yellow, and later live
+measurement disproved this note's original claim that second-yellow promotion was negligible.
+Therefore `0.25/22` is not a valid standalone derivation for `RedCardProbability`. The existing
+`0.011` remains the production value pending the preregistered source-complete calibration, which
+must measure straight reds and second-yellow dismissals separately before any corrected severity
+value is proposed.
 
 The acceptance scenario (§5) asserts **bands**, not the measured numbers: the contract is "a match
 looks like football", and pinning today's exact counts would make every future physics or AI change
@@ -181,7 +189,7 @@ a discipline-test failure.
 | `FoulImpactForceThresholdN` | 1200 | **1200** (unchanged) | p99 of the distribution — in the meaningful part of the band, not on the last thirty samples. It is now the "hard enough to *consider*" gate, with the rate carried by `FoulCallProbability`. |
 | `FoulCallProbability` | *(new)* | **0.015** | Calibrated on a LIVE run, not the offline sweep — see §6. The sweep pointed at 0.025, which measured 37.5 fouls per 90 min. |
 | `YellowCardProbability` | 0.35 | **0.16** | KD-F5 ratio. |
-| `RedCardProbability` | 0.05 | **0.011** | KD-F5 ratio. |
+| `RedCardProbability` | 0.05 | **0.011** | Historical v1.0 fit used the total-dismissal ratio; v1.3 corrects that derivation as invalid for a straight-red-only band. Value remains unchanged pending source-complete recalibration. |
 | `FoulCooldownTicks` | 60 (1 s) | **180 (3 s)** | A restart takes several seconds and the players are still tangled through it; 1 s was thin. Rate-neutral at the new call probability (measured: ≤ 2 fouls per 90 min difference). |
 
 ### 4.2 `MatchEngine`
@@ -358,5 +366,5 @@ injection seam defaults to the certainty force.
 | 1.0 | 2026-07-26 | — | LANDED. §5 filled with the measured pre/post per-predicate margins (9 of 10 predicates fail pre-fix); §6 with the verification numbers (480 → 21 fouls, 147 → 3.0 yellows, 75 → 1.0 reds per 90 min) and the finding that calibration needed a live run because giving fewer fouls raises the contact rate; §9 with the code-review pass (0H+3M). |
 | 1.1 | 2026-08-17 | — | **§7 item 2's tripwire recorded as FIRED, and the owner's sequencing decision taken: hold the drift, arm W2 first, calibrate once.** No `[GT]` moved and no measurement redone here — the August-13 re-measurement (35.0 fouls / 5.0 yellows / 1.00 reds per 90, against this note's post-fix 21.0 / 3.0 / 1.0) is recorded as new item 2a together with its cause (C1's August-8 phase-classification change, upstream of the contact stream), the acceptance bands' blindness to it, the accepted cost of holding, and the condition that un-holds it. |
 | 1.2 | 2026-08-17 | — | **Adversarial-review fixes over the v1.1 landing (M20, M21), documentation only; no `[GT]` moved and no measurement redone.** **M21:** v1.1 said the fit "drifted ~67% unnoticed for **five weeks**" — wrong by roughly 5× under every anchoring, and load-bearing, since this interval is the counter-example the hold is justified by. The measured intervals are **five days** from the C1 change that caused the drift (August 8 → the August 13 re-measurement) and **eighteen days** from the July-26 fit itself. **M20:** §7's new entry was numbered `2a.`, which is not a valid ordered-list marker — it rendered as a lazy continuation of item 2 rather than as its own item; renumbered to 3 with the following item renumbered to 4. ⚠️ L1 (reviewed-findings pass, 2026-08-18): this row had landed OUTSIDE the `#region VersionHistory`/`#endregion` block below (`#endregion` sat between the 1.1 and this row), so this row rendered as an orphan with no table header and `tools/recurring-defect-lint.py`'s `collect_md_version_rows` never saw it. `#endregion` moved to below this row; no content, formula, or `[GT]` changed. |
-| 1.3 | 2026-09-21 | — | **Post-W2 calibration preregistration pointer.** W2 is now active; `foul-card-w3-w9-preregistration.md` freezes the six-full-match source-complete census, W3/W9 invalidation evidence, rare-red treatment and remeasure-don't-widen posture before any result is observed. No `[GT]` moved and KD-W1 remains in force until the complete-engine pass. |
+| 1.3 | 2026-09-21 | — | **Post-W2 calibration preregistration + KD-F5 red-derivation correction.** W2 is active; `foul-card-w3-w9-preregistration.md` freezes the six-full-match source-complete census, W3/W9 invalidation evidence, rare-dismissal treatment and remeasure-don't-widen posture before any result is observed. KD-F5 now distinguishes the ~0.25/90 **total-dismissal** outcome from the straight-red-only `RedCardProbability`; the historical `0.25/22` derivation is withdrawn, `0.011` remains production pending measured straight-red/second-yellow decomposition. No `[GT]` moved and KD-W1 remains in force until the complete-engine pass. |
 #endregion
