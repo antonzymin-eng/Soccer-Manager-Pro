@@ -60,6 +60,14 @@ RATE_FIELDS = (
     "totalDismissalsPer90",
 )
 
+RATE_SPECS = (
+    ("foulsPer90", "totalFouls", 2),
+    ("yellowsPer90", "yellowCards", 2),
+    ("straightRedsPer90", "straightReds", 3),
+    ("secondYellowDismissalsPer90", "secondYellowDismissals", 3),
+    ("totalDismissalsPer90", "totalDismissals", 3),
+)
+
 
 def extract_report(text: str) -> str:
     start = text.find(START)
@@ -85,6 +93,8 @@ def _validate_identities(row: dict[str, int | float | str], label: str) -> None:
         + row["fromBehindPricedCandidates"]
     ):
         raise ValueError(f"{label} collision funnel does not reconcile")
+    if row["fromBehindPricedCandidates"] != row["fromBehindCalled"] + row["fromBehindWavedOn"]:
+        raise ValueError(f"{label} priced-candidate partition does not reconcile")
     if row["fromBehindCalled"] + row["slideTackleCalled"] != row["totalFouls"]:
         raise ValueError(f"{label} foul-source identity does not reconcile")
     if row["straightReds"] + row["secondYellowDismissals"] != row["totalDismissals"]:
@@ -96,6 +106,7 @@ def _validate_identities(row: dict[str, int | float | str], label: str) -> None:
 def parse_report(report: str) -> dict:
     rows: list[dict[str, int | str]] = []
     aggregate: dict[str, int | float | str] = {"scope": "aggregate"}
+    rate_tokens: dict[str, str] = {}
     current: dict[str, int | str] | None = None
     in_aggregate = False
 
@@ -127,11 +138,10 @@ def parse_report(report: str) -> dict:
         if in_aggregate:
             rate_match = RATE_RE.match(line)
             if rate_match:
-                aggregate["foulsPer90"] = float(rate_match.group(1))
-                aggregate["yellowsPer90"] = float(rate_match.group(2))
-                aggregate["straightRedsPer90"] = float(rate_match.group(3))
-                aggregate["secondYellowDismissalsPer90"] = float(rate_match.group(4))
-                aggregate["totalDismissalsPer90"] = float(rate_match.group(5))
+                rate_tokens = {
+                    field: token
+                    for field, token in zip(RATE_FIELDS, rate_match.groups())
+                }
 
     if current is not None:
         rows.append(current)
@@ -152,7 +162,7 @@ def parse_report(report: str) -> dict:
     missing_aggregate = [field for field in FIELDS if field not in aggregate]
     if missing_aggregate:
         raise ValueError(f"aggregate missing fields: {missing_aggregate}")
-    missing_rates = [field for field in RATE_FIELDS if field not in aggregate]
+    missing_rates = [field for field in RATE_FIELDS if field not in rate_tokens]
     if missing_rates:
         raise ValueError(f"aggregate missing shipped per-90 rates: {missing_rates}")
 
@@ -164,6 +174,15 @@ def parse_report(report: str) -> dict:
             raise ValueError(
                 f"aggregate {field}={aggregate[field]} does not equal seed sum {seed_sum}"
             )
+
+    for rate_field, count_field, decimals in RATE_SPECS:
+        expected = f"{int(aggregate[count_field]) / len(FROZEN_SEEDS):.{decimals}f}"
+        observed = rate_tokens[rate_field]
+        if observed != expected:
+            raise ValueError(
+                f"aggregate shipped rate {rate_field}={observed} does not match expected {expected}"
+            )
+        aggregate[rate_field] = float(observed)
 
     return {"seeds": rows, "aggregate": aggregate}
 
@@ -195,7 +214,7 @@ def main() -> int:
     args.report_out.write_text(report, encoding="utf-8", newline="\n")
     write_tsv(parsed, args.tsv_out)
     args.json_out.write_text(
-        json.dumps(parsed, indent=2, sort_keys=True) + "\n",
+        json.dumps(parsed, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
         newline="\n",
     )

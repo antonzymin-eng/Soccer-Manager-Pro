@@ -76,6 +76,30 @@ class FoulCardCharacterizationParserTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing shipped per-90 rates"):
             self.parser.parse_report(corrupted)
 
+    def test_rejects_priced_candidate_partition_mismatch(self) -> None:
+        corrupted = self.report.replace(
+            "fromBehindCalled=4 fromBehindWavedOn=135",
+            "fromBehindCalled=4 fromBehindWavedOn=136",
+            1,
+        )
+        corrupted = corrupted.replace(
+            "fromBehindCalled=42 fromBehindWavedOn=703",
+            "fromBehindCalled=42 fromBehindWavedOn=704",
+            1,
+        )
+        with self.assertRaisesRegex(ValueError, "priced-candidate partition"):
+            self.parser.parse_report(corrupted)
+
+    def test_rejects_rate_that_disagrees_with_aggregate_count(self) -> None:
+        corrupted = self.report.replace("fouls=8.33", "fouls=99.00", 1)
+        with self.assertRaisesRegex(ValueError, "shipped rate foulsPer90"):
+            self.parser.parse_report(corrupted)
+
+    def test_rejects_non_finite_rate_token(self) -> None:
+        corrupted = self.report.replace("fouls=8.33", "fouls=nan", 1)
+        with self.assertRaisesRegex(ValueError, "shipped rate foulsPer90"):
+            self.parser.parse_report(corrupted)
+
 
 if __name__ == "__main__":
     unittest.main()
