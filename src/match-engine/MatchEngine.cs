@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-09-22 (W3 review correction: read-only AGENT_BALL candidate publication runs in Physics after movement; full Collision #3 response, W4 applied deflection, foul capture and next-tick movement feedback remain Resolve-owned; Heading #10 geometry remains authoritative; no schema/RNG change)
+// Modified: 2026-09-22 (W3 shared-feed continuation: AgentBallFanout now has the required two consumers — Heading + frame-local CrossClaimCandidateCollector; collector is candidate-only under ERR-011-011, fail-closed, nonserialized)
+ // Modified: 2026-09-22 (W3 review correction: read-only AGENT_BALL candidate publication runs in Physics after movement; full Collision #3 response, W4 applied deflection, foul capture and next-tick movement feedback remain Resolve-owned; Heading #10 geometry remains authoritative; no schema/RNG change)
 // Modified: 2026-09-16 (W2 production activation — active tackle reach must be > 0 and <= loose-ball reclaim reach; zero remains only as a test/measurement negative-control override; no schema/RNG change)
 // Modified: 2026-09-15 (W6 review closure — Controlled goalkeeper carriers are constrained at their defended goal plane in the MatchEngine attachment funnel; no schema/RNG change)
 // Modified: 2026-09-14 (W6 review P2 — tackle cooldown now ages on every AI stride even without a physical carrier; regression seam only, no schema/RNG change)
@@ -178,6 +179,7 @@ namespace TacticalDirector.MatchEngine
         private readonly CollisionSubsystem _collisionSystem;
         private readonly ICollisionEventConsumer _eventConsumer;       // MatchFlowCollisionConsumer — full Resolve collision stream
         private readonly ICollisionEventConsumer _agentBallConsumer;   // W3 read-only Physics AGENT_BALL fan-out
+        private readonly CrossClaimCandidateCollector _crossClaimCandidates; // W3 frame-local second consumer; no policy / no snapshot state
         private readonly PassExecutor[] _passExecutors;   // [SQUAD_SIZE]
         private readonly ShotExecutor[] _shotExecutors;   // [SQUAD_SIZE]
         private readonly bool[] _stumbleScratch;  // UpdateCollisions stumbleOut sink (discarded — not a Stage-0 movement input, B4)
@@ -733,7 +735,7 @@ namespace TacticalDirector.MatchEngine
             _prevPossessingAgentId = MatchEngineConstants.NO_POSSESSION; // Phase E — no transition at boot
             _collisionSystem = new CollisionSubsystem(MatchEngineConstants.SQUAD_SIZE);
             _eventConsumer = new MatchFlowCollisionConsumer(this);
-            _agentBallConsumer = new AgentBallFanout(this);
+            _crossClaimCandidates = new CrossClaimCandidateCollector(MatchEngineConstants.SQUAD_SIZE);
             _stumbleScratch = new bool[MatchEngineConstants.SQUAD_SIZE];
 
             // Match-flow completion (design note §3) — the first host-owned RNG draw site. Registered
@@ -909,6 +911,7 @@ namespace TacticalDirector.MatchEngine
                 "goalkeeper.mechanics", SubsystemOrdinals.GoalkeeperMechanics, entityId: -1, streamVersion: 1);
             _heading = new TacticalDirector.HeadingMechanics.HeadingMechanics(gkHeadingWorld, gkHeadingWorld);
             _goalkeeper = new TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics(gkHeadingWorld, gkHeadingWorld);
+            _agentBallConsumer = new AgentBallFanout(_heading.CollisionConsumer, _crossClaimCandidates);
 
             // Keeper roster: GoalkeeperConstants.MaxGkAgents == TEAM_COUNT == 2, so keeper index == team id
             // (keeper t is team t's goalkeeper). _teamIds / _isGoalkeeper are boot-populated above.
@@ -4763,6 +4766,7 @@ namespace TacticalDirector.MatchEngine
             {
                 RefreshGkAgentIds();
                 _heading.BeginPhysicsFrame();
+                _crossClaimCandidates.BeginFrame();
                 _collisionSystem.PublishAgentBallContacts(
                     _agents,
                     _attrs,
@@ -4824,6 +4828,12 @@ namespace TacticalDirector.MatchEngine
         /// AGENT_BALL feed is published before GK/Heading consumption without moving physical response.
         /// </summary>
         internal void TestOnly_RunPhysicsPhase() => RunPhysicsPhase();
+
+        /// <summary>W3 observation-only seam: current-frame coarse cross-claim candidate count.</summary>
+        internal int TestOnly_CrossClaimCandidateCount => _crossClaimCandidates.Count;
+
+        /// <summary>W3 observation-only seam: current-frame Heading AGENT_BALL feed count.</summary>
+        internal int TestOnly_HeadingCollisionCandidateCount => _heading.BufferedCollisionContactCount;
 
         /// <summary>Test-only composition seam for a single Resolve phase.</summary>
         internal void TestOnly_RunResolvePhase() => RunResolvePhase();
@@ -8567,18 +8577,23 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// W3 read-only AGENT_BALL fan-out. The generic layer only delivers Collision #3 candidate
-        /// events; it does not classify head/hand contact, choose duel membership, draw RNG, or mutate
-        /// the ball. Heading receives the feed for the same-frame window; the W3 cross-claim collector
-        /// is added beside it in the same landing.
+        /// W3 read-only AGENT_BALL fan-out. Generic delivery only: every AGENT_BALL candidate reaches
+        /// Heading #10 and the frame-local cross-claim collector exactly once, in that fixed consumer
+        /// order. No body-part policy, RNG or world mutation is permitted here.
         /// </summary>
-        private sealed class AgentBallFanout : ICollisionEventConsumer
+        internal sealed class AgentBallFanout : ICollisionEventConsumer
         {
-            private readonly MatchEngine _engine;
+            private readonly ICollisionEventConsumer _headingConsumer;
+            private readonly ICollisionEventConsumer _crossClaimConsumer;
 
-            public AgentBallFanout(MatchEngine engine)
+            internal AgentBallFanout(
+                ICollisionEventConsumer headingConsumer,
+                ICollisionEventConsumer crossClaimConsumer)
             {
-                _engine = engine;
+                _headingConsumer = headingConsumer
+                    ?? throw new ArgumentNullException(nameof(headingConsumer));
+                _crossClaimConsumer = crossClaimConsumer
+                    ?? throw new ArgumentNullException(nameof(crossClaimConsumer));
             }
 
             public void OnCollisionEvent(in CollisionEvent evt)
@@ -8588,7 +8603,64 @@ namespace TacticalDirector.MatchEngine
                     return;
                 }
 
-                _engine._heading.CollisionConsumer.OnCollisionEvent(in evt);
+                _headingConsumer.OnCollisionEvent(in evt);
+                _crossClaimConsumer.OnCollisionEvent(in evt);
+            }
+        }
+
+        /// <summary>
+        /// W3 frame-local second consumer for the shared AGENT_BALL dependency. It records coarse
+        /// Collision #3 candidates only; ERR-011-011 forbids treating these records as Hand/Head truth.
+        /// The buffer is reset before each Physics publication pass and never crosses a tick/snapshot.
+        /// Capacity is the squad size because PublishAgentBallContacts emits at most one event per agent.
+        /// </summary>
+        internal sealed class CrossClaimCandidateCollector : ICollisionEventConsumer
+        {
+            private readonly CollisionEvent[] _events;
+            private int _count;
+
+            internal CrossClaimCandidateCollector(int capacity)
+            {
+                if (capacity <= 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(capacity));
+                }
+
+                _events = new CollisionEvent[capacity];
+            }
+
+            internal int Count => _count;
+
+            internal CollisionEvent EventAt(int index)
+            {
+                if ((uint)index >= (uint)_count)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                }
+
+                return _events[index];
+            }
+
+            internal void BeginFrame()
+            {
+                _count = 0;
+            }
+
+            public void OnCollisionEvent(in CollisionEvent evt)
+            {
+                if (evt.Type != CollisionType.AGENT_BALL)
+                {
+                    return;
+                }
+
+                if (_count >= _events.Length)
+                {
+                    throw new InvalidOperationException(
+                        "W3 cross-claim candidate buffer overflow: capacity=" +
+                        _events.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
+                }
+
+                _events[_count++] = evt;
             }
         }
 
@@ -9759,4 +9831,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.76    | 2026-09-14 | —      | ERR-013-011: FillPressingSnapshot carries the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
 // | 1.80    | 2026-09-16 | —      | W2 production activation: non-positive catalogue reach now fails loud; zero remains only for the explicit test/measurement override. Existing <= LooseBallPickupRadiusM guard unchanged; no schema/RNG change. |
 // | 1.81    | 2026-09-22 | —      | W3 review correction: add a read-only Physics AGENT_BALL candidate feed after movement; keep full Collision #3 response, W4 deflection and foul capture in Resolve; Heading own geometry still owns header eligibility. No cross-tick state/schema/RNG change. |
+// | 1.82    | 2026-09-22 | —      | W3 shared feed now has both consumers: Heading + a frame-local, fail-closed cross-claim candidate collector. Candidate-only per ERR-011-011; no policy, RNG or snapshot field. |
 #endregion
