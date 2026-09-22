@@ -90,6 +90,13 @@ For every seed, and in aggregate, the instrument MUST report at least:
 | `qualifyingContactForce` distribution | p50/p75/p90/p95/p99/p99.9/max for `FROM_BEHIND` collision candidates |
 | `playedTicks` | exact denominator actually run for the seed |
 
+`candidateDisplacedByDecided` is defined against the **current phase order**: the AI phase runs
+before Physics/Resolve, so `TryResolveTackles` can seat a decided tackle candidate before
+`MatchFlowCollisionConsumer` sees same-tick collision events. The consumer's decided-candidate early
+return is therefore the observable displacement site. A future phase reorder is a contract change,
+not an instrumentation detail; §8 requires re-preregistration/re-measurement rather than silently
+keeping this counter definition.
+
 The card-counting convention is frozen to the existing scenario's state semantics: a second-yellow
 dismissal contributes **one additional caution** to `yellowCards` and **one dismissal** to
 `totalDismissals`. The instrument also reports the two dismissal subtypes separately, so the
@@ -358,7 +365,9 @@ The following changes invalidate any earlier foul/card measurement as a **final 
 6. changing **collision-event emission granularity or contact episode semantics** — explicitly named
    because the July 27 §5.Z.13 one-event-per-contact change already invalidated this exact fit;
 7. changing collision classification, possession attachment/release, restart duration/flow, or any
-   other mechanism shown to alter the foul opportunity population.
+   other mechanism shown to alter the foul opportunity population;
+8. changing the AI-before-Physics/Resolve phase order that makes a decided W2 candidate occupy the
+   same-tick foul slot before collision consumption.
 
 When any trigger occurs, rerun the **same frozen corpus and source-complete report**. Do not replace
 seeds, shorten the run, or widen the acceptance envelope because the trajectory moved.
@@ -394,7 +403,9 @@ observed values.
    with **no gameplay `[GT]` change**. New counters follow the existing
    `_tackleSlideTackleFouls` / `TestOnly_TackleSlideTackleFouls` diagnostic precedent: ephemeral
    observation state only, not serialized gameplay state, so the instrument landing does not create a
-   snapshot-schema obligation.
+   snapshot-schema obligation. `foulCooldownSuppressionsFromBehind` can reuse the existing
+   pre-gate collision observer plus `TestOnly_FoulCooldownRemaining`; counters that require new fields
+   remain in the same nonserialized diagnostic class.
 2. Execute the frozen six-full-match **characterization** on the current post-W2 production head.
    It is a baseline/source census, not the final KD-W1 calibration fit.
 3. Complete the remaining Class-A wiring in the authoritative backlog order, collecting the W3/W9
