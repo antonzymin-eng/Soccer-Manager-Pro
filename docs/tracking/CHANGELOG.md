@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 21, 2026 — **PR #433 evidence/governance closure: manifest integrity closed; shallow ancestry narrowed.**
+> **Last Updated:** September 21, 2026 — **PR #434 Positioning AI routing review correction / ERR-012-012.**
+>
+> Review found one runtime defect and two contract overreaches in the original #434 implementation. Formation switching called the boot seeder and reset `CurrentPhase` / `CandidatePhase` / `PhaseDwellCount` to `InPoss`; `SetFormation` now reseeds formation-dependent line/lane/binding state while preserving that independent phase hysteresis, with a regression that holds an in-progress `TransToAtk` candidate across an F442→F433 switch. The draft also gave `PositioningFreedom` a second #12 meaning by multiplying ball-relative offsets even though approved #21 FR-TI-014 maps it exactly to #8 `MOVE_TO_POSITION`, and routed `PlayerRole` into #12 without the numerical role-offset table XC-021-005 names. Both unsupported paths are removed.
+>
+> The approved part remains and is now back-propagated correctly: #21 FR-TI-013's pinned `DutyForeOffsetM` applies Defend/Support/Attack as −3/0/+3 m on the baseline longitudinal anchor before the ball-relative offset; Support is exact identity. `ERR-012-012` records the missing #12 pipeline amendment and #12 §3.7.1 v0.9 publishes the canonical order. Live own-minus-opponent score routing, formation-family/role-table selection, rotation-family restore selection, and sent-off exclusion from `ActiveOutfieldCount` remain intact. No new `[GT]`, assembly edge, save/snapshot schema, RNG stream/domain/draw site/order, roadmap item, spec status, or open-issue count change. The branch was reconciled onto current `main` as a true merge parent (0 behind after the correction). Predecessor corrective-head CI had C# format green and failed Spec hygiene only on two maintained `spec-error-log.md` v2.61 pointers in `file-manifest.md`; those pointers are corrected to v2.62 in this closeout and fresh current-head CI is required.
+>
+> **Last Updated (prior):** September 21, 2026 — **PR #433 evidence/governance closure: manifest integrity closed; shallow ancestry narrowed.**
 >
 > The PR #424 SHA-256 remainder is mechanically closed. New `tools/dotnet-ci/check_evidence_manifests.py` uses the Git index—not arbitrary working-tree files—for complete `SHA256SUMS` scope, so ignored/untracked files cannot turn required CI red. Every tracked top-level evidence directory must register an integrity contract: full SHA manifest, artifact-scoped SHA manifest, or named external verifier. New unregistered directories and unrecognized `*SHA256SUMS*` names fail closed; the PR420 `TRX-SHA256SUMS` ledger is explicitly allowlisted under its existing `pr420-evidence.py` owner. The tooling suite exercises the committed repository and negative fixtures inside required `Spec hygiene checks`.
 >
