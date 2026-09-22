@@ -109,8 +109,8 @@ namespace TacticalDirector.MatchEngine
                 var pricedCandidateForces = new List<float>();
 
                 int totalAgentAgentContacts = 0;
-                int totalQualifyingFromBehindContacts = 0;
                 int totalFromBehindCandidates = 0;
+                int totalFromBehindPricedCandidates = 0;
                 int totalFromBehindDroppedByStrongerSameTick = 0;
                 int totalFromBehindSentOffSlotConsumptions = 0;
                 int totalFromBehindWavedOn = 0;
@@ -151,8 +151,8 @@ namespace TacticalDirector.MatchEngine
                     pricedCandidateForces.AddRange(probe.PricedCandidateForces);
 
                     totalAgentAgentContacts += probe.AgentAgentContacts;
-                    totalQualifyingFromBehindContacts += probe.QualifyingFromBehindContacts;
                     totalFromBehindCandidates += probe.FromBehindCandidates;
+                    totalFromBehindPricedCandidates += probe.FromBehindPricedCandidates;
                     totalFromBehindDroppedByStrongerSameTick += probe.FromBehindCandidatesDroppedByStrongerSameTick;
                     totalFromBehindSentOffSlotConsumptions += probe.FromBehindSentOffSlotConsumptions;
                     totalFromBehindWavedOn += probe.FromBehindWavedOn;
@@ -170,25 +170,25 @@ namespace TacticalDirector.MatchEngine
                     totalDismissals += probe.TotalDismissals;
                     totalPlayedTicks += probe.PlayedTicks;
 
-                    if (probe.QualifyingFromBehindContacts
+                    if (probe.FromBehindCandidates
                         != probe.FoulCooldownSuppressionsFromBehind
                             + probe.CandidateDisplacedByDecided
                             + probe.FromBehindCandidatesDroppedByStrongerSameTick
-                            + probe.FromBehindCandidates)
+                            + probe.FromBehindPricedCandidates)
                     {
                         structuralFindings.Add(
                             Invariant($"seed 0x{seed:X16}: collision funnel failed: ")
-                            + Invariant($"qualifying={probe.QualifyingFromBehindContacts} != ")
+                            + Invariant($"candidates={probe.FromBehindCandidates} != ")
                             + Invariant($"cooldown={probe.FoulCooldownSuppressionsFromBehind} + ")
                             + Invariant($"decided={probe.CandidateDisplacedByDecided} + ")
                             + Invariant($"stronger={probe.FromBehindCandidatesDroppedByStrongerSameTick} + ")
-                            + Invariant($"priced={probe.FromBehindCandidates}."));
+                            + Invariant($"priced={probe.FromBehindPricedCandidates}."));
                     }
-                    if (probe.FromBehindCandidates != probe.FromBehindCalled + probe.FromBehindWavedOn)
+                    if (probe.FromBehindPricedCandidates != probe.FromBehindCalled + probe.FromBehindWavedOn)
                     {
                         structuralFindings.Add(
                             Invariant($"seed 0x{seed:X16}: KD-F1 priced-candidate identity failed: ")
-                            + Invariant($"candidates={probe.FromBehindCandidates} != called={probe.FromBehindCalled} + ")
+                            + Invariant($"priced={probe.FromBehindPricedCandidates} != called={probe.FromBehindCalled} + ")
                             + Invariant($"wavedOn={probe.FromBehindWavedOn}."));
                     }
                     if (probe.FromBehindCalled + probe.SlideTackleCalled != probe.TotalFouls)
@@ -228,8 +228,8 @@ namespace TacticalDirector.MatchEngine
 
                     report.AppendLine(Invariant($"seed 0x{seed:X16}:"));
                     report.AppendLine(
-                        Invariant($"  qualifyingFromBehindContacts={probe.QualifyingFromBehindContacts} ")
-                        + Invariant($"fromBehindCandidates={probe.FromBehindCandidates} ")
+                        Invariant($"  fromBehindCandidates={probe.FromBehindCandidates} ")
+                        + Invariant($"fromBehindPricedCandidates={probe.FromBehindPricedCandidates} ")
                         + Invariant($"fromBehindCalled={probe.FromBehindCalled} ")
                         + Invariant($"fromBehindWavedOn={probe.FromBehindWavedOn}"));
                     report.AppendLine(
@@ -256,8 +256,8 @@ namespace TacticalDirector.MatchEngine
                 report.AppendLine();
                 report.AppendLine("--- aggregate #435 §2.1 discipline stream ---");
                 report.AppendLine(
-                    Invariant($"qualifyingFromBehindContacts={totalQualifyingFromBehindContacts} ")
-                    + Invariant($"fromBehindCandidates={totalFromBehindCandidates} ")
+                    Invariant($"fromBehindCandidates={totalFromBehindCandidates} ")
+                    + Invariant($"fromBehindPricedCandidates={totalFromBehindPricedCandidates} ")
                     + Invariant($"fromBehindCalled={totalFromBehindCalled} ")
                     + Invariant($"fromBehindWavedOn={totalFromBehindWavedOn}"));
                 report.AppendLine(
@@ -339,23 +339,23 @@ namespace TacticalDirector.MatchEngine
 
                 // These are reconciliation/shape checks from #435 §2.1, not rate assertions. A failure
                 // means the measurement taxonomy no longer describes production and calibration must stop.
-                if (totalQualifyingFromBehindContacts
+                if (totalFromBehindCandidates
                     != totalCooldownSuppressionsFromBehind
                         + totalCandidateDisplacedByDecided
                         + totalFromBehindDroppedByStrongerSameTick
-                        + totalFromBehindCandidates)
+                        + totalFromBehindPricedCandidates)
                 {
                     structuralFindings.Add(
-                        Invariant($"aggregate collision funnel failed: qualifying={totalQualifyingFromBehindContacts} != ")
+                        Invariant($"aggregate collision funnel failed: candidates={totalFromBehindCandidates} != ")
                         + Invariant($"cooldown={totalCooldownSuppressionsFromBehind} + ")
                         + Invariant($"decided={totalCandidateDisplacedByDecided} + ")
                         + Invariant($"stronger={totalFromBehindDroppedByStrongerSameTick} + ")
-                        + Invariant($"priced={totalFromBehindCandidates}."));
+                        + Invariant($"priced={totalFromBehindPricedCandidates}."));
                 }
-                if (totalFromBehindCandidates != totalFromBehindCalled + totalFromBehindWavedOn)
+                if (totalFromBehindPricedCandidates != totalFromBehindCalled + totalFromBehindWavedOn)
                 {
                     structuralFindings.Add(
-                        Invariant($"aggregate KD-F1 identity failed: candidates={totalFromBehindCandidates} != ")
+                        Invariant($"aggregate KD-F1 identity failed: priced={totalFromBehindPricedCandidates} != ")
                         + Invariant($"called={totalFromBehindCalled} + wavedOn={totalFromBehindWavedOn}."));
                 }
                 if (totalFromBehindCalled + totalSlideTackleCalled != totalFouls)
@@ -580,8 +580,8 @@ namespace TacticalDirector.MatchEngine
             public List<float> PricedCandidateForces { get; }
 
             public int AgentAgentContacts { get; private set; }
-            public int QualifyingFromBehindContacts { get; private set; }
             public int FromBehindCandidates { get; private set; }
+            public int FromBehindPricedCandidates { get; private set; }
             public int FromBehindCandidatesDroppedByStrongerSameTick { get; private set; }
             public int FromBehindSentOffSlotConsumptions { get; private set; }
             public int FromBehindCalled { get; private set; }
@@ -648,7 +648,7 @@ namespace TacticalDirector.MatchEngine
                     }
                     else
                     {
-                        FromBehindCandidates++;
+                        FromBehindPricedCandidates++;
                         PricedCandidateForces.Add(_strongestCollisionForceThisTick);
                         _pricedCollisionCandidateThisTick = true;
                     }
@@ -765,7 +765,7 @@ namespace TacticalDirector.MatchEngine
                 // before cooldown, same-tick slot competition, and the KD-F1 probability decision.
                 if (participantsActive)
                 {
-                    QualifyingFromBehindContacts++;
+                    FromBehindCandidates++;
                     QualifyingContactForces.Add(foul.ForceMagnitude);
                 }
 
