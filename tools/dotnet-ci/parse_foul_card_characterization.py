@@ -17,6 +17,15 @@ RATE_RE = re.compile(
     r"secondYellowDismissals=(\S+) totalDismissals=(\S+)$"
 )
 
+FROZEN_SEEDS = (
+    "0x0F1E2D3C4B5A6978",
+    "0x00000000D1A6D05E",
+    "0x0000000000000001",
+    "0x00000000ABCDEF12",
+    "0x0000000099887766",
+    "0x000000005A5A5A5A",
+)
+
 FIELDS = [
     "fromBehindCandidates",
     "fromBehindPricedCandidates",
@@ -43,6 +52,14 @@ FIELDS = [
     "playedTicks",
 ]
 
+RATE_FIELDS = (
+    "foulsPer90",
+    "yellowsPer90",
+    "straightRedsPer90",
+    "secondYellowDismissalsPer90",
+    "totalDismissalsPer90",
+)
+
 
 def extract_report(text: str) -> str:
     start = text.find(START)
@@ -57,6 +74,23 @@ def extract_report(text: str) -> str:
     else:
         end += 1
     return text[start:end]
+
+
+def _validate_identities(row: dict[str, int | float | str], label: str) -> None:
+    if row["fromBehindCandidates"] != (
+        row["foulCooldownSuppressionsFromBehind"]
+        + row["candidateDisplacedByDecided"]
+        + row["fromBehindCandidatesDroppedByStrongerSameTick"]
+        + row["fromBehindCandidatesShadowedBySentOffWinner"]
+        + row["fromBehindPricedCandidates"]
+    ):
+        raise ValueError(f"{label} collision funnel does not reconcile")
+    if row["fromBehindCalled"] + row["slideTackleCalled"] != row["totalFouls"]:
+        raise ValueError(f"{label} foul-source identity does not reconcile")
+    if row["straightReds"] + row["secondYellowDismissals"] != row["totalDismissals"]:
+        raise ValueError(f"{label} dismissal identity does not reconcile")
+    if row["pricedCandidateIdentityMismatches"] != 0:
+        raise ValueError(f"{label} priced candidate identity mismatch is non-zero")
 
 
 def parse_report(report: str) -> dict:
@@ -101,31 +135,35 @@ def parse_report(report: str) -> dict:
 
     if current is not None:
         rows.append(current)
-    if len(rows) != 6:
-        raise ValueError(f"expected 6 seed rows, found {len(rows)}")
+
+    observed_seeds = tuple(str(row.get("seed", "")) for row in rows)
+    if observed_seeds != FROZEN_SEEDS:
+        raise ValueError(
+            "seed corpus/order does not match frozen #435 corpus: "
+            f"expected={FROZEN_SEEDS}, observed={observed_seeds}"
+        )
+
     for row in rows:
         missing = [field for field in FIELDS if field not in row]
         if missing:
             raise ValueError(f"seed {row.get('seed')} missing fields: {missing}")
+        _validate_identities(row, f"seed {row['seed']}")
+
     missing_aggregate = [field for field in FIELDS if field not in aggregate]
     if missing_aggregate:
         raise ValueError(f"aggregate missing fields: {missing_aggregate}")
+    missing_rates = [field for field in RATE_FIELDS if field not in aggregate]
+    if missing_rates:
+        raise ValueError(f"aggregate missing shipped per-90 rates: {missing_rates}")
 
-    # Frozen structural identities from #435/#436. Fail closed if the retained report is inconsistent.
-    if aggregate["fromBehindCandidates"] != (
-        aggregate["foulCooldownSuppressionsFromBehind"]
-        + aggregate["candidateDisplacedByDecided"]
-        + aggregate["fromBehindCandidatesDroppedByStrongerSameTick"]
-        + aggregate["fromBehindCandidatesShadowedBySentOffWinner"]
-        + aggregate["fromBehindPricedCandidates"]
-    ):
-        raise ValueError("aggregate collision funnel does not reconcile")
-    if aggregate["fromBehindCalled"] + aggregate["slideTackleCalled"] != aggregate["totalFouls"]:
-        raise ValueError("aggregate foul-source identity does not reconcile")
-    if aggregate["straightReds"] + aggregate["secondYellowDismissals"] != aggregate["totalDismissals"]:
-        raise ValueError("aggregate dismissal identity does not reconcile")
-    if aggregate["pricedCandidateIdentityMismatches"] != 0:
-        raise ValueError("priced candidate identity mismatch is non-zero")
+    _validate_identities(aggregate, "aggregate")
+
+    for field in FIELDS:
+        seed_sum = sum(int(row[field]) for row in rows)
+        if aggregate[field] != seed_sum:
+            raise ValueError(
+                f"aggregate {field}={aggregate[field]} does not equal seed sum {seed_sum}"
+            )
 
     return {"seeds": rows, "aggregate": aggregate}
 
@@ -156,7 +194,11 @@ def main() -> int:
     parsed = parse_report(report)
     args.report_out.write_text(report, encoding="utf-8", newline="\n")
     write_tsv(parsed, args.tsv_out)
-    args.json_out.write_text(json.dumps(parsed, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+    args.json_out.write_text(
+        json.dumps(parsed, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
     return 0
 
 
