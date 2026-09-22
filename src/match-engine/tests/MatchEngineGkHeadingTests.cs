@@ -17,6 +17,8 @@ using UnityEngine;
 
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.CollisionSystem;
+using TacticalDirector.BallPhysics;
+using TacticalDirector.GoalkeeperMechanics;
 using TacticalDirector.AgentMovement;
 using TacticalDirector.PlayerDatabase;
 
