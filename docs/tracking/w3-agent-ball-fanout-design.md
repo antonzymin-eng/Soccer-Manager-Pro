@@ -309,6 +309,19 @@ Whole-tree acceptance:
 Because W3 and the feed are preregistered baseline invalidators, rerun the **same frozen source-complete
 six-seed corpus** after the implementation. Do not calibrate before reading that result.
 
+**Attribution correction discovered during PR #439 defect localization.** The final PR head also carries
+a pre-existing W6 correctness repair: after Collision #3 applies Resolve-time agent-agent penetration
+position correction, MatchEngine re-runs the existing Controlled-ball attachment funnel. That call is
+unconditional — it applies to keeper and outfield holders and also to the default engine when GK/Heading
+wiring is disabled — so it can change match trajectories/digests independently of W3. W3 made the keeper
+symptom observable at scale; it did not create the underlying W6 ordering gap.
+
+Therefore the final six-seed report is evidence for the **combined landing state (W3 + the W6 ordering
+correction)**. Any changed football population must not be causally attributed to W3 alone. The evidence
+write-up must name the W6 correction explicitly and retain `f69aaef0` as the pre-correction W3 head when
+describing provenance. Splitting the correctness fix into a separate PR is not required for #439, but
+the mixed attribution must remain visible in the final closeout.
+
 The result-bearing report must include, per seed and aggregate:
 
 - `AGENT_BALL` multi-agent fan-out events;
@@ -358,7 +371,9 @@ W3 does not:
   merely to satisfy #11's stale citation.
 
 Those remain subsequent work unless implementation evidence exposes a correctness blocker that must
-be fixed atomically.
+be fixed atomically. PR #439 did expose one such blocker: the W6 Resolve-time Controlled attachment
+ordering gap described in §6. That correction is intentionally retained, but it is not reclassified as
+a W3 mechanism and its default-engine trajectory effect must stay explicit in evidence.
 
 ---
 
@@ -366,6 +381,7 @@ be fixed atomically.
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.5 | 2026-09-22 | Defect-localization attribution correction: PR #439 also carries an unconditional W6 Resolve-time Controlled reattachment repair that affects keeper/outfield holders and can change default-engine trajectories with GK/Heading disabled. Final frozen-corpus evidence is therefore the combined W3+W6 landing state; `f69aaef0` is retained as the pre-correction W3 provenance point and deltas must not be attributed to W3 alone. |
 | 0.4 | 2026-09-22 | Review correction / ERR-011-012: Collision #3 fan-out is observation-only, never W3 membership; #10 prepared Head geometry + #11 active-claim Hand reach form the live contest before ball mutation. ClaimIntent is now a bounded locked episode and its full payload + active latch is serialized in MatchEngine schema v23. |
 | 0.3 | 2026-09-22 | `ERR-011-011` filed/resolved atomically with #11 §3.6.1: remove phantom #3 hand/head colliders; #3 is candidate-only, #10 owns head geometry, #11 owns live hand reach, and ordinary Hand claims remain blocked until W3 wires a real claim producer. |
 | 0.2 | 2026-09-22 | PR #439 review correction: reject the full Resolve→Physics collision move and the Collision-cylinder Heading gate. W3 now uses a read-only Physics AGENT_BALL candidate pass; full response/W4/fouls stay in Resolve; #10 geometry remains authoritative; direct Heading lifecycle and overflow fail-closed requirements are explicit. |
