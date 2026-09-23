@@ -1,7 +1,7 @@
 # W3 — shared AGENT_BALL fan-out and goalkeeper cross-claim wiring
 
 > **Created:** September 22, 2026
-> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.8 records the production corpus, corrected W2 gate diagnosis, M7 mutation proof, header-path reachability dependency, and pending owner decisions.
+> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.9 records the production corpus, reproduced W2 gate diagnosis, M7 mutation proof, header-path reachability dependency, and pending owner decisions.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W3**.
 > **Companion preregistration:** `docs/tracking/foul-card-w3-w9-preregistration.md`.
 > **Baseline:** `main` at `876a3343319050187c2a5505b18cb32fc3d0f89d`; post-merge CI run
@@ -444,6 +444,14 @@ test contract must be separate, must freeze its sizing rule before examining new
 the same rule to comparison arms, and must preserve the positive `Won > 0` / dispossession semantics
 unless the owner explicitly changes those requirements.
 
+The subsequent full PR gate reproduced that deterministic state without any gameplay change:
+Actions run `35880226626` / job `107246481435` completed with MatchEngine
+**521 passed / 2 failed / 12 skipped**. The only failures were
+`AControlledCarrierIsActuallyDispossessed` and
+`BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose`; the latter printed exactly
+`won=0 loose=6 foul=0 missed=27 dispossessions=0`. This is direct evidence that another unchanged
+rerun is not a remediation path.
+
 ### 6.4 M7 SeasonSave mutation proof
 
 The deterministic ban-order rewrite has direct mutation proof:
@@ -507,6 +515,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.9 | 2026-09-23 | Records full functional-gate reproduction run 35880226626/job 107246481435: MatchEngine 521/2/12 with exactly the two W2 locks red and won=0/loose=6/dispossessions=0. Confirms unchanged rerun is not a green-gate path. No gameplay/test-contract change. |
 | 0.8 | 2026-09-23 | Review correction: the 1% rule was owner-supplied before the runs but not Git-preregistered; records that the fixed deterministic head corpus must reproduce Won=0/dispossessions=0, links #440 to both W2 failures, records the positive-win lock's 19.586% base / 13.573% head false-red risk, and makes W3 classification evidence-dependent on #441's header-path localization. No gameplay/test-contract change. |
 | 0.7 | 2026-09-23 | Adds the three-arm W2 gate diagnosis (identical test/workflow blobs, head P(0 wins)=13.573% > 1%, 14/14 BallLoose same-tick original-carrier re-pickups, issue #440), issue #441 for the header-contact zero, and M7 mutation proof run 35878836477/job 107241699913. No gameplay change. |
 | 0.6 | 2026-09-23 | Result-bearing six-seed evidence: records run 35814050060 at production SHA `f40f085…`, 1,164 single-participant Hand-contact resolutions and zero contested Hand-vs-Head production duels; corrects `successfulKeeperClaims` to a non-comparable W3-only counter; records headerContacts=0 pre/post, attribution limits, and the pending owner classification decision. |
