@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-09-22 (W3 defect closure / W6 invariant: reattach Controlled possession immediately after Resolve collision position-correction writeback; no schema/RNG change)
+// Modified: 2026-09-22 (W6 ordering correction surfaced by W3: reattach every Controlled holder after Resolve collision position-correction writeback; unconditional/default-engine trajectory change, no schema/RNG change)
 // Modified: 2026-09-22 (W3 / #435 §6.2: add nonserialized measurement-only production counters for frozen six-seed evidence)
 // Modified: 2026-09-22 (W3 / ERR-011-012: claim arming/lifetime corrected; claim reach side locked+serialized in the still-unmerged v23 block; observation seam made state-pure)
 // Modified: 2026-09-22 (W3 shared-feed continuation: AgentBallFanout now has the required two consumers — Heading + frame-local CrossClaimCandidateCollector; collector is candidate-only under ERR-011-011, fail-closed, nonserialized)
@@ -5075,11 +5075,12 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only composition seam for a single Resolve phase.</summary>
         internal void TestOnly_RunResolvePhase() => RunResolvePhase();
 
-        /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor
+        /// <summary>Phase 4 — Resolve. Runs collision (×22), reconciles any Controlled holder/ball
+        /// attachment after collision position correction, advances the in-flight pass/shot executor
         /// lifecycles (C2/C3), runs first touch on a loose arriving ball (D3), then authors the
         /// authoritative <see cref="MatchContext"/> from the settled world state (C4). Intra-Resolve
-        /// order is fixed and digest-load-bearing: collision → executor Update → first touch →
-        /// possession/MatchContext. Collision writes THIS tick's feedback buffers (consumed by movement
+        /// order is fixed and digest-load-bearing: collision → Controlled reattach → executor Update →
+        /// first touch → possession/MatchContext. Collision writes THIS tick's feedback buffers (consumed by movement
         /// next tick — the §3 one-tick-lag contract); the executors advance any pass/shot scripted via the
         /// TestOnly_ seam (production trigger is the Phase D AI dispatcher), kicking the ball at CONTACT
         /// through the executor adapters and releasing possession; first touch (D3) receives a loose
@@ -5131,13 +5132,17 @@ namespace TacticalDirector.MatchEngine
                 eventConsumer: _eventConsumer,
                 ballDeflected: out bool ballDeflected);
 
-            // W6 invariant, exposed by W3's larger keeper-claim population: Physics attaches a
-            // Controlled ball after locomotion, but Resolve can subsequently move that holder via
-            // Collision #3's agent-agent penetration correction. Controlled AGENT_BALL response is
-            // deliberately suppressed, so without this reconciliation the holder and ball can end
-            // one tick with different XY while possession still says Controlled. Re-run the SAME
-            // attachment funnel immediately after collision writeback, before any later Resolve
-            // path can legitimately kick, release, or restart the ball.
+            // Pre-existing W6 ordering invariant, surfaced because W3 greatly increases the observed
+            // keeper-claim population: Physics attaches a Controlled ball after locomotion, but Resolve
+            // can subsequently move ANY holder via Collision #3's agent-agent penetration correction.
+            // Controlled AGENT_BALL response is deliberately suppressed, so without this reconciliation
+            // the holder and ball can end one tick with different XY while possession still says
+            // Controlled. This call is intentionally unconditional: it also applies to outfield holders
+            // and to the default engine when GK/Heading wiring is disabled. It can therefore change
+            // match trajectories/digests wherever Resolve collision correction moves a carrier, even
+            // though it adds no cross-tick state and consumes no RNG. Re-run the SAME attachment funnel
+            // immediately after collision writeback, before any later Resolve path can legitimately
+            // kick, release, or restart the ball.
             DriveControlledBallToPossessor();
 
             // W4: consume an APPLIED flight change immediately in this Resolve phase. No pending
@@ -10376,5 +10381,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.85    | 2026-09-22 | —      | W3 testability only: add deterministic clock/apex-history seams so a composed test can make #10 itself confirm a current-frame Head contact against a simultaneous #11 Hand reach; no production path reads the seams. |
 // | 1.86    | 2026-09-22 | —      | W3 / #435 §6.2: nonserialized cumulative observation counters expose fan-out events, claim episodes, registered duel participants, resolved Hand-contact duels and successful keeper claims to the frozen six-seed diagnostic. No gameplay/snapshot/digest/RNG change. |
 // | 1.87    | 2026-09-22 | —      | W3 event provenance: when Head wins a mixed Hand/Head contest, carry the W3 duel id into #10 before loser suppression so HeaderExecutedEvent remains truthfully contested. Frame-local only. |
-// | 1.88    | 2026-09-22 | —      | W3 defect closure / W6: reconcile Controlled attachment immediately after Resolve collision position correction so an agent-agent separation cannot leave a still-held ball one frame behind its holder. Same attachment funnel; no schema/RNG change. |
+// | 1.88    | 2026-09-22 | —      | W6 ordering correction surfaced by W3: reconcile every Controlled holder immediately after Resolve collision position correction. This is unconditional and can change default-engine trajectories/digests for keeper or outfield carriers even with GK/Heading disabled; it reuses the same attachment funnel and adds no schema field or RNG draw. |
 #endregion
