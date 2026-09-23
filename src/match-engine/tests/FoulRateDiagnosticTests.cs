@@ -1,5 +1,7 @@
 // File:     src/match-engine/tests/FoulRateDiagnosticTests.cs
 // Created:  2026-07-26
+// Modified: 2026-09-23 (PR #439 Codex closure: W3 census explicitly enables GK/Heading; no-op under the ON default)
+// Modified: 2026-09-22 (W3 / #435 §6.2 frozen-corpus extension: measurement-only W3/pass/header census)
 // Modified: 2026-09-22 (#435 §2.1 source-complete foul/card measurement instrument; measurement-only)
 // Author:   —
 // Spec:     foul-card-w3-w9-preregistration.md §2.1 / §3;
@@ -8,7 +10,8 @@
 // Purpose:  Source-complete foul/card measurement required by #435 §2.1. Runs the frozen six
 //           full-match seeds and reports both live discipline sources (collision FROM_BEHIND and
 //           already-adjudicated W2 SLIDE_TACKLE), their cooldown/single-slot interaction, exact
-//           applied foul/card events, and the raw/priced/sent-off-shadowed collision-force distributions.
+//           applied foul/card events, the raw/priced/sent-off-shadowed collision-force distributions,
+//           and #435 §6.2's post-W3 fan-out/claim/duel/pass/header census.
 //
 //           The historical offline (threshold, cooldown) collision replay is retained as descriptive
 //           bracketing only; it is not the live source-complete numerator and does not propose a [GT].
@@ -27,6 +30,8 @@ using NUnit.Framework;
 
 using TacticalDirector.CollisionSystem;
 using TacticalDirector.EventSystem;
+using TacticalDirector.HeadingMechanics;
+using TacticalDirector.PassMechanics;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -133,11 +138,25 @@ namespace TacticalDirector.MatchEngine
                 int totalDismissals = 0;
                 int totalPlayedTicks = 0;
 
+                int totalW3AgentBallFanoutEvents = 0;
+                int totalW3ClaimEligibilityEpisodes = 0;
+                int totalW3RegisteredDuelParticipants = 0;
+                int totalW3ResolvedHandContactDuels = 0;
+                int totalW3SuccessfulKeeperClaims = 0;
+                int totalCrossAttempts = 0;
+                int totalCrossCompletions = 0;
+                int totalLoftedAttempts = 0;
+                int totalLoftedCompletions = 0;
+                int totalHeaderContacts = 0;
+                int totalHeaderFailures = 0;
+
                 var structuralFindings = new List<string>();
 
                 foreach (ulong seed in Seeds)
                 {
                     var engine = new MatchEngine(seed);
+                    // #435 §6.2 is explicitly a W3 census; keep it independent of host defaults.
+                    engine.EnableGkHeading();
                     var probe = new FoulCandidateProbe(engine, TicksPerSeed);
                     engine.TestOnly_SetCollisionObserver(probe);
 
@@ -181,6 +200,50 @@ namespace TacticalDirector.MatchEngine
                     totalSecondYellowDismissals += probe.SecondYellowDismissals;
                     totalDismissals += probe.TotalDismissals;
                     totalPlayedTicks += probe.PlayedTicks;
+
+                    int w3AgentBallFanoutEvents = engine.TestOnly_W3AgentBallFanoutEvents;
+                    int w3ClaimEligibilityEpisodes = engine.TestOnly_W3ClaimEligibilityEpisodes;
+                    int w3RegisteredDuelParticipants = engine.TestOnly_W3RegisteredDuelParticipants;
+                    int w3ResolvedHandContactDuels = engine.TestOnly_W3ResolvedHandContactDuels;
+                    int w3SuccessfulKeeperClaims = engine.TestOnly_W3SuccessfulKeeperClaims;
+
+                    totalW3AgentBallFanoutEvents += w3AgentBallFanoutEvents;
+                    totalW3ClaimEligibilityEpisodes += w3ClaimEligibilityEpisodes;
+                    totalW3RegisteredDuelParticipants += w3RegisteredDuelParticipants;
+                    totalW3ResolvedHandContactDuels += w3ResolvedHandContactDuels;
+                    totalW3SuccessfulKeeperClaims += w3SuccessfulKeeperClaims;
+                    totalCrossAttempts += probe.CrossAttempts;
+                    totalCrossCompletions += probe.CrossCompletions;
+                    totalLoftedAttempts += probe.LoftedAttempts;
+                    totalLoftedCompletions += probe.LoftedCompletions;
+                    totalHeaderContacts += probe.HeaderContacts;
+                    totalHeaderFailures += probe.HeaderFailures;
+
+                    if (w3RegisteredDuelParticipants < w3ResolvedHandContactDuels)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: W3 participant/duel accounting failed: ")
+                            + Invariant($"participants={w3RegisteredDuelParticipants} < duels={w3ResolvedHandContactDuels}."));
+                    }
+                    if (w3SuccessfulKeeperClaims > w3ResolvedHandContactDuels)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: W3 successful-claim subset failed: ")
+                            + Invariant($"claims={w3SuccessfulKeeperClaims} > duels={w3ResolvedHandContactDuels}."));
+                    }
+                    if (probe.CrossCompletions > probe.CrossAttempts || probe.LoftedCompletions > probe.LoftedAttempts)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: aerial pass completion subset failed: ")
+                            + Invariant($"cross={probe.CrossCompletions}/{probe.CrossAttempts}, ")
+                            + Invariant($"lofted={probe.LoftedCompletions}/{probe.LoftedAttempts}."));
+                    }
+                    if (probe.AerialPassOverlapCount != 0)
+                    {
+                        structuralFindings.Add(
+                            Invariant($"seed 0x{seed:X16}: overlapping Cross/Lofted attempts={probe.AerialPassOverlapCount}; ")
+                            + "single-ball completion accounting is no longer valid.");
+                    }
 
                     if (probe.FromBehindCandidates
                         != probe.FoulCooldownSuppressionsFromBehind
@@ -291,6 +354,16 @@ namespace TacticalDirector.MatchEngine
                         + Invariant($"straightReds={probe.StraightReds} ")
                         + Invariant($"secondYellowDismissals={probe.SecondYellowDismissals} ")
                         + Invariant($"totalDismissals={probe.TotalDismissals} playedTicks={probe.PlayedTicks}"));
+                    report.AppendLine(
+                        Invariant($"  W3 agentBallFanoutEvents={w3AgentBallFanoutEvents} ")
+                        + Invariant($"claimEligibilityEpisodes={w3ClaimEligibilityEpisodes} ")
+                        + Invariant($"registeredDuelParticipants={w3RegisteredDuelParticipants} ")
+                        + Invariant($"resolvedHandContactDuels={w3ResolvedHandContactDuels} ")
+                        + Invariant($"successfulKeeperClaims={w3SuccessfulKeeperClaims}"));
+                    report.AppendLine(
+                        Invariant($"  aerialDelivery crossAttempts={probe.CrossAttempts} crossCompletions={probe.CrossCompletions} ")
+                        + Invariant($"loftedAttempts={probe.LoftedAttempts} loftedCompletions={probe.LoftedCompletions} ")
+                        + Invariant($"headerAttempts={probe.HeaderAttempts} headerContacts={probe.HeaderContacts}"));
                     report.AppendLine("  qualifyingContactForce distribution — raw valid contacts (N):");
                     AppendDistribution(report, "    ", probe.QualifyingContactForces);
                     report.AppendLine("  pricedCandidateForce distribution — per-tick KD-F1 winners (N):");
@@ -337,6 +410,19 @@ namespace TacticalDirector.MatchEngine
                     + Invariant($"straightReds={PerMatch(totalStraightReds):F3} ")
                     + Invariant($"secondYellowDismissals={PerMatch(totalSecondYellowDismissals):F3} ")
                     + Invariant($"totalDismissals={PerMatch(totalDismissals):F3}"));
+
+                report.AppendLine();
+                report.AppendLine("--- aggregate #435 §6.2 W3 before/after census ---");
+                report.AppendLine(
+                    Invariant($"agentBallFanoutEvents={totalW3AgentBallFanoutEvents} ")
+                    + Invariant($"claimEligibilityEpisodes={totalW3ClaimEligibilityEpisodes} ")
+                    + Invariant($"registeredDuelParticipants={totalW3RegisteredDuelParticipants} ")
+                    + Invariant($"resolvedHandContactDuels={totalW3ResolvedHandContactDuels} ")
+                    + Invariant($"successfulKeeperClaims={totalW3SuccessfulKeeperClaims}"));
+                report.AppendLine(
+                    Invariant($"crossAttempts={totalCrossAttempts} crossCompletions={totalCrossCompletions} ")
+                    + Invariant($"loftedAttempts={totalLoftedAttempts} loftedCompletions={totalLoftedCompletions} ")
+                    + Invariant($"headerAttempts={totalHeaderContacts + totalHeaderFailures} headerContacts={totalHeaderContacts}"));
 
                 report.AppendLine();
                 report.AppendLine("--- qualifyingContactForce distribution — raw valid FROM_BEHIND contacts (N) ---");
@@ -450,6 +536,16 @@ namespace TacticalDirector.MatchEngine
                     structuralFindings.Add(
                         Invariant($"aggregate dismissal identity failed: {totalDismissals} != ")
                         + Invariant($"{totalStraightReds} + {totalSecondYellowDismissals}."));
+                }
+                if (totalW3AgentBallFanoutEvents == 0)
+                {
+                    structuralFindings.Add(
+                        "W3 post-wire non-vacuity failed: the six-seed production corpus emitted zero AGENT_BALL fan-out observations.");
+                }
+                if (totalW3ResolvedHandContactDuels == 0)
+                {
+                    structuralFindings.Add(
+                        "W3 post-wire non-vacuity failed: the six-seed production corpus resolved zero Hand-contact duels.");
                 }
                 if (structuralFindings.Count != 0)
                 {
@@ -663,6 +759,13 @@ namespace TacticalDirector.MatchEngine
                 QualifyingContactForces = new List<float>();
                 PricedCandidateForces = new List<float>();
                 SentOffShadowedCandidateForces = new List<float>();
+
+                // #435 §6.2: subscribe before the first DrainTick, matching the existing close-chance
+                // instrument. These handlers are observation-only and are cleared by the next
+                // MatchEngine boot's EventBus.ResetForNewMatch().
+                EventBus.Subscribe<PassAttemptEvent>(OnPassAttempt);
+                EventBus.Subscribe<HeaderExecutedEvent>(OnHeaderExecuted);
+                EventBus.Subscribe<HeaderAttemptFailedEvent>(OnHeaderFailed);
             }
 
             public float[] PeakForcePerTick { get; }
@@ -696,6 +799,19 @@ namespace TacticalDirector.MatchEngine
             public int UnknownFoulSources { get; private set; }
             public int UnknownCardKinds { get; private set; }
 
+            public int CrossAttempts { get; private set; }
+            public int CrossCompletions { get; private set; }
+            public int LoftedAttempts { get; private set; }
+            public int LoftedCompletions { get; private set; }
+            public int HeaderContacts { get; private set; }
+            public int HeaderFailures { get; private set; }
+            public int HeaderAttempts => HeaderContacts + HeaderFailures;
+            public int AerialPassOverlapCount { get; private set; }
+
+            private bool _pendingAerialPass;
+            private PassType _pendingAerialPassType;
+            private int _pendingAerialTargetAgentId = MatchEngineConstants.NO_POSSESSION;
+
             public void BeginTick(int tick)
             {
                 _tick = tick;
@@ -717,6 +833,8 @@ namespace TacticalDirector.MatchEngine
 
             public void EndTick()
             {
+                ResolvePendingAerialPass();
+
                 var outcomes = _engine.TestOnly_TackleOutcomeCounts;
                 int newTackleCandidates = outcomes.Foul - _tackleFoulsAtTickStart;
                 if (newTackleCandidates < 0)
@@ -856,6 +974,76 @@ namespace TacticalDirector.MatchEngine
                 }
             }
 
+            private void OnPassAttempt(in PassAttemptEvent evt)
+            {
+                if (evt.PassType != PassType.Cross && evt.PassType != PassType.Lofted)
+                {
+                    return;
+                }
+
+                if (_pendingAerialPass)
+                {
+                    AerialPassOverlapCount++;
+                }
+
+                if (evt.PassType == PassType.Cross)
+                {
+                    CrossAttempts++;
+                }
+                else
+                {
+                    LoftedAttempts++;
+                }
+
+                _pendingAerialPass = evt.TargetAgentId >= 0;
+                _pendingAerialPassType = evt.PassType;
+                _pendingAerialTargetAgentId = evt.TargetAgentId;
+            }
+
+            private void OnHeaderExecuted(in HeaderExecutedEvent evt)
+            {
+                HeaderContacts++;
+            }
+
+            private void OnHeaderFailed(in HeaderAttemptFailedEvent evt)
+            {
+                HeaderFailures++;
+            }
+
+            private void ResolvePendingAerialPass()
+            {
+                if (!_pendingAerialPass)
+                {
+                    return;
+                }
+
+                int holder = _engine.PossessingAgentId;
+                if (holder >= 0)
+                {
+                    if (holder == _pendingAerialTargetAgentId)
+                    {
+                        if (_pendingAerialPassType == PassType.Cross)
+                        {
+                            CrossCompletions++;
+                        }
+                        else if (_pendingAerialPassType == PassType.Lofted)
+                        {
+                            LoftedCompletions++;
+                        }
+                    }
+
+                    _pendingAerialPass = false;
+                    _pendingAerialTargetAgentId = MatchEngineConstants.NO_POSSESSION;
+                    return;
+                }
+
+                if (_engine.RestartAppliedThisTick != RestartCue.None || _engine.MatchEnded)
+                {
+                    _pendingAerialPass = false;
+                    _pendingAerialTargetAgentId = MatchEngineConstants.NO_POSSESSION;
+                }
+            }
+
             public void OnCollisionEvent(in CollisionEvent evt)
             {
                 if (evt.Type != CollisionType.AGENT_AGENT)
@@ -979,4 +1167,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.5     | 2026-09-22 | —      | Clarifies frozen tackle-cooldown measurement as literal AI tick-start    |
 // |         |            |        | nonzero state and adds the separate >1 collision-suppression-window      |
 // |         |            |        | comparison; relabels inferred wave-on accounting and refreshes comments. |
+// | 1.6     | 2026-09-22 | —      | #435 §6.2 W3 extension: same six full-match seeds now report production fan-out/claim/duel/keeper-claim counters plus Cross/Lofted attempts/completions and header attempts/contacts. Observation only; no gameplay state or [GT] change. |
+// | 1.7     | 2026-09-23 | —      | PR #439 Codex closure: the §6.2 W3 census calls engine.EnableGkHeading() so it no longer depends on host defaults. The flag already defaults ON (constructor), so measured output is unchanged. Row added at the #439 close-out. |
 #endregion

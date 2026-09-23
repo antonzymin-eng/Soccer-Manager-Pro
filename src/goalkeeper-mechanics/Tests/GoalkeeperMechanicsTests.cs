@@ -1,6 +1,7 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperMechanicsTests.cs
 // Created:  2026-05-31
 // Modified: 2026-05-31
+// Modified: 2026-09-22 (W3: mixed-participant canonical-order and symmetric near-tie duel locks)
 // Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: call sites renamed to the new state-machine parameter names)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §5, Code Standards #20
@@ -914,6 +915,54 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             Assert.AreEqual(1.0f, sum, 1e-5f,
                 "CROSS_CLAIM_DUEL_BALANCE_W + CROSS_CLAIM_DUEL_STRENGTH_W + CROSS_CLAIM_DUEL_AERIAL_W must equal 1.0.");
         }
+
+        [Test]
+        public void CrossClaimDuel_ThreeParticipants_PreservesCanonicalRegistration_AndChoosesHighestScore()
+        {
+            var duel = new GoalkeeperCrossClaimDuel();
+            duel.ClearFrameBuffer();
+
+            Assert.IsTrue(duel.RegisterParticipant(
+                2, new CrossClaimParticipantAttributes(0.2f, 0.2f, 0.2f), BodyPartEnum.Head, 77));
+            Assert.IsTrue(duel.RegisterParticipant(
+                5, new CrossClaimParticipantAttributes(0.9f, 0.9f, 0.9f), BodyPartEnum.Hand, 77));
+            Assert.IsTrue(duel.RegisterParticipant(
+                9, new CrossClaimParticipantAttributes(0.4f, 0.4f, 0.4f), BodyPartEnum.Head, 77));
+
+            duel.ResolveHandContactDuel(gaussianSample: 0.0f);
+
+            CrossClaimDuelContext result = duel.GetDuel(0);
+            Assert.AreEqual(3, result.ParticipantCount);
+            Assert.AreEqual(2, duel.GetParticipantAgentId(0));
+            Assert.AreEqual(5, duel.GetParticipantAgentId(1));
+            Assert.AreEqual(9, duel.GetParticipantAgentId(2),
+                "W3 registration must remain in canonical entity order.");
+            Assert.AreEqual(5, result.WinnerAgentId);
+            Assert.AreEqual(BodyPartEnum.Hand, result.ContactBodyPart);
+        }
+
+        [Test]
+        public void CrossClaimDuel_NearTie_AppliesSymmetricTopSecondPerturbation()
+        {
+            var duel = new GoalkeeperCrossClaimDuel();
+            duel.ClearFrameBuffer();
+
+            // Weights sum to one, so equal Balance/Strength/Aerial norms make the base score equal
+            // to that norm. Initial gap = 0.015 (< epsilon 0.03). With Gaussian -2/3 and amplitude
+            // 0.015, perturbation = -0.010: symmetric application changes the gap by -0.020 and
+            // flips the winner. The old top-only perturbation would leave a +0.005 gap and not flip.
+            Assert.IsTrue(duel.RegisterParticipant(
+                1, new CrossClaimParticipantAttributes(0.515f, 0.515f, 0.515f), BodyPartEnum.Hand, 88));
+            Assert.IsTrue(duel.RegisterParticipant(
+                2, new CrossClaimParticipantAttributes(0.500f, 0.500f, 0.500f), BodyPartEnum.Head, 88));
+
+            duel.ResolveHandContactDuel(gaussianSample: -2.0f / 3.0f);
+
+            CrossClaimDuelContext result = duel.GetDuel(0);
+            Assert.AreEqual(2, result.WinnerAgentId,
+                "§3.6.3 perturbs top and second symmetrically before re-ranking.");
+            Assert.AreEqual(BodyPartEnum.Head, result.ContactBodyPart);
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -1642,4 +1691,7 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // | 1.3 | 2026-07-27 | — | ERR-011-002 fallout: 12 EvaluateTacticalTransition call sites renamed to    |
 // |     |            |   | ballThreateningOwnGoal/ballSafelyUpfield. Semantics preserved — the two sites|
 // |     |            |   | passing ballInDefensiveThird: true are HandsOnBall cases consulting neither flag.|
+// | 1.4 | 2026-09-22 | — | W3 (PR #439): mixed-participant cross-claim duel locks — canonical         |
+// |     |            |   | registration order with three participants, and the symmetric near-tie     |
+// |     |            |   | top/second perturbation. Row added at the #439 close-out.                  |
 #endregion

@@ -342,12 +342,15 @@ namespace TacticalDirector.HeadingMechanics
 
         // ── §4.2.1 Buffer / Draw Sites ───────────────────────────────────────────────
 
-        /// <summary>[GT] Pre-allocated collision-event buffer capacity for ICollisionEventConsumer (§4.2.1).
-        /// Bound: 3-way duel × 2 contact-pairs × safety margin. Allocated once at Initialize(). §3.1.</summary>
-        public static readonly int HeadingContactBufferCapacity = Config.GetInt("heading-mechanics", "HeadingContactBufferCapacity", 16);
-
         /// <summary>[GT] Maximum number of active header intents tracked simultaneously (one per agent). §4.6.</summary>
         public static readonly int MaxAgents = Config.GetInt("heading-mechanics", "MaxAgents", 22);
+
+        /// <summary>[GT] Pre-allocated collision-event buffer capacity for ICollisionEventConsumer (§4.2.1).
+        /// ERR-010-004: W3 may publish one AGENT_BALL observation per agent in the same frame, so the
+        /// effective capacity is never smaller than MaxAgents. Allocated once at Initialize(). §3.1.</summary>
+        public static readonly int HeadingContactBufferCapacity = Mathf.Max(
+            Config.GetInt("heading-mechanics", "HeadingContactBufferCapacity", MaxAgents),
+            MaxAgents);
 
         /// <summary>[GT] Maximum participants tracked in a single contested duel. §3.7.</summary>
         public static readonly int MaxDuelParticipants = Config.GetInt("heading-mechanics", "MaxDuelParticipants", 8);
@@ -393,4 +396,5 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | 2.3 m and aims at the ground, so the constant asserted in its own name something that    |
 // |         |            |        | was false on essentially every real header. §3.5.1's unreachable-target branch now       |
 // |         |            |        | computes tan(theta) = v / sqrt(v^2 - 2*g*dz) inline; no constant replaces it.            |
+// | 1.6     | 2026-09-23 | —      | ERR-010-004: contact buffer defaults/floors to MaxAgents so W3's full same-frame fan-out fits; beyond-capacity overflow remains fail-closed. |
 #endregion

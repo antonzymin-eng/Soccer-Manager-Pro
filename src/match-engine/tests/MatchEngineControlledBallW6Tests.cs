@@ -1,13 +1,14 @@
 // File:     src/match-engine/tests/MatchEngineControlledBallW6Tests.cs
 // Created:  2026-09-14
+// Modified: 2026-09-22 (W6 ordering correction surfaced by W3: keeper + outfielder Resolve-collision attachment, plus mirrored keeper goal-plane correction)
 // Modified: 2026-09-15 (W6 review closure — direct lock for the Controlled keeper own-goal-plane invariant)
 // Modified: 2026-09-14
 // Author:   —
 // Spec:     Match-engine wiring backlog W6; Ball Physics #1 §3.1.11; Code Standards #20
-// Purpose:  Composed W6 locks: genuine possession enters BallState.Controlled and follows the holder,
-//           restart-taker designation remains a placed Stationary ball, keeper control cannot carry the
-//           attached ball through the defended goal plane, and non-kick release exits physical control
-//           without introducing new cross-tick state.
+// Purpose:  Composed W6 locks: genuine possession enters BallState.Controlled and follows the holder
+//           across Physics and Resolve collision correction, restart-taker designation remains a placed
+//           Stationary ball, keeper control cannot carry the attached ball through either defended goal
+//           plane, and non-kick release exits physical control without introducing new cross-tick state.
 
 using NUnit.Framework;
 using UnityEngine;
@@ -69,6 +70,118 @@ namespace TacticalDirector.MatchEngine
             AssertBallXYAtHolder(engine, Outfielder);
             Assert.AreEqual(MatchEngineConstants.BALL_REST_HEIGHT_M, engine.BallView.Position.z, 1e-6f,
                 "Outfield control is the Ball Physics §3.1.11 foot-position contract.");
+        }
+
+        [Test]
+        public void ControlledKeeper_ReattachesAfterResolveCollisionCorrection()
+        {
+            var engine = new MatchEngine(MatchSeed ^ 0x18UL);
+            int keeper = FindKeeper(engine, team: 0);
+            Assert.GreaterOrEqual(keeper, 0);
+
+            // Static overlap is deliberate: Collision #3 resolves penetration even without impact
+            // velocity, so this isolates its Resolve-phase position correction from locomotion.
+            var keeperPos = new Vector2(40f, 25f);
+            var teammatePos = new Vector2(40.20f, 25f);
+            engine.TestOnly_SetAgent(
+                keeper, AgentState.CreateAtPosition(keeperPos, Vector2.right));
+            engine.TestOnly_SetAgent(
+                Outfielder, AgentState.CreateAtPosition(teammatePos, Vector2.right));
+
+            const float claimHeight = 1.6f;
+            engine.TestOnly_SetBall(BallState.CreateAtPosition(new Vector3(
+                keeperPos.x, keeperPos.y, claimHeight)));
+            engine.TestOnly_SetPossession(keeper);
+
+            Vector2 before = engine.AgentView(keeper).Position;
+            engine.TestOnly_RunResolvePhase();
+            Vector2 after = engine.AgentView(keeper).Position;
+
+            Assert.Greater((after - before).sqrMagnitude, 1e-8f,
+                "Precondition: Resolve collision response must actually position-correct the holder.");
+            Assert.AreEqual(keeper, engine.TestOnly_PossessingAgentId,
+                "Agent-agent separation must not itself release keeper possession.");
+            Assert.AreEqual(BallStateType.Controlled, engine.BallView.State);
+            AssertBallXYAtHolder(engine, keeper);
+            Assert.AreEqual(claimHeight, engine.BallView.Position.z, 1e-6f,
+                "Post-collision attachment reconciliation must preserve keeper claim height.");
+        }
+
+        [Test]
+        public void ControlledOutfielder_ReattachesAfterResolveCollisionCorrection()
+        {
+            var engine = new MatchEngine(MatchSeed ^ 0x19UL);
+            int partner = FindOtherOutfielder(engine, engine.AgentTeamId(Outfielder), Outfielder);
+            Assert.GreaterOrEqual(partner, 0);
+
+            var holderPos = new Vector2(40f, 25f);
+            var partnerPos = new Vector2(40.20f, 25f);
+            engine.TestOnly_SetAgent(
+                Outfielder, AgentState.CreateAtPosition(holderPos, Vector2.right));
+            engine.TestOnly_SetAgent(
+                partner, AgentState.CreateAtPosition(partnerPos, Vector2.right));
+            engine.TestOnly_SetBall(BallState.CreateAtPosition(new Vector3(
+                holderPos.x, holderPos.y, MatchEngineConstants.BALL_REST_HEIGHT_M)));
+            engine.TestOnly_SetPossession(Outfielder);
+
+            Vector2 before = engine.AgentView(Outfielder).Position;
+            engine.TestOnly_RunResolvePhase();
+            Vector2 after = engine.AgentView(Outfielder).Position;
+
+            Assert.Greater((after - before).sqrMagnitude, 1e-8f,
+                "Precondition: Resolve collision response must actually position-correct the outfield holder.");
+            Assert.AreEqual(Outfielder, engine.TestOnly_PossessingAgentId);
+            Assert.AreEqual(BallStateType.Controlled, engine.BallView.State);
+            AssertBallXYAtHolder(engine, Outfielder);
+            Assert.AreEqual(MatchEngineConstants.BALL_REST_HEIGHT_M, engine.BallView.Position.z, 1e-6f,
+                "Resolve reattachment must retain the outfield foot-height contract.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void ControlledKeeper_ResolveCollisionCannotPushAttachedBallBehindOwnGoalPlane(int team)
+        {
+            var engine = new MatchEngine(MatchSeed ^ 0x1AUL ^ (ulong)team);
+            int keeper = FindKeeper(engine, team);
+            int partner = FindOtherOutfielder(engine, team, keeper);
+            Assert.GreaterOrEqual(keeper, 0);
+            Assert.GreaterOrEqual(partner, 0);
+
+            float ownGoalX = team == 0 ? 0.0f : MatchEngineConstants.PITCH_LENGTH_M;
+            float inward = team == 0 ? 1.0f : -1.0f;
+            var keeperPos = new Vector2(
+                ownGoalX + inward * 0.01f, MatchEngineConstants.KickoffBallYM);
+            var partnerPos = new Vector2(
+                ownGoalX + inward * 0.20f, MatchEngineConstants.KickoffBallYM);
+
+            engine.TestOnly_SetAgent(
+                keeper, AgentState.CreateAtPosition(
+                    keeperPos, team == 0 ? Vector2.right : Vector2.left));
+            engine.TestOnly_SetAgent(
+                partner, AgentState.CreateAtPosition(
+                    partnerPos, team == 0 ? Vector2.right : Vector2.left));
+
+            const float claimHeight = 1.6f;
+            engine.TestOnly_SetBall(BallState.CreateAtPosition(new Vector3(
+                keeperPos.x, keeperPos.y, claimHeight)));
+            engine.TestOnly_SetPossession(keeper);
+
+            Vector2 partnerBefore = engine.AgentView(partner).Position;
+            engine.TestOnly_RunResolvePhase();
+
+            AgentState corrected = engine.AgentView(keeper);
+            Vector2 partnerAfter = engine.AgentView(partner).Position;
+            Assert.Greater((partnerAfter - partnerBefore).sqrMagnitude, 1e-8f,
+                "Precondition: the goalmouth overlap must actually execute agent-agent separation.");
+            Assert.AreEqual(ownGoalX, corrected.Position.x, 1e-6f,
+                "Resolve collision correction must not leave a controlling keeper behind the goal plane.");
+            Assert.AreEqual(corrected.Position, corrected.LastValidPosition,
+                "Post-collision goal-plane correction must refresh the keeper recovery checkpoint.");
+            Assert.AreEqual(keeper, engine.TestOnly_PossessingAgentId);
+            Assert.AreEqual(BallStateType.Controlled, engine.BallView.State);
+            AssertBallXYAtHolder(engine, keeper);
+            Assert.AreEqual(claimHeight, engine.BallView.Position.z, 1e-6f,
+                "Goal-plane reconciliation must preserve the actual claim/contact height.");
         }
 
         [Test]
@@ -236,6 +349,20 @@ namespace TacticalDirector.MatchEngine
             return -1;
         }
 
+        private static int FindOtherOutfielder(MatchEngine engine, int team, int exclude)
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (i != exclude
+                    && engine.AgentTeamId(i) == team
+                    && !engine.AgentIsGoalkeeper(i))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         private static void AssertBallXYAtHolder(MatchEngine engine, int holder)
         {
             Vector2 holderPos = engine.AgentView(holder).Position;
@@ -247,6 +374,12 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                        |
+// | 1.4     | 2026-09-22 | —      | W6 scope closure: add outfield Resolve-correction attachment   |
+// |         |            |        | coverage and mirrored home/away goal-plane collision cases.    |
+// |         |            |        | The original keeper regression remains the pre-fix discriminator. |
+// | 1.3     | 2026-09-22 | —      | W6 ordering defect surfaced by W3: direct Resolve collision-   |
+// |         |            |        | correction lock; a still-Controlled keeper remains XY-attached |
+// |         |            |        | after Collision #3 moves the holder during penetration response.|
 // | 1.2     | 2026-09-15 | —      | Review closure: direct two-goal-plane keeper-control lock,    |
 // |         |            |        | including AgentState recovery-checkpoint coherence.           |
 // | 1.1     | 2026-09-14 | —      | P2 lock: loose ball still advances elapsed tackle cooldown.   |

@@ -1,7 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Version:** 0.8
+**Last Updated:** September 22, 2026 (v0.11 — W3 scope clarification: cross-claim arbitration uses active ClaimIntent Hand membership; ordinary save-dive handling remains unchanged)
+**Version:** 0.11
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -735,32 +736,92 @@ Cross / aerial / 1v1 duels among ≥2 agents within
 `CROSS_CLAIM_VOLUME_RADIUS_M`. Algorithm mirrors Heading #10 §3.7
 structure so the duel arithmetic is consistent across specs.
 
-### 3.6.1 Body-part determination (KD-14)
+### 3.6.1 Body-part determination and live claim episode (KD-14 / ERR-011-011 / ERR-011-012)
+
+Collision System #3's read-only `AGENT_BALL` publication is **observation only**. Its Stage-0
+agent-body cylinder is capped at `AgentReachHeight` (2.0 m), while legitimate Heading #10 and
+Goalkeeper #11 aerial contacts can occur above that height. Therefore a #3 record MUST NOT be a
+prerequisite for W3 contest membership, Hand eligibility, or Head eligibility. The W3 composition
+root may retain the #3 fan-out as a diagnostic/secondary consumer, including a legitimate zero count
+during a real high-aerial contest.
+
+**Contest membership comes from the mechanics that own the physical geometry:**
+
+- Heading #10 contributes a Head participant only when its prepared current-frame head-contact
+  geometry admits the ball.
+- Goalkeeper #11 contributes a W3 Hand participant only when an active `ClaimIntent` exposes a
+  current-frame hand/reach envelope and the ball intersects that envelope. Ordinary shot-save dive
+  handling remains on #11's existing save path and is not enrolled into W3 cross-claim arbitration.
+- Outfield players MUST NOT be projected through `GoalkeeperAgentAttributes`; W3 uses only their
+  canonical Balance/Strength/Aerial inputs for the shared duel score.
+- Registration is canonicalized to #16 §3.2 entity order. Callback/feed arrival order is irrelevant.
+
+For each mechanic-confirmed participant:
 
 ```
-// Stage 0 approximation: capsule-vs-sphere intersection priority
-for each agent in candidates:
-    handCapsuleHit = #3.IntersectsBallSphere(agent.handCapsule, ballSphere)
-    headSphereHit  = #3.IntersectsBallSphere(agent.headSphere,  ballSphere)
-    if handCapsuleHit AND headSphereHit:
-        // priority by Z proximity to ball center
-        agent.contactBodyPart = (|ball.z - agent.handZ| < |ball.z - agent.headZ|)
-                                  ? Hand : Head
-    elif handCapsuleHit: agent.contactBodyPart = Hand
-    elif headSphereHit:  agent.contactBodyPart = Head
-    else:                agent.contactBodyPart = None
+headHit = #10 prepared current-frame head-contact geometry admits the ball
+handHit = false
+
+if participant is a goalkeeper
+   AND #11 has a live current-frame hand/reach envelope:
+    handCenter = #11 reachCenter for that frame
+    handRadius = #11 ComputeReachRadius(gkAttrs)
+    handHit = distance(ball.position, handCenter) <= handRadius
+
+if handHit AND headHit:
+    // physical tie rule; intent never chooses the body part
+    contactBodyPart = (|ball.z - handCenter.z| < |ball.z - headCenter.z|)
+                        ? Hand : Head
+elif handHit:
+    contactBodyPart = Hand
+elif headHit:
+    contactBodyPart = Head
+else:
+    contactBodyPart = None
 ```
 
-Body part is determined by physical geometry, NOT by intent
-(FR-GK-022).
+**Live ClaimIntent producer and arming policy (ERR-011-012).** W3 gives the previously dormant
+`ClaimIntent` a Stage-0 MatchEngine composition producer at 10 Hz. A new episode may arm only when
+the ball is loose, the keeper is in `Set` or `Anticipate`, no higher-priority raw SAVE threat is
+armed for that keeper, and the ball's XY point lies inside the existing
+`CROSS_CLAIM_VOLUME_RADIUS_M`. There is **no vertical arming threshold**. In particular,
+`GkRushMaxBallHeightM = 2.5 m` remains a W1 rush-routing ceiling and MUST NOT be reused as a W3
+claim-height floor. Physical #11 reach geometry alone decides whether the hands can actually contact
+the ball.
 
-**Surface citations (v0.2 AR-S1-M4).** `agent.handCapsule` and
-`agent.headSphere` are Collision System #3 agent-shape colliders
-(per #3 collider geometry definitions consumed via the agent's
-`Agent` reference per #2 §3.5.1). `agent.handZ` and `agent.headZ`
-derive from #3 collider centroids at the current frame.
-`#3.IntersectsBallSphere` is the standard `ICollisionEventConsumer`
-collision-query helper (#3 §3.4.2).
+At commit, the producer locks:
+
+```
+ClaimIntent.targetContactPoint      = ball.position          // tactical aim only
+ClaimIntent.clutchFirmness          = gkAttrs.Handling_norm
+ClaimIntent.reachDirectionLateral   = sign(ball.y - gk.y)    // world-Y, {-1,0,+1}
+ClaimIntent.attemptCommittedTick    = currentTacticalTick
+```
+
+The target and lateral side remain immutable for one bounded claim episode. The episode starts at
+`attemptCommittedTick * FramesPerTacticalTick` and lasts exactly the existing
+`GoalkeeperDiveKinematics.ComputeDiveDurationFrames()` window. A later tactical tick MUST NOT cancel
+or retarget an active episode merely because the ball has descended, left the initial arming radius,
+or otherwise fails the ordinary new-episode trigger; this is what allows a cross armed while high to
+descend into reachable hand height. The episode hard-cancels only when possession is no longer loose,
+a higher-priority raw SAVE threat takes over, the keeper slot becomes invalid/sent-off/replaced, or
+the bounded duration expires. While the claim is active, the W1 rush producer MUST NOT steal the same
+ball solely because it has descended below the rush ceiling. After expiry, a later 10 Hz tick may
+commit a fresh episode if the ordinary arming conditions hold.
+
+**Claim reach kinematics.** A claim reuses #11's existing
+`GoalkeeperDiveKinematics.ComputeHandPathZ`, `ComputeReachCenter`, `ComputePeakHandZ`, and
+`ComputeReachRadius` surfaces. The claim's launch anchor is its commit frame, its lateral direction
+is the locked `reachDirectionLateral`, and `ComputePeakHandZ` receives zero save-only dive-timing
+jitter. The zero jitter is intentional: the registered save-dive timing draw site remains
+single-purpose, so W3 does not consume or reorder that RNG stream. `targetContactPoint` is never a
+synthetic collider and no standing hand capsule is manufactured.
+
+Body part is determined by physical geometry, NOT by intent (FR-GK-022). ERR-011-012 introduces no
+new `[GT]`, RNG stream, domain tag, or draw site. It **does** make `ClaimIntent` authoritative
+cross-tick state: MatchEngine snapshot schema v23 serializes target point, clutch firmness, locked
+lateral direction, commit tick, and active latch. Active-claim snapshots therefore change the digest
+preimage and MUST round-trip mid-episode.
 
 ### 3.6.2 Routing
 
@@ -1141,3 +1202,6 @@ standard rebound physics.
 | 0.6 | August 3, 2026 | conversion-at-contact pass | **ERR-011-008** — §3.5's **Outputs** summary named only `Ball.SetPossessor` for the catch branch, while §3.5.2's body carries `ball.velocity = gkHandVelocity` ("parked at hand position"). The implementation followed the summary and omitted the park; because possession in the composition root is a FLAG rather than a kinematic constraint (the ball integrates unconditionally and the goal check adjudicates on ball POSITION), a claimed shot kept its velocity and crossed the line — measured over three full matches: ball speed 11.1 m/s in and **10.8 m/s out** of a catch, **7 of 10 catches followed by a goal within 5 s**, against parry 10.8 → 0.0 and deflect 10.3 → 4.2. §3.5's Outputs now states the catch's TWO effects and §3.5.2 gains the sentence that every contact resolves to exactly one ball-side action, the catch's being a pair. **§3.5.2's pseudocode body is unchanged — it was correct.** Code: `IGoalkeeperBallSystem.cs` v1.1 (+`ParkBall()`), `GoalkeeperMechanics.cs` v1.10 (both claim sites — §3.5.2 catch and the Stage-0 smother), `MatchEngine.cs` (adapter). See `docs/tracking/gk-conversion-at-contact-design.md` | implementation + measurement (per-contact fate instrument, 3 full matches); acceptance 2 of 3 predicates fail pre-fix, verified by execution |
 | 0.7 | August 4, 2026 | wiring backlog W1 | **ERR-011-010** — **the rush decision had no owner.** §3.7's state entry delegated the entire "when" to Decision Tree #8, which has no goalkeeper model and structurally cannot acquire one (`ActionType.SAVE = 7` is the last ordinal fitting §3.3.3's 3-bit composure-noise field, so a `RUSH` action forces a digest rebaseline), so `CommitRushIntent` had **no caller of any kind** from May 28 to August 4, 2026 and every one-on-one was a stationary keeper on his line. New **§3.7.0** takes the decision back — the same move §3.3.6 made for dive timing. It is normative on two points: a team-mate merely CHASING the carrier is **not** a reason to stay (a recovering defender narrows no shooting angle — only a goal-side body in the shot corridor does), and how far out the keeper comes is **his own attributes**, `clamp(RUSH_COMMIT_BASE_M + RUSH_COMMIT_K_ONE_VS_ONE·OneVsOne_norm + RUSH_COMMIT_K_COMPOSURE·Composure_norm − RUSH_COMMIT_FATIGUE_PENALTY_M·fatigue, min, max)`, with six new `[GT]`s in §3.4.6 and a worked example. `OneVsOne` is consumed for the commit DECISION only; FR-GK-024's closed-form constraint on the 1v1 SAVE formulas (§3.2 / §3.5) is untouched. **ERR-011-009** — **a rush that REACHED its target had no exit.** §3.1.1 gave `Rushing` exactly three exits (contact, the 1v1 radius, F-08 interception) and `OneOnOne` two (`SaveIntent`, the smother radius). For a LOOSE ball none of them can fire: the 1v1 and smother triggers are false by construction without a possessor, F-08 needs one, and §3.7.2's update converges on the locked target and stops. A keeper who swept a loose ball therefore stood over it in `Rushing` for the rest of the match. The completion was anticipated everywhere except in the table that adjudicates state — `RushPhase.Reached` has existed in §2's enum since v0.1 and was never emitted, and §3.7.3 reserves `AbortReason.AttackerBeatGK` for the related case. Two new §3.1.1 rows (`Rushing → Recovering`, `OneOnOne → Recovering`) on arrival within the new `[GT] RUSH_TARGET_REACHED_RADIUS_M` (§3.4.6), plus the terminating check in §3.7.2. A **completion, not an abort** — FR-GK-018 / KD-15 are untouched, since nothing about the ball's trajectory ends the rush. Found by wiring the trigger: `CommitRushIntent` had never had a production caller, so no rush had ever run in a match. Code: `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperMechanics.cs` v1.11, `GoalkeeperConstants.cs` v1.5, `MatchEngine.cs` v1.58 (the trigger itself). See `docs/tracking/gk-rush-trigger-design.md` | implementation; **measurement NOT run — no .NET SDK in the authoring environment** |
 | 0.8 | August 4, 2026 | W1 adversarial review pass 1 | Doc-only in this spec: §3.7.0 gains a **fatigue arm — no live input at Stage 0** paragraph. `RUSH_COMMIT_FATIGUE_PENALTY_M` (and §3.7.1's `RUSH_COMMIT_FATIGUE_COEFF`) multiply a value every composition-root projection hardcodes to zero, so both arms are structurally unreachable and MUST NOT be calibrated until fatigue reaches the projection — a dial with no input cannot be fitted. The worked example is left as written: it is correct arithmetic for the formula, and the new paragraph directly above says why production never reaches that branch. The review's other findings were engine-side (the trigger's missing minimum-run guard, the sent-off keeper freeze) and are recorded in `gk-rush-trigger-design.md` v1.2. | doc |
+| 0.9 | September 22, 2026 | W3 / ERR-011-011 | §3.6.1 removes phantom Collision #3 `handCapsule` / `headSphere` / `IntersectsBallSphere` surfaces. #3 is candidate discovery only; #10 owns head geometry, #11 owns its live hand/reach envelope, and no live hand envelope means no Hand participant. The dormant `ClaimIntent` must gain a real producer before ordinary cross claims can use Hand. No `[GT]`, schema or RNG change. | spec correction |
+| 0.10 | September 22, 2026 | W3 / ERR-011-012 | §3.6.1 corrects the live W3 policy discovered during implementation review: Collision #3's 2.0 m observation feed is not contest membership; ClaimIntent arms from loose/local geometry with no vertical floor, stays locked for one existing dive-duration reach episode, locks its lateral reach side, and hard-cancels only on possession/SAVE/slot invalidation/expiry. Claims reuse existing #11 dive/reach kinematics with zero save-only timing jitter. ClaimIntent is now authoritative cross-tick state in MatchEngine snapshot v23. No new `[GT]`, RNG stream/domain/draw site/order. | implementation/spec back-prop |
+| 0.11 | September 22, 2026 | W3 draft scope clarification | §3.6.1 now matches the preregistered W3 boundary exactly: only active ClaimIntent contributes W3 Hand membership. `TryGetHandReachEnvelope` may also describe an ordinary save dive for #11's own save pipeline, but W3 does not interpose on normal shot-save handling. No code/tuning/schema/RNG change. | pre-merge contract sync |

@@ -1,5 +1,10 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-22 (W6 ordering correction surfaced by W3: reattach every Controlled holder after Resolve collision position-correction writeback; unconditional/default-engine trajectory change, no schema/RNG change)
+// Modified: 2026-09-22 (W3 / #435 §6.2: add nonserialized measurement-only production counters for frozen six-seed evidence)
+// Modified: 2026-09-22 (W3 / ERR-011-012: claim arming/lifetime corrected; claim reach side locked+serialized in the still-unmerged v23 block; observation seam made state-pure)
+// Modified: 2026-09-22 (W3 shared-feed continuation: AgentBallFanout now has the required two consumers — Heading + frame-local CrossClaimCandidateCollector; collector is candidate-only under ERR-011-011, fail-closed, nonserialized)
+// Modified: 2026-09-22 (W3 review correction: read-only AGENT_BALL candidate publication runs in Physics after movement; full Collision #3 response, W4 applied deflection, foul capture and next-tick movement feedback remain Resolve-owned; Heading #10 geometry remains authoritative; no schema/RNG change)
 // Modified: 2026-09-16 (W2 production activation — active tackle reach must be > 0 and <= loose-ball reclaim reach; zero remains only as a test/measurement negative-control override; no schema/RNG change)
 // Modified: 2026-09-15 (W6 review closure — Controlled goalkeeper carriers are constrained at their defended goal plane in the MatchEngine attachment funnel; no schema/RNG change)
 // Modified: 2026-09-14 (W6 review P2 — tackle cooldown now ages on every AI stride even without a physical carrier; regression seam only, no schema/RNG change)
@@ -77,6 +82,8 @@
 // Modified: 2026-07-28 (keeper-contact pass: + TestOnly_LastShotStrikePosition/Velocity — the strike-TIME ball state, captured beside the _shotContacts increment (the WoodworkStrikes diagnostic class, not serialized), so instruments no longer sample end-of-tick BallView a same-tick touch may already have reversed. No schema change. See docs/tracking/gk-contact-rate-design.md)
 // Modified: 2026-08-03 (conversion-at-contact pass (ERR-011-008): GkHeadingWorldAdapter.ParkBall() — the ball-side half of #11 §3.5.2's claim, which had no seam (ApplyKick is a kick). Zeroes _ball.Velocity/AngularVelocity; no ball-state-machine transition, no RNG draw, no cross-tick state, so no SNAPSHOT_SCHEMA_VERSION change. A claimed shot previously kept its velocity and entered the net. See docs/tracking/gk-conversion-at-contact-design.md)
 // Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: TryCommitRushIntents gives GoalkeeperMechanics.CommitRushIntent its FIRST production caller — pure GkHeadingIntentSource.RushArmed/HasGoalSideCover geometry + #11 §3.7.0's attribute-driven commit distance (ERR-011-010) + the ClearRushIntent disarm, gated behind SaveArmed so a shot is still a dive. Deliberately NOT a DecisionTree action: ActionType ordinal 8 overflows the 3-bit composure-noise field (the W9 deferral reason). No new engine state ⇒ no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/gk-rush-trigger-design.md)
+// Modified: 2026-09-22 (W3 testability: sanctioned #10 apex-history staging + clock seam for a real Head-vs-Hand composed arbitration lock)
+// Modified: 2026-09-22 (W3 runtime: composition arbiter combines #10 prepared Head geometry with #11 active-claim Hand reach before either path mutates the ball; mixed participants use ToCrossClaim only)
 // Modified: 2026-08-04 (W1 AR-1: RefreshGkAgentIds filters _isSentOff so a keeper sent off mid-rush stops; + TestOnly_DriveGkHeadingPhysics. See docs/tracking/gk-rush-trigger-design.md v1.2)
 // Modified: 2026-08-04 (W1 AR-2: RefreshGkAgentIds detects a CHANGE of keeper-slot occupant and calls GoalkeeperMechanics.ResetSlot — a substitute keeper was inheriting the dismissed keeper's locked RushIntent. No new state, no schema change. See docs/tracking/gk-rush-trigger-design.md v1.3)
 // Modified: 2026-08-06 (#29 T2 match-boot fatigue seam: a four-argument ConfigureSquads overload taking each squad's per-local-index match-entry fatigue (#29 §3.3 / KD-1), seeded onto each starter's AerobicPool as 1 − fatigue. The reservoir is already the engine's live-fatigue quantity and already serialized, so no schema change; null ⇒ rested ⇒ byte-identical to the two-argument form.)
@@ -175,7 +182,9 @@ namespace TacticalDirector.MatchEngine
         // backs all 22 instances (the adapter methods take agentId). DecisionTree stays Phase D.
 
         private readonly CollisionSubsystem _collisionSystem;
-        private readonly ICollisionEventConsumer _eventConsumer;   // MatchFlowCollisionConsumer (design note §3) — captures at most one foul candidate per tick
+        private readonly ICollisionEventConsumer _eventConsumer;       // MatchFlowCollisionConsumer — full Resolve collision stream
+        private readonly ICollisionEventConsumer _agentBallConsumer;   // W3 read-only Physics AGENT_BALL fan-out
+        private readonly CrossClaimCandidateCollector _crossClaimCandidates; // W3 frame-local second consumer; no policy / no snapshot state
         private readonly PassExecutor[] _passExecutors;   // [SQUAD_SIZE]
         private readonly ShotExecutor[] _shotExecutors;   // [SQUAD_SIZE]
         private readonly bool[] _stumbleScratch;  // UpdateCollisions stumbleOut sink (discarded — not a Stage-0 movement input, B4)
@@ -469,7 +478,8 @@ namespace TacticalDirector.MatchEngine
         // GK (#11) / Heading (#10) engine integration (gk-heading-engine-integration-design.md, Phase 1).
         // Both orchestrators are CONSTRUCTED at boot (cheap array allocation; does not touch _ball or any
         // serialized world state, so the default engine stays byte-identical) but are only DRIVEN + their
-        // §4 triggers fired when the opt-in _gkHeadingEnabled flag is set (KD-11 — default off). Their two
+        // §4 triggers fired when the _gkHeadingEnabled activation flag is set. The flag defaults ON since
+        // §5.Z.15; tests/hosts may explicitly disable it. Their two
         // RNG streams are registered at boot in a fixed order (stable indices), the card-severity
         // precedent (KD-1); they are inert until a draw fires (only under the flag).
         // NOTE: the orchestrator class names collide with their own namespace names, so they are
@@ -477,10 +487,21 @@ namespace TacticalDirector.MatchEngine
         // projection design flagged. The interfaces / intent / attribute types are uniquely named.
         private readonly TacticalDirector.HeadingMechanics.HeadingMechanics _heading;
         private readonly TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics _goalkeeper;
+        private readonly W3CrossClaimArbiter _w3CrossClaimArbiter;
+
+        // W3 / #435 §6.2 measurement-only cumulative counters. These are observation state, never
+        // gameplay inputs and deliberately NOT serialized/digested. The frozen six-seed diagnostic
+        // reads them only after production has executed the corresponding seams.
+        private int _w3AgentBallFanoutEvents;
+        private int _w3ClaimEligibilityEpisodes;
+        private int _w3RegisteredDuelParticipants;
+        private int _w3ResolvedHandContactDuels;
+        private int _w3SuccessfulKeeperClaims;
+
         private readonly int _headingStreamIndex;
         private readonly int _goalkeeperStreamIndex;
         private readonly int[] _gkAgentIds;      // [MaxGkAgents] — agentId of each keeper (keeper index → agentId)
-        private bool _gkHeadingEnabled;          // KD-11 opt-in flag; false = byte-identical default engine
+        private bool _gkHeadingEnabled;          // activation flag; defaults true since §5.Z.15
         // §4 trigger latches: at most one save per ball episode per keeper, one header per airborne episode
         // per agent. Cleared when the ball leaves the triggering condition. These are engine-level cross-tick
         // state that GATES whether a save/header re-commits, so they are serialized at v18 (Phase 2) alongside
@@ -731,6 +752,7 @@ namespace TacticalDirector.MatchEngine
             _prevPossessingAgentId = MatchEngineConstants.NO_POSSESSION; // Phase E — no transition at boot
             _collisionSystem = new CollisionSubsystem(MatchEngineConstants.SQUAD_SIZE);
             _eventConsumer = new MatchFlowCollisionConsumer(this);
+            _crossClaimCandidates = new CrossClaimCandidateCollector(MatchEngineConstants.SQUAD_SIZE);
             _stumbleScratch = new bool[MatchEngineConstants.SQUAD_SIZE];
 
             // Match-flow completion (design note §3) — the first host-owned RNG draw site. Registered
@@ -897,8 +919,8 @@ namespace TacticalDirector.MatchEngine
             // Phase 1). Construct both orchestrators + their stateless ball/RNG adapters, and register the
             // two subsystem RNG streams (fixed order → stable indices; the card-severity precedent, KD-1).
             // Constructed unconditionally — this only allocates arrays, touching no serialized world state,
-            // so the default (flag-off) engine stays byte-identical. Both are DRIVEN and their §4 triggers
-            // fired only under _gkHeadingEnabled (KD-11), which starts false.
+            // so construction alone stays byte-stable. Both are DRIVEN and their §4 triggers fire only
+            // under _gkHeadingEnabled; §5.Z.15 below sets that activation flag ON by default.
             var gkHeadingWorld = new GkHeadingWorldAdapter(this);   // one adapter, all four boundary interfaces
             _headingStreamIndex = _rng.RegisterStream(
                 "heading.mechanics", SubsystemOrdinals.HeadingMechanics, entityId: -1, streamVersion: 1);
@@ -906,6 +928,8 @@ namespace TacticalDirector.MatchEngine
                 "goalkeeper.mechanics", SubsystemOrdinals.GoalkeeperMechanics, entityId: -1, streamVersion: 1);
             _heading = new TacticalDirector.HeadingMechanics.HeadingMechanics(gkHeadingWorld, gkHeadingWorld);
             _goalkeeper = new TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics(gkHeadingWorld, gkHeadingWorld);
+            _w3CrossClaimArbiter = new W3CrossClaimArbiter(this);
+            _agentBallConsumer = new AgentBallFanout(_heading.CollisionConsumer, _crossClaimCandidates);
 
             // Keeper roster: GoalkeeperConstants.MaxGkAgents == TEAM_COUNT == 2, so keeper index == team id
             // (keeper t is team t's goalkeeper). _teamIds / _isGoalkeeper are boot-populated above.
@@ -2891,6 +2915,133 @@ namespace TacticalDirector.MatchEngine
         internal TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState TestOnly_GoalkeeperState =>
             _goalkeeper.CaptureState();
 
+        /// <summary>Test-only W3 seam: current 60 Hz frame used by the staged mixed-contact locks.</summary>
+        internal int TestOnly_CurrentPhysicsFrame => (int)_clock.CurrentTick;
+
+        /// <summary>Test-only W3 seam: set the deterministic clock without running unrelated match phases.
+        /// Used only to stage a contact at a non-zero #10/#11 aerial apex.</summary>
+        internal void TestOnly_SetPhysicsFrame(int frame)
+        {
+            if (frame < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(frame));
+            }
+            _clock.RestoreFromSnapshot((ulong)frame);
+        }
+
+        /// <summary>Test-only W3 seam over #10's authoritative cross-tick state.</summary>
+        internal HeadingTickState TestOnly_HeadingState => _heading.CaptureState();
+
+        /// <summary>
+        /// Stages one committed #10 header so the CURRENT frame is its synthetic jump apex, but does
+        /// not manufacture contact membership. The next normal Heading.Update still runs the real
+        /// eligibility/contact-volume calculation against the live ball; this seam supplies only the
+        /// already-elapsed jump history that would otherwise require ~20 unrelated engine ticks.
+        /// </summary>
+        internal Vector3 TestOnly_StageHeadingApexAtCurrentFrame(int agentId)
+        {
+            if ((uint)agentId >= (uint)MatchEngineConstants.SQUAD_SIZE)
+            {
+                throw new ArgumentOutOfRangeException(nameof(agentId));
+            }
+            if (_isGoalkeeper[agentId])
+            {
+                throw new ArgumentException("W3 mixed-contact test staging requires an outfield header.", nameof(agentId));
+            }
+
+            int currentFrame = (int)_clock.CurrentTick;
+            int apexOffset = HeadingJumpKinematics.ComputeApexFrame(0);
+            int jumpStartFrame = currentFrame - apexOffset;
+            if (jumpStartFrame < 0)
+            {
+                throw new InvalidOperationException(
+                    "Current frame must be at least one #10 apex offset before staging an apex contact.");
+            }
+
+            int teamId = _teamIds[agentId];
+            HeadingAgentAttributes attrs =
+                PlayerAttributeProjection.ToHeading(in _canonicalAttrs[agentId], teamId, fatigue: 0f);
+            var intent = new HeaderIntent
+            {
+                PowerIntent = MatchEngineConstants.HeaderTriggerPowerIntent,
+                ContactPointIntent = Vector2.zero,
+                TargetIntent = GkHeadingIntentSource.HeaderAimTarget(in _agents[agentId].Position, teamId),
+                AttemptCommittedTick = jumpStartFrame / DeterministicSimConstants.AI_PHASE_STRIDE,
+                SetPieceContext = SetPieceContext.OpenPlay,
+            };
+            _heading.CommitIntent(agentId, intent, attrs, _ball, currentFrame);
+
+            // Restore through #10's sanctioned state seam instead of mutating CaptureState's live
+            // array references in place.
+            HeadingTickState live = _heading.CaptureState();
+            var intents = (HeaderIntent[])live.Intents.Clone();
+            var contacts = (HeaderContactState[])live.ContactStates.Clone();
+            var active = (bool[])live.IntentActive.Clone();
+            var ballFrames = (int[])live.BallSnapshotFrames.Clone();
+            var attrsByAgent = (HeadingAgentAttributes[])live.AgentAttrs.Clone();
+
+            HeaderContactState contact = contacts[agentId];
+            contact.JumpStartFrame = jumpStartFrame;
+            contact.JumpReachM = HeadingJumpKinematics.ComputeJumpReach(attrs);
+            contact.PrevFrameFacingDirection = _agents[agentId].FacingDirection;
+            contacts[agentId] = contact;
+            ballFrames[agentId] = currentFrame;
+
+            _heading.RestoreState(new HeadingTickState(
+                intents, contacts, active, ballFrames, attrsByAgent));
+
+            float headZ = HeadingJumpKinematics.ComputeHeadZ(
+                jumpStartFrame, contact.JumpReachM, currentFrame);
+            return new Vector3(_agents[agentId].Position.x, _agents[agentId].Position.y, headZ);
+        }
+
+        internal int TestOnly_W3LastParticipantCount => _w3CrossClaimArbiter.LastParticipantCount;
+        internal int TestOnly_W3LastWinnerAgentId => _w3CrossClaimArbiter.LastWinnerAgentId;
+        internal BodyPartEnum TestOnly_W3LastWinnerBodyPart => _w3CrossClaimArbiter.LastWinnerBodyPart;
+
+        // W3 / #435 §6.2 measurement-only cumulative production census.
+        internal int TestOnly_W3AgentBallFanoutEvents => _w3AgentBallFanoutEvents;
+        internal int TestOnly_W3ClaimEligibilityEpisodes => _w3ClaimEligibilityEpisodes;
+        internal int TestOnly_W3RegisteredDuelParticipants => _w3RegisteredDuelParticipants;
+        internal int TestOnly_W3ResolvedHandContactDuels => _w3ResolvedHandContactDuels;
+        internal int TestOnly_W3SuccessfulKeeperClaims => _w3SuccessfulKeeperClaims;
+
+        /// <summary>Test-only W3 seam: commit only the #11 ClaimIntent block while preserving the
+        /// slot's existing projected attributes. Used by the v23 single-field digest and restore locks.</summary>
+        internal void TestOnly_CommitGoalkeeperClaimIntent(int teamId, ClaimIntent intent)
+        {
+            if ((uint)teamId >= (uint)_gkAgentIds.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(teamId));
+            }
+
+            GoalkeeperTickState state = _goalkeeper.CaptureState();
+            _goalkeeper.CommitClaimIntent(teamId, intent, state.Attrs[teamId]);
+        }
+
+        /// <summary>Test-only W3 seam: query the same #11-owned hand envelope production arbitration uses.
+        /// Observation-only: it deliberately does not refresh keeper ids or reset subsystem state.</summary>
+        internal bool TestOnly_TryGetGoalkeeperHandReachEnvelope(
+            int teamId, out Vector3 reachCenter, out float reachRadius)
+        {
+            reachCenter = default;
+            reachRadius = 0.0f;
+            if ((uint)teamId >= (uint)_gkAgentIds.Length)
+            {
+                return false;
+            }
+
+            int agentId = _gkAgentIds[teamId];
+            if (agentId < 0 || _isSentOff[agentId])
+            {
+                return false;
+            }
+
+            Vector3 gkPos = new Vector3(_agents[agentId].Position.x, _agents[agentId].Position.y, 0f);
+            return _goalkeeper.TryGetHandReachEnvelope(
+                teamId, (int)_clock.CurrentTick, gkPos, out reachCenter, out reachRadius);
+        }
+
         /// <summary>Test-only (§7): force the ball into a loose, given position/velocity so a §4 trigger's
         /// world-state gate can be exercised deterministically without a full match developing the geometry
         /// naturally. Clears possession (loose ball).</summary>
@@ -4485,7 +4636,79 @@ namespace TacticalDirector.MatchEngine
             // the two sit on either side of this call.
             TryCommitRushIntents();
             _goalkeeper.TacticalTick((int)_clock.CurrentTick, _agents, _ball, _gkAgentIds);
+            // W3 claim intent is consumed by 60 Hz contact arbitration, like the header intent, so it is
+            // committed AFTER this tick's state transition rather than driving a tactical-state row.
+            TryCommitClaimIntents();
             TryCommitHeaderIntents();
+        }
+
+        /// <summary>
+        /// W3 production producer for #11 <see cref="ClaimIntent"/>. The current Decision Tree action
+        /// protocol cannot encode another action after SAVE=7 (the same constraint documented for W1
+        /// rush), so Stage 0 follows the established composition-root producer pattern. SAVE has priority.
+        ///
+        /// <para>The target is a tactical aim point only. It never becomes contact geometry: #11 owns the
+        /// hand envelope through <c>TryGetHandReachEnvelope</c>, and W3 must still test the current ball
+        /// against that returned envelope before classifying a Hand participant.</para>
+        /// </summary>
+        private void TryCommitClaimIntents()
+        {
+            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                int agentId = _gkAgentIds[k];
+                if (agentId < 0 || _isSentOff[agentId])
+                {
+                    _goalkeeper.ClearClaimIntent(k);
+                    continue;
+                }
+
+                bool saveArmed = GkHeadingIntentSource.SaveArmed(
+                    k, in _ball.Position, in _ball.Velocity, loose);
+
+                // ERR-011-012: possession and SAVE priority are hard cancellations. Ordinary claim
+                // trigger geometry is NOT: once committed, the target and reach side stay locked for
+                // the existing bounded #11 reach episode so a descending cross can enter hand height.
+                if (!loose || saveArmed)
+                {
+                    _goalkeeper.ClearClaimIntent(k);
+                    continue;
+                }
+
+                if (_goalkeeper.HasActiveClaimIntent(k))
+                {
+                    continue;
+                }
+
+                GoalkeeperState gkState = _goalkeeper.GetState(k);
+                if (gkState != GoalkeeperState.Set && gkState != GoalkeeperState.Anticipate)
+                {
+                    continue;
+                }
+
+                Vector3 gkPos = new Vector3(
+                    _agents[agentId].Position.x, _agents[agentId].Position.y, 0f);
+                if (!GkHeadingIntentSource.ClaimArmed(in gkPos, in _ball.Position, loose))
+                {
+                    continue;
+                }
+
+                GoalkeeperAgentAttributes attrs = PlayerAttributeProjection.ToGoalkeeper(
+                    in _canonicalAttrs[agentId], k, fatigue: 0f);
+                float reachDirectionLateral = _ball.Position.y > gkPos.y
+                    ? 1.0f
+                    : _ball.Position.y < gkPos.y ? -1.0f : 0.0f;
+                var intent = new ClaimIntent
+                {
+                    TargetContactPoint = _ball.Position,
+                    ClutchFirmness = attrs.HandlingNorm,
+                    ReachDirectionLateral = reachDirectionLateral,
+                    AttemptCommittedTick = (int)_clock.CurrentTacticalTick,
+                };
+                _goalkeeper.CommitClaimIntent(k, intent, attrs);
+                _w3ClaimEligibilityEpisodes++;
+            }
         }
 
         /// <summary>
@@ -4500,14 +4723,10 @@ namespace TacticalDirector.MatchEngine
         /// deferred. Paying that cost here would turn the cheapest large realism lever on the board into
         /// the most expensive item on it. So the rush follows the HEADER trigger's shape instead: a pure
         /// predicate plus a composition-root commit, the <c>MatchFlowCollisionConsumer</c> heuristic-foul
-        /// precedent that GK/Heading design §4.3 already accepted. When W9 takes the rebaseline, RUSH
-        /// folds into the same DT surface as SAVE and this becomes the fallback, not a rival authority.</para>
+        /// precedent that GK/Heading design §4.3 already accepted.</para>
         ///
         /// <para><b>No new engine state.</b> #11's own <c>_rushIntentActive</c> is the per-episode latch
-        /// and it is already serialized in the v18 GK block, so this reads it through
-        /// <c>HasActiveRushIntent</c> rather than keeping a second latch with a different lifetime — the
-        /// shape that produced ERR-011-002's dive-at-nothing on the save side. Hence no
-        /// SNAPSHOT_SCHEMA_VERSION change.</para>
+        /// and it is already serialized in the v18 GK block.</para>
         /// </summary>
         private void TryCommitRushIntents()
         {
@@ -4530,6 +4749,14 @@ namespace TacticalDirector.MatchEngine
                 // here would let an unsighted keeper rush at a goal-bound ball.
                 bool saveArmed = GkHeadingIntentSource.SaveArmed(
                     k, in _ball.Position, in _ball.Velocity, loose);
+
+                // ERR-011-012: a committed cross claim owns its bounded reach episode. The rush
+                // producer must not take over merely because the same ball descends below the W1
+                // rush height guard; SAVE remains the higher-priority path and is handled above.
+                if (!saveArmed && _goalkeeper.HasActiveClaimIntent(k))
+                {
+                    continue;
+                }
 
                 bool armed = false;
                 Vector3 rushTarget = Vector3.zero;
@@ -4612,7 +4839,7 @@ namespace TacticalDirector.MatchEngine
             int frameNumber = (int)_clock.CurrentTick;
             float matchTimeS = _clock.CurrentMatchTimeSeconds;
             float matchTimeMs = _clock.CurrentMatchTimeMs;
-            _heading.Update(_agents, _ball, frameNumber, matchTimeS);
+            _heading.Update(_agents, _ball, frameNumber, matchTimeS, _w3CrossClaimArbiter);
             _goalkeeper.Update(frameNumber, matchTimeMs, _agents, _ball, _gkAgentIds);
         }
 
@@ -4751,10 +4978,29 @@ namespace TacticalDirector.MatchEngine
                     _isCollisionKnockdown[i], _collisionForces[i]);
             }
 
+            // W3 + shared AGENT_BALL fan-out: publish Collision #3's existing coarse
+            // AGENT_BALL overlap as a READ-ONLY same-frame candidate feed after all movement is final.
+            // Physical collision response remains in Resolve, preserving pre-W3 torso-deflection,
+            // foul, and movement-feedback ordering. Heading #10's own head geometry remains the
+            // authority for whether a header contact is valid; this feed must not gate high aerials.
+            if (_gkHeadingEnabled)
+            {
+                RefreshGkAgentIds();
+                _heading.BeginPhysicsFrame();
+                _crossClaimCandidates.BeginFrame();
+                _collisionSystem.PublishAgentBallContacts(
+                    _agents,
+                    _attrs,
+                    in _ball,
+                    _clock.CurrentMatchTimeSeconds,
+                    _agentBallConsumer);
+                _w3AgentBallFanoutEvents += _crossClaimCandidates.Count;
+            }
+
             // GK (#11) / Heading (#10) 60 Hz drive (design §3.4). After the ball + agents are integrated so
             // the orchestrators see the current world, and — since this is the Physics phase — strictly
             // before the Resolve-phase goal check (a committed save/header can deflect the ball first).
-            // No-op unless _gkHeadingEnabled (KD-11 — the default engine is byte-identical).
+            // No-op only when a test/host explicitly disables _gkHeadingEnabled.
             DriveGkHeadingPhysics();
 
             // W6: Controlled is externally managed by design. After every agent (including GK) has
@@ -4800,17 +5046,42 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Test-only composition seam for a single Resolve phase. W4 uses this to prove that the
-        /// CollisionSystem applied-deflection result reaches the goalkeeper reaction consumer inside
-        /// the same Resolve call without unrelated Physics/AI setup mutating the staged collision first.
+        /// Test-only composition seam for a single Physics phase. W3 uses this to prove the read-only
+        /// AGENT_BALL feed is published before GK/Heading consumption without moving physical response.
         /// </summary>
+        internal void TestOnly_RunPhysicsPhase() => RunPhysicsPhase();
+
+        /// <summary>W3 observation-only seam that executes only the read-only Collision #3 publication
+        /// and its two consumers. No ball integration, movement, GK/Heading update, or Resolve response
+        /// runs, so tests can assert byte-for-byte world-state non-mutation by the feed itself.</summary>
+        internal void TestOnly_PublishAgentBallContactsOnly()
+        {
+            _heading.BeginPhysicsFrame();
+            _crossClaimCandidates.BeginFrame();
+            _collisionSystem.PublishAgentBallContacts(
+                _agents,
+                _attrs,
+                in _ball,
+                _clock.CurrentMatchTimeSeconds,
+                _agentBallConsumer);
+        }
+
+        /// <summary>W3 observation-only seam: current-frame coarse Collision #3 observation count.
+        /// This count is not W3 contest membership.</summary>
+        internal int TestOnly_CrossClaimCandidateCount => _crossClaimCandidates.Count;
+
+        /// <summary>W3 observation-only seam: current-frame Heading AGENT_BALL feed count.</summary>
+        internal int TestOnly_HeadingCollisionCandidateCount => _heading.BufferedCollisionContactCount;
+
+        /// <summary>Test-only composition seam for a single Resolve phase.</summary>
         internal void TestOnly_RunResolvePhase() => RunResolvePhase();
 
-        /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor
+        /// <summary>Phase 4 — Resolve. Runs collision (×22), reconciles any Controlled holder/ball
+        /// attachment after collision position correction, advances the in-flight pass/shot executor
         /// lifecycles (C2/C3), runs first touch on a loose arriving ball (D3), then authors the
         /// authoritative <see cref="MatchContext"/> from the settled world state (C4). Intra-Resolve
-        /// order is fixed and digest-load-bearing: collision → executor Update → first touch →
-        /// possession/MatchContext. Collision writes THIS tick's feedback buffers (consumed by movement
+        /// order is fixed and digest-load-bearing: collision → Controlled reattach → executor Update →
+        /// first touch → possession/MatchContext. Collision writes THIS tick's feedback buffers (consumed by movement
         /// next tick — the §3 one-tick-lag contract); the executors advance any pass/shot scripted via the
         /// TestOnly_ seam (production trigger is the Phase D AI dispatcher), kicking the ball at CONTACT
         /// through the executor adapters and releasing possession; first touch (D3) receives a loose
@@ -4831,7 +5102,8 @@ namespace TacticalDirector.MatchEngine
             // W4 review closure: a substitution published at Resolve entry can change which agent owns
             // a keeper slot. Refresh unconditionally under the GK flag here, before collision/deflection
             // and shot-notification consumers, rather than making ResetSlot timing depend on whether a
-            // body deflection happened later in this phase.
+            // body deflection happened later in this phase. W3 also refreshes before the Physics
+            // read-only feed; keeping this Resolve refresh preserves the reviewed W4 ordering contract.
             if (_gkHeadingEnabled)
             {
                 RefreshGkAgentIds();
@@ -4847,24 +5119,8 @@ namespace TacticalDirector.MatchEngine
                 _foulCooldownRemaining--;
             }
 
-            // C2 — collision first. Reuses _attrs (PlayerAttributes[]); writes _isCollisionKnockdown /
-            // _collisionForces (consumed by movement at tick N+1). stumbleOut is discarded (B4 — not a
-            // Stage-0 movement input). Self-seeds its own RNG from _matchSeed ^ frameNumber internally.
-            // NOTE: UpdateCollisions processes ALL 22 agents incl. goalkeepers, whereas Physics-phase
-            // UpdateAllAgents skips GKs (Stage 0 — GK locomotion is #11). A GK can therefore be
-            // displaced by a collision that movement never re-integrates; benign at Stage 0 (kickoff
-            // spread admits no GK collisions) and inherent to the two seams, recorded here for Phase D.
-            // _foulCandidateFound needs no reset here: ApplyFoulIfCaptured (called every tick, right
-            // below) always clears it when true, so it is already false entering UpdateCollisions —
-            // an invariant a TestOnly-injected candidate can rely on too (design note §3 test plan).
-            //
-            // AMENDED at W2 (AR-1 L-3): "already false entering UpdateCollisions" is no longer true.
-            // The AI phase runs BEFORE Physics, and TryResolveTackles can leave a DECIDED candidate
-            // standing in the slot — which is the whole premise of the KD-F4 decided-outranks-candidate
-            // rule in MatchFlowCollisionConsumer. What survives is the property that actually matters
-            // here: the slot is always empty by the END of a tick, because ApplyFoulIfCaptured clears
-            // it on every path including the wave-on and the sent-off discard. It is a per-tick slot,
-            // not a per-phase one.
+            // C2 — physical collision remains in Resolve. W3's Physics feed is detection-only and
+            // cannot mutate ball/agent state, so pre-W3 response ordering is preserved.
             _collisionSystem.UpdateCollisions(
                 _agents, _attrs, _teamIds, _isGoalkeeper,
                 knockdownOut: _isCollisionKnockdown,
@@ -4876,6 +5132,19 @@ namespace TacticalDirector.MatchEngine
                 matchTime: matchTime,
                 eventConsumer: _eventConsumer,
                 ballDeflected: out bool ballDeflected);
+
+            // Pre-existing W6 ordering invariant, surfaced because W3 greatly increases the observed
+            // keeper-claim population: Physics attaches a Controlled ball after locomotion, but Resolve
+            // can subsequently move ANY holder via Collision #3's agent-agent penetration correction.
+            // Controlled AGENT_BALL response is deliberately suppressed, so without this reconciliation
+            // the holder and ball can end one tick with different XY while possession still says
+            // Controlled. This call is intentionally unconditional: it also applies to outfield holders
+            // and to the default engine when GK/Heading wiring is disabled. It can therefore change
+            // match trajectories/digests wherever Resolve collision correction moves a carrier, even
+            // though it adds no cross-tick state and consumes no RNG. Re-run the SAME attachment funnel
+            // immediately after collision writeback, before any later Resolve path can legitimately
+            // kick, release, or restart the ball.
+            DriveControlledBallToPossessor();
 
             // W4: consume an APPLIED flight change immediately in this Resolve phase. No pending
             // deflection latch survives the tick; existing GK reaction fields remain the only state.
@@ -5156,6 +5425,7 @@ namespace TacticalDirector.MatchEngine
             _ball = BallState.CreateAtPosition(new Vector3(
                 position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
             _possessingAgentId = SelectRestartTaker(position, awardedTeam);
+            CancelGoalkeeperClaimsForPossession();
 
             // ERR-012-011 — a restart ends any pass in flight, stated rather than inherited. The
             // placed ball is at rest, so UpdatePassInFlight's receding test would clear the latch
@@ -7723,6 +7993,15 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, si.AttemptCommittedTick);
                 CanonicalSerializer.WriteBool(buf, ref o, s.SaveIntentActive[i]);
 
+                ClaimIntent ci = s.ClaimIntents[i];
+                CanonicalSerializer.WriteF32(buf, ref o, ci.TargetContactPoint.x);
+                CanonicalSerializer.WriteF32(buf, ref o, ci.TargetContactPoint.y);
+                CanonicalSerializer.WriteF32(buf, ref o, ci.TargetContactPoint.z);
+                CanonicalSerializer.WriteF32(buf, ref o, ci.ClutchFirmness);
+                CanonicalSerializer.WriteF32(buf, ref o, ci.ReachDirectionLateral);
+                CanonicalSerializer.WriteI32(buf, ref o, ci.AttemptCommittedTick);
+                CanonicalSerializer.WriteBool(buf, ref o, s.ClaimIntentActive[i]);
+
                 RushIntent ri = s.RushIntents[i];
                 CanonicalSerializer.WriteF32(buf, ref o, ri.RushTarget.x);
                 CanonicalSerializer.WriteF32(buf, ref o, ri.RushTarget.y);
@@ -7783,6 +8062,8 @@ namespace TacticalDirector.MatchEngine
             var contactStates = new GkContactState[cap];
             var saveIntents = new SaveIntent[cap];
             var saveIntentActive = new bool[cap];
+            var claimIntents = new ClaimIntent[cap];
+            var claimIntentActive = new bool[cap];
             var rushIntents = new RushIntent[cap];
             var rushIntentActive = new bool[cap];
             var distributeIntents = new DistributeIntent[cap];
@@ -7841,6 +8122,17 @@ namespace TacticalDirector.MatchEngine
                 saveIntents[i] = si;
                 saveIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
 
+                ClaimIntent ci = default;
+                ci.TargetContactPoint = new Vector3(
+                    CanonicalSerializer.ReadF32(buf, ref o),
+                    CanonicalSerializer.ReadF32(buf, ref o),
+                    CanonicalSerializer.ReadF32(buf, ref o));
+                ci.ClutchFirmness = CanonicalSerializer.ReadF32(buf, ref o);
+                ci.ReachDirectionLateral = CanonicalSerializer.ReadF32(buf, ref o);
+                ci.AttemptCommittedTick = CanonicalSerializer.ReadI32(buf, ref o);
+                claimIntents[i] = ci;
+                claimIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
+
                 RushIntent ri = default;
                 ri.RushTarget = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
                 ri.CommitmentLevel = CanonicalSerializer.ReadF32(buf, ref o);
@@ -7882,6 +8174,8 @@ namespace TacticalDirector.MatchEngine
                 contactStates: contactStates,
                 saveIntents: saveIntents,
                 saveIntentActive: saveIntentActive,
+                claimIntents: claimIntents,
+                claimIntentActive: claimIntentActive,
                 rushIntents: rushIntents,
                 rushIntentActive: rushIntentActive,
                 distributeIntents: distributeIntents,
@@ -8177,9 +8471,20 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void TakeControlledPossession(int agentId)
         {
+            // ERR-011-014 / #11 §3.6.1: possession is a hard cancellation for every live
+            // cross/aerial ClaimIntent. Clear at acquisition, not at the next 10 Hz producer pass.
+            CancelGoalkeeperClaimsForPossession();
             _possessingAgentId = agentId;
             BallCollision.SetBallControlled(ref _ball);
             DriveControlledBallToPossessor();
+        }
+
+        private void CancelGoalkeeperClaimsForPossession()
+        {
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                _goalkeeper.ClearClaimIntent(k);
+            }
         }
 
         /// <summary>
@@ -8560,14 +8865,371 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Collision-event consumer (design note §3): captures AT MOST ONE foul candidate per Resolve
+        /// W3 production arbitration boundary. #10 calls this after it has prepared real current-frame
+        /// Head contacts and before it resolves/applies them. This host adds only #11 active-claim Hand
+        /// contacts whose live reach envelope intersects the ball, registers the mixed set in canonical
+        /// entity order, resolves through #11's own duel/RNG surface, and suppresses losing Head contacts.
+        /// Collision #3's coarse observation feed is deliberately absent from membership.
+        /// </summary>
+        internal sealed class W3CrossClaimArbiter : IHeadingPreparedFrameArbiter
+        {
+            private readonly MatchEngine _engine;
+
+            internal W3CrossClaimArbiter(MatchEngine engine)
+            {
+                _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+                LastWinnerAgentId = MatchEngineConstants.NO_POSSESSION;
+                LastWinnerBodyPart = BodyPartEnum.Body;
+            }
+
+            internal int LastParticipantCount { get; private set; }
+            internal int LastWinnerAgentId { get; private set; }
+            internal BodyPartEnum LastWinnerBodyPart { get; private set; }
+
+            public void ArbitratePreparedHeadContacts(
+                TacticalDirector.HeadingMechanics.HeadingMechanics heading,
+                AgentState[] agentStates,
+                BallState currentBall,
+                int currentFrame,
+                float currentMatchTime)
+            {
+                LastParticipantCount = 0;
+                LastWinnerAgentId = MatchEngineConstants.NO_POSSESSION;
+                LastWinnerBodyPart = BodyPartEnum.Body;
+
+                _engine._goalkeeper.BeginCrossClaimFrame();
+
+                bool anyHandContact = false;
+                for (int k = 0; k < _engine._gkAgentIds.Length; k++)
+                {
+                    int gkAgentId = _engine._gkAgentIds[k];
+                    if (gkAgentId < 0
+                        || _engine._isSentOff[gkAgentId]
+                        || !_engine._goalkeeper.HasActiveClaimIntent(k))
+                    {
+                        continue;
+                    }
+
+                    Vector3 gkPosition = new Vector3(
+                        agentStates[gkAgentId].Position.x,
+                        agentStates[gkAgentId].Position.y,
+                        0.0f);
+                    if (_engine._goalkeeper.TryGetHandReachEnvelope(
+                            k, currentFrame, gkPosition, out Vector3 handCenter, out float handRadius)
+                        && (currentBall.Position - handCenter).sqrMagnitude <= handRadius * handRadius)
+                    {
+                        anyHandContact = true;
+                        break;
+                    }
+                }
+
+                // No Hand contact means ordinary #10 behaviour remains untouched, including multi-head duels.
+                if (!anyHandContact)
+                {
+                    return;
+                }
+
+                // Canonical registration is by entity id, independent of which mechanic discovered a
+                // participant first. A production keeper is not a header-intent candidate, but the
+                // both-geometry branch remains defined for restored/test state and uses §3.6.1 priority.
+                for (int agentId = 0; agentId < MatchEngineConstants.SQUAD_SIZE; agentId++)
+                {
+                    int preparedHeadIndex = FindPreparedHeadIndex(heading, agentId);
+                    bool headHit = preparedHeadIndex >= 0;
+                    Vector3 headCenter = headHit
+                        ? heading.GetPreparedHeadCenter(preparedHeadIndex)
+                        : default;
+
+                    int gkIndex = FindGoalkeeperIndex(agentId);
+                    bool handHit = false;
+                    Vector3 handCenter = default;
+                    float handRadius = 0.0f;
+                    if (gkIndex >= 0
+                        && !_engine._isSentOff[agentId]
+                        && _engine._goalkeeper.HasActiveClaimIntent(gkIndex))
+                    {
+                        Vector3 gkPosition = new Vector3(
+                            agentStates[agentId].Position.x,
+                            agentStates[agentId].Position.y,
+                            0.0f);
+                        handHit = _engine._goalkeeper.TryGetHandReachEnvelope(
+                                gkIndex, currentFrame, gkPosition, out handCenter, out handRadius)
+                            && (currentBall.Position - handCenter).sqrMagnitude <= handRadius * handRadius;
+                    }
+
+                    if (!headHit && !handHit)
+                    {
+                        continue;
+                    }
+
+                    BodyPartEnum bodyPart;
+                    if (headHit && handHit)
+                    {
+                        bodyPart = GoalkeeperCrossClaimDuel.DetermineBodyPart(
+                            currentBall.Position,
+                            handCenter,
+                            headCenter,
+                            handRadius,
+                            HeadingMechanicsConstants.HeadContactVolumeRadiusM);
+                    }
+                    else
+                    {
+                        bodyPart = handHit ? BodyPartEnum.Hand : BodyPartEnum.Head;
+                    }
+
+                    CrossClaimParticipantAttributes attrs =
+                        PlayerAttributeProjection.ToCrossClaim(in _engine._canonicalAttrs[agentId]);
+                    if (!_engine._goalkeeper.RegisterCrossClaimParticipant(
+                            agentId, attrs, bodyPart, currentFrame))
+                    {
+                        throw new InvalidOperationException(
+                            "W3 cross-claim participant buffer overflow while registering agent " +
+                            agentId.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
+                    }
+                    _engine._w3RegisteredDuelParticipants++;
+                }
+
+                if (_engine._goalkeeper.CrossClaimDuelCount == 0)
+                {
+                    throw new InvalidOperationException(
+                        "W3 detected a live Hand contact but registered no cross-claim participant.");
+                }
+
+                _engine._goalkeeper.ResolveCrossClaimDuel();
+                _engine._w3ResolvedHandContactDuels++;
+                CrossClaimDuelContext duel = _engine._goalkeeper.GetCrossClaimDuel(0);
+                LastParticipantCount = duel.ParticipantCount;
+                LastWinnerAgentId = duel.WinnerAgentId;
+                LastWinnerBodyPart = duel.ContactBodyPart;
+
+                // Every losing Hand claim terminates as DisturbedInDuel before #10 is allowed to mutate
+                // the ball. Re-querying the envelope is pure and returns the same frame geometry.
+                for (int p = 0; p < duel.ParticipantCount; p++)
+                {
+                    int participantAgentId = _engine._goalkeeper.GetCrossClaimParticipantAgentId(p);
+                    if (_engine._goalkeeper.GetCrossClaimParticipantBodyPart(p) != BodyPartEnum.Hand
+                        || participantAgentId == duel.WinnerAgentId)
+                    {
+                        continue;
+                    }
+
+                    int loserGkIndex = FindGoalkeeperIndex(participantAgentId);
+                    if (loserGkIndex < 0)
+                    {
+                        throw new InvalidOperationException(
+                            "W3 registered a Hand participant that is not a current goalkeeper.");
+                    }
+
+                    Vector3 loserPosition = new Vector3(
+                        agentStates[participantAgentId].Position.x,
+                        agentStates[participantAgentId].Position.y,
+                        0.0f);
+                    if (!_engine._goalkeeper.TryGetHandReachEnvelope(
+                            loserGkIndex, currentFrame, loserPosition,
+                            out Vector3 loserReachCenter, out float unusedLoserRadius))
+                    {
+                        throw new InvalidOperationException(
+                            "W3 Hand loser lost its #11 reach envelope within the same arbitration frame.");
+                    }
+
+                    _engine._goalkeeper.ResolveClaimDuelLoss(
+                        loserGkIndex,
+                        participantAgentId,
+                        currentFrame,
+                        _engine._clock.CurrentMatchTimeMs,
+                        currentBall,
+                        loserReachCenter,
+                        duel.DuelId);
+                }
+
+                if (duel.ContactBodyPart == BodyPartEnum.Hand)
+                {
+                    int winnerGkIndex = FindGoalkeeperIndex(duel.WinnerAgentId);
+                    if (winnerGkIndex < 0)
+                    {
+                        throw new InvalidOperationException(
+                            "W3 resolved a Hand winner that is not a current goalkeeper.");
+                    }
+
+                    Vector3 winnerPosition = new Vector3(
+                        agentStates[duel.WinnerAgentId].Position.x,
+                        agentStates[duel.WinnerAgentId].Position.y,
+                        0.0f);
+                    if (!_engine._goalkeeper.TryGetHandReachEnvelope(
+                            winnerGkIndex, currentFrame, winnerPosition,
+                            out Vector3 winnerReachCenter, out float unusedWinnerRadius))
+                    {
+                        throw new InvalidOperationException(
+                            "W3 Hand winner lost its #11 reach envelope within the same arbitration frame.");
+                    }
+
+                    if (!_engine._goalkeeper.ResolveClaimHandContact(
+                            winnerGkIndex,
+                            duel.WinnerAgentId,
+                            currentFrame,
+                            _engine._clock.CurrentMatchTimeMs,
+                            currentBall,
+                            winnerReachCenter,
+                            duel.DuelId))
+                    {
+                        throw new InvalidOperationException(
+                            "W3 Hand winner no longer had an active ClaimIntent at terminal routing.");
+                    }
+
+                    if (_engine._possessingAgentId == duel.WinnerAgentId)
+                    {
+                        _engine._w3SuccessfulKeeperClaims++;
+                    }
+
+                    for (int h = 0; h < heading.PreparedHeadContactCount; h++)
+                    {
+                        heading.SuppressPreparedHeadContact(heading.GetPreparedHeadContactAgentId(h));
+                    }
+                    return;
+                }
+
+                // A Head winner is the only prepared Head allowed into #10's ordinary duel/application
+                // pass. All Hand participants have already terminated as duel losses above. Preserve
+                // the W3 contest id on the surviving #10 event before suppression makes it look
+                // like an uncontested one-participant native Heading duel.
+                heading.MarkPreparedHeadContested(duel.WinnerAgentId, duel.DuelId);
+                for (int h = 0; h < heading.PreparedHeadContactCount; h++)
+                {
+                    int headAgentId = heading.GetPreparedHeadContactAgentId(h);
+                    if (headAgentId != duel.WinnerAgentId)
+                    {
+                        heading.SuppressPreparedHeadContact(headAgentId);
+                    }
+                }
+            }
+
+            private int FindGoalkeeperIndex(int agentId)
+            {
+                for (int k = 0; k < _engine._gkAgentIds.Length; k++)
+                {
+                    if (_engine._gkAgentIds[k] == agentId)
+                    {
+                        return k;
+                    }
+                }
+                return -1;
+            }
+
+            private static int FindPreparedHeadIndex(
+                TacticalDirector.HeadingMechanics.HeadingMechanics heading,
+                int agentId)
+            {
+                for (int i = 0; i < heading.PreparedHeadContactCount; i++)
+                {
+                    if (heading.GetPreparedHeadContactAgentId(i) == agentId)
+                    {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+        }
+
+        /// <summary>
+        /// W3 read-only AGENT_BALL fan-out. Generic delivery only: every AGENT_BALL candidate reaches
+        /// Heading #10 and the frame-local cross-claim collector exactly once, in that fixed consumer
+        /// order. No body-part policy, RNG or world mutation is permitted here.
+        /// </summary>
+        internal sealed class AgentBallFanout : ICollisionEventConsumer
+        {
+            private readonly ICollisionEventConsumer _headingConsumer;
+            private readonly ICollisionEventConsumer _crossClaimConsumer;
+
+            internal AgentBallFanout(
+                ICollisionEventConsumer headingConsumer,
+                ICollisionEventConsumer crossClaimConsumer)
+            {
+                _headingConsumer = headingConsumer
+                    ?? throw new ArgumentNullException(nameof(headingConsumer));
+                _crossClaimConsumer = crossClaimConsumer
+                    ?? throw new ArgumentNullException(nameof(crossClaimConsumer));
+            }
+
+            public void OnCollisionEvent(in CollisionEvent evt)
+            {
+                if (evt.Type != CollisionType.AGENT_BALL)
+                {
+                    return;
+                }
+
+                _headingConsumer.OnCollisionEvent(in evt);
+                _crossClaimConsumer.OnCollisionEvent(in evt);
+            }
+        }
+
+        /// <summary>
+        /// W3 frame-local second consumer for the shared AGENT_BALL dependency. It records coarse
+        /// Collision #3 observations only. ERR-011-011/ERR-011-012 forbid treating these records as
+        /// Hand/Head truth OR as W3 contest membership: high aerials can legitimately produce zero
+        /// records while #10 prepared head geometry or #11 live hand geometry still participates.
+        /// The buffer is therefore a fan-out/diagnostic consumer, not an arbitration gate. It is reset
+        /// before each Physics publication pass and never crosses a tick/snapshot. Capacity is the squad
+        /// size because PublishAgentBallContacts emits at most one event per agent.
+        /// </summary>
+        internal sealed class CrossClaimCandidateCollector : ICollisionEventConsumer
+        {
+            private readonly CollisionEvent[] _events;
+            private int _count;
+
+            internal CrossClaimCandidateCollector(int capacity)
+            {
+                if (capacity <= 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(capacity));
+                }
+
+                _events = new CollisionEvent[capacity];
+            }
+
+            internal int Count => _count;
+
+            internal CollisionEvent EventAt(int index)
+            {
+                if ((uint)index >= (uint)_count)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                }
+
+                return _events[index];
+            }
+
+            internal void BeginFrame()
+            {
+                _count = 0;
+            }
+
+            public void OnCollisionEvent(in CollisionEvent evt)
+            {
+                if (evt.Type != CollisionType.AGENT_BALL)
+                {
+                    return;
+                }
+
+                if (_count >= _events.Length)
+                {
+                    throw new InvalidOperationException(
+                        "W3 cross-claim candidate buffer overflow: capacity=" +
+                        _events.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
+                }
+
+                _events[_count++] = evt;
+            }
+        }
+
+        /// <summary>
+        /// Match-flow collision consumer (design note §3): captures AT MOST ONE foul candidate per
         /// tick into scalar fields on the host — no buffer, since only the first qualifying collision
         /// is ever acted on (cards are rare). Qualification: AGENT_AGENT, ContactType.FROM_BEHIND,
         /// ForceMagnitude ≥ FoulImpactForceThresholdN, opposite teams, and the host's foul cooldown is
         /// closed. Sent-off participation is deliberately NOT checked here — that gate lives at the
         /// application site (<see cref="MatchEngine.ApplyFoulIfCaptured"/>, AR-9 M-1), which also
-        /// covers the test-injection seam. <see cref="MatchEngine.ApplyFoulIfCaptured"/> reads +
-        /// resets this state immediately after <c>UpdateCollisions</c> returns.
+        /// covers the test-injection seam. Physical collision publication remains in Resolve; W3's
+        /// earlier Physics AGENT_BALL feed is read-only and does not enter this consumer.
         /// </summary>
         private sealed class MatchFlowCollisionConsumer : ICollisionEventConsumer
         {
@@ -9725,4 +10387,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Stationary. No snapshot-schema or RNG change.                                     |
 // | 1.76    | 2026-09-14 | —      | ERR-013-011: FillPressingSnapshot carries the 60 Hz [N-AI_PHASE_STRIDE,N) pass window separately from the 10 Hz tactical heartbeat. |
 // | 1.80    | 2026-09-16 | —      | W2 production activation: non-positive catalogue reach now fails loud; zero remains only for the explicit test/measurement override. Existing <= LooseBallPickupRadiusM guard unchanged; no schema/RNG change. |
+// | 1.81    | 2026-09-22 | —      | W3 review correction: add a read-only Physics AGENT_BALL candidate feed after movement; keep full Collision #3 response, W4 deflection and foul capture in Resolve; Heading own geometry still owns header eligibility. No cross-tick state/schema/RNG change. |
+// | 1.82    | 2026-09-22 | —      | W3 shared feed now has both consumers: Heading + a frame-local, fail-closed cross-claim candidate collector. Candidate-only per ERR-011-011; no policy, RNG or snapshot field. |
+// | 1.83    | 2026-09-22 | —      | W3 / ERR-011-012: ClaimIntent is a bounded episode, not a per-stride height gate. Possession/SAVE hard-cancel; ordinary geometry lapse does not. Reach side locks at commit and joins the v23 payload. W1 rush cannot steal an active claim. Test hand-envelope observation no longer Refreshes/ResetSlots. |
+// | 1.84    | 2026-09-22 | —      | W3 runtime arbitration boundary: Heading #10 exposes prepared Head contacts before mutation; MatchEngine combines them with active #11 Hand reach in canonical entity order, scores mixed participants through ToCrossClaim, routes Hand wins/losses through #11, and suppresses losing Heads before #10 applies a header. Collision #3 remains observation-only. |
+// | 1.85    | 2026-09-22 | —      | W3 testability only: add deterministic clock/apex-history seams so a composed test can make #10 itself confirm a current-frame Head contact against a simultaneous #11 Hand reach; no production path reads the seams. |
+// | 1.86    | 2026-09-22 | —      | W3 / #435 §6.2: nonserialized cumulative observation counters expose fan-out events, claim episodes, registered duel participants, resolved Hand-contact duels and successful keeper claims to the frozen six-seed diagnostic. No gameplay/snapshot/digest/RNG change. |
+// | 1.87    | 2026-09-22 | —      | W3 event provenance: when Head wins a mixed Hand/Head contest, carry the W3 duel id into #10 before loser suppression so HeaderExecutedEvent remains truthfully contested. Frame-local only. |
+// | 1.88    | 2026-09-22 | —      | W6 ordering correction surfaced by W3: reconcile every Controlled holder immediately after Resolve collision position correction. This is unconditional and can change default-engine trajectories/digests for keeper or outfield carriers even with GK/Heading disabled; it reuses the same attachment funnel and adds no schema field or RNG draw. |
+// | 1.89    | 2026-09-23 | —      | PR #439 Codex closure / ERR-011-014: possession acquisition and restart-taker awards hard-cancel live #11 ClaimIntent state immediately, closing the stale-Hand window. Stale default-off comments corrected; GK/Heading defaults ON since §5.Z.15. No schema/RNG/draw-order change. |
 #endregion

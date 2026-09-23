@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 16, 2026
-**Version:** 0.3
+**Version:** 0.4
 **Status:** DRAFT
 **Purpose:** Define the file layout under `src/Gameplay/Heading/`, the
 input and output interface contracts (consumed and emitted method
@@ -81,7 +81,9 @@ The buffer is cleared at the start of each physics frame. Zero
 heap allocation per #18 §3.7.3 (the buffer's backing array is
 allocated once at `HeadingMechanics.Initialize()`, sized to
 `HEADING_CONTACT_BUFFER_CAPACITY [GT]`; `ToReadOnlySpan()` returns
-a view over the existing buffer).
+a view over the existing buffer). ERR-010-004 adds the W3 composition
+constraint: effective capacity MUST be at least `MAX_AGENTS`, because
+the shared publisher may emit one `AGENT_BALL` observation per agent.
 
 ---
 
@@ -274,3 +276,4 @@ ASCII sequence diagram:
 | 0.1 | May 16, 2026 | section authoring | Initial draft from `outline-detailed.md` v1.1. File layout, interface contracts, determinism + performance compliance surfaces, tick-scheduling enumerated. Upstream anchors pinned where verified; remaining anchors marked TBD per OI-005. | pending |
 | 0.2 | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: §4.6 60 Hz pseudocode now (a) defines `jumpStartFrame` initialization (M-3), (b) emits mistimed-failed events at the caller after the pure predicate returns (M-2), (c) sets `actualContactFrame` on the contact-frame branch (M-4), (d) replaces "Losers: emit failed" with the uniform 2-way/3+ way M-5 loser semantics. | pending |
 | 0.3 | May 16, 2026 | drafter | APPROVAL. §4.2 Input Interface Contracts re-anchored: #3 row moved from non-existent `GetContactEventsAtFrame` pull-API to actual `ICollisionEventConsumer` push-API (#3 §3.4.2); #8 row marked as Stage 0+1 activation per #8 §1.7.2; #1 / #16 / #17 anchors pinned. New §4.2.1 documents per-frame `ICollisionEventConsumer` buffer mechanic (zero-alloc via pre-sized `HEADING_CONTACT_BUFFER_CAPACITY`). §4.3 Output Interface Contracts: `HeaderExecutedEvent` tagged `IEventB` (Tier B), `HeaderAttemptFailedEvent` tagged `IEventC` (Tier C). New §4.6.1 DT-Side Activation Schedule formalizes Stage 0 / Stage 0+1 split mirroring KD-18 pattern. OI-005 RESOLVED. | granted |
+| 0.4 | September 23, 2026 | PR #439 Codex closure | ERR-010-004: §4.2.1 now states `HEADING_CONTACT_BUFFER_CAPACITY >= MAX_AGENTS` for W3 full fan-out. Structural buffer bound only. | review fix |

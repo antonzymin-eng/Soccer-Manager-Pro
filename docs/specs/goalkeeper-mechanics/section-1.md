@@ -1,8 +1,9 @@
 # Goalkeeper Mechanics Specification #11 — Section 1: Purpose & Scope
 
 **Created:** May 16, 2026
-**Version:** 0.3
+**Version:** 0.4
 **Status:** DRAFT
+**Updated:** September 22, 2026 (v0.4 — ERR-011-013 residual sync: producer ownership and W3 body-part/contact authority aligned with §§3.6/3.7 and live composition.)
 **Purpose:** Establish the scope of the Goalkeeper Mechanics
 specification, the out-of-scope items, the twenty-one pre-committed
 Key Design Decisions (KDs) that govern the entire spec, and the
@@ -16,9 +17,13 @@ here.
 
 Goalkeeper Mechanics #11 governs every behavior unique to the
 goalkeeper agent role (`PlayerRole.Goalkeeper`; one agent per side).
-From the instant Decision Tree #8 commits the GK to a save, claim,
-rush, or distribution intent until the ball leaves the GK's
-possession, this spec owns the state machine, the reaction pipeline,
+From the instant the owning producer commits the GK to a save, claim,
+rush, or distribution intent until the ball leaves the GK's possession,
+this spec owns the state machine, the reaction pipeline. At the current
+Stage-0 composition boundary SAVE remains Decision Tree #8-emitted,
+while W1 RushIntent and W3 ClaimIntent are MatchEngine composition-root
+producers per §§3.7.0 and 3.6.1; distribution remains separately deferred.
+It also owns
 the dive kinematics, the hand-ball contact-quality computation, the
 contested-duel resolution for hand contacts, the failed-attempt
 pipeline, the rush dispatch logic, the distribution release
@@ -40,9 +45,11 @@ Governance areas:
 - **Handling-quality scalar computation** (§3.5) — produces a
   continuous scalar in `[0, 1]` from contact-point error, ball
   speed, attributes, fatigue, and reaction quality.
-- **Cross-claim & aerial duel resolution** (§3.6) — consumes
-  Collision System #3 contact data; resolves multi-agent contests
-  with deterministic tie-break; head-vs-hand routing per KD-14.
+- **Cross-claim & aerial duel resolution** (§3.6) — combines
+  Heading #10 prepared current-frame Head geometry with Goalkeeper #11
+  live Hand/reach geometry; Collision #3's read-only AGENT_BALL feed is
+  observation-only. Resolves multi-agent contests with deterministic
+  tie-break; head-vs-hand routing per KD-14.
 - **Rush / sweep dispatch** (§3.7) — KD-15 abort policy.
 - **Distribution generation** (§3.8) — KD-6 / KD-16; emits Pass
   Mechanics #5 `PassIntent`-equivalent.
@@ -306,10 +313,13 @@ indefinitely; #12 approval blocked.
 **Statement.** Aerial cross claims by the GK are head contacts iff
 the contact body part is head (route to Heading #10 §3.7 per KD-4);
 hand contacts iff the contact body part is hand (route through
-Spec #11 §3.6). The contact body part is determined by Collision
-System #3 contact-event data (Stage 0 approximation: ball-vs-agent-
-hand capsule vs. ball-vs-agent-head sphere intersection priority),
-NOT by intent.
+Spec #11 §3.6). At Stage 0 the contact body part is determined by the
+mechanics that own the physical geometry: #10's prepared current-frame
+Head contact volume and #11's live Hand/reach envelope. Collision #3's
+read-only AGENT_BALL feed is observation-only and MUST NOT gate contest
+membership or classify Hand/Head. If both mechanic-owned volumes admit
+the ball for one keeper, §3.6.1's deterministic physical proximity rule
+chooses the body part. Intent never chooses the body part.
 
 **Rationale.** Body-part is a physical fact, not an intent choice;
 matches the parameter-based-physics invariant.
@@ -430,13 +440,13 @@ magnitude and angle.
 | Agent Movement #2 | §3.1.2 | §3.1 / §3.3 | `AgentMovementState`, `GroundedReason` enums |
 | Agent Movement #2 | §3.5.1 | §3.1 / §3.3 / §3.7 | `Agent` class XY kinematics |
 | Agent Movement #2 | §3.5.6 | §3.2 / §3.5 / §3.7 | `PlayerAttributes` field reads (`Reflexes`, `Handling`, `Aerial`, `OneVsOne`, `Throwing`, `Kicking`, `Strength`, `Balance`, `Composure`, `Pace`) |
-| Collision System #3 | §3.4.2 + agent collider geometry | §3.5 / §3.6 / §3.7 | `ICollisionEventConsumer` pattern (KD-5); agent `handCapsule` / `headSphere` colliders consumed by §3.6.1 body-part determination (v0.2 AR-S1-M4) |
+| Collision System #3 | §3.4.2 | §3.5 / §3.6 / §3.7 | `ICollisionEventConsumer` / read-only AGENT_BALL observation pattern (KD-5); W3 §3.6 membership and Hand/Head classification remain owned by #10 prepared Head geometry + #11 live Hand/reach geometry (ERR-011-011/013). |
 | First Touch #4 | §1.2 | §1.2 boundary | Head-exception per #10 KD-7; foot save-attempts #11-owned |
 | Pass Mechanics #5 | §1.7 / §3 intent surface | §3.8 | `PassIntent` consumer surface (KD-6) |
 | Shot Mechanics #6 | §4.5 | §3.2 | `ShotExecutedEvent` |
 | Shot Mechanics #6 | §1.3 KD-6 | §3.6 / KD-4 | Body-part discriminator authority |
 | Perception System #7 | §3 visibility latency | §3.2 | `PERCEPTION_BASE_LATENCY_MS` consumption |
-| Decision Tree #8 | §1.7 intent surface | §3.1 / §3.2 / §3.7 / §3.8 | GK-branch intent vocabulary extension (`SaveIntent`, `ClaimIntent`, `DistributeIntent`, `RushIntent`) |
+| Decision Tree #8 | §1.7 intent surface | §3.1 / §3.2 / §3.8 | GK SAVE / distribution decision surface. W1 `RushIntent` and W3 `ClaimIntent` are composition-root producers under §§3.7.0/3.6.1, not DT actions (ERR-011-010/012/013). |
 | Heading Mechanics #10 | §3.7 | §3.6 | Contested-duel mechanism for head contacts (KD-14) |
 | Heading Mechanics #10 | KD-7 | §1.1 / KD-4 | GK head-contact ownership inversion |
 | Deterministic Simulation #16 | §3.2 | §3.6 | Entity iteration order |
@@ -477,3 +487,4 @@ Code Standards #20 (§5 / §9).
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from `outline-detailed.md` v1.2; KDs 1–21 reproduced; dependency + downstream tables populated; out-of-scope catalogued | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 16, 2026 | pass-1 fix pass | AR-S1-M4 (#3 dependency row amended to include agent collider geometry) | self-pass-2 self-critique on v0.2 yields no further findings |
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): KD-7 block updated — `DOMAIN_TAG_GOALKEEPER = 0x1D [CROSS: #16 §3.4]`; ERR-011-001 resolved; collision-management policy prose updated to reflect final allocation outcome. |
+| 0.4 | September 22, 2026 | — | ERR-011-013 residual synchronization after W1/W3: §1 producer ownership no longer assigns ClaimIntent/RushIntent to Decision Tree #8, and KD-14 / the #3 dependency row no longer cite phantom hand/head colliders. #3 is observation-only for W3; #10/#11 own contact geometry. No runtime or tuning change. |

@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
+// Modified: 2026-09-22 (wiring backlog W3 — SNAPSHOT_SCHEMA_VERSION 22 -> 23 for the per-GK ClaimIntent payload + active latch)
 // Modified: 2026-09-21 (foul/card preregistration review — FoulCooldownTicks documentation corrected for post-W2 asymmetry: collision candidates obey the gate; decided tackle fouls bypass it but re-arm it; value unchanged)
 // Modified: 2026-09-21 (foul/card preregistration review — RedCardProbability documentation corrected: the ~0.25/90 target is total dismissals, not a direct straight-red-band 0.25/22 ratio; value unchanged)
 // Modified: 2026-09-16 (W2 production activation — TackleContactRadiusM now defaults to LooseBallPickupRadiusM after paired post-W6 evidence; the durable <= reclaim-radius invariant is unchanged)
@@ -301,7 +302,12 @@ namespace TacticalDirector.MatchEngine
         /// is retained exactly. Without this block, a save
         /// between pass CONTACT and the next 10 Hz pressing stride would restore an empty ring and
         /// silently suppress the BACKWARD_PASS trigger.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 22;
+        /// <para>v23 (wiring backlog W3 — goalkeeper cross claims) appends the per-GK
+        /// <c>ClaimIntent</c> payload plus its active latch to the existing goalkeeper block. The claim
+        /// is committed at 10 Hz but its reach envelope remains authoritative across intervening 60 Hz
+        /// frames; serializing the latch + locked target is therefore required for mid-episode restore
+        /// determinism.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 23;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -1093,4 +1099,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Collision FROM_BEHIND candidates obey the cooldown; decided tackle |
 // |         |            |        | fouls bypass the gate but re-arm it. Value remains 180; no runtime, |
 // |         |            |        | schema, RNG, or gameplay-[GT] behavior change.                      |
+// | 1.40    | 2026-09-22 | —      | Wiring backlog W3 (PR #439): SNAPSHOT_SCHEMA_VERSION 22 -> 23.     |
+// |         |            |        | v23 appends the per-GK ClaimIntent payload plus its active latch   |
+// |         |            |        | to the goalkeeper block for mid-episode restore determinism. No    |
+// |         |            |        | [GT] value changes. Row added at the #439 close-out (omitted when  |
+// |         |            |        | the bump landed).                                                  |
 #endregion

@@ -1,6 +1,8 @@
 // File:     src/collision-system/CollisionSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-09-11  [v1.9] (W4: transient applied-deflection feedback; CollisionEvent ABI unchanged)
+// Modified: 2026-09-22  [v1.11] (W3 review: canonical min/max ordering for read-only observation events; feed non-authoritative for W3 membership)
+// Modified: 2026-09-22  [v1.10] (W3: read-only same-frame AGENT_BALL candidate publication; physical response stays in UpdateCollisions/Resolve)
+ // Modified: 2026-09-11  [v1.9] (W4: transient applied-deflection feedback; CollisionEvent ABI unchanged)
 // Author:   —
 // Spec:     Collision System #3 §3.4.1, §4.1.3, §4.4.4, Code Standards #20
 // Purpose:  Main collision system — orchestrates spatial hash, narrow phase, and response.
@@ -113,6 +115,77 @@ namespace TacticalDirector.CollisionSystem
         public void RestoreContactState(in CollisionContactState state)
         {
             _contactPairsThisTick.RestoreWords(state.Word0, state.Word1, state.Word2, state.Word3);
+        }
+
+        /// <summary>
+        /// W3 read-only AGENT_BALL observation pass. Evaluates Collision #3's existing coarse
+        /// agent-ball overlap against the current world snapshot and publishes matching events
+        /// without applying collision response, changing contact-onset state, touching the full
+        /// collision event buffer, or mutating the ball/agents.
+        ///
+        /// This is an observation feed only. Its Stage-0 cylinder / AgentReachHeight geometry is NOT
+        /// W3 contest membership and is NOT authoritative for Heading #10 head-contact eligibility or
+        /// Goalkeeper #11 hand/head body-part classification. High aerials may correctly publish zero
+        /// records while #10/#11 mechanic-owned geometry still forms a W3 contest.
+        /// </summary>
+        public void PublishAgentBallContacts(
+            AgentState[] agentStates,
+            PlayerAttributes[] agentAttrs,
+            in BallState ball,
+            float matchTime,
+            ICollisionEventConsumer eventConsumer)
+        {
+            if (eventConsumer == null)
+            {
+                return;
+            }
+
+            int count = agentStates.Length;
+            if (count > SpatialHashConstants.AgentCapacity || agentAttrs.Length < count)
+            {
+                throw new ArgumentException(
+                    $"Per-agent array length mismatch. count={count}; capacity={SpatialHashConstants.AgentCapacity}; " +
+                    $"attrs={agentAttrs.Length}.",
+                    nameof(agentStates));
+            }
+
+            if (IsInvalidVector(ball.Position))
+            {
+                return;
+            }
+
+            for (int agentId = 0; agentId < count; agentId++)
+            {
+                AgentPhysicalProperties snap =
+                    AgentPhysicalProperties.From(in agentStates[agentId], in agentAttrs[agentId]);
+                if (IsInvalidVector(snap.Position))
+                {
+                    continue;
+                }
+
+                if (!CollisionDetection.CheckAgentBallCollision(in snap, in ball, out Vector3 contactPoint))
+                {
+                    continue;
+                }
+
+                // Match the full Resolve event contract: entity ids are canonicalized low -> high.
+                // The read-only observation path must not invent a second ordering convention.
+                int lo = SpatialHashConstants.BALL_ENTITY_ID <= agentId
+                    ? SpatialHashConstants.BALL_ENTITY_ID : agentId;
+                int hi = SpatialHashConstants.BALL_ENTITY_ID <= agentId
+                    ? agentId : SpatialHashConstants.BALL_ENTITY_ID;
+                var evt = new CollisionEvent
+                {
+                    MatchTime = matchTime,
+                    Type = CollisionType.AGENT_BALL,
+                    Entity1ID = lo,
+                    Entity2ID = hi,
+                    ContactPoint = contactPoint,
+                    ImpactForce = 0f,
+                    FoulData = default
+                };
+                eventConsumer.OnCollisionEvent(in evt);
+            }
         }
 
         /// <summary>
@@ -586,4 +659,7 @@ namespace TacticalDirector.CollisionSystem
 // | 1.9     | 2026-09-11 | —      | W4: source-compatible UpdateCollisions overload reports whether any      |
 // |         |            |        | AGENT_BALL response actually changed ball flight. The signal is transient |
 // |         |            |        | per call; CollisionEvent and cross-tick state remain unchanged.           |
+// | 1.10    | 2026-09-22 | —      | W3: + PublishAgentBallContacts read-only candidate feed for same-frame    |
+// |         |            |        | consumers. No response/contact-state mutation; full collision stays in Resolve. |
+// | 1.11    | 2026-09-22 | —      | W3 review: read-only observation events now use the same canonical min/max entity ordering as Resolve; feed is explicitly non-authoritative for W3 membership. (Renumbered from a duplicate "1.9" at the #439 close-out.) |
 #endregion

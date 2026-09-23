@@ -1,14 +1,14 @@
 # W6 Controlled Ball — Wiring Closeout
 
 **Date:** 2026-09-15
-**Status:** IMPLEMENTED; REVIEW CLOSURE COMPLETE — owner-held close-chance RED remains a separate calibration/disposition item
+**Status:** IMPLEMENTED; REVIEW CLOSURE COMPLETE; PR #439 carries a post-closeout Resolve-order correction surfaced by W3 — owner-held close-chance history remains separate
 **Scope:** Match-engine wiring backlog W6 only. W2 tackle activation remains a separate post-W6 evidence decision.
 
 ## Closed implementation boundary
 
 `BallStateType.Controlled` now has production entry for genuine open-play possession. MatchEngine continues to use `_possessingAgentId` for both physical possession and restart-taker designation, but the Ball Physics state distinguishes the two: open-play possession is `Controlled`; a placed restart ball remains `Stationary`.
 
-The production grant paths are first-touch control/interception, loose-ball pickup, tackle ball-won, and goalkeeper possession. Controlled balls are attached to their holder after movement and goalkeeper/heading physics. Outfield control uses ball-rest height; goalkeeper control preserves the actual claim/contact height while x/y follow the keeper.
+The production grant paths are first-touch control/interception, loose-ball pickup, tackle ball-won, and goalkeeper possession. Controlled balls are attached to their holder after movement and goalkeeper/heading physics. PR #439 adds the missing second reconciliation after Resolve-time Collision #3 agent-agent position correction, because collision separation can move a still-controlling holder after the Physics attachment. Outfield control uses ball-rest height; goalkeeper control preserves the actual claim/contact height while x/y follow the keeper. The second reconciliation is unconditional and therefore affects default-engine keeper and outfield carriers as well as W3-enabled matches; it can change trajectories/digests without adding saved state or RNG draws.
 
 Non-kick physical release now exits `Controlled` explicitly. Kicks already leave control through `BallCollision.ApplyKick`; tackle-loose and the six-second goalkeeper release use the explicit release transition. Restart pseudo-possession is not tackleable because the tackle resolver requires a physically `Controlled` ball.
 
@@ -29,6 +29,9 @@ The W6 regression set proves:
 9. The composed keeper-claim scenario proves a claim arrests the incoming ball and the held `Controlled` ball remains attached to the claiming keeper.
 10. The composed keeper-claim scenario asserts the independent football consequence that an observably held claim does not end in a keeper-carried own goal.
 11. A direct two-goal-plane regression constrains a controlled keeper at either defended goal plane and keeps carrier/ball/recovery kinematics coherent.
+12. A Resolve-only regression proves agent-agent penetration correction cannot leave a still-Controlled keeper one frame ahead of the attached ball.
+13. A mirrored outfielder regression proves the same post-collision attachment contract at ball-rest height; the correction is not goalkeeper-only.
+14. Home/away goal-plane regressions prove Resolve collision separation cannot push a controlling keeper and attached ball behind either defended goal plane.
 
 The two test-only tackle-cooldown seams added for item 8 are retained deliberately as durable regression support. They are not production state and are not temporary measurement scaffolding.
 
@@ -45,6 +48,25 @@ The review state that triggered closure measured **2 of 17 claims** ending with 
 Commit `0c065b38cd8e2a3a6d228bd9ba6b6b8f502ce6b8` closes the defect at the MatchEngine composition seam `DriveControlledBallToPossessor()`. When the physical `Controlled` holder is a goalkeeper and locomotion has put that carrier behind the goal plane it defends, MatchEngine clamps the carrier back to that plane before attaching the ball, clears only velocity that points farther outside, recomputes `Speed`, and refreshes `LastValidPosition` / `LastValidVelocity`. The general Agent Movement buffer and legitimate goal adjudication for loose/kicked balls are unchanged.
 
 Commit `3e00cd4c2801c3d245bac537bf112a5b4dd7c2be` adds the direct two-goal-plane regression. Final focused W6 coverage is **9 passed / 0 failed / 0 skipped**, and the exact composed `sim_match_engine_keeper_claim` scenario is **1 passed / 0 failed / 0 skipped** after the production fix. The structural attachment predicate and independent own-goal consequence predicate therefore both remain live rather than being weakened around the defect.
+
+## PR #439 post-closeout ordering correction — surfaced by W3, owned by W6
+
+The original W6 closeout attached a Controlled ball after Physics locomotion/GK-heading work. PR #439's
+larger live keeper-claim population exposed one detached held observation and localized it to a phase-order
+gap that already existed on `main`: Collision #3 runs later in Resolve and can apply agent-agent penetration
+position correction to the physical holder while Controlled AGENT_BALL response correctly does nothing.
+Possession therefore remained valid while the holder's XY changed after the ball's last attachment point.
+
+PR #439 corrects that at the MatchEngine composition boundary by re-running the existing
+`DriveControlledBallToPossessor()` funnel immediately after Collision #3 writeback, before any legitimate
+kick, release, first touch, pickup or restart path. The correction applies to **every** Controlled holder,
+including outfielders and matches with GK/Heading wiring disabled. It adds no field, snapshot version or RNG
+draw, but it is not trajectory-neutral: any tick where Resolve collision correction moves a carrier can now
+end at a different ball position than the pre-fix engine.
+
+This matters to evidence attribution. W3 surfaced the symptom; W3 did not create the W6 ordering defect.
+PR #439's final six-seed corpus is therefore evidence for the combined W3 + W6 corrected head, not a pure
+causal measurement of W3 alone. The W3 design record retains `f69aaef0` as the pre-correction W3 head.
 
 ## Owner-held RED observation — measured; disposition unchanged
 

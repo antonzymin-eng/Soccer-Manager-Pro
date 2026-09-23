@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
+// Modified: 2026-09-22 (W3/v23: ClaimIntent single-field digest probe, including locked reach side)
 // Modified: 2026-09-11 (W5/v22: schema pin + latest press-pass event digest probe)
 // Modified: 2026-07-23
 // Author:   —
@@ -61,9 +62,36 @@ namespace TacticalDirector.MatchEngine
             // v19 collision contact-onset pair set + the §5.Z.15 six-second-rule state, v20
             // (ERR-012-011) the pass-in-flight receiver latch, v21 (wiring backlog W2 — the tackle)
             // the per-agent tackle-interrupt flag and per-agent challenge cooldown, v22 (wiring backlog
-            // W5) the optional latest opposing PassAttemptEvent retained by each pressing ring.
-            Assert.AreEqual(22u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // W5) the optional latest opposing PassAttemptEvent retained by each pressing ring, v23
+            // (wiring backlog W3) the per-GK ClaimIntent payload + active latch.
+            Assert.AreEqual(23u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void ClaimIntentState_FeedsSnapshotDigest()
+        {
+            // W3/v23: mutate only #11's authoritative ClaimIntent block before the first tick.
+            // The kickoff ball is nowhere near either keeper, so no ordinary W3 producer path can
+            // manufacture the difference. If this does not move the digest, the new cross-tick state
+            // is missing from the canonical preimage even if CaptureState itself appears correct.
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            var intent = new TacticalDirector.GoalkeeperMechanics.ClaimIntent
+            {
+                TargetContactPoint = new Vector3(1.25f, 34.50f, 1.80f),
+                ClutchFirmness = 0.73f,
+                ReachDirectionLateral = 1.0f,
+                AttemptCommittedTick = 0,
+            };
+            perturbed.TestOnly_CommitGoalkeeperClaimIntent(0, intent);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A non-default W3 ClaimIntent left the digest unchanged — the v23 claim block is not in the snapshot preimage.");
         }
 
         [Test]
@@ -693,4 +721,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | moves the digest, written unconditionally so the flag need not be  |
 // |         |            |        | on).                                                               |
 // | 1.16     | 2026-09-11 | —      | W5/v22: schema pin moved to 22 and latest pressing-ring PassAttemptEvent gets a single-field digest probe. |
+// | 1.17     | 2026-09-22 | —      | W3/v23: ClaimIntent payload + active latch enter the serialized GK block. |
+// | 1.18     | 2026-09-22 | —      | W3 review: ClaimIntentState_FeedsSnapshotDigest proves target/clutch/locked reach side/commit tick/active latch reach the v23 digest preimage. |
 #endregion

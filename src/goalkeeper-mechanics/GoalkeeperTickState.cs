@@ -41,6 +41,12 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>Per-GK save-intent-active latch.</summary>
         public readonly bool[] SaveIntentActive;
 
+        /// <summary>Per-GK committed cross/aerial claim intent (valid while <see cref="ClaimIntentActive"/>).</summary>
+        public readonly ClaimIntent[] ClaimIntents;
+
+        /// <summary>Per-GK claim-intent-active latch.</summary>
+        public readonly bool[] ClaimIntentActive;
+
         /// <summary>Per-GK committed rush intent (valid while <see cref="RushIntentActive"/>).</summary>
         public readonly RushIntent[] RushIntents;
 
@@ -100,6 +106,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             GkContactState[] contactStates,
             SaveIntent[] saveIntents,
             bool[] saveIntentActive,
+            ClaimIntent[] claimIntents,
+            bool[] claimIntentActive,
             RushIntent[] rushIntents,
             bool[] rushIntentActive,
             DistributeIntent[] distributeIntents,
@@ -123,6 +131,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             ContactStates           = contactStates;
             SaveIntents             = saveIntents;
             SaveIntentActive        = saveIntentActive;
+            ClaimIntents            = claimIntents;
+            ClaimIntentActive       = claimIntentActive;
             RushIntents             = rushIntents;
             RushIntentActive        = rushIntentActive;
             DistributeIntents       = distributeIntents;
@@ -149,4 +159,6 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.0     | 2026-07-23 | —      | Initial implementation — GK/Heading engine-integration Phase 2      |
 // |         |            |        | snapshot view over the orchestrator's per-GK cross-tick arrays      |
 // |         |            |        | (parallel to PressingTickState / DefensiveTickState seams).         |
+// | 1.1     | 2026-09-22 | —      | W3: ClaimIntent + active latch added to authoritative snapshot view. |
+// |         |            |        | Match-engine world-state schema 22 → 23.                            |
 #endregion

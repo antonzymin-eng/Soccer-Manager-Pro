@@ -1,7 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 2: Functional Requirements, Data Structures & Failure Modes
 
 **Created:** May 16, 2026
-**Version:** 0.3
+**Last Updated:** September 22, 2026 (v0.4 — ERR-011-012 live ClaimIntent episode contract)
+**Version:** 0.4
 **Status:** DRAFT
 **Purpose:** Enumerate the functional requirements (FRs), publish the
 data structures, catalogue the failure modes, and declare the
@@ -72,7 +73,7 @@ game loop per CLAUDE.md "Struct-based, zero-allocation architecture
 in the game loop." All `Vector2` and `Vector3` are in
 corner-origin pitch coordinates per #1 §1.2.
 
-### 2.2.1 Intent payloads (consumed from Decision Tree #8 GK branches)
+### 2.2.1 Intent payloads (10 Hz committed tactical surfaces; producer ownership is mechanic-specific)
 
 ```
 struct SaveIntent {
@@ -83,8 +84,9 @@ struct SaveIntent {
 }
 
 struct ClaimIntent {
-    Vector3    targetContactPoint;
-    float      clutchFirmness;         // [0, 1]
+    Vector3    targetContactPoint;      // locked tactical aim point; NOT contact geometry
+    float      clutchFirmness;          // [0, 1]
+    float      reachDirectionLateral;  // {-1,0,+1}, world-Y side locked at commit
     int        attemptCommittedTick;
 }
 
@@ -109,6 +111,16 @@ physics-input enums. KD-1 prohibits enums that gate physics
 formulas; these two parameterise table-lookups for geometry and
 windup duration, neither of which is a physics output. The
 prohibition is preserved.
+
+**W3 / ERR-011-012 ClaimIntent ownership.** `ClaimIntent` is committed by the MatchEngine Stage-0
+composition producer at the 10 Hz tactical boundary; it is not a new Decision Tree action. The
+current Decision Tree action encoding ends at `SAVE = 7`, so W3 follows the established W1
+composition-root producer pattern rather than changing that protocol. `targetContactPoint` is an
+immutable tactical aim for the bounded claim episode and MUST NOT be treated as a hand collider.
+`reachDirectionLateral` locks the world-Y reach side once at commit so keeper movement cannot flip the
+reach side mid-attempt. The authoritative claim payload + active latch cross 60 Hz frames and are
+therefore serialized in MatchEngine snapshot schema v23. §3.6.1 owns arming, lifetime, cancellation,
+and the #11 reach-envelope policy. No new `[GT]` or RNG draw site/stream/domain is introduced.
 
 ### 2.2.2 State machine
 
@@ -283,3 +295,4 @@ Stage 0+1 deliverable schedule.
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 42 FRs catalogued; data structures published; 10 failure modes catalogued; 12 telemetry channels declared | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 16, 2026 | pass-1 fix pass | AR-S1-M2 (FR-GK-043 forced-release added); AR-S1-M3 (FR-GK-044 `Throwing`/`Kicking` consumption added) — FR count 42 → 44 | self-pass-2 self-critique on v0.2 yields no further findings |
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): FR-GK-026 updated — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; value confirmed `0x1D`; ERR-011-001 resolved. |
+| 0.4 | September 22, 2026 | W3 / ERR-011-012 | `ClaimIntent` gains locked `reachDirectionLateral`; its real Stage-0 composition producer and v23 authoritative snapshot ownership are stated. Target is tactical aim, never hand geometry; §3.6.1 owns the bounded live episode. No new `[GT]` or RNG surface. | implementation/spec back-prop |
