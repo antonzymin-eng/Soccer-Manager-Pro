@@ -1,5 +1,6 @@
 // File:     src/match-engine/GkHeadingIntentSource.cs
 // Created:  2026-07-22
+// Modified: 2026-09-22 (W3 comment sync: GkRushMaxBallHeightM is the W1 rush ceiling, not a claim-height contract; W3 is live)
 // Modified: 2026-08-04 (wiring backlog W1: + RushArmed / TrySolveRushIntercept — the keeper rush trigger geometry. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (ERR-011-010 + AR-1: goal-side cover replaces the rejected last-man test; + the minimum-run guard that stops a completed sweep re-arming. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-09 (ERR-010-002: + HeaderAimTarget (§4.2a) — the situational header aim, clear wide
@@ -121,9 +122,9 @@ namespace TacticalDirector.MatchEngine
                 return false;
             }
 
-            // 2. A ball above claim height is a cross to be caught (backlog W3 — the contested
-            //    multi-agent claim is not wired), not a ball to be swept. Running at it commits the
-            //    keeper to a duel the engine cannot yet resolve.
+            // 2. W1 owns only the low-ball rush route. Above its 2.5 m rush ceiling the keeper
+            //    must not commit a sweep; W3's independently armed ClaimIntent + #11 live Hand reach
+            //    decides whether a real claim contact ever exists. This is NOT a claim-height floor.
             if (ballPosition.z > MatchEngineConstants.GkRushMaxBallHeightM)
             {
                 return false;
@@ -489,4 +490,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | angle tan(theta) = v / sqrt(v^2 - 2*g*dz); 45° holds only at      |
 // |         |            |        | dz = 0, which a header never sees. No logic change.                |
 // | 1.5     | 2026-09-22 | —      | W3 / ERR-011-012: ClaimArmed no longer reuses the 2.5 m rush max as a claim floor. Loose + inside #11's contest radius arms; #11 reach geometry alone decides contact height. |
+// | 1.6     | 2026-09-22 | —      | Comment-only W3 sync: RushArmed's 2.5 m gate is explicitly the W1 rush ceiling, not a claim-height threshold; removes stale text saying W3 was still unwired. |
 #endregion
