@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Parse the frozen #435 foul/card characterization report into TSV/JSON."""
+"""Parse the frozen #435 foul/card + W3 characterization report into TSV/JSON."""
 from __future__ import annotations
 
 import argparse
@@ -9,6 +9,7 @@ from pathlib import Path
 
 START = "=== #435 §2.1 source-complete foul/card measurement ==="
 AGGREGATE = "--- aggregate #435 §2.1 discipline stream ---"
+W3_AGGREGATE = "--- aggregate #435 §6.2 W3 before/after census ---"
 END_PREFIX = "Real-football reference:"
 SEED_RE = re.compile(r"^seed (0x[0-9A-F]{16}):$")
 KV_RE = re.compile(r"([A-Za-z][A-Za-z0-9]*)=([^\s]+)")
@@ -50,6 +51,20 @@ FIELDS = [
     "secondYellowDismissals",
     "totalDismissals",
     "playedTicks",
+]
+
+W3_FIELDS = [
+    "agentBallFanoutEvents",
+    "claimEligibilityEpisodes",
+    "registeredDuelParticipants",
+    "resolvedHandContactDuels",
+    "successfulKeeperClaims",
+    "crossAttempts",
+    "crossCompletions",
+    "loftedAttempts",
+    "loftedCompletions",
+    "headerAttempts",
+    "headerContacts",
 ]
 
 RATE_FIELDS = (
@@ -103,9 +118,23 @@ def _validate_identities(row: dict[str, int | float | str], label: str) -> None:
         raise ValueError(f"{label} priced candidate identity mismatch is non-zero")
 
 
+def _validate_w3_identities(row: dict[str, int | float | str], label: str) -> None:
+    if row["registeredDuelParticipants"] < row["resolvedHandContactDuels"]:
+        raise ValueError(f"{label} W3 participant/duel accounting does not reconcile")
+    if row["successfulKeeperClaims"] > row["resolvedHandContactDuels"]:
+        raise ValueError(f"{label} W3 successful-claim subset does not reconcile")
+    if row["crossCompletions"] > row["crossAttempts"]:
+        raise ValueError(f"{label} Cross completion subset does not reconcile")
+    if row["loftedCompletions"] > row["loftedAttempts"]:
+        raise ValueError(f"{label} Lofted completion subset does not reconcile")
+    if row["headerContacts"] > row["headerAttempts"]:
+        raise ValueError(f"{label} header contact subset does not reconcile")
+
+
 def parse_report(report: str) -> dict:
     rows: list[dict[str, int | str]] = []
     aggregate: dict[str, int | float | str] = {"scope": "aggregate"}
+    w3_required = W3_AGGREGATE in report
     rate_tokens: dict[str, str] = {}
     current: dict[str, int | str] | None = None
     in_aggregate = False
@@ -129,7 +158,7 @@ def parse_report(report: str) -> dict:
         target = aggregate if in_aggregate else current
         if target is not None:
             for key, value in KV_RE.findall(line):
-                if key in FIELDS or (in_aggregate and key == "agentAgentContacts"):
+                if key in FIELDS or key in W3_FIELDS or (in_aggregate and key == "agentAgentContacts"):
                     try:
                         target[key] = int(value)
                     except ValueError:
@@ -158,6 +187,11 @@ def parse_report(report: str) -> dict:
         if missing:
             raise ValueError(f"seed {row.get('seed')} missing fields: {missing}")
         _validate_identities(row, f"seed {row['seed']}")
+        if w3_required:
+            missing_w3 = [field for field in W3_FIELDS if field not in row]
+            if missing_w3:
+                raise ValueError(f"seed {row.get('seed')} missing W3 fields: {missing_w3}")
+            _validate_w3_identities(row, f"seed {row['seed']}")
 
     missing_aggregate = [field for field in FIELDS if field not in aggregate]
     if missing_aggregate:
@@ -168,12 +202,30 @@ def parse_report(report: str) -> dict:
 
     _validate_identities(aggregate, "aggregate")
 
+    if w3_required:
+        missing_w3_aggregate = [field for field in W3_FIELDS if field not in aggregate]
+        if missing_w3_aggregate:
+            raise ValueError(f"aggregate missing W3 fields: {missing_w3_aggregate}")
+        _validate_w3_identities(aggregate, "aggregate")
+        if aggregate["agentBallFanoutEvents"] == 0:
+            raise ValueError("aggregate W3 fan-out non-vacuity is zero")
+        if aggregate["resolvedHandContactDuels"] == 0:
+            raise ValueError("aggregate W3 Hand-contact-duel non-vacuity is zero")
+
     for field in FIELDS:
         seed_sum = sum(int(row[field]) for row in rows)
         if aggregate[field] != seed_sum:
             raise ValueError(
                 f"aggregate {field}={aggregate[field]} does not equal seed sum {seed_sum}"
             )
+
+    if w3_required:
+        for field in W3_FIELDS:
+            seed_sum = sum(int(row[field]) for row in rows)
+            if aggregate[field] != seed_sum:
+                raise ValueError(
+                    f"aggregate {field}={aggregate[field]} does not equal seed sum {seed_sum}"
+                )
 
     for rate_field, count_field, decimals in RATE_SPECS:
         expected = f"{int(aggregate[count_field]) / len(FROZEN_SEEDS):.{decimals}f}"
@@ -188,7 +240,9 @@ def parse_report(report: str) -> dict:
 
 
 def write_tsv(parsed: dict, path: Path) -> None:
-    columns = ["scope", "seed", *FIELDS]
+    aggregate = parsed["aggregate"]
+    w3_columns = W3_FIELDS if all(field in aggregate for field in W3_FIELDS) else []
+    columns = ["scope", "seed", *FIELDS, *w3_columns]
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write("\t".join(columns) + "\n")
         for row in parsed["seeds"]:
