@@ -1,5 +1,6 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperCrossClaimDuel.cs
 // Created:  2026-05-28
+// Modified: 2026-09-22 (W3 / ERR-011-011 cleanup: remove phantom handCapsule/headSphere parameter vocabulary from body-part helper)
 // Modified: 2026-09-22 (W3: narrow participant attributes, live RNG-owned resolution, symmetric near-tie correction)
 // Modified: 2026-06-12
 // Author:   —
@@ -98,27 +99,27 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <param name="ballPosition">Ball world-space position. §3.6.1.</param>
         /// <param name="handCenter">Centre of the agent's hand/reach envelope. §3.6.1.</param>
         /// <param name="headCenter">Centre of the agent's head contact volume. §3.6.1.</param>
-        /// <param name="handRadius">Radius of the hand capsule (m). §3.6.1.</param>
-        /// <param name="headRadius">Radius of the head sphere (m). §3.6.1.</param>
-        /// <returns>BodyPartEnum: Hand if hand capsule intersects ball; Head if head sphere intersects; Body if neither.</returns>
+        /// <param name="handRadius">Radius of #11's live hand/reach envelope (m). §3.6.1.</param>
+        /// <param name="headRadius">Radius of #10's prepared head contact volume (m). §3.6.1.</param>
+        /// <returns>BodyPartEnum: Hand if the hand/reach envelope admits the ball; Head if the head contact volume admits it; Body if neither.</returns>
         public static BodyPartEnum DetermineBodyPart(
             Vector3 ballPosition,
-            Vector3 handCapsuleCenter,
-            Vector3 headSphereCenter,
-            float handCapsuleRadius,
-            float headSphereRadius)
+            Vector3 handCenter,
+            Vector3 headCenter,
+            float handRadius,
+            float headRadius)
         {
-            float handDistSq = (ballPosition - handCapsuleCenter).sqrMagnitude;
-            float headDistSq = (ballPosition - headSphereCenter).sqrMagnitude;
+            float handDistSq = (ballPosition - handCenter).sqrMagnitude;
+            float headDistSq = (ballPosition - headCenter).sqrMagnitude;
 
-            bool handHit = handDistSq <= handCapsuleRadius * handCapsuleRadius;
-            bool headHit = headDistSq <= headSphereRadius  * headSphereRadius;
+            bool handHit = handDistSq <= handRadius * handRadius;
+            bool headHit = headDistSq <= headRadius * headRadius;
 
             if (handHit && headHit)
             {
                 // Priority: closest Z to ball centre
-                float handZDist = Mathf.Abs(ballPosition.z - handCapsuleCenter.z);
-                float headZDist = Mathf.Abs(ballPosition.z - headSphereCenter.z);
+                float handZDist = Mathf.Abs(ballPosition.z - handCenter.z);
+                float headZDist = Mathf.Abs(ballPosition.z - headCenter.z);
                 return handZDist < headZDist ? BodyPartEnum.Hand : BodyPartEnum.Head;
             }
 
