@@ -848,5 +848,5 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | normal horizontal. Calls the new §3.5.1 / HeadingAim.cs three-step aim solve.     |
 // |         |            |        | Retroactive version-history row (adversarial review of the landing, Finding 4) —  |
 // |         |            |        | no further logic change from this row itself.                                     |
-// | 1.6     | 2026-09-22 | —      | W3: prepared Head geometry hook runs between #10 contact qualification and duel/application; host may suppress only already-prepared participants, preserving direct-call behavior when no arbiter is supplied. |
+// | 1.8     | 2026-09-22 | —      | W3: prepared Head geometry hook runs between #10 contact qualification and duel/application; host may suppress only already-prepared participants, preserving direct-call behavior when no arbiter is supplied. |
 #endregion
