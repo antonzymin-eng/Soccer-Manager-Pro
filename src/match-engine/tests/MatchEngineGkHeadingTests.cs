@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGkHeadingTests.cs
 // Created:  2026-07-22
+// Modified: 2026-09-22 (W3: Head-wins-Hand event provenance retains mixed-duel id)
 // Modified: 2026-09-22 (W3: composed home/away Head-wins-Hand route through real #10 geometry)
 // Modified: 2026-09-22 (W3: mirrored home/away claim lifecycle + composed real Hand-contact tests)
 // Modified: 2026-07-23
@@ -394,6 +395,18 @@ namespace TacticalDirector.MatchEngine
             Assert.IsFalse(engine.AgentIsGoalkeeper(header),
                 "The W3 Head participant must be an outfielder; no outfielder may route through ToGoalkeeper.");
 
+            bool sawWinningHeader = false;
+            HeaderExecutedEvent winningHeader = default;
+            EventBus.Subscribe<HeaderExecutedEvent>(
+                (in HeaderExecutedEvent evt) =>
+                {
+                    if (evt.AgentId == header)
+                    {
+                        sawWinningHeader = true;
+                        winningHeader = evt;
+                    }
+                });
+
             Vector2 shared = teamId == 0 ? new Vector2(2f, 34f) : new Vector2(103f, 34f);
             Vector2 facing = teamId == 0 ? Vector2.right : Vector2.left;
 
@@ -431,6 +444,8 @@ namespace TacticalDirector.MatchEngine
             EventBus.BeginPhase(PhaseId.Physics);
 
             engine.TestOnly_DriveGkHeadingPhysics();
+            EventBus.BeginPhase(PhaseId.Events);
+            EventBus.DrainTick();
 
             HeadingTickState headingState = engine.TestOnly_HeadingState;
             GoalkeeperTickState goalkeeperState = engine.TestOnly_GoalkeeperState;
@@ -440,6 +455,10 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(header, engine.TestOnly_W3LastWinnerAgentId,
                 "The deliberately stronger outfielder must win the mixed Balance/Strength/Aerial score.");
             Assert.AreEqual(BodyPartEnum.Head, engine.TestOnly_W3LastWinnerBodyPart);
+            Assert.IsTrue(sawWinningHeader,
+                "The W3 Head winner must publish through Heading #10.");
+            Assert.AreEqual(frame, winningHeader.ContestedDuelId,
+                "A Head that wins a mixed W3 contest must not be mislabeled as an uncontested header.");
             Assert.IsFalse(goalkeeperState.ClaimIntentActive[teamId],
                 "A goalkeeper who loses to Head must consume the claim as DisturbedInDuel.");
             Assert.AreEqual(GoalkeeperState.Recovering, goalkeeperState.States[teamId]);
@@ -870,4 +889,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | tactical producer pass instead of cancelling on the old height gate.| 
 // | 1.6     | 2026-09-22 | —      | W3: claim producer/lifetime locks now run for both teams; added a composed production-path Hand contact for each keeper using #11's live reach envelope and W3 winner observation. |
 // | 1.7     | 2026-09-22 | —      | W3: mirrored composed Head-wins-Hand test stages only elapsed jump history, then requires #10's real current-frame contact geometry to qualify the Head; winner mutates through Heading while the GK claim terminates DisturbedInDuel with no possession. |
+// | 1.8     | 2026-09-22 | —      | W3 event provenance: the mirrored mixed contest drains HeaderExecutedEvent and requires ContestedDuelId == W3 duel/frame id, preventing winner suppression from falsely reporting an uncontested header. |
 #endregion

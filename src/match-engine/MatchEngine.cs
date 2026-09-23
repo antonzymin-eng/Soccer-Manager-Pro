@@ -9061,7 +9061,10 @@ namespace TacticalDirector.MatchEngine
                 }
 
                 // A Head winner is the only prepared Head allowed into #10's ordinary duel/application
-                // pass. All Hand participants have already terminated as duel losses above.
+                // pass. All Hand participants have already terminated as duel losses above. Preserve
+                // the W3 contest id on the surviving #10 event before suppression makes it look
+                // like an uncontested one-participant native Heading duel.
+                heading.MarkPreparedHeadContested(duel.WinnerAgentId, duel.DuelId);
                 for (int h = 0; h < heading.PreparedHeadContactCount; h++)
                 {
                     int headAgentId = heading.GetPreparedHeadContactAgentId(h);
@@ -10362,4 +10365,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.84    | 2026-09-22 | —      | W3 runtime arbitration boundary: Heading #10 exposes prepared Head contacts before mutation; MatchEngine combines them with active #11 Hand reach in canonical entity order, scores mixed participants through ToCrossClaim, routes Hand wins/losses through #11, and suppresses losing Heads before #10 applies a header. Collision #3 remains observation-only. |
 // | 1.85    | 2026-09-22 | —      | W3 testability only: add deterministic clock/apex-history seams so a composed test can make #10 itself confirm a current-frame Head contact against a simultaneous #11 Hand reach; no production path reads the seams. |
 // | 1.86    | 2026-09-22 | —      | W3 / #435 §6.2: nonserialized cumulative observation counters expose fan-out events, claim episodes, registered duel participants, resolved Hand-contact duels and successful keeper claims to the frozen six-seed diagnostic. No gameplay/snapshot/digest/RNG change. |
+// | 1.87    | 2026-09-22 | —      | W3 event provenance: when Head wins a mixed Hand/Head contest, carry the W3 duel id into #10 before loser suppression so HeaderExecutedEvent remains truthfully contested. Frame-local only. |
 #endregion
