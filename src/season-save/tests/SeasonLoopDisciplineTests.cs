@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
-// Modified: 2026-09-22 (W3 trajectory fallout: scope known composed-play ShotExecutor FM-03 Error logs out of discipline state/order oracles — v1.15)
 // Created:  2026-08-13
+// Modified: 2026-09-22 (W3 trajectory fallout: engine-driving discipline oracles temporarily suppress Unity-shim Error-log teardown, including known ShotExecutor FM-03 — v1.16)
 // Modified: 2026-09-12 (Unity editor compile — Does.Not.Contain(int) → Has.No.Member: Unity's bundled
 //           NUnit 3.5 only has the string overload; same assertion, compiles under both NUnits)
 // Modified: 2026-09-11 (#40 T2b — season-boundary discipline fixtures carry finance state)
@@ -1380,22 +1380,17 @@ namespace TacticalDirector.SeasonSave.Tests
 
         /// <summary>
         /// Runs only an engine-driving span with Unity-shim Error-log teardown policing disabled.
-        /// The discipline tests' oracle is fold/order state, not the pre-existing composed-play
-        /// ShotExecutor FM-03 severity. The previous setting is restored even if the span throws.
+        /// This setting suppresses ALL unexpected Error logs in the wrapped span, not only the known
+        /// composed-play ShotExecutor FM-03 channel. That broad suppression is why FM-03 remains a
+        /// separately tracked open issue rather than being treated as resolved here. These discipline
+        /// tests assert fold/order state, not log severity. The prior setting is restored in finally.
         /// </summary>
-        private static void IgnoringComposedEngineErrorLogs(System.Action action)
-        {
-            bool previous = UnityEngine.TestTools.LogAssert.ignoreFailingMessages;
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-            try
+        private static void IgnoringComposedEngineErrorLogs(System.Action action) =>
+            IgnoringComposedEngineErrorLogs(() =>
             {
                 action();
-            }
-            finally
-            {
-                UnityEngine.TestTools.LogAssert.ignoreFailingMessages = previous;
-            }
-        }
+                return 0;
+            });
 
         private static T IgnoringComposedEngineErrorLogs<T>(System.Func<T> action)
         {
@@ -1684,4 +1679,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | Error channel out of the two real-engine discipline fold/order oracles. |
 // |         |            |        | Assertions and production behavior are unchanged; prior LogAssert state |
 // |         |            |        | is restored in finally.                                                  |
+// | 1.16    | 2026-09-22 | —      | Review correction: document that ignoreFailingMessages suppresses ALL   |
+// |         |            |        | unexpected Error logs in each wrapped engine span, not only FM-03; keep  |
+// |         |            |        | FM-03 tracked separately; collapse the Action helper onto the generic    |
+// |         |            |        | implementation. No discipline assertion or production path changed.      |
 #endregion
