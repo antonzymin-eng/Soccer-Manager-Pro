@@ -1,7 +1,7 @@
 # W3 — shared AGENT_BALL fan-out and goalkeeper cross-claim wiring
 
 > **Created:** September 22, 2026
-> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.11 records the raw-log-corrected production corpus, reproduced W2 gate diagnosis, M7 mutation proof, #441 header-path localization, and pending owner decisions.
+> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.12 records the fully raw-log-audited production corpus, reproduced W2 gate diagnosis, M7 mutation proof, unresolved #441 localization, #442 blast-radius audit, and pending owner decisions.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W3**.
 > **Companion preregistration:** `docs/tracking/foul-card-w3-w9-preregistration.md`.
 > **Baseline:** `main` at `876a3343319050187c2a5505b18cb32fc3d0f89d`; post-merge CI run
@@ -365,6 +365,29 @@ Aggregate post-W3 counters:
 | cautions | 5 |
 | dismissals | 1 |
 
+**Full raw-log provenance audit.** After the aggregate-copy error was found, every numeric claim used
+from the pre/post six-seed evidence was re-read from the Actions console rather than inherited from
+the PR body:
+
+- post-W3 run `35814050060` / job `107031655919`: fan-out **215,083**; claim episodes
+  **1,297**; registered participants **1,164**; resolved Hand contacts **1,164**; successful keeper
+  claims **753**; crosses **1,184 / 64**; lofted passes **2,457 / 58**; diagnostic terminal header
+  events / contacts **1,809 / 0**; fouls **43**; yellows **5**; dismissals **1**; slide-tackle
+  candidates/calls **4 / 4**.
+- matched pre-W3 run `35815761065` / job `107036819386`: W3-only counters all **0**; crosses
+  **1,067 / 43**; lofted passes **2,014 / 62**; diagnostic terminal header events / contacts
+  **1,845 / 0**; fouls **50**; yellows **5**; dismissals **1**; slide-tackle candidates/calls
+  **8 / 8**.
+- W2 three-arm summaries were re-read independently from clean evidence jobs:
+  base `107243207618` = **3 / 6 / 0 / 20**, dispossessions **3**, `P0=19.585998%`;
+  W3-only `107243250548` = **2 / 2 / 1 / 36**, dispossessions **2**, `P0=5.816238%`;
+  head `107241232506` = **0 / 6 / 0 / 27**, dispossessions **0**, `P0=13.573100%`.
+  Their BallLoose classifications are respectively **6 / 2 / 6 original-carrier re-pickups** and
+  zero other-player pickups / zero balls remaining loose.
+
+This audit is the authoritative source for the copied counters below. The earlier fabricated/copy-error
+aggregates are superseded in full, not only where a mismatch happened to be noticed first.
+
 The **1,164 resolved Hand-contact events were not contested Hand-vs-Head duels**. Registered
 participants equal resolved Hand contacts because each recorded production resolution contained only
 the goalkeeper participant. The six-match production corpus therefore reached **zero contested
@@ -430,9 +453,13 @@ The two-commit difference against the 1,809 terminal events is accounted for by 
 intent still active at the end of its seed. Every seed independently recorded zero prepared Head
 contacts. Production therefore has abundant header commit opportunities; the first complete zero is at
 #10's actual contact-frame/prepared-Head boundary. W3 never receives a Head participant to arbitrate.
-This localizes the dormancy upstream of W3's mixed arbitration and leaves #441 open specifically for
-Heading #10 eligibility/contact-realization root cause. No geometry or `[GT]` change is authorized by
-this measurement.
+
+That is a **localization, not a root-cause resolution**. The 1,793 `PositionedPoorly` outcomes could
+reflect genuinely unreachable AI commits or incorrect #10 geometry/eligibility. The 18 intents that
+obtained a predicted contact frame but never became prepared contacts are also a concrete place where a
+contact-path defect could exist. #441 therefore remains **open** until those two branches are separated.
+The current evidence only establishes that the zero occurs upstream of W3 mixed arbitration. No geometry
+or `[GT]` change is authorized by this measurement.
 
 With that localization complete, W3 classification is now an explicit owner decision between:
 
@@ -489,6 +516,24 @@ false-red risk for any trajectory-moving change even when the resolver is health
 test contract must be separate, must freeze its sizing rule before examining new results, must apply
 the same rule to comparison arms, and must preserve the positive `Won > 0` / dispossession semantics
 unless the owner explicitly changes those requirements.
+
+Issue **#442** now records the full blast radius of the proposed six-seed × 150,000-tick pooled
+corpus. The current `Seeds` array also drives the parameterized save/restore latch test, so appending
+four entries there would silently add four independent 40k pre-save + 40k replay cases. The narrower
+candidate is to split ownership: six already-frozen #435 seeds for the pooled corpus, while retaining
+the existing two seeds for the independent save/restore lock. Even then, **every pooled assertion**
+sees the larger corpus: the nonzero checks, dispossession, Won/Loose, absolute <2,000 ceiling,
+cooldown-on-miss, both-team check, and both foul/SLIDE_TACKLE tests. The two foul tests are currently
+guard-skipped on head (`connected=6 < 30`, `foul=0`); a larger corpus can activate them, so their
+outcomes must be reported rather than treated as collateral noise.
+
+Seeds 3–6 are not globally unseen — #435 already ran them as full matches and exposed other per-seed
+facts including slide-tackle foul counts. However, before any six-seed W2 run, the raw #435 job
+`107031655919` contains no `W2DIAG`, `won=`, `loose=`, or `missed=` target-outcome lines for
+`0x0000000000000001`, `0x00000000ABCDEF12`, `0x0000000099887766`, or
+`0x000000005A5A5A5A`; repository search likewise found no exact seed + `won=`/`loose=` record.
+Thus the defensible claim is only that their **target W2 clean-win/loose vectors have not been inspected
+in this decision process**, not that the seeds or all tackle behavior are unseen.
 
 The subsequent full PR gate reproduced that deterministic state without any gameplay change:
 Actions run `35880226626` / job `107246481435` completed with MatchEngine
@@ -561,6 +606,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.12 | 2026-09-23 | Full raw-log provenance audit: re-verifies all post/pre W3 aggregates (including 753 claims, 1,164/1,164 participant/Hand counts, foul 50→43, slide-tackle 8→4) and all three W2 diagnostic summaries. Clarifies #441 is localized but unresolved, audits #442's full assertion/runtime blast radius, and narrows the seed-visibility claim to previously uninspected W2 target outcome vectors. No gameplay/test-contract change. |
 | 0.11 | 2026-09-23 | #441 frozen six-seed localization: 1,811 actual header commits / 1,811 jump starts / 18 ever-predicted contacts / 0 prepared Head contacts / 0 executed headers; 1,793 PositionedPoorly + 16 MistimedEarly terminals, one overwrite and one end-of-match active intent. Localizes W3 Head-participant dormancy upstream to Heading #10's contact-realization boundary. No gameplay change. |
 | 0.10 | 2026-09-23 | Raw-log evidence correction: run 35814050060 actually reports fan-out 215,083; claim episodes 1,297; cross 1,184/64; lofted 2,457/58; diagnostic headerAttempts/contact 1,809/0. Pre-W3 run 35815761065 reports cross 1,067/43; lofted 2,014/62; headerAttempts/contact 1,845/0. Supersedes incorrectly copied aggregate values; no gameplay change. |
 | 0.9 | 2026-09-23 | Records full functional-gate reproduction run 35880226626/job 107246481435: MatchEngine 521/2/12 with exactly the two W2 locks red and won=0/loose=6/dispossessions=0. Confirms unchanged rerun is not a green-gate path. No gameplay/test-contract change. |
