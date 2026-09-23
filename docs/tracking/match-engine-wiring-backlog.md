@@ -10,7 +10,7 @@
 
 ---
 
-> **UPDATED September 23, 2026 (v1.26):** PR #439 now has result-bearing W3 evidence. The production `AGENT_BALL` fan-out and keeper-claim path execute, but the frozen six-match corpus reaches **zero contested Hand-vs-Head arbitrations**: 1,164 registered participants == 1,164 resolved Hand-contact events, each a single keeper participant. Contested arbitration remains composed-test-proven only. `headerContacts=0` both before and after W3, and `successfulKeeperClaims=753` has no common pre-W3 comparator. W3's backlog classification is therefore **owner-decision pending**, not silently closed; the factual state is: *contest plumbing is wired and test-proven, but the measured production corpus never reaches a contested Hand-vs-Head arbitration.* Run `35814050060` measured production SHA `f40f0853909cc2a42190023fea1da72d25409b12`; later branch changes are test/documentation only.
+> **UPDATED September 23, 2026 (v1.27):** Owner classification for PR #439 is **W3: wired but dormant**. Production `AGENT_BALL` fan-out and the keeper Hand path are live; the frozen six-match run `35814050060` at production SHA `f40f0853909cc2a42190023fea1da72d25409b12` recorded 215,083 fan-out events, 1,297 claim-eligibility episodes, 1,164 registered participants / 1,164 Hand-contact resolutions and 753 successful keeper claims, but **zero contested Hand-vs-Head arbitrations**. Issue #441 owns the remaining Head-reachability boundary: its frozen localization run `35887487201` recorded 1,811 committed HeaderIntents → 1,811 jump starts → 18 intents ever assigned a predicted contact frame → **0 prepared Head contacts / 0 executed headers**. This leaves W3's contest plumbing wired and test-proven while production Head participation is dormant upstream in Heading #10; #441 remains open to distinguish opportunity/geometry from prediction-to-contact realization. No gameplay `[GT]` change is implied.
 >
 > **UPDATED (prior) September 22, 2026 (v1.25):** The frozen #435 post-W2 source-complete characterization is now result-bearing and durably recorded at `docs/tracking/evidence/foul-card-six-seed/`. Run `35765635130` / job `106874328764` measured exact landed `main` SHA `c56e5e1adff4e240b54c9abbb5ebea9c0290f65e`: **8.33 fouls / 0.83 cautions / 0.167 total dismissals per 90**, split **42 collision + 8 tackle** across six matches, with **42 priced-candidate identity checks / 0 mismatches**. The two tackle-during-cooldown counters were both zero, but eight tackle fouls provide insufficient exposure to disposition the known bypass; the owner decision remains open. This is baseline characterization only: #435 §5's envelope is not applied as a certification result here, no `[GT]` moves, and KD-W1 still blocks the final fit while W3, W8, W9 and W10 remain Class-A work. Continue the authoritative wiring order and rerun the same frozen corpus after every #435 §8 invalidator.
 >
@@ -220,7 +220,7 @@ assembly). Full account: `docs/tracking/tackle-wiring-design.md`, #14 `docs/spec
 §3.6.5, `docs/tracking/spec-error-log.md` `ERR-014-006`. **Next in sequence: W4** (keeper perception),
 **then W12** (the gate-firing instrument).
 
-### W3 — Keepers never claim crosses — ⚠️ **PLUMBING WIRED; OWNER CLASSIFICATION PENDING (PR #439 draft)**
+### W3 — Keepers never claim crosses — ⚠️ **WIRED BUT DORMANT (PR #439 draft; Head reachability owned by #441)**
 **As filed:** `GoalkeeperMechanics` cleared the duel buffer every frame, registered no production
 participants, and never called `ResolveHandContactDuel`; the shared `AGENT_BALL` feed was likewise
 not reaching the required consumers.
@@ -231,22 +231,25 @@ Focused/composed tests prove both contest outcomes. The W6 Resolve-time Controll
 repair found during this work is separate gameplay behavior and remains explicitly attributed as such.
 
 **Production reachability evidence:** frozen six-seed run `35814050060` at production SHA
-`f40f0853909cc2a42190023fea1da72d25409b12` recorded 135,582 fan-out events, 1,262 claim-eligibility
+`f40f0853909cc2a42190023fea1da72d25409b12` recorded 215,083 fan-out events, 1,297 claim-eligibility
 episodes, 1,164 registered participants, 1,164 resolved Hand-contact events, and 753 successful keeper
 claims. Those 1,164 resolutions were **not contested Hand-vs-Head duels**: each contained only the
 keeper participant, so the production corpus reached **zero contested arbitrations**. The contested
 path is proven through the composed seam only.
 
 The matched pre-W3 arm (run `35815761065`, exact baseline `876a3343319050187c2a5505b18cb32fc3d0f89d`)
-and post-W3 arm both have `headerContacts=0`; that zero predates W3 and remains separately open for an
-upstream-opportunity-vs-wiring diagnosis. `successfulKeeperClaims=753` is W3-only instrumentation, so
-it cannot support a before/after keeper-claim-rate claim. Fouls 50→43 and slide tackles 8→4 are
-characterization only, not attributed W3 effects.
+and post-W3 arm both have `headerContacts=0`; that zero predates W3. Issue #441 now owns the Head-side
+reachability diagnosis. Its frozen localization run `35887487201` on production parent `f40f085…`
+recorded **1,811 HeaderIntent commits → 1,811 jump starts → 18 ever-predicted contacts → 0 prepared
+Head contacts → 0 executed headers**, with 1,793 `PositionedPoorly` and 16 `MistimedEarly` terminal
+failures. This proves W3 arbitration is downstream of the first complete zero but does not yet decide
+whether the remaining cause is opportunity/geometry or Heading #10's prediction-to-contact realization.
 
-**Owner decision required before this row is classified:** choose **complete/wired**, **wired but
-dormant**, or **still open pending production contested-arbitration reachability**. Until then the
-authoritative factual statement is: **Contest plumbing is wired and test-proven, but the measured
-production corpus never reaches a contested Hand-vs-Head arbitration.**
+**Owner decision recorded September 23, 2026:** classify W3 **wired but dormant**. The Hand path and
+cross-claim plumbing are live; production Head participation is dormant upstream and remains owned by
+**#441**. `successfulKeeperClaims=753` still has no common pre-W3 comparator, and foul/slide-tackle
+movements remain characterization only, not attributed W3 effects. #440 remains deferred to a separate
+gameplay PR; no gameplay `[GT]` calibration is authorized here.**
 
 ### W4 — The keeper is never unsighted — ✅ **WIRED September 13, 2026 (PR #403)**
 **Evidence:** `match-engine/GkHeadingIntentSource.cs:33` `SaveArmed` is four lines of pure geometry
@@ -677,7 +680,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.26 | 2026-09-23 | — | **W3 result-bearing status correction.** PR #439 production fan-out/keeper-claim plumbing executes, but run 35814050060 at `f40f085…` reached 1,164 single-keeper Hand-contact resolutions and zero contested Hand-vs-Head production arbitrations. Contested arbitration remains composed-test-proven; headerContacts is zero both pre/post; the keeper-claim counter has no common baseline. W3 classification remains an explicit owner decision rather than being silently marked complete. |
+| 1.27 | 2026-09-23 | — | **Owner classification recorded: W3 wired but dormant.** #441 is the named Head-reachability owner. Corrected W3 production counters to the raw-log-verified 215,083 fan-out / 1,297 eligibility / 1,164 Hand participants-resolutions / 753 claims and linked #441's 1,811 commits → 18 predicted → 0 prepared/0 executed localization. No gameplay or `[GT]` change. |\n| 1.26 | 2026-09-23 | — | **W3 result-bearing status correction.** PR #439 production fan-out/keeper-claim plumbing executes, but run 35814050060 at `f40f085…` reached 1,164 single-keeper Hand-contact resolutions and zero contested Hand-vs-Head production arbitrations. Contested arbitration remains composed-test-proven; headerContacts is zero both pre/post; the keeper-claim counter has no common baseline. W3 classification remains an explicit owner decision rather than being silently marked complete. |
 | 1.25 | 2026-09-22 | — | **Frozen #435 source-complete post-W2 characterization recorded.** Run 35765635130/job 106874328764 pinned exact landed main c56e5e1a: 50 fouls (8.33/90), 5 cautions (0.83/90), 1 total dismissal (0.167/90), source split 42 collision + 8 tackle, 42 priced-identity checks/0 mismatches. Both tackle/cooldown counters were zero but are explicitly non-dispositive; owner bypass-semantics decision remains open. Durable evidence + fail-closed parser added; no GT/calibration change. W3/W8/W9/W10 and #435 invalidation/rerun obligations unchanged. |
 | 1.24 | 2026-09-21 | — | **Foul/card + W3/W9 preregistration frozen before results.** New `foul-card-w3-w9-preregistration.md` fixes the six-full-match corpus, source-complete live discipline accounting, W3/W9 before/after evidence and invalidation/remeasurement rules. No result observed, no `[GT]` moved, no KD-W1 exception; final calibration still follows the remaining Class-A wiring. |
 | 1.23 | 2026-09-20 | — | **Owner retires the close-chance held-red exception.** Exact retirement evidence run `35344056248` passes at meanCosine −0.038 / goalwardShare 0.496 against unchanged floors −0.16 / 0.42. The test returns to the ordinary sweep; no seed, predicate, bound, `[GT]`, W2 behavior, or calibration changes. Historical C1/W6 attribution remains evidence, while future trajectory-moving failures are treated as fresh sensitivity. |
