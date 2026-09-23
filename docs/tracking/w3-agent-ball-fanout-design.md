@@ -390,7 +390,7 @@ The evidence supports this factual statement and no stronger completion claim:
 > contested Hand-vs-Head arbitration.
 
 The classification should not be treated as a free-standing choice before **#441** is localized.
-The same corpus reports **1,809 terminal header attempts and 0 header contacts**. Heading #10 is one of
+The same corpus reports the diagnostic field `headerAttempts=1809` and `headerContacts=0`; source inspection shows that field is computed as `HeaderContacts + HeaderFailures`, so it is **1,809 terminal header events**, not a true commit count. Heading #10 is one of
 the two W3 consumers, and W3 can only obtain a Head participant from #10's current-frame prepared Head
 geometry. #441 therefore owns the behavior-neutral upstream census needed to identify whether the first
 zero is at commit, jump/eligibility, predicted contact, or actual prepared-Head reachability.
@@ -516,7 +516,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 | Version | Date | Notes |
 |---|---|---|
 | 0.9 | 2026-09-23 | Records full functional-gate reproduction run 35880226626/job 107246481435: MatchEngine 521/2/12 with exactly the two W2 locks red and won=0/loose=6/dispossessions=0. Confirms unchanged rerun is not a green-gate path. No gameplay/test-contract change. |
-| 0.8 | 2026-09-23 | Review correction: the 1% rule was owner-supplied before the runs but not Git-preregistered; records that the fixed deterministic head corpus must reproduce Won=0/dispossessions=0, links #440 to both W2 failures, records the positive-win lock's 19.586% base / 13.573% head false-red risk, and makes W3 classification evidence-dependent on #441's header-path localization. No gameplay/test-contract change. |
+| 0.8 | 2026-09-23 | Review correction: the 1% rule was owner-supplied before the runs but not Git-preregistered; records that the fixed deterministic head corpus must reproduce Won=0/dispossessions=0, links #440 to both W2 failures, records the positive-win lock's 19.586% base / 13.573% head false-red risk, clarifies that `headerAttempts` is terminal-event count rather than commit count, and makes W3 classification evidence-dependent on #441's header-path localization. No gameplay/test-contract change. |
 | 0.7 | 2026-09-23 | Adds the three-arm W2 gate diagnosis (identical test/workflow blobs, head P(0 wins)=13.573% > 1%, 14/14 BallLoose same-tick original-carrier re-pickups, issue #440), issue #441 for the header-contact zero, and M7 mutation proof run 35878836477/job 107241699913. No gameplay change. |
 | 0.6 | 2026-09-23 | Result-bearing six-seed evidence: records run 35814050060 at production SHA `f40f085…`, 1,164 single-participant Hand-contact resolutions and zero contested Hand-vs-Head production duels; corrects `successfulKeeperClaims` to a non-comparable W3-only counter; records headerContacts=0 pre/post, attribution limits, and the pending owner classification decision. |
 | 0.5 | 2026-09-22 | Defect-localization attribution correction: PR #439 also carries an unconditional W6 Resolve-time Controlled reattachment repair that affects keeper/outfield holders and can change default-engine trajectories with GK/Heading disabled. Final frozen-corpus evidence is therefore the combined W3+W6 landing state; `f69aaef0` is retained as the pre-correction W3 provenance point and deltas must not be attributed to W3 alone. |
