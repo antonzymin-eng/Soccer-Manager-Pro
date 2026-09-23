@@ -1,7 +1,7 @@
 # W3 — shared AGENT_BALL fan-out and goalkeeper cross-claim wiring
 
 > **Created:** September 22, 2026
-> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.10 records the raw-log-corrected production corpus, reproduced W2 gate diagnosis, M7 mutation proof, header-path reachability dependency, and pending owner decisions.
+> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.11 records the raw-log-corrected production corpus, reproduced W2 gate diagnosis, M7 mutation proof, #441 header-path localization, and pending owner decisions.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W3**.
 > **Companion preregistration:** `docs/tracking/foul-card-w3-w9-preregistration.md`.
 > **Baseline:** `main` at `876a3343319050187c2a5505b18cb32fc3d0f89d`; post-merge CI run
@@ -394,22 +394,56 @@ The foul movement **50 → 43** and slide-tackle movement **8 → 4** are charac
 also carries the W6 Resolve-time Controlled-ball reattachment correction described above, so those
 population changes are not attributed to W3.
 
-### 6.2 Backlog classification remains an owner decision
+### 6.2 #441 header-path localization and backlog classification
 
 The evidence supports this factual statement and no stronger completion claim:
 
 > Contest plumbing is wired and test-proven, but the measured production corpus never reaches a
-> contested Hand-vs-Head arbitration.
+> contested Hand-vs-Head arbitration because Heading #10 supplies zero prepared production Head
+> contacts on the frozen six-seed corpus.
 
-The classification should not be treated as a free-standing choice before **#441** is localized.
-The same corpus reports the diagnostic field `headerAttempts=1809` and `headerContacts=0`; source inspection shows that field is computed as `HeaderContacts + HeaderFailures`, so it is **1,809 terminal header events**, not a true commit count. Heading #10 is one of
-the two W3 consumers, and W3 can only obtain a Head participant from #10's current-frame prepared Head
-geometry. #441 therefore owns the behavior-neutral upstream census needed to identify whether the first
-zero is at commit, jump/eligibility, predicted contact, or actual prepared-Head reachability.
+The original corpus field `headerAttempts=1809` is computed as
+`HeaderContacts + HeaderFailures`; it is a terminal-event count, not a commit count. Issue **#441**
+therefore ran behavior-neutral lifecycle counters on the exact six frozen seeds against production
+parent `f40f0853909cc2a42190023fea1da72d25409b12`.
 
-After that evidence, whether W3 is classified as **complete/wired**, **wired but dormant**, or **still
-open pending production contested-arbitration reachability** remains an explicit owner decision. PR #439
-must not silently choose among those classifications.
+Evidence branch `evidence/pr439-header-reachability`, evidence head
+`7494300341cae94ed3eae41033d874e23cac0b06`, Actions run `35887487201`: six parallel seed jobs
+all passed. Aggregate lifecycle:
+
+| Heading #10 lifecycle point | Count |
+|---|---:|
+| actual HeaderIntent commits | 1,811 |
+| active-intent overwrites | 1 |
+| jump starts | 1,811 |
+| intents ever receiving a predicted contact frame | 18 |
+| actual contact-frame / prepared Head contacts | **0** |
+| executed headers | **0** |
+| `MistimedEarly` terminal failures | 16 |
+| `MistimedLate` | 0 |
+| `PositionedPoorly` | 1,793 |
+| `DisturbedInDuel` | 0 |
+| landing-without-terminal-event drops | 0 |
+| explicit cancels | 0 |
+
+The two-commit difference against the 1,809 terminal events is accounted for by one overwrite and one
+intent still active at the end of its seed. Every seed independently recorded zero prepared Head
+contacts. Production therefore has abundant header commit opportunities; the first complete zero is at
+#10's actual contact-frame/prepared-Head boundary. W3 never receives a Head participant to arbitrate.
+This localizes the dormancy upstream of W3's mixed arbitration and leaves #441 open specifically for
+Heading #10 eligibility/contact-realization root cause. No geometry or `[GT]` change is authorized by
+this measurement.
+
+With that localization complete, W3 classification is now an explicit owner decision between:
+
+- **complete/wired** — count the composition wiring/test proof as W3 completion while separately
+  tracking #441's upstream Heading dormancy;
+- **wired but dormant** — record that W3 plumbing is complete but the production mixed branch is
+  unreachable because #10 supplies no prepared Head contacts;
+- **still open pending production contested-arbitration reachability** — require #441 to be repaired
+  and a production contested duel observed before closing W3.
+
+PR #439 must not silently choose among those classifications.
 
 ### 6.3 W2 diagnostic evidence blocking the functional gate
 
@@ -527,6 +561,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.11 | 2026-09-23 | #441 frozen six-seed localization: 1,811 actual header commits / 1,811 jump starts / 18 ever-predicted contacts / 0 prepared Head contacts / 0 executed headers; 1,793 PositionedPoorly + 16 MistimedEarly terminals, one overwrite and one end-of-match active intent. Localizes W3 Head-participant dormancy upstream to Heading #10's contact-realization boundary. No gameplay change. |
 | 0.10 | 2026-09-23 | Raw-log evidence correction: run 35814050060 actually reports fan-out 215,083; claim episodes 1,297; cross 1,184/64; lofted 2,457/58; diagnostic headerAttempts/contact 1,809/0. Pre-W3 run 35815761065 reports cross 1,067/43; lofted 2,014/62; headerAttempts/contact 1,845/0. Supersedes incorrectly copied aggregate values; no gameplay change. |
 | 0.9 | 2026-09-23 | Records full functional-gate reproduction run 35880226626/job 107246481435: MatchEngine 521/2/12 with exactly the two W2 locks red and won=0/loose=6/dispossessions=0. Confirms unchanged rerun is not a green-gate path. No gameplay/test-contract change. |
 | 0.8 | 2026-09-23 | Review correction: the 1% rule was owner-supplied before the runs but not Git-preregistered; records that the fixed deterministic head corpus must reproduce Won=0/dispossessions=0, links #440 to both W2 failures, records the positive-win lock's 19.586% base / 13.573% head false-red risk, clarifies that `headerAttempts` is terminal-event count rather than commit count, and makes W3 classification evidence-dependent on #441's header-path localization. No gameplay/test-contract change. |
