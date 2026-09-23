@@ -1,7 +1,7 @@
 # W3 — shared AGENT_BALL fan-out and goalkeeper cross-claim wiring
 
 > **Created:** September 22, 2026
-> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.9 records the production corpus, reproduced W2 gate diagnosis, M7 mutation proof, header-path reachability dependency, and pending owner decisions.
+> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.10 records the raw-log-corrected production corpus, reproduced W2 gate diagnosis, M7 mutation proof, header-path reachability dependency, and pending owner decisions.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W3**.
 > **Companion preregistration:** `docs/tracking/foul-card-w3-w9-preregistration.md`.
 > **Baseline:** `main` at `876a3343319050187c2a5505b18cb32fc3d0f89d`; post-merge CI run
@@ -337,6 +337,13 @@ Any zero must retain enough upstream counters to distinguish “no opportunity�
 
 ### 6.1 Result-bearing production evidence
 
+**Raw-log correction (September 23).** A later direct re-read of run `35814050060` found that the
+initial handoff/report copied several aggregate counters incorrectly. The run's own console output,
+printed once by the test and again by the parser, agrees on the corrected values below. The workflow
+explicitly checked out and verified `f40f0853909cc2a42190023fea1da72d25409b12`; no raw-log line in
+that run contains the superseded values 135,582 fan-out events, 1,262 claim episodes, 157 cross
+attempts, or 1,803 lofted attempts. Those superseded figures must not be cited.
+
 The post-W3 frozen six-seed run is Actions run `35814050060`, measuring exact production SHA
 `f40f0853909cc2a42190023fea1da72d25409b12`. The later PR head
 `4d31788136b891f37940778d44db2bd28f88d6f6` changes only
@@ -346,14 +353,14 @@ Aggregate post-W3 counters:
 
 | Counter | Six-seed result |
 |---|---:|
-| `agentBallFanoutEvents` | 135,582 |
-| `claimEligibilityEpisodes` | 1,262 |
+| `agentBallFanoutEvents` | 215,083 |
+| `claimEligibilityEpisodes` | 1,297 |
 | registered duel participants | 1,164 |
 | resolved Hand-contact events | 1,164 |
 | `successfulKeeperClaims` | 753 |
-| cross attempts / completions | 157 / 0 |
-| lofted attempts / completions | 1,803 / 0 |
-| header attempts / contacts | 1,809 / 0 |
+| cross attempts / completions | 1,184 / 64 |
+| lofted attempts / completions | 2,457 / 58 |
+| diagnostic `headerAttempts` / contacts | 1,809 / 0 |
 | fouls | 43 total = 7.17 / 90 |
 | cautions | 5 |
 | dismissals | 1 |
@@ -370,9 +377,14 @@ establish production reachability of the contested branch.
 
 The matched pre-W3 arm is branch `evidence/pr439-w3-prewire-six-seed`, Actions run
 `35815761065`, measuring exact baseline `876a3343319050187c2a5505b18cb32fc3d0f89d` with the
-same measurement transform. `headerContacts=0` in both pre-W3 and post-W3 arms, so the zero
-predates W3. A separate open issue, **#441**, must distinguish **no production header-contact opportunity** from
-**broken header-contact wiring** using upstream counters sufficient to locate the first zero.
+same measurement transform. Its raw aggregate is: W3-only counters all structurally zero;
+crosses **1,067 / 43** attempts/completions; lofted passes **2,014 / 62**; diagnostic
+`headerAttempts=1845`, `headerContacts=0`; fouls **50**; slide-tackle calls **8**.
+Post-W3 raw aggregate is crosses **1,184 / 64**, lofted passes **2,457 / 58**, diagnostic
+`headerAttempts=1809`, `headerContacts=0`, fouls **43**, slide-tackle calls **4**.
+`headerContacts=0` therefore predates W3. A separate open issue, **#441**, must distinguish
+**no production header-contact opportunity** from **broken header-contact wiring** using upstream
+counters sufficient to locate the first zero.
 
 `successfulKeeperClaims=753` is a W3-only counter and has no valid pre-W3 comparator. Keepers could
 claim balls before W3, so this corpus **cannot assess a before/after keeper-claim rate** unless a common
@@ -515,6 +527,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.10 | 2026-09-23 | Raw-log evidence correction: run 35814050060 actually reports fan-out 215,083; claim episodes 1,297; cross 1,184/64; lofted 2,457/58; diagnostic headerAttempts/contact 1,809/0. Pre-W3 run 35815761065 reports cross 1,067/43; lofted 2,014/62; headerAttempts/contact 1,845/0. Supersedes incorrectly copied aggregate values; no gameplay change. |
 | 0.9 | 2026-09-23 | Records full functional-gate reproduction run 35880226626/job 107246481435: MatchEngine 521/2/12 with exactly the two W2 locks red and won=0/loose=6/dispossessions=0. Confirms unchanged rerun is not a green-gate path. No gameplay/test-contract change. |
 | 0.8 | 2026-09-23 | Review correction: the 1% rule was owner-supplied before the runs but not Git-preregistered; records that the fixed deterministic head corpus must reproduce Won=0/dispossessions=0, links #440 to both W2 failures, records the positive-win lock's 19.586% base / 13.573% head false-red risk, clarifies that `headerAttempts` is terminal-event count rather than commit count, and makes W3 classification evidence-dependent on #441's header-path localization. No gameplay/test-contract change. |
 | 0.7 | 2026-09-23 | Adds the three-arm W2 gate diagnosis (identical test/workflow blobs, head P(0 wins)=13.573% > 1%, 14/14 BallLoose same-tick original-carrier re-pickups, issue #440), issue #441 for the header-contact zero, and M7 mutation proof run 35878836477/job 107241699913. No gameplay change. |
