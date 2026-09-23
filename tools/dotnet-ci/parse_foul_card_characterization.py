@@ -134,7 +134,14 @@ def _validate_w3_identities(row: dict[str, int | float | str], label: str) -> No
 def parse_report(report: str) -> dict:
     rows: list[dict[str, int | str]] = []
     aggregate: dict[str, int | float | str] = {"scope": "aggregate"}
-    w3_required = W3_AGGREGATE in report
+    w3_marker_present = W3_AGGREGATE in report
+    w3_fields_present = any(
+        re.search(rf"\\b{re.escape(field)}=", report) is not None
+        for field in W3_FIELDS
+    )
+    if w3_fields_present and not w3_marker_present:
+        raise ValueError("W3 fields present without expected aggregate marker")
+    w3_required = w3_marker_present or w3_fields_present
     rate_tokens: dict[str, str] = {}
     current: dict[str, int | str] | None = None
     in_aggregate = False

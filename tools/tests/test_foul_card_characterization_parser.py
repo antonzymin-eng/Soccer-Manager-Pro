@@ -137,6 +137,15 @@ class FoulCardCharacterizationParserTests(unittest.TestCase):
             self.assertIn("agentBallFanoutEvents", header)
             self.assertIn("headerContacts", header)
 
+    def test_w3_extension_rejects_fields_without_expected_marker(self) -> None:
+        corrupted = self._with_w3_census().replace(
+            self.parser.W3_AGGREGATE,
+            "--- aggregate mangled W3 census marker ---",
+            1,
+        )
+        with self.assertRaisesRegex(ValueError, "W3 fields present without expected aggregate marker"):
+            self.parser.parse_report(corrupted)
+
     def test_w3_extension_requires_every_seed_field(self) -> None:
         corrupted = self._with_w3_census().replace(
             "successfulKeeperClaims=1",
