@@ -683,7 +683,10 @@ namespace TacticalDirector.SeasonSave.Tests
             var tally = new DisciplineState();
             SeasonLoop loop = LoopOver(league, RoundResolutionMode.FullEngine, out _, tally);
             loop.AdvanceToNextFixtureDay();
-            IgnoringComposedEngineErrorLogs(() => loop.AdvanceAndPlayNextRound(league));
+            IgnoringComposedEngineErrorLogs(() =>
+            {
+                loop.AdvanceAndPlayNextRound(league);
+            });
 
             for (int i = 0; i < groundTruth.Count; i++)
             {
