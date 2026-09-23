@@ -249,7 +249,7 @@ whether the remaining cause is opportunity/geometry or Heading #10's prediction-
 cross-claim plumbing are live; production Head participation is dormant upstream and remains owned by
 **#441**. `successfulKeeperClaims=753` still has no common pre-W3 comparator, and foul/slide-tackle
 movements remain characterization only, not attributed W3 effects. #440 remains deferred to a separate
-gameplay PR; no gameplay `[GT]` calibration is authorized here.**
+gameplay PR; no gameplay `[GT]` calibration is authorized here.
 
 ### W4 — The keeper is never unsighted — ✅ **WIRED September 13, 2026 (PR #403)**
 **Evidence:** `match-engine/GkHeadingIntentSource.cs:33` `SaveArmed` is four lines of pure geometry
