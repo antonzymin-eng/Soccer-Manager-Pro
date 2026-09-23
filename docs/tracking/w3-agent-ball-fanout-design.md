@@ -1,7 +1,7 @@
 # W3 — shared AGENT_BALL fan-out and goalkeeper cross-claim wiring
 
 > **Created:** September 22, 2026
-> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.13 records the fully raw-log-audited production corpus, reproduced W2 gate diagnosis, M7 mutation proof, unresolved #441 localization, and the fully precommitted #442 landing/interpretation/runtime protocol pending owner approval.
+> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.14 records the fully raw-log-audited production corpus, reproduced W2 gate diagnosis, M7 mutation proof, unresolved #441 localization, and the tightened #442 landing/interpretation/runtime protocol pending owner approval.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W3**.
 > **Companion preregistration:** `docs/tracking/foul-card-w3-w9-preregistration.md`.
 > **Baseline:** `main` at `876a3343319050187c2a5505b18cb32fc3d0f89d`; post-merge CI run
@@ -470,6 +470,9 @@ With that localization complete, W3 classification is now an explicit owner deci
 - **still open pending production contested-arbitration reachability** — require #441 to be repaired
   and a production contested duel observed before closing W3.
 
+If the owner selects **wired but dormant**, the maintained wiring-backlog W3 row must name **#441**
+as the owner of Head reachability/contact realization so the dormancy has a durable exit path.
+
 PR #439 must not silently choose among those classifications.
 
 ### 6.3 W2 diagnostic evidence blocking the functional gate
@@ -544,20 +547,27 @@ before any six-seed W2 outcome is read:
    evidence arm carrying PR #439 production behavior.
 3. Every affected pooled test is reported as **PASS / FAIL / SKIPPED on both arms**, including both
    foul/SLIDE_TACKLE tests and their `Assume` guard inputs.
-4. If base fails any affected assertion, that is a real main-line defect/invalid lock to investigate;
-   the contract is not tuned or relaxed around it and #442 does not merge merely to unblock #439.
+4. If base fails any affected assertion, that is a real main-line defect or contract problem requiring
+   explicit review. The contract is not tuned, relaxed, resized, skipped, or rewritten around it.
+   **Any post-result change to an assertion, guard, seed set, tick count, threshold, or upper bound is
+   a new owner decision**; the agent must not make it on its own judgment.
 5. If head still produces `Won=0` under the six-seed corpus, that is a real signal under the
    pre-sized contract; #439 remains blocked. Likewise, any other head-only pooled failure blocks #439.
-6. Only after the #442 evidence satisfies that precommitted interpretation does #442 merge to
-   `main`; updated `main` is then merged/rebased into #439, followed by focused W2 and full-gate
-   reruns. The contract must not be duplicated manually inside #439.
+6. If the **base/main arm passes every affected assertion**, #442 may merge to `main` after the owner
+   reviews the measured runtime cost. A head-only failure does **not** block #442 from landing; it
+   blocks #439. Updated `main` is then **merged into #439** — never rebased and never manually
+   duplicated/cherry-picked — so cited evidence SHAs (`f40f085…`, `4d31788…`, `f69aaef0…`) remain
+   preserved in #439 history. Focused W2 and full-gate reruns follow. If their W2 result differs from
+   the pre-merge head evidence arm because `main` moved, the intervening main-line change must be
+   identified and explained before interpreting the result.
 
 The pooled setup grows from **300,000 ticks** (2 × 150,000) to **900,000 ticks**
 (6 × 150,000), exactly 3× the pooled simulation work. Because the save/restore test keeps the original
 two `RestoreSeeds`, that independent workload is unchanged. #442 must measure and record the
 before/after wall-clock time for the `MatchEngineTackleTests` fixture (or the narrowest stable
 same-runner timing that isolates it) before merge; tick-count arithmetic is not a substitute for the
-measured gate-cost record.
+measured gate-cost record. No runtime acceptance limit is predeclared; the owner reviews the measured
+cost before #442 merges.
 
 The subsequent full PR gate reproduced that deterministic state without any gameplay change:
 Actions run `35880226626` / job `107246481435` completed with MatchEngine
@@ -630,6 +640,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.14 | 2026-09-23 | Tightens #442 protocol: merge-only main→#439 to preserve cited SHAs; #442 landing depends on base/main passing, while head-only failures block #439 only; any post-base-failure assertion/guard/seed/tick/threshold change requires a new owner decision; post-merge W2 divergence must be explained if main moved; runtime cost remains owner-reviewed before merge; wired-but-dormant backlog status must name #441 as Head-reachability owner. No gameplay/test-contract change. |
 | 0.13 | 2026-09-23 | #442 preregistration guardrails: separate-PR/main-first merge order, precommitted base/head failure interpretation, PASS/FAIL/SKIPPED reporting for every affected pooled test on both arms, and explicit runtime measurement for the 300k→900k pooled-tick increase while RestoreSeeds remain unchanged. No gameplay/test-contract change. |
 | 0.12 | 2026-09-23 | Full raw-log provenance audit: re-verifies all post/pre W3 aggregates (including 753 claims, 1,164/1,164 participant/Hand counts, foul 50→43, slide-tackle 8→4) and all three W2 diagnostic summaries. Clarifies #441 is localized but unresolved, audits #442's full assertion/runtime blast radius, and narrows the seed-visibility claim to previously uninspected W2 target outcome vectors. No gameplay/test-contract change. |
 | 0.11 | 2026-09-23 | #441 frozen six-seed localization: 1,811 actual header commits / 1,811 jump starts / 18 ever-predicted contacts / 0 prepared Head contacts / 0 executed headers; 1,793 PositionedPoorly + 16 MistimedEarly terminals, one overwrite and one end-of-match active intent. Localizes W3 Head-participant dormancy upstream to Heading #10's contact-realization boundary. No gameplay change. |
