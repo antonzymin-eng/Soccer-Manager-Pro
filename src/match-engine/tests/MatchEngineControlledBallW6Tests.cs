@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineControlledBallW6Tests.cs
 // Created:  2026-09-14
+// Modified: 2026-09-22 (W3 defect closure: Controlled holder stays attached through Resolve agent-agent collision correction)
 // Modified: 2026-09-15 (W6 review closure — direct lock for the Controlled keeper own-goal-plane invariant)
 // Modified: 2026-09-14
 // Author:   —
@@ -69,6 +70,41 @@ namespace TacticalDirector.MatchEngine
             AssertBallXYAtHolder(engine, Outfielder);
             Assert.AreEqual(MatchEngineConstants.BALL_REST_HEIGHT_M, engine.BallView.Position.z, 1e-6f,
                 "Outfield control is the Ball Physics §3.1.11 foot-position contract.");
+        }
+
+        [Test]
+        public void ControlledKeeper_ReattachesAfterResolveCollisionCorrection()
+        {
+            var engine = new MatchEngine(MatchSeed ^ 0x18UL);
+            int keeper = FindKeeper(engine, team: 0);
+            Assert.GreaterOrEqual(keeper, 0);
+
+            // Static overlap is deliberate: Collision #3 resolves penetration even without impact
+            // velocity, so this isolates its Resolve-phase position correction from locomotion.
+            var keeperPos = new Vector2(40f, 25f);
+            var teammatePos = new Vector2(40.20f, 25f);
+            engine.TestOnly_SetAgent(
+                keeper, AgentState.CreateAtPosition(keeperPos, Vector2.right));
+            engine.TestOnly_SetAgent(
+                Outfielder, AgentState.CreateAtPosition(teammatePos, Vector2.right));
+
+            const float claimHeight = 1.6f;
+            engine.TestOnly_SetBall(BallState.CreateAtPosition(new Vector3(
+                keeperPos.x, keeperPos.y, claimHeight)));
+            engine.TestOnly_SetPossession(keeper);
+
+            Vector2 before = engine.AgentView(keeper).Position;
+            engine.TestOnly_RunResolvePhase();
+            Vector2 after = engine.AgentView(keeper).Position;
+
+            Assert.Greater((after - before).sqrMagnitude, 1e-8f,
+                "Precondition: Resolve collision response must actually position-correct the holder.");
+            Assert.AreEqual(keeper, engine.TestOnly_PossessingAgentId,
+                "Agent-agent separation must not itself release keeper possession.");
+            Assert.AreEqual(BallStateType.Controlled, engine.BallView.State);
+            AssertBallXYAtHolder(engine, keeper);
+            Assert.AreEqual(claimHeight, engine.BallView.Position.z, 1e-6f,
+                "Post-collision attachment reconciliation must preserve keeper claim height.");
         }
 
         [Test]
@@ -247,6 +283,9 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                        |
+// | 1.3     | 2026-09-22 | —      | W3 defect closure: direct Resolve collision-correction lock;  |
+// |         |            |        | a still-Controlled keeper remains XY-attached after Collision |
+// |         |            |        | #3 moves the holder during agent-agent penetration response.  |
 // | 1.2     | 2026-09-15 | —      | Review closure: direct two-goal-plane keeper-control lock,    |
 // |         |            |        | including AgentState recovery-checkpoint coherence.           |
 // | 1.1     | 2026-09-14 | —      | P2 lock: loose ball still advances elapsed tackle cooldown.   |
