@@ -1,7 +1,7 @@
 # W3 — shared AGENT_BALL fan-out and goalkeeper cross-claim wiring
 
 > **Created:** September 22, 2026
-> **Status:** ACTIVE DRAFT / PREREGISTRATION AMENDMENT — implementation is in progress on PR #439; v0.4 records the geometry-owned arbitration and serialized ClaimIntent corrections before acceptance evidence.
+> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.6 records the production corpus, the dormant contested-arbitration finding, and the pending owner classification decision.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W3**.
 > **Companion preregistration:** `docs/tracking/foul-card-w3-w9-preregistration.md`.
 > **Baseline:** `main` at `876a3343319050187c2a5505b18cb32fc3d0f89d`; post-merge CI run
@@ -335,6 +335,64 @@ The result-bearing report must include, per seed and aggregate:
 
 Any zero must retain enough upstream counters to distinguish “no opportunity” from “broken wire”.
 
+### 6.1 Result-bearing production evidence
+
+The post-W3 frozen six-seed run is Actions run `35814050060`, measuring exact production SHA
+`f40f0853909cc2a42190023fea1da72d25409b12`. The later PR head
+`4d31788136b891f37940778d44db2bd28f88d6f6` changes only
+`src/season-save/tests/SeasonLoopDisciplineTests.cs`; it does not change production gameplay.
+
+Aggregate post-W3 counters:
+
+| Counter | Six-seed result |
+|---|---:|
+| `agentBallFanoutEvents` | 135,582 |
+| `claimEligibilityEpisodes` | 1,262 |
+| registered duel participants | 1,164 |
+| resolved Hand-contact events | 1,164 |
+| `successfulKeeperClaims` | 753 |
+| cross attempts / completions | 157 / 0 |
+| lofted attempts / completions | 1,803 / 0 |
+| header attempts / contacts | 1,809 / 0 |
+| fouls | 43 total = 7.17 / 90 |
+| cautions | 5 |
+| dismissals | 1 |
+
+The **1,164 resolved Hand-contact events were not contested Hand-vs-Head duels**. Registered
+participants equal resolved Hand contacts because each recorded production resolution contained only
+the goalkeeper participant. The six-match production corpus therefore reached **zero contested
+Hand-vs-Head arbitrations**. The contested arbitration path is proven by the composed tests, not by
+production-play reachability.
+
+The production feed and keeper-claim path are nevertheless live: the fan-out, claim-eligibility and
+successful-claim counters are positive. That establishes execution of those paths; it does **not**
+establish production reachability of the contested branch.
+
+The matched pre-W3 arm is branch `evidence/pr439-w3-prewire-six-seed`, Actions run
+`35815761065`, measuring exact baseline `876a3343319050187c2a5505b18cb32fc3d0f89d` with the
+same measurement transform. `headerContacts=0` in both pre-W3 and post-W3 arms, so the zero
+predates W3. A separate open issue must distinguish **no production header-contact opportunity** from
+**broken header-contact wiring** using upstream counters sufficient to locate the first zero.
+
+`successfulKeeperClaims=753` is a W3-only counter and has no valid pre-W3 comparator. Keepers could
+claim balls before W3, so this corpus **cannot assess a before/after keeper-claim rate** unless a common
+metric (for example keeper possession gains) is added to both arms.
+
+The foul movement **50 → 43** and slide-tackle movement **8 → 4** are characterization only. The PR
+also carries the W6 Resolve-time Controlled-ball reattachment correction described above, so those
+population changes are not attributed to W3.
+
+### 6.2 Backlog classification remains an owner decision
+
+The evidence supports this factual statement and no stronger completion claim:
+
+> Contest plumbing is wired and test-proven, but the measured production corpus never reaches a
+> contested Hand-vs-Head arbitration.
+
+Whether W3 is classified as **complete/wired**, **wired but dormant**, or **still open pending
+production contested-arbitration reachability** remains an explicit owner decision. PR #439 must not
+silently choose among those classifications.
+
 ---
 
 ## 7. Implementation size and commit shape
@@ -381,6 +439,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.6 | 2026-09-23 | Result-bearing six-seed evidence: records run 35814050060 at production SHA `f40f085…`, 1,164 single-participant Hand-contact resolutions and zero contested Hand-vs-Head production duels; corrects `successfulKeeperClaims` to a non-comparable W3-only counter; records headerContacts=0 pre/post, attribution limits, and the pending owner classification decision. |
 | 0.5 | 2026-09-22 | Defect-localization attribution correction: PR #439 also carries an unconditional W6 Resolve-time Controlled reattachment repair that affects keeper/outfield holders and can change default-engine trajectories with GK/Heading disabled. Final frozen-corpus evidence is therefore the combined W3+W6 landing state; `f69aaef0` is retained as the pre-correction W3 provenance point and deltas must not be attributed to W3 alone. |
 | 0.4 | 2026-09-22 | Review correction / ERR-011-012: Collision #3 fan-out is observation-only, never W3 membership; #10 prepared Head geometry + #11 active-claim Hand reach form the live contest before ball mutation. ClaimIntent is now a bounded locked episode and its full payload + active latch is serialized in MatchEngine schema v23. |
 | 0.3 | 2026-09-22 | `ERR-011-011` filed/resolved atomically with #11 §3.6.1: remove phantom #3 hand/head colliders; #3 is candidate-only, #10 owns head geometry, #11 owns live hand reach, and ordinary Hand claims remain blocked until W3 wires a real claim producer. |
