@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineTackleTests.cs
 // Created:  2026-08-12
-// Modified: 2026-09-17 (PR #416 live-head closeout — save/restore latch lock ignores unrelated composed-play error logs; latch/replay assertions remain authoritative)
+// Modified: 2026-09-23 (#442 approved W2 deterministic-corpus sizing contract — six pooled corpus seeds; two restore seeds retained)
 // Author:   —
 // Spec:     Defensive AI #14 §3.6.5, Pass Mechanics #5 §3.8.5/§4.4.2, Shot Mechanics #6 §4.4.2,
 //           foul-discipline-balance-design.md KD-F1/KD-F2/KD-F4, Code Standards #20
@@ -30,9 +30,10 @@ namespace TacticalDirector.MatchEngine
     {
         /// <summary>
         /// Half a match. MEASURED, not guessed: the gate anatomy reports ~10 resolved challenges per
-        /// 40 000 ticks on the livelier of the two seeds and ~1 on the quieter one, so a per-seed
-        /// assertion at 40 000 ticks is a coin flip dressed as a lock. At this length both seeds carry
-        /// challenges, and the cases below pool the two rather than asserting per seed — pooling is
+        /// 40 000 ticks on the livelier of the original two seeds and ~1 on the quieter one, so a per-seed
+        /// assertion at 40 000 ticks is a coin flip dressed as a lock. #442 expands the pooled corpus to
+        /// the six seeds already frozen by #435 while keeping each match at this same 150 000-tick horizon;
+        /// the cases below pool the corpus rather than asserting per seed — pooling is
         /// right here because the claim is "this engine produces tackles", not "this seed does".
         ///
         /// <para><b>Corrected at AR-1 M-4.</b> This doc used to claim home and away were distinguished
@@ -43,7 +44,17 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private const int Ticks = 150_000;
 
-        private static readonly ulong[] Seeds =
+        private static readonly ulong[] CorpusSeeds =
+        {
+            0x0F1E2D3C4B5A6978UL,
+            0x00000000D1A6D05EUL,
+            0x0000000000000001UL,
+            0x00000000ABCDEF12UL,
+            0x0000000099887766UL,
+            0x000000005A5A5A5AUL,
+        };
+
+        private static readonly ulong[] RestoreSeeds =
         {
             0x0F1E2D3C4B5A6978UL,
             0x00000000D1A6D05EUL,
@@ -107,7 +118,7 @@ namespace TacticalDirector.MatchEngine
         {
             int won = 0, loose = 0, foul = 0, missed = 0;
 
-            foreach (ulong seed in Seeds)
+            foreach (ulong seed in CorpusSeeds)
             {
                 MatchEngine engine = Booted(seed);
                 int prevHolder = MatchEngineConstants.NO_POSSESSION;
@@ -236,7 +247,7 @@ namespace TacticalDirector.MatchEngine
             int resolved = s_pooled.Won + s_pooled.Loose + s_pooled.Foul + s_pooled.Missed;
 
             Assert.That(resolved, Is.LessThan(2_000),
-                $"{resolved} challenges over {Ticks} ticks x {Seeds.Length} seeds — the per-agent " +
+                $"{resolved} challenges over {Ticks} ticks x {CorpusSeeds.Length} seeds — the per-agent " +
                 "cooldown is not limiting re-challenges");
         }
 
@@ -298,7 +309,7 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
-        public void SaveAndRestoreCarryTheTackleLatches([ValueSource(nameof(Seeds))] ulong seed)
+        public void SaveAndRestoreCarryTheTackleLatches([ValueSource(nameof(RestoreSeeds))] ulong seed)
         {
             // This test's oracle is the serialized tackle-latch state and replay-count equality below.
             // Composed play can independently cancel a shot after possession changes and emit #6 FM-03
@@ -377,4 +388,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | judged twice, and the v21 latches surviving save/restore.         |
 // | 1.1     | 2026-09-16 | —      | W2 activation: composed locks exercise the shipping default; disabled-default lock becomes >0 / <= reclaim invariants; restore no longer arms the test seam. |
 // | 1.2     | 2026-09-17 | —      | PR #416: save/restore lock ignores unrelated composed-play error logs; two-seed latch/replay assertions remain the oracle and pass on the live production head. |
+// | 1.3     | 2026-09-23 | —      | #442 approved contract: pooled composed-play corpus uses the six frozen #435 seeds at 150k ticks each; save/restore remains on the original two seeds. No assertion, guard, threshold, bound, or tick horizon changed. |
 #endregion
