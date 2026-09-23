@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** September 22, 2026 (v0.10 — ERR-011-012 live claim policy + W3 membership correction)
-**Version:** 0.10
+**Last Updated:** September 22, 2026 (v0.11 — W3 scope clarification: cross-claim arbitration uses active ClaimIntent Hand membership; ordinary save-dive handling remains unchanged)
+**Version:** 0.11
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -749,8 +749,9 @@ during a real high-aerial contest.
 
 - Heading #10 contributes a Head participant only when its prepared current-frame head-contact
   geometry admits the ball.
-- Goalkeeper #11 contributes a Hand participant only when a live `ClaimIntent` or save-dive episode
-  exposes a current-frame hand/reach envelope and the ball intersects that envelope.
+- Goalkeeper #11 contributes a W3 Hand participant only when an active `ClaimIntent` exposes a
+  current-frame hand/reach envelope and the ball intersects that envelope. Ordinary shot-save dive
+  handling remains on #11's existing save path and is not enrolled into W3 cross-claim arbitration.
 - Outfield players MUST NOT be projected through `GoalkeeperAgentAttributes`; W3 uses only their
   canonical Balance/Strength/Aerial inputs for the shared duel score.
 - Registration is canonicalized to #16 §3.2 entity order. Callback/feed arrival order is irrelevant.
@@ -1203,3 +1204,4 @@ standard rebound physics.
 | 0.8 | August 4, 2026 | W1 adversarial review pass 1 | Doc-only in this spec: §3.7.0 gains a **fatigue arm — no live input at Stage 0** paragraph. `RUSH_COMMIT_FATIGUE_PENALTY_M` (and §3.7.1's `RUSH_COMMIT_FATIGUE_COEFF`) multiply a value every composition-root projection hardcodes to zero, so both arms are structurally unreachable and MUST NOT be calibrated until fatigue reaches the projection — a dial with no input cannot be fitted. The worked example is left as written: it is correct arithmetic for the formula, and the new paragraph directly above says why production never reaches that branch. The review's other findings were engine-side (the trigger's missing minimum-run guard, the sent-off keeper freeze) and are recorded in `gk-rush-trigger-design.md` v1.2. | doc |
 | 0.9 | September 22, 2026 | W3 / ERR-011-011 | §3.6.1 removes phantom Collision #3 `handCapsule` / `headSphere` / `IntersectsBallSphere` surfaces. #3 is candidate discovery only; #10 owns head geometry, #11 owns its live hand/reach envelope, and no live hand envelope means no Hand participant. The dormant `ClaimIntent` must gain a real producer before ordinary cross claims can use Hand. No `[GT]`, schema or RNG change. | spec correction |
 | 0.10 | September 22, 2026 | W3 / ERR-011-012 | §3.6.1 corrects the live W3 policy discovered during implementation review: Collision #3's 2.0 m observation feed is not contest membership; ClaimIntent arms from loose/local geometry with no vertical floor, stays locked for one existing dive-duration reach episode, locks its lateral reach side, and hard-cancels only on possession/SAVE/slot invalidation/expiry. Claims reuse existing #11 dive/reach kinematics with zero save-only timing jitter. ClaimIntent is now authoritative cross-tick state in MatchEngine snapshot v23. No new `[GT]`, RNG stream/domain/draw site/order. | implementation/spec back-prop |
+| 0.11 | September 22, 2026 | W3 draft scope clarification | §3.6.1 now matches the preregistered W3 boundary exactly: only active ClaimIntent contributes W3 Hand membership. `TryGetHandReachEnvelope` may also describe an ordinary save dive for #11's own save pipeline, but W3 does not interpose on normal shot-save handling. No code/tuning/schema/RNG change. | pre-merge contract sync |
