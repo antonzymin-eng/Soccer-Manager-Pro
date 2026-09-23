@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/GkRushTriggerTests.cs
 // Created:  2026-08-04
+// Modified: 2026-09-22 (W3 compatibility: direct W1 physics-loop test opens the production Physics event phase before a legitimate post-rush claim may publish Tier A)
 // Modified: 2026-08-04
 // Author:   —
 // Spec:     Keeper rush trigger design supplement (docs/tracking/gk-rush-trigger-design.md) §2;
@@ -25,6 +26,7 @@ using UnityEngine;
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.GoalkeeperMechanics;
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -540,6 +542,13 @@ namespace TacticalDirector.MatchEngine
             var engine = new MatchEngine(0x0F1E2D3C4B5A6978UL);
             PlaceFixture(engine, keeperTeam, coverOutFromGoalM: -1f);
 
+            // TestOnly_DriveGkHeadingPhysics bypasses MatchEngine.RunPhysicsPhase, so reproduce the
+            // production EventBus context explicitly. W3 can now legitimately convert the still-loose
+            // swept ball into a #11 Hand contact after the rush ends; SaveAttempted/BallClaimed are
+            // Tier A Physics producers and must not be published from the reset/no-phase sentinel.
+            EventBus.BeginTick(0);
+            EventBus.BeginPhase(PhaseId.Physics);
+
             // 30 tactical strides, each followed by a stride's worth of physics frames — long enough
             // for ten full oscillation cycles if the guard is missing.
             for (int t = 0; t < 30; t++)
@@ -753,4 +762,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | be dragged along the run his predecessor committed — #11 keys  |
 // |         |            |        | its state by team, the engine keys identity by roster slot,    |
 // |         |            |        | and the slot changed hands.                                    |
+// | 1.3     | 2026-09-22 | —      | W3 compatibility only: the swept-ball churn lock now opens the Physics EventBus phase before direct physics driving, matching production now that a legitimate post-rush Hand claim may emit Tier-A goalkeeper events. No gameplay assertion changed. |
 #endregion
