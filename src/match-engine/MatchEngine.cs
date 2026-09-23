@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-22 (W3 / #435 §6.2: add nonserialized measurement-only production counters for frozen six-seed evidence)
 // Modified: 2026-09-22 (W3 / ERR-011-012: claim arming/lifetime corrected; claim reach side locked+serialized in the still-unmerged v23 block; observation seam made state-pure)
 // Modified: 2026-09-22 (W3 shared-feed continuation: AgentBallFanout now has the required two consumers — Heading + frame-local CrossClaimCandidateCollector; collector is candidate-only under ERR-011-011, fail-closed, nonserialized)
 // Modified: 2026-09-22 (W3 review correction: read-only AGENT_BALL candidate publication runs in Physics after movement; full Collision #3 response, W4 applied deflection, foul capture and next-tick movement feedback remain Resolve-owned; Heading #10 geometry remains authoritative; no schema/RNG change)
@@ -485,6 +486,16 @@ namespace TacticalDirector.MatchEngine
         private readonly TacticalDirector.HeadingMechanics.HeadingMechanics _heading;
         private readonly TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics _goalkeeper;
         private readonly W3CrossClaimArbiter _w3CrossClaimArbiter;
+
+        // W3 / #435 §6.2 measurement-only cumulative counters. These are observation state, never
+        // gameplay inputs and deliberately NOT serialized/digested. The frozen six-seed diagnostic
+        // reads them only after production has executed the corresponding seams.
+        private int _w3AgentBallFanoutEvents;
+        private int _w3ClaimEligibilityEpisodes;
+        private int _w3RegisteredDuelParticipants;
+        private int _w3ResolvedHandContactDuels;
+        private int _w3SuccessfulKeeperClaims;
+
         private readonly int _headingStreamIndex;
         private readonly int _goalkeeperStreamIndex;
         private readonly int[] _gkAgentIds;      // [MaxGkAgents] — agentId of each keeper (keeper index → agentId)
@@ -2986,6 +2997,13 @@ namespace TacticalDirector.MatchEngine
         internal int TestOnly_W3LastWinnerAgentId => _w3CrossClaimArbiter.LastWinnerAgentId;
         internal BodyPartEnum TestOnly_W3LastWinnerBodyPart => _w3CrossClaimArbiter.LastWinnerBodyPart;
 
+        // W3 / #435 §6.2 measurement-only cumulative production census.
+        internal int TestOnly_W3AgentBallFanoutEvents => _w3AgentBallFanoutEvents;
+        internal int TestOnly_W3ClaimEligibilityEpisodes => _w3ClaimEligibilityEpisodes;
+        internal int TestOnly_W3RegisteredDuelParticipants => _w3RegisteredDuelParticipants;
+        internal int TestOnly_W3ResolvedHandContactDuels => _w3ResolvedHandContactDuels;
+        internal int TestOnly_W3SuccessfulKeeperClaims => _w3SuccessfulKeeperClaims;
+
         /// <summary>Test-only W3 seam: commit only the #11 ClaimIntent block while preserving the
         /// slot's existing projected attributes. Used by the v23 single-field digest and restore locks.</summary>
         internal void TestOnly_CommitGoalkeeperClaimIntent(int teamId, ClaimIntent intent)
@@ -4687,6 +4705,7 @@ namespace TacticalDirector.MatchEngine
                     AttemptCommittedTick = (int)_clock.CurrentTacticalTick,
                 };
                 _goalkeeper.CommitClaimIntent(k, intent, attrs);
+                _w3ClaimEligibilityEpisodes++;
             }
         }
 
@@ -4973,6 +4992,7 @@ namespace TacticalDirector.MatchEngine
                     in _ball,
                     _clock.CurrentMatchTimeSeconds,
                     _agentBallConsumer);
+                _w3AgentBallFanoutEvents += _crossClaimCandidates.Count;
             }
 
             // GK (#11) / Heading (#10) 60 Hz drive (design §3.4). After the ball + agents are integrated so
@@ -8938,6 +8958,7 @@ namespace TacticalDirector.MatchEngine
                             "W3 cross-claim participant buffer overflow while registering agent " +
                             agentId.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
                     }
+                    _engine._w3RegisteredDuelParticipants++;
                 }
 
                 if (_engine._goalkeeper.CrossClaimDuelCount == 0)
@@ -8947,6 +8968,7 @@ namespace TacticalDirector.MatchEngine
                 }
 
                 _engine._goalkeeper.ResolveCrossClaimDuel();
+                _engine._w3ResolvedHandContactDuels++;
                 CrossClaimDuelContext duel = _engine._goalkeeper.GetCrossClaimDuel(0);
                 LastParticipantCount = duel.ParticipantCount;
                 LastWinnerAgentId = duel.WinnerAgentId;
@@ -9024,6 +9046,11 @@ namespace TacticalDirector.MatchEngine
                     {
                         throw new InvalidOperationException(
                             "W3 Hand winner no longer had an active ClaimIntent at terminal routing.");
+                    }
+
+                    if (_engine._possessingAgentId == duel.WinnerAgentId)
+                    {
+                        _engine._w3SuccessfulKeeperClaims++;
                     }
 
                     for (int h = 0; h < heading.PreparedHeadContactCount; h++)
@@ -10334,4 +10361,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.81    | 2026-09-22 | —      | W3 / ERR-011-012: ClaimIntent is a bounded episode, not a per-stride height gate. Possession/SAVE hard-cancel; ordinary geometry lapse does not. Reach side locks at commit and joins the v23 payload. W1 rush cannot steal an active claim. Test hand-envelope observation no longer Refreshes/ResetSlots. |
 // | 1.82    | 2026-09-22 | —      | W3 runtime arbitration boundary: Heading #10 exposes prepared Head contacts before mutation; MatchEngine combines them with active #11 Hand reach in canonical entity order, scores mixed participants through ToCrossClaim, routes Hand wins/losses through #11, and suppresses losing Heads before #10 applies a header. Collision #3 remains observation-only. |
 // | 1.83    | 2026-09-22 | —      | W3 testability only: add deterministic clock/apex-history seams so a composed test can make #10 itself confirm a current-frame Head contact against a simultaneous #11 Hand reach; no production path reads the seams. |
+// | 1.84    | 2026-09-22 | —      | W3 / #435 §6.2: nonserialized cumulative observation counters expose fan-out events, claim episodes, registered duel participants, resolved Hand-contact duels and successful keeper claims to the frozen six-seed diagnostic. No gameplay/snapshot/digest/RNG change. |
 #endregion
