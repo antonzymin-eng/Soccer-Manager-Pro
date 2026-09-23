@@ -1,7 +1,7 @@
 # W3 — shared AGENT_BALL fan-out and goalkeeper cross-claim wiring
 
 > **Created:** September 22, 2026
-> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.7 records the production corpus, W2 gate diagnosis, M7 mutation proof, dormant contested-arbitration finding, and pending owner decisions.
+> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.8 records the production corpus, corrected W2 gate diagnosis, M7 mutation proof, header-path reachability dependency, and pending owner decisions.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W3**.
 > **Companion preregistration:** `docs/tracking/foul-card-w3-w9-preregistration.md`.
 > **Baseline:** `main` at `876a3343319050187c2a5505b18cb32fc3d0f89d`; post-merge CI run
@@ -389,9 +389,15 @@ The evidence supports this factual statement and no stronger completion claim:
 > Contest plumbing is wired and test-proven, but the measured production corpus never reaches a
 > contested Hand-vs-Head arbitration.
 
-Whether W3 is classified as **complete/wired**, **wired but dormant**, or **still open pending
-production contested-arbitration reachability** remains an explicit owner decision. PR #439 must not
-silently choose among those classifications.
+The classification should not be treated as a free-standing choice before **#441** is localized.
+The same corpus reports **1,809 terminal header attempts and 0 header contacts**. Heading #10 is one of
+the two W3 consumers, and W3 can only obtain a Head participant from #10's current-frame prepared Head
+geometry. #441 therefore owns the behavior-neutral upstream census needed to identify whether the first
+zero is at commit, jump/eligibility, predicted contact, or actual prepared-Head reachability.
+
+After that evidence, whether W3 is classified as **complete/wired**, **wired but dormant**, or **still
+open pending production contested-arbitration reachability** remains an explicit owner decision. PR #439
+must not silently choose among those classifications.
 
 ### 6.3 W2 diagnostic evidence blocking the functional gate
 
@@ -410,18 +416,33 @@ reported at teardown after the diagnostic output completed. An identical evidenc
 rerun, run `35879276984` / job `107243207618`, reproduced the base summary exactly and passed.
 No production behavior was changed by the diagnostic.
 
-The clean-win branch is **not statistically implausible** under the preregistered threshold:
-head `P(0 wins)=13.573%`, well above 1%. The head `p_i` distribution is also ordinary rather than
+The clean-win branch is **not statistically implausible** under the 1% threshold supplied by the owner in the opening instruction before these runs: head `P(0 wins)=13.573%`, well above 1%. The threshold was fixed before result inspection in this work session, but it was **not durably committed/preregistered in Git before the evidence runs**, so the record must not call it repository-preregistered. The head `p_i` distribution is also ordinary rather than
 collapsed (min 1.073%, median 4.177%, max 15.506%, mean 5.793%). Base and W3-only likewise have
 ordinary distributions and `P(0 wins)` of 19.586% and 5.816%. The observed 0 wins at head is
 therefore plausible sampling variation; changing seeds, tick count, or the positive check requires
 an owner decision.
 
-The BallLoose branch is independent and material: **14/14 BallLoose outcomes across all three arms
-end the same tick back on the original carrier**, with zero other-player pickups and zero balls left
-loose. That latent W2/W6 gameplay issue is filed separately as **#440**. It must not be repaired
-inside PR #439; any gameplay fix requires separate before/after measurement, KD-W1 review, explicit
-owner approval, and its own PR.
+The BallLoose branch is distinct in mechanism but **coupled to the same deterministic gate outcome**:
+**14/14 BallLoose outcomes across all three arms end the same tick back on the original carrier**,
+with zero other-player pickups and zero balls left loose. On the fixed head corpus the deterministic
+result is therefore `Won=0, Loose=6, dispossessions=0`: clean wins are currently the only way this
+corpus can change holder identity on a tackle. Re-running unchanged production with the same seeds and
+tick count reproduces the same two red assertions; "keep the corpus unchanged" is not a path to a green
+functional gate.
+
+That latent W2/W6 gameplay issue is filed separately as **#440**. Fixing #440 alone could make
+`AControlledCarrierIsActuallyDispossessed` pass by allowing a `BallLoose` outcome to finish on
+another holder or remain loose, but it would **not** make
+`BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose` pass while this corpus still has
+`Won=0`. #440 must not be repaired inside PR #439; any gameplay fix requires separate before/after
+measurement, KD-W1 review, explicit owner approval, and its own PR.
+
+The positive clean-win lock is also under-sized as a deterministic regression corpus: the same
+probability calculation gives `P(0 wins)=19.586%` on base and `13.573%` on head. That is a material
+false-red risk for any trajectory-moving change even when the resolver is healthy. Any repair to the
+test contract must be separate, must freeze its sizing rule before examining new results, must apply
+the same rule to comparison arms, and must preserve the positive `Won > 0` / dispossession semantics
+unless the owner explicitly changes those requirements.
 
 ### 6.4 M7 SeasonSave mutation proof
 
@@ -486,6 +507,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.8 | 2026-09-23 | Review correction: the 1% rule was owner-supplied before the runs but not Git-preregistered; records that the fixed deterministic head corpus must reproduce Won=0/dispossessions=0, links #440 to both W2 failures, records the positive-win lock's 19.586% base / 13.573% head false-red risk, and makes W3 classification evidence-dependent on #441's header-path localization. No gameplay/test-contract change. |
 | 0.7 | 2026-09-23 | Adds the three-arm W2 gate diagnosis (identical test/workflow blobs, head P(0 wins)=13.573% > 1%, 14/14 BallLoose same-tick original-carrier re-pickups, issue #440), issue #441 for the header-contact zero, and M7 mutation proof run 35878836477/job 107241699913. No gameplay change. |
 | 0.6 | 2026-09-23 | Result-bearing six-seed evidence: records run 35814050060 at production SHA `f40f085…`, 1,164 single-participant Hand-contact resolutions and zero contested Hand-vs-Head production duels; corrects `successfulKeeperClaims` to a non-comparable W3-only counter; records headerContacts=0 pre/post, attribution limits, and the pending owner classification decision. |
 | 0.5 | 2026-09-22 | Defect-localization attribution correction: PR #439 also carries an unconditional W6 Resolve-time Controlled reattachment repair that affects keeper/outfield holders and can change default-engine trajectories with GK/Heading disabled. Final frozen-corpus evidence is therefore the combined W3+W6 landing state; `f69aaef0` is retained as the pre-correction W3 provenance point and deltas must not be attributed to W3 alone. |
