@@ -25,6 +25,33 @@ class FoulCardCharacterizationParserTests(unittest.TestCase):
         self.parser = _load_parser()
         self.report = REPORT.read_text(encoding="utf-8")
 
+    def _with_w3_census(self) -> str:
+        extended = self.report
+        per_seed = (
+            "  W3 agentBallFanoutEvents=10 claimEligibilityEpisodes=2 "
+            "registeredDuelParticipants=3 resolvedHandContactDuels=1 successfulKeeperClaims=1\n"
+            "  aerialDelivery crossAttempts=4 crossCompletions=1 "
+            "loftedAttempts=5 loftedCompletions=2 headerAttempts=6 headerContacts=4\n"
+        )
+        for seed in self.parser.FROZEN_SEEDS:
+            marker = f"seed {seed}:\n"
+            self.assertIn(marker, extended)
+            extended = extended.replace(marker, marker + per_seed, 1)
+
+        rate_line = (
+            "SHIPPED per-90-min rates: fouls=8.33 yellows=0.83 straightReds=0.167 "
+            "secondYellowDismissals=0.000 totalDismissals=0.167\n"
+        )
+        aggregate_w3 = (
+            "\n--- aggregate #435 §6.2 W3 before/after census ---\n"
+            "agentBallFanoutEvents=60 claimEligibilityEpisodes=12 "
+            "registeredDuelParticipants=18 resolvedHandContactDuels=6 successfulKeeperClaims=6\n"
+            "crossAttempts=24 crossCompletions=6 loftedAttempts=30 loftedCompletions=12 "
+            "headerAttempts=36 headerContacts=24\n"
+        )
+        self.assertIn(rate_line, extended)
+        return extended.replace(rate_line, rate_line + aggregate_w3, 1)
+
     def test_committed_report_reproduces_structured_evidence(self) -> None:
         parsed = self.parser.parse_report(self.report)
         with tempfile.TemporaryDirectory() as tmp:
@@ -93,6 +120,39 @@ class FoulCardCharacterizationParserTests(unittest.TestCase):
     def test_rejects_rate_that_disagrees_with_aggregate_count(self) -> None:
         corrupted = self.report.replace("fouls=8.33", "fouls=99.00", 1)
         with self.assertRaisesRegex(ValueError, "shipped rate foulsPer90"):
+            self.parser.parse_report(corrupted)
+
+    def test_w3_extension_parses_and_adds_tsv_columns(self) -> None:
+        parsed = self.parser.parse_report(self._with_w3_census())
+        aggregate = parsed["aggregate"]
+        self.assertEqual(60, aggregate["agentBallFanoutEvents"])
+        self.assertEqual(6, aggregate["resolvedHandContactDuels"])
+        self.assertEqual(24, aggregate["crossAttempts"])
+        self.assertEqual(24, aggregate["headerContacts"])
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tsv = Path(tmp) / "results.tsv"
+            self.parser.write_tsv(parsed, tsv)
+            header = tsv.read_text(encoding="utf-8").splitlines()[0].split("\t")
+            self.assertIn("agentBallFanoutEvents", header)
+            self.assertIn("headerContacts", header)
+
+    def test_w3_extension_requires_every_seed_field(self) -> None:
+        corrupted = self._with_w3_census().replace(
+            "successfulKeeperClaims=1",
+            "successfulKeeperClaimsMissing=1",
+            1,
+        )
+        with self.assertRaisesRegex(ValueError, "missing W3 fields"):
+            self.parser.parse_report(corrupted)
+
+    def test_w3_extension_rejects_aggregate_not_equal_to_seed_sum(self) -> None:
+        corrupted = self._with_w3_census().replace(
+            "agentBallFanoutEvents=60",
+            "agentBallFanoutEvents=61",
+            1,
+        )
+        with self.assertRaisesRegex(ValueError, "agentBallFanoutEvents=.*does not equal seed sum"):
             self.parser.parse_report(corrupted)
 
     def test_rejects_non_finite_rate_token(self) -> None:
