@@ -1,5 +1,7 @@
 // File:     src/heading-mechanics/Tests/HeadingMechanicsTests.cs
 // Created:  2026-05-31
+// Modified: 2026-09-23 (ERR-010-004: full-fan-out contact-buffer capacity lock)
+// Modified: 2026-09-22 (W3: stale-frame, ClearDuelBuffer and fail-closed contact-buffer locks)
 // Modified: 2026-09-08
 // Author:   —
 // Spec:     Heading Mechanics #10 §5, Code Standards #20
@@ -1205,5 +1207,8 @@ namespace TacticalDirector.HeadingMechanics.Tests
 // |         |            |        | (z=0 at t≈0.66 s) and reached x=0 only at z≈−3.05 m, so the predicate          |
 // |         |            |        | correctly returned false; vz=5 keeps it at z≈1.23 m ∈ [0,2.44] when x=0.       |
 // | 1.4     | 2026-09-08 | —      | Regression coverage for invalid jump-frame inputs.                 |
-// | 1.5     | 2026-09-23 | —      | ERR-010-004: full MaxAgents AGENT_BALL fan-out fits; overflow still fails closed beyond effective capacity. |
+// | 1.5     | 2026-09-22 | —      | W3 (PR #439): DirectUpdate_DoesNotCarryStaleCollisionFrame,        |
+// |         |            |        | ClearDuelBuffer_PreservesSameFrameCollisionContacts and            |
+// |         |            |        | CollisionContactBuffer_OverflowFailsClosed. Row added at close-out.|
+// | 1.6     | 2026-09-23 | —      | ERR-010-004: full MaxAgents AGENT_BALL fan-out fits; overflow still fails closed beyond effective capacity. (Renumbered from 1.5 at the #439 close-out so rows stay in date order.) |
 #endregion

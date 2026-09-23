@@ -136,7 +136,7 @@ def parse_report(report: str) -> dict:
     aggregate: dict[str, int | float | str] = {"scope": "aggregate"}
     w3_marker_present = W3_AGGREGATE in report
     w3_fields_present = any(
-        re.search(rf"\\b{re.escape(field)}=", report) is not None
+        re.search(rf"\b{re.escape(field)}=", report) is not None
         for field in W3_FIELDS
     )
     if w3_fields_present and not w3_marker_present:

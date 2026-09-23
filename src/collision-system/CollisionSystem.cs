@@ -1,5 +1,6 @@
 // File:     src/collision-system/CollisionSystem.cs
 // Created:  2026-05-25
+// Modified: 2026-09-22  [v1.11] (W3 review: canonical min/max ordering for read-only observation events; feed non-authoritative for W3 membership)
 // Modified: 2026-09-22  [v1.10] (W3: read-only same-frame AGENT_BALL candidate publication; physical response stays in UpdateCollisions/Resolve)
  // Modified: 2026-09-11  [v1.9] (W4: transient applied-deflection feedback; CollisionEvent ABI unchanged)
 // Author:   —
@@ -660,5 +661,5 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | per call; CollisionEvent and cross-tick state remain unchanged.           |
 // | 1.10    | 2026-09-22 | —      | W3: + PublishAgentBallContacts read-only candidate feed for same-frame    |
 // |         |            |        | consumers. No response/contact-state mutation; full collision stays in Resolve. |
-// | 1.9     | 2026-09-22 | —      | W3 review: read-only observation events now use the same canonical min/max entity ordering as Resolve; feed is explicitly non-authoritative for W3 membership. |
+// | 1.11    | 2026-09-22 | —      | W3 review: read-only observation events now use the same canonical min/max entity ordering as Resolve; feed is explicitly non-authoritative for W3 membership. (Renumbered from a duplicate "1.9" at the #439 close-out.) |
 #endregion

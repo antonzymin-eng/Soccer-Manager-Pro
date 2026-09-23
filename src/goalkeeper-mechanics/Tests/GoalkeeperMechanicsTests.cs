@@ -1691,4 +1691,7 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // | 1.3 | 2026-07-27 | — | ERR-011-002 fallout: 12 EvaluateTacticalTransition call sites renamed to    |
 // |     |            |   | ballThreateningOwnGoal/ballSafelyUpfield. Semantics preserved — the two sites|
 // |     |            |   | passing ballInDefensiveThird: true are HandsOnBall cases consulting neither flag.|
+// | 1.4 | 2026-09-22 | — | W3 (PR #439): mixed-participant cross-claim duel locks — canonical         |
+// |     |            |   | registration order with three participants, and the symmetric near-tie     |
+// |     |            |   | top/second perturbation. Row added at the #439 close-out.                  |
 #endregion

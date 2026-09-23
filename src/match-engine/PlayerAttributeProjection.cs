@@ -254,4 +254,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Heading/Strength/Balance) + ToGoalkeeper (#11, int→float widen |
 // |         |            |        | of the ten GK fields) added; KD-P8 "deliberately ABSENT" note  |
 // |         |            |        | removed now that MatchEngine gives both a live consumer.       |
+// | 1.3     | 2026-09-22 | —      | W3 (PR #439): ToCrossClaim — narrow Balance/Strength/Aerial    |
+// |         |            |        | projection for the shared cross-claim duel; outfielders are    |
+// |         |            |        | never projected through GoalkeeperAgentAttributes. Row added   |
+// |         |            |        | at the #439 close-out.                                         |
 #endregion

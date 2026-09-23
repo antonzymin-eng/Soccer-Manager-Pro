@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/FoulRateDiagnosticTests.cs
 // Created:  2026-07-26
+// Modified: 2026-09-23 (PR #439 Codex closure: W3 census explicitly enables GK/Heading; no-op under the ON default)
 // Modified: 2026-09-22 (W3 / #435 §6.2 frozen-corpus extension: measurement-only W3/pass/header census)
 // Modified: 2026-09-22 (#435 §2.1 source-complete foul/card measurement instrument; measurement-only)
 // Author:   —
@@ -1167,4 +1168,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | nonzero state and adds the separate >1 collision-suppression-window      |
 // |         |            |        | comparison; relabels inferred wave-on accounting and refreshes comments. |
 // | 1.6     | 2026-09-22 | —      | #435 §6.2 W3 extension: same six full-match seeds now report production fan-out/claim/duel/keeper-claim counters plus Cross/Lofted attempts/completions and header attempts/contacts. Observation only; no gameplay state or [GT] change. |
+// | 1.7     | 2026-09-23 | —      | PR #439 Codex closure: the §6.2 W3 census calls engine.EnableGkHeading() so it no longer depends on host defaults. The flag already defaults ON (constructor), so measured output is unchanged. Row added at the #439 close-out. |
 #endregion

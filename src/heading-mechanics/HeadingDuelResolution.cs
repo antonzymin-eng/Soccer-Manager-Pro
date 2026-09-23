@@ -1,5 +1,6 @@
 // File:     src/heading-mechanics/HeadingDuelResolution.cs
 // Created:  2026-05-28
+// Modified: 2026-09-22 (W3: AGENT_BALL contact buffer fails closed on overflow; ClearDuelBuffer/ContactCount)
 // Modified: 2026-06-12
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.7, §4.2.1, KD-8, KD-10, FR-HE-010, FR-HE-017, FR-HE-023,
@@ -338,4 +339,8 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246  |
 // |         |            |        | under Unity and the Linux compile gate alike, so this assembly could not have   |
 // |         |            |        | compiled in-engine. No functional change.                                       |
+// | 1.5     | 2026-09-22 | —      | Wiring backlog W3 (PR #439): the AGENT_BALL contact buffer now throws           |
+// |         |            |        | InvalidOperationException on overflow instead of silently dropping contacts.    |
+// |         |            |        | Adds ClearDuelBuffer() (clears duel registrations, keeps same-frame contacts)   |
+// |         |            |        | and ContactCount. Row added at the #439 close-out.                              |
 #endregion
