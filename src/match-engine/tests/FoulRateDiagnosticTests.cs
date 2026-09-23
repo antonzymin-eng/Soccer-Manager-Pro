@@ -154,6 +154,8 @@ namespace TacticalDirector.MatchEngine
                 foreach (ulong seed in Seeds)
                 {
                     var engine = new MatchEngine(seed);
+                    // #435 §6.2 is explicitly a W3 census; keep it independent of host defaults.
+                    engine.EnableGkHeading();
                     var probe = new FoulCandidateProbe(engine, TicksPerSeed);
                     engine.TestOnly_SetCollisionObserver(probe);
 

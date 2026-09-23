@@ -328,6 +328,41 @@ namespace TacticalDirector.MatchEngine
 
         [TestCase(0)]
         [TestCase(1)]
+        public void W3_PossessionHardCancelsClaim_BeforeNextTacticalPass(int teamId)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            int keeper = GoalkeeperForTeam(engine, teamId);
+            int possessor = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + 1;
+            Assert.GreaterOrEqual(keeper, 0);
+            Assert.IsFalse(engine.AgentIsGoalkeeper(possessor));
+
+            Vector2 gkXY = engine.AgentView(keeper).Position;
+            engine.TestOnly_ForceBallLoose(
+                new Vector3(gkXY.x, gkXY.y + 0.5f, MatchEngineConstants.GkRushMaxBallHeightM + 0.1f),
+                Vector3.zero);
+            engine.TestOnly_DriveGkHeadingTactical();
+            Assert.IsTrue(engine.TestOnly_GoalkeeperState.ClaimIntentActive[teamId]);
+            Assert.IsTrue(engine.TestOnly_TryGetGoalkeeperHandReachEnvelope(
+                teamId, out Vector3 reachCenter, out float reachRadius));
+            Assert.Greater(reachRadius, 0f);
+
+            engine.TestOnly_SetPossession(possessor);
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.ClaimIntentActive[teamId]);
+
+            engine.TestOnly_ForceBallLoose(reachCenter, new Vector3(0f, 0f, -1f));
+            EventBus.BeginTick((uint)engine.TestOnly_CurrentPhysicsFrame);
+            EventBus.BeginPhase(PhaseId.Physics);
+            engine.TestOnly_DriveGkHeadingPhysics();
+
+            Assert.AreEqual(0, engine.TestOnly_W3LastParticipantCount,
+                "A claim cancelled by possession must not revive before the next 10 Hz producer pass.");
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.ClaimIntentActive[teamId]);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
         public void W3_ComposedCross_ProducesRealHandContact_ForEitherTeam(int teamId)
         {
             var engine = new MatchEngine(MatchSeed);
@@ -890,4 +925,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.6     | 2026-09-22 | —      | W3: claim producer/lifetime locks now run for both teams; added a composed production-path Hand contact for each keeper using #11's live reach envelope and W3 winner observation. |
 // | 1.7     | 2026-09-22 | —      | W3: mirrored composed Head-wins-Hand test stages only elapsed jump history, then requires #10's real current-frame contact geometry to qualify the Head; winner mutates through Heading while the GK claim terminates DisturbedInDuel with no possession. |
 // | 1.8     | 2026-09-22 | —      | W3 event provenance: the mirrored mixed contest drains HeaderExecutedEvent and requires ContestedDuelId == W3 duel/frame id, preventing winner suppression from falsely reporting an uncontested header. |
+// | 1.9     | 2026-09-23 | —      | ERR-011-014: possession hard-cancels an active claim immediately; a pre-tactical loose ball cannot revive the stale Hand participant. |
 #endregion

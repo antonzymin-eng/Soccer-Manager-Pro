@@ -937,6 +937,32 @@ namespace TacticalDirector.HeadingMechanics.Tests
         }
 
         [Test]
+        public void CollisionContactBuffer_CoversFullAgentFanout()
+        {
+            Assert.GreaterOrEqual(
+                HeadingMechanicsConstants.HeadingContactBufferCapacity,
+                HeadingMechanicsConstants.MaxAgents,
+                "W3 can publish one AGENT_BALL event per agent; Heading must cover the full fan-out.");
+
+            var duel = new HeadingDuelResolution();
+            var evt = new CollisionEvent
+            {
+                MatchTime = 1f,
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                ContactPoint = new Vector3(10f, 20f, 1f)
+            };
+
+            for (int i = 0; i < HeadingMechanicsConstants.MaxAgents; i++)
+            {
+                evt.Entity2ID = i;
+                duel.OnCollisionEvent(in evt);
+            }
+
+            Assert.AreEqual(HeadingMechanicsConstants.MaxAgents, duel.ContactCount);
+        }
+
+        [Test]
         public void CollisionContactBuffer_OverflowFailsClosed()
         {
             var duel = new HeadingDuelResolution();
@@ -1179,4 +1205,5 @@ namespace TacticalDirector.HeadingMechanics.Tests
 // |         |            |        | (z=0 at t≈0.66 s) and reached x=0 only at z≈−3.05 m, so the predicate          |
 // |         |            |        | correctly returned false; vz=5 keeps it at z≈1.23 m ∈ [0,2.44] when x=0.       |
 // | 1.4     | 2026-09-08 | —      | Regression coverage for invalid jump-frame inputs.                 |
+// | 1.5     | 2026-09-23 | —      | ERR-010-004: full MaxAgents AGENT_BALL fan-out fits; overflow still fails closed beyond effective capacity. |
 #endregion

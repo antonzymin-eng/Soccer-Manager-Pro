@@ -478,7 +478,8 @@ namespace TacticalDirector.MatchEngine
         // GK (#11) / Heading (#10) engine integration (gk-heading-engine-integration-design.md, Phase 1).
         // Both orchestrators are CONSTRUCTED at boot (cheap array allocation; does not touch _ball or any
         // serialized world state, so the default engine stays byte-identical) but are only DRIVEN + their
-        // §4 triggers fired when the opt-in _gkHeadingEnabled flag is set (KD-11 — default off). Their two
+        // §4 triggers fired when the _gkHeadingEnabled activation flag is set. The flag defaults ON since
+        // §5.Z.15; tests/hosts may explicitly disable it. Their two
         // RNG streams are registered at boot in a fixed order (stable indices), the card-severity
         // precedent (KD-1); they are inert until a draw fires (only under the flag).
         // NOTE: the orchestrator class names collide with their own namespace names, so they are
@@ -500,7 +501,7 @@ namespace TacticalDirector.MatchEngine
         private readonly int _headingStreamIndex;
         private readonly int _goalkeeperStreamIndex;
         private readonly int[] _gkAgentIds;      // [MaxGkAgents] — agentId of each keeper (keeper index → agentId)
-        private bool _gkHeadingEnabled;          // KD-11 opt-in flag; false = byte-identical default engine
+        private bool _gkHeadingEnabled;          // activation flag; defaults true since §5.Z.15
         // §4 trigger latches: at most one save per ball episode per keeper, one header per airborne episode
         // per agent. Cleared when the ball leaves the triggering condition. These are engine-level cross-tick
         // state that GATES whether a save/header re-commits, so they are serialized at v18 (Phase 2) alongside
@@ -918,8 +919,8 @@ namespace TacticalDirector.MatchEngine
             // Phase 1). Construct both orchestrators + their stateless ball/RNG adapters, and register the
             // two subsystem RNG streams (fixed order → stable indices; the card-severity precedent, KD-1).
             // Constructed unconditionally — this only allocates arrays, touching no serialized world state,
-            // so the default (flag-off) engine stays byte-identical. Both are DRIVEN and their §4 triggers
-            // fired only under _gkHeadingEnabled (KD-11), which starts false.
+            // so construction alone stays byte-stable. Both are DRIVEN and their §4 triggers fire only
+            // under _gkHeadingEnabled; §5.Z.15 below sets that activation flag ON by default.
             var gkHeadingWorld = new GkHeadingWorldAdapter(this);   // one adapter, all four boundary interfaces
             _headingStreamIndex = _rng.RegisterStream(
                 "heading.mechanics", SubsystemOrdinals.HeadingMechanics, entityId: -1, streamVersion: 1);
@@ -4999,7 +5000,7 @@ namespace TacticalDirector.MatchEngine
             // GK (#11) / Heading (#10) 60 Hz drive (design §3.4). After the ball + agents are integrated so
             // the orchestrators see the current world, and — since this is the Physics phase — strictly
             // before the Resolve-phase goal check (a committed save/header can deflect the ball first).
-            // No-op unless _gkHeadingEnabled (KD-11 — the default engine is byte-identical).
+            // No-op only when a test/host explicitly disables _gkHeadingEnabled.
             DriveGkHeadingPhysics();
 
             // W6: Controlled is externally managed by design. After every agent (including GK) has
@@ -5424,6 +5425,7 @@ namespace TacticalDirector.MatchEngine
             _ball = BallState.CreateAtPosition(new Vector3(
                 position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
             _possessingAgentId = SelectRestartTaker(position, awardedTeam);
+            CancelGoalkeeperClaimsForPossession();
 
             // ERR-012-011 — a restart ends any pass in flight, stated rather than inherited. The
             // placed ball is at rest, so UpdatePassInFlight's receding test would clear the latch
@@ -8469,9 +8471,20 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void TakeControlledPossession(int agentId)
         {
+            // ERR-011-014 / #11 §3.6.1: possession is a hard cancellation for every live
+            // cross/aerial ClaimIntent. Clear at acquisition, not at the next 10 Hz producer pass.
+            CancelGoalkeeperClaimsForPossession();
             _possessingAgentId = agentId;
             BallCollision.SetBallControlled(ref _ball);
             DriveControlledBallToPossessor();
+        }
+
+        private void CancelGoalkeeperClaimsForPossession()
+        {
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                _goalkeeper.ClearClaimIntent(k);
+            }
         }
 
         /// <summary>
@@ -10382,4 +10395,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.86    | 2026-09-22 | —      | W3 / #435 §6.2: nonserialized cumulative observation counters expose fan-out events, claim episodes, registered duel participants, resolved Hand-contact duels and successful keeper claims to the frozen six-seed diagnostic. No gameplay/snapshot/digest/RNG change. |
 // | 1.87    | 2026-09-22 | —      | W3 event provenance: when Head wins a mixed Hand/Head contest, carry the W3 duel id into #10 before loser suppression so HeaderExecutedEvent remains truthfully contested. Frame-local only. |
 // | 1.88    | 2026-09-22 | —      | W6 ordering correction surfaced by W3: reconcile every Controlled holder immediately after Resolve collision position correction. This is unconditional and can change default-engine trajectories/digests for keeper or outfield carriers even with GK/Heading disabled; it reuses the same attachment funnel and adds no schema field or RNG draw. |
+// | 1.89    | 2026-09-23 | —      | PR #439 Codex closure / ERR-011-014: possession acquisition and restart-taker awards hard-cancel live #11 ClaimIntent state immediately, closing the stale-Hand window. Stale default-off comments corrected; GK/Heading defaults ON since §5.Z.15. No schema/RNG/draw-order change. |
 #endregion
