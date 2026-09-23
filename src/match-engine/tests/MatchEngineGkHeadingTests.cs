@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGkHeadingTests.cs
 // Created:  2026-07-22
+// Modified: 2026-09-22 (W3: composed home/away Head-wins-Hand route through real #10 geometry)
 // Modified: 2026-09-22 (W3: mirrored home/away claim lifecycle + composed real Hand-contact tests)
 // Modified: 2026-07-23
 // Author:   —
@@ -20,6 +21,7 @@ using TacticalDirector.DeterministicSim;
 using TacticalDirector.CollisionSystem;
 using TacticalDirector.BallPhysics;
 using TacticalDirector.GoalkeeperMechanics;
+using TacticalDirector.HeadingMechanics;
 using TacticalDirector.EventSystem;
 using TacticalDirector.AgentMovement;
 using TacticalDirector.PlayerDatabase;
@@ -92,6 +94,26 @@ namespace TacticalDirector.MatchEngine
             var gk = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
             gk.Pace = 19;   // ToGoalkeeper copies Pace → the committed attrs must carry 19f
             players[0].Attributes = gk;
+            return new Squad(clubId, players);
+        }
+
+        private static Squad SquadWithHeadBeatsHandProfiles(int clubId)
+        {
+            PlayerRecord[] players = CoherentPlayers(clubId);
+
+            var gk = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+            gk.Balance = 1;
+            gk.Strength = 1;
+            gk.Aerial = 1;
+            players[0].Attributes = gk;
+
+            var header = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+            header.Heading = 20;
+            header.Balance = 20;
+            header.Strength = 20;
+            header.Aerial = 20;
+            players[1].Attributes = header;
+
             return new Squad(clubId, players);
         }
 
@@ -346,6 +368,89 @@ namespace TacticalDirector.MatchEngine
                 state.States[teamId],
                 Is.EqualTo(GoalkeeperState.HandsOnBall).Or.EqualTo(GoalkeeperState.Recovering),
                 "A real Hand contact must terminate through #11 handling, not leave the keeper in Set/Anticipate.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void W3_ComposedContest_HeadWinnerRoutesHeading_AndGoalkeeperDoesNotClaim(int teamId)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            if (teamId == 0)
+            {
+                engine.ConfigureSquads(SquadWithHeadBeatsHandProfiles(21), DefaultSquad(22));
+            }
+            else
+            {
+                engine.ConfigureSquads(DefaultSquad(21), SquadWithHeadBeatsHandProfiles(22));
+            }
+
+            engine.DisableGkHeading();
+            engine.TestOnly_SetPhysicsFrame(36);
+            engine.EnableGkHeading();
+
+            int keeper = GoalkeeperForTeam(engine, teamId);
+            int header = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + 1;
+            Assert.GreaterOrEqual(keeper, 0);
+            Assert.IsFalse(engine.AgentIsGoalkeeper(header),
+                "The W3 Head participant must be an outfielder; no outfielder may route through ToGoalkeeper.");
+
+            Vector2 shared = teamId == 0 ? new Vector2(2f, 34f) : new Vector2(103f, 34f);
+            Vector2 facing = teamId == 0 ? Vector2.right : Vector2.left;
+
+            AgentState keeperState = AgentState.CreateAtPosition(shared, facing);
+            AgentState headerState = AgentState.CreateAtPosition(shared, facing);
+            headerState.CurrentState = AgentMovementState.JOGGING;
+            engine.TestOnly_SetAgent(keeper, keeperState);
+            engine.TestOnly_SetAgent(header, headerState);
+
+            Vector3 headCenter = engine.TestOnly_StageHeadingApexAtCurrentFrame(header);
+
+            int frame = engine.TestOnly_CurrentPhysicsFrame;
+            int claimHalfDuration = GoalkeeperDiveKinematics.ComputeDiveDurationFrames() / 2;
+            int claimCommitTick = System.Math.Max(
+                0, (frame - claimHalfDuration) / GoalkeeperConstants.FramesPerTacticalTick);
+            var claim = new ClaimIntent
+            {
+                TargetContactPoint = headCenter,
+                ClutchFirmness = 0.5f,
+                ReachDirectionLateral = 0.0f,
+                AttemptCommittedTick = claimCommitTick,
+            };
+            engine.TestOnly_CommitGoalkeeperClaimIntent(teamId, claim);
+
+            Assert.IsTrue(engine.TestOnly_TryGetGoalkeeperHandReachEnvelope(
+                teamId, out Vector3 handCenter, out float handRadius));
+            Assert.LessOrEqual(
+                (headCenter - handCenter).sqrMagnitude,
+                handRadius * handRadius,
+                "Fixture must present the same live ball to both #10 Head geometry and #11 Hand reach.");
+
+            Vector3 incomingVelocity = new Vector3(0f, 0f, -1f);
+            engine.TestOnly_ForceBallLoose(headCenter, incomingVelocity);
+            EventBus.BeginTick((uint)frame);
+            EventBus.BeginPhase(PhaseId.Physics);
+
+            engine.TestOnly_DriveGkHeadingPhysics();
+
+            HeadingTickState headingState = engine.TestOnly_HeadingState;
+            GoalkeeperTickState goalkeeperState = engine.TestOnly_GoalkeeperState;
+
+            Assert.AreEqual(2, engine.TestOnly_W3LastParticipantCount,
+                "The composed fixture must resolve one Hand and one real #10 Head participant.");
+            Assert.AreEqual(header, engine.TestOnly_W3LastWinnerAgentId,
+                "The deliberately stronger outfielder must win the mixed Balance/Strength/Aerial score.");
+            Assert.AreEqual(BodyPartEnum.Head, engine.TestOnly_W3LastWinnerBodyPart);
+            Assert.IsFalse(goalkeeperState.ClaimIntentActive[teamId],
+                "A goalkeeper who loses to Head must consume the claim as DisturbedInDuel.");
+            Assert.AreEqual(GoalkeeperState.Recovering, goalkeeperState.States[teamId]);
+            Assert.AreEqual(MatchEngineConstants.NO_POSSESSION, engine.TestOnly_PossessingAgentId,
+                "A Head winner must not create goalkeeper possession / BallClaimed state.");
+            Assert.AreEqual(frame, headingState.ContactStates[header].ActualContactFrame,
+                "The winning route must be a real current-frame #10 contact.");
+            Assert.IsFalse(headingState.IntentActive[header],
+                "The winning header intent must resolve through #10 Pass 2.");
+            Assert.AreNotEqual(incomingVelocity, engine.BallView.Velocity,
+                "A Head winner must route through Heading #10's ApplyKick path.");
         }
 
         // ── flag semantics ──────────────────────────────────────────────────────────
@@ -764,4 +869,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | loose cross keeps the bounded claim episode alive across a later   |
 // |         |            |        | tactical producer pass instead of cancelling on the old height gate.| 
 // | 1.6     | 2026-09-22 | —      | W3: claim producer/lifetime locks now run for both teams; added a composed production-path Hand contact for each keeper using #11's live reach envelope and W3 winner observation. |
+// | 1.7     | 2026-09-22 | —      | W3: mirrored composed Head-wins-Hand test stages only elapsed jump history, then requires #10's real current-frame contact geometry to qualify the Head; winner mutates through Heading while the GK claim terminates DisturbedInDuel with no possession. |
 #endregion

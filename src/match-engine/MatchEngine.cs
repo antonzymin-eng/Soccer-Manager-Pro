@@ -80,6 +80,7 @@
 // Modified: 2026-07-28 (keeper-contact pass: + TestOnly_LastShotStrikePosition/Velocity — the strike-TIME ball state, captured beside the _shotContacts increment (the WoodworkStrikes diagnostic class, not serialized), so instruments no longer sample end-of-tick BallView a same-tick touch may already have reversed. No schema change. See docs/tracking/gk-contact-rate-design.md)
 // Modified: 2026-08-03 (conversion-at-contact pass (ERR-011-008): GkHeadingWorldAdapter.ParkBall() — the ball-side half of #11 §3.5.2's claim, which had no seam (ApplyKick is a kick). Zeroes _ball.Velocity/AngularVelocity; no ball-state-machine transition, no RNG draw, no cross-tick state, so no SNAPSHOT_SCHEMA_VERSION change. A claimed shot previously kept its velocity and entered the net. See docs/tracking/gk-conversion-at-contact-design.md)
 // Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: TryCommitRushIntents gives GoalkeeperMechanics.CommitRushIntent its FIRST production caller — pure GkHeadingIntentSource.RushArmed/HasGoalSideCover geometry + #11 §3.7.0's attribute-driven commit distance (ERR-011-010) + the ClearRushIntent disarm, gated behind SaveArmed so a shot is still a dive. Deliberately NOT a DecisionTree action: ActionType ordinal 8 overflows the 3-bit composure-noise field (the W9 deferral reason). No new engine state ⇒ no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/gk-rush-trigger-design.md)
+// Modified: 2026-09-22 (W3 testability: sanctioned #10 apex-history staging + clock seam for a real Head-vs-Hand composed arbitration lock)
 // Modified: 2026-09-22 (W3 runtime: composition arbiter combines #10 prepared Head geometry with #11 active-claim Hand reach before either path mutates the ball; mixed participants use ToCrossClaim only)
 // Modified: 2026-08-04 (W1 AR-1: RefreshGkAgentIds filters _isSentOff so a keeper sent off mid-rush stops; + TestOnly_DriveGkHeadingPhysics. See docs/tracking/gk-rush-trigger-design.md v1.2)
 // Modified: 2026-08-04 (W1 AR-2: RefreshGkAgentIds detects a CHANGE of keeper-slot occupant and calls GoalkeeperMechanics.ResetSlot — a substitute keeper was inheriting the dismissed keeper's locked RushIntent. No new state, no schema change. See docs/tracking/gk-rush-trigger-design.md v1.3)
@@ -2900,6 +2901,86 @@ namespace TacticalDirector.MatchEngine
         /// parallel surface could disagree with what the engine actually persists.</summary>
         internal TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState TestOnly_GoalkeeperState =>
             _goalkeeper.CaptureState();
+
+        /// <summary>Test-only W3 seam: current 60 Hz frame used by the staged mixed-contact locks.</summary>
+        internal int TestOnly_CurrentPhysicsFrame => (int)_clock.CurrentTick;
+
+        /// <summary>Test-only W3 seam: set the deterministic clock without running unrelated match phases.
+        /// Used only to stage a contact at a non-zero #10/#11 aerial apex.</summary>
+        internal void TestOnly_SetPhysicsFrame(int frame)
+        {
+            if (frame < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(frame));
+            }
+            _clock.RestoreFromSnapshot((ulong)frame);
+        }
+
+        /// <summary>Test-only W3 seam over #10's authoritative cross-tick state.</summary>
+        internal HeadingTickState TestOnly_HeadingState => _heading.CaptureState();
+
+        /// <summary>
+        /// Stages one committed #10 header so the CURRENT frame is its synthetic jump apex, but does
+        /// not manufacture contact membership. The next normal Heading.Update still runs the real
+        /// eligibility/contact-volume calculation against the live ball; this seam supplies only the
+        /// already-elapsed jump history that would otherwise require ~20 unrelated engine ticks.
+        /// </summary>
+        internal Vector3 TestOnly_StageHeadingApexAtCurrentFrame(int agentId)
+        {
+            if ((uint)agentId >= (uint)MatchEngineConstants.SQUAD_SIZE)
+            {
+                throw new ArgumentOutOfRangeException(nameof(agentId));
+            }
+            if (_isGoalkeeper[agentId])
+            {
+                throw new ArgumentException("W3 mixed-contact test staging requires an outfield header.", nameof(agentId));
+            }
+
+            int currentFrame = (int)_clock.CurrentTick;
+            int apexOffset = HeadingJumpKinematics.ComputeApexFrame(0);
+            int jumpStartFrame = currentFrame - apexOffset;
+            if (jumpStartFrame < 0)
+            {
+                throw new InvalidOperationException(
+                    "Current frame must be at least one #10 apex offset before staging an apex contact.");
+            }
+
+            int teamId = _teamIds[agentId];
+            HeadingAgentAttributes attrs =
+                PlayerAttributeProjection.ToHeading(in _canonicalAttrs[agentId], teamId, fatigue: 0f);
+            var intent = new HeaderIntent
+            {
+                PowerIntent = MatchEngineConstants.HeaderTriggerPowerIntent,
+                ContactPointIntent = Vector2.zero,
+                TargetIntent = GkHeadingIntentSource.HeaderAimTarget(in _agents[agentId].Position, teamId),
+                AttemptCommittedTick = jumpStartFrame / DeterministicSimConstants.AI_PHASE_STRIDE,
+                SetPieceContext = SetPieceContext.OpenPlay,
+            };
+            _heading.CommitIntent(agentId, intent, attrs, _ball, currentFrame);
+
+            // Restore through #10's sanctioned state seam instead of mutating CaptureState's live
+            // array references in place.
+            HeadingTickState live = _heading.CaptureState();
+            var intents = (HeaderIntent[])live.Intents.Clone();
+            var contacts = (HeaderContactState[])live.ContactStates.Clone();
+            var active = (bool[])live.IntentActive.Clone();
+            var ballFrames = (int[])live.BallSnapshotFrames.Clone();
+            var attrsByAgent = (HeadingAgentAttributes[])live.AgentAttrs.Clone();
+
+            HeaderContactState contact = contacts[agentId];
+            contact.JumpStartFrame = jumpStartFrame;
+            contact.JumpReachM = HeadingJumpKinematics.ComputeJumpReach(attrs);
+            contact.PrevFrameFacingDirection = _agents[agentId].FacingDirection;
+            contacts[agentId] = contact;
+            ballFrames[agentId] = currentFrame;
+
+            _heading.RestoreState(new HeadingTickState(
+                intents, contacts, active, ballFrames, attrsByAgent));
+
+            float headZ = HeadingJumpKinematics.ComputeHeadZ(
+                jumpStartFrame, contact.JumpReachM, currentFrame);
+            return new Vector3(_agents[agentId].Position.x, _agents[agentId].Position.y, headZ);
+        }
 
         internal int TestOnly_W3LastParticipantCount => _w3CrossClaimArbiter.LastParticipantCount;
         internal int TestOnly_W3LastWinnerAgentId => _w3CrossClaimArbiter.LastWinnerAgentId;
@@ -10252,4 +10333,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.82    | 2026-09-22 | —      | W3 shared feed now has both consumers: Heading + a frame-local, fail-closed cross-claim candidate collector. Candidate-only per ERR-011-011; no policy, RNG or snapshot field. |
 // | 1.81    | 2026-09-22 | —      | W3 / ERR-011-012: ClaimIntent is a bounded episode, not a per-stride height gate. Possession/SAVE hard-cancel; ordinary geometry lapse does not. Reach side locks at commit and joins the v23 payload. W1 rush cannot steal an active claim. Test hand-envelope observation no longer Refreshes/ResetSlots. |
 // | 1.82    | 2026-09-22 | —      | W3 runtime arbitration boundary: Heading #10 exposes prepared Head contacts before mutation; MatchEngine combines them with active #11 Hand reach in canonical entity order, scores mixed participants through ToCrossClaim, routes Hand wins/losses through #11, and suppresses losing Heads before #10 applies a header. Collision #3 remains observation-only. |
+// | 1.83    | 2026-09-22 | —      | W3 testability only: add deterministic clock/apex-history seams so a composed test can make #10 itself confirm a current-frame Head contact against a simultaneous #11 Hand reach; no production path reads the seams. |
 #endregion
