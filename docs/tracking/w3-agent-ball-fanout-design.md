@@ -1,7 +1,7 @@
 # W3 — shared AGENT_BALL fan-out and goalkeeper cross-claim wiring
 
 > **Created:** September 22, 2026
-> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.6 records the production corpus, the dormant contested-arbitration finding, and the pending owner classification decision.
+> **Status:** ACTIVE DRAFT / RESULT-BEARING — PR #439 remains draft. v0.7 records the production corpus, W2 gate diagnosis, M7 mutation proof, dormant contested-arbitration finding, and pending owner decisions.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W3**.
 > **Companion preregistration:** `docs/tracking/foul-card-w3-w9-preregistration.md`.
 > **Baseline:** `main` at `876a3343319050187c2a5505b18cb32fc3d0f89d`; post-merge CI run
@@ -371,7 +371,7 @@ establish production reachability of the contested branch.
 The matched pre-W3 arm is branch `evidence/pr439-w3-prewire-six-seed`, Actions run
 `35815761065`, measuring exact baseline `876a3343319050187c2a5505b18cb32fc3d0f89d` with the
 same measurement transform. `headerContacts=0` in both pre-W3 and post-W3 arms, so the zero
-predates W3. A separate open issue must distinguish **no production header-contact opportunity** from
+predates W3. A separate open issue, **#441**, must distinguish **no production header-contact opportunity** from
 **broken header-contact wiring** using upstream counters sufficient to locate the first zero.
 
 `successfulKeeperClaims=753` is a W3-only counter and has no valid pre-W3 comparator. Keepers could
@@ -392,6 +392,53 @@ The evidence supports this factual statement and no stronger completion claim:
 Whether W3 is classified as **complete/wired**, **wired but dormant**, or **still open pending
 production contested-arbitration reachability** remains an explicit owner decision. PR #439 must not
 silently choose among those classifications.
+
+### 6.3 W2 diagnostic evidence blocking the functional gate
+
+Three evidence arms use the same diagnostic test blob
+`e81e859db5bfa2b4c7a6fd09bee2dab6775b8a11` and workflow blob
+`dec67b35de829d79f9cc6169b5d9139b4ed2d85a`, applied to three production parents:
+
+| arm | production parent | evidence head / run / job | W/L/F/M | dispossessions | BallLoose end state | `P(0 wins)` |
+|---|---|---|---:|---:|---|---:|
+| base | `876a3343319050187c2a5505b18cb32fc3d0f89d` | `1ba99b8e…` / `35878618102` / `107240961327` | 3 / 6 / 0 / 20 | 3 | 6 original-carrier / 0 other / 0 loose | 19.586% |
+| W3-only | `f69aaef0f27fdd8a10a89a2d4cc599b08d6ef70b` | `754c7ab9…` / `35878656931` / `107241091685` | 2 / 2 / 1 / 36 | 2 | 2 original-carrier / 0 other / 0 loose | 5.816% |
+| current-production behavior | `4d31788136b891f37940778d44db2bd28f88d6f6` | `5c75a6cf…` / `35878699989` / `107241232506` | 0 / 6 / 0 / 27 | 0 | 6 original-carrier / 0 other / 0 loose | 13.573% |
+
+The base job's test conclusion was red only because the already-filed ShotExecutor FM-03 Error was
+reported at teardown after the diagnostic output completed. An identical evidence-only containment
+rerun, run `35879276984` / job `107243207618`, reproduced the base summary exactly and passed.
+No production behavior was changed by the diagnostic.
+
+The clean-win branch is **not statistically implausible** under the preregistered threshold:
+head `P(0 wins)=13.573%`, well above 1%. The head `p_i` distribution is also ordinary rather than
+collapsed (min 1.073%, median 4.177%, max 15.506%, mean 5.793%). Base and W3-only likewise have
+ordinary distributions and `P(0 wins)` of 19.586% and 5.816%. The observed 0 wins at head is
+therefore plausible sampling variation; changing seeds, tick count, or the positive check requires
+an owner decision.
+
+The BallLoose branch is independent and material: **14/14 BallLoose outcomes across all three arms
+end the same tick back on the original carrier**, with zero other-player pickups and zero balls left
+loose. That latent W2/W6 gameplay issue is filed separately as **#440**. It must not be repaired
+inside PR #439; any gameplay fix requires separate before/after measurement, KD-W1 review, explicit
+owner approval, and its own PR.
+
+### 6.4 M7 SeasonSave mutation proof
+
+The deterministic ban-order rewrite has direct mutation proof:
+
+- evidence branch: `evidence/pr439-m7-order-mutation`;
+- unmutated production/test parent: `4d31788136b891f37940778d44db2bd28f88d6f6`;
+- mutation commit: `42ea88a79a9f0dad5071cefafda24f5a2ff35656`;
+- evidence-workflow head: `58cf6ec88e33054c069ef8e2914ce395fd2d76f1`;
+- Actions run/job: `35878836477` / `107241699913`;
+- mutation: reverse `SeasonLoop` fixture discipline order so `CommitFixtureCards` runs before
+  `OnClubFixturePlayed`;
+- exact target `ANewBanEarnedThisFixtureIsNotServedByThisSameFixture` reports **Failed** under the
+  mutation, and the evidence job passes only when that exact target fails.
+
+The mutation is evidence-only and is not present on PR #439. The normal branch retains the
+serve-before-commit production order.
 
 ---
 
@@ -439,6 +486,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.7 | 2026-09-23 | Adds the three-arm W2 gate diagnosis (identical test/workflow blobs, head P(0 wins)=13.573% > 1%, 14/14 BallLoose same-tick original-carrier re-pickups, issue #440), issue #441 for the header-contact zero, and M7 mutation proof run 35878836477/job 107241699913. No gameplay change. |
 | 0.6 | 2026-09-23 | Result-bearing six-seed evidence: records run 35814050060 at production SHA `f40f085…`, 1,164 single-participant Hand-contact resolutions and zero contested Hand-vs-Head production duels; corrects `successfulKeeperClaims` to a non-comparable W3-only counter; records headerContacts=0 pre/post, attribution limits, and the pending owner classification decision. |
 | 0.5 | 2026-09-22 | Defect-localization attribution correction: PR #439 also carries an unconditional W6 Resolve-time Controlled reattachment repair that affects keeper/outfield holders and can change default-engine trajectories with GK/Heading disabled. Final frozen-corpus evidence is therefore the combined W3+W6 landing state; `f69aaef0` is retained as the pre-correction W3 provenance point and deltas must not be attributed to W3 alone. |
 | 0.4 | 2026-09-22 | Review correction / ERR-011-012: Collision #3 fan-out is observation-only, never W3 membership; #10 prepared Head geometry + #11 active-claim Hand reach form the live contest before ball mutation. ClaimIntent is now a bounded locked episode and its full payload + active latch is serialized in MatchEngine schema v23. |
