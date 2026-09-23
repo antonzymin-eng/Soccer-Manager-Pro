@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-22 (W3 defect closure / W6 invariant: reattach Controlled possession immediately after Resolve collision position-correction writeback; no schema/RNG change)
 // Modified: 2026-09-22 (W3 / #435 §6.2: add nonserialized measurement-only production counters for frozen six-seed evidence)
 // Modified: 2026-09-22 (W3 / ERR-011-012: claim arming/lifetime corrected; claim reach side locked+serialized in the still-unmerged v23 block; observation seam made state-pure)
 // Modified: 2026-09-22 (W3 shared-feed continuation: AgentBallFanout now has the required two consumers — Heading + frame-local CrossClaimCandidateCollector; collector is candidate-only under ERR-011-011, fail-closed, nonserialized)
@@ -5129,6 +5130,15 @@ namespace TacticalDirector.MatchEngine
                 matchTime: matchTime,
                 eventConsumer: _eventConsumer,
                 ballDeflected: out bool ballDeflected);
+
+            // W6 invariant, exposed by W3's larger keeper-claim population: Physics attaches a
+            // Controlled ball after locomotion, but Resolve can subsequently move that holder via
+            // Collision #3's agent-agent penetration correction. Controlled AGENT_BALL response is
+            // deliberately suppressed, so without this reconciliation the holder and ball can end
+            // one tick with different XY while possession still says Controlled. Re-run the SAME
+            // attachment funnel immediately after collision writeback, before any later Resolve
+            // path can legitimately kick, release, or restart the ball.
+            DriveControlledBallToPossessor();
 
             // W4: consume an APPLIED flight change immediately in this Resolve phase. No pending
             // deflection latch survives the tick; existing GK reaction fields remain the only state.
@@ -10366,4 +10376,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.85    | 2026-09-22 | —      | W3 testability only: add deterministic clock/apex-history seams so a composed test can make #10 itself confirm a current-frame Head contact against a simultaneous #11 Hand reach; no production path reads the seams. |
 // | 1.86    | 2026-09-22 | —      | W3 / #435 §6.2: nonserialized cumulative observation counters expose fan-out events, claim episodes, registered duel participants, resolved Hand-contact duels and successful keeper claims to the frozen six-seed diagnostic. No gameplay/snapshot/digest/RNG change. |
 // | 1.87    | 2026-09-22 | —      | W3 event provenance: when Head wins a mixed Hand/Head contest, carry the W3 duel id into #10 before loser suppression so HeaderExecutedEvent remains truthfully contested. Frame-local only. |
+// | 1.88    | 2026-09-22 | —      | W3 defect closure / W6: reconcile Controlled attachment immediately after Resolve collision position correction so an agent-agent separation cannot leave a still-held ball one frame behind its holder. Same attachment funnel; no schema/RNG change. |
 #endregion
