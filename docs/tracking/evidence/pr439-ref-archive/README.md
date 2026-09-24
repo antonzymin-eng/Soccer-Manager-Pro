@@ -17,7 +17,7 @@ Each snapshot carries a terminal `.txt` suffix but preserves the original Git bl
 - original path and quarantined archive path;
 - original Git blob SHA.
 
-`run-heads.tsv` records **26 workflow runs cited by PR #439's description/comments**, including exact head branch/SHA, commit subject/date, event, conclusion, and workflow name. The live gate re-extracts run IDs from PR #439 through the GitHub API and requires the citation set to match this ledger exactly.
+`run-heads.tsv` records **15 workflow runs cited by PR #439's description/comments**, including exact head branch/SHA, commit subject/date, event, conclusion, and workflow name. The live gate re-extracts run IDs from PR #439 through the GitHub API and requires the citation set to match this ledger exactly.
 
 `ref-heads.tsv` records all **16** live `evidence/pr439-*` refs and exact heads. `ref-disposition.tsv` classifies all 16 as `deletable`, but every row remains `delete_now=false`; archival completeness and deletion authorization are deliberately separate states.
 
