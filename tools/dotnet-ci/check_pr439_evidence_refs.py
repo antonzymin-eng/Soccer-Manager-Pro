@@ -21,7 +21,7 @@ DISPOSITION = ARCHIVE_ROOT / "ref-disposition.tsv"
 RUN_HEADS = ARCHIVE_ROOT / "run-heads.tsv"
 PR_NUMBER = 439
 EXPECTED_REF_COUNT = 16
-EXPECTED_RUN_COUNT = 15
+EXPECTED_RUN_COUNT = 26
 
 
 @dataclass(frozen=True)
