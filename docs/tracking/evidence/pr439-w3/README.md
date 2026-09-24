@@ -21,6 +21,13 @@ All eight uploaded artifact files are now accounted for. The archive retains `re
 
 `supporting-focused-run-excerpts.transcribed.txt` separately preserves the result-bearing lines for the W6 pre-fix discriminator, W6 focused post-fix proof, and SeasonSave focused v2 proof. Those excerpts are explicitly transcribed from the Actions job-log API rather than asserted as byte copies.
 
+## Data carried over from closed PR #446
+
+Two data files from the superseded #446 archive attempt (branch `archive/pr439-evidence-20260923`, head `d8f61356ba5b45debe04371343a5e2715d493ede`, also held by GitHub as `refs/pull/446/head`) had no copy on `main`. Both are committed byte-for-byte; their Git blob ids are unchanged.
+
+- `header-reachability-441-results.tsv` (was `pr439-w3/header-reachability/results.tsv`, blob `2a71483e6d91fecd44ca2f7ccfd8deb363d09fc2`): the per-seed #441 header funnel from run `35887487201` on evidence head `7494300341cae94ed3eae41033d874e23cac0b06` (production `f40f0853…` plus the evidence-branch counters archived under `pr439-ref-archive/history/header-reachability/`). That run uploaded no artifact. On September 24, 2026 all 16 counters for all six seeds, and the aggregate row, were checked against the six job logs; `header-reachability-441-run-log-lines.transcribed.txt` keeps those source lines. The aggregate (1,811 commits → 1,811 jump starts → 18 ever-predicted → 0 prepared → 0 executed; 1,793 `failedPositionedPoorly` + 16 `failedEarly`; 1 overwrite) matches `w3-agent-ball-fanout-design.md`. This is #441 localization data, not a W3 arm.
+- `authoritative-artifact-member-hashes.tsv` (was `pr439-w3/source-artifact-hashes.tsv`, blob `569c6b91d5a022349f472fc2cd0c26e5b7ac4e4f`): the SHA-256 of each file inside the artifacts of runs `35925236129` and `35814050060` (instrument output, `measurement.txt`, runsettings, report, JSON, TSV, TRX). Checked on September 24, 2026: both zip digests equal the Actions API digests, and the TSV hash equals `final-w3-results.tsv`. Not re-derived: the other member hashes, because the artifacts could not be downloaded from the archiving environment. Not covered: the pre-W3 arm, run `35815761065`. The two artifacts expire `2026-12-22T21:54:06Z` and `2026-12-22T03:22:15Z`.
+
 ## Interpretation boundary
 
 The pre-W3 W3-specific counters are **structural zeros, not observations of a live W3 instrument**. The pre-W3 instrument explicitly emitted literal zero values because the fan-out/claim surfaces did not exist yet. Therefore those zeros do not provide a valid before/after rate comparator for keeper claims or fan-out frequency.
