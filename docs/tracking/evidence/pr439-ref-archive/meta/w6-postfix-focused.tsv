@@ -1,0 +1,2 @@
+kind	source_ref	source_head	commit_subject	commit_date	run_id	original_path	archive_path	blob_sha
+current	evidence/pr439-w6-postfix-focused	495f9b0ed2eef06b6dffb7f3b09e4e9e0eaae0f3	ci(evidence): run focused PR439 W6 post-fix proof	2026-09-23T03:22:56Z	35814099718	.github/workflows/pr439-w6-postfix-focused.yml	docs/tracking/evidence/pr439-ref-archive/current/w6-postfix-focused/.github/workflows/pr439-w6-postfix-focused.yml.txt	91f64a78bff039bb5c351e0e820864e9ec4be56d

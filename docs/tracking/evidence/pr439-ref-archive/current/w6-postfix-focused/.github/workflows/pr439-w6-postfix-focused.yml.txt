@@ -1,0 +1,27 @@
+name: PR439 W6 focused post-fix proof
+
+on:
+  push:
+    branches:
+      - evidence/pr439-w6-postfix-focused
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    name: W6 focused post-fix proof
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f40f0853909cc2a42190023fea1da72d25409b12
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run focused W6 + composed keeper claim
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILTER='Name=ControlledKeeper_ReattachesAfterResolveCollisionCorrection|Name=ControlledOutfielder_ReattachesAfterResolveCollisionCorrection|Name=ControlledKeeper_ResolveCollisionCannotPushAttachedBallBehindOwnGoalPlane|Name=sim_match_engine_keeper_claim'
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter "$FILTER"
