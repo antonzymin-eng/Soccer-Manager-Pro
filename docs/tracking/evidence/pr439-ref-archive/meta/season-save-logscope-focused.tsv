@@ -1,0 +1,2 @@
+kind	source_ref	source_head	commit_subject	commit_date	run_id	original_path	archive_path	blob_sha
+current	evidence/pr439-season-save-logscope-focused	d6b6a565b064d0471763d7792ddce3eeacaf6f04	ci(evidence): run focused PR439 SeasonSave log-scope proof	2026-09-23T03:29:23Z	35814523589	.github/workflows/pr439-season-save-logscope-focused.yml	docs/tracking/evidence/pr439-ref-archive/current/season-save-logscope-focused/.github/workflows/pr439-season-save-logscope-focused.yml.txt	684883f4f6edb32e3c13e6b197de078d3eda6417
