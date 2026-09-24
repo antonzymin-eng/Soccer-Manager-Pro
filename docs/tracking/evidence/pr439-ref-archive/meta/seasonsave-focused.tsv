@@ -1,0 +1,2 @@
+kind	source_ref	source_head	commit_subject	commit_date	run_id	original_path	archive_path	blob_sha
+current	evidence/pr439-seasonsave-focused	6214a6039a5e6ff6ca2c225cf1394827c9d63de9	ci(evidence): run focused PR439 SeasonSave proof	2026-09-23T03:31:36Z	35814675549	.github/workflows/pr439-seasonsave-focused.yml	docs/tracking/evidence/pr439-ref-archive/current/seasonsave-focused/.github/workflows/pr439-seasonsave-focused.yml.txt	f566114140cc9937904227c7ebc860046e1b88c6
