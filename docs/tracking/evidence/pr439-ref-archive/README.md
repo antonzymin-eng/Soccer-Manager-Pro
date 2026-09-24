@@ -1,50 +1,36 @@
 # PR #439 Evidence-Ref Archive
 
 > **Created:** September 23, 2026
-> **Purpose:** Preserve branch-only PR #439 evidence and cited-run provenance before any disposable `evidence/pr439-*` ref is deleted.
-> **Status:** Archive built; **no deletion authorized**. All 16 refs remain live with `delete_now=false`.
+> **Purpose:** Preserve every branch-exclusive changed-file blob state and cited workflow-run head needed to make the PR #439 evidence refs disposable without losing the evidence record.
+> **Status:** **PRE-DELETE ARCHIVE COMPLETE CANDIDATE — NO DELETION AUTHORIZED IN PR #447.**
 
-## Archived material
+## Archived scope
 
-The archive contains **39 exact branch-history blob snapshots** under `history/`, covering every non-deletion file state introduced by the exclusive commits of all **16/16** live `evidence/pr439-*` refs.
+This archive records:
 
-Each snapshot carries a terminal `.txt` suffix but preserves the original Git blob bytes. Historical C#, workflow YAML, scripts, and tests therefore remain auditable without entering ordinary source or workflow discovery.
+- all **16** live `evidence/pr439-*` refs and their exact observed remote heads in `ref-heads.tsv`;
+- all **39** branch-exclusive changed-file blob states across those refs in `MANIFEST.tsv`, each copied byte-for-byte under `history/**.txt`;
+- all **26** GitHub Actions run ids cited on PR #439 in `run-heads.tsv`, including exact run branch, run head SHA, event, conclusion and workflow name;
+- an explicit `ref-disposition.tsv` in which every ref is classified `deletable` but every `delete_now` remains `false`.
 
-`MANIFEST.tsv` records, for every archived state:
+The archive includes intermediate states, not only branch tips. In particular it preserves the pre-W3 instrument/parser/workflow lineage `6f2ed037…` → `ccb7bf67…` → `cf36526c…`, the W6 pre-fix discriminator source, all three W2 diagnostic arms, the M7 mutation proof, and the full #441 header-reachability evidence lineage.
 
-- source ref and merge base;
-- exact source commit, subject, and committer date;
-- original path and quarantined archive path;
-- original Git blob SHA.
-
-`run-heads.tsv` records **15 workflow runs cited by PR #439's description/comments**, including exact head branch/SHA, commit subject/date, event, conclusion, and workflow name. The live gate re-extracts run IDs from PR #439 through the GitHub API and requires the citation set to match this ledger exactly.
-
-`ref-heads.tsv` records all **16** live `evidence/pr439-*` refs and exact heads. `ref-disposition.tsv` classifies all 16 as `deletable`, but every row remains `delete_now=false`; archival completeness and deletion authorization are deliberately separate states.
-
-The result-bearing W3 six-seed tables and artifact provenance are committed separately under `../pr439-w3/`.
+The result-bearing six-seed W3 tables are preserved separately in `../pr439-w3/`.
 
 ## Verification
 
-`tools/dotnet-ci/check_pr439_evidence_refs.py` owns this directory's integrity contract.
+`tools/dotnet-ci/check_pr439_evidence_refs.py` owns archive integrity and pre-delete live-ref completeness. `.github/workflows/pr439-evidence-ref-gate.yml`:
 
-Archive mode verifies that:
+1. fetches full history plus all live `evidence/pr439-*` refs;
+2. verifies every archived `.txt` blob equals the recorded original Git blob;
+3. requires the exact 16-ref topology and exact recorded heads;
+4. re-derives every branch-exclusive changed-file blob state and requires the live 39-state set to match the manifest exactly;
+5. verifies that the run ledger exactly covers the workflow-run ids cited on PR #439 and cross-checks each run against the GitHub Actions API.
 
-1. all ledgers exist and the 16-ref disposition set matches the recorded ref set;
-2. every snapshot path is unique, quarantined as `.txt`, and hashes to the recorded original Git blob SHA in the committed tree;
-3. the cited-run ledger contains exactly 26 unique run IDs and the manifest covers all 16 recorded refs;
-4. the committed `history/` snapshot path set matches `MANIFEST.tsv` exactly.
-
-Live mode additionally requires a full-history checkout with all `evidence/pr439-*` remote-tracking refs fetched. It verifies:
-
-1. the live remote-ref set is exactly the 16 recorded refs;
-2. every live head equals the recorded head SHA;
-3. every non-deletion file/blob state introduced by every branch-exclusive commit is represented exactly in the durable manifest, with no extra manifest states;
-4. with `--verify-actions-api`, PR #439's live description/comment run citations equal `run-heads.tsv` exactly and each recorded Actions head branch/SHA/event/conclusion/workflow name matches the API.
-
-The durable `.github/workflows/pr439-evidence-ref-gate.yml` fetches the live refs on PR/main changes and runs archive + live + GitHub-API verification. Before any deletion, run the same live check again against freshly fetched remote refs. Deletion remains blocked if the live set/head mapping drifts or if any branch-history state is missing from the archive.
+This follows the PR #416 archive precedent while keeping PR #439's archive bounded to its own evidence refs.
 
 ## Deletion boundary
 
-This archive does **not** delete branches and does not silently authorize cleanup. A later explicit cleanup change may flip the 16 `delete_now` values only after the live verifier passes on the then-current remote topology. Remote deletion should then use the recorded expected head SHAs as leases.
+PR #447 does **not** delete evidence branches and does **not** authorize deletion. The archive must first land on `main` and pass its pre-delete gate from the durable tree. Any later cleanup must be an explicit follow-up that changes the disposition/authorization state and performs expected-head-protected deletion only after the live-ref completeness gate is green.
 
-Until that explicit authorization exists, every PR #439 evidence ref remains retained.
+Until then, all 16 refs remain live.
