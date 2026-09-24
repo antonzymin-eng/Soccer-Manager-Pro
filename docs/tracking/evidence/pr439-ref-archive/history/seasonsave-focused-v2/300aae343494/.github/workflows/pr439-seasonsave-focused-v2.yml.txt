@@ -1,0 +1,27 @@
+name: PR439 SeasonSave focused proof v2
+
+on:
+  push:
+    branches:
+      - evidence/pr439-seasonsave-focused-v2
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    name: SeasonSave focused post-fix proof v2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 4d31788136b891f37940778d44db2bd28f88d6f6
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run the two discipline regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILTER='Name=ARealEngineFixtureFoldsItsCardsOntoPlayerRecordsAndChangesNothingElse|Name=ANewBanEarnedThisFixtureIsNotServedByThisSameFixture'
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter "$FILTER"
