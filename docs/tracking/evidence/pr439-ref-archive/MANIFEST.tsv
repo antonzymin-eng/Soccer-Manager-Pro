@@ -1,0 +1,2 @@
+kind	source_ref	merge_base	source_commit	commit_subject	commit_date	original_path	archive_path	blob_sha
+history	evidence/pr439-discipline-seed-probe	f40f0853909cc2a42190023fea1da72d25409b12	142b9f98f68e8c5d9b4a8e21e61f44efd931f354	ci(evidence): probe stable discipline ordering seed	2026-09-23T03:39:47Z	.github/workflows/pr439-discipline-seed-probe.yml	docs/tracking/evidence/pr439-ref-archive/history/discipline-seed-probe/142b9f98f68e/.github/workflows/pr439-discipline-seed-probe.yml.txt	b8866ba7385fe84e22493a87aa3c367497b9e998
