@@ -1,0 +1,2 @@
+kind	source_ref	source_head	commit_subject	commit_date	run_id	original_path	archive_path	blob_sha
+current	evidence/pr439-w3-pre-w6-six-seed	d8b362d4c84b9d8fb461ffea66187f50a8780033	ci(evidence): run PR439 W3 pre-W6 attribution arm	2026-09-23T03:46:28Z	35815667045	.github/workflows/pr439-w3-pre-w6-evidence.yml	docs/tracking/evidence/pr439-ref-archive/current/w3-pre-w6-six-seed/.github/workflows/pr439-w3-pre-w6-evidence.yml.txt	03bd697638f6b6097f4bf078993e0a9a09a6506c

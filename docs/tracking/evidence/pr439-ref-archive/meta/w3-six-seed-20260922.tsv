@@ -1,0 +1,2 @@
+kind	source_ref	source_head	commit_subject	commit_date	run_id	original_path	archive_path	blob_sha
+current	evidence/pr439-w3-six-seed-20260922	7347b0452d8143c5b540575b4db1f882302f1988	ci(evidence): run frozen PR439 W3 W6 six-seed corpus	2026-09-23T03:22:12Z	35814050060	.github/workflows/pr439-w3-six-seed-evidence.yml	docs/tracking/evidence/pr439-ref-archive/current/w3-six-seed-20260922/.github/workflows/pr439-w3-six-seed-evidence.yml.txt	25c1cb84188994e4b059c747b1a29513d5ab6697
