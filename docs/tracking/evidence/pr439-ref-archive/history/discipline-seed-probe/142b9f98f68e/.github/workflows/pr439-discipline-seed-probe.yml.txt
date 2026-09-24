@@ -1,0 +1,59 @@
+name: PR439 discipline seed probe
+
+on:
+  push:
+    branches:
+      - evidence/pr439-discipline-seed-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Ban-order seed ${{ matrix.seed }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        seed:
+          - "0x0F1E2D3C4B5A6978"
+          - "0x00000000D1A6D05E"
+          - "0x0000000000000001"
+          - "0x00000000ABCDEF12"
+          - "0x0000000099887766"
+          - "0x000000005A5A5A5A"
+    env:
+      PROBE_SEED: ${{ matrix.seed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f40f0853909cc2a42190023fea1da72d25409b12
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Replace only the test fixture seed in workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          path = Path("src/season-save/tests/SeasonLoopDisciplineTests.cs")
+          text = path.read_text()
+          old = "private const ulong WorldSeed = 0x5EED1EA6D0DEC0DEUL;"
+          seed = os.environ["PROBE_SEED"]
+          new = f"private const ulong WorldSeed = {seed}UL;"
+          if text.count(old) != 1:
+              raise SystemExit("WorldSeed anchor missing or ambiguous")
+          path.write_text(text.replace(old, new))
+          print(new)
+          PY
+
+      - name: Run ban-ordering positive-control test
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'Name=ANewBanEarnedThisFixtureIsNotServedByThisSameFixture'
