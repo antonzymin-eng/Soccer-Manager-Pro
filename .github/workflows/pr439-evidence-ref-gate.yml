@@ -9,7 +9,6 @@ on:
       - 'docs/tracking/evidence/pr439-ref-archive/**'
       - 'docs/tracking/evidence/pr439-w3/**'
       - 'docs/tracking/w3-agent-ball-fanout-design.md'
-      - 'docs/tracking/match-engine-wiring-backlog.md'
   push:
     branches: [main]
     paths:
@@ -18,7 +17,6 @@ on:
       - 'docs/tracking/evidence/pr439-ref-archive/**'
       - 'docs/tracking/evidence/pr439-w3/**'
       - 'docs/tracking/w3-agent-ball-fanout-design.md'
-      - 'docs/tracking/match-engine-wiring-backlog.md'
   workflow_dispatch:
 
 permissions:
@@ -43,13 +41,21 @@ jobs:
             '+refs/heads/main:refs/remotes/origin/main' \
             '+refs/heads/evidence/pr439-*:refs/remotes/origin/evidence/pr439-*'
 
-      - name: Verify durable archive and live branch-exclusive history
+      - name: Gate B - committed archive integrity
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
+            --repo . \
+            --mode archive \
+            --main-ref refs/remotes/origin/main
+
+      - name: Gate A - live-ref full-history completeness
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
             --repo . \
-            --mode all \
+            --mode live \
             --main-ref refs/remotes/origin/main \
             --verify-actions-api
