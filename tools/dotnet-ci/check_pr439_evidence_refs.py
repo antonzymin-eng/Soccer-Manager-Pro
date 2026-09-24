@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+"""Verify PR #439 evidence-ref archival before disposable refs are deleted."""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+
+ARCHIVE_ROOT = Path("docs/tracking/evidence/pr439-ref-archive")
+MANIFEST = ARCHIVE_ROOT / "MANIFEST.tsv"
+REF_HEADS = ARCHIVE_ROOT / "ref-heads.tsv"
+DISPOSITION = ARCHIVE_ROOT / "ref-disposition.tsv"
+RUN_HEADS = ARCHIVE_ROOT / "run-heads.tsv"
+
+
+@dataclass(frozen=True)
+class BlobState:
+    ref: str
+    commit: str
+    path: str
+    blob: str
+
+
+def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if check and result.returncode != 0:
+        raise RuntimeError(
+            f"git {' '.join(args)} failed ({result.returncode}): {result.stderr.strip()}"
+        )
+    return result
+
+
+def read_tsv(path: Path) -> list[dict[str, str]]:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle, delimiter="\t"))
+
+
+def resolve(repo: Path, spec: str) -> str | None:
+    result = git(repo, "rev-parse", "--verify", spec, check=False)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def changed_blob_states(repo: Path, ref: str, main_ref: str) -> set[BlobState]:
+    remote = f"refs/remotes/origin/{ref}"
+    merge_base = git(repo, "merge-base", main_ref, remote).stdout.strip()
+    commits = git(repo, "rev-list", "--reverse", f"{merge_base}..{remote}").stdout.splitlines()
+    states: set[BlobState] = set()
+    for commit in commits:
+        paths = git(repo, "diff", "--no-renames", "--name-only", f"{commit}^", commit, "--").stdout.splitlines()
+        for path in paths:
+            blob = resolve(repo, f"{commit}:{path}")
+            if blob:
+                states.add(BlobState(ref, commit, path, blob))
+    return states
+
+
+def validate_archive(repo: Path) -> list[str]:
+    errors: list[str] = []
+    required = [MANIFEST, REF_HEADS, DISPOSITION, RUN_HEADS]
+    for rel in required:
+        if not (repo / rel).is_file():
+            errors.append(f"missing archive ledger: {rel}")
+    if errors:
+        return errors
+
+    manifest = read_tsv(repo / MANIFEST)
+    refs = read_tsv(repo / REF_HEADS)
+    dispositions = read_tsv(repo / DISPOSITION)
+    runs = read_tsv(repo / RUN_HEADS)
+
+    ref_names = {row["ref"] for row in refs}
+    disposition_names = {row["ref"] for row in dispositions}
+    if len(refs) != 16 or ref_names != disposition_names:
+        errors.append(
+            f"ref ledger/disposition mismatch: refs={len(refs)} dispositions={len(dispositions)}"
+        )
+
+    run_ids = {row["run_id"] for row in runs}
+    if len(run_ids) != len(runs):
+        errors.append("duplicate run id in run-heads.tsv")
+
+    archive_paths: set[str] = set()
+    for row in manifest:
+        path = row["archive_path"]
+        if path in archive_paths:
+            errors.append(f"duplicate archive path: {path}")
+        archive_paths.add(path)
+        if not path.endswith(".txt"):
+            errors.append(f"snapshot is not quarantined as .txt: {path}")
+        actual = resolve(repo, f"HEAD:{path}")
+        if actual != row["blob_sha"]:
+            errors.append(f"archive blob mismatch {path}: {actual} != {row['blob_sha']}")
+
+    return errors
+
+
+def validate_live(repo: Path, main_ref: str) -> list[str]:
+    errors = validate_archive(repo)
+    if errors:
+        return errors
+
+    manifest = read_tsv(repo / MANIFEST)
+    refs = read_tsv(repo / REF_HEADS)
+    expected_heads = {row["ref"]: row["head_sha"] for row in refs}
+    manifest_states = {
+        (row["source_ref"], row["source_commit"], row["original_path"], row["blob_sha"])
+        for row in manifest
+    }
+
+    live = git(
+        repo,
+        "for-each-ref",
+        "--format=%(refname) %(objectname)",
+        "refs/remotes/origin/evidence/pr439-*",
+    ).stdout.splitlines()
+    actual: dict[str, str] = {}
+    prefix = "refs/remotes/origin/"
+    for line in live:
+        refname, sha = line.split()
+        actual[refname[len(prefix):]] = sha
+
+    if set(actual) != set(expected_heads):
+        errors.append(
+            "live PR439 evidence-ref set mismatch: "
+            f"missing={sorted(set(expected_heads)-set(actual))} "
+            f"extras={sorted(set(actual)-set(expected_heads))}"
+        )
+        return errors
+
+    for ref, expected in expected_heads.items():
+        if actual[ref] != expected:
+            errors.append(f"{ref}: live head {actual[ref]} != recorded {expected}")
+
+    live_states: set[tuple[str, str, str, str]] = set()
+    for ref in sorted(expected_heads):
+        for state in changed_blob_states(repo, ref, main_ref):
+            live_states.add((state.ref, state.commit, state.path, state.blob))
+
+    missing = live_states - manifest_states
+    if missing:
+        for ref, commit, path, blob in sorted(missing)[:50]:
+            errors.append(
+                f"unarchived branch-exclusive blob state: {ref} {commit} {path} {blob}"
+            )
+        if len(missing) > 50:
+            errors.append(f"... plus {len(missing)-50} additional missing states")
+
+    return errors
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repo", default=".")
+    parser.add_argument("--mode", choices=("archive", "live", "all"), default="archive")
+    parser.add_argument("--main-ref", default="refs/remotes/origin/main")
+    args = parser.parse_args(argv)
+    repo = Path(args.repo).resolve()
+    errors: list[str] = []
+    try:
+        if args.mode in {"archive", "all"}:
+            errors.extend(validate_archive(repo))
+        if args.mode in {"live", "all"}:
+            errors.extend(validate_live(repo, args.main_ref))
+    except (OSError, RuntimeError, KeyError, ValueError) as exc:
+        errors.append(str(exc))
+
+    if errors:
+        for error in errors:
+            print(f"ERROR: {error}")
+        return 1
+    print("PR439 evidence-ref reconciliation: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
