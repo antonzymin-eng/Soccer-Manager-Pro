@@ -174,12 +174,22 @@ def verify_actions_and_pr_citations(runs: list[dict[str, str]]) -> list[str]:
             f"{api_url}/repos/{repository}/issues/{PR_NUMBER}/comments?per_page=100",
             token,
         )
+        review_comments = _github_json(
+            f"{api_url}/repos/{repository}/pulls/{PR_NUMBER}/comments?per_page=100",
+            token,
+        )
+        reviews = _github_json(
+            f"{api_url}/repos/{repository}/pulls/{PR_NUMBER}/reviews?per_page=100",
+            token,
+        )
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as exc:
         return [f"PR #{PR_NUMBER} citation lookup failed: {exc}"]
 
     pattern = re.compile(r"\b35\d{9}\b")
     bodies = [str(pr.get("body") or "")]
     bodies.extend(str(item.get("body") or "") for item in comments)
+    bodies.extend(str(item.get("body") or "") for item in review_comments)
+    bodies.extend(str(item.get("body") or "") for item in reviews)
     cited: set[str] = set()
     for body in bodies:
         cited.update(pattern.findall(body))
