@@ -1,0 +1,55 @@
+name: PR439 evidence-ref archive gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/dotnet-ci/check_pr439_evidence_refs.py'
+      - '.github/workflows/pr439-evidence-ref-gate.yml'
+      - 'docs/tracking/evidence/pr439-ref-archive/**'
+      - 'docs/tracking/evidence/pr439-w3/**'
+      - 'docs/tracking/w3-agent-ball-fanout-design.md'
+      - 'docs/tracking/match-engine-wiring-backlog.md'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/dotnet-ci/check_pr439_evidence_refs.py'
+      - '.github/workflows/pr439-evidence-ref-gate.yml'
+      - 'docs/tracking/evidence/pr439-ref-archive/**'
+      - 'docs/tracking/evidence/pr439-w3/**'
+      - 'docs/tracking/w3-agent-ball-fanout-design.md'
+      - 'docs/tracking/match-engine-wiring-backlog.md'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  evidence-ref-gate:
+    name: PR439 evidence-ref archive gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch live PR439 evidence refs
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin \
+            '+refs/heads/main:refs/remotes/origin/main' \
+            '+refs/heads/evidence/pr439-*:refs/remotes/origin/evidence/pr439-*'
+
+      - name: Verify durable archive and live branch-exclusive history
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
+            --repo . \
+            --mode all \
+            --main-ref refs/remotes/origin/main \
+            --verify-actions-api
