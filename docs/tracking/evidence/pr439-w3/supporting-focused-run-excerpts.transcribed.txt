@@ -2,6 +2,7 @@
 # Captured: 2026-09-24
 # Status: supporting only; transcribed from GitHub Actions job-log API text, not byte copies.
 # Purpose: retain result semantics that are not represented by run conclusion alone.
+# Runner timestamps and spacing are retained on the result-bearing lines below.
 
 ## W6 pre-fix discriminator
 run=35813627716
@@ -10,12 +11,13 @@ workflow=PR439 W6 pre-fix discriminator
 head=a6cfa40703c74ca42848ae1deaa44ba99f61fe4d
 result_semantics=workflow success means the expected named regression failed
 
-Failed ControlledKeeper_ReattachesAfterResolveCollisionCorrection
-Expected: 39.75d +/- 9.9999999747524271E-07d
-But was:  40.0d
-Off by:   -0.25d
-Failed!  - Failed: 1, Passed: 0, Skipped: 0, Total: 1
-Expected pre-fix failure reproduced: Resolve collision correction detaches the Controlled keeper.
+2026-09-23T03:17:08.6889978Z   Failed ControlledKeeper_ReattachesAfterResolveCollisionCorrection [178 ms]
+2026-09-23T03:17:08.6903376Z   Error Message:
+2026-09-23T03:17:08.6904180Z      Expected: 39.75d +/- 9.9999999747524271E-07d
+2026-09-23T03:17:08.6904960Z   But was:  40.0d
+2026-09-23T03:17:08.6905546Z   Off by:   -0.25d
+2026-09-23T03:17:08.6968580Z Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 178 ms - TacticalDirector.MatchEngine.Tests.dll (net8.0)
+2026-09-23T03:17:13.2433290Z ##[notice]Expected pre-fix failure reproduced: Resolve collision correction detaches the Controlled keeper.
 
 ## W6 focused post-fix proof
 run=35814099718
@@ -23,9 +25,10 @@ job=107031803432
 workflow=PR439 W6 focused post-fix proof
 head=495f9b0ed2eef06b6dffb7f3b09e4e9e0eaae0f3
 measured_sha=f40f0853909cc2a42190023fea1da72d25409b12
+filter_note=the archived workflow uses four test-name clauses; the captured result has five cases, and the captured lines alone do not identify which clause contributed two cases.
 
-Passed!  - Failed: 0, Passed: 5, Skipped: 0, Total: 5
-Gate PASSED
+2026-09-23T03:28:16.8101289Z Passed!  - Failed:     0, Passed:     5, Skipped:     0, Total:     5, Duration: 4 m 19 s - TacticalDirector.MatchEngine.Tests.dll (net8.0)
+2026-09-23T03:28:19.7257671Z ── Gate PASSED ──────────────────────────────────────────────────────
 
 ## SeasonSave focused proof v2
 run=35815420707
@@ -34,5 +37,5 @@ workflow=PR439 SeasonSave focused proof v2
 head=300aae34349493b4a111659a1ac4aa58d9b72fce
 measured_sha=4d31788136b891f37940778d44db2bd28f88d6f6
 
-Passed!  - Failed: 0, Passed: 2, Skipped: 0, Total: 2
-Gate PASSED
+2026-09-23T03:49:33.8180941Z Passed!  - Failed:     0, Passed:     2, Skipped:     0, Total:     2, Duration: 5 m 31 s - TacticalDirector.SeasonSave.Tests.dll (net8.0)
+2026-09-23T03:49:37.1023817Z ── Gate PASSED ──────────────────────────────────────────────────────
