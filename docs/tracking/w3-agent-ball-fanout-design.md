@@ -1,7 +1,7 @@
 # W3 — shared AGENT_BALL fan-out and goalkeeper cross-claim wiring
 
 > **Created:** September 22, 2026
-> **Status:** CLOSED OUT — lands with PR #439 as **W3: wired but dormant** (owner classification); #441 owns Head reachability and #440 stays deferred. v0.15 records the #442/#443 contract landing, the non-rebase merge of `main` into #439, and the post-merge verification. v0.14 and earlier record the raw-log-audited production corpus, the W2 gate diagnosis, the M7 mutation proof, the #441 localization and the #442 protocol.
+> **Status:** CLOSED OUT — lands with PR #439 as **W3: wired but dormant** (owner classification); #441 owns Head reachability and #440 stays deferred. v0.16 points the closeout to the durable Phase-1 evidence archive and preserves its attribution limits. v0.15 records the #442/#443 contract landing, the non-rebase merge of `main` into #439, and the post-merge verification. v0.14 and earlier record the raw-log-audited production corpus, the W2 gate diagnosis, the M7 mutation proof, the #441 localization and the #442 protocol.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W3**.
 > **Companion preregistration:** `docs/tracking/foul-card-w3-w9-preregistration.md`.
 > **Baseline:** `main` at `876a3343319050187c2a5505b18cb32fc3d0f89d`; post-merge CI run
@@ -44,6 +44,8 @@ its active latch is authoritative gameplay state and is serialized in MatchEngin
 
 No `[GT]` values are calibrated in W3. The frozen six-seed corpus is rerun after the wiring as
 required by the companion preregistration.
+
+**Durable evidence:** PR #447 Phase 1 commits the result-bearing tables and provenance under `docs/tracking/evidence/pr439-w3/`, with the live 16-ref snapshot under `docs/tracking/evidence/pr439-ref-archive/`. The archive preserves §6.1–§6.2's interpretation boundary: pre-W3 W3 counters are structural placeholders rather than live measurements, and the before/after trajectory deltas are not a pure W3 A/B attribution. No evidence ref is deletion-authorized by Phase 1.
 
 ---
 
@@ -640,6 +642,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.16 | 2026-09-23 | PR #447 Phase-1 durable evidence pointer. Records `docs/tracking/evidence/pr439-w3/` as the committed six-seed result/provenance copy and `pr439-ref-archive/` as the timestamped live-ref snapshot; reiterates structural-zero and non-pure-A/B attribution limits and that no evidence-ref deletion is authorized until Phase 2 branch-exclusive completeness/run-head/disposition verification lands. No gameplay or test-contract change. |
 | 0.15 | 2026-09-23 | Landing close-out. #443 carried the owner-approved six-seed W2 contract to `main` (merge `6876c5c1…`, runtime approved by the owner). `main` was merged into #439 without rebasing (merge `9668643c…`, via merge-only PR #444); all cited evidence SHAs stay in history. Review closure added gameplay fixes ERR-010-004 (Heading buffer ≥ MAX_AGENTS) and ERR-011-014 (possession hard-cancels ClaimIntent); the frozen corpus was therefore rerun on `bab4cd41…` (run `35925236129`, identical instrument/seeds) and reproduces run `35814050060` exactly, all 264 counters, so §6 evidence stands for the landing head. Same-commit local reruns of the pooled tackle corpus at `9ba53481…` and `bab4cd41…` give `Won=3 Loose=12 Foul=2 Missed=73 dispossessions=3`, with `ATackleFoulIsPublishedAsASlideTackle` passing and only the foul-share lock skipped (`connected=17`). The MatchEngine total moving 535 → 536 is a reporting artefact: the test console leaves `Assume`-skipped tests out of its total and the publication lock moved from skipped to passed; the test set is unchanged at 537. Status set to CLOSED OUT. No gameplay `[GT]`/test-contract change. |
 | 0.14 | 2026-09-23 | Tightens #442 protocol: merge-only main→#439 to preserve cited SHAs; #442 landing depends on base/main passing, while head-only failures block #439 only; any post-base-failure assertion/guard/seed/tick/threshold change requires a new owner decision; post-merge W2 divergence must be explained if main moved; runtime cost remains owner-reviewed before merge; wired-but-dormant backlog status must name #441 as Head-reachability owner. No gameplay/test-contract change. |
 | 0.13 | 2026-09-23 | #442 preregistration guardrails: separate-PR/main-first merge order, precommitted base/head failure interpretation, PASS/FAIL/SKIPPED reporting for every affected pooled test on both arms, and explicit runtime measurement for the 300k→900k pooled-tick increase while RestoreSeeds remain unchanged. No gameplay/test-contract change. |
