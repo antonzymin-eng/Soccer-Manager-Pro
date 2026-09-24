@@ -1,0 +1,131 @@
+name: PR439 frozen pre-W3 six-seed characterization
+
+on:
+  push:
+    branches:
+      - evidence/pr439-w3-prewire-six-seed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr439-pre-w3-six-seed
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    name: Run frozen #435 six-seed pre-W3 arm
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      EXPECTED_PRODUCTION_SHA: 876a3343319050187c2a5505b18cb32fc3d0f89d
+      REASON: "PR #439 pre-W3 arm; production pinned to PR base, evidence-only test/parser backport"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove production tree is exact PR base
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_base="$(git merge-base HEAD "$EXPECTED_PRODUCTION_SHA")"
+          test "$actual_base" = "$EXPECTED_PRODUCTION_SHA"
+
+          mapfile -t changed < <(git diff --name-only "$EXPECTED_PRODUCTION_SHA"...HEAD | sort)
+          printf 'Evidence-only delta:\n%s\n' "${changed[*]}"
+          expected=(
+            ".github/workflows/pr439-w3-prewire-six-seed.yml"
+            "src/match-engine/tests/FoulRateDiagnosticTests.cs"
+            "tools/dotnet-ci/parse_foul_card_characterization.py"
+          )
+          printf '%s\n' "${changed[@]}" > /tmp/changed
+          printf '%s\n' "${expected[@]}" | sort > /tmp/expected
+          sort -o /tmp/changed /tmp/changed
+          diff -u /tmp/expected /tmp/changed
+
+          if git diff --name-only "$EXPECTED_PRODUCTION_SHA"...HEAD -- src             ':(exclude)src/match-engine/tests/FoulRateDiagnosticTests.cs' | grep -q .; then
+            echo "::error::Pre-W3 evidence arm changes production src/."
+            exit 1
+          fi
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve canonical instrument
+        shell: bash
+        env:
+          INSTRUMENT: foul-rate
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/measurement_catalog.py validate --repo .
+          python3 tools/dotnet-ci/measurement_catalog.py resolve             "$INSTRUMENT" --repo . --github-env "$GITHUB_ENV"
+
+      - name: Build gate and run frozen pre-W3 instrument
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/measurements/trx
+          OUT="artifacts/measurements/measurement.txt"
+          MEASURE_OUT="artifacts/measurements/instrument-output.txt"
+          RESULTS="artifacts/measurements/trx"
+          RUNSETTINGS="artifacts/measurements/measurement.runsettings"
+
+          cat > "$RUNSETTINGS" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <RunSettings>
+            <RunConfiguration>
+              <TreatNoTestsAsError>true</TreatNoTestsAsError>
+            </RunConfiguration>
+          </RunSettings>
+          XML
+
+          {
+            echo "# Frozen #435 / PR439 PRE-W3 characterization"
+            echo "# workflow evidence SHA: $GITHUB_SHA"
+            echo "# production base:       $EXPECTED_PRODUCTION_SHA"
+            echo "# run:                   $GITHUB_RUN_ID (attempt $GITHUB_RUN_ATTEMPT)"
+            echo "# instrument:            $MEASUREMENT_INSTRUMENT"
+            echo "# reason:                $REASON"
+            echo
+          } > "$OUT"
+
+          set +e
+          env -u "$MEASUREMENT_ENV" bash tools/dotnet-ci/run-gate.sh             --test-filter "$MEASUREMENT_FILTER" 2>&1 | tee -a "$OUT"
+          gate_status="${PIPESTATUS[0]}"
+          set -e
+          test "$gate_status" -eq 0
+
+          set +e
+          env "$MEASUREMENT_ENV=1" dotnet test "$MEASUREMENT_PROJECT"             --no-build --no-restore             --filter "$MEASUREMENT_FILTER"             --settings "$RUNSETTINGS"             --logger "console;verbosity=detailed"             --logger "trx;LogFileName=measurement.trx"             --results-directory "$RESULTS" 2>&1 | tee "$MEASURE_OUT" | tee -a "$OUT"
+          measurement_status="${PIPESTATUS[0]}"
+          set -e
+          test "$measurement_status" -eq 0
+
+          python3 tools/dotnet-ci/measurement_catalog.py verify-run             "$MEASUREMENT_INSTRUMENT" --trx-dir "$RESULTS" --output "$MEASURE_OUT" | tee -a "$OUT"
+
+          python3 tools/dotnet-ci/parse_foul_card_characterization.py             "$MEASURE_OUT"             --allow-w3-zero             --report-out artifacts/measurements/report.txt             --tsv-out artifacts/measurements/results.tsv             --json-out artifacts/measurements/results.json
+
+          grep -F 'agentBallFanoutEvents=0 claimEligibilityEpisodes=0 registeredDuelParticipants=0 resolvedHandContactDuels=0 successfulKeeperClaims=0'             artifacts/measurements/report.txt >/dev/null
+
+      - name: Hash evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d artifacts/measurements ]; then
+            (
+              cd artifacts/measurements
+              find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+            )
+          fi
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr439-pre-w3-six-seed-${{ github.run_id }}
+          path: artifacts/measurements/
+          if-no-files-found: warn
+          retention-days: 90

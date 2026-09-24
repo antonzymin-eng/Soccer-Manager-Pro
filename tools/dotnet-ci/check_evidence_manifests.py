@@ -29,6 +29,8 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
         "external",
         "tools/dotnet-ci/check_pr416_evidence_refs.py",
     ),
+    "pr439-w3": ("manifest", FULL_MANIFEST),
+    "pr439-ref-archive": ("external", "tools/dotnet-ci/check_pr439_evidence_refs.py"),
 }
 
 # Standalone root metadata is outside a directory-manifest contract but must be

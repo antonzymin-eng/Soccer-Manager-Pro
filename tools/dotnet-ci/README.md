@@ -96,7 +96,7 @@ of:
 - `artifact-SHA256SUMS`: an **artifact-scoped manifest**. Every listed file must exist and match its
   digest, but unrelated sibling documentation is deliberately outside that manifest's digest claim.
 - an explicitly registered **external verifier**. Current examples are W12
-  (`check_w12_evidence.py`) and the PR #416 ref archive (`check_pr416_evidence_refs.py`). This
+  (`check_w12_evidence.py`), the PR #416 ref archive (`check_pr416_evidence_refs.py`), and the PR #439 ref archive (`check_pr439_evidence_refs.py`). This
   registry verifies that the named owner still exists; it does not claim those external contracts
   have identical enforcement strength or duplicate their semantics.
 
@@ -160,6 +160,7 @@ Where .NET 8 is already available, the policy runner can execute normally. Histo
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| Governance addendum | 2026-09-23 | — | Adds the PR #439 evidence-ref archival verifier: 16-ref exact-head topology, 39 branch-exclusive blob states, 15 PR-cited Actions runs, GitHub-API citation/metadata verification, and an explicit no-delete-until-authorized boundary. |
 | Governance addendum | 2026-09-21 | — | Adds the evidence-integrity contract registry/checker and shallow-history ancestry guard; records tracked-file scope, explicit external-verifier boundaries, fail-closed Git-scope behavior, stored-graph semantics with replacement refs disabled / legacy grafts rejected, remote-authoritative descendant requirements for remote deletion, and ancestry exit-code semantics. |
 | Policy addendum (retirement) | 2026-09-20 | — | Owner decision retires the final configured owner-held row, `sim_match_engine_close_chance`, without changing its predicate or bounds. Documents the already-unit-tested empty-ledger terminal state: ordinary sweep unfiltered, dedicated stage skipped. |
 | Policy addendum | 2026-09-04 | — | **Testing Strategy pipeline correction.** Makes `tools/run-tests-local.sh` the canonical developer/CI policy entry point; records exact owner-held RED handling, anchored NUnit pre-commit selection, persistent staged-index build cache, coverage settings, and the gated certified-host nightly boundary. This operational correction intentionally does not advance the historical gate-document version key, because live open-issue records cite the Aug-7 v1.2 revision as dated evidence. |
