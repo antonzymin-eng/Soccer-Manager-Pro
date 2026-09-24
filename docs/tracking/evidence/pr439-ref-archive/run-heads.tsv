@@ -1,0 +1,14 @@
+run_id	head_branch	head_sha	commit_subject	commit_date	event	conclusion	workflow_name
+35133104970	main	1bad655f5826070d1e29f54a845cdf2c549f66bc	Activate W2 tackle challenge in production (#418)	2026-09-16T18:13:56Z	push	failure	CI
+35344056248	evidence/pr416-close-chance-retirement	adcf21bf36c07273f082053d3778693f4075bf2a	test: run close-chance retirement evidence	2026-09-18T12:19:29Z	push	success	PR416 close-chance retirement evidence
+35420947427	fix/gate-owner-held-isolation	2e12fa3e778a82c1afd6a2078ee29f8f7321f58d	Merge main into fix/gate-owner-held-isolation	2026-09-19T04:18:42Z	pull_request	failure	CI
+35675959945	calibration/foul-card-w3-w9-prereg-20260921	820fb7ca41947fdc33dfbfc2e61ebcd1e45e1b9d	review: record W2 foul-cooldown asymmetry	2026-09-22T01:29:39Z	pull_request	success	CI
+35765635130	evidence/foul-card-six-seed-20260922	50d6229ccd5cf3e2118aae1497d27b40f6986b29	ci: isolate measurement selector from MSBuild	2026-09-22T18:12:19Z	push	success	One-shot frozen
+35783692588	main	876a3343319050187c2a5505b18cb32fc3d0f89d	Merge pull request #437 from antonzymin-eng/evidence/foul-card-characterization-closeout-20260922	2026-09-22T20:58:15Z	push	success	CI
+35812444215	wiring/w3-agent-ball-fanout	40a3bf4f8772cf5788408be16d1643cbb81e4185	test(season-save): make log-scope action unambiguous	2026-09-23T02:57:51Z	pull_request	cancelled	CI
+35813515236	wiring/w3-agent-ball-fanout	f40f0853909cc2a42190023fea1da72d25409b12	docs(w6): add PR439 resolve-order correction	2026-09-23T03:14:01Z	pull_request	cancelled	CI
+35813627716	evidence/pr439-w6-prefixtest	a6cfa40703c74ca42848ae1deaa44ba99f61fe4d	ci(evidence): prove PR439 W6 regression fails pre-fix	2026-09-23T03:15:43Z	push	success	PR439 W6 pre-fix discriminator
+35814050060	evidence/pr439-w3-six-seed-20260922	7347b0452d8143c5b540575b4db1f882302f1988	ci(evidence): run frozen PR439 W3 W6 six-seed corpus	2026-09-23T03:22:12Z	push	success	PR439 frozen W3 + W6 six-seed characterization
+35814099718	evidence/pr439-w6-postfix-focused	495f9b0ed2eef06b6dffb7f3b09e4e9e0eaae0f3	ci(evidence): run focused PR439 W6 post-fix proof	2026-09-23T03:22:56Z	push	success	PR439 W6 focused post-fix proof
+35815420707	evidence/pr439-seasonsave-focused-v2	300aae34349493b4a111659a1ac4aa58d9b72fce	ci(evidence): rerun focused PR439 SeasonSave proof	2026-09-23T03:42:53Z	push	success	PR439 SeasonSave focused proof v2
+35815761065	evidence/pr439-w3-prewire-six-seed	cf36526ce6ecd64632133780ed98ca0afe46c987	ci(evidence): run frozen PR439 pre-W3 arm	2026-09-23T03:47:55Z	push	success	PR439 frozen pre-W3 six-seed characterization
