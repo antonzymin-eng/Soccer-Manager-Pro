@@ -1,0 +1,38 @@
+# PR #439 focused-run supporting excerpts
+# Captured: 2026-09-24
+# Status: supporting only; transcribed from GitHub Actions job-log API text, not byte copies.
+# Purpose: retain result semantics that are not represented by run conclusion alone.
+
+## W6 pre-fix discriminator
+run=35813627716
+job=107030350947
+workflow=PR439 W6 pre-fix discriminator
+head=a6cfa40703c74ca42848ae1deaa44ba99f61fe4d
+result_semantics=workflow success means the expected named regression failed
+
+Failed ControlledKeeper_ReattachesAfterResolveCollisionCorrection
+Expected: 39.75d +/- 9.9999999747524271E-07d
+But was:  40.0d
+Off by:   -0.25d
+Failed!  - Failed: 1, Passed: 0, Skipped: 0, Total: 1
+Expected pre-fix failure reproduced: Resolve collision correction detaches the Controlled keeper.
+
+## W6 focused post-fix proof
+run=35814099718
+job=107031803432
+workflow=PR439 W6 focused post-fix proof
+head=495f9b0ed2eef06b6dffb7f3b09e4e9e0eaae0f3
+measured_sha=f40f0853909cc2a42190023fea1da72d25409b12
+
+Passed!  - Failed: 0, Passed: 5, Skipped: 0, Total: 5
+Gate PASSED
+
+## SeasonSave focused proof v2
+run=35815420707
+job=107035807231
+workflow=PR439 SeasonSave focused proof v2
+head=300aae34349493b4a111659a1ac4aa58d9b72fce
+measured_sha=4d31788136b891f37940778d44db2bd28f88d6f6
+
+Passed!  - Failed: 0, Passed: 2, Skipped: 0, Total: 2
+Gate PASSED

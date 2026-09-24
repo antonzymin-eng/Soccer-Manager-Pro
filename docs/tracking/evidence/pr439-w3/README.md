@@ -13,6 +13,14 @@
 
 The original post-W3 and landed-rerun `report.txt`, `results.tsv`, and `results.json` are byte-identical. Their logs/TRX are not asserted byte-identical. The final rerun is the durable post-W3 table copied here because it measures the production head used for the landing closeout.
 
+## Supporting (non-authoritative) arms
+
+The pre-W6 attribution arm is preserved here as supporting evidence, not added to the authoritative-arm table and not added to `pr439-ref-archive/run-heads.tsv`. Run `35815667045` measured production SHA `f69aaef0f27fdd8a10a89a2d4cc599b08d6ef70b`, the W3 point before the W6 Resolve-time Controlled-ball reattachment correction. Its surviving artifact `10732311509` was downloaded through the GitHub Actions API on September 24, 2026, verified against the API digest `sha256:f6b550828d97895e475c73bc2d2172d86d5ff43fa73920603b78a603a2824fb8`, and its own internal `SHA256SUMS` verified cleanly. The API reports `expires_at=2026-12-22T03:46:31Z` for the original artifact.
+
+The committed supporting files retain `report.txt`, `results.tsv`, `results.json`, and `measurement.runsettings` byte-for-byte from that artifact. The original TRX is retained losslessly as seven ordered `supporting-pre-w6-measurement.trx.xz.partNN` chunks; concatenating the chunks reconstructs the exact xz stream. `supporting-pre-w6-provenance.txt` records both the reconstructed xz SHA-256 and original TRX SHA-256 so restoration can be checked exactly. These files preserve the result without promoting the arm into PR #439's cited-run ledger or making a W3-vs-W6 attribution claim.
+
+`supporting-focused-run-excerpts.transcribed.txt` separately preserves the result-bearing lines for the W6 pre-fix discriminator, W6 focused post-fix proof, and SeasonSave focused v2 proof. Those excerpts are explicitly transcribed from the Actions job-log API rather than asserted as byte copies.
+
 ## Interpretation boundary
 
 The pre-W3 W3-specific counters are **structural zeros, not observations of a live W3 instrument**. The pre-W3 instrument explicitly emitted literal zero values because the fan-out/claim surfaces did not exist yet. Therefore those zeros do not provide a valid before/after rate comparator for keeper claims or fan-out frequency.
