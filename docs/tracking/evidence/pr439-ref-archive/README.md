@@ -10,7 +10,7 @@ This archive records:
 
 - all **16** live `evidence/pr439-*` refs and their exact observed remote heads in `ref-heads.tsv`;
 - all **39** branch-exclusive changed-file blob states across those refs in `MANIFEST.tsv`, each copied byte-for-byte under `history/**.txt`;
-- all **26** GitHub Actions run ids cited on PR #439 in `run-heads.tsv`, including exact run branch, run head SHA, event, conclusion and workflow name;
+- all **15** GitHub Actions run ids cited on PR #439 in `run-heads.tsv`, including exact run branch, run head SHA, event, conclusion and workflow name;
 - an explicit `ref-disposition.tsv` in which every ref is classified `deletable` but every `delete_now` remains `false`.
 
 The archive includes intermediate states, not only branch tips. In particular it preserves the pre-W3 instrument/parser/workflow lineage `6f2ed037…` → `ccb7bf67…` → `cf36526c…`, the W6 pre-fix discriminator source, all three W2 diagnostic arms, the M7 mutation proof, and the full #441 header-reachability evidence lineage.
