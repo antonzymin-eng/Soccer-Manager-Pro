@@ -22,6 +22,7 @@ RUN_HEADS = ARCHIVE_ROOT / "run-heads.tsv"
 PR_NUMBER = 439
 EXPECTED_REF_COUNT = 16
 EXPECTED_RUN_COUNT = 26
+EXPECTED_BLOB_STATE_COUNT = 39
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,11 @@ def validate_archive(repo: Path) -> list[str]:
         )
 
     archive_paths: set[str] = set()
+    if len(manifest) != EXPECTED_BLOB_STATE_COUNT:
+        errors.append(
+            f"manifest blob-state rows {len(manifest)} != {EXPECTED_BLOB_STATE_COUNT}"
+        )
+
     manifest_refs = {row["source_ref"] for row in manifest}
     if manifest_refs != ref_names:
         errors.append(
