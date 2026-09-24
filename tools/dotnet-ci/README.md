@@ -23,7 +23,7 @@ It is deliberately **non-certifying**. Determinism certification remains owned b
 | `coverage.runsettings` | Coverlet/XPlat coverage configuration used by PR/nightly policy modes. |
 | `precommit.runsettings` | NUnit pre-commit selection. Excludes taxonomy prefixes only when they occur at the start of the **method name** (`^int_`, `^sim_`, `^e2e_`), avoiding `FullyQualifiedName` substring over-exclusion. |
 | `run-gate.sh` | Lower-level generated-project executor. Accepts explicit arguments only; inherited filter/owner/coverage environment controls are rejected. |
-| `check_evidence_manifests.py` | Verifies the evidence-integrity contract registry and canonical SHA-256 manifests under `docs/tracking/evidence/`. |
+| `check_evidence_manifests.py` | Verifies the evidence-integrity contract registry and canonical SHA-256 manifests under `docs/tracking/evidence/`. |\n| `check_pr439_evidence_refs.py` | Verifies the durable PR #439 ref archive: exact snapshot blobs, 16 ref heads/dispositions, and the 21-run provenance ledger. |
 | `check_branch_ancestry.py` | Local branch-cleanup ancestry guard. Refuses ancestry claims from shallow history; full local history or authoritative remote/API comparison is required. |
 
 ## Normal developer commands
