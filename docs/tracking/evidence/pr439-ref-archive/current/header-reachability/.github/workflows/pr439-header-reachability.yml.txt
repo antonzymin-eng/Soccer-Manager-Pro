@@ -1,0 +1,41 @@
+name: PR439 header reachability evidence
+
+on:
+  push:
+    branches:
+      - evidence/pr439-header-reachability
+
+permissions:
+  contents: read
+
+jobs:
+  header-reachability:
+    name: Frozen header reachability seed ${{ matrix.seed_index }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        seed_index: [0, 1, 2, 3, 4, 5]
+    env:
+      HEADER441_SEED_INDEX: ${{ matrix.seed_index }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provenance
+        shell: bash
+        run: |
+          echo "HEAD=$(git rev-parse HEAD)"
+          echo "HEADER441_SEED_INDEX=$HEADER441_SEED_INDEX"
+          git log --oneline -8
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run exact #441 diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=HeaderReachability_LocalizesFirstZeroOnFrozenCorpus" \
+            --logger "console;verbosity=detailed"

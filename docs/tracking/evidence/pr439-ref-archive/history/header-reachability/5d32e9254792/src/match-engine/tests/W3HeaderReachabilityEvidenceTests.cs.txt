@@ -1,0 +1,87 @@
+// Disposable evidence only: PR #439 / issue #441 header reachability localization.
+using System;
+using System.Globalization;
+
+using NUnit.Framework;
+
+namespace TacticalDirector.MatchEngine
+{
+    [TestFixture]
+    internal sealed class W3HeaderReachabilityEvidenceTests
+    {
+        private const int TicksPerSeed = 324000;
+
+        private static readonly ulong[] Seeds =
+        {
+            0x0F1E2D3C4B5A6978UL,
+            0x00000000D1A6D05EUL,
+            0x0000000000000001UL,
+            0x00000000ABCDEF12UL,
+            0x0000000099887766UL,
+            0x000000005A5A5A5AUL,
+        };
+
+        [Test]
+        public void HeaderReachability_LocalizesFirstZeroOnFrozenCorpus()
+        {
+            bool priorIgnore = UnityEngine.TestTools.LogAssert.ignoreFailingMessages;
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+
+            try
+            {
+                string rawIndex = Environment.GetEnvironmentVariable("HEADER441_SEED_INDEX");
+                Assert.That(rawIndex, Is.Not.Null.And.Not.Empty, "HEADER441_SEED_INDEX must select one frozen seed");
+                Assert.That(int.TryParse(rawIndex, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seedIndex), Is.True,
+                    "HEADER441_SEED_INDEX must be an integer");
+                Assert.That(seedIndex, Is.InRange(0, Seeds.Length - 1), "HEADER441_SEED_INDEX out of frozen corpus range");
+
+                ulong seed = Seeds[seedIndex];
+                var engine = new MatchEngine(seed);
+                for (int t = 0; t < TicksPerSeed; t++)
+                {
+                    engine.RunTick();
+                }
+
+                int terminalFailures =
+                    engine.TestOnly_HeaderFailedEarlyCount
+                    + engine.TestOnly_HeaderFailedLateCount
+                    + engine.TestOnly_HeaderFailedPositionedPoorlyCount
+                    + engine.TestOnly_HeaderFailedDisturbedCount;
+
+                TestContext.Out.WriteLine(
+                    "HEADER441 seedIndex=" + seedIndex
+                    + " seed=0x" + seed.ToString("X16", CultureInfo.InvariantCulture)
+                    + " commits=" + engine.TestOnly_HeaderCommitCount
+                    + " overwrites=" + engine.TestOnly_HeaderOverwriteCount
+                    + " jumpStarts=" + engine.TestOnly_HeaderJumpStartCount
+                    + " everPredicted=" + engine.TestOnly_HeaderEverPredictedContactCount
+                    + " preparedContacts=" + engine.TestOnly_HeaderPreparedContactCount
+                    + " executed=" + engine.TestOnly_HeaderExecutedCount
+                    + " failedEarly=" + engine.TestOnly_HeaderFailedEarlyCount
+                    + " failedLate=" + engine.TestOnly_HeaderFailedLateCount
+                    + " failedPositionedPoorly=" + engine.TestOnly_HeaderFailedPositionedPoorlyCount
+                    + " failedDisturbed=" + engine.TestOnly_HeaderFailedDisturbedCount
+                    + " terminalFailures=" + terminalFailures
+                    + " landingDrops=" + engine.TestOnly_HeaderLandingDropCount
+                    + " cancels=" + engine.TestOnly_HeaderCancelCount
+                    + " w3Participants=" + engine.TestOnly_W3RegisteredDuelParticipants
+                    + " w3HandDuels=" + engine.TestOnly_W3ResolvedHandContactDuels
+                    + " w3KeeperClaims=" + engine.TestOnly_W3SuccessfulKeeperClaims);
+
+                Assert.That(engine.TestOnly_HeaderCommitCount, Is.GreaterThan(0), "frozen seed produced no header commits");
+                Assert.That(engine.TestOnly_HeaderJumpStartCount, Is.LessThanOrEqualTo(engine.TestOnly_HeaderCommitCount),
+                    "jump starts exceed commits");
+                Assert.That(engine.TestOnly_HeaderEverPredictedContactCount, Is.LessThanOrEqualTo(engine.TestOnly_HeaderJumpStartCount),
+                    "predicted-contact episodes exceed jump starts");
+                Assert.That(engine.TestOnly_HeaderPreparedContactCount, Is.LessThanOrEqualTo(engine.TestOnly_HeaderEverPredictedContactCount),
+                    "prepared contacts exceed predicted-contact episodes");
+                Assert.That(engine.TestOnly_HeaderExecutedCount, Is.LessThanOrEqualTo(engine.TestOnly_HeaderPreparedContactCount),
+                    "executed headers exceed prepared contacts");
+            }
+            finally
+            {
+                UnityEngine.TestTools.LogAssert.ignoreFailingMessages = priorIgnore;
+            }
+        }
+    }
+}
