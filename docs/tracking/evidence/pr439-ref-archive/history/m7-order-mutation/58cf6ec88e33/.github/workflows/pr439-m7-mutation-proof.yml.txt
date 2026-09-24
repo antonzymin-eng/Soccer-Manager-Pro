@@ -1,0 +1,59 @@
+name: PR439 M7 mutation proof
+
+on:
+  push:
+    branches:
+      - evidence/pr439-m7-order-mutation
+
+permissions:
+  contents: read
+
+jobs:
+  mutation-proof:
+    name: M7 rewritten test rejects inverted order
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provenance
+        shell: bash
+        run: |
+          echo "HEAD=$(git rev-parse HEAD)"
+          git log --oneline -3
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Require target test to fail
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+          mkdir -p artifacts/pr439-m7
+          set +e
+          dotnet test src/season-save/tests/season-save-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=ANewBanEarnedThisFixtureIsNotServedByThisSameFixture" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=m7-mutation.trx" \
+            --results-directory artifacts/pr439-m7
+          test_status=$?
+          set -e
+          python3 - <<'PY'
+          import pathlib, xml.etree.ElementTree as ET
+          p=pathlib.Path("artifacts/pr439-m7/m7-mutation.trx")
+          root=ET.parse(p).getroot()
+          rows=[e for e in root.iter() if e.tag.endswith("UnitTestResult")]
+          target=[e for e in rows if e.attrib.get("testName")=="ANewBanEarnedThisFixtureIsNotServedByThisSameFixture"]
+          if len(target)!=1:
+              raise SystemExit(f"expected exactly one target result, got {len(target)}")
+          print("M7_MUTATION targetOutcome="+target[0].attrib.get("outcome",""))
+          if target[0].attrib.get("outcome")!="Failed":
+              raise SystemExit("mutation proof failed: target test did not fail")
+          if len(rows)!=1:
+              raise SystemExit(f"expected exactly one executed test result, got {len(rows)}")
+          PY
+          if [ "$test_status" -eq 0 ]; then
+            echo "mutation proof failed: dotnet test unexpectedly succeeded" >&2
+            exit 1
+          fi
+          echo "M7 mutation proof succeeded: exact target failed under inverted production order."
