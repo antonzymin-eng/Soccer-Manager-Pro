@@ -1,0 +1,34 @@
+name: PR439 W2 three-arm diagnostic
+
+on:
+  push:
+    branches:
+      - 'evidence/pr439-w2-diag-*'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    name: W2 diagnostic
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provenance
+        shell: bash
+        run: |
+          echo "HEAD=$(git rev-parse HEAD)"
+          git log --oneline -4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run W2 diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=W2Diagnostic_ThreeWayEvidence" \
+            --logger "console;verbosity=detailed"
