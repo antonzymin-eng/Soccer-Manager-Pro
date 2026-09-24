@@ -19,3 +19,9 @@ run_id	head_branch	head_sha	commit_subject	commit_date	event	conclusion	workflow
 35878656931	evidence/pr439-w2-diag-w3	754c7ab9bfb4e8916359edea84b34f5fec566be6	ci(evidence): run PR439 W2 diagnostic	2026-09-23T15:02:46Z	push	success	PR439 W2 three-arm diagnostic
 35878699989	evidence/pr439-w2-diag-head	5c75a6cf5b6c6e8988ad34f6a96051a74389a4c4	ci(evidence): run PR439 W2 diagnostic	2026-09-23T15:03:05Z	push	success	PR439 W2 three-arm diagnostic
 35879276984	evidence/pr439-w2-diag-base	8b4bf0204179e0824a37a67ac9818d7674975a98	test(evidence): contain unrelated FM-03 in W2 diagnostic	2026-09-23T15:07:43Z	push	success	PR439 W2 three-arm diagnostic
+35133104970	main	1bad655f5826070d1e29f54a845cdf2c549f66bc	Activate W2 tackle challenge in production (#418)	2026-09-16T18:13:56Z	push	failure	CI
+35344056248	evidence/pr416-close-chance-retirement	adcf21bf36c07273f082053d3778693f4075bf2a	test: run close-chance retirement evidence	2026-09-18T12:19:29Z	push	success	PR416 close-chance retirement evidence
+35420947427	fix/gate-owner-held-isolation	2e12fa3e778a82c1afd6a2078ee29f8f7321f58d	Merge main into fix/gate-owner-held-isolation	2026-09-19T04:18:42Z	pull_request	failure	CI
+35675959945	calibration/foul-card-w3-w9-prereg-20260921	820fb7ca41947fdc33dfbfc2e61ebcd1e45e1b9d	review: record W2 foul-cooldown asymmetry	2026-09-22T01:29:39Z	pull_request	success	CI
+35765635130	evidence/foul-card-six-seed-20260922	50d6229ccd5cf3e2118aae1497d27b40f6986b29	ci: isolate measurement selector from MSBuild	2026-09-22T18:12:19Z	push	success	One-shot frozen
+35902016795	test/w2-six-seed-contract-442	e8680a1dbe5fe2a568e9241abb7fb025a41faeeb	test(W2): preregister six-seed pooled corpus for #442	2026-09-23T18:22:06Z	pull_request	success	CI
