@@ -17,7 +17,7 @@ Each snapshot carries a terminal `.txt` suffix but preserves the original Git bl
 - original path and quarantined archive path;
 - original Git blob SHA.
 
-`run-heads.tsv` records **26 workflow runs cited by PR #439's durable record/review history**, including exact head branch/SHA, commit subject/date, event, conclusion, and workflow name.
+`run-heads.tsv` records **26 workflow runs cited by PR #439's description/comments**, including exact head branch/SHA, commit subject/date, event, conclusion, and workflow name. The live gate re-extracts run IDs from PR #439 through the GitHub API and requires the citation set to match this ledger exactly.
 
 `ref-heads.tsv` records all **16** live `evidence/pr439-*` refs and exact heads. `ref-disposition.tsv` classifies all 16 as `deletable`, but every row remains `delete_now=false`; archival completeness and deletion authorization are deliberately separate states.
 
@@ -31,15 +31,17 @@ Archive mode verifies that:
 
 1. all ledgers exist and the 16-ref disposition set matches the recorded ref set;
 2. every snapshot path is unique, quarantined as `.txt`, and hashes to the recorded original Git blob SHA in the committed tree;
-3. the cited-run ledger has no duplicate run IDs.
+3. the cited-run ledger contains exactly 26 unique run IDs and the manifest covers all 16 recorded refs;
+4. the committed `history/` snapshot path set matches `MANIFEST.tsv` exactly.
 
 Live mode additionally requires a full-history checkout with all `evidence/pr439-*` remote-tracking refs fetched. It verifies:
 
 1. the live remote-ref set is exactly the 16 recorded refs;
 2. every live head equals the recorded head SHA;
-3. every non-deletion file/blob state introduced by every branch-exclusive commit is represented exactly in the durable manifest.
+3. every non-deletion file/blob state introduced by every branch-exclusive commit is represented exactly in the durable manifest, with no extra manifest states;
+4. with `--verify-actions-api`, PR #439's live description/comment run citations equal `run-heads.tsv` exactly and each recorded Actions head branch/SHA/event/conclusion/workflow name matches the API.
 
-Before any deletion, run the live check against freshly fetched remote refs. Deletion remains blocked if the live set/head mapping drifts or if any branch-history state is missing from the archive.
+The durable `.github/workflows/pr439-evidence-ref-gate.yml` fetches the live refs on PR/main changes and runs archive + live + GitHub-API verification. Before any deletion, run the same live check again against freshly fetched remote refs. Deletion remains blocked if the live set/head mapping drifts or if any branch-history state is missing from the archive.
 
 ## Deletion boundary
 
