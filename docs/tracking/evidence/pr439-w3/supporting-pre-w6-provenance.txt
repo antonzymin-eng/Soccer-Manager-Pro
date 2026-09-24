@@ -1,0 +1,69 @@
+PR #439 W3 PRE-W6 SUPPORTING ARM — PROVENANCE
+captured_utc=2026-09-24
+classification=supporting_non_authoritative
+measured_sha=f69aaef0f27fdd8a10a89a2d4cc599b08d6ef70b
+run_id=35815667045
+evidence_branch=evidence/pr439-w3-pre-w6-six-seed
+evidence_head=d8b362d4c84b9d8fb461ffea66187f50a8780033
+artifact_id=10732311509
+artifact_name=pr439-w3-pre-w6-35815667045
+artifact_api_digest=sha256:f6b550828d97895e475c73bc2d2172d86d5ff43fa73920603b78a603a2824fb8
+artifact_expires_at=2026-12-22T03:46:31Z
+downloaded_zip_sha256=f6b550828d97895e475c73bc2d2172d86d5ff43fa73920603b78a603a2824fb8
+artifact_internal_sha256sums=PASS
+artifact_internal_sha256sums_file=supporting-pre-w6-artifact-SHA256SUMS.txt
+artifact_internal_sha256sums_file_sha256=2b12d4dbb82990c29a1a3d990cbb26ed6a48b2b539cb10aed99e4a2fb355ec8a
+
+Original artifact SHA256SUMS lines:
+ed9f2a39048a6f72398e0a3fd807a6f05e1b53e6b98f1a012555ac2d208c5bc7  ./instrument-output.txt
+879ed0b251e93f41612861a56d087307a1e6f2cc6299b03cd8c9bebad6a709ec  ./measurement.runsettings
+72d7e73d2bdf73eb8ed4e63d66c1c36fbe2f905fd16436be35d62bd5c89218d6  ./measurement.txt
+1157547c628c8ac84fc6a4fbc34ebd37ec7de0d9ac2aa65bd0425f78a6ee306a  ./report.txt
+6827976c701cd2b34fab890a15c5ca5d125713bb6071bb7314a65b3ecb972760  ./results.json
+59ea7c4fbc298beecfa641dbee01f7568a82e409a3933e87d759c76f6331d2ed  ./results.tsv
+b485f336c13007f1e08e2200c582df2740bedc065806d08b93d01ad2c1802301  ./trx/measurement.trx
+
+Byte-exact artifact files committed under supporting-* names:
+report.txt sha256=1157547c628c8ac84fc6a4fbc34ebd37ec7de0d9ac2aa65bd0425f78a6ee306a
+results.tsv sha256=59ea7c4fbc298beecfa641dbee01f7568a82e409a3933e87d759c76f6331d2ed
+results.json sha256=6827976c701cd2b34fab890a15c5ca5d125713bb6071bb7314a65b3ecb972760
+measurement.runsettings sha256=879ed0b251e93f41612861a56d087307a1e6f2cc6299b03cd8c9bebad6a709ec
+
+Raw instrument source:
+instrument-output.txt sha256=ed9f2a39048a6f72398e0a3fd807a6f05e1b53e6b98f1a012555ac2d208c5bc7
+stored_losslessly_as=ordered supporting-pre-w6-instrument-output.txt.xz.part00..part08
+reconstruct_command=cat supporting-pre-w6-instrument-output.txt.xz.part* > supporting-pre-w6-instrument-output.txt.xz
+restore_command=xz -dc supporting-pre-w6-instrument-output.txt.xz > instrument-output.txt
+compressed_sha256=cf1d82661bc2f308bbc2b666d199f0c52f93bf665cb3f70682253f2c5d9ae279
+part00_sha256=54dedf7553f380cf201a605ffbb4c27ea4e9632648501c52a50e66f034539e8b
+part01_sha256=fa78bb60a0b8cde8db720b10ec50cd2a65432bf3ee06f34e9650d8ebe17bebbb
+part02_sha256=5eb0bbcba4881dd79eafc29a0c867d696092c7b8cd33f8e64023f9329832637d
+part03_sha256=8797e39503f95c8e8dbde85b34ca2a8e5b5bd999444f5964b4e87dd3c6c16db4
+part04_sha256=564d9f25dee95ec074fd86f6eb15e4c4cd276218740b1e87959a2452b4f3a85a
+part05_sha256=efa9bdeec4ee2b48dcf14cc03f542f8034b1a8568c1e4d73ccef69e90ecb5113
+part06_sha256=00b9dad2fb2312fb3cb4a13965adf3ae4f607ece49b54299c31f8181a8309bb8
+part07_sha256=0c52489a126e6bee3d2fef96e0f72d1a13a83a127d4ba4bb123b8029f080c13c
+part08_sha256=9d16fd14ebdfb35d8477b0c73890d01891743bf3ec515a87e96817445fccad0d
+
+Full console capture:
+measurement.txt sha256=72d7e73d2bdf73eb8ed4e63d66c1c36fbe2f905fd16436be35d62bd5c89218d6
+retention=hash-accounted only; not committed because the durable raw instrument stream plus report/structured outputs and TRX retain the result-bearing evidence. The original artifact SHA256SUMS line above remains the durable identity record.
+
+Original TRX:
+trx/measurement.trx sha256=b485f336c13007f1e08e2200c582df2740bedc065806d08b93d01ad2c1802301
+stored_losslessly_as=ordered supporting-pre-w6-measurement.trx.xz.part00..part06
+reconstruct_command=cat supporting-pre-w6-measurement.trx.xz.part* > supporting-pre-w6-measurement.trx.xz
+restore_command=xz -dc supporting-pre-w6-measurement.trx.xz > measurement.trx
+compressed_sha256=f0155e636f8a73db037e423fd938613a2c803751dfab17652c61cbe160010360
+part00_sha256=26e9d91542697e200e85957499043a29b77326033fee4ec6e9a1f7837b458f41
+part01_sha256=2a828f1318fd28afea964bf16566719e85f39cabe736d5b2c0297dc177bdf1b6
+part02_sha256=24526035e17b8a03ca26383b711dd1bac86fba35dced603a0417963acedd8e18
+part03_sha256=550a2f0227919dda75eee50c75250a95dd5142026d6266afd075ce5d397e2b4c
+part04_sha256=d36f41064d22f6f2dd884f78c66a3d418f0c998b92bc78ac2978f8e591396d19
+part05_sha256=3b188e3da7b9f3613760f4b3afc78e0945ec92c91e4bd5bf2c9c47fef0aad20b
+part06_sha256=b73186559d92df73afebf78d8836a30670d5b5ba0926aad7f0a2e5d32dc2cf98
+
+Chunking note:
+The xz streams are split only for archival transport through the repository connector. Concatenating the zero-padded parts in lexical order reconstructs the exact compressed stream; the compressed and original hashes above are the authoritative integrity checks.
+
+The pre-W6 arm is preserved to retain the measured W3-before-W6 state. It is not part of PR #439's cited-run ledger and is not an authoritative W3 A/B arm. No causal attribution is made from differences between this arm and later production states.
