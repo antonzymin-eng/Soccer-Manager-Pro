@@ -1,0 +1,2 @@
+captured_at_utc	pr_number	source_count	cited_run_count	source_index_sha256	capture_scope
+2026-09-25T02:16:00Z	439	25	15	3d545f91eb90c40db14019f49da06ef820077160bff831943fa6476293af4470	PR body plus all issue comments, review comments, and reviews visible through the GitHub connector at capture time

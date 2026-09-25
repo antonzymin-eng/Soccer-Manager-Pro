@@ -22,6 +22,8 @@ MANIFEST = ARCHIVE_ROOT / "MANIFEST.tsv"
 REF_HEADS = ARCHIVE_ROOT / "ref-heads.tsv"
 DISPOSITION = ARCHIVE_ROOT / "ref-disposition.tsv"
 RUN_HEADS = ARCHIVE_ROOT / "run-heads.tsv"
+DISCUSSION_SNAPSHOT = ARCHIVE_ROOT / "pr439-discussion-snapshot.tsv"
+DISCUSSION_META = ARCHIVE_ROOT / "pr439-discussion-snapshot-meta.tsv"
 SUPERSEDED_RUNS = ARCHIVE_ROOT / "superseded-runs.tsv"
 JOB_LOGS = ARCHIVE_ROOT / "archived-job-logs.tsv"
 HISTORICAL_WORKFLOWS = ARCHIVE_ROOT / "historical-workflows.tsv"
@@ -29,6 +31,7 @@ PR_NUMBER = 439
 EXPECTED_REF_COUNT = 16
 EXPECTED_RUN_COUNT = 15
 EXPECTED_BLOB_STATE_COUNT = 39
+EXPECTED_DISCUSSION_SOURCE_COUNT = 25
 EXPECTED_SUPERSEDED_IDS = {
     "35814523589", "35814675549", "35814874360", "35814941362",
     "35815215062", "35879288048", "35887103114", "35887451692",
@@ -65,6 +68,80 @@ def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProce
 def read_tsv(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle, delimiter="\t"))
+
+
+def validate_frozen_pr_citations(repo: Path, cited_ids: set[str]) -> list[str]:
+    errors: list[str] = []
+    rows = read_tsv(repo / DISCUSSION_SNAPSHOT)
+    meta_rows = read_tsv(repo / DISCUSSION_META)
+    if len(meta_rows) != 1:
+        return [f"PR #439 discussion snapshot metadata rows {len(meta_rows)} != 1"]
+    meta = meta_rows[0]
+    if meta.get("pr_number") != str(PR_NUMBER):
+        errors.append("PR #439 discussion snapshot has wrong PR number")
+    if meta.get("captured_at_utc") != "2026-09-25T02:16:00Z":
+        errors.append("PR #439 discussion snapshot capture timestamp changed")
+    if len(rows) != EXPECTED_DISCUSSION_SOURCE_COUNT:
+        errors.append(
+            f"PR #439 discussion snapshot source count {len(rows)} != "
+            f"{EXPECTED_DISCUSSION_SOURCE_COUNT}"
+        )
+    if meta.get("source_count") != str(len(rows)):
+        errors.append("PR #439 discussion snapshot metadata source count mismatch")
+
+    source_keys: set[tuple[str, str]] = set()
+    frozen_ids: set[str] = set()
+    canonical_lines: list[str] = []
+    fields = ("source_kind", "source_id", "source_url", "body_sha256", "run_ids")
+    for row in rows:
+        key = (row.get("source_kind", ""), row.get("source_id", ""))
+        if key in source_keys:
+            errors.append(f"duplicate PR #439 discussion source: {key}")
+        source_keys.add(key)
+        if row.get("source_kind") not in {"pr_body", "issue_comment", "review_comment", "review"}:
+            errors.append(f"unexpected PR #439 discussion source kind: {row.get('source_kind')!r}")
+        if not row.get("source_id") or not row.get("source_url"):
+            errors.append(f"incomplete PR #439 discussion source: {key}")
+        if not re.fullmatch(r"[0-9a-f]{64}", row.get("body_sha256", "")):
+            errors.append(f"malformed PR #439 body SHA-256: {key}")
+
+        ids = [value for value in row.get("run_ids", "").split(",") if value]
+        if len(ids) != len(set(ids)):
+            errors.append(f"duplicate run IDs in PR #439 discussion source: {key}")
+        for run_id in ids:
+            if not re.fullmatch(r"35\d{9}", run_id):
+                errors.append(f"malformed frozen PR #439 run ID: {run_id}")
+            frozen_ids.add(run_id)
+        canonical_lines.append("\t".join(row.get(field, "") for field in fields))
+
+    if frozen_ids != cited_ids:
+        errors.append(
+            "frozen PR #439 citation coverage mismatch: "
+            f"missing={sorted(cited_ids-frozen_ids)} extras={sorted(frozen_ids-cited_ids)}"
+        )
+    if meta.get("cited_run_count") != str(len(frozen_ids)):
+        errors.append("PR #439 discussion snapshot metadata cited-run count mismatch")
+    digest = sha256(("\n".join(canonical_lines) + "\n").encode("utf-8"))
+    if digest != meta.get("source_index_sha256"):
+        errors.append("PR #439 discussion snapshot aggregate digest mismatch")
+    return errors
+
+
+def file_sha256_matches(path: Path, expected: str) -> bool:
+    return sha256(path.read_bytes()) == expected
+
+
+def validate_post_delete_topology(
+    actual_refs: set[str], dispositions: list[dict[str, str]]
+) -> list[str]:
+    errors: list[str] = []
+    if len(dispositions) != EXPECTED_REF_COUNT or not all(
+        row.get("delete_now") == "true" for row in dispositions
+    ):
+        errors.append("post-delete certification requires all 16 delete_now rows to be true")
+    if actual_refs:
+        errors.append(f"post-delete PR439 evidence refs reappeared: {sorted(actual_refs)}")
+    return errors
 
 
 def resolve(repo: Path, spec: str) -> str | None:
@@ -133,7 +210,7 @@ def validate_historical_evidence(repo: Path, cited_ids: set[str]) -> list[str]:
             try:
                 path = archived_path(repo, row["archive_path"], "historical-artifacts")
                 raw = path.read_bytes()
-                if sha256(raw) != row["artifact_sha256"] or len(raw) != int(row["artifact_size_bytes"]):
+                if not file_sha256_matches(path, row["artifact_sha256"]) or len(raw) != int(row["artifact_size_bytes"]):
                     errors.append("alternate pre-W3 ZIP digest or size mismatch")
                 with zipfile.ZipFile(path) as archive:
                     checksums = archive.read("SHA256SUMS").decode("utf-8")
@@ -165,7 +242,7 @@ def validate_historical_evidence(repo: Path, cited_ids: set[str]) -> list[str]:
         expected_workflow_paths.add(name)
         try:
             path = archived_path(repo, name, "historical-workflows")
-            if sha256(path.read_bytes()) != row["sha256"]:
+            if not file_sha256_matches(path, row["sha256"]):
                 errors.append(f"historical workflow SHA-256 mismatch: {name}")
             if resolve(repo, f"HEAD:{name}") != row["git_blob_sha"]:
                 errors.append(f"historical workflow Git blob mismatch: {name}")
@@ -182,7 +259,7 @@ def validate_historical_evidence(repo: Path, cited_ids: set[str]) -> list[str]:
         try:
             path = archived_path(repo, name, "job-logs")
             compressed = path.read_bytes()
-            if sha256(compressed) != row["sha256_xz"]:
+            if not file_sha256_matches(path, row["sha256_xz"]):
                 errors.append(f"job-log compressed SHA-256 mismatch: {name}")
             decoded = lzma.decompress(compressed)
             if sha256(decoded) != row["sha256_decoded_log"] or len(decoded.splitlines()) != int(row["decoded_line_count"]):
@@ -212,6 +289,7 @@ def validate_historical_evidence(repo: Path, cited_ids: set[str]) -> list[str]:
 def validate_archive(repo: Path) -> list[str]:
     errors: list[str] = []
     required = [MANIFEST, REF_HEADS, DISPOSITION, RUN_HEADS,
+                DISCUSSION_SNAPSHOT, DISCUSSION_META,
                 SUPERSEDED_RUNS, JOB_LOGS, HISTORICAL_WORKFLOWS]
     for rel in required:
         if not (repo / rel).is_file():
@@ -248,6 +326,7 @@ def validate_archive(repo: Path) -> list[str]:
         errors.append(
             f"run-head ledger cardinality/uniqueness failure: rows={len(runs)} unique={len(run_ids)}"
         )
+    errors.extend(validate_frozen_pr_citations(repo, run_ids))
     errors.extend(validate_historical_evidence(repo, run_ids))
 
     archive_paths: set[str] = set()
@@ -301,7 +380,21 @@ def _github_json(url: str, token: str) -> object:
         return json.load(response)
 
 
-def verify_actions_and_pr_citations(runs: list[dict[str, str]]) -> list[str]:
+def _github_list_all(url: str, token: str) -> list[dict[str, object]]:
+    items: list[dict[str, object]] = []
+    page = 1
+    while True:
+        separator = "&" if "?" in url else "?"
+        payload = _github_json(f"{url}{separator}per_page=100&page={page}", token)
+        if not isinstance(payload, list):
+            raise ValueError(f"GitHub list endpoint did not return a list: {url}")
+        items.extend(payload)
+        if len(payload) < 100:
+            return items
+        page += 1
+
+
+def verify_live_actions_and_pr_citations(runs: list[dict[str, str]]) -> list[str]:
     errors: list[str] = []
     token = os.environ.get("GITHUB_TOKEN", "")
     repository = os.environ.get("GITHUB_REPOSITORY", "")
@@ -311,17 +404,14 @@ def verify_actions_and_pr_citations(runs: list[dict[str, str]]) -> list[str]:
 
     try:
         pr = _github_json(f"{api_url}/repos/{repository}/pulls/{PR_NUMBER}", token)
-        comments = _github_json(
-            f"{api_url}/repos/{repository}/issues/{PR_NUMBER}/comments?per_page=100",
-            token,
+        comments = _github_list_all(
+            f"{api_url}/repos/{repository}/issues/{PR_NUMBER}/comments", token
         )
-        review_comments = _github_json(
-            f"{api_url}/repos/{repository}/pulls/{PR_NUMBER}/comments?per_page=100",
-            token,
+        review_comments = _github_list_all(
+            f"{api_url}/repos/{repository}/pulls/{PR_NUMBER}/comments", token
         )
-        reviews = _github_json(
-            f"{api_url}/repos/{repository}/pulls/{PR_NUMBER}/reviews?per_page=100",
-            token,
+        reviews = _github_list_all(
+            f"{api_url}/repos/{repository}/pulls/{PR_NUMBER}/reviews", token
         )
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as exc:
         return [f"PR #{PR_NUMBER} citation lookup failed: {exc}"]
@@ -368,110 +458,32 @@ def verify_actions_and_pr_citations(runs: list[dict[str, str]]) -> list[str]:
     return errors
 
 
-def resolve_live_state(
-    actual_refs: set[str], expected_refs: set[str], authorized: bool, requested: str
-) -> tuple[str | None, list[str]]:
-    if requested == "pre-delete":
-        allowed = expected_refs
-    elif requested == "post-delete":
-        if not authorized:
-            return None, ["post-delete state requires all 16 refs to have delete_now=true"]
-        allowed = set()
-    elif actual_refs == expected_refs:
-        return "pre-delete", []
-    elif authorized and not actual_refs:
-        return "post-delete", []
-    else:
-        return None, [
-            "PR439 evidence-ref topology mismatch: "
-            f"actual={sorted(actual_refs)} expected_all={sorted(expected_refs)} "
-            f"post_delete_allowed={authorized}"
-        ]
-    if actual_refs != allowed:
-        return None, [
-            f"{requested} PR439 evidence-ref set mismatch: "
-            f"missing={sorted(allowed - actual_refs)} "
-            f"extras={sorted(actual_refs - allowed)}"
-        ]
-    return requested, []
-
-
-def validate_live(
-    repo: Path, main_ref: str, verify_api: bool = False,
-    require_authorized: bool = False, live_state: str = "auto",
-) -> list[str]:
+def validate_live(repo: Path, verify_api: bool = False) -> list[str]:
     errors = validate_archive(repo)
     if errors:
         return errors
 
-    manifest = read_tsv(repo / MANIFEST)
-    refs = read_tsv(repo / REF_HEADS)
     dispositions = read_tsv(repo / DISPOSITION)
-    authorized = len(dispositions) == EXPECTED_REF_COUNT and all(
-        row["delete_now"] == "true" for row in dispositions
-    )
-    if require_authorized and not authorized:
-        return ["deletion authorization required: all 16 refs must have delete_now=true"]
-    expected_heads = {row["ref"]: row["head_sha"] for row in refs}
-    manifest_states = {
-        (row["source_ref"], row["source_commit"], row["original_path"], row["blob_sha"])
-        for row in manifest
-    }
-
     live = git(
         repo,
         "for-each-ref",
         "--format=%(refname) %(objectname)",
         "refs/remotes/origin/evidence/pr439-*",
     ).stdout.splitlines()
-    actual: dict[str, str] = {}
     prefix = "refs/remotes/origin/"
-    for line in live:
-        refname, sha = line.split()
-        actual[refname[len(prefix):]] = sha
-
-    resolved_state, topology_errors = resolve_live_state(
-        set(actual), set(expected_heads), authorized, live_state
-    )
-    if topology_errors:
-        errors.extend(topology_errors)
-        return errors
-
-    for ref, expected in ((ref, expected_heads[ref]) for ref in sorted(actual)):
-        if actual[ref] != expected:
-            errors.append(f"{ref}: live head {actual[ref]} != recorded {expected}")
-
-    live_states: set[tuple[str, str, str, str]] = set()
-    if resolved_state == "pre-delete":
-        for ref in sorted(expected_heads):
-            for state in changed_blob_states(repo, ref, main_ref):
-                live_states.add((state.ref, state.commit, state.path, state.blob))
-
-        missing = live_states - manifest_states
-        extras = manifest_states - live_states
-        if missing:
-            for ref, commit, path, blob in sorted(missing)[:50]:
-                errors.append(
-                    f"unarchived branch-exclusive blob state: {ref} {commit} {path} {blob}"
-                )
-            if len(missing) > 50:
-                errors.append(f"... plus {len(missing)-50} additional missing states")
-        if extras:
-            for ref, commit, path, blob in sorted(extras)[:50]:
-                errors.append(
-                    f"manifest state is not a live branch-exclusive change: {ref} {commit} {path} {blob}"
-                )
-            if len(extras) > 50:
-                errors.append(f"... plus {len(extras)-50} additional extra states")
+    actual_refs = {
+        line.split()[0][len(prefix):]
+        for line in live
+        if line.strip()
+    }
+    errors.extend(validate_post_delete_topology(actual_refs, dispositions))
 
     if verify_api:
-        errors.extend(verify_actions_and_pr_citations(read_tsv(repo / RUN_HEADS)))
+        errors.extend(verify_live_actions_and_pr_citations(read_tsv(repo / RUN_HEADS)))
 
     print(
-        f"PR439 {resolved_state} evidence census: "
-        f"live_refs={len(actual)} deleted={len(expected_heads)-len(actual)} "
-        f"live_blob_states={len(live_states)} archived={len(manifest_states)} "
-        f"runs={len(read_tsv(repo / RUN_HEADS))} authorized={authorized}"
+        "PR439 post-delete live audit: "
+        f"live_refs={len(actual_refs)} runs={len(read_tsv(repo / RUN_HEADS))}"
     )
     return errors
 
@@ -480,9 +492,6 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", default=".")
     parser.add_argument("--mode", choices=("archive", "live", "all"), default="archive")
-    parser.add_argument("--main-ref", default="refs/remotes/origin/main")
-    parser.add_argument("--live-state", choices=("auto", "pre-delete", "post-delete"), default="auto")
-    parser.add_argument("--require-authorized", action="store_true")
     parser.add_argument("--verify-actions-api", action="store_true")
     args = parser.parse_args(argv)
     repo = Path(args.repo).resolve()
@@ -491,10 +500,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.mode in {"archive", "all"}:
             errors.extend(validate_archive(repo))
         if args.mode in {"live", "all"}:
-            errors.extend(validate_live(
-                repo, args.main_ref, args.verify_actions_api,
-                args.require_authorized, args.live_state,
-            ))
+            errors.extend(validate_live(repo, args.verify_actions_api))
     except (OSError, RuntimeError, KeyError, ValueError) as exc:
         errors.append(str(exc))
 

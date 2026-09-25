@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'tools/dotnet-ci/check_pr439_evidence_refs.py'
+      - 'tools/tests/test_pr439_evidence_refs.py'
       - '.github/workflows/pr439-evidence-ref-gate.yml'
       - 'docs/tracking/evidence/pr439-ref-archive/**'
       - 'docs/tracking/evidence/pr439-w3/**'
@@ -13,17 +14,12 @@ on:
     branches: [main]
     paths:
       - 'tools/dotnet-ci/check_pr439_evidence_refs.py'
+      - 'tools/tests/test_pr439_evidence_refs.py'
       - '.github/workflows/pr439-evidence-ref-gate.yml'
       - 'docs/tracking/evidence/pr439-ref-archive/**'
       - 'docs/tracking/evidence/pr439-w3/**'
       - 'docs/tracking/w3-agent-ball-fanout-design.md'
   workflow_dispatch:
-    inputs:
-      live_state:
-        description: 'Required remote topology for a manual certification run'
-        type: choice
-        options: [post-delete, pre-delete, auto]
-        default: post-delete
 
 permissions:
   actions: read
@@ -32,8 +28,30 @@ permissions:
   issues: read
 
 jobs:
-  evidence-ref-gate:
-    name: PR439 evidence-ref archive gate
+  committed-archive-integrity:
+    name: PR439 committed archive integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify committed archive and frozen citation snapshot
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
+            --repo . \
+            --mode archive
+
+      - name: Run PR439 verifier unit tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest tools.tests.test_pr439_evidence_refs
+
+  live-post-delete-audit:
+    name: PR439 live post-delete audit (manual, non-blocking)
+    if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,27 +62,14 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags --prune origin \
-            '+refs/heads/main:refs/remotes/origin/main' \
             '+refs/heads/evidence/pr439-*:refs/remotes/origin/evidence/pr439-*'
 
-      - name: Gate B - committed archive integrity
-        run: |
-          set -euo pipefail
-          python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
-            --repo . \
-            --mode archive \
-            --main-ref refs/remotes/origin/main
-
-      - name: Gate A - live-ref full-history completeness
+      - name: Audit zero-ref state and live GitHub provenance
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          LIVE_STATE: ${{ inputs.live_state || 'post-delete' }}
         run: |
           set -euo pipefail
           python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
             --repo . \
             --mode live \
-            --main-ref refs/remotes/origin/main \
-            --live-state "$LIVE_STATE" \
-            --require-authorized \
             --verify-actions-api
