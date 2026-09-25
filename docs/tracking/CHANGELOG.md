@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 25, 2026 — **PR #439 historical evidence and guarded 16-ref atomic deletion prepared; remote outcome pending.**
+> **Last Updated:** September 25, 2026 — **PR #451 landed and deleted all 16 PR #439 evidence refs atomically; permanent zero-ref gate and independent #446 archive cleanup follow.**
+>
+> Merge `250b15fec3b98b5d9fece6e9db1e0d787bd623fd` landed the exact historical payload and authorization ledger. One-shot run `36078635104` passed the complete pre-delete census, compared all 16 exact remote heads, performed one leased atomic push, and passed the immediate zero-ref gate. Independently dispatched post-delete gate `36078666318` also passed; the remote now has zero `evidence/pr439-*` refs. This follow-up makes the automatic PR #439 gate require zero refs permanently, retires the completed privileged one-shot workflow and stages a separate exact-head-protected cleanup for the closed #446 archive branch. The 15-run PR #439 citation ledger and PR discussion remain unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
+>
+> **Last Updated (prior):** September 25, 2026 — **PR #439 historical evidence and guarded 16-ref atomic deletion prepared; remote outcome pending.**
 >
 > `pr439-ref-archive/` now retains the complete alternate pre-W3 artifact from successful run `35814941362` (verified live ZIP and internal hashes), a separate eight-row #446-only superseded-run ledger, six losslessly compressed decoded W2/M7 job logs, and the original failed foul/card plus W2 #442 workflows. The alternate measured the same production base as authoritative pre-W3 run `35815761065` but used different instrument/parser revisions. The existing 15-row PR #439 citation ledger and PR discussion are untouched. The foul/card raw streams remain optional forensic detail; the older W2 artifact expiry remains an accepted boundary. All 16 `delete_now` rows are authorized together. The verifier now accepts only the complete exact-head pre-delete or zero-ref post-delete topology, checks the historical payloads and rejects partial deletion. A one-shot workflow on landing requires the full pre-delete gate and remote heads, uses one leased `git push --atomic` (including a dry run), checks the zero-ref state immediately and dispatches an independent explicit post-delete gate. The branch proposal does not delete remote refs; the actual outcome must be read from that one-shot run. No gameplay, spec, RNG, or `[GT]` change.
 >

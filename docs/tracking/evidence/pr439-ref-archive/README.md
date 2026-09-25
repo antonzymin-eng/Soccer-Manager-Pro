@@ -2,13 +2,13 @@
 
 > **Created:** September 23, 2026
 > **Purpose:** Preserve every branch-exclusive changed-file blob state and cited workflow-run head needed to make the PR #439 evidence refs disposable without losing the evidence record.
-> **Status:** **DELETION AUTHORIZED FOR THE COMPLETE 16-REF SET; CERTIFICATION MUST REQUIRE THE ZERO-REF POST-DELETE TOPOLOGY.**
+> **Status:** **ALL 16 EVIDENCE REFS DELETED AT THEIR RECORDED HEADS; INDEPENDENT ZERO-REF GATE PASSED.**
 
 ## Archived scope
 
 This archive records:
 
-- all **16** live `evidence/pr439-*` refs and their exact observed remote heads in `ref-heads.tsv`;
+- all **16** former `evidence/pr439-*` refs and their exact observed remote heads in `ref-heads.tsv`;
 - all **39** branch-exclusive changed-file blob states across those refs in `MANIFEST.tsv`, each copied byte-for-byte under `history/**.txt`;
 - all **15** GitHub Actions run ids cited on PR #439 in `run-heads.tsv`, including exact run branch, run head SHA, event, conclusion and workflow name;
 - an explicit `ref-disposition.tsv` in which every ref is classified `deletable` and all 16 `delete_now` values are now `true` together.
@@ -68,35 +68,35 @@ harness is already preserved separately at `../foul-card-six-seed/harness-50d622
 
 ## Verification
 
-`tools/dotnet-ci/check_pr439_evidence_refs.py` owns archive integrity and pre-delete live-ref completeness. `.github/workflows/pr439-evidence-ref-gate.yml`:
+`tools/dotnet-ci/check_pr439_evidence_refs.py` owns archive integrity and the historical pre-delete live-ref completeness proof. `.github/workflows/pr439-evidence-ref-gate.yml`:
 
-1. fetches full history plus all live `evidence/pr439-*` refs;
+1. fetches full history and any live `evidence/pr439-*` refs;
 2. verifies every archived `.txt` blob equals the recorded original Git blob and hashes the added historical artifact, workflows and six full decoded job logs;
-3. accepts only the exact 16-ref pre-delete topology at recorded heads or the zero-ref post-delete topology once all 16 rows are authorized; any partial topology fails;
+3. recognizes the exact 16-ref pre-delete topology at recorded heads and the authorized zero-ref post-delete topology; its automatic CI invocation now requires zero refs, and any partial topology fails;
 4. in pre-delete mode, re-derives every branch-exclusive changed-file blob state and requires the live 39-state set to match the manifest exactly; in post-delete mode, checks the committed 39-state archive without relying on disappearing branch objects;
 5. verifies that the 15-run ledger exactly covers the workflow-run ids cited on PR #439 and cross-checks each cited run against the GitHub Actions API. The separate eight-run historical ledger does not enter that equality check.
 
-The workflow requires `delete_now=true` for all 16 rows. A manual
-`workflow_dispatch` defaults to explicit `post-delete`, so its green result
-certifies that no `evidence/pr439-*` ref remains. The automatic gate accepts
-the complete pre-delete and post-delete topologies during the one atomic
-transition, and rejects a partial deletion or an unexpected ref.
+The workflow requires `delete_now=true` for all 16 rows and defaults to
+explicit `post-delete` on automatic and manual runs. Its green result certifies
+that no `evidence/pr439-*` ref remains. The CLI retains an explicit
+`pre-delete` mode to audit the completed transaction's historical inputs,
+but automatic CI rejects ref reappearance.
 
-`.github/workflows/pr439-evidence-atomic-delete.yml` is a one-shot action on
-its own landing to `main`. It runs the complete authorized pre-delete gate,
-compares the remote 16-ref set and heads independently, requires an atomic
-dry run, and submits one `git push --atomic` with an exact expected-head lease
-for every deletion. An unsupported atomic push or any head/set drift leaves
-the refs untouched. The same job immediately requires the zero-ref gate and
-then explicitly dispatches an independent `post-delete` gate run. The closed
-PR #446 archive branch is outside this transaction and remains separately
-disposable only after post-delete certification succeeds.
+The one-shot `pr439-evidence-atomic-delete.yml` action ran on PR #451's landing
+to `main` (merge `250b15fec3b98b5d9fece6e9db1e0d787bd623fd`). It ran
+the complete authorized pre-delete gate, compared all 16 remote heads,
+completed an atomic dry run, and submitted one `git push --atomic` with an exact
+expected-head lease for every deletion. Run `36078635104` passed the immediate
+zero-ref check and dispatched independent explicit post-delete gate run
+`36078666318`, which also passed. This one-shot workflow is now retired from
+the maintained tree. The closed PR #446 archive branch is outside that
+transaction and has a separate, exact-head-protected cleanup gate.
 
 ## Deletion boundary
 
-PR #447 did **not** delete evidence branches or authorize deletion. This
-separate closeout changes all 16 `delete_now` values to `true` after preserving
-the remaining historical evidence. Run the pre-delete gate against the live
-exact heads; remove all 16 with one atomic, expected-head-protected operation;
-then run the explicit post-delete gate immediately. Neither a partial remote
-deletion nor a changed ref head is authorized by this ledger.
+PR #447 did **not** delete evidence branches or authorize deletion. PR #451
+preserved the remaining historical evidence, authorized all 16 rows together,
+and landed the guarded one-shot action. Both the one-shot job and the separate
+explicit post-delete run passed, and the live remote now has zero
+`evidence/pr439-*` refs. The superseded `archive/pr439-evidence-20260923`
+branch was excluded from that atomic operation and has its own cleanup gate.
