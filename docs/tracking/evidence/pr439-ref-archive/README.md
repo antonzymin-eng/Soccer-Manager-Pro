@@ -68,7 +68,7 @@ harness is already preserved separately at `../foul-card-six-seed/harness-50d622
 
 ## Verification
 
-`tools/dotnet-ci/check_pr439_evidence_refs.py` owns archive integrity and the historical pre-delete live-ref completeness proof. `.github/workflows/pr439-evidence-ref-gate.yml`:
+`tools/dotnet-ci/check_pr439_evidence_refs.py` owns committed archive integrity and the post-delete live-ref certification path. The historical pre-delete proof is preserved by the committed manifests and Git history. `.github/workflows/pr439-evidence-ref-gate.yml`:
 
 1. fetches full history and any live `evidence/pr439-*` refs;
 2. verifies every archived `.txt` blob equals the recorded original Git blob and hashes the added historical artifact, workflows and six full decoded job logs;
@@ -78,16 +78,17 @@ harness is already preserved separately at `../foul-card-six-seed/harness-50d622
 
 The workflow requires `delete_now=true` for all 16 rows and defaults to
 explicit `post-delete` on automatic and manual runs. Its green result certifies
-that no `evidence/pr439-*` ref remains. The CLI retains an explicit
-`pre-delete` mode to audit the completed transaction's historical inputs,
-but automatic CI rejects ref reappearance.
+that no `evidence/pr439-*` ref remains. The CLI still exposes the historical
+`pre-delete` selector, but after the 2026-09-25 deletion it cannot pass against
+the live remote; historical transaction inputs are audited from the committed
+archive/manifests and Git history. Automatic CI rejects ref reappearance.
 
 The one-shot `pr439-evidence-atomic-delete.yml` action ran on PR #451's landing
 to `main` (merge `250b15fec3b98b5d9fece6e9db1e0d787bd623fd`). It ran
 the complete authorized pre-delete gate, compared all 16 remote heads,
 completed an atomic dry run, and submitted one `git push --atomic` with an exact
 expected-head lease for every deletion. Run `36078635104` passed the immediate
-zero-ref check and dispatched independent explicit post-delete gate run
+zero-ref check and dispatched a separate explicit post-delete gate rerun
 `36078666318`, which also passed. This one-shot workflow is now retired from
 the maintained tree. PR #452 (merge `df63ff91a989b9e5272de6936a45de659ca178b7`)
 made the automatic gate require zero refs. Its separate cleanup run
@@ -96,6 +97,15 @@ the superseded `archive/pr439-evidence-20260923` branch at recorded head
 `d8f61356ba5b45debe04371343a5e2715d493ede`. The same merge's automatic
 evidence gate run `36080270275` passed. The completed cleanup workflow has
 also been retired from the maintained tree.
+
+Final post-merge `main` CI run `36080899633` on merge `2e02b32bc1b2350f57d44dc683b91502bb794e94` completed successfully on 2026-09-25, including the functional gate.
+
+## Residual evidence-branch dispositions
+
+- `evidence/foul-card-six-seed-20260922` may be deleted only while it still points at recorded head `7db673cacf7fb24d1db0b8340cbc3ef5e3821daf`. Its branch-only workflow history is already preserved; do not rewrite the hash-covered `foul-card-six-seed/` payload to record ref deletion.
+- `evidence/w2-442-six-seed-measure-20260923` may be deleted only while it still points at recorded head `2b3bcb290c65fb50fd999033055e39635bc325f8`. Its branch-only workflow is archived and its preregistration commit remains in `main` history.
+- Deleting either branch ref does not delete its retained GitHub Actions runs. These two refs are outside the fixed 16-row PR439 `ref-disposition.tsv` contract and must not be added to that ledger.
+
 
 ## Deletion boundary
 
