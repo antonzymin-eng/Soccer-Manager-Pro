@@ -1,6 +1,7 @@
 name: PR439 one-shot superseded archive cleanup
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -29,7 +30,7 @@ jobs:
           git fetch --no-tags --prune origin \
             '+refs/heads/main:refs/remotes/origin/main' \
             '+refs/heads/evidence/pr439-*:refs/remotes/origin/evidence/pr439-*'
-          test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/main)"
+          git switch --detach refs/remotes/origin/main
           python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
             --repo . --mode all --main-ref refs/remotes/origin/main \
             --live-state post-delete --require-authorized --verify-actions-api
