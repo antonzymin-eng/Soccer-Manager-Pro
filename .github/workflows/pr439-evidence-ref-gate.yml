@@ -22,10 +22,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
-  pull-requests: read
-  issues: read
 
 jobs:
   committed-archive-integrity:
@@ -51,6 +48,11 @@ jobs:
   live-post-delete-audit:
     name: PR439 live post-delete audit (manual)
     if: github.event_name == 'workflow_dispatch'
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      issues: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
