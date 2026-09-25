@@ -58,7 +58,7 @@ jobs:
       - name: Gate A - live-ref full-history completeness
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          LIVE_STATE: ${{ inputs.live_state || 'auto' }}
+          LIVE_STATE: ${{ inputs.live_state || 'post-delete' }}
         run: |
           set -euo pipefail
           python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
