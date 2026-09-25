@@ -10,7 +10,9 @@
 
 ---
 
-> **UPDATED September 25, 2026 (v1.31):** PR #439 post-delete evidence reconciliation records the successful exact-head atomic deletion of all 16 `evidence/pr439-*` refs, the maintained 15-row cited-run ledger, and final green post-merge `main` CI run `36080899633`. Deleted branch names remain provenance backed by `docs/tracking/evidence/pr439-ref-archive/`; W3 remains **wired but dormant**, with #441 and #440 unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
+> **UPDATED September 25, 2026 (v1.32):** W8 investigation is decision-gated at `docs/tracking/w8-goalkeeper-distribution-decision.md`: #21 policy input is incomplete, #11/DT producer ownership hits the ordinal-8 boundary, the hand-only Law-12 clock conflicts with the broader engine stall guard, FR-GK-043/F-05 have live implementation gaps, and the current #11 distribution path emits an event without a Pass Mechanics executor. No W8 gameplay code or `[GT]` change is authorized until the four owner decisions and preregistration land.
+>
+> **UPDATED (prior) September 25, 2026 (v1.31):** PR #439 post-delete evidence reconciliation records the successful exact-head atomic deletion of all 16 `evidence/pr439-*` refs, the maintained 15-row cited-run ledger, and final green post-merge `main` CI run `36080899633`. Deleted branch names remain provenance backed by `docs/tracking/evidence/pr439-ref-archive/`; W3 remains **wired but dormant**, with #441 and #440 unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
 >
 > **UPDATED (prior) September 23, 2026 (v1.30):** PR #447 completes the W3/#439 durable evidence archive: exact pre/final six-seed W3 tables, **39** exact branch-history blob snapshots covering all **16/16** live `evidence/pr439-*` refs, **26** cited workflow-run heads, ref/disposition ledgers, and a dedicated archive/live verifier plus workflow. The verifier requires the live remote ref set/heads and every introduced non-deletion branch-history blob state to match the committed archive. All 16 refs are classified `deletable` but remain `delete_now=false`; PR #447 performs and authorizes no deletion. W3 remains **wired but dormant**; #441 and #440 are unchanged.
 >
@@ -380,6 +382,7 @@ separately tracked by #401. Regression locks: `CollisionDeflectionFeedbackTests`
 human baseline tactic and can only ladder away from it mid-match.
 
 ### W8 — Goalkeeper distribution
+**Decision packet:** `docs/tracking/w8-goalkeeper-distribution-decision.md` — pre-preregistration owner decisions; no implementation authorization.
 **Evidence:** `goalkeeper-mechanics/GoalkeeperMechanics.cs:301` `CommitDistributeIntent`, no caller.
 The engine substitutes its own six-second-rule release (`_gkHoldTicks` /
 `_gkReleaseCooldownRemaining`), so #11's `GoalkeeperDistribution` model — delivery kind, target
