@@ -100,6 +100,13 @@ also been retired from the maintained tree.
 
 Final post-merge `main` CI run `36080899633` on merge `2e02b32bc1b2350f57d44dc683b91502bb794e94` completed successfully on 2026-09-25, including the functional gate.
 
+## Residual evidence-branch dispositions
+
+- `evidence/foul-card-six-seed-20260922` may be deleted only while it still points at recorded head `7db673cacf7fb24d1db0b8340cbc3ef5e3821daf`. Its branch-only workflow history is already preserved; do not rewrite the hash-covered `foul-card-six-seed/` payload to record ref deletion.
+- `evidence/w2-442-six-seed-measure-20260923` may be deleted only while it still points at recorded head `2b3bcb290c65fb50fd999033055e39635bc325f8`. Its branch-only workflow is archived and its preregistration commit remains in `main` history.
+- Deleting either branch ref does not delete its retained GitHub Actions runs. These two refs are outside the fixed 16-row PR439 `ref-disposition.tsv` contract and must not be added to that ledger.
+
+
 ## Deletion boundary
 
 PR #447 did **not** delete evidence branches or authorize deletion. PR #451
