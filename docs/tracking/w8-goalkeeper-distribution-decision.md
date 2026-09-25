@@ -80,7 +80,15 @@ In `GoalkeeperMechanics.Update`, an active `DistributeIntent` is validated and c
 
 Repository search finds no production consumer of `DistributionExecutedEvent`; its registration in Event System #17 does not execute the distribution. Therefore wiring only a producer into `CommitDistributeIntent` would still leave W8 behaviorally dormant at the executor boundary.
 
-There is also a normative integration-surface defect in approved #11 §3.8.3: it calls `PassMechanics.ConsumePassIntent(passIntent)` and FR-GK-007 says no #5 amendment is required, but `ConsumePassIntent` does not exist anywhere in production `src/`. The real Pass Mechanics surfaces are `PassRequest` and `PassExecutor`. OD-W8-4 must therefore resolve not only ownership/order but the incorrect named #5 API; the eventual ERR/back-propagation must replace the nonexistent surface with the actual canonical integration contract.
+There is also a broader normative integration-surface defect in approved #11 §3.8.3–§3.8.4:
+
+- `PassMechanics.ConsumePassIntent(passIntent)` does not exist anywhere in production `src/`;
+- the pseudocode's `PassIntent` type does not exist in `src/pass-mechanics/`;
+- `PassMechanics.DeliveryKind` does not exist; Pass Mechanics exposes `PassType` instead;
+- the named `LowDriven` and `GroundRoll` delivery values do not exist in Pass Mechanics;
+- the real `PassRequest` has no `sourcePoint`, `powerIntent`, `spinIntent`, or `deliveryKind` fields. `PassExecutor` derives launch speed, angle and spin from its own pass type, passer attributes and request fields.
+
+So FR-GK-007's statement that distribution can use the existing #5 intent surface with “no #5 amendment required” is not established by the live interface. In particular, blindly translating a goalkeeper Throw/Roll/Kick into today's `PassRequest` would silently replace #11-owned release geometry / emitted-power / spin semantics with #5's foot-pass model. OD-W8-4 must therefore decide whether the canonical solution is a real #5 extension/adaptation surface, a narrowed subset that existing `PassRequest` can faithfully represent, or an explicitly re-specified execution boundary. The implementation must not pretend the current APIs are structurally equivalent.
 
 Finally, `DistributionExecutedEvent.cs` currently documents that “`Ball.ApplyKick` precedes this event.” That statement is false on current production because no kick occurs at all. Treat the comment as stale documentation to correct atomically when the executor path lands; do not use it as evidence that execution already exists.
 
@@ -156,7 +164,7 @@ A committed `DistributeIntent` currently stops at an event. The owner must fix t
 
 The approved #11 contract already requires Pass Mechanics #5 rather than a goalkeeper-local kick implementation. The remaining decision is which composition-root surface owns the adaptation and ordering. The contract must state, before code:
 
-1. how a #11 `DistributeIntent` becomes the production `PassRequest` / `PassExecutor` input without bypassing Pass Mechanics, replacing #11 §3.8.3's nonexistent `PassMechanics.ConsumePassIntent` surface;
+1. how #11 distribution reaches canonical execution given that §3.8.3–§3.8.4 name a nonexistent `PassIntent`, `ConsumePassIntent`, and `PassMechanics.DeliveryKind`, while today's `PassRequest` cannot carry #11's source-point / power / spin / delivery payload without semantic loss;
 2. which Match Engine phase initiates that executor and how #11's windup semantics compose with (rather than duplicate) #5's windup;
 3. the exact ordering of controlled-possession release relative to executor initiation and CONTACT-time `Ball.ApplyKick`;
 4. how the in-flight-pass receiver latch is armed so W5's pass feed and possession-phase classification see goalkeeper distributions through the same canonical path as other passes;
@@ -176,7 +184,7 @@ The landing must distinguish:
 
 1. **code fix:** make the existing FR-GK-043 forced-release requirement actually produce the required distribution/event behavior;
 2. **code fix:** replace the live `agentRosterContains: true` stub so F-05 receiver validation is reachable;
-3. **spec defect + execution-contract repair:** #11 §3.8.3 names nonexistent `PassMechanics.ConsumePassIntent(passIntent)` while FR-GK-007 says no #5 amendment is required. File this drift explicitly and back-propagate #11 to the real `PassRequest` / `PassExecutor` integration surface while connecting distribution output to the canonical Match Engine / Pass Mechanics path rather than treating `DistributionExecutedEvent` as an executor;
+3. **spec defect + execution-contract repair:** #11 §3.8.3–§3.8.4 names a phantom #5 contract: nonexistent `PassIntent`, `PassMechanics.ConsumePassIntent`, `PassMechanics.DeliveryKind`, `LowDriven`, and `GroundRoll`. Today's `PassRequest` also lacks #11's source-point / power / spin / delivery fields and `PassExecutor` derives those semantics independently. File this drift explicitly; back-propagate #11/FR-GK-007 and, if the chosen faithful solution requires it, amend #5 atomically rather than claiming “no #5 amendment required.” Then connect the resulting contract to the canonical Match Engine / Pass Mechanics execution path rather than treating `DistributionExecutedEvent` as an executor;
 4. **documentation/code correction:** repair the stale `DistributionExecutedEvent` comment claiming `Ball.ApplyKick` precedes the event, at the same time the real executor ordering is implemented and locked;
 5. **new normative specification:** concrete #21 policy mapping, receiver selector, voluntary commit timing, RNG/draw-order rule, executor adaptation/phase ordering, and the empty-target fallback;
 6. **spec back-propagation where authority changes:** amend #11/#21 integration text if the owner moves the producer away from Decision Tree #8, changes Law-12 ownership, or otherwise changes an approved normative owner;
@@ -278,6 +286,7 @@ Those choices require owner approval first.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.4 | 2026-09-25 | draft | Integrity correction: broadens the #11/#5 defect from one nonexistent method to the full phantom §3.8.3–§3.8.4 contract — no `PassIntent`, no Pass Mechanics `DeliveryKind`, no `LowDriven`/`GroundRoll`, and current `PassRequest` cannot carry #11 source-point/power/spin/delivery semantics. OD-W8-4 now requires an explicit faithful execution contract and allows that #5 may need atomic amendment. |
 | 0.3 | 2026-09-25 | draft | Review correction: records #11 §3.8.3's nonexistent `PassMechanics.ConsumePassIntent` surface as an explicit spec defect/back-propagation obligation, flags the false `DistributionExecutedEvent` ApplyKick-order comment, and tightens OD-W8-4 around the real `PassRequest` / `PassExecutor` integration seam. |
 | 0.2 | 2026-09-25 | draft | Review correction: adds missing executor/pass-registration boundary (OD-W8-4), live-roster F-05 stub, RNG/draw-order and source-tag obligations, producer-neutral preregistration candidates/falsifier classes, and clarifies code-fix vs spec back-propagation terminology. |
 | 0.1 | 2026-09-25 | draft | Initial decision packet: Law-12 authority, producer/ordinal boundary, #21 incomplete policy contract, FR-GK-043 divergence and empty-target fallback. |
