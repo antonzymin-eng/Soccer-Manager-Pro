@@ -45,7 +45,7 @@ its active latch is authoritative gameplay state and is serialized in MatchEngin
 No `[GT]` values are calibrated in W3. The frozen six-seed corpus is rerun after the wiring as
 required by the companion preregistration.
 
-**Durable evidence:** PR #447 commits the result-bearing tables/provenance under `docs/tracking/evidence/pr439-w3/` and the full 16-ref evidence-history archive under `docs/tracking/evidence/pr439-ref-archive/`. The latter contains 39 exact branch-history blob states, 26 cited workflow-run heads, exact ref heads/dispositions, and a live-ref verifier/workflow. The archive preserves §6.1–§6.2's interpretation boundary: pre-W3 W3 counters are structural placeholders rather than live measurements, and the before/after trajectory deltas are not a pure W3 A/B attribution. All 16 evidence refs remain `delete_now=false`; no evidence ref is deleted or cleanup-authorized by PR #447.
+**Durable evidence:** PR #447 commits the result-bearing tables/provenance under `docs/tracking/evidence/pr439-w3/` and the full 16-ref evidence-history archive under `docs/tracking/evidence/pr439-ref-archive/`. The maintained archive contains 39 exact branch-history blob states, the 15-row PR #439 cited-run ledger, exact ref heads/dispositions, and the verifier/workflow. The earlier 26-row run inventory remains in Git history; the 11 dropped IDs are recorded elsewhere on `main`. The archive preserves §6.1–§6.2's interpretation boundary: pre-W3 W3 counters are structural placeholders rather than live measurements, and the before/after trajectory deltas are not a pure W3 A/B attribution. On 2026-09-25 the authorized exact-head atomic cleanup deleted all 16 `evidence/pr439-*` refs; `ref-disposition.tsv` records all 16 as `delete_now=true`. Deleted branch names below remain provenance and point to histories preserved under `docs/tracking/evidence/pr439-ref-archive/`.
 
 ---
 
@@ -400,7 +400,7 @@ The production feed and keeper-claim path are nevertheless live: the fan-out, cl
 successful-claim counters are positive. That establishes execution of those paths; it does **not**
 establish production reachability of the contested branch.
 
-The matched pre-W3 arm is branch `evidence/pr439-w3-prewire-six-seed`, Actions run
+The matched pre-W3 arm is branch `evidence/pr439-w3-prewire-six-seed` (deleted 2026-09-25; history archived under `docs/tracking/evidence/pr439-ref-archive/`), Actions run
 `35815761065`, measuring exact baseline `876a3343319050187c2a5505b18cb32fc3d0f89d` with the
 same measurement transform. Its raw aggregate is: W3-only counters all structurally zero;
 crosses **1,067 / 43** attempts/completions; lofted passes **2,014 / 62**; diagnostic
@@ -432,7 +432,7 @@ The original corpus field `headerAttempts=1809` is computed as
 therefore ran behavior-neutral lifecycle counters on the exact six frozen seeds against production
 parent `f40f0853909cc2a42190023fea1da72d25409b12`.
 
-Evidence branch `evidence/pr439-header-reachability`, evidence head
+Evidence branch `evidence/pr439-header-reachability` (deleted 2026-09-25; history archived under `docs/tracking/evidence/pr439-ref-archive/`), evidence head
 `7494300341cae94ed3eae41033d874e23cac0b06`, Actions run `35887487201`: six parallel seed jobs
 all passed. Aggregate lifecycle:
 
@@ -583,7 +583,7 @@ rerun is not a remediation path.
 
 The deterministic ban-order rewrite has direct mutation proof:
 
-- evidence branch: `evidence/pr439-m7-order-mutation`;
+- evidence branch: `evidence/pr439-m7-order-mutation` (deleted 2026-09-25; history archived under `docs/tracking/evidence/pr439-ref-archive/`);
 - unmutated production/test parent: `4d31788136b891f37940778d44db2bd28f88d6f6`;
 - mutation commit: `42ea88a79a9f0dad5071cefafda24f5a2ff35656`;
 - evidence-workflow head: `58cf6ec88e33054c069ef8e2914ce395fd2d76f1`;
@@ -642,6 +642,7 @@ a W3 mechanism and its default-engine trajectory effect must stay explicit in ev
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.19 | 2026-09-25 | Post-delete evidence reconciliation: records successful deletion of all 16 `evidence/pr439-*` refs, corrects the maintained cited-run cardinality to 15, preserves branch names as provenance with archive pointers, and records final green `main` CI run `36080899633`. Historical version rows remain unchanged. No gameplay/test-contract change. |
 | 0.18 | 2026-09-24 | #446 carry-over: `docs/tracking/evidence/pr439-w3/` gains the per-seed #441 header-reachability census for run `35887487201` (checked against its six job logs; aggregate 1,811 → 18 → 0 prepared → 0 executed, 1,793 `PositionedPoorly`, matching the #441 localization table in this document) and the member-hash ledger for runs `35925236129` / `35814050060`. Evidence only; §6 conclusions and the W3 classification are unchanged. |
 | 0.17 | 2026-09-23 | PR #447 durable evidence closeout: commits exact pre/final W3 result tables, 39 branch-history blob snapshots for all 16 `evidence/pr439-*` refs, 26 cited-run heads, ref/disposition ledgers, and dedicated archive/live verification. All refs remain `delete_now=false`; no deletion is authorized. Attribution limits from §6.1–§6.2 remain unchanged. No gameplay/test-contract change. |
 | 0.16 | 2026-09-23 | PR #447 durable pre-delete evidence archive. Records `docs/tracking/evidence/pr439-w3/` as the committed six-seed result/provenance copy and `pr439-ref-archive/` as the exact 16-ref / 39 branch-history-state / 26 cited-run archive, with a dedicated live-ref verifier/workflow. Structural-zero and non-pure-A/B attribution limits remain explicit. No evidence-ref deletion is authorized in this PR. No gameplay or test-contract change. |

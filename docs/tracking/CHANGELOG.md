@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 25, 2026 — **PR #452 closed the separate #446 archive branch; both privileged one-shot workflows retired.**
+> **Last Updated:** September 25, 2026 — **PR #439 post-delete documentation reconciled; final `main` CI green.**
+>
+> All 16 `evidence/pr439-*` refs are recorded as deleted after the authorized exact-head atomic cleanup, the maintained PR #439 cited-run ledger is 15 rows, and deleted branch names remain provenance backed by `docs/tracking/evidence/pr439-ref-archive/`. Final post-merge `main` CI run `36080899633` completed successfully, including the functional gate. The archive README now describes the post-delete state without calling the separate rerun independent or implying the dead live `pre-delete` path remains an audit mechanism. Cleanup dispositions are also recorded in `docs/tracking/evidence/pr439-ref-archive/README.md` for `evidence/foul-card-six-seed-20260922` at `7db673ca…` and `evidence/w2-442-six-seed-measure-20260923` at `2b3bcb29…`; no branch deletion is performed by this documentation change. Historical changelog entries remain unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
+>
+> **Last Updated (prior):** September 25, 2026 — **PR #452 closed the separate #446 archive branch; both privileged one-shot workflows retired.**
 >
 > Merge `df63ff91a989b9e5272de6936a45de659ca178b7` made the automatic PR #439 gate require zero live refs. Its one-shot cleanup run `36080270280` passed the authorized post-delete check and removed `archive/pr439-evidence-20260923` only at its recorded head. Automatic evidence gate `36080270275` also passed. This final follow-up retires the completed cleanup action; the archive, separate historical-run ledger and permanent zero-ref gate remain. The PR #439 discussion and 15-run citation ledger remain unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
 >
@@ -172,7 +176,7 @@ break it, and do not edit historical entries.
 >
 > **Third base advance, and the first one that cost nothing:** `main` moved again through **PR #405** (art pipeline AP-03 / G2 acceptance, 17 commits). Only `CHANGELOG.md`'s chain conflicted, additively, and **neither version collision recurred** — `main` still carried `spec-error-log.md` v2.56 and `CHANGELOG-src.md` v2.134, so this landing's v2.57 and v2.135 stood unchanged. Checked explicitly rather than assumed, because the two previous merges both hid a collision behind an ordinary-looking chain conflict. Three base advances in two days is itself the observation worth keeping: on a repository this documentation-heavy, a PR left open overnight will conflict in the tracking chains roughly every time, and the conflict is where the version collisions hide.
 >
-> **Sixth base advance, and the collision class recurred a third time — caught by the pre-check rather than by luck.** `main` moved again through **PR #409** (W4 tracking recovery, 24 commits) and took **`CHANGELOG-src.md` v2.135**, the same number this branch had already used; this landing's `src/` entry renumbers to **v2.136**. That is now three collisions across six merges: the error log's first contested number, then the `src/` chain's next two in succession. The difference this time is procedural: the version comparison was run **before** merging rather than discovered inside a conflict hunk, which is the practice the `open-issues.md` entry recommends and the only reason it was not resolved by accident. `file-manifest.md` also conflicted on a single maintained-pointer line and was **genuinely merged rather than taken from one side** — this branch's `spec-error-log.md` **v2.58** is kept (this landing bumped it; `main` is still at v2.57) while `main`'s `match-engine-wiring-backlog.md` **v1.16**, since advanced to **v1.28**, is adopted (W4 advanced it; this landing did not). Taking either side wholesale would have silently reverted the other's pointer.
+> **Sixth base advance, and the collision class recurred a third time — caught by the pre-check rather than by luck.** `main` moved again through **PR #409** (W4 tracking recovery, 24 commits) and took **`CHANGELOG-src.md` v2.135**, the same number this branch had already used; this landing's `src/` entry renumbers to **v2.136**. That is now three collisions across six merges: the error log's first contested number, then the `src/` chain's next two in succession. The difference this time is procedural: the version comparison was run **before** merging rather than discovered inside a conflict hunk, which is the practice the `open-issues.md` entry recommends and the only reason it was not resolved by accident. `file-manifest.md` also conflicted on a single maintained-pointer line and was **genuinely merged rather than taken from one side** — this branch's `spec-error-log.md` **v2.58** is kept (this landing bumped it; `main` is still at v2.57) while `main`'s `match-engine-wiring-backlog.md` **v1.16**, since advanced to **v1.31**, is adopted (W4 advanced it; this landing did not). Taking either side wholesale would have silently reverted the other's pointer.
 >
 > The merged head owns its own gate verdict; `check_drift.sh` and `doc-consistency-check.py` were re-run clean after each resolution. **`recurring-defect-lint.py` reports 4 ERRORs on this head and they are NOT this landing's** — `FR-CS-057` header/version-row date mismatches in `TackleOutcomeResolverTests.cs`, `MatchEngineTackleTests.cs`, `AvailabilityCompositionExtremisTests.cs` and `SeasonLoopDisciplineTests.cs`, all four introduced by **PR #404**, which bumped each file's `// Modified:` line without appending the matching version-history row. Verified pre-existing by running the linter against `origin/main` at `ddd221c` in a scratch worktree: **identical 4 ERRORs, same files, same messages.** The repository's standing bar is 0 ERROR tree-wide (August 8, 2026 hygiene pass), so this is a real regression on `main` — but it is in four files this PR does not touch, and repairing them here would widen a Club Finances landing into someone else's test headers. Not fixed, not silently absorbed: recorded here so the next `src/` landing or a dedicated hygiene pass picks it up.
 >
@@ -1635,7 +1639,7 @@ break it, and do not edit historical entries.
 > knowingly wrong meanwhile, with the acceptance bands (fouls ≤ 90, yellows ≤ 20, reds ≤ 5) reading
 > green throughout.
 >
-> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.28)* records the consequence none of these three holds could
+> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.31)* records the consequence none of these three holds could
 > see individually: W2's *arming* now gates three separate decisions** — the foul/card calibration,
 > KD-7a's successor distribution, and everything behind the un-isolated `sim_match_engine_inposs_gate`
 > stall whose leading candidate is W6. The path **W4 → W12 → W6** therefore unblocks three decisions,
@@ -1645,7 +1649,7 @@ break it, and do not edit historical entries.
 > FALSE — W2's arming gates **two** held decisions (the foul/card calibration and KD-7a's successor
 > distribution); the third item, the un-isolated `sim_match_engine_inposs_gate` stall, is what BLOCKS
 > arming, not something arming unblocks, so it does not belong beside them. The citation above is
-> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.28)*, whose §5 note carries the corrected
+> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.31)*, whose §5 note carries the corrected
 > two-plus-the-blocker form; the W4 → W12 → W6 path aims to clear the blocker and thereby unblock
 > the two.
 >
