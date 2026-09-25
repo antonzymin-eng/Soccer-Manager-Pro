@@ -7,8 +7,6 @@
 **Successful run/job:** `35765635130` / `106874328764`  
 **Status:** result-bearing post-W2 **characterization**, not the final KD-W1 calibration fit.
 
-**Branch disposition (2026-09-25):** `evidence/foul-card-six-seed-20260922` may be deleted only if it still points at recorded head `7db673cacf7fb24d1db0b8340cbc3ef5e3821daf`. Its branch-only workflow history is already preserved in this evidence set/archive; deleting the ref does not alter the retained Actions runs. Do not rewrite the hash-covered evidence payloads to reflect ref deletion.
-
 ## Execution boundary
 
 The one-shot workflow was triggered from `evidence/foul-card-six-seed-20260922` at harness commit
