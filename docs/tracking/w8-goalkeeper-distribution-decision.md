@@ -72,6 +72,20 @@ This is a factual code/spec divergence and requires an ERR against the implement
 
 FR-GK-043 also leaves one edge case undefined: no eligible own-team agent is inside the penalty area at timeout.
 
+### 1.6 The current #11 distribution path does not execute a pass or move the ball
+
+Goalkeeper #11 §3.8.3 normatively requires a distribution to construct a Pass Mechanics #5 intent and send it through the existing pass-intent surface before publishing `DistributionExecutedEvent`. The current implementation does not do that.
+
+In `GoalkeeperMechanics.Update`, an active `DistributeIntent` is validated and converted into release-point / windup / emitted-power values. The code then publishes `DistributionExecutedEvent`, clears the intent latch, marks `distributionReleaseReached`, and advances the state machine. It does **not** initiate the production `PassExecutor`, release controlled possession through the Match Engine's canonical possession seam, arm the in-flight-pass receiver latch used by the W5 pass feed, or cause Pass Mechanics to reach its CONTACT-time `Ball.ApplyKick`.
+
+Repository search finds no production consumer of `DistributionExecutedEvent`; its registration in Event System #17 does not execute the distribution. Therefore wiring only a producer into `CommitDistributeIntent` would still leave W8 behaviorally dormant at the executor boundary.
+
+### 1.7 Receiver validation is also stubbed in the live #11 path
+
+`GoalkeeperDistribution.ValidateTarget` supports FR-GK F-05 by taking an `agentRosterContains` input and falling back when the committed receiver has disappeared. The live `GoalkeeperMechanics.Update` call currently supplies `agentRosterContains: true` as a Stage-0 stub. A substituted/sent-off/missing receiver therefore cannot activate the required fallback.
+
+W8 must replace that stub with an authoritative live-roster query at the execution boundary; it must not treat target validation as already wired.
+
 ---
 
 ## 2. Owner decisions required before preregistration
@@ -111,7 +125,8 @@ This option still requires new normative specification for:
 2. deterministic receiver selection;
 3. deterministic commit timing between `releaseTickEarliest` and the Law-12 timeout;
 4. what `SlowDown` and `Quick` mean in that timing rule;
-5. the #21 §7 T4 “polish” classification — either accept W8 as the approved consumer that activates it or explicitly revise that tiering.
+5. the #21 §7 T4 “polish” classification — either accept W8 as the approved consumer that activates it or explicitly revise that tiering;
+6. RNG policy for receiver selection and commit timing: either make each rule deterministic and draw-free, or name the existing/new deterministic RNG domain and draw-site ID explicitly. Any new draw site/order changes the digest stream and must be declared before measurement.
 
 **Option B — Decision Tree producer.**
 
@@ -131,26 +146,44 @@ Freeze one deterministic fallback before implementation. Candidate classes for o
 
 The implementation must not invent this after observing results.
 
+### OD-W8-4 — Distribution executor, possession release, and pass registration
+
+A committed `DistributeIntent` currently stops at an event. The owner must fix the execution contract before preregistration.
+
+The approved #11 contract already requires Pass Mechanics #5 rather than a goalkeeper-local kick implementation. The remaining decision is which composition-root surface owns the adaptation and ordering. The contract must state, before code:
+
+1. how a #11 `DistributeIntent` becomes the production `PassRequest` / `PassExecutor` input without bypassing Pass Mechanics;
+2. which Match Engine phase initiates that executor and how #11's windup semantics compose with (rather than duplicate) #5's windup;
+3. the exact ordering of controlled-possession release relative to executor initiation and CONTACT-time `Ball.ApplyKick`;
+4. how the in-flight-pass receiver latch is armed so W5's pass feed and possession-phase classification see goalkeeper distributions through the same canonical path as other passes;
+5. when `DistributionExecutedEvent` is published — it must describe a real launched distribution, not substitute for launching one;
+6. how the live roster/sent-off state replaces the current `agentRosterContains: true` stub so F-05 can actually fire;
+7. save/restore and snapshot consequences for any new cross-tick executor/adaptation state.
+
+**Decision needed:** executor/adaptation owner and ordering. Direct `Ball.ApplyKick` from Goalkeeper Mechanics is not assumed: #11 FR-GK-007 and §3.8 point to Pass Mechanics #5 as the canonical execution surface.
+
 ---
 
 ## 3. ERR/spec obligations after the owner decision
 
-The forced-release implementation divergence requires a Goalkeeper Mechanics #11 ERR. Reserve the next free #11 ERR only when the decision is accepted and the exact correction is known.
+The forced-release implementation divergence and the missing execution seam require Goalkeeper Mechanics #11 error records once the owner decision fixes the intended correction. Reserve specific ERR IDs only when the decision is accepted and the exact defect boundaries are known.
 
-The same landing must distinguish:
+The landing must distinguish:
 
-1. **code defect back-propagation:** implement FR-GK-043's forced distribution/event behavior;
-2. **new specification needed:** concrete #21 policy mapping, receiver selector, and commit timing;
-3. **spec amendment only if authority changes:** any change to #11's currently named Decision Tree producer or to the owner of the Law-12 clock;
-4. **schema obligation:** any semantic retirement/removal/replacement of `_gkHoldTicks`, `_gkReleaseCooldownRemaining`, or `_gkReleasedAgentId`.
+1. **code fix:** make the existing FR-GK-043 forced-release requirement actually produce the required distribution/event behavior;
+2. **code fix:** replace the live `agentRosterContains: true` stub so F-05 receiver validation is reachable;
+3. **execution-contract repair:** connect #11's distribution output to the canonical Pass Mechanics / Match Engine execution path rather than treating `DistributionExecutedEvent` as an executor;
+4. **new normative specification:** concrete #21 policy mapping, receiver selector, voluntary commit timing, RNG/draw-order rule, executor adaptation/phase ordering, and the empty-target fallback;
+5. **spec back-propagation where authority changes:** amend #11/#21 integration text if the owner moves the producer away from Decision Tree #8, changes Law-12 ownership, or otherwise changes an approved normative owner;
+6. **schema obligation:** evaluate any semantic retirement/removal/replacement of `_gkHoldTicks`, `_gkReleaseCooldownRemaining`, `_gkReleasedAgentId`, or any new cross-tick executor state.
 
-No gameplay `[GT]` value is to be fitted as part of this decision pass.
+Every new numeric policy/timing/power constant must carry an explicit source tag and valid-range rationale in its owning approved spec. Any new gameplay `[GT]` remains **uncalibrated under KD-W1** until the single complete-engine calibration pass; W8 must not fit those values to the observed corpus.
 
 ---
 
-## 4. What may be preregistered before the producer contract is chosen
+## 4. Candidate preregistration measures — not frozen by this packet
 
-The following outcome metrics are producer-neutral and may be frozen now:
+This decision packet does **not** freeze seeds, thresholds, acceptance bands, or falsifiers. After OD-W8-1 through OD-W8-4 are resolved, the W8 preregistration should consider these producer-neutral baseline measures:
 
 - goalkeeper hand claims;
 - goalkeeper feet-possession episodes;
@@ -163,7 +196,9 @@ The following outcome metrics are producer-neutral and may be frozen now:
 - pass attempts/completions following goalkeeper possession;
 - existing source-complete foul/yellow/red census.
 
-Do **not** yet freeze metrics whose meaning depends on the chosen producer, including “DT distribution commits” versus “engine distribution commits.”
+Do **not** define producer-dependent counters such as “DT distribution commits” versus “engine distribution commits” until the producer/executor contract is chosen.
+
+The preregistration must also freeze falsifiers before any result-bearing W8 run. Candidate falsifier classes include: no new keeper-possession stall; no hand-control episode surviving beyond the chosen Law-12 deadline; no duplicate release/kick for one distribution; no `DistributionExecutedEvent` without a corresponding canonical pass execution; no immediate same-keeper reacquisition loop caused by the release path; W5's pass feed observing the launched distribution when a receiver exists; and a predeclared football/source-based band or shape check for hand-hold duration rather than a post-result “looks plausible” judgment. Exact thresholds belong in the later preregistration, not in this decision packet.
 
 ---
 
@@ -184,6 +219,11 @@ Land a behavior-neutral, nonserialized diagnostic instrument first. Following th
 - forced timeout count;
 - forced fallback reason, including empty-penalty-area cases;
 - `DistributionExecutedEvent` count;
+- PassExecutor initiation / CONTACT / completion-or-cancel counts for goalkeeper distributions;
+- canonical possession-release count and ordering relative to pass initiation/contact;
+- W5 in-flight/pass-feed registration count and receiver identity;
+- ball-launch / `ApplyKick` reachability through Pass Mechanics, without a second goalkeeper-local physics path;
+- F-05 receiver-missing validation/fallback count from the authoritative live roster;
 - restart count/type before and after release;
 - immediate possession/reacquisition result;
 - pass outcome/completion where the release enters Pass Mechanics;
@@ -195,8 +235,8 @@ The frozen six-seed corpus remains the result-bearing comparison population unle
 
 ## 6. Landing sequence after approval
 
-1. Owner records OD-W8-1, OD-W8-2 and OD-W8-3.
-2. File the #11 ERR and make the required same-commit approved-spec/back-propagation edits.
+1. Owner records OD-W8-1 through OD-W8-4.
+2. File the required #11 ERR record(s) and make only the approved same-commit spec back-propagation/new normative contract edits required by those decisions.
 3. Land the W8 preregistration and nonserialized instrument **before** observing result-bearing W8 data.
 4. Run the pre-wire baseline with the frozen corpus.
 5. Implement W8 only.
@@ -214,8 +254,10 @@ This document does **not**:
 - choose whether the engine guard is narrowed or retired;
 - choose a concrete #21 policy mapping;
 - choose a receiver-selection algorithm;
-- choose voluntary release timing;
+- choose voluntary release timing or whether it consumes RNG;
+- choose a receiver-selection RNG/domain/draw site;
 - choose the FR-GK-043 empty-target fallback;
+- choose the executor/adaptation owner, possession-release ordering, or pass-feed registration seam;
 - authorize a Decision Tree ordinal-width change or digest rebaseline;
 - authorize W9;
 - change snapshot schema;
@@ -223,3 +265,13 @@ This document does **not**:
 - modify production gameplay.
 
 Those choices require owner approval first.
+
+
+---
+
+## Version history
+
+| Version | Date | Status | Notes |
+|---|---|---|---|
+| 0.2 | 2026-09-25 | draft | Review correction: adds missing executor/pass-registration boundary (OD-W8-4), live-roster F-05 stub, RNG/draw-order and source-tag obligations, producer-neutral preregistration candidates/falsifier classes, and clarifies code-fix vs spec back-propagation terminology. |
+| 0.1 | 2026-09-25 | draft | Initial decision packet: Law-12 authority, producer/ordinal boundary, #21 incomplete policy contract, FR-GK-043 divergence and empty-target fallback. |
