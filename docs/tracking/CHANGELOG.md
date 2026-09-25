@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 25, 2026 — **PR #439 post-delete documentation reconciled; final `main` CI green.**
+> **Last Updated:** September 25, 2026 — **PR #455 hardens the PR #439 evidence gate for durable post-delete operation.**
+>
+> The automatic PR/push check now validates committed evidence only: archive/manifests, historical payload hashes and a frozen PR #439 discussion snapshot. Mutable GitHub state moved to an explicit manual audit that requires zero live `evidence/pr439-*` refs, compares live PR discussion sources against the frozen snapshot, and cross-checks the maintained 15-run ledger against Actions metadata; audit failures remain visible. The transition-era `pre-delete`/`auto` selector and unused history-reconstruction code are removed, discussion pagination is complete, snapshot cardinality/timestamp are metadata-driven, and tamper tests include real archived-log corruption plus a superseded run inserted into the cited-run ledger. Workflow-wide permissions are reduced to `contents: read`; Actions/PR/issues reads are scoped to the manual job. No gameplay, spec, schema, RNG or `[GT]` change.
+>
+> **Last Updated (prior):** September 25, 2026 — **PR #439 post-delete documentation reconciled; final `main` CI green.**
 >
 > All 16 `evidence/pr439-*` refs are recorded as deleted after the authorized exact-head atomic cleanup, the maintained PR #439 cited-run ledger is 15 rows, and deleted branch names remain provenance backed by `docs/tracking/evidence/pr439-ref-archive/`. Final post-merge `main` CI run `36080899633` completed successfully, including the functional gate. The archive README now describes the post-delete state without calling the separate rerun independent or implying the dead live `pre-delete` path remains an audit mechanism. Cleanup dispositions are also recorded in `docs/tracking/evidence/pr439-ref-archive/README.md` for `evidence/foul-card-six-seed-20260922` at `7db673ca…` and `evidence/w2-442-six-seed-measure-20260923` at `2b3bcb29…`; no branch deletion is performed by this documentation change. Historical changelog entries remain unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
 >

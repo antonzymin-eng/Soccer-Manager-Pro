@@ -68,20 +68,15 @@ harness is already preserved separately at `../foul-card-six-seed/harness-50d622
 
 ## Verification
 
-`tools/dotnet-ci/check_pr439_evidence_refs.py` owns committed archive integrity and the post-delete live-ref certification path. The historical pre-delete proof is preserved by the committed manifests and Git history. `.github/workflows/pr439-evidence-ref-gate.yml`:
+`tools/dotnet-ci/check_pr439_evidence_refs.py` owns committed archive integrity plus a separate manual post-delete remote audit. `.github/workflows/pr439-evidence-ref-gate.yml` now separates those concerns:
 
-1. fetches full history and any live `evidence/pr439-*` refs;
-2. verifies every archived `.txt` blob equals the recorded original Git blob and hashes the added historical artifact, workflows and six full decoded job logs;
-3. recognizes the exact 16-ref pre-delete topology at recorded heads and the authorized zero-ref post-delete topology; its automatic CI invocation now requires zero refs, and any partial topology fails;
-4. in pre-delete mode, re-derives every branch-exclusive changed-file blob state and requires the live 39-state set to match the manifest exactly; in post-delete mode, checks the committed 39-state archive without relying on disappearing branch objects;
-5. verifies that the 15-run ledger exactly covers the workflow-run ids cited on PR #439 and cross-checks each cited run against the GitHub Actions API. The separate eight-run historical ledger does not enter that equality check.
+1. automatic pull-request/push CI checks only committed repository evidence: the 39 archived branch-history blob states, ref/disposition/run ledgers, historical artifact/workflow/job-log hashes, and the frozen PR #439 discussion snapshot;
+2. the frozen discussion snapshot records each captured PR body/comment/review source by stable source id, URL, body SHA-256 and the maintained run ids it cited; its metadata carries the capture time, source count, cited-run count and aggregate digest;
+3. the automatic path does **not** fetch live evidence refs or query mutable GitHub discussion/Actions state, so later remote changes cannot make an unrelated repository-only PR fail;
+4. a manual `workflow_dispatch` audit fetches `evidence/pr439-*` refs, requires the live set to remain empty, compares the live PR #439 discussion source-for-source against the frozen snapshot, and cross-checks the 15 maintained run records against the GitHub Actions API;
+5. the manual audit is intentionally visible on failure. Added, edited or removed PR #439 discussion sources, recreated evidence refs, or Actions metadata drift make that audit red and require an explicit snapshot/provenance decision.
 
-The workflow requires `delete_now=true` for all 16 rows and defaults to
-explicit `post-delete` on automatic and manual runs. Its green result certifies
-that no `evidence/pr439-*` ref remains. The CLI still exposes the historical
-`pre-delete` selector, but after the 2026-09-25 deletion it cannot pass against
-the live remote; historical transaction inputs are audited from the committed
-archive/manifests and Git history. Automatic CI rejects ref reappearance.
+The historical pre-delete proof remains preserved by the committed manifests and Git history. The transition-era `pre-delete`/`auto` selector is removed from the maintained CLI; post-delete automatic CI validates only durable repository state, while live remote certification is explicit and manual.
 
 The one-shot `pr439-evidence-atomic-delete.yml` action ran on PR #451's landing
 to `main` (merge `250b15fec3b98b5d9fece6e9db1e0d787bd623fd`). It ran

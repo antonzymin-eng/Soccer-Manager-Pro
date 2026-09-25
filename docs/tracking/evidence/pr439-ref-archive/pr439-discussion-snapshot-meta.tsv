@@ -1,0 +1,2 @@
+captured_at_utc	pr_number	source_count	cited_run_count	source_index_sha256	capture_scope
+2026-09-25T15:23:12Z	439	26	15	9273815c441f8e7a8b38c8ede170936c169b7011c4b944c6bcdd626009628cf1	PR body plus all issue comments, review comments, and reviews visible through the GitHub API after the post-closeout archive pointer comment
