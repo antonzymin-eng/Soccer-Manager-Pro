@@ -80,6 +80,10 @@ In `GoalkeeperMechanics.Update`, an active `DistributeIntent` is validated and c
 
 Repository search finds no production consumer of `DistributionExecutedEvent`; its registration in Event System #17 does not execute the distribution. Therefore wiring only a producer into `CommitDistributeIntent` would still leave W8 behaviorally dormant at the executor boundary.
 
+There is also a normative integration-surface defect in approved #11 §3.8.3: it calls `PassMechanics.ConsumePassIntent(passIntent)` and FR-GK-007 says no #5 amendment is required, but `ConsumePassIntent` does not exist anywhere in production `src/`. The real Pass Mechanics surfaces are `PassRequest` and `PassExecutor`. OD-W8-4 must therefore resolve not only ownership/order but the incorrect named #5 API; the eventual ERR/back-propagation must replace the nonexistent surface with the actual canonical integration contract.
+
+Finally, `DistributionExecutedEvent.cs` currently documents that “`Ball.ApplyKick` precedes this event.” That statement is false on current production because no kick occurs at all. Treat the comment as stale documentation to correct atomically when the executor path lands; do not use it as evidence that execution already exists.
+
 ### 1.7 Receiver validation is also stubbed in the live #11 path
 
 `GoalkeeperDistribution.ValidateTarget` supports FR-GK F-05 by taking an `agentRosterContains` input and falling back when the committed receiver has disappeared. The live `GoalkeeperMechanics.Update` call currently supplies `agentRosterContains: true` as a Stage-0 stub. A substituted/sent-off/missing receiver therefore cannot activate the required fallback.
@@ -152,7 +156,7 @@ A committed `DistributeIntent` currently stops at an event. The owner must fix t
 
 The approved #11 contract already requires Pass Mechanics #5 rather than a goalkeeper-local kick implementation. The remaining decision is which composition-root surface owns the adaptation and ordering. The contract must state, before code:
 
-1. how a #11 `DistributeIntent` becomes the production `PassRequest` / `PassExecutor` input without bypassing Pass Mechanics;
+1. how a #11 `DistributeIntent` becomes the production `PassRequest` / `PassExecutor` input without bypassing Pass Mechanics, replacing #11 §3.8.3's nonexistent `PassMechanics.ConsumePassIntent` surface;
 2. which Match Engine phase initiates that executor and how #11's windup semantics compose with (rather than duplicate) #5's windup;
 3. the exact ordering of controlled-possession release relative to executor initiation and CONTACT-time `Ball.ApplyKick`;
 4. how the in-flight-pass receiver latch is armed so W5's pass feed and possession-phase classification see goalkeeper distributions through the same canonical path as other passes;
@@ -172,10 +176,11 @@ The landing must distinguish:
 
 1. **code fix:** make the existing FR-GK-043 forced-release requirement actually produce the required distribution/event behavior;
 2. **code fix:** replace the live `agentRosterContains: true` stub so F-05 receiver validation is reachable;
-3. **execution-contract repair:** connect #11's distribution output to the canonical Pass Mechanics / Match Engine execution path rather than treating `DistributionExecutedEvent` as an executor;
-4. **new normative specification:** concrete #21 policy mapping, receiver selector, voluntary commit timing, RNG/draw-order rule, executor adaptation/phase ordering, and the empty-target fallback;
-5. **spec back-propagation where authority changes:** amend #11/#21 integration text if the owner moves the producer away from Decision Tree #8, changes Law-12 ownership, or otherwise changes an approved normative owner;
-6. **schema obligation:** evaluate any semantic retirement/removal/replacement of `_gkHoldTicks`, `_gkReleaseCooldownRemaining`, `_gkReleasedAgentId`, or any new cross-tick executor state.
+3. **spec defect + execution-contract repair:** #11 §3.8.3 names nonexistent `PassMechanics.ConsumePassIntent(passIntent)` while FR-GK-007 says no #5 amendment is required. File this drift explicitly and back-propagate #11 to the real `PassRequest` / `PassExecutor` integration surface while connecting distribution output to the canonical Match Engine / Pass Mechanics path rather than treating `DistributionExecutedEvent` as an executor;
+4. **documentation/code correction:** repair the stale `DistributionExecutedEvent` comment claiming `Ball.ApplyKick` precedes the event, at the same time the real executor ordering is implemented and locked;
+5. **new normative specification:** concrete #21 policy mapping, receiver selector, voluntary commit timing, RNG/draw-order rule, executor adaptation/phase ordering, and the empty-target fallback;
+6. **spec back-propagation where authority changes:** amend #11/#21 integration text if the owner moves the producer away from Decision Tree #8, changes Law-12 ownership, or otherwise changes an approved normative owner;
+7. **schema obligation:** evaluate any semantic retirement/removal/replacement of `_gkHoldTicks`, `_gkReleaseCooldownRemaining`, `_gkReleasedAgentId`, or any new cross-tick executor state.
 
 Every new numeric policy/timing/power constant must carry an explicit source tag and valid-range rationale in its owning approved spec. Any new gameplay `[GT]` remains **uncalibrated under KD-W1** until the single complete-engine calibration pass; W8 must not fit those values to the observed corpus.
 
@@ -273,5 +278,6 @@ Those choices require owner approval first.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.3 | 2026-09-25 | draft | Review correction: records #11 §3.8.3's nonexistent `PassMechanics.ConsumePassIntent` surface as an explicit spec defect/back-propagation obligation, flags the false `DistributionExecutedEvent` ApplyKick-order comment, and tightens OD-W8-4 around the real `PassRequest` / `PassExecutor` integration seam. |
 | 0.2 | 2026-09-25 | draft | Review correction: adds missing executor/pass-registration boundary (OD-W8-4), live-roster F-05 stub, RNG/draw-order and source-tag obligations, producer-neutral preregistration candidates/falsifier classes, and clarifies code-fix vs spec back-propagation terminology. |
 | 0.1 | 2026-09-25 | draft | Initial decision packet: Law-12 authority, producer/ordinal boundary, #21 incomplete policy contract, FR-GK-043 divergence and empty-target fallback. |
