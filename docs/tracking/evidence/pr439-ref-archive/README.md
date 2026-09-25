@@ -2,7 +2,7 @@
 
 > **Created:** September 23, 2026
 > **Purpose:** Preserve every branch-exclusive changed-file blob state and cited workflow-run head needed to make the PR #439 evidence refs disposable without losing the evidence record.
-> **Status:** **ALL 16 EVIDENCE REFS DELETED AT THEIR RECORDED HEADS; INDEPENDENT ZERO-REF GATE PASSED.**
+> **Status:** **ALL 16 EVIDENCE REFS AND THE SEPARATE SUPERSEDED #446 ARCHIVE BRANCH REMOVED; ZERO-REF GATES PASSED.**
 
 ## Archived scope
 
@@ -89,8 +89,13 @@ completed an atomic dry run, and submitted one `git push --atomic` with an exact
 expected-head lease for every deletion. Run `36078635104` passed the immediate
 zero-ref check and dispatched independent explicit post-delete gate run
 `36078666318`, which also passed. This one-shot workflow is now retired from
-the maintained tree. The closed PR #446 archive branch is outside that
-transaction and has a separate, exact-head-protected cleanup gate.
+the maintained tree. PR #452 (merge `df63ff91a989b9e5272de6936a45de659ca178b7`)
+made the automatic gate require zero refs. Its separate cleanup run
+`36080270280` first passed the full post-delete verifier, then removed only
+the superseded `archive/pr439-evidence-20260923` branch at recorded head
+`d8f61356ba5b45debe04371343a5e2715d493ede`. The same merge's automatic
+evidence gate run `36080270275` passed. The completed cleanup workflow has
+also been retired from the maintained tree.
 
 ## Deletion boundary
 
@@ -99,4 +104,5 @@ preserved the remaining historical evidence, authorized all 16 rows together,
 and landed the guarded one-shot action. Both the one-shot job and the separate
 explicit post-delete run passed, and the live remote now has zero
 `evidence/pr439-*` refs. The superseded `archive/pr439-evidence-20260923`
-branch was excluded from that atomic operation and has its own cleanup gate.
+branch was excluded from that atomic operation and removed independently by
+run `36080270280` after the explicit post-delete certification.
