@@ -18,6 +18,12 @@ on:
       - 'docs/tracking/evidence/pr439-w3/**'
       - 'docs/tracking/w3-agent-ball-fanout-design.md'
   workflow_dispatch:
+    inputs:
+      live_state:
+        description: 'Required remote topology for a manual certification run'
+        type: choice
+        options: [post-delete, pre-delete, auto]
+        default: post-delete
 
 permissions:
   actions: read
@@ -37,7 +43,7 @@ jobs:
       - name: Fetch live PR439 evidence refs
         run: |
           set -euo pipefail
-          git fetch --no-tags origin \
+          git fetch --no-tags --prune origin \
             '+refs/heads/main:refs/remotes/origin/main' \
             '+refs/heads/evidence/pr439-*:refs/remotes/origin/evidence/pr439-*'
 
@@ -52,10 +58,13 @@ jobs:
       - name: Gate A - live-ref full-history completeness
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          LIVE_STATE: ${{ inputs.live_state || 'auto' }}
         run: |
           set -euo pipefail
           python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
             --repo . \
             --mode live \
             --main-ref refs/remotes/origin/main \
+            --live-state "$LIVE_STATE" \
+            --require-authorized \
             --verify-actions-api
