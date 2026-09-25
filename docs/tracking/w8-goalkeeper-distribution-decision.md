@@ -50,7 +50,7 @@ W8 must not silently choose the W9 rebaseline decision.
 
 ### 1.4 The two current six-second mechanisms do not measure the same possession
 
-**Match Engine guard.** `EnforceGoalkeeperReleaseRule` increments `_gkHoldTicks` whenever the current possessor is a goalkeeper. It is not hand-specific. Since W6, goalkeeper possession can be genuine Controlled possession at the feet, so this timer can include feet possession. Its cross-tick state is serialized from snapshot schema v19.
+**Match Engine guard.** `EnforceGoalkeeperReleaseRule` increments `_gkHoldTicks` whenever the current possessor is a goalkeeper. It is not hand-specific. Since W6, goalkeeper possession can be genuine Controlled possession at the feet, so this timer can include feet possession. Its cross-tick state is serialized from snapshot schema v19. It is currently the only keeper-at-feet anti-stall backstop; removing it before a separate feet-possession measurement would reopen that stall risk.
 
 This path was introduced as a match-stall backstop while #11 distribution was not engine-driven. Its historical comment says future #11 distribution replaces the method body, but that comment predates W6/W3 making keeper possession and hand claims live.
 
@@ -133,7 +133,7 @@ First choose the rules edition for this mechanic.
 - Hand/arm control limit is eight seconds, not six.
 - Exceeding the limit awards a corner kick to the opponents; it does not force a keeper distribution.
 - #11's hand-claim clock is the natural source for measuring hand-control duration.
-- Match Flow / restart ownership must apply the corner-kick outcome through the canonical restart path.
+- Match Flow / restart ownership must apply the corner-kick outcome through the shared restart placement, taker, cue and event seams. The existing `CheckRestartAndApply` and `RestartResolver.Resolve(Corner, …)` are written for a ball exiting the field: a hand-hold offence needs a new entry point using the **keeper's position when penalised**, the opposing team as recipient, and an explicit deterministic Y-centre tie rule (provisionally the existing high-Y tie choice). Calling the boundary-exit path unchanged is not sufficient.
 - FR-GK-028, FR-GK-043, the `[FIXED]` hold constant, related tests/comments, and the Match Engine “Law 12” wording require ERR/back-propagation.
 - Voluntary distribution still needs to occur before the deadline through OD-W8-2/OD-W8-4.
 
@@ -148,16 +148,14 @@ After the rules edition is chosen, choose the long-term ownership of any remaini
 **Option A — #11 owns Law 12 from the hand-claim clock.**
 
 - `_claimTick` / `GK_HOLD_MAX_TICKS` is the authoritative hand-control timer.
-- The Match Engine's existing `_gkHoldTicks` guard is either:
-  - narrowed to a separately defined non-hand stall safeguard, or
-  - retired once W8 supplies a live distribution path.
+- The Match Engine's existing `_gkHoldTicks` guard remains as a separately named **non-law feet-possession stall safeguard** at the law-correction landing. Instrument its firings and retain the six-second inherited limit pending evidence and its proper source-tag/rationale; retire it only through a later measured decision. It must not also time hand control after the correction.
 - Any removal or semantic change to the serialized engine fields must follow the snapshot-schema migration/rebaseline process.
 
 **Option B — move Law 12 to Match Engine.**
 
 This requires a new hand-vs-feet possession signal because the current engine counter is not hand-specific. Using the present `_possessingAgentId` test unchanged is not acceptable: it would force-release legitimate feet possession after six seconds.
 
-**Decision needed:** named rules edition (or an explicit project house rule); authoritative hand-control clock; exact 10 Hz / 60 Hz boundary and treatment of release at the limit versus control for *more than* the limit; timeout outcome/restart owner; fate of the historical feet-possession stall guard; and resulting schema plan.
+**Proposed disposition for owner approval:** current 2026/27 law; #11's hand-control clock; Match Engine's shared restart seams with an offence-specific corner entry; retain the engine guard only for feet-possession stalls until measured. Stage this law correction **after** a working voluntary distribution path (§6), never on the pre-wire engine. Freeze the exact 10 Hz / 60 Hz boundary so release at the limit remains legal and only control for *more than* eight seconds is penalised. Any changed serialized guard semantics require a schema plan.
 
 ### OD-W8-2 — Production `DistributeIntent` producer
 
@@ -211,7 +209,7 @@ The approved #11 contract already requires Pass Mechanics #5 rather than a goalk
 6. how the live roster/sent-off state replaces the current `agentRosterContains: true` stub so F-05 can actually fire;
 7. save/restore and snapshot consequences for any new cross-tick executor/adaptation state.
 
-**Decision needed:** executor/adaptation owner and ordering. Direct `Ball.ApplyKick` from Goalkeeper Mechanics is not assumed: #11 FR-GK-007 and §3.8 point to Pass Mechanics #5 as the canonical execution surface.
+**Proposed disposition for owner approval:** extend Pass Mechanics #5 with an explicit goalkeeper-distribution request/variant that faithfully carries source point, delivery, power and spin; amend #5 and #11 together. Match Engine owns the adapter and initiation, keeps possession through accepted initiation, uses #5's single windup and CONTACT-time kick/release, arms W5 through the existing pass adapter exactly once, then publishes `DistributionExecutedEvent` only for a launched ball. A narrowed translation into today's foot-pass `PassRequest` would discard #11 semantics; a goalkeeper-local kick would duplicate #5. Fix the live roster check and serialize any new cross-tick state.
 
 ---
 
@@ -221,7 +219,7 @@ The forced-release implementation divergence and the missing execution seam requ
 
 The landing must distinguish:
 
-1. **Law/spec correction first:** resolve OD-W8-1. If current IFAB Law 12 is adopted, correct FR-GK-028 / FR-GK-043 and the `[FIXED]` hold constant to eight seconds + opponent corner-kick restart rather than implementing the obsolete forced-ROLL timeout. If the owner selects a historical edition, make the six-second limit and opponent indirect-free-kick sanction normative; any forced ROLL must be identified separately as a voluntary policy or explicit house rule;
+1. **Law choice now, law/code correction in its own later landing:** resolve OD-W8-1 before preregistration, but do not change the six-second guard or #11 timeout spec before a live voluntary distributor exists. A standalone eight-second/corner patch on today's producer-less engine would make hand claims run to an opponent corner. After the W8 distribution landing and its separate measurement, correct FR-GK-028 / FR-GK-043 and the `[FIXED]` hold constant together with the code: eight seconds + opponent corner for current law, or six seconds + opponent indirect free kick for a named historical edition. Any forced ROLL is separate project policy. The intermediate old guard is documented as the existing **noncompliant ground-drop backstop**, not historical IFAB compliance;
 2. **code fix:** replace the live `agentRosterContains: true` stub so F-05 receiver validation is reachable;
 3. **spec defect + execution-contract repair:** #11 §3.8.3–§3.8.4 names a phantom #5 contract: nonexistent `PassIntent`, `PassMechanics.ConsumePassIntent`, `PassMechanics.DeliveryKind`, `LowDriven`, and `GroundRoll`. Today's `PassRequest` also lacks #11's source-point / power / spin / delivery fields and `PassExecutor` derives those semantics independently. File this drift explicitly; back-propagate #11/FR-GK-007 and, if the chosen faithful solution requires it, amend #5 atomically rather than claiming “no #5 amendment required.” Then connect the resulting contract to the canonical Match Engine / Pass Mechanics execution path rather than treating `DistributionExecutedEvent` as an executor;
 4. **documentation/code correction:** repair the stale `DistributionExecutedEvent` comment claiming `Ball.ApplyKick` precedes the event, at the same time the real executor ordering is implemented and locked;
@@ -241,7 +239,7 @@ This decision packet does **not** freeze seeds, thresholds, acceptance bands, or
 - goalkeeper feet-possession episodes;
 - hand-hold duration distribution;
 - feet-possession duration distribution;
-- count/timing of existing engine historical engine hold guard firings;
+- count/timing of existing engine keeper-possession hold-guard firings;
 - count/timing of #11 hand-clock timeout transitions;
 - restart counts/types;
 - possession release and same/other-player reacquisition;
@@ -281,19 +279,21 @@ Land a behavior-neutral, nonserialized diagnostic instrument first. Following th
 - pass outcome/completion where the release enters Pass Mechanics;
 - the unchanged source-complete foul/card report.
 
-The frozen six-seed corpus remains the result-bearing comparison population unless a separate owner decision changes that contract.
+The frozen six-seed corpus remains the result-bearing comparison population unless a separate owner decision changes that contract. Preserve three distinct arms on identical seeds and instruments: **A** pre-wire engine/old ground-drop guard; **B** voluntary W8 producer/executor with the old guard unchanged; **C** the same working distribution with current-law hand timeout and a separate feet-only stall guard. A→B estimates distribution wiring; B→C estimates the law/restart change. Forced deadline fixtures, not six sampled matches, establish the rare offence's exact corner placement, recipient, event and save/restore behavior.
 
 ---
 
 ## 6. Landing sequence after approval
 
-1. Owner records OD-W8-1 through OD-W8-4.
-2. File the required #11 ERR record(s) and make only the approved same-commit spec back-propagation/new normative contract edits required by those decisions.
-3. Land the W8 preregistration and nonserialized instrument **before** observing result-bearing W8 data.
-4. Run the pre-wire baseline with the frozen corpus.
-5. Implement W8 only.
-6. Run the identical post-wire corpus and preserve durable evidence.
-7. Interpret W8 independently before moving to W10/#441/W9.
+1. Owner records OD-W8-1 through OD-W8-4, including the two-landing isolation rule and the interim voluntary-release window **before** the inherited six-second ground-drop guard. This interim guard is not described as IFAB compliance.
+2. File the #11/#5 producer/executor ERR record(s) and amend only those approved specs together with their W8 distribution code. Defer the Law-12/FR-GK-028/043 ERR back-propagation until its matching code landing; do not claim the pre-existing forced-ROLL divergence is resolved in the interim.
+3. Freeze preregistration for A→B and B→C and land the behavior-neutral nonserialized instrument before result-bearing W8 data.
+4. Run **A**, the pre-wire frozen corpus, and forced boundary baseline fixtures against the old ground-drop behavior.
+5. Land **B**, the #21-policy producer and faithful #5 executor under the **unchanged** six-second engine guard. Keep voluntary release before that guard across all policy choices; do not implement a second goalkeeper-local kick.
+6. Run the identical corpus and boundary fixtures for B; preserve evidence and interpret the distribution effect A→B.
+7. Land **C** in a separate measured change: atomically correct the approved Law-12 spec, #11 timeout code and offence-specific opponent-corner restart, while retaining the old guard only as a named feet-possession safeguard. Apply the snapshot-schema plan and exact-limit/mirrored-corner tests.
+8. Rerun the same corpus and forced fixtures; preserve evidence and interpret the law/restart effect B→C separately.
+9. Only after both results are dispositioned proceed to W10/#441/W9. Any later policy-timing expansion is its own declared change; it is not silently folded into C.
 
 W8 must not be bundled with W9 or W10. Any later #440/cooldown semantics change, W10 landing, #441 Heading reachability change, or W9 landing remains an invalidation trigger for the final KD-W1 calibration basis.
 
@@ -304,13 +304,13 @@ W8 must not be bundled with W9 or W10. Any later #440/cooldown semantics change,
 This document does **not**:
 
 - choose current IFAB 2026/27 Law 12 versus a named historical edition or an explicit project house rule;
-- choose whether the engine guard is narrowed or retired;
+- approve or reject retaining the engine guard as a separately named feet-possession safeguard pending measurement;
 - choose a concrete #21 policy mapping;
 - choose a receiver-selection algorithm;
 - choose voluntary release timing or whether it consumes RNG;
 - choose a receiver-selection RNG/domain/draw site;
 - choose the FR-GK-043 empty-target fallback;
-- choose the executor/adaptation owner, possession-release ordering, or pass-feed registration seam;
+- approve or reject the explicit #5 distribution extension and Match Engine adapter/ordering proposed in §2;
 - authorize a Decision Tree ordinal-width change or digest rebaseline;
 - authorize W9;
 - change snapshot schema;
@@ -326,6 +326,7 @@ Those choices require owner approval first.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.7 | 2026-09-25 | draft | Review correction: separates W8 distribution wiring from the later Law-12/restart landing with A→B→C measurements; records the offence-specific keeper-position corner seam, preserves the feet-only stall guard pending evidence, chooses a faithful #5 extension as the proposed OD-W8-4 option, and fixes the §4 guard typo. The v0.5 row's “current 2025/26” wording describes the edition that introduced the change; 2026/27 is the current edition. |
 | 0.6 | 2026-09-25 | draft | Advisor correction: names the current 2026/27 IFAB edition, distinguishes the pre-2025/26 six-second indirect-free-kick sanction from the project's forced ROLL, and calls for exact deadline/restore fixtures because six sampled matches cannot certify a rare timeout. |
 | 0.5 | 2026-09-25 | draft | Evidence correction: current IFAB Law 12 (2025/26) is eight seconds with an opponent corner-kick sanction, not the repository's six-second forced-release model. OD-W8-1 now requires an explicit rules-edition decision before any timeout implementation; FR-GK-028/043 are treated as candidate spec defects if current law is adopted. |
 | 0.4 | 2026-09-25 | draft | Integrity correction: broadens the #11/#5 defect from one nonexistent method to the full phantom §3.8.3–§3.8.4 contract — no `PassIntent`, no Pass Mechanics `DeliveryKind`, no `LowDriven`/`GroundRoll`, and current `PassRequest` cannot carry #11 source-point/power/spin/delivery semantics. OD-W8-4 now requires an explicit faithful execution contract and allows that #5 may need atomic amendment. |
