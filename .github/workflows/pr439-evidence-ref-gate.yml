@@ -49,9 +49,8 @@ jobs:
           python3 -m unittest tools.tests.test_pr439_evidence_refs
 
   live-post-delete-audit:
-    name: PR439 live post-delete audit (manual, non-blocking)
+    name: PR439 live post-delete audit (manual)
     if: github.event_name == 'workflow_dispatch'
-    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -64,7 +63,7 @@ jobs:
           git fetch --no-tags --prune origin \
             '+refs/heads/evidence/pr439-*:refs/remotes/origin/evidence/pr439-*'
 
-      - name: Audit zero-ref state and live GitHub provenance
+      - name: Audit zero-ref state and compare GitHub discussion to frozen snapshot
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
