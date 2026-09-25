@@ -68,7 +68,7 @@ Current #11 behavior does not implement that outcome. When its hand-claim timer 
 
 The keeper therefore does not stall, but the required forced ROLL and its event are missing.
 
-Against the **current project spec**, this is a factual code/spec divergence: production does not perform the forced ROLL that FR-GK-043 requires. But the requirement's football-law premise is itself now under review (§1.8 below). If the project adopts current IFAB Law 12, FR-GK-028 / FR-GK-043 and the six-second `[FIXED]` constant are spec defects rather than requirements to implement literally.
+Against the **current project spec**, this is a factual code/spec divergence: production does not perform the forced ROLL that FR-GK-043 requires. But the requirement's football-law premise is itself now under review (§1.8 below). Neither current nor historical IFAB Law 12 uses a forced ROLL as the timeout sanction. If the project adopts current law, FR-GK-028 / FR-GK-043 and the six-second `[FIXED]` constant require correction; under a historical ruleset, the forced ROLL still needs separate treatment as a project policy.
 
 FR-GK-043 also leaves one edge case undefined if its forced-ROLL model is retained: no eligible own-team agent is inside the penalty area at timeout.
 
@@ -100,7 +100,7 @@ W8 must replace that stub with an authoritative live-roster query at the executi
 
 ### 1.8 The project's “Law 12 six-second rule” is no longer the current IFAB law
 
-Current IFAB Laws of the Game changed this rule for 2025/26. A goalkeeper controlling the ball with the hands/arms inside the penalty area may do so for **eight seconds**; if control exceeds eight seconds, the restart is a **corner kick to the opponents**, with the referee visually counting down the final five seconds. The prior six-second rule was replaced.
+The current IFAB Laws of the Game **2026/27** retain the change introduced in 2025/26. A goalkeeper controlling the ball with the hands/arms inside the penalty area may do so for **eight seconds**; if control exceeds eight seconds, the restart is a **corner kick to the opponents**, with the referee visually counting down the final five seconds. Under the pre-2025/26 law, the limit was six seconds and the sanction was an **indirect free kick to the opponents**. Neither edition makes a forced ROLL the sanction.
 
 The repository still encodes the superseded rule in multiple live/normative surfaces:
 
@@ -111,11 +111,11 @@ The repository still encodes the superseded rule in multiple live/normative surf
 
 Repository search found no project-wide declaration that Soccer-Manager-Pro intentionally targets an older Laws edition. Ball Physics contains at least one 2024/25 law citation, but that is not a global rules-version policy.
 
-**External authority checked for this decision packet:** IFAB Laws of the Game 2025/26, Law 12.3 (“Corner kick”) and the IFAB 2025/26 goalkeeper-control Q&A.
+**External authority checked for this decision packet:** [IFAB Laws of the Game 2026/27, Law 12.3](https://www.theifab.com/laws/latest/fouls-and-misconduct/) (“Corner kick”), [Law 17](https://www.theifab.com/laws/latest/the-corner-kick/) (corner placement), and the [IFAB 2025/26 change explanation](https://www.theifab.com/news/the-ifab-tackles-goalkeeper-time-wasting/) (earlier six-second indirect-free-kick sanction).
 
 Therefore W8 must not silently preserve “six seconds + forced release” merely because it is already tagged `[FIXED]`. The owner must either:
 
-1. explicitly freeze the simulation to an older Laws edition for this rule, with that version policy recorded; or
+1. explicitly freeze the simulation to a named pre-2025/26 Laws edition, including its indirect-free-kick timeout sanction, or record a separately named project-specific departure; or
 2. adopt the current Law 12 model, which changes both the `[FIXED]` duration and the timeout outcome/restart ownership.
 
 This is a spec-governance decision, not gameplay tuning.
@@ -128,7 +128,7 @@ This is a spec-governance decision, not gameplay tuning.
 
 First choose the rules edition for this mechanic.
 
-**Option CURRENT — adopt current IFAB Law 12.**
+**Option CURRENT — adopt IFAB Laws of the Game 2026/27, Law 12.**
 
 - Hand/arm control limit is eight seconds, not six.
 - Exceeding the limit awards a corner kick to the opponents; it does not force a keeper distribution.
@@ -137,9 +137,11 @@ First choose the rules edition for this mechanic.
 - FR-GK-028, FR-GK-043, the `[FIXED]` hold constant, related tests/comments, and the Match Engine “Law 12” wording require ERR/back-propagation.
 - Voluntary distribution still needs to occur before the deadline through OD-W8-2/OD-W8-4.
 
-**Option LEGACY — explicitly target the pre-2025 six-second law for this mechanic.**
+**Option LEGACY — explicitly target a named pre-2025/26 Laws edition.**
 
-If the owner intentionally chooses this, record the targeted Laws edition so `[FIXED]` means “fixed to an explicit historical ruleset,” not “current football law.”
+- Hand/arm control limit is six seconds, with an **indirect free kick to the opponents** if exceeded. Specify its restart owner and boundary timing.
+- Record the targeted edition so `[FIXED]` means “fixed to an explicit historical ruleset,” not “current football law.”
+- A forced default ROLL is not the old-law sanction. If retained, specify it separately as an earlier voluntary-release policy or an explicit project-specific house rule; do not label it Law 12 compliance. A house rule that replaces the indirect free kick must be chosen expressly.
 
 After the rules edition is chosen, choose the long-term ownership of any remaining timeout/stall behavior.
 
@@ -155,7 +157,7 @@ After the rules edition is chosen, choose the long-term ownership of any remaini
 
 This requires a new hand-vs-feet possession signal because the current engine counter is not hand-specific. Using the present `_possessingAgentId` test unchanged is not acceptable: it would force-release legitimate feet possession after six seconds.
 
-**Decision needed:** rules edition; authoritative hand-control clock; timeout outcome/restart owner; fate of the historical feet-possession stall guard; and resulting schema plan.
+**Decision needed:** named rules edition (or an explicit project house rule); authoritative hand-control clock; exact 10 Hz / 60 Hz boundary and treatment of release at the limit versus control for *more than* the limit; timeout outcome/restart owner; fate of the historical feet-possession stall guard; and resulting schema plan.
 
 ### OD-W8-2 — Production `DistributeIntent` producer
 
@@ -183,9 +185,9 @@ This requires resolving the ordinal-8 / 3-bit composure-noise boundary before W8
 
 **Decision needed:** producer architecture. No implementation may infer the policy table, target selector, or timing rule.
 
-### OD-W8-3 — Empty-target fallback, if a forced/default ROLL contract survives OD-W8-1
+### OD-W8-3 — Empty-target fallback, if a separate default ROLL policy survives OD-W8-1
 
-The current FR-GK-043 requirement says “nearest own-team agent within the penalty area” but does not say what happens when there is no eligible teammate there. If OD-W8-1 adopts current IFAB Law 12 and retires the timeout-forced ROLL, this decision applies only to any separately retained voluntary/default ROLL policy; it is no longer the timeout sanction.
+The current FR-GK-043 requirement says “nearest own-team agent within the penalty area” but does not say what happens when there is no eligible teammate there. Under either real IFAB edition, a forced ROLL is not the timeout sanction. This decision applies only if the owner separately retains a voluntary/default ROLL policy; if that policy is retired, mark OD-W8-3 not applicable.
 
 Freeze one deterministic fallback before implementation. Candidate classes for owner review include:
 
@@ -219,7 +221,7 @@ The forced-release implementation divergence and the missing execution seam requ
 
 The landing must distinguish:
 
-1. **Law/spec correction first:** resolve OD-W8-1. If current IFAB Law 12 is adopted, correct FR-GK-028 / FR-GK-043 and the `[FIXED]` hold constant to eight seconds + opponent corner-kick restart rather than implementing the obsolete forced-ROLL timeout. If the owner explicitly selects the legacy rules edition, then make that version choice normative before fixing code to it;
+1. **Law/spec correction first:** resolve OD-W8-1. If current IFAB Law 12 is adopted, correct FR-GK-028 / FR-GK-043 and the `[FIXED]` hold constant to eight seconds + opponent corner-kick restart rather than implementing the obsolete forced-ROLL timeout. If the owner selects a historical edition, make the six-second limit and opponent indirect-free-kick sanction normative; any forced ROLL must be identified separately as a voluntary policy or explicit house rule;
 2. **code fix:** replace the live `agentRosterContains: true` stub so F-05 receiver validation is reachable;
 3. **spec defect + execution-contract repair:** #11 §3.8.3–§3.8.4 names a phantom #5 contract: nonexistent `PassIntent`, `PassMechanics.ConsumePassIntent`, `PassMechanics.DeliveryKind`, `LowDriven`, and `GroundRoll`. Today's `PassRequest` also lacks #11's source-point / power / spin / delivery fields and `PassExecutor` derives those semantics independently. File this drift explicitly; back-propagate #11/FR-GK-007 and, if the chosen faithful solution requires it, amend #5 atomically rather than claiming “no #5 amendment required.” Then connect the resulting contract to the canonical Match Engine / Pass Mechanics execution path rather than treating `DistributionExecutedEvent` as an executor;
 4. **documentation/code correction:** repair the stale `DistributionExecutedEvent` comment claiming `Ball.ApplyKick` precedes the event, at the same time the real executor ordering is implemented and locked;
@@ -248,7 +250,7 @@ This decision packet does **not** freeze seeds, thresholds, acceptance bands, or
 
 Do **not** define producer-dependent counters such as “DT distribution commits” versus “engine distribution commits” until the producer/executor contract is chosen.
 
-The preregistration must also freeze falsifiers before any result-bearing W8 run. Candidate falsifier classes include: no new keeper-possession stall; no hand-control episode surviving beyond the chosen Law-12 deadline; no duplicate release/kick for one distribution; no `DistributionExecutedEvent` without a corresponding canonical pass execution; no immediate same-keeper reacquisition loop caused by the release path; W5's pass feed observing the launched distribution when a receiver exists; and a predeclared football/source-based band or shape check for hand-hold duration rather than a post-result “looks plausible” judgment. Exact thresholds belong in the later preregistration, not in this decision packet.
+The preregistration must also freeze falsifiers before any result-bearing W8 run. Candidate falsifier classes include: no new keeper-possession stall; no hand-control episode surviving beyond the chosen Law-12 deadline; no duplicate release/kick for one distribution; no `DistributionExecutedEvent` without a corresponding canonical pass execution; no immediate same-keeper reacquisition loop caused by the release path; W5's pass feed observing the launched distribution when a receiver exists; and a predeclared football/source-based band or shape check for hand-hold duration rather than a post-result “looks plausible” judgment. Exact thresholds belong in the later preregistration, not in this decision packet. The six-match corpus cannot by itself prove a rare timeout sanction: preregister deterministic boundary fixtures for hand control released exactly at the limit and continuing beyond it, feet possession beyond the limit, mirrored keeper ends and restart side, plus save/restore across claim, deadline and pass windup.
 
 ---
 
@@ -301,7 +303,7 @@ W8 must not be bundled with W9 or W10. Any later #440/cooldown semantics change,
 
 This document does **not**:
 
-- choose current IFAB 2025/26 Law 12 versus an explicitly frozen legacy Laws edition;
+- choose current IFAB 2026/27 Law 12 versus a named historical edition or an explicit project house rule;
 - choose whether the engine guard is narrowed or retired;
 - choose a concrete #21 policy mapping;
 - choose a receiver-selection algorithm;
@@ -324,6 +326,7 @@ Those choices require owner approval first.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.6 | 2026-09-25 | draft | Advisor correction: names the current 2026/27 IFAB edition, distinguishes the pre-2025/26 six-second indirect-free-kick sanction from the project's forced ROLL, and calls for exact deadline/restore fixtures because six sampled matches cannot certify a rare timeout. |
 | 0.5 | 2026-09-25 | draft | Evidence correction: current IFAB Law 12 (2025/26) is eight seconds with an opponent corner-kick sanction, not the repository's six-second forced-release model. OD-W8-1 now requires an explicit rules-edition decision before any timeout implementation; FR-GK-028/043 are treated as candidate spec defects if current law is adopted. |
 | 0.4 | 2026-09-25 | draft | Integrity correction: broadens the #11/#5 defect from one nonexistent method to the full phantom §3.8.3–§3.8.4 contract — no `PassIntent`, no Pass Mechanics `DeliveryKind`, no `LowDriven`/`GroundRoll`, and current `PassRequest` cannot carry #11 source-point/power/spin/delivery semantics. OD-W8-4 now requires an explicit faithful execution contract and allows that #5 may need atomic amendment. |
 | 0.3 | 2026-09-25 | draft | Review correction: records #11 §3.8.3's nonexistent `PassMechanics.ConsumePassIntent` surface as an explicit spec defect/back-propagation obligation, flags the false `DistributionExecutedEvent` ApplyKick-order comment, and tightens OD-W8-4 around the real `PassRequest` / `PassExecutor` integration seam. |
