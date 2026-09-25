@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 25, 2026 — **PR #452 closed the separate #446 archive branch; both privileged one-shot workflows retired.**
+> **Last Updated:** September 25, 2026 — **PR #439 post-delete documentation reconciled; final `main` CI green.**
+>
+> All 16 `evidence/pr439-*` refs are recorded as deleted after the authorized exact-head atomic cleanup, the maintained PR #439 cited-run ledger is 15 rows, and deleted branch names remain provenance backed by `docs/tracking/evidence/pr439-ref-archive/`. Final post-merge `main` CI run `36080899633` completed successfully, including the functional gate. The archive README now describes the post-delete state without calling the separate rerun independent or implying the dead live `pre-delete` path remains an audit mechanism. Cleanup dispositions are also recorded for `evidence/foul-card-six-seed-20260922` at `7db673ca…` and `evidence/w2-442-six-seed-measure-20260923` at `2b3bcb29…`; no branch deletion is performed by this documentation change. Historical changelog entries remain unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
+>
+> **Last Updated (prior):** September 25, 2026 — **PR #452 closed the separate #446 archive branch; both privileged one-shot workflows retired.**
 >
 > Merge `df63ff91a989b9e5272de6936a45de659ca178b7` made the automatic PR #439 gate require zero live refs. Its one-shot cleanup run `36080270280` passed the authorized post-delete check and removed `archive/pr439-evidence-20260923` only at its recorded head. Automatic evidence gate `36080270275` also passed. This final follow-up retires the completed cleanup action; the archive, separate historical-run ledger and permanent zero-ref gate remain. The PR #439 discussion and 15-run citation ledger remain unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
 >

@@ -1,5 +1,7 @@
 # W2 post-#416 six-seed evidence
 
+**Branch disposition (2026-09-25):** `evidence/w2-442-six-seed-measure-20260923` may be deleted only if it still points at recorded head `2b3bcb290c65fb50fd999033055e39635bc325f8`. Its branch-only workflow is already archived and the preregistration commit is retained in `main` history; deleting the ref does not remove its Actions runs.
+
 > **Frozen preregistration:** `docs/tracking/w2-six-seed-evidence-preregistration.md` is restored
 > to the exact pre-result content from result head `dbd3053ad191e06f587ce84fce280ebe74e4bec7`.
 > Post-result interpretation and closeout live only in this README.
