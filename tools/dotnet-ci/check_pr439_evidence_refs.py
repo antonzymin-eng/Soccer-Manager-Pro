@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify PR #439 evidence archival across an atomic ref-deletion transition."""
+"""Verify PR #439 evidence archival after the atomic evidence-ref deletion."""
 
 from __future__ import annotations
 
