@@ -14,7 +14,6 @@ import subprocess
 import urllib.error
 import urllib.request
 import zipfile
-from dataclasses import dataclass
 from pathlib import Path
 
 ARCHIVE_ROOT = Path("docs/tracking/evidence/pr439-ref-archive")
@@ -41,14 +40,6 @@ EXPECTED_JOB_IDS = {
     "107241699913", "107243207618", "107243250548",
 }
 ALTERNATE_ARTIFACT_SHA256 = "981600d85ddcb67cd0d313ed698e4f1a6db5c70cce1e753b80a84600a7497571"
-
-
-@dataclass(frozen=True)
-class BlobState:
-    ref: str
-    commit: str
-    path: str
-    blob: str
 
 
 def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -147,20 +138,6 @@ def validate_post_delete_topology(
 def resolve(repo: Path, spec: str) -> str | None:
     result = git(repo, "rev-parse", "--verify", spec, check=False)
     return result.stdout.strip() if result.returncode == 0 else None
-
-
-def changed_blob_states(repo: Path, ref: str, main_ref: str) -> set[BlobState]:
-    remote = f"refs/remotes/origin/{ref}"
-    merge_base = git(repo, "merge-base", main_ref, remote).stdout.strip()
-    commits = git(repo, "rev-list", "--reverse", f"{merge_base}..{remote}").stdout.splitlines()
-    states: set[BlobState] = set()
-    for commit in commits:
-        paths = git(repo, "diff", "--no-renames", "--name-only", f"{commit}^", commit, "--").stdout.splitlines()
-        for path in paths:
-            blob = resolve(repo, f"{commit}:{path}")
-            if blob:
-                states.add(BlobState(ref, commit, path, blob))
-    return states
 
 
 def sha256(data: bytes) -> str:
@@ -394,13 +371,47 @@ def _github_list_all(url: str, token: str) -> list[dict[str, object]]:
         page += 1
 
 
-def verify_live_actions_and_pr_citations(runs: list[dict[str, str]]) -> list[str]:
+def compare_live_discussion_snapshot(
+    repo: Path, live_sources: list[dict[str, str]]
+) -> list[str]:
+    errors: list[str] = []
+    frozen_rows = read_tsv(repo / DISCUSSION_SNAPSHOT)
+    frozen = {
+        (row["source_kind"], row["source_id"]): row
+        for row in frozen_rows
+    }
+    live = {
+        (row["source_kind"], row["source_id"]): row
+        for row in live_sources
+    }
+
+    added = sorted(set(live) - set(frozen))
+    removed = sorted(set(frozen) - set(live))
+    for key in added:
+        errors.append(f"PR #439 discussion source added since snapshot: {key}")
+    for key in removed:
+        errors.append(f"PR #439 discussion source removed since snapshot: {key}")
+
+    for key in sorted(set(live) & set(frozen)):
+        current = live[key]
+        expected = frozen[key]
+        for field in ("source_url", "body_sha256", "run_ids"):
+            if current.get(field, "") != expected.get(field, ""):
+                errors.append(
+                    f"PR #439 discussion source changed since snapshot: {key} "
+                    f"{field}={current.get(field, '')!r} "
+                    f"expected={expected.get(field, '')!r}"
+                )
+    return errors
+
+
+def verify_live_github_state(repo: Path, runs: list[dict[str, str]]) -> list[str]:
     errors: list[str] = []
     token = os.environ.get("GITHUB_TOKEN", "")
     repository = os.environ.get("GITHUB_REPOSITORY", "")
     api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
     if not token or not repository:
-        return ["Actions/citation verification requires GITHUB_TOKEN and GITHUB_REPOSITORY"]
+        return ["live GitHub audit requires GITHUB_TOKEN and GITHUB_REPOSITORY"]
 
     try:
         pr = _github_json(f"{api_url}/repos/{repository}/pulls/{PR_NUMBER}", token)
@@ -413,24 +424,39 @@ def verify_live_actions_and_pr_citations(runs: list[dict[str, str]]) -> list[str
         reviews = _github_list_all(
             f"{api_url}/repos/{repository}/pulls/{PR_NUMBER}/reviews", token
         )
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as exc:
-        return [f"PR #{PR_NUMBER} citation lookup failed: {exc}"]
-
-    pattern = re.compile(r"\b35\d{9}\b")
-    bodies = [str(pr.get("body") or "")]
-    bodies.extend(str(item.get("body") or "") for item in comments)
-    bodies.extend(str(item.get("body") or "") for item in review_comments)
-    bodies.extend(str(item.get("body") or "") for item in reviews)
-    cited: set[str] = set()
-    for body in bodies:
-        cited.update(pattern.findall(body))
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as exc:
+        return [f"PR #{PR_NUMBER} discussion lookup failed: {exc}"]
 
     ledger_ids = {row["run_id"] for row in runs}
-    if cited != ledger_ids:
-        errors.append(
-            f"PR #{PR_NUMBER} run citation mismatch: "
-            f"missing={sorted(cited-ledger_ids)} extras={sorted(ledger_ids-cited)}"
-        )
+    pattern = re.compile(r"\b35\d{9}\b")
+
+    def source(kind: str, source_id: object, url: object, body: object) -> dict[str, str]:
+        text = str(body or "")
+        ids = sorted(set(pattern.findall(text)) & ledger_ids)
+        return {
+            "source_kind": kind,
+            "source_id": str(source_id),
+            "source_url": str(url or ""),
+            "body_sha256": sha256(text.encode("utf-8")),
+            "run_ids": ",".join(ids),
+        }
+
+    live_sources = [
+        source("pr_body", PR_NUMBER, pr.get("html_url"), pr.get("body"))
+    ]
+    live_sources.extend(
+        source("issue_comment", item.get("id"), item.get("html_url"), item.get("body"))
+        for item in comments
+    )
+    live_sources.extend(
+        source("review_comment", item.get("id"), item.get("html_url"), item.get("body"))
+        for item in review_comments
+    )
+    live_sources.extend(
+        source("review", item.get("id"), item.get("html_url"), item.get("body"))
+        for item in reviews
+    )
+    errors.extend(compare_live_discussion_snapshot(repo, live_sources))
 
     fields = (
         ("head_branch", "head_branch"),
@@ -453,10 +479,10 @@ def verify_live_actions_and_pr_citations(runs: list[dict[str, str]]) -> list[str
             actual = "" if actual_value is None else str(actual_value)
             if actual != row.get(ledger_key, ""):
                 errors.append(
-                    f"run {run_id}: Actions {api_key} {actual!r} != ledger {row.get(ledger_key, '')!r}"
+                    f"run {run_id}: Actions {api_key} {actual!r} != ledger "
+                    f"{row.get(ledger_key, '')!r}"
                 )
     return errors
-
 
 def validate_live(repo: Path, verify_api: bool = False) -> list[str]:
     errors = validate_archive(repo)
@@ -479,7 +505,7 @@ def validate_live(repo: Path, verify_api: bool = False) -> list[str]:
     errors.extend(validate_post_delete_topology(actual_refs, dispositions))
 
     if verify_api:
-        errors.extend(verify_live_actions_and_pr_citations(read_tsv(repo / RUN_HEADS)))
+        errors.extend(verify_live_github_state(repo, read_tsv(repo / RUN_HEADS)))
 
     print(
         "PR439 post-delete live audit: "
