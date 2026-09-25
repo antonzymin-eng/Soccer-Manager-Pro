@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 25, 2026 — **PR #451 landed and deleted all 16 PR #439 evidence refs atomically; permanent zero-ref gate and independent #446 archive cleanup follow.**
+> **Last Updated:** September 25, 2026 — **PR #452 closed the separate #446 archive branch; both privileged one-shot workflows retired.**
+>
+> Merge `df63ff91a989b9e5272de6936a45de659ca178b7` made the automatic PR #439 gate require zero live refs. Its one-shot cleanup run `36080270280` passed the authorized post-delete check and removed `archive/pr439-evidence-20260923` only at its recorded head. Automatic evidence gate `36080270275` also passed. This final follow-up retires the completed cleanup action; the archive, separate historical-run ledger and permanent zero-ref gate remain. The PR #439 discussion and 15-run citation ledger remain unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
+>
+> **Last Updated (prior):** September 25, 2026 — **PR #451 landed and deleted all 16 PR #439 evidence refs atomically; permanent zero-ref gate and independent #446 archive cleanup follow.**
 >
 > Merge `250b15fec3b98b5d9fece6e9db1e0d787bd623fd` landed the exact historical payload and authorization ledger. One-shot run `36078635104` passed the complete pre-delete census, compared all 16 exact remote heads, performed one leased atomic push, and passed the immediate zero-ref gate. Independently dispatched post-delete gate `36078666318` also passed; the remote now has zero `evidence/pr439-*` refs. This follow-up makes the automatic PR #439 gate require zero refs permanently, retires the completed privileged one-shot workflow and stages a separate exact-head-protected cleanup for the closed #446 archive branch. The 15-run PR #439 citation ledger and PR discussion remain unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
 >
