@@ -123,9 +123,10 @@ The dry selector found a receiver for 860/862 hand claims and used the fixed rec
 Every observed policy value was `SlowDown`. The frozen six-seed A→B corpus can therefore measure
 only the SlowDown B path and **must not** be cited as execution coverage for `Quick`, `ShortKick`,
 `LongKick`, `RollOut`, or `ThrowOut`. Before B merges, deterministic composed fixtures must
-exercise all six policy rows, including receiver + no-eligible-receiver arms for each receiver-capable
-policy and the receiverless-by-design LongKick path. The A→B corpus remains useful as the frozen
-SlowDown comparison, not as six-policy coverage.
+exercise all six policy rows. The exact receiver/zone fixture topology for each row is owned by the
+**owner-approved B contract**; this Stage A evidence record does not pre-approve LongKick as
+receiverless, or any other policy-specific receiver/fallback choice. The A→B corpus remains useful
+as the frozen SlowDown comparison, not as six-policy coverage.
 
 ## Restart census
 
@@ -139,18 +140,21 @@ frozen terminal digests exactly. That evidence applies only to the assignment-on
 
 Before any B result-bearing measurement:
 
-1. finish and merge the spec-first B contract (#461), including the distance-sensitive #5 delivery
-   formula, exact hash namespace, live CONTACT target semantics, typed possession-change
-   completion/cancellation semantics, explicit guard arithmetic, and ERR-011-015/016/017;
-2. land the structural follow-up that rejects `ldflda` address-taking of `_possessingAgentId`
-   and catches up the omitted helper source history (#462);
+1. #462 is complete and merged as `a4056ea6371f6dcf72dcaa6ef51980f7bbeaabc7`: the writer guard
+   now rejects `ldflda` address-taking as well as unlisted `stfld` stores, and the helper's omitted
+   source history/changelog are recorded.
+2. finish the spec-first B contract (#461), including the distance-sensitive #5 delivery formula,
+   exact hash namespace, live CONTACT target semantics, typed possession-change completion/cancellation
+   semantics, explicit guard arithmetic, and ERR-011-015/016/017; it remains draft pending owner
+   approval of the W8 amendment.
 3. wire B only after the owning specs are explicitly approved and merged;
 4. prove deterministic composed execution of **all six** #21 policies;
 5. rerun the frozen six seeds as the SlowDown A→B comparison, with the now-proven
    **501 same-keeper / 0 opponent-keeper** self-reclaim loop reported as a separate confound rather
    than folded into a single policy verdict.
 
-The supplemental keeper-identity split is complete and is no longer a pending gate.
+The supplemental keeper-identity split and the possession-seam structural follow-up are complete;
+neither remains a pending B-measurement gate.
 
 Once B attaches hand-episode teardown, PR #460's digest equality is no longer neutrality evidence for
 that new behavior. B must prove the new semantics directly.
