@@ -1,0 +1,97 @@
+name: W8 Stage A reclaim identity supplement
+
+on:
+  push:
+    branches:
+      - evidence/w8-stage-a-reclaim-split-20260926
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout supplemental diagnostic
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify production anchor and allowed diff
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor b06595fbd409396c3ebad445cecd2b215b8e9e2a HEAD
+          git diff --name-only b06595fbd409396c3ebad445cecd2b215b8e9e2a..HEAD | sort > /tmp/changed
+          cat > /tmp/expected <<'EOF'
+          .github/workflows/w8-stage-a-reclaim-split.yml
+          src/match-engine/tests/W8StageADiagnosticTests.cs
+          EOF
+          diff -u /tmp/expected /tmp/changed
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve W8 instrument
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/measurement_catalog.py validate --repo .
+          python3 tools/dotnet-ci/measurement_catalog.py resolve w8-stage-a --repo . --github-env "$GITHUB_ENV"
+
+      - name: Run gate and supplemental measurement
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/measurements/trx
+          OUT="artifacts/measurements/measurement.txt"
+          MEASURE_OUT="artifacts/measurements/instrument-output.txt"
+          RESULTS="artifacts/measurements/trx"
+          RUNSETTINGS="artifacts/measurements/measurement.runsettings"
+          cat > "$RUNSETTINGS" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <RunSettings>
+            <RunConfiguration>
+              <TreatNoTestsAsError>true</TreatNoTestsAsError>
+            </RunConfiguration>
+          </RunSettings>
+          XML
+          env -u "$MEASUREMENT_ENV" bash tools/dotnet-ci/run-gate.sh             --test-filter "$MEASUREMENT_FILTER" 2>&1 | tee "$OUT"
+          env "$MEASUREMENT_ENV=1" dotnet test "$MEASUREMENT_PROJECT"             --no-build --no-restore --filter "$MEASUREMENT_FILTER"             --settings "$RUNSETTINGS"             --logger "console;verbosity=detailed"             --logger "trx;LogFileName=measurement.trx"             --results-directory "$RESULTS" 2>&1 | tee "$MEASURE_OUT" | tee -a "$OUT"
+          python3 tools/dotnet-ci/measurement_catalog.py verify-run             "$MEASUREMENT_INSTRUMENT" --trx-dir "$RESULTS" --output "$MEASURE_OUT" | tee -a "$OUT"
+
+      - name: Verify frozen digests and reclaim identity accounting
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("artifacts/measurements/instrument-output.txt").read_text()
+          expected = {
+              "0x0F1E2D3C4B5A6978": "6a0ef38092a424332483b0124d13429c9134c58eefdb421e7f4bbdee509cafc3",
+              "0x00000000D1A6D05E": "c47c5d8fc993dfb0fd29164e33bc7770b4ee74857c1875c58f421f7ceec30d3e",
+              "0x0000000000000001": "7f13a1adafac5b692c1757922f92d72eb12dc86137cfff7eb5ee415af358fe29",
+              "0x00000000ABCDEF12": "0767c1fa25b77bd36168564944cae973b1a0c41899b9d84601203b57ad6dacb6",
+              "0x0000000099887766": "802fa9a2d27319cd6c423730109604786c66b626f44e39f71ba9599574525008",
+              "0x000000005A5A5A5A": "62d7ce6b7b0f1e9edd61271bdf6c899f3f1b2d5f8a4e9f1f0f2310fba5920088",
+          }
+          seen = dict(re.findall(r"seedEnd,(0x[0-9A-F]+),tick=324000,digest=([0-9a-f]{64})", text))
+          if seen != expected:
+              raise SystemExit(f"digest mismatch: {seen}")
+
+          same = sum(map(int, re.findall(r"count,0x[0-9A-F]+,pass-outcome-hand-interrupted-by-claim-same-keeper,(\d+)", text)))
+          opp = sum(map(int, re.findall(r"count,0x[0-9A-F]+,pass-outcome-hand-interrupted-by-claim-opponent-keeper,(\d+)", text)))
+          total = sum(map(int, re.findall(r"count,0x[0-9A-F]+,pass-outcome-hand-interrupted-by-claim,(\d+)", text)))
+          if total != 501 or same + opp != total:
+              raise SystemExit(f"identity accounting mismatch total={total} same={same} opponent={opp}")
+          print(f"W8 RECLAIM IDENTITY: total={total} sameKeeper={same} opponentKeeper={opp}")
+          print("FROZEN W8 DIGEST EQUALITY: PASS (6/6 exact)")
+          PY
+
+      - name: Preserve supplement evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w8-stage-a-reclaim-split-${{ github.run_id }}
+          path: artifacts/measurements/
+          if-no-files-found: warn
+          retention-days: 90
