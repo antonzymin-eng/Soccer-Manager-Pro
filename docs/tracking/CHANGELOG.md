@@ -12,7 +12,14 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 26, 2026 — **W8 B #461 post-#463 review closure: retry budget, LongKick landing evidence and approval gates.**
+> **Last Updated:** September 26, 2026 — **W8 B #461 owner approval recorded; wiring authorized after merge.**
+>
+> The project owner explicitly approved the W8 B amendment bundle on September 26, 2026: #5 §2.4.4 / §3.8.13, #11 §3.8, and #21 FR-TI-022 / §3.4.1. The approval accepts `GK_DIST_FALLBACK_ADVANCE_M = 35 m` as an **uncalibrated B default**. #5 and #11 remain overall DRAFT; #21 remains APPROVED. This is amendment approval, not whole-spec promotion, and B production wiring starts only after PR #461 merges.
+>
+> Realistic punt length is explicitly **not** approved as solved. The follow-up is filed in `open-issues.md` against #5's Lofted trajectory: the current W8 LongKick path uses the existing 22 m/s top-speed profile and zero spin. B must preserve intended-target versus actual first-ground-contact evidence, with LongKick separate; that measurement is the closing input for any later #5 trajectory change. The active open-issue count is now 31; archive remains 58. No production code, snapshot schema, RNG draw/order, calibration fit or gameplay result changes in this approval landing.
+>
+>
+> **Last Updated (prior):** September 26, 2026 — **W8 B #461 post-#463 review closure: retry budget, LongKick landing evidence and approval gates.**
 >
 > `main` was merged into #461 as true merge `b7df544431f625ded86538a11b6f8e12450f7811`: the three #463 conflicts are resolved by taking `main`'s Stage A record wholesale and preserving both sides' CHANGELOG/manifest history. The stale `receiverless-by-design` wording is therefore absent from the Stage A evidence record, while #21's draft B policy remains owner-gated in its owning spec.
 >

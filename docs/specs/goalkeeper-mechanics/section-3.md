@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** September 26, 2026 (v0.15 — W8 B review closure: retained-possession retries are deadline-gated, LongKick arrival is measured rather than assumed, and the W8 amendment carries an explicit owner-approval gate)
-**Version:** 0.15
+**Last Updated:** September 26, 2026 (v0.16 — W8 B amendment approved by owner; overall #11 remains DRAFT and B wiring is authorized only after PR #461 merges)
+**Version:** 0.16
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -1069,7 +1069,7 @@ reaching pitch coordinates past `gkPos.x` while still in
 
 ## 3.8 Distribution Generation (KD-6, KD-16; W8 B)
 
-**W8 amendment approval:** **PENDING OWNER APPROVAL.** This section remains DRAFT; merging the PR is not approval. Owner acceptance must cover this #11 amendment together with #5 §2.4.4 / §3.8.13 and #21 §3.4.1 before B production wiring is authorized.
+**W8 amendment approval:** **W8 B amendment APPROVED by owner, September 26, 2026.** The overall #11 specification remains DRAFT; this approval applies only to the W8 B amendment bundle (#11 §3.8, #5 §2.4.4 / §3.8.13, and #21 FR-TI-022 / §3.4.1). B production wiring is authorized only after PR #461 merges.
 
 **Ownership.** While a keeper has live hand control, Match Engine — not Decision Tree #8 —
 is the producer of `DistributeIntent`. It reads #21 `GkDistributionPolicy` and commits one
@@ -1364,5 +1364,6 @@ standard rebound physics.
 | 0.11 | September 22, 2026 | W3 draft scope clarification | §3.6.1 now matches the preregistered W3 boundary exactly: only active ClaimIntent contributes W3 Hand membership. `TryGetHandReachEnvelope` may also describe an ordinary save dive for #11's own save pipeline, but W3 does not interpose on normal shot-save handling. No code/tuning/schema/RNG change. | pre-merge contract sync |
 | 0.12 | September 25, 2026 | W8 B spec / ERR-011-015/016/017 | §3.8 replaces the phantom #5 pass API with the dedicated #5 goalkeeper request, moves hand-distribution production from #8 to Match Engine + #21, pins the 10 Hz clock domain, live-roster/receiverless fallback, CONTACT-only possession release/event, zero-RNG selector, and 35-tactical-tick safety ceiling. C still owns the Law-12 eight-second correction. | spec-first; B code deferred to W8 wiring |
 | 0.13 | September 26, 2026 | W8 B review closure | `Distributing` now means an accepted #5 request only; legacy no-intent expiry cannot manufacture that state. Commit-time target point is explicitly fallback-only, valid receivers re-aim to live CONTACT position, reject/cancel outcomes distinguish retained possession from real loss, and the inherited-guard proof is shown as `210 + 84 + 1 = 295 < 355 < 360` with worked windup/alignment examples. | review correction; code still deferred |
+| 0.16 | September 26, 2026 | W8 B owner approval | Records owner approval of the W8 B amendment bundle, including the 35 m fallback as an uncalibrated B default. Overall #11 remains DRAFT; realistic punt length is explicitly not claimed solved and is tracked as a #5 trajectory follow-up after B landing-point measurement. | owner approval; code still deferred until #461 merges |
 | 0.15 | September 26, 2026 | W8 B review closure | Makes retained-possession retries conditional on a live CONTACT-before-both-guards budget, requires late-cancel/repeated-reject regressions, adds the explicit W8 owner-approval gate, and states that LongKick arrival is an evidence question rather than an assumed target hit. | review correction; code still deferred |
 | 0.14 | September 26, 2026 | W8 B final consistency | §3.1.2 tactical pseudocode no longer uses a generic Decision Tree GK intent that could re-imply the ERR-011-016 producer defect; it keeps existing SAVE/rush ownership and names Match Engine + #21 as the hand-distribution producer, with #5 acceptance gating `Distributing`. | review correction; code still deferred |

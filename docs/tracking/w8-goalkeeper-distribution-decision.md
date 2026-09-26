@@ -1,7 +1,7 @@
 # W8 Goalkeeper Distribution — Owner Decision Packet
 
 > **Created:** September 25, 2026  
-> **Status:** **B CONTRACT DRAFTED IN OWNING SPECS — review-corrected in PR #461, but #5/#11 remain DRAFT and the #21 amendment requires explicit owner approval. No B production wiring is authorized yet.**
+> **Status:** **B contract approved; B wiring authorized after #461 merges.** #5 and #11 remain overall DRAFT; only their W8 B amendments are approved. #21 remains APPROVED with its W8 amendment explicitly owner-approved.
 > **Production anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (`main`, PR #455 merge).  
 > **Scope:** Record W8 ownership and the ordered A baseline, isolated possession-helper refactor, B spec, and B wiring boundaries.
 
@@ -14,7 +14,7 @@
 | OD-W8-3 | Retire timeout-forced ROLL; empty-receiver fallback is covered by OD-W8-2. | N/A — covered by OD-W8-2 |
 | OD-W8-4 | Extend #5 for a faithful GK request; serialized B windup/cancel, CONTACT release and W5 registration. | B |
 
-**Owner direction (September 25, 2026):** proceed in this order: land a behavior-neutral, nonserialized instrument and preregistration **before reading A results**; run the frozen six-seed A baseline; land the separate, behavior-neutral possession-change helper with exact frozen-seed digest equality (it may be developed alongside A); amend #11, #5, #21 and Match Engine with the actual policy delays, delivery ranges, tie-break and punt-zone geometry and file the #11 ERRs **before any B wiring code**; then wire B and compare the same corpus with A. The architecture choices above govern that work. §7 now lists only unresolved numerical and policy details. Approved specs govern implementation once amended; this packet does not itself amend or approve them. #5/#11 remain DRAFT in #461, and the already-APPROVED #21 section is an amendment requiring explicit owner acceptance. Merge is not treated as implicit approval. C's Law-12 correction remains a later, separately measured landing.
+**Owner direction (September 25, 2026):** proceed in this order: land a behavior-neutral, nonserialized instrument and preregistration **before reading A results**; run the frozen six-seed A baseline; land the separate, behavior-neutral possession-change helper with exact frozen-seed digest equality (it may be developed alongside A); amend #11, #5, #21 and Match Engine with the actual policy delays, delivery ranges, tie-break and punt-zone geometry and file the #11 ERRs **before any B wiring code**; then wire B and compare the same corpus with A. The architecture choices above govern that work. §7 now lists only unresolved numerical and policy details. Approved specs govern implementation once amended; this packet does not itself amend or approve them. #5/#11 remain overall DRAFT in #461. The W8 amendments to #5/#11/#21 were explicitly approved by the owner on September 26, 2026; that approval is narrower than whole-spec promotion. Merge is still not treated as implicit approval. C's Law-12 correction remains a later, separately measured landing.
 
 ---
 
@@ -342,13 +342,13 @@ W8 must not be bundled with W9 or W10. Any later #440/cooldown semantics change,
 
 ---
 
-## 7. Remaining B review / approval gates before wiring
+## 7. Post-approval B landing gates before wiring
 
 The B draft now specifies the previously-open policy mapping, selector/tie-break, fallback-zone
 formula, zero-RNG rule, #5 distance-sensitive delivery/launch rules, exact error-hash namespace,
 CONTACT-time target resolution, windup/rejection/cancellation API and Match Engine phase ownership.
 Those draft decisions live in #21 §3.4.1, #11 §3.8, #5 §2.4.4 / §3.8.13 and
-`match-engine-design.md`. They remain pre-code review text until explicitly approved.
+`match-engine-design.md`. The W8 B amendment bundle was explicitly approved by the owner on September 26, 2026. B production wiring remains blocked until PR #461 lands.
 
 Still intentionally **not** decided or changed here:
 
@@ -356,13 +356,8 @@ Still intentionally **not** decided or changed here:
 - final retirement of the inherited six-second/no-intent and 360-frame hand-drop guards (C);
 - any post-complete-engine calibration of W8 `[GT]` values;
 - W9 or any Decision Tree ordinal-width/digest rebaseline;
-- B production code or the B snapshot-schema bump itself — those follow only after this spec PR is
-  explicitly approved and lands;
-- the owner realism decision on `GK_DIST_FALLBACK_ADVANCE_M = 35 m`: under the current fixed-end
-  engine this keeps the receiverless LongKick target in the keeper's own half. The draft records this
-  honestly rather than calling it a calibrated punt or claiming the current #5/#1 trajectory reaches
-  the zone; owner must accept or change it before approval, and B measurement must report actual
-  first ground contact versus the target.
+- B production code or the B snapshot-schema bump itself — those follow only after this owner-approved spec PR lands;
+- realistic punt length remains a **non-blocking follow-up** rather than an unresolved B approval gate. The owner accepted `GK_DIST_FALLBACK_ADVANCE_M = 35 m` on September 26, 2026 as the uncalibrated B default. The current #5/#1 trajectory is not claimed to reach that zone; `open-issues.md` owns the follow-up, and B measurement must report actual first ground contact versus the intended target before any #5 trajectory change is considered.
 
 The W8 B policy defaults are uncalibrated semantic values and are not fitted to Stage A results.
 Every new numeric now has exactly one source tag and valid range in #21 §3.4.1. The 25 m
@@ -390,6 +385,7 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.18 | 2026-09-26 | B contract approved; wiring after #461 merge | Records explicit owner approval of the #5/#11/#21 W8 B amendment bundle and accepts the 35 m LongKick fallback as an uncalibrated B default. Realistic punt length is not claimed solved; it moves to `open-issues.md` against #5's Lofted trajectory and closes on B target-vs-first-landing evidence. B production wiring starts only after #461 merges. |
 | 0.17 | 2026-09-26 | B review closure pending owner approval | Resolves the post-#463 review: retained-possession retries are admitted only while a live CONTACT-before-both-guards budget remains; the LongKick worked example now applies `KICK_ACCURACY_COEFF`, makes no target-arrival claim, and adds target-vs-first-landing evidence; #5 and #11 W8 amendment sections now carry the same explicit owner-approval gate as #21. |
 | 0.16 | 2026-09-26 | B review closure pending owner approval | Closes the Stage A reclaim split at 501 same-keeper / 0 opponent-keeper (run `36251412673`), corrects ERR-011-017 to first-tactical-pass maturation after frame 72, pins #5's `0x47` error discriminator and live CONTACT receiver target, distinguishes Rejected/Cancelled/Completed retained-possession behavior, shows the `295 < 355 < 360` deadline proof, routes fallback through own-goal/attack-direction helpers, and records that the 35 m LongKick target plus #5/#11/#21 amendments require explicit owner approval before wiring. |
 | 0.15 | 2026-09-26 | B review correction | Records Stage A's claim-pass-claim loop as a known A→B confound, the SlowDown-only corpus coverage gap, and the evidence boundary on PR #460's assignment-only digest proof. B adds all-six-policy composed fixtures, distance-sensitive #5 delivery speed/launch, and typed possession-change completion/cancellation semantics before wiring. |

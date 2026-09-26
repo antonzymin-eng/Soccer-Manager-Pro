@@ -1,11 +1,11 @@
 # Tactical Instructions Specification #21 — Section 3: Algorithms
 
 **Created:** June 20, 2026
-**Last Updated:** September 26, 2026 (v0.6 — W8 B final consistency: spec-first constant allocation is explicit)
-**Version:** 0.6
-**Status:** APPROVED baseline (June 20, 2026); W8 v0.4–v0.5 amendment PENDING OWNER APPROVAL
+**Last Updated:** September 26, 2026 (v0.7 — W8 B amendment approved by owner; 35 m fallback accepted as an uncalibrated B default)
+**Version:** 0.7
+**Status:** APPROVED baseline (June 20, 2026); **W8 B amendment APPROVED by owner, September 26, 2026**
 
-> Existing implemented constants cited by the pre-W8 baseline live in `TacticalInstructionsConstants.cs` (Appendix A). The W8 §3.4.1 constants are **spec-first allocations**: they deliberately do not exist in `src/` until this amendment is owner-approved and B code lands. Once approved, their stated values and shapes are normative B inputs; `[GT]` means uncalibrated, not illustrative or optional.
+> Existing implemented constants cited by the pre-W8 baseline live in `TacticalInstructionsConstants.cs` (Appendix A). The W8 §3.4.1 constants are **spec-first allocations**: they deliberately do not exist in `src/` until B code lands. Owner approval was recorded September 26, 2026; their stated values and shapes are therefore normative B inputs. `[GT]` means uncalibrated, not illustrative or optional.
 
 ---
 
@@ -169,11 +169,13 @@ within 25.0 m, team 0 uses `0 + (+1)*35 = 35 m` and the centreline `68/2 = 34 m`
 `GK_DIST_MAX_POLICY_DELAY_TICKS = 35` is the derived ceiling; any change to a policy delay that
 raises the maximum requires revisiting #11 §3.8.4's CONTACT-before-inherited-guard proof.
 
-**LongKick realism / approval gate.** The current 35 m-from-own-goal receiverless target is a
-deliberately bounded B semantic default and ordinarily remains in the keeper's own half. It is not
-claimed to represent a calibrated full-length punt. The owner must explicitly accept this target or
-change `GK_DIST_FALLBACK_ADVANCE_M` before the W8 B amendment is approved; merging the PR is not
-treated as implicit approval of this realism choice.
+**LongKick realism / owner approval.** On September 26, 2026 the owner explicitly accepted the
+current `GK_DIST_FALLBACK_ADVANCE_M = 35 m` receiverless target as an **uncalibrated B default**. It is
+a bounded semantic target and ordinarily remains in the keeper's own half; it is **not** approval that
+realistic punt length is solved. The follow-up belongs to #5's Lofted trajectory model (current top
+speed 22 m/s) together with W8's zero-spin LongKick input. After B lands, the required evidence is the
+intended target versus the ball's actual first ground-contact point/distance; that measurement closes
+the follow-up decision rather than changing the 35 m target inside this approval landing.
 
 **B coverage obligation.** The frozen Stage A six-seed corpus observed `SlowDown` on every keeper
 episode. The same-corpus A→B comparison therefore covers only the SlowDown row and MUST NOT be cited
@@ -217,5 +219,6 @@ KD-9 precedence, not a limitation to be "fixed."
 | 0.3 | 2026-06-20 | — | PASS-2 fix pass: §3.3 product gains the fifth factor `tempoActionBias` (M-2); §3.4 `DefensiveLine` serialization pinned to the input dial, resolved depth recomputed each tick (M-1). |
 | 0.4 | 2026-09-25 | — | W8 B / ERR-011-016: freezes the first six-value goalkeeper-distribution draft before wiring — deterministic receiver/zone selector, 25 m local radius, low-index tie-break, mirrored 35 m centreline fallback zone, power, zero spin, 5/10/35-tick delays and zero RNG. Values are uncalibrated `[GT]`, not Stage A fitted. |
 | 0.5 | 2026-09-26 | — | W8 B review closure: gives every new numeric exactly one source tag and valid range, makes the 35-tick ceiling derived, routes fallback geometry through own-goal/attack-direction helpers instead of fixed-end literals, pins CONTACT to live receiver position with committed-position fallback, adds a selector worked example, preserves zero RNG, and records the 35 m LongKick fallback as an explicit owner-approval realism choice. |
+| 0.7 | 2026-09-26 | — | W8 B amendment APPROVED by owner, September 26, 2026. Accepts `GK_DIST_FALLBACK_ADVANCE_M = 35 m` as the uncalibrated B default while explicitly leaving realistic punt length open against #5's Lofted trajectory; B landing-point evidence is the closing input. B wiring is authorized only after PR #461 merges. |
 | 0.6 | 2026-09-26 | — | W8 B final consistency: corrects the inherited section preamble so spec-first W8 constants are not falsely claimed to already exist in `TacticalInstructionsConstants.cs` and `[GT]` is not mistaken for an optional illustrative value. Source implementation remains blocked on owner approval. |
 #endregion
