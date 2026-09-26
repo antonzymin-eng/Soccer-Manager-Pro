@@ -1,0 +1,97 @@
+# W8 Stage A frozen six-seed baseline — recorded results
+
+> **Measured source:** `b06595fbd409396c3ebad445cecd2b215b8e9e2a` (PR #458 merge)  
+> **Run:** `36212512965` — `W8 Stage A pinned baseline` — success  
+> **Population:** frozen six seeds from `w8-stage-a-preregistration.md`; 324,000 frames per seed  
+> **Status:** descriptive Stage A record only. No B numeric policy, delivery, timing, Law-12, or gameplay decision is inferred here.
+
+The workflow branch was `measure/w8-stage-a-baseline`, but both measurement jobs checked out the pinned source commit above before running. The W8 job and unchanged `foul-rate` job both passed their test + sentinel verification.
+
+## Evidence provenance
+
+| Item | Value |
+|---|---|
+| Workflow run | `36212512965` |
+| W8 job | `108321862991` |
+| W8 artifact | `10896108016` — `w8-stage-a-w8-stage-a-36212512965` |
+| W8 artifact ZIP SHA-256 | `2e94446fb02127b2b04d195706cf27658837fb95b903f18b061379198f1cdd2c` |
+| W8 artifact size | 1,118,320 bytes |
+| Foul-rate job | `108321863117` |
+| Foul-rate artifact | `10896387320` — `w8-stage-a-foul-rate-36212512965` |
+| Foul-rate artifact ZIP SHA-256 | `743548e6670de3627a71d849164c1ea8f99390f76a63e2d9f3c64b6541cb20db` |
+| Foul-rate artifact size | 170,677 bytes |
+| Artifact expiry | 2026-12-25 02:42:07Z |
+
+## Per-seed results
+
+| Seed | W8 hand claims | Keeper 0 | Keeper 11 | W3 successful claims | Delta | Old 360-frame drops | Reclaim <=300f | F/Y/R | Terminal digest |
+|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| `0x0F1E2D3C4B5A6978` | 101 | 29 | 72 | 91 | +10 | 0 | 0 | 4/1/0 | `6a0ef38092a424332483b0124d13429c9134c58eefdb421e7f4bbdee509cafc3` |
+| `0x00000000D1A6D05E` | 224 | 154 | 70 | 196 | +28 | 0 | 0 | 5/1/0 | `c47c5d8fc993dfb0fd29164e33bc7770b4ee74857c1875c58f421f7ceec30d3e` |
+| `0x0000000000000001` | 105 | 53 | 52 | 90 | +15 | 1 | 1 hand | 10/0/0 | `7f13a1adafac5b692c1757922f92d72eb12dc86137cfff7eb5ee415af358fe29` |
+| `0x00000000ABCDEF12` | 136 | 25 | 111 | 121 | +15 | 0 | 0 | 5/2/0 | `0767c1fa25b77bd36168564944cae973b1a0c41899b9d84601203b57ad6dacb6` |
+| `0x0000000099887766` | 148 | 44 | 104 | 130 | +18 | 0 | 0 | 10/1/0 | `802fa9a2d27319cd6c423730109604786c66b626f44e39f71ba9599574525008` |
+| `0x000000005A5A5A5A` | 148 | 44 | 104 | 125 | +23 | 0 | 0 | 9/0/1 | `62d7ce6b7b0f1e9edd61271bdf6c899f3f1b2d5f8a4e9f1f0f2310fba5920088` |
+| **Total** | **862** | **349** | **513** | **753** | **+109** | **1** | **1 hand** | **43/5/1** | — |
+
+The W8 hand-claim population is therefore 109 above the earlier W3 `successfulKeeperClaims` population. This is recorded as the preregistered finding; it is not treated as a failed arm or a tuning signal.
+
+The W8 Tier-A discipline census matches the unchanged source-complete `foul-rate` instrument **exactly per seed**: 43 fouls, 5 yellows, 1 straight red, 0 second-yellow dismissals in aggregate. The source-gap falsifier did not fire.
+
+## Hand episodes
+
+All 862 hand episodes closed in the run:
+
+- 861 ended at canonical `PassKick` CONTACT.
+- 1 ended at the engine's old 360-frame ground drop.
+- No hand episode ended from a restart, takeover, other explicit release, replacement claim, or full-time censor.
+- Hand hold duration: min 6 frames, max 359 frames, mean 32.086 frames.
+- Same-keeper reclaim after the one old drop: 1 hand reclaim within the preregistered 300-frame window; 0 feet reclaims.
+
+While a hand episode was live, keeper Decision Tree selections were: PASS 1,003; HOLD 2,036; DRIBBLE 12; SHOOT 0. The last selected action at episode end was PASS for 853 episodes, HOLD for 1, and none observed for 8. These selections are descriptive and are not assigned as the cause of release unless CONTACT establishes it.
+
+The 861 hand-origin pass CONTACTs subsequently resolved as:
+
+| Outcome | Count |
+|---|---:|
+| interrupted by a later hand claim | 501 |
+| interrupted by another kick | 258 |
+| other agent controlled | 89 |
+| committed receiver controlled | 13 |
+
+## Last touch before hand claim
+
+| Preceding observable touch | Claims |
+|---|---:|
+| `PassKick` | 580 |
+| `GkHeadingKick` | 177 |
+| `first-touch-0` | 69 |
+| `ShotKick` | 15 |
+| `loose-pickup` | 13 |
+| `first-touch-1` | 6 |
+| `unattributed-collision-deflection` | 1 |
+| preceding `hand-claim` | 1 |
+
+The summary counter reported one unknown-last-touch claim because the unattributed collision deflection has no actor. Four claims followed a same-team touch; four were also deliberate-kick candidates under the preregistered narrow classification.
+
+## Geometry and dry-run target selector
+
+Keeper position at the 862 hand acquisitions: 842 inside own penalty area, 1 on the boundary, 19 outside. Ball contact position: 848 inside, 3 boundary, 11 outside. These are diagnostic classifications only; Stage A does not change claim legality or sanction behavior.
+
+The dry selector found a receiver for 860/862 hand claims and used the fixed receiverless zone for 2/862. Across hand + feet acquisitions it found a receiver for 1,081/1,087 episodes and used the zone fallback for 6/1,087. Every observed policy value was `SlowDown`; no B mapping is inferred from that fact.
+
+## Restart census
+
+Applied restart cues across the six seeds: Corner 4; FreeKick 80; GoalKick 13; KickOff 47; ThrowIn 81. None was the first end cause of a hand episode.
+
+## Fixed next step
+
+Stage A is now result-bearing and recorded. The next landing remains the separately scoped behavior-neutral possession-change helper from the owner packet §1.9:
+
+1. route the six mid-match `_possessingAgentId` writers through one helper;
+2. keep constructor/startup, test-only force-loose, and snapshot restore direct with explicit disposition;
+3. preserve caller guards, ball operations, claim cancellation, event timing, and assignment order;
+4. add a structural writer-inventory guard;
+5. prove exact frozen-seed digest equality before accepting the refactor.
+
+No #11 clock correction, hand teardown, B distribution producer, numeric policy, schema change, or RNG change belongs in that helper landing.
