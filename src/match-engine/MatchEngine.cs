@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-26 (W8 pre-B tracking closeout — records the already-merged assignment-only SetPossessingAgent seam and six routed mid-match writers; no runtime delta in this follow-up)
 // Modified: 2026-09-22 (W6 ordering correction surfaced by W3: reattach every Controlled holder after Resolve collision position-correction writeback; unconditional/default-engine trajectory change, no schema/RNG change)
 // Modified: 2026-09-22 (W3 / #435 §6.2: add nonserialized measurement-only production counters for frozen six-seed evidence)
 // Modified: 2026-09-22 (W3 / ERR-011-012: claim arming/lifetime corrected; claim reach side locked+serialized in the still-unmerged v23 block; observation seam made state-pure)
@@ -10452,4 +10453,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.87    | 2026-09-22 | —      | W3 event provenance: when Head wins a mixed Hand/Head contest, carry the W3 duel id into #10 before loser suppression so HeaderExecutedEvent remains truthfully contested. Frame-local only. |
 // | 1.88    | 2026-09-22 | —      | W6 ordering correction surfaced by W3: reconcile every Controlled holder immediately after Resolve collision position correction. This is unconditional and can change default-engine trajectories/digests for keeper or outfield carriers even with GK/Heading disabled; it reuses the same attachment funnel and adds no schema field or RNG draw. |
 // | 1.89    | 2026-09-23 | —      | PR #439 Codex closure / ERR-011-014: possession acquisition and restart-taker awards hard-cancel live #11 ClaimIntent state immediately, closing the stale-Hand window. Stale default-off comments corrected; GK/Heading defaults ON since §5.Z.15. No schema/RNG/draw-order change. |
+// | 1.90    | 2026-09-26 | —      | W8 pre-B helper closeout (already merged in #460): six real mid-match _possessingAgentId mutation sites route through assignment-only SetPossessingAgent; constructor/opening kickoff, restore and TestOnly_ForceBallLoose remain direct by explicit disposition. This follow-up records the omitted history only; no gameplay/schema/RNG change. |
 #endregion
