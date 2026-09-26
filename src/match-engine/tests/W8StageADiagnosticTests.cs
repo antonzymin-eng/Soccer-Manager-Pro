@@ -59,15 +59,24 @@ namespace TacticalDirector.MatchEngine
             // No baseline figures are printed or inspected by this structural gate.
             const ulong seed = 0x0F1E2D3C4B5A6978UL;
             var observed = new MatchEngine(seed);
-            var plain = new MatchEngine(seed);
             observed.EnableGkHeading();
-            plain.EnableGkHeading();
             observed.TestOnly_W8StageAObserver = _ => { };
+            var digests = new byte[600][];
             for (int frame = 0; frame < 600; frame++)
             {
                 observed.RunTick();
+                digests[frame] = observed.CurrentSnapshotDigest;
+            }
+            observed.TestOnly_W8StageAObserver = null;
+
+            // EventBus is process-global: construct and run the second engine only after the first
+            // chain has finished, as the existing deterministic replay probes do.
+            var plain = new MatchEngine(seed);
+            plain.EnableGkHeading();
+            for (int frame = 0; frame < 600; frame++)
+            {
                 plain.RunTick();
-                CollectionAssert.AreEqual(plain.CurrentSnapshotDigest, observed.CurrentSnapshotDigest,
+                CollectionAssert.AreEqual(plain.CurrentSnapshotDigest, digests[frame],
                     $"observer altered snapshot at frame {frame + 1}");
             }
         }
