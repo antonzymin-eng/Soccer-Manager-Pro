@@ -21,6 +21,14 @@ class Instrument:
 
 
 INSTRUMENTS = {
+    "w8-stage-a": Instrument(
+        "w8-stage-a",
+        "TD_W8_STAGE_A",
+        "src/match-engine/tests/W8StageADiagnosticTests.cs",
+        "src/match-engine/tests/match-engine-tests.gen.csproj",
+        "FullyQualifiedName~W8StageADiagnostic_ReportsFrozenSixSeedBaseline",
+        "=== W8 Stage A frozen six-seed baseline ===",
+    ),
     "w12-gate-firing": Instrument(
         "w12-gate-firing",
         "TD_W12_GATE_DIAGNOSTIC",
