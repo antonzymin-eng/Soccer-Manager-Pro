@@ -360,12 +360,27 @@ The W8 B policy defaults are uncalibrated semantic values and are not fitted to 
 The 25 m local-selector core and fixed mirrored zone derive from the preregistered dry-selector shape;
 the policy-specific delivery/timing values are frozen here before B behavior is measured.
 
+**Stage A interpretation limits.** The baseline is dominated by a keeper claim→pass→claim loop
+(862 hand claims; 501/861 hand-origin passes later interrupted by a hand claim; only 13/861 reached
+the committed receiver; mean hand hold 32.086 frames). That loop is a known confound, not a tuning
+target. Its exact same-keeper/opponent-keeper split is being characterized with a test-only supplement
+on the pinned A production tree before B measurement. Also, every Stage A episode observed
+`SlowDown`; the frozen A→B corpus cannot validate the other five #21 policy rows. B therefore
+requires deterministic composed coverage of every policy independently of the six-seed comparison.
+
+**Possession seam evidence boundary.** PR #460's 6/6 digest equality proves only the assignment-only
+pre-B helper. Once B adds hand-episode teardown, that proof no longer establishes behavioral
+neutrality. B must prove that teardown fires only on a real possessor change with a live outgoing
+hand episode, and that the expected successful goalkeeper-distribution CONTACT is a normal-completion
+cause rather than self-cancellation.
+
 ---
 
 ## Version history
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.15 | 2026-09-26 | B review correction | Records Stage A's claim-pass-claim loop as a known A→B confound, the SlowDown-only corpus coverage gap, and the evidence boundary on PR #460's assignment-only digest proof. B adds all-six-policy composed fixtures, distance-sensitive #5 delivery speed/launch, and typed possession-change completion/cancellation semantics before wiring. |
 | 0.14 | 2026-09-25 | B contract promoted | #11/#5/#21/Match Engine now own the full pre-code B contract: six policy rows, deterministic selector/tie-break/fallback zone, zero RNG, exact tactical delays and power, profile-derived delivery ranges, faithful dedicated #5 request, 10 Hz clock correction, CONTACT-only release/event/W5 behavior, cancellation feedback and B schema obligation. ERR-011-015/016/017 filed spec-first; production wiring remains next. |
 | 0.13 | 2026-09-25 | architecture recorded | Owner-directed A preregistration/instrument before results, separate behavior-neutral possession helper with explicit ten-writer disposition and exact digest parity, then #11/#5/#21/Match Engine numeric B specs and #11 ERRs before B wiring; same-corpus A→B comparison. Bounds live windup configuration and leaves receiverless RollOut/ThrowOut to B specs. Review correction: A measures the real 60 Hz/10 Hz #11 clock mismatch, B corrects it after its ERR/spec text, and C limits the eight-second corner to own-area hand control with outside-area handling specified separately. |
 | 0.12 | 2026-09-25 | draft | Native two-lens advisor correction: Decision Tree keeper foot-action competition; live-control and possession-loss teardown; clearable distribution intent; serialized B windup latch and independent B/C schema changes; architecture-only approval governance. Carries event phase, #5 composition and cancellation obligations, and updates A baseline and B→C non-regression preregistration candidates. |

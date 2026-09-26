@@ -132,6 +132,14 @@ delivery kind.
 **Timing safety.** Delays are in #11's 10 Hz tactical-tick domain. No B policy may exceed **35
 tactical ticks** without revisiting #11 §3.8.4's CONTACT-before-inherited-guard proof.
 
+**B coverage obligation.** The frozen Stage A six-seed corpus observed `SlowDown` on every keeper
+episode. The same-corpus A→B comparison therefore covers only the SlowDown row and MUST NOT be cited
+as execution evidence for the other five policies. Before B merges, deterministic composed tests
+must exercise each of the six enum values and lock delivery variant, delay, receiver selector or
+fallback zone, power/spin mapping, and no-RNG behavior. At least one fixture per receiver-capable
+policy must cover both eligible-receiver and no-eligible-receiver outcomes; `LongKick` must lock
+its receiverless-by-design path.
+
 **`DefensiveLine` single-source (resolves PASS-1 M-2).** `TeamTactic.DefensiveLine` is the manager-set
 **input dial** only; it is **not** a parallel depth value. Each tick the assembly layer **recomputes**
 `DefensiveLineDepth = Clamp01(TeamTactic.DefensiveLine + MentalityLineBias[mentality])` and writes it

@@ -631,7 +631,21 @@ keeping the request type distinct:
 | Throw | 10.0–28.0 | 5°–12° | existing Driven profile bounds |
 | Kick | 8.0–22.0 | 20°–45° | existing Lofted profile bounds |
 
-The scalar speed is `lerp(vMin, vMax, clamp01(EmittedPower01))`. The requested
+The scalar speed preserves #5's existing **distance-sensitive** velocity shape rather than
+mapping power directly onto the whole speed range. Let `D` be the XY distance from the live
+CONTACT release point to `TargetPosition`, clamped to `[0.001, distMax]` for the selected
+numeric profile:
+
+```
+distanceFraction = D / distMax
+speedBase = vOffset
+          + clamp01(EmittedPower01) * distanceFraction * (vMax - vOffset)
+kickSpeed = clamp(speedBase, vMin, vMax)
+```
+
+This is the ordinary §3.2 distance/power shape with `EmittedPower01` already normalized by #11;
+goalkeeper distribution does **not** apply a second KickPower, fatigue or weak-foot multiplier.
+Launch angle uses the selected profile's existing distance-sensitive §3.3 formula. The requested
 `SpinIntent` is passed through exactly; the ordinary pass spin generator does not run.
 
 **One error model.** Goalkeeper distribution uses the existing deterministic #5 angular-error chain
@@ -826,7 +840,7 @@ only. Only a tackle interrupt — a real game event — produces a cancellation 
 |---------|------|--------|-------|
 | 1.0 | March 7, 2026, 2:00 PM PST | Claude (AI) / Anton | Initial draft. WeakFoot accuracy and power penalty models. Six-state machine with full transition table. Urgency-driven windup reduction. Two event struct definitions. All formulas derived from Appendix A.6. State machine architecture from §2.2.3 and §4.4.2. Event structs from §4.6.1. |
 | 1.1 | May 6, 2026 | Claude (AI) / Anton | Resolves §3.3–§3.9 follow-up audit finding F-A02: localized `WINDUP_FRAMES` and `FOLLOWTHROUGH_FRAMES` ownership entirely in §3.8.10 (state-machine timing values, not pass-type physical intrinsics). Removed dead-end "from §3.1.4 PhysicalProfile" citation; updated §3.8.2 state table and §3.8 cross-spec dependencies table to reference §3.8.10 as canonical source. Non-behavioral with respect to formula code (values unchanged). |
-| 1.2 | September 25, 2026 | — | W8 B / ERR-011-015: §3.8.13 defines the dedicated goalkeeper request mode, profile-derived delivery bounds, one deterministic error model, exact #11 windup, CONTACT recheck/release, typed feedback, W5 receiver-latch rule, and canonical snapshot obligation. Existing `PassType` ordinals and ordinary pass semantics are unchanged. |
+| 1.2 | September 25, 2026 | — | W8 B / ERR-011-015: §3.8.13 defines the dedicated goalkeeper request mode, profile-derived delivery bounds, **distance-sensitive** #5 velocity/launch shapes, one deterministic error model, exact #11 windup, CONTACT recheck/release, typed feedback, W5 receiver-latch rule, and canonical snapshot obligation. Existing `PassType` ordinals and ordinary pass semantics are unchanged. |
 
 ---
 

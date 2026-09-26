@@ -1162,7 +1162,7 @@ Accepted initiation moves #11 to `Distributing` but **does not release possessio
 2. #5 samples the live keeper position, forms `releasePoint`, resolves the one B error model,
    and calls the ball kick exactly once.
 3. The Match Engine adapter releases controlled possession through the central possession-change
-   seam on that same CONTACT.
+   seam on that same CONTACT, tagged as the **successful goalkeeper-distribution CONTACT** cause.
 4. W5 is armed exactly once when `TargetAgentId >= 0`; receiverless zone execution arms no W5
    receiver latch.
 5. `DistributionExecutedEvent` is published in its registered **Resolve** phase only after the
@@ -1170,9 +1170,21 @@ Accepted initiation moves #11 to `Distributing` but **does not release possessio
 6. #11 receives completion feedback, clears the intent, and transitions
    `Distributing → Recovering`.
 
+**Possession-change teardown rule.** The central possession seam first compares the old and next
+possessor. If they are equal, it performs no #11 teardown. If they differ, #11 teardown is considered
+only when the outgoing possessor owns a live hand episode. An ordinary loss/takeover/restart while
+such an episode is live cancels the distribution and clears the intent. The expected possession
+release caused by **this distribution's successful #5 CONTACT is not a cancellation**: it ends hand
+control normally and must not cancel the #5 execution or clear its intent before the completion
+feedback above is consumed. The composition root therefore carries a typed possession-change cause
+(or an equivalently explicit non-ambiguous signal); inferring this case from `next == NO_POSSESSION`
+is forbidden because ordinary kicks use the same possession seam.
+
 If #5 rejects initiation, loses possession before CONTACT, or is explicitly cancelled, it produces
 cancellation feedback; #11 clears the intent/hand episode and may not publish
 `DistributionExecutedEvent`. `ClearDistributeIntent` is the idempotent #11 cleanup entry point.
+The pre-B helper's frozen-digest proof applies only to its assignment-only form and is **not**
+evidence that this B teardown behavior is neutral.
 
 ### 3.8.4 Deadline budget
 
