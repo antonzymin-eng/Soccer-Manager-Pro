@@ -7,7 +7,7 @@ modes for Pass Mechanics Specification #5. This section defines the "what" and "
 before Section 3 defines the "how."
 
 **Created:** February 20, 2026, 5:30 PM PST
-**Version:** 1.2
+**Version:** 1.3
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -33,6 +33,7 @@ before Section 3 defines the "how."
   - [2.4.1 PassRequest](#241-passrequest)
   - [2.4.2 PassResult](#242-passresult)
   - [2.4.3 PhysicalProfile (Internal)](#243-physicalprofile-internal)
+  - [2.4.4 GoalkeeperDistributionRequest — W8 B](#244-goalkeeperdistributionrequest--w8-b)
 - [2.5 Non-Functional Requirements](#25-non-functional-requirements)
 - [2.6 Failure Modes and Recovery](#26-failure-modes-and-recovery)
 - [2.7 Open Dependency Flags](#27-open-dependency-flags)
@@ -645,12 +646,21 @@ public struct GoalkeeperDistributionRequest
     public int TeamId;
     public GoalkeeperDeliveryVariant Delivery;
     public int TargetAgentId;
+    // Commit-time aim/fallback point. If TargetAgentId remains eligible at CONTACT,
+    // #5 replaces this with that receiver's live CONTACT-frame position.
     public Vector3 TargetPosition;
     public float EmittedPower01;
     public Vector3 SpinIntent;
     public float ReleaseHeightM;
     public int WindupFrames;
     public int FrameNumber;
+}
+
+public enum GoalkeeperDistributionFeedbackKind : byte
+{
+    Rejected = 0,   // synchronous INITIATING rejection; WINDUP never started
+    Cancelled = 1,  // accepted, then ended before CONTACT
+    Completed = 2   // exactly one successful CONTACT kick
 }
 ```
 
@@ -661,8 +671,28 @@ owns a separate stable goalkeeper-distribution mode in its snapshot state; W8 B 
 one Match Engine snapshot-schema bump when code lands.
 
 The request is accepted only while the executor is idle and `AgentId` still owns possession.
-Receiverless execution is valid for all three variants. Cancellation/completion feedback is exposed
-to the composition root so #11 can clear its intent and hand episode.
+Receiverless execution is valid for all three variants.
+
+**Target semantics.** `TargetPosition` is the commit-time receiver position or already-selected
+receiverless fallback. It is therefore always a valid fallback point. At CONTACT, #5 re-queries the
+host's live roster/agent surface. If `TargetAgentId >= 0` and that receiver remains eligible under
+#21 §3.4.1, #5 aims at the receiver's **live CONTACT-frame position**. If the receiver disappeared,
+was sent off, or is otherwise no longer eligible, #5 applies #11 F-05: set the effective receiver to
+`-1`, use the stored `TargetPosition`, then apply F-09 / own-goal-line safety. The target is not
+silently frozen at commit for up to a full windup.
+
+**Feedback semantics.** #5 returns one typed
+`GoalkeeperDistributionFeedbackKind` to the composition root:
+
+- `Rejected`: INITIATING failed; WINDUP never existed and no ball mutation occurred.
+- `Cancelled`: request was accepted but ended before CONTACT; no ball mutation/event occurred.
+- `Completed`: exactly one CONTACT kick occurred.
+
+If Rejected/Cancelled occurs while the same keeper still owns controlled possession, the host clears
+only the distribution intent and leaves #11 in `HandsOnBall` with the original claim clock; a new
+intent may be attempted no earlier than a later 10 Hz tactical heartbeat. If possession was actually
+lost, the hand episode ends and #11 moves to `Recovering`. Successful CONTACT uses the distinct
+normal-completion possession-change cause and may not self-cancel the just-completed execution.
 
 ## 2.5 Non-Functional Requirements
 
@@ -718,6 +748,7 @@ Neither flag blocks Section 2. Both flags block Section 3.
 | 1.0 | February 20, 2026, 5:30 PM PST | Claude (AI) / Anton | Initial draft. 10 FRs (expanded from outline). NFR section added. Physical profile table included. FM table formalised. ERR-007/008 flags carried forward from Section 1. |
 | 1.1 | March 25, 2026 | Claude (AI) / Anton | Post-audit fixes: Decision Tree #7→#8 (C-03, 2 instances); FR-02 fatigue convention corrected 1.0=rested→0.0=rested (C-04); §2.4.3 profile table marked SUPERSEDED by §3.1.4 (M-03); FR-03 Lofted angle range 35°→45°, Cross ranges aligned with §3.1 (Mod-01). |
 | 1.2 | September 25, 2026 | — | W8 B / ERR-011-015: adds #5-owned `GoalkeeperDistributionRequest` and append-only `GoalkeeperDeliveryVariant`; preserves ordinary `PassRequest`/`PassType` ABI and makes receiverless execution, serialized mode, possession-at-initiation and completion/cancellation feedback explicit. |
+| 1.3 | September 26, 2026 | — | W8 B review closure: pins `TargetPosition` as the commit-time fallback while valid receiver execution re-aims at the receiver's live CONTACT-frame position; defines `Rejected` / `Cancelled` / `Completed` feedback and the exact #11 state/claim-clock consequence for retained-possession versus real possession loss. |
 
 ---
 

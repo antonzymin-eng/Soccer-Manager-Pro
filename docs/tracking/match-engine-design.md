@@ -1,7 +1,7 @@
 # Match Engine — Tick Orchestrator Composition Root (Design Note)
 
 > **Created:** June 15, 2026
-> **Last Updated:** September 25, 2026 (v2.10 — W8 B pre-code contract: Match Engine owns keeper hand-distribution production, supplies #11 a 10 Hz tick, suppresses keeper foot actions during hand control, translates #21→#11→#5, and releases possession/W5/event only at #5 CONTACT. No production code in this revision.)
+> **Last Updated:** September 26, 2026 (v2.11 — W8 B review closure: exact clock mechanism, retained-possession rejection/cancel semantics, live CONTACT target, derived own-goal fallback and explicit 295<355<360 budget. No production code in this revision.)
 > **Prior maintained version:** August 3, 2026 (v2.9 — §5.Z.23 conversion-at-contact; full account retained in Version History.)
 > **Legacy header chain (retained verbatim):** July 26, 2026, later same day (v2.3.1 — **§5.Z Phase H LANDED: a production match now
 > plays.** ERR-030-014 is closed. The possession bootstrap is five seams, not one: the kickoff/restart
@@ -322,36 +322,61 @@ requires adding read/restore seams — parallel to
 
 1. On every 10 Hz tactical heartbeat, derive
    `gkTacticalTick = floor(currentFrame / FramesPerTacticalTick)` once and pass that value to #11.
-   Never pass the raw 60 Hz frame as #11 `currentTick` (**ERR-011-017**).
+   Never pass the raw 60 Hz frame as #11 `currentTick` (**ERR-011-017**). The live defect is not
+   merely a sixfold acceleration: after frame 72, the first tactical pass following an ordinary claim
+   already satisfies `currentFrame - floor(claimFrame/6) >= 60`.
 2. While a keeper has live hand control, suppress only that keeper's Decision Tree on-ball
    PASS/SHOOT/DRIBBLE/HOLD dispatch. Keeper feet-possession remains ordinary.
 3. Read #21 `GkDistributionPolicy`, run its deterministic total selector, and commit #11
    `DistributeIntent` when its tactical delay and #11 release gate are both satisfied
    (**ERR-011-016**). Zero RNG draws.
 4. Translate #11 fields to #5 `GoalkeeperDistributionRequest` in Match Engine; #11 and #5 keep no
-   assembly reference to each other (**ERR-011-015**).
-5. After #5 accepts initiation, keep the same keeper as controlled possessor through WINDUP.
-   The pre-B `SetPossessingAgent` seam remains the sole live identity writer, but B extends it with
-   explicit transition cause semantics. It captures the old possessor and is a no-op for teardown
-   when `old == next`.
-6. A real change tears down #11 hand state only when the **outgoing** possessor owns a live hand
-   episode. Ordinary loss/takeover/restart cancels that episode. A successful goalkeeper-distribution
-   CONTACT is a distinct typed cause: it ends hand control normally and MUST NOT cancel the #5
-   execution or clear #11's intent before completion feedback. A bare
-   `SetPossessingAgent(NO_POSSESSION)` is insufficient to distinguish those cases.
-7. At successful #5 CONTACT, apply the kick, then clear possession through that typed successful-
-   distribution cause. Arm W5 exactly once for a real receiver; receiverless zone distribution arms
-   no W5 receiver latch.
-8. Publish `DistributionExecutedEvent` only after CONTACT in Resolve, then feed completion to #11.
-   Other cancellation/possession-loss feeds cleanup and publishes no executed event.
-9. B adds canonical cross-tick state for the #5 goalkeeper mode and any host latch required to wait
-   for CONTACT; implementation bumps `SNAPSHOT_SCHEMA_VERSION` once and proves save/restore.
-10. Before B merge, test all six #21 delays against **live configured** #11 windup values and prove
-    CONTACT precedes both inherited B guards. No policy may exceed the 35-tactical-tick ceiling.
-11. The frozen Stage A six-seed corpus exercised **SlowDown only**. Its A→B rerun therefore measures
+   assembly reference to each other (**ERR-011-015**). The request's `TargetPosition` is the
+   commit-time fallback point, not a promise to aim at a stale receiver position.
+5. #5 `Rejected` while the keeper still owns controlled possession leaves #11 in `HandsOnBall`,
+   clears only the intent, preserves the original claim/release clocks, and permits retry only on a
+   later tactical heartbeat. An accepted request moves #11 to `Distributing`.
+6. While `Distributing`, keep the same keeper as controlled possessor through WINDUP. If #5
+   `Cancelled` while possession is retained, return to `HandsOnBall` and preserve the claim clock.
+   If cancellation accompanies real loss/restart/takeover, end the hand episode and enter
+   `Recovering`.
+7. The pre-B `SetPossessingAgent` seam remains the sole live identity writer, but B extends it with
+   explicit transition-cause semantics. It captures old and next possessor; `old == next` performs
+   no hand teardown. A real change tears down only a live **outgoing** hand episode.
+8. A successful goalkeeper-distribution CONTACT is a distinct normal-completion cause. It ends hand
+   control without cancelling #5 or clearing #11 before completion feedback. A bare
+   `SetPossessingAgent(NO_POSSESSION)` is insufficient because ordinary kicks share that seam.
+9. At CONTACT, #5 revalidates the selected receiver through the host's live roster. A still-eligible
+   receiver is aimed at his **live CONTACT-frame position**; a missing/ineligible receiver becomes
+   receiverless and uses the committed fallback point through #11 F-05/F-09. Receiverless execution
+   never invents a W5 receiver latch.
+10. Fallback geometry must derive from shared `OwnGoalX(teamId)` / `AttackDirectionX(teamId)`
+    semantics plus #21's `GK_DIST_FALLBACK_ADVANCE_M`; do not duplicate literal team-0/team-1
+    coordinates at the distribution call site. The present engine has no half-time end swap; if that
+    changes, the shared helper becomes the dependency and W8 geometry follows it.
+11. #5 uses fixed error-hash discriminator `0x47`, outside ordinary `PassType` ordinals 0–6.
+    No PRNG stream/domain/draw site or draw order is added.
+12. At successful #5 CONTACT, apply the kick, then clear possession through the typed successful-
+    distribution cause. Arm W5 exactly once for a real effective receiver; receiverless distribution
+    arms none.
+13. Publish `DistributionExecutedEvent` only after CONTACT in Resolve, then feed `Completed` to
+    #11. Rejected/cancelled paths publish no executed event.
+14. `Distributing` means **accepted #5 request only**. The temporary legacy no-intent six-second
+    condition may signal defensively while #11 remains `HandsOnBall`; it may not manufacture an
+    intent-less `Distributing` state. C owns the later Law-12 replacement.
+15. B adds canonical cross-tick state for the #5 goalkeeper mode and any host latch required to wait
+    for CONTACT; implementation bumps `SNAPSHOT_SCHEMA_VERSION` once and proves save/restore.
+16. Deadline proof uses live-config bounds: max policy wait `35*6 = 210` frames, max Kick windup
+    `ceil(1400*60/1000)=84` frames, plus one CONTACT update = **295 frames**. Corrected #11's
+    earliest physically aligned 60-tick expiry is **355 frames** after a late-cell claim, and the
+    engine drop is 360; therefore `295 < 355 < 360`, with at least 60 frames of margin to the
+    earlier inherited boundary. A test must recompute this from live configured values.
+17. The frozen Stage A six-seed corpus exercised **SlowDown only**. Its A→B rerun therefore measures
     only that policy path. Before B merge, deterministic composed fixtures MUST exercise all six
-    policy rows, including receiver and receiverless fallback arms, so Quick/ShortKick/LongKick/
-    RollOut/ThrowOut do not ship solely from the SlowDown corpus.
+    policy rows, including receiver and receiverless fallback arms.
+18. PR #460's exact-digest evidence proves only the assignment-only pre-B helper. Once B attaches
+    teardown/cause logic, B must prove those semantics directly; the old neutrality citation does not
+    extend across this change.
 
 **Collision ↔ movement ordering contract (one-tick lag).** `AgentMovementSystem.Update`
 (Physics, phase 3) takes collision force / grounded / knockdown as **inputs**, but
@@ -1956,6 +1981,7 @@ question Step 0 exists to ask.
 | 2.5     | 2026-07-28 | —      | **§5.Z.19 — shot speed + the physical goal frame (the §5.Z.18 residual lever (b)) fixed and measured.** ERR-008-016 (#8 §3.5.3 PowerIntent floor-plus-modulation — the product form pinned nearly every shot at its own 0.1 clamp floor), ERR-006-004 (#6 `VFloor` 10 → 24 over two measured calibration iterations), ERR-001-005 (the goal frame physical: `ApplySweptGoalFrameCollision` six-cylinder segment test — `ApplyGoalPostCollision`'s first production caller; crossing-point goal-line adjudication via the `CheckBoundaries` prevPosition overload). Engine: `_prevTickBallPosition` within-tick capture + swept call in RunPhysicsPhase, crossing-point adjudication in CheckRestartAndApply, `TestOnly_WoodworkStrikes`. Measured: shot-tick means 6.9–10.3 → 14.7–16.1 m/s, maxima to 27.6, shots/match 59–70 → 31–45, goals/shot ROSE 0.14–0.25 → 0.38–0.42 (the keeper's conversion — lever (c) — now measured against real pace). New `match-engine-shot-speed` scenario (5 of 7 predicates fail pre-fix, verified by execution) + `SweptGoalFrameTests` (11) + PowerIntent locks (3). No schema/RNG/draw-order change. Owner: `shot-speed-woodwork-design.md`. |
 | 2.4     | 2026-07-27 | —      | **§5.Z.18 — the shot-outcome distribution (the §5.Z.17 residual) fixed and measured.** ERR-006-002 (`finalVelocity = finalDirection × kickSpeed` per #6's own §3.5.7; the §3.5.6 launch-tilt aim — the vertical half of the placement/error model live for the first time), ERR-006-003 (the error cone is a cone: `tan(err) × distance` at the goal plane), ERR-001-004 (the `z < Diameter` gate removed from `CheckBoundaries` + `IsOutOfBounds` — the goal has a crossbar, airborne crossings adjudicate at the crossing per Law 9/10), ERR-003-007 (`OnAgentCollision` live: `BallCollision.ApplyAgentDeflection`, `BodyPartCoefficients`' first consumer, stateless approaching-only self-block guard, `[GT] AgentDeflection.MinBallSpeedMps` = 10 re-anchored from measurement), the `ShotWorldAdapter` pressure query live (was `0f`; first-touch `PressureEvaluator` + §5.Z.14 un-mirror), `MIN_GOAL_VISIBILITY` 0.05 → 0.12. Measured: goals/match 15.3 → 12.3, goals/shot 0.24–0.29 → 0.14–0.25, fast-ball body contacts 0 → 560–612/match. New `match-engine-shot-outcomes` scenario (3 of 8 predicates fail pre-fix, by execution in a worktree at the pre-fix commit) + 17 unit locks + the `ShotOutcomeDiagnosticTests` instrument. Two tests inverted (encoded the old z-gate contract). No schema/RNG/draw-order change. Residual levers recorded: shot volume (~2.5× football), shot speed (~7–10 m/s means vs ~25), keeper conversion. Owner: `shot-outcome-distribution-design.md`. |
 | 2.10    | 2026-09-25 | —      | **W8 B spec-first contract.** Match Engine becomes producer/translator for keeper hand distribution: 10 Hz #11 clock conversion (ERR-011-017), #21 deterministic selector and DT foot-action suppression (ERR-011-016), dedicated #11→#5 request translation (ERR-011-015), possession held through windup and released only at CONTACT, typed possession-change cause so successful distribution completion cannot self-cancel, W5 receiver latch, Resolve-phase DistributionExecutedEvent, all-six-policy fixture coverage, and one B snapshot-schema bump. No production code changed. |
+| 2.11    | 2026-09-26 | —      | **W8 B review closure.** Pins retained-possession Rejected/Cancelled behavior, accepted-only `Distributing`, live CONTACT receiver targeting with committed fallback, helper-derived fixed-end geometry, error-hash discriminator `0x47`, exact ERR-011-017 first-pass mechanism, the `210+84+1=295<355<360` guard proof, and the evidence boundary on #460. No production code changed. |
 | 2.3.1  | 2026-07-26 | —      | **§5.Z Phase H LANDED — ERR-030-014 closed; a production match now plays.** Five seams, four of them found by running the composed engine one after another (each visible only once the previous was fixed — §5.Z.6). KD-H1 restart taker award: `ApplyRestart(position, awardedTeam)` with every call site declaring its team (kickoff home / second half the other side per Law 8 / post-goal the conceding team / RestartResolver's award / offside the defenders / foul the victim's team); taker = nearest non-sent-off agent of that team, ties to lower index. New `[FIXED] FIRST_HALF_KICKOFF_TEAM` + `[DERIVED] SECOND_HALF_KICKOFF_TEAM`. KD-H2 assignment not imparted velocity (`ApplyKick` stays the sole motion producer). KD-H3 `RunLooseBallPickup` — a loose ball at REST is claimed by an agent within the new `[GT] LooseBallPickupRadiusM`, the exact speed-gate complement of `RunFirstTouch` so the two can never both fire. KD-H5 / **ERR-008-014** the DT loose-ball collect, emitted as the SOLE off-ball option for one host-designated collector per team (`TacticalContext.LooseBallCollector`; host-designated because only it knows who is sent off — a perception-derived "nearest teammate" rule deadlocked on a frozen red-carded agent). KD-H4 / **ERR-008-015** the PASS/SHOOT completion sweep — `NotifyActionComplete` had zero production callers, so every agent that passed or shot was frozen in EXECUTING for the rest of the match; plus `OnPossessionChanged` no longer interrupts a holder whose executor is still in flight. New acceptance scenario `match-engine-play-develops` (6 seeds × 9 min; every predicate fails pre-Phase-H, incl. `play-still-alive-at-final-tick`, which caught two of the four stalls) + `MatchEnginePossessionBootstrapTests` (11) + `OptionGeneratorTests` (+3). 21 existing tests updated — most encoded the "a restart clears possession" contract that made the deadlock possible. No `SNAPSHOT_SCHEMA_VERSION` change. **Full dotnet gate: PASSED, 0 failures (whole tree green).** Recorded NOT fixed (§5.Z.7): the foul heuristic's ~7 red cards per 9 minutes; the process-static EventBus's interleaved-engine divergence; #5's FM-08 Error-level log; the `FR-PO-052` perf baseline needing re-capture. |
 | 2.3     | 2026-07-20 | —      | **Phase G Phase-2 LANDED — distinct-squad re-projection (#27 T3 / KD-3).** New public `ISquadProvider` (`src/match-engine/ISquadProvider.cs`, the `ClubId → Squad` resolver) threaded into `RestoreFromSnapshot(…, ISquadProvider squads = null)`; `ReprojectDistinctSquads` replaces the Phase-1 distinct-squad fail-loud — neutral fast-path returns immediately, each team with a non-sentinel `_rosterClubId` resolves its roster (ClubId-check + `ValidateSquadSize`/`ValidateSelectedRecords`, both teams before any apply), re-runs `LineupSelector` + `PlayerAttributeProjection` for the base lineup (`ReprojectBaseLineup`, attribute arrays + the un-serialized bench GK flags `_benchIsGoalkeeper`; the serialized on-pitch `_isGoalkeeper` stays the restored value), then replays the substitutions the serialized `_activeBenchSlot` records (`ReprojectSubstitutions`, the attribute half of `SubstitutePlayer`). Fail-loud on absent provider / unresolvable ClubId (`NotSupportedException`) / mismatched returned ClubId (`InvalidOperationException`) (R4). `MatchEngineSnapshotRestoreTests` v1.1: distinct-squad G3 round-trip (base / mid-match sub / post-restore sub / post-restore keeper-for-keeper sub) + three provider fail-loud gates; new `TestOnly_BenchIsGoalkeeper` seam. No `SNAPSHOT_SCHEMA_VERSION` change. `MatchEngine.cs` v1.42. Full dotnet gate: PASSED, 0 failures (263 match-engine tests; whole tree green). Implementation finding folded in: `_benchIsGoalkeeper` is NOT serialized (only on-pitch `_isGoalkeeper` is), re-projected for post-restore keeper subs. Discovered out-of-scope (Phase-1 completeness follow-up, root `CLAUDE.md` OPEN ISSUES): a keeper-onto-outfield-slot substitution post-restore diverges via a Positioning-AI (#12) GK-flag-flip formation-slot interaction. See `snapshot-deserialize-design.md` v0.8. |
 | 2.2     | 2026-07-20 | —      | **Phase G Phase-1 COMPLETE — reader LANDED.** `DeserializeWorldState` (symmetric mirror of `SerializeWorldState`, restore-seam reconstruction, version-gate + event-ledger-boundary trailing guard) + the `RestoreState` counterparts (Pressing/Defensive/Attacking/Perception/Positioning + `MovementCommand.ReconstructFromSnapshot`) + the static `RestoreFromSnapshot` factory (fingerprint gate → boot + EventBus reset → deserialize → KD-3 distinct-squad fail-loud → digest-chain + clock restore) + `MatchEngineSnapshotRestoreTests` (G3 round-trip determinism + fail-loud guards). Findings folded in during landing: `_possessingAgentId`/`_prevPossessingAgentId` reconstructed from the restored MatchContext; the trailing guard made event-ledger-aware. No `SNAPSHOT_SCHEMA_VERSION` change. `MatchEngine.cs` v1.41. Full dotnet gate: PASSED, 0 failures (257 match-engine tests; whole tree green). See `snapshot-deserialize-design.md` v0.7. |

@@ -1,9 +1,9 @@
 # Tactical Instructions Specification #21 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 20, 2026
-**Last Updated:** September 25, 2026 (v0.6 — W8 B total goalkeeper-distribution policy contract)
-**Version:** 0.6
-**Status:** APPROVED (June 20, 2026)
+**Last Updated:** September 26, 2026 (v0.7 — W8 B amendment approval gate made explicit)
+**Version:** 0.7
+**Status:** APPROVED baseline (June 20, 2026); W8 v0.6–v0.7 amendment PENDING OWNER APPROVAL
 
 ---
 
@@ -139,4 +139,5 @@ Snapshot contribution is governed by FR-TI-028. In-match mutation timing by FR-T
 | 0.4 | 2026-07-07 | — | Cheap-item addition: + FR-TI-033 (`MarkingOrientation` → #14 MAN_MARK radius); TeamTactic field table + Balanced factory description updated. |
 | 0.5 | 2026-07-10 | — | Back-props ERR-021-005/006/007 (#23/#24/#25 `APPROVED`): `DismarkIntensity`, `BuildUpStructure`, `RotationFreedom` appended to the TeamTactic field table in spec-approval order; Balanced factory notes all three as zero-value identities. Behaviour contracts stay in the owning specs (FR-DM/FR-BU/FR-RO); serialization coverage lands with each spec's wiring via `WriteTeamTactic` + one `SNAPSHOT_SCHEMA_VERSION` bump per landing (Appendix B v0.5). |
 | 0.6 | 2026-09-25 | — | W8 B: FR-TI-022 becomes a total deterministic producer contract for #11 distribution. Exact six-value mapping, selector/tie-break, fallback zone, power and tactical-tick delays are normative in §3.4.1. Zero RNG; no enum ordinal change. |
+| 0.7 | 2026-09-26 | — | W8 B review closure: the historical June APPROVED baseline remains approved, but the W8 amendment is explicitly PENDING OWNER APPROVAL. Merge is not treated as approval; B wiring remains blocked until owner acceptance of the amended FR-TI-022 / §3.4.1 contract. |
 #endregion

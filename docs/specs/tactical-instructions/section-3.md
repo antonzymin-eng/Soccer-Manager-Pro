@@ -1,9 +1,9 @@
 # Tactical Instructions Specification #21 — Section 3: Algorithms
 
 **Created:** June 20, 2026
-**Last Updated:** September 25, 2026 (v0.4 — W8 B goalkeeper-distribution map frozen before wiring)
-**Version:** 0.4
-**Status:** APPROVED (June 20, 2026)
+**Last Updated:** September 26, 2026 (v0.5 — W8 B review closure: source tags, target helper, worked examples and six-policy coverage)
+**Version:** 0.5
+**Status:** APPROVED baseline (June 20, 2026); W8 v0.4–v0.5 amendment PENDING OWNER APPROVAL
 
 > All constants cited here live in `TacticalInstructionsConstants.cs` (Appendix A). Values shown are
 > illustrative `[GT]` defaults pending the §5.6 balance pass; the **shapes** are normative.
@@ -100,37 +100,81 @@ utility' = clamp( utility × RoleWeightModifiers[role, opt.Type] × mentalityRis
 
 ### 3.4.1 Goalkeeper distribution policy — W8 B (FR-TI-022)
 
-These values are **[GT][UNCALIBRATED]** B defaults frozen before production wiring. They are
-semantic initial values, not a fit to the Stage A corpus. A later complete-engine calibration may
-change them only through the normal spec/config process.
+The values below are uncalibrated B defaults frozen before production wiring. "Uncalibrated" is a
+status, not a source tag: every numeric constant carries exactly one project source tag.
+
+| Constant | Source tag | Units | Value | Valid range / rationale |
+|---|---|---:|---:|---|
+| `GK_DIST_LOCAL_RECEIVER_RADIUS_M` | `[GT]` | m | 25.0 | [5, 40]; local release option rather than a whole-pitch search |
+| `GK_DIST_FALLBACK_ADVANCE_M` | `[GT]` | m | 35.0 | [20, 60]; deterministic receiverless B target, subject to owner realism approval below |
+| `GK_DIST_QUICK_DELAY_TICKS` | `[GT]` | tactical ticks @10 Hz | 5 | [1, 35]; voluntary release must remain inside §11 §3.8.4's inherited-guard budget |
+| `GK_DIST_STANDARD_DELAY_TICKS` | `[GT]` | tactical ticks @10 Hz | 10 | [1, 35]; same safety envelope |
+| `GK_DIST_SLOW_DELAY_TICKS` | `[GT]` | tactical ticks @10 Hz | 35 | [1, 35]; latest permitted voluntary commit |
+| `GK_DIST_SLOW_POWER` | `[GT]` | dimensionless | 0.50 | [0, 1] request domain |
+| `GK_DIST_QUICK_POWER` | `[GT]` | dimensionless | 0.75 | [0, 1] request domain |
+| `GK_DIST_SHORT_KICK_POWER` | `[GT]` | dimensionless | 0.55 | [0, 1] request domain |
+| `GK_DIST_LONG_KICK_POWER` | `[GT]` | dimensionless | 0.90 | [0, 1] request domain |
+| `GK_DIST_ROLL_OUT_POWER` | `[GT]` | dimensionless | 0.55 | [0, 1] request domain |
+| `GK_DIST_THROW_OUT_POWER` | `[GT]` | dimensionless | 0.70 | [0, 1] request domain |
+| `GK_DIST_SPIN` | `[FIXED]` | rad/s | `Vector3.zero` | exact B identity; no distribution-spin model in this slice |
+| `GK_DIST_MAX_POLICY_DELAY_TICKS` | `[DERIVED]` | tactical ticks @10 Hz | 35 | `max(Quick, Standard, Slow)`; safety ceiling, not an independent tuning value |
+
+A later complete-engine calibration may change only the `[GT]` values through the normal
+spec/config process. Stage A results do not fit or retune them.
 
 | Policy | Delivery | Target rule | PowerIntent | Delay after claim |
 |---|---|---|---:|---:|
-| `SlowDown` | Roll | nearest eligible local receiver; otherwise fallback zone | 0.50 | 35 tactical ticks |
-| `Quick` | Throw | nearest eligible local receiver; otherwise fallback zone | 0.75 | 5 tactical ticks |
-| `ShortKick` | Kick | nearest eligible local receiver; otherwise fallback zone | 0.55 | 10 tactical ticks |
-| `LongKick` | Kick | receiverless fallback zone by design | 0.90 | 10 tactical ticks |
-| `RollOut` | Roll | nearest eligible local receiver; otherwise fallback zone | 0.55 | 10 tactical ticks |
-| `ThrowOut` | Throw | widest eligible local receiver; otherwise fallback zone | 0.70 | 10 tactical ticks |
+| `SlowDown` | Roll | nearest eligible local receiver; otherwise fallback zone | `GK_DIST_SLOW_POWER` | `GK_DIST_SLOW_DELAY_TICKS` |
+| `Quick` | Throw | nearest eligible local receiver; otherwise fallback zone | `GK_DIST_QUICK_POWER` | `GK_DIST_QUICK_DELAY_TICKS` |
+| `ShortKick` | Kick | nearest eligible local receiver; otherwise fallback zone | `GK_DIST_SHORT_KICK_POWER` | `GK_DIST_STANDARD_DELAY_TICKS` |
+| `LongKick` | Kick | receiverless fallback zone by design | `GK_DIST_LONG_KICK_POWER` | `GK_DIST_STANDARD_DELAY_TICKS` |
+| `RollOut` | Roll | nearest eligible local receiver; otherwise fallback zone | `GK_DIST_ROLL_OUT_POWER` | `GK_DIST_STANDARD_DELAY_TICKS` |
+| `ThrowOut` | Throw | widest eligible local receiver; otherwise fallback zone | `GK_DIST_THROW_OUT_POWER` | `GK_DIST_STANDARD_DELAY_TICKS` |
 
-For every row, `SpinIntent = Vector3.zero` in B. The selector consumes **zero RNG draws**.
+Every row uses `GK_DIST_SPIN`. The selector consumes **zero RNG draws**.
 
-**Eligible local receiver.** Active, non-sent-off, outfield team-mate within **25.0 m inclusive**
-of the keeper in XY. This is the pre-A dry-selector candidate promoted without using Stage A outcomes.
-For the nearest rule, minimize squared XY distance; exact ties choose the lower roster index.
+**Eligible local receiver.** Active, non-sent-off, outfield team-mate whose XY distance from the
+keeper is `<= GK_DIST_LOCAL_RECEIVER_RADIUS_M`. For the nearest rule, minimize squared XY distance
+(m²); exact ties choose the lower roster index.
 
-For `ThrowOut`, use the same eligible set and maximize
-`abs(candidate.y - PITCH_WIDTH_M / 2)`; ties then minimize squared keeper distance, then choose
-the lower roster index. No extra “wide enough” threshold exists.
+For `ThrowOut`, use the same eligible set and maximize the absolute lateral distance in metres from
+the pitch centreline, `abs(candidate.y - PitchWidthM/2)`; ties then minimize squared keeper distance,
+then choose the lower roster index. No extra "wide enough" threshold exists.
 
-**Fallback / punt zone.** The deterministic receiverless point is on the pitch centreline, 35 m from
-the keeper's own goal line: team 0 `(35, 34, 0)`, team 1 `(70, 34, 0)` on the canonical 105×68 m
-pitch. F-09 still clamps through #11. `LongKick` always uses this zone. If a selected receiver
-disappears before CONTACT, #11 F-05 converts to a receiverless execution and preserves the selected
-delivery kind.
+**Fallback / punt zone.** Do not hard-code literal team-0/team-1 points at the call site. Derive:
 
-**Timing safety.** Delays are in #11's 10 Hz tactical-tick domain. No B policy may exceed **35
-tactical ticks** without revisiting #11 §3.8.4's CONTACT-before-inherited-guard proof.
+```
+ownGoalX = OwnGoalX(teamId)                         // [CROSS] Match Engine fixed-end convention
+attackDir = AttackDirectionX(teamId)                // [CROSS] +1 for team 0, -1 for team 1 today
+targetX = ownGoalX + attackDir * GK_DIST_FALLBACK_ADVANCE_M
+targetY = PitchWidthM / 2                            // [CROSS] Ball Physics pitch width
+fallback = (targetX, targetY, 0)
+```
+
+The current engine does **not** swap ends at half-time, so this evaluates to (35, 34, 0) for team 0
+and (70, 34, 0) for team 1 on the canonical 105×68 m pitch. If end swapping is introduced, W8 must
+consume the shared runtime own-goal/attack-direction helper rather than preserve the present
+team-id literals. F-09 still clamps through #11. `LongKick` always uses this receiverless zone.
+
+If a selected receiver disappears before CONTACT, #5 performs #11 F-05 at CONTACT: it clears the
+receiver id and uses the committed fallback position, then F-09/safety clamping. If the receiver is
+still eligible, CONTACT aims at that receiver's **live CONTACT-frame position**, not the stale
+commit-time point.
+
+**Worked selector example.** Keeper at (10, 34) m has eligible roster indices 3 at (18, 30) and 5 at
+(18, 38). Both are sqrt(80) m away, so nearest-policy tie-break chooses index 3. If no candidate is
+within 25.0 m, team 0 uses `0 + (+1)*35 = 35 m` and the centreline `68/2 = 34 m`, producing
+(35, 34, 0). Units are metres throughout.
+
+**Timing safety.** Delays are in #11's 10 Hz tactical-tick domain.
+`GK_DIST_MAX_POLICY_DELAY_TICKS = 35` is the derived ceiling; any change to a policy delay that
+raises the maximum requires revisiting #11 §3.8.4's CONTACT-before-inherited-guard proof.
+
+**LongKick realism / approval gate.** The current 35 m-from-own-goal receiverless target is a
+deliberately bounded B semantic default and ordinarily remains in the keeper's own half. It is not
+claimed to represent a calibrated full-length punt. The owner must explicitly accept this target or
+change `GK_DIST_FALLBACK_ADVANCE_M` before the W8 B amendment is approved; merging the PR is not
+treated as implicit approval of this realism choice.
 
 **B coverage obligation.** The frozen Stage A six-seed corpus observed `SlowDown` on every keeper
 episode. The same-corpus A→B comparison therefore covers only the SlowDown row and MUST NOT be cited
@@ -172,5 +216,6 @@ KD-9 precedence, not a limitation to be "fixed."
 | 0.1 | 2026-06-20 | — | Translation seams, mentality table, role-weight model, direct-input transforms, man-mark precedence. |
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: §3.2 Mentality/Transition composition (H-2); §3.3+§3.4 Tempo reclassified new branch (H-1); §3.4 Width relabelled new-field-feeds-existing (M-1) + `DefensiveLine` single-source (M-2); §3.1 `TacticFormation` 3-family clamp (L-4). |
 | 0.3 | 2026-06-20 | — | PASS-2 fix pass: §3.3 product gains the fifth factor `tempoActionBias` (M-2); §3.4 `DefensiveLine` serialization pinned to the input dial, resolved depth recomputed each tick (M-1). |
-| 0.4 | 2026-09-25 | — | W8 B / ERR-011-016: freezes the total six-value goalkeeper-distribution map before wiring — deterministic receiver/zone selector, 25 m local radius, low-index tie-break, mirrored 35 m centreline fallback zone, power, zero spin, 5/10/35-tick delays and zero RNG. Values are uncalibrated `[GT]`, not Stage A fitted. |
+| 0.4 | 2026-09-25 | — | W8 B / ERR-011-016: freezes the first six-value goalkeeper-distribution draft before wiring — deterministic receiver/zone selector, 25 m local radius, low-index tie-break, mirrored 35 m centreline fallback zone, power, zero spin, 5/10/35-tick delays and zero RNG. Values are uncalibrated `[GT]`, not Stage A fitted. |
+| 0.5 | 2026-09-26 | — | W8 B review closure: gives every new numeric exactly one source tag and valid range, makes the 35-tick ceiling derived, routes fallback geometry through own-goal/attack-direction helpers instead of fixed-end literals, pins CONTACT to live receiver position with committed-position fallback, adds a selector worked example, preserves zero RNG, and records the 35 m LongKick fallback as an explicit owner-approval realism choice. |
 #endregion

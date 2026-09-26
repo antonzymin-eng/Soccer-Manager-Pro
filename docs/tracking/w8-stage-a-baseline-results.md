@@ -76,9 +76,23 @@ PassKick-preceded claims were the **same keeper reclaiming his own immediately p
 **0/580** directly followed the opponent keeper's pass, and 4/580 followed an outfield team-mate's
 pass. That direct-touch classification is not automatically the same population as the 501
 `interrupted-by-claim` pass outcomes because a pending pass can survive intervening touches before
-the claim resolves it. Supplemental test-only run `36251412673` on the exact pinned Stage A
-production tree is therefore the authority for the 501-outcome same-keeper/opponent-keeper split;
-that result must be recorded here before B measurement is accepted.
+the claim resolves it.
+
+Supplemental test-only run `36251412673` on the **exact pinned Stage A production tree** closes that
+population directly:
+
+- `pass-outcome-hand-interrupted-by-claim = 501`;
+- `...-same-keeper = 501`;
+- `...-opponent-keeper = 0`;
+- all six frozen terminal digests reproduced exactly (6/6);
+- artifact `10909441933`, `w8-stage-a-reclaim-split-36251412673`;
+- artifact ZIP SHA-256
+  `0e076292accbb43eb3b5bda7a0b27b9df37447764d9778f19055e9a707ad1ed6`;
+- artifact size 1,118,448 bytes; expiry `2026-12-25T15:17:22Z`.
+
+Therefore the measured 501-pass interruption population is **100% same-keeper self-reclaim and 0%
+opponent-keeper reclaim**. This is the dominant Stage A confound that A→B must report separately
+from the policy effect.
 
 This loop is a **known comparison confound**, not a signal to tune B constants. A→B interpretation
 must report it separately from the intended distribution-policy effect.
@@ -126,14 +140,17 @@ frozen terminal digests exactly. That evidence applies only to the assignment-on
 Before any B result-bearing measurement:
 
 1. finish and merge the spec-first B contract (#461), including the distance-sensitive #5 delivery
-   formula, typed possession-change completion/cancellation semantics, and ERR-011-015/016/017;
-2. record the supplemental 501-outcome keeper-identity split from the pinned Stage A production tree;
-3. land the structural follow-up that rejects `ldflda` address-taking of `_possessingAgentId`
+   formula, exact hash namespace, live CONTACT target semantics, typed possession-change
+   completion/cancellation semantics, explicit guard arithmetic, and ERR-011-015/016/017;
+2. land the structural follow-up that rejects `ldflda` address-taking of `_possessingAgentId`
    and catches up the omitted helper source history (#462);
-4. wire B only after the owning specs are merged;
-5. prove deterministic composed execution of **all six** #21 policies;
-6. rerun the frozen six seeds as the SlowDown A→B comparison, with the claim→pass→claim loop reported
-   as a separate confound rather than folded into a single policy verdict.
+3. wire B only after the owning specs are explicitly approved and merged;
+4. prove deterministic composed execution of **all six** #21 policies;
+5. rerun the frozen six seeds as the SlowDown A→B comparison, with the now-proven
+   **501 same-keeper / 0 opponent-keeper** self-reclaim loop reported as a separate confound rather
+   than folded into a single policy verdict.
+
+The supplemental keeper-identity split is complete and is no longer a pending gate.
 
 Once B attaches hand-episode teardown, PR #460's digest equality is no longer neutrality evidence for
 that new behavior. B must prove the new semantics directly.

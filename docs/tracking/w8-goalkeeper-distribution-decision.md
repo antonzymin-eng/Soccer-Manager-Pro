@@ -1,7 +1,7 @@
 # W8 Goalkeeper Distribution — Owner Decision Packet
 
 > **Created:** September 25, 2026  
-> **Status:** **B CONTRACT PROMOTED TO OWNING SPECS — policy/selector/timing/#5 execution are frozen before wiring. No production code changes in this revision.**
+> **Status:** **B CONTRACT DRAFTED IN OWNING SPECS — review-corrected in PR #461, but #5/#11 remain DRAFT and the #21 amendment requires explicit owner approval. No B production wiring is authorized yet.**
 > **Production anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (`main`, PR #455 merge).  
 > **Scope:** Record W8 ownership and the ordered A baseline, isolated possession-helper refactor, B spec, and B wiring boundaries.
 
@@ -14,7 +14,7 @@
 | OD-W8-3 | Retire timeout-forced ROLL; empty-receiver fallback is covered by OD-W8-2. | N/A — covered by OD-W8-2 |
 | OD-W8-4 | Extend #5 for a faithful GK request; serialized B windup/cancel, CONTACT release and W5 registration. | B |
 
-**Owner direction (September 25, 2026):** proceed in this order: land a behavior-neutral, nonserialized instrument and preregistration **before reading A results**; run the frozen six-seed A baseline; land the separate, behavior-neutral possession-change helper with exact frozen-seed digest equality (it may be developed alongside A); amend #11, #5, #21 and Match Engine with the actual policy delays, delivery ranges, tie-break and punt-zone geometry and file the #11 ERRs **before any B wiring code**; then wire B and compare the same corpus with A. The architecture choices above govern that work. §7 now lists only unresolved numerical and policy details. Approved specs govern implementation once amended; this packet does not itself amend them. C's Law-12 correction remains a later, separately measured landing.
+**Owner direction (September 25, 2026):** proceed in this order: land a behavior-neutral, nonserialized instrument and preregistration **before reading A results**; run the frozen six-seed A baseline; land the separate, behavior-neutral possession-change helper with exact frozen-seed digest equality (it may be developed alongside A); amend #11, #5, #21 and Match Engine with the actual policy delays, delivery ranges, tie-break and punt-zone geometry and file the #11 ERRs **before any B wiring code**; then wire B and compare the same corpus with A. The architecture choices above govern that work. §7 now lists only unresolved numerical and policy details. Approved specs govern implementation once amended; this packet does not itself amend or approve them. #5/#11 remain DRAFT in #461, and the already-APPROVED #21 section is an amendment requiring explicit owner acceptance. Merge is not treated as implicit approval. C's Law-12 correction remains a later, separately measured landing.
 
 ---
 
@@ -341,12 +341,13 @@ W8 must not be bundled with W9 or W10. Any later #440/cooldown semantics change,
 
 ---
 
-## 7. Remaining non-decisions after B spec promotion
+## 7. Remaining B review / approval gates before wiring
 
-The B spec amendment now decides the previously-open policy mapping, selector/tie-break, fallback
-zone, zero-RNG rule, #5 delivery bounds, windup/execution/cancellation API and Match Engine phase
-ownership. Those decisions live in #21 §3.4.1, #11 §3.8, #5 §2.4.4 / §3.8.13 and
-`match-engine-design.md`.
+The B draft now specifies the previously-open policy mapping, selector/tie-break, fallback-zone
+formula, zero-RNG rule, #5 distance-sensitive delivery/launch rules, exact error-hash namespace,
+CONTACT-time target resolution, windup/rejection/cancellation API and Match Engine phase ownership.
+Those draft decisions live in #21 §3.4.1, #11 §3.8, #5 §2.4.4 / §3.8.13 and
+`match-engine-design.md`. They remain pre-code review text until explicitly approved.
 
 Still intentionally **not** decided or changed here:
 
@@ -354,19 +355,25 @@ Still intentionally **not** decided or changed here:
 - final retirement of the inherited six-second/no-intent and 360-frame hand-drop guards (C);
 - any post-complete-engine calibration of W8 `[GT]` values;
 - W9 or any Decision Tree ordinal-width/digest rebaseline;
-- B production code or the B snapshot-schema bump itself — those follow only after this spec PR lands.
+- B production code or the B snapshot-schema bump itself — those follow only after this spec PR is
+  explicitly approved and lands;
+- the owner realism decision on `GK_DIST_FALLBACK_ADVANCE_M = 35 m`: under the current fixed-end
+  engine this keeps the receiverless LongKick target in the keeper's own half. The draft records this
+  honestly rather than calling it a calibrated punt; owner must accept or change it before approval.
 
 The W8 B policy defaults are uncalibrated semantic values and are not fitted to Stage A results.
-The 25 m local-selector core and fixed mirrored zone derive from the preregistered dry-selector shape;
-the policy-specific delivery/timing values are frozen here before B behavior is measured.
+Every new numeric now has exactly one source tag and valid range in #21 §3.4.1. The 25 m
+local-selector core derives from the preregistered dry-selector shape; fallback geometry is now
+expressed through own-goal/attack-direction helpers rather than duplicated team-id literals.
 
 **Stage A interpretation limits.** The baseline is dominated by a keeper claim→pass→claim loop
 (862 hand claims; 501/861 hand-origin passes later interrupted by a hand claim; only 13/861 reached
-the committed receiver; mean hand hold 32.086 frames). That loop is a known confound, not a tuning
-target. Its exact same-keeper/opponent-keeper split is being characterized with a test-only supplement
-on the pinned A production tree before B measurement. Also, every Stage A episode observed
-`SlowDown`; the frozen A→B corpus cannot validate the other five #21 policy rows. B therefore
-requires deterministic composed coverage of every policy independently of the six-seed comparison.
+the committed receiver; mean hand hold 32.086 frames). Supplemental run `36251412673` on the exact
+pinned A tree proves the exact interruption split is **501 same-keeper / 0 opponent-keeper**, with
+all six terminal digests unchanged. That self-reclaim loop is a known confound, not a tuning target.
+Also, every Stage A episode observed `SlowDown`; the frozen A→B corpus cannot validate the other
+five #21 policy rows. B therefore requires deterministic composed coverage of every policy
+independently of the six-seed comparison.
 
 **Possession seam evidence boundary.** PR #460's 6/6 digest equality proves only the assignment-only
 pre-B helper. Once B adds hand-episode teardown, that proof no longer establishes behavioral
@@ -380,6 +387,7 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.16 | 2026-09-26 | B review closure pending owner approval | Closes the Stage A reclaim split at 501 same-keeper / 0 opponent-keeper (run `36251412673`), corrects ERR-011-017 to first-tactical-pass maturation after frame 72, pins #5's `0x47` error discriminator and live CONTACT receiver target, distinguishes Rejected/Cancelled/Completed retained-possession behavior, shows the `295 < 355 < 360` deadline proof, routes fallback through own-goal/attack-direction helpers, and records that the 35 m LongKick target plus #5/#11/#21 amendments require explicit owner approval before wiring. |
 | 0.15 | 2026-09-26 | B review correction | Records Stage A's claim-pass-claim loop as a known A→B confound, the SlowDown-only corpus coverage gap, and the evidence boundary on PR #460's assignment-only digest proof. B adds all-six-policy composed fixtures, distance-sensitive #5 delivery speed/launch, and typed possession-change completion/cancellation semantics before wiring. |
 | 0.14 | 2026-09-25 | B contract promoted | #11/#5/#21/Match Engine now own the full pre-code B contract: six policy rows, deterministic selector/tie-break/fallback zone, zero RNG, exact tactical delays and power, profile-derived delivery ranges, faithful dedicated #5 request, 10 Hz clock correction, CONTACT-only release/event/W5 behavior, cancellation feedback and B schema obligation. ERR-011-015/016/017 filed spec-first; production wiring remains next. |
 | 0.13 | 2026-09-25 | architecture recorded | Owner-directed A preregistration/instrument before results, separate behavior-neutral possession helper with explicit ten-writer disposition and exact digest parity, then #11/#5/#21/Match Engine numeric B specs and #11 ERRs before B wiring; same-corpus A→B comparison. Bounds live windup configuration and leaves receiverless RollOut/ThrowOut to B specs. Review correction: A measures the real 60 Hz/10 Hz #11 clock mismatch, B corrects it after its ERR/spec text, and C limits the eight-second corner to own-area hand control with outside-area handling specified separately. |
