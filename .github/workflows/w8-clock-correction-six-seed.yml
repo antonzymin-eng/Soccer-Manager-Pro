@@ -1,0 +1,141 @@
+name: W8 clock correction six-seed comparison
+
+on:
+  push:
+    branches:
+      - measure/w8-clock-correction-six-seed-20260926
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout measurement branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify production anchor and allowed diff
+        run: |
+          set -euo pipefail
+          ANCHOR=ff4dd34a06e32216a45d2e11fe254b76d01e868c
+          test "$(git merge-base "$ANCHOR" HEAD)" = "$ANCHOR"
+          git diff --name-only "$ANCHOR"..HEAD | sort > /tmp/changed
+          cat > /tmp/expected <<'EOF'
+          .github/workflows/w8-clock-correction-six-seed.yml
+          src/match-engine/tests/W8StageADiagnosticTests.cs
+          EOF
+          diff -u /tmp/expected /tmp/changed
+
+      - name: Verify reclaim diagnostic is the frozen Stage A supplement
+        run: |
+          set -euo pipefail
+          test "$(git hash-object src/match-engine/tests/W8StageADiagnosticTests.cs)" = "520ba31c71e06ed408fd5c282b5fd5611cf74879"
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve W8 instrument
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/measurement_catalog.py validate --repo .
+          python3 tools/dotnet-ci/measurement_catalog.py resolve w8-stage-a --repo . --github-env "$GITHUB_ENV"
+
+      - name: Run gate and frozen six-seed measurement
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/measurements/trx
+          OUT="artifacts/measurements/measurement.txt"
+          MEASURE_OUT="artifacts/measurements/instrument-output.txt"
+          RESULTS="artifacts/measurements/trx"
+          RUNSETTINGS="artifacts/measurements/measurement.runsettings"
+          cat > "$RUNSETTINGS" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <RunSettings>
+            <RunConfiguration>
+              <TreatNoTestsAsError>true</TreatNoTestsAsError>
+            </RunConfiguration>
+          </RunSettings>
+          XML
+          {
+            echo "# W8 clock-correction frozen six-seed comparison"
+            echo "# measured production anchor: ff4dd34a06e32216a45d2e11fe254b76d01e868c"
+            echo "# workflow/diagnostic head: $GITHUB_SHA"
+            echo "# run: $GITHUB_RUN_ID (attempt $GITHUB_RUN_ATTEMPT)"
+            echo "# instrument: $MEASUREMENT_INSTRUMENT"
+            echo "# env: $MEASUREMENT_ENV"
+            echo "# filter: $MEASUREMENT_FILTER"
+            echo "# project: $MEASUREMENT_PROJECT"
+          } > "$OUT"
+          env -u "$MEASUREMENT_ENV" bash tools/dotnet-ci/run-gate.sh             --test-filter "$MEASUREMENT_FILTER" 2>&1 | tee -a "$OUT"
+          echo "=== Proved measurement ===" | tee -a "$OUT"
+          env "$MEASUREMENT_ENV=1" dotnet test "$MEASUREMENT_PROJECT"             --no-build --no-restore --filter "$MEASUREMENT_FILTER"             --settings "$RUNSETTINGS"             --logger "console;verbosity=detailed"             --logger "trx;LogFileName=measurement.trx"             --results-directory "$RESULTS" 2>&1 | tee "$MEASURE_OUT" | tee -a "$OUT"
+          python3 tools/dotnet-ci/measurement_catalog.py verify-run             "$MEASUREMENT_INSTRUMENT" --trx-dir "$RESULTS" --output "$MEASURE_OUT" | tee -a "$OUT"
+
+      - name: Verify six-seed completeness and reclaim identity accounting
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          text = Path("artifacts/measurements/instrument-output.txt").read_text()
+          seeds = [
+              "0x0F1E2D3C4B5A6978",
+              "0x00000000D1A6D05E",
+              "0x0000000000000001",
+              "0x00000000ABCDEF12",
+              "0x0000000099887766",
+              "0x000000005A5A5A5A",
+          ]
+          ends = dict(re.findall(
+              r"seedEnd,(0x[0-9A-F]+),tick=324000,digest=([0-9a-f]{64})", text))
+          if set(ends) != set(seeds):
+              raise SystemExit(f"seed-end mismatch: {sorted(ends)}")
+
+          def per_seed_counter(counter):
+              rows = re.findall(
+                  rf"count,(0x[0-9A-F]+),{re.escape(counter)},(\d+)", text)
+              out = {seed: 0 for seed in seeds}
+              for seed, raw in rows:
+                  value = int(raw)
+                  if out[seed] not in (0, value):
+                      raise SystemExit(
+                          f"duplicate counter disagrees: {counter} {seed} {out[seed]} vs {value}")
+                  out[seed] = value
+              return out
+
+          same = per_seed_counter("pass-outcome-hand-interrupted-by-claim-same-keeper")
+          opp = per_seed_counter("pass-outcome-hand-interrupted-by-claim-opponent-keeper")
+          total = per_seed_counter("pass-outcome-hand-interrupted-by-claim")
+          for seed in seeds:
+              if same[seed] + opp[seed] != total[seed]:
+                  raise SystemExit(
+                      f"identity accounting mismatch {seed}: total={total[seed]} same={same[seed]} opp={opp[seed]}")
+
+          print("W8 CLOCK-CORRECTION SIX-SEED: COMPLETE (6/6)")
+          print(
+              "W8 RECLAIM IDENTITY: "
+              f"total={sum(total.values())} "
+              f"sameKeeper={sum(same.values())} "
+              f"opponentKeeper={sum(opp.values())}")
+          for seed in seeds:
+              print(
+                  f"RECLAIM {seed}: total={total[seed]} "
+                  f"sameKeeper={same[seed]} opponentKeeper={opp[seed]} "
+                  f"digest={ends[seed]}")
+          PY
+
+      - name: Preserve comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w8-clock-correction-six-seed-${{ github.run_id }}
+          path: artifacts/measurements/
+          if-no-files-found: warn
+          retention-days: 90
