@@ -9,7 +9,7 @@ through Ball.ApplyKick() to completion. §3.9 defines the events published at st
 transitions. Together these subsections complete the Section 3 Technical Specifications.
 
 **Created:** March 7, 2026, 2:00 PM PST
-**Version:** 1.1
+**Version:** 1.5
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -617,6 +617,136 @@ Even a fully rushed pass (Urgency = 1.0) requires a minimum physical preparation
 time. 50ms at 60Hz (3 frames) is the minimum time for a ballistic leg motion from
 a standing position. Below this, the kick animation would be physically implausible.
 
+### 3.8.13 Goalkeeper distribution execution — W8 B
+
+**W8 amendment approval:** **W8 B amendment APPROVED by owner, September 26, 2026.** The overall #5 specification remains DRAFT; this approval applies only to the W8 B amendment bundle (#5 §2.4.4 / §3.8.13, #11 §3.8, and #21 FR-TI-022 / §3.4.1). B production wiring is authorized only after PR #461 merges.
+
+This is a second request mode on the same per-agent executor; it is **not** a translation into an
+ordinary `PassType`.
+
+**Profile mapping and physical bounds.** B reuses existing #5 profiles as the numerical source while
+keeping the request type distinct:
+
+| GK variant | Numeric profile | Speed range (m/s) | Launch range | Distance cap |
+|---|---|---:|---:|---:|
+| Roll | Ground | 5.0–18.0 | 2°–5° | 30 m |
+| Throw | Driven | 10.0–28.0 | 5°–12° | 50 m |
+| Kick | Lofted | 8.0–22.0 | 20°–45° | 60 m |
+
+These values are existing #5 profile constants, not new W8 constants.
+
+Let `D` be the XY distance in metres from the live CONTACT release point to the **effective CONTACT
+target** defined below, clamped to `[0.001, distMax]`; `EmittedPower01 ∈ [0,1]`.
+
+```
+distanceFraction = D / distMax
+speedBase = vOffset
+          + clamp01(EmittedPower01) * distanceFraction * (vMax - vOffset)
+kickSpeed = clamp(speedBase, vMin, vMax)
+```
+
+Units: `D/distMax` and `EmittedPower01` are dimensionless; `vOffset/vMin/vMax/kickSpeed` are m/s.
+This is the ordinary §3.2 distance/power shape with `EmittedPower01` already normalized by #11;
+goalkeeper distribution does **not** apply a second KickPower, fatigue or weak-foot multiplier.
+
+Launch angle is also fully pinned:
+
+```
+Roll  → Ground §3.3.3: angleMin + (D/distMax) * (angleMax-angleMin)
+Throw → Driven §3.3.3: angleMin + (D/distMax) * (angleMax-angleMin)
+Kick  → Lofted §3.3.4: atan(4 * ApexHeightLofted / D), clamped to [20°,45°]
+```
+
+There is no goalkeeper-specific angle picker. `ApexHeightLofted` is the existing #5 Lofted apex
+constant. The requested `SpinIntent` is passed through exactly; the ordinary pass spin generator
+does not run.
+
+**Worked delivery examples.**
+
+1. SlowDown Roll, `D=6 m`, `EmittedPower01=0.50`: Ground gives
+   `8 + 0.50*(6/30)*(18-8) = 9.0 m/s`; launch angle
+   `2 + (6/30)*(5-2) = 2.6°`.
+2. LongKick default-config example with a live release point 5.5 m from the keeper's own goal line
+   and the current 35 m fallback point: `D=29.5 m`, policy `PowerIntent=0.90`. With the current
+   `KICK_ACCURACY_COEFF=0.85` and an upper-normalized `Kicking_norm=1.0`, #11 supplies
+   `EmittedPower01 = 0.90*0.85*1.0 = 0.765`; Lofted therefore gives
+   `9 + 0.765*(29.5/60)*(22-9) = 13.889625 m/s`. With `ApexHeightLofted=6 m`,
+   `atan(24/29.5) = 39.13°`, already inside the 20°–45° clamp. Lower `Kicking_norm` lowers emitted
+   power further. This is a **launch-parameter** example only: the contract does not claim the ball
+   reaches the 29.5 m target, and it does not treat 35 m-from-own-goal as a calibrated full-length punt.
+
+B's result-bearing diagnostic must record requested target point/distance and the ball's actual first
+ground-contact point/distance (or a terminal no-ground-contact reason) for goalkeeper distributions,
+with LongKick reported separately and shortfall/overshoot relative to target preserved. This is an
+evidence obligation, not a calibration rule.
+
+**CONTACT target resolution.** `GoalkeeperDistributionRequest.TargetPosition` is the commit-time
+fallback point. At CONTACT:
+
+1. If `TargetAgentId >= 0`, query the host's live eligibility surface using the same #21 §3.4.1
+   predicate: same team, active, non-sent-off, outfield.
+2. If still eligible, set the effective target to that receiver's **live CONTACT-frame position**.
+3. If not eligible, apply #11 F-05: effective receiver becomes `-1`, use the stored
+   `TargetPosition`, then apply F-09 and the own-goal-line safety fallback.
+4. Receiverless requests use stored `TargetPosition` directly, subject to the same clamp/safety.
+
+Thus a 0.4–1.4 s windup does not aim at a stale receiver location, while disappearance still has a
+deterministic last-known/fallback path. #5 performs this CONTACT revalidation through its host query;
+#11 owns the F-05 rule and #21 owns eligibility.
+
+**One error model and exact hash namespace.** Goalkeeper distribution uses the existing deterministic
+#5 angular-error chain and CONTACT-time pressure re-sample. Roll/Throw/Kick take the existing
+Ground/Driven/Lofted base-error values respectively, but this is an error-profile lookup only — it
+does not convert the request to `PassType`. Weak-foot and urgency modifiers are identity.
+
+The error-direction discriminator is not left to implementation choice:
+
+| Constant | Source tag | Type | Value | Constraint |
+|---|---|---|---:|---|
+| `GK_DISTRIBUTION_ERROR_HASH_DISCRIMINATOR` | `[FIXED]` | int | `0x47` (71) | reserved outside ordinary `PassType` ordinals 0–6; if that enum ever reaches 0x47, this reservation must be moved before the enum append lands |
+
+The direction call is exactly:
+
+```
+PassErrorCalculator.ComputeErrorDirection(
+    request.AgentId,
+    request.FrameNumber,
+    GK_DISTRIBUTION_ERROR_HASH_DISCRIMINATOR)
+```
+
+`FrameNumber` is the request/commit frame, matching ordinary #5's locked hash-input convention.
+No `DeterministicRngService` stream/domain/draw site or draw order is added.
+
+**Windup, rejection/cancellation, and CONTACT.**
+
+1. INITIATING validates idle executor, finite request fields, target semantics and possession.
+   Failure returns `Rejected`; WINDUP never starts.
+2. `WindupFrames` is used exactly. No ordinary-pass urgency reduction, min-windup floor or second
+   delivery windup may be applied.
+3. WINDUP is cancellable on explicit host cancel or possession loss and returns `Cancelled`.
+4. When the countdown reaches zero, CONTACT occurs on the next executor update, matching current
+   state-machine semantics.
+5. CONTACT re-checks possession, resolves the effective live/fallback target above, samples live
+   keeper position, forms `releasePoint = livePosition + (0,0,ReleaseHeightM)`, resolves
+   pressure/error/velocity, and invokes the ball adapter exactly once.
+6. The adapter's successful kick releases possession on CONTACT. A real target receiver arms W5
+   once; effective receiver `-1` arms no receiver latch.
+7. The host receives `Completed` only after successful CONTACT. It, not #5, publishes #11's
+   `DistributionExecutedEvent` after CONTACT in Resolve.
+
+For `Rejected` or `Cancelled` while the same keeper still owns controlled possession, the host
+clears only the distribution intent and returns/keeps #11 in `HandsOnBall` with the original claim
+clock; retry is allowed only on a later tactical heartbeat **and only if #11 §3.8.4's live retry-budget
+predicate proves candidate CONTACT remains strictly before both inherited guards**. If possession is
+lost, the hand episode ends and #11 transitions to `Recovering`. Neither path publishes
+`DistributionExecutedEvent`.
+Successful CONTACT uses the typed normal-completion possession-change cause and cannot be
+misclassified as cancellation.
+
+**Snapshot.** The execution-mode discriminator, goalkeeper request, windup count and cached inputs
+that survive a frame are canonical executor state. W8 B code must bump the Match Engine body schema
+and add round-trip/digest probes before merge.
+
 ---
 
 ## 3.9 Event Publishing
@@ -782,6 +912,10 @@ only. Only a tackle interrupt — a real game event — produces a cancellation 
 |---------|------|--------|-------|
 | 1.0 | March 7, 2026, 2:00 PM PST | Claude (AI) / Anton | Initial draft. WeakFoot accuracy and power penalty models. Six-state machine with full transition table. Urgency-driven windup reduction. Two event struct definitions. All formulas derived from Appendix A.6. State machine architecture from §2.2.3 and §4.4.2. Event structs from §4.6.1. |
 | 1.1 | May 6, 2026 | Claude (AI) / Anton | Resolves §3.3–§3.9 follow-up audit finding F-A02: localized `WINDUP_FRAMES` and `FOLLOWTHROUGH_FRAMES` ownership entirely in §3.8.10 (state-machine timing values, not pass-type physical intrinsics). Removed dead-end "from §3.1.4 PhysicalProfile" citation; updated §3.8.2 state table and §3.8 cross-spec dependencies table to reference §3.8.10 as canonical source. Non-behavioral with respect to formula code (values unchanged). |
+| 1.2 | September 25, 2026 | — | W8 B / ERR-011-015: §3.8.13 defines the dedicated goalkeeper request mode, profile-derived delivery bounds, **distance-sensitive** #5 velocity/launch shapes, one deterministic error model, exact #11 windup, CONTACT recheck/release, typed feedback, W5 receiver-latch rule, and canonical snapshot obligation. Existing `PassType` ordinals and ordinary pass semantics are unchanged. |
+| 1.5 | September 26, 2026 | — | Owner approval: W8 B amendment approved September 26, 2026 as part of the #5/#11/#21 bundle. #5 remains overall DRAFT; B wiring is authorized only after PR #461 merges. The current Lofted trajectory is not approved as a realistic punt solution; target-vs-first-ground-contact evidence closes the follow-up decision. |
+| 1.4 | September 26, 2026 | — | W8 B review closure follow-up: corrects the LongKick worked example to apply #11's kicking-accuracy coefficient, explicitly makes target arrival an empirical landing measurement, adds that B evidence field, makes retries deadline-gated through #11 §3.8.4, and adds the owner-approval gate. |
+| 1.3 | September 26, 2026 | — | W8 B review closure: pins the exact Roll/Throw/Kick launch-angle rule, CONTACT-time live receiver versus committed fallback semantics, fixed error-hash discriminator `0x47`, Rejected/Cancelled/Completed state consequences, and worked Roll/LongKick calculations. No ordinary `PassType` ordinal or RNG draw site is changed. |
 
 ---
 

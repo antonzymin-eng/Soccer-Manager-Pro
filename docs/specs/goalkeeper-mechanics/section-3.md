@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** September 22, 2026 (v0.11 — W3 scope clarification: cross-claim arbitration uses active ClaimIntent Hand membership; ordinary save-dive handling remains unchanged)
-**Version:** 0.11
+**Last Updated:** September 26, 2026 (v0.16 — W8 B amendment approved by owner; overall #11 remains DRAFT and B wiring is authorized only after PR #461 merges)
+**Version:** 0.16
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -31,9 +31,11 @@ Each row is `(from, to, trigger, tick-rate, source spec)`.
 | `Airborne` | `HandsOnBall` | #3 hand-ball contact event with positive `handlingQualityScalar ≥ MIN_HANDLING_QUALITY` AND `≥ CATCH_THRESHOLD` (caught path) | 60 Hz | #3 / #11 §3.5 |
 | `Airborne` | `Recovering` | #3 hand-ball contact event with `handlingQualityScalar < CATCH_THRESHOLD` (parry / deflect / spill paths) | 60 Hz | #3 / #11 §3.5 |
 | `Airborne` | `Recovering` | Ground re-entry (`agentZ ≤ 0`) without contact event (F-01 / F-02 / F-03) | 60 Hz | #11 §3.3 |
-| `HandsOnBall` | `Distributing` | Decision Tree #8 commits `DistributeIntent` AND `currentTick ≥ releaseTickEarliest` | 10 Hz | #8 |
-| `HandsOnBall` | `HandsOnBall` | `currentTick − claimTick ≥ GK_HOLD_MAX_TICKS` (Laws-of-the-Game 6-second rule; forced release) | 10 Hz | KD-9 / FR-GK-028 |
-| `Distributing` | `Recovering` | Distribution release frame reached (windup elapsed; `passIntent` published) | 60 Hz | #11 §3.8 |
+| `HandsOnBall` | `Distributing` | Match Engine's #21 producer has a valid `DistributeIntent`, all release/policy tick gates are satisfied, and #5 **accepts** the corresponding `GoalkeeperDistributionRequest` | 10 Hz initiation | W8 B / #21 / #5 |
+| `HandsOnBall` | `HandsOnBall` | Temporary legacy no-intent guard reaches `currentTick - claimTick >= GK_HOLD_MAX_TICKS`; signal the legacy timeout condition but **do not** overload `Distributing` without an accepted #5 request | 10 Hz | W8 B temporary guard; C owns Law-12 replacement |
+| `HandsOnBall` | `HandsOnBall` | #5 rejects initiation while the same keeper still owns controlled possession: clear `DistributeIntent`, preserve claim/release clocks; retry no earlier than a later tactical heartbeat and only when §3.8.4's retry-budget predicate still permits CONTACT before both inherited guards | 10 Hz initiation | W8 B / #5 feedback |
+| `Distributing` | `HandsOnBall` | Accepted #5 request is cancelled before CONTACT while the same keeper still owns controlled possession: clear intent, preserve claim/release clocks | 60 Hz feedback | W8 B / #5 feedback |
+| `Distributing` | `Recovering` | Successful #5 CONTACT completes, or cancellation/teardown accompanies real possession loss/restart/takeover | 60 Hz | W8 B / #5 / Match Engine |
 | `Recovering` | `Set` | Recovery-to-line cooldown elapsed (`RECOVERY_COOLDOWN_TICKS`) OR GK XY already within `GK_REACTIVE_RADIUS_M` of #12 baseline (v0.2 AR-S1-M5: OR not AND — prevents stall when GK is already at baseline after distribution release) | 10 Hz | #11 §3.3.0 |
 | `Recovering` | `Resting` | Possession transitions to GK's own team in defensive third | 10 Hz | #11 / #8 |
 | `Set` | `Rushing` | Decision Tree #8 commits `RushIntent` with `commitmentLevel > RUSH_COMMIT_THRESHOLD` | 10 Hz | #8 |
@@ -56,11 +58,19 @@ scenarios in §3.6 (cross-claim duel).
 ### 3.1.2 Pseudocode for state evaluation
 
 ```
-on TacticalTick(currentTick):                   // 10 Hz
-    for gk in {homeGK, awayGK}:                 // #16 §3.2 entity order
-        ballState = BallPhysics.GetBallState(currentTick)
-        intent    = DecisionTree.GetGKIntent(gk.agentId, currentTick)
-        gk.state  = evaluateTacticalTransition(gk.state, ballState, intent, currentTick)
+on TacticalTick(currentTacticalTick):           // 10 Hz; Match Engine passes floor(frame/6)
+    for gk in {homeGK, awayGK}:                  // #16 §3.2 entity order
+        ballState = BallPhysics.GetBallState(currentTacticalTick)
+        # SAVE/rush inputs come from their owning producers; W8 does not redefine them.
+        gk.state = evaluateTacticalTransition(
+            gk.state, ballState, currentTacticalTick, existingSaveRushInputs)
+
+        if gk has live controlled hand possession:
+            # W8 B producer is Match Engine + #21, never Decision Tree #8.
+            candidate = buildDistributionFromPolicy(gk, TeamTactic.GkDistributionPolicy)
+            if candidate gates pass AND #5 accepts GoalkeeperDistributionRequest(candidate):
+                CommitDistributeIntent(gk, candidate)
+                gk.state = Distributing
 
 on PhysicsFrame(currentFrame):                  // 60 Hz
     for gk in {homeGK, awayGK}:
@@ -1057,13 +1067,34 @@ reaching pitch coordinates past `gkPos.x` while still in
 
 ---
 
-## 3.8 Distribution Generation (KD-6, KD-16)
+## 3.8 Distribution Generation (KD-6, KD-16; W8 B)
 
-Decision Tree #8 supplies `DistributeIntent` at the 10 Hz tactical
-tick once the GK enters `HandsOnBall` state and
-`releaseTickEarliest` has passed.
+**W8 amendment approval:** **W8 B amendment APPROVED by owner, September 26, 2026.** The overall #11 specification remains DRAFT; this approval applies only to the W8 B amendment bundle (#11 §3.8, #5 §2.4.4 / §3.8.13, and #21 FR-TI-022 / §3.4.1). B production wiring is authorized only after PR #461 merges.
 
-### 3.8.1 Release-point geometry (KD-16)
+**Ownership.** While a keeper has live hand control, Match Engine — not Decision Tree #8 —
+is the producer of `DistributeIntent`. It reads #21 `GkDistributionPolicy` and commits one
+total receiver-or-zone intent. Decision Tree keeper on-ball actions are suppressed while the
+keeper is in `HandsOnBall` or remains the controlled possessor during `Distributing` windup.
+This resolves **ERR-011-016**; no Decision Tree ordinal or composure-noise width changes.
+
+**Clock domain.** Every `currentTick` supplied to #11 tactical state transitions is a **10 Hz
+tactical tick**, derived once by the composition root as
+`floor(currentFrame / FramesPerTacticalTick)`. `_claimTick` and
+`_releaseTickEarliest` are in that same domain. Passing a 60 Hz frame index here is invalid
+and is the defect recorded by **ERR-011-017**.
+
+For a policy delay `D` from #21 §3.4.1, the producer may commit only when:
+
+```
+currentTacticalTick >= releaseTickEarliest
+AND currentTacticalTick >= claimTick + D
+AND keeper still has live hand control
+AND no DistributeIntent is already active
+```
+
+The B producer and selector consume **zero RNG draws**.
+
+### 3.8.1 Release-point geometry and windup (KD-16)
 
 ```
 releaseHeight = match distributeIntent.deliveryKind:
@@ -1076,63 +1107,189 @@ windupMs      = match distributeIntent.deliveryKind:
                   Roll  → ROLL_WINDUP_MS
                   Kick  → KICK_WINDUP_MS
 
-// v0.2 AR-S1-M3: distribution-accuracy attribute modulation
 accuracyCoeff = match distributeIntent.deliveryKind:
                   Throw → THROW_ACCURACY_COEFF · Throwing_norm
                   Roll  → 1.0
                   Kick  → KICK_ACCURACY_COEFF  · Kicking_norm
 
-releasePoint  = gkPosition + Vector3(0, 0, releaseHeight)
-emittedPowerIntent = distributeIntent.powerIntent · accuracyCoeff
+releasePoint       = liveGkPositionAtContact + Vector3(0, 0, releaseHeight)
+emittedPowerIntent = clamp01(distributeIntent.powerIntent · accuracyCoeff)
+windupFrames       = ceil(windupMs · 60 / 1000)
 ```
 
-### 3.8.2 Target validation (F-05, F-09)
+**Worked windup example.** A Kick with the default `KICK_WINDUP_MS = 900 ms` gives
+`ceil(900*60/1000) = 54 frames`. At the permitted live-config maximum 1400 ms the same formula gives
+84 frames. The formula is dimensionally `ms * frames/s / ms/s = frames`; valid input bounds are the
+delivery-kind `[GT]` ranges in §3.4.6.
+
+The release point is sampled from the keeper's **live CONTACT-frame position**, not the
+position at intent commit. #5 receives the release-height offset and recomputes the source point
+from its live agent query at CONTACT. W8 B does not apply ordinary-pass urgency reduction or the
+ordinary `MIN_WINDUP_FRAMES` floor to this windup: exactly one #11 windup is authoritative.
+
+### 3.8.2 Target validation and total fallback (F-05, F-09)
+
+The producer uses the live active roster at commit. A receiver is eligible only when the agent is an
+active, non-sent-off outfield team-mate and satisfies #21 §3.4.1. Exact distance ties use the lower
+roster index.
+
+At commit, `DistributeIntent.TargetReceiverId` stores the selected receiver id (or null), and
+`TargetPoint` stores that receiver's **commit-time position** or the already-selected receiverless
+fallback. `TargetPoint` is therefore the deterministic last-known fallback, not necessarily the
+final aim point.
+
+At #5 CONTACT, the live target is resolved again:
 
 ```
-if distributeIntent.targetReceiverId != null
-   AND !agentRoster.contains(distributeIntent.targetReceiverId):
-    // F-05: receiver substituted between commit and release
-    distributeIntent.targetReceiverId = null
-    distributeIntent.targetPoint     = lastKnownReceiverPosition
+if targetReceiverId != null AND liveRoster.containsEligible(targetReceiverId):
+    effectiveReceiver = targetReceiverId
+    effectiveTarget = livePosition(targetReceiverId)         // CONTACT-frame position
+else if targetReceiverId != null:
+    effectiveReceiver = null                                  // F-05
+    effectiveTarget = targetPoint                             // committed last-known point
     emit telemetry warning "gk.distribution.target_receiver_missing"
+else:
+    effectiveReceiver = null
+    effectiveTarget = targetPoint
 
-if distributeIntent.targetPoint.x ∉ [0, PITCH_LENGTH_M]
-   OR distributeIntent.targetPoint.y ∉ [0, PITCH_WIDTH_M]:
-    // F-09: clamp to in-bounds
-    distributeIntent.targetPoint = clampToInBounds(distributeIntent.targetPoint)
-    emit telemetry warning "gk.distribution.target_out_of_bounds"
+effectiveTarget = clampToInBounds(effectiveTarget)            // F-09
+
+if effectiveReceiver == null AND effectiveTarget lies on own goal line:
+    effectiveTarget = policyFallbackZone(teamId)              // #21 §3.4.1
 ```
 
-### 3.8.3 PassIntent emission
+Thus a receiver who moves during a 0.4–1.4 s windup is aimed at his live CONTACT-frame position; a
+receiver who disappears becomes receiverless but keeps a deterministic committed fallback. Missing
+receiver does **not** cancel an otherwise valid distribution, and the selected delivery kind is
+preserved through fallback, including `RollOut` and `ThrowOut`. #5 performs the CONTACT re-query
+through the Match Engine host surface; #11 owns F-05/F-09 semantics and #21 owns eligibility.
+
+### 3.8.3 Faithful Pass Mechanics execution (ERR-011-015)
+
+The old `PassIntent` / `PassMechanics.ConsumePassIntent` /
+`PassMechanics.DeliveryKind.LowDriven|GroundRoll|Lofted` text described APIs that do not exist.
+W8 B replaces that phantom contract with #5's dedicated
+`GoalkeeperDistributionRequest` / `GoalkeeperDeliveryVariant` seam (§5 §2.4.4, §3.8.13).
+
+The composition root translates fields structurally; #11 does not reference the #5 assembly:
 
 ```
-passIntent = PassIntent {
-    sourceAgentId     = gkId,
-    sourcePoint       = releasePoint,
-    targetPoint       = distributeIntent.targetPoint,
-    targetReceiverId  = distributeIntent.targetReceiverId,
-    powerIntent       = emittedPowerIntent,
-    spinIntent        = distributeIntent.spinIntent,
-    deliveryKind      = mapToPassMechanicsDelivery(distributeIntent.deliveryKind)
-}
-
-PassMechanics.ConsumePassIntent(passIntent)         // #5 §3 intent surface
-emit DistributionExecutedEvent { ..., releasePoint, windupDurationMs: windupMs }
-
-state machine: Distributing → Recovering
+#11 DistributeIntent              #5 GoalkeeperDistributionRequest
+------------------------------------------------------------------
+keeper id / team               -> AgentId / TeamId
+Throw | Roll | Kick            -> Throw | Roll | Kick
+targetReceiverId               -> TargetAgentId (-1 for zone)
+targetPoint                    -> TargetPosition
+emittedPowerIntent             -> EmittedPower01
+spinIntent                     -> SpinIntent
+releaseHeight                  -> ReleaseHeightM
+windupFrames                   -> WindupFrames
+commit frame                   -> FrameNumber
 ```
 
-### 3.8.4 `mapToPassMechanicsDelivery`
+Accepted initiation moves #11 to `Distributing` but **does not release possession**.
+`Distributing` remains live controlled hand possession through #5 WINDUP. At #5 CONTACT:
 
-One-to-one structural mapping:
+1. #5 re-checks that the keeper still possesses the ball.
+2. #5 samples the live keeper position, forms `releasePoint`, resolves the one B error model,
+   and calls the ball kick exactly once.
+3. The Match Engine adapter releases controlled possession through the central possession-change
+   seam on that same CONTACT, tagged as the **successful goalkeeper-distribution CONTACT** cause.
+4. W5 is armed exactly once when `TargetAgentId >= 0`; receiverless zone execution arms no W5
+   receiver latch.
+5. `DistributionExecutedEvent` is published in its registered **Resolve** phase only after the
+   successful CONTACT kick. Its `releasePoint` and `windupDurationMs` report the executed sample.
+6. #11 receives completion feedback, clears the intent, and transitions
+   `Distributing → Recovering`.
+
+**Possession-change teardown rule.** The central possession seam first compares the old and next
+possessor. If they are equal, it performs no #11 teardown. If they differ, #11 teardown is considered
+only when the outgoing possessor owns a live hand episode. An ordinary loss/takeover/restart while
+such an episode is live cancels the distribution and clears the intent. The expected possession
+release caused by **this distribution's successful #5 CONTACT is not a cancellation**: it ends hand
+control normally and must not cancel the #5 execution or clear its intent before the completion
+feedback above is consumed. The composition root therefore carries a typed possession-change cause
+(or an equivalently explicit non-ambiguous signal); inferring this case from `next == NO_POSSESSION`
+is forbidden because ordinary kicks use the same possession seam.
+
+#5 feedback is state-specific:
+
+- **Rejected before WINDUP, possession retained:** clear only `DistributeIntent`; remain
+  `HandsOnBall`; preserve `claimTick` and `releaseTickEarliest`; retry no earlier than a later
+  10 Hz heartbeat **and only if** §3.8.4's retry-budget predicate passes for the new candidate.
+- **Cancelled after acceptance, possession retained:** return `Distributing → HandsOnBall`; clear
+  only the distribution intent; preserve the same claim clock; a later retry is allowed only if
+  §3.8.4's retry-budget predicate passes.
+- **Cancelled because possession was actually lost / restart / takeover:** clear the hand episode
+  and enter `Recovering`.
+- **Completed CONTACT:** clear the intent and enter `Recovering` as normal completion.
+
+A retained-possession retry is **budget-gated, not unconditional**. At the later tactical heartbeat,
+let `candidateContactFrame = currentFrame + candidate.WindupFrames + 1`. The producer may submit the
+new #5 request only when that CONTACT frame is strictly before both (a) the frame on which the
+corrected #11 no-intent boundary would first be processed and (b) the engine ground-drop boundary.
+If either comparison fails, no new #5 request starts; #11 remains `HandsOnBall` and the inherited
+backstop handles the episode. Repeated rejections are subject to the same check on every attempt.
+
+No reject/cancel path publishes `DistributionExecutedEvent`. `ClearDistributeIntent` is the
+idempotent intent cleanup entry point; hand-episode teardown remains separate so a retained-possession
+rejection does not accidentally re-enable foot actions or wait for the 360-frame ground drop.
+
+The temporary six-second no-intent guard likewise may not manufacture `Distributing` with no
+accepted #5 request. In B that condition is a defensive legacy signal while the keeper remains
+`HandsOnBall`; ordinary policy scheduling must reach accepted #5 execution earlier. C owns the
+eventual Law-12/offence replacement.
+
+The pre-B helper's frozen-digest proof applies only to its assignment-only form and is **not**
+evidence that this B teardown behavior is neutral.
+
+### 3.8.4 Deadline budget
+
+W8 B retains the inherited six-second no-intent condition and the engine's 360-frame ground-drop
+guard as temporary backstops; neither is described as current Law-12 compliance. C owns their
+offence/restart replacement.
+
+The maximum policy delay imported from #21 is
+`GK_DIST_MAX_POLICY_DELAY_TICKS = 35` tactical ticks (`[CROSS]`, 10 Hz). The largest allowed live
+windup is Kick `1400 ms = ceil(1400*60/1000) = 84 frames`. CONTACT occurs on the executor update
+after windup reaches zero, so budget one additional frame.
+
+Worst-case claim-to-CONTACT budget:
 
 ```
-Throw → PassMechanics.DeliveryKind.LowDriven   (sub-cross height)
-Roll  → PassMechanics.DeliveryKind.GroundRoll
-Kick  → PassMechanics.DeliveryKind.Lofted
+policy wait   = 35 ticks * 6 frames/tick = 210 frames
+max windup    = 84 frames
+CONTACT step  = 1 frame
+total         = 295 frames
 ```
 
-The mapping is structural only; #5 owns the resulting trajectory.
+The engine ground-drop boundary is 360 frames after keeper possession, leaving at least 65 frames
+against that clock when claim/possession begin together. This **295-frame figure is the first-attempt
+scheduling bound only**; it does not authorize a fresh full windup after a late cancellation.
+
+For the corrected #11 tactical guard, `claimTick = floor(claimFrame/6)`. The earliest possible
+60-tick expiry relative to the physical claim occurs when the claim lands at the last frame of its
+six-frame tactical cell: the expiry heartbeat is then 355 physical frames after the claim. Therefore
+`295 < 355 < 360`; even this worst alignment leaves a **60-frame margin** before the earlier
+inherited boundary.
+
+**Worked alignment example.** Claim at frame 101 (`claimTick=floor(101/6)=16`). SlowDown may commit
+when tactical tick reaches 51, at frame 306: 205 frames after the claim. A maximum 84-frame Kick
+windup plus one CONTACT frame reaches frame 391, 290 frames after claim. The corrected #11 timeout
+tick is 76, first processed at frame 456: 355 frames after claim. The example is below the general
+295-frame bound because the claim occurred late in its tactical cell.
+
+**Late-cancellation retry example.** A cancellation on the last windup frame can occur about
+`210 + 84 = 294` frames after claim. The next tactical heartbeat may be up to 6 frames later; starting
+another maximum 84-frame windup plus its CONTACT update could therefore reach about
+`294 + 6 + 84 + 1 = 385` frames after claim, beyond both inherited guards. Such a retry is forbidden
+by the predicate above.
+
+Regressions must read the **live configured** delivery windup values and all six #21 policy delays,
+recompute the first-attempt inequality, and fail if CONTACT can meet or cross either inherited
+boundary. They must also cover (a) an early retained-possession cancellation whose retry still fits,
+(b) a last-windup-frame cancellation whose retry is refused, and (c) repeated rejection until the
+remaining budget closes. Testing only default constants or only the first attempt is insufficient.
 
 ---
 
@@ -1205,3 +1362,8 @@ standard rebound physics.
 | 0.9 | September 22, 2026 | W3 / ERR-011-011 | §3.6.1 removes phantom Collision #3 `handCapsule` / `headSphere` / `IntersectsBallSphere` surfaces. #3 is candidate discovery only; #10 owns head geometry, #11 owns its live hand/reach envelope, and no live hand envelope means no Hand participant. The dormant `ClaimIntent` must gain a real producer before ordinary cross claims can use Hand. No `[GT]`, schema or RNG change. | spec correction |
 | 0.10 | September 22, 2026 | W3 / ERR-011-012 | §3.6.1 corrects the live W3 policy discovered during implementation review: Collision #3's 2.0 m observation feed is not contest membership; ClaimIntent arms from loose/local geometry with no vertical floor, stays locked for one existing dive-duration reach episode, locks its lateral reach side, and hard-cancels only on possession/SAVE/slot invalidation/expiry. Claims reuse existing #11 dive/reach kinematics with zero save-only timing jitter. ClaimIntent is now authoritative cross-tick state in MatchEngine snapshot v23. No new `[GT]`, RNG stream/domain/draw site/order. | implementation/spec back-prop |
 | 0.11 | September 22, 2026 | W3 draft scope clarification | §3.6.1 now matches the preregistered W3 boundary exactly: only active ClaimIntent contributes W3 Hand membership. `TryGetHandReachEnvelope` may also describe an ordinary save dive for #11's own save pipeline, but W3 does not interpose on normal shot-save handling. No code/tuning/schema/RNG change. | pre-merge contract sync |
+| 0.12 | September 25, 2026 | W8 B spec / ERR-011-015/016/017 | §3.8 replaces the phantom #5 pass API with the dedicated #5 goalkeeper request, moves hand-distribution production from #8 to Match Engine + #21, pins the 10 Hz clock domain, live-roster/receiverless fallback, CONTACT-only possession release/event, zero-RNG selector, and 35-tactical-tick safety ceiling. C still owns the Law-12 eight-second correction. | spec-first; B code deferred to W8 wiring |
+| 0.13 | September 26, 2026 | W8 B review closure | `Distributing` now means an accepted #5 request only; legacy no-intent expiry cannot manufacture that state. Commit-time target point is explicitly fallback-only, valid receivers re-aim to live CONTACT position, reject/cancel outcomes distinguish retained possession from real loss, and the inherited-guard proof is shown as `210 + 84 + 1 = 295 < 355 < 360` with worked windup/alignment examples. | review correction; code still deferred |
+| 0.16 | September 26, 2026 | W8 B owner approval | Records owner approval of the W8 B amendment bundle, including the 35 m fallback as an uncalibrated B default. Overall #11 remains DRAFT; realistic punt length is explicitly not claimed solved and is tracked as a #5 trajectory follow-up after B landing-point measurement. | owner approval; code still deferred until #461 merges |
+| 0.15 | September 26, 2026 | W8 B review closure | Makes retained-possession retries conditional on a live CONTACT-before-both-guards budget, requires late-cancel/repeated-reject regressions, adds the explicit W8 owner-approval gate, and states that LongKick arrival is an evidence question rather than an assumed target hit. | review correction; code still deferred |
+| 0.14 | September 26, 2026 | W8 B final consistency | §3.1.2 tactical pseudocode no longer uses a generic Decision Tree GK intent that could re-imply the ERR-011-016 producer defect; it keeps existing SAVE/rush ownership and names Match Engine + #21 as the hand-distribution producer, with #5 acceptance gating `Distributing`. | review correction; code still deferred |

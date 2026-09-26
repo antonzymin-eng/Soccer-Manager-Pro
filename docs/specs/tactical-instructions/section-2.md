@@ -1,9 +1,9 @@
 # Tactical Instructions Specification #21 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 20, 2026
-**Last Updated:** July 10, 2026 (v0.5 — ERR-021-005/006/007 back-prop field appends)
-**Version:** 0.5
-**Status:** APPROVED (June 20, 2026)
+**Last Updated:** September 26, 2026 (v0.8 — W8 B amendment approved by owner; baseline status remains APPROVED)
+**Version:** 0.8
+**Status:** APPROVED baseline (June 20, 2026); **W8 B amendment APPROVED by owner, September 26, 2026**
 
 ---
 
@@ -34,7 +34,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-TI-019 | `OffsideTrap` (bool) enables #14 `MarkDirective.OffsideTrapActive`. | MUST | §3.4 |
 | FR-TI-020 | `TransitionWon`/`TransitionLost` override **only** the transition dimension of the `Mentality`-selected `StyleProfile` (`TransitionHoldTicks`) and the #13 counter-press gate — never the profile's other multipliers. Composition with `Mentality` is defined in §3.2. | MUST | §3.2 / §3.4 |
 | FR-TI-021 | `FocusPlay` is a **new** lateral-preference branch in #8 `OptionGenerator` and a flank bias in #15 `OverloadDetector` (no existing hook — §2.3 of supplement / KD-11). | MUST | §3.3 / KD-11 |
-| FR-TI-022 | `GkDistributionPolicy` sets the default fields of #11 `DistributeIntent`. | MUST | §3.4 |
+| FR-TI-022 | `GkDistributionPolicy` maps every one of its six values to exactly one deterministic #11 `DistributeIntent` policy: delivery kind, target selector/fallback zone, power, spin and commit delay. The map is total, consumes zero RNG draws, and is evaluated by Match Engine while the keeper has live hand control. | MUST | §3.4.1 / W8 B |
 | FR-TI-023 | A manager man-mark override (`PlayerInstructions.MarkTargetEntityId ≥ 0`) requests #14 force `MarkMode.ManMark` on that opponent, honoured **only within** #14's §3.10 anti-chaos invariants (safety floor wins on conflict). | MUST | KD-9 / §3.5 |
 | FR-TI-024 | Routing: #8 receives tactics via `TacticalContext`; #12–#15 via new fields on their own per-tick snapshots. The match-engine Phase-D assembly layer is the sole populator. | MUST | KD-4 / §4.4 |
 | FR-TI-025 | Routing fields store the **translated local** enum; the assembly layer runs translation once per tactic-change, not per agent per tick. Mechanics ticks never reference a `Tactic*` enum on the hot path. | MUST | KD-5 |
@@ -138,4 +138,7 @@ Snapshot contribution is governed by FR-TI-028. In-match mutation timing by FR-T
 | 0.3 | 2026-06-20 | — | PASS-2 fix pass: FR-TI-031 reworded to world-state (not full-payload) identity vs FR-TI-028 (H-1); FR-TI-015 gains the `tempoActionBias` utility factor (M-2); FR-TI-016 names the new `ContextModifierInputs` field (M-4); §2.2.1 Tempo note updated. |
 | 0.4 | 2026-07-07 | — | Cheap-item addition: + FR-TI-033 (`MarkingOrientation` → #14 MAN_MARK radius); TeamTactic field table + Balanced factory description updated. |
 | 0.5 | 2026-07-10 | — | Back-props ERR-021-005/006/007 (#23/#24/#25 `APPROVED`): `DismarkIntensity`, `BuildUpStructure`, `RotationFreedom` appended to the TeamTactic field table in spec-approval order; Balanced factory notes all three as zero-value identities. Behaviour contracts stay in the owning specs (FR-DM/FR-BU/FR-RO); serialization coverage lands with each spec's wiring via `WriteTeamTactic` + one `SNAPSHOT_SCHEMA_VERSION` bump per landing (Appendix B v0.5). |
+| 0.6 | 2026-09-25 | — | W8 B: FR-TI-022 becomes a total deterministic producer contract for #11 distribution. Exact six-value mapping, selector/tie-break, fallback zone, power and tactical-tick delays are normative in §3.4.1. Zero RNG; no enum ordinal change. |
+| 0.8 | 2026-09-26 | — | W8 B amendment APPROVED by owner, September 26, 2026. Approval covers amended FR-TI-022 together with #21 §3.4.1 and the paired #5/#11 W8 sections. The 35 m fallback is accepted as an uncalibrated B default; B wiring begins only after PR #461 merges. |
+| 0.7 | 2026-09-26 | — | W8 B review closure: the historical June APPROVED baseline remains approved, but the W8 amendment is explicitly PENDING OWNER APPROVAL. Merge is not treated as approval; B wiring remains blocked until owner acceptance of the amended FR-TI-022 / §3.4.1 contract. |
 #endregion

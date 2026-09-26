@@ -7,7 +7,7 @@ modes for Pass Mechanics Specification #5. This section defines the "what" and "
 before Section 3 defines the "how."
 
 **Created:** February 20, 2026, 5:30 PM PST
-**Version:** 1.1
+**Version:** 1.5
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -33,6 +33,7 @@ before Section 3 defines the "how."
   - [2.4.1 PassRequest](#241-passrequest)
   - [2.4.2 PassResult](#242-passresult)
   - [2.4.3 PhysicalProfile (Internal)](#243-physicalprofile-internal)
+  - [2.4.4 GoalkeeperDistributionRequest — W8 B](#244-goalkeeperdistributionrequest--w8-b)
 - [2.5 Non-Functional Requirements](#25-non-functional-requirements)
 - [2.6 Failure Modes and Recovery](#26-failure-modes-and-recovery)
 - [2.7 Open Dependency Flags](#27-open-dependency-flags)
@@ -42,7 +43,7 @@ before Section 3 defines the "how."
 
 ## 2.1 Functional Requirements
 
-Ten functional requirements govern the Pass Mechanics system for Stage 0. Each requirement
+Ten original functional requirements govern ordinary Pass Mechanics for Stage 0. W8 B adds the dedicated goalkeeper-distribution execution contract below without changing the seven-value `PassType` ordinal surface. Each requirement
 derives directly from the core responsibilities in Section 1.1 and maps to one or more
 sub-systems in Section 3. All requirements include their Section 3 owner and test coverage
 identifiers.
@@ -626,6 +627,76 @@ internal struct PhysicalProfile
 
 ---
 
+### 2.4.4 GoalkeeperDistributionRequest — W8 B
+
+**W8 amendment approval:** **W8 B amendment APPROVED by owner, September 26, 2026.** The overall #5 specification remains DRAFT; this approval applies only to the W8 B amendment bundle (#5 §2.4.4 / §3.8.13, #11 §3.8, and #21 FR-TI-022 / §3.4.1). B production wiring is authorized only after PR #461 merges.
+
+W8 B adds a **#5-owned** request family rather than pretending goalkeeper hand distribution is an
+ordinary `PassRequest`. This resolves ERR-011-015 without adding/reordering `PassType`.
+
+```csharp
+public enum GoalkeeperDeliveryVariant : byte
+{
+    Roll = 0,
+    Throw = 1,
+    Kick = 2
+}
+
+public struct GoalkeeperDistributionRequest
+{
+    public int AgentId;
+    public int TeamId;
+    public GoalkeeperDeliveryVariant Delivery;
+    public int TargetAgentId;
+    // Commit-time aim/fallback point. If TargetAgentId remains eligible at CONTACT,
+    // #5 replaces this with that receiver's live CONTACT-frame position.
+    public Vector3 TargetPosition;
+    public float EmittedPower01;
+    public Vector3 SpinIntent;
+    public float ReleaseHeightM;
+    public int WindupFrames;
+    public int FrameNumber;
+}
+
+public enum GoalkeeperDistributionFeedbackKind : byte
+{
+    Rejected = 0,   // synchronous INITIATING rejection; WINDUP never started
+    Cancelled = 1,  // accepted, then ended before CONTACT
+    Completed = 2   // exactly one successful CONTACT kick
+}
+```
+
+`TargetAgentId == -1` means a receiverless zone. `GoalkeeperDeliveryVariant` is APPEND-only once
+serialized by W8 B. It is **not** `PassType`, is not placed in ordinary
+`PassAttemptEvent.PassType`, and does not alter the existing PassType error-hash input. The executor
+owns a separate stable goalkeeper-distribution mode in its snapshot state; W8 B therefore requires
+one Match Engine snapshot-schema bump when code lands.
+
+The request is accepted only while the executor is idle and `AgentId` still owns possession.
+Receiverless execution is valid for all three variants.
+
+**Target semantics.** `TargetPosition` is the commit-time receiver position or already-selected
+receiverless fallback. It is therefore always a valid fallback point. At CONTACT, #5 re-queries the
+host's live roster/agent surface. If `TargetAgentId >= 0` and that receiver remains eligible under
+#21 §3.4.1, #5 aims at the receiver's **live CONTACT-frame position**. If the receiver disappeared,
+was sent off, or is otherwise no longer eligible, #5 applies #11 F-05: set the effective receiver to
+`-1`, use the stored `TargetPosition`, then apply F-09 / own-goal-line safety. The target is not
+silently frozen at commit for up to a full windup.
+
+**Feedback semantics.** #5 returns one typed
+`GoalkeeperDistributionFeedbackKind` to the composition root:
+
+- `Rejected`: INITIATING failed; WINDUP never existed and no ball mutation occurred.
+- `Cancelled`: request was accepted but ended before CONTACT; no ball mutation/event occurred.
+- `Completed`: exactly one CONTACT kick occurred.
+
+If Rejected/Cancelled occurs while the same keeper still owns controlled possession, the host clears
+only the distribution intent and leaves #11 in `HandsOnBall` with the original claim clock; a new
+intent may be attempted no earlier than a later 10 Hz tactical heartbeat **and only when #11 §3.8.4
+proves that candidate CONTACT remains strictly before both inherited guards**. If possession was
+actually lost, the hand episode ends and #11 moves to `Recovering`. Successful CONTACT uses the
+distinct normal-completion possession-change cause and may not self-cancel the just-completed execution.
+
 ## 2.5 Non-Functional Requirements
 
 | NFR ID | Category | Requirement | Rationale / Source |
@@ -679,6 +750,10 @@ Neither flag blocks Section 2. Both flags block Section 3.
 |---------|------|--------|-------|
 | 1.0 | February 20, 2026, 5:30 PM PST | Claude (AI) / Anton | Initial draft. 10 FRs (expanded from outline). NFR section added. Physical profile table included. FM table formalised. ERR-007/008 flags carried forward from Section 1. |
 | 1.1 | March 25, 2026 | Claude (AI) / Anton | Post-audit fixes: Decision Tree #7→#8 (C-03, 2 instances); FR-02 fatigue convention corrected 1.0=rested→0.0=rested (C-04); §2.4.3 profile table marked SUPERSEDED by §3.1.4 (M-03); FR-03 Lofted angle range 35°→45°, Cross ranges aligned with §3.1 (Mod-01). |
+| 1.2 | September 25, 2026 | — | W8 B / ERR-011-015: adds #5-owned `GoalkeeperDistributionRequest` and append-only `GoalkeeperDeliveryVariant`; preserves ordinary `PassRequest`/`PassType` ABI and makes receiverless execution, serialized mode, possession-at-initiation and completion/cancellation feedback explicit. |
+| 1.5 | September 26, 2026 | — | Owner approval: W8 B amendment approved September 26, 2026 as part of the #5/#11/#21 bundle. #5 remains overall DRAFT; B wiring is authorized only after PR #461 merges. The 35 m LongKick target is accepted as an uncalibrated B default, while realistic punt length remains a separate #5 trajectory follow-up. |
+| 1.4 | September 26, 2026 | — | W8 B review closure follow-up: adds an explicit owner-approval gate and makes retained-possession Rejected/Cancelled retries conditional on #11 §3.8.4's live CONTACT-before-both-guards budget. |
+| 1.3 | September 26, 2026 | — | W8 B review closure: pins `TargetPosition` as the commit-time fallback while valid receiver execution re-aims at the receiver's live CONTACT-frame position; defines `Rejected` / `Cancelled` / `Completed` feedback and the exact #11 state/claim-clock consequence for retained-possession versus real possession loss. |
 
 ---
 
