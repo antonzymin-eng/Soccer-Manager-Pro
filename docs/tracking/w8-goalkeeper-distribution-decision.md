@@ -1,20 +1,20 @@
 # W8 Goalkeeper Distribution — Owner Decision Packet
 
 > **Created:** September 25, 2026  
-> **Status:** **DECISION REQUIRED — investigation only; no gameplay code, approved-spec change, schema change, RNG change, or `[GT]` tuning is authorized by this document.**  
+> **Status:** **ARCHITECTURE RECORDED — staged implementation authorized by the owner; numeric policy and execution details await B spec text. This packet changes no gameplay, approved spec, schema, RNG, or `[GT]`.**
 > **Production anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (`main`, PR #455 merge).  
-> **Scope:** Resolve the W8 ownership/contract questions that must be settled before a result-bearing preregistration, diagnostic instrument, or production wiring is written.
+> **Scope:** Record W8 ownership and the ordered A baseline, isolated possession-helper refactor, B spec, and B wiring boundaries.
 
 ## Owner decisions at a glance
 
-| ID | Proposed choice for owner approval | Landing |
+| ID | Recorded architecture; details to specify in owning specs | Landing |
 |---|---|---|
 | OD-W8-1 | 2026/27 Law 12; #11 hand clock gated by live controlled possession; opponent corner; feet-only stall guard. | C, after live distribution |
 | OD-W8-2 | Match Engine owns hand-held distribution, suppresses Decision Tree on-ball actions, and produces total #21-policy intents outside ordinal 8. | B |
 | OD-W8-3 | Retire timeout-forced ROLL; empty-receiver fallback is covered by OD-W8-2. | N/A — covered by OD-W8-2 |
 | OD-W8-4 | Extend #5 for a faithful GK request; serialized B windup/cancel, CONTACT release and W5 registration. | B |
 
-**Status:** recommendations only; no owner decision has been recorded. Approval would settle only the four architecture choices and the A→B→C order. §7's non-decisions describe this *draft* state and are superseded by an explicit owner decision record, not silently by this packet. The policy table, selector, fallback geometry, timing and RNG/draw-order rules need approved #21/#11/#5/Match Engine text before B code uses them; approved #11 remains authoritative until amended with its matching code. The frame, phase and contract rules below are planning obligations. At each implementation landing, transcribe accepted rules into the owning approved specs **in the same commit as code**; those specs then take precedence over this packet.
+**Owner direction (September 25, 2026):** proceed in this order: land a behavior-neutral, nonserialized instrument and preregistration **before reading A results**; run the frozen six-seed A baseline; land the separate, behavior-neutral possession-change helper with exact frozen-seed digest equality (it may be developed alongside A); amend #11, #5, #21 and Match Engine with the actual policy delays, delivery ranges, tie-break and punt-zone geometry and file the #11 ERRs **before any B wiring code**; then wire B and compare the same corpus with A. The architecture choices above govern that work. §7 now lists only unresolved numerical and policy details. Approved specs govern implementation once amended; this packet does not itself amend them. C's Law-12 correction remains a later, separately measured landing.
 
 ---
 
@@ -81,7 +81,7 @@ Current #11 behavior does not implement that outcome. When its hand-claim timer 
 
 This #11 transition leaves `HandsOnBall` without a kick, but the keeper's authoritative possession can persist until the engine's separate drop or another action. The required forced ROLL and its event are missing; do not infer that every claim runs to either timeout without observing the Decision Tree, restart, foul and goal exits.
 
-Against the **current project spec**, this is a factual code/spec divergence: production does not perform the forced ROLL that FR-GK-043 requires. But the requirement's football-law premise is itself now under review (§1.9 below). Neither current nor historical IFAB Law 12 uses a forced ROLL as the timeout sanction. If the project adopts current law, FR-GK-028 / FR-GK-043 and the six-second `[FIXED]` constant require correction; under a historical ruleset, the forced ROLL still needs separate treatment as a project policy.
+Against the **current project spec**, this is a factual code/spec divergence: production does not perform the forced ROLL that FR-GK-043 requires. But the requirement's football-law premise was reviewed (§1.10 below). Neither current nor historical IFAB Law 12 uses a forced ROLL as the timeout sanction. If the project adopts current law, FR-GK-028 / FR-GK-043 and the six-second `[FIXED]` constant require correction; under a historical ruleset, the forced ROLL still needs separate treatment as a project policy.
 
 FR-GK-043 also leaves one edge case undefined if its forced-ROLL model is retained: no eligible own-team agent is inside the penalty area at timeout.
 
@@ -115,7 +115,26 @@ W8 must replace that stub with an authoritative live-roster query at the executi
 
 `ApplyRestart` replaces the ball/possessor and clears claim intents, but there is no #11 entry point to end an existing `HandsOnBall`/`Distributing` episode when possession is lost. #11 also has no `ClearDistributeIntent` analogue of `ClearSaveIntent`/`ClearRushIntent`: `ResetSlot` alone clears a committed distribution, so an interrupted intent can survive into the next claim. The current `Distributing` branch marks release reached immediately even without an active intent. A real #5 windup in B needs a serialized cross-tick wait/feedback latch and explicit loss/cancel teardown, not that immediate release.
 
-### 1.9 The project's “Law 12 six-second rule” is no longer the current IFAB law
+### 1.9 Narrow possession-change seam for the pre-B refactor
+
+The helper centralizes the identity assignment so B can later attach #11 hand-episode teardown; the pre-B refactor must not invoke new teardown or change ball-state or restart semantics. Inventory every `_possessingAgentId` assignment at this production anchor before changing code; line numbers identify this revision and must be rechecked when implementing:
+
+| Writer in `MatchEngine.cs` | Disposition for the isolated helper PR |
+|---|---|
+| `:750` initialization | Keep direct: no live keeper hand episode. |
+| `:1110` opening-kickoff award | Keep direct: startup runs before a keeper can hold the ball. |
+| `:3054` `TestOnly_ForceBallLoose` | Keep direct and explicitly test-only; it is not a production writer. |
+| `:5427` `ApplyRestart` award | Route through the helper; B later uses this seam to end an existing keeper hand episode. |
+| `:6091` unresolved interception release | Route through the helper. |
+| `:6097` loose/deflected touch release | Route through the helper. |
+| `:6849` snapshot restore | Keep direct: restore reconstructs state rather than creating a gameplay transition. |
+| `:8477` `TakeControlledPossession` | Route through the helper before the existing ball-control operations. |
+| `:8505` `ReleaseControlledPossession` | Route through the helper after the existing conditional ball-control release. |
+| `:8579` `ReleasePossessionOnKick` | Route through the helper inside its existing current-holder guard. |
+
+These are **six mid-match assignment sites**, one test-only site, and three initialization/restore sites. Preserve the existing guard, ball operations, claim cancellation, event timing and assignment order at each caller. Add a guard test that inventories all writers and fails if a new mid-match direct assignment bypasses the seam. Compare frozen-seed digests before and after this refactor exactly, including snapshot/restore; a difference requires investigation before B. B may then add teardown on an actual keeper hand-episode ownership loss via this one seam, with separate behavior tests. The B contract must capture the prior hand-control state before `ApplyRestart` replaces `_ball` or `ReleaseControlledPossession` releases its control, so the hook cannot miss a real episode after the caller has changed ball state. A's measurement instrument must remain nonserialized and behavior-neutral. The helper is not itself a distribution producer or a new Law-12 clock.
+
+### 1.10 The project's “Law 12 six-second rule” is no longer the current IFAB law
 
 The current IFAB Laws of the Game **2026/27** retain the change introduced in 2025/26. A goalkeeper controlling the ball with the hands/arms inside the penalty area may do so for **eight seconds**; if control exceeds eight seconds, the restart is a **corner kick to the opponents**, with the referee visually counting down the final five seconds. Under the pre-2025/26 law, the limit was six seconds and the sanction was an **indirect free kick to the opponents**. Neither edition makes a forced ROLL the sanction.
 
@@ -139,7 +158,7 @@ This is a spec-governance decision, not gameplay tuning.
 
 ---
 
-## 2. Owner decisions required before preregistration
+## 2. Recorded architecture and B-spec obligations
 
 ### OD-W8-1 — Laws edition, hand-control authority, and the engine feet-possession guard
 
@@ -173,7 +192,7 @@ After the rules edition is chosen, choose the long-term ownership of any remaini
 
 This can consume the **existing** #11 `GoalkeeperMechanics.GetState(gkIndex)` distinction: `HandsOnBall` marks hand control, and `Distributing` remains hand control while the keeper still holds the ball through #5 windup. It still requires the same three-part live-control predicate, authoritative possession-lost entry point and exact claim-frame handoff as Option A, not an invented new hand-vs-feet concept. Using the present `_possessingAgentId` test unchanged is not acceptable: it would count both hand control and feet possession, and treating `Distributing` windup as feet would let the safeguard cancel a valid launch.
 
-**Proposed disposition for owner approval:** current 2026/27 law; #11's hand-control clock; Match Engine's shared restart seams with an offence-specific corner entry; retain the engine guard only for feet-possession stalls until measured. Stage this law correction **after** a working voluntary distribution path (§6), never on the pre-wire engine. Freeze the exact 10 Hz / 60 Hz boundary: actual CONTACT/release at elapsed 480 physics frames is legal; a committed intent alone does not stop the clock. If control persists into frame 481, a **new hand-offence check placed before the C3 pass-executor update loop in `RunResolvePhase`** must adjudicate before any #5 CONTACT, cancel the pending pass via an explicitly specified #5 cancellation/feedback seam (there is no public `PassExecutor.Cancel` today) and award the corner once. The existing ground-drop guard runs **after** executors and first touch; reusing that slot would allow a late kick. Keep the feet-only safeguard there. C also removes #11's no-intent 10 Hz forced-recovery transition so hand control cannot disappear at the deadline without a real release, a real loss, or sanction. C must check the live three-part control predicate before any offence; a restart, goal, foul or tackle must instead call #11's possession-lost entry point. Keep one Law-12 deadline constant; retag the old `GK_MAX_HOLD_SECONDS` as an explicitly non-law feet-stall value or retire it with code. Review the tackle exemption at `MatchEngine.cs:3753`, which currently treats keeper feet as hands, in C or explicitly defer it as a tracked issue. Add the precise 60 Hz claim frame at all three claim sites and clear it on exit/`ResetSlot`. B **already** needs a separate schema bump for the #5 windup latch; C's exact-frame additions require their own snapshot plan.
+**Recorded architecture for later C implementation:** current 2026/27 law; #11's hand-control clock; Match Engine's shared restart seams with an offence-specific corner entry; retain the engine guard only for feet-possession stalls until measured. Stage this law correction **after** a working voluntary distribution path (§6), never on the pre-wire engine. Freeze the exact 10 Hz / 60 Hz boundary: actual CONTACT/release at elapsed 480 physics frames is legal; a committed intent alone does not stop the clock. If control persists into frame 481, a **new hand-offence check placed before the C3 pass-executor update loop in `RunResolvePhase`** must adjudicate before any #5 CONTACT, cancel the pending pass via an explicitly specified #5 cancellation/feedback seam (there is no public `PassExecutor.Cancel` today) and award the corner once. The existing ground-drop guard runs **after** executors and first touch; reusing that slot would allow a late kick. Keep the feet-only safeguard there. C also removes #11's no-intent 10 Hz forced-recovery transition so hand control cannot disappear at the deadline without a real release, a real loss, or sanction. C must check the live three-part control predicate before any offence; a restart, goal, foul or tackle must instead call #11's possession-lost entry point. Keep one Law-12 deadline constant; retag the old `GK_MAX_HOLD_SECONDS` as an explicitly non-law feet-stall value or retire it with code. Review the tackle exemption at `MatchEngine.cs:3753`, which currently treats keeper feet as hands, in C or explicitly defer it as a tracked issue. Add the precise 60 Hz claim frame at all three claim sites and clear it on exit/`ResetSlot`. B **already** needs a separate schema bump for the #5 windup latch; C's exact-frame additions require their own snapshot plan.
 
 ### OD-W8-2 — Production `DistributeIntent` producer
 
@@ -189,10 +208,10 @@ Two architectural choices exist.
 
 The Match Engine must also own **exclusive** hand-held distribution arbitration: while #11 is `HandsOnBall` or a still-controlled `Distributing` windup, suppress the keeper's Decision Tree on-ball PASS/SHOOT/DRIBBLE/HOLD dispatch (and interrupt any in-flight foot action safely). Normal feet-possession and off-ball Decision Tree actions remain available outside that hand episode. A losing #5 `Execute` result must never be ignored as an ordinary no-op; record and disposition a rejected initiation without a duplicate launch.
 
-This option still requires new normative specification for:
+This accepted architecture still requires new normative B specification for:
 1. exact policy → delivery-kind / target-class / power defaults;
-2. a **total**, deterministic receiver-or-zone selector for every live keeper hand claim under every #21 distribution policy: select a currently valid teammate when possible, otherwise supply a fixed, deterministic, in-bounds zone target off the keeper's own goal line. No eligible receiver (including all candidates filtered out by the policy, or roster/sent-off validation) must never mean no intent, a skipped commit, or a forced wait to the timeout. Specify the fixed zone's geometry, end-relative orientation and tie rule before preregistration. Proposed default: preserve each policy's delivery-kind semantics for zone targets. The owner must explicitly settle whether receiverless `RollOut`/`ThrowOut` stays that type or uses a separately specified emergency kick; do not switch delivery silently;
-3. deterministic commit timing between `releaseTickEarliest` and the deadline for **actual CONTACT**, accounting for #11's delivery-specific, config-backed windup (current Roll/Throw/Kick defaults 400/700/900 ms), its deterministic conversion into #5 physics frames, the 10 Hz commit stride and Resolve-phase ordering; in B, planned CONTACT must precede **both** #11's 10 Hz no-intent timeout and the inherited 360-frame ground-drop guard (whichever comes first for that claim), and the same voluntary schedule must be retained in C to isolate the sanction change;
+2. a **total**, deterministic receiver-or-zone selector for every live keeper hand claim under every #21 distribution policy: select a currently valid teammate when possible, otherwise supply a fixed, deterministic, in-bounds zone target off the keeper's own goal line. No eligible receiver (including all candidates filtered out by the policy, or roster/sent-off validation) must never mean no intent, a skipped commit, or a forced wait to the timeout. Freeze the A dry-run selector candidate before measurement; specify the final fixed zone's geometry, end-relative orientation and tie rule in B specs before wiring. Proposed default: preserve each policy's delivery-kind semantics for zone targets. The owner must explicitly settle whether receiverless `RollOut`/`ThrowOut` stays that type or uses a separately specified emergency kick; do not switch delivery silently;
+3. deterministic per-policy commit delays between `releaseTickEarliest` and the deadline for **actual CONTACT**, accounting for #11's delivery-specific, config-backed windup (current Roll/Throw/Kick defaults 400/700/900 ms), its live allowed configuration bounds, deterministic conversion into #5 physics frames, the 10 Hz commit stride and Resolve-phase ordering; if the allowed maximum cannot meet the deadline, constrain/validate that configuration explicitly in the owning specs before B. In B, planned CONTACT must precede **both** #11's 10 Hz no-intent timeout and the inherited 360-frame ground-drop guard (whichever comes first for that claim), and the same voluntary schedule must be retained in C to isolate the sanction change;
 4. what `SlowDown` and `Quick` mean in that timing rule;
 5. the #21 §7 T4 “polish” classification — either accept W8 as the approved consumer that activates it or explicitly revise that tiering;
 6. RNG policy for receiver selection and commit timing: either make each rule deterministic and draw-free, or name the existing/new deterministic RNG domain and draw-site ID explicitly. Any new draw site/order changes the digest stream and must be declared before measurement.
@@ -201,7 +220,7 @@ This option still requires new normative specification for:
 
 This requires resolving the ordinal-8 / 3-bit composure-noise boundary before W8 and therefore couples W8 to the same digest/rebaseline choice as W9.
 
-**Decision needed:** producer architecture and the total selector contract, including the exact fixed zone. No implementation may infer the policy table, target selector, or timing rule. The selector's totality applies while the keeper still controls the ball in an active match; actual possession loss or interrupted play follows the new #11 possession-lost/cancellation path and disarms the committed intent.
+**Recorded architecture; B spec still needed:** the engine-side producer and total selector are chosen. No implementation may infer the policy table, target selector, exact fixed punt-zone geometry, delivery ranges, tie-break, or timing rule. The selector's totality applies while the keeper still controls the ball in an active match; actual possession loss or interrupted play follows the new #11 possession-lost/cancellation path and disarms the committed intent.
 
 ### OD-W8-3 — Retire the timeout-forced ROLL
 
@@ -209,7 +228,7 @@ FR-GK-043 currently demands a timeout-forced default ROLL toward the nearest own
 
 ### OD-W8-4 — Distribution executor, possession release, and pass registration
 
-A committed `DistributeIntent` currently stops at an event. The owner must fix the execution contract before preregistration.
+A committed `DistributeIntent` currently stops at an event. The detailed execution contract belongs in the owning B specs before wiring.
 
 The approved #11 contract already requires Pass Mechanics #5 rather than a goalkeeper-local kick implementation. The remaining decision is which composition-root surface owns the adaptation and ordering. The contract must state, before code:
 
@@ -222,24 +241,24 @@ The approved #11 contract already requires Pass Mechanics #5 rather than a goalk
 7. save/restore and snapshot consequences for any new cross-tick executor/adaptation state: the B-stage #11 `Distributing` wait-for-#5 latch and terminal feedback belong in `GoalkeeperTickState`, any new #5 per-executor fields in `PassExecutorState`, and Match Engine bumps `SNAPSHOT_SCHEMA_VERSION` **in B**, independently of C's later 60 Hz frame/schema change;
 8. exactly one distribution accuracy/error model: either #11's `ComputeAccuracyCoeff` feeding emitted power or #5's `ComputeErrorAngle` as adapted for keeper distributions; do not silently apply both.
 
-**Proposed disposition for owner approval:** extend Pass Mechanics #5 with its **own #5-owned request/variant types** that faithfully carry #11's delivery, emitted power and spin, with either a real receiver or a receiverless zone target. #11 and #5 assemblies do not directly reference each other; Match Engine translates the #11 `DeliveryKind` at the adapter. #11 supplies its delivery-specific `ComputeWindupMs`; #5 executes that as one frame-quantized windup, with #11's release point computed from the live keeper position at CONTACT. Match Engine owns the adapter and initiation, keeps possession through accepted initiation, uses CONTACT-time kick/release, arms W5 through the existing pass adapter exactly once, then publishes `DistributionExecutedEvent` only for a launched ball. Keep #11 in `Distributing` through the windup using a serialized B-stage latch; replace its immediate `distributionReleaseReached = true` and immediate event with completion/cancellation feedback from #5. Add `ClearDistributeIntent` alongside #11's existing clear-intent APIs and invoke it on every loss/restart/cancel; `ResetSlot` alone does not clear interrupted episodes. The receiverless variant must reach the same CONTACT-time launch through #5 without inventing a W5 receiver latch (the existing space-targeted `PassRequest` represents absent receiver as `TargetAgentId = -1`). A narrowed translation into today's foot-pass `PassRequest` would discard #11 semantics; a goalkeeper-local kick would duplicate #5. Fix the live roster check, declare B's Tier-A event/digest movement and bump the snapshot schema in B for the #11/#5 cross-tick state, then separately in C as required.
+**Recorded B architecture, with details pending B specs:** extend Pass Mechanics #5 with its **own #5-owned request/variant types** that faithfully carry #11's delivery, emitted power and spin, with either a real receiver or a receiverless zone target. #11 and #5 assemblies do not directly reference each other; Match Engine translates the #11 `DeliveryKind` at the adapter. #11 supplies its delivery-specific `ComputeWindupMs`; #5 executes that as one frame-quantized windup, with #11's release point computed from the live keeper position at CONTACT. Match Engine owns the adapter and initiation, keeps possession through accepted initiation, uses CONTACT-time kick/release, arms W5 through the existing pass adapter exactly once, then publishes `DistributionExecutedEvent` only for a launched ball. Keep #11 in `Distributing` through the windup using a serialized B-stage latch; replace its immediate `distributionReleaseReached = true` and immediate event with completion/cancellation feedback from #5. Add `ClearDistributeIntent` alongside #11's existing clear-intent APIs and invoke it on every loss/restart/cancel; `ResetSlot` alone does not clear interrupted episodes. The receiverless variant must reach the same CONTACT-time launch through #5 without inventing a W5 receiver latch (the existing space-targeted `PassRequest` represents absent receiver as `TargetAgentId = -1`). A narrowed translation into today's foot-pass `PassRequest` would discard #11 semantics; a goalkeeper-local kick would duplicate #5. Fix the live roster check, declare B's Tier-A event/digest movement and bump the snapshot schema in B for the #11/#5 cross-tick state, then separately in C as required.
 
 **Timing rule for the two landings:** In **B**, schedule each policy's commit early enough that #5 CONTACT occurs **strictly before the earlier of** (a) #11's 10 Hz `(currentTick - _claimTick) >= 60` no-intent transition and (b) Match Engine's 360-frame `_gkHoldTicks` ground drop. Budget with the actual serialized engine counter, rounded-down #11 claim tick, tactical dispatch, ms→frame rounding and Resolve ordering; do not assume the clocks share a start frame. `Execute` accepting at 5.9 s is not a release. Keep both old timeout paths unchanged for B and count them separately: without an intent, #11 may recover with no kick before the engine later drops the ball; with a late/injected pass, engine release can cancel #5 at CONTACT, and no distribution event may publish. Ordinary policy scheduling must depend on neither fallback. In **C**, hand control continues through windup and ends only at actual CONTACT/release. A CONTACT at exactly 480 frames after the precise hand claim is legal; if control survives to frame 481, the new offence check runs **before** the C3 executor loop and awards the corner before any pass CONTACT, even if an intent was committed earlier. The post-first-touch feet guard remains separate. Lock this ordering for both keeper ends and save/restore.
 
 ---
 
-## 3. ERR/spec obligations after the owner decision
+## 3. ERR/spec obligations in the staged work
 
-The forced-release implementation divergence and the missing execution seam require Goalkeeper Mechanics #11 error records once the owner decision fixes the intended correction. Reserve specific ERR IDs only when the decision is accepted and the exact defect boundaries are known.
+The forced-release implementation divergence and the missing execution seam require Goalkeeper Mechanics #11 error records. Check available IDs and file the B producer/executor defects with the B spec text before wiring; defer C's Law-12 correction and its closure until the matching C code. A filed ERR does not claim its runtime defect has been fixed.
 
 The landing must distinguish:
 
-1. **Law choice now, law/code correction in its own later landing:** resolve OD-W8-1 before preregistration, but do not change the six-second guard or #11 timeout spec before a live voluntary distributor exists. A standalone eight-second/corner patch on today's producer-less #11 path could turn hand claims that survive ordinary Decision Tree/restart exits into opponent corners; first measure those exits in A. After the W8 distribution landing and its separate measurement, correct FR-GK-028 / FR-GK-043 and the `[FIXED]` hold constant together with the code: eight seconds + opponent corner for current law, or six seconds + opponent indirect free kick for a named historical edition. Any forced ROLL is separate project policy. The intermediate old guard is documented as the existing **noncompliant ground-drop backstop**, not historical IFAB compliance;
+1. **Law/code correction in its own later landing:** keep the recorded current-law choice, but do not change the six-second guard or #11 timeout spec before a live voluntary distributor exists. A standalone eight-second/corner patch on today's producer-less #11 path could turn hand claims that survive ordinary Decision Tree/restart exits into opponent corners; first measure those exits in A. After the W8 distribution landing and its separate measurement, correct FR-GK-028 / FR-GK-043 and the `[FIXED]` hold constant with C code: eight seconds + opponent corner for the chosen current law. Any forced ROLL is separate project policy. The intermediate old guard is documented as the existing **noncompliant ground-drop backstop**, not historical IFAB compliance;
 2. **code fix:** replace the live `agentRosterContains: true` stub so F-05 receiver validation is reachable;
 3. **spec defect + execution-contract repair:** #11 §3.8.3–§3.8.4 names a phantom #5 contract: nonexistent `PassIntent`, `PassMechanics.ConsumePassIntent`, `PassMechanics.DeliveryKind`, `LowDriven`, and `GroundRoll`. Today's `PassRequest` also lacks #11's source-point / power / spin / delivery fields and `PassExecutor` derives those semantics independently. File this drift explicitly; the proposed faithful #5 extension requires atomic #11/FR-GK-007 **and #5** amendment rather than claiming “no #5 amendment required.” Specify how #11's existing windup, release-point and emitted-power calculations feed the one #5 executor: retain their semantics, compute release geometry at CONTACT, convert windup once, keep `Distributing` live until real launch/cancel, and remove the current immediate-release/event path. No second GK-local kick;
 4. **documentation/code correction:** repair the stale `DistributionExecutedEvent` comment claiming `Ball.ApplyKick` precedes the event, at the same time the real executor ordering is implemented and locked;
 5. **new normative specification:** concrete #21 policy mapping, total receiver-or-zone selector with a fixed in-bounds zone rule, voluntary commit timing, RNG/draw-order rule, executor adaptation/phase ordering, and F-05's receiverless last-known-point fallback with fixed-zone replacement only when the F-09-clamped point is on the keeper's own goal line;
-6. **spec back-propagation where authority changes:** amend #11/#21 integration text if the owner moves the producer away from Decision Tree #8, changes Law-12 ownership, or otherwise changes an approved normative owner; approved #11 wins until its change lands with code. The architecture vote does not silently approve numeric policy values, target geometry, timing or RNG;
+6. **spec back-propagation where authority changes:** amend #11/#21 integration text for the chosen engine-side producer and #11 hand-clock owner, plus #5 and Match Engine's execution contract, in the B spec landing before B wiring. The architecture choice does not silently approve numeric policy values, target geometry, timing or RNG;
 7. **schema obligation:** B must serialize the new #11 wait/feedback latch in `GoalkeeperTickState` and any new #5 executor fields in `PassExecutorState` and bump `SNAPSHOT_SCHEMA_VERSION` for B. C separately evaluates semantic retirement/removal/replacement of `_gkHoldTicks`, `_gkReleaseCooldownRemaining`, `_gkReleasedAgentId`, and serializes its exact 60 Hz claim frame. Save/restore across deadline, restart, loss and windup must preserve the next CONTACT, cancellation or corner outcome;
 8. **ownership and event obligations:** repair the #11 hand-possession-lost entry point and `ClearDistributeIntent`, forbid concurrent Decision Tree on-ball dispatch, reconcile `DistributionExecutedEvent`'s Physics publication with Resolve registration, declare the Tier-A digest change, and require #5-owned types plus one windup/error model.
 
@@ -247,11 +266,11 @@ Every new numeric policy/timing/power constant must carry an explicit source tag
 
 ---
 
-## 4. Candidate preregistration measures — not frozen by this packet
+## 4. Stage A preregistration measures — freeze before looking at results
 
-This decision packet does **not** freeze seeds, thresholds, acceptance bands, or falsifiers. After OD-W8-1 through OD-W8-4 are resolved, the W8 preregistration should consider these producer-neutral baseline measures:
+This decision packet does **not** freeze seeds, thresholds, acceptance bands, or falsifiers. A dedicated preregistration must freeze the six seeds, measures, end-reason classification and falsifiers and be merged alongside the nonserialized instrument **before any result-bearing baseline output is inspected**. It must include at least these producer-neutral baseline measures:
 
-- goalkeeper hand claims;
+- goalkeeper hand claims per keeper, with the exact keeper exposure denominator;
 - goalkeeper feet-possession episodes;
 - hand-hold duration distribution;
 - feet-possession duration distribution;
@@ -264,7 +283,7 @@ This decision packet does **not** freeze seeds, thresholds, acceptance bands, or
 - how every hand hold ends: engine 360-frame drop, #11 10 Hz timeout, Decision Tree PASS/SHOOT/DRIBBLE, restart, goal, foul, tackle or another possession/ball-state change, including first divergent end reason and simultaneous triggers;
 - same-keeper reclaim within a preregistered N-second window after the keeper's own drop, split into hand vs feet;
 - last ball touch before each hand claim, including teammate deliberate kick/back-pass candidates for separate Law-12 classification;
-- a behavior-neutral, RNG-neutral dry run of the approved selector on A claims (no intent commit or launch) to count receiver vs zone fallback by policy, plus explicit per-policy fixtures because `SlowDown` is the default and a six-seed corpus may exercise only that value;
+- a behavior-neutral, RNG-neutral dry run of the **preregistered target-selection candidate** on A claims (no intent commit or launch) to count receiver vs zone fallback by policy, plus explicit per-policy fixtures because `SlowDown` is the default and a six-seed corpus may exercise only that value; freeze candidate inputs and outputs before inspection, then place the final tie-break, delivery ranges and punt-zone geometry in owning B specs before code;
 - existing source-complete foul/yellow/red census.
 
 Do **not** define producer-dependent counters such as “DT distribution commits” versus “engine distribution commits” until the producer/executor contract is chosen. Once the owner chooses Match Engine ownership, baseline instrumentation must count Decision Tree on-ball keeper actions and executor initiations independently of #11 distribution so the A premise is settled from observed episodes.
@@ -305,17 +324,16 @@ The total selector must operate identically in B and C; a no-receiver policy sta
 
 ---
 
-## 6. Landing sequence after approval
+## 6. Owner-directed landing sequence
 
-1. Owner records architecture-only OD-W8-1 through OD-W8-4, explicitly superseding §7's draft non-decisions, including exclusive Decision Tree suppression during hand control, hand-episode teardown, B's snapshot bump, the two-landing isolation rule and interim voluntary release before both inherited clocks. This interim guard is not described as IFAB compliance. Record unresolved policy/selector/timing/RNG and receiverless RollOut/ThrowOut choices as B-spec obligations, not implied approvals.
-2. Before B code, agree and freeze the exact #21 policy table, total selector and zone geometry, voluntary timing and RNG/draw-order rule as reviewable owning-spec amendments. At B, file the #11/#5/#21 producer/executor ERR record(s) after rechecking ERR-011 id availability, then land the approved spec amendments **together with** their matching distribution code. Defer the Law-12/FR-GK-028/043 ERR back-propagation until its matching code landing; do not claim the pre-existing forced-ROLL divergence is resolved in the interim.
-3. Freeze preregistration for A→B and B→C and land the behavior-neutral nonserialized instrument before result-bearing W8 data. Include the A dry-run selector without RNG consumption, claim/end-reason census and per-policy fixtures.
-4. Run **A**, the pre-wire frozen corpus, and forced boundary baseline fixtures against the old ground-drop behavior.
-5. Land **B**, the #21-policy producer and faithful #5 executor under the **unchanged** six-second engine guard **and #11 tactical timeout**. Suppress on-ball Decision Tree dispatch during hand episodes; implement #11 possession-loss and `ClearDistributeIntent`, a serialized wait-for-#5 latch and #5 cancel/feedback, #5-owned request types and one error/windup model. Fix the event phase and declare its Tier-A digest effect; bump `SNAPSHOT_SCHEMA_VERSION` for `GoalkeeperTickState`/`PassExecutorState` changes. Keep voluntary CONTACT before whichever old clock fires first across all policy choices; do not implement a second goalkeeper-local kick.
-6. Run the identical corpus and boundary fixtures for B; preserve evidence and interpret the distribution effect A→B.
-7. Land **C** in a separate measured change: atomically correct the approved Law-12 spec, #11 no-intent timeout/recovery path and offence-specific opponent-corner restart. Check the three-part live hand-control predicate, add a hand-offence check and #5 cancellation **before** the C3 pass-executor loop; retain the old guard **after** first touch only as a named feet-possession safeguard. Capture/clear/serialize the precise claim frame at all three sites, reconcile the two hold constants and the tackle feet-versus-hands exemption, and apply the C snapshot plan and exact-limit/mirrored-corner tests.
-8. Rerun the same corpus and forced fixtures; preserve evidence. Compare B→C ordinary gameplay events and ball trajectories for exact non-regression; use forced fixtures alone to prove the rare timeout/law result.
-9. Only after both results are dispositioned proceed to W10/#441/W9. Any later policy-timing expansion is its own declared change; it is not silently folded into C.
+1. Merge this packet and the current `main` into PR #456, run `check_drift.sh`, take it out of draft and merge. This records the architecture and ordered work, including B's Decision Tree suppression, hand-episode teardown and serialized latch, with numeric B details unresolved. The inherited guard is not described as IFAB compliance.
+2. **A preregistration and baseline:** merge the behavior-neutral, nonserialized instrument and separate preregistration before inspecting results. Freeze the six seeds and dry-run selector; count claims per keeper, every hold end including keeper Decision Tree actions/restarts/six-second drops, same-keeper reclaims, and last touches. Run A on the frozen code/corpus and preserve its outputs.
+3. **Pre-B helper:** in a separate PR, centralize only the six mid-match writers in §1.9, inventory and guard the direct exceptions, and prove frozen-seed digests exactly equal. This refactor may be developed alongside A; it cannot change A's behavior or be bundled with B wiring. Run the applicable `snapshot-schema-bump` and `dotnet-gate` checks.
+4. **B spec text:** before **any** B wiring code, amend approved #11, #5, #21 and Match Engine with the actual per-policy commit delays, delivery ranges, deterministic receiver tie-break, punt-zone geometry, live windup bounds, RNG/draw-order and executor/phase contract. Explicitly decide receiverless `RollOut`/`ThrowOut`. File the #11 ERRs after checking ID availability, including the phantom pass contract and producer drift; identify which ERRs remain open until the corresponding code lands. The owner specifically orders the reviewable spec text before code for this slice. Defer Law-12/FR-GK-028/043 correction to C.
+5. **B wiring:** implement the #21-policy producer and faithful #5 executor under the **unchanged** six-second engine guard **and #11 tactical timeout**. Suppress on-ball Decision Tree dispatch during hand episodes; attach #11 possession-loss/`ClearDistributeIntent` teardown at the centralized ownership seam, add the serialized wait-for-#5 latch and #5 cancel/feedback, #5-owned request types and one error/windup model. Fix the event phase and declare its Tier-A digest effect; bump `SNAPSHOT_SCHEMA_VERSION` for `GoalkeeperTickState`/`PassExecutorState` changes. Keep voluntary CONTACT before whichever old clock fires first across all policy choices; do not implement a second goalkeeper-local kick.
+6. Rerun the **same** corpus and boundary fixtures for B; preserve evidence and compare A→B per claim, end reason and outcome. No new calibration fit is inferred from these six matches.
+7. **Later C, separately measured:** correct the approved Law-12 spec, #11 no-intent timeout/recovery path and offence-specific opponent-corner restart. Check the three-part live hand-control predicate, add a hand-offence check and #5 cancellation **before** the C3 pass-executor loop; retain the old guard **after** first touch only as a named feet-possession safeguard. Capture/clear/serialize the precise claim frame at all three sites, reconcile the two hold constants and the tackle feet-versus-hands exemption, and apply the C snapshot plan and exact-limit/mirrored-corner tests. Rerun the corpus and forced fixtures; compare B→C ordinary gameplay events and ball trajectories exactly. Forced fixtures prove the rare timeout/law result.
+8. Only after the evidence is dispositioned proceed to W10/#441/W9. Any later policy-timing expansion is its own declared change; it is not silently folded into C.
 
 W8 must not be bundled with W9 or W10. Any later #440/cooldown semantics change, W10 landing, #441 Heading reachability change, or W9 landing remains an invalidation trigger for the final KD-W1 calibration basis.
 
@@ -323,23 +341,23 @@ W8 must not be bundled with W9 or W10. Any later #440/cooldown semantics change,
 
 ## 7. Explicit non-decisions
 
-This document does **not**:
+This architecture record does **not yet**:
 
-- choose current IFAB 2026/27 Law 12 versus a named historical edition or an explicit project house rule;
-- approve or reject retaining the engine guard as a separately named feet-possession safeguard pending measurement;
+- implement the chosen IFAB 2026/27 Law-12 correction; that is the later C landing;
+- remove the inherited guard; its feet-only disposition remains subject to measurement and the C contract;
 - choose a concrete #21 policy mapping;
 - choose a receiver-selection algorithm or the fixed zone's precise geometry;
 - choose voluntary release timing or whether it consumes RNG;
 - choose a receiver-selection RNG/domain/draw site;
-- approve the proposed retirement of FR-GK-043's timeout-forced ROLL or the total OD-W8-2 receiver-or-zone fallback;
-- approve or reject the explicit #5 distribution extension and Match Engine adapter/ordering proposed in §2;
+- implement FR-GK-043's retirement or the chosen total receiver-or-zone fallback; exact receiverless RollOut/ThrowOut delivery belongs to the B specs;
+- settle the detailed #5 adapter/phase and cancellation API; B specs must do so before wiring;
 - authorize a Decision Tree ordinal-width change or digest rebaseline;
 - authorize W9;
 - change snapshot schema;
 - tune distribution `[GT]` constants;
 - modify production gameplay.
 
-These are **draft** non-decisions. The owner's explicit OD-W8-1..4 record supersedes this list only for the named architecture choices; exact #21 policy values, selector and zone geometry, timing, RNG and football policy still need owning-spec approval before B code. Until matching code/spec amendments land, approved #11 governs.
+The owner's staged direction supersedes the v0.12 draft non-decisions for architecture and sequence. Exact #21 policy values, selector and zone geometry, delivery ranges, timing, RNG and #5 execution details require owning-spec approval before B code. Until those amendments land, approved #11 governs current behavior.
 
 
 ---
@@ -348,6 +366,7 @@ These are **draft** non-decisions. The owner's explicit OD-W8-1..4 record supers
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.13 | 2026-09-25 | architecture recorded | Owner-directed A preregistration/instrument before results, separate behavior-neutral possession helper with explicit ten-writer disposition and exact digest parity, then #11/#5/#21/Match Engine numeric B specs and #11 ERRs before B wiring; same-corpus A→B comparison. Bounds live windup configuration and leaves receiverless RollOut/ThrowOut to B specs. |
 | 0.12 | 2026-09-25 | draft | Native two-lens advisor correction: Decision Tree keeper foot-action competition; live-control and possession-loss teardown; clearable distribution intent; serialized B windup latch and independent B/C schema changes; architecture-only approval governance. Carries event phase, #5 composition and cancellation obligations, and updates A baseline and B→C non-regression preregistration candidates. |
 | 0.11 | 2026-09-25 | draft | Defines the F-05 goal-line safety exception after F-09 clamping as a proposed new B-stage rule, labels the B no-intent timeout fixture injected/defensive, and requires separate receiverless-zone pass outcomes/completion denominators before A→B measurement. |
 | 0.10 | 2026-09-25 | draft | Makes OD-W8-2's selector total for every live hand claim: a valid receiver or a deterministic in-bounds zone under every #21 policy. Carries the fallback through F-05 invalidation, #5 receiverless execution and W5 latch handling, adds B/C no-eligible-receiver fixtures, and makes OD-W8-3's separate fallback N/A under this contract. |
