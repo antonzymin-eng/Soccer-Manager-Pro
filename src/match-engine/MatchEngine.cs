@@ -152,6 +152,21 @@ namespace TacticalDirector.MatchEngine
     /// </summary>
     public sealed class MatchEngine
     {
+        // W8 Stage A: optional, per-instance observation only. Never consumed by simulation or snapshot.
+        internal Action<W8StageAEvent> TestOnly_W8StageAObserver;
+
+        internal int TestOnly_W8TeamId(int agentId) => _teamIds[agentId];
+        internal GkDistributionPolicy TestOnly_W8DistributionPolicy(int teamId) =>
+            _activeTeamTactics[teamId].GkDistribution;
+
+        private void ObserveW8(W8StageAKind kind, int agent = -1, int other = -1,
+            RestartCue cue = RestartCue.None)
+        {
+            Action<W8StageAEvent> observer = TestOnly_W8StageAObserver;
+            if (observer != null)
+                observer(new W8StageAEvent(kind, (int)_clock.CurrentTick, agent, other, cue,
+                    _ball.Position, _possessingAgentId));
+        }
         // ── Deterministic infrastructure ──────────────────────────────────────────────
 
         private readonly DeterministicRngService _rng;
@@ -3308,6 +3323,8 @@ namespace TacticalDirector.MatchEngine
                 _decisionTrees[i].ReceiveSnapshot(
                     view, _matchContext, _tacticalContexts[i], _dtAttrs[i],
                     _agents[i], pressureScalar);
+                if (TestOnly_W8StageAObserver != null && _isGoalkeeper[i])
+                    ObserveW8(W8StageAKind.KeeperDecision, i, (int)_decisionTrees[i].LastAction.Type);
             }
         }
 
@@ -4635,7 +4652,13 @@ namespace TacticalDirector.MatchEngine
             // The header trigger below is the opposite case — it is consumed at 60 Hz — which is why
             // the two sit on either side of this call.
             TryCommitRushIntents();
+            if (TestOnly_W8StageAObserver != null)
+                for (int k = 0; k < _gkAgentIds.Length; k++)
+                    ObserveW8(W8StageAKind.TacticalBefore, _gkAgentIds[k], k);
             _goalkeeper.TacticalTick((int)_clock.CurrentTick, _agents, _ball, _gkAgentIds);
+            if (TestOnly_W8StageAObserver != null)
+                for (int k = 0; k < _gkAgentIds.Length; k++)
+                    ObserveW8(W8StageAKind.TacticalAfter, _gkAgentIds[k], k);
             // W3 claim intent is consumed by 60 Hz contact arbitration, like the header intent, so it is
             // committed AFTER this tick's state transition rather than driving a tactical-state row.
             TryCommitClaimIntents();
@@ -5132,6 +5155,8 @@ namespace TacticalDirector.MatchEngine
                 matchTime: matchTime,
                 eventConsumer: _eventConsumer,
                 ballDeflected: out bool ballDeflected);
+            if (ballDeflected)
+                ObserveW8(W8StageAKind.UnattributedDeflection);
 
             // Pre-existing W6 ordering invariant, surfaced because W3 greatly increases the observed
             // keeper-claim population: Physics attaches a Controlled ball after locomotion, but Resolve
@@ -5422,9 +5447,12 @@ namespace TacticalDirector.MatchEngine
         /// <param name="cue">What kind of restart this is. Observation only — never read by gameplay.</param>
         private void ApplyRestart(Vector2 position, int awardedTeam, RestartCue cue)
         {
+            ObserveW8(W8StageAKind.Restart, awardedTeam, _possessingAgentId, cue);
             _ball = BallState.CreateAtPosition(new Vector3(
                 position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
             _possessingAgentId = SelectRestartTaker(position, awardedTeam);
+            if (_possessingAgentId >= 0)
+                ObserveW8(W8StageAKind.Acquire, _possessingAgentId);
             CancelGoalkeeperClaimsForPossession();
 
             // ERR-012-011 — a restart ends any pass in flight, stated rather than inherited. The
@@ -5496,6 +5524,7 @@ namespace TacticalDirector.MatchEngine
                 return;
             }
 
+            ObserveW8(W8StageAKind.SixSecondDrop, holder);
             ReleaseControlledPossession(placeAtGround: true);
             _gkHoldTicks = 0;
             _gkReleasedAgentId = holder;
@@ -6047,6 +6076,7 @@ namespace TacticalDirector.MatchEngine
             FirstTouchContext context = BuildFirstTouchContext(toucher);
             FirstTouchResult result = _firstTouch.EvaluateFirstTouch(context);
             _firstTouch.ApplyTouchResult(result, context);
+            ObserveW8(W8StageAKind.FirstTouch, toucher, (int)result.PossessionOutcome);
 
             switch (result.PossessionOutcome)
             {
@@ -6172,6 +6202,7 @@ namespace TacticalDirector.MatchEngine
             if (claimer != MatchEngineConstants.NO_POSSESSION)
             {
                 TakeControlledPossession(claimer);
+                ObserveW8(W8StageAKind.LoosePickup, claimer);
             }
         }
 
@@ -8471,6 +8502,7 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void TakeControlledPossession(int agentId)
         {
+            ObserveW8(W8StageAKind.Acquire, agentId, _possessingAgentId);
             // ERR-011-014 / #11 §3.6.1: possession is a hard cancellation for every live
             // cross/aerial ClaimIntent. Clear at acquisition, not at the next 10 Hz producer pass.
             CancelGoalkeeperClaimsForPossession();
@@ -8493,6 +8525,7 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void ReleaseControlledPossession(bool placeAtGround)
         {
+            ObserveW8(W8StageAKind.Release, _possessingAgentId);
             if (_ball.State == BallStateType.Controlled)
             {
                 if (placeAtGround)
@@ -8574,6 +8607,7 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void ReleasePossessionOnKick(int agentId)
         {
+            ObserveW8(W8StageAKind.KickRelease, agentId);
             if (_possessingAgentId == agentId)
             {
                 _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
@@ -8689,6 +8723,8 @@ namespace TacticalDirector.MatchEngine
 
             public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
             {
+                _engine.ObserveW8(W8StageAKind.PassKick, agentId,
+                    _engine._passExecutors[agentId].InFlightTargetAgentId);
                 BallCollision.ApplyKick(ref ball, velocity, spin, agentId, matchTime, logger: null);
                 _engine.ReleasePossessionOnKick(agentId);
 
@@ -8743,6 +8779,7 @@ namespace TacticalDirector.MatchEngine
 
             public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
             {
+                _engine.ObserveW8(W8StageAKind.ShotKick, agentId);
                 // Canonical attack-+X frame → world frame. Both are free vectors, so both negate.
                 int team = _engine._teamIds[agentId];
                 BallCollision.ApplyKick(
@@ -8828,6 +8865,7 @@ namespace TacticalDirector.MatchEngine
 
             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTime)
             {
+                _engine.ObserveW8(W8StageAKind.GkHeadingKick, agentId);
                 BallCollision.ApplyKick(ref _engine._ball, velocity, spin, agentId, matchTime, logger: null);
                 _engine.ReleasePossessionOnKick(agentId);
 
@@ -8838,7 +8876,11 @@ namespace TacticalDirector.MatchEngine
                 _engine.ClearPassInFlight();
             }
 
-            public void SetPossessor(int agentId) => _engine.TakeControlledPossession(agentId);
+            public void SetPossessor(int agentId)
+            {
+                _engine.ObserveW8(W8StageAKind.HandClaim, agentId);
+                _engine.TakeControlledPossession(agentId);
+            }
 
             /// <summary>ERR-011-008 — the ball-side half of #11 §3.5.2's claim. Writes only
             /// <c>_ball</c> (already serialized); no ball-state-machine transition, no RNG draw, no
