@@ -12,6 +12,7 @@ namespace TacticalDirector.MatchEngine
     public sealed class PossessionChangeSeamTests
     {
         private static readonly Dictionary<ushort, OpCode> OpCodesByValue = BuildOpCodeMap();
+        private int _addressScannerProbe;
 
         [Test]
         public void PossessionIdentityWriters_MatchExplicitInventory()
@@ -26,7 +27,13 @@ namespace TacticalDirector.MatchEngine
             {
                 foreach (MethodBase method in DeclaredMethodsAndConstructors(type))
                 {
-                    int stores = CountStoresToField(method, holderField);
+                    int addresses = CountFieldOpcode(method, holderField, OpCodes.Ldflda);
+                    Assert.Zero(
+                        addresses,
+                        $"Address-taking _possessingAgentId is forbidden in {type.FullName}.{method.Name}; " +
+                        "a by-ref/indirect write would bypass SetPossessingAgent and the writer inventory.");
+
+                    int stores = CountFieldOpcode(method, holderField, OpCodes.Stfld);
                     if (stores == 0)
                     {
                         continue;
@@ -60,6 +67,32 @@ namespace TacticalDirector.MatchEngine
                 "ordinary mid-match possession changes must route through SetPossessingAgent.");
         }
 
+        [Test]
+        public void FieldOpcodeScanner_DetectsAddressTaking()
+        {
+            FieldInfo probeField = typeof(PossessionChangeSeamTests).GetField(
+                "_addressScannerProbe",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo probeMethod = typeof(PossessionChangeSeamTests).GetMethod(
+                nameof(AddressScannerProbe),
+                BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.IsNotNull(probeField);
+            Assert.IsNotNull(probeMethod);
+            Assert.That(CountFieldOpcode(probeMethod, probeField, OpCodes.Ldflda), Is.EqualTo(1));
+            Assert.That(CountFieldOpcode(probeMethod, probeField, OpCodes.Stfld), Is.EqualTo(0));
+        }
+
+        private void AddressScannerProbe()
+        {
+            ConsumeRef(ref _addressScannerProbe);
+        }
+
+        private static void ConsumeRef(ref int value)
+        {
+            // Intentionally empty. Passing the field by ref forces ldflda in AddressScannerProbe.
+        }
+
         private static IEnumerable<MethodBase> DeclaredMethodsAndConstructors(Type type)
         {
             const BindingFlags Flags =
@@ -78,7 +111,10 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
-        private static int CountStoresToField(MethodBase method, FieldInfo target)
+        private static int CountFieldOpcode(
+            MethodBase method,
+            FieldInfo target,
+            OpCode fieldOpcode)
         {
             MethodBody body = method.GetMethodBody();
             if (body == null)
@@ -88,25 +124,25 @@ namespace TacticalDirector.MatchEngine
 
             byte[] il = body.GetILAsByteArray();
             int offset = 0;
-            int stores = 0;
+            int matches = 0;
 
             while (offset < il.Length)
             {
                 OpCode opCode = ReadOpCode(il, ref offset);
-                if (opCode == OpCodes.Stfld)
+                if (opCode == fieldOpcode)
                 {
                     EnsureAvailable(il, offset, 4, method, opCode);
                     int token = BitConverter.ToInt32(il, offset);
                     if (method.Module == target.Module && token == target.MetadataToken)
                     {
-                        stores++;
+                        matches++;
                     }
                 }
 
                 SkipOperand(il, ref offset, opCode, method);
             }
 
-            return stores;
+            return matches;
         }
 
         private static OpCode ReadOpCode(byte[] il, ref int offset)
