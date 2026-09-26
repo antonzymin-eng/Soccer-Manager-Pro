@@ -3,6 +3,7 @@
 // Modified: 2026-05-31
 // Modified: 2026-09-22 (W3: mixed-participant canonical-order and symmetric near-tie duel locks)
 // Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: call sites renamed to the new state-machine parameter names)
+// Modified: 2026-09-26 (W8 / ERR-011-017 review: Recovering holds until the cooldown boundary — the not-elapsed complement of T-5.1.1-I)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §5, Code Standards #20
 // Purpose:  Unit tests for Goalkeeper Mechanics. T-5.1 unit tests from §5.
@@ -290,6 +291,41 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Set, result, "Recovering should transition to Set when cooldown has elapsed.");
+        }
+
+        // ── T-5.1.1-I2  Recovering holds until the cooldown elapses ──────────
+
+        /// <summary>
+        /// T-5.1.1-I2 (W8 / ERR-011-017 review): the complement of T-5.1.1-I. Before the cooldown boundary a
+        /// keeper away from its baseline stays <c>Recovering</c>; at the boundary it returns to <c>Set</c>.
+        /// Both ticks are 10 Hz tactical ticks. The composed engine cannot show this today because it feeds
+        /// the baseline slot the keeper's own position (open-issues.md), so the contract is locked here.
+        /// </summary>
+        [TestCase(9, GoalkeeperState.Recovering)]
+        [TestCase(10, GoalkeeperState.Set)]
+        public void Recovering_AwayFromBaseline_HoldsUntilCooldownBoundary(int currentTick, GoalkeeperState expected)
+        {
+            int cooldownEnd = 10;
+
+            GoalkeeperState result = GoalkeeperStateMachine.EvaluateTacticalTransition(
+                currentState:           GoalkeeperState.Recovering,
+                ballState:              DefaultBall(),
+                hasSaveIntent:          false,
+                hasRushIntent:          false,
+                hasDistributeIntent:    false,
+                anticipationScore:      0.0f,
+                rushCommitmentLevel:    0.0f,
+                currentTick:            currentTick,
+                claimTick:              -1,
+                releaseTickEarliest:    0,
+                recoveryCooldownEndTick:cooldownEnd,
+                gkPosition:             new Vector2(52.5f, 34f),
+                gkBaselineSlot:         new Vector2(0f, 34f),   // far from baseline
+                ballThreateningOwnGoal: true,
+                ballSafelyUpfield:      false);
+
+            Assert.AreEqual(expected, result,
+                "an off-baseline keeper recovers for exactly the cooldown, counted in tactical ticks");
         }
 
         // ── T-5.1.1-J  OneOnOne → Diving when SaveIntent committed ───────────
@@ -1694,4 +1730,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // | 1.4 | 2026-09-22 | — | W3 (PR #439): mixed-participant cross-claim duel locks — canonical         |
 // |     |            |   | registration order with three participants, and the symmetric near-tie     |
 // |     |            |   | top/second perturbation. Row added at the #439 close-out.                  |
+// | 1.5 | 2026-09-26 | — | W8 / ERR-011-017 review: T-5.1.1-I2 locks the not-elapsed side of the recovery cooldown (tick 9 < end 10 stays Recovering off-baseline; tick 10 returns to Set). T-5.1.1-I only covered the elapsed side. |
 #endregion
