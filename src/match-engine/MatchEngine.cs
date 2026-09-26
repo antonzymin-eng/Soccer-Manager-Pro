@@ -5451,7 +5451,7 @@ namespace TacticalDirector.MatchEngine
             ObserveW8(W8StageAKind.Restart, awardedTeam, _possessingAgentId, cue);
             _ball = BallState.CreateAtPosition(new Vector3(
                 position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
-            _possessingAgentId = SelectRestartTaker(position, awardedTeam);
+            SetPossessingAgent(SelectRestartTaker(position, awardedTeam));
             if (_possessingAgentId >= 0)
                 ObserveW8(W8StageAKind.Acquire, _possessingAgentId);
             CancelGoalkeeperClaimsForPossession();
@@ -6119,13 +6119,13 @@ namespace TacticalDirector.MatchEngine
                         }
                         else
                         {
-                            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+                            SetPossessingAgent(MatchEngineConstants.NO_POSSESSION);
                         }
                         break;
                     }
                 default:
                     // LOOSE_BALL / DEFLECTION — ball redirected but uncontrolled; possession stays loose.
-                    _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+                    SetPossessingAgent(MatchEngineConstants.NO_POSSESSION);
                     break;
             }
         }
@@ -8496,6 +8496,19 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// Behavior-neutral live-game possession identity seam for W8 pre-B.
+        /// This method deliberately does nothing except assign the authoritative holder id: no ball-state
+        /// mutation, event, claim cancellation, keeper teardown, RNG draw, or serialized state belongs here
+        /// in the helper refactor. Constructor/startup, snapshot restore, and TestOnly_ForceBallLoose remain
+        /// explicit direct writers; every ordinary mid-match identity change routes through this seam so B
+        /// can later attach #11 hand-episode teardown in one place without widening this landing.
+        /// </summary>
+        private void SetPossessingAgent(int agentId)
+        {
+            _possessingAgentId = agentId;
+        }
+
+        /// <summary>
         /// W6 physical-possession entry. MatchEngine remains the Option-B owner of WHO possesses the ball;
         /// Ball Physics owns the Controlled transition. Acquisition geometry remains the host's first-touch,
         /// loose-pickup, tackle, or goalkeeper decision rather than re-running Ball Physics' narrower 0.5 m
@@ -8507,7 +8520,7 @@ namespace TacticalDirector.MatchEngine
             // ERR-011-014 / #11 §3.6.1: possession is a hard cancellation for every live
             // cross/aerial ClaimIntent. Clear at acquisition, not at the next 10 Hz producer pass.
             CancelGoalkeeperClaimsForPossession();
-            _possessingAgentId = agentId;
+            SetPossessingAgent(agentId);
             BallCollision.SetBallControlled(ref _ball);
             DriveControlledBallToPossessor();
         }
@@ -8536,7 +8549,7 @@ namespace TacticalDirector.MatchEngine
                 }
                 BallCollision.ReleaseBallControl(ref _ball);
             }
-            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+            SetPossessingAgent(MatchEngineConstants.NO_POSSESSION);
         }
 
         /// <summary>
@@ -8611,7 +8624,7 @@ namespace TacticalDirector.MatchEngine
             ObserveW8(W8StageAKind.KickRelease, agentId);
             if (_possessingAgentId == agentId)
             {
-                _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+                SetPossessingAgent(MatchEngineConstants.NO_POSSESSION);
             }
         }
 
