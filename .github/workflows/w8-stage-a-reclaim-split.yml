@@ -78,9 +78,23 @@ jobs:
           if seen != expected:
               raise SystemExit(f"digest mismatch: {seen}")
 
-          same = sum(map(int, re.findall(r"count,0x[0-9A-F]+,pass-outcome-hand-interrupted-by-claim-same-keeper,(\d+)", text)))
-          opp = sum(map(int, re.findall(r"count,0x[0-9A-F]+,pass-outcome-hand-interrupted-by-claim-opponent-keeper,(\d+)", text)))
-          total = sum(map(int, re.findall(r"count,0x[0-9A-F]+,pass-outcome-hand-interrupted-by-claim,(\d+)", text)))
+          def aggregate(counter):
+              rows = re.findall(
+                  rf"count,(0x[0-9A-F]+),{re.escape(counter)},(\d+)",
+                  text)
+              by_seed = {}
+              for seed, raw in rows:
+                  value = int(raw)
+                  prior = by_seed.get(seed)
+                  if prior is not None and prior != value:
+                      raise SystemExit(
+                          f"duplicate counter disagrees: {counter} {seed} {prior} vs {value}")
+                  by_seed[seed] = value
+              return sum(by_seed.values())
+
+          same = aggregate("pass-outcome-hand-interrupted-by-claim-same-keeper")
+          opp = aggregate("pass-outcome-hand-interrupted-by-claim-opponent-keeper")
+          total = aggregate("pass-outcome-hand-interrupted-by-claim")
           if total != 501 or same + opp != total:
               raise SystemExit(f"identity accounting mismatch total={total} same={same} opponent={opp}")
           print(f"W8 RECLAIM IDENTITY: total={total} sameKeeper={same} opponentKeeper={opp}")
