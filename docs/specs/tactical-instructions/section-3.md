@@ -1,12 +1,11 @@
 # Tactical Instructions Specification #21 — Section 3: Algorithms
 
 **Created:** June 20, 2026
-**Last Updated:** September 26, 2026 (v0.5 — W8 B review closure: source tags, target helper, worked examples and six-policy coverage)
-**Version:** 0.5
+**Last Updated:** September 26, 2026 (v0.6 — W8 B final consistency: spec-first constant allocation is explicit)
+**Version:** 0.6
 **Status:** APPROVED baseline (June 20, 2026); W8 v0.4–v0.5 amendment PENDING OWNER APPROVAL
 
-> All constants cited here live in `TacticalInstructionsConstants.cs` (Appendix A). Values shown are
-> illustrative `[GT]` defaults pending the §5.6 balance pass; the **shapes** are normative.
+> Existing implemented constants cited by the pre-W8 baseline live in `TacticalInstructionsConstants.cs` (Appendix A). The W8 §3.4.1 constants are **spec-first allocations**: they deliberately do not exist in `src/` until this amendment is owner-approved and B code lands. Once approved, their stated values and shapes are normative B inputs; `[GT]` means uncalibrated, not illustrative or optional.
 
 ---
 
@@ -218,4 +217,5 @@ KD-9 precedence, not a limitation to be "fixed."
 | 0.3 | 2026-06-20 | — | PASS-2 fix pass: §3.3 product gains the fifth factor `tempoActionBias` (M-2); §3.4 `DefensiveLine` serialization pinned to the input dial, resolved depth recomputed each tick (M-1). |
 | 0.4 | 2026-09-25 | — | W8 B / ERR-011-016: freezes the first six-value goalkeeper-distribution draft before wiring — deterministic receiver/zone selector, 25 m local radius, low-index tie-break, mirrored 35 m centreline fallback zone, power, zero spin, 5/10/35-tick delays and zero RNG. Values are uncalibrated `[GT]`, not Stage A fitted. |
 | 0.5 | 2026-09-26 | — | W8 B review closure: gives every new numeric exactly one source tag and valid range, makes the 35-tick ceiling derived, routes fallback geometry through own-goal/attack-direction helpers instead of fixed-end literals, pins CONTACT to live receiver position with committed-position fallback, adds a selector worked example, preserves zero RNG, and records the 35 m LongKick fallback as an explicit owner-approval realism choice. |
+| 0.6 | 2026-09-26 | — | W8 B final consistency: corrects the inherited section preamble so spec-first W8 constants are not falsely claimed to already exist in `TacticalInstructionsConstants.cs` and `[GT]` is not mistaken for an optional illustrative value. Source implementation remains blocked on owner approval. |
 #endregion

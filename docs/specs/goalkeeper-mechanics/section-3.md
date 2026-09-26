@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** September 26, 2026 (v0.13 — W8 B review closure: accepted-only Distributing state, target timing, cancellation semantics and explicit deadline proof)
-**Version:** 0.13
+**Last Updated:** September 26, 2026 (v0.14 — W8 B final consistency: tactical pseudocode no longer implies Decision Tree owns distribution)
+**Version:** 0.14
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -58,11 +58,19 @@ scenarios in §3.6 (cross-claim duel).
 ### 3.1.2 Pseudocode for state evaluation
 
 ```
-on TacticalTick(currentTick):                   // 10 Hz
-    for gk in {homeGK, awayGK}:                 // #16 §3.2 entity order
-        ballState = BallPhysics.GetBallState(currentTick)
-        intent    = DecisionTree.GetGKIntent(gk.agentId, currentTick)
-        gk.state  = evaluateTacticalTransition(gk.state, ballState, intent, currentTick)
+on TacticalTick(currentTacticalTick):           // 10 Hz; Match Engine passes floor(frame/6)
+    for gk in {homeGK, awayGK}:                  // #16 §3.2 entity order
+        ballState = BallPhysics.GetBallState(currentTacticalTick)
+        # SAVE/rush inputs come from their owning producers; W8 does not redefine them.
+        gk.state = evaluateTacticalTransition(
+            gk.state, ballState, currentTacticalTick, existingSaveRushInputs)
+
+        if gk has live controlled hand possession:
+            # W8 B producer is Match Engine + #21, never Decision Tree #8.
+            candidate = buildDistributionFromPolicy(gk, TeamTactic.GkDistributionPolicy)
+            if candidate gates pass AND #5 accepts GoalkeeperDistributionRequest(candidate):
+                CommitDistributeIntent(gk, candidate)
+                gk.state = Distributing
 
 on PhysicsFrame(currentFrame):                  // 60 Hz
     for gk in {homeGK, awayGK}:
@@ -1337,3 +1345,4 @@ standard rebound physics.
 | 0.11 | September 22, 2026 | W3 draft scope clarification | §3.6.1 now matches the preregistered W3 boundary exactly: only active ClaimIntent contributes W3 Hand membership. `TryGetHandReachEnvelope` may also describe an ordinary save dive for #11's own save pipeline, but W3 does not interpose on normal shot-save handling. No code/tuning/schema/RNG change. | pre-merge contract sync |
 | 0.12 | September 25, 2026 | W8 B spec / ERR-011-015/016/017 | §3.8 replaces the phantom #5 pass API with the dedicated #5 goalkeeper request, moves hand-distribution production from #8 to Match Engine + #21, pins the 10 Hz clock domain, live-roster/receiverless fallback, CONTACT-only possession release/event, zero-RNG selector, and 35-tactical-tick safety ceiling. C still owns the Law-12 eight-second correction. | spec-first; B code deferred to W8 wiring |
 | 0.13 | September 26, 2026 | W8 B review closure | `Distributing` now means an accepted #5 request only; legacy no-intent expiry cannot manufacture that state. Commit-time target point is explicitly fallback-only, valid receivers re-aim to live CONTACT position, reject/cancel outcomes distinguish retained possession from real loss, and the inherited-guard proof is shown as `210 + 84 + 1 = 295 < 355 < 360` with worked windup/alignment examples. | review correction; code still deferred |
+| 0.14 | September 26, 2026 | W8 B final consistency | §3.1.2 tactical pseudocode no longer uses a generic Decision Tree GK intent that could re-imply the ERR-011-016 producer defect; it keeps existing SAVE/rush ownership and names Match Engine + #21 as the hand-distribution producer, with #5 acceptance gating `Distributing`. | review correction; code still deferred |
