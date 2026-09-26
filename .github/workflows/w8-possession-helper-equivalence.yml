@@ -18,11 +18,11 @@ jobs:
       - name: Checkout exact helper candidate
         uses: actions/checkout@v4
         with:
-          ref: 29c671f5c46358c16aab352f79f63db1943cbbb6
+          ref: 4d05f64c79dd89d3add3a059f1fe6fe380dc9029
 
       - name: Verify measured code identity
         run: |
-          test "$(git rev-parse HEAD)" = "29c671f5c46358c16aab352f79f63db1943cbbb6"
+          test "$(git rev-parse HEAD)" = "4d05f64c79dd89d3add3a059f1fe6fe380dc9029"
 
       - name: Set up .NET 8
         uses: actions/setup-dotnet@v4
