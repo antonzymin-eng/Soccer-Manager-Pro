@@ -32,7 +32,7 @@ namespace TacticalDirector.MatchEngine
             {
                 var report = new StringBuilder();
                 report.AppendLine("=== W8 Stage A frozen six-seed baseline ===");
-                report.AppendLine("seed,keeper,team,kind,startFrame,endFrame,durationFrames,endReason,lastTouchAgent,lastTouchKind,lastTouchTeam,claimArea,claimX,claimY,lastDecision,claimTick,lastTransitionFrame,claimTacticalTick,dryTarget,dryDistanceM,dryFallback,dryPolicy");
+                report.AppendLine("seed,keeper,team,kind,startFrame,endFrame,durationFrames,endReason,lastTouchAgent,lastTouchKind,lastTouchTeam,keeperArea,keeperX,keeperY,contactArea,contactX,contactY,lastDecision,claimTick,lastTransitionFrame,claimTacticalTick,dryTarget,dryDistanceM,dryFallback,dryPolicy");
                 foreach (ulong seed in Seeds)
                 {
                     var engine = new MatchEngine(seed);
@@ -234,7 +234,10 @@ namespace TacticalDirector.MatchEngine
                 {
                     Agent = agent, Team = team, Kind = kind, Start = e.Frame,
                     LastAgent = _lastTouch, LastKind = _lastTouchKind, LastTeam = _lastTouchTeam,
-                    Area = area, X = p.x, Y = p.y, Target = target, Distance = distance,
+                    Area = area, X = p.x, Y = p.y,
+                    ContactArea = Area(team, new Vector2(e.BallPosition.x, e.BallPosition.y)),
+                    ContactX = e.BallPosition.x, ContactY = e.BallPosition.y,
+                    Target = target, Distance = distance,
                     Policy = _engine.TestOnly_W8DistributionPolicy(team),
                     ClaimTick = kind == "hand" ? -1 : state.ClaimTick[slot], LastTransition = -1
                 };
@@ -244,7 +247,8 @@ namespace TacticalDirector.MatchEngine
                 {
                     _totalClaims++;
                     Count("claim-keeper-" + agent);
-                    Count("claim-area-" + area);
+                    Count("claim-keeper-area-" + area);
+                    Count("claim-contact-area-" + episode.ContactArea);
                     if (_lastTouch < 0) _unknownTouchClaims++;
                     if (_lastTouchTeam == team && _lastTouch >= 0 && _lastTouch != agent)
                     {
@@ -310,9 +314,9 @@ namespace TacticalDirector.MatchEngine
                 string action = _decision.TryGetValue(agent, out ActionType dt) ? dt.ToString() : "none";
                 string fallback = episode.Target < 0 ? "zone" : "receiver";
                 string target = episode.Target < 0
-                    ? (episode.Team == 0 ? "zone(35,34)" : "zone(70,34)")
+                    ? (episode.Team == 0 ? "zone_35_34" : "zone_70_34")
                     : episode.Target.ToString(CultureInfo.InvariantCulture);
-                _output.AppendLine(Inv($"0x{_seed:X16},{episode.Agent},{episode.Team},{episode.Kind},{episode.Start},{frame},{frame - episode.Start},{reason},{episode.LastAgent},{episode.LastKind},{episode.LastTeam},{episode.Area},{episode.X:F3},{episode.Y:F3},{action},{episode.ClaimTick},{episode.LastTransition},{episode.Start / 6},{target},{episode.Distance:F3},{fallback},{episode.Policy}"));
+                _output.AppendLine(Inv($"0x{_seed:X16},{episode.Agent},{episode.Team},{episode.Kind},{episode.Start},{frame},{frame - episode.Start},{reason},{episode.LastAgent},{episode.LastKind},{episode.LastTeam},{episode.Area},{episode.X:F3},{episode.Y:F3},{episode.ContactArea},{episode.ContactX:F3},{episode.ContactY:F3},{action},{episode.ClaimTick},{episode.LastTransition},{episode.Start / 6},{target},{episode.Distance:F3},{fallback},{episode.Policy}"));
                 _decision.Remove(agent);
             }
 
@@ -350,8 +354,8 @@ namespace TacticalDirector.MatchEngine
             private sealed class Episode
             {
                 internal int Agent, Team, Start, LastAgent, LastTeam, Target, ClaimTick, LastTransition;
-                internal float X, Y, Distance;
-                internal string Kind, LastKind, Area;
+                internal float X, Y, ContactX, ContactY, Distance;
+                internal string Kind, LastKind, Area, ContactArea;
                 internal GkDistributionPolicy Policy;
             }
         }
