@@ -1,0 +1,26 @@
+name: W8 Stage A short validation
+
+on:
+  push:
+    branches:
+      - measure/w8-stage-a-validation
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: e3a11fc11b9592eb02ded10a0e06d96e2150e17c
+      - name: Check source identity
+        run: test "$(git rev-parse HEAD)" = "e3a11fc11b9592eb02ded10a0e06d96e2150e17c"
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Compile and run observer neutrality gate only
+        run: bash tools/dotnet-ci/run-gate.sh --fast --test-filter 'FullyQualifiedName~W8Observer_DoesNotEnterSnapshot'
