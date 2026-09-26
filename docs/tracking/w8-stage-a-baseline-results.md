@@ -1,5 +1,6 @@
 # W8 Stage A frozen six-seed baseline — recorded results
 
+> **Created:** September 25, 2026  
 > **Measured source:** `b06595fbd409396c3ebad445cecd2b215b8e9e2a` (PR #458 merge)  
 > **Run:** `36212512965` — `W8 Stage A pinned baseline` — success  
 > **Population:** frozen six seeds from `w8-stage-a-preregistration.md`; 324,000 frames per seed  
@@ -59,6 +60,43 @@ The 861 hand-origin pass CONTACTs subsequently resolved as:
 | other agent controlled | 89 |
 | committed receiver controlled | 13 |
 
+### Known A→B confound — keeper claim→pass→claim loop
+
+The frozen corpus is dominated by a keeper claim/pass cycle and must not be read as a clean
+distribution-policy baseline:
+
+- 862 hand claims across six matches = 143.7 claims per match.
+- 501/861 hand-origin passes (58.2%) were still pending when a later hand claim occurred.
+- only 13/861 (1.5%) reached the committed receiver before the pending pass resolved.
+- mean hand hold was 32.086 frames (~0.535 s at 60 Hz).
+- 580 hand claims had `PassKick` as the immediately preceding observable touch.
+
+A re-derivation from the preserved Stage A episode rows sharpens the last point: **576/580** of those
+PassKick-preceded claims were the **same keeper reclaiming his own immediately preceding pass**,
+**0/580** directly followed the opponent keeper's pass, and 4/580 followed an outfield team-mate's
+pass. That direct-touch classification is not automatically the same population as the 501
+`interrupted-by-claim` pass outcomes because a pending pass can survive intervening touches before
+the claim resolves it.
+
+Supplemental test-only run `36251412673` on the **exact pinned Stage A production tree** closes that
+population directly:
+
+- `pass-outcome-hand-interrupted-by-claim = 501`;
+- `...-same-keeper = 501`;
+- `...-opponent-keeper = 0`;
+- all six frozen terminal digests reproduced exactly (6/6);
+- artifact `10909441933`, `w8-stage-a-reclaim-split-36251412673`;
+- artifact ZIP SHA-256
+  `0e076292accbb43eb3b5bda7a0b27b9df37447764d9778f19055e9a707ad1ed6`;
+- artifact size 1,118,448 bytes; expiry `2026-12-25T15:17:22Z`.
+
+Therefore the measured 501-pass interruption population is **100% same-keeper self-reclaim and 0%
+opponent-keeper reclaim**. This is the dominant Stage A confound that A→B must report separately
+from the policy effect.
+
+This loop is a **known comparison confound**, not a signal to tune B constants. A→B interpretation
+must report it separately from the intended distribution-policy effect.
+
 ## Last touch before hand claim
 
 | Preceding observable touch | Claims |
@@ -78,7 +116,16 @@ The summary counter reported one unknown-last-touch claim because the unattribut
 
 Keeper position at the 862 hand acquisitions: 842 inside own penalty area, 1 on the boundary, 19 outside. Ball contact position: 848 inside, 3 boundary, 11 outside. These are diagnostic classifications only; Stage A does not change claim legality or sanction behavior.
 
-The dry selector found a receiver for 860/862 hand claims and used the fixed receiverless zone for 2/862. Across hand + feet acquisitions it found a receiver for 1,081/1,087 episodes and used the zone fallback for 6/1,087. Every observed policy value was `SlowDown`; no B mapping is inferred from that fact.
+The dry selector found a receiver for 860/862 hand claims and used the fixed receiverless zone for 2/862. Across hand + feet acquisitions it found a receiver for 1,081/1,087 episodes and used the zone fallback for 6/1,087.
+
+### Known B coverage gap — Stage A exercised only `SlowDown`
+
+Every observed policy value was `SlowDown`. The frozen six-seed A→B corpus can therefore measure
+only the SlowDown B path and **must not** be cited as execution coverage for `Quick`, `ShortKick`,
+`LongKick`, `RollOut`, or `ThrowOut`. Before B merges, deterministic composed fixtures must
+exercise all six policy rows, including receiver + no-eligible-receiver arms for each receiver-capable
+policy and the receiverless-by-design LongKick path. The A→B corpus remains useful as the frozen
+SlowDown comparison, not as six-policy coverage.
 
 ## Restart census
 
@@ -86,12 +133,27 @@ Applied restart cues across the six seeds: Corner 4; FreeKick 80; GoalKick 13; K
 
 ## Fixed next step
 
-Stage A is now result-bearing and recorded. The next landing remains the separately scoped behavior-neutral possession-change helper from the owner packet §1.9:
+The behavior-neutral possession helper has now landed in PR #460. Its final-head proof ran
+`PossessionChangeSeamTests` + `MatchEngineSnapshotRestoreTests` 18/18 and reproduced all six
+frozen terminal digests exactly. That evidence applies only to the assignment-only helper.
 
-1. route the six mid-match `_possessingAgentId` writers through one helper;
-2. keep constructor/startup, test-only force-loose, and snapshot restore direct with explicit disposition;
-3. preserve caller guards, ball operations, claim cancellation, event timing, and assignment order;
-4. add a structural writer-inventory guard;
-5. prove exact frozen-seed digest equality before accepting the refactor.
+Before any B result-bearing measurement:
 
-No #11 clock correction, hand teardown, B distribution producer, numeric policy, schema change, or RNG change belongs in that helper landing.
+1. #462 is complete and merged as `a4056ea6371f6dcf72dcaa6ef51980f7bbeaabc7`: the writer guard
+   now rejects `ldflda` address-taking as well as unlisted `stfld` stores, and the helper's omitted
+   source history/changelog are recorded.
+2. finish the spec-first B contract (#461), including the distance-sensitive #5 delivery formula,
+   exact hash namespace, live CONTACT target semantics, typed possession-change completion/cancellation
+   semantics, explicit guard arithmetic, and ERR-011-015/016/017; it remains draft pending owner
+   approval of the W8 amendment.
+3. wire B only after the owning specs are explicitly approved and merged;
+4. prove deterministic composed execution of **all six** #21 policies;
+5. rerun the frozen six seeds as the SlowDown A→B comparison, with the now-proven
+   **501 same-keeper / 0 opponent-keeper** self-reclaim loop reported as a separate confound rather
+   than folded into a single policy verdict.
+
+The supplemental keeper-identity split and the possession-seam structural follow-up are complete;
+neither remains a pending B-measurement gate.
+
+Once B attaches hand-episode teardown, PR #460's digest equality is no longer neutrality evidence for
+that new behavior. B must prove the new semantics directly.
