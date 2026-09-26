@@ -12,6 +12,7 @@ namespace TacticalDirector.MatchEngine
     public sealed class PossessionChangeSeamTests
     {
         private static readonly Dictionary<ushort, OpCode> OpCodesByValue = BuildOpCodeMap();
+        private int _addressScannerProbe;
 
         [Test]
         public void PossessionIdentityWriters_MatchExplicitInventory()
@@ -64,6 +65,32 @@ namespace TacticalDirector.MatchEngine
                 actual,
                 "Direct _possessingAgentId writer inventory drifted. Classify any new writer explicitly; " +
                 "ordinary mid-match possession changes must route through SetPossessingAgent.");
+        }
+
+        [Test]
+        public void FieldOpcodeScanner_DetectsAddressTaking()
+        {
+            FieldInfo probeField = typeof(PossessionChangeSeamTests).GetField(
+                "_addressScannerProbe",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo probeMethod = typeof(PossessionChangeSeamTests).GetMethod(
+                nameof(AddressScannerProbe),
+                BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.IsNotNull(probeField);
+            Assert.IsNotNull(probeMethod);
+            Assert.That(CountFieldOpcode(probeMethod, probeField, OpCodes.Ldflda), Is.EqualTo(1));
+            Assert.That(CountFieldOpcode(probeMethod, probeField, OpCodes.Stfld), Is.EqualTo(0));
+        }
+
+        private void AddressScannerProbe()
+        {
+            ConsumeRef(ref _addressScannerProbe);
+        }
+
+        private static void ConsumeRef(ref int value)
+        {
+            // Intentionally empty. Passing the field by ref forces ldflda in AddressScannerProbe.
         }
 
         private static IEnumerable<MethodBase> DeclaredMethodsAndConstructors(Type type)
