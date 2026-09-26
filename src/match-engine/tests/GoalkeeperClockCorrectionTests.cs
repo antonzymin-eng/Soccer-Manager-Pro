@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/GoalkeeperClockCorrectionTests.cs
 // Created:  2026-09-26
-// Modified: 2026-09-26
+// Modified: 2026-09-26 (v1.1 review closure: live distribution-intent teardown cases)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.8 (clock domain, §3.8.3 possession-change teardown);
 //           ERR-011-017; Code Standards #20
@@ -9,6 +9,8 @@
 //           restart. Mirrored for both teams.
 
 using NUnit.Framework;
+
+using UnityEngine;
 
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.GoalkeeperMechanics;
@@ -84,7 +86,6 @@ namespace TacticalDirector.MatchEngine
                 lossFrame / GoalkeeperConstants.FramesPerTacticalTick + GoalkeeperConstants.RecoveryCooldownTicks,
                 state.RecoveryCooldownEndTick[teamId],
                 "recovery uses the ordinary cooldown, in tactical ticks from the loss");
-            Assert.IsFalse(state.DistributeIntentActive[teamId]);
             Assert.AreEqual(otherKeeperBefore, state.States[1 - teamId],
                 "only the outgoing holder's episode ends");
 
@@ -93,6 +94,36 @@ namespace TacticalDirector.MatchEngine
                 * GoalkeeperConstants.FramesPerTacticalTick);
             Assert.AreNotEqual(GoalkeeperState.HandsOnBall, engine.TestOnly_GkState(teamId));
             Assert.AreNotEqual(GoalkeeperState.Distributing, engine.TestOnly_GkState(teamId));
+        }
+
+        [TestCase(0, false)]
+        [TestCase(1, false)]
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        public void PossessionLoss_ClearsALiveDistributeIntent(int teamId, bool alreadyDistributing)
+        {
+            // Both hand-episode states end on a loss: HandsOnBall with a committed intent, and the
+            // Distributing windup in which the keeper is still the controlled holder (#11 §3.8.3).
+            MatchEngine engine = NewEngine();
+            GoalkeeperState handState = alreadyDistributing
+                ? GoalkeeperState.Distributing
+                : GoalkeeperState.HandsOnBall;
+            StageHandEpisode(engine, teamId, ClaimFrame, handState, LiveIntent(engine, teamId));
+
+            GoalkeeperTickState before = engine.TestOnly_GoalkeeperState;
+            Assert.IsTrue(before.DistributeIntentActive[teamId], "fixture: a live intent is staged");
+            Assert.Greater(before.DistributeIntents[teamId].PowerIntent, 0f, "fixture: a non-default intent");
+
+            engine.TestOnly_SetPhysicsFrame(ClaimFrame + 7);
+            engine.TestOnly_SetPossession(OutfieldTeammate(engine, teamId));
+
+            GoalkeeperTickState after = engine.TestOnly_GoalkeeperState;
+            Assert.AreEqual(GoalkeeperState.Recovering, after.States[teamId]);
+            Assert.IsFalse(after.DistributeIntentActive[teamId],
+                "an ordinary loss cancels the distribution: nothing may be released for a ball the keeper lost");
+            Assert.AreEqual(0f, after.DistributeIntents[teamId].PowerIntent, "the cancelled intent is cleared");
+            Assert.IsFalse(after.DistributeIntents[teamId].TargetReceiverId.HasValue,
+                "the cancelled intent is cleared");
         }
 
         [TestCase(0)]
@@ -152,8 +183,14 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>Gives the team's keeper controlled possession and a live #11 hand episode claimed at
-        /// <paramref name="claimFrame"/>, restored through #11's own snapshot seam.</summary>
-        private static void StageHandEpisode(MatchEngine engine, int teamId, int claimFrame)
+        /// <paramref name="claimFrame"/>, restored through #11's own snapshot seam. With no
+        /// <paramref name="intent"/> the episode has no committed distribution.</summary>
+        private static void StageHandEpisode(
+            MatchEngine engine,
+            int teamId,
+            int claimFrame,
+            GoalkeeperState handState = GoalkeeperState.HandsOnBall,
+            DistributeIntent? intent = null)
         {
             engine.TestOnly_SetPhysicsFrame(claimFrame);
             int keeper = GoalkeeperForTeam(engine, teamId);
@@ -162,15 +199,28 @@ namespace TacticalDirector.MatchEngine
 
             GoalkeeperTickState staged = Clone(engine.TestOnly_GoalkeeperState);
             int claimTick = claimFrame / GoalkeeperConstants.FramesPerTacticalTick;
-            staged.States[teamId] = GoalkeeperState.HandsOnBall;
+            staged.States[teamId] = handState;
             staged.ClaimTick[teamId] = claimTick;
             staged.ReleaseTickEarliest[teamId] = claimTick + 1;
-            staged.DistributeIntentActive[teamId] = false;
+            staged.DistributeIntents[teamId] = intent ?? default;
+            staged.DistributeIntentActive[teamId] = intent.HasValue;
             engine.TestOnly_RestoreGoalkeeperState(in staged);
 
-            Assert.AreEqual(GoalkeeperState.HandsOnBall, engine.TestOnly_GkState(teamId), "fixture: staged");
+            Assert.AreEqual(handState, engine.TestOnly_GkState(teamId), "fixture: staged");
             Assert.AreEqual(keeper, engine.TestOnly_PossessingAgentId, "fixture: keeper holds the ball");
         }
+
+        /// <summary>A committed throw to a team-mate. Receiver, target point and power are non-default, so
+        /// clearing is observable (DeliveryKind.Throw and zero spin coincide with the default).</summary>
+        private static DistributeIntent LiveIntent(MatchEngine engine, int teamId) =>
+            new DistributeIntent
+            {
+                DeliveryKind = DeliveryKind.Throw,
+                TargetReceiverId = OutfieldTeammate(engine, teamId),
+                TargetPoint = new Vector3(30f, 20f, 0f),
+                PowerIntent = 0.7f,
+                SpinIntent = Vector3.zero
+            };
 
         private static void DriveTacticalAt(MatchEngine engine, int frame)
         {
@@ -241,4 +291,7 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-09-26 | —      | Initial: ERR-011-017 tactical-tick clock lock + #11 §3.8.3 hand-episode      |
 // |         |            |        | teardown locks (possession loss, unchanged holder, no-episode no-op, restart |
 // |         |            |        | by the same keeper), mirrored for both teams.                                |
+// | 1.1     | 2026-09-26 | —      | Review closure: the loss case no longer asserts an intent it staged false;    |
+// |         |            |        | new PossessionLoss_ClearsALiveDistributeIntent stages a live non-default     |
+// |         |            |        | intent in HandsOnBall and in Distributing and proves the teardown clears it. |
 #endregion
