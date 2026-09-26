@@ -9,7 +9,7 @@ through Ball.ApplyKick() to completion. §3.9 defines the events published at st
 transitions. Together these subsections complete the Section 3 Technical Specifications.
 
 **Created:** March 7, 2026, 2:00 PM PST
-**Version:** 1.3
+**Version:** 1.4
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -619,6 +619,8 @@ a standing position. Below this, the kick animation would be physically implausi
 
 ### 3.8.13 Goalkeeper distribution execution — W8 B
 
+**W8 amendment approval:** **PENDING OWNER APPROVAL.** This DRAFT amendment is not approved by merge; owner acceptance must cover #5 §2.4.4 / §3.8.13 together with #11 §3.8 and #21 §3.4.1 before B production wiring.
+
 This is a second request mode on the same per-agent executor; it is **not** a translation into an
 ordinary `PassType`.
 
@@ -664,12 +666,19 @@ does not run.
 1. SlowDown Roll, `D=6 m`, `EmittedPower01=0.50`: Ground gives
    `8 + 0.50*(6/30)*(18-8) = 9.0 m/s`; launch angle
    `2 + (6/30)*(5-2) = 2.6°`.
-2. LongKick example with a live release point 5.5 m from the keeper's own goal line and the current
-   35 m fallback point: `D=29.5 m`, `EmittedPower01=0.90`; Lofted gives
-   `9 + 0.90*(29.5/60)*(22-9) = 14.7525 m/s`; with `ApexHeightLofted=6 m`,
-   `atan(24/29.5) = 39.13°`, already inside the 20°–45° clamp.
-   This example demonstrates the currently proposed bounded B target; it is not a claim that a
-   35 m-from-own-goal target is a calibrated full-length punt.
+2. LongKick default-config example with a live release point 5.5 m from the keeper's own goal line
+   and the current 35 m fallback point: `D=29.5 m`, policy `PowerIntent=0.90`. With the current
+   `KICK_ACCURACY_COEFF=0.85` and an upper-normalized `Kicking_norm=1.0`, #11 supplies
+   `EmittedPower01 = 0.90*0.85*1.0 = 0.765`; Lofted therefore gives
+   `9 + 0.765*(29.5/60)*(22-9) = 13.889625 m/s`. With `ApexHeightLofted=6 m`,
+   `atan(24/29.5) = 39.13°`, already inside the 20°–45° clamp. Lower `Kicking_norm` lowers emitted
+   power further. This is a **launch-parameter** example only: the contract does not claim the ball
+   reaches the 29.5 m target, and it does not treat 35 m-from-own-goal as a calibrated full-length punt.
+
+B's result-bearing diagnostic must record requested target point/distance and the ball's actual first
+ground-contact point/distance (or a terminal no-ground-contact reason) for goalkeeper distributions,
+with LongKick reported separately and shortfall/overshoot relative to target preserved. This is an
+evidence obligation, not a calibration rule.
 
 **CONTACT target resolution.** `GoalkeeperDistributionRequest.TargetPosition` is the commit-time
 fallback point. At CONTACT:
@@ -727,8 +736,10 @@ No `DeterministicRngService` stream/domain/draw site or draw order is added.
 
 For `Rejected` or `Cancelled` while the same keeper still owns controlled possession, the host
 clears only the distribution intent and returns/keeps #11 in `HandsOnBall` with the original claim
-clock; retry is allowed only on a later tactical heartbeat. If possession is lost, the hand episode
-ends and #11 transitions to `Recovering`. Neither path publishes `DistributionExecutedEvent`.
+clock; retry is allowed only on a later tactical heartbeat **and only if #11 §3.8.4's live retry-budget
+predicate proves candidate CONTACT remains strictly before both inherited guards**. If possession is
+lost, the hand episode ends and #11 transitions to `Recovering`. Neither path publishes
+`DistributionExecutedEvent`.
 Successful CONTACT uses the typed normal-completion possession-change cause and cannot be
 misclassified as cancellation.
 
@@ -902,6 +913,7 @@ only. Only a tackle interrupt — a real game event — produces a cancellation 
 | 1.0 | March 7, 2026, 2:00 PM PST | Claude (AI) / Anton | Initial draft. WeakFoot accuracy and power penalty models. Six-state machine with full transition table. Urgency-driven windup reduction. Two event struct definitions. All formulas derived from Appendix A.6. State machine architecture from §2.2.3 and §4.4.2. Event structs from §4.6.1. |
 | 1.1 | May 6, 2026 | Claude (AI) / Anton | Resolves §3.3–§3.9 follow-up audit finding F-A02: localized `WINDUP_FRAMES` and `FOLLOWTHROUGH_FRAMES` ownership entirely in §3.8.10 (state-machine timing values, not pass-type physical intrinsics). Removed dead-end "from §3.1.4 PhysicalProfile" citation; updated §3.8.2 state table and §3.8 cross-spec dependencies table to reference §3.8.10 as canonical source. Non-behavioral with respect to formula code (values unchanged). |
 | 1.2 | September 25, 2026 | — | W8 B / ERR-011-015: §3.8.13 defines the dedicated goalkeeper request mode, profile-derived delivery bounds, **distance-sensitive** #5 velocity/launch shapes, one deterministic error model, exact #11 windup, CONTACT recheck/release, typed feedback, W5 receiver-latch rule, and canonical snapshot obligation. Existing `PassType` ordinals and ordinary pass semantics are unchanged. |
+| 1.4 | September 26, 2026 | — | W8 B review closure follow-up: corrects the LongKick worked example to apply #11's kicking-accuracy coefficient, explicitly makes target arrival an empirical landing measurement, adds that B evidence field, makes retries deadline-gated through #11 §3.8.4, and adds the owner-approval gate. |
 | 1.3 | September 26, 2026 | — | W8 B review closure: pins the exact Roll/Throw/Kick launch-angle rule, CONTACT-time live receiver versus committed fallback semantics, fixed error-hash discriminator `0x47`, Rejected/Cancelled/Completed state consequences, and worked Roll/LongKick calculations. No ordinary `PassType` ordinal or RNG draw site is changed. |
 
 ---

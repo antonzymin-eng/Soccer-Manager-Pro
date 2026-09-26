@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** September 26, 2026 (v0.14 — W8 B final consistency: tactical pseudocode no longer implies Decision Tree owns distribution)
-**Version:** 0.14
+**Last Updated:** September 26, 2026 (v0.15 — W8 B review closure: retained-possession retries are deadline-gated, LongKick arrival is measured rather than assumed, and the W8 amendment carries an explicit owner-approval gate)
+**Version:** 0.15
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -33,7 +33,7 @@ Each row is `(from, to, trigger, tick-rate, source spec)`.
 | `Airborne` | `Recovering` | Ground re-entry (`agentZ ≤ 0`) without contact event (F-01 / F-02 / F-03) | 60 Hz | #11 §3.3 |
 | `HandsOnBall` | `Distributing` | Match Engine's #21 producer has a valid `DistributeIntent`, all release/policy tick gates are satisfied, and #5 **accepts** the corresponding `GoalkeeperDistributionRequest` | 10 Hz initiation | W8 B / #21 / #5 |
 | `HandsOnBall` | `HandsOnBall` | Temporary legacy no-intent guard reaches `currentTick - claimTick >= GK_HOLD_MAX_TICKS`; signal the legacy timeout condition but **do not** overload `Distributing` without an accepted #5 request | 10 Hz | W8 B temporary guard; C owns Law-12 replacement |
-| `HandsOnBall` | `HandsOnBall` | #5 rejects initiation while the same keeper still owns controlled possession: clear `DistributeIntent`, preserve claim/release clocks, retry no earlier than a later tactical heartbeat | 10 Hz initiation | W8 B / #5 feedback |
+| `HandsOnBall` | `HandsOnBall` | #5 rejects initiation while the same keeper still owns controlled possession: clear `DistributeIntent`, preserve claim/release clocks; retry no earlier than a later tactical heartbeat and only when §3.8.4's retry-budget predicate still permits CONTACT before both inherited guards | 10 Hz initiation | W8 B / #5 feedback |
 | `Distributing` | `HandsOnBall` | Accepted #5 request is cancelled before CONTACT while the same keeper still owns controlled possession: clear intent, preserve claim/release clocks | 60 Hz feedback | W8 B / #5 feedback |
 | `Distributing` | `Recovering` | Successful #5 CONTACT completes, or cancellation/teardown accompanies real possession loss/restart/takeover | 60 Hz | W8 B / #5 / Match Engine |
 | `Recovering` | `Set` | Recovery-to-line cooldown elapsed (`RECOVERY_COOLDOWN_TICKS`) OR GK XY already within `GK_REACTIVE_RADIUS_M` of #12 baseline (v0.2 AR-S1-M5: OR not AND — prevents stall when GK is already at baseline after distribution release) | 10 Hz | #11 §3.3.0 |
@@ -1069,6 +1069,8 @@ reaching pitch coordinates past `gkPos.x` while still in
 
 ## 3.8 Distribution Generation (KD-6, KD-16; W8 B)
 
+**W8 amendment approval:** **PENDING OWNER APPROVAL.** This section remains DRAFT; merging the PR is not approval. Owner acceptance must cover this #11 amendment together with #5 §2.4.4 / §3.8.13 and #21 §3.4.1 before B production wiring is authorized.
+
 **Ownership.** While a keeper has live hand control, Match Engine — not Decision Tree #8 —
 is the producer of `DistributeIntent`. It reads #21 `GkDistributionPolicy` and commits one
 total receiver-or-zone intent. Decision Tree keeper on-ball actions are suppressed while the
@@ -1214,12 +1216,20 @@ is forbidden because ordinary kicks use the same possession seam.
 
 - **Rejected before WINDUP, possession retained:** clear only `DistributeIntent`; remain
   `HandsOnBall`; preserve `claimTick` and `releaseTickEarliest`; retry no earlier than a later
-  10 Hz heartbeat.
+  10 Hz heartbeat **and only if** §3.8.4's retry-budget predicate passes for the new candidate.
 - **Cancelled after acceptance, possession retained:** return `Distributing → HandsOnBall`; clear
-  only the distribution intent; preserve the same claim clock.
+  only the distribution intent; preserve the same claim clock; a later retry is allowed only if
+  §3.8.4's retry-budget predicate passes.
 - **Cancelled because possession was actually lost / restart / takeover:** clear the hand episode
   and enter `Recovering`.
 - **Completed CONTACT:** clear the intent and enter `Recovering` as normal completion.
+
+A retained-possession retry is **budget-gated, not unconditional**. At the later tactical heartbeat,
+let `candidateContactFrame = currentFrame + candidate.WindupFrames + 1`. The producer may submit the
+new #5 request only when that CONTACT frame is strictly before both (a) the frame on which the
+corrected #11 no-intent boundary would first be processed and (b) the engine ground-drop boundary.
+If either comparison fails, no new #5 request starts; #11 remains `HandsOnBall` and the inherited
+backstop handles the episode. Repeated rejections are subject to the same check on every attempt.
 
 No reject/cancel path publishes `DistributionExecutedEvent`. `ClearDistributeIntent` is the
 idempotent intent cleanup entry point; hand-episode teardown remains separate so a retained-possession
@@ -1254,7 +1264,8 @@ total         = 295 frames
 ```
 
 The engine ground-drop boundary is 360 frames after keeper possession, leaving at least 65 frames
-against that clock when claim/possession begin together.
+against that clock when claim/possession begin together. This **295-frame figure is the first-attempt
+scheduling bound only**; it does not authorize a fresh full windup after a late cancellation.
 
 For the corrected #11 tactical guard, `claimTick = floor(claimFrame/6)`. The earliest possible
 60-tick expiry relative to the physical claim occurs when the claim lands at the last frame of its
@@ -1268,9 +1279,17 @@ windup plus one CONTACT frame reaches frame 391, 290 frames after claim. The cor
 tick is 76, first processed at frame 456: 355 frames after claim. The example is below the general
 295-frame bound because the claim occurred late in its tactical cell.
 
-A regression must read the **live configured** delivery windup values and all six #21 policy delays,
-recompute this inequality, and fail if CONTACT can meet or cross either inherited boundary. Testing
-only default constants is insufficient.
+**Late-cancellation retry example.** A cancellation on the last windup frame can occur about
+`210 + 84 = 294` frames after claim. The next tactical heartbeat may be up to 6 frames later; starting
+another maximum 84-frame windup plus its CONTACT update could therefore reach about
+`294 + 6 + 84 + 1 = 385` frames after claim, beyond both inherited guards. Such a retry is forbidden
+by the predicate above.
+
+Regressions must read the **live configured** delivery windup values and all six #21 policy delays,
+recompute the first-attempt inequality, and fail if CONTACT can meet or cross either inherited
+boundary. They must also cover (a) an early retained-possession cancellation whose retry still fits,
+(b) a last-windup-frame cancellation whose retry is refused, and (c) repeated rejection until the
+remaining budget closes. Testing only default constants or only the first attempt is insufficient.
 
 ---
 
@@ -1345,4 +1364,5 @@ standard rebound physics.
 | 0.11 | September 22, 2026 | W3 draft scope clarification | §3.6.1 now matches the preregistered W3 boundary exactly: only active ClaimIntent contributes W3 Hand membership. `TryGetHandReachEnvelope` may also describe an ordinary save dive for #11's own save pipeline, but W3 does not interpose on normal shot-save handling. No code/tuning/schema/RNG change. | pre-merge contract sync |
 | 0.12 | September 25, 2026 | W8 B spec / ERR-011-015/016/017 | §3.8 replaces the phantom #5 pass API with the dedicated #5 goalkeeper request, moves hand-distribution production from #8 to Match Engine + #21, pins the 10 Hz clock domain, live-roster/receiverless fallback, CONTACT-only possession release/event, zero-RNG selector, and 35-tactical-tick safety ceiling. C still owns the Law-12 eight-second correction. | spec-first; B code deferred to W8 wiring |
 | 0.13 | September 26, 2026 | W8 B review closure | `Distributing` now means an accepted #5 request only; legacy no-intent expiry cannot manufacture that state. Commit-time target point is explicitly fallback-only, valid receivers re-aim to live CONTACT position, reject/cancel outcomes distinguish retained possession from real loss, and the inherited-guard proof is shown as `210 + 84 + 1 = 295 < 355 < 360` with worked windup/alignment examples. | review correction; code still deferred |
+| 0.15 | September 26, 2026 | W8 B review closure | Makes retained-possession retries conditional on a live CONTACT-before-both-guards budget, requires late-cancel/repeated-reject regressions, adds the explicit W8 owner-approval gate, and states that LongKick arrival is an evidence question rather than an assumed target hit. | review correction; code still deferred |
 | 0.14 | September 26, 2026 | W8 B final consistency | §3.1.2 tactical pseudocode no longer uses a generic Decision Tree GK intent that could re-imply the ERR-011-016 producer defect; it keeps existing SAVE/rush ownership and names Match Engine + #21 as the hand-distribution producer, with #5 acceptance gating `Distributing`. | review correction; code still deferred |

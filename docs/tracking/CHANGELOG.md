@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 26, 2026 — **W8 Stage A / pre-B merged-work review closeout; evidence and tracking only.**
+> **Last Updated:** September 26, 2026 — **W8 B #461 post-#463 review closure: retry budget, LongKick landing evidence and approval gates.**
+>
+> `main` was merged into #461 as true merge `b7df544431f625ded86538a11b6f8e12450f7811`: the three #463 conflicts are resolved by taking `main`'s Stage A record wholesale and preserving both sides' CHANGELOG/manifest history. The stale `receiverless-by-design` wording is therefore absent from the Stage A evidence record, while #21's draft B policy remains owner-gated in its owning spec.
+>
+> Claude N1–N3 are incorporated across #11, #5, the W8 decision packet and Match Engine design. The `210+84+1=295<355<360` proof is now explicitly **first-attempt-only**; retained-possession reject/cancel retries preserve the original claim clock and may start only if the candidate CONTACT still lands strictly before both inherited guards. Required regressions include early-cancel retry, last-windup-frame refusal (~385-frame ungated path), and repeated rejection until budget closes. The LongKick worked example now applies the default `KICK_ACCURACY_COEFF=0.85` (`PowerIntent 0.90 → EmittedPower01 0.765` at `Kicking_norm=1`) and makes no claim that the current trajectory reaches the 29.5 m target; B evidence must record target versus first ground contact/shortfall, with LongKick separate. #5 §2.4.4 / §3.8.13 and #11 §3.8 now carry the same explicit **PENDING OWNER APPROVAL** gate as #21. No production code, schema, RNG, calibration or gameplay result changes.
+>
+> **Last Updated (prior):** September 26, 2026 — **W8 Stage A / pre-B merged-work review closeout; evidence and tracking only.**
 >
 > Review of merged #459/#460 found the frozen Stage A baseline is dominated by a keeper self-reclaim loop and that the assignment-only possession seam needed a stronger structural guard. The Stage A record now carries its missing Created date and names the loop as a known A→B confound: 862 hand claims across six matches; 501/861 hand-origin passes interrupted by a later hand claim; only 13/861 reached the committed receiver; mean hand hold 32.086 frames. Supplemental test-only run `36251412673` checked out the exact pinned Stage A production tree and closes the exact 501-outcome identity split at **501 same-keeper / 0 opponent-keeper**, while reproducing all six frozen terminal digests. Artifact `10909441933` (`w8-stage-a-reclaim-split-36251412673`) is 1,118,448 bytes, expires `2026-12-25T15:17:22Z`, and has ZIP SHA-256 `0e076292accbb43eb3b5bda7a0b27b9df37447764d9778f19055e9a707ad1ed6`. Every Stage A policy observation was `SlowDown`, so the frozen A→B corpus is explicitly SlowDown-only evidence and cannot stand in for the other five policy rows.
 >
