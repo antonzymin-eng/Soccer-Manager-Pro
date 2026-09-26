@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using NUnit.Framework;
 using TacticalDirector.DecisionTree;
+using TacticalDirector.EventSystem;
 using TacticalDirector.GoalkeeperMechanics;
 using TacticalDirector.TacticalInstructions;
 using UnityEngine;
@@ -15,6 +16,8 @@ namespace TacticalDirector.MatchEngine
     internal class W8StageADiagnosticTests
     {
         private const int TicksPerSeed = 324000;
+        private static readonly byte FoulOrdinal = EventRegistry.GetOrdinal<FoulCommittedEvent>();
+        private static readonly byte CardOrdinal = EventRegistry.GetOrdinal<CardIssuedEvent>();
         private static readonly ulong[] Seeds =
         {
             0x0F1E2D3C4B5A6978UL, 0x00000000D1A6D05EUL,
@@ -109,6 +112,7 @@ namespace TacticalDirector.MatchEngine
             private int _lastTouchFrame = -1;
             private int _pendingPassTarget = -2;
             private string _pendingPassKind;
+            private int _fouls, _yellows, _straightReds, _secondYellowDismissals;
 
             internal Census(MatchEngine engine, ulong seed, StringBuilder output)
             {
@@ -299,7 +303,7 @@ namespace TacticalDirector.MatchEngine
             {
                 float edge = team == 0 ? 16.5f : 105f - 16.5f;
                 bool xInside = team == 0 ? p.x < edge : p.x > edge;
-                bool xAt = p.x == edge;
+                bool xAt = p.x == edge || p.x == (team == 0 ? 0f : 105f);
                 bool yInside = p.y > 34f - 20.16f && p.y < 34f + 20.16f;
                 bool yAt = p.y == 34f - 20.16f || p.y == 34f + 20.16f;
                 if ((xInside || xAt) && (yInside || yAt) && p.x >= 0f && p.x <= 105f)
@@ -332,6 +336,27 @@ namespace TacticalDirector.MatchEngine
             internal void AfterTick()
             {
                 _lastFrame = (int)_engine.CurrentTick;
+                for (int record = 0; record < _engine.TickLedgerCount; record++)
+                {
+                    byte ordinal = _engine.TickLedgerOrdinal(record);
+                    if (ordinal == FoulOrdinal)
+                    {
+                        _engine.TickLedgerRecord<FoulCommittedEvent>(record);
+                        _fouls++;
+                    }
+                    else if (ordinal == CardOrdinal)
+                    {
+                        CardIssuedEvent card = _engine.TickLedgerRecord<CardIssuedEvent>(record);
+                        if (card.CardKind == MatchEngineConstants.CardKindYellow) _yellows++;
+                        else if (card.CardKind == MatchEngineConstants.CardKindRed) _straightReds++;
+                        else if (card.CardKind == MatchEngineConstants.CardKindSecondYellow)
+                        {
+                            _yellows++;
+                            _secondYellowDismissals++;
+                        }
+                        else Count("unknown-card-kind");
+                    }
+                }
                 foreach (int keeper in _keepers.Keys)
                     if (!_engine.TestOnly_IsSentOff(keeper))
                     {
@@ -349,6 +374,7 @@ namespace TacticalDirector.MatchEngine
                 ResolvePass("censored-at-fulltime");
                 foreach (int keeper in new List<int>(_open.Keys)) Close(keeper, _lastFrame, "censored-at-fulltime");
                 _output.AppendLine(Inv($"summary,0x{_seed:X16},claims={_totalClaims},unknownLastTouch={_unknownTouchClaims},drops={_drops},sameKeeperReclaimHandWithin300={_reclaimsHand},sameKeeperReclaimFeetWithin300={_reclaimsFeet},exposureKeeperMatchMinutes=90"));
+                _output.AppendLine(Inv($"discipline,0x{_seed:X16},fouls={_fouls},yellows={_yellows},straightReds={_straightReds},secondYellowDismissals={_secondYellowDismissals}"));
                 var keys = new List<string>(_counts.Keys);
                 keys.Sort(StringComparer.Ordinal);
                 foreach (string key in keys)

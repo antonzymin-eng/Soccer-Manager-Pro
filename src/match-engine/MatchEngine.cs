@@ -3323,7 +3323,8 @@ namespace TacticalDirector.MatchEngine
                 _decisionTrees[i].ReceiveSnapshot(
                     view, _matchContext, _tacticalContexts[i], _dtAttrs[i],
                     _agents[i], pressureScalar);
-                if (TestOnly_W8StageAObserver != null && _isGoalkeeper[i])
+                if (TestOnly_W8StageAObserver != null && _isGoalkeeper[i]
+                    && _decisionTrees[i].LastAction.HeartbeatTick == heartbeat)
                     ObserveW8(W8StageAKind.KeeperDecision, i, (int)_decisionTrees[i].LastAction.Type);
             }
         }
