@@ -123,9 +123,10 @@ The dry selector found a receiver for 860/862 hand claims and used the fixed rec
 Every observed policy value was `SlowDown`. The frozen six-seed A→B corpus can therefore measure
 only the SlowDown B path and **must not** be cited as execution coverage for `Quick`, `ShortKick`,
 `LongKick`, `RollOut`, or `ThrowOut`. Before B merges, deterministic composed fixtures must
-exercise all six policy rows, including receiver + no-eligible-receiver arms for each receiver-capable
-policy and the receiverless-by-design LongKick path. The A→B corpus remains useful as the frozen
-SlowDown comparison, not as six-policy coverage.
+exercise all six policy rows. The exact receiver/zone fixture topology for each row is owned by the
+**owner-approved B contract**; this Stage A evidence record does not pre-approve LongKick as
+receiverless, or any other policy-specific receiver/fallback choice. The A→B corpus remains useful
+as the frozen SlowDown comparison, not as six-policy coverage.
 
 ## Restart census
 
