@@ -10,7 +10,9 @@
 
 ---
 
-> **UPDATED September 25, 2026 (v1.31):** PR #439 post-delete evidence reconciliation records the successful exact-head atomic deletion of all 16 `evidence/pr439-*` refs, the maintained 15-row cited-run ledger, and final green post-merge `main` CI run `36080899633`. Deleted branch names remain provenance backed by `docs/tracking/evidence/pr439-ref-archive/`; W3 remains **wired but dormant**, with #441 and #440 unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
+> **UPDATED September 25, 2026 (v1.32):** W8 investigation is decision-gated at `docs/tracking/w8-goalkeeper-distribution-decision.md`: current IFAB Law 12 (2026/27) is eight seconds + opponent corner kick; the pre-2025/26 six-second law awarded an opponent indirect free kick, while the repo's forced ROLL is a separate project policy; #21 policy input is incomplete; #11/DT producer ownership hits the ordinal-8 boundary; the hand-only law clock conflicts with the broader engine stall guard; FR-GK-043/F-05 have live implementation gaps; #11 §3.8.3–§3.8.4 names a phantom Pass Mechanics contract (`PassIntent` / `ConsumePassIntent` / `DeliveryKind`); and the current #11 distribution path emits an event without a real Pass Mechanics executor. No W8 gameplay code or `[GT]` change is authorized until the four owner decisions and preregistration land.
+>
+> **UPDATED (prior) September 25, 2026 (v1.31):** PR #439 post-delete evidence reconciliation records the successful exact-head atomic deletion of all 16 `evidence/pr439-*` refs, the maintained 15-row cited-run ledger, and final green post-merge `main` CI run `36080899633`. Deleted branch names remain provenance backed by `docs/tracking/evidence/pr439-ref-archive/`; W3 remains **wired but dormant**, with #441 and #440 unchanged. No gameplay, spec, schema, RNG or `[GT]` change.
 >
 > **UPDATED (prior) September 23, 2026 (v1.30):** PR #447 completes the W3/#439 durable evidence archive: exact pre/final six-seed W3 tables, **39** exact branch-history blob snapshots covering all **16/16** live `evidence/pr439-*` refs, **26** cited workflow-run heads, ref/disposition ledgers, and a dedicated archive/live verifier plus workflow. The verifier requires the live remote ref set/heads and every introduced non-deletion branch-history blob state to match the committed archive. All 16 refs are classified `deletable` but remain `delete_now=false`; PR #447 performs and authorizes no deletion. W3 remains **wired but dormant**; #441 and #440 are unchanged.
 >
@@ -380,7 +382,8 @@ separately tracked by #401. Regression locks: `CollisionDeflectionFeedbackTests`
 human baseline tactic and can only ladder away from it mid-match.
 
 ### W8 — Goalkeeper distribution
-**Evidence:** `goalkeeper-mechanics/GoalkeeperMechanics.cs:301` `CommitDistributeIntent`, no caller.
+**Decision packet:** `docs/tracking/w8-goalkeeper-distribution-decision.md` — pre-preregistration owner decisions; no implementation authorization.
+**Evidence:** `goalkeeper-mechanics/GoalkeeperMechanics.cs:774` `CommitDistributeIntent`, no caller.
 The engine substitutes its own six-second-rule release (`_gkHoldTicks` /
 `_gkReleaseCooldownRemaining`), so #11's `GoalkeeperDistribution` model — delivery kind, target
 selection — is unused.
@@ -690,6 +693,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.32 | 2026-09-25 | — | **W8 decision-gate investigation.** Adds the pointer to `w8-goalkeeper-distribution-decision.md` and records that W8 first needs an explicit current-vs-legacy Laws edition decision (current IFAB Law 12 is eight seconds + opponent corner kick, not six-second forced release) and has four unresolved pre-preregistration contract groups: hand-only Law-12 authority versus the broader engine stall guard; producer/RNG policy versus the DT ordinal-8 ceiling; FR-GK-043/F-05 forced-release/receiver-validation defects; #11 §3.8.3–§3.8.4's phantom `PassIntent` / `ConsumePassIntent` / `DeliveryKind` contract; and a missing faithful Pass Mechanics executor/pass-registration seam behind the currently event-only #11 distribution path. No gameplay, approved-spec, schema, RNG or `[GT]` change. |
 | 1.31 | 2026-09-25 | — | **PR #439 evidence-ref post-delete reconciliation.** Records the successful 16-ref atomic deletion and the final green `main` CI run `36080899633`, corrects the durable-evidence pointer to the 15-row cited-run ledger, and keeps deleted branch names as provenance backed by `pr439-ref-archive/`. No gameplay, spec, schema, RNG or `[GT]` change. |
 | 1.28 | 2026-09-23 | — | **W3 landing close-out (PR #439).** W3 row heading now reads landed via PR #439 (classification unchanged: wired but dormant, #441 owns Head reachability). Records #443 merge `6876c5c1…`, the non-rebase merge of `main` into #439 (`9668643c…`, via PR #444), review-closure gameplay fixes ERR-010-004 / ERR-011-014, the corpus rerun `35925236129` at `bab4cd41…` that reproduces `35814050060` exactly (264/264 counters), and the W2 reproduction `Won=3 Loose=12 Foul=2 Missed=73 dispossessions=3`. Repairs the 1.27/1.26 table rows, which were joined on one line by a literal `\n`. No gameplay `[GT]` change. |
 | 1.27 | 2026-09-23 | — | **Owner classification recorded: W3 wired but dormant.** #441 is the named Head-reachability owner. Corrected W3 production counters to the raw-log-verified 215,083 fan-out / 1,297 eligibility / 1,164 Hand participants-resolutions / 753 claims and linked #441's 1,811 commits → 18 predicted → 0 prepared/0 executed localization. No gameplay or `[GT]` change. |
