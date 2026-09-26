@@ -26,7 +26,13 @@ namespace TacticalDirector.MatchEngine
             {
                 foreach (MethodBase method in DeclaredMethodsAndConstructors(type))
                 {
-                    int stores = CountStoresToField(method, holderField);
+                    int addresses = CountFieldOpcode(method, holderField, OpCodes.Ldflda);
+                    Assert.Zero(
+                        addresses,
+                        $"Address-taking _possessingAgentId is forbidden in {type.FullName}.{method.Name}; " +
+                        "a by-ref/indirect write would bypass SetPossessingAgent and the writer inventory.");
+
+                    int stores = CountFieldOpcode(method, holderField, OpCodes.Stfld);
                     if (stores == 0)
                     {
                         continue;
@@ -78,7 +84,10 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
-        private static int CountStoresToField(MethodBase method, FieldInfo target)
+        private static int CountFieldOpcode(
+            MethodBase method,
+            FieldInfo target,
+            OpCode fieldOpcode)
         {
             MethodBody body = method.GetMethodBody();
             if (body == null)
@@ -88,25 +97,25 @@ namespace TacticalDirector.MatchEngine
 
             byte[] il = body.GetILAsByteArray();
             int offset = 0;
-            int stores = 0;
+            int matches = 0;
 
             while (offset < il.Length)
             {
                 OpCode opCode = ReadOpCode(il, ref offset);
-                if (opCode == OpCodes.Stfld)
+                if (opCode == fieldOpcode)
                 {
                     EnsureAvailable(il, offset, 4, method, opCode);
                     int token = BitConverter.ToInt32(il, offset);
                     if (method.Module == target.Module && token == target.MetadataToken)
                     {
-                        stores++;
+                        matches++;
                     }
                 }
 
                 SkipOperand(il, ref offset, opCode, method);
             }
 
-            return stores;
+            return matches;
         }
 
         private static OpCode ReadOpCode(byte[] il, ref int offset)
