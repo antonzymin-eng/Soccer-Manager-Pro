@@ -9,7 +9,7 @@ through Ball.ApplyKick() to completion. §3.9 defines the events published at st
 transitions. Together these subsections complete the Section 3 Technical Specifications.
 
 **Created:** March 7, 2026, 2:00 PM PST
-**Version:** 1.1
+**Version:** 1.2
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -617,6 +617,50 @@ Even a fully rushed pass (Urgency = 1.0) requires a minimum physical preparation
 time. 50ms at 60Hz (3 frames) is the minimum time for a ballistic leg motion from
 a standing position. Below this, the kick animation would be physically implausible.
 
+### 3.8.13 Goalkeeper distribution execution — W8 B
+
+This is a second request mode on the same per-agent executor; it is **not** a translation into an
+ordinary `PassType`.
+
+**Dedicated physical bounds.** B reuses existing #5 profile bounds as the numerical source while
+keeping the request type distinct:
+
+| GK variant | Speed range (m/s) | Launch range | Numerical source |
+|---|---:|---:|---|
+| Roll | 5.0–18.0 | 2°–5° | existing Ground profile bounds |
+| Throw | 10.0–28.0 | 5°–12° | existing Driven profile bounds |
+| Kick | 8.0–22.0 | 20°–45° | existing Lofted profile bounds |
+
+The scalar speed is `lerp(vMin, vMax, clamp01(EmittedPower01))`. The requested
+`SpinIntent` is passed through exactly; the ordinary pass spin generator does not run.
+
+**One error model.** Goalkeeper distribution uses the existing deterministic #5 angular-error chain
+and CONTACT-time pressure re-sample. Roll/Throw/Kick take the existing Ground/Driven/Lofted
+base-error values respectively, but this is an error-profile lookup only — it does not convert the
+request to `PassType`. Weak-foot and urgency modifiers are identity. Error direction uses the same
+draw-free hash family with a dedicated goalkeeper-distribution discriminator namespace. No
+`DeterministicRngService` draw site is added.
+
+**Windup and CONTACT.**
+
+1. INITIATING validates idle executor, finite request fields, target semantics and possession.
+2. `WindupFrames` is used exactly. No ordinary-pass urgency reduction, min-windup floor or second
+   delivery windup may be applied.
+3. WINDUP is cancellable on explicit possession loss / host cancel.
+4. When the countdown reaches zero, CONTACT occurs on the next executor update, matching current
+   state-machine semantics.
+5. CONTACT re-checks possession, samples live keeper position, forms
+   `releasePoint = livePosition + (0,0,ReleaseHeightM)`, resolves target/error/velocity, and invokes
+   the ball adapter exactly once.
+6. The adapter's successful kick releases possession on CONTACT. A target receiver arms W5 once;
+   `TargetAgentId == -1` arms no receiver latch.
+7. The host gets typed `Completed` or `Cancelled` feedback. It, not #5, publishes #11's
+   `DistributionExecutedEvent` after successful CONTACT in Resolve.
+
+**Snapshot.** The execution-mode discriminator, goalkeeper request, windup count and cached CONTACT
+inputs that survive a frame are canonical executor state. W8 B code must bump the Match Engine body
+schema and add round-trip/digest probes before merge.
+
 ---
 
 ## 3.9 Event Publishing
@@ -782,6 +826,7 @@ only. Only a tackle interrupt — a real game event — produces a cancellation 
 |---------|------|--------|-------|
 | 1.0 | March 7, 2026, 2:00 PM PST | Claude (AI) / Anton | Initial draft. WeakFoot accuracy and power penalty models. Six-state machine with full transition table. Urgency-driven windup reduction. Two event struct definitions. All formulas derived from Appendix A.6. State machine architecture from §2.2.3 and §4.4.2. Event structs from §4.6.1. |
 | 1.1 | May 6, 2026 | Claude (AI) / Anton | Resolves §3.3–§3.9 follow-up audit finding F-A02: localized `WINDUP_FRAMES` and `FOLLOWTHROUGH_FRAMES` ownership entirely in §3.8.10 (state-machine timing values, not pass-type physical intrinsics). Removed dead-end "from §3.1.4 PhysicalProfile" citation; updated §3.8.2 state table and §3.8 cross-spec dependencies table to reference §3.8.10 as canonical source. Non-behavioral with respect to formula code (values unchanged). |
+| 1.2 | September 25, 2026 | — | W8 B / ERR-011-015: §3.8.13 defines the dedicated goalkeeper request mode, profile-derived delivery bounds, one deterministic error model, exact #11 windup, CONTACT recheck/release, typed feedback, W5 receiver-latch rule, and canonical snapshot obligation. Existing `PassType` ordinals and ordinary pass semantics are unchanged. |
 
 ---
 

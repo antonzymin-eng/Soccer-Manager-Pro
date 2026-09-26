@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 3: Algorithms
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
-**Version:** 0.3
+**Last Updated:** September 25, 2026 (v0.4 — W8 B goalkeeper-distribution map frozen before wiring)
+**Version:** 0.4
 **Status:** APPROVED (June 20, 2026)
 
 > All constants cited here live in `TacticalInstructionsConstants.cs` (Appendix A). Values shown are
@@ -96,7 +96,41 @@ utility' = clamp( utility × RoleWeightModifiers[role, opt.Type] × mentalityRis
 | `LineOfEngagement` | #13 trigger distances (existing) | scalar [0.80..1.20] on trigger radius |
 | `OffsideTrap` | #14 `MarkDirective.OffsideTrapActive` | bool passthrough |
 | `TransitionWon/Lost` | #15 `StyleProfile.TransitionHoldTicks`; #13 counter-press gate | enum select |
-| `GkDistributionPolicy` | #11 `DistributeIntent` defaults | enum → (DeliveryKind, target, power) defaults |
+| `GkDistributionPolicy` | #11 `DistributeIntent` defaults | exact W8 B map in §3.4.1 |
+
+### 3.4.1 Goalkeeper distribution policy — W8 B (FR-TI-022)
+
+These values are **[GT][UNCALIBRATED]** B defaults frozen before production wiring. They are
+semantic initial values, not a fit to the Stage A corpus. A later complete-engine calibration may
+change them only through the normal spec/config process.
+
+| Policy | Delivery | Target rule | PowerIntent | Delay after claim |
+|---|---|---|---:|---:|
+| `SlowDown` | Roll | nearest eligible local receiver; otherwise fallback zone | 0.50 | 35 tactical ticks |
+| `Quick` | Throw | nearest eligible local receiver; otherwise fallback zone | 0.75 | 5 tactical ticks |
+| `ShortKick` | Kick | nearest eligible local receiver; otherwise fallback zone | 0.55 | 10 tactical ticks |
+| `LongKick` | Kick | receiverless fallback zone by design | 0.90 | 10 tactical ticks |
+| `RollOut` | Roll | nearest eligible local receiver; otherwise fallback zone | 0.55 | 10 tactical ticks |
+| `ThrowOut` | Throw | widest eligible local receiver; otherwise fallback zone | 0.70 | 10 tactical ticks |
+
+For every row, `SpinIntent = Vector3.zero` in B. The selector consumes **zero RNG draws**.
+
+**Eligible local receiver.** Active, non-sent-off, outfield team-mate within **25.0 m inclusive**
+of the keeper in XY. This is the pre-A dry-selector candidate promoted without using Stage A outcomes.
+For the nearest rule, minimize squared XY distance; exact ties choose the lower roster index.
+
+For `ThrowOut`, use the same eligible set and maximize
+`abs(candidate.y - PITCH_WIDTH_M / 2)`; ties then minimize squared keeper distance, then choose
+the lower roster index. No extra “wide enough” threshold exists.
+
+**Fallback / punt zone.** The deterministic receiverless point is on the pitch centreline, 35 m from
+the keeper's own goal line: team 0 `(35, 34, 0)`, team 1 `(70, 34, 0)` on the canonical 105×68 m
+pitch. F-09 still clamps through #11. `LongKick` always uses this zone. If a selected receiver
+disappears before CONTACT, #11 F-05 converts to a receiverless execution and preserves the selected
+delivery kind.
+
+**Timing safety.** Delays are in #11's 10 Hz tactical-tick domain. No B policy may exceed **35
+tactical ticks** without revisiting #11 §3.8.4's CONTACT-before-inherited-guard proof.
 
 **`DefensiveLine` single-source (resolves PASS-1 M-2).** `TeamTactic.DefensiveLine` is the manager-set
 **input dial** only; it is **not** a parallel depth value. Each tick the assembly layer **recomputes**
@@ -130,4 +164,5 @@ KD-9 precedence, not a limitation to be "fixed."
 | 0.1 | 2026-06-20 | — | Translation seams, mentality table, role-weight model, direct-input transforms, man-mark precedence. |
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: §3.2 Mentality/Transition composition (H-2); §3.3+§3.4 Tempo reclassified new branch (H-1); §3.4 Width relabelled new-field-feeds-existing (M-1) + `DefensiveLine` single-source (M-2); §3.1 `TacticFormation` 3-family clamp (L-4). |
 | 0.3 | 2026-06-20 | — | PASS-2 fix pass: §3.3 product gains the fifth factor `tempoActionBias` (M-2); §3.4 `DefensiveLine` serialization pinned to the input dial, resolved depth recomputed each tick (M-1). |
+| 0.4 | 2026-09-25 | — | W8 B / ERR-011-016: freezes the total six-value goalkeeper-distribution map before wiring — deterministic receiver/zone selector, 25 m local radius, low-index tie-break, mirrored 35 m centreline fallback zone, power, zero spin, 5/10/35-tick delays and zero RNG. Values are uncalibrated `[GT]`, not Stage A fitted. |
 #endregion

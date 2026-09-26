@@ -7,7 +7,7 @@ modes for Pass Mechanics Specification #5. This section defines the "what" and "
 before Section 3 defines the "how."
 
 **Created:** February 20, 2026, 5:30 PM PST
-**Version:** 1.1
+**Version:** 1.2
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -42,7 +42,7 @@ before Section 3 defines the "how."
 
 ## 2.1 Functional Requirements
 
-Ten functional requirements govern the Pass Mechanics system for Stage 0. Each requirement
+Ten original functional requirements govern ordinary Pass Mechanics for Stage 0. W8 B adds the dedicated goalkeeper-distribution execution contract below without changing the seven-value `PassType` ordinal surface. Each requirement
 derives directly from the core responsibilities in Section 1.1 and maps to one or more
 sub-systems in Section 3. All requirements include their Section 3 owner and test coverage
 identifiers.
@@ -626,6 +626,44 @@ internal struct PhysicalProfile
 
 ---
 
+### 2.4.4 GoalkeeperDistributionRequest — W8 B
+
+W8 B adds a **#5-owned** request family rather than pretending goalkeeper hand distribution is an
+ordinary `PassRequest`. This resolves ERR-011-015 without adding/reordering `PassType`.
+
+```csharp
+public enum GoalkeeperDeliveryVariant : byte
+{
+    Roll = 0,
+    Throw = 1,
+    Kick = 2
+}
+
+public struct GoalkeeperDistributionRequest
+{
+    public int AgentId;
+    public int TeamId;
+    public GoalkeeperDeliveryVariant Delivery;
+    public int TargetAgentId;
+    public Vector3 TargetPosition;
+    public float EmittedPower01;
+    public Vector3 SpinIntent;
+    public float ReleaseHeightM;
+    public int WindupFrames;
+    public int FrameNumber;
+}
+```
+
+`TargetAgentId == -1` means a receiverless zone. `GoalkeeperDeliveryVariant` is APPEND-only once
+serialized by W8 B. It is **not** `PassType`, is not placed in ordinary
+`PassAttemptEvent.PassType`, and does not alter the existing PassType error-hash input. The executor
+owns a separate stable goalkeeper-distribution mode in its snapshot state; W8 B therefore requires
+one Match Engine snapshot-schema bump when code lands.
+
+The request is accepted only while the executor is idle and `AgentId` still owns possession.
+Receiverless execution is valid for all three variants. Cancellation/completion feedback is exposed
+to the composition root so #11 can clear its intent and hand episode.
+
 ## 2.5 Non-Functional Requirements
 
 | NFR ID | Category | Requirement | Rationale / Source |
@@ -679,6 +717,7 @@ Neither flag blocks Section 2. Both flags block Section 3.
 |---------|------|--------|-------|
 | 1.0 | February 20, 2026, 5:30 PM PST | Claude (AI) / Anton | Initial draft. 10 FRs (expanded from outline). NFR section added. Physical profile table included. FM table formalised. ERR-007/008 flags carried forward from Section 1. |
 | 1.1 | March 25, 2026 | Claude (AI) / Anton | Post-audit fixes: Decision Tree #7→#8 (C-03, 2 instances); FR-02 fatigue convention corrected 1.0=rested→0.0=rested (C-04); §2.4.3 profile table marked SUPERSEDED by §3.1.4 (M-03); FR-03 Lofted angle range 35°→45°, Cross ranges aligned with §3.1 (Mod-01). |
+| 1.2 | September 25, 2026 | — | W8 B / ERR-011-015: adds #5-owned `GoalkeeperDistributionRequest` and append-only `GoalkeeperDeliveryVariant`; preserves ordinary `PassRequest`/`PassType` ABI and makes receiverless execution, serialized mode, possession-at-initiation and completion/cancellation feedback explicit. |
 
 ---
 

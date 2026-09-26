@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 2.65
-**Updated:** September 23, 2026 (v2.65 — **`ERR-010-004` and `ERR-011-014` filed and RESOLVED during PR #439 Codex review closure.** Heading's 16-event buffer was smaller than W3's 22-agent fan-out; capacity now defaults/floors to `MAX_AGENTS`. #11 already defined possession as a hard ClaimIntent cancellation, but MatchEngine could carry a stale latch from Resolve until the next tactical pass; acquisition/restart now cancel immediately with a no-revival regression. The #435 W3 diagnostic explicitly enables GK/Heading, and its parser rejects W3 fields without the expected aggregate marker. No schema/RNG/draw-order change. Error Index cardinality 246 → 248. Prior update below.)
+**Version:** 2.66
+**Updated:** September 25, 2026 (v2.66 — **W8 B spec-first filing: `ERR-011-015` / `ERR-011-016` / `ERR-011-017`.** #11's distribution section named a nonexistent #5 API, delegated hand-distribution production to Decision Tree #8 despite no viable owner/caller, and accepted a 60 Hz frame index against 10 Hz claim ticks. Owning #11/#5/#21/Match Engine text is corrected before B code. All three remain code-pending until W8 B wiring; no production behavior/schema/RNG changes in this revision. Error Index cardinality 248 → 251. Prior update below.)
+**Updated (prior):** September 23, 2026 (v2.65 — **`ERR-010-004` and `ERR-011-014` filed and RESOLVED during PR #439 Codex review closure.** Heading's 16-event buffer was smaller than W3's 22-agent fan-out; capacity now defaults/floors to `MAX_AGENTS`. #11 already defined possession as a hard ClaimIntent cancellation, but MatchEngine could carry a stale latch from Resolve until the next tactical pass; acquisition/restart now cancel immediately with a no-revival regression. The #435 W3 diagnostic explicitly enables GK/Heading, and its parser rejects W3 fields without the expected aggregate marker. No schema/RNG/draw-order change. Error Index cardinality 246 → 248. Prior update below.)
 **Updated (prior):** September 22, 2026 (v2.64 — **`ERR-011-013` filed and RESOLVED during W3 / PR #439 residual spec sweep.** Goalkeeper #11 §1 still contradicted already-resolved ERR-011-010/011/012: it assigned claim/rush intent ownership to Decision Tree #8 and retained phantom Collision #3 hand/head collider authority even though live W1/W3 composition uses MatchEngine producers, #10 prepared Head geometry, and #11 live Hand/reach geometry. Section 1 v0.4 now matches §§3.6/3.7 and the shipped composition boundary. Documentation only; no runtime, `[GT]`, snapshot schema, RNG stream/domain/draw site, or draw-order change. Error Index cardinality 245 → 246. Prior update below.)
 **Updated (prior):** September 22, 2026 (v2.63 — **`ERR-011-012` filed and RESOLVED during W3 / PR #439 review correction.** The first W3 draft treated Collision #3's read-only AGENT_BALL feed as cross-claim membership and reused `GkRushMaxBallHeightM = 2.5 m` as a claim floor even though #3's Stage-0 body reach caps at 2.0 m and #11's existing Hand reach peaks lower; the combination could make ordinary Hand claims unreachable. It also described ClaimIntent as dormant/non-serialized while implementation required a locked episode across tactical/physics strides. #11 §§2/3 and the W3 design now separate observation from membership: #10 prepared Head geometry + #11 live active-claim Hand reach form the contest; claim arming has no vertical floor, locks reach side/target for the existing bounded dive-duration episode, and MatchEngine schema 22 → 23 serializes the full ClaimIntent plus active latch. Outfield participants use the narrow Balance/Strength/Aerial projection, never `ToGoalkeeper`. No new `[GT]`, RNG stream/domain/draw site, or draw-order contract. Error Index cardinality 244 → 245. Prior update below.)
 **Updated (prior):** September 22, 2026 (v2.62 — **`ERR-011-011` filed and RESOLVED during W3 / PR #439.** Pre-implementation review verified that Goalkeeper #11 §3.6.1 cited three Collision #3 surfaces that do not exist: `agent.handCapsule`, `agent.headSphere`, and `#3.IntersectsBallSphere`. The real Stage-0 #3 AGENT_BALL path is a generic body cylinder capped at `AgentReachHeight` and hard-codes `BodyPart.Torso`; using it as Hand/Head authority would suppress high aerial headers and manufacture an API. #11 §3.6.1 v0.9 now makes #3 candidate discovery only, keeps #10 as head-geometry owner, keeps #11's live reach envelope as hand-geometry owner, and explicitly requires W3 to wire the dormant claim producer before ordinary cross claims can become Hand contacts. No `[GT]`, save/snapshot schema, RNG stream/domain/draw site/order change. Error Index cardinality 243 → 244. Prior update below.)
@@ -797,10 +798,63 @@ different things, each internally self-consistent); no code change proposed. Pri
 
 ---
 
+## ERR-011-015: Goalkeeper distribution cited a nonexistent Pass Mechanics contract
+
+**Filed:** September 25, 2026 — W8 B pre-code spec pass.  
+**How found.** Repository/API reconciliation of #11 §3.8.3–§3.8.4 against #5 found no
+`PassIntent`, no `PassMechanics.ConsumePassIntent`, no #5 `DeliveryKind`, and no
+`LowDriven` / `GroundRoll`; live `PassRequest` also cannot faithfully carry #11 release
+height, emitted power, requested spin or hand-delivery identity.  
+**Fix (spec first; code deferred to W8 B).** #11 now targets a dedicated #5-owned
+`GoalkeeperDistributionRequest` / `GoalkeeperDeliveryVariant` through Match Engine.
+#5 owns one windup/error/CONTACT path, receiverless execution, feedback and serialized in-flight
+state; ordinary `PassType` remains unchanged.  
+**Determinism impact:** spec revision only today. B code requires one Match Engine body-schema bump;
+no RNG stream/domain/draw site is added.  
+**Status:** ◑ **SPEC RESOLVED September 25, 2026; CODE PENDING W8 B wiring.**
+
+---
+
+## ERR-011-016: hand-distribution production was delegated to Decision Tree #8 and therefore had no viable owner
+
+**Filed:** September 25, 2026 — W8 B pre-code spec pass.  
+**How found.** Static wiring review found `CommitDistributeIntent` had no production caller while
+#11 §3.8 said Decision Tree #8 supplied it. #8 has no keeper-distribution producer and adding a new
+action ordinal would reopen the digest/3-bit composure-noise boundary already avoided for W1/W9.  
+**Fix (spec first; code deferred to W8 B).** Match Engine owns the hand-held producer, reads #21's
+total six-value deterministic map, suppresses only keeper on-ball foot actions during hand control,
+and commits #11 intents without changing Decision Tree ordinals. #21 defines exact delivery,
+selector/fallback, power/spin and tactical-delay values.  
+**Determinism impact:** zero RNG draws; no ordinal/digest change in this spec revision. B behavior
+will intentionally change and is measured against the frozen A corpus.  
+**Status:** ◑ **SPEC RESOLVED September 25, 2026; CODE PENDING W8 B wiring.**
+
+---
+
+## ERR-011-017: #11 compared a 60 Hz frame index with 10 Hz claim ticks
+
+**Filed:** September 25, 2026 — W8 B pre-code spec pass.  
+**How found.** Source reconciliation found each hand claim stores
+`claimTick = currentFrame / FramesPerTacticalTick`, while Match Engine calls #11 tactical logic
+with the raw 60 Hz frame index. The no-intent elapsed comparison therefore mixes units and can mature
+roughly six times too fast. Stage A intentionally measured that behavior unchanged.  
+**Fix (spec first; code deferred to W8 B).** Composition root must derive one
+`floor(currentFrame / FramesPerTacticalTick)` value and pass that as #11 `currentTick`; claim,
+release-earliest and policy delay are all 10 Hz. B retains the inherited six-second rule only as a
+unit-correct temporary guard; C owns its Law-12 replacement.  
+**Determinism impact:** no RNG change; clock correction changes B behavior by design. No schema
+change is required for the unit conversion itself.  
+**Status:** ◑ **SPEC RESOLVED September 25, 2026; CODE PENDING W8 B wiring.**
+
+---
+
 ## Error Index
 
 | ID | Title | Severity | Files Affected | Status |
 |----|-------|----------|---------------|--------|
+| ERR-011-017 | Goalkeeper #11 stores hand-claim time in 10 Hz ticks but live Match Engine passes a raw 60 Hz frame index into tactical comparisons, so the no-intent elapsed guard can mature roughly six times too fast. Stage A measured this unchanged; source review verified the mixed-unit expressions. | High | 3 (`goalkeeper-mechanics/section-3.md`, `match-engine-design.md`, this log) | ◑ **Spec resolved September 25, 2026; code pending W8 B.** Composition root now normatively passes `floor(currentFrame / FramesPerTacticalTick)`; #11 claim/release/policy clocks are all 10 Hz. C, not B, replaces the inherited six-second law rule. No RNG/schema impact from conversion itself. |
+| ERR-011-016 | Goalkeeper #11 §3.8 delegated hand-distribution intent production to Decision Tree #8, but `CommitDistributeIntent` had no production caller and #8 has no viable keeper-distribution action surface without reopening its ordinal/digest boundary. | High | 5 (#11 §3, #21 §§2–3, Match Engine design, this log) | ◑ **Spec resolved September 25, 2026; code pending W8 B.** Match Engine owns the producer, reads #21's total deterministic six-value map, suppresses only keeper hand-episode foot actions and uses zero RNG. No Decision Tree ordinal change. |
+| ERR-011-015 | Goalkeeper #11 §3.8.3–§3.8.4 specified a phantom #5 API (`PassIntent`, `ConsumePassIntent`, `DeliveryKind.LowDriven/GroundRoll/Lofted`) that does not exist and cannot carry #11's full release-height/power/spin semantics. | High | 5 (#11 §3, #5 §§2/3, Match Engine design, this log) | ◑ **Spec resolved September 25, 2026; code pending W8 B.** #5 now owns a dedicated goalkeeper request/variant with one windup/error/CONTACT path, receiverless execution and feedback; ordinary `PassType` stays unchanged. B code will add canonical in-flight state + one schema bump; no RNG draw site. |
 | ERR-011-012 | W3's first runtime draft made the coarse Collision #3 AGENT_BALL observation feed part of cross-claim membership, reused the 2.5 m W1 rush ceiling as a claim floor, re-evaluated that trigger during the attempt, and still described ClaimIntent as dormant/non-serialized. Those choices contradict the mechanic-owned geometry boundary and can make the Hand route empty/unreachable while hiding authoritative cross-tick claim state from save/restore. | High | 9 (`goalkeeper-mechanics/section-2.md`, `section-3.md`, `ClaimIntent.cs`, `GoalkeeperMechanics.cs`, `GoalkeeperCrossClaimDuel.cs`, `MatchEngine.cs`, snapshot tests, W3 design, this log) | ✅ **Resolved September 22, 2026 in PR #439.** Collision #3 is observation-only; #10 prepared Head geometry and #11 live Hand reach own membership. Claim arming has no vertical floor; target/reach side stay locked for the existing bounded reach episode; full ClaimIntent + active latch is canonical snapshot schema v23. Mixed participants carry only normalized Balance/Strength/Aerial and outfielders never route through `ToGoalkeeper`. No new `[GT]` or RNG draw site. |
 | ERR-011-013 | Goalkeeper #11 §1 remained stale after ERR-011-010/011/012: the purpose/dependency/KD-14 surfaces still assigned ClaimIntent/RushIntent to Decision Tree #8 and named Collision #3 hand/head collider authority that the live repo does not have. A W3 residual cross-spec sweep found the contradiction after §3 had already been corrected. | Medium | 2 (`goalkeeper-mechanics/section-1.md`, this log) | ✅ **Resolved September 22, 2026, same landing.** Section 1 v0.4 now uses owning-producer language, records W1 RushIntent and W3 ClaimIntent as MatchEngine composition-root producers, and makes #3 AGENT_BALL observation-only for W3 while #10 prepared Head geometry + #11 live Hand/reach geometry own contact classification. No runtime, `[GT]`, schema, RNG stream/domain/draw site, or draw-order change. |
 | ERR-011-014 | Possession was a documented hard ClaimIntent cancellation but could leave a stale 60 Hz Hand latch until the next tactical pass. | High | 4 | ✅ Resolved September 23, 2026 in PR #439 — immediate acquisition/restart cancellation + no-revival regression. |

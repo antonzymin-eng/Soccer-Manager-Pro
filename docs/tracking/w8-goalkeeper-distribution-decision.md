@@ -1,7 +1,7 @@
 # W8 Goalkeeper Distribution — Owner Decision Packet
 
 > **Created:** September 25, 2026  
-> **Status:** **ARCHITECTURE RECORDED — staged implementation authorized by the owner; numeric policy and execution details await B spec text. This packet changes no gameplay, approved spec, schema, RNG, or `[GT]`.**
+> **Status:** **B CONTRACT PROMOTED TO OWNING SPECS — policy/selector/timing/#5 execution are frozen before wiring. No production code changes in this revision.**
 > **Production anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (`main`, PR #455 merge).  
 > **Scope:** Record W8 ownership and the ordered A baseline, isolated possession-helper refactor, B spec, and B wiring boundaries.
 
@@ -341,26 +341,24 @@ W8 must not be bundled with W9 or W10. Any later #440/cooldown semantics change,
 
 ---
 
-## 7. Explicit non-decisions
+## 7. Remaining non-decisions after B spec promotion
 
-This architecture record does **not yet**:
+The B spec amendment now decides the previously-open policy mapping, selector/tie-break, fallback
+zone, zero-RNG rule, #5 delivery bounds, windup/execution/cancellation API and Match Engine phase
+ownership. Those decisions live in #21 §3.4.1, #11 §3.8, #5 §2.4.4 / §3.8.13 and
+`match-engine-design.md`.
 
-- implement the chosen IFAB 2026/27 Law-12 correction; that is the later C landing;
-- remove the inherited guard; its feet-only disposition remains subject to measurement and the C contract;
-- choose a concrete #21 policy mapping;
-- choose a receiver-selection algorithm or the fixed zone's precise geometry;
-- choose voluntary release timing or whether it consumes RNG;
-- choose a receiver-selection RNG/domain/draw site;
-- implement FR-GK-043's retirement or the chosen total receiver-or-zone fallback; exact receiverless RollOut/ThrowOut delivery belongs to the B specs;
-- settle the detailed #5 adapter/phase and cancellation API; B specs must do so before wiring;
-- authorize a Decision Tree ordinal-width change or digest rebaseline;
-- authorize W9;
-- change snapshot schema;
-- tune distribution `[GT]` constants;
-- modify production gameplay.
+Still intentionally **not** decided or changed here:
 
-The owner's staged direction supersedes the v0.12 draft non-decisions for architecture and sequence. Exact #21 policy values, selector and zone geometry, delivery ranges, timing, RNG and #5 execution details require owning-spec approval before B code. Until those amendments land, approved #11 governs current behavior.
+- C's 2026/27 Law-12 eight-second corner implementation and outside-area handball path;
+- final retirement of the inherited six-second/no-intent and 360-frame hand-drop guards (C);
+- any post-complete-engine calibration of W8 `[GT]` values;
+- W9 or any Decision Tree ordinal-width/digest rebaseline;
+- B production code or the B snapshot-schema bump itself — those follow only after this spec PR lands.
 
+The W8 B policy defaults are uncalibrated semantic values and are not fitted to Stage A results.
+The 25 m local-selector core and fixed mirrored zone derive from the preregistered dry-selector shape;
+the policy-specific delivery/timing values are frozen here before B behavior is measured.
 
 ---
 
@@ -368,6 +366,7 @@ The owner's staged direction supersedes the v0.12 draft non-decisions for archit
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.14 | 2026-09-25 | B contract promoted | #11/#5/#21/Match Engine now own the full pre-code B contract: six policy rows, deterministic selector/tie-break/fallback zone, zero RNG, exact tactical delays and power, profile-derived delivery ranges, faithful dedicated #5 request, 10 Hz clock correction, CONTACT-only release/event/W5 behavior, cancellation feedback and B schema obligation. ERR-011-015/016/017 filed spec-first; production wiring remains next. |
 | 0.13 | 2026-09-25 | architecture recorded | Owner-directed A preregistration/instrument before results, separate behavior-neutral possession helper with explicit ten-writer disposition and exact digest parity, then #11/#5/#21/Match Engine numeric B specs and #11 ERRs before B wiring; same-corpus A→B comparison. Bounds live windup configuration and leaves receiverless RollOut/ThrowOut to B specs. Review correction: A measures the real 60 Hz/10 Hz #11 clock mismatch, B corrects it after its ERR/spec text, and C limits the eight-second corner to own-area hand control with outside-area handling specified separately. |
 | 0.12 | 2026-09-25 | draft | Native two-lens advisor correction: Decision Tree keeper foot-action competition; live-control and possession-loss teardown; clearable distribution intent; serialized B windup latch and independent B/C schema changes; architecture-only approval governance. Carries event phase, #5 composition and cancellation obligations, and updates A baseline and B→C non-regression preregistration candidates. |
 | 0.11 | 2026-09-25 | draft | Defines the F-05 goal-line safety exception after F-09 clamping as a proposed new B-stage rule, labels the B no-intent timeout fixture injected/defensive, and requires separate receiverless-zone pass outcomes/completion denominators before A→B measurement. |

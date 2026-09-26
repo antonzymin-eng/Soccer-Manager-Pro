@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** September 22, 2026 (v0.11 — W3 scope clarification: cross-claim arbitration uses active ClaimIntent Hand membership; ordinary save-dive handling remains unchanged)
-**Version:** 0.11
+**Last Updated:** September 25, 2026 (v0.12 — W8 B distribution ownership, clock, target and #5 CONTACT contract; ERR-011-015/016/017)
+**Version:** 0.12
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -1057,13 +1057,32 @@ reaching pitch coordinates past `gkPos.x` while still in
 
 ---
 
-## 3.8 Distribution Generation (KD-6, KD-16)
+## 3.8 Distribution Generation (KD-6, KD-16; W8 B)
 
-Decision Tree #8 supplies `DistributeIntent` at the 10 Hz tactical
-tick once the GK enters `HandsOnBall` state and
-`releaseTickEarliest` has passed.
+**Ownership.** While a keeper has live hand control, Match Engine — not Decision Tree #8 —
+is the producer of `DistributeIntent`. It reads #21 `GkDistributionPolicy` and commits one
+total receiver-or-zone intent. Decision Tree keeper on-ball actions are suppressed while the
+keeper is in `HandsOnBall` or remains the controlled possessor during `Distributing` windup.
+This resolves **ERR-011-016**; no Decision Tree ordinal or composure-noise width changes.
 
-### 3.8.1 Release-point geometry (KD-16)
+**Clock domain.** Every `currentTick` supplied to #11 tactical state transitions is a **10 Hz
+tactical tick**, derived once by the composition root as
+`floor(currentFrame / FramesPerTacticalTick)`. `_claimTick` and
+`_releaseTickEarliest` are in that same domain. Passing a 60 Hz frame index here is invalid
+and is the defect recorded by **ERR-011-017**.
+
+For a policy delay `D` from #21 §3.4.1, the producer may commit only when:
+
+```
+currentTacticalTick >= releaseTickEarliest
+AND currentTacticalTick >= claimTick + D
+AND keeper still has live hand control
+AND no DistributeIntent is already active
+```
+
+The B producer and selector consume **zero RNG draws**.
+
+### 3.8.1 Release-point geometry and windup (KD-16)
 
 ```
 releaseHeight = match distributeIntent.deliveryKind:
@@ -1076,63 +1095,96 @@ windupMs      = match distributeIntent.deliveryKind:
                   Roll  → ROLL_WINDUP_MS
                   Kick  → KICK_WINDUP_MS
 
-// v0.2 AR-S1-M3: distribution-accuracy attribute modulation
 accuracyCoeff = match distributeIntent.deliveryKind:
                   Throw → THROW_ACCURACY_COEFF · Throwing_norm
                   Roll  → 1.0
                   Kick  → KICK_ACCURACY_COEFF  · Kicking_norm
 
-releasePoint  = gkPosition + Vector3(0, 0, releaseHeight)
-emittedPowerIntent = distributeIntent.powerIntent · accuracyCoeff
+releasePoint       = liveGkPositionAtContact + Vector3(0, 0, releaseHeight)
+emittedPowerIntent = clamp01(distributeIntent.powerIntent · accuracyCoeff)
+windupFrames       = ceil(windupMs · 60 / 1000)
 ```
 
-### 3.8.2 Target validation (F-05, F-09)
+The release point is sampled from the keeper's **live CONTACT-frame position**, not the
+position at intent commit. #5 receives the release-height offset and recomputes the source point
+from its live agent query at CONTACT. W8 B does not apply ordinary-pass urgency reduction or the
+ordinary `MIN_WINDUP_FRAMES` floor to this windup: exactly one #11 windup is authoritative.
+
+### 3.8.2 Target validation and total fallback (F-05, F-09)
+
+The producer uses the live active roster. A receiver is eligible only when the agent is an active,
+non-sent-off outfield team-mate and satisfies #21's policy selector. Exact distance ties use the
+lower roster index.
 
 ```
-if distributeIntent.targetReceiverId != null
-   AND !agentRoster.contains(distributeIntent.targetReceiverId):
-    // F-05: receiver substituted between commit and release
-    distributeIntent.targetReceiverId = null
-    distributeIntent.targetPoint     = lastKnownReceiverPosition
+if targetReceiverId != null AND !liveRoster.containsEligible(targetReceiverId):
+    targetReceiverId = null
+    targetPoint = lastKnownReceiverPosition
     emit telemetry warning "gk.distribution.target_receiver_missing"
 
-if distributeIntent.targetPoint.x ∉ [0, PITCH_LENGTH_M]
-   OR distributeIntent.targetPoint.y ∉ [0, PITCH_WIDTH_M]:
-    // F-09: clamp to in-bounds
-    distributeIntent.targetPoint = clampToInBounds(distributeIntent.targetPoint)
-    emit telemetry warning "gk.distribution.target_out_of_bounds"
+targetPoint = clampToInBounds(targetPoint)
+
+if targetReceiverId == null AND targetPoint lies on own goal line:
+    targetPoint = policyFallbackZone(teamId)
 ```
 
-### 3.8.3 PassIntent emission
+A missing receiver therefore becomes a receiverless zone execution; it does **not** cancel an
+otherwise valid distribution. The selected delivery kind is preserved through fallback, including
+`RollOut` and `ThrowOut`.
+
+### 3.8.3 Faithful Pass Mechanics execution (ERR-011-015)
+
+The old `PassIntent` / `PassMechanics.ConsumePassIntent` /
+`PassMechanics.DeliveryKind.LowDriven|GroundRoll|Lofted` text described APIs that do not exist.
+W8 B replaces that phantom contract with #5's dedicated
+`GoalkeeperDistributionRequest` / `GoalkeeperDeliveryVariant` seam (§5 §2.4.4, §3.8.13).
+
+The composition root translates fields structurally; #11 does not reference the #5 assembly:
 
 ```
-passIntent = PassIntent {
-    sourceAgentId     = gkId,
-    sourcePoint       = releasePoint,
-    targetPoint       = distributeIntent.targetPoint,
-    targetReceiverId  = distributeIntent.targetReceiverId,
-    powerIntent       = emittedPowerIntent,
-    spinIntent        = distributeIntent.spinIntent,
-    deliveryKind      = mapToPassMechanicsDelivery(distributeIntent.deliveryKind)
-}
-
-PassMechanics.ConsumePassIntent(passIntent)         // #5 §3 intent surface
-emit DistributionExecutedEvent { ..., releasePoint, windupDurationMs: windupMs }
-
-state machine: Distributing → Recovering
+#11 DistributeIntent              #5 GoalkeeperDistributionRequest
+------------------------------------------------------------------
+keeper id / team               -> AgentId / TeamId
+Throw | Roll | Kick            -> Throw | Roll | Kick
+targetReceiverId               -> TargetAgentId (-1 for zone)
+targetPoint                    -> TargetPosition
+emittedPowerIntent             -> EmittedPower01
+spinIntent                     -> SpinIntent
+releaseHeight                  -> ReleaseHeightM
+windupFrames                   -> WindupFrames
+commit frame                   -> FrameNumber
 ```
 
-### 3.8.4 `mapToPassMechanicsDelivery`
+Accepted initiation moves #11 to `Distributing` but **does not release possession**.
+`Distributing` remains live controlled hand possession through #5 WINDUP. At #5 CONTACT:
 
-One-to-one structural mapping:
+1. #5 re-checks that the keeper still possesses the ball.
+2. #5 samples the live keeper position, forms `releasePoint`, resolves the one B error model,
+   and calls the ball kick exactly once.
+3. The Match Engine adapter releases controlled possession through the central possession-change
+   seam on that same CONTACT.
+4. W5 is armed exactly once when `TargetAgentId >= 0`; receiverless zone execution arms no W5
+   receiver latch.
+5. `DistributionExecutedEvent` is published in its registered **Resolve** phase only after the
+   successful CONTACT kick. Its `releasePoint` and `windupDurationMs` report the executed sample.
+6. #11 receives completion feedback, clears the intent, and transitions
+   `Distributing → Recovering`.
 
-```
-Throw → PassMechanics.DeliveryKind.LowDriven   (sub-cross height)
-Roll  → PassMechanics.DeliveryKind.GroundRoll
-Kick  → PassMechanics.DeliveryKind.Lofted
-```
+If #5 rejects initiation, loses possession before CONTACT, or is explicitly cancelled, it produces
+cancellation feedback; #11 clears the intent/hand episode and may not publish
+`DistributionExecutedEvent`. `ClearDistributeIntent` is the idempotent #11 cleanup entry point.
 
-The mapping is structural only; #5 owns the resulting trajectory.
+### 3.8.4 Deadline budget
+
+W8 B retains the inherited six-second no-intent boundary unchanged as a **temporary, unit-correct
+B guard**; C owns its replacement with the 2026/27 eight-second corner sanction. The engine's
+existing 360-frame hand-drop guard also remains until C.
+
+To prevent B from racing either inherited guard, #21 caps policy delay at 35 tactical ticks.
+With the largest configured windup bound (Kick 1400 ms = 84 frames) and one CONTACT frame,
+the worst B contact budget is below the earliest inherited boundary even for a claim created late
+inside a tactical stride. A regression must check every policy using the **live configured windup
+values**, not only defaults.
 
 ---
 
@@ -1205,3 +1257,4 @@ standard rebound physics.
 | 0.9 | September 22, 2026 | W3 / ERR-011-011 | §3.6.1 removes phantom Collision #3 `handCapsule` / `headSphere` / `IntersectsBallSphere` surfaces. #3 is candidate discovery only; #10 owns head geometry, #11 owns its live hand/reach envelope, and no live hand envelope means no Hand participant. The dormant `ClaimIntent` must gain a real producer before ordinary cross claims can use Hand. No `[GT]`, schema or RNG change. | spec correction |
 | 0.10 | September 22, 2026 | W3 / ERR-011-012 | §3.6.1 corrects the live W3 policy discovered during implementation review: Collision #3's 2.0 m observation feed is not contest membership; ClaimIntent arms from loose/local geometry with no vertical floor, stays locked for one existing dive-duration reach episode, locks its lateral reach side, and hard-cancels only on possession/SAVE/slot invalidation/expiry. Claims reuse existing #11 dive/reach kinematics with zero save-only timing jitter. ClaimIntent is now authoritative cross-tick state in MatchEngine snapshot v23. No new `[GT]`, RNG stream/domain/draw site/order. | implementation/spec back-prop |
 | 0.11 | September 22, 2026 | W3 draft scope clarification | §3.6.1 now matches the preregistered W3 boundary exactly: only active ClaimIntent contributes W3 Hand membership. `TryGetHandReachEnvelope` may also describe an ordinary save dive for #11's own save pipeline, but W3 does not interpose on normal shot-save handling. No code/tuning/schema/RNG change. | pre-merge contract sync |
+| 0.12 | September 25, 2026 | W8 B spec / ERR-011-015/016/017 | §3.8 replaces the phantom #5 pass API with the dedicated #5 goalkeeper request, moves hand-distribution production from #8 to Match Engine + #21, pins the 10 Hz clock domain, live-roster/receiverless fallback, CONTACT-only possession release/event, zero-RNG selector, and 35-tactical-tick safety ceiling. C still owns the Law-12 eight-second correction. | spec-first; B code deferred to W8 wiring |
