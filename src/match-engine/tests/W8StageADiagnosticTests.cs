@@ -112,6 +112,7 @@ namespace TacticalDirector.MatchEngine
             private int _lastTouchFrame = -1;
             private int _pendingPassTarget = -2;
             private string _pendingPassKind;
+            private int _pendingPassAgent = -1;
             private int _fouls, _yellows, _straightReds, _secondYellowDismissals;
 
             internal Census(MatchEngine engine, ulong seed, StringBuilder output)
@@ -144,6 +145,12 @@ namespace TacticalDirector.MatchEngine
                 switch (e.Kind)
                 {
                     case W8StageAKind.HandClaim:
+                        if (_pendingPassTarget != -2 && _pendingPassKind == "hand")
+                        {
+                            Count(e.Agent == _pendingPassAgent
+                                ? "pass-outcome-hand-interrupted-by-claim-same-keeper"
+                                : "pass-outcome-hand-interrupted-by-claim-opponent-keeper");
+                        }
                         ResolvePass("interrupted-by-claim");
                         Open(e.Agent, "hand", e);
                         Touch(e.Agent, "hand-claim");
@@ -189,6 +196,7 @@ namespace TacticalDirector.MatchEngine
                             ResolvePass("replaced-by-pass");
                             _pendingPassTarget = e.Other;
                             _pendingPassKind = passerEpisode.Kind;
+                            _pendingPassAgent = e.Agent;
                             Count("pass-contact-" + _pendingPassKind + (e.Other < 0 ? "-zone" : "-receiver"));
                         }
                         else if (_pendingPassTarget != -2) ResolvePass("interrupted-by-kick");
@@ -317,6 +325,7 @@ namespace TacticalDirector.MatchEngine
                 Count("pass-outcome-" + _pendingPassKind + "-" + result);
                 _pendingPassTarget = -2;
                 _pendingPassKind = null;
+                _pendingPassAgent = -1;
             }
 
             private void Close(int agent, int frame, string reason)
