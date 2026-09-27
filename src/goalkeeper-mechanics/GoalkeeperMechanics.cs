@@ -11,6 +11,7 @@
 // Modified: 2026-09-22 (W3 runtime: mixed cross-claim registration/resolution API + claim hand win/loss terminal routes through existing §3.5 handling)
 // Modified: 2026-09-22 (W3 / ERR-011-012: claim reach side is locked at commit; claim episode is bounded by existing dive duration and hard-cancelled only by composition policy, not by a re-evaluated height/radius trigger)
 // Modified: 2026-09-11 (W4: OnThreatDeflected restarts reaction timing for a changed live flight without setting the shot-event latch; no new state/schema)
+// Modified: 2026-09-26 (W8 / ERR-011-017: + EndHandEpisodeOnPossessionLoss — the §3.8.3 possession-change teardown the corrected 10 Hz clock needs; no new state/schema/RNG)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
 // Purpose:  Main 10 Hz + 60 Hz orchestrator. Manages per-GK state, dive kinematics, reaction pipeline,
@@ -467,6 +468,39 @@ namespace TacticalDirector.GoalkeeperMechanics
             }
 
             _claimIntentActive[gkIndex] = false;
+        }
+
+        /// <summary>
+        /// §3.8.3 possession-change teardown (W8, landed with the ERR-011-017 clock correction): ends this
+        /// keeper's live hand episode when the composition root reports that the keeper no longer controls
+        /// the ball — a pass, a takeover, a restart, or the engine's ground-drop backstop. The keeper enters
+        /// <c>Recovering</c> with the ordinary recovery cooldown and any uncommitted distribution intent is
+        /// cleared. Outside <c>HandsOnBall</c> / <c>Distributing</c> this is a no-op, so a caller may report
+        /// every possession loss without first reading the state. Writes only fields already in the
+        /// serialized GK block; no RNG draw.
+        /// </summary>
+        /// <param name="gkIndex">Keeper index (== team id; KD-1).</param>
+        /// <param name="currentFrame">Current 60 Hz physics frame; converted to the 10 Hz cooldown domain here.</param>
+        /// <returns>True when a live hand episode was ended.</returns>
+        public bool EndHandEpisodeOnPossessionLoss(int gkIndex, int currentFrame)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return false;
+            }
+
+            GoalkeeperState state = _states[gkIndex];
+            if (state != GoalkeeperState.HandsOnBall && state != GoalkeeperState.Distributing)
+            {
+                return false;
+            }
+
+            _distributeIntents[gkIndex] = default;
+            _distributeIntentActive[gkIndex] = false;
+            _states[gkIndex] = GoalkeeperState.Recovering;
+            int tacticalTick = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+            _recoveryCooldownEndTick[gkIndex] = tacticalTick + GoalkeeperConstants.RecoveryCooldownTicks;
+            return true;
         }
 
         /// <summary>
@@ -1710,4 +1744,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |      |            |   | removing the live-position side flip; the existing dive-duration remains  |
 // |      |            |   | the sole bounded episode lifetime. No new GT or RNG draw site.             |
 // | 1.17 | 2026-09-22 | — | W3 runtime: #11 exposes frame-local mixed-participant duel registration and owns the tiebreak draw; Hand winner/loss routes now consume the live ClaimIntent and use the existing §3.5 handling/event/ball-action contract. |
+// | 1.18 | 2026-09-26 | — | W8 / ERR-011-017: + EndHandEpisodeOnPossessionLoss (#11 §3.8.3 possession-change teardown). Once the composition root passes a true 10 Hz tick, HandsOnBall has no exit but the 60-tick timeout, so a keeper who had already passed stayed in hands for up to 6 s and could not rush, claim or dive. The teardown enters Recovering with the ordinary cooldown; no-op outside HandsOnBall/Distributing. No new state, schema, GT or RNG. |
 #endregion

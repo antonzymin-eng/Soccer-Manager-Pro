@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-26 (W8 / ERR-011-017: #11 TacticalTick receives the 10 Hz tactical tick, not the raw 60 Hz frame; SetPossessingAgent and ApplyRestart end the outgoing keeper's live #11 hand episode (#11 §3.8.3 teardown); + TestOnly_RestoreGoalkeeperState. Behaviour change; no schema/RNG change)
 // Modified: 2026-09-26 (W8 pre-B tracking closeout — records the already-merged assignment-only SetPossessingAgent seam and six routed mid-match writers; no runtime delta in this follow-up)
 // Modified: 2026-09-22 (W6 ordering correction surfaced by W3: reattach every Controlled holder after Resolve collision position-correction writeback; unconditional/default-engine trajectory change, no schema/RNG change)
 // Modified: 2026-09-22 (W3 / #435 §6.2: add nonserialized measurement-only production counters for frozen six-seed evidence)
@@ -2931,6 +2932,19 @@ namespace TacticalDirector.MatchEngine
         internal TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState TestOnly_GoalkeeperState =>
             _goalkeeper.CaptureState();
 
+        /// <summary>Test-only (W8 / ERR-011-017): restores #11's cross-tick state through the SAME public
+        /// <c>RestoreState</c> seam snapshot restore uses, so a test can stage an exact hand episode
+        /// (state + claim tick) without depending on a composed catch's handling-quality outcome.</summary>
+        internal void TestOnly_RestoreGoalkeeperState(
+            in TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState state) =>
+            _goalkeeper.RestoreState(in state);
+
+        /// <summary>Test-only (W8 / ERR-011-017): applies a free-kick restart exactly as the production
+        /// restart paths do, so the "same keeper awarded the restart" teardown case — which the possession
+        /// seam alone cannot see — is lockable without staging a whole foul.</summary>
+        internal void TestOnly_ApplyRestart(Vector2 position, int awardedTeam) =>
+            ApplyRestart(position, awardedTeam, RestartCue.FreeKick);
+
         /// <summary>Test-only W3 seam: current 60 Hz frame used by the staged mixed-contact locks.</summary>
         internal int TestOnly_CurrentPhysicsFrame => (int)_clock.CurrentTick;
 
@@ -4657,7 +4671,9 @@ namespace TacticalDirector.MatchEngine
             if (TestOnly_W8StageAObserver != null)
                 for (int k = 0; k < _gkAgentIds.Length; k++)
                     ObserveW8(W8StageAKind.TacticalBefore, _gkAgentIds[k], k);
-            _goalkeeper.TacticalTick((int)_clock.CurrentTick, _agents, _ball, _gkAgentIds);
+            // ERR-011-017: #11 compares this against 10 Hz claim/release/recovery ticks, so it must be the
+            // tactical tick, never the raw 60 Hz frame (which matured the hold timeout on the first pass).
+            _goalkeeper.TacticalTick((int)_clock.CurrentTacticalTick, _agents, _ball, _gkAgentIds);
             if (TestOnly_W8StageAObserver != null)
                 for (int k = 0; k < _gkAgentIds.Length; k++)
                     ObserveW8(W8StageAKind.TacticalAfter, _gkAgentIds[k], k);
@@ -5452,6 +5468,12 @@ namespace TacticalDirector.MatchEngine
             ObserveW8(W8StageAKind.Restart, awardedTeam, _possessingAgentId, cue);
             _ball = BallState.CreateAtPosition(new Vector3(
                 position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
+            // W8 / ERR-011-017 (#11 §3.8.3): a restart ends any live hand episode, including when the same
+            // keeper is awarded the restart — the possession seam below only sees a change of holder.
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                EndGoalkeeperHandEpisode(_gkAgentIds[k]);
+            }
             SetPossessingAgent(SelectRestartTaker(position, awardedTeam));
             if (_possessingAgentId >= 0)
                 ObserveW8(W8StageAKind.Acquire, _possessingAgentId);
@@ -8497,16 +8519,46 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Behavior-neutral live-game possession identity seam for W8 pre-B.
-        /// This method deliberately does nothing except assign the authoritative holder id: no ball-state
-        /// mutation, event, claim cancellation, keeper teardown, RNG draw, or serialized state belongs here
-        /// in the helper refactor. Constructor/startup, snapshot restore, and TestOnly_ForceBallLoose remain
-        /// explicit direct writers; every ordinary mid-match identity change routes through this seam so B
-        /// can later attach #11 hand-episode teardown in one place without widening this landing.
+        /// Live-game possession identity seam (W8). Every ordinary mid-match identity change routes through
+        /// here; constructor/startup, snapshot restore, and TestOnly_ForceBallLoose remain explicit direct
+        /// writers (PossessionChangeSeamTests pins the inventory).
+        ///
+        /// W8 / ERR-011-017: when the holder actually changes, the outgoing holder's #11 hand episode ends
+        /// (#11 §3.8.3 possession-change teardown). Once #11 receives a true 10 Hz tick, HandsOnBall has no
+        /// exit but the 60-tick timeout, so without this a keeper who had already passed would stay "in
+        /// hands" for up to 6 s, unable to rush, claim or dive. An unchanged holder performs no teardown.
+        /// Every loss is an ordinary one in this landing; B adds the typed cause that lets its own
+        /// successful distribution CONTACT complete normally rather than cancel.
         /// </summary>
         private void SetPossessingAgent(int agentId)
         {
+            int previous = _possessingAgentId;
             _possessingAgentId = agentId;
+            if (previous != agentId)
+            {
+                EndGoalkeeperHandEpisode(previous);
+            }
+        }
+
+        /// <summary>
+        /// W8 / ERR-011-017: ends the live #11 hand episode of <paramref name="agentId"/> if that agent is
+        /// the keeper #11 is tracking for its team (keeper index == team id, KD-1). No-op for outfield
+        /// players, NO_POSSESSION, a stale keeper slot, or a keeper not in a hand episode.
+        /// </summary>
+        private void EndGoalkeeperHandEpisode(int agentId)
+        {
+            if (!_gkHeadingEnabled || agentId < 0 || !_isGoalkeeper[agentId])
+            {
+                return;
+            }
+
+            int teamId = _teamIds[agentId];
+            if (_gkAgentIds[teamId] != agentId)
+            {
+                return;
+            }
+
+            _goalkeeper.EndHandEpisodeOnPossessionLoss(teamId, (int)_clock.CurrentTick);
         }
 
         /// <summary>
@@ -10454,4 +10506,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.88    | 2026-09-22 | —      | W6 ordering correction surfaced by W3: reconcile every Controlled holder immediately after Resolve collision position correction. This is unconditional and can change default-engine trajectories/digests for keeper or outfield carriers even with GK/Heading disabled; it reuses the same attachment funnel and adds no schema field or RNG draw. |
 // | 1.89    | 2026-09-23 | —      | PR #439 Codex closure / ERR-011-014: possession acquisition and restart-taker awards hard-cancel live #11 ClaimIntent state immediately, closing the stale-Hand window. Stale default-off comments corrected; GK/Heading defaults ON since §5.Z.15. No schema/RNG/draw-order change. |
 // | 1.90    | 2026-09-26 | —      | W8 pre-B helper closeout (already merged in #460): six real mid-match _possessingAgentId mutation sites route through assignment-only SetPossessingAgent; constructor/opening kickoff, restore and TestOnly_ForceBallLoose remain direct by explicit disposition. This follow-up records the omitted history only; no gameplay/schema/RNG change. |
+// | 1.91    | 2026-09-26 | —      | W8 / ERR-011-017 clock correction: DriveGkHeadingTactical passes _clock.CurrentTacticalTick to #11 TacticalTick (was the raw 60 Hz frame, which matured the 60-tick hold timeout and the recovery cooldown on the first tactical pass after any claim). Companion #11 §3.8.3 teardown: SetPossessingAgent ends the outgoing keeper's live hand episode on a real change of holder, and ApplyRestart ends any live hand episode even when the same keeper is awarded the restart; without it a keeper who had already passed stayed HandsOnBall for up to 6 s, unable to rush, claim or dive. Intentional trajectory/digest change versus the frozen Stage A corpus. No schema, GT, RNG stream/draw-site/order change. + TestOnly_RestoreGoalkeeperState. |
 #endregion
