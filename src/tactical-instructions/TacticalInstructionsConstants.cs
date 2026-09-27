@@ -1,6 +1,7 @@
 // File:     src/tactical-instructions/TacticalInstructionsConstants.cs
 // Created:  2026-06-21
 // Modified: 2026-06-21
+// Modified: 2026-09-26 (W8 B — approved goalkeeper distribution fallback advance constant)
 // Author:   —
 // Spec:     Tactical Instructions #21 Appendix A, §3.2–§3.4, §5.6, Code Standards #20
 // Modified: 2026-06-30 (§5.6 / G2 balance pass — [GT] magnitudes pinned)
@@ -88,6 +89,9 @@ namespace TacticalDirector.TacticalInstructions
 
         #region GT
 
+        /// <summary>[GT] W8 B receiverless goalkeeper-distribution fallback advance from the keeper's own goal line. #21 §3.4.1.</summary>
+        public const float GK_DIST_FALLBACK_ADVANCE_M = 35.0f;
+
         /// <summary>[GT] Per-<see cref="Mentality"/> utility multiplier (×#8 utility, before clamp). §3.2.</summary>
         public static readonly float[] MentalityRiskMult =
             { 0.80f, 0.88f, 0.94f, 1.00f, 1.06f, 1.14f, 1.20f }; // TODO: replace with config loader (Stage 1)
@@ -174,4 +178,5 @@ namespace TacticalDirector.TacticalInstructions
 // |         |            |        |   bounds). Locked by BalancePassInvariantsTests.                   |
 // | 1.2     | 2026-07-07 | —      | Cheap-item addition: + MarkingOrientationScalar[3] (§3.4, #14 MAN_ |
 // |         |            |        |   MARK candidate radius); Balanced row = identity ×1.00.           |
+// | 1.3     | 2026-09-26 | —      | W8 B: + owner-approved uncalibrated [GT] GK_DIST_FALLBACK_ADVANCE_M = 35 m used by the receiverless goalkeeper-distribution fallback. |
 #endregion

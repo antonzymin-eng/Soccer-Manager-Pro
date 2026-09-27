@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/Tests/PassMechanicsTests.cs
 // Created:  2026-05-31
+// Modified: 2026-09-26 (W8 B — IPassAgentQuery goalkeeper-distribution test stub surface)
 // Modified: 2026-06-13
 // Author:   —
 // Spec:     Pass Mechanics #5 §5, Code Standards #20
@@ -1654,6 +1655,14 @@ namespace TacticalDirector.PassMechanics.Tests
 
             public PassAgentState GetState(int agentId)
                 => agentId == PasserId ? PasserState : ReceiverState;
+
+            public bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId) => true;
+
+            public bool IsGoalkeeperDistributionOwnGoalLine(int teamId, Vector3 targetPosition)
+                => teamId == 0 ? targetPosition.x == 0f : targetPosition.x == 105f;
+
+            public Vector3 GetGoalkeeperDistributionFallbackPosition(int teamId)
+                => teamId == 0 ? new Vector3(35f, 34f, 0f) : new Vector3(70f, 34f, 0f);
         }
 
         private sealed class StubCollisionQuery : IPassCollisionQuery
@@ -1783,4 +1792,5 @@ namespace TacticalDirector.PassMechanics.Tests
 // |         |            |        |     apexChip=4.5 m yields θ=atan(1)=45°, not the §5's 55°). PRODUCTION code  |
 // |         |            |        |     unchanged — verdict TEST/SPEC, not PRODUCTION. Resolves the 11.0-bracket |
 // |         |            |        |     inversion: chip (11.12) now > short ground pass (10.19) as it must.      |
+// | 1.4     | 2026-09-26 | —      | W8 B dormant API support: StubAgentQuery implements the new receiver-eligibility, own-goal-line and fallback-position queries; no existing pass-test behavior changes. |
 #endregion

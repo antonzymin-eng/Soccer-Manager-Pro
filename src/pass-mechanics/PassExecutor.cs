@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.cs
 // Created:  2026-05-26
+// Modified: 2026-09-26 (W8 B dormant #5 goalkeeper-distribution mode + terminal feedback/state)
 // Modified: 2026-08-12 (W2: FM-08's CONTACT-time possession loss downgraded LogError -> LogWarning; a tackle now makes it ordinary)
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8, §3.9, §4.1, Code Standards #20
@@ -20,7 +21,7 @@ namespace TacticalDirector.PassMechanics
     /// IDLE → INITIATING (inside Execute) → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE.
     /// All §3.x subsystems are coordinated from here. Pass Mechanics #5 §3.8, §4.1.
     /// </summary>
-    public sealed class PassExecutor
+    public sealed partial class PassExecutor
     {
         // ── Dependencies ─────────────────────────────────────────────────────────────
 
@@ -85,7 +86,7 @@ namespace TacticalDirector.PassMechanics
         // ── Public API ───────────────────────────────────────────────────────────────
 
         /// <summary>True when no pass is in progress and the executor is ready.</summary>
-        public bool IsIdle => _state == PassExecutionState.Idle;
+        public bool IsIdle => _state == PassExecutionState.Idle && !_goalkeeperFeedbackPending;
 
         /// <summary>
         /// The team-mate this executor's CURRENT pass was aimed at (<c>PassRequest.TargetAgentId</c>).
@@ -100,7 +101,9 @@ namespace TacticalDirector.PassMechanics
         /// <c>_request</c> field, one for observation at the kick and one for serialization.
         /// </para>
         /// </summary>
-        public int InFlightTargetAgentId => _request.TargetAgentId;
+        public int InFlightTargetAgentId => _mode == PassExecutionMode.GoalkeeperDistribution
+            ? _goalkeeperEffectiveTargetAgentId
+            : _request.TargetAgentId;
 
         /// <summary>
         /// The result of the most recently completed (or cancelled/invalid) pass.
@@ -153,7 +156,13 @@ namespace TacticalDirector.PassMechanics
                 _cachedWeakFootRating,
                 _windupFramesRemaining,
                 _followThroughFramesRemaining,
-                in _lastResult);
+                in _lastResult,
+                (int)_mode,
+                in _goalkeeperRequest,
+                _goalkeeperEffectiveTargetAgentId,
+                _goalkeeperEffectiveTargetPosition,
+                _goalkeeperFeedbackPending,
+                in _goalkeeperFeedback);
         }
 
         /// <summary>
@@ -168,6 +177,12 @@ namespace TacticalDirector.PassMechanics
         {
             _state                  = (PassExecutionState)state.State;
             _request                = state.Request;
+            _mode                   = (PassExecutionMode)state.ExecutionMode;
+            _goalkeeperRequest      = state.GoalkeeperRequest;
+            _goalkeeperEffectiveTargetAgentId = state.GoalkeeperEffectiveTargetAgentId;
+            _goalkeeperEffectiveTargetPosition = state.GoalkeeperEffectiveTargetPosition;
+            _goalkeeperFeedbackPending = state.GoalkeeperFeedbackPending;
+            _goalkeeperFeedback = state.GoalkeeperFeedback;
             _cachedEffectiveSubType = state.EffectiveSubType;
 
             // Recompute the internal profile (pure function of PassType + effective sub-type;
@@ -176,7 +191,9 @@ namespace TacticalDirector.PassMechanics
             // default(PhysicalProfile) a freshly-constructed executor holds; this is benign — Idle
             // Update is a no-op, _profile is excluded from the digest, and the next Execute()
             // overwrites it before any read.
-            _profile = PassTypeProfiles.GetProfile(state.Request.PassType, state.EffectiveSubType);
+            _profile = _mode == PassExecutionMode.GoalkeeperDistribution
+                ? GetGoalkeeperDistributionProfile(state.GoalkeeperRequest.Delivery)
+                : PassTypeProfiles.GetProfile(state.Request.PassType, state.EffectiveSubType);
 
             _kickSpeed                    = state.KickSpeed;
             _launchAngleDeg               = state.LaunchAngleDeg;
@@ -213,7 +230,7 @@ namespace TacticalDirector.PassMechanics
             using var _ = s_executeMarker.Auto();
 
             // ── Guard: reject if already executing a pass ────────────────────────────
-            if (_state != PassExecutionState.Idle)
+            if (_state != PassExecutionState.Idle || _goalkeeperFeedbackPending)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError($"[PassExecutor] Execute() called while pass is in progress (state={_state}). Agent={request.AgentId}. Frame={request.FrameNumber}");
@@ -274,6 +291,7 @@ namespace TacticalDirector.PassMechanics
                 ? request.CrossSubType
                 : CrossSubType.Flat;
 
+            _mode = PassExecutionMode.Ordinary;
             _request = request;
             _profile = PassTypeProfiles.GetProfile(request.PassType, effectiveSubType);
 
@@ -381,11 +399,17 @@ namespace TacticalDirector.PassMechanics
                     break;
 
                 case PassExecutionState.Windup:
-                    UpdateWindup(matchTime, frameNumber);
+                    if (_mode == PassExecutionMode.GoalkeeperDistribution)
+                        UpdateGoalkeeperDistributionWindup();
+                    else
+                        UpdateWindup(matchTime, frameNumber);
                     break;
 
                 case PassExecutionState.Contact:
-                    ExecuteContact(matchTime, frameNumber, ref ball);
+                    if (_mode == PassExecutionMode.GoalkeeperDistribution)
+                        ExecuteGoalkeeperDistributionContact(matchTime, frameNumber, ref ball);
+                    else
+                        ExecuteContact(matchTime, frameNumber, ref ball);
                     break;
 
                 case PassExecutionState.FollowThrough:
@@ -749,4 +773,5 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | suite treating an unexpected LogError as a failure. NOT "text only" |
 // |         |            |        | (AR-1 L-7): the SEVERITY change alters LogAssert behaviour in every  |
 // |         |            |        | suite, which is the whole reason for making it. No formula changed.  |
+// | 1.17    | 2026-09-26 | —      | W8 B dormant executor surface: partial dedicated goalkeeper-distribution mode, pending terminal feedback gate, mode-aware in-flight target, and v24 Capture/Restore fields. Ordinary PassRequest execution remains separate and production wiring is not activated. |
 #endregion

@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/PassExecutorState.cs
 // Created:  2026-06-19
+// Modified: 2026-09-26 (W8 B — append dedicated goalkeeper-distribution cross-tick state)
 // Modified: 2026-06-19
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8; Match Engine design note §2.6 (Phase C step C0); Code Standards #20
@@ -81,8 +82,16 @@ namespace TacticalDirector.PassMechanics
         /// <summary>Follow-through frames remaining.</summary>
         public readonly int FollowThroughFramesRemaining;
 
-        /// <summary>The most recently committed result (read via <see cref="PassExecutor.LastResult"/> after IsIdle).</summary>
+        /// <summary>The most recently committed ordinary-pass result.</summary>
         public readonly PassResult LastResult;
+
+        /// <summary>Execution-mode ordinal: 0=ordinary, 1=goalkeeper distribution.</summary>
+        public readonly int ExecutionMode;
+        public readonly GoalkeeperDistributionRequest GoalkeeperRequest;
+        public readonly int GoalkeeperEffectiveTargetAgentId;
+        public readonly UnityEngine.Vector3 GoalkeeperEffectiveTargetPosition;
+        public readonly bool GoalkeeperFeedbackPending;
+        public readonly GoalkeeperDistributionFeedback GoalkeeperFeedback;
 
         /// <summary>Constructs an immutable executor-state snapshot from the captured field set.</summary>
         public PassExecutorState(
@@ -102,7 +111,13 @@ namespace TacticalDirector.PassMechanics
             int cachedWeakFootRating,
             int windupFramesRemaining,
             int followThroughFramesRemaining,
-            in PassResult lastResult)
+            in PassResult lastResult,
+            int executionMode,
+            in GoalkeeperDistributionRequest goalkeeperRequest,
+            int goalkeeperEffectiveTargetAgentId,
+            UnityEngine.Vector3 goalkeeperEffectiveTargetPosition,
+            bool goalkeeperFeedbackPending,
+            in GoalkeeperDistributionFeedback goalkeeperFeedback)
         {
             State                        = state;
             Request                      = request;
@@ -121,6 +136,12 @@ namespace TacticalDirector.PassMechanics
             WindupFramesRemaining        = windupFramesRemaining;
             FollowThroughFramesRemaining = followThroughFramesRemaining;
             LastResult                   = lastResult;
+            ExecutionMode                 = executionMode;
+            GoalkeeperRequest             = goalkeeperRequest;
+            GoalkeeperEffectiveTargetAgentId = goalkeeperEffectiveTargetAgentId;
+            GoalkeeperEffectiveTargetPosition = goalkeeperEffectiveTargetPosition;
+            GoalkeeperFeedbackPending     = goalkeeperFeedbackPending;
+            GoalkeeperFeedback            = goalkeeperFeedback;
         }
     }
 }
@@ -133,4 +154,5 @@ namespace TacticalDirector.PassMechanics
 // | 1.0.1   | 2026-06-19 | —      | C0 AR-1 (L-1/L-3): State field gains an ORDINAL STABILITY note |
 // |         |            |        | (digest-load-bearing at C5); public constructor gains a        |
 // |         |            |        | <summary> (FR-CS-060). Doc-only.                               |
+// | 1.1     | 2026-09-26 | —      | W8 B/v24: append executor mode, dedicated goalkeeper request, effective target, pending-feedback latch and terminal feedback so mid-windup and terminal-unconsumed states round-trip. |
 #endregion

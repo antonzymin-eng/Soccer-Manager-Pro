@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs
 // Created:  2026-07-20
+// Modified: 2026-09-26 (W8 B/v24: goalkeeper-distribution mid-windup real writer/reader round-trip)
 // Modified: 2026-09-22 (W3/v23: active ClaimIntent field-for-field restore + continuation chain)
 // Modified: 2026-09-11 (W5/v22: non-default pressing pass-ring save/restore round-trip)
 // Modified: 2026-07-23
@@ -147,6 +148,91 @@ namespace TacticalDirector.MatchEngine
                     new UnityEngine.Vector3(5f, 34f, 0.11f), new UnityEngine.Vector3(-10f, 0f, 0f)),
                 midRunTick: 60);
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
+        }
+
+        [Test]
+        public void RoundTrip_GoalkeeperDistributionMidWindup_RestoresFieldsAndContinuation()
+        {
+            var a = new MatchEngine(MatchSeed);
+            a.TestOnly_SetPossession(0);
+            PassExecutorState source = a.TestOnly_PassExecutorState(0);
+            PassRequest ordinaryRequest = source.Request;
+            PassResult lastResult = source.LastResult;
+            var goalkeeperRequest = new GoalkeeperDistributionRequest
+            {
+                AgentId = 0,
+                TeamId = 0,
+                Delivery = GoalkeeperDeliveryVariant.Kick,
+                TargetAgentId = 5,
+                TargetPosition = new UnityEngine.Vector3(35f, 34f, 0f),
+                EmittedPower01 = 0.82f,
+                SpinIntent = UnityEngine.Vector3.zero,
+                ReleaseHeightM = 0.45f,
+                WindupFrames = 120,
+                FrameNumber = 0,
+            };
+            GoalkeeperDistributionFeedback feedback = default;
+            var staged = new PassExecutorState(
+                state: 1,
+                request: ordinaryRequest,
+                effectiveSubType: source.EffectiveSubType,
+                kickSpeed: source.KickSpeed,
+                launchAngleDeg: source.LaunchAngleDeg,
+                spinVector: source.SpinVector,
+                baseKickDirection: source.BaseKickDirection,
+                aimPoint: source.AimPoint,
+                leadDistance: source.LeadDistance,
+                cachedPassing: source.CachedPassing,
+                cachedFatigue: source.CachedFatigue,
+                cachedBodyAngleDeg: source.CachedBodyAngleDeg,
+                cachedIsWeakFoot: source.CachedIsWeakFoot,
+                cachedWeakFootRating: source.CachedWeakFootRating,
+                windupFramesRemaining: 120,
+                followThroughFramesRemaining: source.FollowThroughFramesRemaining,
+                lastResult: lastResult,
+                executionMode: 1,
+                goalkeeperRequest: goalkeeperRequest,
+                goalkeeperEffectiveTargetAgentId: 5,
+                goalkeeperEffectiveTargetPosition: goalkeeperRequest.TargetPosition,
+                goalkeeperFeedbackPending: false,
+                goalkeeperFeedback: feedback);
+            a.TestOnly_SetPassExecutorState(0, in staged);
+
+            a.RunTick();
+            PassExecutorState saved = a.TestOnly_PassExecutorState(0);
+            Assert.AreEqual(1, saved.ExecutionMode);
+            Assert.AreEqual(GoalkeeperDeliveryVariant.Kick, saved.GoalkeeperRequest.Delivery);
+            Assert.Greater(saved.WindupFramesRemaining, 0,
+                "Staging failed: the W8 executor must still be mid-windup at the save point.");
+
+            SnapshotHeader header = a.CaptureDurableHeader();
+            SnapshotPayload payload = a.CaptureDurablePayload();
+
+            const int continuationTicks = 4;
+            var reference = new List<byte[]>(continuationTicks);
+            for (int i = 0; i < continuationTicks; i++)
+            {
+                a.RunTick();
+                reference.Add(a.CurrentSnapshotDigest);
+            }
+
+            MatchEngine c = MatchEngine.RestoreFromSnapshot(header, payload, MatchSeed);
+            PassExecutorState restored = c.TestOnly_PassExecutorState(0);
+            Assert.AreEqual(saved.ExecutionMode, restored.ExecutionMode);
+            Assert.AreEqual(saved.GoalkeeperRequest.Delivery, restored.GoalkeeperRequest.Delivery);
+            Assert.AreEqual(saved.GoalkeeperRequest.TargetAgentId, restored.GoalkeeperRequest.TargetAgentId);
+            Assert.AreEqual(saved.GoalkeeperRequest.TargetPosition, restored.GoalkeeperRequest.TargetPosition);
+            Assert.AreEqual(saved.GoalkeeperRequest.EmittedPower01, restored.GoalkeeperRequest.EmittedPower01, 0f);
+            Assert.AreEqual(saved.GoalkeeperRequest.WindupFrames, restored.GoalkeeperRequest.WindupFrames);
+            Assert.AreEqual(saved.WindupFramesRemaining, restored.WindupFramesRemaining);
+
+            for (int i = 0; i < continuationTicks; i++)
+            {
+                c.RunTick();
+                CollectionAssert.AreEqual(
+                    reference[i], c.CurrentSnapshotDigest,
+                    $"W8 goalkeeper-distribution mid-windup round-trip diverged at continuation tick {i + 1}.");
+            }
         }
 
         [Test]
@@ -553,4 +639,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | chain byte-for-byte.                                            |
 // | 1.3     | 2026-09-11 | —      | W5/v22: round-trip lock saves with a non-default latest opposing pass retained in the home pressing ring. |
 // | 1.12    | 2026-09-22 | —      | W3/v23 active ClaimIntent round-trip: field-for-field restore plus post-save digest continuation, including locked reach side. |
+// | 1.13    | 2026-09-26 | —      | W8 B/v24: real MatchEngine writer/reader round-trip saves a possessed keeper mid-distribution windup, restores non-default request/mode state, and continues an identical digest chain. |
 #endregion
