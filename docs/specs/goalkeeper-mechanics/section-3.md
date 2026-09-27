@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** September 26, 2026 (v0.16 — W8 B amendment approved by owner; overall #11 remains DRAFT and B wiring is authorized only after PR #461 merges)
-**Version:** 0.16
+**Last Updated:** September 27, 2026 (v0.17 — ERR-011-018: §3.3.0.1 names the real #12 baseline surface and its world-frame mapping; prior: v0.16 W8 B amendment approved by owner)
+**Version:** 0.17
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -390,16 +390,44 @@ Position*. It is the explicit ratification event for the three
 
 ### 3.3.0.1 Inputs Spec #11 expects from #12
 
-Read-only at every 10 Hz tactical tick:
+Read-only at every 10 Hz tactical tick, supplied by the Match Engine
+composition root (ERR-011-018):
 
 ```
-PositioningAI.GetGKBaselineSlot(matchTime) → Vector2
+canonicalSlot  = PositioningAITick[team].GetFormationSlot(keeperEntityId)   // #12 frame
+gkBaselineSlot = isSentinel(canonicalSlot)
+                   ? keeperPosition                                           // degenerate
+                   : mapCanonicalToWorld(team, canonicalSlot)                 // world, m
+GoalkeeperMechanics.UpdateBaselineSlot(team, gkBaselineSlot)
 ```
 
-The returned `gkBaselineSlot` is computed by #12 §3.3.3 using the
-three constants `GK_DEPTH_M`, `GK_ADVANCE_FACTOR`,
-`GK_LATERAL_FACTOR` and the current ball position via #12's
-`basisX` / `basisY` formation-aware functions.
+`GetFormationSlot` returns, for the entity #12 flags `IsGoalkeeper`,
+the dedicated §3.3.3 GK slot (`GK_DEPTH_M`, `GK_ADVANCE_FACTOR`, the
+ball-line lateral term clamped by `GK_LATERAL_CLAMP_M` per
+ERR-012-010) in #12's canonical attack-toward-+X frame. The
+composition root maps it to world space with the same 180° pitch map
+(`x → 105 − x`, `y → 68 − y` for team 1; identity for team 0) it
+applies to the keeper's `MOVE_TO_POSITION` anchor, so the slot #11
+measures recovery against is the slot the keeper is walking to. It is
+read after #12's tick in the same tactical stride, never a stale
+stride's value. The keeper's own position is **not** a valid stand-in
+except for #12's inactive-agent sentinel: it makes the §3.1.1
+`Recovering → Set` at-baseline test identically true.
+
+Units: metres, world frame (§1.2 corner origin). Range: x ∈
+[0, 52.5] from the keeper's own goal line (own half, by #12's ball-X
+clamp), y ∈ [31, 37] (34 ± `GK_LATERAL_CLAMP_M`).
+
+*Worked example.* Ball at world (52.5, 50). Team 1 keeper: canonical
+ball = (105 − 52.5, 68 − 50) = (52.5, 18); `basisX(52.5) = 0`, so
+x = 5.5 m; gain = 5.5 / 52.5 = 0.1048; lateral = (18 − 34) × 0.1048 =
+−1.68 m (inside ±3.0); canonical slot (5.5, 32.32) → world
+(99.5, 35.68). Team 0 with the mirrored ball (52.5, 18) gets world
+(5.5, 32.32): the home/away mirror. A team-1 keeper standing 6 m
+lateral of that slot at `Recovering` entry on tactical tick 1000
+(cooldown end 1006) stays `Recovering` on ticks 1001–1005 (6 m >
+`GK_REACTIVE_RADIUS_M` = 1.5 m) and exits to `Set` on tick 1006;
+before ERR-011-018 it exited on tick 1001.
 
 ### 3.3.0.2 What Spec #11 reserves for itself
 
@@ -1367,3 +1395,4 @@ standard rebound physics.
 | 0.16 | September 26, 2026 | W8 B owner approval | Records owner approval of the W8 B amendment bundle, including the 35 m fallback as an uncalibrated B default. Overall #11 remains DRAFT; realistic punt length is explicitly not claimed solved and is tracked as a #5 trajectory follow-up after B landing-point measurement. | owner approval; code still deferred until #461 merges |
 | 0.15 | September 26, 2026 | W8 B review closure | Makes retained-possession retries conditional on a live CONTACT-before-both-guards budget, requires late-cancel/repeated-reject regressions, adds the explicit W8 owner-approval gate, and states that LongKick arrival is an evidence question rather than an assumed target hit. | review correction; code still deferred |
 | 0.14 | September 26, 2026 | W8 B final consistency | §3.1.2 tactical pseudocode no longer uses a generic Decision Tree GK intent that could re-imply the ERR-011-016 producer defect; it keeps existing SAVE/rush ownership and names Match Engine + #21 as the hand-distribution producer, with #5 acceptance gating `Distributing`. | review correction; code still deferred |
+| 0.17 | September 27, 2026 | ERR-011-018 baseline-slot wiring | §3.3.0.1 replaced the phantom `PositioningAI.GetGKBaselineSlot(matchTime)` with the real surface: #12's per-team `GetFormationSlot(keeperEntityId)` (the §3.3.3 GK slot, canonical attack-+X frame), mapped to world space by the composition root with the keeper's `MOVE_TO_POSITION` map, read after #12's tick in the same stride; the keeper's own position is ruled out as a stand-in (it made `Recovering → Set` immediate). Units, range, mirrored worked example and the 6 m / tick 1001 → 1006 cooldown example added. §3.1.1 unchanged. No `[GT]`, schema or RNG change. | spec + code, same commit |

@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-27 (ERR-011-018 / #11 §3.3.0 / KD-13 baseline-slot wiring: UpdateBaselineSlot receives the keeper's #12 slot in world space, not the keeper's own position, so Recovering → Set honours RecoveryCooldownTicks. Behaviour change; no schema/RNG change)
 // Modified: 2026-09-26 (W8 / ERR-011-017: #11 TacticalTick receives the 10 Hz tactical tick, not the raw 60 Hz frame; SetPossessingAgent and ApplyRestart end the outgoing keeper's live #11 hand episode (#11 §3.8.3 teardown); + TestOnly_RestoreGoalkeeperState. Behaviour change; no schema/RNG change)
 // Modified: 2026-09-26 (W8 pre-B tracking closeout — records the already-merged assignment-only SetPossessingAgent seam and six routed mid-match writers; no runtime delta in this follow-up)
 // Modified: 2026-09-22 (W6 ordering correction surfaced by W3: reattach every Controlled holder after Resolve collision position-correction writeback; unconditional/default-engine trajectory change, no schema/RNG change)
@@ -4659,7 +4660,7 @@ namespace TacticalDirector.MatchEngine
                 int agentId = _gkAgentIds[k];
                 if (agentId >= 0 && !_isSentOff[agentId])
                 {
-                    _goalkeeper.UpdateBaselineSlot(k, _agents[agentId].Position);
+                    _goalkeeper.UpdateBaselineSlot(k, GkBaselineSlotWorld(k, agentId));
                 }
             }
             // Wiring backlog W1: the rush decision is a 10 Hz state-machine INPUT (the
@@ -4681,6 +4682,23 @@ namespace TacticalDirector.MatchEngine
             // committed AFTER this tick's state transition rather than driving a tactical-state row.
             TryCommitClaimIntents();
             TryCommitHeaderIntents();
+        }
+
+        /// <summary>ERR-011-018 — #11 §3.3.0 / KD-13 baseline for team <paramref name="team"/>'s keeper: this stride's
+        /// Positioning AI #12 slot for <paramref name="agentId"/> (the §3.3.3 dedicated GK formula — #12
+        /// selects it by the same <c>_isGoalkeeper</c> flag that resolves <c>_gkAgentIds</c>), mapped back
+        /// to world space exactly as <see cref="RunMechanicsAI"/> maps the keeper's MOVE_TO_POSITION anchor,
+        /// so the slot #11 measures recovery against is the slot the keeper is walking to. #12 ticks earlier
+        /// in the same stride, so the read is never stale, including on the first stride after a restore.
+        /// The keeper's own position was fed here before, which made every <c>Recovering → Set</c> exit
+        /// immediate and <c>RecoveryCooldownTicks</c> unreachable. A sentinel slot falls back to the
+        /// keeper's position, as the anchor does.</summary>
+        private Vector2 GkBaselineSlotWorld(int team, int agentId)
+        {
+            Vector2 canonicalSlot = _positioning[team].GetFormationSlot(agentId);
+            return PositioningAITick.IsSentinelSlot(canonicalSlot)
+                ? _agents[agentId].Position
+                : MirrorPitchIfAway(team, canonicalSlot);
         }
 
         /// <summary>
@@ -10507,4 +10525,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.89    | 2026-09-23 | —      | PR #439 Codex closure / ERR-011-014: possession acquisition and restart-taker awards hard-cancel live #11 ClaimIntent state immediately, closing the stale-Hand window. Stale default-off comments corrected; GK/Heading defaults ON since §5.Z.15. No schema/RNG/draw-order change. |
 // | 1.90    | 2026-09-26 | —      | W8 pre-B helper closeout (already merged in #460): six real mid-match _possessingAgentId mutation sites route through assignment-only SetPossessingAgent; constructor/opening kickoff, restore and TestOnly_ForceBallLoose remain direct by explicit disposition. This follow-up records the omitted history only; no gameplay/schema/RNG change. |
 // | 1.91    | 2026-09-26 | —      | W8 / ERR-011-017 clock correction: DriveGkHeadingTactical passes _clock.CurrentTacticalTick to #11 TacticalTick (was the raw 60 Hz frame, which matured the 60-tick hold timeout and the recovery cooldown on the first tactical pass after any claim). Companion #11 §3.8.3 teardown: SetPossessingAgent ends the outgoing keeper's live hand episode on a real change of holder, and ApplyRestart ends any live hand episode even when the same keeper is awarded the restart; without it a keeper who had already passed stayed HandsOnBall for up to 6 s, unable to rush, claim or dive. Intentional trajectory/digest change versus the frozen Stage A corpus. No schema, GT, RNG stream/draw-site/order change. + TestOnly_RestoreGoalkeeperState. |
+// | 1.92    | 2026-09-27 | —      | ERR-011-018 / #11 §3.3.0 / KD-13 baseline-slot wiring (open-issues, recorded Sept 26): DriveGkHeadingTactical feeds UpdateBaselineSlot the keeper's Positioning AI #12 slot, mapped to world space exactly as the MOVE_TO_POSITION anchor (GkBaselineSlotWorld), instead of the keeper's own position. The at-baseline test was identically true, so every Recovering episode exited on the next tactical pass and RecoveryCooldownTicks was unreachable. Intentional trajectory/digest change. GkBaselineSlot was already serialized; no schema, GT, RNG stream/draw-site/order change. |
 #endregion
