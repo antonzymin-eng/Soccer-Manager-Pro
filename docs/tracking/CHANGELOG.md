@@ -12,7 +12,15 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 27, 2026 — **W8 B dormant #5 goalkeeper-distribution executor slice; compile/schema repair before live wiring.**
+> **Last Updated:** September 27, 2026 — **W8 B dormant #5 executor review hardening after ERR-011-018 merge.**
+>
+> PR #466 now contains a true merge of gameplay-changing #465 / ERR-011-018 and keeps B's dedicated #5 slice dormant. The merge resolves the version collisions by advancing this branch to `MatchEngine.cs` v1.93, `CHANGELOG-src.md` v2.152 and the W8 decision packet v0.21; #465's new comparison baseline and all baseline-slot tracking are preserved. Pre-merge CI run **`36295057956` PASSED**, including the PR functional gate, meta integrity and format checks; Unity was skipped by the normal workflow. Because #465 changes gameplay, that run is evidence only for the pre-merge dormant slice, not the merged head.
+>
+> The executor now has direct behavioral locks before any #21/#11 wiring is allowed: the #5 §3.8.13 worked Roll example (6 m, power 0.50 → **9.0 m/s, 2.6°**) and Kick example (29.5 m, power 0.765 → **13.889625 m/s, 39.13°**); Rejected and Cancelled leave the ball untouched; Completed calls `ApplyKick` exactly once; terminal feedback keeps `IsIdle == false` until consumed; a receiver invalidated at CONTACT falls back to the stored target with no receiver; and own-goal-line receiverless targets map to the mirrored 35 m fallback for both teams.
+>
+> Snapshot hardening closes the remaining v24 proof gaps. The mid-windup restore lock now asserts actual WINDUP state and no terminal feedback. A second real MatchEngine save/restore case crosses CONTACT and proves identical post-kick digest continuation plus retained Completed feedback. Direct pre-tick payload probes now cover the pending-feedback latch, effective-target id/position and terminal feedback contents, so those fields are proven serialized without relying on downstream gameplay effects. No new RNG stream, domain tag, draw site or draw-order change; no #21 selector, #11 producer, Decision Tree suppression, Resolve feedback consumer, event move or result-bearing A→B comparison is activated. **Fresh CI on this merged/test-hardened head is required before live wiring.**
+>
+> **Last Updated (prior):** September 27, 2026 — **W8 B dormant #5 goalkeeper-distribution executor slice; compile/schema repair before live wiring.**
 >
 > The first B code slice adds the dedicated Pass Mechanics #5 executor contract without connecting it to #21 or #11 production flow: distinct `GoalkeeperDistributionRequest` / typed terminal feedback, Roll/Throw/Kick → Ground/Driven/Lofted profile reuse, exact #5-owned windup, CONTACT-time receiver revalidation, receiverless own-goal-line fallback, release-height/spin pass-through, and the reserved `0x47` deterministic error discriminator. Ordinary `PassRequest` remains a separate path. Match Engine supplies the read-only CONTACT queries and the owner-approved **35 m** receiverless fallback; that `[GT]` value is new but dormant until B host wiring exists.
 >

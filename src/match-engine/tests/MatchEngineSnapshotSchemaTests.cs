@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
+// Modified: 2026-09-27 (W8 B/v24: direct payload probes for pending feedback, effective target and feedback contents)
 // Modified: 2026-09-26 (W8 B/v24: dedicated goalkeeper-distribution PassExecutor state pin + digest probes)
 // Modified: 2026-09-22 (W3/v23: ClaimIntent single-field digest probe, including locked reach side)
 // Modified: 2026-09-11 (W5/v22: schema pin + latest press-pass event digest probe)
@@ -74,6 +75,8 @@ namespace TacticalDirector.MatchEngine
             in PassExecutorState source,
             int executionMode,
             in GoalkeeperDistributionRequest goalkeeperRequest,
+            int goalkeeperEffectiveTargetAgentId,
+            Vector3 goalkeeperEffectiveTargetPosition,
             bool goalkeeperFeedbackPending,
             in GoalkeeperDistributionFeedback goalkeeperFeedback)
         {
@@ -87,8 +90,8 @@ namespace TacticalDirector.MatchEngine
                 source.AimPoint, source.LeadDistance, source.CachedPassing, source.CachedFatigue,
                 source.CachedBodyAngleDeg, source.CachedIsWeakFoot, source.CachedWeakFootRating,
                 source.WindupFramesRemaining, source.FollowThroughFramesRemaining, in lastResult,
-                executionMode, in request, source.GoalkeeperEffectiveTargetAgentId,
-                source.GoalkeeperEffectiveTargetPosition, goalkeeperFeedbackPending, in feedback);
+                executionMode, in request, goalkeeperEffectiveTargetAgentId,
+                goalkeeperEffectiveTargetPosition, goalkeeperFeedbackPending, in feedback);
         }
 
         [Test]
@@ -103,6 +106,7 @@ namespace TacticalDirector.MatchEngine
             GoalkeeperDistributionFeedback feedback = default;
             PassExecutorState injected = WithGoalkeeperFields(
                 in source, executionMode: 1, in request,
+                source.GoalkeeperEffectiveTargetAgentId, source.GoalkeeperEffectiveTargetPosition,
                 goalkeeperFeedbackPending: false, in feedback);
             perturbed.TestOnly_SetPassExecutorState(0, in injected);
             perturbed.RunTick();
@@ -136,6 +140,7 @@ namespace TacticalDirector.MatchEngine
             GoalkeeperDistributionFeedback feedback = default;
             PassExecutorState injected = WithGoalkeeperFields(
                 in source, source.ExecutionMode, in request,
+                source.GoalkeeperEffectiveTargetAgentId, source.GoalkeeperEffectiveTargetPosition,
                 source.GoalkeeperFeedbackPending, in feedback);
             perturbed.TestOnly_SetPassExecutorState(0, in injected);
             perturbed.RunTick();
@@ -157,6 +162,7 @@ namespace TacticalDirector.MatchEngine
             GoalkeeperDistributionFeedback feedback = default;
             PassExecutorState injected = WithGoalkeeperFields(
                 in source, source.ExecutionMode, in request,
+                source.GoalkeeperEffectiveTargetAgentId, source.GoalkeeperEffectiveTargetPosition,
                 goalkeeperFeedbackPending: true, in feedback);
             perturbed.TestOnly_SetPassExecutorState(0, in injected);
             perturbed.RunTick();
@@ -164,6 +170,86 @@ namespace TacticalDirector.MatchEngine
             CollectionAssert.AreNotEqual(
                 baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
                 "Changing only the W8 pending-feedback latch left the v24 digest unchanged.");
+        }
+
+        [Test]
+        public void GoalkeeperDistributionFeedbackPending_FeedsSnapshotPayloadDirectly()
+        {
+            var baseline = new MatchEngine(MatchSeed);
+            var perturbed = new MatchEngine(MatchSeed);
+            PassExecutorState source = perturbed.TestOnly_PassExecutorState(0);
+            GoalkeeperDistributionRequest request = default;
+            GoalkeeperDistributionFeedback feedback = default;
+            PassExecutorState injected = WithGoalkeeperFields(
+                in source, source.ExecutionMode, in request,
+                source.GoalkeeperEffectiveTargetAgentId, source.GoalkeeperEffectiveTargetPosition,
+                goalkeeperFeedbackPending: true, in feedback);
+            perturbed.TestOnly_SetPassExecutorState(0, in injected);
+
+            var baselinePayload = baseline.CaptureDurablePayload();
+            var perturbedPayload = perturbed.CaptureDurablePayload();
+
+            Assert.AreEqual(baselinePayload.BytesWritten, perturbedPayload.BytesWritten);
+            CollectionAssert.AreNotEqual(
+                baselinePayload.PayloadBytes, perturbedPayload.PayloadBytes,
+                "Changing only the pending-feedback latch must change the serialized v24 payload before any gameplay step runs.");
+        }
+
+        [Test]
+        public void GoalkeeperDistributionEffectiveTarget_FeedsSnapshotPayloadDirectly()
+        {
+            var baseline = new MatchEngine(MatchSeed);
+            var perturbed = new MatchEngine(MatchSeed);
+            PassExecutorState source = perturbed.TestOnly_PassExecutorState(0);
+            GoalkeeperDistributionRequest request = default;
+            GoalkeeperDistributionFeedback feedback = default;
+            PassExecutorState injected = WithGoalkeeperFields(
+                in source, source.ExecutionMode, in request,
+                goalkeeperEffectiveTargetAgentId: 4,
+                goalkeeperEffectiveTargetPosition: new Vector3(22f, 17f, 0f),
+                goalkeeperFeedbackPending: false, in feedback);
+            perturbed.TestOnly_SetPassExecutorState(0, in injected);
+
+            var baselinePayload = baseline.CaptureDurablePayload();
+            var perturbedPayload = perturbed.CaptureDurablePayload();
+
+            Assert.AreEqual(baselinePayload.BytesWritten, perturbedPayload.BytesWritten);
+            CollectionAssert.AreNotEqual(
+                baselinePayload.PayloadBytes, perturbedPayload.PayloadBytes,
+                "The effective goalkeeper-distribution target id/position are v24 serialized fields.");
+        }
+
+        [Test]
+        public void GoalkeeperDistributionFeedbackContents_FeedSnapshotPayloadDirectly()
+        {
+            var baseline = new MatchEngine(MatchSeed);
+            var perturbed = new MatchEngine(MatchSeed);
+            PassExecutorState source = perturbed.TestOnly_PassExecutorState(0);
+            GoalkeeperDistributionRequest request = default;
+            var feedback = new GoalkeeperDistributionFeedback
+            {
+                Kind = GoalkeeperDistributionFeedbackKind.Completed,
+                EffectiveTargetAgentId = 5,
+                EffectiveTargetPosition = new Vector3(33f, 21f, 0f),
+                ReleasePoint = new Vector3(7f, 34f, 1.8f),
+                FinalVelocity = new Vector3(12f, 1f, 3f),
+                ErrorAngleDeg = 1.375f,
+                ContactFrame = 77,
+                ContactMatchTime = 1.283f
+            };
+            PassExecutorState injected = WithGoalkeeperFields(
+                in source, source.ExecutionMode, in request,
+                source.GoalkeeperEffectiveTargetAgentId, source.GoalkeeperEffectiveTargetPosition,
+                goalkeeperFeedbackPending: false, in feedback);
+            perturbed.TestOnly_SetPassExecutorState(0, in injected);
+
+            var baselinePayload = baseline.CaptureDurablePayload();
+            var perturbedPayload = perturbed.CaptureDurablePayload();
+
+            Assert.AreEqual(baselinePayload.BytesWritten, perturbedPayload.BytesWritten);
+            CollectionAssert.AreNotEqual(
+                baselinePayload.PayloadBytes, perturbedPayload.PayloadBytes,
+                "Terminal feedback contents must be present in the v24 payload even when the pending latch is false.");
         }
 
         [Test]
@@ -822,4 +908,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.17     | 2026-09-22 | —      | W3/v23: ClaimIntent payload + active latch enter the serialized GK block. |
 // | 1.18     | 2026-09-22 | —      | W3 review: ClaimIntentState_FeedsSnapshotDigest proves target/clutch/locked reach side/commit tick/active latch reach the v23 digest preimage. |
 // | 1.19     | 2026-09-26 | —      | W8 B/v24: pin 23 → 24; dedicated goalkeeper-distribution execution mode, request and pending-feedback latch each get a real world-state digest probe. |
+// | 1.20     | 2026-09-27 | —      | W8 B review hardening: direct pre-tick payload probes cover the pending-feedback latch, effective-target id/position and terminal feedback contents, avoiding gameplay-mediated evidence for those fields. |
 #endregion
