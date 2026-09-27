@@ -3,6 +3,7 @@
 // Modified: 2026-05-31
 // Modified: 2026-09-22 (W3: mixed-participant canonical-order and symmetric near-tie duel locks)
 // Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: call sites renamed to the new state-machine parameter names)
+// Modified: 2026-09-27 (ERR-011-018: T-GK-I-011 stub names the real #12 surface and where the baseline read is now locked)
 // Modified: 2026-09-26 (W8 / ERR-011-017 review: Recovering holds until the cooldown boundary — the not-elapsed complement of T-5.1.1-I)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §5, Code Standards #20
@@ -1579,13 +1580,15 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 "Stage 0+1: requires full match simulation — activate when deterministic RNG wiring to DeterministicSimulation #16 is complete");
         }
 
-        /// <summary>T-GK-I-011: Positioning AI #12 baseline-slot ratification: GK reads baseline from
-        /// PositioningAI.GetGKBaselineSlot and applies KD-13 reactive radius correctly. §5.2.11.</summary>
+        /// <summary>T-GK-I-011: Positioning AI #12 baseline-slot ratification: GK reads baseline from #12's
+        /// GetFormationSlot (via the composition root, §3.3.0.1) and applies KD-13 reactive radius correctly.
+        /// §5.2.11. The baseline read and the recovery cooldown are locked in the match-engine assembly by
+        /// GoalkeeperBaselineSlotTests (ERR-011-018); the reactive-radius clamp still has no consumer.</summary>
         [Test]
         public void T_GK_I_011_PositioningBaselineSlotRatification()
         {
             Assert.Ignore(
-                "Stage 0+1: requires full match simulation — activate when PositioningAI #12 GetGKBaselineSlot is wired");
+                "Stage 0+1: baseline read wired (ERR-011-018, locked by match-engine GoalkeeperBaselineSlotTests); activate when the KD-13 reactive-radius clamp has a production consumer");
         }
     }
 
@@ -1731,4 +1734,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |     |            |   | registration order with three participants, and the symmetric near-tie     |
 // |     |            |   | top/second perturbation. Row added at the #439 close-out.                  |
 // | 1.5 | 2026-09-26 | — | W8 / ERR-011-017 review: T-5.1.1-I2 locks the not-elapsed side of the recovery cooldown (tick 9 < end 10 stays Recovering off-baseline; tick 10 returns to Set). T-5.1.1-I only covered the elapsed side. |
+// | 1.6 | 2026-09-27 | — | ERR-011-018: T-GK-I-011 stub text names #12 GetFormationSlot (via §3.3.0.1) instead of the phantom GetGKBaselineSlot and records that the baseline read is locked at composition level; still ignored — the reactive-radius clamp has no consumer. No test behaviour change. |
 #endregion
