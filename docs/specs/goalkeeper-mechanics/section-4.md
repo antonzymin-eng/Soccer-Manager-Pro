@@ -1,7 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 16, 2026
-**Version:** 0.3
+**Version:** 0.4
+**Last Updated:** September 27, 2026 (v0.4 — ERR-011-018 #12 baseline surface)
 **Status:** DRAFT
 **Purpose:** Establish the architectural file layout, the input /
 output interface contracts, the determinism compliance surface,
@@ -43,7 +44,7 @@ source file per Spec #19 §3 convention.
 | `ShotExecutedEvent` subscription | #6 | §4.5 (via Event System #17 §3.2.1) | §3.2 |
 | `Perception.GetVisibilityLatency(agentId, target) → float ms` | #7 | §3 visibility-cone latency surface (anchor pinned during implementation) | §3.2 |
 | `DecisionTree.GetGKIntent(agentId, tick) → SaveIntent \| ClaimIntent \| RushIntent \| DistributeIntent \| None` | #8 | §1.7 GK-branch intent surface (anchor pinned during implementation) | §3.1 / §3.2 / §3.7 / §3.8 |
-| `PositioningAI.GetGKBaselineSlot(matchTime) → Vector2` | #12 | §3.3.3 (consumed per KD-3 / §3.3.0) | §3.3.0 |
+| `PositioningAITick.GetFormationSlot(keeperEntityId) → Vector2` (canonical frame; composition root maps to world and calls `UpdateBaselineSlot`, ERR-011-018) | #12 | §3.3.3 (consumed per KD-3 / §3.3.0) | §3.3.0 |
 | `DeterministicRng.NextFloat(drawSiteId, domainTag) → float`, `DeterministicRng.NextGaussian(drawSiteId, domainTag) → float` | #16 | §4.1 / §4.5 | §3.3 / §3.5 / §3.6 |
 
 ---
@@ -170,7 +171,7 @@ hot-path allocations; the attribute deferral to Stage 0+1 per #18
 ### 4.6.1 10 Hz tactical loop (every 100 ms)
 
 - Read `BallPhysics.GetBallState(currentTick)` snapshot.
-- Read `PositioningAI.GetGKBaselineSlot(currentTick)`.
+- Receive the #12 GK baseline slot for this stride via `UpdateBaselineSlot` (§3.3.0.1; ERR-011-018).
 - Query `DecisionTree.GetGKIntent(gkId, currentTick)` for each GK
   in #16 §3.2 entity order.
 - Evaluate state-machine transitions (§3.1).
@@ -220,3 +221,4 @@ t   0ms │            │ #3 hand-ball contact event fires
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 11 source files declared, input/output contracts tabulated, four draw sites registered, performance budgets staged, tick-scheduling sequence diagrammed | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 16, 2026 | pass-1 fix pass | AR-S1-H1 (§4.5.2 steady-state budget revised to ≤40 µs) | self-pass-2 self-critique on v0.2 yields no further findings |
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §4.4.1 domain-tag allocation prose updated — `DOMAIN_TAG_GOALKEEPER = 0x1D [CROSS: #16 §3.4]`; ERR-011-001 resolved; final allocation outcome documented. |
+| 0.4 | September 27, 2026 | ERR-011-018 | §4 input table and §4.6.1 replace the phantom `PositioningAI.GetGKBaselineSlot` with the real #12 `GetFormationSlot(keeperEntityId)` surface delivered through `UpdateBaselineSlot` (§3.3.0.1). | spec + code, same commit |

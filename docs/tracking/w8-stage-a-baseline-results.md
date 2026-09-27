@@ -5,6 +5,7 @@
 > **Run:** `36212512965` — `W8 Stage A pinned baseline` — success  
 > **Population:** frozen six seeds from `w8-stage-a-preregistration.md`; 324,000 frames per seed  
 > **Updated:** September 27, 2026 — adds the post-clock-correction (#464, `ff4dd34`) baseline section at the end; Stage A sections unchanged.  
+> **Updated:** September 27, 2026, later — adds the post-baseline-slot (ERR-011-018) section at the end; it supersedes the `ff4dd34` section as W8 B's comparison baseline. Earlier sections unchanged.  
 > **Status:** descriptive Stage A record only. No B numeric policy, delivery, timing, Law-12, or gameplay decision is inferred here.
 
 The workflow branch was `measure/w8-stage-a-baseline`, but both measurement jobs checked out the pinned source commit above before running. The W8 job and unchanged `foul-rate` job both passed their test + sentinel verification.
@@ -211,3 +212,52 @@ distribution producer — must each be measured as they land rather than presume
 | `0x00000000ABCDEF12` | `0767c1fa25b77bd36168564944cae973b1a0c41899b9d84601203b57ad6dacb6` | `134f78b9b1f730abeb973535aebb460db997a41bf99f9c7eb63f8892c64ffcdf` |
 | `0x0000000099887766` | `802fa9a2d27319cd6c423730109604786c66b626f44e39f71ba9599574525008` | `e4f59a01451a40d20287584f1f09c9cf3f683481912c2a05465bc3947bc4d642` |
 | `0x000000005A5A5A5A` | `62d7ce6b7b0f1e9edd61271bdf6c899f3f1b2d5f8a4e9f1f0f2310fba5920088` | `0b1061408be36d1e9bbb4fbbc46f6f3a3df08c9c7c0f10868b1b4f68387adbf0` |
+
+## Post-baseline-slot baseline — ERR-011-018 (supersedes `ff4dd34` as W8 B's comparison corpus)
+
+> **Added:** September 27, 2026. W8 B must be measured against **this** corpus, not the `ff4dd34` one above: the
+> baseline-slot fix changes the keeper-recovery behaviour B's self-reclaim comparison depends on.
+
+**Provenance — local, not a CI artifact.** Ubuntu 24.04, .NET SDK 8.0.131 (Ubuntu package; the CI host runs
+`setup-dotnet` 8.0.x). Two scratch worktrees at `f5fc856` (#464 merge), each with the frozen diagnostic blob
+`520ba31c71e06ed408fd5c282b5fd5611cf74879` and nothing else changed; the fix worktree additionally carries the production
+`MatchEngine.cs` change of `b241a26` (it was copied before that commit's comment-only ERR citation edits). Instrument
+`w8-stage-a` (`TD_W8_STAGE_A`), run through `run-gate.sh` then `dotnet test` exactly as the lane does. **The base
+worktree reproduced all six `ff4dd34` terminal digests in the table above byte-for-byte**, which is the evidence that the
+local host and the CI host agree on this corpus. A CI re-run on the landing PR head is still worth taking before B's
+comparison is published.
+
+| Measure | `ff4dd34` | ERR-011-018 |
+|---|---:|---:|
+| Hand claims | 862 | 135 |
+| Hand-origin passes reaching CONTACT | 861 | 135 |
+| … interrupted by a later hand claim (same keeper / opponent keeper) | 501 (501 / 0) | 24 (24 / 0) |
+| … interrupted by another kick / other agent controlled / committed receiver controlled | 258 / 89 / 13 | 15 / 74 / 22 |
+| Old 360-frame ground drops | 1 | 0 |
+| DT selections during hand episodes (PASS / HOLD / DRIBBLE / SHOOT) | 1,003 / 2,036 / 12 / 0 | 208 / 507 / 4 / 0 |
+| Fouls / yellows / straight reds | 43 / 5 / 1 | 49 / 7 / 2 |
+| #11 `Recovering → Set` | 1,449 | **344** |
+| #11 `Set → Anticipate` | 2,237 | 2,064 |
+| #11 `Anticipate → Diving` / `OneOnOne → Diving` / `Anticipate → Rushing` | 52 / 1 / 233 | 28 / 0 / 204 |
+| Restarts: KickOff / FreeKick / GoalKick / ThrowIn / Corner | 47 / 80 / 13 / 81 / 4 | 64 / 88 / 20 / 70 / 1 |
+
+Per-seed hand claims 101 / 224 / 105 / 136 / 148 / 148 → 23 / 17 / 23 / 18 / 21 / 33; per-seed same-keeper self-reclaim
+63 / 131 / 62 / 80 / 83 / 82 → 8 / 0 / 4 / 2 / 4 / 6.
+
+**Reading.** The cooldown is now observable (`Recovering → Set` −76 %). Because the claim and rush producers commit only
+from `Set` / `Anticipate`, a keeper that has just distributed can no longer re-claim its own pass on the next pass: the
+501 / 0 self-reclaim loop collapses to 24. So one of the three candidate contributors named in the `ff4dd34` section — the
+baseline-slot/cooldown defect — is now measured and accounts for most of the loop. B's Decision Tree suppression and
+distribution producer must still be measured on their own against this table. The same gating also cut keeper
+claims well beyond the loop (non-loop claims 361 → 111) and halved dives; the `match-balance-scoreline` instrument
+(2 seeds × neutral/configured) moved goals 34 → 44 on shots 98 → 94. That consequence is recorded as a live
+`open-issues.md` entry, not tuned here.
+
+| Seed | ERR-011-018 terminal digest |
+|---|---|
+| `0x0F1E2D3C4B5A6978` | `329dbe733f4bb37d824feb6d88660199c82e6ed3313b98e0d9e712007381375a` |
+| `0x00000000D1A6D05E` | `262f2c1d2ad2f91d4b4b931255fae508db2f2f4d1ac9ed5e2067ffc0d4048e31` |
+| `0x0000000000000001` | `1461c72c59f2befe7f3f637be9fd8c7b7a33bbf6452f6b9f3211421dd27b83b8` |
+| `0x00000000ABCDEF12` | `44517dc781bf5a329c830ca676afe7b87029f126ee3c897741e8cf1d369924a7` |
+| `0x0000000099887766` | `d838c8813bc8a12ebca1c049c7a4b04a11746e5407ccb18df890c892fdcb1fe0` |
+| `0x000000005A5A5A5A` | `16a55b84478e208736cd5a0f1d0e34db2baaa149a405a862083694cc530e9d90` |
