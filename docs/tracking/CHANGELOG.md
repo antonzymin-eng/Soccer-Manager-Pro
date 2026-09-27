@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 27, 2026 — **PR #466 snapshot-proof correction after merged-head functional-gate failure.**
+> **Last Updated:** September 27, 2026 — **PR #466 dormant-slice landing record after green CI.**
+>
+> Corrected head `795ca64` passed CI run **`36337174267`**: every executable CI job is green, including the PR functional gate; Unity tests were skipped by the normal workflow. This is the first green merged-head execution evidence for the corrected v24 codec proof.
+>
+> The landing-record change strengthens `MatchEngineSnapshotSchemaTests` v1.22 without touching production code: the canonical codec round-trip now uses distinct non-default request sentinels (`AgentId = 11`, `TeamId = 1`, request `TargetAgentId = 4`) and a different effective target id (`6`). That closes the low-risk false-positive case where defaulted/dropped fields or a request/effective-target swap could survive the round-trip. No gameplay, snapshot layout/schema (still v24), RNG, or `[GT]` change. The landing-record head must pass its own CI before the PR leaves draft; live #21/#11 wiring remains out of scope.
+>
+> **Last Updated (prior):** September 27, 2026 — **PR #466 snapshot-proof correction after merged-head functional-gate failure.**
 >
 > CI run **`36328692042`** completed with every lint/format/spec/manifest/`.meta` job green, but the PR functional gate failed **3 / 573** Match Engine tests (**557 passed / 13 skipped / 3 failed**). All three failures were the new v1.20 “direct pre-tick payload” probes. They injected PassExecutor state and then read `CaptureDurablePayload()` without ever running Snapshot phase; that API returns the orchestrator's cached current payload, so both baseline and perturbed buffers were empty (`BytesWritten = 0`). The executor and v24 writer/reader were not implicated by the failure.
 >

@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
+// Modified: 2026-09-27 (W8 B/v24 landing: strengthen canonical codec probe with distinct non-default request/effective-target sentinels after green CI 36337174267)
 // Modified: 2026-09-27 (W8 B/v24 correction: replace vacuous pre-tick payload probes with direct canonical PassExecutor codec round-trip)
 // Modified: 2026-09-27 (W8 B/v24: direct payload probes for pending feedback, effective target and feedback contents — superseded by v1.21 after CI showed CaptureDurablePayload is empty before Snapshot phase)
 // Modified: 2026-09-26 (W8 B/v24: dedicated goalkeeper-distribution PassExecutor state pin + digest probes)
@@ -181,8 +182,8 @@ namespace TacticalDirector.MatchEngine
 
             var request = new GoalkeeperDistributionRequest
             {
-                AgentId = 0,
-                TeamId = 0,
+                AgentId = 11,
+                TeamId = 1,
                 Delivery = GoalkeeperDeliveryVariant.Throw,
                 TargetAgentId = 4,
                 TargetPosition = new Vector3(31f, 24f, 0.25f),
@@ -205,7 +206,7 @@ namespace TacticalDirector.MatchEngine
             };
             PassExecutorState injected = WithGoalkeeperFields(
                 in baseline, executionMode: 1, in request,
-                goalkeeperEffectiveTargetAgentId: 4,
+                goalkeeperEffectiveTargetAgentId: 6,
                 goalkeeperEffectiveTargetPosition: new Vector3(22f, 17f, 0.5f),
                 goalkeeperFeedbackPending: true, in feedback);
 
@@ -912,4 +913,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.19     | 2026-09-26 | —      | W8 B/v24: pin 23 → 24; dedicated goalkeeper-distribution execution mode, request and pending-feedback latch each get a real world-state digest probe. |
 // | 1.20     | 2026-09-27 | —      | W8 B review hardening: direct pre-tick payload probes cover the pending-feedback latch, effective-target id/position and terminal feedback contents, avoiding gameplay-mediated evidence for those fields. |
 // | 1.21     | 2026-09-27 | —      | CI 36328692042 correction: v1.20's three pre-tick CaptureDurablePayload probes were vacuous because no Snapshot phase had populated the cached payload. Replaced by a direct real MatchEngine PassExecutor codec test: >0-byte guard, default-vs-nondefault byte divergence, exact writer/reader byte count, and field-for-field round-trip of every v24 goalkeeper-distribution field. Pending-feedback digest probe remains supplemental gameplay-mediated evidence only. |
+// | 1.22     | 2026-09-27 | —      | Landing hardening after green CI 36337174267: the codec round-trip now uses distinct non-default sentinels (request AgentId 11, TeamId 1, TargetAgentId 4, effective target 6) so dropped/defaulted or request/effective-target swaps cannot pass accidentally. Test-only data change; serializer/runtime/schema/RNG unchanged. |
 #endregion
