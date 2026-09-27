@@ -1,7 +1,7 @@
 # W8 Goalkeeper Distribution — Owner Decision Packet
 
 > **Created:** September 25, 2026  
-> **Status:** **B contract approved; dormant #5 executor slice corrected and green on CI `36337174267`; landing-record head still requires its own CI. Live #21/#11 wiring not started.** #5 and #11 remain overall DRAFT; only their W8 B amendments are approved. #21 remains APPROVED with its W8 amendment explicitly owner-approved.
+> **Status:** **B contract approved; dormant #5 executor slice and landing record are green on CI `36341081930` at `30372cd`; Unity 6000.4.9f1 editor compilation is still pending, so live #21/#11 wiring must not depend on this substrate yet. Live wiring not started.** #5 and #11 remain overall DRAFT; only their W8 B amendments are approved. #21 remains APPROVED with its W8 amendment explicitly owner-approved.
 > **Production anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (`main`, PR #455 merge).  
 > **Scope:** Record W8 ownership and the ordered A baseline, isolated possession-helper refactor, B spec, and B wiring boundaries.
 
@@ -15,6 +15,8 @@
 | OD-W8-4 | Extend #5 for a faithful GK request; serialized B windup/cancel, CONTACT release and W5 registration. | B |
 
 **Owner direction (September 25, 2026):** proceed in this order: land a behavior-neutral, nonserialized instrument and preregistration **before reading A results**; run the frozen six-seed A baseline; land the separate, behavior-neutral possession-change helper with exact frozen-seed digest equality (it may be developed alongside A); amend #11, #5, #21 and Match Engine with the actual policy delays, delivery ranges, tie-break and punt-zone geometry and file the #11 ERRs **before any B wiring code**; then wire B and compare the same corpus with A. The architecture choices above govern that work. §7 now lists only unresolved numerical and policy details. Approved specs govern implementation once amended; this packet does not itself amend or approve them. #5/#11 remain overall DRAFT in #461. The W8 amendments to #5/#11/#21 were explicitly approved by the owner on September 26, 2026; that approval is narrower than whole-spec promotion. Merge is still not treated as implicit approval. C's Law-12 correction remains a later, separately measured landing.
+
+**Unity compile gate for the dormant B substrate (PR #466):** CI `36341081930` passed on `30372cd`, but Unity was skipped by the normal workflow. Until the merged PR #466 code compiles successfully on the pinned Unity 6000.4.9f1 host, #21/#11 live wiring must not depend on the new goalkeeper-distribution executor substrate. `open-issues.md` owns this blocker so it survives the PR body; the first live-wiring tracking entry must record the exact merged commit and successful Unity compile before closing it.
 
 ---
 
@@ -385,6 +387,7 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.25 | 2026-09-27 | PR #466 CI green; Unity compile gate recorded durably | Records green run `36341081930` on `30372cd`, including the functional gate, while making the skipped Unity editor compile an explicit repository blocker: live #21/#11 wiring must not depend on the dormant B substrate until the merged code compiles on pinned Unity 6000.4.9f1. Mirrors the blocker in `open-issues.md`. Documentation only; no production, schema, gameplay, RNG, or A→B result change. |
 | 0.24 | 2026-09-27 | corrected dormant executor green; landing-record CI required | Corrected head `795ca64` passed CI `36337174267`, including the PR functional gate; Unity skipped normally. The landing-record test v1.22 changes only codec sentinels to distinct non-default values (AgentId 11, TeamId 1, request target 4, effective target 6), closing default/swap false positives. No production, schema v24, gameplay, RNG, #21/#11 live wiring or A→B result change. |
 | 0.23 | 2026-09-27 | B dormant executor snapshot-proof correction; fresh CI required | Merged-head CI `36328692042` failed only the three v1.20 pre-Snapshot payload probes (557 pass / 13 skip / 3 fail): `CaptureDurablePayload` was empty because Snapshot phase never ran. Replaces them with the real canonical PassExecutor writer/reader round-trip, guarded by >0 bytes and covering every v24 GK-distribution field; writer/reader visibility becomes internal only for this test. The pending-feedback digest probe is supplemental, not serialization proof. No #21/#11 live wiring, runtime/schema/RNG change, or A→B result run. |
 | 0.22 | 2026-09-27 | B dormant executor review hardening; merged-head CI pending | Adds direct §3.8.13 executor locks for Roll/Kick worked examples, terminal semantics, exactly-once kick, CONTACT receiver invalidation, mirrored fallback and feedback-gated idle; hardens v24 with direct pending/effective-target/feedback payload probes and a save/restore continuation through CONTACT. Pre-merge CI 36295057956 passed. No #21/#11 live wiring or A→B result run yet. |
