@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-27 (W8 B snapshot-proof correction: PassExecutor state codec private→internal for direct canonical write/read tests; no runtime behavior change)
 // Modified: 2026-09-27 (W8 B dormant #5 executor snapshot/query seams merged after ERR-011-018; gameplay path remains unwired)
 // Modified: 2026-09-27 (ERR-011-018 / #11 §3.3.0 / KD-13 baseline-slot wiring: UpdateBaselineSlot receives the keeper's #12 slot in world space, not the keeper's own position, so Recovering → Set honours RecoveryCooldownTicks. Behaviour change; no schema/RNG change)
 // Modified: 2026-09-26 (W8 / ERR-011-017: #11 TacticalTick receives the 10 Hz tactical tick, not the raw 60 Hz frame; SetPossessingAgent and ApplyRestart end the outgoing keeper's live #11 hand episode (#11 §3.8.3 teardown); + TestOnly_RestoreGoalkeeperState. Behaviour change; no schema/RNG change)
@@ -7231,7 +7232,7 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Reads a <see cref="PassExecutorState"/> in the <see cref="WritePassExecutorState"/>
         /// field order (the internal PhysicalProfile is recomputed by RestoreState, not serialized).</summary>
-        private static PassExecutorState ReadPassExecutorState(byte[] buf, ref int o)
+        internal static PassExecutorState ReadPassExecutorState(byte[] buf, ref int o)
         {
             int state = CanonicalSerializer.ReadI32(buf, ref o);
 
@@ -7845,7 +7846,7 @@ namespace TacticalDirector.MatchEngine
         /// fields, and the committed <see cref="PassResult"/>. Mirrors the C0 round-trip field order in
         /// PassExecutorStateTests (the lock that this body must stay in sync with). The internal
         /// PhysicalProfile is excluded — it is recomputed on restore (§2.6).</summary>
-        private static void WritePassExecutorState(byte[] buf, ref int o, in PassExecutorState s)
+        internal static void WritePassExecutorState(byte[] buf, ref int o, in PassExecutorState s)
         {
             CanonicalSerializer.WriteI32(buf, ref o, s.State);
 
@@ -10626,4 +10627,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.91    | 2026-09-26 | —      | W8 / ERR-011-017 clock correction: DriveGkHeadingTactical passes _clock.CurrentTacticalTick to #11 TacticalTick (was the raw 60 Hz frame, which matured the 60-tick hold timeout and the recovery cooldown on the first tactical pass after any claim). Companion #11 §3.8.3 teardown: SetPossessingAgent ends the outgoing keeper's live hand episode on a real change of holder, and ApplyRestart ends any live hand episode even when the same keeper is awarded the restart; without it a keeper who had already passed stayed HandsOnBall for up to 6 s, unable to rush, claim or dive. Intentional trajectory/digest change versus the frozen Stage A corpus. No schema, GT, RNG stream/draw-site/order change. + TestOnly_RestoreGoalkeeperState. |
 // | 1.92    | 2026-09-27 | —      | ERR-011-018 / #11 §3.3.0 / KD-13 baseline-slot wiring (open-issues, recorded Sept 26): DriveGkHeadingTactical feeds UpdateBaselineSlot the keeper's Positioning AI #12 slot, mapped to world space exactly as the MOVE_TO_POSITION anchor (GkBaselineSlotWorld), instead of the keeper's own position. The at-baseline test was identically true, so every Recovering episode exited on the next tactical pass and RecoveryCooldownTicks was unreachable. Intentional trajectory/digest change. GkBaselineSlot was already serialized; no schema, GT, RNG stream/draw-site/order change. |
 // | 1.93    | 2026-09-27 | —      | W8 B dormant #5 integration substrate merged after ERR-011-018: v24 PassExecutor serialization/restore, CONTACT receiver/fallback queries, and test-only executor state seams. #21/#11 production wiring remains absent. No new RNG stream/domain/draw-site/order; schema v24 digest change is intentional. |
+// | 1.94    | 2026-09-27 | —      | W8 B snapshot-proof correction after CI 36328692042: PassExecutor state's canonical writer/reader are internal static instead of private so tests can exercise the real v24 codec directly. Test visibility only; serialized order, gameplay, schema v24 and RNG are unchanged. |
 #endregion

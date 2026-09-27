@@ -12,7 +12,15 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 27, 2026 — **W8 B dormant #5 executor review hardening after ERR-011-018 merge.**
+> **Last Updated:** September 27, 2026 — **PR #466 snapshot-proof correction after merged-head functional-gate failure.**
+>
+> CI run **`36328692042`** completed with every lint/format/spec/manifest/`.meta` job green, but the PR functional gate failed **3 / 573** Match Engine tests (**557 passed / 13 skipped / 3 failed**). All three failures were the new v1.20 “direct pre-tick payload” probes. They injected PassExecutor state and then read `CaptureDurablePayload()` without ever running Snapshot phase; that API returns the orchestrator's cached current payload, so both baseline and perturbed buffers were empty (`BytesWritten = 0`). The executor and v24 writer/reader were not implicated by the failure.
+>
+> The false proof is removed rather than papered over with `RunTick()`. `MatchEngine.WritePassExecutorState` / `ReadPassExecutorState` are now **internal static** (test visibility only), and one direct canonical-codec test writes both default and non-default states, first asserts **>0 bytes**, proves their serialized bytes differ, reads the non-default bytes back through the real reader, asserts the reader consumed exactly the writer's byte count, and compares **every v24 goalkeeper-distribution field**: execution mode, request, effective target id/position, pending-feedback latch, and complete terminal feedback. The existing pending-feedback world-digest test remains useful only as supplemental gameplay-mediated evidence, not serialization proof.
+>
+> Tracking explicitly supersedes the v1.20/v2.153 “pre-tick payload probe” claim. No #21/#11 live wiring is started. No runtime behavior, snapshot field order/schema (still v24), RNG stream/domain/draw-site/order, or gameplay `[GT]` changes. **Fresh CI is required before the dormant slice can leave draft.**
+>
+> **Last Updated (prior):** September 27, 2026 — **W8 B dormant #5 executor review hardening after ERR-011-018 merge.**
 >
 > PR #466 now contains a true merge of gameplay-changing #465 / ERR-011-018 and keeps B's dedicated #5 slice dormant. The merge resolves the version collisions by advancing this branch to `MatchEngine.cs` v1.93, `CHANGELOG-src.md` v2.152 and the W8 decision packet v0.21; #465's new comparison baseline and all baseline-slot tracking are preserved. Pre-merge CI run **`36295057956` PASSED**, including the PR functional gate, meta integrity and format checks; Unity was skipped by the normal workflow. Because #465 changes gameplay, that run is evidence only for the pre-merge dormant slice, not the merged head.
 >
