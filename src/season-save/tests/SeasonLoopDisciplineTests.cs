@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
+// Modified: 2026-09-28 (FM-03 closeout: remove broad composed-engine Error suppression — v1.18)
 // Modified: 2026-09-22 (W3 trajectory fallout: make the within-fixture ban-order lock deterministic and trajectory-independent; retain scoped composed-engine Error-log containment — v1.17)
 // Modified: 2026-09-12 (Unity editor compile — Does.Not.Contain(int) → Has.No.Member: Unity's bundled
 //           NUnit 3.5 only has the string overload; same assertion, compiles under both NUnits)
@@ -1060,10 +1061,8 @@ namespace TacticalDirector.SeasonSave.Tests
             int managedClubId = league.ClubIds()[0];
 
             var tally = new DisciplineState();
-            MatchResult observed = IgnoringComposedEngineErrorLogs(
-                () => PlayOneEngineRound(league, managedClubId, tally));
-            MatchResult unobserved = IgnoringComposedEngineErrorLogs(
-                () => PlayOneEngineRound(league, managedClubId, null));
+            MatchResult observed = PlayOneEngineRound(league, managedClubId, tally);
+            MatchResult unobserved = PlayOneEngineRound(league, managedClubId, null);
 
             // Positive control. At the engine's measured discipline rate a 90-minute fixture books
             // several players, so an empty tally means the fold never ran, never saw the tap, or was
@@ -1401,34 +1400,6 @@ namespace TacticalDirector.SeasonSave.Tests
         // ── helpers ──────────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Runs only an engine-driving span with Unity-shim Error-log teardown policing disabled.
-        /// This setting suppresses ALL unexpected Error logs in the wrapped span, not only the known
-        /// composed-play ShotExecutor FM-03 channel. That broad suppression is why FM-03 remains a
-        /// separately tracked open issue rather than being treated as resolved here. These discipline
-        /// tests assert fold/order state, not log severity. The prior setting is restored in finally.
-        /// </summary>
-        private static void IgnoringComposedEngineErrorLogs(System.Action action) =>
-            IgnoringComposedEngineErrorLogs(() =>
-            {
-                action();
-                return 0;
-            });
-
-        private static T IgnoringComposedEngineErrorLogs<T>(System.Func<T> action)
-        {
-            bool previous = UnityEngine.TestTools.LogAssert.ignoreFailingMessages;
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-            try
-            {
-                return action();
-            }
-            finally
-            {
-                UnityEngine.TestTools.LogAssert.ignoreFailingMessages = previous;
-            }
-        }
-
-        /// <summary>
         /// Plays round 0 in <see cref="RoundResolutionMode.ManagedThroughEngine"/> — one real match,
         /// the rest quick-simmed — and returns the managed club's own fixture result.
         /// </summary>
@@ -1711,4 +1682,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | The same serve→commit production seam is locked without depending on     |
 // |         |            |        | incidental card output; real-engine fold ingestion stays covered by the  |
 // |         |            |        | separate ARealEngineFixture... test. Production code unchanged.          |
+// | 1.18    | 2026-09-28 | —      | FM-03 closeout: the two full-engine fold/neutrality runs no longer use     |
+// |         |            |        | ignoreFailingMessages. CONTACT-time shot possession loss is Warning-level, |
+// |         |            |        | so unrelated unexpected Error logs are visible to teardown policing again. |
 #endregion
