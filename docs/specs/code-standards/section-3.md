@@ -8,8 +8,8 @@ does not restate them. Appendix D is the single source of truth for banned/requi
 API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
-**Modified:** September 21, 2026
-**Version:** 1.15
+**Modified:** September 28, 2026
+**Version:** 1.16
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.8 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
@@ -627,7 +627,7 @@ order:
 | 6 **Composition** | `match-engine` | References all four gameplay tiers plus Data; the only assembly that does. Not a numbered spec — governed by `docs/tracking/match-engine-design.md`. |
 | 7 **Management** | `living-world` (#22), `player-progression` (#28), `training-system` (#29), `injuries-medical` (#41), `discipline` (#44), `season-save` (#30), `club-finances` (#40), `transfers` (#31) | Long-horizon state above a single match. |
 | 8 **Presentation** | `match-viewer`, `match-analytics` (#37) | Derived from a played match. This tier is what keeps the root `CLAUDE.md` rule that **no sim assembly may reference `match-analytics`** true. |
-| 9 **Client** | `match-client-core`, `ui-framework` (#38), `client-app`, `match-client-unity`, `match-client-web` | Screens, shells and hosts. |
+| 9 **Client** | `match-client-core`, `ui-framework` (#38), `client-app`, `match-client-unity`, `match-client-web`, `localization` (#49) | Screens, shells and hosts, including client-facing localization infrastructure. |
 | — **Infrastructure** | `performance-optimization` (#18), `testing-strategy` (#19) | Out of band: not members of the order, and no tier may reference them at runtime. |
 
 ```
@@ -1329,6 +1329,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.13 | September 7, 2026 | Codex | **D4/#40 T0/T1a seating, review-corrected in place before merge.** Adds `club-finances` (#40) to Tier 7 Management in the same landing as its production `.asmdef`. The `player-database` current Management-consumer note remains five consumers while the denominator moves six→seven because `club-finances` deliberately defers its #27 edge to T2; current non-consumers are `living-world` and `club-finances`. No dependency-direction rule or A3.1a governance semantics change. | — |
 | 1.14 | September 12, 2026 | Codex | **D5/#31 T0 seating.** Adds `transfers` (#31) to Tier 7 Management in the same landing as its production `.asmdef`. The `player-database` current Management-consumer note moves five-of-seven → six-of-eight because `transfers` has a live #27 read edge; current non-consumers remain `living-world` and `club-finances`. The new assembly's #40 reference is intra-tier and its ProjectConstants reference is downward to Foundation; no dependency-direction rule or A3.1a governance semantics change. | — |
 | 1.15 | September 21, 2026 | OpenAI | **PR #407 current-main reconciliation.** Corrects the maintained Data-tier consumer note after #40 T2a had already activated `club-finances` → `player-database` on September 11: seven of eight Management assemblies now consume #27, with only `living-world` not doing so. Tier-7 seating is unchanged; no dependency-direction or A3.1a governance semantics change. | — |
+| 1.16 | September 28, 2026 | OpenAI | **Localization #49 L1 seating.** Adds `localization` (#49) to Tier 9 Client in the same commit that adds `src/localization/localization.asmdef`. The production assembly is dependency-free, so this adds no upward edge; the L1 reverse-reference lock rejects unauthorized production consumers until L3B deliberately narrows it for the approved sibling boundary adapter. No other tier membership changes. | — |
 
 ---
 
