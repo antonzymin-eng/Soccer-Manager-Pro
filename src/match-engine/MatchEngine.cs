@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-28 (W8 B review — authoritative goalkeeper/team identity query)
 // Modified: 2026-09-27 (W8 B snapshot-proof correction: PassExecutor state codec private→internal for direct canonical write/read tests; no runtime behavior change)
 // Modified: 2026-09-27 (W8 B dormant #5 executor snapshot/query seams merged after ERR-011-018; gameplay path remains unwired)
 // Modified: 2026-09-27 (ERR-011-018 / #11 §3.3.0 / KD-13 baseline-slot wiring: UpdateBaselineSlot receives the keeper's #12 slot in world space, not the keeper's own position, so Recovering → Set honours RecoveryCooldownTicks. Behaviour change; no schema/RNG change)
@@ -8901,6 +8902,14 @@ namespace TacticalDirector.MatchEngine
 
             public PassAgentState GetState(int agentId) => _engine.BuildPassState(agentId);
 
+            public bool IsGoalkeeperOfTeam(int agentId, int teamId)
+            {
+                return (uint)agentId < (uint)MatchEngineConstants.SQUAD_SIZE
+                    && _engine._teamIds[agentId] == teamId
+                    && _engine._isGoalkeeper[agentId]
+                    && !_engine._isSentOff[agentId];
+            }
+
             public bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId)
             {
                 return (uint)agentId < (uint)MatchEngineConstants.SQUAD_SIZE
@@ -10628,4 +10637,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.92    | 2026-09-27 | —      | ERR-011-018 / #11 §3.3.0 / KD-13 baseline-slot wiring (open-issues, recorded Sept 26): DriveGkHeadingTactical feeds UpdateBaselineSlot the keeper's Positioning AI #12 slot, mapped to world space exactly as the MOVE_TO_POSITION anchor (GkBaselineSlotWorld), instead of the keeper's own position. The at-baseline test was identically true, so every Recovering episode exited on the next tactical pass and RecoveryCooldownTicks was unreachable. Intentional trajectory/digest change. GkBaselineSlot was already serialized; no schema, GT, RNG stream/draw-site/order change. |
 // | 1.93    | 2026-09-27 | —      | W8 B dormant #5 integration substrate merged after ERR-011-018: v24 PassExecutor serialization/restore, CONTACT receiver/fallback queries, and test-only executor state seams. #21/#11 production wiring remains absent. No new RNG stream/domain/draw-site/order; schema v24 digest change is intentional. |
 // | 1.94    | 2026-09-27 | —      | W8 B snapshot-proof correction after CI 36328692042: PassExecutor state's canonical writer/reader are internal static instead of private so tests can exercise the real v24 codec directly. Test visibility only; serialized order, gameplay, schema v24 and RNG are unchanged. |
+// | 1.95    | 2026-09-28 | —      | W8 B review: PassWorldAdapter exposes authoritative live goalkeeper/team identity so #5 rejects wrong-team and non-goalkeeper dedicated distribution requests before WINDUP. Dormant until #21/#11 wiring; no schema/RNG change. |
 #endregion

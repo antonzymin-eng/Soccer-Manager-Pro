@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.cs
 // Created:  2026-05-26
+// Modified: 2026-09-28 (W8 B review — feedback-pending guard diagnostic + mode-aware target docs)
 // Modified: 2026-09-26 (W8 B dormant #5 goalkeeper-distribution mode + terminal feedback/state)
 // Modified: 2026-08-12 (W2: FM-08's CONTACT-time possession loss downgraded LogError -> LogWarning; a tackle now makes it ordinary)
 // Author:   —
@@ -89,16 +90,14 @@ namespace TacticalDirector.PassMechanics
         public bool IsIdle => _state == PassExecutionState.Idle && !_goalkeeperFeedbackPending;
 
         /// <summary>
-        /// The team-mate this executor's CURRENT pass was aimed at (<c>PassRequest.TargetAgentId</c>).
+        /// The effective target agent for the CURRENT kick. Ordinary mode returns
+        /// <c>PassRequest.TargetAgentId</c>; goalkeeper-distribution mode returns the CONTACT-resolved
+        /// effective receiver (or -1 for a receiverless fallback).
         /// <para>
-        /// Only meaningful at the moment of the CONTACT kick, which is the sole caller: <c>_request</c>
-        /// is never cleared on the return to Idle, so between passes this reports a stale last-pass
-        /// target forever. Read it at the kick or not at all — the engine's own pass-in-flight latch
-        /// (ERR-012-011) exists precisely because this value is not self-dating.
-        /// </para>
-        /// <para>
-        /// Not a second derivation of anything: this and <c>CaptureState().Request</c> return the same
-        /// <c>_request</c> field, one for observation at the kick and one for serialization.
+        /// Only meaningful at the CONTACT kick. Between ordinary passes <c>_request</c> retains stale
+        /// last-pass data, and goalkeeper terminal feedback deliberately keeps the executor unavailable
+        /// until the host consumes it. Read this value at the kick or not at all — the engine's own
+        /// pass-in-flight latch (ERR-012-011) exists precisely because this value is not self-dating.
         /// </para>
         /// </summary>
         public int InFlightTargetAgentId => _mode == PassExecutionMode.GoalkeeperDistribution
@@ -233,7 +232,7 @@ namespace TacticalDirector.PassMechanics
             if (_state != PassExecutionState.Idle || _goalkeeperFeedbackPending)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogError($"[PassExecutor] Execute() called while pass is in progress (state={_state}). Agent={request.AgentId}. Frame={request.FrameNumber}");
+                Debug.LogError($"[PassExecutor] Execute() called while executor is unavailable (state={_state}, goalkeeperFeedbackPending={_goalkeeperFeedbackPending}). Agent={request.AgentId}. Frame={request.FrameNumber}");
 #endif
                 // AR-9 M-1: do NOT write _lastResult here. A pass is in flight and owns
                 // that slot — in FollowThrough/Complete it already holds the committed
@@ -774,4 +773,5 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | (AR-1 L-7): the SEVERITY change alters LogAssert behaviour in every  |
 // |         |            |        | suite, which is the whole reason for making it. No formula changed.  |
 // | 1.17    | 2026-09-26 | —      | W8 B dormant executor surface: partial dedicated goalkeeper-distribution mode, pending terminal feedback gate, mode-aware in-flight target, and v24 Capture/Restore fields. Ordinary PassRequest execution remains separate and production wiring is not activated. |
+// | 1.18    | 2026-09-28 | —      | W8 B review: Execute rejection diagnostic distinguishes pending GK terminal feedback from an in-flight pass; InFlightTargetAgentId docs now describe the mode-aware effective target. No behavior change. |
 #endregion

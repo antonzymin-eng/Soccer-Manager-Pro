@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/Tests/PassMechanicsTests.cs
 // Created:  2026-05-31
+// Modified: 2026-09-28 (W8 B review — goalkeeper/team request-identity rejection coverage)
 // Modified: 2026-09-27 (W8 B — direct dedicated goalkeeper-distribution executor behaviour coverage)
 // Modified: 2026-09-26 (W8 B — IPassAgentQuery goalkeeper-distribution test stub surface)
 // Modified: 2026-06-13
@@ -1657,6 +1658,8 @@ namespace TacticalDirector.PassMechanics.Tests
             public PassAgentState GetState(int agentId)
                 => agentId == PasserId ? PasserState : ReceiverState;
 
+            public bool IsGoalkeeperOfTeam(int agentId, int teamId) => true;
+
             public bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId) => true;
 
             public bool IsGoalkeeperDistributionOwnGoalLine(int teamId, Vector3 targetPosition)
@@ -1802,6 +1805,8 @@ namespace TacticalDirector.PassMechanics.Tests
         private sealed class StubAgentQuery : IPassAgentQuery
         {
             public bool ReceiverEligible = true;
+            public bool AgentIsGoalkeeper = true;
+            public int KeeperTeamId = 0;
             public PassAgentState KeeperState = new PassAgentState
             {
                 Position = new Vector2(30f, 34f),
@@ -1827,6 +1832,9 @@ namespace TacticalDirector.PassMechanics.Tests
 
             public PassAgentState GetState(int agentId)
                 => agentId == KeeperId ? KeeperState : ReceiverState;
+
+            public bool IsGoalkeeperOfTeam(int agentId, int teamId)
+                => AgentIsGoalkeeper && agentId == KeeperId && teamId == KeeperTeamId;
 
             public bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId)
                 => ReceiverEligible && agentId == ReceiverId;
@@ -1928,6 +1936,33 @@ namespace TacticalDirector.PassMechanics.Tests
             Assert.AreEqual(39.13f, LaunchAngleDeg(ballSystem.LastVelocity), 0.02f);
         }
 
+        [TestCase(0, 1, true)]
+        [TestCase(1, 0, true)]
+        [TestCase(0, 0, false)]
+        [TestCase(1, 1, false)]
+        public void W8B_RequestIdentityMustBeLiveGoalkeeperOnRequestTeam_Rejects(
+            int keeperTeamId,
+            int requestTeamId,
+            bool agentIsGoalkeeper)
+        {
+            var ballSystem = new StubBallSystem();
+            var agents = new StubAgentQuery
+            {
+                KeeperTeamId = keeperTeamId,
+                AgentIsGoalkeeper = agentIsGoalkeeper
+            };
+            var executor = new PassExecutor(ballSystem, agents, new StubCollisionQuery());
+            GoalkeeperDistributionRequest request = Request(
+                GoalkeeperDeliveryVariant.Throw, requestTeamId,
+                PassMechanicsConstants.AGENT_ID_NONE, new Vector3(40f, 20f, 0f), 0.6f);
+
+            Assert.IsFalse(executor.TryStartGoalkeeperDistribution(
+                in request, out GoalkeeperDistributionFeedback feedback));
+            Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Rejected, feedback.Kind);
+            Assert.AreEqual(0, ballSystem.ApplyKickCalls);
+            Assert.IsTrue(executor.IsIdle);
+        }
+
         [Test]
         public void W8B_RejectedRequest_DoesNotTouchBall()
         {
@@ -2000,7 +2035,8 @@ namespace TacticalDirector.PassMechanics.Tests
             float expectedFallbackX)
         {
             var ballSystem = new StubBallSystem();
-            var executor = new PassExecutor(ballSystem, new StubAgentQuery(), new StubCollisionQuery());
+            var agents = new StubAgentQuery { KeeperTeamId = teamId };
+            var executor = new PassExecutor(ballSystem, agents, new StubCollisionQuery());
             GoalkeeperDistributionRequest request = Request(
                 GoalkeeperDeliveryVariant.Roll, teamId, PassMechanicsConstants.AGENT_ID_NONE,
                 new Vector3(ownGoalX, 20f, 0f), 0.5f);
@@ -2045,4 +2081,5 @@ namespace TacticalDirector.PassMechanics.Tests
 // |         |            |        |     inversion: chip (11.12) now > short ground pass (10.19) as it must.      |
 // | 1.4     | 2026-09-26 | —      | W8 B dormant API support: StubAgentQuery implements the new receiver-eligibility, own-goal-line and fallback-position queries; no existing pass-test behavior changes. |
 // | 1.5     | 2026-09-27 | —      | W8 B direct executor coverage: Roll/Kick worked examples; Rejected/Cancelled/Completed terminal semantics; exactly-once kick; CONTACT receiver invalidation; mirrored 35 m own-goal fallback; IsIdle held false until terminal feedback consumption. |
+// | 1.6     | 2026-09-28 | —      | W8 B review: dedicated requests reject wrong-team and non-goalkeeper identities, locked for both home and away; test stubs implement IsGoalkeeperOfTeam. |
 #endregion

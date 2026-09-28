@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/IPassAgentQuery.cs
 // Created:  2026-05-26
+// Modified: 2026-09-28 (W8 B review — goalkeeper/team identity validation query)
 // Modified: 2026-09-26 (W8 B — CONTACT receiver eligibility / own-goal-line / fallback queries)
 // Modified: 2026-05-26
 // Author:   —
@@ -29,6 +30,9 @@ namespace TacticalDirector.PassMechanics
         /// </summary>
         PassAgentState GetState(int agentId);
 
+        /// <summary>True when the agent is a live goalkeeper for the authoritative team.</summary>
+        bool IsGoalkeeperOfTeam(int agentId, int teamId);
+
         /// <summary>CONTACT-time eligibility for a goalkeeper-distribution receiver.</summary>
         bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId);
 
@@ -45,4 +49,5 @@ namespace TacticalDirector.PassMechanics
 // | 1.0     | 2026-05-26 | —      | Initial implementation (combined with PassAgentAttributes, PassAgentState). |
 // | 1.1     | 2026-05-26 | —      | H5: PassAgentAttributes and PassAgentState moved to own files.            |
 // | 1.2     | 2026-09-26 | —      | W8 B: + CONTACT-time goalkeeper-distribution receiver eligibility, own-goal-line safety predicate and host-owned deterministic receiverless fallback position. |
+// | 1.3     | 2026-09-28 | —      | W8 B review: + IsGoalkeeperOfTeam identity query so dedicated distribution cannot trust request TeamId or an outfield AgentId. |
 #endregion

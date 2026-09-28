@@ -9,7 +9,7 @@ through Ball.ApplyKick() to completion. §3.9 defines the events published at st
 transitions. Together these subsections complete the Section 3 Technical Specifications.
 
 **Created:** March 7, 2026, 2:00 PM PST
-**Version:** 1.5
+**Version:** 1.6
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -719,8 +719,10 @@ No `DeterministicRngService` stream/domain/draw site or draw order is added.
 
 **Windup, rejection/cancellation, and CONTACT.**
 
-1. INITIATING validates idle executor, finite request fields, target semantics and possession.
-   Failure returns `Rejected`; WINDUP never starts.
+1. INITIATING validates idle executor, finite request fields, target semantics, possession, and
+   authoritative request identity: `AgentId` MUST resolve to a live goalkeeper and that
+   goalkeeper's authoritative team MUST equal `TeamId`. A wrong-team request or an outfield
+   possessor therefore returns `Rejected`; WINDUP never starts.
 2. `WindupFrames` is used exactly. No ordinary-pass urgency reduction, min-windup floor or second
    delivery windup may be applied.
 3. WINDUP is cancellable on explicit host cancel or possession loss and returns `Cancelled`.
@@ -913,6 +915,7 @@ only. Only a tackle interrupt — a real game event — produces a cancellation 
 | 1.0 | March 7, 2026, 2:00 PM PST | Claude (AI) / Anton | Initial draft. WeakFoot accuracy and power penalty models. Six-state machine with full transition table. Urgency-driven windup reduction. Two event struct definitions. All formulas derived from Appendix A.6. State machine architecture from §2.2.3 and §4.4.2. Event structs from §4.6.1. |
 | 1.1 | May 6, 2026 | Claude (AI) / Anton | Resolves §3.3–§3.9 follow-up audit finding F-A02: localized `WINDUP_FRAMES` and `FOLLOWTHROUGH_FRAMES` ownership entirely in §3.8.10 (state-machine timing values, not pass-type physical intrinsics). Removed dead-end "from §3.1.4 PhysicalProfile" citation; updated §3.8.2 state table and §3.8 cross-spec dependencies table to reference §3.8.10 as canonical source. Non-behavioral with respect to formula code (values unchanged). |
 | 1.2 | September 25, 2026 | — | W8 B / ERR-011-015: §3.8.13 defines the dedicated goalkeeper request mode, profile-derived delivery bounds, **distance-sensitive** #5 velocity/launch shapes, one deterministic error model, exact #11 windup, CONTACT recheck/release, typed feedback, W5 receiver-latch rule, and canonical snapshot obligation. Existing `PassType` ordinals and ordinary pass semantics are unchanged. |
+| 1.6 | September 28, 2026 | — | Owner-approved W8 review amendment: dedicated goalkeeper-distribution INITIATING now rejects requests unless AgentId is a live goalkeeper whose authoritative team equals TeamId. This closes both wrong-team fallback orientation and outfield-player Throw/Kick entry without adding serialized state, RNG, or changing ordinary PassRequest behavior. |
 | 1.5 | September 26, 2026 | — | Owner approval: W8 B amendment approved September 26, 2026 as part of the #5/#11/#21 bundle. #5 remains overall DRAFT; B wiring is authorized only after PR #461 merges. The current Lofted trajectory is not approved as a realistic punt solution; target-vs-first-ground-contact evidence closes the follow-up decision. |
 | 1.4 | September 26, 2026 | — | W8 B review closure follow-up: corrects the LongKick worked example to apply #11's kicking-accuracy coefficient, explicitly makes target arrival an empirical landing measurement, adds that B evidence field, makes retries deadline-gated through #11 §3.8.4, and adds the owner-approval gate. |
 | 1.3 | September 26, 2026 | — | W8 B review closure: pins the exact Roll/Throw/Kick launch-angle rule, CONTACT-time live receiver versus committed fallback semantics, fixed error-hash discriminator `0x47`, Rejected/Cancelled/Completed state consequences, and worked Roll/LongKick calculations. No ordinary `PassType` ordinal or RNG draw site is changed. |

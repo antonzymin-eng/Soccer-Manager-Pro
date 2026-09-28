@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/Tests/PassExecutorStateTests.cs
 // Created:  2026-06-19
+// Modified: 2026-09-28 (W8 B review — IPassAgentQuery identity stub)
 // Modified: 2026-09-26 (W8 B — dedicated state serializer/identity coverage + 27-field omission guard)
 // Modified: 2026-06-19
 // Author:   —
@@ -412,6 +413,8 @@ namespace TacticalDirector.PassMechanics.Tests
                 Position = new Vector2(30f, 34f), Velocity = Vector2.zero, FacingDirection = new Vector2(1f, 0f)
             };
 
+            public bool IsGoalkeeperOfTeam(int agentId, int teamId) => true;
+
             public bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId) => true;
 
             public bool IsGoalkeeperDistributionOwnGoalLine(int teamId, Vector3 targetPosition)
@@ -492,4 +495,5 @@ namespace TacticalDirector.PassMechanics.Tests
 // |         |            |        | field-count lock (silent-omission guard, B0 BufferSize analogue|
 // |         |            |        | ). Added stub IPass* implementations.                         |
 // | 1.2     | 2026-09-26 | —      | W8 B: serializer/deserialize and Capture/Restore identity cover the appended dedicated-distribution fields; reflection omission guard advances 21 → 27 fields. |
+// | 1.3     | 2026-09-28 | —      | W8 B review: test IPassAgentQuery stub implements the new goalkeeper/team identity query; snapshot field set remains unchanged. |
 #endregion

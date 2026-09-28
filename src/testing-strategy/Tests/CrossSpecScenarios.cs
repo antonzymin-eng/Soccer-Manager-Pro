@@ -1,5 +1,6 @@
 // File:     src/testing-strategy/Tests/CrossSpecScenarios.cs
 // Created:  2026-06-10
+// Modified: 2026-09-28 (W8 B review — IPassAgentQuery identity stub)
 // Modified: 2026-09-26 (W8 B — IPassAgentQuery goalkeeper-distribution scenario stub surface)
 // Modified: 2026-06-10
 // Author:   —
@@ -277,6 +278,8 @@ namespace TacticalDirector.TestingStrategy.Tests
                 };
             }
 
+            public bool IsGoalkeeperOfTeam(int agentId, int teamId) => true;
+
             public bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId) => true;
 
             public bool IsGoalkeeperDistributionOwnGoalLine(int teamId, Vector3 targetPosition)
@@ -309,4 +312,5 @@ namespace TacticalDirector.TestingStrategy.Tests
 // |         |            |        | boot wiring + tick lifecycle around the CONTACT publish. Owning   |
 // |         |            |        | specs {1, 5}; path under SCENARIO_PATH_CROSS_SPEC_PREFIX.         |
 // | 1.1     | 2026-09-26 | —      | W8 B dormant API support: ScenarioAgentQuery implements the added goalkeeper-distribution receiver/goal-line/fallback query members; existing cross-spec scenario behavior is unchanged. |
+// | 1.2     | 2026-09-28 | —      | W8 B review: ScenarioAgentQuery implements the new goalkeeper/team identity query; existing scenario behavior is unchanged. |
 #endregion

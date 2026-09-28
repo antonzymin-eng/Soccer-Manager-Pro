@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.GoalkeeperDistribution.cs
 // Created:  2026-09-26
+// Modified: 2026-09-28 (W8 B review — reject non-keeper / wrong-team requests at INITIATING)
 // Author:   —
 // Spec:     Pass Mechanics #5 §2.4.4, §3.8.13; Goalkeeper Mechanics #11 §3.8
 // Purpose:  Dedicated goalkeeper-distribution execution mode for PassExecutor.
@@ -38,6 +39,7 @@ namespace TacticalDirector.PassMechanics
             feedback = default;
             if (_state != PassExecutionState.Idle || _goalkeeperFeedbackPending
                 || !ValidateGoalkeeperDistributionRequest(in request)
+                || !_agentQuery.IsGoalkeeperOfTeam(request.AgentId, request.TeamId)
                 || !_ballSystem.IsBallPossessedBy(request.AgentId))
             {
                 feedback.Kind = GoalkeeperDistributionFeedbackKind.Rejected;

@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 27, 2026 — **PR #466 dormant-slice landing record after green CI.**
+> **Last Updated:** September 28, 2026 — **PR #466 review correction: goalkeeper/team identity guard before live wiring.**
+>
+> Pass Mechanics #5 §3.8.13 advances to v1.6 and §4.3 advances to v1.2; the dormant dedicated executor now rejects a request unless `AgentId` is a live goalkeeper whose authoritative team equals `TeamId`. This closes both wrong-team own-goal/fallback orientation and outfield-player entry into Throw/Roll/Kick. `IPassAgentQuery` gains the read-only identity query; Match Engine supplies it from authoritative team/goalkeeper/sent-off state; mirrored home/away tests cover wrong-team and non-goalkeeper rejection. No snapshot field/schema or RNG change; ordinary `PassRequest` behavior is unchanged.
+>
+> The existing Unity blocker now also owns two live-wiring requirements: Resolve must consume every terminal goalkeeper feedback exactly once before ordinary pass execution can resume, and #11 F-05 telemetry must compare the serialized original requested receiver with terminal effective receiver before consumption so intentional receiverless requests are not misreported. `Execute()`'s pending-feedback diagnostic and `InFlightTargetAgentId` documentation are corrected. Prior head `6119fe7` passed CI `36346168645`; this review-correction head requires fresh CI. Local gate is unavailable in this authoring environment (no dotnet/toolchain and no network clone/install path).
+>
+> **Last Updated (prior):** September 27, 2026 — **PR #466 dormant-slice landing record after green CI.**
 >
 > Corrected head `795ca64` passed CI run **`36337174267`**: every executable CI job is green, including the PR functional gate; Unity tests were skipped by the normal workflow. This is the first green merged-head execution evidence for the corrected v24 codec proof.
 >
