@@ -1,5 +1,9 @@
 // File:     src/pass-mechanics/Tests/PassMechanicsTests.cs
 // Created:  2026-05-31
+// Modified: 2026-09-28 (PX-001 expectation follows the PassExecutor v1.18 unavailable-executor diagnostic)
+// Modified: 2026-09-28 (W8 B review — goalkeeper/team request-identity rejection coverage)
+// Modified: 2026-09-27 (W8 B — direct dedicated goalkeeper-distribution executor behaviour coverage)
+// Modified: 2026-09-26 (W8 B — IPassAgentQuery goalkeeper-distribution test stub surface)
 // Modified: 2026-06-13
 // Author:   —
 // Spec:     Pass Mechanics #5 §5, Code Standards #20
@@ -1654,6 +1658,16 @@ namespace TacticalDirector.PassMechanics.Tests
 
             public PassAgentState GetState(int agentId)
                 => agentId == PasserId ? PasserState : ReceiverState;
+
+            public bool IsGoalkeeperOfTeam(int agentId, int teamId) => true;
+
+            public bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId) => true;
+
+            public bool IsGoalkeeperDistributionOwnGoalLine(int teamId, Vector3 targetPosition)
+                => teamId == 0 ? targetPosition.x == 0f : targetPosition.x == 105f;
+
+            public Vector3 GetGoalkeeperDistributionFallbackPosition(int teamId)
+                => teamId == 0 ? new Vector3(35f, 34f, 0f) : new Vector3(70f, 34f, 0f);
         }
 
         private sealed class StubCollisionQuery : IPassCollisionQuery
@@ -1695,7 +1709,8 @@ namespace TacticalDirector.PassMechanics.Tests
             PassResult first = exec.Execute(MakeValidRequest());
             Assert.AreEqual(PassOutcome.Initiated, first.Outcome, "PX-001 precondition: first Execute must initiate.");
 
-            LogAssert.Expect(LogType.Error, new Regex("in progress"));
+            LogAssert.Expect(LogType.Error,
+                new Regex(@"executor is unavailable \(state=Windup, goalkeeperFeedbackPending=False\)"));
             PassResult second = exec.Execute(MakeValidRequest());
 
             Assert.AreEqual(PassOutcome.Invalid, second.Outcome,
@@ -1757,6 +1772,289 @@ namespace TacticalDirector.PassMechanics.Tests
                 "PX-004: no PassCancelledEvent path may fire from the drained stale flag.");
         }
     }
+    // ════════════════════════════════════════════════════════════════════════════
+    // W8 B dedicated goalkeeper-distribution executor tests
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>Pass Mechanics #5 §3.8.13 direct execution locks for the dedicated
+    /// goalkeeper-distribution path. These tests exercise the executor itself rather than
+    /// only its snapshot carrier.</summary>
+    [TestFixture]
+    internal sealed class GoalkeeperDistributionExecutorTests
+    {
+        private const int KeeperId = 7;
+        private const int ReceiverId = 9;
+
+        private sealed class StubBallSystem : IPassBallSystem
+        {
+            public bool Possessed = true;
+            public int ApplyKickCalls;
+            public Vector3 LastVelocity;
+            public Vector3 LastSpin;
+            public int LastAgentId = -1;
+
+            public bool IsBallPossessedBy(int agentId) => Possessed && agentId == KeeperId;
+
+            public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
+            {
+                ApplyKickCalls++;
+                LastVelocity = velocity;
+                LastSpin = spin;
+                LastAgentId = agentId;
+            }
+        }
+
+        private sealed class StubAgentQuery : IPassAgentQuery
+        {
+            public bool ReceiverEligible = true;
+            public bool AgentIsGoalkeeper = true;
+            public int KeeperTeamId = 0;
+            public PassAgentState KeeperState = new PassAgentState
+            {
+                Position = new Vector2(30f, 34f),
+                Velocity = Vector2.zero,
+                FacingDirection = Vector2.right
+            };
+            public PassAgentState ReceiverState = new PassAgentState
+            {
+                Position = new Vector2(45f, 34f),
+                Velocity = Vector2.zero,
+                FacingDirection = Vector2.left
+            };
+
+            public PassAgentAttributes GetAttributes(int agentId) => new PassAgentAttributes
+            {
+                Passing = 20f,
+                Technique = 20f,
+                KickPower = 20f,
+                WeakFootRating = 5,
+                Crossing = 20f,
+                Fatigue = 0f
+            };
+
+            public PassAgentState GetState(int agentId)
+                => agentId == KeeperId ? KeeperState : ReceiverState;
+
+            public bool IsGoalkeeperOfTeam(int agentId, int teamId)
+                => AgentIsGoalkeeper && agentId == KeeperId && teamId == KeeperTeamId;
+
+            public bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId)
+                => ReceiverEligible && agentId == ReceiverId;
+
+            public bool IsGoalkeeperDistributionOwnGoalLine(int teamId, Vector3 targetPosition)
+                => teamId == 0
+                    ? Mathf.Approximately(targetPosition.x, 0f)
+                    : Mathf.Approximately(targetPosition.x, 105f);
+
+            public Vector3 GetGoalkeeperDistributionFallbackPosition(int teamId)
+                => teamId == 0 ? new Vector3(35f, 34f, 0f) : new Vector3(70f, 34f, 0f);
+        }
+
+        private sealed class StubCollisionQuery : IPassCollisionQuery
+        {
+            public bool GetAndClearTackleFlag(int agentId) => false;
+            public float ComputePressureScalar(Vector2 passerPosition, int passerTeamId) => 0f;
+        }
+
+        private static GoalkeeperDistributionRequest Request(
+            GoalkeeperDeliveryVariant delivery,
+            int teamId,
+            int targetAgentId,
+            Vector3 target,
+            float power)
+        {
+            return new GoalkeeperDistributionRequest
+            {
+                AgentId = KeeperId,
+                TeamId = teamId,
+                Delivery = delivery,
+                TargetAgentId = targetAgentId,
+                TargetPosition = target,
+                EmittedPower01 = power,
+                SpinIntent = new Vector3(1f, 2f, 3f),
+                ReleaseHeightM = 1.8f,
+                WindupFrames = 1,
+                FrameNumber = 100
+            };
+        }
+
+        private static void RunToContact(PassExecutor executor, ref BallState ball)
+        {
+            executor.Update(1.0f, 101, ref ball);   // WINDUP -> CONTACT
+            executor.Update(1.02f, 102, ref ball);  // CONTACT
+        }
+
+        private static float LaunchAngleDeg(Vector3 velocity)
+        {
+            float horizontal = new Vector2(velocity.x, velocity.y).magnitude;
+            return Mathf.Atan2(velocity.z, horizontal) * Mathf.Rad2Deg;
+        }
+
+        [Test]
+        public void W8B_RollWorkedExample_D6Power050_Is9MpsAt2Point6Deg_AndCompletesOnce()
+        {
+            var ballSystem = new StubBallSystem();
+            var agents = new StubAgentQuery();
+            var executor = new PassExecutor(ballSystem, agents, new StubCollisionQuery());
+            GoalkeeperDistributionRequest request = Request(
+                GoalkeeperDeliveryVariant.Roll, 0, PassMechanicsConstants.AGENT_ID_NONE,
+                new Vector3(36f, 34f, 0f), 0.50f);
+            BallState ball = default;
+
+            Assert.IsTrue(executor.TryStartGoalkeeperDistribution(in request, out GoalkeeperDistributionFeedback startFeedback));
+            Assert.AreEqual(0, ballSystem.ApplyKickCalls);
+            RunToContact(executor, ref ball);
+
+            Assert.AreEqual(1, ballSystem.ApplyKickCalls, "Completed distribution applies exactly one kick.");
+            Assert.AreEqual(9.0f, ballSystem.LastVelocity.magnitude, 1e-4f);
+            Assert.AreEqual(2.6f, LaunchAngleDeg(ballSystem.LastVelocity), 1e-3f);
+            Assert.AreEqual(request.SpinIntent, ballSystem.LastSpin);
+            Assert.AreEqual(KeeperId, ballSystem.LastAgentId);
+            Assert.IsFalse(executor.IsIdle, "Terminal feedback keeps the executor unavailable until consumed.");
+
+            executor.Update(1.04f, 103, ref ball);
+            Assert.AreEqual(1, ballSystem.ApplyKickCalls, "Pending feedback must not repeat CONTACT.");
+
+            Assert.IsTrue(executor.TryConsumeGoalkeeperDistributionFeedback(out GoalkeeperDistributionFeedback feedback));
+            Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Completed, feedback.Kind);
+            Assert.IsTrue(executor.IsIdle);
+        }
+
+        [Test]
+        public void W8B_KickWorkedExample_D29Point5Power0765_Is13Point889625MpsAt39Point13Deg()
+        {
+            var ballSystem = new StubBallSystem();
+            var executor = new PassExecutor(ballSystem, new StubAgentQuery(), new StubCollisionQuery());
+            GoalkeeperDistributionRequest request = Request(
+                GoalkeeperDeliveryVariant.Kick, 0, PassMechanicsConstants.AGENT_ID_NONE,
+                new Vector3(59.5f, 34f, 0f), 0.765f);
+            BallState ball = default;
+
+            Assert.IsTrue(executor.TryStartGoalkeeperDistribution(in request, out GoalkeeperDistributionFeedback startFeedback));
+            RunToContact(executor, ref ball);
+
+            Assert.AreEqual(1, ballSystem.ApplyKickCalls);
+            Assert.AreEqual(13.889625f, ballSystem.LastVelocity.magnitude, 1e-4f);
+            Assert.AreEqual(39.13f, LaunchAngleDeg(ballSystem.LastVelocity), 0.02f);
+        }
+
+        [TestCase(0, 1, true)]
+        [TestCase(1, 0, true)]
+        [TestCase(0, 0, false)]
+        [TestCase(1, 1, false)]
+        public void W8B_RequestIdentityMustBeLiveGoalkeeperOnRequestTeam_Rejects(
+            int keeperTeamId,
+            int requestTeamId,
+            bool agentIsGoalkeeper)
+        {
+            var ballSystem = new StubBallSystem();
+            var agents = new StubAgentQuery
+            {
+                KeeperTeamId = keeperTeamId,
+                AgentIsGoalkeeper = agentIsGoalkeeper
+            };
+            var executor = new PassExecutor(ballSystem, agents, new StubCollisionQuery());
+            GoalkeeperDistributionRequest request = Request(
+                GoalkeeperDeliveryVariant.Throw, requestTeamId,
+                PassMechanicsConstants.AGENT_ID_NONE, new Vector3(40f, 20f, 0f), 0.6f);
+
+            Assert.IsFalse(executor.TryStartGoalkeeperDistribution(
+                in request, out GoalkeeperDistributionFeedback feedback));
+            Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Rejected, feedback.Kind);
+            Assert.AreEqual(0, ballSystem.ApplyKickCalls);
+            Assert.IsTrue(executor.IsIdle);
+        }
+
+        [Test]
+        public void W8B_RejectedRequest_DoesNotTouchBall()
+        {
+            var ballSystem = new StubBallSystem { Possessed = false };
+            var executor = new PassExecutor(ballSystem, new StubAgentQuery(), new StubCollisionQuery());
+            GoalkeeperDistributionRequest request = Request(
+                GoalkeeperDeliveryVariant.Throw, 0, PassMechanicsConstants.AGENT_ID_NONE,
+                new Vector3(40f, 20f, 0f), 0.6f);
+            BallState ball = default;
+            ball.Position = new Vector3(11f, 12f, 13f);
+            Vector3 before = ball.Position;
+
+            Assert.IsFalse(executor.TryStartGoalkeeperDistribution(in request, out GoalkeeperDistributionFeedback feedback));
+            Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Rejected, feedback.Kind);
+            Assert.AreEqual(0, ballSystem.ApplyKickCalls);
+            Assert.AreEqual(before, ball.Position);
+            Assert.IsTrue(executor.IsIdle);
+        }
+
+        [Test]
+        public void W8B_CancelledRequest_DoesNotTouchBall_AndBlocksUntilFeedbackConsumed()
+        {
+            var ballSystem = new StubBallSystem();
+            var executor = new PassExecutor(ballSystem, new StubAgentQuery(), new StubCollisionQuery());
+            GoalkeeperDistributionRequest request = Request(
+                GoalkeeperDeliveryVariant.Throw, 0, PassMechanicsConstants.AGENT_ID_NONE,
+                new Vector3(40f, 20f, 0f), 0.6f);
+            BallState ball = default;
+            ball.Position = new Vector3(3f, 4f, 5f);
+            Vector3 before = ball.Position;
+
+            Assert.IsTrue(executor.TryStartGoalkeeperDistribution(in request, out GoalkeeperDistributionFeedback startFeedback));
+            Assert.IsTrue(executor.CancelGoalkeeperDistribution());
+            Assert.AreEqual(0, ballSystem.ApplyKickCalls);
+            Assert.AreEqual(before, ball.Position);
+            Assert.IsFalse(executor.IsIdle);
+
+            Assert.IsTrue(executor.TryConsumeGoalkeeperDistributionFeedback(out GoalkeeperDistributionFeedback feedback));
+            Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Cancelled, feedback.Kind);
+            Assert.IsTrue(executor.IsIdle);
+        }
+
+        [Test]
+        public void W8B_ReceiverBecomesIneligibleAtContact_FallsBackToStoredPointWithoutReceiver()
+        {
+            var ballSystem = new StubBallSystem();
+            var agents = new StubAgentQuery();
+            var executor = new PassExecutor(ballSystem, agents, new StubCollisionQuery());
+            Vector3 storedTarget = new Vector3(41f, 19f, 0f);
+            GoalkeeperDistributionRequest request = Request(
+                GoalkeeperDeliveryVariant.Throw, 0, ReceiverId, storedTarget, 0.6f);
+            BallState ball = default;
+
+            Assert.IsTrue(executor.TryStartGoalkeeperDistribution(in request, out GoalkeeperDistributionFeedback startFeedback));
+            agents.ReceiverEligible = false;
+            RunToContact(executor, ref ball);
+            Assert.IsTrue(executor.TryConsumeGoalkeeperDistributionFeedback(out GoalkeeperDistributionFeedback feedback));
+
+            Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Completed, feedback.Kind);
+            Assert.AreEqual(PassMechanicsConstants.AGENT_ID_NONE, feedback.EffectiveTargetAgentId);
+            Assert.AreEqual(storedTarget, feedback.EffectiveTargetPosition);
+            Assert.AreEqual(1, ballSystem.ApplyKickCalls);
+        }
+
+        [TestCase(0, 0f, 35f)]
+        [TestCase(1, 105f, 70f)]
+        public void W8B_ReceiverlessOwnGoalLineTarget_UsesMirrored35MFallback(
+            int teamId,
+            float ownGoalX,
+            float expectedFallbackX)
+        {
+            var ballSystem = new StubBallSystem();
+            var agents = new StubAgentQuery { KeeperTeamId = teamId };
+            var executor = new PassExecutor(ballSystem, agents, new StubCollisionQuery());
+            GoalkeeperDistributionRequest request = Request(
+                GoalkeeperDeliveryVariant.Roll, teamId, PassMechanicsConstants.AGENT_ID_NONE,
+                new Vector3(ownGoalX, 20f, 0f), 0.5f);
+            BallState ball = default;
+
+            Assert.IsTrue(executor.TryStartGoalkeeperDistribution(in request, out GoalkeeperDistributionFeedback startFeedback));
+            RunToContact(executor, ref ball);
+            Assert.IsTrue(executor.TryConsumeGoalkeeperDistributionFeedback(out GoalkeeperDistributionFeedback feedback));
+
+            Assert.AreEqual(PassMechanicsConstants.AGENT_ID_NONE, feedback.EffectiveTargetAgentId);
+            Assert.AreEqual(expectedFallbackX, feedback.EffectiveTargetPosition.x, 1e-5f);
+            Assert.AreEqual(34f, feedback.EffectiveTargetPosition.y, 1e-5f);
+            Assert.AreEqual(1, ballSystem.ApplyKickCalls);
+        }
+    }
+
 }
 
 #region VersionHistory
@@ -1783,4 +2081,8 @@ namespace TacticalDirector.PassMechanics.Tests
 // |         |            |        |     apexChip=4.5 m yields θ=atan(1)=45°, not the §5's 55°). PRODUCTION code  |
 // |         |            |        |     unchanged — verdict TEST/SPEC, not PRODUCTION. Resolves the 11.0-bracket |
 // |         |            |        |     inversion: chip (11.12) now > short ground pass (10.19) as it must.      |
+// | 1.4     | 2026-09-26 | —      | W8 B dormant API support: StubAgentQuery implements the new receiver-eligibility, own-goal-line and fallback-position queries; no existing pass-test behavior changes. |
+// | 1.5     | 2026-09-27 | —      | W8 B direct executor coverage: Roll/Kick worked examples; Rejected/Cancelled/Completed terminal semantics; exactly-once kick; CONTACT receiver invalidation; mirrored 35 m own-goal fallback; IsIdle held false until terminal feedback consumption. |
+// | 1.6     | 2026-09-28 | —      | W8 B review: dedicated requests reject wrong-team and non-goalkeeper identities, locked for both home and away; test stubs implement IsGoalkeeperOfTeam. |
+// | 1.7     | 2026-09-28 | —      | PX-001 expects the PassExecutor v1.18 rejection diagnostic ("executor is unavailable (state=Windup, goalkeeperFeedbackPending=False)") instead of the retired "in progress" wording; CI 36461159668 failed only this test. Assertions otherwise unchanged. |
 #endregion

@@ -1,5 +1,8 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-09-28 (W8 B review — authoritative goalkeeper/team identity query)
+// Modified: 2026-09-27 (W8 B snapshot-proof correction: PassExecutor state codec private→internal for direct canonical write/read tests; no runtime behavior change)
+// Modified: 2026-09-27 (W8 B dormant #5 executor snapshot/query seams merged after ERR-011-018; gameplay path remains unwired)
 // Modified: 2026-09-27 (ERR-011-018 / #11 §3.3.0 / KD-13 baseline-slot wiring: UpdateBaselineSlot receives the keeper's #12 slot in world space, not the keeper's own position, so Recovering → Set honours RecoveryCooldownTicks. Behaviour change; no schema/RNG change)
 // Modified: 2026-09-26 (W8 / ERR-011-017: #11 TacticalTick receives the 10 Hz tactical tick, not the raw 60 Hz frame; SetPossessingAgent and ApplyRestart end the outgoing keeper's live #11 hand episode (#11 §3.8.3 teardown); + TestOnly_RestoreGoalkeeperState. Behaviour change; no schema/RNG change)
 // Modified: 2026-09-26 (W8 pre-B tracking closeout — records the already-merged assignment-only SetPossessingAgent seam and six routed mid-match writers; no runtime delta in this follow-up)
@@ -2655,6 +2658,13 @@ namespace TacticalDirector.MatchEngine
         {
             return _shotExecutors[agentId].Execute(in request);
         }
+
+        /// <summary>Test-only: captures one pass executor through its real snapshot seam.</summary>
+        internal PassExecutorState TestOnly_PassExecutorState(int agentId) => _passExecutors[agentId].CaptureState();
+
+        /// <summary>Test-only: restores one pass executor through its real snapshot seam.</summary>
+        internal void TestOnly_SetPassExecutorState(int agentId, in PassExecutorState state) =>
+            _passExecutors[agentId].RestoreState(in state);
 
         /// <summary>Test-only: whether the agent's pass executor is idle (no pass in flight).</summary>
         internal bool TestOnly_PassExecutorIdle(int agentId) => _passExecutors[agentId].IsIdle;
@@ -7223,7 +7233,7 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Reads a <see cref="PassExecutorState"/> in the <see cref="WritePassExecutorState"/>
         /// field order (the internal PhysicalProfile is recomputed by RestoreState, not serialized).</summary>
-        private static PassExecutorState ReadPassExecutorState(byte[] buf, ref int o)
+        internal static PassExecutorState ReadPassExecutorState(byte[] buf, ref int o)
         {
             int state = CanonicalSerializer.ReadI32(buf, ref o);
 
@@ -7269,10 +7279,42 @@ namespace TacticalDirector.MatchEngine
                 ContactMatchTime = CanonicalSerializer.ReadF32(buf, ref o),
             };
 
+            int executionMode = CanonicalSerializer.ReadI32(buf, ref o);
+            GoalkeeperDistributionRequest goalkeeperRequest = new GoalkeeperDistributionRequest
+            {
+                AgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                TeamId = CanonicalSerializer.ReadI32(buf, ref o),
+                Delivery = (GoalkeeperDeliveryVariant)CanonicalSerializer.ReadU8(buf, ref o),
+                TargetAgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                TargetPosition = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                EmittedPower01 = CanonicalSerializer.ReadF32(buf, ref o),
+                SpinIntent = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                ReleaseHeightM = CanonicalSerializer.ReadF32(buf, ref o),
+                WindupFrames = CanonicalSerializer.ReadI32(buf, ref o),
+                FrameNumber = CanonicalSerializer.ReadI32(buf, ref o)
+            };
+            int goalkeeperEffectiveTargetAgentId = CanonicalSerializer.ReadI32(buf, ref o);
+            Vector3 goalkeeperEffectiveTargetPosition = new Vector3(
+                CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            bool goalkeeperFeedbackPending = CanonicalSerializer.ReadBool(buf, ref o);
+            GoalkeeperDistributionFeedback goalkeeperFeedback = new GoalkeeperDistributionFeedback
+            {
+                Kind = (GoalkeeperDistributionFeedbackKind)CanonicalSerializer.ReadU8(buf, ref o),
+                EffectiveTargetAgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                EffectiveTargetPosition = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                ReleasePoint = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                FinalVelocity = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                ErrorAngleDeg = CanonicalSerializer.ReadF32(buf, ref o),
+                ContactFrame = CanonicalSerializer.ReadI32(buf, ref o),
+                ContactMatchTime = CanonicalSerializer.ReadF32(buf, ref o)
+            };
+
             return new PassExecutorState(
                 state, in req, effectiveSubType, kickSpeed, launchAngleDeg, spinVector, baseKickDir, aimPoint,
                 leadDistance, cachedPassing, cachedFatigue, cachedBodyAng, cachedIsWeak, cachedWeakRating,
-                windupRemaining, followRemaining, in lastResult);
+                windupRemaining, followRemaining, in lastResult, executionMode, in goalkeeperRequest,
+                goalkeeperEffectiveTargetAgentId, goalkeeperEffectiveTargetPosition,
+                goalkeeperFeedbackPending, in goalkeeperFeedback);
         }
 
         /// <summary>Reads a <see cref="ShotExecutorState"/> in the <see cref="WriteShotExecutorState"/> field order.</summary>
@@ -7805,7 +7847,7 @@ namespace TacticalDirector.MatchEngine
         /// fields, and the committed <see cref="PassResult"/>. Mirrors the C0 round-trip field order in
         /// PassExecutorStateTests (the lock that this body must stay in sync with). The internal
         /// PhysicalProfile is excluded — it is recomputed on restore (§2.6).</summary>
-        private static void WritePassExecutorState(byte[] buf, ref int o, in PassExecutorState s)
+        internal static void WritePassExecutorState(byte[] buf, ref int o, in PassExecutorState s)
         {
             CanonicalSerializer.WriteI32(buf, ref o, s.State);
 
@@ -7858,6 +7900,42 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteI32(buf, ref o, (int)s.LastResult.PassType);
             CanonicalSerializer.WriteI32(buf, ref o, s.LastResult.ContactFrame);
             CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.ContactMatchTime);
+
+            // v24 W8 B — append-only dedicated goalkeeper-distribution executor state.
+            CanonicalSerializer.WriteI32(buf, ref o, s.ExecutionMode);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperRequest.AgentId);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperRequest.TeamId);
+            CanonicalSerializer.WriteU8(buf, ref o, (byte)s.GoalkeeperRequest.Delivery);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperRequest.TargetAgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.TargetPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.TargetPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.TargetPosition.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.EmittedPower01);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.SpinIntent.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.SpinIntent.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.SpinIntent.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.ReleaseHeightM);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperRequest.WindupFrames);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperRequest.FrameNumber);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperEffectiveTargetAgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperEffectiveTargetPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperEffectiveTargetPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperEffectiveTargetPosition.z);
+            CanonicalSerializer.WriteBool(buf, ref o, s.GoalkeeperFeedbackPending);
+            CanonicalSerializer.WriteU8(buf, ref o, (byte)s.GoalkeeperFeedback.Kind);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperFeedback.EffectiveTargetAgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.EffectiveTargetPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.EffectiveTargetPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.EffectiveTargetPosition.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.ReleasePoint.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.ReleasePoint.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.ReleasePoint.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.FinalVelocity.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.FinalVelocity.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.FinalVelocity.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.ErrorAngleDeg);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperFeedback.ContactFrame);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.ContactMatchTime);
         }
 
         /// <summary>Serializes a <see cref="ShotExecutorState"/> (C0 capture) in canonical order, mirroring
@@ -8823,6 +8901,37 @@ namespace TacticalDirector.MatchEngine
             public PassAgentAttributes GetAttributes(int agentId) => _engine.BuildPassAttributes(agentId);
 
             public PassAgentState GetState(int agentId) => _engine.BuildPassState(agentId);
+
+            public bool IsGoalkeeperOfTeam(int agentId, int teamId)
+            {
+                return (uint)agentId < (uint)MatchEngineConstants.SQUAD_SIZE
+                    && _engine._teamIds[agentId] == teamId
+                    && _engine._isGoalkeeper[agentId]
+                    && !_engine._isSentOff[agentId];
+            }
+
+            public bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId)
+            {
+                return (uint)agentId < (uint)MatchEngineConstants.SQUAD_SIZE
+                    && _engine._teamIds[agentId] == teamId
+                    && !_engine._isSentOff[agentId]
+                    && !_engine._isGoalkeeper[agentId];
+            }
+
+            public bool IsGoalkeeperDistributionOwnGoalLine(int teamId, Vector3 targetPosition)
+            {
+                Vector3 canonical = MirrorPitchIfAway(teamId, targetPosition);
+                return Mathf.Approximately(canonical.x, 0f);
+            }
+
+            public Vector3 GetGoalkeeperDistributionFallbackPosition(int teamId)
+            {
+                Vector3 canonical = new Vector3(
+                    TacticalInstructionsConstants.GK_DIST_FALLBACK_ADVANCE_M,
+                    MatchEngineConstants.PITCH_WIDTH_M * 0.5f,
+                    0f);
+                return MirrorPitchIfAway(teamId, canonical);
+            }
 
             // Live since wiring backlog W2 (#14 §3.6.5). Until then this returned a hardcoded false,
             // which made #5 §3.8.5's tackle-interrupt branch and CancelReason.TackleInterrupt
@@ -10526,4 +10635,7 @@ namespace TacticalDirector.MatchEngine
 // | 1.90    | 2026-09-26 | —      | W8 pre-B helper closeout (already merged in #460): six real mid-match _possessingAgentId mutation sites route through assignment-only SetPossessingAgent; constructor/opening kickoff, restore and TestOnly_ForceBallLoose remain direct by explicit disposition. This follow-up records the omitted history only; no gameplay/schema/RNG change. |
 // | 1.91    | 2026-09-26 | —      | W8 / ERR-011-017 clock correction: DriveGkHeadingTactical passes _clock.CurrentTacticalTick to #11 TacticalTick (was the raw 60 Hz frame, which matured the 60-tick hold timeout and the recovery cooldown on the first tactical pass after any claim). Companion #11 §3.8.3 teardown: SetPossessingAgent ends the outgoing keeper's live hand episode on a real change of holder, and ApplyRestart ends any live hand episode even when the same keeper is awarded the restart; without it a keeper who had already passed stayed HandsOnBall for up to 6 s, unable to rush, claim or dive. Intentional trajectory/digest change versus the frozen Stage A corpus. No schema, GT, RNG stream/draw-site/order change. + TestOnly_RestoreGoalkeeperState. |
 // | 1.92    | 2026-09-27 | —      | ERR-011-018 / #11 §3.3.0 / KD-13 baseline-slot wiring (open-issues, recorded Sept 26): DriveGkHeadingTactical feeds UpdateBaselineSlot the keeper's Positioning AI #12 slot, mapped to world space exactly as the MOVE_TO_POSITION anchor (GkBaselineSlotWorld), instead of the keeper's own position. The at-baseline test was identically true, so every Recovering episode exited on the next tactical pass and RecoveryCooldownTicks was unreachable. Intentional trajectory/digest change. GkBaselineSlot was already serialized; no schema, GT, RNG stream/draw-site/order change. |
+// | 1.93    | 2026-09-27 | —      | W8 B dormant #5 integration substrate merged after ERR-011-018: v24 PassExecutor serialization/restore, CONTACT receiver/fallback queries, and test-only executor state seams. #21/#11 production wiring remains absent. No new RNG stream/domain/draw-site/order; schema v24 digest change is intentional. |
+// | 1.94    | 2026-09-27 | —      | W8 B snapshot-proof correction after CI 36328692042: PassExecutor state's canonical writer/reader are internal static instead of private so tests can exercise the real v24 codec directly. Test visibility only; serialized order, gameplay, schema v24 and RNG are unchanged. |
+// | 1.95    | 2026-09-28 | —      | W8 B review: PassWorldAdapter exposes authoritative live goalkeeper/team identity so #5 rejects wrong-team and non-goalkeeper dedicated distribution requests before WINDUP. Dormant until #21/#11 wiring; no schema/RNG change. |
 #endregion

@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
+// Modified: 2026-09-26 (W8 B — SNAPSHOT_SCHEMA_VERSION 23 -> 24 for #5 goalkeeper-distribution execution state)
 // Modified: 2026-09-22 (wiring backlog W3 — SNAPSHOT_SCHEMA_VERSION 22 -> 23 for the per-GK ClaimIntent payload + active latch)
 // Modified: 2026-09-21 (foul/card preregistration review — FoulCooldownTicks documentation corrected for post-W2 asymmetry: collision candidates obey the gate; decided tackle fouls bypass it but re-arm it; value unchanged)
 // Modified: 2026-09-21 (foul/card preregistration review — RedCardProbability documentation corrected: the ~0.25/90 target is total dismissals, not a direct straight-red-band 0.25/22 ratio; value unchanged)
@@ -307,7 +308,13 @@ namespace TacticalDirector.MatchEngine
         /// is committed at 10 Hz but its reach envelope remains authoritative across intervening 60 Hz
         /// frames; serializing the latch + locked target is therefore required for mid-episode restore
         /// determinism.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 23;
+        /// <para>v24 (W8 B — goalkeeper distribution) appends the dedicated #5 executor mode, request,
+        /// effective target, pending-feedback latch and terminal feedback to every serialized
+        /// <c>PassExecutorState</c>. These values persist across windup and between terminal execution and
+        /// host feedback consumption, so omitting them would either restart an ordinary pass mode or lose
+        /// the terminal outcome after restore. This bump adds no RNG stream, domain tag, draw site or
+        /// draw-order change; matches exercising the new block intentionally move the world-state digest.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 24;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -1104,4 +1111,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | to the goalkeeper block for mid-episode restore determinism. No    |
 // |         |            |        | [GT] value changes. Row added at the #439 close-out (omitted when  |
 // |         |            |        | the bump landed).                                                  |
+// | 1.41    | 2026-09-26 | —      | W8 B dormant #5 state: SNAPSHOT_SCHEMA_VERSION 23 -> 24. v24 appends per-agent goalkeeper-distribution mode/request/effective-target/pending-feedback/terminal-feedback state. No RNG stream/domain/draw-site/order or gameplay [GT] change. |
 #endregion
