@@ -19,18 +19,11 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void sim_match_engine_shot_outcomes()
         {
-            // Same declaration as the discipline / goalkeeper scenarios: live play emits #5's
-            // FM-08 "lost possession before CONTACT" at Error level whenever a restart is awarded
-            // against a passer mid-windup (§5.Z.7 item 3 records the log LEVEL as the stale part).
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             var runner = new ScenarioRunner(MatchEngineShotOutcomeScenarios.BuildIndex());
 
             ScenarioResult result = runner.Run(
                 MatchEngineShotOutcomeScenarios.ShotOutcomesPath,
                 MatchEngineShotOutcomeScenarios.ShotOutcomeSeed);
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             Assert.AreEqual(ScenarioStatus.Passed, result.Status, result.Diagnostics);
         }

@@ -20,19 +20,11 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void sim_match_engine_play_develops()
         {
-            // A match that actually plays reaches Pass Mechanics #5's FM-08 possession-recheck cancel (a
-            // pass whose passer has a restart awarded against them mid-windup). That is the documented
-            // cancel path working as designed, but #5 emits it at Error level, so the run must declare it.
-            // See the same note on SeasonLoopScenarioTests.sim_season_multi_fixture.
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             var runner = new ScenarioRunner(MatchEnginePlayDevelopmentScenarios.BuildIndex());
 
             ScenarioResult result = runner.Run(
                 MatchEnginePlayDevelopmentScenarios.PlayDevelopsPath,
                 MatchEnginePlayDevelopmentScenarios.PlayDevelopsSeed);
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             Assert.AreEqual(ScenarioStatus.Passed, result.Status, result.Diagnostics);
         }

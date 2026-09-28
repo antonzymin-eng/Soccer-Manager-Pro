@@ -19,19 +19,11 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void sim_match_engine_discipline_plausible()
         {
-            // Live play emits #5's FM-08 "lost possession before CONTACT" at Error level whenever a
-            // restart is awarded against a passer mid-windup — an ordinary match event since Phase H, and
-            // fouls are one of the things that award restarts. §5.Z.7 item 3 records that the log LEVEL is
-            // the stale part, not the cancel path; the composed runs declare it meanwhile.
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             var runner = new ScenarioRunner(MatchEngineDisciplineScenarios.BuildIndex());
 
             ScenarioResult result = runner.Run(
                 MatchEngineDisciplineScenarios.DisciplinePlausiblePath,
                 MatchEngineDisciplineScenarios.DisciplineSeed);
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             Assert.AreEqual(ScenarioStatus.Passed, result.Status, result.Diagnostics);
         }

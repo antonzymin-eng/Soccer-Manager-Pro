@@ -20,18 +20,11 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void sim_match_engine_keeper_contact()
         {
-            // Live play emits #5's FM-08 "lost possession before CONTACT" at Error level whenever a
-            // restart is awarded against a passer mid-windup (§5.Z.7 item 3 — the log LEVEL is the
-            // stale part, not the cancel path). Same declaration as the sibling scenarios.
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             var runner = new ScenarioRunner(MatchEngineKeeperContactScenarios.BuildIndex());
 
             ScenarioResult result = runner.Run(
                 MatchEngineKeeperContactScenarios.KeeperContactPath,
                 MatchEngineKeeperContactScenarios.KeeperContactSeed);
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             Assert.AreEqual(ScenarioStatus.Passed, result.Status, result.Diagnostics);
         }

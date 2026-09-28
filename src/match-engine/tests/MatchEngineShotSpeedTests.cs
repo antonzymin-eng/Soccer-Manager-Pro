@@ -19,18 +19,11 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void sim_match_engine_shot_speed()
         {
-            // Live play emits #5's FM-08 Error-level log on restart-interrupted windups
-            // (§5.Z.7 item 3 — the log LEVEL is the stale part); same declaration as the
-            // sibling acceptance scenarios.
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             var runner = new ScenarioRunner(MatchEngineShotSpeedScenarios.BuildIndex());
 
             ScenarioResult result = runner.Run(
                 MatchEngineShotSpeedScenarios.ShotSpeedPath,
                 MatchEngineShotSpeedScenarios.ShotSpeedSeed);
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             Assert.AreEqual(ScenarioStatus.Passed, result.Status, result.Diagnostics);
         }
