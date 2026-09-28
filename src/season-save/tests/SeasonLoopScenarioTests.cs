@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopScenarioTests.cs
 // Created:  2026-07-26
+// Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.1)
 // Modified: 2026-07-26
 // Author:   —
 // Spec:     Season & Competition Loop #30 §5.7; Testing Strategy & Framework #19 §3.1.4 (sim_<scenario>
@@ -35,4 +36,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-07-26 | —      | Initial implementation (#30 §5.7): runs the season-multi-fixture     |
 // |         |            |        | capstone through the ScenarioRunner.                                |
+// | 1.1     | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
 #endregion

@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs
 // Created:  2026-07-20
+// Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.15)
 // Modified: 2026-09-27 (W8 B/v24: harden mid-windup restore + add through-CONTACT deterministic continuation)
 // Modified: 2026-09-26 (W8 B/v24: goalkeeper-distribution mid-windup real writer/reader round-trip)
 // Modified: 2026-09-22 (W3/v23: active ClaimIntent field-for-field restore + continuation chain)
@@ -723,4 +724,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.12    | 2026-09-22 | —      | W3/v23 active ClaimIntent round-trip: field-for-field restore plus post-save digest continuation, including locked reach side. |
 // | 1.13    | 2026-09-26 | —      | W8 B/v24: real MatchEngine writer/reader round-trip saves a possessed keeper mid-distribution windup, restores non-default request/mode state, and continues an identical digest chain. |
 // | 1.14    | 2026-09-27 | —      | W8 B review hardening: mid-windup lock now asserts WINDUP + no pending feedback; second real save/restore case crosses CONTACT and proves completed terminal feedback plus post-kick digest continuation are identical. |
+// | 1.15    | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
 #endregion

@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGoalkeeperSaveTests.cs
 // Created:  2026-07-27
+// Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.1)
 // Modified: 2026-07-27
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5.Z.17;
@@ -35,4 +36,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes                                                     |
 // | 1.0     | 2026-07-27 | —      | Initial: runs the §5.Z.17 goalkeeper save acceptance      |
 // |         |            |        | scenario.                                                 |
+// | 1.1     | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
 #endregion

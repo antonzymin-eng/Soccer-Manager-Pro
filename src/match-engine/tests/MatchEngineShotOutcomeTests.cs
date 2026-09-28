@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineShotOutcomeTests.cs
 // Created:  2026-07-27
+// Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.1)
 // Modified: 2026-07-27
 // Author:   —
 // Spec:     Shot-outcome distribution design §5; Match Engine design note §5.Z.18;
@@ -33,4 +34,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                     |
 // | 1.0     | 2026-07-27 | —      | Initial: runs the shot-outcome acceptance scenario.       |
+// | 1.1     | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
 #endregion
