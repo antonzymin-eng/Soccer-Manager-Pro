@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 28, 2026 — **PR #466 review correction: goalkeeper/team identity guard before live wiring.**
+> **Last Updated:** September 28, 2026 — **PR #466 PX-001 test fix and owner approval of the identity amendment.**
+>
+> CI `36461159668` on `cc51730` failed exactly one test: `PX001_ExecuteWhileInProgress_RejectsWithoutStompingLastResult` still expected the retired `"in progress"` log text after `PassExecutor.cs` v1.18 reworded the rejection diagnostic (PassMechanics 94 pass / 12 skip / 1 fail; every other suite, including MatchEngine 558/0, passed). `PassMechanicsTests.cs` v1.7 now expects `executor is unavailable (state=Windup, goalkeeperFeedbackPending=False)`, which also pins the state and the pending-feedback flag. The owner explicitly approved the #5 §3.8.13 v1.6 / §4.3 v1.2 goalkeeper/team identity amendment on September 28, 2026, so its existing "owner-approved" rows are now backed by a recorded decision. `open-issues.md` adds a third live-wiring obligation: an engine-level test of `PassWorldAdapter.IsGoalkeeperOfTeam`. Test and tracking only; no production, schema, gameplay or RNG change. Local gate unavailable (network policy blocks the .NET SDK download); fresh CI required.
+>
+> **Last Updated (prior):** September 28, 2026 — **PR #466 review correction: goalkeeper/team identity guard before live wiring.**
 >
 > Pass Mechanics #5 §3.8.13 advances to v1.6 and §4.3 advances to v1.2; the dormant dedicated executor now rejects a request unless `AgentId` is a live goalkeeper whose authoritative team equals `TeamId`. This closes both wrong-team own-goal/fallback orientation and outfield-player entry into Throw/Roll/Kick. `IPassAgentQuery` gains the read-only identity query; Match Engine supplies it from authoritative team/goalkeeper/sent-off state; mirrored home/away tests cover wrong-team and non-goalkeeper rejection. No snapshot field/schema or RNG change; ordinary `PassRequest` behavior is unchanged.
 >

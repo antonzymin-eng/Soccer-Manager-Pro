@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/Tests/PassMechanicsTests.cs
 // Created:  2026-05-31
+// Modified: 2026-09-28 (PX-001 expectation follows the PassExecutor v1.18 unavailable-executor diagnostic)
 // Modified: 2026-09-28 (W8 B review — goalkeeper/team request-identity rejection coverage)
 // Modified: 2026-09-27 (W8 B — direct dedicated goalkeeper-distribution executor behaviour coverage)
 // Modified: 2026-09-26 (W8 B — IPassAgentQuery goalkeeper-distribution test stub surface)
@@ -1708,7 +1709,8 @@ namespace TacticalDirector.PassMechanics.Tests
             PassResult first = exec.Execute(MakeValidRequest());
             Assert.AreEqual(PassOutcome.Initiated, first.Outcome, "PX-001 precondition: first Execute must initiate.");
 
-            LogAssert.Expect(LogType.Error, new Regex("in progress"));
+            LogAssert.Expect(LogType.Error,
+                new Regex(@"executor is unavailable \(state=Windup, goalkeeperFeedbackPending=False\)"));
             PassResult second = exec.Execute(MakeValidRequest());
 
             Assert.AreEqual(PassOutcome.Invalid, second.Outcome,
@@ -2082,4 +2084,5 @@ namespace TacticalDirector.PassMechanics.Tests
 // | 1.4     | 2026-09-26 | —      | W8 B dormant API support: StubAgentQuery implements the new receiver-eligibility, own-goal-line and fallback-position queries; no existing pass-test behavior changes. |
 // | 1.5     | 2026-09-27 | —      | W8 B direct executor coverage: Roll/Kick worked examples; Rejected/Cancelled/Completed terminal semantics; exactly-once kick; CONTACT receiver invalidation; mirrored 35 m own-goal fallback; IsIdle held false until terminal feedback consumption. |
 // | 1.6     | 2026-09-28 | —      | W8 B review: dedicated requests reject wrong-team and non-goalkeeper identities, locked for both home and away; test stubs implement IsGoalkeeperOfTeam. |
+// | 1.7     | 2026-09-28 | —      | PX-001 expects the PassExecutor v1.18 rejection diagnostic ("executor is unavailable (state=Windup, goalkeeperFeedbackPending=False)") instead of the retired "in progress" wording; CI 36461159668 failed only this test. Assertions otherwise unchanged. |
 #endregion
