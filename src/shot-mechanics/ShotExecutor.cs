@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotExecutor.cs
 // Created:  2026-05-27
-// Modified: 2026-07-27  [v1.10]
+// Modified: 2026-09-28  [v1.11]
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9, §4.1, §4.2, §4.3, §4.4, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the five-state shot execution state machine:
@@ -495,9 +495,14 @@ namespace TacticalDirector.ShotMechanics
             // §4.7.1 permanently restricts ShotCancelledEvent to WINDUP tackle interrupts only.
             // FM-03 is CONTACT-phase possession loss; ShotCancelReason must NOT get PossessionLost.
             // Stage 1: if notification is needed, add a separate PossessionLostEvent channel.
+            // W2 makes CONTACT-time possession loss an ordinary football event: a challenge can land
+            // after the final WINDUP poll but before this tick's CONTACT executes. The shot still
+            // cancels because the agent no longer owns the ball; only the diagnostic severity changes.
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
-                Debug.LogError($"[ShotExecutor] FM-03: Agent {_request.AgentId} lost possession before CONTACT.");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning($"[ShotExecutor] FM-03: Agent {_request.AgentId} lost possession before CONTACT — shot cancelled.");
+#endif
                 _lastResult = new ShotResult { Outcome = ShotOutcome.Cancelled, ContactFrame = -1 };
                 _state = ShotExecutionState.Idle;
                 return;
@@ -618,4 +623,7 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        | and CONTACT assembles finalVelocity = finalDirection × kickSpeed per §3.5.7/§3.9    |
 // |         |            |        | step 9 — the former cos/sin re-derivation discarded finalDirection.z, leaving the   |
 // |         |            |        | vertical half of the placement/error model inert. FM-04a/FM-04 guards unchanged.    |
+// | 1.11    | 2026-09-28 | —      | FM-03 closeout: CONTACT-time possession loss is an ordinary active-W2 cancellation. |
+// |         |            |        | Diagnostic severity LogError → development-only LogWarning; Cancelled outcome,      |
+// |         |            |        | event semantics are unchanged.                                                      |
 #endregion

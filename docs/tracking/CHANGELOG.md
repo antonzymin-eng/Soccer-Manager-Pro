@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 28, 2026 — **PR #466 PX-001 test fix and owner approval of the identity amendment.**
+> **Last Updated:** September 28, 2026 — **Shot Mechanics #6 FM-03 CONTACT-possession-loss closeout.**
+>
+> **Owner direction recorded:** the September 28 FM-03 closeout instruction explicitly requires reclassifying §4.2.4 CONTACT-time possession loss. The spec header advances to v1.5 and the boundary action now names the real behavior: Warning, `ShotOutcome.Cancelled`, return to IDLE, zero `ApplyKick()`, and no `ShotCancelledEvent`. `ShotExecutor.cs` v1.11 changes only diagnostic severity/gating and restores the separate-channel guard comment. `ShotExecutorStateTests.cs` v1.2 ports the archived PR #416 direct lock. `SeasonLoopDisciplineTests.cs` v1.18, `RoundResolutionCalibrationHarnessTests.cs` v1.3, and `MatchEngineTackleTests.cs` v1.4 remove the FM-03-specific broad `LogAssert.ignoreFailingMessages` containment. Normal CI exercises the discipline/tackle paths; the two calibration drivers are env-gated, so their suppression removal is explicitly **unexercised** until the next requested pilot/corpus run. The live FM-03 issue moves to the resolved archive (active 33 → 32; archive 59 → 60). No gameplay, snapshot/save schema, RNG stream/domain/draw-order, or gameplay `[GT]` change. Fresh CI and the governing Unity compile remain required.
+>
+> **Last Updated (prior):** September 28, 2026 — **PR #466 PX-001 test fix and owner approval of the identity amendment.**
 >
 > CI `36461159668` on `cc51730` failed exactly one test: `PX001_ExecuteWhileInProgress_RejectsWithoutStompingLastResult` still expected the retired `"in progress"` log text after `PassExecutor.cs` v1.18 reworded the rejection diagnostic (PassMechanics 94 pass / 12 skip / 1 fail; every other suite, including MatchEngine 558/0, passed). `PassMechanicsTests.cs` v1.7 now expects `executor is unavailable (state=Windup, goalkeeperFeedbackPending=False)`, which also pins the state and the pending-feedback flag. The owner explicitly approved the #5 §3.8.13 v1.6 / §4.3 v1.2 goalkeeper/team identity amendment on September 28, 2026, so its existing "owner-approved" rows are now backed by a recorded decision. `open-issues.md` adds a third live-wiring obligation: an engine-level test of `PassWorldAdapter.IsGoalkeeperOfTeam`. Test and tracking only; no production, schema, gameplay or RNG change. Local gate unavailable (network policy blocks the .NET SDK download); fresh CI required.
 >
