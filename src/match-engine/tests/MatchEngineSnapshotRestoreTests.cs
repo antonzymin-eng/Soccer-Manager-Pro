@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs
 // Created:  2026-07-20
+// Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.15)
 // Modified: 2026-09-27 (W8 B/v24: harden mid-windup restore + add through-CONTACT deterministic continuation)
 // Modified: 2026-09-26 (W8 B/v24: goalkeeper-distribution mid-windup real writer/reader round-trip)
 // Modified: 2026-09-22 (W3/v23: active ClaimIntent field-for-field restore + continuation chain)
@@ -134,21 +135,12 @@ namespace TacticalDirector.MatchEngine
             // the save point arms the §4 save trigger, so the committed SaveIntent + set latch + advanced
             // goalkeeper.mechanics RNG cursor (dive-timing draws) + the evolving GkContactState arrays are
             // all baked into the saved payload. The restore must reproduce every one of them.
-            //
-            // §5.Z Phase H made this scenario reach a code path it never used to: the ball is now actually
-            // POSSESSED during the run, so forcing it loose mid-windup legitimately cancels an in-flight
-            // pass at CONTACT and Pass Mechanics #5 logs its FM-08 possession-recheck message. That is the
-            // documented cancel path working, not a defect — but #5 emits it at Error level, so the run
-            // must declare it. (Whether a legitimate mid-windup possession loss deserves Error rather than
-            // Warning is a #5 question, recorded in the design note, not changed here.)
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             AssertRoundTripDeterministic(
                 setup: e => e.EnableGkHeading(),
                 n: 180, k: 120,
                 midRun: e => e.TestOnly_ForceBallLoose(
                     new UnityEngine.Vector3(5f, 34f, 0.11f), new UnityEngine.Vector3(-10f, 0f, 0f)),
                 midRunTick: 60);
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
         }
 
         [Test]
@@ -732,4 +724,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.12    | 2026-09-22 | —      | W3/v23 active ClaimIntent round-trip: field-for-field restore plus post-save digest continuation, including locked reach side. |
 // | 1.13    | 2026-09-26 | —      | W8 B/v24: real MatchEngine writer/reader round-trip saves a possessed keeper mid-distribution windup, restores non-default request/mode state, and continues an identical digest chain. |
 // | 1.14    | 2026-09-27 | —      | W8 B review hardening: mid-windup lock now asserts WINDUP + no pending feedback; second real save/restore case crosses CONTACT and proves completed terminal feedback plus post-kick digest continuation are identical. |
+// | 1.15    | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
 #endregion
