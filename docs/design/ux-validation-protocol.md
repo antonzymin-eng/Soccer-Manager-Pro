@@ -1,10 +1,10 @@
 # System XI UX Validation Protocol
 
 **Created:** September 11, 2026  
-**Last Updated:** September 21, 2026  
-**Version:** 0.11\
-**Status:** F4 + S0 GATE A COMPLETE — Gate B next; anonymous participant requirements unchanged\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.8 §F4 and Gates E–G\
+**Last Updated:** September 28, 2026  
+**Version:** 0.12\
+**Status:** F4 + S0 GATES A–B COMPLETE (B on owner merge) — Gate C next; anonymous participant requirements unchanged\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.9 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4  
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -474,7 +474,7 @@ semantics and evidence-backed interaction states.
 | Privacy-safe S0 participant slot 2 defined | **READY** | §4.1 defines anonymous S0-P2, profile, channel and pre-Gate-F attestation field |
 
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
-the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.**
+the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed on owner merge — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G: both S0 availability attestations are still due before
 Gate F, and Gate G remains unavailable until two distinct independent participants complete the entire round.
 
@@ -495,3 +495,4 @@ Gate F, and Gate G remains unavailable until two distinct independent participan
 | 0.9 | September 21, 2026 | Status/pointer reconciliation after S0 Gate A completed in `ux-s0-pm1-journey.md` v0.2. Execution authority advances to `ux-detailed-plan.md` v1.6 and the next UX action is Gate B. Validation mechanics, anonymous participant evidence, pre-Gate-F availability, and the two-independent-participant Gate-G requirement are unchanged. |
 | 0.10 | September 21, 2026 | Pointer-only review sync after the Gate-A packet and execution authority advance to `ux-s0-pm1-journey.md` v0.3 / `ux-detailed-plan.md` v1.7. No validation task, participant rule, Gate-E/G evidence requirement, severity rule or pass/fail policy changes. |
 | 0.11 | September 21, 2026 | Review closeout pointer sync to `ux-detailed-plan.md` v1.8 / `ux-s0-pm1-journey.md` v0.4. Validation tasks, participant rules, Gate-E/G evidence requirements, severity and pass/fail policy remain unchanged. |
+| 0.12 | September 28, 2026 | Pointer/status sync for S0 Gate B (`ux-s0-pm1-journey.md` v0.5 §7, `ux-detailed-plan.md` v1.9). Gate B maps S0-T1–T7 to flow steps without changing any task, participant rule, Gate-E/G evidence requirement, severity or disposition; S0-T2's pre-match choice is now concretely Mentality because Formation has no simulation consumer. |
