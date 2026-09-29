@@ -3,7 +3,7 @@
 **Created:** September 12, 2026  
 **Last Updated:** September 28, 2026  
 **Version:** 0.5  
-**Status:** S0 GATES A–B COMPLETE — GATE C NEXT (Gate B closes on owner merge; see §7.10)  
+**Status:** S0 GATES A–B COMPLETE — GATE C NEXT (Gate B pending owner review; see §7.10)  
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.9 §5–§6  
 **Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.12  
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
@@ -317,7 +317,7 @@ split, and no row becomes `UNKNOWN`.
 ## 7.2 Flow decisions
 
 Gate B may choose ordering and wording within the audited surfaces. These are the choices that shape the flow.
-B-DEC-1, B-DEC-2 and B-DEC-5 are product-visible and are put to the owner at merge (§7.10).
+B-DEC-1, B-DEC-2 and B-DEC-5 are product-visible and need the owner's explicit confirmation in review (§7.10).
 
 | ID | Decision | Rationale | Seam |
 |---|---|---|---|
@@ -325,7 +325,7 @@ B-DEC-1, B-DEC-2 and B-DEC-5 are product-visible and are put to the owner at mer
 | B-DEC-2 | The opponent is **AI-managed** (`AwayManagerMode = AI`), using the default manager profile. | A static opponent that never reacts misrepresents a management match. If the owner declines, the fallback is `Human`/no input, and the flow is otherwise unchanged. | A-39 |
 | B-DEC-3 | The pre-match choice is **Mentality**, seven ordered values from Very Defensive to Very Attacking, defaulting to Balanced. All other team-tactic axes stay at their `Balanced` defaults and are not shown in S0. | One consequential, ordered, explainable choice satisfies S0-T2. The other axes are real but would widen S0 past "one understandable choice"; S1 revisits them. | A-10 (corrected) |
 | B-DEC-4 | The in-match tactical adjustment is the **same Mentality control**, sent as a team-tactic change. Per-player tactic change stays available as a seam (A-24) but is **not** in the S0 required path. | Re-using the pre-match concept makes S0-T4 learnable and testable. The per-player surface needs player identity, which A-40 limits to shirt numbers. | A-23, A-26 |
-| B-DEC-5 | Full time does **not** auto-navigate. Match View enters a full-time state on the frame where `MatchEnded` is true, and a single primary action, "View match report", invokes `ShowPostMatchReport()`. | S0-T6 tests recognition of the frozen full-time state. An automatic `Replace` would remove that moment. The action uses the existing edge, so no edge is invented. | A-05, A-15, A-30, A-31 |
+| B-DEC-5 | **Lifecycle contract:** the full-time state is the authoritative transition. The first frame with `MatchEnded` true puts Match View into MV-FT, and `MatchControlAvailability.FullTime` is the only thing that makes the report reachable. The binding never detects the end itself and never enables the report from any other signal. **Presentation:** in MV-FT the already-available report is exposed through a "View match report" control that invokes `ShowPostMatchReport()`. That control is acknowledgement and navigation only. It does not decide whether the match is over or whether the report exists, and it cannot appear or act outside MV-FT. | S0-T6 tests recognition of the frozen full-time state, and an immediate automatic `Replace` would remove that moment. Whether the report opens on acknowledgement or on a timed advance after MV-FT is a presentation choice that Gate G can test. Neither choice changes the contract above. | A-05, A-15, A-22, A-30, A-31 |
 | B-DEC-6 | Pause is a separate toggle from the speed rungs. Pausing keeps the selected rung, and resuming returns to it. | `PlaybackSpeedLadder` has no 0× rung, and A-21 forbids pause masquerading as a speed. | A-19–A-21 |
 | B-DEC-7 | A setup choice is not kept when the player cancels Tactics Setup. Re-entry starts from Balanced. | No pre-match state holder exists (A-11's missing setup handoff). A remembered draft would invent persistence. | A-03, A-09 |
 | B-DEC-8 | Live statistics start **closed**. Opening them does not pause the match. | The pitch is the primary information during play, and statistics are secondary (S0-T5 asks for open/close). | A-27, A-28 |
@@ -432,7 +432,8 @@ Match View state except MV-FT → PR (A-07: no abandon).
 - **Required information:** a persistent "full time" state and the final score. The pitch stays frozen on the final
   frame. Playback, tactical and substitution controls remain visible but unavailable, with reason "match ended"
   (A-22, A-26, S0-A-008). Any request still pending resolves as "not applied — the match ended" (§7.5).
-- **Actions:** "View match report" → `ShowPostMatchReport()` (A-31) → PR. This is the only available action.
+- **Transition contract:** MV-FT exists only because `FullTime` was reported. Report availability derives from that state alone (B-DEC-5).
+- **Actions:** "View match report" → `ShowPostMatchReport()` (A-31) → PR. This is acknowledgement/navigation over an already-available report, and the only action in MV-FT.
 - **Back/cancel:** none. There is nothing to return to (A-07).
 
 ### B-7 Post-Match Report (PR)
@@ -518,14 +519,14 @@ Ledger fields per `ux-detailed-plan.md` §12. Owner is the UX workstream owner (
 | S0-B-002 | Major | No frame read-back of the active tactic; outcome evidence exists only in the command logs (A-38), which no #38 adapter projects. | `ACCEPT FOR CURRENT GATE`. §7.5 defines the states from A-38. | Gate I must name the adapter that projects `Log`/`FailedCommands` to the Match View; Gate J verifies it. |
 | S0-B-003 | Minor (S0) | Substitutions apply immediately; the owner's stoppage rule is not implemented. | `BLOCKED BY DOMAIN/CLIENT IMPLEMENTATION` for the future state; today's behavior designed. | When the owning engine change lands, §7.5 returns to Gate B (§13). |
 | S0-B-004 | Major (usability risk) | The neutral demo has no player names. Substitution relies on shirt numbers and bench slots (A-40). | `ACCEPT FOR CURRENT GATE`; measured at Gate G. | Before Gate H: either choose an S0 squad source (Gate-A addendum) or accept shirt-number identity on Gate G evidence. |
-| S0-B-005 | Minor | B-DEC-5 chooses a player-invoked full-time → report action. PR #361's closing plan note said the transition should be driven by `FullTime` rather than "an invented button". | `ACCEPT FOR CURRENT GATE`, pending owner confirmation at merge. The action uses the existing `ShowPostMatchReport` edge and is enabled only by the `FullTime` state, so it honors the note's intent (no new edge, no UI-derived end detection). | Owner confirms or reverses at merge. If reversed, B-6 becomes a timed or automatic transition and Gate C retests S0-T6. |
+| S0-B-005 | Minor | PR #361's closing plan note said Match View → Post-Match Report should be driven by `FullTime`, "not an invented button". A player-facing "View match report" control is in tension with that note. Reusing the existing `ShowPostMatchReport` edge does **not** by itself resolve the tension, because the note concerns what drives the transition, not whether the edge is new. | `ACCEPT FOR CURRENT GATE`, pending explicit owner confirmation in review. B-DEC-5 separates the two concerns: `FullTime` remains the authoritative lifecycle trigger and sole source of report availability, and the control is limited to acknowledgement/navigation within MV-FT. | Owner confirms in review. If declined, MV-FT advances to the report on its own (timed or immediate) under the same contract, and Gate C/G retest S0-T6. Gate I must carry the contract into the binding. |
 | S0-B-006 | Minor | No quit/exit control exists in the Gate-A inventory. The desktop window close is the only exit. | `DEFER TO P2/P3` — requires a Gate-A addendum naming the host quit seam. | Before Gate I. |
 | S0-B-007 | Minor | No half-time interval exists in the engine. The second half follows directly. | `ACCEPT FOR CURRENT GATE`. | Re-evaluate at Gate G if participants expect a break. |
 | S0-B-008 | Minor | Whether requests made while paused apply before resume depends on whether the P5b binding services the command queue off-tick (`ServiceOnce`). | `ACCEPT FOR CURRENT GATE`. §7.5 shows Pending either way, so the flow is correct under both. | Gate I states the binding's paused-servicing behavior. |
 
 ## 7.10 Gate B verdict
 
-**PASS on owner merge.** The S0 flow is coherent without visual styling:
+**PASS, pending owner review.** The S0 flow is coherent without visual styling:
 
 - every state has an entry trigger, a goal, required information with a cited owner, actions bound to existing
   seams, explicit alternate/blocked behavior, cancel/back behavior and a completion/return destination;
@@ -533,9 +534,10 @@ Ledger fields per `ux-detailed-plan.md` §12. Owner is the UX workstream owner (
 - no screen, edge, simulation command, statistic, setting or production capability is added beyond the Gate-A
   inventory as amended in §7.1.
 
-Merging this revision is the owner's confirmation of **B-DEC-1** (player manages home), **B-DEC-2** (AI-managed
-opponent) and **B-DEC-5** (player-invoked full-time → report). If any is declined in review, Gate B stays open on
-that item alone.
+Gate B closes when the owner has reviewed this revision and **explicitly confirmed** **B-DEC-1** (player manages
+home), **B-DEC-2** (existing AI manager for the opponent) and **B-DEC-5** (full time is the authoritative transition;
+the report control is acknowledgement/navigation only). Merging alone is not that confirmation. If any item is
+declined, Gate B stays open on that item alone.
 
 Gate B does **not** release P5b (Gate I), pass any later gate, or change any `src/` surface.
 
@@ -564,4 +566,4 @@ navigation, comparison, progressive disclosure, focus sequence and reflow. Carry
 | 0.2 | September 21, 2026 | Reconciled PR #406 onto current `main` `ad7e0d75` after #407. Re-ran the Gate-A current-state claims: P5b remains absent; the four-screen/five-edge client graph, lifecycle, match projection/dispatch, playback/control and #37 analytics ownership remain valid; P4b advances from compiler-only evidence to partial host verification (tracked-scene Play-mode boot/render smoke) without overstating click/perf/Gate-J acceptance. Gate A remains PASS; Gate B is next. |
 | 0.3 | September 21, 2026 | Review correction: A-11 no longer treats the `PlayerTactic` value type as proof of a pre-match action/state seam. `MatchSetup` has no per-player tactic holder/builder and `MatchSession.BootEngine` applies no per-player setup state, so Role/Duty/Instructions are explicitly `FUTURE-BLOCKED` for pre-match editing until a setup persistence/handoff contract exists. The existing live `SetPlayerTactic` dispatcher remains valid for in-match intervention. This converts an overstated seam into a named blocker; the Gate-A PASS and zero-`UNKNOWN` result remain valid, and Gate B is constrained to a verified team-tactic pre-match choice. |
 | 0.4 | September 21, 2026 | Review closeout: repins the maintained execution/validation authority headers to `ux-detailed-plan.md` v1.8 / `ux-validation-protocol.md` v0.11 and makes the Gate-A verdict taxonomy explicit. `UNWIRED` means an existing contract lacks production presentation/binding; `FUTURE-BLOCKED` means the required contract/state/runtime capability itself is absent. This prevents the A-07/A-11 contract gaps from being laundered later as P5b-only binding work. Gate A remains PASS; Gate B remains next. |
-| 0.5 | September 28, 2026 | **S0 Gate B complete (on owner merge).** Adds §7 Gate B: seven journey states over the four typed screens using only the five existing `ClientScreenFlow` moves; per-state entry/goal/information/actions/alternate/back/completion; the requested/applied/refused/not-applied intervention feedback model over `MatchSession.Driver.Log`/`FailedCommands`; blocked-path table with owner-sourced reasons; #37 statistic set (no shots row; xG only when available); S0-T1–T7 + PM-1 substitution coverage; findings S0-B-001–008. Gate-A re-check at `main` `ee37aa60` **corrects A-10**: `TeamTactic.Formation` has no simulation consumer, so S0's pre-match choice is Mentality; adds A-38–A-41 (command-outcome logs, AI opponent mode, shirt-number identity, substitution legality inputs). Owner confirmation requested at merge for B-DEC-1/2/5. Adds §8 Gate C inputs. No `src/` change; P5b remains gated on Gate I. |
+| 0.5 | September 28, 2026 | **S0 Gate B complete (pending owner review).** Adds §7 Gate B: seven journey states over the four typed screens using only the five existing `ClientScreenFlow` moves; per-state entry/goal/information/actions/alternate/back/completion; the requested/applied/refused/not-applied intervention feedback model over `MatchSession.Driver.Log`/`FailedCommands`; blocked-path table with owner-sourced reasons; #37 statistic set (no shots row; xG only when available); S0-T1–T7 + PM-1 substitution coverage; findings S0-B-001–008. Gate-A re-check at `main` `ee37aa60` **corrects A-10**: `TeamTactic.Formation` has no simulation consumer, so S0's pre-match choice is Mentality; adds A-38–A-41 (command-outcome logs, AI opponent mode, shirt-number identity, substitution legality inputs). Explicit owner confirmation of B-DEC-1/2/5 requested in review; B-DEC-5 states full time as the authoritative transition and the report control as acknowledgement only. Adds §8 Gate C inputs. No `src/` change; P5b remains gated on Gate I. |
