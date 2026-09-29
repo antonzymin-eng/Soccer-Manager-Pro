@@ -454,6 +454,7 @@ MonoBehaviour:
   - {r: 0, g: 0, b: 1, a: 1}
   - {r: 1, g: 0, b: 0, a: 1}
   _matchCamera: {fileID: 1708501427}
+  _autoBootDemoMatch: 1
   _demoSeedText: 1
   _colorPropertyName: _Color
 --- !u!1660057539 &9223372036854775807
