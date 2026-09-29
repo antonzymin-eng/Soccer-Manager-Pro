@@ -1,16 +1,17 @@
 # Localization & Accessibility #49 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.4 — repeat AR-3 (1H+1L) fix pass recorded in §9.3.1; APPROVED)
-**Version:** 0.4
+**Last Updated:** September 28, 2026 (v0.5 — L1 implementation status synchronized; core seam exists, L2/T1/Wave-8 remain pending)
+**Last Updated (prior):** July 23, 2026 (v0.4 — repeat AR-3 (1H+1L) fix pass recorded in §9.3.1; APPROVED)
+**Version:** 0.5
 **Status:** APPROVED
 **Source:** `docs/tracking/localization-seam-template-design.md` v0.2
 
 ---
 
 Checklist entries are verified against real source; nothing is checked without a programmatically verifiable
-anchor (CLAUDE.md "Never fabricate verification values"). This is a **forward-design** spec — implementation
-gates are open by construction (nothing is built yet); review gates track the pipeline.
+anchor (CLAUDE.md "Never fabricate verification values"). The July 23 approval remains the forward-design
+record; §9.2 now separately tracks implementation progress as slices land.
 
 ## 9.1 Content gates
 
@@ -24,10 +25,11 @@ gates are open by construction (nothing is built yet); review gates track the pi
 - [x] KD-6 one-way reference direction stated (no sim assembly references #49; producer emits native
       values) (§1.6 / §4.1).
 
-## 9.2 Implementation status (forward design — nothing built yet)
+## 9.2 Implementation status
 
 - [x] FR set complete + stable: FR-LC-001..020 + FR-LC-008a (grep-verified in §2/§5).
-- [ ] `TacticalDirector.Localization` seam + base-locale catalogue — **NOT STARTED** (T0).
+- [x] `TacticalDirector.Localization` **L1 core seam** — IMPLEMENTED IN THIS CHANGESET: dependency-free asmdef, `ILocalizer`, immutable key/locale/template/request/slot/typed-selector contracts, and structural regression locks. Merge remains blocked on current-head CI plus a Unity 6000.4.9f1 editor compile of both new asmdefs.
+- [ ] Base-locale catalogue + renderer — **NOT STARTED** (L2).
 - [ ] #22 retrofit (`Generate` returns native values; corpus migrates; base-locale identity lock) — NOT
       STARTED (T1).
 - [ ] Wave-8 locale content + a11y content surface — NOT STARTED (Wave 8).
@@ -133,4 +135,5 @@ each producer's boundary adapter (#35/#46/#38-static), and the Wave-8 locale + a
 | 0.1 | 2026-07-23 | — | Initial checklist. Content/consistency gates checked; review + implementation gates OPEN by construction (forward design). Status IN REVIEW. |
 | 0.3 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L: H-1 generic-core / per-producer boundary-adapter split; M-1 FR-LC-008a construction-time roster-coverage invariant; L-1 `{score}` derived) → AR-2 convergence recorded (§9.3.1); R-01..R-05 signed; §9.6 APPROVED. Status APPROVED. |
 | 0.4 | 2026-07-23 | — | Repeat AR-3 (1H+1L) recorded in §9.3.1: `{score}` derivation relocated to the boundary adapter + `NamedSlotSet` typed (name→string) + producer-scoped clause lookup. Still APPROVED. |
+| 0.5 | 2026-09-28 | OpenAI | L1 implementation status synchronized: the dependency-free core seam and structural tests exist in this changeset; L2 catalogue/renderer, T1 producer retrofit and Wave-8 content remain pending. The July approval/sign-off text remains historical. Current-head CI and pinned Unity editor compilation remain merge blockers. |
 #endregion
