@@ -1,6 +1,7 @@
 // File:     src/ball-physics/tests/BallStateMachineTests.cs
 // Created:  2026-05-24
 // Modified: 2026-06-02
+// Modified: 2026-09-15 (ERR-001-006 elevated-state transition locks)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Unit tests for BallStateMachine state transitions and hysteresis.
@@ -31,6 +32,20 @@ namespace TacticalDirector.BallPhysics.Tests
             };
 
             Assert.AreEqual(BallStateType.Stationary, BallStateMachine.UpdateBallState(ball));
+        }
+
+        [Test]
+        public void Rolling_AboveEnterThreshold_BelowMinVelocity_StillTransitionsToAirborne()
+        {
+            var ball = new BallState
+            {
+                State = BallStateType.Rolling,
+                Position = new Vector3(50f, 34f, BallPhysicsConstants.State.AirborneEnterThreshold + 0.01f),
+                Velocity = new Vector3(BallPhysicsConstants.State.MinVelocity * 0.5f, 0f, 0f)
+            };
+
+            Assert.AreEqual(BallStateType.Airborne, BallStateMachine.UpdateBallState(ball),
+                "ERR-001-006: height must win over the low-speed stop rule");
         }
 
         [Test]
@@ -203,10 +218,26 @@ namespace TacticalDirector.BallPhysics.Tests
         // ── Locked states ────────────────────────────────────────────────────────
 
         [Test]
-        public void Stationary_AlwaysReturnsStationary()
+        public void Stationary_OnGround_ReturnsStationary()
         {
-            var ball = new BallState { State = BallStateType.Stationary };
+            var ball = new BallState
+            {
+                State = BallStateType.Stationary,
+                Position = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS)
+            };
             Assert.AreEqual(BallStateType.Stationary, BallStateMachine.UpdateBallState(ball));
+        }
+
+        [Test]
+        public void Stationary_AboveEnterThreshold_TransitionsToAirborne()
+        {
+            var ball = new BallState
+            {
+                State = BallStateType.Stationary,
+                Position = new Vector3(50f, 34f, 0.973f)
+            };
+            Assert.AreEqual(BallStateType.Airborne, BallStateMachine.UpdateBallState(ball),
+                "ERR-001-006: Stationary is not valid above the airborne threshold");
         }
 
         [Test]
@@ -243,6 +274,8 @@ namespace TacticalDirector.BallPhysics.Tests
 // |         |            |        | constant refs → PascalCase; file header per FR-CS-056/057.         |
 // | 1.2     | 2026-06-01 | —      | Add UT-STM-008: ball partially over touchline still in play         |
 // |         |            |        | (spec §5.2.4 — centre must clear by full RADIUS).                  |
+// | 1.4     | 2026-09-15 | —      | ERR-001-006: height dominates low-speed stop; elevated Stationary  |
+// |         |            |        | transitions to Airborne.                                           |
 // | 1.3     | 2026-06-02 | —      | AR-1 fixes. H-2: file header path corrected to src/ball-physics/.  |
 // |         |            |        | H-3: OutOfBounds_BeyondTouchline_ReturnsTrue z lifted to ground    |
 // |         |            |        | level (was 0f); new OutOfBounds_HighAboveTouchline_ReturnsFalse    |

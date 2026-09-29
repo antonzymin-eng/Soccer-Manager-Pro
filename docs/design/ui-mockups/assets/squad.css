@@ -28,7 +28,7 @@ body { font-family: var(--font-body); color: var(--ink-1); -webkit-font-smoothin
 /* ---------------- TOP CHROME ---------------- */
 .chrome { display:flex; align-items:stretch; background: var(--bg-1); border-bottom:1px solid var(--line-2); padding:0 18px; }
 .brand { display:flex; align-items:center; gap:12px; padding-right:22px; height:100%; border-right:1px solid var(--line-2); }
-.crest-gm { width:30px; height:30px; border-radius: var(--r-1); background: linear-gradient(135deg, var(--brand-400), var(--brand-700)); display:flex; align-items:center; justify-content:center; font-family: var(--font-display); font-weight:800; font-size:14px; color:#001a0a; letter-spacing:-0.02em; }
+.crest-gm { width:30px; height:30px; border-radius: var(--r-1); background: linear-gradient(135deg, var(--brand-400), var(--brand-700)); display:flex; align-items:center; justify-content:center; font-family: var(--font-display); font-weight:var(--display-weight); font-size:14px; color:#001a0a; letter-spacing:-0.02em; }
 .brand .nm { font-family: var(--font-display); font-weight:700; letter-spacing:0.02em; font-size:15px; }
 .brand .nm em { font-style:normal; color:var(--ink-3); font-weight:600; }
 .nav { display:flex; align-items:stretch; height:100%; padding: 0 4px 0 18px; flex:1; }
@@ -227,7 +227,7 @@ body { font-family: var(--font-body); color: var(--ink-1); -webkit-font-smoothin
 }
 .portrait::before { content:""; position:absolute; top: 16px; left: 50%; transform: translateX(-50%); width: 26px; height: 26px; border-radius:50%; background: rgba(255,255,255,0.10); }
 .portrait::after  { content:""; position:absolute; bottom: -16px; left: 50%; transform: translateX(-50%); width: 56px; height: 56px; border-radius:50%; background: rgba(255,255,255,0.07); }
-.portrait .num { position:relative; z-index:1; font-family: var(--font-display); font-weight: 800; font-size: 28px; color: var(--brand-400); line-height: 1; padding-bottom: 4px; }
+.portrait .num { position:relative; z-index:1; font-family: var(--font-display); font-weight: var(--display-weight); font-size: 28px; color: var(--brand-400); line-height: 1; padding-bottom: 4px; }
 .side-head .who { min-width:0; }
 .side-head .who .nm { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.005em; line-height: 1.05; }
 .side-head .who .sub { font-size: 12px; color: var(--ink-3); margin-top: 4px; display:flex; gap: 6px; align-items:center; flex-wrap: wrap; }

@@ -1,5 +1,8 @@
 // File:     src/match-engine/tests/MatchEngineGkHeadingTests.cs
 // Created:  2026-07-22
+// Modified: 2026-09-22 (W3: Head-wins-Hand event provenance retains mixed-duel id)
+// Modified: 2026-09-22 (W3: composed home/away Head-wins-Hand route through real #10 geometry)
+// Modified: 2026-09-22 (W3: mirrored home/away claim lifecycle + composed real Hand-contact tests)
 // Modified: 2026-07-23
 // Author:   —
 // Spec:     GK/Heading engine-integration design supplement
@@ -16,6 +19,12 @@ using NUnit.Framework;
 using UnityEngine;
 
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.CollisionSystem;
+using TacticalDirector.BallPhysics;
+using TacticalDirector.GoalkeeperMechanics;
+using TacticalDirector.HeadingMechanics;
+using TacticalDirector.EventSystem;
+using TacticalDirector.AgentMovement;
 using TacticalDirector.PlayerDatabase;
 
 namespace TacticalDirector.MatchEngine
@@ -26,6 +35,26 @@ namespace TacticalDirector.MatchEngine
     {
         private const ulong MatchSeed = 0x0BADF00DDEADBEEFUL;
         private const int   TickCount = 120;
+
+        private sealed class OrderedCollisionProbe : ICollisionEventConsumer
+        {
+            private readonly string _name;
+            private readonly List<string> _order;
+
+            internal OrderedCollisionProbe(string name, List<string> order)
+            {
+                _name = name;
+                _order = order;
+            }
+
+            internal int Count { get; private set; }
+
+            public void OnCollisionEvent(in CollisionEvent evt)
+            {
+                Count++;
+                _order.Add(_name + ":" + evt.Entity2ID.ToString());
+            }
+        }
 
         private static int RequiredCount =>
             MatchEngineConstants.PLAYERS_PER_TEAM + MatchEngineConstants.SUBSTITUTES_PER_TEAM;
@@ -69,6 +98,26 @@ namespace TacticalDirector.MatchEngine
             return new Squad(clubId, players);
         }
 
+        private static Squad SquadWithHeadBeatsHandProfiles(int clubId)
+        {
+            PlayerRecord[] players = CoherentPlayers(clubId);
+
+            var gk = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+            gk.Balance = 1;
+            gk.Strength = 1;
+            gk.Aerial = 1;
+            players[0].Attributes = gk;
+
+            var header = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+            header.Heading = 20;
+            header.Balance = 20;
+            header.Strength = 20;
+            header.Aerial = 20;
+            players[1].Attributes = header;
+
+            return new Squad(clubId, players);
+        }
+
         private static int FirstOutfieldAgent(MatchEngine engine)
         {
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
@@ -79,6 +128,383 @@ namespace TacticalDirector.MatchEngine
                 }
             }
             return -1;
+        }
+
+        private static int GoalkeeperForTeam(MatchEngine engine, int teamId)
+        {
+            int start = teamId * MatchEngineConstants.PLAYERS_PER_TEAM;
+            int end = start + MatchEngineConstants.PLAYERS_PER_TEAM;
+            for (int i = start; i < end; i++)
+            {
+                if (engine.AgentIsGoalkeeper(i))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        // ── W3 shared AGENT_BALL feed ───────────────────────────────────────────────
+
+        [Test]
+        public void W3_Fanout_ForwardsOnlyAgentBall_ExactlyOnce_InFixedConsumerOrder()
+        {
+            var order = new List<string>();
+            var heading = new OrderedCollisionProbe("heading", order);
+            var crossClaim = new OrderedCollisionProbe("cross", order);
+            var fanout = new MatchEngine.AgentBallFanout(heading, crossClaim);
+
+            var agentAgent = new CollisionEvent
+            {
+                Type = CollisionType.AGENT_AGENT,
+                Entity1ID = 2,
+                Entity2ID = 3
+            };
+            fanout.OnCollisionEvent(in agentAgent);
+
+            var agentBall = new CollisionEvent
+            {
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                Entity2ID = 7
+            };
+            fanout.OnCollisionEvent(in agentBall);
+
+            Assert.AreEqual(1, heading.Count);
+            Assert.AreEqual(1, crossClaim.Count);
+            CollectionAssert.AreEqual(
+                new[] { "heading:7", "cross:7" },
+                order,
+                "W3 generic fan-out must deliver one AGENT_BALL candidate to each consumer exactly once "
+                + "and preserve the fixed Heading-before-cross-claim consumer order.");
+        }
+
+        [Test]
+        public void W3_CrossClaimCandidateCollector_ResetsEachFrame_AndFailsClosedOnOverflow()
+        {
+            var collector = new MatchEngine.CrossClaimCandidateCollector(capacity: 2);
+            var evt = new CollisionEvent
+            {
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                Entity2ID = 1
+            };
+
+            collector.OnCollisionEvent(in evt);
+            evt.Entity2ID = 2;
+            collector.OnCollisionEvent(in evt);
+            Assert.AreEqual(2, collector.Count);
+            Assert.AreEqual(1, collector.EventAt(0).Entity2ID);
+            Assert.AreEqual(2, collector.EventAt(1).Entity2ID);
+
+            evt.Entity2ID = 3;
+            Assert.Throws<System.InvalidOperationException>(() => collector.OnCollisionEvent(in evt),
+                "W3 candidate overflow must fail closed rather than silently truncate.");
+
+            collector.BeginFrame();
+            Assert.AreEqual(0, collector.Count,
+                "Cross-claim candidates are frame-local and must not survive into the next Physics pass.");
+        }
+
+        [Test]
+        public void W3_PhysicsPrefeed_ReachesBothConsumers_WithoutReplacingResolveCollision()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            int target = FirstOutfieldAgent(engine);
+            Assert.GreaterOrEqual(target, 0);
+            var ballXY = new Vector2(52f, 34f);
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                Vector2 p = i == target
+                    ? ballXY
+                    : new Vector2(5f + (i % 10) * 9f, 8f + (i / 10) * 20f);
+                if (i != target && Vector2.Distance(p, ballXY) < 2f)
+                {
+                    p.y = 60f;
+                }
+
+                engine.TestOnly_SetAgent(i, AgentState.CreateAtPosition(p, Vector2.right));
+                engine.TestOnly_SetCommand(i, MovementCommand.Stop(p));
+            }
+
+            Vector3 stagedBallPosition = new Vector3(ballXY.x, ballXY.y, 0.6f);
+            Vector3 stagedBallVelocity = new Vector3(0.25f, -0.5f, 0.75f);
+            engine.TestOnly_ForceBallLoose(stagedBallPosition, stagedBallVelocity);
+            Vector2 agentBefore = engine.AgentView(target).Position;
+            BallState ballBefore = engine.BallView;
+
+            engine.TestOnly_PublishAgentBallContactsOnly();
+
+            Assert.AreEqual(1, engine.TestOnly_CrossClaimCandidateCount,
+                "The read-only Physics prefeed should identify only the staged target.");
+            Assert.AreEqual(1, engine.TestOnly_HeadingCollisionCandidateCount,
+                "The same candidate must reach Heading in the same Physics frame.");
+            Assert.AreEqual(agentBefore, engine.AgentView(target).Position,
+                "Read-only publication must not displace the staged target.");
+            Assert.AreEqual(ballBefore.Position, engine.BallView.Position,
+                "Read-only publication must not move the ball.");
+            Assert.AreEqual(ballBefore.Velocity, engine.BallView.Velocity,
+                "Read-only publication must not apply a collision impulse; full response remains Resolve-owned.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void W3_ClaimProducer_CommitsSerializedIntent_AndExposesOwnedReachEnvelope(int teamId)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            int keeper = GoalkeeperForTeam(engine, teamId);
+            Assert.GreaterOrEqual(keeper, 0);
+
+            Vector2 gkXY = engine.AgentView(keeper).Position;
+            Vector3 ball = new Vector3(
+                gkXY.x,
+                gkXY.y + 0.5f,
+                MatchEngineConstants.GkRushMaxBallHeightM + 0.1f);
+
+            engine.TestOnly_ForceBallLoose(ball, Vector3.zero);
+            engine.TestOnly_DriveGkHeadingTactical();
+
+            var state = engine.TestOnly_GoalkeeperState;
+            Assert.IsTrue(state.ClaimIntentActive[teamId],
+                "The W3 high-ball producer must arm #11's own serialized claim latch for either team.");
+            Assert.AreEqual(ball.x, state.ClaimIntents[teamId].TargetContactPoint.x, 1e-6f);
+            Assert.AreEqual(ball.y, state.ClaimIntents[teamId].TargetContactPoint.y, 1e-6f);
+            Assert.AreEqual(ball.z, state.ClaimIntents[teamId].TargetContactPoint.z, 1e-6f);
+            Assert.AreEqual(state.Attrs[teamId].HandlingNorm, state.ClaimIntents[teamId].ClutchFirmness, 1e-6f,
+                "Claim handling input should reuse the keeper's normalized Handling, not add a W3 tuning dial.");
+            Assert.AreEqual(1f, state.ClaimIntents[teamId].ReachDirectionLateral, 0f,
+                "The +Y reach side must lock at commit; it must not be recomputed from the keeper's later live position.");
+
+            Assert.IsTrue(engine.TestOnly_TryGetGoalkeeperHandReachEnvelope(
+                    teamId, out Vector3 reachCenter, out float reachRadius),
+                "An active production ClaimIntent must expose #11's live hand/reach envelope.");
+            Assert.Greater(reachRadius, 0f);
+            Assert.AreEqual(
+                TacticalDirector.GoalkeeperMechanics.GoalkeeperDiveKinematics.ComputeReachRadius(
+                    state.Attrs[teamId]),
+                reachRadius, 1e-6f,
+                "W3 must consume #11's existing reach-radius formula rather than inventing hand geometry.");
+            Assert.AreNotEqual(ball, reachCenter,
+                "The tactical target must not be returned verbatim as a synthetic hand collider.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void W3_ActiveClaim_SurvivesTriggerLapse_WhileBallDescendsIntoHandHeight(int teamId)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            int keeper = GoalkeeperForTeam(engine, teamId);
+            Assert.GreaterOrEqual(keeper, 0);
+            Vector2 gkXY = engine.AgentView(keeper).Position;
+
+            // Arm above the W1 rush ceiling, then re-run the 10 Hz producer after the same loose ball
+            // has dropped into a physically reachable cross height. ERR-011-012 requires the original
+            // claim episode to remain active instead of being cancelled by a re-evaluated height gate.
+            engine.TestOnly_ForceBallLoose(
+                new Vector3(gkXY.x, gkXY.y + 0.5f, MatchEngineConstants.GkRushMaxBallHeightM + 0.1f),
+                Vector3.zero);
+            engine.TestOnly_DriveGkHeadingTactical();
+            ClaimIntent committed = engine.TestOnly_GoalkeeperState.ClaimIntents[teamId];
+            Assert.IsTrue(engine.TestOnly_GoalkeeperState.ClaimIntentActive[teamId]);
+
+            engine.TestOnly_ForceBallLoose(new Vector3(gkXY.x, gkXY.y + 0.5f, 1.8f), Vector3.zero);
+            engine.TestOnly_DriveGkHeadingTactical();
+
+            var state = engine.TestOnly_GoalkeeperState;
+            Assert.IsTrue(state.ClaimIntentActive[teamId],
+                "A descending loose cross must keep the bounded claim episode alive for either team.");
+            Assert.AreEqual(committed.TargetContactPoint, state.ClaimIntents[teamId].TargetContactPoint,
+                "The claim target stays locked for the episode; a later tactical stride must not retarget it.");
+            Assert.AreEqual(committed.ReachDirectionLateral, state.ClaimIntents[teamId].ReachDirectionLateral, 0f,
+                "The reach side stays locked for the episode.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void W3_PossessionHardCancelsClaim_BeforeNextTacticalPass(int teamId)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            int keeper = GoalkeeperForTeam(engine, teamId);
+            int possessor = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + 1;
+            Assert.GreaterOrEqual(keeper, 0);
+            Assert.IsFalse(engine.AgentIsGoalkeeper(possessor));
+
+            Vector2 gkXY = engine.AgentView(keeper).Position;
+            engine.TestOnly_ForceBallLoose(
+                new Vector3(gkXY.x, gkXY.y + 0.5f, MatchEngineConstants.GkRushMaxBallHeightM + 0.1f),
+                Vector3.zero);
+            engine.TestOnly_DriveGkHeadingTactical();
+            Assert.IsTrue(engine.TestOnly_GoalkeeperState.ClaimIntentActive[teamId]);
+            Assert.IsTrue(engine.TestOnly_TryGetGoalkeeperHandReachEnvelope(
+                teamId, out Vector3 reachCenter, out float reachRadius));
+            Assert.Greater(reachRadius, 0f);
+
+            engine.TestOnly_SetPossession(possessor);
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.ClaimIntentActive[teamId]);
+
+            engine.TestOnly_ForceBallLoose(reachCenter, new Vector3(0f, 0f, -1f));
+            EventBus.BeginTick((uint)engine.TestOnly_CurrentPhysicsFrame);
+            EventBus.BeginPhase(PhaseId.Physics);
+            engine.TestOnly_DriveGkHeadingPhysics();
+
+            Assert.AreEqual(0, engine.TestOnly_W3LastParticipantCount,
+                "A claim cancelled by possession must not revive before the next 10 Hz producer pass.");
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.ClaimIntentActive[teamId]);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void W3_ComposedCross_ProducesRealHandContact_ForEitherTeam(int teamId)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            int keeper = GoalkeeperForTeam(engine, teamId);
+            Assert.GreaterOrEqual(keeper, 0);
+            Vector2 gkXY = engine.AgentView(keeper).Position;
+
+            // First create the production ClaimIntent episode from a high loose cross.
+            engine.TestOnly_ForceBallLoose(
+                new Vector3(gkXY.x, gkXY.y + 0.5f, MatchEngineConstants.GkRushMaxBallHeightM + 0.1f),
+                Vector3.zero);
+            engine.TestOnly_DriveGkHeadingTactical();
+            Assert.IsTrue(engine.TestOnly_GoalkeeperState.ClaimIntentActive[teamId]);
+
+            // Then place the same loose cross at #11's actual live reach centre and run the production
+            // 60 Hz composition boundary. The arbiter must classify Hand from geometry, not from intent
+            // or the coarse Collision #3 feed.
+            Assert.IsTrue(engine.TestOnly_TryGetGoalkeeperHandReachEnvelope(
+                teamId, out Vector3 reachCenter, out float reachRadius));
+            Assert.Greater(reachRadius, 0f);
+            engine.TestOnly_ForceBallLoose(reachCenter, new Vector3(0f, 0f, -1f));
+
+            EventBus.BeginTick(0);
+            EventBus.BeginPhase(PhaseId.Physics);
+            engine.TestOnly_DriveGkHeadingPhysics();
+
+            var state = engine.TestOnly_GoalkeeperState;
+            Assert.AreEqual(1, engine.TestOnly_W3LastParticipantCount,
+                "An uncontested real Hand contact is still a one-participant W3 resolution.");
+            Assert.AreEqual(keeper, engine.TestOnly_W3LastWinnerAgentId);
+            Assert.AreEqual(BodyPartEnum.Hand, engine.TestOnly_W3LastWinnerBodyPart);
+            Assert.IsFalse(state.ClaimIntentActive[teamId],
+                "The Hand terminal route must consume the bounded ClaimIntent episode.");
+            Assert.GreaterOrEqual(state.ContactStates[teamId].ActualContactFrame, 0,
+                "The composed route must record a real #11 contact frame.");
+            Assert.That(
+                state.States[teamId],
+                Is.EqualTo(GoalkeeperState.HandsOnBall).Or.EqualTo(GoalkeeperState.Recovering),
+                "A real Hand contact must terminate through #11 handling, not leave the keeper in Set/Anticipate.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void W3_ComposedContest_HeadWinnerRoutesHeading_AndGoalkeeperDoesNotClaim(int teamId)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            if (teamId == 0)
+            {
+                engine.ConfigureSquads(SquadWithHeadBeatsHandProfiles(21), DefaultSquad(22));
+            }
+            else
+            {
+                engine.ConfigureSquads(DefaultSquad(21), SquadWithHeadBeatsHandProfiles(22));
+            }
+
+            engine.DisableGkHeading();
+            engine.TestOnly_SetPhysicsFrame(36);
+            engine.EnableGkHeading();
+
+            int keeper = GoalkeeperForTeam(engine, teamId);
+            int header = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + 1;
+            Assert.GreaterOrEqual(keeper, 0);
+            Assert.IsFalse(engine.AgentIsGoalkeeper(header),
+                "The W3 Head participant must be an outfielder; no outfielder may route through ToGoalkeeper.");
+
+            bool sawWinningHeader = false;
+            HeaderExecutedEvent winningHeader = default;
+            EventBus.Subscribe<HeaderExecutedEvent>(
+                (in HeaderExecutedEvent evt) =>
+                {
+                    if (evt.AgentId == header)
+                    {
+                        sawWinningHeader = true;
+                        winningHeader = evt;
+                    }
+                });
+
+            Vector2 shared = teamId == 0 ? new Vector2(2f, 34f) : new Vector2(103f, 34f);
+            Vector2 facing = teamId == 0 ? Vector2.right : Vector2.left;
+
+            AgentState keeperState = AgentState.CreateAtPosition(shared, facing);
+            AgentState headerState = AgentState.CreateAtPosition(shared, facing);
+            headerState.CurrentState = AgentMovementState.JOGGING;
+            engine.TestOnly_SetAgent(keeper, keeperState);
+            engine.TestOnly_SetAgent(header, headerState);
+
+            Vector3 headCenter = engine.TestOnly_StageHeadingApexAtCurrentFrame(header);
+
+            int frame = engine.TestOnly_CurrentPhysicsFrame;
+            int claimHalfDuration = GoalkeeperDiveKinematics.ComputeDiveDurationFrames() / 2;
+            int claimCommitTick = System.Math.Max(
+                0, (frame - claimHalfDuration) / GoalkeeperConstants.FramesPerTacticalTick);
+            var claim = new ClaimIntent
+            {
+                TargetContactPoint = headCenter,
+                ClutchFirmness = 0.5f,
+                ReachDirectionLateral = 0.0f,
+                AttemptCommittedTick = claimCommitTick,
+            };
+            engine.TestOnly_CommitGoalkeeperClaimIntent(teamId, claim);
+
+            Assert.IsTrue(engine.TestOnly_TryGetGoalkeeperHandReachEnvelope(
+                teamId, out Vector3 handCenter, out float handRadius));
+            Assert.LessOrEqual(
+                (headCenter - handCenter).sqrMagnitude,
+                handRadius * handRadius,
+                "Fixture must present the same live ball to both #10 Head geometry and #11 Hand reach.");
+
+            Vector3 incomingVelocity = new Vector3(0f, 0f, -1f);
+            engine.TestOnly_ForceBallLoose(headCenter, incomingVelocity);
+            EventBus.BeginTick((uint)frame);
+            EventBus.BeginPhase(PhaseId.Physics);
+
+            engine.TestOnly_DriveGkHeadingPhysics();
+            EventBus.BeginPhase(PhaseId.Events);
+            EventBus.DrainTick();
+
+            HeadingTickState headingState = engine.TestOnly_HeadingState;
+            GoalkeeperTickState goalkeeperState = engine.TestOnly_GoalkeeperState;
+
+            Assert.AreEqual(2, engine.TestOnly_W3LastParticipantCount,
+                "The composed fixture must resolve one Hand and one real #10 Head participant.");
+            Assert.AreEqual(header, engine.TestOnly_W3LastWinnerAgentId,
+                "The deliberately stronger outfielder must win the mixed Balance/Strength/Aerial score.");
+            Assert.AreEqual(BodyPartEnum.Head, engine.TestOnly_W3LastWinnerBodyPart);
+            Assert.IsTrue(sawWinningHeader,
+                "The W3 Head winner must publish through Heading #10.");
+            Assert.AreEqual(frame, winningHeader.ContestedDuelId,
+                "A Head that wins a mixed W3 contest must not be mislabeled as an uncontested header.");
+            Assert.IsFalse(goalkeeperState.ClaimIntentActive[teamId],
+                "A goalkeeper who loses to Head must consume the claim as DisturbedInDuel.");
+            Assert.AreEqual(GoalkeeperState.Recovering, goalkeeperState.States[teamId]);
+            Assert.AreEqual(MatchEngineConstants.NO_POSSESSION, engine.TestOnly_PossessingAgentId,
+                "A Head winner must not create goalkeeper possession / BallClaimed state.");
+            Assert.AreEqual(frame, headingState.ContactStates[header].ActualContactFrame,
+                "The winning route must be a real current-frame #10 contact.");
+            Assert.IsFalse(headingState.IntentActive[header],
+                "The winning header intent must resolve through #10 Pass 2.");
+            Assert.AreNotEqual(incomingVelocity, engine.BallView.Velocity,
+                "A Head winner must route through Heading #10's ApplyKick path.");
         }
 
         // ── flag semantics ──────────────────────────────────────────────────────────
@@ -490,4 +916,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the new TestOnly_SaveCommittedForGk latch seam via the false → |
 // |         |            |        | true edge (the sticky LastCommittedSaveAttrs cannot distinguish|
 // |         |            |        | a second commit).                                              |
+// | 1.4     | 2026-09-22 | —      | W3: shared AGENT_BALL fan-out exact-once/order; frame-local cross- |
+// |         |            |        | claim collector reset/overflow; read-only publication reaches both |
+// |         |            |        | consumers without changing agent or ball position/velocity.       |
+// | 1.5     | 2026-09-22 | —      | W3 / ERR-011-012: claim reach side locks at commit; a descending  |
+// |         |            |        | loose cross keeps the bounded claim episode alive across a later   |
+// |         |            |        | tactical producer pass instead of cancelling on the old height gate.| 
+// | 1.6     | 2026-09-22 | —      | W3: claim producer/lifetime locks now run for both teams; added a composed production-path Hand contact for each keeper using #11's live reach envelope and W3 winner observation. |
+// | 1.7     | 2026-09-22 | —      | W3: mirrored composed Head-wins-Hand test stages only elapsed jump history, then requires #10's real current-frame contact geometry to qualify the Head; winner mutates through Heading while the GK claim terminates DisturbedInDuel with no possession. |
+// | 1.8     | 2026-09-22 | —      | W3 event provenance: the mirrored mixed contest drains HeaderExecutedEvent and requires ContestedDuelId == W3 duel/frame id, preventing winner suppression from falsely reporting an uncontested header. |
+// | 1.9     | 2026-09-23 | —      | ERR-011-014: possession hard-cancels an active claim immediately; a pre-tactical loose ball cannot revive the stale Hand participant. |
 #endregion

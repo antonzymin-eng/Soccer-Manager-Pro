@@ -1,6 +1,6 @@
 // File:     src/match-client-core/ManagerCommandQueue.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P2/§6.2),
 //           Code Standards #20
@@ -25,16 +25,20 @@ namespace TacticalDirector.MatchClientCore
 
         /// <summary>
         /// Enqueues a command (thread-safe; UI thread). Applied on the sim thread at the top of the next
-        /// tick. An uninitialized (<see cref="ManagerCommandKind.None"/> / <c>default</c>) command is
-        /// refused fail-loud here, at the misuse site, so it can never reach a mutator.
+        /// tick. An uninitialized (<see cref="ManagerCommandKind.None"/> / <c>default</c>) or unknown
+        /// command is refused fail-loud here, at the misuse site, so it can never reach a mutator.
         /// </summary>
-        /// <exception cref="ArgumentException"><paramref name="command"/> is the uninitialized default value.</exception>
+        /// <exception cref="ArgumentException"><paramref name="command"/> has no supported game-command kind.</exception>
         public void Enqueue(in ManagerCommand command)
         {
-            if (command.Kind == ManagerCommandKind.None)
+            uint kind = (uint)command.Kind;
+            if (kind < (uint)ManagerCommandKind.SetTeamTactic
+                || kind > (uint)ManagerCommandKind.Substitute)
             {
                 throw new ArgumentException(
-                    "Cannot enqueue an uninitialized (default) ManagerCommand; construct it via a factory.",
+                    "Cannot enqueue a ManagerCommand with unsupported kind "
+                        + ((int)command.Kind).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                        + "; construct it via a factory.",
                     nameof(command));
             }
             lock (_lock)
@@ -74,4 +78,6 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | sim-thread internal DrainInto.                                 |
 // | 1.1     | 2026-07-24 | —      | AR pass-1 Medium: Enqueue refuses the None (default) command   |
 // |         |            |        | fail-loud at the misuse site.                                  |
+// | 1.2     | 2026-09-08 | —      | Reject undefined kind ordinals at enqueue instead of carrying  |
+// |         |            |        | them across the UI/simulation boundary as doomed commands.     |
 #endregion

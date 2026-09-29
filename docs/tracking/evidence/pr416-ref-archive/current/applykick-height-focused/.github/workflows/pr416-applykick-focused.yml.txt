@@ -1,0 +1,44 @@
+name: PR416 ApplyKick focused evidence
+
+on:
+  push:
+    branches:
+      - evidence/pr416-applykick-height-focused
+    paths:
+      - .github/workflows/pr416-applykick-focused.yml
+
+permissions:
+  contents: read
+
+jobs:
+  focused-regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run the three PR416 branch-specific regressions
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-applykick-focused
+          dotnet test tools/dotnet-ci/TacticalDirector.gen.sln \
+            --no-restore \
+            --filter "Name=AControlledCarrierIsActuallyDispossessed|Name=BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose|Name=sim_match_engine_shot_outcomes" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=pr416-applykick-focused.trx" \
+            --results-directory artifacts/pr416-applykick-focused \
+            2>&1 | tee artifacts/pr416-applykick-focused/console.log
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-applykick-focused-${{ github.run_id }}
+          path: artifacts/pr416-applykick-focused/
+          if-no-files-found: error

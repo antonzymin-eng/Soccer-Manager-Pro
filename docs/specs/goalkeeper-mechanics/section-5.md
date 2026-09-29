@@ -1,7 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 5: Test Plan
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.2
+**Last Updated:** September 27, 2026 (v0.2 — ERR-011-018 T-5.2.11 surface)
 **Status:** DRAFT
 **Purpose:** Specify unit tests, integration tests, validation
 scenarios, and cross-spec conformance tests for Goalkeeper
@@ -181,8 +182,11 @@ One sub-section per §3 algorithm; ~6–10 test cases each.
   sequences across 10 runs with the same RNG seed.
 - T-5.2.11 #12 baseline-slot ratification: with the #12 v1.0.x
   patch applied (post-`IN REVIEW` transition), GK reads baseline
-  from `PositioningAI.GetGKBaselineSlot` and applies KD-13
-  reactive radius correctly.
+  from #12's `GetFormationSlot(keeperEntityId)` via §3.3.0.1 and
+  applies KD-13 reactive radius correctly. The baseline read and the
+  `Recovering → Set` cooldown are locked at composition level by
+  `GoalkeeperBaselineSlotTests` (ERR-011-018); the reactive-radius
+  micro-adjustment still has no production consumer.
 
 ---
 
@@ -239,3 +243,4 @@ One sub-section per §3 algorithm; ~6–10 test cases each.
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 9 unit-test families, 11 integration tests, 4 validation scenarios, 7 cross-spec conformance gates | self-pass-1 in `adversarial-review-section-files-v1.md` |
+| 0.2 | September 27, 2026 | ERR-011-018 | T-5.2.11 names the real #12 surface and records what is now locked (baseline read, cooldown) versus still unconsumed (reactive-radius clamp). | spec + code, same commit |

@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/BoardModifier.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-09-08
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 KD-4, FR-FN-018 (board identity routing seam)
@@ -29,9 +29,10 @@ namespace TacticalDirector.ClubFinances
 }
 
 #region VersionHistory
-// Version | Date       | Author | Change
-// --------|------------|--------|----------------------------------------------
-// 1.0     | 2026-09-04 | —      | Initial #40 T0 board routing seam.
-// 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder.
-// 1.2     | 2026-09-07 | —      | Documented the F4 positive-multiplier runtime contract.
+// | Version | Date       | Author | Change |
+// | --------|------------|--------|---------------------------------------------- |
+// | 1.0     | 2026-09-04 | —      | Initial #40 T0 board routing seam. |
+// | 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder. |
+// | 1.2     | 2026-09-07 | —      | Documented the F4 positive-multiplier runtime contract. |
+// | 1.3     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
 #endregion

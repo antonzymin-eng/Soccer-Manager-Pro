@@ -1,5 +1,11 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
+// Modified: 2026-09-27 (W8 B/v24 landing: strengthen canonical codec probe with distinct non-default request/effective-target sentinels after green CI 36337174267)
+// Modified: 2026-09-27 (W8 B/v24 correction: replace vacuous pre-tick payload probes with direct canonical PassExecutor codec round-trip)
+// Modified: 2026-09-27 (W8 B/v24: direct payload probes for pending feedback, effective target and feedback contents — superseded by v1.21 after CI showed CaptureDurablePayload is empty before Snapshot phase)
+// Modified: 2026-09-26 (W8 B/v24: dedicated goalkeeper-distribution PassExecutor state pin + digest probes)
+// Modified: 2026-09-22 (W3/v23: ClaimIntent single-field digest probe, including locked reach side)
+// Modified: 2026-09-11 (W5/v22: schema pin + latest press-pass event digest probe)
 // Modified: 2026-07-23
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
@@ -15,6 +21,7 @@ using UnityEngine;
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
 using TacticalDirector.DecisionTree;
+using TacticalDirector.PassMechanics;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -58,9 +65,248 @@ namespace TacticalDirector.MatchEngine
             // in-flight state via their CaptureState seams — making a flag-on engine snapshot-safe).
             // v19 collision contact-onset pair set + the §5.Z.15 six-second-rule state, v20
             // (ERR-012-011) the pass-in-flight receiver latch, v21 (wiring backlog W2 — the tackle)
-            // the per-agent tackle-interrupt flag and per-agent challenge cooldown.
-            Assert.AreEqual(21u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // the per-agent tackle-interrupt flag and per-agent challenge cooldown, v22 (wiring backlog
+            // W5) the optional latest opposing PassAttemptEvent retained by each pressing ring, v23
+            // (wiring backlog W3) the per-GK ClaimIntent payload + active latch, v24 (W8 B) the
+            // dedicated goalkeeper-distribution PassExecutor execution mode/request/terminal feedback state.
+            Assert.AreEqual(24u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        private static PassExecutorState WithGoalkeeperFields(
+            in PassExecutorState source,
+            int executionMode,
+            in GoalkeeperDistributionRequest goalkeeperRequest,
+            int goalkeeperEffectiveTargetAgentId,
+            Vector3 goalkeeperEffectiveTargetPosition,
+            bool goalkeeperFeedbackPending,
+            in GoalkeeperDistributionFeedback goalkeeperFeedback)
+        {
+            PassRequest ordinaryRequest = source.Request;
+            PassResult lastResult = source.LastResult;
+            GoalkeeperDistributionRequest request = goalkeeperRequest;
+            GoalkeeperDistributionFeedback feedback = goalkeeperFeedback;
+            return new PassExecutorState(
+                source.State, in ordinaryRequest, source.EffectiveSubType,
+                source.KickSpeed, source.LaunchAngleDeg, source.SpinVector, source.BaseKickDirection,
+                source.AimPoint, source.LeadDistance, source.CachedPassing, source.CachedFatigue,
+                source.CachedBodyAngleDeg, source.CachedIsWeakFoot, source.CachedWeakFootRating,
+                source.WindupFramesRemaining, source.FollowThroughFramesRemaining, in lastResult,
+                executionMode, in request, goalkeeperEffectiveTargetAgentId,
+                goalkeeperEffectiveTargetPosition, goalkeeperFeedbackPending, in feedback);
+        }
+
+        [Test]
+        public void GoalkeeperDistributionExecutionMode_FeedsSnapshotDigest()
+        {
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            PassExecutorState source = perturbed.TestOnly_PassExecutorState(0);
+            GoalkeeperDistributionRequest request = default;
+            GoalkeeperDistributionFeedback feedback = default;
+            PassExecutorState injected = WithGoalkeeperFields(
+                in source, executionMode: 1, in request,
+                source.GoalkeeperEffectiveTargetAgentId, source.GoalkeeperEffectiveTargetPosition,
+                goalkeeperFeedbackPending: false, in feedback);
+            perturbed.TestOnly_SetPassExecutorState(0, in injected);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Changing only the W8 goalkeeper-distribution execution mode left the v24 digest unchanged.");
+        }
+
+        [Test]
+        public void GoalkeeperDistributionRequest_FeedsSnapshotDigest()
+        {
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            PassExecutorState source = perturbed.TestOnly_PassExecutorState(0);
+            var request = new GoalkeeperDistributionRequest
+            {
+                AgentId = 0,
+                TeamId = 0,
+                Delivery = GoalkeeperDeliveryVariant.Throw,
+                TargetAgentId = 4,
+                TargetPosition = new Vector3(31f, 24f, 0f),
+                EmittedPower01 = 0.67f,
+                SpinIntent = new Vector3(0f, 2f, 0f),
+                ReleaseHeightM = 1.8f,
+                WindupFrames = 24,
+                FrameNumber = 17,
+            };
+            GoalkeeperDistributionFeedback feedback = default;
+            PassExecutorState injected = WithGoalkeeperFields(
+                in source, source.ExecutionMode, in request,
+                source.GoalkeeperEffectiveTargetAgentId, source.GoalkeeperEffectiveTargetPosition,
+                source.GoalkeeperFeedbackPending, in feedback);
+            perturbed.TestOnly_SetPassExecutorState(0, in injected);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A non-default W8 goalkeeper-distribution request left the v24 digest unchanged.");
+        }
+
+        [Test]
+        public void GoalkeeperDistributionFeedbackPending_FeedsSnapshotDigest()
+        {
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            PassExecutorState source = perturbed.TestOnly_PassExecutorState(0);
+            GoalkeeperDistributionRequest request = default;
+            GoalkeeperDistributionFeedback feedback = default;
+            PassExecutorState injected = WithGoalkeeperFields(
+                in source, source.ExecutionMode, in request,
+                source.GoalkeeperEffectiveTargetAgentId, source.GoalkeeperEffectiveTargetPosition,
+                goalkeeperFeedbackPending: true, in feedback);
+            perturbed.TestOnly_SetPassExecutorState(0, in injected);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Changing only the W8 pending-feedback latch left the v24 digest unchanged.");
+        }
+
+        [Test]
+        public void GoalkeeperDistributionState_RoundTripsThroughCanonicalPassExecutorCodec()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            PassExecutorState baseline = engine.TestOnly_PassExecutorState(0);
+
+            var request = new GoalkeeperDistributionRequest
+            {
+                AgentId = 11,
+                TeamId = 1,
+                Delivery = GoalkeeperDeliveryVariant.Throw,
+                TargetAgentId = 4,
+                TargetPosition = new Vector3(31f, 24f, 0.25f),
+                EmittedPower01 = 0.67f,
+                SpinIntent = new Vector3(0.5f, 2f, -0.25f),
+                ReleaseHeightM = 1.8f,
+                WindupFrames = 24,
+                FrameNumber = 17,
+            };
+            var feedback = new GoalkeeperDistributionFeedback
+            {
+                Kind = GoalkeeperDistributionFeedbackKind.Completed,
+                EffectiveTargetAgentId = 5,
+                EffectiveTargetPosition = new Vector3(33f, 21f, 0f),
+                ReleasePoint = new Vector3(7f, 34f, 1.8f),
+                FinalVelocity = new Vector3(12f, 1f, 3f),
+                ErrorAngleDeg = 1.375f,
+                ContactFrame = 77,
+                ContactMatchTime = 1.283f
+            };
+            PassExecutorState injected = WithGoalkeeperFields(
+                in baseline, executionMode: 1, in request,
+                goalkeeperEffectiveTargetAgentId: 6,
+                goalkeeperEffectiveTargetPosition: new Vector3(22f, 17f, 0.5f),
+                goalkeeperFeedbackPending: true, in feedback);
+
+            var baselineBytes = new byte[1024];
+            int baselineBytesWritten = 0;
+            MatchEngine.WritePassExecutorState(baselineBytes, ref baselineBytesWritten, in baseline);
+
+            var injectedBytes = new byte[1024];
+            int injectedBytesWritten = 0;
+            MatchEngine.WritePassExecutorState(injectedBytes, ref injectedBytesWritten, in injected);
+
+            Assert.Greater(baselineBytesWritten, 0,
+                "The direct PassExecutor codec wrote no bytes; this guard prevents vacuous serialization evidence.");
+            Assert.AreEqual(baselineBytesWritten, injectedBytesWritten,
+                "Default and non-default PassExecutor states must use the same canonical v24 field layout.");
+            CollectionAssert.AreNotEqual(
+                baselineBytes, injectedBytes,
+                "Non-default W8 goalkeeper-distribution state must change the canonical PassExecutor byte stream.");
+
+            int bytesRead = 0;
+            PassExecutorState restored = MatchEngine.ReadPassExecutorState(injectedBytes, ref bytesRead);
+            Assert.AreEqual(injectedBytesWritten, bytesRead,
+                "The PassExecutor reader must consume exactly the bytes written by the canonical writer.");
+
+            Assert.AreEqual(injected.ExecutionMode, restored.ExecutionMode);
+            Assert.AreEqual(injected.GoalkeeperRequest.AgentId, restored.GoalkeeperRequest.AgentId);
+            Assert.AreEqual(injected.GoalkeeperRequest.TeamId, restored.GoalkeeperRequest.TeamId);
+            Assert.AreEqual(injected.GoalkeeperRequest.Delivery, restored.GoalkeeperRequest.Delivery);
+            Assert.AreEqual(injected.GoalkeeperRequest.TargetAgentId, restored.GoalkeeperRequest.TargetAgentId);
+            Assert.AreEqual(injected.GoalkeeperRequest.TargetPosition, restored.GoalkeeperRequest.TargetPosition);
+            Assert.AreEqual(injected.GoalkeeperRequest.EmittedPower01, restored.GoalkeeperRequest.EmittedPower01);
+            Assert.AreEqual(injected.GoalkeeperRequest.SpinIntent, restored.GoalkeeperRequest.SpinIntent);
+            Assert.AreEqual(injected.GoalkeeperRequest.ReleaseHeightM, restored.GoalkeeperRequest.ReleaseHeightM);
+            Assert.AreEqual(injected.GoalkeeperRequest.WindupFrames, restored.GoalkeeperRequest.WindupFrames);
+            Assert.AreEqual(injected.GoalkeeperRequest.FrameNumber, restored.GoalkeeperRequest.FrameNumber);
+            Assert.AreEqual(injected.GoalkeeperEffectiveTargetAgentId, restored.GoalkeeperEffectiveTargetAgentId);
+            Assert.AreEqual(injected.GoalkeeperEffectiveTargetPosition, restored.GoalkeeperEffectiveTargetPosition);
+            Assert.AreEqual(injected.GoalkeeperFeedbackPending, restored.GoalkeeperFeedbackPending);
+            Assert.AreEqual(injected.GoalkeeperFeedback.Kind, restored.GoalkeeperFeedback.Kind);
+            Assert.AreEqual(injected.GoalkeeperFeedback.EffectiveTargetAgentId, restored.GoalkeeperFeedback.EffectiveTargetAgentId);
+            Assert.AreEqual(injected.GoalkeeperFeedback.EffectiveTargetPosition, restored.GoalkeeperFeedback.EffectiveTargetPosition);
+            Assert.AreEqual(injected.GoalkeeperFeedback.ReleasePoint, restored.GoalkeeperFeedback.ReleasePoint);
+            Assert.AreEqual(injected.GoalkeeperFeedback.FinalVelocity, restored.GoalkeeperFeedback.FinalVelocity);
+            Assert.AreEqual(injected.GoalkeeperFeedback.ErrorAngleDeg, restored.GoalkeeperFeedback.ErrorAngleDeg);
+            Assert.AreEqual(injected.GoalkeeperFeedback.ContactFrame, restored.GoalkeeperFeedback.ContactFrame);
+            Assert.AreEqual(injected.GoalkeeperFeedback.ContactMatchTime, restored.GoalkeeperFeedback.ContactMatchTime);
+        }
+
+        [Test]
+        public void ClaimIntentState_FeedsSnapshotDigest()
+        {
+            // W3/v23: mutate only #11's authoritative ClaimIntent block before the first tick.
+            // The kickoff ball is nowhere near either keeper, so no ordinary W3 producer path can
+            // manufacture the difference. If this does not move the digest, the new cross-tick state
+            // is missing from the canonical preimage even if CaptureState itself appears correct.
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            var intent = new TacticalDirector.GoalkeeperMechanics.ClaimIntent
+            {
+                TargetContactPoint = new Vector3(1.25f, 34.50f, 1.80f),
+                ClutchFirmness = 0.73f,
+                ReachDirectionLateral = 1.0f,
+                AttemptCommittedTick = 0,
+            };
+            perturbed.TestOnly_CommitGoalkeeperClaimIntent(0, intent);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A non-default W3 ClaimIntent left the digest unchanged — the v23 claim block is not in the snapshot preimage.");
+        }
+
+        [Test]
+        public void LatestPressPassEvent_FeedsSnapshotDigest()
+        {
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            // Deliberately use an agent id absent from the live snapshot: TriggerEvaluator therefore
+            // returns false and cannot mutate pressing state. Any digest delta is the v22 serialized ring
+            // field itself, not a downstream gameplay consequence of evaluating a real backward pass.
+            PassAttemptEvent pass = new PassAttemptEvent
+            {
+                AgentId = -123,
+                TeamId = 1,
+                TargetPosition = new Vector3(90f, 34f, 0f),
+                FinalVelocity = new Vector3(8f, 0f, 0f),
+                TargetAgentId = -1,
+                Frame = 17,
+                MatchTime = 0.25f,
+            };
+            perturbed.TestOnly_PushPressPassEvent(0, in pass);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A retained W5 pass event left the digest unchanged — v22 is not in the snapshot preimage.");
         }
 
         [Test]
@@ -661,4 +907,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Digest probe (the goalkeeper.mechanics RNG cursor — a v18 field —  |
 // |         |            |        | moves the digest, written unconditionally so the flag need not be  |
 // |         |            |        | on).                                                               |
+// | 1.16     | 2026-09-11 | —      | W5/v22: schema pin moved to 22 and latest pressing-ring PassAttemptEvent gets a single-field digest probe. |
+// | 1.17     | 2026-09-22 | —      | W3/v23: ClaimIntent payload + active latch enter the serialized GK block. |
+// | 1.18     | 2026-09-22 | —      | W3 review: ClaimIntentState_FeedsSnapshotDigest proves target/clutch/locked reach side/commit tick/active latch reach the v23 digest preimage. |
+// | 1.19     | 2026-09-26 | —      | W8 B/v24: pin 23 → 24; dedicated goalkeeper-distribution execution mode, request and pending-feedback latch each get a real world-state digest probe. |
+// | 1.20     | 2026-09-27 | —      | W8 B review hardening: direct pre-tick payload probes cover the pending-feedback latch, effective-target id/position and terminal feedback contents, avoiding gameplay-mediated evidence for those fields. |
+// | 1.21     | 2026-09-27 | —      | CI 36328692042 correction: v1.20's three pre-tick CaptureDurablePayload probes were vacuous because no Snapshot phase had populated the cached payload. Replaced by a direct real MatchEngine PassExecutor codec test: >0-byte guard, default-vs-nondefault byte divergence, exact writer/reader byte count, and field-for-field round-trip of every v24 goalkeeper-distribution field. Pending-feedback digest probe remains supplemental gameplay-mediated evidence only. |
+// | 1.22     | 2026-09-27 | —      | Landing hardening after green CI 36337174267: the codec round-trip now uses distinct non-default sentinels (request AgentId 11, TeamId 1, TargetAgentId 4, effective target 6) so dropped/defaulted or request/effective-target swaps cannot pass accidentally. Test-only data change; serializer/runtime/schema/RNG unchanged. |
 #endregion

@@ -1,0 +1,98 @@
+name: PR416 Shot FM-03 severity evidence
+
+on:
+  push:
+    branches:
+      - evidence/pr416-shot-fm03-severity
+    paths:
+      - .github/workflows/pr416-shot-fm03-severity.yml
+      - src/shot-mechanics/ShotExecutor.cs
+
+permissions:
+  contents: read
+
+jobs:
+  focused-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-shot-fm03-severity
+          fetch-depth: 0
+
+      - name: Verify evidence delta
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" != "a7f2b77af61c1d0b7138bfdfce21cd1772c91f26"
+          git diff --check a7f2b77af61c1d0b7138bfdfce21cd1772c91f26 -- src/shot-mechanics/ShotExecutor.cs
+          changed="$(git diff --name-only a7f2b77af61c1d0b7138bfdfce21cd1772c91f26 -- 'src/**')"
+          test "$changed" = "src/shot-mechanics/ShotExecutor.cs"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run Shot Mechanics suite
+        shell: bash
+        run: |
+          dotnet test src/shot-mechanics/Tests/shot-mechanics-tests.gen.csproj \
+            --no-restore \
+            --logger "console;verbosity=normal"
+
+      - name: Run MatchEngine tackle fixture plus shot outcome
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-shot-fm03
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "FullyQualifiedName~MatchEngineTackleTests|Name=sim_match_engine_shot_outcomes" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=pr416-shot-fm03.trx" \
+            --results-directory artifacts/pr416-shot-fm03 \
+            2>&1 | tee artifacts/pr416-shot-fm03/console.log
+
+      - name: Verify current-PR acceptance outcomes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          files = glob.glob("artifacts/pr416-shot-fm03/*.trx")
+          if len(files) != 1:
+              raise SystemExit(f"expected one TRX, found {files}")
+          wanted = {
+              "AControlledCarrierIsActuallyDispossessed": "Passed",
+              "BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose": "Passed",
+              "TacklesHappenInComposedPlay": "Passed",
+              "ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice": "NotExecuted",
+              "sim_match_engine_shot_outcomes": "Passed",
+          }
+          root = ET.parse(files[0]).getroot()
+          rows = []
+          for elem in root.iter():
+              if elem.tag.endswith("UnitTestResult"):
+                  rows.append((elem.attrib.get("testName"), elem.attrib.get("outcome")))
+          seen = {name: outcome for name, outcome in rows if name in wanted}
+          save = [(name, outcome) for name, outcome in rows
+                  if name and name.startswith("SaveAndRestoreCarryTheTackleLatches")]
+          print("REFERENCE_TARGET_OUTCOMES", seen)
+          print("SAVE_RESTORE_OUTCOMES", save)
+          if seen != wanted:
+              raise SystemExit(f"target mismatch: expected={wanted} actual={seen}")
+          if len(save) != 2 or any(outcome != "Passed" for _, outcome in save):
+              raise SystemExit(f"save/restore latch cases not both Passed: {save}")
+          PY
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-shot-fm03-${{ github.run_id }}
+          path: artifacts/pr416-shot-fm03/
+          if-no-files-found: warn

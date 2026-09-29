@@ -1,0 +1,221 @@
+name: W2 #442 six-seed evidence
+
+on:
+  push:
+    branches:
+      - evidence/w2-442-six-seed-measure-20260923
+    paths:
+      - .github/workflows/w2-442-six-seed-evidence.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w2-442-six-seed-evidence-20260923
+  cancel-in-progress: false
+
+env:
+  BASE_OLD_SHA: 876a3343319050187c2a5505b18cb32fc3d0f89d
+  BASE_CONTRACT_SHA: e8680a1dbe5fe2a568e9241abb7fb025a41faeeb
+  HEAD_CONTRACT_SHA: 165e50e357a6126b04336d266267426bb55e5f62
+  BASE_OLD_TEST_BLOB: 83f358426842b4bd030b4c8b3da07d7a1365fed0
+  CONTRACT_TEST_BLOB: c5205ce840080d6a44c46cf4e4f77f5e82108e45
+
+jobs:
+  base-runtime-and-results:
+    name: Base before/after on one runner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run old two-seed and frozen six-seed base fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/w2-442-base"
+          mkdir -p "$OUT"
+
+          FILTER='Name=TacklesHappenInComposedPlay|Name=AControlledCarrierIsActuallyDispossessed|Name=BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose|Name=ChallengesAreBoundedAbove_NotJustNonZero|Name=TheCooldownArmsOnEveryOutcomeIncludingAMiss|Name=ChallengesOccurForBothDefendingTeams|Name=ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice|Name=ATackleFoulIsPublishedAsASlideTackle|Name=ReportW2442Corpus'
+
+          patch_reporter() {
+            python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/match-engine/tests/MatchEngineTackleTests.cs")
+          text = path.read_text(encoding="utf-8")
+          needle = "        [Test]\n        public void SaveAndRestoreCarryTheTackleLatches"
+          reporter = """        [Test]
+                  public void ReportW2442Corpus()
+                  {
+                      int connected = s_pooled.Won + s_pooled.Loose + s_pooled.Foul;
+                      TestContext.WriteLine(
+                          "W2_442_COUNTS won=" + s_pooled.Won
+                          + " loose=" + s_pooled.Loose
+                          + " foul=" + s_pooled.Foul
+                          + " missed=" + s_pooled.Missed
+                          + " dispossessions=" + s_dispossessions);
+                      TestContext.WriteLine(
+                          "W2_442_GUARDS connected=" + connected
+                          + " foul=" + s_pooled.Foul
+                          + " team0Resolved=" + s_perTeamResolved[0]
+                          + " team1Resolved=" + s_perTeamResolved[1]
+                          + " slideTackleFouls=" + s_slideTackleFouls
+                          + " cooldownOnMissOnly=" + s_sawCooldownWhileOnlyMisses);
+                  }
+
+          """
+          if text.count(needle) != 1:
+              raise SystemExit("reporter insertion point not unique")
+          path.write_text(text.replace(needle, reporter + needle, 1), encoding="utf-8", newline="\n")
+          PY
+          }
+
+          run_arm() {
+            label="$1"
+            ref="$2"
+            expected_blob="$3"
+
+            git reset --hard
+            git clean -fdx
+            git checkout --detach "$ref"
+            test "$(git rev-parse HEAD)" = "$ref"
+            test "$(git hash-object src/match-engine/tests/MatchEngineTackleTests.cs)" = "$expected_blob"
+
+            mkdir -p "$OUT/$label"
+            {
+              echo "label=$label"
+              echo "ref=$ref"
+              echo "pre_report_test_blob=$expected_blob"
+              echo "runner_os=$RUNNER_OS"
+              echo "runner_arch=$RUNNER_ARCH"
+            } > "$OUT/$label/provenance.txt"
+
+            patch_reporter
+            git diff --check -- src/match-engine/tests/MatchEngineTackleTests.cs
+            git diff -- src/match-engine/tests/MatchEngineTackleTests.cs > "$OUT/$label/reporter.patch"
+
+            python3 tools/dotnet-ci/generate_projects.py
+            dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+            dotnet build src/match-engine/tests/match-engine-tests.gen.csproj --no-restore
+
+            set +e
+            /usr/bin/time -f 'elapsed_seconds=%e' -o "$OUT/$label/runtime.txt" \
+              bash -o pipefail -c "dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-build --no-restore --filter \"$FILTER\" --logger \"console;verbosity=detailed\" --logger \"trx;LogFileName=$label.trx\" --results-directory \"$OUT/$label\" 2>&1 | tee \"$OUT/$label/console.log\""
+            rc=$?
+            set -e
+            echo "test_exit_code=$rc" >> "$OUT/$label/provenance.txt"
+            grep -E 'W2_442_(COUNTS|GUARDS)' "$OUT/$label/console.log" || true
+          }
+
+          run_arm base-old "$BASE_OLD_SHA" "$BASE_OLD_TEST_BLOB"
+          run_arm base-contract "$BASE_CONTRACT_SHA" "$CONTRACT_TEST_BLOB"
+
+          echo "=== runtime comparison ==="
+          cat "$OUT/base-old/runtime.txt"
+          cat "$OUT/base-contract/runtime.txt"
+
+      - name: Upload base evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w2-442-base-${{ github.run_id }}
+          path: ${{ runner.temp }}/w2-442-base/
+          if-no-files-found: error
+
+  head-results:
+    name: PR439 production + identical frozen contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 165e50e357a6126b04336d266267426bb55e5f62
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Verify pinned head evidence lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$HEAD_CONTRACT_SHA"
+          test "$(git rev-parse HEAD^)" = "989e78c490936eea63935a5c870c34b4dd615084"
+          test "$(git hash-object src/match-engine/tests/MatchEngineTackleTests.cs)" = "$CONTRACT_TEST_BLOB"
+
+      - name: Run frozen six-seed head fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/w2-442-head"
+          mkdir -p "$OUT"
+
+          FILTER='Name=TacklesHappenInComposedPlay|Name=AControlledCarrierIsActuallyDispossessed|Name=BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose|Name=ChallengesAreBoundedAbove_NotJustNonZero|Name=TheCooldownArmsOnEveryOutcomeIncludingAMiss|Name=ChallengesOccurForBothDefendingTeams|Name=ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice|Name=ATackleFoulIsPublishedAsASlideTackle|Name=ReportW2442Corpus'
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/match-engine/tests/MatchEngineTackleTests.cs")
+          text = path.read_text(encoding="utf-8")
+          needle = "        [Test]\n        public void SaveAndRestoreCarryTheTackleLatches"
+          reporter = """        [Test]
+                  public void ReportW2442Corpus()
+                  {
+                      int connected = s_pooled.Won + s_pooled.Loose + s_pooled.Foul;
+                      TestContext.WriteLine(
+                          "W2_442_COUNTS won=" + s_pooled.Won
+                          + " loose=" + s_pooled.Loose
+                          + " foul=" + s_pooled.Foul
+                          + " missed=" + s_pooled.Missed
+                          + " dispossessions=" + s_dispossessions);
+                      TestContext.WriteLine(
+                          "W2_442_GUARDS connected=" + connected
+                          + " foul=" + s_pooled.Foul
+                          + " team0Resolved=" + s_perTeamResolved[0]
+                          + " team1Resolved=" + s_perTeamResolved[1]
+                          + " slideTackleFouls=" + s_slideTackleFouls
+                          + " cooldownOnMissOnly=" + s_sawCooldownWhileOnlyMisses);
+                  }
+
+          """
+          if text.count(needle) != 1:
+              raise SystemExit("reporter insertion point not unique")
+          path.write_text(text.replace(needle, reporter + needle, 1), encoding="utf-8", newline="\n")
+          PY
+
+          git diff --check -- src/match-engine/tests/MatchEngineTackleTests.cs
+          git diff -- src/match-engine/tests/MatchEngineTackleTests.cs > "$OUT/reporter.patch"
+          {
+            echo "label=head-contract"
+            echo "production_parent=989e78c490936eea63935a5c870c34b4dd615084"
+            echo "contract_evidence_commit=$HEAD_CONTRACT_SHA"
+            echo "pre_report_test_blob=$CONTRACT_TEST_BLOB"
+            echo "runner_os=$RUNNER_OS"
+            echo "runner_arch=$RUNNER_ARCH"
+          } > "$OUT/provenance.txt"
+
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+          dotnet build src/match-engine/tests/match-engine-tests.gen.csproj --no-restore
+
+          set +e
+          /usr/bin/time -f 'elapsed_seconds=%e' -o "$OUT/runtime.txt" \
+            bash -o pipefail -c "dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-build --no-restore --filter \"$FILTER\" --logger \"console;verbosity=detailed\" --logger \"trx;LogFileName=head-contract.trx\" --results-directory \"$OUT\" 2>&1 | tee \"$OUT/console.log\""
+          rc=$?
+          set -e
+          echo "test_exit_code=$rc" >> "$OUT/provenance.txt"
+          grep -E 'W2_442_(COUNTS|GUARDS)' "$OUT/console.log" || true
+
+      - name: Upload head evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w2-442-head-${{ github.run_id }}
+          path: ${{ runner.temp }}/w2-442-head/
+          if-no-files-found: error

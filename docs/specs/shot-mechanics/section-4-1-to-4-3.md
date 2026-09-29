@@ -1,6 +1,6 @@
 # Shot Mechanics Specification #6 — Section 4: Architecture & Integration
 
-**File:** `Shot_Mechanics_Spec_Section_4_v1_3.md`
+**File:** `Shot_Mechanics_Spec_Section_4_v1_5.md`
 **Purpose:** Defines the complete file/module architecture for the Shot Mechanics system,
 including all integration contracts with Ball Physics (#1), Agent Movement (#2),
 Collision System (#3), Decision Tree (#8), and the Event System stub. This section is the
@@ -8,8 +8,8 @@ authoritative reference for boundary ownership and interface signatures. Impleme
 must not cross these boundaries without a formal amendment to this section.
 
 **Created:** February 23, 2026, 11:59 PM PST
-**Revised:** February 23, 2026
-**Version:** 1.3
+**Revised:** September 28, 2026
+**Version:** 1.5
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 6 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -529,7 +529,7 @@ corresponding update.
 |----|----------|-----------|--------|
 | FM-01 | Agent does not have possession at `ValidateRequest()` | Possession check (§4.2.2) | Reject `ShotRequest`. Return `ShotOutcome.Invalid`. Log warning with `agentId` and `frame`. Do not proceed to WINDUP. |
 | FM-02 | `ApplyKick()` produces NaN or Infinity in `BallState` | Post-call `float.IsNaN()` / `float.IsInfinity()` check on `ball.Velocity` | Log critical error. Flag for QA investigation. Indicates upstream physics parameter error. |
-| FM-03 | Possession race condition: agent loses possession between `INITIATING` and `CONTACT` | Possession re-check immediately before `ApplyKick()` at CONTACT | Log error. Transition to CANCELLED. This indicates a Collision System tackle interrupt handling failure. |
+| FM-03 | Agent loses possession between `INITIATING` and `CONTACT` | Possession re-check immediately before `ApplyKick()` at CONTACT | Log warning. Set `ShotOutcome.Cancelled` and return to IDLE without calling `ApplyKick()`; no `ShotCancelledEvent` (§4.7.1). Active-W2 composed play can make this an ordinary cancellation; it does not by itself indicate a Collision System failure. |
 | FM-04 | Velocity magnitude below `V_MIN` after full calculation | Post-calculation magnitude check | Apply `V_MIN` floor. Log warning. This should not occur if ShotVelocityCalculator is correct. |
 | FM-05 | NaN or Infinity from `IShotVelocityCalculator.Calculate()` | `float.IsNaN()` / `float.IsInfinity()` check on returned value | Do NOT call `ApplyKick()`. Return `ShotOutcome.Invalid`. Log critical error. Tested by EC-008 via NaNVelocityStub injection. |
 

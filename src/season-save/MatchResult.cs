@@ -1,6 +1,6 @@
 // File:     src/season-save/MatchResult.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2, §3.4, FR-SN-016..018, KD-3; Code Standards #20
 // Purpose:  The structured match-outcome payload — the #22 WorldLoop phase-1 PRODUCER event (KD-3).
@@ -52,6 +52,14 @@ namespace TacticalDirector.SeasonSave
         public MatchResult(
             int homeClubId, int awayClubId, int homeGoals, int awayGoals, int roundIndex, uint worldDay)
         {
+            if (homeClubId < 0 || awayClubId < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    homeClubId < 0 ? nameof(homeClubId) : nameof(awayClubId),
+                    homeClubId < 0 ? homeClubId : awayClubId,
+                    "Result club ids must be non-negative.");
+            }
+
             if (homeClubId == awayClubId)
             {
                 throw new System.ArgumentException(
@@ -115,4 +123,5 @@ namespace TacticalDirector.SeasonSave
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-07-25 | —      | Initial implementation (#30 T0): producer-only payload with F2     |
 // |         |            |        | construction gates; no #22 ingest wiring (FR-SN-017).              |
+// | 1.1     | 2026-09-08 | —      | Reject negative home and away club identities.                     |
 #endregion

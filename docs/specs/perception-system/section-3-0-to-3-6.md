@@ -1,6 +1,6 @@
 # Perception System Specification #7 — Section 3: Core Models
 
-**File:** `Perception_System_Spec_Section_3_v1_3.md`  
+**File:** `Perception_System_Spec_Section_3_v1_5.md`  
 **Purpose:** Defines all mathematical models, data structures, and computational procedures
 governing `FilteredView` and `PerceptionDiagnostics` production. This section is the
 implementation authority for the field of view model, shadow-cone occlusion, recognition
@@ -10,7 +10,7 @@ All constants are audit-tagged. All formulas include worked examples with numeri
 verification.
 
 **Created:** February 24, 2026, 3:00 PM PST  
-**Version:** 1.4  
+**Version:** 1.5  
 **Status:** DRAFT — Awaiting Lead Developer Review  
 **Specification Number:** 7 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -26,6 +26,7 @@ verification.
 | 1.0 | February 24, 2026, 3:00 PM PST | Initial draft |
 | 1.1 | February 25, 2026 | Four fixes: (1) Peripheral arc boundary derived from BASE_FOV_HALF_ANGLE/2 (40°) — removes arbitrary 60° magic number. (2) Confirmation expiry reduced to 1 tick [DERIVED] — minimum sufficient to absorb single-tick boundary noise, not GT-tuned. (3) Noise changed to additive-only (+0/+1) — preserves L_MIN floor algebraically without secondary clamp. (4) Constants table updated: 12 GT, 3 CROSS, 2 DERIVED (was 12 GT, 3 CROSS, 1 GT). |
 | 1.2 | February 26, 2026 | One fix: (1) §3.3.2 — L_rec rounding convention made explicit: floor() required (Mathf.FloorToInt). Previously the formula showed a float result with no documented conversion to integer ticks. Verification table updated to show float and floored-tick columns separately. This is a clarification only — the floor convention was always implied by the integer tick system; no constant values change. |
+| 1.5 | September 17, 2026 | ERR-007-004: §3.5.1 defines exact projected co-location as a zero-bearing case. A ball at the observer's exact XY is inside the FoV test regardless of facing direction; range and occlusion still apply. This closes the artificial `atan2(0,0)` world-East bearing exposed by PR #416 without changing non-zero-distance visibility. No constants, schema, RNG, or draw order change. |
 | 1.4 | April 22, 2026 | NB-1/NB-4 fix: §3.10 legend corrected — `[PHYS]` removed (no rows used it; `[FIXED]` is the CLAUDE.md canonical equivalent); paragraph text updated to 18 constants total (12 [GT], 2 [DERIVED], 4 [CROSS]) and 4 `[CROSS]` entries — matching the actual 18-row table. Section 3 Summary §3.10 line updated to match. `[CROSS]` tag formalized in `CLAUDE.md` (Option A). | §3.7 retitled from "PerceptionSnapshot Struct Definition" to "Output Struct Definitions: FilteredView + PerceptionDiagnostics". `PerceptionSnapshot` replaced by two structs: `FilteredView` (9 fields — pure consumer output delivered to Decision Tree) and `PerceptionDiagnostics` (7 fields — filter metadata NOT delivered to DT). `PerceivedAgent` reduced from 5→4 fields: `RecognitionLatencyRemaining` moved to editor-only `PerceivedAgentDebug`. Pipeline step 6 renamed BuildFilteredView. Worked examples (§3.9) updated to show FilteredView and PerceptionDiagnostics outputs separately. Prerequisite updated to Section 2 v1.2. |
 
 **Cross-Specification Constants Consumed (read-only):**
@@ -666,13 +667,21 @@ struct ShoulderCheckAnimData
 The ball is treated as a special entity with two differences from agent perception:
 
 1. **No L_rec.** Ball recognition is immediate upon becoming visible (OQ-2).
-2. **Visibility test is otherwise identical:** Range check (MAX_PERCEPTION_RANGE), FoV
-   half-angle check, shadow cone occlusion test.
+2. **Visibility is otherwise identical for non-zero projected displacement:** Range check
+   (MAX_PERCEPTION_RANGE), FoV half-angle check, shadow cone occlusion test.
+3. **Zero projected displacement has no bearing (ERR-007-004).** If the ball and observer
+   share the exact same XY coordinate, the FoV-angle predicate is satisfied regardless of
+   facing direction. Range and occlusion still apply. This is required for Controlled
+   possession, where the match engine attaches the ball to its holder at the same XY.
 
 ```
 // Ball visibility pipeline (Step 3–4 only; Step 5 skipped):
-bool ballInRange = (BallState.Position - Observer.Position).magnitude <= MAX_PERCEPTION_RANGE
-bool ballInFoV   = (|bearingToBall - FacingAngle| <= EffectiveFoV_HalfAngle)
+Vector2 ballDelta = BallState.Position.xy - Observer.Position
+bool ballInRange = ballDelta.magnitude <= MAX_PERCEPTION_RANGE
+bool ballCoLocated = ballDelta.sqrMagnitude == 0
+bool ballInFoV = ballInRange &&
+                 (ballCoLocated ||
+                  |bearingToBall - FacingAngle| <= EffectiveFoV_HalfAngle)
 bool ballOccluded = CheckOcclusionForEntity(BallState.Position, nearbyOpponents)
 
 BallVisible = ballInRange && ballInFoV && !ballOccluded

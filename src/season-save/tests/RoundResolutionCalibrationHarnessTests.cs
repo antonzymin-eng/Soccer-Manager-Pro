@@ -3,6 +3,7 @@
 // Modified: 2026-07-26
 // Modified: 2026-07-28 (Step 0 re-run PASSED post-§5.Z.20/§5.Z.21; LogAssert wrapper on both env-gated drivers — playing matches emit FM-08/FM-03 as ordinary events)
 // Modified: 2026-08-12 (A4a run: TD_CALIBRATION_SAMPLE_FROM + window tiling/slice locks)
+// Modified: 2026-09-28 (FM-03 closeout: remove broad Error-log suppression from engine corpus drivers — v1.3)
 // Author:   —
 // Spec:     League Bootstrap design supplement KD-8 (calibration methodology + Step 0); path-to-playable
 //           roadmap A4a / C1a; Code Standards #20
@@ -281,12 +282,6 @@ namespace TacticalDirector.SeasonSave.Tests
                 Assert.Ignore("Set TD_CALIBRATION_PILOT=1 to run the KD-8 Step 0 pilot (~20 real matches).");
             }
 
-            // A playing match emits FM-08/FM-03 possession-race errors as ordinary match events
-            // (§5.Z Phase H); without this the shim's log watcher fails the run at teardown even
-            // though every assertion passed — this driver predates play developing, so it never
-            // needed the wrapper its sibling engine-driving diagnostics carry.
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             int spread = LeagueBootstrapConstants.LeagueStrengthSpread;
             Squad[] rosters = RoundResolutionCalibrationHarness.BuildBaseRosters();
 
@@ -294,8 +289,6 @@ namespace TacticalDirector.SeasonSave.Tests
                 RoundResolutionCalibrationHarness.RunBucket(rosters, +2 * spread, 10);
             List<CalibrationRow> strongAway =
                 RoundResolutionCalibrationHarness.RunBucket(rosters, -2 * spread, 10);
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             float strongHomeMargin = MeanMargin(strongHome);
             float strongAwayMargin = MeanMargin(strongAway);
@@ -336,10 +329,6 @@ namespace TacticalDirector.SeasonSave.Tests
             int sampleFrom = EnvInt("TD_CALIBRATION_SAMPLE_FROM", 0);
             string outPath = Environment.GetEnvironmentVariable("TD_CALIBRATION_OUT");
 
-            // Same wrapper as the pilot: playing matches emit FM-08/FM-03 possession-race errors
-            // as ordinary match events (§5.Z Phase H).
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             Squad[] rosters = RoundResolutionCalibrationHarness.BuildBaseRosters();
             var rows = new List<CalibrationRow>();
 
@@ -353,8 +342,6 @@ namespace TacticalDirector.SeasonSave.Tests
                     + $"n={bucket.Count} meanDSquad={MeanDSquad(bucket):F3} "
                     + $"meanHome={MeanHome(bucket):F3} meanAway={MeanAway(bucket):F3}");
             }
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             string csv = RoundResolutionCalibrationHarness.ToCsv(rows);
             if (!string.IsNullOrEmpty(outPath))
@@ -445,4 +432,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | this tree PASSED: margins +4.000 / -3.500 (was +7.100 / -4.700 on  |
 // |         |            |        | the July-28 tree), and the split-across-processes rows were        |
 // |         |            |        | verified byte-identical to this driver's own 20 pilot rows.        |
+// | 1.3     | 2026-09-28 | —      | FM-03 closeout: broad Error suppression removed from both env-gated    |
+// |         |            |        | real-match drivers. UNEXERCISED on this head: normal CI skips both;    |
+// |         |            |        | the next explicit pilot/corpus run is the evidence that no other       |
+// |         |            |        | unexpected Error channel aborts these long runs at teardown.           |
 #endregion

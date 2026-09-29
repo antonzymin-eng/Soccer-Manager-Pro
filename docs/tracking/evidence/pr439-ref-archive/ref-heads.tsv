@@ -1,0 +1,17 @@
+observed_at_utc	ref	head_sha
+2026-09-24T00:48Z	evidence/pr439-discipline-seed-probe	142b9f98f68e8c5d9b4a8e21e61f44efd931f354
+2026-09-24T00:48Z	evidence/pr439-header-reachability	7494300341cae94ed3eae41033d874e23cac0b06
+2026-09-24T00:48Z	evidence/pr439-m7-order-mutation	58cf6ec88e33054c069ef8e2914ce395fd2d76f1
+2026-09-24T00:48Z	evidence/pr439-season-save-logscope-focused	d6b6a565b064d0471763d7792ddce3eeacaf6f04
+2026-09-24T00:48Z	evidence/pr439-seasonsave-focused	6214a6039a5e6ff6ca2c225cf1394827c9d63de9
+2026-09-24T00:48Z	evidence/pr439-seasonsave-focused-v2	300aae34349493b4a111659a1ac4aa58d9b72fce
+2026-09-24T00:48Z	evidence/pr439-w2-diag-base	8b4bf0204179e0824a37a67ac9818d7674975a98
+2026-09-24T00:48Z	evidence/pr439-w2-diag-head	b15366ced301f988af3b72817839b6f463ce1e71
+2026-09-24T00:48Z	evidence/pr439-w2-diag-w3	fe99bae58045151c91653dc0c8da90b8679c35c8
+2026-09-24T00:48Z	evidence/pr439-w3-pre-w6-six-seed	d8b362d4c84b9d8fb461ffea66187f50a8780033
+2026-09-24T00:48Z	evidence/pr439-w3-prearm-20260922	b8b59a41fe56cf6a5ac67e952435cfb8a0707317
+2026-09-24T00:48Z	evidence/pr439-w3-prewire-six-seed	cf36526ce6ecd64632133780ed98ca0afe46c987
+2026-09-24T00:48Z	evidence/pr439-w3-six-seed-20260922	7347b0452d8143c5b540575b4db1f882302f1988
+2026-09-24T00:48Z	evidence/pr439-w3-six-seed-rerun-20260923	3f391fed45795a9c4f22bc601e187dd2cbe0e39a
+2026-09-24T00:48Z	evidence/pr439-w6-postfix-focused	495f9b0ed2eef06b6dffb7f3b09e4e9e0eaae0f3
+2026-09-24T00:48Z	evidence/pr439-w6-prefixtest	a6cfa40703c74ca42848ae1deaa44ba99f61fe4d

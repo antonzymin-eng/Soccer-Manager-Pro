@@ -5,6 +5,8 @@
         "TacticalDirector.SeasonSave",
         "TacticalDirector.MatchEngine",
         "TacticalDirector.AgentMovement",
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.EventSystem",
         "TacticalDirector.LivingWorld",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.PlayerDatabase",
@@ -12,6 +14,7 @@
         "TacticalDirector.TrainingSystem",
         "TacticalDirector.InjuriesMedical",
         "TacticalDirector.Discipline",
+        "TacticalDirector.ClubFinances",
         "TacticalDirector.TestingStrategy",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

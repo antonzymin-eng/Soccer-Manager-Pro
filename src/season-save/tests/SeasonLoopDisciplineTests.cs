@@ -1,5 +1,10 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
+// Modified: 2026-09-28 (FM-03 closeout: remove broad composed-engine Error suppression — v1.18)
+// Modified: 2026-09-22 (W3 trajectory fallout: make the within-fixture ban-order lock deterministic and trajectory-independent; retain scoped composed-engine Error-log containment — v1.17)
+// Modified: 2026-09-12 (Unity editor compile — Does.Not.Contain(int) → Has.No.Member: Unity's bundled
+//           NUnit 3.5 only has the string overload; same assertion, compiles under both NUnits)
+// Modified: 2026-09-11 (#40 T2b — season-boundary discipline fixtures carry finance state)
 // Modified: 2026-08-16, latest of all again (M-C, adversarial review — v1.13: the production
 //           onPitchAgentIdCount argument at SeasonLoop.PlayThroughEngine's CardLedgerFold construction
 //           site (MatchEngineConstants.SQUAD_SIZE) had no lock — ApplySubstitution is reachable only
@@ -148,7 +153,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 league,
                 progressionOrNull: null,
                 disciplineOrNull: discipline,
-                disciplineDriverOrNull: disciplineDriverOrNull);
+                disciplineDriverOrNull: disciplineDriverOrNull,
+                financesOrNull: SeasonLoopScenarios.InitialFinances(league));
         }
 
         /// <summary>
@@ -189,6 +195,49 @@ namespace TacticalDirector.SeasonSave.Tests
             }
 
             public void CommitFixtureCards(CardLedgerFold foldOrNull) => foldOrNull?.Commit(_rules);
+        }
+
+        /// <summary>
+        /// Deterministic M7 collaborator. The real-engine fold wiring is locked separately by
+        /// <see cref="ARealEngineFixtureFoldsItsCardsOntoPlayerRecordsAndChangesNothingElse"/>.
+        /// This driver isolates the within-fixture ordering invariant: it delegates real serving, then
+        /// injects one straight-red card on the FIRST commit. The target is chosen by the test from the
+        /// first fixture's home-club bench, so if production ever calls CommitFixtureCards BEFORE
+        /// OnClubFixturePlayed, that same fixture immediately serves one match of the newly-created ban.
+        /// </summary>
+        private sealed class InjectStraightRedOnFirstCommitDriver : SeasonLoop.IFixtureDisciplineDriver
+        {
+            private readonly DisciplineRules _rules;
+            private readonly int _playerId;
+            private bool _injected;
+
+            internal InjectStraightRedOnFirstCommitDriver(DisciplineState state, int playerId)
+            {
+                _rules = new DisciplineRules(state);
+                _playerId = playerId;
+            }
+
+            internal bool Injected => _injected;
+
+            public void RequireCommittableConfig() => CardLedgerFold.RequireCommittableConfig();
+
+            public void OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds) =>
+                _rules.OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds);
+
+            public void CommitFixtureCards(CardLedgerFold foldOrNull)
+            {
+                foldOrNull?.Commit(_rules);
+                if (_injected)
+                {
+                    return;
+                }
+
+                _rules.ApplyCard(
+                    _playerId,
+                    DisciplineConstants.LeagueCompetitionKey,
+                    DisciplineConstants.CardKindRed);
+                _injected = true;
+            }
         }
 
         /// <summary>
@@ -480,7 +529,7 @@ namespace TacticalDirector.SeasonSave.Tests
 
             loop.BootFixtureEngine(in fixture, league, out int[] homeXi, out _, out _, out _);
 
-            Assert.That(homeXi, Does.Not.Contain(bannedStarter),
+            Assert.That(homeXi, Has.No.Member(bannedStarter),
                 "A suspended home starter was still fielded. The filter is not reaching the engine "
                 + "boot's resolve→filter→configure seam (ERR-030-009 / FR-DC-010).");
             Assert.That(homeXi.Length, Is.EqualTo(baselineXi.Length),
@@ -505,7 +554,7 @@ namespace TacticalDirector.SeasonSave.Tests
 
             loop.BootFixtureEngine(in fixture, league, out _, out int[] awayXi, out _, out _);
 
-            Assert.That(awayXi, Does.Not.Contain(bannedStarter),
+            Assert.That(awayXi, Has.No.Member(bannedStarter),
                 "A suspended AWAY starter was still fielded. The seam must filter each resolved squad "
                 + "of the fixture, not only the managed club's.");
         }
@@ -613,90 +662,75 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void ANewBanEarnedThisFixtureIsNotServedByThisSameFixture()
         {
-            // M7 (ERR-030-037): the off-by-one contract's WITHIN-fixture half, which
-            // AOneMatchBan_CostsExactlyTheNextFixtureAndNoMore above cannot see — that test pre-seeds
-            // the ban before the fixture is played, so it is blind to the ORDER of
-            // OnClubFixturePlayed vs fold.Commit inside PlayNextRound. Swapping the two calls makes a
-            // straight red a ONE-match ban instead of the two FR-DC-006 specifies (or, for a fresh
-            // accumulation crossing with no residual yellows, decrements the just-added ban straight to
-            // (0, 0) and FR-DC-017 drops the row — the player vanishes from the tally as if never
-            // carded at all), and every other test in this suite still passes: QuickSimAll (most of
-            // them) never builds a fold at all, and the fixed-tally fixtures above are seeded BEFORE
-            // kickoff, so they are blind to commit-vs-serve order within a fixture that EARNS a card.
+            // M7 (ERR-030-037): lock the relative order inside ONE fixture:
+            // OnClubFixturePlayed MUST run before CommitFixtureCards. The original version inferred
+            // the newly-earned ban from whatever cards this fixed match seed happened to produce.
+            // W3/W6 trajectory changes legitimately moved that population to zero ban-worthy cards,
+            // making the positive control fail without any ordering defect.
             //
-            // Ground truth for what round 0's cards alone should produce — with no serving anywhere
-            // near them — comes from an independent replay of the SAME deterministic round, fixture by
-            // fixture: the match is a pure function of (seed, squads), both tallies here start EMPTY so
-            // nobody is suspension-filtered, and the replayed engine runs are therefore byte-identical
-            // to production's. Committing each replayed fold into one fresh, unrelated
-            // DisciplineRules — never touched by a serving call — gives the exact tally PlayNextRound's
-            // own commits must reproduce if, and only if, serving never touches a ban a fixture just
-            // earned for itself. FullEngine (not ManagedThroughEngine) so BOTH of this 4-club round's
-            // fixtures book cards; at WorldSeed, fixture 0 alone happens to book nothing bannable, and
-            // a positive control that only checked SOME card existed would be vacuous on that fixture.
+            // Keep the production ordering seam but make the stimulus deterministic. QuickSimAll still
+            // calls the same IFixtureDisciplineDriver block (with fold=null). A test driver delegates
+            // real serving and injects exactly one straight red on the FIRST commit. Its target is a
+            // bench player from fixture 0's home club, so he is on that club's roster but NOT in the
+            // fielded XI. Correct order: empty tally is served first, then the full straight-red ban is
+            // added. Reversed order: the ban is added first and that same fixture immediately decrements
+            // it (or removes it entirely if the configured ban length is one). Thus the test remains
+            // non-vacuous without depending on incidental match/card trajectories.
             League league = FourClubLeague();
+            SeasonLoop probe = LoopOver(league, RoundResolutionMode.QuickSimAll, out _);
+            Fixture first = probe.State.FixtureAt(0);
+            Squad home = league.ResolveByClubId(first.HomeClubId);
+            int[] startingEleven = SquadRating.StartingElevenPlayerIds(home);
 
-            SeasonLoop groundTruthLoop = LoopOver(league, RoundResolutionMode.FullEngine, out _);
-            var groundTruth = new DisciplineState();
-            var groundTruthRules = new DisciplineRules(groundTruth);
-            for (int f = 0; f < 2; f++)
+            int benchPlayerId = -1;
+            for (int i = 0; i < home.Count && benchPlayerId < 0; i++)
             {
-                Fixture fixture = groundTruthLoop.State.FixtureAt(f);
-                TacticalDirector.MatchEngine.MatchEngine groundTruthEngine =
-                    groundTruthLoop.BootFixtureEngine(in fixture, league);
-                var groundTruthFold = new CardLedgerFold(
-                    groundTruthEngine.PlayerIdsByAgentId(), MatchEngineConstants.SQUAD_SIZE,
-                    DisciplineConstants.LeagueCompetitionKey);
-                var groundTruthTap = new MatchEngineDisciplineTap(groundTruthEngine);
-                while (!groundTruthEngine.MatchEnded)
+                int candidate = home.GetPlayer(i).PlayerId;
+                bool starts = false;
+                for (int j = 0; j < startingEleven.Length; j++)
                 {
-                    groundTruthEngine.RunTick();
-                    groundTruthFold.ObserveTick(groundTruthTap);
+                    if (startingEleven[j] == candidate)
+                    {
+                        starts = true;
+                        break;
+                    }
                 }
-                groundTruthFold.Commit(groundTruthRules);
-            }
 
-            int groundTruthBanEntries = 0;
-            for (int i = 0; i < groundTruth.Count; i++)
-            {
-                if (groundTruth.EntryAt(i).BanMatchesRemaining > 0)
+                if (!starts)
                 {
-                    groundTruthBanEntries++;
+                    benchPlayerId = candidate;
                 }
             }
 
-            Assert.That(groundTruthBanEntries, Is.GreaterThan(0),
-                "Positive control: round 0 must deterministically book at least one BAN-WORTHY card "
-                + "(not just any card — a bare uncrossed yellow has BanMatchesRemaining == 0 and is "
-                + "untouched by serving either way, so it would pass this lock vacuously). If this ever "
-                + "fails, the fixture/seed pairing needs revisiting, not the ordering this test exists "
-                + "to lock.");
+            Assert.That(benchPlayerId, Is.GreaterThanOrEqualTo(0),
+                "Precondition: fixture 0's home club must have at least one non-starting roster player.");
+            Assert.That(DisciplineConstants.StraightRedBanMatches, Is.GreaterThan(0),
+                "Precondition: a straight red must create a positive ban for this ordering lock.");
 
             var tally = new DisciplineState();
-            SeasonLoop loop = LoopOver(league, RoundResolutionMode.FullEngine, out _, tally);
+            var driver = new InjectStraightRedOnFirstCommitDriver(tally, benchPlayerId);
+            SeasonLoop loop = LoopOver(
+                league,
+                RoundResolutionMode.QuickSimAll,
+                out _,
+                tally,
+                driver);
+
             loop.AdvanceToNextFixtureDay();
             loop.AdvanceAndPlayNextRound(league);
 
-            for (int i = 0; i < groundTruth.Count; i++)
-            {
-                DisciplineEntry expected = groundTruth.EntryAt(i);
-
-                Assert.That(
-                    tally.HasEntry(expected.PlayerId, expected.CompetitionId), Is.True,
-                    $"Player {expected.PlayerId}'s card from this round is MISSING from the production "
-                    + "tally entirely. M6/M7: OnClubFixturePlayed ran on this player's newly committed "
-                    + "(residual-yellows, ban) entry and decremented it to (0, 0), which FR-DC-017 then "
-                    + "drops immediately — a ban his own fixture's card had just added, served (and "
-                    + "erased) before it ever counted for a fixture.");
-
-                DisciplineEntry actual = tally.EntryFor(expected.PlayerId, expected.CompetitionId);
-                Assert.That(actual.BanMatchesRemaining, Is.EqualTo(expected.BanMatchesRemaining),
-                    $"Player {expected.PlayerId} earned a {expected.BanMatchesRemaining}-match ban this "
-                    + $"round (ground truth, commit alone) but the production tally shows "
-                    + $"{actual.BanMatchesRemaining}. OnClubFixturePlayed must run BEFORE that player's "
-                    + "own fixture's fold.Commit, never after — a card shown in fixture N must not have "
-                    + "ITS OWN ban served by fixture N.");
-            }
+            Assert.That(driver.Injected, Is.True,
+                "Positive control: the fixture commit seam must have been reached and injected the card.");
+            Assert.That(
+                tally.HasEntry(benchPlayerId, DisciplineConstants.LeagueCompetitionKey),
+                Is.True,
+                "The newly-earned ban disappeared during its own fixture; commit likely ran before serving.");
+            Assert.That(
+                Ban(tally, benchPlayerId),
+                Is.EqualTo(DisciplineConstants.StraightRedBanMatches),
+                "A ban earned by fixture N must retain its FULL configured length after fixture N. "
+                + "If this is one lower, CommitFixtureCards ran before OnClubFixturePlayed and the "
+                + "new ban incorrectly served a match during the dismissal fixture itself.");
         }
 
         // ── M12: the block's POSITION relative to MarkFixturePlayed ───────────────────────
@@ -866,9 +900,9 @@ namespace TacticalDirector.SeasonSave.Tests
 
             loop.BootFixtureEngine(in fixture, league, out int[] homeXi, out _, out _, out _);
 
-            Assert.That(homeXi, Does.Not.Contain(suspended),
+            Assert.That(homeXi, Has.No.Member(suspended),
                 "The suspension removal was lost when composed with the injury removal.");
-            Assert.That(homeXi, Does.Not.Contain(injured),
+            Assert.That(homeXi, Has.No.Member(injured),
                 "The injury removal was lost when composed with the suspension removal. Both are "
                 + "removals and the composition is a union — neither may mask the other.");
         }
@@ -1633,4 +1667,22 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | MatchEngineConstants.SQUAD_SIZE and re-ran green. Both mutations  |
 // |         |            |        | were applied to the ACTUAL FILE, built and run via dotnet test,   |
 // |         |            |        | not merely reasoned about.                                        |
+// | 1.14    | 2026-09-11 | —      | #40 T2b: LoopOver carries canonical finance state at boundary.   |
+// | 1.15    | 2026-09-22 | —      | W3 trajectory fallout: scope the known composed-play ShotExecutor FM-03 |
+// |         |            |        | Error channel out of the two real-engine discipline fold/order oracles. |
+// |         |            |        | Assertions and production behavior are unchanged; prior LogAssert state |
+// |         |            |        | is restored in finally.                                                  |
+// | 1.16    | 2026-09-22 | —      | Review correction: document that ignoreFailingMessages suppresses ALL   |
+// |         |            |        | unexpected Error logs in each wrapped engine span, not only FM-03; keep  |
+// |         |            |        | FM-03 tracked separately; collapse the Action helper onto the generic    |
+// |         |            |        | implementation. No discipline assertion or production path changed.      |
+// | 1.17    | 2026-09-22 | —      | W3 trajectory-proof M7 repair: replace the real-match ban-worthiness     |
+// |         |            |        | positive control with a deterministic test driver that injects one       |
+// |         |            |        | straight-red ban at the first fixture commit, targeting a non-starter.  |
+// |         |            |        | The same serve→commit production seam is locked without depending on     |
+// |         |            |        | incidental card output; real-engine fold ingestion stays covered by the  |
+// |         |            |        | separate ARealEngineFixture... test. Production code unchanged.          |
+// | 1.18    | 2026-09-28 | —      | FM-03 closeout: the two full-engine fold/neutrality runs no longer use     |
+// |         |            |        | ignoreFailingMessages. CONTACT-time shot possession loss is Warning-level, |
+// |         |            |        | so unrelated unexpected Error logs are visible to teardown policing again. |
 #endregion

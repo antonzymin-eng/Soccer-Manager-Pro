@@ -3,6 +3,8 @@
 // Modified: 2026-06-14
 // Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over
 //           the per-agent cross-tick arrays, for the Match Engine v18 save/restore path)
+// Modified: 2026-09-22 (W3: preserve cross-system contested duel id on a surviving Head's HeaderExecutedEvent)
+// Modified: 2026-09-22 (W3: expose geometry-qualified current-frame Head participants to one composition arbitration hook before Heading duel/application)
 // Modified: 2026-08-09 (ERR-010-002: contact-geometry rewritten around a single ResolveContactGeometry
 //           owner read by both Update passes, carrying the 3-D contact point directly; see §3.5.1 / HeadingAim.cs)
 // Author:   —
@@ -21,6 +23,22 @@ using TacticalDirector.CollisionSystem;
 
 namespace TacticalDirector.HeadingMechanics
 {
+    /// <summary>
+    /// Optional W3 composition hook invoked once after #10 has identified its real current-frame
+    /// geometry-qualified Head contacts and before #10 resolves/applies any header. The implementation
+    /// may suppress prepared Head participants after combining them with other mechanic-owned geometry;
+    /// Collision #3 observations are not part of this contract.
+    /// </summary>
+    public interface IHeadingPreparedFrameArbiter
+    {
+        void ArbitratePreparedHeadContacts(
+            HeadingMechanics heading,
+            AgentState[] agentStates,
+            BallState currentBall,
+            int currentFrame,
+            float currentMatchTime);
+    }
+
     /// <summary>
     /// 60 Hz physics-tick orchestrator for Heading Mechanics #10.
     /// Dispatches §3.2–§3.9 sub-systems per-agent per-frame, resolves contested duels, and
@@ -44,6 +62,18 @@ namespace TacticalDirector.HeadingMechanics
         private readonly bool[]              _intentActive;
         private readonly int[]               _ballSnapshotFrames;
         private readonly HeadingAgentAttributes[] _agentAttrs;
+
+        // W3 frame-local prepared Head geometry. These arrays are observation/arbitration scratch only:
+        // cleared every Update, never serialized, and never used as a replacement for #10 eligibility.
+        private readonly int[] _preparedHeadAgentIds;
+        private readonly Vector3[] _preparedHeadCenters;
+        private readonly bool[] _preparedHeadSuppressedByAgent;
+        private readonly int[] _preparedHeadExternalDuelIdByAgent;
+        private int _preparedHeadCount;
+
+        // W3 same-frame feed lifecycle. True only between BeginPhysicsFrame and Update; never
+        // survives a completed physics tick and therefore is not cross-tick snapshot state.
+        private bool _collisionFramePrepared;
 
         // ── Profiler Markers ─────────────────────────────────────────────────────────
 
@@ -71,6 +101,10 @@ namespace TacticalDirector.HeadingMechanics
             _intentActive      = new bool[maxAgents];
             _ballSnapshotFrames = new int[maxAgents];
             _agentAttrs        = new HeadingAgentAttributes[maxAgents];
+            _preparedHeadAgentIds = new int[maxAgents];
+            _preparedHeadCenters = new Vector3[maxAgents];
+            _preparedHeadSuppressedByAgent = new bool[maxAgents];
+            _preparedHeadExternalDuelIdByAgent = new int[maxAgents];
         }
 
         // ── Public API ───────────────────────────────────────────────────────────────
@@ -80,6 +114,103 @@ namespace TacticalDirector.HeadingMechanics
         /// AGENT_BALL events into the duel resolution buffer each frame (§4.2.1 / KD-8).
         /// </summary>
         public ICollisionEventConsumer CollisionConsumer => _duelResolution;
+
+        /// <summary>Current-frame AGENT_BALL candidate count. Observation-only W3 diagnostic.</summary>
+        public int BufferedCollisionContactCount => _duelResolution.ContactCount;
+
+        /// <summary>
+        /// Starts the current 60 Hz collision-consumption window. The composition root calls this
+        /// immediately before Collision System #3 publishes the frame's AGENT_BALL contacts.
+        /// </summary>
+        public void BeginPhysicsFrame()
+        {
+            _duelResolution.ClearFrameBuffer();
+            _collisionFramePrepared = true;
+        }
+
+        /// <summary>W3 current-frame geometry-qualified Head participant count.</summary>
+        public int PreparedHeadContactCount => _preparedHeadCount;
+
+        public int GetPreparedHeadContactAgentId(int index)
+        {
+            if ((uint)index >= (uint)_preparedHeadCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+            return _preparedHeadAgentIds[index];
+        }
+
+        public Vector3 GetPreparedHeadCenter(int index)
+        {
+            if ((uint)index >= (uint)_preparedHeadCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+            return _preparedHeadCenters[index];
+        }
+
+        /// <summary>
+        /// W3 composition decision: suppress one already-prepared Head contact because another physical
+        /// participant won the shared aerial arbitration. This never creates a Head participant.
+        /// </summary>
+        public void SuppressPreparedHeadContact(int agentId)
+        {
+            if ((uint)agentId >= (uint)_preparedHeadSuppressedByAgent.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(agentId));
+            }
+
+            bool found = false;
+            for (int i = 0; i < _preparedHeadCount; i++)
+            {
+                if (_preparedHeadAgentIds[i] == agentId)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                throw new InvalidOperationException(
+                    "Cannot suppress an agent that #10 did not prepare as a Head contact this frame.");
+            }
+
+            _preparedHeadSuppressedByAgent[agentId] = true;
+        }
+
+        /// <summary>
+        /// W3 records that an already-prepared Head survived a cross-system contest. This is frame-local
+        /// event provenance only: it lets HeaderExecutedEvent carry the W3 duel id instead of falsely
+        /// reporting the surviving Head as uncontested after the losing participants are suppressed.
+        /// </summary>
+        public void MarkPreparedHeadContested(int agentId, int contestedDuelId)
+        {
+            if ((uint)agentId >= (uint)_preparedHeadExternalDuelIdByAgent.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(agentId));
+            }
+            if (contestedDuelId == HeaderExecutedEvent.UncontestedDuelId)
+            {
+                throw new ArgumentOutOfRangeException(nameof(contestedDuelId));
+            }
+
+            bool found = false;
+            for (int i = 0; i < _preparedHeadCount; i++)
+            {
+                if (_preparedHeadAgentIds[i] == agentId)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                throw new InvalidOperationException(
+                    "Cannot mark a W3 duel on an agent that #10 did not prepare as a Head contact this frame.");
+            }
+
+            _preparedHeadExternalDuelIdByAgent[agentId] = contestedDuelId;
+        }
 
         /// <summary>
         /// Commits a HeaderIntent for an agent (called from the 10 Hz tactical loop).
@@ -173,11 +304,31 @@ namespace TacticalDirector.HeadingMechanics
             AgentState[] agentStates,
             BallState currentBall,
             int currentFrame,
-            float currentMatchTime)
+            float currentMatchTime,
+            IHeadingPreparedFrameArbiter frameArbiter = null)
         {
             using var _ = s_updateMarker.Auto();
 
-            _duelResolution.ClearFrameBuffer();
+            // W3 lifecycle: composition callers that want the same-frame AGENT_BALL candidate feed
+            // call BeginPhysicsFrame, publish contacts, then Update. Direct/unit callers that invoke
+            // Update alone retain the pre-W3 self-contained lifecycle and cannot accumulate stale
+            // contacts/duels across calls.
+            if (_collisionFramePrepared)
+            {
+                _duelResolution.ClearDuelBuffer();
+            }
+            else
+            {
+                _duelResolution.ClearFrameBuffer();
+            }
+            _collisionFramePrepared = false;
+
+            _preparedHeadCount = 0;
+            for (int i = 0; i < _preparedHeadSuppressedByAgent.Length; i++)
+            {
+                _preparedHeadSuppressedByAgent[i] = false;
+                _preparedHeadExternalDuelIdByAgent[i] = HeaderExecutedEvent.UncontestedDuelId;
+            }
 
             // Pass 1: per-agent eligibility check, jump kinematics, contact-frame detection.
             // Agents are iterated in index order (deterministic per #16 §3.2 entity ordering).
@@ -320,9 +471,19 @@ namespace TacticalDirector.HeadingMechanics
                     contactState.ContactPointError = contactPointError;
                     contactState.ContactQualityScalar = qualityScalar;
 
-                    // Register with duel resolution (always; uncontested agents will be solo-resolved).
-                    float baseScore = HeadingDuelResolution.ComputeBaseScore(attrs);
-                    _duelResolution.RegisterDuelCandidate(agentId, currentMatchTime, baseScore);
+                    // Heading #10 remains the sole authority for Head contact geometry. W3 needs one
+                    // composition seam before any ball mutation, so record this real geometry-qualified
+                    // participant in canonical agent order. Registration into #10's own duel happens
+                    // after the optional cross-system arbiter has had a chance to suppress a loser.
+                    if (_preparedHeadCount >= _preparedHeadAgentIds.Length)
+                    {
+                        throw new InvalidOperationException(
+                            "Prepared Heading contact buffer overflow: capacity=" +
+                            _preparedHeadAgentIds.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
+                    }
+                    _preparedHeadAgentIds[_preparedHeadCount] = agentId;
+                    _preparedHeadCenters[_preparedHeadCount] = headCentre_ws;
+                    _preparedHeadCount++;
                 }
 
                 // Do not update PrevFrameFacingDirection on the contact frame; Pass 2 needs the
@@ -331,6 +492,24 @@ namespace TacticalDirector.HeadingMechanics
                 {
                     contactState.PrevFrameFacingDirection = agentState.FacingDirection;
                 }
+            }
+
+            // W3 composition boundary: #10 has now prepared real Head geometry, but has not resolved
+            // its duel or touched the ball. The optional host may combine this with #11 Hand geometry.
+            frameArbiter?.ArbitratePreparedHeadContacts(
+                this, agentStates, currentBall, currentFrame, currentMatchTime);
+
+            // Register only Head participants that survived cross-system arbitration. With no arbiter
+            // this is exactly the pre-W3 canonical agent-order registration.
+            for (int i = 0; i < _preparedHeadCount; i++)
+            {
+                int agentId = _preparedHeadAgentIds[i];
+                if (_preparedHeadSuppressedByAgent[agentId])
+                {
+                    continue;
+                }
+                float baseScore = HeadingDuelResolution.ComputeBaseScore(_agentAttrs[agentId]);
+                _duelResolution.RegisterDuelCandidate(agentId, currentMatchTime, baseScore);
             }
 
             // Pass 2: resolve duels and emit events.
@@ -387,8 +566,22 @@ namespace TacticalDirector.HeadingMechanics
                     out Vector2 unusedAimHeadLocal,
                     out Vector3 contactPointActual_ws);
 
+                if (_preparedHeadSuppressedByAgent[agentId])
+                {
+                    EmitFailedAttempt(
+                        agentId,
+                        FailureCause.DisturbedInDuel,
+                        currentBall,
+                        currentMatchTime,
+                        contactState.TimingOffsetMs,
+                        agentStates);
+                    _telemetry.RecordDuelOutcome(false, true);
+                    _intentActive[agentId] = false;
+                    continue;
+                }
+
                 // Find this agent's duel result.
-                int  duelId          = -1;
+                int  duelId          = _preparedHeadExternalDuelIdByAgent[agentId];
                 bool isWinner        = true;
                 float disturbance    = 0.0f;
 
@@ -399,7 +592,12 @@ namespace TacticalDirector.HeadingMechanics
                     {
                         if (_duelResolution.GetParticipantAgentId(duel.BufferStartIndex, p) == agentId)
                         {
-                            duelId     = duel.ParticipantCount > 1 ? duel.DuelId : HeaderExecutedEvent.UncontestedDuelId;
+                            // Preserve a W3 cross-system duel id when this Head is the sole survivor
+                            // handed into #10. A native multi-Head #10 duel remains #10-owned.
+                            if (duel.ParticipantCount > 1)
+                            {
+                                duelId = duel.DuelId;
+                            }
                             isWinner   = duel.WinnerAgentId == agentId;
                             disturbance = _duelResolution.GetDisturbanceFactor(duel.BufferStartIndex, p);
                             break;
@@ -693,4 +891,6 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | normal horizontal. Calls the new §3.5.1 / HeadingAim.cs three-step aim solve.     |
 // |         |            |        | Retroactive version-history row (adversarial review of the landing, Finding 4) —  |
 // |         |            |        | no further logic change from this row itself.                                     |
+// | 1.8     | 2026-09-22 | —      | W3: prepared Head geometry hook runs between #10 contact qualification and duel/application; host may suppress only already-prepared participants, preserving direct-call behavior when no arbiter is supplied. |
+// | 1.9     | 2026-09-22 | —      | W3 provenance: a Head surviving mixed Hand/Head arbitration retains the cross-system duel id in HeaderExecutedEvent instead of being mislabeled uncontested after loser suppression. Frame-local only; no snapshot/RNG change. |
 #endregion

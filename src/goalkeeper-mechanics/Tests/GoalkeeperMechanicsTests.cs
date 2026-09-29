@@ -1,7 +1,10 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperMechanicsTests.cs
 // Created:  2026-05-31
 // Modified: 2026-05-31
+// Modified: 2026-09-22 (W3: mixed-participant canonical-order and symmetric near-tie duel locks)
 // Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: call sites renamed to the new state-machine parameter names)
+// Modified: 2026-09-27 (ERR-011-018: T-GK-I-011 stub names the real #12 surface and where the baseline read is now locked)
+// Modified: 2026-09-26 (W8 / ERR-011-017 review: Recovering holds until the cooldown boundary — the not-elapsed complement of T-5.1.1-I)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §5, Code Standards #20
 // Purpose:  Unit tests for Goalkeeper Mechanics. T-5.1 unit tests from §5.
@@ -289,6 +292,41 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Set, result, "Recovering should transition to Set when cooldown has elapsed.");
+        }
+
+        // ── T-5.1.1-I2  Recovering holds until the cooldown elapses ──────────
+
+        /// <summary>
+        /// T-5.1.1-I2 (W8 / ERR-011-017 review): the complement of T-5.1.1-I. Before the cooldown boundary a
+        /// keeper away from its baseline stays <c>Recovering</c>; at the boundary it returns to <c>Set</c>.
+        /// Both ticks are 10 Hz tactical ticks. The composed engine cannot show this today because it feeds
+        /// the baseline slot the keeper's own position (open-issues.md), so the contract is locked here.
+        /// </summary>
+        [TestCase(9, GoalkeeperState.Recovering)]
+        [TestCase(10, GoalkeeperState.Set)]
+        public void Recovering_AwayFromBaseline_HoldsUntilCooldownBoundary(int currentTick, GoalkeeperState expected)
+        {
+            int cooldownEnd = 10;
+
+            GoalkeeperState result = GoalkeeperStateMachine.EvaluateTacticalTransition(
+                currentState:           GoalkeeperState.Recovering,
+                ballState:              DefaultBall(),
+                hasSaveIntent:          false,
+                hasRushIntent:          false,
+                hasDistributeIntent:    false,
+                anticipationScore:      0.0f,
+                rushCommitmentLevel:    0.0f,
+                currentTick:            currentTick,
+                claimTick:              -1,
+                releaseTickEarliest:    0,
+                recoveryCooldownEndTick:cooldownEnd,
+                gkPosition:             new Vector2(52.5f, 34f),
+                gkBaselineSlot:         new Vector2(0f, 34f),   // far from baseline
+                ballThreateningOwnGoal: true,
+                ballSafelyUpfield:      false);
+
+            Assert.AreEqual(expected, result,
+                "an off-baseline keeper recovers for exactly the cooldown, counted in tactical ticks");
         }
 
         // ── T-5.1.1-J  OneOnOne → Diving when SaveIntent committed ───────────
@@ -914,6 +952,54 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             Assert.AreEqual(1.0f, sum, 1e-5f,
                 "CROSS_CLAIM_DUEL_BALANCE_W + CROSS_CLAIM_DUEL_STRENGTH_W + CROSS_CLAIM_DUEL_AERIAL_W must equal 1.0.");
         }
+
+        [Test]
+        public void CrossClaimDuel_ThreeParticipants_PreservesCanonicalRegistration_AndChoosesHighestScore()
+        {
+            var duel = new GoalkeeperCrossClaimDuel();
+            duel.ClearFrameBuffer();
+
+            Assert.IsTrue(duel.RegisterParticipant(
+                2, new CrossClaimParticipantAttributes(0.2f, 0.2f, 0.2f), BodyPartEnum.Head, 77));
+            Assert.IsTrue(duel.RegisterParticipant(
+                5, new CrossClaimParticipantAttributes(0.9f, 0.9f, 0.9f), BodyPartEnum.Hand, 77));
+            Assert.IsTrue(duel.RegisterParticipant(
+                9, new CrossClaimParticipantAttributes(0.4f, 0.4f, 0.4f), BodyPartEnum.Head, 77));
+
+            duel.ResolveHandContactDuel(gaussianSample: 0.0f);
+
+            CrossClaimDuelContext result = duel.GetDuel(0);
+            Assert.AreEqual(3, result.ParticipantCount);
+            Assert.AreEqual(2, duel.GetParticipantAgentId(0));
+            Assert.AreEqual(5, duel.GetParticipantAgentId(1));
+            Assert.AreEqual(9, duel.GetParticipantAgentId(2),
+                "W3 registration must remain in canonical entity order.");
+            Assert.AreEqual(5, result.WinnerAgentId);
+            Assert.AreEqual(BodyPartEnum.Hand, result.ContactBodyPart);
+        }
+
+        [Test]
+        public void CrossClaimDuel_NearTie_AppliesSymmetricTopSecondPerturbation()
+        {
+            var duel = new GoalkeeperCrossClaimDuel();
+            duel.ClearFrameBuffer();
+
+            // Weights sum to one, so equal Balance/Strength/Aerial norms make the base score equal
+            // to that norm. Initial gap = 0.015 (< epsilon 0.03). With Gaussian -2/3 and amplitude
+            // 0.015, perturbation = -0.010: symmetric application changes the gap by -0.020 and
+            // flips the winner. The old top-only perturbation would leave a +0.005 gap and not flip.
+            Assert.IsTrue(duel.RegisterParticipant(
+                1, new CrossClaimParticipantAttributes(0.515f, 0.515f, 0.515f), BodyPartEnum.Hand, 88));
+            Assert.IsTrue(duel.RegisterParticipant(
+                2, new CrossClaimParticipantAttributes(0.500f, 0.500f, 0.500f), BodyPartEnum.Head, 88));
+
+            duel.ResolveHandContactDuel(gaussianSample: -2.0f / 3.0f);
+
+            CrossClaimDuelContext result = duel.GetDuel(0);
+            Assert.AreEqual(2, result.WinnerAgentId,
+                "§3.6.3 perturbs top and second symmetrically before re-ranking.");
+            Assert.AreEqual(BodyPartEnum.Head, result.ContactBodyPart);
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -1494,13 +1580,15 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 "Stage 0+1: requires full match simulation — activate when deterministic RNG wiring to DeterministicSimulation #16 is complete");
         }
 
-        /// <summary>T-GK-I-011: Positioning AI #12 baseline-slot ratification: GK reads baseline from
-        /// PositioningAI.GetGKBaselineSlot and applies KD-13 reactive radius correctly. §5.2.11.</summary>
+        /// <summary>T-GK-I-011: Positioning AI #12 baseline-slot ratification: GK reads baseline from #12's
+        /// GetFormationSlot (via the composition root, §3.3.0.1) and applies KD-13 reactive radius correctly.
+        /// §5.2.11. The baseline read and the recovery cooldown are locked in the match-engine assembly by
+        /// GoalkeeperBaselineSlotTests (ERR-011-018); the reactive-radius clamp still has no consumer.</summary>
         [Test]
         public void T_GK_I_011_PositioningBaselineSlotRatification()
         {
             Assert.Ignore(
-                "Stage 0+1: requires full match simulation — activate when PositioningAI #12 GetGKBaselineSlot is wired");
+                "Stage 0+1: baseline read wired (ERR-011-018, locked by match-engine GoalkeeperBaselineSlotTests); activate when the KD-13 reactive-radius clamp has a production consumer");
         }
     }
 
@@ -1642,4 +1730,9 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // | 1.3 | 2026-07-27 | — | ERR-011-002 fallout: 12 EvaluateTacticalTransition call sites renamed to    |
 // |     |            |   | ballThreateningOwnGoal/ballSafelyUpfield. Semantics preserved — the two sites|
 // |     |            |   | passing ballInDefensiveThird: true are HandsOnBall cases consulting neither flag.|
+// | 1.4 | 2026-09-22 | — | W3 (PR #439): mixed-participant cross-claim duel locks — canonical         |
+// |     |            |   | registration order with three participants, and the symmetric near-tie     |
+// |     |            |   | top/second perturbation. Row added at the #439 close-out.                  |
+// | 1.5 | 2026-09-26 | — | W8 / ERR-011-017 review: T-5.1.1-I2 locks the not-elapsed side of the recovery cooldown (tick 9 < end 10 stays Recovering off-baseline; tick 10 returns to Set). T-5.1.1-I only covered the elapsed side. |
+// | 1.6 | 2026-09-27 | — | ERR-011-018: T-GK-I-011 stub text names #12 GetFormationSlot (via §3.3.0.1) instead of the phantom GetGKBaselineSlot and records that the baseline read is locked at composition level; still ignored — the reactive-radius clamp has no consumer. No test behaviour change. |
 #endregion

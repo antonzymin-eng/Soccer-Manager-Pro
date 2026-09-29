@@ -76,6 +76,9 @@ file inventory. This file adds only the entity → (spec §, assembly) hop those
 | Board objective & job security | #30 §2.2 | `season-save` | `BoardObjective`, `BoardState` (job security becomes a derived read over #45 at its T2) |
 | Club finance state and read model | #40 §2.2, §3 | `club-finances` | `ClubFinances`, `FinancesViewModel` |
 | Club finance transaction seam | #40 §2.2, §3.2 | `club-finances` | `FinanceTransaction`, `FinanceLedger` |
+| Managed transfer state | #31 §2.2, §3 | `transfers` | `Contract`, `TransferWindow`, `ClubTransferState`, `TransfersState` |
+| Transfer negotiation / manager command seam | #31 §2.2, §3.2–§3.3 | `transfers` | `Offer`, `NegotiationOutcome`, `TransferCommands` |
+| Transfer roster consumer port | #31 §4.5 | `transfers` | `ITransferRosterPort` |
 | Match outcome payload | #30 §2.2 | `season-save` | `MatchResult` |
 | Season state (serialized surface) | #30 §2.2, Appendix B | `season-save` | `SeasonState` |
 | Season composition root | #30 §2.2 | `season-save` | `SeasonLoop` |
@@ -194,7 +197,6 @@ about whether an implementation exists. This table is a navigational snapshot; v
 
 | Spec | Folder | Entities it will own |
 |---|---|---|
-| #31 | `transfers-contracts-negotiation/` | transfer offers, contracts, negotiation state |
 | #32 | `scouting-player-knowledge/` | scout reports, knowledge/uncertainty over `PlayerRecord` |
 | #33 | `personalities-morale-dynamics/` | personality, morale, the pairwise social graph |
 | #34 | `staff-backroom/` | staff records, roles, staff contracts |
@@ -256,6 +258,7 @@ career-roster projection, `season-save`). They are three different layers of the
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.4 | September 21, 2026 | PR #407 closeout: removed #31 from the “Specified but NOT implemented” table now that this same index already points at the live `transfers` assembly and its managed-state / negotiation / roster-port surfaces. No contract definition changed. |
 | v1.3 | September 6, 2026 | #40 T0 + T1a landing: registered `ClubFinances` / `FinancesViewModel` and the finance transaction seam under `club-finances`, added the standalone `FINANCE_SAVE_FORMAT_VERSION` pointer, and removed #40 from the no-assembly table. The §8 percentage was deliberately removed rather than creating another volatile cardinality claim. |
 | v1.2 | August 22, 2026 | `ERR-016-009`'s `buildHash` half CLOSED. New §4 row **Build identity (`buildHash`) → #16 §2.3.2 → `deterministic-sim`, `match-engine` → `BuildIdentity` / `BuildModule` / `SnapshotHeader.BuildHash` / `MatchEngineBuildIdentity`**, and the note above it updated: the `DeterminismContext` mapping row reads SPLIT rather than SPLIT + GAP, and only `ToleranceRow`/`ComparatorRegistry` remain deferred. Every named type verified to exist per this file's own landing rule. No other row changed. |
 | v1.1 | August 22, 2026 | The §4 note on unresolved `#16 §2.3` names is **superseded by `ERR-016-009`**, filed the same day: the count is **six of nine**, not four (the note omitted `ToleranceRow` and `ComparatorRegistry`), and it is a filed defect rather than the observation this file first recorded. #16 §2.3 v1.1 now carries the authoritative per-row mapping table, so the note points there instead of restating it — §0 rule 2 working as intended: the pointer target won. The two open items it surfaces (`buildHash` has no representation anywhere in `src/`; `ToleranceRow`/`ComparatorRegistry` are Stage-1+ deferrals) are tracked in `open-issues.md` beside the `Fingerprint = null` remainder on the same contract. No row in any table changed. |

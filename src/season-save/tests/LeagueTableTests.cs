@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/LeagueTableTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §5.3 (T-SN-TAB-001..005), §3.2, Appendix D; Testing Strategy #19
 // Purpose:  Unit locks for the league table: result arithmetic, GD recomputation, the FR-SN-007
@@ -220,6 +220,22 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(after.Points, Is.EqualTo(before.Points), "points must not advance");
         }
 
+        [Test]
+        public void ApplyResult_AwayOverflow_LeavesHomeRowUntouched()
+        {
+            LeagueTable table = LeagueTable.FromRows(new[]
+            {
+                LeagueTableRow.Empty(10),
+                LeagueTableRow.Create(11, 0, 0, 0, 0, 0, int.MaxValue, 0)
+            });
+            LeagueTableRow homeBefore = table.Row(10);
+
+            Assert.Throws<System.OverflowException>(() => table.ApplyResult(10, 11, 1, 0));
+
+            Assert.That(table.Row(10).Played, Is.EqualTo(homeBefore.Played));
+            Assert.That(table.Row(10).GoalsFor, Is.EqualTo(homeBefore.GoalsFor));
+        }
+
         /// <summary>
         /// The `in MatchResult` overload is the §3.4 round-loop call shape — same arithmetic as the
         /// four-argument form.
@@ -281,6 +297,9 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void Create_RejectsNegativeCounts()
         {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => LeagueTableRow.Empty(-1), "empty row club id");
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => LeagueTableRow.Create(-1, 0, 0, 0, 0, 0, 0, 0), "restored row club id");
             Assert.Throws<System.ArgumentOutOfRangeException>(
                 () => LeagueTableRow.Create(10, -1, 0, 0, 0, 0, 0, 0), "played");
             Assert.Throws<System.ArgumentOutOfRangeException>(
@@ -294,11 +313,26 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
+        public void WithResult_RejectsNegativeGoalCounts()
+        {
+            LeagueTableRow row = LeagueTableRow.Empty(10);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => row.WithResult(-1, 0));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => row.WithResult(0, -1));
+        }
+
+        [Test]
         public void Create_RejectsIncoherentPlayedTotal()
         {
             Assert.Throws<System.ArgumentException>(
                 () => LeagueTableRow.Create(10, 5, 2, 0, 1, 0, 0, 6),
                 "won + drawn + lost must equal played");
+        }
+
+        [Test]
+        public void Create_OutcomeTotalOverflowCannotMasqueradeAsCoherent()
+        {
+            Assert.Throws<System.ArgumentException>(() => LeagueTableRow.Create(
+                10, 0, int.MaxValue, int.MaxValue, 2, 0, 0, 0));
         }
 
         [Test]
@@ -391,4 +425,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // | Version | Date       | Author | Notes                                                     |
 // | 1.0     | 2026-07-25 | —      | Initial suite (#30 T0): T-SN-TAB-001..005 + precedence,   |
 // |         |            |        | atomicity, aliasing, PositionOf, Clone, FieldsEqual.      |
+// | 1.1     | 2026-09-08 | —      | Regression coverage for invalid row identities and negative result goals. |
+// | 1.2     | 2026-09-08 | —      | Regression coverage for overflow-safe coherence and atomic updates. |
 #endregion

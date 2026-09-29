@@ -1,0 +1,27 @@
+name: PR439 SeasonSave FM-03 containment proof
+
+on:
+  push:
+    branches:
+      - evidence/pr439-season-save-logscope-focused
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    name: SeasonSave focused log-scope proof
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f40f0853909cc2a42190023fea1da72d25409b12
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run the two previously red SeasonSave discipline oracles
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILTER='Name=ANewBanEarnedThisFixtureIsNotServedByThisSameFixture|Name=ARealEngineFixtureFoldsItsCardsOntoPlayerRecordsAndChangesNothingElse'
+          bash tools/dotnet-ci/run-gate.sh --fast --test-filter "$FILTER"

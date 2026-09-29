@@ -1,6 +1,6 @@
 // File:     src/testing-strategy/DeterminismSuiteResult.cs
 // Created:  2026-06-02
-// Modified: 2026-06-02
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Testing Strategy & Framework #19 §3.2 / §4.3.1, Code Standards #20
 // Purpose:  Aggregated result for one invocation of DeterminismGate. Carried
@@ -87,7 +87,7 @@ namespace TacticalDirector.TestingStrategy
             // FR-DS-009-GATE even if every present element passed. AR-1 M-3.
             // Iterate over the copied arrays so the pass-loop and the locked AllPassed
             // are computed against the same snapshot the property surface exposes.
-            bool allPassed = tierCopy.Length > 0 && goldenCopy.Length > 0;
+            bool allPassed = HasCompleteCoverage(tierCopy, goldenCopy);
             for (int i = 0; allPassed && i < tierCopy.Length; i++)
             {
                 if (!tierCopy[i].Passed)
@@ -104,6 +104,27 @@ namespace TacticalDirector.TestingStrategy
             }
 
             AllPassed = allPassed;
+        }
+
+        private static bool HasCompleteCoverage(
+            DeterminismTierResult[] tiers, GoldenVectorResult[] goldenVectors)
+        {
+            int requiredTierCount = (int)DeterminismTierKind.Soak + 1;
+            int requiredGoldenVectorCount = (int)GoldenVectorKind.CanonicalSerializeCorpus + 1;
+            if (tiers.Length != requiredTierCount || goldenVectors.Length != requiredGoldenVectorCount)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < tiers.Length; i++)
+            {
+                if ((int)tiers[i].Tier != i) { return false; }
+            }
+            for (int i = 0; i < goldenVectors.Length; i++)
+            {
+                if ((int)goldenVectors[i].Entry.Kind != i) { return false; }
+            }
+            return true;
         }
     }
 }
@@ -126,4 +147,5 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | the AllPassed verdict and the property surface are computed       |
 // |         |            |        | against the same snapshot. Supersedes the AR-2 L-1 producer-side  |
 // |         |            |        | wrap in DeterminismGate.RunTiers (reverted in DeterminismGate v1.4).|
+// | 1.4     | 2026-09-08 | —      | Fail closed unless every canonical tier and corpus appears once, in order. |
 #endregion

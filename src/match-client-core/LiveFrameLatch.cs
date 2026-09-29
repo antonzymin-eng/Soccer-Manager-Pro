@@ -1,6 +1,6 @@
 // File:     src/match-client-core/LiveFrameLatch.cs
 // Created:  2026-08-15
-// Modified: 2026-08-15
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12
 //           rule 1), Code Standards #20
@@ -28,7 +28,9 @@ namespace TacticalDirector.MatchClientCore
     /// <see cref="Previous"/> and becomes the new <see cref="Current"/>. A frame carrying the SAME
     /// tick as <see cref="Current"/> — the streamer publishes its latest frame far more often than it
     /// advances a tick — is a no-op: accepting it again would reset the arrival clock without a new
-    /// tick to interpolate towards, making the render loop think a fresh interval just started.</para>
+    /// tick to interpolate towards, making the render loop think a fresh interval just started. A
+    /// frame OLDER than <see cref="Current"/> is also ignored so a delayed publication cannot rewind
+    /// the renderer or create a non-advancing pair that disables interpolation.</para>
     ///
     /// <para>Not thread-safe and not reentrant — exactly one caller (the render loop) is expected to
     /// drive it, the same single-writer assumption <see cref="TickStampedCommandReplay"/> makes of
@@ -67,8 +69,8 @@ namespace TacticalDirector.MatchClientCore
         /// </param>
         /// <returns>
         /// True when <paramref name="frame"/> changed <see cref="Current"/> (the first frame ever, or
-        /// a new tick); false when <paramref name="frame"/> repeats the already-latched tick, in
-        /// which case nothing about the latch's state changes.
+        /// a newer tick); false when <paramref name="frame"/> repeats or predates the already-latched
+        /// tick, in which case nothing about the latch's state changes.
         /// </returns>
         public bool TryAccept(in LiveMatchFrame frame, float nowSeconds)
         {
@@ -78,7 +80,7 @@ namespace TacticalDirector.MatchClientCore
                 _current  = frame;
                 _hasFrame = true;
             }
-            else if (frame.Tick != _current.Tick)
+            else if (frame.Tick > _current.Tick)
             {
                 _previous = _current;
                 _current  = frame;
@@ -109,4 +111,6 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | Covers the three cases the inline version handled: first frame  |
 // |         |            |        | ever, a new tick (including a multi-tick jump), and the same    |
 // |         |            |        | tick repeating.                                                  |
+// | 1.1     | 2026-09-08 | —      | Ignore delayed older frames instead of rewinding the latch and   |
+// |         |            |        | resetting its interpolation clock.                               |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/Tests/TackleOutcomeResolverTests.cs
 // Created:  2026-08-12
-// Modified: 2026-08-12
+// Modified: 2026-09-12
 // Author:   —
 // Spec:     Defensive AI #14 §3.6.5, §5, Code Standards #20
 // Purpose:  Locks for the §3.6.5 tackle outcome resolution — the partition, the monotonicities, the
@@ -87,23 +87,18 @@ namespace TacticalDirector.DefensiveAI.Tests
 
             var d = Distribution(inputs);
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(d.Missed, Is.EqualTo(1.0 - engage).Within(0.002), "MISSED share");
-                Assert.That(d.Foul, Is.EqualTo(engage * foul).Within(0.002), "FOUL share");
-                Assert.That(d.Won, Is.EqualTo(engage * (1.0 - foul) * clean).Within(0.002), "BALL_WON share");
-                Assert.That(d.Loose, Is.EqualTo(engage * (1.0 - foul) * (1.0 - clean)).Within(0.002),
-                    "BALL_LOOSE share");
-            });
+            // Sequential asserts, not Assert.Multiple: Unity's bundled NUnit 3.5 does not have it.
+            Assert.That(d.Missed, Is.EqualTo(1.0 - engage).Within(0.002), "MISSED share");
+            Assert.That(d.Foul, Is.EqualTo(engage * foul).Within(0.002), "FOUL share");
+            Assert.That(d.Won, Is.EqualTo(engage * (1.0 - foul) * clean).Within(0.002), "BALL_WON share");
+            Assert.That(d.Loose, Is.EqualTo(engage * (1.0 - foul) * (1.0 - clean)).Within(0.002),
+                "BALL_LOOSE share");
 
             // The §3.6.5.7 figures, so the spec's own worked example cannot drift from the code.
-            Assert.Multiple(() =>
-            {
-                Assert.That(d.Missed, Is.EqualTo(0.5897).Within(0.002));
-                Assert.That(d.Foul, Is.EqualTo(0.0583).Within(0.002));
-                Assert.That(d.Won, Is.EqualTo(0.0993).Within(0.002));
-                Assert.That(d.Loose, Is.EqualTo(0.2527).Within(0.002));
-            });
+            Assert.That(d.Missed, Is.EqualTo(0.5897).Within(0.002), "§3.6.5.7 MISSED");
+            Assert.That(d.Foul, Is.EqualTo(0.0583).Within(0.002), "§3.6.5.7 FOUL");
+            Assert.That(d.Won, Is.EqualTo(0.0993).Within(0.002), "§3.6.5.7 BALL_WON");
+            Assert.That(d.Loose, Is.EqualTo(0.2527).Within(0.002), "§3.6.5.7 BALL_LOOSE");
         }
 
         [Test]

@@ -1,6 +1,6 @@
 // File:     src/player-database/PlayerGenerationRng.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Squad/Player Data Layer #27 §3 / Player Progression #28 §3.3; Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  Shared deterministic player-generation RNG helpers used by RosterGenerator (#27) and
@@ -34,6 +34,12 @@ namespace TacticalDirector.PlayerDatabase
         /// <exception cref="InvalidOperationException">The draw failed — corrupt reservation state (internal invariant).</exception>
         public static int DrawBounded(DeterministicRngService rng, int streamIndex, int drawIndex, int bound)
         {
+            if (bound <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(bound), bound, "bound must be positive.");
+            }
+            if (rng == null) { throw new ArgumentNullException(nameof(rng)); }
+
             ushort err = rng.DrawReserved(streamIndex, drawIndex, out ulong value);
             if (err != 0)
             {
@@ -46,6 +52,10 @@ namespace TacticalDirector.PlayerDatabase
         /// <summary>Clamps <paramref name="value"/> to the inclusive range [<paramref name="min"/>, <paramref name="max"/>].</summary>
         public static int Clamp(int value, int min, int max)
         {
+            if (min > max)
+            {
+                throw new ArgumentException("min must not exceed max.", nameof(min));
+            }
             if (value < min)
             {
                 return min;
@@ -64,4 +74,5 @@ namespace TacticalDirector.PlayerDatabase
 // | 1.0     | 2026-07-24 | —      | Extracted from RosterGenerator / RegenGenerator (adversarial- |
 // |         |            |        | review Low: the bounded-draw mapping + its rationale were     |
 // |         |            |        | duplicated across the two generators). Byte-identical logic.  |
+// | 1.1     | 2026-09-08 | —      | Validate RNG, positive bounds, and ordered clamp limits.      |
 #endregion

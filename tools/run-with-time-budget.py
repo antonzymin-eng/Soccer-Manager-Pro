@@ -8,6 +8,7 @@ propagate the child exit code. Stdout/stderr stream directly to the caller.
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import signal
 import subprocess
@@ -19,8 +20,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seconds", type=float, required=True)
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args()
-    if args.seconds <= 0:
-        parser.error("--seconds must be > 0")
+    if not math.isfinite(args.seconds) or args.seconds <= 0:
+        parser.error("--seconds must be a finite value > 0")
     if not args.command or args.command[0] != "--" or len(args.command) == 1:
         parser.error("command must follow '--'")
     args.command = args.command[1:]
@@ -36,7 +37,68 @@ def main() -> int:
     else:
         kwargs["start_new_session"] = True
 
-    proc = subprocess.Popen(args.command, **kwargs)
+    try:
+        proc = subprocess.Popen(args.command, **kwargs)
+    except FileNotFoundError:
+        print(f"ERROR: command not found: {args.command[0]}", file=sys.stderr)
+        return 127
+    except PermissionError:
+        print(f"ERROR: command is not executable: {args.command[0]}", file=sys.stderr)
+        return 126
+    except OSError as error:
+        print(f"ERROR: could not start command: {error}", file=sys.stderr)
+        return 126
+
+    def stop_process_tree() -> None:
+        """Stop the complete child tree while tolerating exit races."""
+        if os.name == "nt":
+            if proc.poll() is not None:
+                return
+            try:
+                proc.send_signal(signal.CTRL_BREAK_EVENT)
+            except ProcessLookupError:
+                return
+
+            try:
+                proc.wait(timeout=2)
+                return
+            except subprocess.TimeoutExpired:
+                pass
+
+            try:
+                proc.kill()
+            except ProcessLookupError:
+                pass
+            proc.wait()
+            return
+
+        # On POSIX the leader may exit on SIGTERM while a descendant in the same
+        # process group ignores it. Do not treat leader exit as proof that the
+        # process tree is gone; probe the group and escalate any survivors.
+        process_group = proc.pid
+        try:
+            os.killpg(process_group, signal.SIGTERM)
+        except ProcessLookupError:
+            if proc.poll() is None:
+                proc.wait()
+            return
+
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            pass
+
+        try:
+            os.killpg(process_group, 0)
+        except ProcessLookupError:
+            return
+
+        try:
+            os.killpg(process_group, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.wait()
+
     try:
         return proc.wait(timeout=args.seconds)
     except subprocess.TimeoutExpired:
@@ -44,20 +106,11 @@ def main() -> int:
             f"ERROR: command exceeded {args.seconds:g}s wall-clock budget",
             file=sys.stderr,
         )
-        if os.name == "nt":
-            proc.send_signal(signal.CTRL_BREAK_EVENT)
-            try:
-                proc.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-        else:
-            os.killpg(proc.pid, signal.SIGTERM)
-            try:
-                proc.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                os.killpg(proc.pid, signal.SIGKILL)
-        proc.wait()
+        stop_process_tree()
         return 124
+    except KeyboardInterrupt:
+        stop_process_tree()
+        return 130
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 // File:     src/testing-strategy/GoldenVectorResult.cs
 // Created:  2026-06-02
-// Modified: 2026-06-02
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Testing Strategy & Framework #19 §3.8,
 //           Deterministic Simulation #16 §9.5 / §5.5 (FR-DS-009-GATE),
@@ -73,6 +73,10 @@ namespace TacticalDirector.TestingStrategy
             int vectorsFailed,
             string diagnostic)
         {
+            if (entry.Name == null)
+            {
+                throw new ArgumentException("entry must be constructed and valid", nameof(entry));
+            }
             if (diagnostic == null)
             {
                 throw new ArgumentNullException(nameof(diagnostic));
@@ -126,4 +130,5 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | bypass.                                                            |
 // | 1.3     | 2026-06-02 | —      | AR-3 L-1: diagnostic null-vs-empty split — ArgumentNullException  |
 // |         |            |        | for null, ArgumentException for empty (idiomatic .NET BCL).       |
+// | 1.4     | 2026-09-08 | —      | Reject a default, unconstructed catalogue entry.                  |
 #endregion

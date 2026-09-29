@@ -1,5 +1,6 @@
 // File:     src/match-engine/GkHeadingIntentSource.cs
 // Created:  2026-07-22
+// Modified: 2026-09-22 (W3 comment sync: GkRushMaxBallHeightM is the W1 rush ceiling, not a claim-height contract; W3 is live)
 // Modified: 2026-08-04 (wiring backlog W1: + RushArmed / TrySolveRushIntercept — the keeper rush trigger geometry. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (ERR-011-010 + AR-1: goal-side cover replaces the rejected last-man test; + the minimum-run guard that stops a completed sweep re-arming. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-09 (ERR-010-002: + HeaderAimTarget (§4.2a) — the situational header aim, clear wide
@@ -45,6 +46,27 @@ namespace TacticalDirector.MatchEngine
             return distToGoalLine <= MatchEngineConstants.GkSaveTriggerRangeM
                    && towardGoal > 0f
                    && speed >= MatchEngineConstants.GkSaveTriggerMinBallSpeedMps;
+        }
+
+        /// <summary>
+        /// W3 / ERR-011-012 cross/aerial claim trigger. A loose ball inside #11's existing cross-claim
+        /// contest radius may arm a ClaimIntent at any height. There is deliberately no vertical gate:
+        /// the 2.5 m <c>GkRushMaxBallHeightM</c> remains a rush-only routing guard, while #11's physical
+        /// hand-reach envelope is the sole authority on whether a claim can actually contact the ball.
+        /// This method selects WHEN to commit only; it does not define a hand position or decide contact.
+        /// </summary>
+        public static bool ClaimArmed(in Vector3 gkPosition, in Vector3 ballPosition, bool ballLoose)
+        {
+            if (!ballLoose)
+            {
+                return false;
+            }
+
+            float dx = ballPosition.x - gkPosition.x;
+            float dy = ballPosition.y - gkPosition.y;
+            float radius =
+                TacticalDirector.GoalkeeperMechanics.GoalkeeperConstants.CrossClaimVolumeRadiusM;
+            return dx * dx + dy * dy <= radius * radius;
         }
 
         /// <summary>
@@ -100,9 +122,9 @@ namespace TacticalDirector.MatchEngine
                 return false;
             }
 
-            // 2. A ball above claim height is a cross to be caught (backlog W3 — the contested
-            //    multi-agent claim is not wired), not a ball to be swept. Running at it commits the
-            //    keeper to a duel the engine cannot yet resolve.
+            // 2. W1 owns only the low-ball rush route. Above its 2.5 m rush ceiling the keeper
+            //    must not commit a sweep; W3's independently armed ClaimIntent + #11 live Hand reach
+            //    decides whether a real claim contact ever exists. This is NOT a claim-height floor.
             if (ballPosition.z > MatchEngineConstants.GkRushMaxBallHeightM)
             {
                 return false;
@@ -467,4 +489,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Commit d93e0c8 had already replaced that with the dz-dependent    |
 // |         |            |        | angle tan(theta) = v / sqrt(v^2 - 2*g*dz); 45° holds only at      |
 // |         |            |        | dz = 0, which a header never sees. No logic change.                |
+// | 1.5     | 2026-09-22 | —      | W3 / ERR-011-012: ClaimArmed no longer reuses the 2.5 m rush max as a claim floor. Loose + inside #11's contest radius arms; #11 reach geometry alone decides contact height. |
+// | 1.6     | 2026-09-22 | —      | Comment-only W3 sync: RushArmed's 2.5 m gate is explicitly the W1 rush ceiling, not a claim-height threshold; removes stale text saying W3 was still unwired. |
 #endregion

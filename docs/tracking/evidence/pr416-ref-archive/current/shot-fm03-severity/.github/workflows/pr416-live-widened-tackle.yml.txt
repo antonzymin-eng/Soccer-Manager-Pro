@@ -1,0 +1,68 @@
+name: PR416 live-fix widened tackle corpus
+
+on:
+  push:
+    branches:
+      - evidence/pr416-shot-fm03-severity
+    paths:
+      - .github/workflows/pr416-live-widened-tackle.yml
+
+permissions:
+  contents: read
+
+jobs:
+  widened:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: pinned-main
+            ref: 1bad655f5826070d1e29f54a845cdf2c549f66bc
+          - label: live-fix-candidate
+            ref: 54d2388c454f7f4fdc6a2afeaab5bfe2dd41fb3e
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          fetch-depth: 0
+
+      - name: Install preregistered widened helper
+        shell: bash
+        run: |
+          git fetch origin evidence/pr416-shot-fm03-severity
+          git show origin/evidence/pr416-shot-fm03-severity:.github/evidence/Pr416LiveWidenedCensusTests.cs \
+            > src/match-engine/tests/Pr416LiveWidenedCensusTests.cs
+          grep -q 'private const int Ticks = 324_000;' src/match-engine/tests/Pr416LiveWidenedCensusTests.cs
+          grep -q '0x5EED000000000003UL' src/match-engine/tests/Pr416LiveWidenedCensusTests.cs
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run widened census
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-live-widened-${{ matrix.label }}
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=MeasurePr416MechanismCensus" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=pr416-live-widened-${{ matrix.label }}.trx" \
+            --results-directory artifacts/pr416-live-widened-${{ matrix.label }} \
+            2>&1 | tee artifacts/pr416-live-widened-${{ matrix.label }}/console.log
+
+      - name: Upload widened evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-live-widened-${{ matrix.label }}-${{ github.run_id }}
+          path: artifacts/pr416-live-widened-${{ matrix.label }}/
+          if-no-files-found: error

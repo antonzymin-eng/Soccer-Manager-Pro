@@ -1,6 +1,6 @@
 // File:     src/match-client-web/MatchClientServer.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-09-09
 // Author:   —
 // Spec:     Path-to-playable roadmap §7 (B6, option (b)), Code Standards #20
 // Purpose:  Loopback-only HTTP transport for the browser match client. Owns sockets and threads and
@@ -184,6 +184,9 @@ namespace TacticalDirector.MatchClientWeb
             {
                 int b = stream.ReadByte();
                 if (b < 0) { return null; }
+                // Reject high-bit wire bytes before ASCII decoding can replace them with '?'. A
+                // replacement '?' could otherwise become a query delimiter and change the route.
+                if (b > 0x7F) { return string.Empty; }
                 if (b == '\n')
                 {
                     int end = bytes.Count;
@@ -201,10 +204,53 @@ namespace TacticalDirector.MatchClientWeb
         {
             method = null;
             pathAndQuery = null;
-            string[] parts = requestLine.Split(' ');
-            if (parts.Length < 2) { return false; }
-            method = parts[0];
-            pathAndQuery = parts[1];
+            if (requestLine == null) { return false; }
+
+            int firstSpace = requestLine.IndexOf(' ');
+            int secondSpace = firstSpace < 0 ? -1 : requestLine.IndexOf(' ', firstSpace + 1);
+            if (firstSpace <= 0 || secondSpace <= firstSpace + 1 ||
+                secondSpace == requestLine.Length - 1 ||
+                requestLine.IndexOf(' ', secondSpace + 1) >= 0)
+            {
+                return false;
+            }
+
+            string candidateMethod = requestLine.Substring(0, firstSpace);
+            string candidateTarget = requestLine.Substring(firstSpace + 1, secondSpace - firstSpace - 1);
+            string version = requestLine.Substring(secondSpace + 1);
+            if (version != "HTTP/1.1" || !IsHttpToken(candidateMethod) || !IsOriginFormTarget(candidateTarget))
+            {
+                return false;
+            }
+
+            method = candidateMethod;
+            pathAndQuery = candidateTarget;
+            return true;
+        }
+
+        private static bool IsHttpToken(string value)
+        {
+            for (int i = 0; i < value.Length; i++)
+            {
+                char c = value[i];
+                bool isAlphaNumeric = (c >= '0' && c <= '9') ||
+                    (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+                bool isTokenPunctuation = c == '!' || c == '#' || c == '$' || c == '%' || c == '&' ||
+                    c == '\'' || c == '*' || c == '+' || c == '-' || c == '.' || c == '^' ||
+                    c == '_' || c == '`' || c == '|' || c == '~';
+                if (!isAlphaNumeric && !isTokenPunctuation) { return false; }
+            }
+            return value.Length > 0;
+        }
+
+        private static bool IsOriginFormTarget(string value)
+        {
+            if (value.Length == 0 || value[0] != '/') { return false; }
+            for (int i = 0; i < value.Length; i++)
+            {
+                char c = value[i];
+                if (c <= 0x20 || c == 0x7F || c > 0x7E || c == '#' || c == '\\') { return false; }
+            }
             return true;
         }
 
@@ -248,4 +294,6 @@ namespace TacticalDirector.MatchClientWeb
 // | 1.0     | 2026-07-27 | —      | Initial creation (B6): loopback-only transport delegating every|
 // |         |            |        | decision to MatchClientRouter, with the viewer's proven        |
 // |         |            |        | lifecycle, request-line bound and post-Stop 503 refusal.       |
+// | 1.1     | 2026-09-09 | —      | Reject malformed HTTP versions, spacing, method tokens, raw    |
+// |         |            |        | non-ASCII octets, and non-origin-form targets before routing.  |
 #endregion

@@ -1,0 +1,60 @@
+name: PR416 owner-fix validation
+# rerun after test compile correction
+
+on:
+  push:
+    branches:
+      - evidence/pr416-current-head-validation
+    paths:
+      - .github/workflows/pr416-owner-fix-validation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  owner-fixes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-current-head-validation
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run Shot Mechanics assembly
+        shell: bash
+        run: |
+          dotnet test src/shot-mechanics/Tests/shot-mechanics-tests.gen.csproj \
+            --no-restore \
+            --logger "console;verbosity=normal"
+
+      - name: Run save-restore tackle latch lock
+        shell: bash
+        run: |
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=SaveAndRestoreCarryTheTackleLatches" \
+            --logger "console;verbosity=detailed"
+
+      - name: Run frozen InPoss detector
+        shell: bash
+        run: |
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=sim_match_engine_inposs_gate" \
+            --logger "console;verbosity=detailed"
+
+      - name: Run main-relative regression targets
+        shell: bash
+        run: |
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=AControlledCarrierIsActuallyDispossessed|Name=BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose|Name=TacklesHappenInComposedPlay|Name=ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice|Name=sim_match_engine_shot_outcomes" \
+            --logger "console;verbosity=detailed"

@@ -1,6 +1,8 @@
 // File:     src/season-save/tests/SeasonLoopTests.cs
 // Created:  2026-07-26
-// Modified: 2026-08-15 (M4, reviewed-findings pass — the one Save call site here drives no #44
+// Modified: 2026-09-10 (#40 T1b, ERR-030-049 — the Save call site passes the new required finance
+//           set; SeasonLoop holds no finance state until #40 T2 adds the resume seam — v1.6)
+// Prior-Modified: 2026-08-15 (M4, reviewed-findings pass — the one Save call site here drives no #44
 //           subsystem; flipped disciplineWired: true → false, matching SeasonSaveManagerTests.cs'
 //           companion fix — v1.5)
 //           Prior: 2026-08-13 (#44 C1/C2 AR round 4, H4/ERR-030-039 — call site updated for the required
@@ -23,6 +25,7 @@ using System.IO;
 
 using NUnit.Framework;
 
+using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
@@ -36,6 +39,10 @@ namespace TacticalDirector.SeasonSave.Tests
     {
         private const ulong WorldSeed = 0x5EED1EA6D0DEC0DEUL;
         private const int ManagerId = 1;
+
+        // "No club has a finance entry yet" — the only value a save can carry until #40 T2
+        // wires ClubFinances.CreateInitial; said explicitly because Save requires it to be said.
+        private static ClubFinanceEntry[] NoFinances => Array.Empty<ClubFinanceEntry>();
 
         private static League FourClubLeague() => LeagueBootstrap.Generate(WorldSeed, 4);
 
@@ -453,7 +460,7 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(firstWorld, first.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false, NoFinances);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
@@ -700,4 +707,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | fresh temp path and drives no #44 subsystem — disciplineWired: true |
 // |         |            |        | flipped to false to match the parameter's own contract. No          |
 // |         |            |        | assertion or intent change; suite still green.                     |
+// | 1.6     | 2026-09-10 | —      | #40 T1b (ERR-030-049): the Save call site passes the required     |
+// |         |            |        | empty finance set via a NoFinances helper. SeasonLoop holds no    |
+// |         |            |        | finance state until #40 T2 adds the resume seam, so there is      |
+// |         |            |        | nothing else this suite can pass. No assertion or intent change.  |
 #endregion

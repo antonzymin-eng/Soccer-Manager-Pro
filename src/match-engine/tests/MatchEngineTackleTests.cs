@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineTackleTests.cs
 // Created:  2026-08-12
-// Modified: 2026-08-12
+// Modified: 2026-09-28 (FM-03 closeout: restore unexpected-Error policing in restore lock — v1.4)
+// Modified: 2026-09-23 (#442 approved W2 deterministic-corpus sizing contract — six pooled corpus seeds; two restore seeds retained)
 // Author:   —
 // Spec:     Defensive AI #14 §3.6.5, Pass Mechanics #5 §3.8.5/§4.4.2, Shot Mechanics #6 §4.4.2,
 //           foul-discipline-balance-design.md KD-F1/KD-F2/KD-F4, Code Standards #20
@@ -30,9 +31,10 @@ namespace TacticalDirector.MatchEngine
     {
         /// <summary>
         /// Half a match. MEASURED, not guessed: the gate anatomy reports ~10 resolved challenges per
-        /// 40 000 ticks on the livelier of the two seeds and ~1 on the quieter one, so a per-seed
-        /// assertion at 40 000 ticks is a coin flip dressed as a lock. At this length both seeds carry
-        /// challenges, and the cases below pool the two rather than asserting per seed — pooling is
+        /// 40 000 ticks on the livelier of the original two seeds and ~1 on the quieter one, so a per-seed
+        /// assertion at 40 000 ticks is a coin flip dressed as a lock. #442 expands the pooled corpus to
+        /// the six seeds already frozen by #435 while keeping each match at this same 150 000-tick horizon;
+        /// the cases below pool the corpus rather than asserting per seed — pooling is
         /// right here because the claim is "this engine produces tackles", not "this seed does".
         ///
         /// <para><b>Corrected at AR-1 M-4.</b> This doc used to claim home and away were distinguished
@@ -43,12 +45,17 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private const int Ticks = 150_000;
 
-        /// <summary>The reach these locks arm the challenge at — the value the catalogue would carry
-        /// if W6 were closed, pinned to <c>LooseBallPickupRadiusM</c> so a knocked-loose ball is always
-        /// reachable by the challenge that produced it.</summary>
-        private const float ArmedRadiusM = 1.0f;
+        private static readonly ulong[] CorpusSeeds =
+        {
+            0x0F1E2D3C4B5A6978UL,
+            0x00000000D1A6D05EUL,
+            0x0000000000000001UL,
+            0x00000000ABCDEF12UL,
+            0x0000000099887766UL,
+            0x000000005A5A5A5AUL,
+        };
 
-        private static readonly ulong[] Seeds =
+        private static readonly ulong[] RestoreSeeds =
         {
             0x0F1E2D3C4B5A6978UL,
             0x00000000D1A6D05EUL,
@@ -89,10 +96,8 @@ namespace TacticalDirector.MatchEngine
             var engine = new MatchEngine(seed);
             engine.ConfigureSquads(BuildSquad(seed, clubId: 1), BuildSquad(seed, clubId: 2));
 
-            // The challenge ships DISABLED (TackleContactRadiusM = 0, pending backlog W6), so every
-            // lock in this file arms it explicitly. Same shape as #41's suite driving its disarmed
-            // occurrence model: the dial being off must not make the mechanism untested.
-            engine.TestOnly_ArmTackleChallenge(ArmedRadiusM);
+            // W2 is active in production. Do not use the test-only arm seam here: these composed
+            // locks must exercise the exact shipping default so a regression back to radius 0 is visible.
             return engine;
         }
 
@@ -114,7 +119,7 @@ namespace TacticalDirector.MatchEngine
         {
             int won = 0, loose = 0, foul = 0, missed = 0;
 
-            foreach (ulong seed in Seeds)
+            foreach (ulong seed in CorpusSeeds)
             {
                 MatchEngine engine = Booted(seed);
                 int prevHolder = MatchEngineConstants.NO_POSSESSION;
@@ -179,24 +184,18 @@ namespace TacticalDirector.MatchEngine
             $"dispossessions={s_dispossessions}";
 
         [Test]
-        public void TheChallengeIsDisabledOnTheShippedDefault()
+        public void ShippedTackleReachIsActiveAndCannotOutreachLooseBallReclaim()
         {
-            // The other half of the FR-MD-027 posture: a dial that ships off must be locked OFF as
-            // well as on, or "disabled" is a claim rather than a property. This is the only case in
-            // the file that does NOT arm the challenge.
-            var engine = new MatchEngine(Seeds[0]);
-            engine.ConfigureSquads(BuildSquad(Seeds[0], clubId: 1), BuildSquad(Seeds[0], clubId: 2));
-
-            for (int t = 0; t < 40_000; t++)
-            {
-                engine.RunTick();
-            }
-
-            var oc = engine.TestOnly_TackleOutcomeCounts;
-            Assert.That(oc.Won + oc.Loose + oc.Foul + oc.Missed, Is.Zero,
-                "the shipped TackleContactRadiusM is 0, so no challenge may resolve at all");
-            Assert.That(MatchEngineConstants.TackleContactRadiusM, Is.Zero,
-                "this lock is meaningless if the catalogue default is no longer 0 — arm it deliberately");
+            // Activation has two durable correctness properties. The first prevents a silent return to
+            // behaviorally-unwired W2; the second prevents BALL_LOOSE from being created beyond the
+            // ordinary stationary-ball reclaim reach. The current shared default happens to be 1.0 m,
+            // but the relationship — not that literal — is the contract.
+            Assert.That(MatchEngineConstants.TackleContactRadiusM, Is.GreaterThan(0f),
+                "W2 production activation regressed to a non-positive contact radius");
+            Assert.That(
+                MatchEngineConstants.TackleContactRadiusM,
+                Is.LessThanOrEqualTo(MatchEngineConstants.LooseBallPickupRadiusM),
+                "a tackle must not knock a stationary loose ball beyond the ordinary reclaim reach");
         }
 
         [Test]
@@ -249,7 +248,7 @@ namespace TacticalDirector.MatchEngine
             int resolved = s_pooled.Won + s_pooled.Loose + s_pooled.Foul + s_pooled.Missed;
 
             Assert.That(resolved, Is.LessThan(2_000),
-                $"{resolved} challenges over {Ticks} ticks x {Seeds.Length} seeds — the per-agent " +
+                $"{resolved} challenges over {Ticks} ticks x {CorpusSeeds.Length} seeds — the per-agent " +
                 "cooldown is not limiting re-challenges");
         }
 
@@ -311,8 +310,10 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
-        public void SaveAndRestoreCarryTheTackleLatches([ValueSource(nameof(Seeds))] ulong seed)
+        public void SaveAndRestoreCarryTheTackleLatches([ValueSource(nameof(RestoreSeeds))] ulong seed)
         {
+            // This test's oracle is the serialized tackle-latch state and replay-count equality below.
+
             // SNAPSHOT_SCHEMA_VERSION 21's reason to exist. A restore that dropped the cooldown would
             // let every defender re-challenge immediately, diverging the digest on the very next stride
             // — and in the direction of MORE tackles, which is the hard-to-notice direction.
@@ -328,11 +329,9 @@ namespace TacticalDirector.MatchEngine
             byte[] blob = MatchSaveManager.Encode(engine);
             MatchEngine restored = MatchSaveManager.Restore(blob, new TwoClubProvider(seed));
 
-            // The arming seam is a TEST seam and is deliberately not serialized — a restored engine
-            // comes back on the shipped default, which is DISABLED. Re-arm it to the same reach, or
-            // this case compares an armed run against a disabled one and reports it as a restore
-            // defect (which is exactly what it did first time round).
-            restored.TestOnly_ArmTackleChallenge(ArmedRadiusM);
+            // The contact reach is configuration, not snapshot state. Both engines therefore use the
+            // same active shipping default after restore; the test-only arming seam must not participate
+            // in this production-path restore lock.
 
             for (int a = 0; a < MatchEngineConstants.SQUAD_SIZE; a++)
             {
@@ -361,13 +360,11 @@ namespace TacticalDirector.MatchEngine
             var afterReplay = engine.TestOnly_TackleOutcomeCounts;
             var restoredCounts = restored.TestOnly_TackleOutcomeCounts;
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(restoredCounts.Won, Is.EqualTo(afterReplay.Won - beforeReplay.Won), "won diverged");
-                Assert.That(restoredCounts.Loose, Is.EqualTo(afterReplay.Loose - beforeReplay.Loose), "loose diverged");
-                Assert.That(restoredCounts.Foul, Is.EqualTo(afterReplay.Foul - beforeReplay.Foul), "foul diverged");
-                Assert.That(restoredCounts.Missed, Is.EqualTo(afterReplay.Missed - beforeReplay.Missed), "missed diverged");
-            });
+            // Sequential asserts, not Assert.Multiple: Unity's bundled NUnit 3.5 does not have it.
+            Assert.That(restoredCounts.Won, Is.EqualTo(afterReplay.Won - beforeReplay.Won), "won diverged");
+            Assert.That(restoredCounts.Loose, Is.EqualTo(afterReplay.Loose - beforeReplay.Loose), "loose diverged");
+            Assert.That(restoredCounts.Foul, Is.EqualTo(afterReplay.Foul - beforeReplay.Foul), "foul diverged");
+            Assert.That(restoredCounts.Missed, Is.EqualTo(afterReplay.Missed - beforeReplay.Missed), "missed diverged");
 
             // A window in which nothing happened would satisfy every equality above trivially.
             Assert.That(
@@ -386,4 +383,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | was unsatisfiable before this landing, plus a CEILING as well as  |
 // |         |            |        | a floor, the cooldown arming on a miss, the foul not being        |
 // |         |            |        | judged twice, and the v21 latches surviving save/restore.         |
+// | 1.1     | 2026-09-16 | —      | W2 activation: composed locks exercise the shipping default; disabled-default lock becomes >0 / <= reclaim invariants; restore no longer arms the test seam. |
+// | 1.2     | 2026-09-17 | —      | PR #416: save/restore lock ignores unrelated composed-play error logs; two-seed latch/replay assertions remain the oracle and pass on the live production head. |
+// | 1.3     | 2026-09-23 | —      | #442 approved contract: pooled composed-play corpus uses the six frozen #435 seeds at 150k ticks each; save/restore remains on the original two seeds. No assertion, guard, threshold, bound, or tick horizon changed. |
+// | 1.4     | 2026-09-28 | —      | FM-03 closeout: restore lock no longer suppresses unexpected Error logs; CONTACT-time shot possession loss is Warning-level. |
 #endregion

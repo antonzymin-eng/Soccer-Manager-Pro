@@ -4,6 +4,7 @@
     { "pattern": "^https://web\\.archive\\.org/" },
     { "pattern": "^https://github.com/.*/issues/" },
     { "pattern": "^https://www\\.fifa\\.com/" },
+    { "pattern": "^https://www\\.gdcvault\\.com/" },
     { "pattern": "^https://docs\\.unity3d\\.com/" },
     { "pattern": "^https://www\\.chrishecker\\.com/" },
     { "pattern": "^https://learn\\.microsoft\\.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions$" },

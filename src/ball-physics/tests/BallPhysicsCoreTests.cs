@@ -1,6 +1,7 @@
 // File:     src/ball-physics/tests/BallPhysicsCoreTests.cs
 // Created:  2026-05-24
 // Modified: 2026-06-09 (AR-7 fix pass)
+// Modified: 2026-09-15 (ERR-001-006 elevated Stationary recovery lock)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Unit tests for BallPhysicsCore force calculations and validation.
@@ -139,6 +140,30 @@ namespace TacticalDirector.BallPhysics.Tests
             float   expected  = 10f - BallPhysicsConstants.Spin.RollingSpinDecayPerSecond;
 
             Assert.That(afterOneS.magnitude, Is.EqualTo(expected).Within(0.001f));
+        }
+
+        [Test]
+        public void UpdateBallPhysics_ElevatedStationaryState_RecoversToAirborneAndFalls()
+        {
+            const float dt = 1f / 60f;
+            float initialZ = 0.973f;
+            var ball = new BallState
+            {
+                Position = new Vector3(7.241f, 30.676f, initialZ),
+                Velocity = Vector3.zero,
+                AngularVelocity = Vector3.zero,
+                State = BallStateType.Stationary,
+                LastValidPosition = new Vector3(7.241f, 30.676f, initialZ),
+                LastValidVelocity = Vector3.zero
+            };
+
+            BallPhysicsCore.UpdateBallPhysics(
+                ref ball, dt, SurfaceType.GrassDry, Vector3.zero, logger: null, matchTime: 0f);
+
+            Assert.AreEqual(BallStateType.Airborne, ball.State,
+                "ERR-001-006: elevated legacy/restored Stationary state must self-heal before force selection");
+            Assert.That(ball.Velocity.z, Is.LessThan(0f), "gravity must act on the recovered state");
+            Assert.That(ball.Position.z, Is.LessThan(initialZ), "the ball must begin falling in the same tick");
         }
 
         // ── Validation ───────────────────────────────────────────────────────────

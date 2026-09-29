@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/HeadingJumpKinematics.cs
 // Created:  2026-05-28
-// Modified: 2026-06-12
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.3, KD-4, KD-18, FR-HE-004, FR-HE-019, FR-HE-021, FR-HE-031, Code Standards #20
 // Purpose:  JumpReach formula (FM-010-001) and Stage 0 synthetic parabolic Z trajectory.
@@ -45,10 +45,11 @@ namespace TacticalDirector.HeadingMechanics
         /// <param name="jumpStartFrame">Frame at which the agent left the ground. Must be ≥ 0.</param>
         public static int ComputeApexFrame(int jumpStartFrame)
         {
+            RequireValidStartFrame(jumpStartFrame);
             float apexOffsetFrames = HeadingMechanicsConstants.JumpPhaseDurationMs
                                    * HeadingMechanicsConstants.JumpApexFraction
                                    / HeadingMechanicsConstants.FrameMs;
-            return jumpStartFrame + Mathf.RoundToInt(apexOffsetFrames);
+            return checked(jumpStartFrame + Mathf.RoundToInt(apexOffsetFrames));
         }
 
         /// <summary>
@@ -59,9 +60,10 @@ namespace TacticalDirector.HeadingMechanics
         /// <param name="jumpStartFrame">Frame at which the agent left the ground. Must be ≥ 0.</param>
         public static int ComputeLandingFrame(int jumpStartFrame)
         {
+            RequireValidStartFrame(jumpStartFrame);
             float totalFrames = HeadingMechanicsConstants.JumpPhaseDurationMs
                               / HeadingMechanicsConstants.FrameMs;
-            return jumpStartFrame + Mathf.RoundToInt(totalFrames);
+            return checked(jumpStartFrame + Mathf.RoundToInt(totalFrames));
         }
 
         /// <summary>
@@ -120,6 +122,15 @@ namespace TacticalDirector.HeadingMechanics
                 HeadingMechanicsConstants.ATTR_MAX);
             return clamped / HeadingMechanicsConstants.ATTR_MAX;
         }
+
+        private static void RequireValidStartFrame(int jumpStartFrame)
+        {
+            if (jumpStartFrame < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(jumpStartFrame), jumpStartFrame, "jumpStartFrame must be non-negative.");
+            }
+        }
     }
 }
 
@@ -134,4 +145,5 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | parabola to peak AT apexFrame with peak value JumpReach. u is now time-warped |
 // |         |            |        | (rising [0,apexOffset], falling [apexOffset,total]) so u=0.5 lands exactly on  |
 // |         |            |        | the rounded apexFrame; endpoints and monotonicity unchanged. No constants.    |
+// | 1.3     | 2026-09-08 | —      | Reject negative starts and checked-overflow frame arithmetic.      |
 #endregion

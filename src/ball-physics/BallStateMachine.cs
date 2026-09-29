@@ -1,6 +1,7 @@
 // File:     src/ball-physics/BallStateMachine.cs
 // Created:  2026-05-24
 // Modified: 2026-07-27 (shot-outcome pass)
+// Modified: 2026-09-15 (ERR-001-006: elevated Stationary/Rolling states normalize to Airborne)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Pure state-transition logic for the ball state machine.
@@ -25,14 +26,19 @@ namespace TacticalDirector.BallPhysics
             switch (ball.State)
             {
                 case BallStateType.Stationary:
-                    // Transitions handled externally by kick/touch events.
+                    // ERR-001-006: Stationary is valid only at ground-rest height. Recover an
+                    // elevated state so gravity can act rather than leaving the ball force-free.
+                    if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
+                        return BallStateType.Airborne;
                     return BallStateType.Stationary;
 
                 case BallStateType.Rolling:
-                    if (ball.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity)
-                        return BallStateType.Stationary;
+                    // Height wins over speed. The old order could turn a slow elevated Rolling
+                    // ball into Stationary before noticing that it was airborne.
                     if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
                         return BallStateType.Airborne;
+                    if (ball.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity)
+                        return BallStateType.Stationary;
                     if (IsOutOfBounds(ball.Position))
                         return BallStateType.OutOfPlay;
                     return BallStateType.Rolling;
@@ -96,4 +102,6 @@ namespace TacticalDirector.BallPhysics
 // | 1.3     | 2026-07-27 | —      | ERR-001-004 (shot-outcome design KD-5): IsOutOfBounds drops the   |
 // |         |            |        | z < Diameter gate in the same commit as CheckBoundaries — the two |
 // |         |            |        | predicates are pinned to agree, and an airborne crossing is out.  |
+// | 1.4     | 2026-09-15 | —      | ERR-001-006: elevated Stationary and Rolling states normalize to  |
+// |         |            |        | Airborne; Rolling checks altitude before the low-speed stop rule.  |
 #endregion

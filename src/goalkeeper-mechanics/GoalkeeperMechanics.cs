@@ -7,6 +7,11 @@
 // Modified: 2026-07-28 (gk-contact-rate (ERR-011-007/KD-CR5): the frozen reaction window's elapsed anchors at SaveIntent.AttemptCommittedTick (under the held dive the launch is deliberate timing, not reaction); ComputeDiveDirectionLateral delegates its prediction to the shared TryPredictPlaneCrossing)
 // Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: ClearRushIntent + GetState/HasActiveRushIntent observation accessors give CommitRushIntent its first production caller; rushTargetReached ends a rush that ARRIVED — the loose-ball strand. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (W1 AR-2: + ResetSlot — the per-GK arrays are indexed by TEAM, and the agent occupying that slot can change mid-match (dismissal + substitute keeper), so the slot needs a way to be disowned. See docs/tracking/gk-rush-trigger-design.md v1.3)
+// Modified: 2026-09-12 (W4 review closure: OnThreatArmed is explicitly a visible-threat episode anchor; no state/schema change)
+// Modified: 2026-09-22 (W3 runtime: mixed cross-claim registration/resolution API + claim hand win/loss terminal routes through existing §3.5 handling)
+// Modified: 2026-09-22 (W3 / ERR-011-012: claim reach side is locked at commit; claim episode is bounded by existing dive duration and hard-cancelled only by composition policy, not by a re-evaluated height/radius trigger)
+// Modified: 2026-09-11 (W4: OnThreatDeflected restarts reaction timing for a changed live flight without setting the shot-event latch; no new state/schema)
+// Modified: 2026-09-26 (W8 / ERR-011-017: + EndHandEpisodeOnPossessionLoss — the §3.8.3 possession-change teardown the corrected 10 Hz clock needs; no new state/schema/RNG)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
 // Purpose:  Main 10 Hz + 60 Hz orchestrator. Manages per-GK state, dive kinematics, reaction pipeline,
@@ -45,6 +50,8 @@ namespace TacticalDirector.GoalkeeperMechanics
         private readonly GkContactState[] _contactStates;
         private readonly SaveIntent[] _saveIntents;
         private readonly bool[] _saveIntentActive;
+        private readonly ClaimIntent[] _claimIntents;
+        private readonly bool[] _claimIntentActive;
         private readonly RushIntent[] _rushIntents;
         private readonly bool[] _rushIntentActive;
         private readonly DistributeIntent[] _distributeIntents;
@@ -100,6 +107,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             _contactStates = new GkContactState[maxGks];
             _saveIntents = new SaveIntent[maxGks];
             _saveIntentActive = new bool[maxGks];
+            _claimIntents = new ClaimIntent[maxGks];
+            _claimIntentActive = new bool[maxGks];
             _rushIntents = new RushIntent[maxGks];
             _rushIntentActive = new bool[maxGks];
             _distributeIntents = new DistributeIntent[maxGks];
@@ -249,6 +258,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             _contactStates[gkIndex] = GkContactState.CreateNew();
             _saveIntents[gkIndex] = default;
             _saveIntentActive[gkIndex] = false;
+            _claimIntents[gkIndex] = default;
+            _claimIntentActive[gkIndex] = false;
             _rushIntents[gkIndex] = default;
             _rushIntentActive[gkIndex] = false;
             _distributeIntents[gkIndex] = default;
@@ -295,12 +306,30 @@ namespace TacticalDirector.GoalkeeperMechanics
         public bool HasActiveRushIntent(int gkIndex) =>
             (uint)gkIndex < (uint)GoalkeeperConstants.MaxGkAgents && _rushIntentActive[gkIndex];
 
+        /// <summary>True while a committed cross/aerial <see cref="ClaimIntent"/> still owns a live
+        /// Stage-0 reach episode. This is the authoritative per-episode latch; callers must not mirror it.</summary>
+        public bool HasActiveClaimIntent(int gkIndex) =>
+            (uint)gkIndex < (uint)GoalkeeperConstants.MaxGkAgents && _claimIntentActive[gkIndex];
+
+        /// <summary>Returns the locked claim payload when the claim episode is active.</summary>
+        public bool TryGetActiveClaimIntent(int gkIndex, out ClaimIntent intent)
+        {
+            intent = default;
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents || !_claimIntentActive[gkIndex])
+            {
+                return false;
+            }
+
+            intent = _claimIntents[gkIndex];
+            return true;
+        }
+
         /// <summary>
         /// Seeds the §3.2 detection stamp at the ONSET of a save episode when no stamp is live —
         /// the fallback anchor for threats that have no <see cref="OnShotExecutedEvent"/> producer
         /// (deflections, rebounds, mis-hit passes driving at the goal). A live stamp always wins:
         /// after the first call of an episode this is a no-op until <see cref="ClearSaveIntent"/>
-        /// or a save resolution clears the stamp, so the caller may invoke it every armed tick with
+        /// or a save resolution clears the stamp, so the caller may invoke it every VISIBLE armed tick with
         /// no edge-detection state of its own — the stamp itself is the latch, and it is already
         /// serialized (v19 GK block). A true shot CONTACT still overwrites via
         /// <see cref="OnShotExecutedEvent"/>: the newest shot is the live threat, and its strike
@@ -319,6 +348,27 @@ namespace TacticalDirector.GoalkeeperMechanics
             }
 
             if (_shotDetectedTickMs[gkIndex] > 0.0f)
+            {
+                return;
+            }
+
+            _attrs[gkIndex] = attrs;
+            _shotDetectedTickMs[gkIndex] =
+                GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(matchTimeMs, attrs);
+            _requiredReactionMs[gkIndex] =
+                GoalkeeperReactionPipeline.ComputeRequiredReactionMs(attrs, ballSpeedMps, _states[gkIndex]);
+        }
+
+        /// <summary>
+        /// W4 new-threat seam: a real body deflection changed the live ball flight during Resolve.
+        /// Unlike <see cref="OnThreatArmed"/>, this deliberately overwrites an already-live detection
+        /// and required-reaction stamp. Unlike <see cref="OnShotExecutedEvent"/>, it does NOT set
+        /// <c>_shotEventPending</c>: a deflection is not a newly struck shot.
+        /// </summary>
+        public void OnThreatDeflected(
+            int gkIndex, float matchTimeMs, float ballSpeedMps, GoalkeeperAgentAttributes attrs)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
             {
                 return;
             }
@@ -383,7 +433,356 @@ namespace TacticalDirector.GoalkeeperMechanics
         }
 
         /// <summary>
-        /// Commits a RushIntent for the specified GK from the 10 Hz Decision Tree output.
+        /// Commits a cross/aerial <see cref="ClaimIntent"/> from the 10 Hz producer. The intent is a
+        /// tactical target and handling input only; it does not manufacture contact geometry. Physics
+        /// asks <see cref="TryGetHandReachEnvelope"/> for #11's existing Stage-0 reach envelope.
+        /// </summary>
+        public void CommitClaimIntent(int gkIndex, ClaimIntent intent, GoalkeeperAgentAttributes attrs)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return;
+            }
+
+            _claimIntents[gkIndex] = intent;
+            _claimIntentActive[gkIndex] = true;
+            _attrs[gkIndex] = attrs;
+
+            // ERR-011-012: a cross/aerial claim is a deliberate interception episode, not a shot
+            // reaction episode. Start a fresh contact record and give §3.5 a neutral/full timing term;
+            // reusing the previous save's reaction window would make claim handling depend on stale shot
+            // history. No new RNG or tuning constant is introduced.
+            _contactStates[gkIndex] = GkContactState.CreateNew();
+            _contactStates[gkIndex].ReactionWindowAchieved = 1.0f;
+            _contactStates[gkIndex].ClutchFirmness = intent.ClutchFirmness;
+        }
+
+        /// <summary>Hard-cancels a live claim episode. W3 / ERR-011-012: ordinary trigger geometry
+        /// lapsing does not call this; once committed, the claim remains locked until its bounded reach
+        /// duration expires unless the composition root cancels it for possession, SAVE priority, or slot loss.</summary>
+        public void ClearClaimIntent(int gkIndex)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return;
+            }
+
+            _claimIntentActive[gkIndex] = false;
+        }
+
+        /// <summary>
+        /// §3.8.3 possession-change teardown (W8, landed with the ERR-011-017 clock correction): ends this
+        /// keeper's live hand episode when the composition root reports that the keeper no longer controls
+        /// the ball — a pass, a takeover, a restart, or the engine's ground-drop backstop. The keeper enters
+        /// <c>Recovering</c> with the ordinary recovery cooldown and any uncommitted distribution intent is
+        /// cleared. Outside <c>HandsOnBall</c> / <c>Distributing</c> this is a no-op, so a caller may report
+        /// every possession loss without first reading the state. Writes only fields already in the
+        /// serialized GK block; no RNG draw.
+        /// </summary>
+        /// <param name="gkIndex">Keeper index (== team id; KD-1).</param>
+        /// <param name="currentFrame">Current 60 Hz physics frame; converted to the 10 Hz cooldown domain here.</param>
+        /// <returns>True when a live hand episode was ended.</returns>
+        public bool EndHandEpisodeOnPossessionLoss(int gkIndex, int currentFrame)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return false;
+            }
+
+            GoalkeeperState state = _states[gkIndex];
+            if (state != GoalkeeperState.HandsOnBall && state != GoalkeeperState.Distributing)
+            {
+                return false;
+            }
+
+            _distributeIntents[gkIndex] = default;
+            _distributeIntentActive[gkIndex] = false;
+            _states[gkIndex] = GoalkeeperState.Recovering;
+            int tacticalTick = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+            _recoveryCooldownEndTick[gkIndex] = tacticalTick + GoalkeeperConstants.RecoveryCooldownTicks;
+            return true;
+        }
+
+        /// <summary>
+        /// Returns #11's live hand/reach envelope for the current physics frame. A save dive reuses the
+        /// already-launched dive scratch. A cross/aerial claim reuses the SAME
+        /// <see cref="GoalkeeperDiveKinematics"/> reach path, anchored at the claim commit frame with the
+        /// lateral side locked in <see cref="ClaimIntent.ReachDirectionLateral"/>. The target never acts as a hand
+        /// collider: callers still decide contact by testing the ball against the returned envelope.
+        ///
+        /// Claim reach deliberately supplies zero timing jitter. <c>DrawSiteDiveTimingJitter</c> is the
+        /// save-dive draw site; consuming it from claims would silently change its single-purpose draw
+        /// contract and RNG cursor. This keeps W3 geometry parameter-free while preserving #11 ownership.
+        /// </summary>
+        public bool TryGetHandReachEnvelope(
+            int gkIndex,
+            int currentFrame,
+            Vector3 gkPosition,
+            out Vector3 reachCenter,
+            out float reachRadius)
+        {
+            reachCenter = default;
+            reachRadius = 0.0f;
+
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return false;
+            }
+
+            int launchFrame;
+            int durationFrames;
+            float peakHandZ;
+            float directionLateral;
+
+            if (_states[gkIndex] == GoalkeeperState.Airborne && _diveLaunchFrames[gkIndex] >= 0)
+            {
+                launchFrame = _diveLaunchFrames[gkIndex];
+                durationFrames = _diveDurationFrames[gkIndex];
+                peakHandZ = _divePeakHandZ[gkIndex];
+                directionLateral = _diveDirectionLateral[gkIndex];
+            }
+            else if (_claimIntentActive[gkIndex])
+            {
+                ClaimIntent intent = _claimIntents[gkIndex];
+                launchFrame = intent.AttemptCommittedTick * GoalkeeperConstants.FramesPerTacticalTick;
+                durationFrames = GoalkeeperDiveKinematics.ComputeDiveDurationFrames();
+
+                if (currentFrame < launchFrame || currentFrame - launchFrame >= durationFrames)
+                {
+                    return false;
+                }
+
+                peakHandZ = GoalkeeperDiveKinematics.ComputePeakHandZ(_attrs[gkIndex], diveTimingJitterMs: 0.0f);
+                directionLateral = intent.ReachDirectionLateral;
+            }
+            else
+            {
+                return false;
+            }
+
+            int frameOffset = currentFrame - launchFrame;
+            if (frameOffset < 0 || frameOffset >= durationFrames)
+            {
+                return false;
+            }
+
+            float handZ = GoalkeeperDiveKinematics.ComputeHandPathZ(
+                currentFrame, launchFrame, durationFrames, peakHandZ);
+            reachCenter = GoalkeeperDiveKinematics.ComputeReachCenter(
+                gkPosition, currentFrame, launchFrame, durationFrames, directionLateral, handZ);
+            reachRadius = GoalkeeperDiveKinematics.ComputeReachRadius(_attrs[gkIndex]);
+            return true;
+        }
+
+        /// <summary>W3 frame-local cross-claim duel reset. No cross-tick state is carried here.</summary>
+        public void BeginCrossClaimFrame()
+        {
+            _crossClaimDuel.ClearFrameBuffer();
+        }
+
+        /// <summary>
+        /// W3 mixed-participant registration. The narrow attribute record is valid for both goalkeeper
+        /// and outfield participants and keeps ToGoalkeeper out of outfield paths.
+        /// </summary>
+        public bool RegisterCrossClaimParticipant(
+            int agentId,
+            CrossClaimParticipantAttributes attrs,
+            BodyPartEnum bodyPart,
+            int currentFrame)
+        {
+            return _crossClaimDuel.RegisterParticipant(agentId, attrs, bodyPart, currentFrame);
+        }
+
+        /// <summary>Resolves the current W3 duel through #11's own RNG stream.</summary>
+        public void ResolveCrossClaimDuel()
+        {
+            _crossClaimDuel.ResolveHandContactDuel(_rng);
+        }
+
+        public int CrossClaimDuelCount => _crossClaimDuel.DuelCount;
+
+        public CrossClaimDuelContext GetCrossClaimDuel(int index) => _crossClaimDuel.GetDuel(index);
+
+        public int GetCrossClaimParticipantAgentId(int slot) =>
+            _crossClaimDuel.GetParticipantAgentId(slot);
+
+        public BodyPartEnum GetCrossClaimParticipantBodyPart(int slot) =>
+            _crossClaimDuel.GetParticipantBodyPart(slot);
+
+        /// <summary>
+        /// W3 terminal route for a keeper who physically wins a Hand contact. The caller has already
+        /// confirmed the live #11 reach envelope and any mixed hand/head duel. This method owns the
+        /// existing §3.5 handling draws, band-to-action mutation, events, claim-latch consumption and
+        /// keeper state transition.
+        /// </summary>
+        public bool ResolveClaimHandContact(
+            int gkIndex,
+            int agentId,
+            int currentFrame,
+            float currentMatchTimeMs,
+            BallState ballState,
+            Vector3 reachCenter,
+            int contestedDuelId)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents
+                || !_claimIntentActive[gkIndex])
+            {
+                return false;
+            }
+
+            float handlingNoiseRaw = _rng.NextGaussian(
+                GoalkeeperConstants.DrawSiteHandlingNoise,
+                GoalkeeperConstants.DomainTagGoalkeeper);
+            float pointNoiseRaw = _rng.NextGaussian(
+                GoalkeeperConstants.DrawSiteHandlingPointNoise,
+                GoalkeeperConstants.DomainTagGoalkeeper);
+            float pointNoise = GoalkeeperConstants.HandlingPointErrorSigmaM * pointNoiseRaw;
+
+            float quality = GoalkeeperHandlingQuality.Compute(
+                attrs: _attrs[gkIndex],
+                handContactActual: ballState.Position,
+                targetHandContact: ballState.Position,
+                ballSpeedMps: ballState.Velocity.magnitude,
+                reactionWindowAchieved: _contactStates[gkIndex].ReactionWindowAchieved,
+                state: _states[gkIndex],
+                handlingScaleNoise: handlingNoiseRaw,
+                pointErrorNoise: pointNoise,
+                handlingLabel: out HandlingQualityLabel handlingLabel);
+
+            _contactStates[gkIndex].ContactPointError = new Vector2(
+                reachCenter.x - ballState.Position.x,
+                reachCenter.y - ballState.Position.y);
+            _contactStates[gkIndex].HandlingQualityScalar = quality;
+            _contactStates[gkIndex].ActualContactFrame = currentFrame;
+            _contactStates[gkIndex].ClutchFirmness = _claimIntents[gkIndex].ClutchFirmness;
+
+            _telemetry.RecordSaveHandlingQuality(quality, handlingLabel);
+            _telemetry.RecordSaveOutcome(handlingLabel);
+
+            if (quality >= GoalkeeperConstants.CatchThreshold)
+            {
+                _ballSystem.SetPossessor(agentId);
+                _ballSystem.ParkBall();
+                _claimTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+                _releaseTickEarliest[gkIndex] = _claimTick[gkIndex] + 1;
+                _states[gkIndex] = GoalkeeperState.HandsOnBall;
+
+                BallClaimedEvent claimEvt = new BallClaimedEvent
+                {
+                    AgentId = agentId,
+                    MatchTimeMs = currentMatchTimeMs,
+                    HandlingQualityScalar = quality,
+                    // Stage 0 cannot prove pass provenance here; Aerial is the honest generic label.
+                    ClaimType = ClaimType.Aerial,
+                    ClaimPosition = reachCenter,
+                    ContactBodyPart = BodyPartEnum.Hand,
+                    ContestedDuelId = contestedDuelId
+                };
+                EventBusStub.Publish(in claimEvt);
+                _telemetry.RecordBallClaim(ClaimType.Aerial);
+            }
+            else
+            {
+                SaveAttemptedEvent saveEvt = new SaveAttemptedEvent
+                {
+                    AgentId = agentId,
+                    MatchTimeMs = currentMatchTimeMs,
+                    HandlingQualityScalar = quality,
+                    HandlingLabel = handlingLabel,
+                    ReactionWindowAchieved = _contactStates[gkIndex].ReactionWindowAchieved,
+                    ReactionLabel = GoalkeeperReactionPipeline.ComputeReactionLabel(
+                        _contactStates[gkIndex].ReactionWindowAchieved),
+                    IncomingBallState = ballState,
+                    ContactPointError = _contactStates[gkIndex].ContactPointError,
+                    FailureCause = handlingLabel == HandlingQualityLabel.Missed
+                        ? FailureCause.MissedContact : default,
+                    HandContactPosition = reachCenter,
+                    HandUsed = HandEnum.Either,
+                    ContactBodyPart = BodyPartEnum.Hand
+                };
+                EventBusStub.Publish(in saveEvt);
+
+                if (quality >= GoalkeeperConstants.ParryThreshold)
+                {
+                    Vector3 parryVel = GoalkeeperHandlingQuality.ComputeParryVelocity(
+                        ballState.Velocity, quality, _claimIntents[gkIndex].ClutchFirmness);
+                    _ballSystem.ApplyKick(parryVel, ballState.AngularVelocity, agentId, currentMatchTimeMs);
+                }
+                else if (quality >= GoalkeeperConstants.DeflectThreshold)
+                {
+                    Vector3 fallback = ballState.Position
+                        + (ballState.Velocity.sqrMagnitude > GoalkeeperConstants.DEGENERACY_EPSILON_SQ
+                            ? ballState.Velocity.normalized * GoalkeeperConstants.Stage0DeflectFallbackProjectionM
+                            : Vector3.zero);
+                    Vector3 deflectVel = GoalkeeperHandlingQuality.ComputeDeflectVelocity(
+                        ballState.Velocity, quality, fallback, reachCenter);
+                    _ballSystem.ApplyKick(deflectVel, ballState.AngularVelocity, agentId, currentMatchTimeMs);
+                }
+                else if (quality >= GoalkeeperConstants.MinHandlingQuality)
+                {
+                    Vector3 spillVel = GoalkeeperHandlingQuality.ComputeSpillVelocity(
+                        ballState.Velocity, quality);
+                    _ballSystem.ApplyKick(spillVel, ballState.AngularVelocity, agentId, currentMatchTimeMs);
+                }
+
+                _states[gkIndex] = GoalkeeperState.Recovering;
+                int tacticalTick = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+                _recoveryCooldownEndTick[gkIndex] =
+                    tacticalTick + GoalkeeperConstants.RecoveryCooldownTicks;
+            }
+
+            _claimIntentActive[gkIndex] = false;
+            return true;
+        }
+
+        /// <summary>
+        /// W3 losing-Hand route. A keeper beaten by the shared aerial duel records the specified
+        /// DisturbedInDuel failure, consumes the claim episode and enters recovery without touching the ball.
+        /// </summary>
+        public void ResolveClaimDuelLoss(
+            int gkIndex,
+            int agentId,
+            int currentFrame,
+            float currentMatchTimeMs,
+            BallState ballState,
+            Vector3 reachCenter,
+            int contestedDuelId)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents
+                || !_claimIntentActive[gkIndex])
+            {
+                return;
+            }
+
+            SaveAttemptedEvent saveEvt = new SaveAttemptedEvent
+            {
+                AgentId = agentId,
+                MatchTimeMs = currentMatchTimeMs,
+                HandlingQualityScalar = 0.0f,
+                HandlingLabel = HandlingQualityLabel.Missed,
+                ReactionWindowAchieved = _contactStates[gkIndex].ReactionWindowAchieved,
+                ReactionLabel = GoalkeeperReactionPipeline.ComputeReactionLabel(
+                    _contactStates[gkIndex].ReactionWindowAchieved),
+                IncomingBallState = ballState,
+                ContactPointError = new Vector2(
+                    reachCenter.x - ballState.Position.x,
+                    reachCenter.y - ballState.Position.y),
+                FailureCause = FailureCause.DisturbedInDuel,
+                HandContactPosition = reachCenter,
+                HandUsed = HandEnum.Either,
+                ContactBodyPart = BodyPartEnum.Hand
+            };
+            EventBusStub.Publish(in saveEvt);
+
+            _claimIntentActive[gkIndex] = false;
+            _states[gkIndex] = GoalkeeperState.Recovering;
+            int tacticalTick = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+            _recoveryCooldownEndTick[gkIndex] =
+                tacticalTick + GoalkeeperConstants.RecoveryCooldownTicks;
+        }
+
+        /// <summary>
+        /// Commits a RushIntent for the specified GK from the 10 Hz producer.
         /// §3.7 / §4.6.1.
         /// </summary>
         public void CommitRushIntent(int gkIndex, RushIntent intent, GoalkeeperAgentAttributes attrs)
@@ -430,6 +829,7 @@ namespace TacticalDirector.GoalkeeperMechanics
             new GoalkeeperTickState(
                 _states, _attrs, _contactStates,
                 _saveIntents, _saveIntentActive,
+                _claimIntents, _claimIntentActive,
                 _rushIntents, _rushIntentActive,
                 _distributeIntents, _distributeIntentActive,
                 _positioningContracts,
@@ -454,6 +854,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             Array.Copy(state.ContactStates, _contactStates, _contactStates.Length);
             Array.Copy(state.SaveIntents, _saveIntents, _saveIntents.Length);
             Array.Copy(state.SaveIntentActive, _saveIntentActive, _saveIntentActive.Length);
+            Array.Copy(state.ClaimIntents, _claimIntents, _claimIntents.Length);
+            Array.Copy(state.ClaimIntentActive, _claimIntentActive, _claimIntentActive.Length);
             Array.Copy(state.RushIntents, _rushIntents, _rushIntents.Length);
             Array.Copy(state.RushIntentActive, _rushIntentActive, _rushIntentActive.Length);
             Array.Copy(state.DistributeIntents, _distributeIntents, _distributeIntents.Length);
@@ -601,13 +1003,9 @@ namespace TacticalDirector.GoalkeeperMechanics
         {
             using var _ = s_updateMarker.Auto();
 
-            // §3.6 cross-claim / aerial duel resolution requires opponent hand/head collider
-            // geometry that the single-GK Stage 0 contact path does not yet plumb through this
-            // entry point. The duel buffer is cleared each frame and the resolver is exercised by
-            // GoalkeeperCrossClaimDuelTests; wiring contested multi-agent claims here is a Stage 1
-            // deliverable (pending the multi-agent contact feed). Until then no participants are
-            // registered, so ResolveHandContactDuel is intentionally not called.
-            _crossClaimDuel.ClearFrameBuffer();
+            // W3 cross-claim arbitration now runs at the MatchEngine composition boundary BEFORE
+            // this per-GK update, where #10 prepared Head geometry and #11 live Hand geometry coexist.
+            // Do not clear _crossClaimDuel here: the composition route owns its frame lifecycle.
 
             for (int gkIndex = 0; gkIndex < GoalkeeperConstants.MaxGkAgents; gkIndex++)
             {
@@ -615,6 +1013,21 @@ namespace TacticalDirector.GoalkeeperMechanics
                 if ((uint)agentId >= (uint)agentStates.Length)
                 {
                     continue;
+                }
+
+                // W3 / ERR-011-012: ClaimIntent owns one bounded Stage-0 reach episode. Its target and
+                // lateral side stay locked for the whole existing dive-duration window; current ball
+                // height/radius do NOT re-arm or cancel it. At expiry the 10 Hz producer may start a
+                // fresh episode if the ordinary loose-ball/local-volume trigger is true.
+                if (_claimIntentActive[gkIndex])
+                {
+                    int claimLaunchFrame =
+                        _claimIntents[gkIndex].AttemptCommittedTick * GoalkeeperConstants.FramesPerTacticalTick;
+                    int claimDurationFrames = GoalkeeperDiveKinematics.ComputeDiveDurationFrames();
+                    if (currentFrame - claimLaunchFrame >= claimDurationFrames)
+                    {
+                        _claimIntentActive[gkIndex] = false;
+                    }
                 }
 
                 AgentState agentState = agentStates[agentId];
@@ -1319,4 +1732,17 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |      |            |   | which Set → Rushing then launched him at. Unconditional by design, and    |
 // |      |            |   | so NOT ClearRushIntent/ClearSaveIntent, which refuse to disarm a chain    |
 // |      |            |   | in flight (FR-GK-018): the flight belongs to nobody now.                  |
+// | 1.13 | 2026-09-11 | — | W4: OnThreatDeflected explicitly restarts the detection / required-reaction |
+// |      |            |   | stamp after a real body deflection without setting _shotEventPending. A   |
+// |      |            |   | deflection is a changed threat, not a newly struck shot. No new state.     |
+// | 1.14 | 2026-09-12 | — | W4 review closure: caller contract now states OnThreatArmed anchors a      |
+// |      |            |   | visible threat episode; screened time is deliberately outside the clock.  |
+// | 1.15 | 2026-09-22 | — | W3: ClaimIntent receives a real production lifecycle plus a read-only      |
+// |      |            |   | TryGetHandReachEnvelope surface. Claims reuse #11's existing dive/reach   |
+// |      |            |   | kinematics with zero save-only timing jitter; no hand collider invented.  |
+// | 1.16 | 2026-09-22 | — | W3 / ERR-011-012: claim reach side is frozen in ClaimIntent at commit,    |
+// |      |            |   | removing the live-position side flip; the existing dive-duration remains  |
+// |      |            |   | the sole bounded episode lifetime. No new GT or RNG draw site.             |
+// | 1.17 | 2026-09-22 | — | W3 runtime: #11 exposes frame-local mixed-participant duel registration and owns the tiebreak draw; Hand winner/loss routes now consume the live ClaimIntent and use the existing §3.5 handling/event/ball-action contract. |
+// | 1.18 | 2026-09-26 | — | W8 / ERR-011-017: + EndHandEpisodeOnPossessionLoss (#11 §3.8.3 possession-change teardown). Once the composition root passes a true 10 Hz tick, HandsOnBall has no exit but the 60-tick timeout, so a keeper who had already passed stayed in hands for up to 6 s and could not rush, claim or dive. The teardown enters Recovering with the ordinary cooldown; no-op outside HandsOnBall/Distributing. No new state, schema, GT or RNG. |
 #endregion

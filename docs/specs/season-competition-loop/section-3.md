@@ -1,6 +1,7 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
+**Last Updated:** September 11, 2026 (v2.20 — ERR-030-051: #40 T2b makes (b') live while preserving refused-roll atomicity by staging settlement until the fallible season commit succeeds)
 **Last Updated:** August 18, 2026, even later still (v2.19 — **adversarial-review round-7 finding M7**,
 spec-text only — no code change; the code was already correct): `PlayThroughEngine`'s pseudocode body
 derived `homeXi`/`awayXi` via `StartingElevenPlayerIds(...)` directly — a call that never returns null —
@@ -228,7 +229,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.19
+**Version:** 2.20
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -950,9 +951,9 @@ RollToNextSeason():
     #           reads. #30 supplies the seam and the ordering; the TERMINATION DECISION IS #54's.
     #           FR-BD-012 previously named #30 as deciding it; #30 contains no such rule and never did.
     # (a')  <-- #43 promotion/relegation transform inserts HERE (FR-SN-031), not built now
-    # (b')  <-- #40 finance settlement inserts HERE (ERR-030-003) — after (a') so budgets reflect the
-    #           post-promotion division; SettleFinances(financeState[club], position, clubCount, board)
-    #           per club. NULL SEAM until #40 T2 wires it; #40 references #30 never (one-way #30 → #40).
+    # (b')  #40 finance settlement — LIVE at T2b (ERR-030-051), after (a') so budgets reflect the
+    #           post-promotion division. Compute/stage SettleFinances(financeState[club], position,
+    #           clubCount, board) for every club HERE; do not install into live finance state yet.
     nextSeed := DeriveNextSeasonSeed(Seed, SeasonNumber)
     Fixtures := FixtureScheduler.Generate(ClubIds, nextSeed)   # (c) regenerate
     Calendar := ShiftForwardOneSeason(Calendar)        # (c′) rebuild — see the correction note
@@ -962,6 +963,7 @@ RollToNextSeason():
     Table := LeagueTable.Empty(ClubIds)                # (e) reset
     SeasonNumber++
     Seed := nextSeed
+    FinanceState := stagedFinanceState                 # commit b' only AFTER (e) succeeds; cannot throw
     # (f) #44's season-boundary sweep (FR-DC-017) — LIVE since T2 (C1/C2, August 13, 2026):
     # DisciplineRules.RollToNextSeason() resets every yellow count to 0; UNSERVED BANS CARRY
     # UNCHANGED — a red card in the final round is still a ban in August, which is the whole reason
@@ -987,13 +989,13 @@ regen replacements via `RetirementResult`/`RegenResult` (FR-PG-015). That call i
 part of the T2a landing (#28 §3.4/§7) and stays reserved here until it lands; `AdvanceAges()` at (d)
 is a placeholder name for a step whose real shape #28 has not yet specified either.
 
-Each step mutates a well-defined slice of `SeasonState`; the whole transform is a pure function of
-the prior `SeasonState` + `nextSeed`, so a save taken mid-roll restores to the same continuation
-(restartable, FR-SN-029). #43's promotion/relegation is a transform inserted at (a'), between
-finalize and regenerate, leaving (a)/(b)/(c)/(c′)/(d)/(e) unchanged (FR-SN-031). #40's finance settlement
-(ERR-030-003, at #40's approval) is a NULL SEAM inserted at (b'), after (a') so budgets reflect the
-post-promotion division and before (c); it too leaves the surrounding steps unchanged and keeps the
-transform a pure function of `SeasonState + nextSeed` (per-club `ClubFinances` prior state carried in).
+Each boundary step is first **computed/staged** from the prior state. The supported public operation is the
+single synchronous `RollToNextSeason()` call; there is no externally observable save point between its
+internal steps. #43 remains a transform inserted at (a'). #40 T2b is live at (b'): its complete per-club
+settlement is computed from the final table before regeneration, but live finance entries are not replaced
+until after `BeginNextSeason` — the roll's final fallible season commit — succeeds. A refusal therefore
+leaves both `SeasonState` and `ClubFinances` untouched; a successful call installs the staged finance values
+exactly once. This resolves the prior #40 mid-call-save wording without weakening FR-SN-029 (ERR-030-051).
 
 **Correction note — step (c′) (ERR-030-015, filed at T3 implementation).** Versions of this block before
 v0.5 regenerated `Fixtures` but never touched `Calendar`, whose cursor sits at `RoundCount` (season
@@ -1014,8 +1016,8 @@ changes the round count regenerates the schedule first; it does not disturb (a')
 client that advanced the world deep into the close season before rolling would install a schedule
 opening in the past — a KD-4 / FR-SN-011 cursor-invariant violation. The roll refuses that fail-loud
 rather than installing it, and performs no write until every step is computed and validated, so a
-refused roll leaves the season untouched rather than carrying a committed board verdict against a
-schedule that was then rejected.
+refused roll leaves the season **and staged #40 finance result** untouched rather than carrying a
+committed board verdict or next-season budget against a schedule that was then rejected.
 
 ## 3.6 Season-state sub-blob codec (FR-SN-019..023)
 
@@ -1125,4 +1127,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 2.17 | 2026-08-18 | — | **ERR-030-047** (adversarial-review round 6, H1 — spec-text only, no code change; the code was already correct): §3.4's normative pseudocode was never updated when `ERR-044-014` (August 16, 2026) changed the call it specifies. The serve step still read the two-argument `OnClubFixturePlayed(f.HomeClubId, homeXi)` / `OnClubFixturePlayed(f.AwayClubId, awayXi)` (the v2.4 form) and the fallibility comment still said the method "has TWO guards" (the v2.5 count), while the real signature has been `OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)` with THREE guards — `clubId < 0` (F2), `clubPlayerIds == null` (ArgumentNullException, the ERR-044-014 addition) and `fieldedPlayerIds == null` (ArgumentNullException, ERR-044-003 stage 1) — since `src/discipline/DisciplineRules.cs` v1.7 / `src/season-save/SeasonLoop.cs` v1.29. Worse than the stale signature, **the unfiltered-roster precondition ERR-044-014 introduced appeared nowhere in this spec**: serving MUST read the UNFILTERED roster (every id whose ban is being served is precisely an id the availability filter has just removed), so an implementer wiring the serve step off the filtered squad — the only squad the pre-fix pseudocode ever bound — would make every suspension unservable: bans never decrement, every suspension is permanent, silently, no throw and no log. Fixed on BOTH resolution paths: `PlayThroughEngine`'s pseudocode resolves `homeRoster`/`awayRoster` explicitly, derives `homeRosterIds := RosterIds(homeRoster)` / `awayRosterIds := RosterIds(awayRoster)` off the UNFILTERED `squads.ResolveByClubId(...)` output — resolved one statement above the `SelectAvailable` filter that consumes the same instance — and returns the pair; `ResolveRound(f, squads)` outputs the same pair from its own resolve → filter site (ban serving runs on both paths, now also stated in §3.4.1); the serve step becomes `OnClubFixturePlayed(f.HomeClubId, homeRosterIds, homeXi)` / `(f.AwayClubId, awayRosterIds, awayXi)` with the precondition carried as a normative MUST comment; and the guard comment names all THREE guards with both structural null-exclusions (`FieldedXi`'s and `RosterIds`' gates). Verified against `DisciplineRules.cs:318-345` and `SeasonLoop.cs:984-985`/`1622-1638` before writing. Filed at `spec-error-log.md` v2.45. |
 | 2.18 | 2026-08-18 | — | **ERR-030-048** (adversarial-review round 7, H4 — spec-text only; the code was already correct). §3.4's `AdvanceAndPlayNextRound` pseudocode ran the `OnClubFixturePlayed` pair and `fold?.Commit` at the same indent as `f.Played := true`, i.e. UNGATED inside the fixture loop — while the comment block directly above justified their null-safety by appealing to "the same condition this whole block already runs under". No such condition existed in the block. The live code wraps both calls in `if (_disciplineDriver != null)` (`SeasonLoop.cs:982`) and `RosterIds` returns **null** when discipline is unwired (`SeasonLoop.cs:1751-1756`), so an implementer following the pseudocode literally passes null and takes the `clubPlayerIds` `ArgumentNullException` (`DisciplineRules.cs:329`) on the FIRST fixture of any career without discipline wired — the loud twin of the silently-permanent-ban defect `ERR-030-047` fixed one round earlier, in the same block, from the same omission. The `fold?.Commit` on the next line being `?.`-guarded made the gap read as deliberate. Pair and commit now sit under an explicit `if discipline is wired:`, and the null-safety comment cites that gate instead of a gate that was not there. Recorded in passing, because it is the reason the two defects are twins: what the block IS NOT gated on is a CAREER being wired — a ban is served by the club playing without him, on both resolution paths. | — |
 | 2.19 | 2026-08-18 | — | **Adversarial-review round-7 finding M7** (spec-text only; the code was already correct). `PlayThroughEngine`'s pseudocode body derived `homeXi`/`awayXi` via `StartingElevenPlayerIds(...)` directly — a call that never returns null — while the serve-step comment (§3.4, below the pseudocode) justified skipping a null check on those same variables by citing `FieldedXi`'s null-gating, a DISTINCT producer (`SeasonLoop.cs:1721-1724`: `_career == null && _disciplineDriver == null ? null : SquadRating.StartingElevenPlayerIds(squad)`). The pseudocode's own body therefore did not support the null-safety argument built on it two names later. Fixed: `PlayThroughEngine` now derives `homeXi := FieldedXi(home)` / `awayXi := FieldedXi(away)`, with `StartingElevenPlayerIds` named as `FieldedXi`'s inner walk once the gate has passed; §3.4.1's prose description of `ResolveRound` corrected the same way, so both resolution paths are stated to derive their XIs through the same producer. Verified against `src/season-save/SeasonLoop.cs:1721-1724` before writing. | — |
+| 2.20 | 2026-09-11 | — | **ERR-030-051 / #40 T2b.** Step (b') becomes live. The complete finance result is computed there from the final table before regeneration, then installed only after `BeginNextSeason` succeeds; refused rolls leave finance state untouched. The prior mid-roll-save wording is retired because `RollToNextSeason()` is synchronous and exposes no such save seam. |
 #endregion

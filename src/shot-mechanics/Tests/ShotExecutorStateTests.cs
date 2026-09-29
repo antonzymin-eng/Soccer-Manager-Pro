@@ -1,5 +1,6 @@
 // File:     src/shot-mechanics/Tests/ShotExecutorStateTests.cs
 // Created:  2026-06-19
+// Modified: 2026-09-28 (FM-03 closeout: Warning-level CONTACT possession-loss lock — v1.2)
 // Modified: 2026-06-19
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9; Match Engine design note §2.6 (Phase C step C0); Code Standards #20
@@ -306,10 +307,10 @@ namespace TacticalDirector.ShotMechanics.Tests
             AssertStateEquals(in seeded, in recaptured);
         }
 
-        // Stubs let a real Execute() populate the in-flight fields from genuine computation rather
-        // than a hand-built DTO. The lifecycle stays in WINDUP so no CONTACT publish is reached
-        // (publish needs a booted EventBus registry); full CONTACT-through-publish behavioural
-        // parity is exercised at Phase C C3's MatchEngineResolveTests where Resolve boots the bus.
+        // Stubs let real Execute() calls populate in-flight fields from genuine computation rather
+        // than hand-built DTOs. The snapshot parity case stays in WINDUP; the FM-03 case reaches
+        // CONTACT but cancels before publishing. Full CONTACT-through-publish behavioural parity is
+        // exercised at Phase C C3's MatchEngineResolveTests where Resolve boots the EventBus registry.
         private sealed class StubBall : IShotBallSystem
         {
             public bool IsBallPossessedBy(int agentId) => true;
@@ -336,6 +337,72 @@ namespace TacticalDirector.ShotMechanics.Tests
         {
             public bool GetAndClearTackleFlag(int agentId) => false;
             public float ComputePressureScalar(Vector3 shooterPosition, int shooterTeamId) => 0.3f;
+        }
+
+        private sealed class MutablePossessionBall : IShotBallSystem
+        {
+            public bool Possessed = true;
+            public int ApplyKickCalls;
+
+            public bool IsBallPossessedBy(int agentId) => Possessed;
+
+            public void ApplyKick(
+                ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
+            {
+                ApplyKickCalls++;
+            }
+        }
+
+        [Test]
+        public void FM03_ContactTimePossessionLoss_CancelsWithoutErrorOrKick()
+        {
+            var ballSystem = new MutablePossessionBall();
+            var agent = new StubAgent();
+            var collision = new StubCollision();
+            var executor = new ShotExecutor(ballSystem, agent, collision);
+            var ball = BallState.CreateAtPosition(
+                new Vector3(85f, 34f, BallPhysicsConstants.Ball.RADIUS));
+
+            var request = new ShotRequest
+            {
+                AgentId         = 9,
+                PowerIntent     = 0.8f,
+                ContactZone     = ContactZone.Centre,
+                SpinIntent      = 0.3f,
+                PlacementTarget = new Vector2(0.6f, 0.5f),
+                IsWeakFoot      = false,
+                DistanceToGoal  = 18f,
+                TeamId          = 0,
+                FrameNumber     = 100
+            };
+
+            ShotResult initiated = executor.Execute(in request);
+            Assert.AreEqual(ShotOutcome.Initiated, initiated.Outcome);
+
+            const int WindupState = 1;  // ShotExecutorState ordinal contract
+            const int ContactState = 2;
+
+            int frame = 101;
+            while (executor.CaptureState().State == WindupState)
+            {
+                executor.Update(frame / 60f, frame, ref ball);
+                frame++;
+                Assert.Less(frame, 200, "shot must reach CONTACT");
+            }
+
+            Assert.AreEqual(
+                ContactState, executor.CaptureState().State, "executor must reach CONTACT");
+            ballSystem.Possessed = false;
+
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Warning,
+                "[ShotExecutor] FM-03: Agent 9 lost possession before CONTACT — shot cancelled.");
+
+            executor.Update(frame / 60f, frame, ref ball);
+
+            Assert.AreEqual(ShotOutcome.Cancelled, executor.LastResult.Outcome);
+            Assert.AreEqual(0, ballSystem.ApplyKickCalls, "FM-03 must cancel before ApplyKick");
+            Assert.IsTrue(executor.IsIdle, "FM-03 cancellation must return executor to Idle");
         }
 
         [Test]
@@ -398,4 +465,6 @@ namespace TacticalDirector.ShotMechanics.Tests
 // |         |            |        | test (genuine computed state, stays in WINDUP) + M-2 reflection|
 // |         |            |        | field-count lock (silent-omission guard, B0 BufferSize analogue|
 // |         |            |        | ). Added stub IShot* implementations.                         |
+// | 1.2     | 2026-09-28 | —      | FM-03 closeout: direct CONTACT-time possession-loss lock expects|
+// |         |            |        | Warning, Cancelled, zero ApplyKick calls, and immediate Idle.  |
 #endregion

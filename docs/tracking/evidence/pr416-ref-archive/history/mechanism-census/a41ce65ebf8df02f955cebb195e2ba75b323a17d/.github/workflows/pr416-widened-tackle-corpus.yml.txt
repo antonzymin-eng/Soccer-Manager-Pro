@@ -1,0 +1,100 @@
+name: PR416 widened tackle corpus
+
+on:
+  push:
+    branches:
+      - evidence/pr416-mechanism-census
+    paths:
+      - .github/workflows/pr416-widened-tackle-corpus.yml
+
+permissions:
+  contents: read
+
+jobs:
+  widened-corpus:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: pinned-main
+            ref: 1bad655f5826070d1e29f54a845cdf2c549f66bc
+            ablate: false
+          - label: pr416-control
+            ref: 07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad
+            ablate: false
+          - label: rolling-preforce-ablation
+            ref: 07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad
+            ablate: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          fetch-depth: 0
+
+      - name: Fetch frozen evidence inputs
+        shell: bash
+        run: |
+          git fetch origin evidence/pr416-mechanism-census evidence/pr416-no-rolling-focused evidence/pr416-pre-force-normalization-ablation
+
+      - name: Apply exact localized pair ablation
+        if: matrix.ablate
+        shell: bash
+        run: |
+          git checkout origin/evidence/pr416-no-rolling-focused -- src/ball-physics/BallStateMachine.cs
+          git checkout origin/evidence/pr416-pre-force-normalization-ablation -- src/ball-physics/BallPhysicsCore.cs
+          test "$(git hash-object src/ball-physics/BallStateMachine.cs)" = "3297dd5a90c8881c510fa1869d34821d395f2a7f"
+          test "$(git hash-object src/ball-physics/BallPhysicsCore.cs)" = "5fbdb6b44b4f623311e122f72a1b4ccf20e4b228"
+          test "$(git hash-object src/ball-physics/BallCollision.cs)" = "d58e69016875df3ba360b1364bf5d5a85e9b5766"
+          git diff --check 07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad -- src/ball-physics/BallStateMachine.cs src/ball-physics/BallPhysicsCore.cs
+
+      - name: Install frozen widened census helper
+        shell: bash
+        run: |
+          git show origin/evidence/pr416-mechanism-census:.github/evidence/Pr416MechanismCensusTests.cs > src/match-engine/tests/Pr416MechanismCensusTests.cs
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("src/match-engine/tests/Pr416MechanismCensusTests.cs")
+          s = p.read_text()
+          s = s.replace("private const int Ticks = 150_000;", "private const int Ticks = 324_000;")
+          old = """                    0x0F1E2D3C4B5A6978UL,
+                    0x00000000D1A6D05EUL,"""
+          new = """                    0x0F1E2D3C4B5A6978UL,
+                    0x00000000D1A6D05EUL,
+                    0x5EED000000000003UL,"""
+          if old not in s:
+              raise SystemExit("seed block not found")
+          p.write_text(s.replace(old, new))
+          PY
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run widened mechanism census
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-widened-${{ matrix.label }}
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=MeasurePr416MechanismCensus" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=pr416-widened-${{ matrix.label }}.trx" \
+            --results-directory artifacts/pr416-widened-${{ matrix.label }} \
+            2>&1 | tee artifacts/pr416-widened-${{ matrix.label }}/console.log
+
+      - name: Upload widened evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-widened-${{ matrix.label }}-${{ github.run_id }}
+          path: artifacts/pr416-widened-${{ matrix.label }}/
+          if-no-files-found: error

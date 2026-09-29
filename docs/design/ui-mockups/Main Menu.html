@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Main Menu — System XI</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<style>
+* { box-sizing: border-box; }
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#05070a; color:var(--ink-1); }
+body { font-family:var(--font-body); }
+button { font:inherit; }
+
+.fitter {
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle at 74% 44%, rgba(0,255,136,.055), transparent 34%), #05070a;
+}
+.stage {
+  width:1920px; height:1080px; transform-origin:center center; position:relative; overflow:hidden;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px) 0 0 / 64px 64px,
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px) 0 0 / 64px 64px,
+    var(--bg-0);
+  border:1px solid var(--line-2);
+}
+.stage::before {
+  content:""; position:absolute; inset:-18% -12% -10% 42%; transform:rotate(-8deg);
+  background:
+    linear-gradient(90deg, transparent 49.8%, rgba(0,255,136,.08) 50%, transparent 50.2%),
+    linear-gradient(transparent 49.8%, rgba(255,255,255,.035) 50%, transparent 50.2%);
+  background-size:180px 180px; mask-image:linear-gradient(90deg, transparent, #000 25%, #000 70%, transparent);
+  pointer-events:none;
+}
+.stage::after {
+  content:"XI"; position:absolute; right:-14px; bottom:-160px;
+  font-family:var(--font-display); font-size:680px; line-height:.8; font-weight:800; letter-spacing:-.06em;
+  color:rgba(255,255,255,.018); pointer-events:none;
+}
+
+.topbar {
+  height:54px; padding:0 34px; display:flex; align-items:center; border-bottom:1px solid var(--line-2);
+  background:rgba(7,9,12,.84); backdrop-filter:blur(8px); position:relative; z-index:3;
+}
+.wordmark-mini { font-family:var(--font-display); font-weight:800; letter-spacing:.06em; font-size:20px; }
+.wordmark-mini span { color:var(--brand-400); }
+.top-spacer { flex:1; }
+.top-meta { display:flex; align-items:center; gap:18px; font-family:var(--font-mono); font-size:10px; color:var(--ink-4); letter-spacing:.05em; }
+.top-meta .online { color:var(--brand-400); }
+
+.menu-shell {
+  position:absolute; inset:54px 0 38px 0; display:grid; grid-template-columns:790px 1fr; z-index:2;
+}
+.menu-panel {
+  padding:112px 0 0 138px; display:flex; flex-direction:column; align-items:flex-start;
+}
+.eyebrow {
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--brand-400); margin-bottom:12px;
+}
+.brand-title {
+  font-family:var(--font-display); font-size:124px; font-weight:800; line-height:.78; letter-spacing:-.04em;
+  text-transform:uppercase; margin:0;
+}
+.brand-title .xi { color:var(--brand-400); }
+.brand-sub {
+  margin-top:22px; font-family:var(--font-mono); font-size:12px; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+.brand-rule { width:106px; height:2px; background:var(--brand-400); margin:36px 0 34px; box-shadow:var(--brand-glow); }
+
+.menu-list { width:428px; display:flex; flex-direction:column; gap:7px; }
+.menu-btn {
+  width:100%; height:58px; border:1px solid var(--line-2); border-radius:var(--r-2);
+  background:rgba(17,21,27,.78); color:var(--ink-2); display:grid; grid-template-columns:30px 1fr auto;
+  align-items:center; gap:12px; padding:0 18px; cursor:pointer; text-align:left;
+  transition:background .12s,border-color .12s,color .12s,transform .08s;
+}
+.menu-btn:hover, .menu-btn:focus-visible {
+  outline:none; background:var(--bg-2); border-color:var(--line-4); color:var(--ink-1);
+}
+.menu-btn:active { transform:translateY(1px); }
+.menu-btn.primary { border-color:rgba(0,255,136,.46); background:var(--brand-tint); color:var(--ink-1); }
+.menu-btn.primary:hover, .menu-btn.primary:focus-visible { border-color:var(--brand-400); background:var(--brand-tint-strong); }
+.menu-btn.disabled { cursor:not-allowed; color:var(--ink-5); background:rgba(13,16,21,.6); border-color:var(--line-1); }
+.menu-btn.disabled:hover { background:rgba(13,16,21,.6); border-color:var(--line-1); color:var(--ink-5); }
+.menu-key { font-family:var(--font-mono); font-size:9px; color:var(--ink-5); }
+.menu-btn.primary .menu-key { color:var(--brand-400); }
+.menu-label { font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:.01em; }
+.menu-note { font-family:var(--font-mono); font-size:9px; color:var(--ink-4); letter-spacing:.03em; }
+.menu-btn.disabled .menu-note { color:var(--ink-5); }
+.menu-secondary { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; width:428px; margin-top:4px; }
+.menu-small {
+  height:42px; border:1px solid var(--line-2); border-radius:var(--r-2); background:transparent;
+  color:var(--ink-3); font-family:var(--font-mono); font-size:10px; cursor:pointer;
+}
+.menu-small:hover, .menu-small:focus-visible { outline:none; color:var(--ink-1); background:var(--bg-2); border-color:var(--line-3); }
+
+.hero {
+  position:relative; display:flex; align-items:center; justify-content:center; padding:84px 98px 84px 0;
+}
+.hero-frame {
+  width:820px; height:720px; position:relative; border:1px solid var(--line-2); border-radius:var(--r-4);
+  overflow:hidden; background:
+    radial-gradient(circle at 52% 46%, rgba(0,255,136,.10), transparent 23%),
+    linear-gradient(145deg,#10151b 0%,#0b0e13 50%,#07090c 100%);
+  box-shadow:var(--shadow-3);
+}
+.hero-frame::before {
+  content:""; position:absolute; left:72px; right:72px; top:70px; bottom:70px;
+  border:1px solid rgba(255,255,255,.07); border-radius:2px;
+  background:
+    linear-gradient(90deg, transparent 49.9%, rgba(255,255,255,.07) 50%, transparent 50.1%),
+    radial-gradient(circle at center, transparent 0 72px, rgba(255,255,255,.07) 73px 74px, transparent 75px);
+}
+.hero-frame::after {
+  content:""; position:absolute; left:72px; right:72px; top:70px; bottom:70px;
+  background:
+    linear-gradient(90deg, transparent 0 11%, rgba(0,255,136,.025) 11% 22%, transparent 22% 33%, rgba(0,255,136,.025) 33% 44%, transparent 44% 55%, rgba(0,255,136,.025) 55% 66%, transparent 66% 77%, rgba(0,255,136,.025) 77% 88%, transparent 88%);
+}
+.hero-art-slot {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:1;
+}
+.system-mark {
+  width:270px; height:270px; border:1px solid rgba(0,255,136,.24); border-radius:50%; position:relative;
+  box-shadow:0 0 90px rgba(0,255,136,.06) inset;
+}
+.system-mark::before, .system-mark::after { content:""; position:absolute; background:rgba(0,255,136,.34); }
+.system-mark::before { width:1px; height:330px; left:50%; top:-30px; }
+.system-mark::after { height:1px; width:330px; top:50%; left:-30px; }
+.system-mark span {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:800; font-size:88px; letter-spacing:-.04em; color:var(--ink-1);
+}
+.system-mark span em { color:var(--brand-400); font-style:normal; }
+.hero-caption {
+  position:absolute; left:28px; bottom:24px; z-index:3; display:flex; flex-direction:column; gap:4px;
+}
+.hero-caption strong { font-family:var(--font-mono); font-size:10px; color:var(--ink-2); letter-spacing:.08em; text-transform:uppercase; }
+.hero-caption span { font-size:11px; color:var(--ink-4); }
+.art-badge {
+  position:absolute; right:22px; top:20px; z-index:3; border:1px solid var(--line-2); border-radius:var(--r-pill);
+  background:rgba(7,9,12,.72); color:var(--ink-4); padding:6px 10px; font-family:var(--font-mono); font-size:9px; letter-spacing:.08em;
+}
+
+.footer {
+  position:absolute; left:0; right:0; bottom:0; height:38px; padding:0 34px; display:flex; align-items:center;
+  border-top:1px solid var(--line-2); background:#080b0f; z-index:3; font-family:var(--font-mono); font-size:9px; color:var(--ink-5);
+}
+.footer .sp { flex:1; }
+.footer .hint { color:var(--ink-4); }
+.resolution-badge {
+  position:fixed; top:8px; right:10px; z-index:10; font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-btn { transition:none; }
+}
+</style>
+</head>
+<body>
+<div class="resolution-badge" id="resbadge">1920 × 1080</div>
+<div class="fitter">
+  <main class="stage" id="stage" aria-label="System XI main menu mockup">
+    <header class="topbar">
+      <div class="wordmark-mini">SYSTEM <span>XI</span></div>
+      <div class="top-spacer"></div>
+      <div class="top-meta"><span>EARLY ACCESS UX REFERENCE</span><span class="online">● TOUCHLINE</span></div>
+    </header>
+
+    <div class="menu-shell">
+      <section class="menu-panel" aria-labelledby="game-title">
+        <div class="eyebrow">Build your club. Build your system. Build your story.</div>
+        <h1 class="brand-title" id="game-title">SYSTEM <span class="xi">XI</span></h1>
+        <div class="brand-sub">Football management simulation</div>
+        <div class="brand-rule"></div>
+
+        <div class="menu-list" aria-label="Main menu actions">
+          <button class="menu-btn disabled" type="button" aria-disabled="true" title="No save is available in this mock state">
+            <span class="menu-key">01</span><span class="menu-label">Continue</span><span class="menu-note">No career save</span>
+          </button>
+          <button class="menu-btn primary" type="button">
+            <span class="menu-key">02</span><span class="menu-label">New Game</span><span class="menu-note">Start a career →</span>
+          </button>
+          <button class="menu-btn" type="button">
+            <span class="menu-key">03</span><span class="menu-label">Load Game</span><span class="menu-note">Browse saves</span>
+          </button>
+        </div>
+
+        <div class="menu-secondary" aria-label="Secondary actions">
+          <button class="menu-small" type="button">Settings</button>
+          <button class="menu-small" type="button">Credits</button>
+          <button class="menu-small" type="button">Exit</button>
+        </div>
+      </section>
+
+      <aside class="hero" aria-label="Key art placeholder">
+        <div class="hero-frame">
+          <div class="art-badge">KEY ART SLOT · FALLBACK ACTIVE</div>
+          <div class="hero-art-slot">
+            <div class="system-mark"><span>S<em>XI</em></span></div>
+          </div>
+          <div class="hero-caption">
+            <strong>Art-independent fallback</strong>
+            <span>Final key art can replace this surface without changing menu hierarchy or layout.</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="footer">
+      <span>System XI · UX-S1 · Main Menu reference</span><span class="sp"></span>
+      <span class="hint">↑ ↓ navigate · Enter select · Esc back</span><span style="margin-left:24px">v0.1 mockup</span>
+    </footer>
+  </main>
+</div>
+<script>
+(function fit(){
+  const stage=document.getElementById('stage');
+  const scale=Math.min(window.innerWidth/1920,window.innerHeight/1080);
+  stage.style.transform='scale('+scale+')';
+})();
+window.addEventListener('resize',function(){
+  const stage=document.getElementById('stage');
+  const scale=Math.min(window.innerWidth/1920,window.innerHeight/1080);
+  stage.style.transform='scale('+scale+')';
+});
+</script>
+</body>
+</html>

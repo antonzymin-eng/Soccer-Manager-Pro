@@ -1,7 +1,8 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Updated:** August 24, 2026 (round-2 M/L pass, L6) — **adding the chain entry that commit `9fca357`
+> **Updated:** September 14, 2026 — **#31 T0 discharges both C6-deferred transfer findings in PR #407.** The one-unit accept/reject cliff is replaced by a deterministic synchronous `CounterOffered` band, and Stage 2 now carries always-on #27 coarse-position scarcity so disabling/defering #33/#28/#34 refinements does not revert to a context-blind valuation. Both are code + approved-spec back-props + regression locks; no RNG is introduced. Counts move **34 recorded / 5 fixed / 29 open → 34 / 7 / 27**. The assembly-less subset moves **6 specs / 8 findings → 5 / 6** (#34, #36, #43, #46, #54), leaving the workable queue unchanged at **21**.
+> **Updated (prior):** August 24, 2026 (round-2 M/L pass, L6) — **adding the chain entry that commit `9fca357`
 > (round-1's #28 Medium/Low close-out) landed without.** That commit made two edits to this file with no
 > governing `Updated:` line of its own — FR-CS-056/057 applied to a tracking document, whose only
 > version-history mechanism is this chain. **(1)** §6.3's assembly-less-class bullet ("carry 8 of the 32
@@ -416,12 +417,12 @@ this pattern — FRs and formulas).
   hard threshold; the spec's own worked example states a bid one currency unit under value is
   certain-rejected, one at value is certain-accepted — no acceptance band, no risk/willingness
   modeling, no `CounterOffered` path (deferred to an unbuilt deep tier). Same shape as ERR-008-019.
-  Pattern (b).
+  Pattern (b). **FIXED September 14, 2026 at #31 T0:** the shipped minimal evaluator now has a deterministic `CounterOffered` band around value; exact value remains the acceptance pivot, and only terms beyond the band reject. Regression coverage proves accepted/counter/rejected buy+sell and no-mutation counter paths.
 - **§3.1/KD-1 valuation baseline** — club-need and personality (#33) are folded in only as
   multiplicative biases that default to exactly neutral (`1000‰`) when the deep-tier flag is off — so
   the shipped baseline negotiation has zero situational/personality awareness, gaining it only if a
   separate optional system is toggled on. Same "reverts to blind behavior when a sibling spec's dial
-  is off" shape as DT #8 §3.2.2.1. Pattern (d).
+  is off" shape as DT #8 §3.2.2.1. Pattern (d). **FIXED September 14, 2026 at #31 T0:** Stage 2 always applies deterministic #27 coarse-position scarcity from the valuing club; #33 personality, #28 CA and #34 staff remain later multiplicative refinements, but their absence no longer removes all situational context. A neutral-stock pivot is locked at `1000‰`.
 
 **Spec #34 Staff & Backroom**
 - **§3.4 `EvaluateStaffOffer`** — identical hard-threshold shape to #31: `wage >= wageDemand`, with no
@@ -661,9 +662,9 @@ creation — that separation is the acceptance test that the stages are genuinel
   lookup — overturning it is an owner decision about the spec's stated design intent, not a patch.
 - **Management-layer findings** (#31, #34, #54, #43, #36, #27, #28): the three-stage frame does not
   map literally (there is no "execution" of a sacking), but P1, P3, and P5 apply unchanged.
-- **Assembly-less class — deferred BY RULE, not by priority** *(added August 21, 2026)*. Six of the
-  specs itemized in §2/§3 have no `src/` assembly at all — **#31, #34, #36, #43, #46, #54** — and they
-  carry **8 of the 29 open findings** (#31 ×2, #34 ×1, #36 ×1, #43 ×1, #46 ×1, #54 ×2). Those fixes do
+- **Assembly-less class — deferred BY RULE, not by priority** *(added August 21, 2026; current count updated September 14).* Five of the
+  specs itemized in §2/§3 still have no `src/` assembly — **#34, #36, #43, #46, #54** — and they carry
+  **6 of the 27 open findings** (#34 ×1, #36 ×1, #43 ×1, #46 ×1, #54 ×2). #31's two findings discharged at T0. Those remaining fixes do
   **not** land ahead of their spec's T0 code. The formula-patch process immediately above requires
   spec + code in the same commit, and this project's standard for a landed fix is a test that fails
   when the fix is reverted; with no assembly, neither half can be executed, so what would ship is

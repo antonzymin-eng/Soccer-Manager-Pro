@@ -1,0 +1,26 @@
+{
+  "asset_id": "ui.pipeline.import-probe",
+  "family": "ui",
+  "status": "candidate",
+  "style_version": "none-technical-probe",
+  "target_surface": "ap03-import-proof-only",
+  "source_kind": "generated",
+  "creator_or_tool": "Anthropic Claude Code (AI coding agent, model claude-opus-5) wrote the SVG markup at the project owner's direction; exported with resvg 0.47.0 (official win64 release)",
+  "license_or_rights_basis": "AI-generated technical probe made for internal pipeline verification; no third-party material, references or inputs. Not adopted for release — the commercial-use basis is to be confirmed by the owner before any release-ready use.",
+  "attribution_required": false,
+  "real_person_or_likeness": false,
+  "real_club_competition_or_trademark": false,
+  "export_paths": [
+    "Assets/GameArt/UI/Icons/ap03_import_probe.png"
+  ],
+  "notes": "AP-03 technical import probe only. Deliberately neutral geometry (rounded-square outline + filled circle; no text, marks or likeness), independent of G1/AP-02, not an approved production-style asset. Human review of the generated output is part of the G2 review. May be deprecated after G2; the evidence stays in docs/design/art/art-technical-recipe-v1.md.",
+  "generation": {
+    "provider_or_tool": "Anthropic Claude Code (agentic coding session)",
+    "model_or_version": "claude-opus-5",
+    "prompt_or_recipe_reference": "Owner instruction to start AP-03; probe specified by docs/design/art/art-technical-recipe-v1.md §3 (neutral geometric UI icon probe). SVG written directly as vector markup; no image-generation model was used.",
+    "input_reference_rights": "None — no reference images, third-party assets or fonts were used as inputs.",
+    "material_manual_edits": "No human edits. One agent revision in place for the G2 replacement proof: inner circle r=26 #8A93A3 -> r=32 #B4BBC7 (commit abc07f2f).",
+    "generation_date_or_batch": "2026-09-12; initial commit dd0d1ff5, revision commit abc07f2f",
+    "commercial_use_basis": "Not adopted for release (technical probe only); owner to confirm the applicable basis before any release-ready use."
+  }
+}

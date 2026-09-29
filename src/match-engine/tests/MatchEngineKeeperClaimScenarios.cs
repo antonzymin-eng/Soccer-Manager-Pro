@@ -1,25 +1,31 @@
 // File:     src/match-engine/tests/MatchEngineKeeperClaimScenarios.cs
 // Created:  2026-08-03
+// Modified: 2026-09-15 (W6 review closure — retain Controlled attachment lock and restore held-claim own-goal consequence guard)
+// Modified: 2026-09-15 (W6 compatibility — held claims now assert Controlled attachment rather than treating keeper carry across the goal line as stale-shot travel)
 // Modified: 2026-08-03
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.5.2 (ERR-011-008), Ball Physics #1 §3.1,
 //           Testing Strategy & Framework #19 §3.3.1/§3.3.5/Appendix A.1, Code Standards #20
 // Purpose:  Acceptance scenario for the conversion-at-contact pass
-//           (gk-conversion-at-contact-design.md §5): a keeper CLAIM must end the threat.
+//           (gk-conversion-at-contact-design.md §5): a keeper CLAIM must end the incoming-ball threat.
 //
 //           #11 §3.5.2's catch branch is two statements — the possession record AND the velocity
 //           park ("parked at hand position"). Only the first was implemented (ERR-011-008), and
-//           possession in this engine is a FLAG, not a kinematic constraint: the ball integrates
-//           unconditionally and the goal check adjudicates on ball POSITION. So a claimed shot kept
-//           its velocity and flew into the net — measured over three full matches, ball speed
-//           11.1 m/s in and 10.8 m/s out of a catch, with 7 of 10 catches followed by a goal
+//           possession in this engine was originally a FLAG, not a kinematic constraint: the ball
+//           integrated independently and the goal check adjudicated on ball POSITION. So a claimed
+//           shot kept its velocity and flew into the net — measured over three full matches, ball
+//           speed 11.1 m/s in and 10.8 m/s out of a catch, with 7 of 10 catches followed by a goal
 //           within 5 s.
 //
-//           The predicates assert the STRUCTURE that makes a claim a claim (the ball stops; the
-//           claiming keeper does not then concede from it), never a save percentage or a goal rate.
+//           W6 makes genuine possession a kinematic constraint. The scenario therefore keeps both
+//           sides of the contract: a held ball must remain physically attached to the claiming
+//           keeper, and the held claim must not itself end in an own goal. The latter is an outcome
+//           guard, not a ban on Law-10 adjudication: if a held keeper is permitted to carry the
+//           attached ball through his own goal plane, the production locomotion/carry path is wrong.
 
 using System;
 
+using TacticalDirector.BallPhysics;
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.PlayerDatabase;
 using TacticalDirector.TestingStrategy;
@@ -61,16 +67,17 @@ namespace TacticalDirector.MatchEngine
         private const float ArrestedSpeedMps = 2.0f;
 
         /// <summary>
+        /// W6 attaches Controlled possession to the holder exactly in x/y. This tolerance is only a
+        /// floating-point comparison guard for the acceptance probe; it is not a gameplay tuning dial.
+        /// </summary>
+        private const float ControlledAttachmentToleranceM = 0.001f;
+
+        /// <summary>
         /// Hard cap on the attribution window after a claim (5 s at 60 Hz — the instrument's fate
         /// window). The window normally closes earlier, the moment the claiming keeper's possession
-        /// ends: after that the ball is in open play and a goal is no longer that claim's doing.
-        /// <para>Attribution is deliberately narrow. A broader "any goal at this end within 5 s"
-        /// rule measured 3 of 7 on the FIXED engine — the keeper claims, the release rule drops the
-        /// ball loose in his own box, and the scramble produces a goal. That is a creation-side
-        /// observation (§7), not a failure of the claim, and pinning it here would make the
-        /// predicate fail for a reason it does not name.</para>
+        /// ends: after that the ball is in open play and no longer tests the claim's held state.
         /// </summary>
-        private const int ClaimGoalWindowTicks = 300;
+        private const int ClaimWindowTicks = 300;
 
         // #11 (the claim), #1 (ball kinematics), #2 (keeper locomotion), #16 (determinism), #19.
         private static readonly int[] OwningSpecIds = { 1, 2, 11, 16, 19 };
@@ -97,11 +104,19 @@ namespace TacticalDirector.MatchEngine
         {
             int claims = 0;
             int travellingAfterClaim = 0;
-            int concededFromClaim = 0;
+            int heldClaimsObserved = 0;
+            int detachedWhileHeld = 0;
+            int concededWhileHolding = 0;
 
             for (int s = 0; s < Seeds.Length; s++)
             {
-                PlayOne(Seeds[s], ref claims, ref travellingAfterClaim, ref concededFromClaim);
+                PlayOne(
+                    Seeds[s],
+                    ref claims,
+                    ref travellingAfterClaim,
+                    ref heldClaimsObserved,
+                    ref detachedWhileHeld,
+                    ref concededWhileHolding);
             }
 
             string inv(int v) => v.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -121,17 +136,31 @@ namespace TacticalDirector.MatchEngine
                 + " (bound " + ArrestedSpeedMps.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
                 + " m/s)");
 
-            // The consequence that makes it matter: the ball a keeper is RECORDED AS HOLDING does
-            // not end up in his own net. Pre-fix that is precisely what happened — the possession
-            // flag was set on a ball still travelling at shot speed, so the keeper "had" the ball
-            // as it crossed his own goal line.
-            context.Envelope.CheckTrue("held-ball-does-not-enter-own-net",
-                concededFromClaim == 0,
-                "concededWhileHolding=" + inv(concededFromClaim) + " of " + inv(claims));
+            // W6 structure lock: an observably held ball cannot travel independently of its holder.
+            // Claims whose possession both begins and ends inside one RunTick have no held-state
+            // observation boundary and are excluded; heldClaimsObserved keeps the predicate non-vacuous.
+            context.Envelope.CheckTrue("claimed-ball-remains-attached-while-held",
+                heldClaimsObserved >= 3 && detachedWhileHeld == 0,
+                "heldClaimsObserved=" + inv(heldClaimsObserved)
+                + " detachedWhileHeld=" + inv(detachedWhileHeld)
+                + " claims=" + inv(claims));
+
+            // Independent football consequence. ORDER in PlayOne matters: a goal restart clears
+            // possession inside the scoring RunTick, so score changes are attributed against the
+            // claim window as it stood entering that tick before holder-based window closure. W6's
+            // pre-closure corpus measured 2 of 17 claims ending this way.
+            context.Envelope.CheckTrue("held-claim-does-not-concede-own-goal",
+                concededWhileHolding == 0,
+                "concededWhileHolding=" + inv(concededWhileHolding) + " of " + inv(claims));
         }
 
         private static void PlayOne(
-            ulong seed, ref int claims, ref int travellingAfterClaim, ref int concededFromClaim)
+            ulong seed,
+            ref int claims,
+            ref int travellingAfterClaim,
+            ref int heldClaimsObserved,
+            ref int detachedWhileHeld,
+            ref int concededWhileHolding)
         {
             var engine = new MatchEngine(seed);
             engine.ConfigureSquads(BuildSquad(seed, clubId: 1), BuildSquad(seed, clubId: 2));
@@ -145,13 +174,14 @@ namespace TacticalDirector.MatchEngine
                 claimTick[t] = int.MinValue;
             }
 
-            int prevHome = 0;
-            int prevAway = 0;
             var claimingAgent = new int[gkCount];
             for (int t = 0; t < gkCount; t++)
             {
                 claimingAgent[t] = -1;
             }
+
+            int prevHome = 0;
+            int prevAway = 0;
 
             for (int tick = 0; tick < NumTicks; tick++)
             {
@@ -161,41 +191,55 @@ namespace TacticalDirector.MatchEngine
                 float ballSpeed = engine.BallView.Velocity.magnitude;
                 int holder = engine.PossessingAgentId;
 
-                // ORDER MATTERS. The score check runs FIRST, against the window as it stood coming
-                // into this tick. A goal awards through ApplyRestart, which CLEARS possession
-                // inside the same RunTick — so closing the window on `holder != claimingAgent`
-                // before reading the score would close it on the very tick the goal lands, making
-                // this predicate structurally unreachable (verified: it read 0 pre-fix, on an
-                // engine where 6 of 6 claims left the ball travelling).
+                // Read score changes BEFORE holder-based window closure. ApplyRestart clears the
+                // possessor inside the same RunTick a goal is awarded; checking holder first would
+                // make the consequence structurally unreachable on exactly the scoring tick.
                 if (engine.HomeScore != prevHome)
                 {
-                    // Home scored ⇒ the AWAY keeper (slot 1) conceded.
+                    // Home scored => the away keeper (team/gk index 1) conceded.
                     if (claimingAgent[1] >= 0)
                     {
-                        concededFromClaim++;
-                        claimingAgent[1] = -1;   // one attribution per claim
+                        concededWhileHolding++;
+                        claimingAgent[1] = -1;
+                        claimTick[1] = int.MinValue;
                     }
                     prevHome = engine.HomeScore;
                 }
 
                 if (engine.AwayScore != prevAway)
                 {
+                    // Away scored => the home keeper (team/gk index 0) conceded.
                     if (claimingAgent[0] >= 0)
                     {
-                        concededFromClaim++;
+                        concededWhileHolding++;
                         claimingAgent[0] = -1;
+                        claimTick[0] = int.MinValue;
                     }
                     prevAway = engine.AwayScore;
                 }
 
                 for (int t = 0; t < gkCount; t++)
                 {
-                    // The attribution window closes the moment the claiming keeper stops holding
-                    // the ball — from then on the ball is in open play, not in his hands.
-                    if (claimingAgent[t] >= 0
-                        && (holder != claimingAgent[t] || tick - claimTick[t] > ClaimGoalWindowTicks))
+                    if (claimingAgent[t] < 0)
+                    {
+                        continue;
+                    }
+
+                    // The held-state window closes as soon as possession ends. While it remains
+                    // open, W6's Controlled contract says the ball must stay physically attached
+                    // to that keeper; independent travel would be the old ERR-011-008 shape again.
+                    if (holder != claimingAgent[t] || tick - claimTick[t] > ClaimWindowTicks)
                     {
                         claimingAgent[t] = -1;
+                        claimTick[t] = int.MinValue;
+                        continue;
+                    }
+
+                    heldClaimsObserved++;
+                    if (!IsControlledAtHolder(engine, claimingAgent[t]))
+                    {
+                        detachedWhileHeld++;
+                        claimingAgent[t] = -1;   // one attribution per claim
                         claimTick[t] = int.MinValue;
                     }
                 }
@@ -216,16 +260,55 @@ namespace TacticalDirector.MatchEngine
                            >= GoalkeeperMechanics.GoalkeeperConstants.CatchThreshold)
                     {
                         claims++;
-                        claimTick[t] = tick;
-                        claimingAgent[t] = GkAgentId(engine, t);
+                        int agentId = GkAgentId(engine, t);
+
                         if (ballSpeed > ArrestedSpeedMps)
                         {
                             travellingAfterClaim++;
                         }
+
+                        // The claim may already have ended later in this same RunTick (for example,
+                        // a restart clears possession before the scenario can observe the tick). Such
+                        // a claim has no held-state observation to test. Open the W6 attachment/outcome
+                        // window only when the keeper is still the holder at this observation boundary.
+                        if (agentId >= 0 && holder == agentId)
+                        {
+                            heldClaimsObserved++;
+                            if (!IsControlledAtHolder(engine, agentId))
+                            {
+                                detachedWhileHeld++;
+                                claimingAgent[t] = -1;
+                                claimTick[t] = int.MinValue;
+                            }
+                            else
+                            {
+                                claimingAgent[t] = agentId;
+                                claimTick[t] = tick;
+                            }
+                        }
+                        else
+                        {
+                            claimingAgent[t] = -1;
+                            claimTick[t] = int.MinValue;
+                        }
                     }
                 }
-
             }
+        }
+
+        private static bool IsControlledAtHolder(MatchEngine engine, int agentId)
+        {
+            if (engine.BallView.State != BallStateType.Controlled)
+            {
+                return false;
+            }
+
+            var holderPosition = engine.AgentView(agentId).Position;
+            var ballPosition = engine.BallView.Position;
+            float dx = ballPosition.x - holderPosition.x;
+            float dy = ballPosition.y - holderPosition.y;
+            return dx * dx + dy * dy
+                   <= ControlledAttachmentToleranceM * ControlledAttachmentToleranceM;
         }
 
         /// <summary>The on-pitch goalkeeper agent for the given team, or -1.</summary>
@@ -263,6 +346,15 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
+// | 1.3     | 2026-09-15 | —      | W6 review closure: retained Controlled attachment structure and     |
+// |         |            |        | restored the held-claim own-goal consequence guard; score changes   |
+// |         |            |        | are attributed before same-tick restart clears possession.          |
+// | 1.2     | 2026-09-15 | —      | W6 probe observes attachment only at held-state tick boundaries;   |
+// |         |            |        | same-tick claim+release/restart transitions are excluded and the   |
+// |         |            |        | observed-held population is non-vacuity gated.                     |
+// | 1.1     | 2026-09-15 | —      | W6 compatibility: predicate 3 now asserts Controlled attachment   |
+// |         |            |        | while held; keeper-carried goal-line crossing is no longer        |
+// |         |            |        | misclassified as independent stale-shot travel.                   |
 // | 1.0     | 2026-08-03 | —      | Initial. Conversion-at-contact acceptance (ERR-011-008): a claim   |
 // |         |            |        | arrests the ball, and a claiming keeper does not concede from the  |
 // |         |            |        | claim. Full-match windows because a claim is rarer than a contact. |

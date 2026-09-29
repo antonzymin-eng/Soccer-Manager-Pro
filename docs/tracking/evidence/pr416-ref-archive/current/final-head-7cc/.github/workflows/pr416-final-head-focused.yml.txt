@@ -1,0 +1,67 @@
+name: PR416 final-head focused validation
+
+on:
+  push:
+    branches:
+      - evidence/pr416-final-head-7cc
+    paths:
+      - .github/workflows/pr416-final-head-focused.yml
+
+permissions:
+  contents: read
+
+jobs:
+  detector:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7cc7d868f38096754cc85758b9224fb2c34fb5b8
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run permanent InPoss detector
+        run: |
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=sim_match_engine_inposs_gate" \
+            --logger "console;verbosity=detailed"
+
+  tackle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7cc7d868f38096754cc85758b9224fb2c34fb5b8
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run tackle regression and save-restore locks
+        run: |
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=AControlledCarrierIsActuallyDispossessed|Name=BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose|Name=TacklesHappenInComposedPlay|Name=ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice|Name=SaveAndRestoreCarryTheTackleLatches" \
+            --logger "console;verbosity=detailed"
+
+  perception-ball:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7cc7d868f38096754cc85758b9224fb2c34fb5b8
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run Perception and Ball Physics locks
+        run: |
+          dotnet test src/perception-system/Tests/perception-system-tests.gen.csproj --no-restore --logger "console;verbosity=minimal"
+          dotnet test src/ball-physics/tests/ball-physics-tests.gen.csproj --no-restore --logger "console;verbosity=minimal"

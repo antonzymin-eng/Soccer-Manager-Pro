@@ -1,0 +1,16 @@
+# #441 header-reachability census - source log lines
+# Created: 2026-09-24
+# Purpose: keep the per-seed source lines behind header-reachability-441-results.tsv. Run 35887487201
+#          uploaded no artifact; its six job logs are the only primary record and will expire.
+# Run: 35887487201 (workflow "PR439 header reachability evidence"), branch
+#      evidence/pr439-header-reachability, head 7494300341cae94ed3eae41033d874e23cac0b06; one job per
+#      frozen seed, each concluded success with "Test Run Successful. Total tests: 1 Passed: 1".
+# Source: GitHub Actions job-log API text, read 2026-09-24. Transcribed, not byte-copied; runner
+#         timestamps kept. Format: job id, TAB, the log line.
+# Check: all 16 counters for all 6 seeds, and the aggregate row, equal header-reachability-441-results.tsv.
+107271234429	2026-09-23T16:17:49.0208416Z  HEADER441 seedIndex=0 seed=0x0F1E2D3C4B5A6978 commits=303 overwrites=0 jumpStarts=303 everPredicted=3 preparedContacts=0 executed=0 failedEarly=3 failedLate=0 failedPositionedPoorly=300 failedDisturbed=0 terminalFailures=303 landingDrops=0 cancels=0 w3Participants=126 w3HandDuels=126 w3KeeperClaims=91
+107271234789	2026-09-23T16:19:07.2908276Z  HEADER441 seedIndex=1 seed=0x00000000D1A6D05E commits=293 overwrites=0 jumpStarts=293 everPredicted=3 preparedContacts=0 executed=0 failedEarly=3 failedLate=0 failedPositionedPoorly=290 failedDisturbed=0 terminalFailures=293 landingDrops=0 cancels=0 w3Participants=312 w3HandDuels=312 w3KeeperClaims=196
+107271234921	2026-09-23T16:18:15.9849935Z  HEADER441 seedIndex=2 seed=0x0000000000000001 commits=283 overwrites=1 jumpStarts=283 everPredicted=3 preparedContacts=0 executed=0 failedEarly=2 failedLate=0 failedPositionedPoorly=280 failedDisturbed=0 terminalFailures=282 landingDrops=0 cancels=0 w3Participants=138 w3HandDuels=138 w3KeeperClaims=90
+107271235043	2026-09-23T16:19:07.7293964Z  HEADER441 seedIndex=3 seed=0x00000000ABCDEF12 commits=260 overwrites=0 jumpStarts=260 everPredicted=0 preparedContacts=0 executed=0 failedEarly=0 failedLate=0 failedPositionedPoorly=260 failedDisturbed=0 terminalFailures=260 landingDrops=0 cancels=0 w3Participants=189 w3HandDuels=189 w3KeeperClaims=121
+107271234922	2026-09-23T16:18:15.5475061Z  HEADER441 seedIndex=4 seed=0x0000000099887766 commits=293 overwrites=0 jumpStarts=293 everPredicted=4 preparedContacts=0 executed=0 failedEarly=4 failedLate=0 failedPositionedPoorly=289 failedDisturbed=0 terminalFailures=293 landingDrops=0 cancels=0 w3Participants=207 w3HandDuels=207 w3KeeperClaims=130
+107271234882	2026-09-23T16:18:58.2956226Z  HEADER441 seedIndex=5 seed=0x000000005A5A5A5A commits=379 overwrites=0 jumpStarts=379 everPredicted=5 preparedContacts=0 executed=0 failedEarly=4 failedLate=0 failedPositionedPoorly=374 failedDisturbed=0 terminalFailures=378 landingDrops=0 cancels=0 w3Participants=192 w3HandDuels=192 w3KeeperClaims=125

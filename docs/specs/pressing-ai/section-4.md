@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.3 APPROVED gate: KD-3 Option B resolved; ERR-013-005/007/008 resolved)
-**Version:** 0.3
+**Last Updated:** September 11, 2026 (v0.4 — ERR-013-011: binds PassEventRing recency to the 60 Hz EventBus clock and AI-before-Resolve/Events phase order.)
+**Version:** 0.4
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -89,15 +89,16 @@ re-read mid-tick (FR-PR-037 / F3). Fields consumed:
 
 ### 4.4.2 Pass Mechanics (#5) Event Ring
 
-`PassEventRing` is a per-tick read of `PassAttemptEvent` instances
-published at #5 `CONTACT` (FR-10). The confirmed event payload
-(`pass-mechanics/section-2.md` FR-10 §351) is: `AgentID`,
-`PassType`, `TargetPosition`, `FrameNumber` — no velocity field.
-#13 reads the most-recent event for the opposing team's pass and
-computes the `BACKWARD_PASS` dot-product locally: pass direction is
-derived from `perception.agents[e.AgentID].position` (passer) to
-`e.TargetPosition` (KD-1: #13 owns the threshold and the direction
-derivation; no upstream "backward" classification consumed).
+`PassEventRing` retains `PassAttemptEvent` instances published at #5 `CONTACT` (FR-10), while
+#13 reads once per 10 Hz tactical evaluation. #17 stamps events in the authoritative 60 Hz physics
+clock. Because AI precedes Resolve/Events, an AI evaluation on physics tick `N` may consume only the
+most-recent opposing pass in `[N-AI_PHASE_STRIDE, N)`; the orchestrator supplies `N` and the inclusive
+window start separately from the tactical heartbeat index.
+
+The retained event remains wholly in authoritative world coordinates. #13 computes the BACKWARD_PASS
+dot-product locally and normalizes only `TargetPosition` at the pressing-frame geometry boundary.
+ERR-013-011 §3.2 also defines the bounded discrete-event dwell latch so one qualifying pass can
+satisfy the two-heartbeat debounce without treating a stale retained ring entry as newly fresh.
 
 ### 4.4.3 #12 Positioning AI Read
 
@@ -223,3 +224,4 @@ The following checks run during integration testing (§5.4):
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. KD-3 mechanism options A and B both preserved in §4.4.4 per OI-001. |
 | 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H2: §4.4.2 `FR-08` → `FR-10`; removed "kick velocity vector" claim; added direction-from-positions derivation. AR-S1-H4: §4.4.3 split into Stage 0 (GetFormationSlot / IsSentinel) and Stage 1+ (GetPhase / GetLine) accessor groups; ERR-013-007 / ERR-013-008 back-prop requests documented. AR-S1-M3: §4.6 RNG domain tag row updated with block-collision-avoidance rationale for the Stage-0 reservation. |
 | 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | APPROVED gate resolution. §4.4.3 GetPhase/GetLine promoted from back-prop-pending to confirmed Stage 1 via ERR-013-007/008 resolution (#12 §4.5.1 v0.3). §4.4.4 rewritten: KD-3 mechanism resolved (Option B — `TacticalContext.PressDirective?`); Option A preserved for record. §4.5.2 updated to reflect resolved mechanism. §4.6 `DOMAIN_TAG_PRESSING_AI` `[CROSS-PENDING]` → `[CROSS]` (ERR-013-005 resolved, #16 §3.4 v1.0.3). |
+| 0.4 | September 11, 2026 | OpenAI | ERR-013-011: exact 60 Hz `[N-AI_PHASE_STRIDE,N)` ring-read contract, phase order, homogeneous world-frame storage. |

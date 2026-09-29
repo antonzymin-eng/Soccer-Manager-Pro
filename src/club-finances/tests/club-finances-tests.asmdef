@@ -3,6 +3,7 @@
     "rootNamespace": "TacticalDirector.ClubFinances.Tests",
     "references": [
         "TacticalDirector.ClubFinances",
+        "TacticalDirector.PlayerDatabase",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

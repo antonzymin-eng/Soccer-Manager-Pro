@@ -1,0 +1,43 @@
+name: PR439 W6 pre-fix discriminator
+
+on:
+  push:
+    branches:
+      - evidence/pr439-w6-prefixtest
+
+permissions:
+  contents: read
+
+jobs:
+  pre-fix-regression:
+    name: W6 pre-fix regression must fail
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Prove Resolve attachment regression is red before the fix
+        shell: bash
+        run: |
+          set -o pipefail
+          set +e
+          bash tools/dotnet-ci/run-gate.sh --fast \
+            --test-filter 'Name=ControlledKeeper_ReattachesAfterResolveCollisionCorrection' \
+            2>&1 | tee pr439-w6-prefix.log
+          status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$status" -eq 0 ]; then
+            echo "::error::Pre-fix discriminator unexpectedly passed on f69aaef0-derived code."
+            exit 1
+          fi
+
+          if ! grep -F "Failed ControlledKeeper_ReattachesAfterResolveCollisionCorrection" \
+            pr439-w6-prefix.log >/dev/null; then
+            echo "::error::Gate failed, but not at the intended W6 attachment regression."
+            cat pr439-w6-prefix.log
+            exit 1
+          fi
+
+          echo "::notice::Expected pre-fix failure reproduced: Resolve collision correction detaches the Controlled keeper."

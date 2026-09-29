@@ -1,0 +1,48 @@
+name: PR416 final focused validation
+
+on:
+  push:
+    branches:
+      - evidence/pr416-final-validation
+    paths:
+      - .github/workflows/pr416-final-validation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  focused-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run Ball Physics, perception lock, and MatchEngine targets
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-final
+          dotnet test tools/dotnet-ci/TacticalDirector.gen.sln \
+            --no-restore \
+            --filter "FullyQualifiedName~TacticalDirector.BallPhysics.Tests|Name=BP007_CoLocatedBall_IsVisibleRegardlessOfFacing|Name=AControlledCarrierIsActuallyDispossessed|Name=BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose|Name=TacklesHappenInComposedPlay|Name=ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice|Name=sim_match_engine_shot_outcomes" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=pr416-final.trx" \
+            --results-directory artifacts/pr416-final \
+            2>&1 | tee artifacts/pr416-final/console.log
+
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-final-focused-${{ github.run_id }}
+          path: artifacts/pr416-final/
+          if-no-files-found: error

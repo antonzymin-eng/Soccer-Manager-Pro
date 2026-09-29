@@ -1,0 +1,144 @@
+name: PR416 rolling + pre-force pair ablation
+
+on:
+  push:
+    branches:
+      - evidence/pr416-mechanism-census
+    paths:
+      - .github/workflows/pr416-rolling-preforce-pair.yml
+
+permissions:
+  contents: read
+
+jobs:
+  mechanism-census:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-mechanism-census
+          fetch-depth: 0
+
+      - name: Apply exact rolling + pre-force removals
+        shell: bash
+        run: |
+          git fetch origin evidence/pr416-no-rolling-focused evidence/pr416-pre-force-normalization-ablation
+          git checkout origin/evidence/pr416-no-rolling-focused -- src/ball-physics/BallStateMachine.cs
+          git checkout origin/evidence/pr416-pre-force-normalization-ablation -- src/ball-physics/BallPhysicsCore.cs
+          test "$(git hash-object src/ball-physics/BallStateMachine.cs)" = "3297dd5a90c8881c510fa1869d34821d395f2a7f"
+          test "$(git hash-object src/ball-physics/BallPhysicsCore.cs)" = "5fbdb6b44b4f623311e122f72a1b4ccf20e4b228"
+          test "$(git hash-object src/ball-physics/BallCollision.cs)" = "d58e69016875df3ba360b1364bf5d5a85e9b5766"
+          git diff --check 07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad -- src/ball-physics/BallStateMachine.cs src/ball-physics/BallPhysicsCore.cs
+          cp .github/evidence/Pr416MechanismCensusTests.cs src/match-engine/tests/Pr416MechanismCensusTests.cs
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run mechanism census
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-rolling-preforce-census
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=MeasurePr416MechanismCensus" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=pr416-rolling-preforce-census.trx" \
+            --results-directory artifacts/pr416-rolling-preforce-census \
+            2>&1 | tee artifacts/pr416-rolling-preforce-census/console.log
+
+      - name: Upload census evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-rolling-preforce-census-${{ github.run_id }}
+          path: artifacts/pr416-rolling-preforce-census/
+          if-no-files-found: error
+
+  focused-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-mechanism-census
+          fetch-depth: 0
+
+      - name: Apply exact rolling + pre-force removals
+        shell: bash
+        run: |
+          git fetch origin evidence/pr416-no-rolling-focused evidence/pr416-pre-force-normalization-ablation
+          git checkout origin/evidence/pr416-no-rolling-focused -- src/ball-physics/BallStateMachine.cs
+          git checkout origin/evidence/pr416-pre-force-normalization-ablation -- src/ball-physics/BallPhysicsCore.cs
+          test "$(git hash-object src/ball-physics/BallStateMachine.cs)" = "3297dd5a90c8881c510fa1869d34821d395f2a7f"
+          test "$(git hash-object src/ball-physics/BallPhysicsCore.cs)" = "5fbdb6b44b4f623311e122f72a1b4ccf20e4b228"
+          test "$(git hash-object src/ball-physics/BallCollision.cs)" = "d58e69016875df3ba360b1364bf5d5a85e9b5766"
+          git diff --check 07dcc670fed1ecc6aa32e9711d4bc8830c0ec2ad -- src/ball-physics/BallStateMachine.cs src/ball-physics/BallPhysicsCore.cs
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+
+      - name: Run focused targets
+        id: tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-rolling-preforce-focused
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=AControlledCarrierIsActuallyDispossessed|Name=BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose|Name=TacklesHappenInComposedPlay|Name=ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice|Name=sim_match_engine_shot_outcomes" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=pr416-rolling-preforce-focused.trx" \
+            --results-directory artifacts/pr416-rolling-preforce-focused \
+            2>&1 | tee artifacts/pr416-rolling-preforce-focused/console.log
+
+      - name: Enforce strict five-target TRX Passed outcomes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          targets = {
+              "AControlledCarrierIsActuallyDispossessed",
+              "BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose",
+              "TacklesHappenInComposedPlay",
+              "ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice",
+              "sim_match_engine_shot_outcomes",
+          }
+          files = glob.glob("artifacts/pr416-rolling-preforce-focused/*.trx")
+          if len(files) != 1:
+              raise SystemExit(f"expected one TRX, found {files}")
+          root = ET.parse(files[0]).getroot()
+          seen = {}
+          for elem in root.iter():
+              if elem.tag.endswith("UnitTestResult"):
+                  name = elem.attrib.get("testName")
+                  if name in targets:
+                      seen[name] = elem.attrib.get("outcome")
+          print("STRICT_TARGET_OUTCOMES", seen)
+          missing = targets - seen.keys()
+          bad = {k:v for k,v in seen.items() if v != "Passed"}
+          if missing or bad:
+              raise SystemExit(f"strict target failure missing={sorted(missing)} bad={bad}")
+          PY
+
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-rolling-preforce-focused-${{ github.run_id }}
+          path: artifacts/pr416-rolling-preforce-focused/
+          if-no-files-found: error

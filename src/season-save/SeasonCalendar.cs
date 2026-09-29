@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonCalendar.cs
 // Created:  2026-07-25
-// Modified: 2026-07-27
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2, §3.3 (cursor + day advance), Appendix B row 8,
 //           FR-SN-009/011, KD-4; Code Standards #20
@@ -63,33 +63,34 @@ namespace TacticalDirector.SeasonSave
                 throw new System.ArgumentNullException(nameof(roundToDay));
             }
 
-            if (roundToDay.Length == 0)
+            uint[] days = new uint[roundToDay.Length];
+            System.Array.Copy(roundToDay, days, roundToDay.Length);
+
+            if (days.Length == 0)
             {
                 throw new System.ArgumentException(
                     "A season calendar needs at least one round.", nameof(roundToDay));
             }
 
-            for (int i = 1; i < roundToDay.Length; i++)
+            for (int i = 1; i < days.Length; i++)
             {
-                if (roundToDay[i] <= roundToDay[i - 1])
+                if (days[i] <= days[i - 1])
                 {
                     throw new System.ArgumentException(
-                        $"Round days must be strictly ascending; round {i} is day {roundToDay[i]} but " +
-                        $"round {i - 1} is day {roundToDay[i - 1]}.",
+                        $"Round days must be strictly ascending; round {i} is day {days[i]} but " +
+                        $"round {i - 1} is day {days[i - 1]}.",
                         nameof(roundToDay));
                 }
             }
 
-            if (nextRoundIndex < 0 || nextRoundIndex > roundToDay.Length)
+            if (nextRoundIndex < 0 || nextRoundIndex > days.Length)
             {
                 throw new System.ArgumentOutOfRangeException(
                     nameof(nextRoundIndex), nextRoundIndex,
-                    $"nextRoundIndex must be in [0, {roundToDay.Length}] (length = season complete).");
+                    $"nextRoundIndex must be in [0, {days.Length}] (length = season complete).");
             }
 
             // Snapshot-copy: the calendar must not alias the caller's array.
-            var days = new uint[roundToDay.Length];
-            System.Array.Copy(roundToDay, days, roundToDay.Length);
             return new SeasonCalendar(nextRoundIndex, days);
         }
 
@@ -299,4 +300,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | ascending sequence provably preserves strict ascent, so the        |
 // |         |            |        | private constructor is reached directly. Plus a positive-breakDays |
 // |         |            |        | gate — at zero a single-round calendar reproduces itself.          |
+// | 1.3     | 2026-09-08 | —      | Snapshot the supplied day mapping before validating that snapshot. |
 #endregion

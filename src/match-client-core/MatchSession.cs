@@ -1,6 +1,6 @@
 // File:     src/match-client-core/MatchSession.cs
 // Created:  2026-07-24
-// Modified: 2026-08-03
+// Modified: 2026-09-11 (wiring backlog W7: live boot now runs ManagerAdaptation.ApplyKickoff after manager configuration, preserving setup baselines for human teams while selecting + seeding AI-manager kickoff presets before the first tick)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P0/§5-P6/§6),
 //           Code Standards #20
@@ -60,10 +60,10 @@ namespace TacticalDirector.MatchClientCore
 
         /// <summary>
         /// Builds the composition from <paramref name="setup"/>: constructs the engine, applies the
-        /// boot-only mutators once (squads → managers → GK/heading → initial tactics, all pre-kickoff),
-        /// then wires the streamer + driver and installs the driver's drain as the streamer's pre-tick
-        /// hook. Nothing has ticked yet — call <see cref="Start"/> to begin paced playback, or
-        /// <see cref="TickOnce"/> to advance head-lessly.
+        /// boot-only mutators once (squads → managers → GK/heading → manager kickoff selection + setup
+        /// baselines, all pre-kickoff), then wires the streamer + driver and installs the driver's drain
+        /// as the streamer's pre-tick hook. Nothing has ticked yet — call <see cref="Start"/> to begin
+        /// paced playback, or <see cref="TickOnce"/> to advance head-lessly.
         /// </summary>
         /// <param name="setup">Boot configuration. Must not be null.</param>
         public MatchSession(MatchSetup setup)
@@ -99,8 +99,8 @@ namespace TacticalDirector.MatchClientCore
 
             // Boot-only / pre-kickoff mutators, applied once, in a fixed order (§3-2). ConfigureSquads
             // requires tick 0, which holds here (nothing has ticked). A neutral demo skips squads and
-            // managers entirely, leaving the engine byte-identical to a bare same-seed engine except
-            // for the staged Balanced tactics (a proven no-op).
+            // managers entirely; ApplyKickoff then applies the two setup baselines unchanged because no
+            // team is AI-managed, preserving the same Balanced identity path.
             if (setup.HasDistinctSquads)
             {
                 engine.ConfigureSquads(setup.HomeSquad, setup.AwaySquad);
@@ -118,10 +118,16 @@ namespace TacticalDirector.MatchClientCore
                 engine.EnableGkHeading();
             }
 
-            TeamTactic home = setup.HomeTactic;
-            TeamTactic away = setup.AwayTactic;
-            engine.SetTeamTactic(0, in home);
-            engine.SetTeamTactic(1, in away);
+            // Wiring backlog W7 / #26 FR-TP-004/010: this is the live composition root and therefore
+            // the one production place that can run the kickoff manager decision after manager setup but
+            // before the first tick. Passing the MatchSetup tactics as the baseline is load-bearing:
+            // ApplyKickoff replaces only AI-managed teams with their selected preset and leaves a human
+            // team's authored setup tactic intact. Running this before the old SetTeamTactic calls would
+            // have selected a preset and then immediately overwritten it, leaving W7 functionally dead.
+            ManagerAdaptation.ApplyKickoff(
+                engine,
+                new InCodeTacticPresetCatalogue(),
+                new TeamTacticConfig(setup.HomeTactic, setup.AwayTactic));
 
             return engine;
         }
@@ -368,4 +374,9 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | CaptureSave() — the durable capture that rides the ServiceOnce  |
 // |         |            |        | seam and holds §6.3's drained-empty-before-capture invariant by |
 // |         |            |        | ordering (drain, then capture, in one sim-thread pass).         |
+// | 1.3     | 2026-09-11 | —      | Wiring backlog W7: BootEngine now calls ManagerAdaptation.      |
+// |         |            |        | ApplyKickoff after ConfigureManager and passes MatchSetup team  |
+// |         |            |        | tactics as the baseline. AI teams therefore select + seed their |
+// |         |            |        | kickoff preset before tick 1; human teams retain the setup      |
+// |         |            |        | baseline. Replaces the two unconditional SetTeamTactic calls.   |
 #endregion

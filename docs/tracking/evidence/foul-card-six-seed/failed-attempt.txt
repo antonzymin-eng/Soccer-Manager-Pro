@@ -1,0 +1,24 @@
+NON-RESULT-BEARING FIRST ATTEMPT
+run_id=35765454797
+job_id=106873731837
+workflow_event_sha=7a45f57f86ff73683e0cd6de50566f5eb2579dc7
+branch=evidence/foul-card-six-seed-20260922
+artifact_id=10712420145
+artifact_digest=sha256:74c74d2db74f0648be92f71951ec9331c5e39277db733b34c9ad3dc63020cfdc
+run_created_at=2026-09-22T18:10:39Z
+run_updated_at=2026-09-22T18:11:33Z
+measured_checkout_sha=c56e5e1adff4e240b54c9abbb5ebea9c0290f65e
+result_bearing=false
+
+The first one-shot harness incorrectly placed INSTRUMENT=foul-rate in job-level env. MSBuild/C#
+therefore consumed INSTRUMENT as the compiler instrumentation setting while run-gate.sh was still
+building the tree. The run stopped before the proved measurement invocation and produced no governed
+corpus result.
+
+Relevant job-log lines:
+  Measured tree: c56e5e1adff4e240b54c9abbb5ebea9c0290f65e
+  CSC : error CS8111: Invalid instrumentation kind: foul-rate [.../tools/dotnet-ci/UnityShim/UnityShim.csproj]
+  Build FAILED.
+
+The corrective harness scoped INSTRUMENT only to the catalog-resolution step. No measured-tree,
+instrument, seed, duration, gameplay value, or production configuration changed between attempts.

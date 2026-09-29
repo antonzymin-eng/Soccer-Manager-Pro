@@ -3,6 +3,7 @@
     "rootNamespace": "TacticalDirector.ClubFinances",
     "references": [
         "TacticalDirector.DeterministicSim",
+        "TacticalDirector.PlayerDatabase",
         "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
