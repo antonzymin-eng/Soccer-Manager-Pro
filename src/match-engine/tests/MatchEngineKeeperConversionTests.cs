@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineKeeperConversionTests.cs
 // Created:  2026-07-28
+// Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.1)
 // Modified: 2026-07-28
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5.Z.20;
@@ -20,18 +21,11 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void sim_match_engine_keeper_conversion()
         {
-            // Live play emits #5's FM-08 "lost possession before CONTACT" at Error level whenever a
-            // restart is awarded against a passer mid-windup (§5.Z.7 item 3 — the log LEVEL is the
-            // stale part, not the cancel path). Same declaration as the sibling scenarios.
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             var runner = new ScenarioRunner(MatchEngineKeeperConversionScenarios.BuildIndex());
 
             ScenarioResult result = runner.Run(
                 MatchEngineKeeperConversionScenarios.KeeperConversionPath,
                 MatchEngineKeeperConversionScenarios.KeeperConversionSeed);
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             Assert.AreEqual(ScenarioStatus.Passed, result.Status, result.Diagnostics);
         }
@@ -42,4 +36,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes                                                     |
 // | 1.0     | 2026-07-28 | —      | Initial: runs the gk-catch-parry-conversion acceptance    |
 // |         |            |        | scenario.                                                 |
+// | 1.1     | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run hit only #6 FM-03 (Warning via PR #467). |
 #endregion

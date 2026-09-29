@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineShotSpeedTests.cs
 // Created:  2026-07-28
+// Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.1)
 // Modified: 2026-07-28
 // Author:   —
 // Spec:     Shot speed & physical woodwork design §5; Match Engine design note §5.Z;
@@ -19,18 +20,11 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void sim_match_engine_shot_speed()
         {
-            // Live play emits #5's FM-08 Error-level log on restart-interrupted windups
-            // (§5.Z.7 item 3 — the log LEVEL is the stale part); same declaration as the
-            // sibling acceptance scenarios.
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             var runner = new ScenarioRunner(MatchEngineShotSpeedScenarios.BuildIndex());
 
             ScenarioResult result = runner.Run(
                 MatchEngineShotSpeedScenarios.ShotSpeedPath,
                 MatchEngineShotSpeedScenarios.ShotSpeedSeed);
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             Assert.AreEqual(ScenarioStatus.Passed, result.Status, result.Diagnostics);
         }
@@ -40,4 +34,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                     |
 // | 1.0     | 2026-07-28 | —      | Initial: runs the shot-speed acceptance scenario.         |
+// | 1.1     | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run hit only #6 FM-03 (Warning via PR #467). |
 #endregion
