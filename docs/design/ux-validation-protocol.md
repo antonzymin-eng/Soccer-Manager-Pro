@@ -3,7 +3,7 @@
 **Created:** September 11, 2026  
 **Last Updated:** September 28, 2026  
 **Version:** 0.12\
-**Status:** F4 + S0 GATES A–B COMPLETE (B pending owner review) — Gate C next; anonymous participant requirements unchanged\
+**Status:** F4 + S0 GATES A–B COMPLETE (B owner-confirmed September 28, 2026) — Gate C next; anonymous participant requirements unchanged\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.9 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4  
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
@@ -474,7 +474,7 @@ semantics and evidence-backed interaction states.
 | Privacy-safe S0 participant slot 2 defined | **READY** | §4.1 defines anonymous S0-P2, profile, channel and pre-Gate-F attestation field |
 
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
-the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed, pending owner review — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
+the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G: both S0 availability attestations are still due before
 Gate F, and Gate G remains unavailable until two distinct independent participants complete the entire round.
 

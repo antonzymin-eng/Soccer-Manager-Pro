@@ -3,7 +3,7 @@
 **Created:** September 4, 2026  
 **Last Updated:** September 28, 2026\
 **Version:** 1.9\
-**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 GATES A–B COMPLETE (B pending owner review); S0 GATE C NEXT\
+**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 GATES A–B COMPLETE (B owner-confirmed September 28, 2026); S0 GATE C NEXT\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -961,7 +961,7 @@ No additional polished screen comes next.
 5. **F3 — audit only S0-required component/state/a11y/localization/fallback primitives.**
 6. **F4 — write scripts, severity ledger and privacy-safe participant mechanism; define two anonymous S0 slots.**
 7. **S0 Gate A — COMPLETE September 21, 2026.** The reconciled dependency/control audit is `ux-s0-pm1-journey.md` v0.4.
-8. **S0 Gate B — COMPLETE September 28, 2026 (pending owner review).** The task flow is `ux-s0-pm1-journey.md` v0.5 §7. It also corrects Gate A's A-10: Formation has no simulation consumer, so S0's pre-match choice is Mentality.
+8. **S0 Gate B — COMPLETE September 28, 2026 (owner-confirmed September 28, 2026).** The task flow is `ux-s0-pm1-journey.md` v0.5 §7. It also corrects Gate A's A-10: Formation has no simulation consumer, so S0's pre-match choice is Mentality.
 9. **S0 Gate C — NEXT.** Low-fidelity wireframes from the `ux-s0-pm1-journey.md` §8 inputs.
 10. Continue through D–G; no high fidelity before Gate G passes.
 
@@ -1044,4 +1044,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.6 | September 21, 2026 | S0 Gate A closes through reconciled PR #406 / `ux-s0-pm1-journey.md` v0.2 and the execution sequence advances to Gate B. The reconciliation also corrects the plan's current P4b evidence from “never compiled/run” to the September 12 compile plus September 13 tracked-scene Play-mode boot/render smoke result; full host acceptance still waits on click-to-command and cert-host render-loop/performance evidence. No Gate E–J rule, participant requirement, P5b release gate or S1/S2 scope changes. |
 | 1.7 | September 21, 2026 | PR #406 review correction. §6.1 records that per-player Role/Duty/Instructions have a bounded `PlayerTactic` vocabulary and a live `SetPlayerTactic` command but **no pre-match `MatchSetup` persistence/builder**, so Gate B may not invent that setup seam. §6.2 reconciles B8 with the roadmap's September 13 state: pinned-editor compile plus tracked-scene boot/render smoke are already complete; only the shipping click path and cert-host render-loop/performance capture remain for B8 acceptance. Gate A remains complete through journey packet v0.3; Gate B remains next. |
 | 1.8 | September 21, 2026 | Review closeout pointer sync after `ux-s0-pm1-journey.md` advances to v0.4. The execution sequence and Gate-A result are unchanged; the v0.4 packet only corrects maintained authority pointers and distinguishes `UNWIRED` existing-contract binding gaps from `FUTURE-BLOCKED` missing contract/state/runtime capabilities. Gate B remains next. |
-| 1.9 | September 28, 2026 | S0 Gate B closes through `ux-s0-pm1-journey.md` v0.5 §7 (pending owner review) and §14 advances to Gate C. The Gate-B re-check corrects a Gate-A overstatement: `TeamTactic.Formation` is serialized and parsed but read by no simulation system, so S0's one pre-match choice is Mentality (read by the Decision Tree risk multiplier and the engine's defensive-line bias). Gate A's verdict and zero-`UNKNOWN` result stand. Explicit owner confirmation of B-DEC-1/2/5 (home side, existing AI manager for the opponent, full time as the authoritative transition with the report control as acknowledgement only) is requested in review; merging alone is not that confirmation. P5b remains gated on Gate I. |
+| 1.9 | September 28, 2026 | S0 Gate B closes through `ux-s0-pm1-journey.md` v0.5 §7 (owner-confirmed September 28, 2026) and §14 advances to Gate C. The Gate-B re-check corrects a Gate-A overstatement: `TeamTactic.Formation` is serialized and parsed but read by no simulation system, so S0's one pre-match choice is Mentality (read by the Decision Tree risk multiplier and the engine's defensive-line bias). Gate A's verdict and zero-`UNKNOWN` result stand. The project owner explicitly confirmed B-DEC-1/2/5 (home side, existing AI manager for the opponent, full time as the authoritative transition with the report control as acknowledgement only) on September 28, 2026. P5b remains gated on Gate I. |
