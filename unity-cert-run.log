@@ -1,0 +1,368 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.4/staging' branch; Version is '6000.4.9f1 (f7258d6eebbe) revision 16197005'; Using compiler version '194234433'; Build Type 'Release'
+OS: 'Windows 11  (10.0.26200) Core' Language: 'en' Physical Memory: 24413 MB
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-azymi" at "2026-07-19T00:11:11.9193204Z"
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-07-19T00:11:11Z
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor\Unity.exe
+-batchmode
+-runTests
+-projectPath
+C:/Users/azymi/Desktop/Soccer-Manager-Pro
+-testPlatform
+EditMode
+-testFilter
+TacticalDirector.MatchEngine.MatchEngineCapstonePerfHarnessTests
+-testResults
+C:/Users/azymi/Desktop/Soccer-Manager-Pro/perf-results.xml
+-logFile
+C:/Users/azymi/Desktop/Soccer-Manager-Pro/unity-cert-run.log
+Successfully changed project path to: C:/Users/azymi/Desktop/Soccer-Manager-Pro
+C:/Users/azymi/Desktop/Soccer-Manager-Pro
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+Player connection [11296]  Target information:
+
+Player connection [11296]  * "[IP] 10.14.0.2 [Port] 55504 [Flags] 2 [Guid] 1458217634 [EditorId] 1458217634 [Version] 1048832 [Id] WindowsEditor(7,LAPTOP-3UD9J5E0) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [11296]  * "[IP] 192.168.0.75 [Port] 55504 [Flags] 2 [Guid] 1458217634 [EditorId] 1458217634 [Version] 1048832 [Id] WindowsEditor(7,LAPTOP-3UD9J5E0) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [11296] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [11296] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-12012" after 0.3 seconds.
+[Licensing::Module] Licensing is not yet initialized.
+[Licensing::Client] Error: HandshakeResponse reported an error:
+	ResponseCode: 505
+	ResponseStatus: Unsupported protocol version '1.18.1'.
+[Licensing::Module] Error: Failed to handshake to channel: "LicenseClient-azymi"
+[Licensing::IpcConnector] LicenseClient-azymi channel disconnected successfully.
+[Licensing::IpcConnector] Channel LicenseClient-azymi-6000.4.9 doesn't exist
+[Licensing::Module] Successfully launched the LicensingClient (PId: 9864)
+Starting IPC server.
+Waiting for clients to connect on \\.\pipe\Unity-LicenseClient-azymi-6000.4.9, press Ctrl-C to exit.
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-azymi-6000.4.9" at "2026-07-19T00:11:13.7005385Z"
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 9864, path: "C:/Program Files/Unity/Hub/Editor/6000.4.9f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.18.1+9fbee8e
+  Session Id:              4a2c86e0f34048219bf1727f1e55100a
+  Correlation Id:          b3843a89e7b30ada61c7833cd965adab
+  External correlation Id: 3531438684544859471
+  Machine Id:              faA2th9heu3OIlk5DGCyN7pFZ3g=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-azymi-6000.4.9" (connect: 0.37s, validation: 0.20s, handshake: 0.01s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-azymi-6000.4.9-notifications" at "2026-07-19T00:11:13.9101116Z"
+[Licensing::Module] Connected to LicensingClient (PId: 9864, launch time: 0.00, total connection time: 0.58s)
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 1375944849079-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
+[Licensing::Module] Licensing Background thread has ended after 2.04s
+[Licensing::Module] Licensing is initialized (took 1.52s).
+[Licensing::Client] Successfully resolved entitlement details
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Initialize engine version: 6000.4.9f1 (f7258d6eebbe)
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/6000.4.9f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/Users/azymi/Desktop/Soccer-Manager-Pro/Assets
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: NVIDIA GeForce GTX 1650 (ID=0x1f91)
+    Vendor:   NVIDIA
+    VRAM:     3935 MB
+    Driver:   32.0.15.8180
+Initialize mono
+Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/6000.4.9f1/Editor/Data/Managed'
+Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/6000.4.9f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'C:/Program Files/Unity/Hub/Editor/6000.4.9f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56012
+CodeReloadManager initialized
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.4.9f1/Editor/Data/PlaybackEngines/WebGLSupport/UnityEditor.WebGL.Extensions.dll
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.4.9f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.002298 seconds.
+Native extension for WindowsStandalone target not found
+Native extension for WebGL target not found
+Package Manager log level set to [2]
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:False
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.479 seconds
+Domain Reload Profiling: 1025ms
+	BeginReloadAssembly (146ms)
+		CreateAndSetChildDomain (5ms)
+	RebuildCommonClasses (44ms)
+	RebuildNativeTypeToScriptingClass (16ms)
+	initialDomainReloadingComplete (71ms)
+	LoadAllAssembliesAndSetupDomain (266ms)
+		LoadAssemblies (139ms)
+		AnalyzeDomain (256ms)
+			TypeCache.Refresh (254ms)
+				TypeCache.ScanAssembly (238ms)
+	FinalizeReload (481ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (56ms)
+			BeforeProcessingInitializeOnLoad (103ms)
+			ProcessInitializeOnLoadAttributes (127ms)
+			ProcessInitializeOnLoadMethodAttributes (110ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 6 packages:
+  Packages from [https://packages.unity.com]:
+    com.unity.ide.visualstudio@2.0.22 (location: C:\Users\azymi\Desktop\Soccer-Manager-Pro\Library\PackageCache\com.unity.ide.visualstudio@8140e851d83e)
+    com.unity.ide.rider@3.0.31 (location: C:\Users\azymi\Desktop\Soccer-Manager-Pro\Library\PackageCache\com.unity.ide.rider@7921be93db40)
+  Built-in packages:
+    com.unity.test-framework@1.6.0 (location: C:\Users\azymi\Desktop\Soccer-Manager-Pro\Library\PackageCache\com.unity.test-framework@76560ee600cb)
+    com.unity.ext.nunit@2.0.5 (location: C:\Users\azymi\Desktop\Soccer-Manager-Pro\Library\PackageCache\com.unity.ext.nunit@d8c07649098d)
+    com.unity.modules.imgui@1.0.0 (location: C:\Users\azymi\Desktop\Soccer-Manager-Pro\Library\PackageCache\com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: C:\Users\azymi\Desktop\Soccer-Manager-Pro\Library\PackageCache\com.unity.modules.jsonserialize)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.01 seconds
+Assets/Scripts is a symbolic link. Using symlinks in Unity projects may cause your project to become corrupted if you create multiple references to the same asset, use recursive symlinks or use symlinks to share assets between projects used with different versions of Unity. Make sure you know what you are doing.
+Disabling directory monitoring for current editor session. Found symlinks in project which cannot be used with directory monitoring. Directory monitoring settings can be changed in preferences.
+AcceleratorClientConnectionCallback - disconnected - :0
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:80
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\azymi\Desktop\Soccer-Manager-Pro
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - 200 - application/grpc 35.3160ms
+Starting: C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: C:/Users/azymi/Desktop/Soccer-Manager-Pro
+DisplayProgressbar: Compiling Scripts
+ExitCode: 0 Duration: 0s168ms
+*** Tundra build success (0.12 seconds), 0 items updated, 561 evaluated
+AssetDatabase: script compilation time: 0.629829s
+Begin MonoManager ReloadAssembly
+Assembly Assembly-CSharp-Editor-firstpass.dll at Library/ScriptAssemblies/Assembly-CSharp-Editor-firstpass.dll not valid. Loading of assembly skipped.
+Assembly Assembly-CSharp-Editor.dll at Library/ScriptAssemblies/Assembly-CSharp-Editor.dll not valid. Loading of assembly skipped.
+Assembly Assembly-CSharp-firstpass.dll at Library/ScriptAssemblies/Assembly-CSharp-firstpass.dll not valid. Loading of assembly skipped.
+Assembly Assembly-CSharp.dll at Library/ScriptAssemblies/Assembly-CSharp.dll not valid. Loading of assembly skipped.
+Assembly TestNewCustomAssembly.dll at Library/ScriptAssemblies/TestNewCustomAssembly.dll not valid. Loading of assembly skipped.
+Native extension for WindowsStandalone target not found
+Native extension for WebGL target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:False
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.585 seconds
+Domain Reload Profiling: 1257ms
+	BeginReloadAssembly (382ms)
+		DisableScriptedObjects (30ms)
+		CreateAndSetChildDomain (157ms)
+	RebuildCommonClasses (46ms)
+	RebuildNativeTypeToScriptingClass (16ms)
+	initialDomainReloadingComplete (51ms)
+	LoadAllAssembliesAndSetupDomain (176ms)
+		LoadAssemblies (247ms)
+		AnalyzeDomain (46ms)
+			TypeCache.Refresh (23ms)
+				TypeCache.ScanAssembly (17ms)
+			BuildScriptInfoCaches (20ms)
+	FinalizeReload (586ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (28ms)
+			BeforeProcessingInitializeOnLoad (166ms)
+			ProcessInitializeOnLoadAttributes (132ms)
+			ProcessInitializeOnLoadMethodAttributes (74ms)
+			AfterProcessingInitializeOnLoad (7ms)
+		AwakeInstancesAfterBackupRestoration (23ms)
+(Values over 0.050ms)
+Asset Pipeline Refresh (id=c4531850b8483384e93dfd94b27e76df): Total: 2.100 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=732 ms
+		Asset DB Callback time: managed=27 ms, native=6 ms
+		Scripting: domain reloads=1, domain reload time=675 ms, compile time=631 ms, other=25 ms
+		Project Asset Count: scripts=197, non-scripts=26
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 8.821ms
+	ApplyChangesToAssetFolders: 0.328ms
+	Scan: 37.168ms
+	CategorizeScriptCompilationAssets: 6.094ms
+	ProcessAssetsWithTransientArtifactChanges: 10.272ms
+	CategorizeAssets: 1.452ms
+	CompileScripts: 631.177ms
+	ImportOutOfDateAssets: 588.075ms (587.763ms without children)
+		UnloadImportedAssets: 0.108ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.055ms
+		OnDemandSchedulerStart: 0.148ms
+	PostProcessAllAssets: 27.408ms
+		MonoPostProcessAllAssets: 27.335ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 9.555ms
+			SyncVS.PostprocessSyncProject 3.718ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 0.847ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.398ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.253ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.189ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.105ms
+	UnloadStreamsBegin: 1.825ms
+	Untracked: 781.418ms
+
+Application.AssetDatabase Initial Refresh End
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.01 seconds
+Scanning for USB devices : 11.706ms
+Initializing Unity extensions:
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-Soccer-Manager-Pro
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 1122 unused Assets / (0.9 MB). Loaded Objects now: 1759.
+Memory consumption went from 94.1 MB to 93.2 MB.
+Total: 5.806700 ms (FindLiveObjects: 0.193900 ms CreateObjectMapping: 0.103800 ms MarkObjects: 4.914700 ms  DeleteObjects: 0.591900 ms)
+
+[Project] Loading completed in 6.435 seconds
+	Project init time: 				6.136 seconds
+		Template init time: 		0.000 seconds
+		Package Manager init time: 		1.824 seconds
+		Asset Database init time: 		0.219 seconds
+		Global illumination init time: 	0.002 seconds
+		Assemblies load time: 			1.070 seconds
+		Unity extensions init time: 	0.006 seconds
+		Asset Database refresh time: 	2.101 seconds
+	Scene opening time: 			0.106 seconds
+##utp:{"type":"ProjectInfo","version":2,"phase":"Immediate","time":1784419878348,"processId":12012,"projectLoad":6.4349932999999999,"projectInit":6.1357442,"templateInit":0.0,"packageManagerInit":1.8236895,"assetDatabaseInit":0.2187239,"globalIlluminationInit":0.0022984,"assembliesLoad":1.0695617,"unityExtensionsInit":0.0055844,"assetDatabaseRefresh":2.100516,"sceneOpening":0.1063005}
+##utp:{"type":"EditorInfo","version":2,"phase":"Immediate","time":1784419878348,"processId":12012,"editorVersion":"6000.4.9f1 (f7258d6eebbe)","branch":"6000.4/staging","buildType":"Release","platform":"Windows"}
+[Licensing::Client] Successfully resolved entitlement details
+Running tests for ExecutionSettings with details:
+targetPlatform = 
+playerHeartbeatTimeout = 600
+filters[0] = 
+   Filter with settings:
+   testMode = EditMode
+   targetPlatform = 
+   testNames = null
+   groupNames = TacticalDirector.MatchEngine.MatchEngineCapstonePerfHarnessTests
+   categoryNames = null
+   assemblyNames = null
+ignoreTests = {}
+featureFlags = null
+
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+UnityEditor.TestTools.TestRunner.CommandLineTest.Executer:InitializeAndExecuteRun (string[]) (at ./Library/PackageCache/com.unity.test-framework@76560ee600cb/UnityEditor.TestRunner/CommandLineTest/Executer.cs:53)
+UnityEditor.TestTools.TestRunner.CommandLineTest.TestStarter:InitializeAndExecuteRun () (at ./Library/PackageCache/com.unity.test-framework@76560ee600cb/UnityEditor.TestRunner/CommandLineTest/TestStarter.cs:64)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions ()
+
+(Filename: ./Library/PackageCache/com.unity.test-framework@76560ee600cb/UnityEditor.TestRunner/CommandLineTest/Executer.cs Line: 53)
+
+[UnityConnectServicesConfig] config is NOT valid, switching to default
+Created GICache directory at C:/Users/azymi/AppData/LocalLow/Unity/Caches/GiCache. Took: 0.015s, timestamps: [6.438 - 6.453]
+Unloading 2 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 0 unused Assets / (55.1 KB). Loaded Objects now: 1782.
+Memory consumption went from 93.3 MB to 93.3 MB.
+Total: 11.791400 ms (FindLiveObjects: 0.118600 ms CreateObjectMapping: 0.043900 ms MarkObjects: 11.616700 ms  DeleteObjects: 0.010500 ms)
+
+Saving results to: C:/Users/azymi/Desktop/Soccer-Manager-Pro/perf-results.xml
+TrimDiskCacheJob: Current cache size 0mb
+Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 0 unused Assets / (0 B). Loaded Objects now: 1783.
+Memory consumption went from 91.2 MB to 91.2 MB.
+Total: 8.100100 ms (FindLiveObjects: 0.073000 ms CreateObjectMapping: 0.028200 ms MarkObjects: 7.992300 ms  DeleteObjects: 0.005600 ms)
+
+DisplayProgressbar: Undo
+Test run completed. Exiting with code 0 (Ok). Run completed.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+UnityEditor.TestTools.TestRunner.CommandLineTest.Executer:ExitApplication (UnityEditor.TestTools.TestRunner.CommandLineTest.Executer/ReturnCodes,string) (at ./Library/PackageCache/com.unity.test-framework@76560ee600cb/UnityEditor.TestRunner/CommandLineTest/Executer.cs:81)
+UnityEditor.TestTools.TestRunner.CommandLineTest.Executer:ExitIfRunIsCompleted () (at ./Library/PackageCache/com.unity.test-framework@76560ee600cb/UnityEditor.TestRunner/CommandLineTest/Executer.cs:74)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions ()
+
+(Filename: ./Library/PackageCache/com.unity.test-framework@76560ee600cb/UnityEditor.TestRunner/CommandLineTest/Executer.cs Line: 81)
+
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-azymi-6000.4.9-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-azymi-6000.4.9 channel disconnected successfully.
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+CodeReloadManager destroyed
+Shut down.
+abort_threads: Failed aborting id: 0000000000003AE4, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 00000000000058B0, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000003AE4, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 00000000000058B0, mono_thread_manage will ignore it
+
+debugger-agent: Unable to listen on 3640
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+[Package Manager] Server process was shutdown
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1784419925488,"processId":12012,"allocatedMemory":10930794,"memoryLabels":[{"Default":146370},{"Permanent":15276},{"NewDelete":64819},{"Thread":4230344},{"Manager":19541},{"VertexData":8},{"Geometry":816},{"Texture":24},{"Shader":833017},{"Material":24},{"GfxDevice":55320},{"Animation":392},{"Audio":3008},{"FreeType":8},{"FontEngine":736},{"Physics":2090},{"Physics2D":16},{"Serialization":1016},{"Input":9880},{"JobScheduler":33024},{"TextLib":216},{"Mono":32},{"ScriptingNativeRuntime":155052},{"BaseObject":1620368},{"Resource":1184},{"Renderer":3008},{"Transform":4685},{"File":1088},{"WebCam":616},{"Culling":32},{"Terrain":11394},{"Wind":24},{"STL":40},{"String":12940},{"StaticString":6718},{"Utility":2672230},{"Curl":2559},{"PoolAlloc":2072},{"AI":80},{"TypeTree":13637},{"ScriptManager":448},{"RuntimeInitializeOnLoadManager":64},{"SpriteAtlas":120},{"GI":7792},{"Director":8320},{"CloudService":288},{"WebRequest":808},{"VR":48050},{"SceneManager":504},{"Video":208},{"LazyScriptCache":32},{"Camera":17},{"Secure":2377},{"SerializationCache":1576},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57888},{"StaticSafetyDebugInfo":278528},{"Analytics":344},{"Hierarchy":608},{"CoreStats":13112},{"Identifiers":12960},{"Gui":128},{"EditorUtility":104033},{"VersionControl":4},{"Undo":931},{"AssetDatabase":403484},{"EditorGi":328},{"UnityConnect":37777},{"Upm":1912},{"UpmDiagnostics":8},{"AssetCompliance":64},{"DrivenProperties":72},{"LocalIPC":211},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2612},{"Windowing":456},{"Licensing":664},{"AssetReference":32},{"IPCStream":32}]}

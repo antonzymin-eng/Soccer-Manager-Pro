@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/tools/chat-review.py\" --repo \"${CLAUDE_PROJECT_DIR:-.}\" --since 14 --hook 2>/dev/null || true",
+            "timeout": 15,
+            "statusMessage": "Checking recent sessions"
+          }
+        ]
+      }
+    ]
+  }
+}

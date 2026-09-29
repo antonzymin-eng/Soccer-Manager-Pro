@@ -1,0 +1,136 @@
+---
+name: err-file-and-backprop
+description: >-
+  File a spec-error-log entry (ERR-NNN-NNN) and land the back-propagation into the owning spec
+  correctly — allocating a non-colliding id, writing the entry in the log's fixed shape, patching the
+  spec section in the same commit when the spec text is itself the defect, and bumping every version
+  header the change touches. Use this skill whenever a defect is found in an APPROVED spec or in code
+  that contradicts one, whenever an ERR id needs allocating or citing, whenever a cross-spec
+  back-prop is landed at approval, and whenever a fix note says "spec + code, same commit". Trigger
+  it even when the fix looks purely like code — if the spec's own pseudocode or formula sourced the
+  bug, the spec is the defect and skipping the log leaves the next implementer to rebuild it.
+---
+
+# File an ERR and Back-Prop
+
+`docs/tracking/spec-error-log.md` — check its own `**Version:**` header for the current revision
+rather than trusting a number restated here. It is the authoritative remediation backlog, and its
+value depends on two things being reliably true: ids are unique, and an entry describes the *spec*
+defect rather than only the code fix.
+
+## Step 1 — Allocate the id against the live log
+
+Ids are `ERR-<owning spec number, 3 digits>-<sequence, 3 digits>`, e.g. `ERR-011-007` for
+Goalkeeper Mechanics #11. The owning spec is the one whose text is wrong, not the one where the
+symptom appeared — the keeper-contact pass filed against #11 *and* #12 because both specs' formulas
+were defective.
+
+**The allocation itself — find the highest used id for this spec, propose the next one — is a fixed
+lookup, not a judgment call, so it's scripted.** Run it against the live tree, not a plan written
+earlier:
+
+```bash
+.Codex/skills/err-file-and-backprop/scripts/next_err_id.sh 011
+```
+
+It greps both `docs/` and `src/` (not only the log — a citation can land in an approved spec or a
+code comment first) and prints every existing id for that spec plus the next free one. This repo has
+hit collisions repeatedly, and every time the proposed id had been written down in advance and claimed
+by someone else in between — which is why the script's output ends with a re-verify reminder rather
+than a green light:
+
+- three design supplements proposed ids that had already been filed the same day the supplements were
+  written, and had to be reassigned at promotion;
+- `ERR-030-015` was verified free on a branch, then claimed on `main` by #30's own T3 landing while
+  that branch was still open — a **branch-vs-main** collision, which a check at authoring time cannot
+  catch;
+- the injury/aging note proposed `ERR-028-002..004` on July 26; `ERR-028-002` was filed at #53's
+  approval on July 27, so that whole range is stale and nothing has re-pointed it.
+
+Two consequences. Treat an id written in a design note as a *suggestion to re-verify*, never a
+reservation. And **re-verify at merge, not only at authoring** — the branch-vs-main case is invisible
+until you rebase, so re-run the script after any rebase, not just once at the start.
+
+Two id conventions worth knowing: numbers are sometimes deliberately **skipped** to soft-reserve them
+for an in-flight cluster, and a duplicate that has already shipped in approved text stays **preserved
+verbatim as errata** rather than being silently renumbered — six approved specs citing a step number
+is a stronger constraint than tidiness.
+
+## Step 2 — Write the entry in the log's shape
+
+**Every entry gets a row in the `## Error Index` table near the top — `| ID | Title | Severity |
+Files Affected | Status |`. That row is the entry.** A separate `## ERR-NNN-NNN` body further down
+is *not* mandatory: measured against the live log (`grep -c '^| ERR-'` vs `grep -c '^## ERR-'`), the
+large majority of entries — including the standing pattern for everything filed in the last several
+adversarial-review rounds (`ERR-020-006`, `ERR-020-007`, `ERR-030-047`, `ERR-030-048`, and roughly a
+hundred before them back past `ERR-030-030`) — carry only the index row, with the full account packed
+into the Title and Status cells. The log says as much of itself in one entry's own Status cell:
+*"which IS the entry, no separate body exists"* (`ERR-030-034`). Older entries with unusually long
+worked-example or derivation content (e.g. `ERR-008-017`, `ERR-020-002`) do carry a separate body, and
+that is still the right call when the content genuinely does not fit a table cell — but writing an
+empty or token separate section purely to satisfy a "both surfaces" rule is not what this log does,
+and re-verify against the live file before assuming otherwise; this note describes practice as of
+August 2026 and the log can move again.
+
+Whichever shape you use, the row (or the row + body) must carry the same content:
+
+- **Title cell** — the defect statement plus **how it was found**: the measurement or review that
+  surfaced it, with numbers, and the cause verified against source (name the file and the expression).
+  An entry that says *what* was wrong without *how it was measured* cannot be re-checked, and several
+  entries here were only believable because they carried the numbers (dive-early 456–2000 ms with
+  dive-late exactly zero; mean shot distance 30–34 m against football's ~17).
+- **Severity cell** — Major / Moderate / Medium / High / Low (both scales appear in the live log;
+  match whichever the surrounding rows use).
+- **Files Affected cell** — a count, or the short list itself for a small one.
+- **Status cell** — `✅ RESOLVED <date>, same commit` (or `Open — <priority>` / `◑` for a
+  spec-text-first entry whose code half is deferred) followed by **the fix**: what the spec section
+  now says, what stays unchanged and why, what the worked examples become, and the **determinism
+  impact** (schema / RNG stream / domain tag / draw site / draw order — usually "none", then what
+  locks it, with the pre-fix failure verified by execution).
+
+If you do add a separate `## ERR-NNN-NNN` body — because the derivation is long enough that packing
+it into two table cells would make the index unreadable — follow the existing template (copy
+`ERR-008-017` as the model): `**Filed:**` / `**How found.**` / `**Fix (spec + code, same commit).**` /
+`**Determinism impact:**`, terminated with `---`. Either way, do not leave the index row as a bare
+one-line title with the substance parked in a body nobody wrote yet — that is the actual failure mode
+here (a row promising detail that was never filed), not the choice of surface.
+
+Then update the file header: bump `**Version:**`, rewrite `**Updated:**` with a prose summary of this
+revision, and relabel the previous summary so the chain reads `Prior update below.`
+
+## Step 3 — Patch the owning spec in the same commit
+
+When the spec text sourced the defect, the spec is the deliverable. Landing the code fix alone leaves
+an approved document that still instructs the next implementer to rebuild the bug — which is exactly
+how the Ball Physics ground-normal bug and the `z < 0.22 m` boundary gate survived as long as they did.
+
+- Edit the section file (`docs/specs/<folder>/section-N.md`), including the pseudocode and any worked
+  example whose arithmetic the change moves. If an example is now unreachable in production, annotate
+  it rather than deleting it.
+- Append a version-history row to every section file you touched, and bump its `Version:` /
+  `Modified:` headers — stale headers against real history are a recurring low finding here.
+- When two documents disagree, **Appendix B is the byte-layout authority** over §3 pseudocode; that
+  precedent settled `ERR-030-011`.
+
+## Step 4 — Decide the back-prop's timing
+
+Not every ERR lands immediately. Three timings are in use, and stating which one applies avoids a
+back-prop quietly evaporating:
+
+- **Same commit** — the default when the fix is being landed now.
+- **Atomically at approval** — cross-spec back-props filed when a spec flips to APPROVED. Landing
+  twenty-three of them together is what exposed the duplicated `#30` day-advance step numbers; filing
+  one at a time could not have.
+- **Deferred to a named stage** — when the consumer does not exist yet. Say which stage, and why
+  building it now would be the phantom-consumer trap.
+
+Also record when an entry changes an approved **contract** rather than a pointer, since that needs
+owner awareness: `ERR-048-001` resolved two MUSTs inside one approved spec that were jointly
+impossible and would have surfaced as an assembly cycle.
+
+## Step 5 — Close out
+
+Cite the ERR id in the code comment at the fix site and in the commit message, so the code points back
+at its rationale. Then run the `landing-close-out` skill — the `docs/tracking/CHANGELOG.md` entry and
+the root `AGENTS.md` OPEN ISSUES section both need the ERR referenced, and the log version bump belongs
+in the same commit as everything else it describes.
