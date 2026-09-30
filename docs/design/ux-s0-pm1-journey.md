@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.12\
-**Status:** S0 A–F COMPLETE — G RE-REVIEW PENDING FOR v0.5; H PAUSED; I BLOCKED (§12.3)\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.16 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.19\
+**Version:** 0.13\
+**Status:** S0 A–F COMPLETE — G DELTA REVIEW PENDING FOR v0.5; H PAUSED; I BLOCKED (§12.3)\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.17 §5–§6\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.20\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -657,8 +657,10 @@ reachable. These remain design-validation cases, not shipping resolution/minimum
 Every PDF below is an exported exercised DOM state in prototype v0.5. Dialogs are opened through
 actual controls; outcomes follow queued simulated requests. The Not-applied image comes from the
 normal MM→TS→MV minute-89 pause/request/resume journey, not a directly loaded result. None is
-independent tester evidence. All 19 current-revision images are required for the owner re-review; the original 18 approved
-v0.4 PDFs remain unchanged in the parent evidence directory and in protocol §9.1.
+independent tester evidence. The pending owner delta review is limited to `mv-ft-statistics-fault.pdf`. Text extraction confirms
+the other 18 match approved v0.4 apart from the version label; they are carried forward, not submitted
+for a full re-review. Those 18 v0.5 PDFs are unchanged by this correction. Original approved v0.4
+PDFs remain unchanged in the parent evidence directory and in protocol §9.1.
 
 | Review surface | Image |
 |---|---|
@@ -740,6 +742,10 @@ is retained unchanged; the old source hashes identify the superseded PR commit. 
 uses **85 checks** in run `UX-GE-S0-20260930-05`, including direct focus assertions that fail on body
 focus and a live-timer disclosure regression. No participant results are claimed. The prior [v0.4 run 04](s0-prototype/evidence/walkthrough.json)
 is preserved; its normal-text and fault-timeline coverage claims are superseded by run 05.
+Run 05 is preserved unchanged at `a859ea1`; its fingerprints describe that baseline, not the small copy correction.
+[Focused delta evidence](s0-prototype/evidence/v0.5/full-time-fault-delta.json), run `UX-GE-S0-20260930-05-DELTA-01`,
+records three passing checks, current seven-source/19-image hashes, and only one regenerated PDF.
+Healthy full time retains its report note; faulted full time suppresses the final-statistics promise.
 Run 05 tests minute 0/17/18/21 in both ordinary and direct-first-frame entry, cutoff crossing at
 10× speed, full-time fault wording, and actual normal/pseudo label text and font sizes.
 
@@ -750,7 +756,7 @@ Run 05 tests minute 0/17/18/21 in both ordinary and direct-first-frame entry, cu
 | Prototype/version | `s0-prototype v0.5` |
 | Date | September 30, 2026 (UTC and America/Los_Angeles) |
 | Runner | Codex scripted/self-walkthrough; no independent participant claim |
-| Evidence | [executed checks + source hashes](s0-prototype/evidence/v0.5/walkthrough.json); [reproducible runner](s0-prototype/verify.cjs) |
+| Evidence | [baseline 85 checks + hashes at a859ea1](s0-prototype/evidence/v0.5/walkthrough.json); [focused delta/current hashes](s0-prototype/evidence/v0.5/full-time-fault-delta.json); [reproducible runner](s0-prototype/verify.cjs) |
 | Real-data source | `main` `c37213abf2b2b8f6ded68b125bd7c0cc524927fa`; existing `MatchClientHost`, no harness/source modification |
 | Ordinary session | Explicitly synthetic 2–1 score/statistics fixture, with captured reference pitch positions; no seed/realism claim |
 | Capture / unusual-score fixture | seed `0x00C11E7B6D0C`; neutral agents; home Human / away AI; 91 snapshots, ticks 1–324000, MatchEnded true, statistics observer healthy; frame score **19–9**, xG unavailable |
@@ -862,8 +868,8 @@ a11y application, actual maximum scale and runtime audio/captions. No prototype 
 |---|---|---|
 | S0 reviewer assignment | Anton Zymin | Owner-directed September 30, 2026: testers not required; owner conducts image reviews |
 | Gate F complete task | UX workstream | PASS — §12.1 complete vehicle, v0.5 run 05; former tester prerequisite superseded |
-| Gate G image approval | Anton Zymin | v0.4 PASS at `13c2c09`; current v0.5 PENDING owner re-review, protocol §9.1.1 |
-| Gate H high-fidelity image review | Anton Zymin | PAUSED for corrected v0.5 until G re-review; separate H image approval still required |
+| Gate G image approval | Anton Zymin | v0.4 PASS at `13c2c09`; current v0.5 PENDING owner delta review, protocol §9.1.1 |
+| Gate H high-fidelity image review | Anton Zymin | PAUSED for corrected v0.5 until G delta review; separate H image approval still required |
 | Gate I implementation handoff | UX / Unity client | BLOCKED — awaits separately owner-approved H images; #470 remains blocked on I |
 
 **Owner decision, September 30, 2026:** the owner instructed, "don't worry about testers. I will be
@@ -880,8 +886,9 @@ statements and approved prototype v0.4 at `13c2c09`, the original 18 images reta
 C-DEC-1 and S0-G-008 decisions, every finding disposition, and written rationale/release condition
 for carried Majors S0-B-002/S0-B-004. The original 18 approved PDFs and run-04 record stay unchanged; their source version is pinned to `13c2c09`.
 Image review supplies no runtime or independent usability evidence; the existing 80-check run remains
-supporting scripted interaction evidence. **For current v0.5, Gate G re-review is PENDING and H is PAUSED.** The instruction to fix
-Codex comments authorizes corrections; it does not approve new images. After G re-review,
+supporting scripted interaction evidence. **For current v0.5, Gate G delta review is PENDING and H is PAUSED.** The instruction to fix
+Codex comments authorizes corrections; it does not approve the one new image. The other 18 carry
+forward from approved v0.4, apart from version text. After this single-image delta approval,
 high-fidelity images still need separate owner approval before I. **PR #470 remains draft/blocked on S0 Gate I.**
 
 ## 12.4 Image-review findings and required owner decisions
@@ -928,14 +935,18 @@ report, and View match report remains primary. Acceptance statement: protocol §
 | Carried Majors | S0-B-002 accepted for G and S0-B-004 accepted for S0; verbatim owner reasons/release conditions in protocol §9.1 and §7.9 ledger references; findings remain open for H/I/J follow-up |
 | Full-time statistics access | S0-G-008 `ACCEPT FOR CURRENT GATE` — no reopening; retained-open panel and report note; protocol §9.1 |
 | Gate G | PASS — owner approval/decisions recorded; no unresolved Blocker or unaccepted Major |
-| Current revision | v0.5 G re-review PENDING, protocol §9.1.1; H paused until that approval, then separate H image approval before I. #470 remains blocked on I. |
+| Current revision | v0.5 G delta review PENDING, protocol §9.1.1; H paused until that approval, then separate H image approval before I. #470 remains blocked on I. |
 
 ---
+
+**Additional v0.5 delta finding:** S0-G-016 (Minor), `FIX NOW`: full-time fault view also promised
+final report statistics. Fixed by showing that note only for healthy statistics; three focused
+checks pass and only the new full-time fault PDF is regenerated. See the delta evidence in §11.1.
 
 ## 12.5 H/I follow-ups from image review
 
 These obligations remain open after the pinned v0.4 G approval. H is paused for the corrected
-v0.5 revision until G re-review; no H/I approval is supplied.
+v0.5 revision until G delta review; no H/I approval is supplied.
 
 | Gate | Follow-up | Closure evidence |
 |---|---|---|
@@ -944,6 +955,7 @@ v0.5 revision until G re-review; no H/I approval is supplied.
 | H / S0-H-001 (Minor) | Remove the stray dot from the near-zero-length displaced-label leader in the 200% stress view. `FIX NOW` at H. | H stress images retain separated markers without an unexplained leader dot. |
 | H / S0-H-002 (Minor) | Display bench slots as 1–7, keeping engine indices 0–6 internal. `FIX NOW` at H. | H substitution images use 1-based player-facing labels; I maps display labels to unchanged engine indices. |
 | H / S0-H-003 (Minor) | Polish “Submission requests the change; feedback confirms the outcome” into player language. `FIX NOW` at H. | Owner-approved H dialog copy preserves Submit/Cancel and requested-versus-applied meaning without developer phrasing. |
+| H / S0-H-004 (Minor) | Review disabled “Close statistics” on an open full-time panel. Preserve the accepted no-reopening rule, but choose a clearer presentation. `FIX NOW` at H. | Owner-approved H full-time images avoid an apparently actionable disabled close control; any change to S0-G-008 is explicitly decided. |
 | I | The prototype direction label is fixed to the verified Stage-0 home +X convention. Stage 0 deliberately does not swap ends. | The handoff identifies the engine-owned direction projection required when Stage-1 ends-swap lands; shipping text follows that projection and is not inferred from minute or hardcoded. |
 
 ---
@@ -964,3 +976,4 @@ v0.5 revision until G re-review; no H/I approval is supplied.
 | 0.10 | September 30, 2026 | Second image-review cleanup: S0-G-008 moved to pending owner decisions; dropdown focus spacing measured; leader-line promise removed; concise refusal and player-facing substitution copy. Records H choice/identity consistency and I engine-direction obligations. Prototype v0.4 run 04 has 80 checks; run 03 retained. Owner choices and G/H/I approval remain pending. |
 | 0.11 | September 30, 2026 | Records actual owner acceptance of C-DEC-1/S0-G-008 and carried Majors, with durable rationale/release-condition references, and approval of v0.4 / 13c2c09 / all 18 PDFs. G PASS; H OPEN; I/#470 blocked. Carries stray dot, 1-based bench labels and dialog copy into H. Prototype/evidence unchanged. |
 | 0.12 | September 30, 2026 | Fixes Codex S0-G-013–015: fault-cutoff timing, full-time notice, actual normal-text clearance. Current v0.5 has 85 checks and 19 PDFs under evidence/v0.5; original 18 PDFs/run04 unchanged. G reopened for current-revision owner review; pinned v0.4 approval/decisions preserved; H paused, I/#470 blocked. |
+| 0.13 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |

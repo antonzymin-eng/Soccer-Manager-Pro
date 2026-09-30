@@ -179,7 +179,7 @@
         ${pendingTactic ? `<p>${text('Mentality request pending — another request is unavailable until resolved.')}</p>` : ''}
         ${button('substitute', 'Make substitution', locked || state.usedBench.length >= 5 || state.requests.some(r => r.kind === 'substitution' && r.status === 'Pending'))}
         <p>${text(`Substitutions used: ${state.usedBench.length} / 5${state.usedBench.length >= 5 ? ' — all substitutions used' : ''} (simulated requests)`)}</p>${feedback()}</section>
-        <section class="panel stack"><h2>${text('Match statistics')}</h2>${healthNotice()}${button('stats', state.statsOpen ? 'Close statistics' : 'Open statistics', locked)}${ended ? `<p>${text('Final statistics are available in the match report.')}</p>` : ''}
+        <section class="panel stack"><h2>${text('Match statistics')}</h2>${healthNotice()}${button('stats', state.statsOpen ? 'Close statistics' : 'Open statistics', locked)}${ended && state.faultMinute === null ? `<p>${text('Final statistics are available in the match report.')}</p>` : ''}
         ${state.statsOpen ? statTable(state.faultMinute !== null) : ''}</section></aside></div></section>`;
     }
     bindActions();

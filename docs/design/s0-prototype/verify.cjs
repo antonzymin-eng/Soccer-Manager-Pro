@@ -104,6 +104,7 @@ async function faultProgression() {
       await has(p, 'Full time');
       await has(p, 'Statistics incomplete — stopped at minute 18. Final score remains available.');
       assert(!(await p.locator('main').innerText()).includes('The match continues'));
+      assert(!(await p.locator('main').innerText()).includes('Final statistics are available'));
       assert.deepEqual(await cells(), frozen, 'full-time figures remain partial');
       assert(await p.locator('#report').isEnabled());
       await geometry(p, 'full-time statistics fault');
@@ -461,9 +462,58 @@ async function reviewImages() {
   record('partial statistics and alignment', `Synthetic minute-18 possession ${cutoff.join('/')} differs from final ${final.join('/')}; numeric Home/Away headers and cells right-aligned.`);
   await partial.close(); await ordinary.close();
 }
+async function fullTimeFaultDelta() {
+  const healthy = await open('?review=1&state=MV-FT');
+  await has(healthy, 'Final statistics are available in the match report.');
+  record('healthy full-time report note', 'Healthy full-time state retains its final-statistics report note.');
+  await healthy.close();
+  const fault = await open('?fixture=fault');
+  await fault.locator('#open-setup').click(); await fault.locator('#start').click();
+  await fault.clock.runFor(2000);
+  await fault.locator('#stats').click();
+  await fault.clock.runFor(90000);
+  await has(fault, 'Full time');
+  await has(fault, 'Statistics incomplete — stopped at minute 18. Final score remains available.');
+  assert(!(await fault.locator('main').innerText()).includes('Final statistics are available'));
+  await has(fault, 'partial figures through minute 18 — not full-match totals');
+  assert(await fault.locator('#report').isEnabled());
+  await geometry(fault, 'full-time statistics fault delta');
+  await exportWireframe(fault, 'mv-ft-statistics-fault');
+  await fault.locator('#report').click();
+  await has(fault, 'Statistics incomplete — stopped at minute 18');
+  assert.equal(await fault.locator('details').getAttribute('open'), null);
+  assert(await fault.locator('#return').isEnabled());
+  record('faulted full-time report note', 'Normal fault journey reaches full time with partial figures and no promise of final statistics; report disclosure stays closed and Return enabled.');
+  await fault.close();
+}
+function fingerprints() {
+  const digest = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  const files = ['index.html', 'prototype.css', 'model.js', 'prototype.js', 'reference-data.js', 'scenario-data.js', 'verify.cjs'];
+  const hashes = Object.fromEntries(files.map(file => [file, digest(path.join(root, file))]));
+  const imageHashes = Object.fromEntries(fs.readdirSync(evidence).filter(file => file.endsWith('.pdf')).sort().map(file => [file, digest(path.join(evidence, file))]));
+  assert.equal(Object.keys(imageHashes).length, 19);
+  return { hashes, imageHashes };
+}
 (async () => {
   fs.mkdirSync(evidence, { recursive: true });
   browser = await chromium.launch({ executablePath: process.env.UX_BROWSER, args: ['--no-sandbox'] });
+  if (process.argv.includes('--full-time-fault-delta')) {
+    await fullTimeFaultDelta();
+    const baseline = fs.readFileSync(path.join(evidence, 'walkthrough.json'));
+    const current = fingerprints();
+    const unchangedImages = Object.keys(current.imageHashes).filter(file => file !== 'mv-ft-statistics-fault.pdf');
+    for (const file of unchangedImages) assert.equal(current.imageHashes[file], JSON.parse(baseline).imageHashes[file],
+      'delta must preserve other review images: ' + file);
+    fs.writeFileSync(path.join(evidence, 'full-time-fault-delta.json'), JSON.stringify({
+      created: '2026-09-30', purpose: 'Focused full-time fault-copy correction; not a new full walkthrough or owner approval',
+      runId: 'UX-GE-S0-20260930-05-DELTA-01', prototype: 's0-prototype v0.5',
+      baselineCommit: 'a859ea12b9fa5ae9cf366e86c10407d03a9cf885', baselineRunId: 'UX-GE-S0-20260930-05',
+      baselineEvidenceSha256: crypto.createHash('sha256').update(baseline).digest('hex'),
+      regeneratedImages: ['mv-ft-statistics-fault.pdf'], unchangedImages, browser: browser.version(), ...current, results
+    }, null, 2) + '\n');
+    console.log(`PASS: ${results.length} focused checks; only mv-ft-statistics-fault.pdf regenerated.`);
+    return;
+  }
   for (const state of ['MM', 'TS', 'MV-0', 'MV-L', 'MV-P', 'MV-FT', 'PR']) {
     const p = await open(`?review=1&state=${state}`);
     await geometry(p, 'wireframe ' + state);
@@ -483,10 +533,7 @@ async function reviewImages() {
   await faultProgression();
   await fixtures();
   await reviewImages();
-  const files = ['index.html', 'prototype.css', 'model.js', 'prototype.js', 'reference-data.js', 'scenario-data.js', 'verify.cjs'];
-  const hashes = Object.fromEntries(files.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]));
-  const imageHashes = Object.fromEntries(fs.readdirSync(evidence).filter(file => file.endsWith('.pdf')).sort().map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(evidence, file))).digest('hex')]));
-  assert.equal(Object.keys(imageHashes).length, 19);
+  const { hashes, imageHashes } = fingerprints();
   fs.writeFileSync(path.join(evidence, 'walkthrough.json'), JSON.stringify({ created: '2026-09-30', purpose: 'Executed S0 scripted resilience evidence; not participant results', runId: 'UX-GE-S0-20260930-05', supersedes: 'UX-GE-S0-20260930-04: preserved approved-v0.4 record; run 05 corrects fault timing, full-time notice and actual normal-text coverage', journey: 'S0', prototype: 's0-prototype v0.5', textScaleMethod: 'scale=2 doubles root font size from 16px to 32px; browser zoom remains 100%', date: '2026-09-30 (UTC)', runner: 'Codex scripted/self-walkthrough', browser: browser.version(), hashes, imageHashes, results }, null, 2) + '\n');
   console.log(`PASS: ${results.length} recorded checks; 19 revision-review PDFs including full-time statistics failure.`);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => { if (browser) await browser.close(); });

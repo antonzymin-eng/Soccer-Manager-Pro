@@ -64,9 +64,17 @@ With Playwright available, run the recorded walkthrough from the repository root
 NODE_PATH=/path/to/node_modules UX_BROWSER=/path/to/chrome node docs/design/s0-prototype/verify.cjs
 ```
 
-Current run `UX-GE-S0-20260930-05` writes 85 checks and 19 PDFs under `evidence/v0.5/`,
+Baseline run `UX-GE-S0-20260930-05` at `a859ea1` records 85 checks and 19 PDFs under `evidence/v0.5/`,
 including full-time statistics failure. Its `walkthrough.json` fingerprints all seven source files
-and all 19 PDFs. Earlier evidence remains unchanged: the root `evidence/walkthrough.json` and
+and all 19 PDFs at that commit. The baseline JSON remains unchanged. Focused delta run
+`UX-GE-S0-20260930-05-DELTA-01` records three checks and current seven-source/19-image hashes in
+`evidence/v0.5/full-time-fault-delta.json`; only `mv-ft-statistics-fault.pdf` is regenerated. Reproduce it with:
+
+```bash
+NODE_PATH=/path/to/node_modules UX_BROWSER=/path/to/chrome node docs/design/s0-prototype/verify.cjs --full-time-fault-delta
+```
+
+Earlier evidence remains unchanged: the root `evidence/walkthrough.json` and
 18 PDFs record the owner-approved v0.4 at `13c2c09`; their source hashes refer to that pinned
 commit, not current v0.5. Runs v0.1/v0.2/v0.3 are also retained. Prior v0.4 claims about normal-text
 clearance and the fault journey are superseded by run 05, which verifies actual label expansion,
@@ -82,8 +90,9 @@ Automated/self-walkthrough evidence supplies no Gate-G participant results.
 ## Gate boundary
 
 C–F are complete for v0.5. The owner-approved v0.4 images/decisions remain pinned in validation
-protocol §9.1; current v0.5 corrections await the owner image re-review in §9.1.1. H is paused for
-this revision until G passes again. The owner conducts S0 image reviews; no tester prerequisite
+protocol §9.1; v0.5 awaits owner delta approval of only the new full-time fault image in §9.1.1.
+The other 18 PDFs match approved v0.4 apart from version text and carry forward. H is paused for
+this revision until that delta is approved. The owner conducts S0 image reviews; no tester prerequisite
 returns. H then needs its own separate image approval before I; #470 remains blocked on I.
 Scripted evidence supplies no runtime or independent usability evidence.
 
@@ -95,3 +104,4 @@ Scripted evidence supplies no runtime or independent usability evidence.
 | 0.3 | September 30, 2026 | Complete 18-image review coverage; pitch markings/direction and label leaders; raw restart/holder caption removed; changing partial statistics, aligned headers and simplified waiting state. 79-check run 03; explicit G decisions and separate H image approval before I. |
 | 0.4 | September 30, 2026 | Adds dropdown label/focus spacing and measured clearance; removes leader-line promise; shortens refusal and player-facing substitution wording. Regenerates 18 images; 80-check run 04; successful run 03 archived. Pending decisions and H/I obligations stay explicit. |
 | 0.5 | September 30, 2026 | Codex corrections: fault activates on cutoff crossing; full-time fault notice states final score; normal-text focus check omits pseudo and verifies actual labels/fonts. 85-check run 05 and 19 PDFs stored separately; approved v0.4 images/evidence preserved. Current revision awaits G re-review. |
+| 0.5 copy delta | September 30, 2026 | Suppresses the final-statistics report promise only when faulted; three focused checks and one regenerated PDF. Immutable run05 remains historical; separate delta record holds current hashes. Single-image owner approval pending; disabled Close statistics carried to H. |

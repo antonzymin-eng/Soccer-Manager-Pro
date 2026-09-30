@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 30, 2026 — **PR #473 Codex P2 comments fixed and retested.**
+> **Last Updated:** September 30, 2026 — **PR #473 full-time fault copy delta.** Suppress the final-statistics report note when faulted; healthy copy retained. Focused run `UX-GE-S0-20260930-05-DELTA-01` passes three checks and regenerates only `mv-ft-statistics-fault.pdf`; run05 stays unchanged at a859ea1. New delta JSON records current seven-source/19-image hashes and the 18 unchanged PDFs. Text comparison confirms those 18 match approved v0.4 apart from version text. Packet v0.13, protocol v0.20, detailed plan v1.17 and high-level plan v1.9 narrow pending G approval to the single new image. S0-H-004 carries disabled Close statistics into H. v0.4 approval/decisions preserved; H paused pending delta approval, I/#470 blocked. No new approval, production/spec change or issue-count change.
+>
+> **Last Updated (prior):** September 30, 2026 — **PR #473 Codex P2 comments fixed and retested.**
 >
 > Prototype version 0.5 fixes the fault fixture at its cutoff: direct first-frame views no longer start faulted, normal MM entry activates exactly at minute 18, and fast ticks crossing that minute retain cutoff-18 figures. Full-time notices state statistics are incomplete and final score remains available. The normal clearance test omits the pseudo parameter and asserts actual plain/expanded labels and 16/32px text. New regression evidence covers normal/direct entry at 0/17/18/21, 10× crossing, frozen figures through full time/report, and real normal-text focus clearance.
 >

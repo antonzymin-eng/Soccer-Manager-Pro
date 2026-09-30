@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.19\
-**Status:** F4 + S0 A–F COMPLETE — G RE-REVIEW PENDING FOR v0.5; H PAUSED; I BLOCKED\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.16 §F4 and Gates E–G\
+**Version:** 0.20\
+**Status:** F4 + S0 A–F COMPLETE — G DELTA REVIEW PENDING FOR v0.5; H PAUSED; I BLOCKED\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.17 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -487,7 +487,7 @@ Tester sessions and attestations are not required for S0. Gate F must still supp
 interactive task. Gate H follows the owner-approved low-fidelity images; the owner also reviews
 the high-fidelity images before the Gate-I handoff. Gate J verifies the real client.
 
-#### 9.1.1 v0.5 correction review — pending
+#### 9.1.1 v0.5 single-image delta review — pending
 
 Codex review found premature/direct-state fault initialization, one-tick-late normal fault activation,
 full-time wording claiming continued play, and a normal-text check that used `pseudo=0` despite
@@ -498,13 +498,13 @@ normal-text coverage and the fault timeline are superseded by the actual run-05 
 |---|---|
 | Review ID | `UX-GG-S0-OWNER-20260930-04` |
 | Reviewer | Anton Zymin |
-| Revision / evidence | Prototype v0.5; `UX-GE-S0-20260930-05`, 85 passing browser checks, seven source and 19 PDF fingerprints in `s0-prototype/evidence/v0.5/walkthrough.json` |
-| Candidate images | All 19 paths in packet §9.4, including full-time statistics fault; earlier approved PDFs remain in the parent evidence directory |
-| Findings | S0-G-013–015 `FIX NOW`, fixed/retested; previous dispositions remain; H backlog unchanged |
+| Revision / evidence | Prototype v0.5; baseline `UX-GE-S0-20260930-05` at `a859ea1`, 85 passing checks (unchanged historical record). Focused `UX-GE-S0-20260930-05-DELTA-01`: three passing checks and current seven-source/19-image fingerprints in `s0-prototype/evidence/v0.5/full-time-fault-delta.json`. No new full evidence run. |
+| Candidate image / carry-forward | Only `s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf` needs delta approval. Text extraction verifies the other 18 paths in packet §9.4 match approved v0.4 apart from version text; carry those forward. This correction preserves those 18 v0.5 PDFs byte-for-byte and all original approved PDFs. |
+| Findings | S0-G-013–016 `FIX NOW`, fixed/retested; previous dispositions remain. S0-H-004 adds disabled Close statistics presentation to H backlog. |
 | Owner decisions | C-DEC-1 / S0-G-008 and S0-B-002 / S0-B-004 acceptance conditions remain as actually adopted above |
 | Owner review date / reviewed commit / statement | PENDING — no approval inferred from the instruction to resolve comments |
-| Gate G for v0.5 | PENDING owner review of the corrected version; v0.4 approval remains pinned above |
-| H / I | H paused for the corrected revision until G re-review passes. I remains blocked until separately owner-approved H images; #470 remains blocked on I. |
+| Gate G for v0.5 | PENDING owner delta approval of the one new full-time statistics-fault image; v0.4 approval remains pinned above |
+| H / I | H paused for the corrected revision until G delta review passes. I remains blocked until separately owner-approved H images; #470 remains blocked on I. |
 
 ### 9.2 S1 participant decision record
 
@@ -582,7 +582,7 @@ semantics and evidence-backed interaction states.
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
-S0 Gate G passed for pinned v0.4 in §9.1; corrected v0.5 awaits the §9.1.1 owner re-review. H is paused for that revision; I/#470 remain blocked. S1 requires its two independent completions.
+S0 Gate G passed for pinned v0.4 in §9.1; corrected v0.5 awaits the §9.1.1 owner delta review. H is paused for that revision; I/#470 remain blocked. S1 requires its two independent completions.
 
 ---
 
@@ -609,3 +609,4 @@ S0 Gate G passed for pinned v0.4 in §9.1; corrected v0.5 awaits the §9.1.1 own
 | 0.17 | September 30, 2026 | Updates execution pointer and supporting evidence to the 80-check review-cleanup run. S0-G-008 stays an undecided owner choice; no image approval or Major acceptance inferred. |
 | 0.18 | September 30, 2026 | Fills §9.1 with explicit owner confirmation and adopted statement verbatim, review ID/date/full commit, 18 paths/hashes, run 04 and carried-Major reasons/release conditions. G PASS; H OPEN; I/#470 blocked. Documents-only recording preserves the full prototype/evidence tree. |
 | 0.19 | September 30, 2026 | Preserves the completed v0.4 approval verbatim and original image hashes; dates its immutable recording boundary. Adds pending v0.5 correction-review record with 85-check run 05 / 19 separate PDFs. No approval inferred from fixing Codex comments. |
+| 0.20 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
