@@ -6,7 +6,7 @@
   const fixture = params.get('fixture') || 'ordinary';
   const captured = fixture === 'scoreline';
   const reference = captured ? window.S0Reference : window.S0Scenario;
-  if (captured) document.querySelector('.prototype-notice').textContent = 'Design prototype v0.3 • Unmodified reference capture: unusual 19–9 match. All interactions are simulated; choices do not change the recorded match. Unity binding remains pending UX Gate I.';
+  if (captured) document.querySelector('.prototype-notice').textContent = 'Design prototype v0.4 • Unmodified reference capture: unusual 19–9 match. All interactions are simulated; choices do not change the recorded match. Unity binding remains pending UX Gate I.';
   const app = document.getElementById('app');
   const announcement = document.getElementById('announcement');
   const t = text => params.has('pseudo') ? `[${text} ${'~'.repeat(Math.ceil(text.length * .4))}]` : text;
@@ -70,7 +70,7 @@
   function feedback() {
     const entry = r => {
       const change = r.kind === 'mentality' ? `Mentality: ${M.mentalities[r.value]}` : `Home shirt ${r.out + 1} → bench slot ${r.bench}`;
-      const refusal = r.status === 'Refused' ? ' — the request was refused. Last applied value is unchanged; choose again.' : '';
+      const refusal = r.status === 'Refused' ? (r.kind === 'mentality' ? '. Current Mentality unchanged.' : '. Substitution count unchanged.') : '';
       const paused = r.status === 'Pending' && state.screen === 'MV-P' ? ' — waiting; resume to continue' : '';
       return `<p class="feedback">${text(`${change} — ${r.status}${r.status === 'Applied' ? ` at minute ${r.minute}` : ''}${refusal}${paused}`)}</p>`;
     };
@@ -91,8 +91,8 @@
       <circle cx="11" cy="34" r=".25"/><circle cx="94" cy="34" r=".25"/>
     </svg>`;
     return `<p class="pitch-direction">${text('Home attacks right → • Away attacks left ←')}</p>
-      <div class="pitch" role="img" aria-label="${text('Captured pitch snapshot. Home H attacks right; away A attacks left. Goals and penalty areas shown. Displaced labels have leaders to their captured positions; ball dot.')}">${field}${marks}<span class="ball" style="${position(frame.ball[0], frame.ball[1])}" aria-hidden="true">●</span></div>
-      <p>${text('Captured reference pitch — simulated substitutions do not replace these markers. Displaced labels use leader lines to captured positions.')}</p>`;
+      <div class="pitch" role="img" aria-label="${text('Captured pitch snapshot. Home H attacks right; away A attacks left. Goals and penalty areas shown. Labels may move slightly to avoid overlap; ball dot.')}">${field}${marks}<span class="ball" style="${position(frame.ball[0], frame.ball[1])}" aria-hidden="true">●</span></div>
+      <p>${text('Captured reference pitch — simulated substitutions do not replace these markers. Labels may move slightly to avoid overlap.')}</p>`;
   }
   function layoutPitchMarkers() {
     const field = document.querySelector('.pitch:not(.pitch-empty)');
@@ -216,7 +216,7 @@
     const bench = Array.from({ length: 7 }, (_, i) => i).filter(i => !state.usedBench.includes(i));
     dialog.innerHTML = `<h2 id="dialog-heading">${text(kind === 'mentality' ? 'Change Home Mentality' : 'Make Home substitution')}</h2>
       ${kind === 'mentality' ? `<label for="new-mentality">${text('Requested Mentality')}</label><select id="new-mentality">${options()}</select><p id="choice-help"></p>`
-        : `<p>${text('Choose by shirt number and unused bench slot. The current engine applies the swap immediately when processed; it does not wait for a stoppage.')}</p>
+        : `<p>${text('Choose by shirt number and unused bench slot. The substitution takes effect when the request is applied; it does not wait for a stoppage.')}</p>
           <label for="outgoing">${text('Outgoing home player')}</label><select id="outgoing">${starters.map(i => `<option value="${i}">${text(`Home shirt ${i + 1}${i === 0 ? ' — goalkeeper' : ''}`)}</option>`).join('')}</select>
           <label for="incoming">${text('Incoming bench player')}</label><select id="incoming">${bench.map(i => `<option value="${i}">${text(`Bench slot ${i}`)}</option>`).join('')}</select>`}
       <p>${text('Selection has no effect until submitted. Submission requests the change; feedback confirms the outcome.')}</p>

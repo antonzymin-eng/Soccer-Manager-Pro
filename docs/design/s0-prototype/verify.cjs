@@ -35,6 +35,31 @@ async function focused(page, id) {
   assert.equal(await page.evaluate(() => document.activeElement.id), id, 'focus destination: ' + id);
   assert(await page.locator('#' + id).evaluate(el => el.isConnected && !el.disabled), 'valid focus target');
 }
+async function dialogFocusLabels() {
+  for (const width of [1366, 1920, 2560]) for (const scale of [1, 2]) {
+    const p = await open(`?review=1&state=MV-L&pseudo=${scale === 2 ? 1 : 0}&scale=${scale}`,
+      { width, height: width === 1366 ? 768 : 1080 });
+    for (const [invoker, fields] of [['tactic', ['new-mentality']], ['substitute', ['outgoing', 'incoming']]]) {
+      await p.locator('#' + invoker).click();
+      for (const id of fields) {
+        if (id === 'incoming') await p.keyboard.press('Tab');
+        await focused(p, id);
+        const gap = await p.locator('#' + id).evaluate(el => {
+          const label = document.querySelector(`label[for="${el.id}"]`);
+          const style = getComputedStyle(el);
+          return { visible: el.matches(':focus-visible'), width: parseFloat(style.outlineWidth),
+            clearance: el.getBoundingClientRect().top - parseFloat(style.outlineOffset) -
+              parseFloat(style.outlineWidth) - label.getBoundingClientRect().bottom };
+        });
+        assert(gap.visible && gap.width >= 3, 'visible dropdown focus: ' + id);
+        assert(gap.clearance >= 4, `focus outline clear of label: ${id}, ${width}, ${scale}`);
+      }
+      await p.keyboard.press('Escape');
+    }
+    await p.close();
+  }
+  record('dialog focus and label separation', 'Both dialogs and all three dropdowns retain visible 3px focus outlines with at least 4px label clearance at all three widths, normal text and pseudo-locale/200% text.');
+}
 async function activate(page, selector, keyboard) {
   if (keyboard) { await keyTo(page, selector); await page.keyboard.press('Enter'); }
   else await page.locator(selector).click();
@@ -210,7 +235,7 @@ async function fixtures() {
   await refusal.locator('#new-mentality').selectOption('5');
   await refusal.locator('#submit-change').click();
   await refusal.clock.runFor(1000);
-  await has(refusal, 'Refused'); await has(refusal, 'Current Mentality: Balanced');
+  await has(refusal, 'Refused. Current Mentality unchanged.'); await has(refusal, 'Current Mentality: Balanced');
   record('refused command', 'Persistent inline refusal; last applied value remained Balanced; Change Mentality enabled again.');
   await refusal.close();
   const pending = await open();
@@ -385,12 +410,13 @@ async function reviewImages() {
     await journey(`?fixture=${fixture}`, { width: 1366, height: 768 }, false, `${fixture} complete journey`);
   }
   await contrast();
+  await dialogFocusLabels();
   await fixtures();
   await reviewImages();
   const files = ['index.html', 'prototype.css', 'model.js', 'prototype.js', 'reference-data.js', 'scenario-data.js', 'verify.cjs'];
   const hashes = Object.fromEntries(files.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]));
   const imageHashes = Object.fromEntries(fs.readdirSync(evidence).filter(file => file.endsWith('.pdf')).sort().map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(evidence, file))).digest('hex')]));
   assert.equal(Object.keys(imageHashes).length, 18);
-  fs.writeFileSync(path.join(evidence, 'walkthrough.json'), JSON.stringify({ created: '2026-09-30', purpose: 'Executed S0 scripted resilience evidence; not participant results', runId: 'UX-GE-S0-20260930-03', supersedes: 'UX-GE-S0-20260930-02: successful 74-check interaction run retained; run 03 adds image coverage, marker separation and visual corrections', journey: 'S0', prototype: 's0-prototype v0.3', textScaleMethod: 'scale=2 doubles root font size from 16px to 32px; browser zoom remains 100%', date: '2026-09-30 (UTC)', runner: 'Codex scripted/self-walkthrough', browser: browser.version(), hashes, imageHashes, results }, null, 2) + '\n');
+  fs.writeFileSync(path.join(evidence, 'walkthrough.json'), JSON.stringify({ created: '2026-09-30', purpose: 'Executed S0 scripted resilience evidence; not participant results', runId: 'UX-GE-S0-20260930-04', supersedes: 'UX-GE-S0-20260930-03: successful 79-check run retained; run 04 adds measured dropdown-focus/label clearance and image-review copy corrections', journey: 'S0', prototype: 's0-prototype v0.4', textScaleMethod: 'scale=2 doubles root font size from 16px to 32px; browser zoom remains 100%', date: '2026-09-30 (UTC)', runner: 'Codex scripted/self-walkthrough', browser: browser.version(), hashes, imageHashes, results }, null, 2) + '\n');
   console.log(`PASS: ${results.length} recorded checks; 18 review PDFs including dialogs, request outcomes and statistics disclosures.`);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => { if (browser) await browser.close(); });

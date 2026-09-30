@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 30, 2026 — **PR #473 image review: missing interaction views added; visual defects fixed.**
+> **Last Updated:** September 30, 2026 — **PR #473 second image-review cleanup.**
+>
+> `docs/design/ux-s0-pm1-journey.md` v0.10 records S0-G-008 as a pending owner decision without a preselected finding disposition. Prototype version 0.4 separates dropdown labels from visible focus outlines, removes the promise of visible leader lines, shortens refusal feedback without inventing a reason and uses player-facing substitution help. S0-G-009–012 record those fixes; H must reconcile Mentality choices and substituted pitch identity, and I must allocate engine-owned direction when Stage-1 ends-swap lands.
+>
+> Regenerates all 18 PDFs with run `UX-GE-S0-20260930-04`: 80 browser checks, measured focus/label clearance at normal and pseudo/200% text across three widths, and seven source/18 image fingerprints. Successful run 03 is retained unchanged as `walkthrough-v0.3.json`. Detailed plan v1.14 and validation protocol v0.17 maintain current pointers. No owner choice, Major acceptance or image approval inferred. G opens H only; H images need separate approval before I; #470 stays blocked. No production/spec changes; active/archive issue counts unchanged.
+>
+> **Last Updated (prior):** September 30, 2026 — **PR #473 image review: missing interaction views added; visual defects fixed.**
 >
 > **What:** Prototype v0.3, journey packet v0.9, detailed plan v1.13 and protocol v0.16. All 18 PDF views now cover dialogs, request states and healthy/partial statistics. Raw restart/holder captions removed; grounded pitch markings and direction added; marker labels separated with leaders; temporal synthetic figures/header alignment/start copy fixed. S0-G-001–008 record fixes and the pending full-time-statistics choice.
 >

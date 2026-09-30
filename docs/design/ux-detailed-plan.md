@@ -2,7 +2,7 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 1.13\
+**Version:** 1.14\
 **Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 GATES A–F COMPLETE; S0 GATE G PENDING OWNER IMAGE REVIEW\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
@@ -977,7 +977,7 @@ No additional polished screen comes next.
 6. **F4 — write scripts, severity ledger and the review mechanism.** S0 uses owner image review under the September 30 decision; the earlier anonymous S0 slots are superseded.
 7. **S0 Gate A — COMPLETE September 21, 2026.** The reconciled dependency/control audit is `ux-s0-pm1-journey.md` v0.4.
 8. **S0 Gate B — COMPLETE September 28, 2026 (owner-confirmed September 28, 2026).** The task flow is `ux-s0-pm1-journey.md` v0.5 §7. It also corrects Gate A's A-10: Formation has no simulation consumer, so S0's pre-match choice is Mentality.
-9. **S0 Gates C–E — COMPLETE September 30, 2026.** `ux-s0-pm1-journey.md` v0.9 §§9–11 records monochrome wireframes, state matrix and executed resilience evidence.
+9. **S0 Gates C–E — COMPLETE September 30, 2026.** `ux-s0-pm1-journey.md` v0.10 §§9–11 records monochrome wireframes, state matrix and executed resilience evidence.
 10. **S0 Gate F — COMPLETE September 30, 2026.** The complete vehicle and critical-state evidence are in `docs/design/s0-prototype/`; the owner's September 30 review decision removes the pre-F tester prerequisite.
 11. **S0 Gate G — PENDING OWNER IMAGE REVIEW.** Record Anton Zymin's review of the versioned wireframes/state images and explicit approval. No high fidelity or P5b release before G → H → I.
 
@@ -1068,3 +1068,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.11 | September 30, 2026 | Pointer sync to S0 packet v0.7 after PR #473 review: initial Gate-E pass withdrawn, focus/disclosure Majors fixed and retested in 74-check v0.2 run. F attestation prerequisites and G/H/I sequencing unchanged. |
 | 1.12 | September 30, 2026 | Owner-directed S0 image review replaces independent tester recruitment, attestations and sessions. S0 F closes on the existing complete vehicle; G awaits explicit owner image approval and finding dispositions. H images also receive owner review before I. S1 participant mechanism and Gate-J production verification retained. |
 | 1.13 | September 30, 2026 | Makes S0 G closure explicit: complete image coverage, every finding disposition, C-DEC-1 decision and written rationale/release condition for accepted Majors. G opens H; H needs separate owner image approval before I. Packet v0.9 adds missing interaction views and visual fixes. |
+| 1.14 | September 30, 2026 | Syncs current packet pointer to v0.10 after image-review cleanup; pending owner decisions and H/I follow-ups remain in the packet. Gate rules unchanged. |

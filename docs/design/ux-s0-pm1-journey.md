@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.9\
+**Version:** 0.10\
 **Status:** S0 GATES A–F COMPLETE — G PENDING OWNER IMAGE REVIEW (§12.3)\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.13 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.16\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.14 §5–§6\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.17\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -576,7 +576,7 @@ navigation, comparison, progressive disclosure, focus sequence and reflow. Carry
 
 # 9. Gate C — low-fidelity information design
 
-**Vehicle:** [interactive prototype v0.3](s0-prototype/index.html), [review/reproduction guide](s0-prototype/README.md).
+**Vehicle:** [interactive prototype v0.4](s0-prototype/index.html), [review/reproduction guide](s0-prototype/README.md).
 Seven monochrome wireframes and the executable vehicle cover §8's eight inputs. They use system text,
 boxes, spacing, checked selection and solid/dashed marker outlines; no `touchline` polish or final art.
 
@@ -648,13 +648,13 @@ At 1366-wide, preserve the scoreboard, playback/current tactic and blockers; kee
 closed until requested. At 1920×1080, pitch and the compact intervention/statistics rail are adjacent.
 At 2560-wide, cap the content width instead of stretching text/controls across the display. At narrower
 available width or text scale of 150% and above, the rail stacks; the pitch keeps full available width. A deterministic nearest-clear placement rule separates
-marker labels and draws leader lines to displaced captured locations, and current Mentality stays in the context band. Expanded labels wrap; 200% text may require vertical scrolling but no
+marker labels without promising visible leader lines, and current Mentality stays in the context band. Expanded labels wrap; 200% text may require vertical scrolling but no
 critical control or label is clipped. Dialogs scroll vertically and keep their fields/commit/cancel
 reachable. These remain design-validation cases, not shipping resolution/minimum/scale promises.
 
 ## 9.4 Complete image-review coverage
 
-Every PDF below is an exported exercised DOM state in prototype v0.3. Dialogs are opened through
+Every PDF below is an exported exercised DOM state in prototype v0.4. Dialogs are opened through
 actual controls; outcomes follow queued simulated requests. The Not-applied image comes from the
 normal MM→TS→MV minute-89 pause/request/resume journey, not a directly loaded result. None is
 independent tester evidence. All 18 images are required for the owner review.
@@ -677,8 +677,8 @@ independent tester evidence. All 18 images are required for the owner review.
 The player-facing pitch omits the raw restart and possession-holder captions. It shows goals,
 penalty/goal areas and **Home attacks right / Away attacks left**, grounded in `MatchEngine`'s
 `MirrorPitchIfAway` and `CheckMatchFlowTransitions`: Stage 0 retains that convention across halves.
-The data itself is unchanged. Displaced labels have leader lines to captured positions; this is
-presentation deconfliction, not changed player positions. Synthetic possession/territory now vary
+The data itself is unchanged. Labels may move slightly to avoid overlap; the caption and accessible
+description no longer promise visible leader lines. This is presentation deconfliction, not changed player positions. Synthetic possession/territory now vary
 by minute, so the minute-18 cutoff differs visibly from final figures. Numeric column headers and
 values share right alignment. The waiting surface has one lock explanation and a separate blank
 pitch placeholder. Full-time statistics remain a proposed disabled-reopening choice, pending S0-G-008.
@@ -734,15 +734,15 @@ confirmation/success/failure states have a disposition; the design is not happy-
 
 The initial v0.1 Gate-E PASS is **withdrawn**: its 71 checks missed focus loss after submit/speed
 boundaries and earlier-feedback collapse during live ticks. [Archived original evidence](s0-prototype/evidence/walkthrough-v0.1.json)
-is retained unchanged; the old source hashes identify the superseded PR commit. The successful [74-check run 02](s0-prototype/evidence/walkthrough-v0.2.json) is retained unchanged. The current verdict
-uses **79 checks** in run `UX-GE-S0-20260930-03`, including direct focus assertions that fail on body
+is retained unchanged; the old source hashes identify the superseded PR commit. The successful [74-check run 02](s0-prototype/evidence/walkthrough-v0.2.json) and [79-check run 03](s0-prototype/evidence/walkthrough-v0.3.json) are retained unchanged. The current verdict
+uses **80 checks** in run `UX-GE-S0-20260930-04`, including direct focus assertions that fail on body
 focus and a live-timer disclosure regression. No participant results are claimed.
 
 | Run field | Value |
 |---|---|
-| Gate-E run ID | `UX-GE-S0-20260930-03` |
+| Gate-E run ID | `UX-GE-S0-20260930-04` |
 | Journey | S0 |
-| Prototype/version | `s0-prototype v0.3` |
+| Prototype/version | `s0-prototype v0.4` |
 | Date | September 30, 2026 (UTC and America/Los_Angeles) |
 | Runner | Codex scripted/self-walkthrough; no independent participant claim |
 | Evidence | [executed checks + source hashes](s0-prototype/evidence/walkthrough.json); [reproducible runner](s0-prototype/verify.cjs) |
@@ -758,37 +758,37 @@ succeeded on .NET 8; existing ActionSelector CS0649 warnings were emitted. No Un
 
 ## 11.2 Complete protocol matrix
 
-Every row below is for **s0-prototype v0.3** and the identified run. Results distinguish executed
+Every row below is for **s0-prototype v0.4** and the identified run. Results distinguish executed
 prototype evidence from future shipping obligations. Relevant task traversal uses S0-T1–T7 plus the
 PM-1 substitution path; additional condition fixtures inspect failures/limits without claiming they
 are participant task completions.
 
 | Condition | Result | Prototype/version | Evidence / reason |
 |---|---|---|---|
-| Ordinary case | PASS | v0.3 | mouse journeys at all three widths and keyboard journey: cancel/re-enter, choose/start, read state, speed/tactic/substitution, stats open/close, full time/report/return; synthetic 2–1 ordinary scenario and captured pitch; raw #37 values exercised by unusual-score journey |
-| Color-independent meaning | PASS | v0.3 | monochrome complete journeys; checked radio selection, literal Paused/Pending/Applied/Refused/Full time text, Home H/Away A marker identity, dashed disabled controls and persistent reasons |
-| Contrast | PASS | v0.3 | actual computed foreground/background pairs and ratios in `computed contrast`; each ≥4.5:1; 3px #161616 focus outline against white; disabled text #444 on #eee, not low opacity |
-| Long player/club/competition names | PASS | v0.3 | labelled long-identity stress fixture complete journey and 1366/1920/2560 + pseudo/200% geometry; actual S0 uses shirt/slot identity, not named squads |
-| Empty/large lists | N/A | v0.3 | no variable catalogue, sort/filter or career lists; S0's bounded chooser has 11 starting slots / 7 bench slots and fixed stat rows. Ordinary and limit checks exercise those bounds; genuinely empty frame is checked separately |
-| Many status indicators | PASS | v0.3 | `events` fixture, 15 feedback records; latest three visible; earlier disclosure remains open with summary focus over five live ticks and pause/resume; all-width geometry and complete journey; every Applied timestamp ≤ clock |
-| Pseudo-locale | PASS | v0.3 | approximately 40% bracketed expansion; complete fault/pseudo/200% journey and every applicable all-width fixture; equivalent stress content, not #49 localization runtime proof |
-| Alternate date/currency formatting | N/A | v0.3 | S0 contains no dates/currencies or management account surfaces |
-| No save | PASS | v0.3 | complete MM→TS→MV→PR→MM journey has no save/Continue/Load control or persistence promise |
-| Save/load failure where relevant | N/A | v0.3 | no save/load action or contract is admitted in S0; general failure remains separately tested |
-| No match frame yet | PASS | v0.3 | `no match frame`: waiting fixture stays non-live after clock advance, score/clock withheld, actions disabled with reason |
-| Disabled action with reason | PASS | v0.3 | waiting/full-time lock reasons, real-time/fastest boundary reasons, five-substitution limit; geometry at all widths |
-| Error/failure state (general) | PASS | v0.3 | `refused command`: last applied Mentality remains Balanced, persistent refusal, retry through ordinary staging; statistics failure preserves score/Return |
-| Missing art | PASS | v0.3 | every complete journey uses no external art/fonts; neutral pitch and explicit Home/Away/shirt identity remain usable |
-| Event-heavy match | PASS | v0.3 | `events` complete journey plus dense feedback/restart context with stats open; fixed scoreboard/action regions survive all-width pseudo/200% fixture |
-| Unusual scoreline | PASS | v0.3 | unmodified real 19–9 capture complete journey, separate from ordinary 2–1 scenario; each goals table agrees with score; score identity/columns preserved at all widths |
-| Full-time/frozen state | PASS | v0.3 | all complete journeys lock controls; `end race` starts at MM, reaches minute 89, pauses/submits/resumes, then resolves Pending as not applied on the live whistle tick; no direct-state load is claimed as a journey; report only available from MV-FT |
-| Small desktop — 1366-wide | PASS | v0.3 | 1366×768 full mouse/keyboard journeys; all stress fixtures; [expanded-text fault view](s0-prototype/evidence/stress-fault-1366.pdf); no horizontal overflow/clipped critical labels |
-| Reference — 1920×1080 | PASS | v0.3 | complete journey, all seven wireframes, and stress fixtures; playback region above pitch keeps high-frequency controls early |
-| Expanded — 2560-wide | PASS | v0.3 | complete journey/stress fixtures; capped content and compact rail, no extreme stretched control widths |
-| Max supported text scale | PASS (prototype value) | v0.3 | explicitly tested **200% base font** (16px → 32px; browser zoom stays 100%) with pseudo-locale and all-width failure/chooser fixtures plus complete journey. Shipping maximum remains unallocated; Gate I must name it and Gate J must retest that actual value |
-| Keyboard only | PASS | v0.3 | complete 1366 journey by Tab/arrows/Enter/Escape; cancel restores invoker; both submits immediately focus request feedback; 1×/10× boundaries focus Pause/Resume; live earlier-feedback focus survives refresh; `keyTo` rejects unexpected body focus; each chooser's Tab wrap inspected through 12 advances; headings/full-time focus deterministic |
-| Mouse only | PASS | v0.3 | complete mouse journey at every width, including selectors, chooser cancel/submit, disclosures and return |
-| Audio muted/caption path | PASS (prototype scope) | v0.3 | all journeys are silent; no information depends on sound. Future-caption reservation combined with every all-width pseudo/200% fixture; runtime #51 remains future-blocked, not a working caption consumer |
+| Ordinary case | PASS | v0.4 | mouse journeys at all three widths and keyboard journey: cancel/re-enter, choose/start, read state, speed/tactic/substitution, stats open/close, full time/report/return; synthetic 2–1 ordinary scenario and captured pitch; raw #37 values exercised by unusual-score journey |
+| Color-independent meaning | PASS | v0.4 | monochrome complete journeys; checked radio selection, literal Paused/Pending/Applied/Refused/Full time text, Home H/Away A marker identity, dashed disabled controls and persistent reasons |
+| Contrast | PASS | v0.4 | actual computed foreground/background pairs and ratios in `computed contrast`; each ≥4.5:1; 3px #161616 focus outline against white; disabled text #444 on #eee, not low opacity |
+| Long player/club/competition names | PASS | v0.4 | labelled long-identity stress fixture complete journey and 1366/1920/2560 + pseudo/200% geometry; actual S0 uses shirt/slot identity, not named squads |
+| Empty/large lists | N/A | v0.4 | no variable catalogue, sort/filter or career lists; S0's bounded chooser has 11 starting slots / 7 bench slots and fixed stat rows. Ordinary and limit checks exercise those bounds; genuinely empty frame is checked separately |
+| Many status indicators | PASS | v0.4 | `events` fixture, 15 feedback records; latest three visible; earlier disclosure remains open with summary focus over five live ticks and pause/resume; all-width geometry and complete journey; every Applied timestamp ≤ clock |
+| Pseudo-locale | PASS | v0.4 | approximately 40% bracketed expansion; complete fault/pseudo/200% journey and every applicable all-width fixture; equivalent stress content, not #49 localization runtime proof |
+| Alternate date/currency formatting | N/A | v0.4 | S0 contains no dates/currencies or management account surfaces |
+| No save | PASS | v0.4 | complete MM→TS→MV→PR→MM journey has no save/Continue/Load control or persistence promise |
+| Save/load failure where relevant | N/A | v0.4 | no save/load action or contract is admitted in S0; general failure remains separately tested |
+| No match frame yet | PASS | v0.4 | `no match frame`: waiting fixture stays non-live after clock advance, score/clock withheld, actions disabled with reason |
+| Disabled action with reason | PASS | v0.4 | waiting/full-time lock reasons, real-time/fastest boundary reasons, five-substitution limit; geometry at all widths |
+| Error/failure state (general) | PASS | v0.4 | `refused command`: last applied Mentality remains Balanced, persistent refusal, retry through ordinary staging; statistics failure preserves score/Return |
+| Missing art | PASS | v0.4 | every complete journey uses no external art/fonts; neutral pitch and explicit Home/Away/shirt identity remain usable |
+| Event-heavy match | PASS | v0.4 | `events` complete journey plus dense feedback/restart context with stats open; fixed scoreboard/action regions survive all-width pseudo/200% fixture |
+| Unusual scoreline | PASS | v0.4 | unmodified real 19–9 capture complete journey, separate from ordinary 2–1 scenario; each goals table agrees with score; score identity/columns preserved at all widths |
+| Full-time/frozen state | PASS | v0.4 | all complete journeys lock controls; `end race` starts at MM, reaches minute 89, pauses/submits/resumes, then resolves Pending as not applied on the live whistle tick; no direct-state load is claimed as a journey; report only available from MV-FT |
+| Small desktop — 1366-wide | PASS | v0.4 | 1366×768 full mouse/keyboard journeys; all stress fixtures; [expanded-text fault view](s0-prototype/evidence/stress-fault-1366.pdf); no horizontal overflow/clipped critical labels |
+| Reference — 1920×1080 | PASS | v0.4 | complete journey, all seven wireframes, and stress fixtures; playback region above pitch keeps high-frequency controls early |
+| Expanded — 2560-wide | PASS | v0.4 | complete journey/stress fixtures; capped content and compact rail, no extreme stretched control widths |
+| Max supported text scale | PASS (prototype value) | v0.4 | explicitly tested **200% base font** (16px → 32px; browser zoom stays 100%) with pseudo-locale and all-width failure/chooser fixtures plus complete journey. Shipping maximum remains unallocated; Gate I must name it and Gate J must retest that actual value |
+| Keyboard only | PASS | v0.4 | complete 1366 journey by Tab/arrows/Enter/Escape; cancel restores invoker; both submits immediately focus request feedback; 1×/10× boundaries focus Pause/Resume; live earlier-feedback focus survives refresh; `keyTo` rejects unexpected body focus; each chooser's Tab wrap inspected through 12 advances; headings/full-time focus deterministic |
+| Mouse only | PASS | v0.4 | complete mouse journey at every width, including selectors, chooser cancel/submit, disclosures and return |
+| Audio muted/caption path | PASS (prototype scope) | v0.4 | all journeys are silent; no information depends on sound. Future-caption reservation combined with every all-width pseudo/200% fixture; runtime #51 remains future-blocked, not a working caption consumer |
 
 ## 11.3 Findings, disposition and retest
 
@@ -856,7 +856,7 @@ a11y application, actual maximum scale and runtime audio/captions. No prototype 
 | Gate record | Owner | Status / evidence |
 |---|---|---|
 | S0 reviewer assignment | Anton Zymin | Owner-directed September 30, 2026: testers not required; owner conducts image reviews |
-| Gate F complete task | UX workstream | PASS — §12.1 complete vehicle, v0.3 run 03; former tester prerequisite superseded |
+| Gate F complete task | UX workstream | PASS — §12.1 complete vehicle, v0.4 run 04; former tester prerequisite superseded |
 | Gate G image approval | Anton Zymin | PENDING — reviewer assignment supplies no image approval |
 | Gate H high-fidelity image review | Anton Zymin | Not started; follows G |
 | Gate I implementation handoff | UX / Unity client | Not started; follows owner-approved H images |
@@ -872,7 +872,7 @@ the vehicle/evidence above; the owner has removed the remaining tester prerequis
 **Gate G: PENDING OWNER IMAGE REVIEW.** Review all 18 images in §9.4. Record the version,
 images reviewed, every finding disposition, C-DEC-1 decision, written rationale/release condition
 for each carried Major and actual image approval using protocol §9.1.
-Image review does not establish interactive task success by independent players. The 79-check
+Image review does not establish interactive task success by independent players. The 80-check
 Gate-E record supplies the existing interaction evidence; Gate J still verifies production behavior.
 H (high fidelity) and I (implementation handoff) remain unopened. **PR #470 remains draft/blocked
 on S0 Gate I**; the review-method change alone does not release it.
@@ -885,30 +885,49 @@ of their replacement images; no Major is accepted by the agent.
 
 | ID | Severity | Finding | Disposition | Release condition / retest |
 |---|---|---|---|---|
-| S0-G-001 | Major (review coverage) | Earlier nine PDFs omitted dialogs, request outcomes and healthy live statistics | `FIX NOW` | Fixed: §9.4 supplies all 18 images; run 03 exercises and exports the missing states. Owner must review the expanded set before G. |
+| S0-G-001 | Major (review coverage) | Earlier nine PDFs omitted dialogs, request outcomes and healthy live statistics | `FIX NOW` | Fixed: §9.4 supplies all 18 images; run 04 exercises and exports the missing states. Owner must review the expanded set before G. |
 | S0-G-002 | Moderate | Raw Restart: KickOff and loose-holder captions misrepresented open play | `FIX NOW` | Fixed: both captions omitted from the player-facing pitch; source capture unchanged; absence asserted at full time and inspected across regenerated views. |
 | S0-G-003 | Moderate | Missing goals, penalty areas and attacking direction | `FIX NOW` | Fixed: pitch geometry and fixed Stage-0 direction added; source grounding in §9.4; rendered live/full-time views inspected. |
-| S0-G-004 | Minor | A10/H4 marker-label overlap in the 200% stress view | `FIX NOW` | Fixed: stable nearest-clear label layout plus leader lines; pairwise bounding-box separation asserted in all geometry checks, including every 200% fixture. |
+| S0-G-004 | Minor | A10/H4 marker-label overlap in the 200% stress view | `FIX NOW` | Fixed: stable nearest-clear label layout; pairwise bounding-box separation asserted in all geometry checks, including every 200% fixture. |
 | S0-G-005 | Minor | Minute-18 partial possession/territory identical to full-match fixture | `FIX NOW` | Fixed synthetic temporal fixture: possession 47/47 and territory 50/50 at minute 18 versus final 51/43 and 54/46. Partial/full difference asserted; raw capture unchanged. |
 | S0-G-006 | Minor | Numeric report columns misaligned with team headers | `FIX NOW` | Fixed: Home/Away headers right-aligned with numeric values; computed alignment asserted and PDFs inspected. |
 | S0-G-007 | Minor | Repeated starting lock explanation and placeholder crossing pitch markings | `FIX NOW` | Fixed: one control-lock reason and unmarked pitch placeholder; copy/marking assertions and MV-0 image inspected. |
-| S0-G-008 | Question (design decision) | Should live-view statistics be reopenable at full time? | `FIX NOW` | Owner decision pending before G. Proposal: keep toggle disabled; retain an already-open frozen panel; display “Final statistics are available in the match report.”, retain report acknowledgement as primary action. Current prototype illustrates that proposal; no yes/no is inferred. |
+| S0-G-009 | Minor | Focus outlines touched dropdown labels in both dialogs | `FIX NOW` | Fixed: .75rem label/field gap; visible focus and at least 4px outline/label clearance measured for every dropdown at normal and pseudo/200% text at all three widths. Replacement dialog PDFs inspected. |
+| S0-G-010 | Minor | Caption promised leader lines that were not visibly useful | `FIX NOW` | Fixed: removes that promise from visible and accessible descriptions; overlap separation remains asserted. Expanded-text image inspected. |
+| S0-G-011 | Minor | Circular refusal wording implied an explanation the engine does not supply | `FIX NOW` | Fixed: “Refused. Current Mentality unchanged.”; status and requested value retained, unchanged applied value asserted. No reason invented. |
+| S0-G-012 | Minor | Substitution help used developer-facing engine language | `FIX NOW` | Fixed: describes when the substitution takes effect in player language; the current no-stoppage behavior remains explicit. |
 
-The question row is a decision item, not a new severity class or counted unresolved Major.
+**S0-G-008 is an owner decision, not a finding with an agent-selected disposition.** Before G,
+choose whether full-time statistics can be reopened. The current proposal disables the toggle, retains
+an already-open frozen panel and states “Final statistics are available in the match report.” The report
+acknowledgement remains the primary action. Record `ACCEPT FOR CURRENT GATE` if accepting that proposal,
+or `FIX NOW` if requesting a revised toggle; no choice is recorded yet.
 
 | Gate-G decision record | Current value / required owner action |
 |---|---|
-| Review ID | `UX-GG-S0-OWNER-20260930-02` |
+| Review ID | `UX-GG-S0-OWNER-20260930-03` |
 | Reviewer | Anton Zymin |
-| Review version | Prototype v0.3; all 18 §9.4 image paths; source fingerprints in run 03 |
+| Review version | Prototype v0.4; all 18 §9.4 image paths; source fingerprints in run 04 |
 | Owner review date / statement | PENDING |
 | Image approval | PENDING — Claude's review and generated evidence supply no owner approval |
-| Finding dispositions | S0-G-001–007 fixed/retested above; S0-G-008 pending owner choice; earlier B/E ledgers still apply |
+| Finding dispositions | S0-G-001–007 and S0-G-009–012 fixed/retested above; S0-G-008 pending owner choice; earlier B/E ledgers still apply |
 | C-DEC-1 | PENDING explicit owner decision: retain labelled partial live figures; hide report partial figures behind incomplete disclosure while score/result/return remain outside |
 | Carried Majors | S0-B-002 (production feedback adapter) and S0-B-004 (shirt-number identity) need written owner acceptance rationale and release condition for G, or resolution; earlier Gate-B disposition is not new Gate-G acceptance |
 | Full-time statistics access | PENDING owner decision on S0-G-008 |
 | Gate G | PENDING — requires complete review, all dispositions, C-DEC-1, required Major acceptances and actual image approval |
 | Next gate | G opens H only. H requires separate owner approval of high-fidelity images before I. #470 remains blocked on I. |
+
+---
+
+## 12.5 H/I follow-ups from image review
+
+These obligations remain open; they supply no approval of G, H or I.
+
+| Gate | Follow-up | Closure evidence |
+|---|---|---|
+| H | Review Mentality choice presentation: the live dropdown shows one selected option while setup exposes all seven choices and effects. | Owner-approved high-fidelity images show a deliberate, understandable choice/consequence presentation in both contexts. |
+| H | Applied substitution feedback must agree with the pitch. Current captured markers do not update, despite the simulated count/feedback. | Replacement images show a coherent post-swap projection, or a clearly labelled illustrative scenario with consistent identity; unchanged captured markers may not imply a real applied swap. Recheck S0-B-004 identity. |
+| I | The prototype direction label is fixed to the verified Stage-0 home +X convention. Stage 0 deliberately does not swap ends. | The handoff identifies the engine-owned direction projection required when Stage-1 ends-swap lands; shipping text follows that projection and is not inferred from minute or hardcoded. |
 
 ---
 
@@ -925,3 +944,4 @@ The question row is a decision item, not a new severity class or counted unresol
 | 0.7 | September 30, 2026 | PR #473 review correction: withdraws initial E pass; fixes submit/speed focus and live feedback disclosure Majors; 74-check run 02 passes with direct focus and live-timer assertions. Coherent synthetic 2–1 ordinary session; raw 19–9 capture reserved for unusual-score checks; normal-play whistle race; removes contradictory captured substitution row; distinguishes base-font scaling from zoom. Moves tester attestations from findings to formal F prerequisites. C-DEC-1 remains a Gate-C design choice, not an owner-confirmed decision; no gate rule requires its confirmation. F/G/H/I remain unpassed, #470 blocked. |
 | 0.8 | September 30, 2026 | Records explicit owner instruction to conduct image reviews instead of testers. S0-F-001 prerequisite superseded; F passes existing complete vehicle. G awaits actual owner image approval, including failure/stress views and carried design findings. H/I remain unopened; #470 blocked. |
 | 0.9 | September 30, 2026 | Image-review correction: 18 PDFs cover dialogs, queued/applied/refused/not-applied requests and healthy/partial statistics. Removes raw pitch restart/holder captions, adds grounded pitch/direction markings and collision-free label placement with leaders, fixes temporal statistics/header alignment/waiting copy. Records S0-G-001–008 dispositions and explicit pending C-DEC-1/full-time-statistics/carried-Major/image decisions. Run 03 has 79 checks; successful run 02 archived. G opens H only; H approval separately precedes I. |
+| 0.10 | September 30, 2026 | Second image-review cleanup: S0-G-008 moved to pending owner decisions; dropdown focus spacing measured; leader-line promise removed; concise refusal and player-facing substitution copy. Records H choice/identity consistency and I engine-direction obligations. Prototype v0.4 run 04 has 80 checks; run 03 retained. Owner choices and G/H/I approval remain pending. |

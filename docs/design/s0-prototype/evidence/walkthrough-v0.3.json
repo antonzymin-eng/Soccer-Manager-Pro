@@ -1,42 +1,42 @@
 {
   "created": "2026-09-30",
   "purpose": "Executed S0 scripted resilience evidence; not participant results",
-  "runId": "UX-GE-S0-20260930-04",
-  "supersedes": "UX-GE-S0-20260930-03: successful 79-check run retained; run 04 adds measured dropdown-focus/label clearance and image-review copy corrections",
+  "runId": "UX-GE-S0-20260930-03",
+  "supersedes": "UX-GE-S0-20260930-02: successful 74-check interaction run retained; run 03 adds image coverage, marker separation and visual corrections",
   "journey": "S0",
-  "prototype": "s0-prototype v0.4",
+  "prototype": "s0-prototype v0.3",
   "textScaleMethod": "scale=2 doubles root font size from 16px to 32px; browser zoom remains 100%",
   "date": "2026-09-30 (UTC)",
   "runner": "Codex scripted/self-walkthrough",
   "browser": "153.0.8010.0",
   "hashes": {
-    "index.html": "59ed43134cf8cbfcab86cf0b831917a227db49aabd17dfe96f055a58f16ef275",
-    "prototype.css": "60aaede3535622638dcdce0abd89c366b00404663c9df02f9c11e4e2ae557d87",
+    "index.html": "681a56bbf03cc643ebbf54a876d9a143a6e36b26092ba414e80d9f152ce91d2f",
+    "prototype.css": "243dd37f64ec2646ef01c1c6fc50a39fbece9113927b266998940b6fa63e30aa",
     "model.js": "bf64020cacacf0cdd0275ee3da55af349bcdf3f248d132cb7a03060354ec7f9c",
-    "prototype.js": "b52f034ea9ae3f0a3f47cbb33414a9042c560c073de70c4bec8fbf5913a64467",
+    "prototype.js": "c5721e0917fa03535e9c4d9c0e15d4649b82d8dea2f9b8afedae61c15ac17318",
     "reference-data.js": "fafa28bbd78b067bb63241a64042ebd8d0cea7e8050c95d7db8fdda9feb8ad69",
     "scenario-data.js": "05412989bdcbd11eb72fb76673f44d93d190e257ec6dbe529600cce1e1cd6866",
-    "verify.cjs": "a8cb1120c148982b1f58bd6aa04fa83059a3a7e2180e0a4b1d04a20c847ce376"
+    "verify.cjs": "fecd09b7bf88dfca84cc125f8a7fa86de0b618354011486bdcd7fde00e5e0739"
   },
   "imageHashes": {
-    "mentality-dialog.pdf": "b5d0078ba87a4505df773abc528e1bb591cff3d918951dd492f3a0677d651c72",
-    "mm.pdf": "ce49faa20c6f47979c3cb794efff27bd19fe32acda0384287e6e0d02b37eb053",
-    "mv-0.pdf": "7979e1ccb4a005ab46f5ec079d6eff0564df834e8ac1d6a6c47b987781e9b76c",
-    "mv-ft-not-applied.pdf": "0211872f6d215aa34e4117bd63e3fa38c869992325f9c4c1d8d4d07fbc6351bd",
-    "mv-ft.pdf": "52daf84ea4b3b2e84b593a29bd547a6b276f19bbec8c241a21d6bbe6a700b571",
-    "mv-l.pdf": "b6fae8521d0388ee6ae717cb7b32fef63ac95d646adfbe3da1362b53d43d6e74",
-    "mv-live-applied.pdf": "edb263e4614c074fd46e527201a2995066f72e042828a837cd87f88fbf965f37",
-    "mv-live-pending.pdf": "964054d13292ce0b96e9f03d53fe407a5641a9064751f440a18f6e622e105b31",
-    "mv-live-refused.pdf": "4ccb71d73190d0857f17126f316c473de80236b8299db951447245998b1b9cf0",
-    "mv-live-statistics.pdf": "411ea5ff9b7a12603a4779a071d7028822bccf75189d7ba2a1cce92572563791",
-    "mv-p.pdf": "31764ec1927b1f4586119aaf9939021ceb11d7a9e5b9572635f563d6f57db9bd",
-    "mv-paused-pending.pdf": "1c8bf7efc8d9c683c722213c72b68793b25e8bb94f49ab403a0a37b23c8df952",
-    "pr.pdf": "c3f3e8a6286fbaece9df18085c857909166d9e2a53c145852db85c7d0ff9fe44",
-    "report-incomplete.pdf": "f7e582d2f4474f6f54089f7480a6a9a1f81236508d94114961cd85dda74a614c",
-    "report-partial-open.pdf": "32d417d70d67af860503098186419766a4628002ffd2c9d61ce4404d37bab908",
-    "stress-fault-1366.pdf": "2dddfbd394fcd379f4e39856446b63d22329e014f33352b62ca2409996fc2f33",
-    "substitution-dialog.pdf": "c2242dd8ae17cc3c7107be77e7e4ef091d515aac238a80628c901dcac8ae7d82",
-    "ts.pdf": "9b6d966d9914348dd7da04f4d57e29b00986d2b4e16c7b95c433ba3f2d79c4d0"
+    "mentality-dialog.pdf": "0e53defd02db577ad3791f70bb16c98dd7adc052092cfb35520779feff525849",
+    "mm.pdf": "373ed7c0c66df7b58a7fbb1dec0c6a1382d741ae10342f42b8d1e35491e910a1",
+    "mv-0.pdf": "840da874708dd0dca06efbf903f489084f4f6b8d303692f5af7ad05a9cb5bf66",
+    "mv-ft-not-applied.pdf": "8ec8b21526257a68c1e1520f01a6c5900ec374d49ebe598c342637b268d8cf2f",
+    "mv-ft.pdf": "a2788003bdaf2df953a12c9cb59db2823515579f17ebc2b61dfcde255cf023e8",
+    "mv-l.pdf": "2bbeef50b9de6c4d8c5e9d591dfc1e52d852fe7b9e1dd49bcd3714c1b256b2ab",
+    "mv-live-applied.pdf": "ecc6184e802949f6dcf46e3b7abfa7fe0d9e42f0dd573271ee257f96679fa2e7",
+    "mv-live-pending.pdf": "8390a545444c6b357c2ed2afc47435643ffbfb37ac52e93b4c25af34cfa04fdb",
+    "mv-live-refused.pdf": "4b5b104adb6efb01a4d838a68b526cc5b6ba2a2565b92f90deae50c2ae99dc49",
+    "mv-live-statistics.pdf": "b27c1e04e49b21cf57b9d20ac520a933b6486626f4eee25af8522725361e7b7a",
+    "mv-p.pdf": "1dae4b3b3f4f361a2d105efc0cafcc742f29b32a1456706d06c7cbaa33d0daaa",
+    "mv-paused-pending.pdf": "779f01681ac97a78ceb6779301341544cc2fdea2420f8422cefc036cd5ec7cab",
+    "pr.pdf": "3360223bfe1cc0a231344e858b8043f1c440c7e5660544fcd503eb6994f978f1",
+    "report-incomplete.pdf": "dfac0ca033f0132f91864b4e5e35d7c4118e2d857cbe899c556c60ae8a8aa2a7",
+    "report-partial-open.pdf": "8cc0bd9c96218d77dfe31b22a4384a42fa888fa89e6c91437e01e166ba4cc492",
+    "stress-fault-1366.pdf": "030cef8da34e40f6bece1c38955ccfe15d9418b2fa70ac9baabcefe2eb0db103",
+    "substitution-dialog.pdf": "b72e7ace6d582cc7159a9c400495845d5f3d782ebc361f4635e8b7fcd4ac54b9",
+    "ts.pdf": "7ed8ed0a7421bf7ffd404cadee05a45a44cd1f00b961b27bf6a506889ce00db9"
   },
   "results": [
     {
@@ -226,11 +226,6 @@
         ],
         "focus": "3px #161616 outline against white; selection checked radio and text; disabled dashed border and persistent reason."
       }
-    },
-    {
-      "name": "dialog focus and label separation",
-      "result": "PASS",
-      "detail": "Both dialogs and all three dropdowns retain visible 3px focus outlines with at least 4px label clearance at all three widths, normal text and pseudo-locale/200% text."
     },
     {
       "name": "geometry: 1366 / ordinary / pseudo / 200%",

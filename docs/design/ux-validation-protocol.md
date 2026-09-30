@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.16\
+**Version:** 0.17\
 **Status:** F4 + S0 GATES A–F COMPLETE — S0 G pending owner image review\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.13 §F4 and Gates E–G\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.14 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -419,7 +419,7 @@ Do not downgrade severity merely because a participant eventually found a workar
 The owner reviews all 18 images listed in journey packet §9.4: seven journey states, both staging
 dialogs, live/paused Pending, Applied, Refused, healthy live statistics, full-time Not applied and
 the statistics-failure/disclosure/stress views.
-Use the interactive prototype and 79-check Gate-E evidence to support questions about behavior;
+Use the interactive prototype and 80-check Gate-E evidence to support questions about behavior;
 an image approval alone supplies no runtime or independent usability evidence.
 
 | Review field | Required record |
@@ -542,3 +542,4 @@ S0 Gate G remains pending actual owner image approval. S1 requires its two indep
 | 0.14 | September 30, 2026 | Execution pointer sync to detailed plan v1.11; packet v0.7 corrects E evidence and retests v0.2. Tester attestations are formal F prerequisites, not usability findings. Participant cells, tasks and gate rules unchanged. |
 | 0.15 | September 30, 2026 | Records the owner-directed S0 image-review route and §9.1 review/approval template. S0 tester slots superseded; F complete, G pending actual image approval. Participant-session templates retained for S1/optional research; image approval supplies no independent usability/runtime evidence. |
 | 0.16 | September 30, 2026 | Expands S0 image-review coverage to 18 views and supporting 79-check run. Requires every finding disposition, explicit C-DEC-1/full-time-statistics decisions and written acceptance rationale/release condition for carried Majors; H approval remains separate before I. |
+| 0.17 | September 30, 2026 | Updates execution pointer and supporting evidence to the 80-check review-cleanup run. S0-G-008 stays an undecided owner choice; no image approval or Major acceptance inferred. |

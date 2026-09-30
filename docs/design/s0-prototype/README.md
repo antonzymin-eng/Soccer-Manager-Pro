@@ -1,4 +1,4 @@
-# S0 low-fidelity prototype v0.3
+# S0 low-fidelity prototype v0.4
 
 **Created:** September 30, 2026\
 **Purpose:** executable Gates C–F design evidence for the [S0 journey packet](../ux-s0-pm1-journey.md).
@@ -64,12 +64,12 @@ With Playwright available, run the recorded walkthrough from the repository root
 NODE_PATH=/path/to/node_modules UX_BROWSER=/path/to/chrome node docs/design/s0-prototype/verify.cjs
 ```
 
-The successful 74-check v0.2 run is preserved as `evidence/walkthrough-v0.2.json`. Current evidence includes SHA-256 fingerprints for all seven source files and all 18 PDFs.
+The successful 79-check v0.3 run is preserved as `evidence/walkthrough-v0.3.json`. The successful 74-check v0.2 run is preserved as `evidence/walkthrough-v0.2.json`. Current evidence includes SHA-256 fingerprints for all seven source files and all 18 PDFs.
 
-The runner emits `evidence/walkthrough.json` and 18 PDFs (journey states, dialogs, request outcomes and statistics disclosure/stress views). The v0.3 run has 79 checks; the original
+The runner emits `evidence/walkthrough.json` and 18 PDFs (journey states, dialogs, request outcomes and statistics disclosure/stress views). The v0.4 run has 80 checks; the original
 71-check v0.1 evidence is archived and its Gate-E pass withdrawn after review found two Majors.
 Keyboard navigation rejects unexpected body focus; submits and both speed limits assert immediate
-focus destinations. Earlier feedback is tested over live timer ticks, not only frozen review frames.
+focus destinations. Dropdown focus outlines are measured clear of labels at normal and pseudo/200% text at all three widths. Earlier feedback is tested over live timer ticks, not only frozen review frames.
 The end-race test reaches minute 89 from MM, submits while paused, then resumes to the whistle. It traverses
 S0-T1–T7 plus substitution, tests semantic outcomes, and inspects layout/focus/failure fixtures. See the
 journey packet's Gate-E matrix for limits, N/A reasons and remaining implementation obligations.
@@ -83,7 +83,7 @@ prerequisites. Gate G awaits all finding dispositions, C-DEC-1, the full-time-st
 written rationale/release conditions for carried Majors and explicit owner approval of all 18 images
 in journey packet §9.4, using validation protocol §9.1. G opens H only. H needs separate owner
 approval of high-fidelity images before I; draft PR #470 stays blocked on Gate I.
-The 79-check interaction evidence remains distinct from image approval and real-client verification.
+The 80-check interaction evidence remains distinct from image approval and real-client verification.
 
 | Version | Date | Change |
 |---|---|---|
@@ -91,3 +91,4 @@ The 79-check interaction evidence remains distinct from image approval and real-
 | 0.2 | September 30, 2026 | Fixes live focus/disclosure; coherent ordinary synthetic 2–1 versus captured 19–9 fixtures; reachable whistle race; 74 checks; archives insufficient original E run; clarifies text-scale method and formal F prerequisites. |
 | 0.2 review-route update | September 30, 2026 | Owner-directed S0 image review replaces tester prerequisites; prototype sources, PDFs and 74-check run unchanged. |
 | 0.3 | September 30, 2026 | Complete 18-image review coverage; pitch markings/direction and label leaders; raw restart/holder caption removed; changing partial statistics, aligned headers and simplified waiting state. 79-check run 03; explicit G decisions and separate H image approval before I. |
+| 0.4 | September 30, 2026 | Adds dropdown label/focus spacing and measured clearance; removes leader-line promise; shortens refusal and player-facing substitution wording. Regenerates 18 images; 80-check run 04; successful run 03 archived. Pending decisions and H/I obligations stay explicit. |

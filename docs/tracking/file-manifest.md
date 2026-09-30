@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 30, 2026 — **Complete S0 image-review coverage / PR #473.** Journey packet v0.9, detailed plan v1.13, validation protocol v0.16 and prototype v0.3. Eighteen PDF views, 79 checks, seven source/18 image fingerprints; successful prior run archived. Nine new PDFs plus `walkthrough-v0.2.json` inventoried below. Pitch/collision/statistics/alignment/waiting presentation corrected; Gate-G decisions remain pending; H approval separately precedes I. No production/spec change.
+**Last Updated:** September 30, 2026 — **PR #473 second image-review cleanup.** Journey packet v0.10, detailed plan v1.14, validation protocol v0.17 and prototype version 0.4. S0-G-008 is an undecided owner choice; focus spacing, leader-line caption, refusal and substitution wording corrected. Eighteen PDFs regenerated; 80-check run 04 and source/image fingerprints; successful run 03 archived and inventoried. H choice/identity consistency and I engine-direction obligations recorded. G remains pending actual owner decisions/approval; issue counts and production/spec files unchanged.
+
+**Last Updated (prior):** September 30, 2026 — **Complete S0 image-review coverage / PR #473.** Journey packet v0.9, detailed plan v1.13, validation protocol v0.16 and prototype v0.3. Eighteen PDF views, 79 checks, seven source/18 image fingerprints; successful prior run archived. Nine new PDFs plus `walkthrough-v0.2.json` inventoried below. Pitch/collision/statistics/alignment/waiting presentation corrected; Gate-G decisions remain pending; H approval separately precedes I. No production/spec change.
 
 **Last Updated (prior):** September 30, 2026 — **Owner-directed S0 image review.** `docs/design/ux-high-level-plan.md` v1.6, `ux-detailed-plan.md` v1.12, `ux-validation-protocol.md` v0.15, `ux-s0-pm1-journey.md` v0.8 and `s0-prototype/README.md` record the owner review route. S0 tester prerequisite superseded; A–F complete, G pending actual owner image approval; #470 remains blocked on I. Prototype/PDF/browser evidence unchanged; no new paths or production/spec changes.
 
@@ -3523,12 +3525,12 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | File | Purpose |
 |------|---------|
 | `docs/design/ux-high-level-plan.md` | UX strategy v1.6; S0 owner image review; current status delegated to execution authority |
-| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.13: S0 A–F complete; G requires owner review, all dispositions, C-DEC-1 and Major acceptance rationale; H approval separately precedes I |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.14: S0 A–F complete; packet review-cleanup pointer current; G owner decisions and H approval separately precede I |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | Validation operating packet v0.16: S0 18-image review record with explicit decisions; tester prerequisite superseded; S1 participant templates retained |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.9: complete 18-image coverage, 79-check evidence, findings S0-G-001–008 and pending owner decisions; #470 blocked on I |
+| `docs/design/ux-validation-protocol.md` | Validation operating packet v0.17: S0 18-image review with explicit owner choices and 80-check support; S1 participant templates retained |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.10: 18-image coverage, 80-check evidence, findings S0-G-001–012, pending owner decisions and H/I follow-ups; #470 blocked on I |
 | `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/owner-review boundary |
 | `docs/design/s0-prototype/index.html` | Local-only monochrome complete-task design vehicle; simulation banner |
 | `docs/design/s0-prototype/prototype.css` | Low-fidelity layout, focus, disabled states, scale/reflow and caption reservation |
@@ -3550,7 +3552,8 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | `docs/design/s0-prototype/evidence/mv-ft-not-applied.pdf` | Full-time not-applied result reached by normal whistle-race journey |
 | `docs/design/s0-prototype/evidence/report-partial-open.pdf` | Incomplete report disclosure open on minute-18 partial figures |
 | `docs/design/s0-prototype/evidence/walkthrough-v0.2.json` | Preserved successful 74-check run 02/source fingerprints |
-| `docs/design/s0-prototype/evidence/walkthrough.json` | Gate-E v0.3 run 03 identity, 79 executed checks, browser version, seven source and 18 PDF SHA-256 hashes |
+| `docs/design/s0-prototype/evidence/walkthrough-v0.3.json` | Preserved successful 79-check run 03/source and image fingerprints |
+| `docs/design/s0-prototype/evidence/walkthrough.json` | Gate-E v0.4 run 04 identity, 80 executed checks, browser version, seven source and 18 PDF SHA-256 hashes |
 | `docs/design/s0-prototype/evidence/mm.pdf` | Main Menu wireframe |
 | `docs/design/s0-prototype/evidence/ts.pdf` | Tactics Setup wireframe |
 | `docs/design/s0-prototype/evidence/mv-0.pdf` | Awaiting-first-frame wireframe |
