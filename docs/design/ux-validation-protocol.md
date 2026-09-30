@@ -1,11 +1,11 @@
 # System XI UX Validation Protocol
 
 **Created:** September 11, 2026  
-**Last Updated:** September 28, 2026  
-**Version:** 0.12\
-**Status:** F4 + S0 GATES A–B COMPLETE (B owner-confirmed September 28, 2026) — Gate C next; anonymous participant requirements unchanged\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.9 §F4 and Gates E–G\
-**Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4  
+**Last Updated:** September 30, 2026\
+**Version:** 0.13\
+**Status:** F4 + S0 GATES A–E COMPLETE — F prototype ready; formal F opening/pass pending participant attestations; anonymous participant requirements unchanged\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.10 §F4 and Gates E–G\
+**Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
 ---
@@ -496,3 +496,4 @@ Gate F, and Gate G remains unavailable until two distinct independent participan
 | 0.10 | September 21, 2026 | Pointer-only review sync after the Gate-A packet and execution authority advance to `ux-s0-pm1-journey.md` v0.3 / `ux-detailed-plan.md` v1.7. No validation task, participant rule, Gate-E/G evidence requirement, severity rule or pass/fail policy changes. |
 | 0.11 | September 21, 2026 | Review closeout pointer sync to `ux-detailed-plan.md` v1.8 / `ux-s0-pm1-journey.md` v0.4. Validation tasks, participant rules, Gate-E/G evidence requirements, severity and pass/fail policy remain unchanged. |
 | 0.12 | September 28, 2026 | Pointer/status sync for S0 Gate B (`ux-s0-pm1-journey.md` v0.5 §7, `ux-detailed-plan.md` v1.9). Gate B maps S0-T1–T7 to flow steps without changing any task, participant rule, Gate-E/G evidence requirement, severity or disposition; S0-T2's pre-match choice is now concretely Mentality because Formation has no simulation consumer. |
+| 0.13 | September 30, 2026 | Status/pointer sync to detailed plan v1.10 and S0 packet v0.6. C–E complete; F vehicle ready but both pre-F availability/independence/distinctness attestations remain due. Participant cells and G requirements unchanged. |

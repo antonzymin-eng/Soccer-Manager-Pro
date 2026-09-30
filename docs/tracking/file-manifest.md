@@ -3516,13 +3516,32 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 
 | File | Purpose |
 |------|---------|
-| `docs/design/ux-high-level-plan.md` | Strategy, milestone cut and dependency posture (v1.4, Sep 28, 2026); mirrors `ux-detailed-plan.md` §10.2's effort bands rather than duplicating them and carries the current P4b partial-host evidence correction |
-| `docs/design/ux-detailed-plan.md` | **The single UX execution authority** (v1.9, Sep 28, 2026): work packages F0–F4, journey slices S0–S2, the one authoritative Gates A–J definition, validation severity, QA handoff, change control, §17's acceptance record, and the privacy-safe anonymous-participant rule; F0–F4 + S0 Gate A complete, S0 Gate B next; B8 completed-vs-open host evidence and the missing pre-match per-player-tactic handoff are explicit |
+| `docs/design/ux-high-level-plan.md` | UX strategy v1.5; current status delegated to execution authority; C–E complete, F vehicle ready with formal attestations pending |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.10: F0–F4 and S0 A–E complete; F prototype ready / formal F pending both participant attestations; G/H/I unpassed, P5b gated on I; unchanged gate definitions and participant rules |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | F4 output — the repeatable validation operating packet (v0.12, Sep 28, 2026): four-layer sequence, S0-T1–T7 and S1-T1–T8 participant tasks, Anton Zymin as UX-workstream owner, privacy-safe anonymous participant slots with pre-Gate-F owner availability plus explicit independence/distinctness attestations, the scripted walkthrough matrix covering all nineteen F4.6 minimum profiles plus F4.3's general error condition and standalone Gate-E color-independent-meaning and F3-001 contrast conditions, auditable per-condition Gate-E results/evidence, moderator script, the full `ux-detailed-plan.md` §12 finding ledger, severity with §12's closed five-value disposition vocabulary, Gate-G no-skip semantics for prescribed tasks, and the journey-parameterized Gate-G/Gate-J records; F4 + S0 Gate A complete, Gate B next |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D journey packet (v0.5, Sep 28, 2026): reconciled Gate-A dependency/control audit for PM-1 (PASS, zero `UNKNOWN`; P5b the dominant binding gap; pre-match per-player tactics blocked on the missing `MatchSetup` handoff) plus §7 **Gate B task flow** — seven journey states over the five existing `ClientScreenFlow` moves, requested/applied/refused/not-applied intervention feedback over the session command logs, blocked-path reasons, #37 statistic set, S0-T1–T7 coverage and findings S0-B-001–009 (S0-B-009: statistics-observer failure state). Gate-A A-10 corrected (Formation has no simulation consumer; the pre-match choice is Mentality) and A-38–A-42 added; Gate C inputs are the next authorized UX work |
+| `docs/design/ux-validation-protocol.md` | F4 validation operating packet v0.13: status sync to S0 C–E complete / F vehicle ready; participant availability and explicit independence/distinctness remain due before F, actual independent completions bind G; unchanged scripts, matrix and ledger rules |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.6: A/B audits/flow plus C monochrome hierarchy/focus/reflow, D full state matrix, E executed resilience evidence and F vehicle/attestation boundary; real capture and statistics-failure decision; C–E PASS, formal F pending, #470 blocked on I |
+| `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/attestation boundary |
+| `docs/design/s0-prototype/index.html` | Local-only monochrome complete-task design vehicle; simulation banner |
+| `docs/design/s0-prototype/prototype.css` | Low-fidelity layout, focus, disabled states, scale/reflow and caption reservation |
+| `docs/design/s0-prototype/model.js` | Pure simulated S0 transitions, pending/applied/refused/end race; no production API |
+| `docs/design/s0-prototype/prototype.js` | Semantic controls, focus recovery/staging dialogs, health/disclosure and fixtures |
+| `docs/design/s0-prototype/reference-data.js` | 91 captured frame/#37 snapshots from main c37213ab, no synthetic analytics accumulator |
+| `docs/design/s0-prototype/capture-reference.cs` | Reproducible console caller of the unchanged reference composition; non-certifying |
+| `docs/design/s0-prototype/capture-reference.sh` | Temporary .NET capture project runner using existing generated shim projects |
+| `docs/design/s0-prototype/verify.cjs` | Reproducible browser walkthrough, geometry/focus/outcome assertions and screenshot capture |
+| `docs/design/s0-prototype/evidence/walkthrough.json` | Gate-E run identity, 71 executed checks, browser version and source SHA-256 hashes |
+| `docs/design/s0-prototype/evidence/mm.pdf` | Main Menu wireframe |
+| `docs/design/s0-prototype/evidence/ts.pdf` | Tactics Setup wireframe |
+| `docs/design/s0-prototype/evidence/mv-0.pdf` | Awaiting-first-frame wireframe |
+| `docs/design/s0-prototype/evidence/mv-l.pdf` | Live Match View wireframe |
+| `docs/design/s0-prototype/evidence/mv-p.pdf` | Paused Match View wireframe |
+| `docs/design/s0-prototype/evidence/mv-ft.pdf` | Full-time wireframe |
+| `docs/design/s0-prototype/evidence/pr.pdf` | Post-Match Report wireframe |
+| `docs/design/s0-prototype/evidence/report-incomplete.pdf` | Faulted statistics report/disclosure evidence |
+| `docs/design/s0-prototype/evidence/stress-fault-1366.pdf` | 1366-wide expanded-text/200% statistics-failure and caption-reservation evidence |
 | `docs/design/ux-foundation.md` | Superseded stub — historical design reference, explicitly **not** execution authority; retained so older citations resolve |
 
 Registered September 11, 2026 with the F4 packet's landing. The first five rows are **retrospective**:

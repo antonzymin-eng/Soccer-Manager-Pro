@@ -12,7 +12,15 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 28, 2026 — **S0 UX Gate B: PM-1 task flow defined; one Gate-A overstatement corrected.**
+> **Last Updated:** September 30, 2026 — **S0 UX Gates C–E complete; Gate-F vehicle ready, formal F pending participant attestations.**
+>
+> **What:** S0 packet v0.6 adds low-fidelity hierarchy/focus/reflow, all seven wireframes, the full state matrix, the statistics-failure presentation decision, and a complete executable design prototype. The existing reference `MatchClientHost` was called without modifying its harness: 91 snapshots on `main` `c37213ab`, seed `0x00C11E7B6D0C`, home Human/away AI, through tick 324000, healthy #37 observer, final frame score 19–9. The captured output is preserved; simulated prototype choices do not rerun the match or mutate production.
+>
+> **Validation:** Gate-E run `UX-GE-S0-20260930-01` records 71 executed browser checks: complete S0-T1–T7 plus substitution, keyboard/mouse, three desktop widths, equivalent pseudo-locale, 200% text, failure/disabled/end-race fixtures, computed contrast, and chooser focus. Expanded-text overflow and modal Tab wrapping were found, fixed and retested. The packet states each protocol-row result/N/A and the limits of prototype evidence. Shipping maximum scale remains unallocated. Capture compilation succeeded under the non-certifying .NET shim; Unity was not run.
+>
+> **Boundary:** C–E PASS; F deliverable READY, formal opening/pass PENDING both pre-F anonymous availability and independence/distinctness attestations. No participant evidence fabricated. G still requires two real independent completions; H/I unopened; #470 remains draft/blocked on Gate I. Status pointers sync in detailed plan v1.10, high-level plan v1.5, validation protocol v0.13, manifest and the existing open-issues UX entry. No source/spec/scene/schema/RNG change; no issue-count change.
+>
+> **Last Updated (prior):** September 28, 2026 — **S0 UX Gate B: PM-1 task flow defined; one Gate-A overstatement corrected.**
 >
 > **What:** `docs/design/ux-s0-pm1-journey.md` v0.5 adds §7, the S0 Gate B task flow. It has seven journey states (Main Menu, Tactics Setup, Match starting, Live, Paused, Full time, Post-Match Report) over the four typed screens, using only the five existing `ClientScreenFlow` moves. Every state has an entry trigger, a goal, information with a cited Gate-A owner, seam-bound actions, blocked paths with owner-sourced reasons, back/cancel behavior and a completion/return destination. A validation-task table maps S0-T1–T7 and the PM-1 substitution exit criterion onto steps. Status pointers move in `ux-detailed-plan.md` v1.9 (§14: Gate C next), `ux-validation-protocol.md` v0.12 and `ux-high-level-plan.md` v1.4.
 >
