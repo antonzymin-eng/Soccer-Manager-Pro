@@ -7,7 +7,7 @@ const { pathToFileURL } = require('node:url');
 const { chromium } = require('playwright');
 
 const root = __dirname;
-const evidence = path.join(root, 'evidence');
+const evidence = path.join(root, 'evidence', 'v0.5');
 const base = pathToFileURL(path.join(root, 'index.html')).href;
 const results = [];
 let browser;
@@ -37,11 +37,15 @@ async function focused(page, id) {
 }
 async function dialogFocusLabels() {
   for (const width of [1366, 1920, 2560]) for (const scale of [1, 2]) {
-    const p = await open(`?review=1&state=MV-L&pseudo=${scale === 2 ? 1 : 0}&scale=${scale}`,
+    const p = await open(`?review=1&state=MV-L&scale=${scale}${scale === 2 ? '&pseudo=1' : ''}`,
       { width, height: width === 1366 ? 768 : 1080 });
     for (const [invoker, fields] of [['tactic', ['new-mentality']], ['substitute', ['outgoing', 'incoming']]]) {
       await p.locator('#' + invoker).click();
       for (const id of fields) {
+        const label = await p.locator(`label[for="${id}"]`).innerText();
+        assert.equal(label.startsWith('[') && label.includes('~'), scale === 2,
+          'actual normal versus pseudo label rendering: ' + id);
+        assert.equal(await p.evaluate(() => getComputedStyle(document.documentElement).fontSize), `${16 * scale}px`);
         if (id === 'incoming') await p.keyboard.press('Tab');
         await focused(p, id);
         const gap = await p.locator('#' + id).evaluate(el => {
@@ -59,6 +63,71 @@ async function dialogFocusLabels() {
     await p.close();
   }
   record('dialog focus and label separation', 'Both dialogs and all three dropdowns retain visible 3px focus outlines with at least 4px label clearance at all three widths, normal text and pseudo-locale/200% text.');
+}
+async function faultProgression() {
+  for (const direct of [false, true]) {
+    const p = await open(direct ? '?state=MV-0&fixture=fault' : '?fixture=fault');
+    if (!direct) { await p.locator('#open-setup').click(); await p.locator('#start').click(); }
+    await p.clock.runFor(2000);
+    await has(p, 'Minute 0');
+    await p.locator('#stats').click();
+    const cells = () => p.locator('tbody td').allTextContents();
+    const expected = minute => p.evaluate(minute => {
+      const s = window.S0Scenario.snapshots.reduce((s, f) => f.minute <= minute ? f : s,
+        window.S0Scenario.snapshots[0]);
+      return ['goals', 'possession', 'territory', 'fouls', 'yellow', 'red', 'offsides', 'corners', 'throwIns', 'goalKicks']
+        .flatMap(key => [s.home[key], s.away[key]]).map(v => Number.isInteger(v) ? String(v) : v.toFixed(1));
+    }, minute);
+    assert.equal(await p.locator('.warning').count(), 0, 'no future fault at first frame');
+    assert.deepEqual(await cells(), await expected(0), 'first-frame statistics');
+    await p.clock.runFor(17000);
+    await has(p, 'Minute 17');
+    assert.equal(await p.locator('.warning').count(), 0, 'healthy until cutoff');
+    assert.deepEqual(await cells(), await expected(17), 'pre-cutoff statistics');
+    await p.clock.runFor(1000);
+    await has(p, 'Minute 18');
+    await has(p, 'Statistics stopped at minute 18');
+    const frozen = await cells();
+    assert.deepEqual(frozen, await expected(18), 'fault begins at cutoff');
+    await p.clock.runFor(3000);
+    await has(p, 'Minute 21');
+    assert.deepEqual(await cells(), frozen, 'statistics remain frozen after cutoff');
+    await p.locator('#pause').click();
+    await p.clock.runFor(2000);
+    await has(p, 'Minute 21');
+    assert.deepEqual(await cells(), frozen, 'paused fault snapshot retained');
+    await p.locator('#pause').click();
+    record('fault progression: ' + (direct ? 'direct first frame' : 'MM to match'),
+      'Minute 0/17 healthy with current figures; fault activates exactly at 18; figures remain frozen while the clock reaches 21 and pauses.');
+    if (!direct) {
+      await p.clock.runFor(69000);
+      await has(p, 'Full time');
+      await has(p, 'Statistics incomplete — stopped at minute 18. Final score remains available.');
+      assert(!(await p.locator('main').innerText()).includes('The match continues'));
+      assert.deepEqual(await cells(), frozen, 'full-time figures remain partial');
+      assert(await p.locator('#report').isEnabled());
+      await geometry(p, 'full-time statistics fault');
+      await exportWireframe(p, 'mv-ft-statistics-fault');
+      await p.locator('#report').click();
+      await has(p, 'Final score remains available');
+      assert.equal(await p.locator('details').getAttribute('open'), null);
+      record('full-time fault notice', 'Normal fault journey reaches full time with ended-state copy and the frozen open panel; report retains its incomplete disclosure and final score.');
+    }
+    await p.close();
+  }
+  const fast = await open('?fixture=fault');
+  await fast.locator('#open-setup').click(); await fast.locator('#start').click();
+  await fast.clock.runFor(2000);
+  for (let i = 0; i < 3; i++) await fast.locator('#faster').click();
+  await fast.clock.runFor(1000);
+  await has(fast, 'Minute 10');
+  assert.equal(await fast.locator('.warning').count(), 0);
+  await fast.clock.runFor(1000);
+  await has(fast, 'Minute 20'); await has(fast, 'Statistics stopped at minute 18');
+  await fast.locator('#stats').click();
+  await has(fast, 'partial figures through minute 18');
+  record('fault cutoff at fast speed', '10× progression jumps 10→20; fault activates on the crossing tick and uses cutoff 18, never current minute 20.');
+  await fast.close();
 }
 async function activate(page, selector, keyboard) {
   if (keyboard) { await keyTo(page, selector); await page.keyboard.press('Enter'); }
@@ -411,12 +480,13 @@ async function reviewImages() {
   }
   await contrast();
   await dialogFocusLabels();
+  await faultProgression();
   await fixtures();
   await reviewImages();
   const files = ['index.html', 'prototype.css', 'model.js', 'prototype.js', 'reference-data.js', 'scenario-data.js', 'verify.cjs'];
   const hashes = Object.fromEntries(files.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]));
   const imageHashes = Object.fromEntries(fs.readdirSync(evidence).filter(file => file.endsWith('.pdf')).sort().map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(evidence, file))).digest('hex')]));
-  assert.equal(Object.keys(imageHashes).length, 18);
-  fs.writeFileSync(path.join(evidence, 'walkthrough.json'), JSON.stringify({ created: '2026-09-30', purpose: 'Executed S0 scripted resilience evidence; not participant results', runId: 'UX-GE-S0-20260930-04', supersedes: 'UX-GE-S0-20260930-03: successful 79-check run retained; run 04 adds measured dropdown-focus/label clearance and image-review copy corrections', journey: 'S0', prototype: 's0-prototype v0.4', textScaleMethod: 'scale=2 doubles root font size from 16px to 32px; browser zoom remains 100%', date: '2026-09-30 (UTC)', runner: 'Codex scripted/self-walkthrough', browser: browser.version(), hashes, imageHashes, results }, null, 2) + '\n');
-  console.log(`PASS: ${results.length} recorded checks; 18 review PDFs including dialogs, request outcomes and statistics disclosures.`);
+  assert.equal(Object.keys(imageHashes).length, 19);
+  fs.writeFileSync(path.join(evidence, 'walkthrough.json'), JSON.stringify({ created: '2026-09-30', purpose: 'Executed S0 scripted resilience evidence; not participant results', runId: 'UX-GE-S0-20260930-05', supersedes: 'UX-GE-S0-20260930-04: preserved approved-v0.4 record; run 05 corrects fault timing, full-time notice and actual normal-text coverage', journey: 'S0', prototype: 's0-prototype v0.5', textScaleMethod: 'scale=2 doubles root font size from 16px to 32px; browser zoom remains 100%', date: '2026-09-30 (UTC)', runner: 'Codex scripted/self-walkthrough', browser: browser.version(), hashes, imageHashes, results }, null, 2) + '\n');
+  console.log(`PASS: ${results.length} recorded checks; 19 revision-review PDFs including full-time statistics failure.`);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => { if (browser) await browser.close(); });

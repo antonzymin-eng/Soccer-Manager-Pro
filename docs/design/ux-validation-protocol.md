@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.18\
-**Status:** F4 + S0 GATES A–G COMPLETE — H OPEN; I BLOCKED ON OWNER-APPROVED H IMAGES\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.15 §F4 and Gates E–G\
+**Version:** 0.19\
+**Status:** F4 + S0 A–F COMPLETE — G RE-REVIEW PENDING FOR v0.5; H PAUSED; I BLOCKED\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.16 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -416,7 +416,7 @@ Do not downgrade severity merely because a participant eventually found a workar
 
 ### 9.1 S0 owner image review
 
-The owner reviews all 18 images listed in journey packet §9.4: seven journey states, both staging
+The completed v0.4 record below covers the original 18 images retained at the paths below: seven journey states, both staging
 dialogs, live/paused Pending, Applied, Refused, healthy live statistics, full-time Not applied and
 the statistics-failure/disclosure/stress views.
 Use the interactive prototype and 80-check Gate-E evidence to support questions about behavior;
@@ -477,15 +477,34 @@ confirmation above; Claude's proposal alone was not recorded as approval.
 | [`docs/design/s0-prototype/evidence/substitution-dialog.pdf`](s0-prototype/evidence/substitution-dialog.pdf) | `c2242dd8ae17cc3c7107be77e7e4ef091d515aac238a80628c901dcac8ae7d82` |
 | [`docs/design/s0-prototype/evidence/ts.pdf`](s0-prototype/evidence/ts.pdf) | `9b6d966d9914348dd7da04f4d57e29b00986d2b4e16c7b95c433ba3f2d79c4d0` |
 
-**Recording boundary:** this approval record changes documents only. The entire
-`docs/design/s0-prototype/` tree, including all seven source files, all 18 PDFs and the run-04
-fingerprint record, remains byte-identical to `13c2c09`. The approved image/source version stays
-v0.4 even though the recording documents advance. Prototype-version review guidance is frozen
-with that tree; current gate status is this record and the journey packet §12.3.
+**Historical recording boundary:** approval-recording commit `d99a1a9` changed documents only;
+at that commit the full prototype/evidence tree was byte-identical to `13c2c09`. The approved
+version remains v0.4 at that pinned commit. Its 18 PDF files and root run-04 evidence are still
+unchanged. Later Codex corrections advance source files to v0.5 and put all new evidence in
+`evidence/v0.5/`; the v0.4 approval is not extended to those files.
 
 Tester sessions and attestations are not required for S0. Gate F must still supply the complete
 interactive task. Gate H follows the owner-approved low-fidelity images; the owner also reviews
 the high-fidelity images before the Gate-I handoff. Gate J verifies the real client.
+
+#### 9.1.1 v0.5 correction review — pending
+
+Codex review found premature/direct-state fault initialization, one-tick-late normal fault activation,
+full-time wording claiming continued play, and a normal-text check that used `pseudo=0` despite
+presence-based pseudo-localization. These are fixed/retested in v0.5; the prior run-04 claims about
+normal-text coverage and the fault timeline are superseded by the actual run-05 checks.
+
+| Field | Current correction-review record |
+|---|---|
+| Review ID | `UX-GG-S0-OWNER-20260930-04` |
+| Reviewer | Anton Zymin |
+| Revision / evidence | Prototype v0.5; `UX-GE-S0-20260930-05`, 85 passing browser checks, seven source and 19 PDF fingerprints in `s0-prototype/evidence/v0.5/walkthrough.json` |
+| Candidate images | All 19 paths in packet §9.4, including full-time statistics fault; earlier approved PDFs remain in the parent evidence directory |
+| Findings | S0-G-013–015 `FIX NOW`, fixed/retested; previous dispositions remain; H backlog unchanged |
+| Owner decisions | C-DEC-1 / S0-G-008 and S0-B-002 / S0-B-004 acceptance conditions remain as actually adopted above |
+| Owner review date / reviewed commit / statement | PENDING — no approval inferred from the instruction to resolve comments |
+| Gate G for v0.5 | PENDING owner review of the corrected version; v0.4 approval remains pinned above |
+| H / I | H paused for the corrected revision until G re-review passes. I remains blocked until separately owner-approved H images; #470 remains blocked on I. |
 
 ### 9.2 S1 participant decision record
 
@@ -563,7 +582,7 @@ semantics and evidence-backed interaction states.
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
-S0 Gate G passed September 30, 2026 on the owner record in §9.1; H is open and I awaits separately approved H images. S1 requires its two independent completions.
+S0 Gate G passed for pinned v0.4 in §9.1; corrected v0.5 awaits the §9.1.1 owner re-review. H is paused for that revision; I/#470 remain blocked. S1 requires its two independent completions.
 
 ---
 
@@ -589,3 +608,4 @@ S0 Gate G passed September 30, 2026 on the owner record in §9.1; H is open and 
 | 0.16 | September 30, 2026 | Expands S0 image-review coverage to 18 views and supporting 79-check run. Requires every finding disposition, explicit C-DEC-1/full-time-statistics decisions and written acceptance rationale/release condition for carried Majors; H approval remains separate before I. |
 | 0.17 | September 30, 2026 | Updates execution pointer and supporting evidence to the 80-check review-cleanup run. S0-G-008 stays an undecided owner choice; no image approval or Major acceptance inferred. |
 | 0.18 | September 30, 2026 | Fills §9.1 with explicit owner confirmation and adopted statement verbatim, review ID/date/full commit, 18 paths/hashes, run 04 and carried-Major reasons/release conditions. G PASS; H OPEN; I/#470 blocked. Documents-only recording preserves the full prototype/evidence tree. |
+| 0.19 | September 30, 2026 | Preserves the completed v0.4 approval verbatim and original image hashes; dates its immutable recording boundary. Adds pending v0.5 correction-review record with 85-check run 05 / 19 separate PDFs. No approval inferred from fixing Codex comments. |

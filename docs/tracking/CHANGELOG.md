@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 30, 2026 — **S0 Gate G owner approval recorded; Gate H OPEN (PR #473).**
+> **Last Updated:** September 30, 2026 — **PR #473 Codex P2 comments fixed and retested.**
+>
+> Prototype version 0.5 fixes the fault fixture at its cutoff: direct first-frame views no longer start faulted, normal MM entry activates exactly at minute 18, and fast ticks crossing that minute retain cutoff-18 figures. Full-time notices state statistics are incomplete and final score remains available. The normal clearance test omits the pseudo parameter and asserts actual plain/expanded labels and 16/32px text. New regression evidence covers normal/direct entry at 0/17/18/21, 10× crossing, frozen figures through full time/report, and real normal-text focus clearance.
+>
+> Run `UX-GE-S0-20260930-05` passes 85 checks; 19 PDFs and seven source/19 image hashes are stored separately under `docs/design/s0-prototype/evidence/v0.5/`, including the new full-time statistics-fault view. Original 18 approved PDFs/root run04 remain byte-identical to `13c2c09`. `docs/design/ux-s0-pm1-journey.md` v0.12 records S0-G-013–015 and current G re-review pending; high-level plan v1.8, detailed plan v1.16 and validation protocol v0.19 preserve the actual v0.4 approval/owner statements while pausing H for the corrected revision. No new approval inferred from fixing comments. I/#470 remain blocked; H polish backlog unchanged. No production/spec change; issue counts unchanged.
+>
+> **Last Updated (prior):** September 30, 2026 — **S0 Gate G owner approval recorded; Gate H OPEN (PR #473).**
 >
 > Anton Zymin explicitly accepted the proposed owner decisions and approved prototype version 0.4 at `13c2c095bea6876ffd010dfad1df23fb4f137868`, all 18 PDFs. `docs/design/ux-validation-protocol.md` v0.18 §9.1 preserves the actual owner confirmation and adopted statement verbatim, review ID/date, all 18 paths/hashes and run `UX-GE-S0-20260930-04` (80 checks). C-DEC-1 and S0-G-008 are accepted; S0-B-002/S0-B-004 have written owner reasons and release conditions and remain open for production/identity follow-up.
 >

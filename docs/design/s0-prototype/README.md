@@ -1,4 +1,4 @@
-# S0 low-fidelity prototype v0.4
+# S0 low-fidelity prototype v0.5
 
 **Created:** September 30, 2026\
 **Purpose:** executable Gates C–F design evidence for the [S0 journey packet](../ux-s0-pm1-journey.md).
@@ -64,10 +64,14 @@ With Playwright available, run the recorded walkthrough from the repository root
 NODE_PATH=/path/to/node_modules UX_BROWSER=/path/to/chrome node docs/design/s0-prototype/verify.cjs
 ```
 
-The successful 79-check v0.3 run is preserved as `evidence/walkthrough-v0.3.json`. The successful 74-check v0.2 run is preserved as `evidence/walkthrough-v0.2.json`. Current evidence includes SHA-256 fingerprints for all seven source files and all 18 PDFs.
+Current run `UX-GE-S0-20260930-05` writes 85 checks and 19 PDFs under `evidence/v0.5/`,
+including full-time statistics failure. Its `walkthrough.json` fingerprints all seven source files
+and all 19 PDFs. Earlier evidence remains unchanged: the root `evidence/walkthrough.json` and
+18 PDFs record the owner-approved v0.4 at `13c2c09`; their source hashes refer to that pinned
+commit, not current v0.5. Runs v0.1/v0.2/v0.3 are also retained. Prior v0.4 claims about normal-text
+clearance and the fault journey are superseded by run 05, which verifies actual label expansion,
+minute 0/17/18/21, direct-state entry, fast cutoff crossing and full-time fault wording.
 
-The runner emits `evidence/walkthrough.json` and 18 PDFs (journey states, dialogs, request outcomes and statistics disclosure/stress views). The v0.4 run has 80 checks; the original
-71-check v0.1 evidence is archived and its Gate-E pass withdrawn after review found two Majors.
 Keyboard navigation rejects unexpected body focus; submits and both speed limits assert immediate
 focus destinations. Dropdown focus outlines are measured clear of labels at normal and pseudo/200% text at all three widths. Earlier feedback is tested over live timer ticks, not only frozen review frames.
 The end-race test reaches minute 89 from MM, submits while paused, then resumes to the whistle. It traverses
@@ -77,13 +81,11 @@ Automated/self-walkthrough evidence supplies no Gate-G participant results.
 
 ## Gate boundary
 
-C–F are complete in the journey packet. Under the owner decision of September 30, 2026,
-Anton Zymin conducts the S0 image reviews; tester recruitment, attestations and sessions are not
-prerequisites. Gate G awaits all finding dispositions, C-DEC-1, the full-time-statistics decision,
-written rationale/release conditions for carried Majors and explicit owner approval of all 18 images
-in journey packet §9.4, using validation protocol §9.1. G opens H only. H needs separate owner
-approval of high-fidelity images before I; draft PR #470 stays blocked on Gate I.
-The 80-check interaction evidence remains distinct from image approval and real-client verification.
+C–F are complete for v0.5. The owner-approved v0.4 images/decisions remain pinned in validation
+protocol §9.1; current v0.5 corrections await the owner image re-review in §9.1.1. H is paused for
+this revision until G passes again. The owner conducts S0 image reviews; no tester prerequisite
+returns. H then needs its own separate image approval before I; #470 remains blocked on I.
+Scripted evidence supplies no runtime or independent usability evidence.
 
 | Version | Date | Change |
 |---|---|---|
@@ -92,3 +94,4 @@ The 80-check interaction evidence remains distinct from image approval and real-
 | 0.2 review-route update | September 30, 2026 | Owner-directed S0 image review replaces tester prerequisites; prototype sources, PDFs and 74-check run unchanged. |
 | 0.3 | September 30, 2026 | Complete 18-image review coverage; pitch markings/direction and label leaders; raw restart/holder caption removed; changing partial statistics, aligned headers and simplified waiting state. 79-check run 03; explicit G decisions and separate H image approval before I. |
 | 0.4 | September 30, 2026 | Adds dropdown label/focus spacing and measured clearance; removes leader-line promise; shortens refusal and player-facing substitution wording. Regenerates 18 images; 80-check run 04; successful run 03 archived. Pending decisions and H/I obligations stay explicit. |
+| 0.5 | September 30, 2026 | Codex corrections: fault activates on cutoff crossing; full-time fault notice states final score; normal-text focus check omits pseudo and verifies actual labels/fonts. 85-check run 05 and 19 PDFs stored separately; approved v0.4 images/evidence preserved. Current revision awaits G re-review. |

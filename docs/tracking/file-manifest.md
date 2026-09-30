@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 30, 2026 — **S0 Gate G owner approval / H OPEN.** High-level plan v1.7, detailed plan v1.15, journey packet v0.11 and validation protocol v0.18 record actual owner approval of prototype version 0.4 at 13c2c09, all 18 PDFs, with explicit decisions and carried-Major reasons/release conditions. Seven existing documents updated; no paths added. Full prototype/evidence tree remains byte-identical to the reviewed commit. H polish backlog recorded; I/#470 blocked on separately approved H images. No production/spec change; counts unchanged.
+**Last Updated:** September 30, 2026 — **PR #473 Codex corrections / prototype version 0.5.** Fault timing, ended-state notice and real normal-text checks fixed; 85-check run05 plus 19 revision PDFs stored under evidence/v0.5. Original v0.4 images/run04 preserved. High-level plan v1.8, detailed plan v1.16, packet v0.12 and protocol v0.19 record current G re-review pending / H paused while preserving the earlier owner approval. Twenty new evidence files inventoried; no production/spec change, issue counts unchanged.
+
+**Last Updated (prior):** September 30, 2026 — **S0 Gate G owner approval / H OPEN.** High-level plan v1.7, detailed plan v1.15, journey packet v0.11 and validation protocol v0.18 record actual owner approval of prototype version 0.4 at 13c2c09, all 18 PDFs, with explicit decisions and carried-Major reasons/release conditions. Seven existing documents updated; no paths added. Full prototype/evidence tree remains byte-identical to the reviewed commit. H polish backlog recorded; I/#470 blocked on separately approved H images. No production/spec change; counts unchanged.
 
 **Last Updated (prior):** September 30, 2026 — **PR #473 second image-review cleanup.** Journey packet v0.10, detailed plan v1.14, validation protocol v0.17 and prototype version 0.4. S0-G-008 is an undecided owner choice; focus spacing, leader-line caption, refusal and substitution wording corrected. Eighteen PDFs regenerated; 80-check run 04 and source/image fingerprints; successful run 03 archived and inventoried. H choice/identity consistency and I engine-direction obligations recorded. G remains pending actual owner decisions/approval; issue counts and production/spec files unchanged.
 
@@ -3526,13 +3528,13 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 
 | File | Purpose |
 |------|---------|
-| `docs/design/ux-high-level-plan.md` | UX strategy v1.7; S0 A–G complete / H open after owner approval; current status delegated to execution authority |
-| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.15: S0 A–G complete; H open; I/#470 blocked until separately owner-approved H images |
+| `docs/design/ux-high-level-plan.md` | UX strategy v1.8: v0.4 approval retained; corrected v0.5 awaits G re-review; H paused for that revision |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.16: current G re-review pending; H paused; I/#470 blocked |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | Validation operating packet v0.18: completed owner record, verbatim decisions/reasons/release conditions, 18 paths/hashes pinned to 13c2c09; S1 templates retained |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.11: G PASS, H OPEN, accepted decisions with durable Major rationale/conditions; H backlog; I/#470 blocked |
+| `docs/design/ux-validation-protocol.md` | Validation packet v0.19: pinned v0.4 owner record unchanged; pending v0.5 revision review, 85 checks / 19 images; S1 templates retained |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.12: Codex findings S0-G-013–015 fixed; v0.5 85-check evidence and 19 images; earlier approval preserved, current G pending |
 | `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/owner-review boundary |
 | `docs/design/s0-prototype/index.html` | Local-only monochrome complete-task design vehicle; simulation banner |
 | `docs/design/s0-prototype/prototype.css` | Low-fidelity layout, focus, disabled states, scale/reflow and caption reservation |
@@ -3555,7 +3557,27 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | `docs/design/s0-prototype/evidence/report-partial-open.pdf` | Incomplete report disclosure open on minute-18 partial figures |
 | `docs/design/s0-prototype/evidence/walkthrough-v0.2.json` | Preserved successful 74-check run 02/source fingerprints |
 | `docs/design/s0-prototype/evidence/walkthrough-v0.3.json` | Preserved successful 79-check run 03/source and image fingerprints |
-| `docs/design/s0-prototype/evidence/walkthrough.json` | Gate-E v0.4 run 04 identity, 80 executed checks, browser version, seven source and 18 PDF SHA-256 hashes |
+| `docs/design/s0-prototype/evidence/walkthrough.json` | Preserved approved-v0.4 run04, 80 checks and original source/18 image hashes at 13c2c09; superseded temporal/normal-text claims documented |
+| `docs/design/s0-prototype/evidence/v0.5/mentality-dialog.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mm.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-0.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-ft-not-applied.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-ft.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-l.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-applied.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-pending.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-refused.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-statistics.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-p.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-paused-pending.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/pr.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/report-incomplete.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/report-partial-open.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/stress-fault-1366.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/substitution-dialog.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/ts.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/walkthrough.json` | Current v0.5 run05: 85 checks; seven source and 19 revision PDF fingerprints |
 | `docs/design/s0-prototype/evidence/mm.pdf` | Main Menu wireframe |
 | `docs/design/s0-prototype/evidence/ts.pdf` | Tactics Setup wireframe |
 | `docs/design/s0-prototype/evidence/mv-0.pdf` | Awaiting-first-frame wireframe |

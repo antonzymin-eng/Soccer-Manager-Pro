@@ -6,7 +6,7 @@
   const fixture = params.get('fixture') || 'ordinary';
   const captured = fixture === 'scoreline';
   const reference = captured ? window.S0Reference : window.S0Scenario;
-  if (captured) document.querySelector('.prototype-notice').textContent = 'Design prototype v0.4 • Unmodified reference capture: unusual 19–9 match. All interactions are simulated; choices do not change the recorded match. Unity binding remains pending UX Gate I.';
+  if (captured) document.querySelector('.prototype-notice').textContent = 'Design prototype v0.5 • Unmodified reference capture: unusual 19–9 match. All interactions are simulated; choices do not change the recorded match. Unity binding remains pending UX Gate I.';
   const app = document.getElementById('app');
   const announcement = document.getElementById('announcement');
   const t = text => params.has('pseudo') ? `[${text} ${'~'.repeat(Math.ceil(text.length * .4))}]` : text;
@@ -32,7 +32,11 @@
       state.minute = ['MV-FT', 'PR'].includes(target) ? 90 : target.startsWith('MV-') && target !== 'MV-0' ? 24 : 0;
     }
   }
-  if (fixture === 'fault') state.faultMinute = 18;
+  function withFixtureFault(current) {
+    return fixture === 'fault' && current.faultMinute === null && current.minute >= 18
+      ? M.reduce(current, { type: 'FAULT', minute: 18 }) : current;
+  }
+  state = withFixtureFault(state);
   if (fixture === 'limit') state.usedBench = [0, 1, 2, 3, 4];
   if (fixture === 'pending-end') state.requests = [{ kind: 'mentality', value: 5, status: 'Pending', minute: 89 }];
   function seedHistory() {
@@ -46,7 +50,7 @@
     return samples.reduce((result, frame) => frame.minute <= minute + .001 ? frame : result, samples[0]);
   }
   function send(action, message = '') {
-    state = M.reduce(state, action);
+    state = withFixtureFault(M.reduce(state, action));
     render();
     if (message) announcement.textContent = t(message);
   }
@@ -63,7 +67,7 @@
       <p>${text('Possession shares include loose-ball time; the two teams need not total 100%.')}</p>`;
   }
   function healthNotice(report = false) {
-    return state.faultMinute === null ? '' : `<p class="warning" role="status">${text(report
+    return state.faultMinute === null ? '' : `<p class="warning" role="status">${text(report || state.screen === 'MV-FT'
       ? `Statistics incomplete — stopped at minute ${state.faultMinute}. Final score remains available.`
       : `Statistics stopped at minute ${state.faultMinute}. The match continues; these figures are incomplete.`)}</p>`;
   }
@@ -258,7 +262,6 @@
         announcement.textContent = t('First frame received. Match live.');
       }
     } else if (state.screen === 'MV-L') {
-      if (fixture === 'fault' && state.minute >= 18) state.faultMinute = 18;
       send({ type: 'ADVANCE', minutes: M.speeds[state.speed], refuse: fixture === 'refusal' });
       if (state.screen === 'MV-FT') {
         if (dialog.open) closeDialog();
