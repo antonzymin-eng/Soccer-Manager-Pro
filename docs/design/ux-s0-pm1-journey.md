@@ -310,6 +310,9 @@ Gate-A amendments with their evidence rather than used silently.
 | A-39 **addendum** | Opponent manager | `MatchSetup.AwayManagerMode = ManagerMode.AI` opts the away team into #26 kickoff selection and in-match adaptation; `MatchSetup.NeutralDemo` leaves both teams `Human` (no adaptation) | `DESIGNABLE / UNWIRED` (no client setup builder) | Lets the opponent react during the match without a new capability; see B-DEC-2. |
 | A-40 **addendum** | Player identity | `NeutralDemo` passes no `Squad`s. Agents are identified only by team, shirt number (`MatchRoster.ShirtNumber`), goalkeeper flag and cues; bench players only by bench slot 0–6 (`LiveAgentCue.BenchSlot`). `MatchSetup` accepts real `Squad`s, but no S0 source for a squad pair exists in client code | shirt-number identity `DESIGNABLE / UNWIRED`; named players `FUTURE-BLOCKED` for S0 | Substitution selection uses shirt number and bench slot; names are not shown. See S0-B-004. |
 | A-41 **addendum** | Substitution legality inputs | Sim-side refusals: match ended, outgoing slot sent off or already substituted, bench slot already used, team at `MAX_SUBSTITUTIONS_PER_TEAM` (5); bench size `SUBSTITUTES_PER_TEAM` (7). Frame exposes `SubstitutionsUsed` per team and per-agent `IsSentOff` / `BenchSlot` | `DESIGNABLE / UNWIRED` | The flow can disable illegal choices before submission; the sim-side refusal (A-38) remains authoritative for races. |
+| A-42 **addendum** | Statistics health | #37 statistics are fed by the post-tick observer attached through `MatchSession.AttachTickObserver`. On its first exception the streamer disarms it and latches the cause on `MatchSession.Streamer.PostTickObserverFault` (null while healthy), and the match keeps running. After that, every `MatchAnalyticsResult` built is frozen at the failing tick. The reference web host's `AnalyticsFault` wraps the same seam and states that a screen **must** surface it rather than show frozen numbers as current; its `/report` route emits `healthy`/`fault` beside the numbers. The aggregator's observed-tick count locates where the numbers stopped. | `DESIGNABLE / UNWIRED` (no #38 projection) | Live statistics and the report need an explicit failure state (§7.4 B-4, B-7; §7.6). The score and full-time state come from the frame (A-14, A-15), not from #37, so they stay correct. |
+
+*A-42 was added on September 30, 2026 in response to automated review of PR #472 (S0-B-009).*
 
 The Gate-A verdict survives the correction. A-10 moves from a partly overstated `DESIGNABLE` to an explicit
 split, and no row becomes `UNKNOWN`.
@@ -412,7 +415,9 @@ Match View state except MV-FT → PR (A-07: no abandon).
   - **Substitution:** open the substitution choice → pick an on-pitch home player (shirt number) and an unused
     bench slot → confirm → `Substitute(0, outSlot, benchSlot, Tactical)` (A-25). The reason is always `Tactical`, because S0 has no injury surface. Pending/applied/refused as §7.5.
     Selection can be abandoned without effect until confirm.
-  - **Live statistics:** open/close (A-28). Contents in §7.7.
+  - **Live statistics:** open/close (A-28). Contents in §7.7. If A-42 reports a fault, the area keeps its values
+    but shows a persistent "statistics stopped at minute N" state in place of presenting them as current. N comes
+    from the aggregator's observed-tick count. The match itself continues normally.
 - **Half-time:** the engine has no half-time interval state. The period label changes to second half, and play
   continues with a kickoff restart banner. The flow adds no break screen (S0-B-007).
 - **Completion:** a `MatchEnded` frame → MV-FT.
@@ -440,8 +445,14 @@ Match View state except MV-FT → PR (A-07: no abandon).
 
 - **Entry trigger:** B-6.
 - **Player goal:** understand the result and core statistics, then leave (S0-T6).
-- **Required information:** final score and result (win/draw/loss from the home side's view), and both teams'
-  #37 statlines (§7.7). No causal analysis or ratings that #37 does not supply (A-29).
+- **Required information:** final score and result (win/draw/loss from the home side's view), both from the frame
+  (A-30), and both teams' #37 statlines (§7.7), together with their health (A-42). No causal analysis or ratings
+  that #37 does not supply (A-29).
+- **Statistics failure path:** if A-42 reports a fault, the score and result still show, because they don't
+  depend on #37. The statistics carry a persistent "statistics incomplete — stopped at minute N" notice and are
+  never presented as full-match totals. The #37 goal count may then disagree with the score, and the score wins.
+  The return action stays available. Whether the partial figures are shown at all under that notice is a Gate C
+  choice. Showing them unlabelled is not allowed.
 - **Actions:** "Return to main menu" → `ReturnToMainMenu()` (A-32) → MM. No rematch, replay or save
   (no edge, no client lifecycle).
 - **Completion / return destination:** MM. A new match from MM goes through B-2 again, and
@@ -478,6 +489,7 @@ not implemented. The flow designs today's behavior. When that rule lands, the su
 | MV-L/P | a request races past these checks and is refused | "refused" state, §7.5 | `FailedCommands` (A-38) |
 | MV-FT | match ended | every match control unavailable ("match ended"); pending requests resolve as not applied | `FullTime` / `MatchEnded` (A-15, A-22, A-26); sim-side drop |
 | TS | — | no blocked state; "Start match" always enabled | B-DEC-3 |
+| MV-L/P, MV-FT, PR | statistics observer faulted | statistics marked "stopped at minute N" / "incomplete"; never shown as current or as full-match totals; score, clock and navigation unaffected | `PostTickObserverFault` + observed-tick count (A-42) |
 
 Disabled states appear only where the capability is real and the current state blocks it (F2 §6). Capabilities
 that are future-blocked, such as Formation, pre-match Role/Duty/Instructions, save, quit, rematch and abandon, are
@@ -486,7 +498,8 @@ that are future-blocked, such as Formation, pre-match Role/Duty/Instructions, sa
 ## 7.7 Information the flow requires from #37
 
 Live statistics (B-4) and the report (B-7) use the same `MatchAnalyticsResult` owner (A-27, A-29, S0-A-004).
-Both show, for home and away, only what `MatchStatline` / `AdvancedStatline` carry:
+Both show, for home and away, only what `MatchStatline` / `AdvancedStatline` carry, and both carry the A-42 health
+state. A faulted result is labelled incomplete, never shown as current:
 
 - goals, possession share %, fouls, yellow cards, red cards, offsides, corners, throw-ins, goal kicks, substitutions;
 - territorial %;
@@ -523,6 +536,7 @@ Ledger fields per `ux-detailed-plan.md` §12. Owner is the UX workstream owner (
 | S0-B-006 | Minor | No quit/exit control exists in the Gate-A inventory. The desktop window close is the only exit. | `DEFER TO P2/P3` — requires a Gate-A addendum naming the host quit seam. | Before Gate I. |
 | S0-B-007 | Minor | No half-time interval exists in the engine. The second half follows directly. | `ACCEPT FOR CURRENT GATE`. | Re-evaluate at Gate G if participants expect a break. |
 | S0-B-008 | Minor | Whether requests made while paused apply before resume depends on whether the P5b binding services the command queue off-tick (`ServiceOnce`). | `ACCEPT FOR CURRENT GATE`. §7.5 shows Pending either way, so the flow is correct under both. | Gate I states the binding's paused-servicing behavior. |
+| S0-B-009 | Major | The flow presented #37 statistics unconditionally, with no path for an analytics-observer failure. After a fault, statistics freeze at the failing tick while the match continues, so the report would look plausible but be incomplete. The owning contract (A-42) requires the fault to be surfaced. Raised by automated review of PR #472. | `FIX NOW` — A-42 added; B-4, B-7, §7.6 and §7.7 now carry the failure state; the score and result stay frame-sourced. | Done in this revision. Gate I must name where the Unity binding reads `PostTickObserverFault`; Gate J verifies the failure presentation with a forced observer fault. |
 
 ## 7.10 Gate B verdict
 
@@ -554,7 +568,9 @@ navigation, comparison, progressive disclosure, focus sequence and reflow. Carry
 4. the substitution chooser built on shirt number and bench slot (A-40, S0-B-004);
 5. the MV-FT frozen state and its single primary action;
 6. the §7.7 statistic set with no shots row, and xG omitted when unavailable;
-7. everything omitted in §7.6 stays omitted. Gate C may not reintroduce it as disabled chrome.
+7. everything omitted in §7.6 stays omitted. Gate C may not reintroduce it as disabled chrome;
+8. the A-42 statistics-failure presentation for the live stats area and the report, including whether partial
+   figures appear under the incomplete notice.
 
 ---
 
@@ -566,4 +582,4 @@ navigation, comparison, progressive disclosure, focus sequence and reflow. Carry
 | 0.2 | September 21, 2026 | Reconciled PR #406 onto current `main` `ad7e0d75` after #407. Re-ran the Gate-A current-state claims: P5b remains absent; the four-screen/five-edge client graph, lifecycle, match projection/dispatch, playback/control and #37 analytics ownership remain valid; P4b advances from compiler-only evidence to partial host verification (tracked-scene Play-mode boot/render smoke) without overstating click/perf/Gate-J acceptance. Gate A remains PASS; Gate B is next. |
 | 0.3 | September 21, 2026 | Review correction: A-11 no longer treats the `PlayerTactic` value type as proof of a pre-match action/state seam. `MatchSetup` has no per-player tactic holder/builder and `MatchSession.BootEngine` applies no per-player setup state, so Role/Duty/Instructions are explicitly `FUTURE-BLOCKED` for pre-match editing until a setup persistence/handoff contract exists. The existing live `SetPlayerTactic` dispatcher remains valid for in-match intervention. This converts an overstated seam into a named blocker; the Gate-A PASS and zero-`UNKNOWN` result remain valid, and Gate B is constrained to a verified team-tactic pre-match choice. |
 | 0.4 | September 21, 2026 | Review closeout: repins the maintained execution/validation authority headers to `ux-detailed-plan.md` v1.8 / `ux-validation-protocol.md` v0.11 and makes the Gate-A verdict taxonomy explicit. `UNWIRED` means an existing contract lacks production presentation/binding; `FUTURE-BLOCKED` means the required contract/state/runtime capability itself is absent. This prevents the A-07/A-11 contract gaps from being laundered later as P5b-only binding work. Gate A remains PASS; Gate B remains next. |
-| 0.5 | September 28, 2026 | **S0 Gate B complete; B-DEC-1/2/5 owner-confirmed September 28, 2026.** Adds §7 Gate B: seven journey states over the four typed screens using only the five existing `ClientScreenFlow` moves; per-state entry/goal/information/actions/alternate/back/completion; the requested/applied/refused/not-applied intervention feedback model over `MatchSession.Driver.Log`/`FailedCommands`; blocked-path table with owner-sourced reasons; #37 statistic set (no shots row; xG only when available); S0-T1–T7 + PM-1 substitution coverage; findings S0-B-001–008. Gate-A re-check at `main` `ee37aa60` **corrects A-10**: `TeamTactic.Formation` has no simulation consumer, so S0's pre-match choice is Mentality; adds A-38–A-41 (command-outcome logs, AI opponent mode, shirt-number identity, substitution legality inputs). B-DEC-1/2/5 explicitly owner-confirmed September 28, 2026; B-DEC-5 states full time as the authoritative transition and the report control as acknowledgement only. Adds §8 Gate C inputs. No `src/` change; P5b remains gated on Gate I. |
+| 0.5 | September 28, 2026 | **S0 Gate B complete; B-DEC-1/2/5 owner-confirmed September 28, 2026.** Adds §7 Gate B: seven journey states over the four typed screens using only the five existing `ClientScreenFlow` moves; per-state entry/goal/information/actions/alternate/back/completion; the requested/applied/refused/not-applied intervention feedback model over `MatchSession.Driver.Log`/`FailedCommands`; blocked-path table with owner-sourced reasons; #37 statistic set (no shots row; xG only when available); S0-T1–T7 + PM-1 substitution coverage; findings S0-B-001–009. Gate-A re-check at `main` `ee37aa60` **corrects A-10**: `TeamTactic.Formation` has no simulation consumer, so S0's pre-match choice is Mentality; adds A-38–A-42 (command-outcome logs, AI opponent mode, shirt-number identity, substitution legality inputs, statistics health). A-42 / S0-B-009 were added before merge in response to automated review of PR #472: the flow now surfaces an analytics-observer fault in place of presenting frozen statistics as current. B-DEC-1/2/5 explicitly owner-confirmed September 28, 2026; B-DEC-5 states full time as the authoritative transition and the report control as acknowledgement only. Adds §8 Gate C inputs. No `src/` change; P5b remains gated on Gate I. |
