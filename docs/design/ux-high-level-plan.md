@@ -1,8 +1,8 @@
 # System XI — UX High-Level Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** September 21, 2026  
-**Version:** 1.3  
+**Last Updated:** September 28, 2026  
+**Version:** 1.4  
 **Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW  
 **Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop  
 **Execution plan:** [`ux-detailed-plan.md`](ux-detailed-plan.md)
@@ -342,7 +342,7 @@ The high-level plan is settled when:
 - effort/ownership are explicit;
 - repository tracking surfaces route agents to the plan.
 
-After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 21, 2026: F0–F4 and S0 Gate A are now complete; S0 Gate B is next. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
+After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 28, 2026: F0–F4 and S0 Gates A–B are now complete (Gate B owner-confirmed September 28, 2026); S0 Gate C is next. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
 
 ---
 
@@ -354,3 +354,4 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 | 1.1 | September 4, 2026 | External dependency-review revision: inherited existing client-plan authority; corrected P4b/#30 status; tied S0 to B8/B9b/B10; made Gate G binding; added prototype vehicle, role ownership, effort bands, and tracking/discoverability exit condition; removed duplicated gate definitions from the high-level plan. |
 | 1.2 | September 9, 2026 | Corrects §8's F1 effort band 1–2 → **3–4 working days**, matching the revision `ux-detailed-plan.md` made at its own v1.2 on September 6, 2026. This table had duplicated the band rather than citing it, was not updated with the detailed plan, and so contradicted the execution authority for three days — found by an external pre-merge review of PR #362. §8 now names `ux-detailed-plan.md` §10.2 as the authority it mirrors, so the next band revision has one place to land. §11's "F1 is the next UX action" carries a dated status note: F0–F3 are complete and F4 is next. `**Version:**` and `**Last Updated:**` are re-derived in the same commit — omitting that is exactly the desync this workstream had to correct in the detailed plan at v1.3. No band other than F1 differs between the two documents; all twelve were compared. |
 | 1.3 | September 21, 2026 | Reconciles current client evidence and UX phase status after PR #406 Gate A. P4b is no longer described as never having run: pinned-editor compilation and tracked-scene Play-mode boot/render smoke are recorded while click-to-command and cert-host performance evidence remain open. The dated §11 note advances to F0–F4 + S0 Gate A complete / Gate B next. Strategy, release cut, gate definitions and effort bands are unchanged. |
+| 1.4 | September 28, 2026 | Status-note sync only: S0 Gate B completes in `ux-s0-pm1-journey.md` v0.5 §7 (owner-confirmed September 28, 2026) and Gate C is next. No plan content changes. |
