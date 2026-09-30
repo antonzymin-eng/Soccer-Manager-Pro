@@ -2,7 +2,7 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 1.5\
+**Version:** 1.6\
 **Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW\
 **Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop\
 **Execution plan:** [`ux-detailed-plan.md`](ux-detailed-plan.md)
@@ -154,7 +154,7 @@ No speculative component catalogue.
 Define:
 
 - scripted heuristic/self-walkthrough checks;
-- independent participant test mechanism for S0/S1;
+- owner image-review mechanism for S0; independent participant mechanism for S1;
 - severity and disposition rules;
 - test-data extremes;
 - implementation verification procedure.
@@ -267,9 +267,9 @@ These are **effort bands, not release dates**. They assume one primary UX contri
 | F1 evidence/capability baseline | 3–4 working days | starts immediately after plan/tracking close-out |
 | F2 current-vs-target architecture | 0.5–1 day | uses existing PM-1 graph; no re-authoring |
 | F3 shared S0/S1 interaction audit | 1–2 days | only primitives actually needed |
-| F4 validation setup | 0.5–1 day | includes participant booking before S0-G |
+| F4 validation setup | 0.5–1 day | includes the S0 owner image-review record |
 | S0 A–E | 2–4 days | host-free |
-| S0 F–G | 2–4 days | prototype + one capped participant round |
+| S0 F–G | 2–4 days | prototype + owner image review |
 | S0 H–I | 2–3 days | produces P5b implementation handoff |
 | S0 J | external dependency | requires remaining Unity host/binding/cert work |
 | S1 A–E | 3–5 days | may overlap Unity S0 work; classification-driven |
@@ -342,7 +342,7 @@ The high-level plan is settled when:
 - effort/ownership are explicit;
 - repository tracking surfaces route agents to the plan.
 
-After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 30, 2026: F0–F4 and S0 Gates A–E are complete; the F prototype is ready, with formal F opening/pass pending participant attestations. G/H/I remain unpassed. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
+After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 30, 2026: F0–F4 and S0 Gates A–F are complete. The owner-directed image review replaces S0 tester prerequisites; G awaits explicit image approval and H/I remain unpassed. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
 
 ---
 
@@ -356,3 +356,4 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 | 1.3 | September 21, 2026 | Reconciles current client evidence and UX phase status after PR #406 Gate A. P4b is no longer described as never having run: pinned-editor compilation and tracked-scene Play-mode boot/render smoke are recorded while click-to-command and cert-host performance evidence remain open. The dated §11 note advances to F0–F4 + S0 Gate A complete / Gate B next. Strategy, release cut, gate definitions and effort bands are unchanged. |
 | 1.4 | September 28, 2026 | Status-note sync only: S0 Gate B completes in `ux-s0-pm1-journey.md` v0.5 §7 (owner-confirmed September 28, 2026) and Gate C is next. No plan content changes. |
 | 1.5 | September 30, 2026 | Status-note sync only: S0 C–E complete and F prototype ready; formal F pending both pre-F participant attestations. Strategy and gate definitions unchanged. |
+| 1.6 | September 30, 2026 | Mirrors the owner-directed S0 image-review method and A–F complete / G pending image approval status; S0 tester prerequisite removed in execution authority. |

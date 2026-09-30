@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.7\
-**Status:** S0 GATES A–E COMPLETE — F PROTOTYPE READY; FORMAL F OPENING/PASS PENDING PARTICIPANT ATTESTATIONS (§12.3)\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.11 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.14\
+**Version:** 0.8\
+**Status:** S0 GATES A–F COMPLETE — G PENDING OWNER IMAGE REVIEW (§12.3)\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.12 §5–§6\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.15\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -782,7 +782,7 @@ runtime and pinned-host acceptance remain explicit implementation/Gate-J work, n
 
 ---
 
-# 12. Gate F — executable deliverable and formal prerequisite
+# 12. Gate F — complete vehicle; Gate G owner image review
 
 ## 12.1 Complete task vehicle
 
@@ -805,9 +805,9 @@ expanded text, dense feedback and resolution/scale cases; no debug controls ente
 | S0-T7 | change draft, Back without start, re-enter at Balanced |
 | PM-1 substitution | cancel a selection without effect, submit shirt/bench choice, inspect Applied count |
 
-These are scripted/self-walkthrough outcomes, not claims about how a participant performs. No task is
-removed from the later Gate-G denominator. The moderator uses protocol §6's goal-based script and
-records both anonymous sessions per §7; the prototype supplies no click-by-click instruction.
+These are scripted/self-walkthrough outcomes. The complete task remains available for inspection;
+the prototype supplies no click-by-click instruction. The owner's September 30 decision replaces
+the S0 participant round with the image review in protocol §9.1.
 
 ## 12.2 What remains real versus simulated/future
 
@@ -822,25 +822,29 @@ a11y application, actual maximum scale and runtime audio/captions. No prototype 
 
 ## 12.3 Assessment and next gate
 
-| Formal F prerequisite | Owner | Status / evidence |
+| Gate record | Owner | Status / evidence |
 |---|---|---|
-| S0-P1 availability and independence | Anton Zymin | Due; protocol §4.1 attestation cell unchanged |
-| S0-P2 availability, independence and distinctness from P1 | Anton Zymin | Due; protocol §4.1 attestation cell unchanged |
+| S0 reviewer assignment | Anton Zymin | Owner-directed September 30, 2026: testers not required; owner conducts image reviews |
+| Gate F complete task | UX workstream | PASS — §12.1 complete vehicle, v0.2 run 02; former tester prerequisite superseded |
+| Gate G image approval | Anton Zymin | PENDING — reviewer assignment supplies no image approval |
+| Gate H high-fidelity image review | Anton Zymin | Not started; follows G |
+| Gate I implementation handoff | UX / Unity client | Not started; follows owner-approved H images |
 
-Former S0-F-001 is reclassified here as prerequisite tracking. It is not a usability finding, severity
-rating, or `FIX NOW` design defect. No availability or independence fact is inferred from authorization.
+**Owner decision, September 30, 2026:** the owner instructed, "don't worry about testers. I will be
+conducting all reviews of images". This changes S0's review method under detailed-plan F4.2;
+the former S0-F-001 prerequisite is superseded. No tester availability, independence or session
+completion is claimed. C-DEC-1 and carried design findings remain subjects for the owner's review.
 
-**Gate-F deliverable: READY. Formal Gate-F opening/pass: PENDING the participant prerequisites above.** The executable complete-task
-and critical-state requirements are satisfied by the vehicle/evidence above. The current execution
-plan's F4 mechanism and validation protocol §4.1 also require owner-attested availability plus explicit
-independence/distinctness for **both** anonymous real-person slots **before Gate F opens**. The request
-to proceed with C–F authorizes creating and checking this deliverable; it supplies no factual attestation
-about those people. Their cells remain unaltered and no Gate-F pass is fabricated.
+**Gate F: PASS.** The executable complete-task and critical-state requirements are satisfied by
+the vehicle/evidence above; the owner has removed the remaining tester prerequisite.
 
-Once those two attestations are recorded, formally close F and schedule the first practical Gate-G
-round. **Gate G still requires two actual independent completions**, with no unresolved Blocker or
-unaccepted Major. H (high fidelity) and I (implementation handoff) remain unopened. **PR #470 remains
-draft/blocked on S0 Gate I**; this docs-only vehicle does not release it or perform P5b implementation.
+**Gate G: PENDING OWNER IMAGE REVIEW.** Review the seven wireframes in §9 plus
+`s0-prototype/evidence/report-incomplete.pdf` and `stress-fault-1366.pdf`. Record the version,
+images reviewed, findings, carried-Major acceptance and actual approval using protocol §9.1.
+Image review does not establish interactive task success by independent players. The 74-check
+Gate-E record supplies the existing interaction evidence; Gate J still verifies production behavior.
+H (high fidelity) and I (implementation handoff) remain unopened. **PR #470 remains draft/blocked
+on S0 Gate I**; the review-method change alone does not release it.
 
 ---
 
@@ -855,3 +859,4 @@ draft/blocked on S0 Gate I**; this docs-only vehicle does not release it or perf
 | 0.5 | September 28, 2026 | **S0 Gate B complete; B-DEC-1/2/5 owner-confirmed September 28, 2026.** Adds §7 Gate B: seven journey states over the four typed screens using only the five existing `ClientScreenFlow` moves; per-state entry/goal/information/actions/alternate/back/completion; the requested/applied/refused/not-applied intervention feedback model over `MatchSession.Driver.Log`/`FailedCommands`; blocked-path table with owner-sourced reasons; #37 statistic set (no shots row; xG only when available); S0-T1–T7 + PM-1 substitution coverage; findings S0-B-001–009. Gate-A re-check at `main` `ee37aa60` **corrects A-10**: `TeamTactic.Formation` has no simulation consumer, so S0's pre-match choice is Mentality; adds A-38–A-42 (command-outcome logs, AI opponent mode, shirt-number identity, substitution legality inputs, statistics health). A-42 / S0-B-009 were added before merge in response to automated review of PR #472: the flow now surfaces an analytics-observer fault in place of presenting frozen statistics as current. B-DEC-1/2/5 explicitly owner-confirmed September 28, 2026; B-DEC-5 states full time as the authoritative transition and the report control as acknowledgement only. Adds §8 Gate C inputs. No `src/` change; P5b remains gated on Gate I. |
 | 0.6 | September 30, 2026 | Adds Gates C/D information design and state matrix; seven monochrome wireframes and a complete interactive prototype under `s0-prototype/`; real 91-snapshot MatchClientHost capture; executed Gate-E resilience matrix with fixed/retested overflow and modal-focus findings. C–E PASS; F deliverable READY but formal opening/pass awaits both pre-F participant attestations (S0-F-001). Statistics-failure decision retains labelled live partial figures and hides report partial figures behind disclosure. No production/spec/Unity changes; G requires real independent sessions, H/I unopened, #470 remains blocked. |
 | 0.7 | September 30, 2026 | PR #473 review correction: withdraws initial E pass; fixes submit/speed focus and live feedback disclosure Majors; 74-check run 02 passes with direct focus and live-timer assertions. Coherent synthetic 2–1 ordinary session; raw 19–9 capture reserved for unusual-score checks; normal-play whistle race; removes contradictory captured substitution row; distinguishes base-font scaling from zoom. Moves tester attestations from findings to formal F prerequisites. C-DEC-1 remains a Gate-C design choice, not an owner-confirmed decision; no gate rule requires its confirmation. F/G/H/I remain unpassed, #470 blocked. |
+| 0.8 | September 30, 2026 | Records explicit owner instruction to conduct image reviews instead of testers. S0-F-001 prerequisite superseded; F passes existing complete vehicle. G awaits actual owner image approval, including failure/stress views and carried design findings. H/I remain unopened; #470 blocked. |

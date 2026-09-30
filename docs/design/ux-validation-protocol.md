@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.14\
-**Status:** F4 + S0 GATES A–E COMPLETE — F prototype ready; formal F opening/pass pending participant attestations; anonymous participant requirements unchanged\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.11 §F4 and Gates E–G\
+**Version:** 0.15\
+**Status:** F4 + S0 GATES A–F COMPLETE — S0 G pending owner image review\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.12 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -23,13 +23,20 @@ produce comparable evidence rather than an informal design review.
 F4 is **complete** at this revision. The project owner assigned **Anton Zymin** as the
 `ux-detailed-plan.md` §10.1 UX-workstream accountable owner on September 11, 2026 and then directed
 that participant names be omitted. The protocol therefore uses stable anonymous slots and never
-stores participant names or contact details. The UX owner attests that two distinct real people are
-available for the applicable anonymous slots before a journey reaches Gate F. Gate G still requires
-both people to complete the round; anonymity is not a waiver or provisional bypass.
+stores participant names or contact details. For S1, the UX owner attests that two distinct real
+people are available for the applicable anonymous slots before Gate F and both complete Gate G. For S0, the September 30 owner decision
+supersedes those participant prerequisites with owner image review (§9.1).
 
 ---
 
 ## 2. Four-layer validation sequence
+
+**S0 review route, owner-directed September 30, 2026:** Anton Zymin conducts the image review
+in place of independent tester sessions. The former S0-P1/P2 recruitment, availability and
+independence prerequisites are superseded. Sections 3/5 retain the complete task and scripted
+interaction coverage; the participant mechanism and session templates below apply to S1 and
+optional future research. For S0, use §9.1. No owner image approval is inferred from this decision.
+This amendment supersedes the earlier S0 participant requirements throughout this protocol.
 
 Run the layers in this order for each journey:
 
@@ -37,13 +44,13 @@ Run the layers in this order for each journey:
    explicitly marked `FUTURE-BLOCKED`.
 2. **Scripted heuristic/self-walkthrough** — run the complete task against the resilience matrix in
    §5 before showing the prototype to a participant.
-3. **Independent task-based participant test** — run the Gate-G round using the neutral moderator
-   script in §6. The designer/implementer does not count as a participant.
+3. **Design validation** — S0 uses the owner image review in §9.1; S1 uses the independent
+   Gate-G round and neutral moderator script in §6. The designer/implementer is not an S1 participant.
 4. **Implementation verification** — after implementation, verify the real client against the
    validated handoff and host/cert requirements at Gate J.
 
-A later layer never repairs a skipped earlier layer. In particular, self-walkthrough evidence never
-substitutes for the two-participant Gate-G round.
+A later layer never repairs a skipped earlier layer. Self-walkthrough evidence does not replace
+S0 owner image approval or the S1 two-participant Gate-G round.
 
 ---
 
@@ -148,15 +155,16 @@ rights or the domain/client owners' authority defined in §10.1.
 
 ### 4.1 Privacy-safe recruitment slots
 
-`ux-detailed-plan.md` F4.2 requires two independent participants for both S0 and S1; the
+`ux-detailed-plan.md` F4.2 requires two independent participants for S1; the S0 rows below are
+superseded historical slots under the September 30 owner image-review decision. For S1, the
 designer/implementer does not count. Personal names and contact details are intentionally excluded
 from repository evidence. Each stable slot instead records the preferred profile, recruiting channel,
 a privacy-safe owner availability attestation and an explicit independence/distinctness attestation before its journey reaches Gate F.
 
 | Slot | Journey | Preferred profile | Recruiting channel | Repository identity | Availability attestation | Independence/distinctness attestation | Status |
 |---|---|---|---|---|---|---|---|
-| S0-P1 | S0 | Experienced football/management-sim player | Owner/team personal or relevant community network | **S0-P1 — anonymous; name omitted** | Due before S0 Gate F | Due before S0 Gate F | READY — slot defined |
-| S0-P2 | S0 | Football-literate newcomer to management sims, where practical | Owner/team personal or relevant community network | **S0-P2 — anonymous; name omitted** | Due before S0 Gate F | Due before S0 Gate F | READY — slot defined |
+| S0-P1 | S0 | Historical experienced-player slot | Historical recruitment route | **S0-P1 — superseded** | Not required | Not required | SUPERSEDED — owner image review |
+| S0-P2 | S0 | Historical newcomer slot | Historical recruitment route | **S0-P2 — superseded** | Not required | Not required | SUPERSEDED — owner image review |
 | S1-P1 | S1 | Experienced football/management-sim player | Owner/team personal or relevant community network | **S1-P1 — anonymous; name omitted** | Due before S1 Gate F | Due before S1 Gate F | READY / FUTURE S1 |
 | S1-P2 | S1 | Football-literate newcomer to management sims, where practical | Owner/team personal or relevant community network | **S1-P2 — anonymous; name omitted** | Due before S1 Gate F | Due before S1 Gate F | READY / FUTURE S1 |
 
@@ -165,12 +173,15 @@ football/product context to attempt the task without being coached through the U
 handles, email addresses or other identifying details to this packet. The slot ID, profile,
 independence attestation and owner availability attestation are the repository record.
 
-**F4 exit:** closed under `ux-detailed-plan.md` v1.5's explicit timing relaxation. §4.0 assigns the accountable UX owner and §4.1 defines the two anonymous S0 slots,
+**Historical F4 exit (S0 prerequisites superseded September 30, 2026):** closed under `ux-detailed-plan.md` v1.5's explicit timing relaxation. §4.0 assigns the accountable UX owner and §4.1 defines the two anonymous S0 slots,
 profiles, recruiting channels and attestation mechanism. Anonymity alone does not move the availability check; v1.5 separately moves it from F4 exit to pre-Gate-F. Before S0 reaches Gate F, Anton Zymin records
 `AVAILABLE — owner attested <date>` in both availability cells and `INDEPENDENT/DISTINCT — owner attested <date>` in both independence/distinctness cells without naming either person. The latter attests that each slot is a real person independent of the UX author/designer and distinct from the other slot. If either participant is unavailable or either independence/distinctness attestation is missing, Gate F does not open and Gate G cannot pass; there is no provisional
 bypass to Gate H/I.
 
 ### 4.2 Scheduling rule
+
+S0 image review is conducted by Anton Zymin after the complete Gate-F vehicle is ready.
+The participant scheduling rule below applies to S1.
 
 The participant round is booked for the first practical session after the applicable journey prototype
 passes Gate F. One round is the default cap. A second round is required only when a Blocker/Major
@@ -251,7 +262,7 @@ profiles do not discharge F4.3's wider `disabled/error states` condition.
 
 ---
 
-## 6. Participant session script
+## 6. Participant session script (S1; optional S0 research)
 
 ### 6.1 Moderator opening
 
@@ -295,7 +306,8 @@ prototype could not honestly present it.
 
 ## 7. Evidence record
 
-Create one record per participant and one consolidated finding table per tested prototype version.
+For S1 or optional participant research, create one record per participant and one consolidated
+finding table per tested prototype version. S0 owner image review uses §9.1 instead.
 
 ### 7.1 Session header
 
@@ -402,12 +414,38 @@ Do not downgrade severity merely because a participant eventually found a workar
 
 ## 9. Gate-G decision record
 
+### 9.1 S0 owner image review
+
+The owner reviews all seven journey-state images and the statistics-failure/stress views.
+Use the interactive prototype and 74-check Gate-E evidence to support questions about behavior;
+an image approval alone supplies no runtime or independent usability evidence.
+
+| Review field | Required record |
+|---|---|
+| Review ID | Stable ID, for example `UX-GG-S0-OWNER-20260930-01` |
+| Reviewer | Anton Zymin |
+| Date | Actual review date |
+| Prototype / image version | Version and reviewed commit |
+| Images reviewed | MM, TS, MV-0, MV-L, MV-P, MV-FT, PR, report-incomplete, stress-fault-1366; exact paths |
+| Complete task / state coverage | S0-T1–T7 plus substitution, using packet §§9–12 |
+| Supporting interaction evidence | Gate-E run ID and any additional walkthrough |
+| Findings | IDs, severity, disposition and retest where needed |
+| Carried Majors | Explicit acceptance rationale and release condition, or none |
+| Image approval | Owner's actual approval statement/reference, or pending |
+| Gate G | PASS only with explicit approval, no unresolved Blocker and no unaccepted Major |
+
+Tester sessions and attestations are not required for S0. Gate F must still supply the complete
+interactive task. Gate H follows the owner-approved low-fidelity images; the owner also reviews
+the high-fidelity images before the Gate-I handoff. Gate J verifies the real client.
+
+### 9.2 S1 participant decision record
+
 After both sessions, complete the record for the journey under test.
 
 | Check | Result |
 |---|---|
-| Journey | S0 / S1 |
-| Prescribed task set | S0-T1–T7 / S1-T1–T8 |
+| Journey | S1 |
+| Prescribed task set | S1-T1–T8 |
 | Two independent participants completed the round | PASS / FAIL |
 | Both session records carry matching independence/distinctness attestations | PASS / FAIL |
 | Gate F passed with the complete prescribed task set | PASS / FAIL |
@@ -475,8 +513,8 @@ semantics and evidence-backed interaction states.
 
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
-Neither F4 nor Gate A passes Gate E, F or G: both S0 availability attestations are still due before
-Gate F, and Gate G remains unavailable until two distinct independent participants complete the entire round.
+Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
+S0 Gate G remains pending actual owner image approval. S1 requires its two independent completions.
 
 ---
 
@@ -498,3 +536,4 @@ Gate F, and Gate G remains unavailable until two distinct independent participan
 | 0.12 | September 28, 2026 | Pointer/status sync for S0 Gate B (`ux-s0-pm1-journey.md` v0.5 §7, `ux-detailed-plan.md` v1.9). Gate B maps S0-T1–T7 to flow steps without changing any task, participant rule, Gate-E/G evidence requirement, severity or disposition; S0-T2's pre-match choice is now concretely Mentality because Formation has no simulation consumer. |
 | 0.13 | September 30, 2026 | Status/pointer sync to detailed plan v1.10 and S0 packet v0.6. C–E complete; F vehicle ready but both pre-F availability/independence/distinctness attestations remain due. Participant cells and G requirements unchanged. |
 | 0.14 | September 30, 2026 | Execution pointer sync to detailed plan v1.11; packet v0.7 corrects E evidence and retests v0.2. Tester attestations are formal F prerequisites, not usability findings. Participant cells, tasks and gate rules unchanged. |
+| 0.15 | September 30, 2026 | Records the owner-directed S0 image-review route and §9.1 review/approval template. S0 tester slots superseded; F complete, G pending actual image approval. Participant-session templates retained for S1/optional research; image approval supplies no independent usability/runtime evidence. |

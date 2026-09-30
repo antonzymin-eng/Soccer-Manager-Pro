@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 30, 2026 — **PR #473 review corrections: focus/disclosure Majors fixed; initial E claim withdrawn and retested.**
+> **Last Updated:** September 30, 2026 — **Owner-directed S0 image review; tester prerequisite superseded.**
+>
+> **Decision and status:** Anton Zymin will conduct S0 image reviews. Detailed plan v1.12, validation protocol v0.15, high-level plan v1.6 and journey packet v0.8 record that owner review replaces S0 independent recruitment, attestations and sessions. Gate F passes the existing complete prototype; Gate G remains pending actual image approval and finding dispositions. H images receive owner review before I; #470 remains blocked on I.
+>
+> **Evidence:** prototype v0.2, its nine PDFs and the 74-check run are unchanged. Image approval and tester/session evidence are not fabricated. No production/spec/scene/schema/RNG change; issue counts unchanged.
+>
+> **Last Updated (prior):** September 30, 2026 — **PR #473 review corrections: focus/disclosure Majors fixed; initial E claim withdrawn and retested.**
 >
 > **What:** Packet v0.7, prototype v0.2, detailed plan v1.11 and validation protocol v0.14. Submitting a request focuses persistent feedback; speed extremes focus Pause/Resume. Earlier-feedback disclosure preserves open state and focus through live refresh. Ordinary score/statistics are explicitly synthetic 2–1; the captured 19–9 case remains unchanged for raw-data/unusual-score checks. The captured substitution row is omitted, pitch limitation labelled, dense-history timestamps coherent, and the whistle can beat a queued request during a normal journey.
 >

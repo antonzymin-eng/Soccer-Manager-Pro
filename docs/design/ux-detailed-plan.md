@@ -2,8 +2,8 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 1.11\
-**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 GATES A–E COMPLETE; F PROTOTYPE READY / FORMAL F PENDING PARTICIPANT ATTESTATIONS\
+**Version:** 1.12\
+**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 GATES A–F COMPLETE; S0 GATE G PENDING OWNER IMAGE REVIEW\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -333,12 +333,22 @@ Use four layers:
 
 1. contract review;
 2. scripted heuristic/self-walkthrough;
-3. independent task-based participant test;
+3. owner image review for S0; independent task-based participant test for S1;
 4. implementation verification.
 
 ### F4.2 Binding participant mechanism
 
-For **S0 and S1 only**, Gate G requires:
+**Owner decision, September 30, 2026 — S0 image review.** The project owner instructed that
+testers are not required and that he will conduct all image reviews for the current S0 work.
+For S0, Anton Zymin's image review replaces the participant round and its recruitment,
+availability and independence attestations. The owner reviews the versioned wireframes and
+failure/state images, with the Gate-E interaction checks as supporting evidence. Gate G requires
+an explicit image-approval record, finding dispositions and no unresolved Blocker or unaccepted
+Major. Assigning the reviewer is not approving the images. Static images do not establish
+independent task completion or runtime interaction correctness. Gates H/I still follow G;
+Gate J still requires real-client verification.
+
+For **S1**, Gate G requires:
 
 - **2 independent participants** in one formative round;
 - the designer/implementer does not count;
@@ -360,7 +370,7 @@ This is intentionally small enough to bind in a solo/small-team project while st
 
 ### F4.3 Scripted self-walkthrough
 
-Before independent testing, the author executes the same tasks using:
+Before owner image review or independent testing, the author executes the same tasks using:
 
 - baseline data;
 - long names/pseudo-locale;
@@ -417,12 +427,10 @@ Minimum profiles:
 
 ### F4 exit
 
-The protocol is repeatable by someone other than its author, the UX owner is assigned, and two
-privacy-safe independent-participant slots with profiles, recruiting channels and an availability
-attestation mechanism are defined for S0. Personal identity disclosure is not an F4 output. The
-availability attestations are due before S0 reaches Gate F; two real independent completions remain
-mandatory at Gate G. **This is a deliberate timing relaxation from v1.4, which required the two S0
-participants to be identified/recruitable at F4 exit; anonymity itself does not require that timing change.**
+The protocol is repeatable, the UX owner is assigned, and the review route is explicit: owner
+image review for S0 under the September 30 decision; anonymous independent participants for S1.
+S0 tester slots and attestations are superseded. The earlier v1.5 timing relaxation is retained
+in version history; it is no longer a prerequisite for S0.
 
 ---
 
@@ -494,9 +502,14 @@ The prototype is not required to be Unity. It must accurately label real versus 
 
 **Pass:** a participant can attempt the complete task without instructions about which control to click.
 
-## Gate G — Independent usability validation
+## Gate G — Design validation
 
-Run the F4 participant round.
+For S0, run the owner image review defined in F4.2. Record the reviewer, date, prototype version,
+reviewed image paths, findings and explicit approval. **S0 pass:** owner-approved images;
+no unresolved Blocker; no unaccepted Major. The decision record must identify this as owner
+design review, without claiming independent participant evidence.
+
+For S1, run the F4 participant round.
 
 Record:
 
@@ -509,7 +522,7 @@ Record:
 - confidence about what happens next;
 - findings/severity/disposition/retest.
 
-**Pass:** two independent participants completed the round; no unresolved Blocker; no unaccepted Major.
+**S1 pass:** two independent participants completed the round; no unresolved Blocker; no unaccepted Major.
 
 ## Gate H — High-fidelity reference
 
@@ -522,7 +535,7 @@ Only after Gate G:
 - finalize copy roles/localization keys as appropriate;
 - clearly mark future behavior.
 
-**Pass:** design-ready.
+**Pass:** design-ready; S0 high-fidelity images explicitly approved by the project owner.
 
 ## Gate I — Implementation handoff
 
@@ -585,7 +598,7 @@ S0 does **not** wait for all Unity work before design, but the dependencies are 
 
 - **S0 Gates A–E:** host-free; proceed from code/spec/reference evidence.
 - **S0 Gate F:** use a design prototype for the full flow; use `match-viewer`/`match-client-web` and captured real outputs to validate Match View data/behavior. Do not extend the browser client into a second shipping implementation.
-- **S0 Gate G:** validate the design prototype with two independent participants.
+- **S0 Gate G:** Anton Zymin reviews and explicitly approves the versioned images under F4.2.
 - **S0 Gates H–I:** produce the approved visual reference and the implementation packet that directly feeds **B9b/P5b**.
 - **Roadmap B8/P4b:** code, pinned-editor compilation and tracked-scene Play-mode boot/render smoke are complete. The row remains open only on the evidence the roadmap still names: click-to-select routed through the shipping P5b interaction path and the budgeted cert-host render-loop/performance capture. Do **not** repeat completed compile/scene-smoke work as if it were still absent; do not promote the partial evidence into Gate-J acceptance.
 - **Roadmap B9b/P5b:** consumes the S0 Gate-I packet for the four-screen UGUI binding.
@@ -663,7 +676,7 @@ Do not modify those reference harnesses merely to make the prototype easier. The
 
 ## 6.7 S0 usability task
 
-Participant goal:
+Review task goal:
 
 > Prepare the team, start the match, identify what is happening, make one supported intervention, understand the final result, and return successfully.
 
@@ -959,12 +972,12 @@ No additional polished screen comes next.
 3. **F1.4 — PM-1/PM-2 task hierarchy and EA priority.**
 4. **F2 — record the existing `ClientScreenFlow`; produce separate future career-shell map.**
 5. **F3 — audit only S0-required component/state/a11y/localization/fallback primitives.**
-6. **F4 — write scripts, severity ledger and privacy-safe participant mechanism; define two anonymous S0 slots.**
+6. **F4 — write scripts, severity ledger and the review mechanism.** S0 uses owner image review under the September 30 decision; the earlier anonymous S0 slots are superseded.
 7. **S0 Gate A — COMPLETE September 21, 2026.** The reconciled dependency/control audit is `ux-s0-pm1-journey.md` v0.4.
 8. **S0 Gate B — COMPLETE September 28, 2026 (owner-confirmed September 28, 2026).** The task flow is `ux-s0-pm1-journey.md` v0.5 §7. It also corrects Gate A's A-10: Formation has no simulation consumer, so S0's pre-match choice is Mentality.
-9. **S0 Gates C–E — COMPLETE September 30, 2026.** `ux-s0-pm1-journey.md` v0.7 §§9–11 records monochrome wireframes, state matrix and executed resilience evidence.
-10. **S0 Gate F — PROTOTYPE READY; FORMAL OPENING/PASS PENDING ATTESTATIONS.** The complete vehicle is `docs/design/s0-prototype/`; §12 records the remaining pre-F S0-P1/P2 availability and independence/distinctness requirement.
-11. Record those two anonymous attestations, formally close F, then run Gate G with two actual independent completions. No high fidelity or P5b release before G → H → I.
+9. **S0 Gates C–E — COMPLETE September 30, 2026.** `ux-s0-pm1-journey.md` v0.8 §§9–11 records monochrome wireframes, state matrix and executed resilience evidence.
+10. **S0 Gate F — COMPLETE September 30, 2026.** The complete vehicle and critical-state evidence are in `docs/design/s0-prototype/`; the owner's September 30 review decision removes the pre-F tester prerequisite.
+11. **S0 Gate G — PENDING OWNER IMAGE REVIEW.** Record Anton Zymin's review of the versioned wireframes/state images and explicit approval. No high fidelity or P5b release before G → H → I.
 
 The existing Main Menu visual is revisited at Gate H unless earlier low-fidelity findings show it should be retired.
 
@@ -989,7 +1002,7 @@ After the external dependency review, the plan now has no remaining structural e
 - S0 has a named consumer and cert path;
 - #30 status is measured correctly rather than inferred from a folder name;
 - S1 can design ahead without pretending future UI surfaces are live;
-- Gate G requires two real independent participants and cannot be bypassed into H/I;
+- Gate G requires explicit owner image approval for S0 and two independent participants for S1;
 - host-free prototype validation uses the existing real-match reference surfaces without turning them into a second shipping client;
 - ownership and effort are bounded;
 - gates are defined once;
@@ -1001,13 +1014,16 @@ Three things are deliberately **not** F1 gates, having been mis-stated as such i
 
 - **PR draft status.** #362 remaining draft is a review-state fact, not a technical dependency. F1 is evidence-gathering against the tree and needs no acceptance decision to proceed.
 - **B8 → B9b → B10 host ordering.** It is the recommended implementation sequence and a real dependency for S0 Gates I/J, but it constrains nothing in the F1 capability audit.
-- **Gate-G tester recruitment.** §4 defines the anonymous participant slots and recruitment mechanism
-  in F4 without requiring public identity disclosure. The UX owner attests that two distinct real
-  participants are available before Gate F; the two-participant requirement stays binding at Gate G.
+- **Gate-G tester recruitment.** S0 uses owner image review under F4.2. S1 retains the anonymous
+  participant mechanism; recruitment is not an F1 gate.
 
 ---
 
 # 17. Owner acceptance
+
+**September 30, 2026 amendment:** F4.2 records the owner-directed S0 image-review route.
+The September 9/11 acceptance and participant limits below are historical decisions superseded
+for S0 by that amendment. They do not reinstate a tester prerequisite or count as image approval.
 
 **The project owner accepted this UX planning package on September 9, 2026.** The acceptance covers the package as it stands at this revision: `ux-high-level-plan.md` v1.2, this plan at v1.4, and the F1–F3 outputs `ux-baseline-evidence.md` v0.3, `ux-experience-architecture.md` v0.1 and `ux-shared-system.md` v0.3 (since advanced to v0.4 by the September 11 status-authority correction).
 
@@ -1048,3 +1064,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.9 | September 28, 2026 | S0 Gate B closes through `ux-s0-pm1-journey.md` v0.5 §7 (owner-confirmed September 28, 2026) and §14 advances to Gate C. The Gate-B re-check corrects a Gate-A overstatement: `TeamTactic.Formation` is serialized and parsed but read by no simulation system, so S0's one pre-match choice is Mentality (read by the Decision Tree risk multiplier and the engine's defensive-line bias). Gate A's verdict and zero-`UNKNOWN` result stand. The project owner explicitly confirmed B-DEC-1/2/5 (home side, existing AI manager for the opponent, full time as the authoritative transition with the report control as acknowledgement only) on September 28, 2026. P5b remains gated on Gate I. |
 | 1.10 | September 30, 2026 | Status sync to S0 packet v0.6: C–E complete with executed prototype evidence; F deliverable ready, formal opening/pass pending both pre-F participant attestations. Gate definitions/participant rules unchanged; G/H/I remain unpassed and #470 blocked. |
 | 1.11 | September 30, 2026 | Pointer sync to S0 packet v0.7 after PR #473 review: initial Gate-E pass withdrawn, focus/disclosure Majors fixed and retested in 74-check v0.2 run. F attestation prerequisites and G/H/I sequencing unchanged. |
+| 1.12 | September 30, 2026 | Owner-directed S0 image review replaces independent tester recruitment, attestations and sessions. S0 F closes on the existing complete vehicle; G awaits explicit owner image approval and finding dispositions. H images also receive owner review before I. S1 participant mechanism and Gate-J production verification retained. |

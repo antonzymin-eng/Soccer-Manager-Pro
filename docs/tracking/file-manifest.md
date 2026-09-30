@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 30, 2026 — **S0 prototype review corrections / PR #473.** Packet `docs/design/ux-s0-pm1-journey.md` v0.7, `ux-detailed-plan.md` v1.11, `ux-validation-protocol.md` v0.14; prototype v0.2. Two focus/disclosure Majors fixed and retested; 74-check run 02 supersedes the insufficient 71-check run. Synthetic ordinary 2–1 scenario, raw 19–9 unusual-score capture, reachable whistle race, nine regenerated PDFs; tester attestations are formal F prerequisites. Maintained old currency pointers corrected; no production/spec change.
+**Last Updated:** September 30, 2026 — **Owner-directed S0 image review.** `docs/design/ux-high-level-plan.md` v1.6, `ux-detailed-plan.md` v1.12, `ux-validation-protocol.md` v0.15, `ux-s0-pm1-journey.md` v0.8 and `s0-prototype/README.md` record the owner review route. S0 tester prerequisite superseded; A–F complete, G pending actual owner image approval; #470 remains blocked on I. Prototype/PDF/browser evidence unchanged; no new paths or production/spec changes.
+
+**Last Updated (prior):** September 30, 2026 — **S0 prototype review corrections / PR #473.** Packet `docs/design/ux-s0-pm1-journey.md` v0.7, `ux-detailed-plan.md` v1.11, `ux-validation-protocol.md` v0.14; prototype v0.2. Two focus/disclosure Majors fixed and retested; 74-check run 02 supersedes the insufficient 71-check run. Synthetic ordinary 2–1 scenario, raw 19–9 unusual-score capture, reachable whistle race, nine regenerated PDFs; tester attestations are formal F prerequisites. Maintained old currency pointers corrected; no production/spec change.
 
 **Last Updated (prior):** September 28, 2026 — **S0 UX Gate B task flow (docs only).** **Modified design docs (4):** `docs/design/ux-s0-pm1-journey.md` v0.4→v0.5 (§7 Gate B, §8 Gate C inputs, A-10 correction); `ux-detailed-plan.md` v1.8→v1.9; `ux-validation-protocol.md` v0.11→v0.12; `ux-high-level-plan.md` v1.3→v1.4. **Modified tracking (4):** `CHANGELOG.md`; `open-issues.md` (UX entry title amended + September 28 update; counts unchanged); `docs/agent-guides/project-reference.md` (UX index bullet); this manifest. No `src/` file changed.
 
@@ -3518,14 +3520,14 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 
 | File | Purpose |
 |------|---------|
-| `docs/design/ux-high-level-plan.md` | UX strategy v1.5; current status delegated to execution authority; C–E complete, F vehicle ready with formal attestations pending |
-| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.11: F0–F4 and S0 A–E complete; F prototype ready / formal F pending both participant attestations; G/H/I unpassed, P5b gated on I; unchanged gate definitions and participant rules |
+| `docs/design/ux-high-level-plan.md` | UX strategy v1.6; S0 owner image review; current status delegated to execution authority |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.12: F0–F4 and S0 A–F complete; G pending owner image approval; H/I unpassed; P5b gated on I |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | F4 validation operating packet v0.14: status sync to S0 C–E complete / F vehicle ready; participant availability and explicit independence/distinctness remain due before F, actual independent completions bind G; unchanged scripts, matrix and ledger rules |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.7: A/B audits/flow plus C monochrome hierarchy/focus/reflow, D full state matrix, E executed resilience evidence and F vehicle/attestation boundary; real capture and statistics-failure decision; C–E PASS, formal F pending, #470 blocked on I |
-| `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/attestation boundary |
+| `docs/design/ux-validation-protocol.md` | F4 validation operating packet v0.15: S0 owner image-review record in §9.1; tester prerequisites superseded; S1 participant templates retained |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.8: A/B audit/flow, C wireframes, D state matrix, E resilience evidence, F complete vehicle; G pending owner image approval; #470 blocked on I |
+| `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/owner-review boundary |
 | `docs/design/s0-prototype/index.html` | Local-only monochrome complete-task design vehicle; simulation banner |
 | `docs/design/s0-prototype/prototype.css` | Low-fidelity layout, focus, disabled states, scale/reflow and caption reservation |
 | `docs/design/s0-prototype/model.js` | Pure simulated S0 transitions, pending/applied/refused/end race; no production API |

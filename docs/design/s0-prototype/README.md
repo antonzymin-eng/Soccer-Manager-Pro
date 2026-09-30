@@ -75,12 +75,14 @@ Automated/self-walkthrough evidence supplies no Gate-G participant results.
 
 ## Gate boundary
 
-C/D deliverables and E evidence live in the same journey packet. F's executable deliverable is ready,
-but its formal opening/pass remains pending the two privacy-safe availability and independence/
-distinctness attestations required by the validation protocol §4.1. Gate G then needs the two actual
-independent sessions. H/I remain unopened; draft PR #470 stays blocked on Gate I.
+C–F are complete in the journey packet. Under the owner decision of September 30, 2026,
+Anton Zymin conducts the S0 image reviews; tester recruitment, attestations and sessions are not
+prerequisites. Gate G awaits explicit owner approval of the seven wireframes and failure/stress
+images using validation protocol §9.1. H/I follow that approval; draft PR #470 stays blocked on Gate I.
+The 74-check interaction evidence remains distinct from image approval and real-client verification.
 
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | September 30, 2026 | Initial low-fidelity S0 vehicle, captured reference data and reproducible walkthrough. |
 | 0.2 | September 30, 2026 | Fixes live focus/disclosure; coherent ordinary synthetic 2–1 versus captured 19–9 fixtures; reachable whistle race; 74 checks; archives insufficient original E run; clarifies text-scale method and formal F prerequisites. |
+| 0.2 review-route update | September 30, 2026 | Owner-directed S0 image review replaces tester prerequisites; prototype sources, PDFs and 74-check run unchanged. |
